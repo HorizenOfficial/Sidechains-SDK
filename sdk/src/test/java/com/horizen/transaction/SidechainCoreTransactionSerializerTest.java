@@ -1,6 +1,6 @@
 package com.horizen.transaction;
 
-import com.horizen.box.NoncedBox;
+import com.horizen.box.Box;
 import com.horizen.box.data.*;
 import com.horizen.fixtures.BoxFixtureClass;
 import com.horizen.proof.Proof;
@@ -27,10 +27,10 @@ public class SidechainCoreTransactionSerializerTest extends BoxFixtureClass {
     public void serializeCoreData() {
         List<byte[]> inputsIds = Arrays.asList(getRandomBoxId());
 
-        List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData = new ArrayList<>();
-        outputsData.add((NoncedBoxData) getZenBoxData());
-        outputsData.add((NoncedBoxData)getForgerBoxData());
-        outputsData.add((NoncedBoxData)getWithdrawalRequestBoxData());
+        List<BoxData<Proposition, Box<Proposition>>> outputsData = new ArrayList<>();
+        outputsData.add((BoxData) getZenBoxData());
+        outputsData.add((BoxData)getForgerBoxData());
+        outputsData.add((BoxData)getWithdrawalRequestBoxData());
 
         List<Proof<Proposition>> proofs = new ArrayList<>();
         proofs.add((Proof)getRandomSignature25519());
@@ -55,9 +55,9 @@ public class SidechainCoreTransactionSerializerTest extends BoxFixtureClass {
     public void regressionTest() {
         List<byte[]> inputsIds = Arrays.asList(getRandomBoxId(123L));
 
-        List<NoncedBoxData<Proposition, NoncedBox<Proposition>>> outputsData = new ArrayList<>();
-        outputsData.add((NoncedBoxData)new ZenBoxData(getPrivateKey25519("1".getBytes()).publicImage(), 100L));
-        outputsData.add((NoncedBoxData)new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(BytesUtils.fromHexString("811d42a49dffaee0cb600dee740604b4d5bd0cfb")), 40L));
+        List<BoxData<Proposition, Box<Proposition>>> outputsData = new ArrayList<>();
+        outputsData.add((BoxData)new ZenBoxData(getPrivateKey25519("1".getBytes()).publicImage(), 100L));
+        outputsData.add((BoxData)new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(BytesUtils.fromHexString("811d42a49dffaee0cb600dee740604b4d5bd0cfb")), 40L));
 
         List<Proof<Proposition>> proofs = new ArrayList<>();
         proofs.add((Proof)new Signature25519(BytesUtils.fromHexString("34098ab081a042cb9a4da5faf05c9d1b970cf365a776acd356e980313335ac55eb41d80a6aa816e311cd1ed488b18ef8a10f278b4de19a5b5865a16f6e5bb001")));

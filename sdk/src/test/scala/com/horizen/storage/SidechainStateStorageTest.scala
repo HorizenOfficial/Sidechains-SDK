@@ -118,14 +118,16 @@ class SidechainStateStorageTest
 
 
     // Test 1: test successful update
-    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(boxList.head), Set(new ByteArrayWrapper(boxList(2).id())), Seq(), consensusEpoch, None, blockFeeInfo)
+    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(boxList.head),
+      Set(new ByteArrayWrapper(boxList(2).id())), Seq(), consensusEpoch, None, blockFeeInfo, None, false)
     assertTrue("StateStorage successful update expected, instead exception occurred:\n %s".format(if(tryRes.isFailure) tryRes.failed.get.getMessage else ""),
       tryRes.isSuccess)
 
 
     // Test 2: test failed update, when Storage throws an exception
     val box = getZenBox
-    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(box), Set(new ByteArrayWrapper(boxList(3).id())), Seq(), consensusEpoch, None, blockFeeInfo)
+    tryRes = stateStorage.update(version, withdrawalEpochInfo, Set(box),
+      Set(new ByteArrayWrapper(boxList(3).id())), Seq(), consensusEpoch, None, blockFeeInfo, None, false)
     assertTrue("StateStorage failure expected during update.", tryRes.isFailure)
     assertEquals("StateStorage different exception expected during update.", expectedException, tryRes.failed.get)
     assertTrue("Storage should NOT contain Box that was tried to update.", stateStorage.getBox(box.id()).isEmpty)
@@ -135,26 +137,26 @@ class SidechainStateStorageTest
 
   @Test
   def testExceptions() : Unit = {
-    var exceptionTrown = false
+    var exceptionThrown = false
 
     try {
       val stateStorage = new SidechainStateStorage(null, sidechainBoxesCompanion)
     } catch {
-      case e : IllegalArgumentException => exceptionTrown = true
+      case e : IllegalArgumentException => exceptionThrown = true
     }
 
     assertTrue("SidechainStateStorage constructor. Exception must be thrown if storage is not specified.",
-      exceptionTrown)
+      exceptionThrown)
 
-    exceptionTrown = false
+    exceptionThrown = false
     try {
       val stateStorage = new SidechainStateStorage(mockedPhysicalStorage, null)
     } catch {
-      case e : IllegalArgumentException => exceptionTrown = true
+      case e : IllegalArgumentException => exceptionThrown = true
     }
 
     assertTrue("SidechainStateStorage constructor. Exception must be thrown if boxesCompation is not specified.",
-      exceptionTrown)
+      exceptionThrown)
 
     val stateStorage = new SidechainStateStorage(mockedPhysicalStorage, sidechainBoxesCompanion)
 

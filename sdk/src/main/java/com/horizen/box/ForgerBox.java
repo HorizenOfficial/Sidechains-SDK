@@ -13,7 +13,7 @@ import java.util.Arrays;
 import static com.horizen.box.CoreBoxesIdsEnum.ForgerBoxId;
 
 public final class ForgerBox
-        extends AbstractNoncedBox<PublicKey25519Proposition, ForgerBoxData, ForgerBox>
+        extends AbstractBox<PublicKey25519Proposition, ForgerBoxData, ForgerBox>
         implements CoinsBox<PublicKey25519Proposition>
 {
 
@@ -59,4 +59,7 @@ public final class ForgerBox
 
         return boxData.getBox(nonce);
     }
+
+    @Override
+    public Boolean isCustom() { return false; }
 }

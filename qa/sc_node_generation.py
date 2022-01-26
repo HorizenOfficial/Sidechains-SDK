@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, assert_true, initialize_chain_clean, start_nodes, connect_nodes_bi, sync_mempools, sync_blocks
 from SidechainTestFramework.scutil import initialize_default_sc_chain_clean, start_sc_nodes, connect_sc_nodes, connect_sc_nodes_bi, sync_sc_mempools, sync_sc_blocks, \
@@ -53,7 +53,7 @@ class SidechainNodeBlockGenerationTest(SidechainTestFramework):
             "format": True
             #            "format": "true"
         }
-        print j
+        print(j)
         request = json.dumps(j)
         response = sender_node.transaction_spendForgingStake(request)
         txid = response["result"]["transaction"]["id"]
@@ -80,7 +80,7 @@ class SidechainNodeBlockGenerationTest(SidechainTestFramework):
         j = {"blockId": block_id}
         request = json.dumps(j)
         block = node.block_findById(request)
-        assert_true(block.has_key("result"), "Error during getBlock for SC {0}".format(nodename))
+        assert_true("result" in block, "Error during getBlock for SC {0}".format(nodename))
         for tx in block["result"]["block"]["sidechainTransactions"]:
             tx_list.append(tx["id"])
         assert_true(tx_id in tx_list, "Transaction {0} not included in the new block for SC {1}".format(str(tx_id), nodename))
@@ -128,7 +128,7 @@ class SidechainNodeBlockGenerationTest(SidechainTestFramework):
         sc_node_0_first_forger_box_pub_key = sc_node_0_first_forger_box["proposition"]["publicKey"]
         sc_node_0_first_forger_box_vrf_pub_key = sc_node_0_first_forger_box["vrfPubKey"]["publicKey"]
 
-        print ("Found forger box with id {forgerBxId} for node 0".format(forgerBxId = sc_node_0_first_forger_box_id))
+        print("Found forger box with id {forgerBxId} for node 0".format(forgerBxId = sc_node_0_first_forger_box_id))
         print("-->SC Node 0 sends to SC Node 1 address {0}, {1} coins with fee {2} coins...".format(str(scnode1address), sc_amount, sc_fee))
         sctxid = self.send_forger_stake_coins(self.sc_nodes[0], sc_node_0_first_forger_box_id, scnode1address, sc_node_0_first_forger_box_pub_key, sc_node_0_first_forger_box_vrf_pub_key, sc_amount, sc_node_0_forger_box_balance)
         print("OK\n")

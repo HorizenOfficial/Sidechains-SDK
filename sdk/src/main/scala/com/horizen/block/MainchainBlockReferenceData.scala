@@ -3,9 +3,11 @@ package com.horizen.block
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.serialization.Views
+import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
+import scala.collection.JavaConverters._
 
 @JsonView(Array(classOf[Views.Default]))
 @JsonIgnoreProperties(Array("hash"))
@@ -27,6 +29,20 @@ case class MainchainBlockReferenceData(
       case data: MainchainBlockReferenceData => bytes.sameElements(data.bytes)
       case _ => false
     }
+  }
+
+  def commitmentTree(sidechainId: Array[Byte]): SidechainCommitmentTree = {
+    val commitmentTree = new SidechainCommitmentTree()
+
+    sidechainRelatedAggregatedTransaction.foreach(_.mc2scTransactionsOutputs().asScala.foreach {
+      case sc: SidechainCreation => commitmentTree.addSidechainCreation(sc)
+      case ft: ForwardTransfer => commitmentTree.addForwardTransfer(ft)
+    })
+
+    lowerCertificateLeaves.foreach(leaf => commitmentTree.addCertLeaf(sidechainId, leaf))
+    topQualityCertificate.foreach(cert => commitmentTree.addCertificate(cert))
+
+    commitmentTree
   }
 }
 
@@ -105,7 +121,7 @@ object MainchainBlockReferenceDataSerializer extends ScorexSerializer[MainchainB
     }
 
     val lowerCertificateLeavesSize: Int = r.getInt()
-    val lowerCertificateLeaves: Seq[Array[Byte]] = (0 until lowerCertificateLeavesSize).map(_ => r.getBytes(FieldElementUtils.maximumFieldElementLength()))
+    val lowerCertificateLeaves: Seq[Array[Byte]] = (0 until lowerCertificateLeavesSize).map(_ => r.getBytes(FieldElementUtils.fieldElementLength()))
 
     val topQualityCertificateSize: Int = r.getInt()
     val topQualityCertificate: Option[WithdrawalEpochCertificate] = {

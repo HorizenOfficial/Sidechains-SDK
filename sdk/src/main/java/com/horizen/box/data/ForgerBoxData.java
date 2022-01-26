@@ -12,7 +12,7 @@ import scorex.crypto.hash.Blake2b256;
 import java.util.Arrays;
 import java.util.Objects;
 
-public final class ForgerBoxData extends AbstractNoncedBoxData<PublicKey25519Proposition, ForgerBox, ForgerBoxData> {
+public final class ForgerBoxData extends AbstractBoxData<PublicKey25519Proposition, ForgerBox, ForgerBoxData> {
     private final PublicKey25519Proposition blockSignProposition;
     private final VrfPublicKey vrfPublicKey;
 
@@ -51,7 +51,7 @@ public final class ForgerBoxData extends AbstractNoncedBoxData<PublicKey25519Pro
     }
 
     @Override
-    public NoncedBoxDataSerializer serializer() {
+    public BoxDataSerializer serializer() {
         return ForgerBoxDataSerializer.getSerializer();
     }
 

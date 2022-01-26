@@ -1,11 +1,11 @@
 package com.horizen.cryptolibprovider;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.poseidonnative.PoseidonHash;
-import com.horizen.utils.BytesUtils;
+import com.horizen.librustsidechains.Constants;
 
 public class CumulativeHashFunctions {
     public static int hashLength() {
-        return PoseidonHash.HASH_LENGTH;
+        return Constants.FIELD_ELEMENT_LENGTH();
     }
 
     // Note: both arguments should be a LE form of the FieldElements expected by sc-cryptolib.

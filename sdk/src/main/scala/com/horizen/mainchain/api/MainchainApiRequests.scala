@@ -4,10 +4,13 @@ import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
-import java.math.BigDecimal
 
+import java.math.BigDecimal
 import com.horizen.block.{BitVectorCertificateField, FieldElementCertificateField}
+import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.utils.BytesUtils
+
+import scala.collection.convert.ImplicitConversions._
 
 @JsonView(Array(classOf[Views.Default]))
 case class SidechainInfoResponse
@@ -30,8 +33,8 @@ case class SendCertificateRequest
    proofBytes: Array[Byte],
    quality: Long,
    backwardTransfers: Seq[BackwardTransferEntry],
-   fieldElementCertificateFields: Seq[String],
-   bitVectorCertificateFields: Seq[String],
+   fieldElementCertificateFields: Seq[Array[Byte]],
+   bitVectorCertificateFields: Seq[Array[Byte]],
    ftrMinAmount: String,
    btrMinFee: String,
    fee: Option[String])
@@ -62,6 +65,7 @@ object CertificateRequestCreator {
              withdrawalRequestBoxes: Seq[WithdrawalRequestBox],
              ftMinAmount: Long,
              btrFee: Long,
+             utxoMerkleTreeRoot: Array[Byte],
              fee: Option[String],
              params: NetworkParams) : SendCertificateRequest = {
     SendCertificateRequest(
@@ -76,7 +80,7 @@ object CertificateRequestCreator {
         val pubKeyAddress: String = BytesUtils.toHorizenPublicKeyAddress(wrb.proposition().bytes(), params)
         BackwardTransferEntry(pubKeyAddress, new BigDecimal(wrb.value()).divide(ZEN_COINS_DIVISOR).toPlainString)
       }),
-      Seq(), // No custom field elements support for Threshold signature proof
+      CryptoLibProvider.sigProofThresholdCircuitFunctions.splitUtxoMerkleTreeRoot(utxoMerkleTreeRoot).toSeq,
       Seq(), // No bitvectors support for Threshold signature proofs
       new BigDecimal(ftMinAmount).divide(ZEN_COINS_DIVISOR).toPlainString,
       new BigDecimal(btrFee).divide(ZEN_COINS_DIVISOR).toPlainString,

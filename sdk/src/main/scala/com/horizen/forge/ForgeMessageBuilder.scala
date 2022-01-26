@@ -2,7 +2,7 @@ package com.horizen.forge
 
 import akka.util.Timeout
 import com.horizen.block._
-import com.horizen.box.{ForgerBox, NoncedBox}
+import com.horizen.box.{ForgerBox, Box}
 import com.horizen.chain.{MainchainHeaderHash, SidechainBlockInfo}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
@@ -297,7 +297,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     })
 
     // Collect transactions if possible
-    val transactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] =
+    val transactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]] =
       if (mainchainReferenceData.size == withdrawalEpochMcBlocksLeft) { // SC block is going to become the last block of the withdrawal epoch
         Seq() // no SC Txs allowed
       } else { // SC block is in the middle of the epoch
@@ -311,7 +311,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
             blockSize += txSize
             true // continue data collection
           }
-        }).map(tx => tx.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]]).toSeq // TO DO: problems with types
+        }).map(tx => tx.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]).toSeq // TO DO: problems with types
       }
 
     val tryBlock = SidechainBlock.create(

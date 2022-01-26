@@ -17,8 +17,8 @@ class WalletBox(val box: SidechainTypes#SCB, val transactionId: ModifierId, val 
   require(createdAt >= 0, "Expected createdAt should be non-negative value, actual value is %d".format(createdAt))
 
   // Create WalletBox without containing transaction information.
-  def this(box: SidechainTypes#SCB) {
-    this(box, bytesToId(new Array[Byte](NodeViewModifier.ModifierIdSize)), 0)
+  def this(box: SidechainTypes#SCB, createdAt: Long) {
+    this(box, bytesToId(new Array[Byte](NodeViewModifier.ModifierIdSize)), createdAt)
   }
 
   override def toString: String = s"WalletBox($box, ${encoder.encode(transactionId)}, $createdAt)"

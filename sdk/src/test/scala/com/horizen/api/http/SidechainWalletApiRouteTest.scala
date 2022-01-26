@@ -91,7 +91,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
           fail("Result serialization failed")
 
         assertTrue(node.isArray)
-        assertEquals(4, node.elements().asScala.length)
+        assertEquals(allBoxes.size() - 2, node.elements().asScala.length)
       }
       Post(basePath + "allBoxes")
         .withEntity(

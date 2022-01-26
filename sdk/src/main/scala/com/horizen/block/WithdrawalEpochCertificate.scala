@@ -3,7 +3,7 @@ package com.horizen.block
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.Bytes
-import com.horizen.librustsidechains.FieldElement
+import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.serialization.{ReverseBytesSerializer, Views}
 import com.horizen.utils.{BytesUtils, Utils, VarInt}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
@@ -14,7 +14,7 @@ import scala.util.Try
 
 case class FieldElementCertificateField(rawData: Array[Byte]) {
   lazy val fieldElementBytes: Array[Byte] = {
-    Bytes.concat(new Array[Byte](FieldElement.FIELD_ELEMENT_LENGTH - rawData.length), rawData)
+    Bytes.concat(new Array[Byte](FieldElementUtils.fieldElementLength() - rawData.length), rawData)
   }
 }
 case class BitVectorCertificateField(rawData: Array[Byte]) {
@@ -83,9 +83,9 @@ object WithdrawalEpochCertificate {
 
     val endCumulativeScTxCommitmentTreeRootSize: VarInt = BytesUtils.getReversedVarInt(certificateBytes, currentOffset)
     currentOffset += endCumulativeScTxCommitmentTreeRootSize.size()
-    if(endCumulativeScTxCommitmentTreeRootSize.value() != FieldElement.FIELD_ELEMENT_LENGTH)
+    if(endCumulativeScTxCommitmentTreeRootSize.value() != FieldElementUtils.fieldElementLength())
       throw new IllegalArgumentException(s"Input data corrupted: endCumulativeScTxCommitmentTreeRoot size ${endCumulativeScTxCommitmentTreeRootSize.value()} " +
-        s"is expected to be FieldElement size ${FieldElement.FIELD_ELEMENT_LENGTH}")
+        s"is expected to be FieldElement size ${FieldElementUtils.fieldElementLength()}")
 
     val endCumulativeScTxCommitmentTreeRoot: Array[Byte] = certificateBytes.slice(
       currentOffset, currentOffset + endCumulativeScTxCommitmentTreeRootSize.value().intValue())

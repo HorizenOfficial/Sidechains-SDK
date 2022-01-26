@@ -23,16 +23,15 @@ object WithdrawalEpochUtils {
     WithdrawalEpochInfo(withdrawalEpoch, withdrawalEpochIndex)
   }
 
-  def inReachedCertificateSubmissionWindowEnd(block: SidechainBlock, parentEpochInfo: WithdrawalEpochInfo, params: NetworkParams): Boolean = {
-    if (block.mainchainBlockReferencesData.nonEmpty && inSubmitCertificateWindow(parentEpochInfo, params)) {
-      val mcBlocksLeft = certificateSubmissionWindowLength(params) - parentEpochInfo.lastEpochIndex
-      // It can be no blocks left if parent reached exactly the end of the window.
-      // SC block may have multiple MCBlockRefData entries that reach or even exceed the CertificateSubmissionWindowEnd
-      mcBlocksLeft > 0 && block.mainchainBlockReferencesData.size >= mcBlocksLeft
-    } else {
-      // SC block has no MCBlockRefData or parent is not inside the window at all
-      false
-    }
+  def hasReachedCertificateSubmissionWindowEnd(newEpochInfo: WithdrawalEpochInfo, parentEpochInfo: WithdrawalEpochInfo, params: NetworkParams): Boolean = {
+    inSubmitCertificateWindow(parentEpochInfo, params) && // parent was in the submission window
+      newEpochInfo != parentEpochInfo && // new block should increase epoch index (corner case: parent in the end odf the window)
+      newEpochInfo.lastEpochIndex >= certificateSubmissionWindowLength(params) // new block may have multiple ref data so may pass over the window
+  }
+
+  def hasReachedCertificateSubmissionWindowEnd(block: SidechainBlock, parentEpochInfo: WithdrawalEpochInfo, params: NetworkParams): Boolean = {
+    val newEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentEpochInfo, params)
+    hasReachedCertificateSubmissionWindowEnd(newEpochInfo, parentEpochInfo, params)
   }
 
   def isEpochLastIndex(epochInfo: WithdrawalEpochInfo, params: NetworkParams): Boolean = {
@@ -45,7 +44,15 @@ object WithdrawalEpochUtils {
   }
 
   def certificateSubmissionWindowLength(params: NetworkParams): Int = {
+    certificateSubmissionWindowLength(params.withdrawalEpochLength)
+  }
+
+  def certificateSubmissionWindowLength(withdrawalEpochLength: Int): Int = {
     // MC consensus cert submission window length is 1/5 of the withdrawal epoch length, but at least 2 mc blocks
-    Math.max(2, params.withdrawalEpochLength / 5)
+    Math.max(2, withdrawalEpochLength / 5)
+  }
+
+  def ceasedAtMcBlockHeight(withdrawalEpochNumber: Int, params: NetworkParams): Int = {
+    params.mainchainCreationBlockHeight + (withdrawalEpochNumber * params.withdrawalEpochLength) + certificateSubmissionWindowLength(params) - 1
   }
 }

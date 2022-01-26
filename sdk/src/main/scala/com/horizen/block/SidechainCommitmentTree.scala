@@ -1,9 +1,9 @@
 package com.horizen.block
 
 import com.horizen.utils.BytesUtils
-import com.horizen.commitmenttree.{CommitmentTree, ScAbsenceProof, ScExistenceProof}
+import com.horizen.commitmenttreenative.{CommitmentTree, ScAbsenceProof, ScExistenceProof}
 import com.horizen.librustsidechains.FieldElement
-import com.horizen.sigproofnative.BackwardTransfer
+import com.horizen.certnative.BackwardTransfer
 
 import scala.compat.java8.OptionConverters._
 import scala.collection.JavaConverters._
@@ -111,11 +111,69 @@ class SidechainCommitmentTree {
     }
   }
 
-  def getCertLeafs(sidechainId: Array[Byte]): Seq[Array[Byte]] = {
-    val certLeafsOpt: Option[java.util.List[FieldElement]] = commitmentTree.getCrtLeaves(sidechainId).asScala
-    certLeafsOpt match {
+  def getScCrCommitment(sidechainId: Array[Byte]): Option[Array[Byte]] = {
+    commitmentTree.getScCrCommitment(sidechainId).asScala match {
+      case Some(fe) => {
+        val res = fe.serializeFieldElement()
+        fe.freeFieldElement()
+        Some(res)
+      }
+      case None => None
+    }
+  }
+
+  def getFtCommitment(sidechainId: Array[Byte]): Option[Array[Byte]] = {
+    commitmentTree.getFwtCommitment(sidechainId).asScala match {
+      case Some(fe) => {
+        val res = fe.serializeFieldElement()
+        fe.freeFieldElement()
+        Some(res)
+      }
+      case None => None
+    }
+  }
+
+  def getBtrCommitment(sidechainId: Array[Byte]): Option[Array[Byte]] = {
+    commitmentTree.getBtrCommitment(sidechainId).asScala match {
+      case Some(fe) => {
+        val res = fe.serializeFieldElement()
+        fe.freeFieldElement()
+        Some(res)
+      }
+      case None => None
+    }
+  }
+
+  def getCertCommitment(sidechainId: Array[Byte]): Option[Array[Byte]] = {
+    commitmentTree.getCertCommitment(sidechainId).asScala match {
+      case Some(fe) => {
+        val res = fe.serializeFieldElement()
+        fe.freeFieldElement()
+        Some(res)
+      }
+      case None => None
+    }
+  }
+
+  def getFtLeaves(sidechainId: Array[Byte]): Seq[Array[Byte]] = {
+    val fwtLeavesOpt: Option[java.util.List[FieldElement]] = commitmentTree.getFwtLeaves(sidechainId).asScala
+    fwtLeavesOpt match {
+      case Some(fwtList) => {
+        val fwtLeaves = fwtList.asScala.map(ft => ft.serializeFieldElement())
+        fwtList.asScala.foreach(_.freeFieldElement())
+        fwtLeaves
+      }
+      case None => Seq()
+    }
+  }
+
+  def getCertLeaves(sidechainId: Array[Byte]): Seq[Array[Byte]] = {
+    val certLeavesOpt: Option[java.util.List[FieldElement]] = commitmentTree.getCrtLeaves(sidechainId).asScala
+    certLeavesOpt match {
       case Some(certList) => {
-        certList.asScala.map(cert => cert.serializeFieldElement())
+        val certLeaves = certList.asScala.map(cert => cert.serializeFieldElement())
+        certList.asScala.foreach(_.freeFieldElement())
+        certLeaves
       }
       case None => Seq()
     }
@@ -141,6 +199,32 @@ class SidechainCommitmentTree {
       }
       case None => None
     }
+  }
+
+  def getSidechainCommitmentMerklePath(sidechainId: Array[Byte]): Option[Array[Byte]] = {
+    commitmentTree.getScCommitmentMerklePath(sidechainId).asScala match {
+      case Some(merklePath) => {
+        val merklePathBytes = merklePath.serialize()
+        merklePath.freeMerklePath()
+        Some(merklePathBytes)
+      }
+      case None => None
+    }
+  }
+
+  def getForwardTransferMerklePath(sidechainId: Array[Byte], ftLeafIndex: Int): Option[Array[Byte]] = {
+    commitmentTree.getFwtMerklePath(sidechainId, ftLeafIndex).asScala match {
+      case Some(merklePath) => {
+        val merklePathBytes = merklePath.serialize()
+        merklePath.freeMerklePath()
+        Some(merklePathBytes)
+      }
+      case None => None
+    }
+  }
+
+  def free(): Unit = {
+    commitmentTree.freeCommitmentTree()
   }
 }
 

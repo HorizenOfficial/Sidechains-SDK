@@ -1,10 +1,10 @@
 package com.horizen
 
 import com.google.common.primitives.{Bytes, Ints}
+
 import java.io.File
 import java.util
 import java.util.{Optional => JOptional}
-
 import com.horizen.block.{SidechainBlock, WithdrawalEpochCertificate}
 import com.horizen.box.{Box, CoinsBox, ForgerBox, WithdrawalRequestBox, ZenBox}
 import com.horizen.consensus._
@@ -12,16 +12,17 @@ import com.horizen.node.NodeState
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.state.ApplicationState
-import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage}
+import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
 import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import scorex.core._
 import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, MinimalState, ModifierValidation, Removal, TransactionValidation}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging}
-import java.math.{BigDecimal, MathContext}
 
+import java.math.{BigDecimal, MathContext}
 import com.horizen.box.data.ZenBoxData
+import com.horizen.cryptolibprovider.CryptoLibProvider
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
@@ -30,6 +31,7 @@ import scala.util.{Failure, Success, Try}
 
 class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
                                        forgerBoxStorage: SidechainStateForgerBoxStorage,
+                                       utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
                                        val params: NetworkParams,
                                        override val version: VersionTag,
                                        val applicationState: ApplicationState)
@@ -39,6 +41,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     with SidechainTypes
     with NodeState
     with ScorexLogging
+    with UtxoMerkleTreeView
 {
 
   checkVersion()
@@ -46,11 +49,11 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   override type NVCT = SidechainState
 
   lazy val verificationKeyFullFilePath: String = {
-    if (params.verificationKeyFilePath.equalsIgnoreCase("")) {
+    if (params.certVerificationKeyFilePath.equalsIgnoreCase("")) {
       throw new IllegalStateException(s"Verification key file name is not set")
     }
 
-    val verificationFile: File = new File(params.provingKeyFilePath)
+    val verificationFile: File = new File(params.certProvingKeyFilePath)
     if (!verificationFile.canRead) {
       throw new IllegalStateException(s"Verification key file at path ${verificationFile.getAbsolutePath} is not exist or can't be read")
     }
@@ -78,6 +81,14 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       }
     },
       s"Specified version is invalid. StateForgerBoxStorage version ${forgerBoxStorage.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != $version")
+
+    require({
+      utxoMerkleTreeStorage.lastVersionId match {
+        case Some(storageVersion) => storageVersion.data.sameElements(versionBytes)
+        case None => true
+      }
+    },
+      s"Specified version is invalid. UtxoMerkleTreeStorage version ${utxoMerkleTreeStorage.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != $version")
   }
 
   // Note: emit tx.semanticValidity for each tx
@@ -99,12 +110,26 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     }
   }
 
-  def withdrawalRequests(epoch: Int): Seq[WithdrawalRequestBox] = {
-    stateStorage.getWithdrawalRequests(epoch)
+  def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequestBox] = {
+    stateStorage.getWithdrawalRequests(withdrawalEpoch)
   }
 
-  def certificateTopQuality(epoch: Int): Long = {
-    stateStorage.getTopQualityCertificate(epoch) match {
+  override def utxoMerkleTreeRoot(withdrawalEpoch: Int): Option[Array[Byte]] = {
+    stateStorage.getUtxoMerkleTreeRoot(withdrawalEpoch)
+  }
+
+  override def utxoMerklePath(boxId: Array[Byte]): Option[Array[Byte]] = {
+    utxoMerkleTreeStorage.getMerklePath(boxId)
+  }
+
+  def hasCeased: Boolean = stateStorage.hasCeased
+
+  def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
+    stateStorage.getTopQualityCertificate(referencedWithdrawalEpoch)
+  }
+
+  def certificateTopQuality(referencedWithdrawalEpoch: Int): Long = {
+    certificate(referencedWithdrawalEpoch) match {
       case Some(cert) => cert.quality
       case None => 0 // there are no certificates for epoch
     }
@@ -124,15 +149,35 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     require(versionToBytes(version).sameElements(idToBytes(mod.parentId)),
       s"Incorrect state version!: ${mod.parentId} found, " + s"${version} expected")
 
+    if(hasCeased) {
+      throw new IllegalStateException(s"Can't apply Block ${mod.id}, because the sidechain has ceased.")
+    }
+
     validateBlockTransactionsMutuality(mod)
     mod.transactions.foreach(tx => validate(tx).get)
 
     // If SC block has reached the certificate submission window end -> check the top quality certificate
+    // Note: even if mod contains multiple McBlockRefData entries, we are sure they belongs to the same withdrawal epoch.
     val currentWithdrawalEpochInfo = stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0))
-    if(WithdrawalEpochUtils.inReachedCertificateSubmissionWindowEnd(mod, currentWithdrawalEpochInfo, params)) {
+    if(WithdrawalEpochUtils.hasReachedCertificateSubmissionWindowEnd(mod, currentWithdrawalEpochInfo, params)) {
       val modWithdrawalEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, currentWithdrawalEpochInfo, params)
-      // Note: even if mod contains multiple McBlockRefData entries, we are sure they belongs to the same withdrawal epoch.
-      validateTopQualityCertificate(mod, modWithdrawalEpochInfo.epoch)
+      val certReferencedEpochNumber = modWithdrawalEpochInfo.epoch - 1
+
+      // Top quality certificate may present in the current SC block or in the previous blocks or can be absent.
+      val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = mod.topQualityCertificateOpt.orElse(
+        stateStorage.getTopQualityCertificate(certReferencedEpochNumber))
+
+      // Check top quality certificate or notify that sidechain has ceased since we have no certificate in the end of the submission window.
+      topQualityCertificateOpt match {
+        case Some(cert) =>
+          validateTopQualityCertificate(cert, certReferencedEpochNumber)
+        case None =>
+          log.info(s"In the end of the certificate submission window of epoch ${modWithdrawalEpochInfo.epoch} " +
+            s"there are no certificates referenced to the epoch $certReferencedEpochNumber. Sidechain has ceased.")
+
+
+      }
+
     }
 
     applicationState.validate(this, mod)
@@ -150,19 +195,12 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     }
   }
 
-  private def validateTopQualityCertificate(mod: SidechainBlock, blockWithdrawalEpochNumber: Int): Unit = {
-    val certReferencedEpochNumber: Int = blockWithdrawalEpochNumber - 1
-
-    // Top quality certificate may present in the current SC block or in the previous blocks or can be absent.
-    val topQualityCertificate: WithdrawalEpochCertificate = mod.topQualityCertificateOpt.getOrElse(
-      stateStorage.getTopQualityCertificate(certReferencedEpochNumber)
-        .getOrElse(throw new IllegalStateException(s"In the end of the certificate submission window of epoch $blockWithdrawalEpochNumber " +
-          s"there are no certificates referenced to the epoch $certReferencedEpochNumber. Sidechain is ceased."))
-    )
+  private def validateTopQualityCertificate(topQualityCertificate: WithdrawalEpochCertificate, certReferencedEpochNumber: Int): Unit = {
+    val certReferencedEpochNumber: Int = topQualityCertificate.epochNumber
 
     // Check that the top quality certificate data is relevant to the SC active chain cert data.
     // There is no need to check endEpochBlockHash, epoch number and Snark proof, because SC trusts MC consensus.
-    // Currently we need to check only the consistency of backward transfers.
+    // Currently we need to check only the consistency of backward transfers and utxoMerkleRoot
     val expectedWithdrawalRequests = withdrawalRequests(certReferencedEpochNumber)
 
     // Simple size check
@@ -181,6 +219,22 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
             s"data is different than expected. Node's active chain is the fork from MC perspective.")
         }
       }
+    }
+
+    if(topQualityCertificate.fieldElementCertificateFields.size != 2)
+      throw new IllegalArgumentException(s"Top quality certificate should contain exactly 2 custom fields.")
+
+    utxoMerkleTreeRoot(certReferencedEpochNumber) match {
+      case Some(expectedMerkleTreeRoot) =>
+        val certUtxoMerkleRoot = CryptoLibProvider.sigProofThresholdCircuitFunctions.reconstructUtxoMerkleTreeRoot(
+          topQualityCertificate.fieldElementCertificateFields.head.fieldElementBytes,
+          topQualityCertificate.fieldElementCertificateFields(1).fieldElementBytes
+        )
+        if(!expectedMerkleTreeRoot.sameElements(certUtxoMerkleRoot))
+          throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate utxo merkle tree root " +
+            s"data is different than expected. Node's active chain is the fork from MC perspective.")
+      case None =>
+        throw new IllegalArgumentException(s"There is no utxo merkle tree root stored for the referenced epoch $certReferencedEpochNumber.")
     }
   }
 
@@ -259,8 +313,15 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     val forgerBoxesToAppend: ListBuffer[ForgerBox] = ListBuffer()
     val otherBoxesToAppend: ListBuffer[SidechainTypes#SCB] = ListBuffer()
 
+    // Check if current block application will lead to ceasing the sidechain
+    val hasReachedCertificateSubmissionWindowEnd: Boolean = WithdrawalEpochUtils.hasReachedCertificateSubmissionWindowEnd(
+      withdrawalEpochInfo, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0, 0)), params)
 
-    if(WithdrawalEpochUtils.isEpochLastIndex(withdrawalEpochInfo, params)) {
+    val scHasCeased: Boolean = hasReachedCertificateSubmissionWindowEnd &&
+      topQualityCertificateOpt.orElse(stateStorage.getTopQualityCertificate(withdrawalEpochInfo.epoch - 1)).isEmpty
+
+    val isWithdrawalEpochFinished: Boolean = WithdrawalEpochUtils.isEpochLastIndex(withdrawalEpochInfo, params)
+    if(isWithdrawalEpochFinished) {
       // Calculate and append fee payment boxes to the boxesToAppend
       // Note: that current block id and fee info are still not in the state storage, so consider them during result calculation.
       boxesToAppend ++= getFeePayments(withdrawalEpochInfo.epoch, Some((versionToId(newVersion), blockFeeInfo)))
@@ -275,17 +336,26 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         otherBoxesToAppend.append(box)
     })
 
+    val coinBoxesToAppend = boxesToAppend.filter(box => box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]])
+
     applicationState.onApplyChanges(this,
       version.data,
       boxesToAppend.asJava,
       changes.toRemove.map(_.boxId.array).asJava) match {
       case Success(appState) =>
         val boxIdsToRemoveSet = changes.toRemove.map(r => new ByteArrayWrapper(r.boxId)).toSet
+        val updatedUtxoMerkleTreeStorage = utxoMerkleTreeStorage.update(version, coinBoxesToAppend, boxIdsToRemoveSet).get
+        val utxoMerkleTreeRootOpt: Option[Array[Byte]] = if(isWithdrawalEpochFinished) {
+          Some(updatedUtxoMerkleTreeStorage.getMerkleTreeRoot)
+        } else {
+          None
+        }
 
         new SidechainState(
           stateStorage.update(version, withdrawalEpochInfo, otherBoxesToAppend.toSet, boxIdsToRemoveSet,
-            withdrawalRequestsToAppend, consensusEpoch, topQualityCertificateOpt, blockFeeInfo).get,
+            withdrawalRequestsToAppend, consensusEpoch, topQualityCertificateOpt, blockFeeInfo, utxoMerkleTreeRootOpt, scHasCeased).get,
           forgerBoxStorage.update(version, forgerBoxesToAppend, boxIdsToRemoveSet).get,
+          updatedUtxoMerkleTreeStorage,
           params,
           newVersion,
           appState
@@ -309,6 +379,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       case Success(appState) => new SidechainState(
         stateStorage.rollback(new ByteArrayWrapper(version)).get,
         forgerBoxStorage.rollback(new ByteArrayWrapper(version)).get,
+        utxoMerkleTreeStorage.rollback(new ByteArrayWrapper(version)).get,
         params,
         to,
         appState)
@@ -445,23 +516,26 @@ object SidechainState
 
   private[horizen] def restoreState(stateStorage: SidechainStateStorage,
                                     forgerBoxStorage: SidechainStateForgerBoxStorage,
+                                    utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
                                     params: NetworkParams,
                                     applicationState: ApplicationState): Option[SidechainState] = {
 
     if (!stateStorage.isEmpty)
-      Some(new SidechainState(stateStorage, forgerBoxStorage, params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState))
+      Some(new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage,
+        params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState))
     else
       None
   }
 
   private[horizen] def createGenesisState(stateStorage: SidechainStateStorage,
                                           forgerBoxStorage: SidechainStateForgerBoxStorage,
+                                          utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
                                           params: NetworkParams,
                                           applicationState: ApplicationState,
                                           genesisBlock: SidechainBlock): Try[SidechainState] = Try {
 
     if (stateStorage.isEmpty)
-      new SidechainState(stateStorage, forgerBoxStorage, params, idToVersion(genesisBlock.parentId), applicationState)
+      new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, idToVersion(genesisBlock.parentId), applicationState)
         .applyModifier(genesisBlock).get
     else
       throw new RuntimeException("State storage is not empty!")

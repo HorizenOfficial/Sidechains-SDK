@@ -1,7 +1,7 @@
 package com.horizen.certificatesubmitter.network
 
 import com.horizen.certificatesubmitter.CertificateSubmitter.CertificateSignatureInfo
-import com.horizen.librustsidechains.FieldElement
+import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.proof.SchnorrSignatureSerializer
 import scorex.core.network.message.{Message, MessageSpecV1}
 import scorex.util.serialization.{Reader, Writer}
@@ -63,7 +63,7 @@ class CertificateSignaturesSpec(signaturesLimit: Int) extends MessageSpecV1[Know
   override val messageName: String = CertificateSignaturesSpec.messageName
 
   override def serialize(inv: KnownSignatures, w: Writer): Unit = {
-    require(inv.messageToSign.length == FieldElement.FIELD_ELEMENT_LENGTH, "messageToSign has invalid length")
+    require(inv.messageToSign.length == FieldElementUtils.fieldElementLength(), "messageToSign has invalid length")
     require(inv.signaturesInfo.nonEmpty, "empty signaturesInfo list")
     require(inv.signaturesInfo.size <= signaturesLimit, s"more signatures info entries than max allowed $signaturesLimit in a message")
 
@@ -78,7 +78,7 @@ class CertificateSignaturesSpec(signaturesLimit: Int) extends MessageSpecV1[Know
   }
 
   override def parse(r: Reader): KnownSignatures = {
-    val messageToSign = r.getBytes(FieldElement.FIELD_ELEMENT_LENGTH)
+    val messageToSign = r.getBytes(FieldElementUtils.fieldElementLength())
 
     val length = r.getUInt().toInt
     require(length <= signaturesLimit, s"Too many signatures info entries. $length exceeds limit $signaturesLimit")

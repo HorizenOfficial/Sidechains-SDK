@@ -1,7 +1,6 @@
 package com.horizen
 
 import java.util
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestProbe
 import com.horizen.block.SidechainBlock
@@ -9,8 +8,8 @@ import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus.{ConsensusEpochInfo, FullConsensusEpochInfo, intToConsensusEpochNumber}
 import com.horizen.fixtures._
 import com.horizen.params.{NetworkParams, RegTestParams}
-import com.horizen.utils.MerkleTree
-import org.junit.Assert.{assertEquals, assertTrue}
+import com.horizen.utils.{MerkleTree, WithdrawalEpochInfo}
+import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.{Before, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.junit.JUnitSuite
@@ -63,8 +62,11 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[SidechainBlock])).thenReturn(true)
     // Mock state to apply incoming block successfully
     Mockito.when(state.applyModifier(ArgumentMatchers.any[SidechainBlock])).thenReturn(Success(state))
+    // Mock state withdrawal epoch methods
+    Mockito.when(state.getWithdrawalEpochInfo).thenReturn(WithdrawalEpochInfo(0, 1))
+    Mockito.when(state.isWithdrawalEpochLastIndex).thenReturn(false)
     // Mock wallet to apply incoming block successfully
-    Mockito.when(wallet.scanPersistent(ArgumentMatchers.any[SidechainBlock])).thenReturn(wallet)
+    Mockito.when(wallet.scanPersistent(ArgumentMatchers.any[SidechainBlock], ArgumentMatchers.any[Int](), ArgumentMatchers.any(), ArgumentMatchers.any())).thenReturn(wallet)
 
 
     var stateNotificationExecuted: Boolean = false
@@ -130,8 +132,14 @@ class SidechainNodeViewHolderTest extends JUnitSuite
       assertEquals("State received different block to apply.", block.id, blockToApply.id)
       Success(state)
     })
+    // Mock state withdrawal epoch methods
+    Mockito.when(state.getWithdrawalEpochInfo).thenReturn(WithdrawalEpochInfo(0, 1))
+    Mockito.when(state.isWithdrawalEpochLastIndex).thenReturn(false)
     // Wallet apply
-    Mockito.when(wallet.scanPersistent(ArgumentMatchers.any[SidechainBlock])).thenAnswer( answer => {
+    Mockito.when(wallet.scanPersistent(ArgumentMatchers.any[SidechainBlock],
+      ArgumentMatchers.any[Int](),
+      ArgumentMatchers.any(),
+      ArgumentMatchers.any())).thenAnswer( answer => {
       val blockToApply: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
       assertEquals("Wallet received different block to apply.", block.id, blockToApply.id)
       wallet
@@ -192,6 +200,10 @@ class SidechainNodeViewHolderTest extends JUnitSuite
 
     // Mock current version of the State
     Mockito.when(state.version).thenReturn(idToVersion(firstBlockInActiveChain.id))
+    // Mock state withdrawal epoch methods
+    Mockito.when(state.getWithdrawalEpochInfo).thenReturn(WithdrawalEpochInfo(0, 1))
+    Mockito.when(state.isWithdrawalEpochLastIndex).thenReturn(false)
+
     // State rollback check
     Mockito.when(state.rollbackTo(ArgumentMatchers.any[VersionTag])).thenAnswer(answer => {
       val rollbackPoint: VersionTag = answer.getArgument(0).asInstanceOf[VersionTag]
@@ -218,16 +230,19 @@ class SidechainNodeViewHolderTest extends JUnitSuite
       Success(wallet)
     })
     // Wallet apply - one by one for fork chain.
-    Mockito.when(wallet.scanPersistent(ArgumentMatchers.any[SidechainBlock]))
+    Mockito.when(wallet.scanPersistent(ArgumentMatchers.any[SidechainBlock],
+      ArgumentMatchers.any[Int](),
+      ArgumentMatchers.any(),
+      ArgumentMatchers.any()))
       .thenAnswer( answer => {
-      val blockToApply: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
-      assertEquals("Wallet received different block to apply. First fork block expected.", firstBlockInFork.id, blockToApply.id)
-      wallet
+        val blockToApply: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
+        assertEquals("Wallet received different block to apply. First fork block expected.", firstBlockInFork.id, blockToApply.id)
+        wallet
       })
       .thenAnswer( answer => {
-      val blockToApply: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
-      assertEquals("Wallet received different block to apply. Second fork block expected.", secondBlockInFork.id, blockToApply.id)
-      wallet
+        val blockToApply: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
+        assertEquals("Wallet received different block to apply. Second fork block expected.", secondBlockInFork.id, blockToApply.id)
+        wallet
       })
 
 
@@ -275,8 +290,15 @@ class SidechainNodeViewHolderTest extends JUnitSuite
       fail("State should NOT receive block to apply.")
       Success(state)
     })
+    // Mock state withdrawal epoch methods
+    Mockito.when(state.getWithdrawalEpochInfo).thenReturn(WithdrawalEpochInfo(0, 1))
+    Mockito.when(state.isWithdrawalEpochLastIndex).thenReturn(false)
+
     // Wallet apply
-    Mockito.when(wallet.scanPersistent(ArgumentMatchers.any[SidechainBlock])).thenAnswer( _ => {
+    Mockito.when(wallet.scanPersistent(ArgumentMatchers.any[SidechainBlock],
+      ArgumentMatchers.any[Int](),
+      ArgumentMatchers.any(),
+      ArgumentMatchers.any())).thenAnswer( _ => {
       fail("Wallet should NOT receive block to apply.")
       wallet
     })
@@ -298,5 +320,129 @@ class SidechainNodeViewHolderTest extends JUnitSuite
 
     // Verify requesting for download
     eventListener.expectMsgType[DownloadRequest]
+  }
+
+  @Test
+  def withdrawalEpochInTheMiddle(): Unit = {
+    // Test: Verify that SC block in the middle of withdrawal epoch will NOT emit notify wallet with fee payments and utxo merkle tree view.
+
+    // Mock history to add the incoming block to the ProgressInfo append list
+    Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer( answer =>
+      Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(answer.getArgument(0).asInstanceOf[SidechainBlock]), Seq())))
+    Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenReturn(history)
+    // Mock state to notify that any incoming block to append will NOT lead to chain switch
+    Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[SidechainBlock])).thenReturn(false)
+    // Mock state to apply incoming block successfully
+    Mockito.when(state.applyModifier(ArgumentMatchers.any[SidechainBlock])).thenReturn(Success(state))
+
+    // Mock state withdrawal epoch methods
+    val withdrawalEpochInfo = WithdrawalEpochInfo(0, 1)
+    Mockito.when(state.getWithdrawalEpochInfo).thenReturn(withdrawalEpochInfo)
+    Mockito.when(state.isWithdrawalEpochLastIndex).thenReturn(false)
+
+    // Mock state fee payments with checks
+    var feePaymentsCalculationEvent: Boolean = false
+    Mockito.when(state.getFeePayments(ArgumentMatchers.any[Int]())).thenAnswer(args => {
+      feePaymentsCalculationEvent = true
+      Seq()
+    })
+
+    // Mock wallet scanPersistent with checks
+    var walletChecksPassed: Boolean = false
+    Mockito.when(wallet.scanPersistent(
+      ArgumentMatchers.any[SidechainBlock],
+      ArgumentMatchers.any[Int](),
+      ArgumentMatchers.any[Seq[SidechainTypes#SCB]](),
+      ArgumentMatchers.any[Option[UtxoMerkleTreeView]]()))
+      .thenAnswer(args => {
+        val epochNumber: Int = args.getArgument(1)
+        val feePayments: Seq[SidechainTypes#SCB] = args.getArgument(2)
+        val utxoView: Option[UtxoMerkleTreeView] = args.getArgument(3)
+        assertEquals("Different withdrawal epoch number expected.", withdrawalEpochInfo.epoch, epochNumber)
+        assertTrue("No fee payments expected while not in the end of the withdrawal epoch.", feePayments.isEmpty)
+        assertTrue("No UtxoMerkleTreeView expected while not in the end of the withdrawal epoch.", utxoView.isEmpty)
+
+        walletChecksPassed = true
+        wallet
+      })
+
+    // Send locally generated block to the NodeViewHolder
+    val eventListener = TestProbe()
+    actorSystem.eventStream.subscribe(eventListener.ref, classOf[SemanticallySuccessfulModifier[SidechainBlock]])
+    val block = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params)
+    mockedNodeViewHolderRef ! LocallyGeneratedModifier(block)
+
+
+    // Verify successful applying
+    eventListener.expectMsgType[SemanticallySuccessfulModifier[SidechainBlock]]
+    Thread.sleep(100)
+
+    // Verify that all the checks passed
+    assertFalse("State feePayments calculation should no occur.", feePaymentsCalculationEvent)
+    assertTrue("Wallet scanPersistent checks failed.", walletChecksPassed)
+  }
+
+  @Test
+  def withdrawalEpochLastIndex(): Unit = {
+    // Test: Verify that SC block leading to the last withdrawal epoch index will emit notify wallet with fee payments and utxo merkle tree view.
+
+    // Mock history to add the incoming block to the ProgressInfo append list
+    Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer( answer =>
+      Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(answer.getArgument(0).asInstanceOf[SidechainBlock]), Seq())))
+    Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenReturn(history)
+    // Mock state to notify that any incoming block to append will NOT lead to chain switch
+    Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[SidechainBlock])).thenReturn(false)
+    // Mock state to apply incoming block successfully
+    Mockito.when(state.applyModifier(ArgumentMatchers.any[SidechainBlock])).thenReturn(Success(state))
+
+    val withdrawalEpochInfo = WithdrawalEpochInfo(3, params.withdrawalEpochLength)
+    // Mock state to reach the last withdrawal epoch index
+    Mockito.when(state.getWithdrawalEpochInfo).thenReturn(withdrawalEpochInfo)
+    Mockito.when(state.isWithdrawalEpochLastIndex).thenReturn(true)
+
+    // Mock state fee payments with checks
+    var stateChecksPassed: Boolean = false
+    val expectedFeePayments: Seq[SidechainTypes#SCB] = Seq(getZenBox, getZenBox)
+    Mockito.when(state.getFeePayments(ArgumentMatchers.any[Int]())).thenAnswer(args => {
+      val epochNumber: Int = args.getArgument(0)
+      assertEquals("Different withdrawal epoch number expected.", withdrawalEpochInfo.epoch, epochNumber)
+
+      stateChecksPassed = true
+      expectedFeePayments
+    })
+
+    // Mock wallet scanPersistent with checks
+    var walletChecksPassed: Boolean = false
+    Mockito.when(wallet.scanPersistent(
+      ArgumentMatchers.any[SidechainBlock],
+      ArgumentMatchers.any[Int](),
+      ArgumentMatchers.any[Seq[SidechainTypes#SCB]](),
+      ArgumentMatchers.any[Option[UtxoMerkleTreeView]]()))
+      .thenAnswer(args => {
+        val epochNumber: Int = args.getArgument(1)
+        val feePayments: Seq[SidechainTypes#SCB] = args.getArgument(2)
+        val utxoView: Option[UtxoMerkleTreeView] = args.getArgument(3)
+        assertEquals("Different withdrawal epoch number expected.", withdrawalEpochInfo.epoch, epochNumber)
+        assertEquals("Different fee payments expected while in the end of the withdrawal epoch.", expectedFeePayments, feePayments)
+        assertTrue("UtxoMerkleTreeView expected to be defined while in the end of the withdrawal epoch.", utxoView.isDefined)
+
+        walletChecksPassed = true
+        wallet
+      })
+
+    // Send locally generated block to the NodeViewHolder
+    val eventListener = TestProbe()
+    actorSystem.eventStream.subscribe(eventListener.ref, classOf[SemanticallySuccessfulModifier[SidechainBlock]])
+    val block = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params)
+    mockedNodeViewHolderRef ! LocallyGeneratedModifier(block)
+
+
+    // Verify successful applying
+    eventListener.expectMsgType[SemanticallySuccessfulModifier[SidechainBlock]]
+    Thread.sleep(100)
+
+    // Verify that all the checks passed
+    assertTrue("State feePayments checks failed.", stateChecksPassed)
+    assertTrue("Wallet scanPersistent checks failed.", walletChecksPassed)
   }
 }

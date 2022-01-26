@@ -50,8 +50,10 @@ public class SimpleAppModule extends SidechainAppModule
         File walletBoxStore = new File(dataDirAbsolutePath + "/wallet");
         File walletTransactionStore = new File(dataDirAbsolutePath + "/walletTransaction");
         File walletForgingBoxesInfoStorage = new File(dataDirAbsolutePath + "/walletForgingStake");
+        File walletCswDataStorage = new File(dataDirAbsolutePath + "/walletCswDataStorage");
         File stateStore = new File(dataDirAbsolutePath + "/state");
         File stateForgerBoxStore = new File(dataDirAbsolutePath + "/stateForgerBox");
+        File stateUtxoMerkleTreeStore = new File(dataDirAbsolutePath + "/stateUtxoMerkleTree");
         File historyStore = new File(dataDirAbsolutePath + "/history");
         File consensusStore = new File(dataDirAbsolutePath + "/consensusData");
 
@@ -103,11 +105,17 @@ public class SimpleAppModule extends SidechainAppModule
                 .annotatedWith(Names.named("WalletForgingBoxesInfoStorage"))
                 .toInstance(new VersionedLevelDbStorageAdapter(walletForgingBoxesInfoStorage));
         bind(Storage.class)
+                .annotatedWith(Names.named("WalletCswDataStorage"))
+                .toInstance(new VersionedLevelDbStorageAdapter(walletCswDataStorage));
+        bind(Storage.class)
                 .annotatedWith(Names.named("StateStorage"))
                 .toInstance(new VersionedLevelDbStorageAdapter(stateStore));
         bind(Storage.class)
                 .annotatedWith(Names.named("StateForgerBoxStorage"))
                 .toInstance(new VersionedLevelDbStorageAdapter(stateForgerBoxStore));
+        bind(Storage.class)
+                .annotatedWith(Names.named("StateUtxoMerkleTreeStorage"))
+                .toInstance(new VersionedLevelDbStorageAdapter(stateUtxoMerkleTreeStore));
         bind(Storage.class)
                 .annotatedWith(Names.named("HistoryStorage"))
                 .toInstance(new VersionedLevelDbStorageAdapter(historyStore));

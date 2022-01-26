@@ -1,16 +1,17 @@
 package com.horizen
 
 import java.util.{ArrayList => JArrayList, List => JList}
-
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, WithdrawalEpochCertificate}
-import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, ZenBoxData}
+import com.horizen.box.data.{ForgerBoxData, BoxData, ZenBoxData}
 import com.horizen.box._
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
+import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
+import com.horizen.librustsidechains.FieldElement
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
-import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage}
+import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
 import com.horizen.state.{ApplicationState, SidechainStateReader}
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.transaction.{BoxTransaction, RegularTransaction}
@@ -29,7 +30,7 @@ import scala.collection.mutable.ListBuffer
 import scala.util.{Random, Success}
 
 
-class SidechainStateTestTestsExtension
+class SidechainStateTest
   extends JUnitSuite
     with SecretFixture
     with TransactionFixture
@@ -40,6 +41,7 @@ class SidechainStateTestTestsExtension
 
   val mockedStateStorage: SidechainStateStorage = mock[SidechainStateStorage]
   val mockedStateForgerBoxStorage: SidechainStateForgerBoxStorage = mock[SidechainStateForgerBoxStorage]
+  val mockedStateUtxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage = mock[SidechainStateUtxoMerkleTreeStorage]
   val mockedApplicationState: ApplicationState = mock[ApplicationState]
 
   val boxList: ListBuffer[SidechainTypes#SCB] = new ListBuffer[SidechainTypes#SCB]()
@@ -49,9 +51,8 @@ class SidechainStateTestTestsExtension
   val secretList = new ListBuffer[PrivateKey25519]()
 
   val params = MainNetParams()
-  val withdrawalEpochInfo = WithdrawalEpochInfo(0, 0)
-  
-  
+
+
   def getRegularTransaction(regularOutputsCount: Int,
                             forgerOutputsCount: Int,
                             boxesWithSecretToOpen: Seq[(ZenBox,PrivateKey25519)],
@@ -60,7 +61,7 @@ class SidechainStateTestTestsExtension
 
     val from: JList[JPair[ZenBox,PrivateKey25519]] = new JArrayList[JPair[ZenBox,PrivateKey25519]]()
     from.addAll(boxesWithSecretToOpen.map{case (box, secret) => new JPair[ZenBox,PrivateKey25519](box, secret)}.asJava)
-    val to: JList[NoncedBoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
+    val to: JList[BoxData[_ <: Proposition, _ <: Box[_ <: Proposition]]] = new JArrayList()
     var totalFrom = boxesWithSecretToOpen.map{case (box, _) => box.value()}.sum
 
     for (b <- boxList) {
@@ -120,7 +121,10 @@ class SidechainStateTestTestsExtension
 
     Mockito.when(mockedStateForgerBoxStorage.getForgerBox(ArgumentMatchers.any[Array[Byte]]())).thenReturn(None)
 
-    val sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, params, bytesToVersion(stateVersion.last.data), mockedApplicationState)
+    Mockito.when(mockedStateUtxoMerkleTreeStorage.lastVersionId).thenReturn(Some(stateVersion.last))
+
+    val sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeStorage,
+      params, bytesToVersion(stateVersion.last.data), mockedApplicationState)
 
     //Test get
     assertEquals("State must return existing box.",
@@ -272,7 +276,9 @@ class SidechainStateTestTestsExtension
       ArgumentMatchers.any[Seq[WithdrawalRequestBox]](),
       ArgumentMatchers.any[ConsensusEpochNumber](),
       ArgumentMatchers.any[Option[WithdrawalEpochCertificate]](),
-      ArgumentMatchers.any[BlockFeeInfo]()))
+      ArgumentMatchers.any[BlockFeeInfo](),
+      ArgumentMatchers.any[Option[Array[Byte]]](),
+      ArgumentMatchers.any[Boolean]()))
       .thenAnswer( answer => {
         val version = answer.getArgument[ByteArrayWrapper](0)
         val withdrawalEpochInfo = answer.getArgument[WithdrawalEpochInfo](1)
@@ -282,6 +288,8 @@ class SidechainStateTestTestsExtension
         val consensusEpoch = answer.getArgument[ConsensusEpochNumber](5)
         val backwardTransferCertificate = answer.getArgument[Option[WithdrawalEpochCertificate]](6)
         val blockFeeInfo = answer.getArgument[BlockFeeInfo](7)
+        val utxoMerkleTreeRootOpt = answer.getArgument[Option[Array[Byte]]](8)
+        val scHasCeased = answer.getArgument[Boolean](9)
 
         // Verify withdrawals
         assertTrue("Withdrawals to append expected to be empty.", withdrawalRequestAppendSeq.isEmpty)
@@ -291,6 +299,9 @@ class SidechainStateTestTestsExtension
         assertEquals("Certificate expected to be absent.", None, backwardTransferCertificate)
         // Verify blockFeeInfo
         assertEquals("blockFeeInfo expected to be different.", modBlockFeeInfo, blockFeeInfo)
+        // Verify utxoMerkleTreeRoot
+        assertTrue("utxoMerkleTreeRoot expected to be empty.", utxoMerkleTreeRootOpt.isEmpty)
+        assertFalse("sc not ceased.", scHasCeased)
 
 
         stateVersion += version
@@ -306,24 +317,39 @@ class SidechainStateTestTestsExtension
         Success(mockedStateStorage)
       })
 
-    Mockito.when(mockedStateStorage.getWithdrawalEpochInfo)
-      .thenAnswer(answer => None)
+    Mockito.when(mockedStateStorage.getWithdrawalEpochInfo).thenReturn(None)
 
-    Mockito.when(mockedStateForgerBoxStorage.lastVersionId)
-      .thenAnswer(answer => {Some(stateVersion.last)})
+    Mockito.when(mockedStateForgerBoxStorage.lastVersionId).thenAnswer(_ => Some(stateVersion.last))
 
     Mockito.when(mockedStateForgerBoxStorage.update(
       ArgumentMatchers.any[ByteArrayWrapper](),
       ArgumentMatchers.any[Seq[ForgerBox]](),
       ArgumentMatchers.any[Set[ByteArrayWrapper]]()
     )).thenAnswer( answer => {
-      val version = answer.getArgument[ByteArrayWrapper](0)
       val forgerBoxToUpdate = answer.getArgument[ListBuffer[ForgerBox]](1)
-      val boxToRemove = answer.getArgument[Set[ByteArrayWrapper]](2)
 
       assertEquals("ForgerBox seq should be different.", forgerBoxes, forgerBoxToUpdate)
 
       Success(mockedStateForgerBoxStorage)
+    })
+
+    Mockito.when(mockedStateUtxoMerkleTreeStorage.lastVersionId).thenAnswer(_ => Some(stateVersion.last))
+
+    Mockito.when(mockedStateUtxoMerkleTreeStorage.update(
+      ArgumentMatchers.any[ByteArrayWrapper](),
+      ArgumentMatchers.any[Seq[SidechainTypes#SCB]](),
+      ArgumentMatchers.any[Set[ByteArrayWrapper]]()
+    )).thenAnswer( answer => {
+      val expectedBoxesToAppend = transactionList.flatMap(tx => tx.newBoxes().asScala)
+      val expectedBoxesToRemove = transactionList.flatMap(tx => tx.unlockers().asScala.map(u => new ByteArrayWrapper(u.closedBoxId()))).toSet
+
+      val boxesToAppend = answer.getArgument[Seq[SidechainTypes#SCB]](1)
+      val boxesToRemove = answer.getArgument[Set[ByteArrayWrapper]](2)
+
+      assertEquals("Different boxes to append found.", expectedBoxesToAppend, boxesToAppend)
+      assertEquals("Different boxes to remove found.", expectedBoxesToRemove, boxesToRemove)
+
+      Success(mockedStateUtxoMerkleTreeStorage)
     })
 
     val mockedBlock = mock[SidechainBlock]
@@ -361,7 +387,8 @@ class SidechainStateTestTestsExtension
       ArgumentMatchers.any[JList[Array[Byte]]]()))
       .thenReturn(Success(mockedApplicationState))
 
-    val sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, params, bytesToVersion(stateVersion.last.data), mockedApplicationState)
+    val sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeStorage,
+      params, bytesToVersion(stateVersion.last.data), mockedApplicationState)
 
     val applyTry = sidechainState.applyModifier(mockedBlock)
 
@@ -376,13 +403,16 @@ class SidechainStateTestTestsExtension
   def feePayments(): Unit = {
     val stateStorage: SidechainStateStorage = mock[SidechainStateStorage]
     val stateForgerBoxStorage: SidechainStateForgerBoxStorage = mock[SidechainStateForgerBoxStorage]
+    val stateUtxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage = mock[SidechainStateUtxoMerkleTreeStorage]
     val applicationState: ApplicationState = mock[ApplicationState]
 
     val version = getVersion
     Mockito.when(stateStorage.lastVersionId).thenReturn(Some(version))
     Mockito.when(stateForgerBoxStorage.lastVersionId).thenReturn(Some(version))
+    Mockito.when(stateUtxoMerkleTreeStorage.lastVersionId).thenReturn(Some(version))
 
-    val sidechainState = new SidechainState(stateStorage, stateForgerBoxStorage, params, bytesToVersion(version.data), applicationState)
+    val sidechainState = new SidechainState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage,
+      params, bytesToVersion(version.data), applicationState)
 
 
     // Test 1: No block fee info record in the storage
@@ -439,16 +469,81 @@ class SidechainStateTestTestsExtension
     assertEquals(s"Total fee value is wrong", totalFee, feePayments.map(_.value()).sum)
 
 
-    // Test 5:
-    val xz1 = BlockFeeInfo(0, getPrivateKey25519("forger1".getBytes()).publicImage())
-    val xz2 = BlockFeeInfo(1000, getPrivateKey25519("forger1".getBytes()).publicImage())
-    val xz3 = BlockFeeInfo(0, getPrivateKey25519("forger1".getBytes()).publicImage())
-    val xz4 = BlockFeeInfo(200, getPrivateKey25519("forger2".getBytes()).publicImage())
-    val xz5 = BlockFeeInfo(0, getPrivateKey25519("forger2".getBytes()).publicImage())
+    // Test 5: with multiple block fee info records created by 2 unique forgers
+    val bfi1 = BlockFeeInfo(0, getPrivateKey25519("forger1".getBytes()).publicImage())
+    val bfi2 = BlockFeeInfo(1000, getPrivateKey25519("forger1".getBytes()).publicImage())
+    val bfi3 = BlockFeeInfo(0, getPrivateKey25519("forger1".getBytes()).publicImage())
+    val bfi4 = BlockFeeInfo(200, getPrivateKey25519("forger2".getBytes()).publicImage())
+    val bfi5 = BlockFeeInfo(0, getPrivateKey25519("forger2".getBytes()).publicImage())
     Mockito.reset(stateStorage)
     Mockito.when(stateStorage.getFeePayments(ArgumentMatchers.any[Int]()))
-      .thenReturn(Seq(xz1, xz2, xz3, xz4, xz5))
+      .thenReturn(Seq(bfi1, bfi2, bfi3, bfi4, bfi5))
     feePayments = sidechainState.getFeePayments(0)
     assertEquals(s"Fee payments size expected to be different.", 2, feePayments.size)
+  }
+
+  @Test
+  def utxoMerkleTreeRoot(): Unit = {
+    val stateStorage: SidechainStateStorage = mock[SidechainStateStorage]
+    val stateForgerBoxStorage: SidechainStateForgerBoxStorage = mock[SidechainStateForgerBoxStorage]
+    val stateUtxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage = mock[SidechainStateUtxoMerkleTreeStorage]
+    val applicationState: ApplicationState = mock[ApplicationState]
+
+    val version = getVersion
+    Mockito.when(stateStorage.lastVersionId).thenReturn(Some(version))
+    Mockito.when(stateForgerBoxStorage.lastVersionId).thenReturn(Some(version))
+    Mockito.when(stateUtxoMerkleTreeStorage.lastVersionId).thenReturn(Some(version))
+
+    val sidechainState = new SidechainState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage,
+      params, bytesToVersion(version.data), applicationState)
+
+
+    // Test 1: No utxoMerkleTreeRoot found for given epoch
+    val withdrawalEpochNumber: Int = 0
+    Mockito.when(stateStorage.getUtxoMerkleTreeRoot(ArgumentMatchers.any[Int]())).thenAnswer(data => {
+      val epoch: Int = data.getArgument(0)
+      assertEquals("Different withdrawal epoch number found.", withdrawalEpochNumber, epoch)
+      None
+    })
+    val rootOpt1 = sidechainState.utxoMerkleTreeRoot(0)
+    assertTrue(s"No root expected to be found for given epoch.", rootOpt1.isEmpty)
+
+
+    // Test 2: utxoMerkleTreeRoot exists for given epoch
+    Mockito.reset(stateStorage)
+    val expectedRoot = FieldElementUtils.randomFieldElementBytes()
+    Mockito.when(stateStorage.getUtxoMerkleTreeRoot(ArgumentMatchers.any[Int]())).thenAnswer(data => {
+      val epoch: Int = data.getArgument(0)
+      assertEquals("Different withdrawal epoch number found.", withdrawalEpochNumber, epoch)
+      Some(expectedRoot)
+    })
+    val rootOpt2 = sidechainState.utxoMerkleTreeRoot(0)
+    assertTrue(s"Root expected to be found for given epoch.", rootOpt2.isDefined)
+    assertArrayEquals("Different root value found.", expectedRoot, rootOpt2.get)
+  }
+
+  @Test
+  def ceased(): Unit = {
+    val stateStorage: SidechainStateStorage = mock[SidechainStateStorage]
+    val stateForgerBoxStorage: SidechainStateForgerBoxStorage = mock[SidechainStateForgerBoxStorage]
+    val stateUtxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage = mock[SidechainStateUtxoMerkleTreeStorage]
+    val applicationState: ApplicationState = mock[ApplicationState]
+
+    val version = getVersion
+    Mockito.when(stateStorage.lastVersionId).thenReturn(Some(version))
+    Mockito.when(stateForgerBoxStorage.lastVersionId).thenReturn(Some(version))
+    Mockito.when(stateUtxoMerkleTreeStorage.lastVersionId).thenReturn(Some(version))
+
+    val sidechainState = new SidechainState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage,
+      params, bytesToVersion(version.data), applicationState)
+
+
+    // Test 1: Sidechain is alive
+    Mockito.when(stateStorage.hasCeased).thenReturn(false)
+    assertFalse(s"Sidechain must be alive.", sidechainState.hasCeased)
+
+    // Test 1: Sidechain has ceased
+    Mockito.when(stateStorage.hasCeased).thenReturn(true)
+    assertTrue(s"Sidechain must be ceased.", sidechainState.hasCeased)
   }
 }

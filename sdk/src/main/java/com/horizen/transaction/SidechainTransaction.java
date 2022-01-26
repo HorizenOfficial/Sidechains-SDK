@@ -3,8 +3,8 @@ package com.horizen.transaction;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import com.horizen.box.Box;
 import com.horizen.box.CoinsBox;
-import com.horizen.box.NoncedBox;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.box.WithdrawalRequestBox;
 import com.horizen.proposition.Proposition;
@@ -16,7 +16,7 @@ import scorex.crypto.hash.Blake2b256;
 import java.io.ByteArrayOutputStream;
 import java.util.List;
 
-abstract public class SidechainTransaction<P extends Proposition, B extends NoncedBox<P>> extends BoxTransaction<P, B>
+abstract public class SidechainTransaction<P extends Proposition, B extends Box<P>> extends BoxTransaction<P, B>
 {
     // We don't need to calculate the hashWithoutNonce value each time, because transaction is immutable.
     private byte[] _hashWithoutNonce;

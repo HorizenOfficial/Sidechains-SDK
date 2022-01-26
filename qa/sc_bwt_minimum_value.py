@@ -72,7 +72,7 @@ class SCBwtMinValue(SidechainTestFramework):
 
         # check all keys/boxes/balances are coherent with the default initialization
         check_wallet_coins_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance)
-        check_box_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account, 3, 1,
+        check_box_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account, "ForgerBox", 1,
                                  self.sc_nodes_bootstrap_info.genesis_account_balance)
 
 
@@ -98,7 +98,7 @@ class SCBwtMinValue(SidechainTestFramework):
 
         # check all keys/boxes/balances are coherent with the default initialization
         check_wallet_coins_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance + ft_amount)
-        check_box_balance(sc_node, sc_account, 1, 1, ft_amount)
+        check_box_balance(sc_node, sc_account, "ZenBox", 1, ft_amount)
 
         # Checking withdrawCoins
         # Try to withdraw coins from SC to MC: amount below the dust threshold

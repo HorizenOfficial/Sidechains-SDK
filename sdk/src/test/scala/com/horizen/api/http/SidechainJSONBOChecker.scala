@@ -2,7 +2,7 @@ package com.horizen.api.http
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlock}
-import com.horizen.box.{Box, BoxUnlocker, NoncedBox}
+import com.horizen.box.{Box, BoxUnlocker}
 import com.horizen.transaction.{BoxTransaction, MC2SCAggregatedTransaction}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.junit.Assert._
@@ -34,9 +34,10 @@ class SidechainJSONBOChecker {
       assertTrue(sign.get("signature").isTextual)
     })
     newBoxesJsonNode.foreach(node => {
-      assertTrue(node.elements().asScala.length >= 4)
-      assertTrue(node.elements().asScala.length <= 5)
-      assertTrue(node.get("typeId").isInt)
+      assertTrue(node.elements().asScala.length >= 5)
+      assertTrue(node.elements().asScala.length <= 6)
+      assertTrue(node.get("typeName").isTextual)
+      assertTrue(node.get("isCustom").isBoolean)
       assertTrue(node.get("proposition").isObject)
       assertTrue(node.get("value").isNumber)
       assertTrue(node.get("id").isTextual)
@@ -86,21 +87,23 @@ class SidechainJSONBOChecker {
 
   def assertsOnBoxJson(json: JsonNode, box: Box[_]): Unit = {
     assertTrue(json.elements().asScala.length >= 4)
-    assertTrue(json.elements().asScala.length <= 7)
-    assertTrue(json.get("typeId").isInt)
+    assertTrue(json.elements().asScala.length <= 9)
+    assertTrue(json.get("typeName").isTextual)
     assertTrue(json.get("proposition").isObject)
     assertTrue(json.get("value").isNumber)
     assertTrue(json.get("id").isTextual)
     assertEquals(BytesUtils.toHexString(box.id()), json.get("id").asText())
     assertEquals(box.value(), json.get("value").asLong())
-    assertEquals(box.boxTypeId().toInt, json.get("typeId").asInt())
+    assertEquals(box.typeName(), json.get("typeName").asText())
     assertEquals(1, json.get("proposition").elements().asScala.length)
     val publicKey = json.get("proposition")
     assertEquals(1, publicKey.elements().asScala.length)
     assertTrue(publicKey.get("publicKey").isTextual)
+    assertTrue(json.get("isCustom").isBoolean)
+    assertEquals(box.isCustom, json.get("isCustom").asBoolean())
     if (json.elements().asScala.length > 4) {
       assertTrue(json.get("nonce").isNumber)
-      assertEquals(box.asInstanceOf[NoncedBox[_]].nonce(), json.get("nonce").asLong())
+      assertEquals(box.asInstanceOf[Box[_]].nonce(), json.get("nonce").asLong())
     }
   }
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 import json
 import time
 
@@ -43,7 +43,7 @@ class SCBackwardTransfer(SidechainTestFramework):
     def setup_nodes(self):
         num_nodes = 1
         # Set MC scproofqueuesize to 0 to avoid BatchVerifier processing delays
-        return start_nodes(num_nodes, self.options.tmpdir, extra_args=[['-debug=sc', '-logtimemicros=1', '-scproofqueuesize=0']] * num_nodes)
+        return start_nodes(num_nodes, self.options.tmpdir, extra_args=[['-debug=sc', '-debug=ws',  '-logtimemicros=1', '-scproofqueuesize=0']] * num_nodes)
 
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
@@ -74,7 +74,7 @@ class SCBackwardTransfer(SidechainTestFramework):
 
         # check all keys/boxes/balances are coherent with the default initialization
         check_wallet_coins_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance)
-        check_box_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account, 3, 1,
+        check_box_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account, "ForgerBox", 1,
                                  self.sc_nodes_bootstrap_info.genesis_account_balance)
 
 
@@ -100,7 +100,7 @@ class SCBackwardTransfer(SidechainTestFramework):
 
         # check all keys/boxes/balances are coherent with the default initialization
         check_wallet_coins_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance + ft_amount)
-        check_box_balance(sc_node, sc_account, 1, 1, ft_amount)
+        check_box_balance(sc_node, sc_account, "ZenBox", 1, ft_amount)
 
         # Generate 8 more MC block to finish the first withdrawal epoch, then generate 1 more SC block to sync with MC.
         we0_end_mcblock_hash = mc_node.generate(8)[7]
@@ -300,7 +300,6 @@ class SCBackwardTransfer(SidechainTestFramework):
 
         assert_equal(we1_certHash, we1_sc_cert["hash"], "Certificate hash is different to the one in MC.")
 
-        # TODO: continue the flow and test ceased Sidechain case.
 
 if __name__ == "__main__":
     SCBackwardTransfer().main()

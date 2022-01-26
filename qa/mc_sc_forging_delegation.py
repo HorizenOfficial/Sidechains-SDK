@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -53,7 +53,7 @@ class MCSCForgingDelegation(SidechainTestFramework):
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0)))
         )
 
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 100, 1000),
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 100, 900),
                                          sc_node_1_configuration, sc_node_2_configuration)
         # rewind sc genesis block timestamp for 5 consensus epochs
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options.tmpdir, network, 720*120*5)
@@ -88,7 +88,7 @@ class MCSCForgingDelegation(SidechainTestFramework):
 
         # check all keys/boxes/balances are coherent with the default initialization
         check_wallet_coins_balance(sc_node1, self.sc_nodes_bootstrap_info.genesis_account_balance + ft_amount)
-        check_box_balance(sc_node1, sc_node1_account, 1, 1, ft_amount)
+        check_box_balance(sc_node1, sc_node1_account, "ZenBox", 1, ft_amount)
 
         # Delegate 300 Zen and 200 Zen to SC node 2 - expected stake is 500 Zen
         sc_node2_address = sc_node2.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
@@ -126,7 +126,7 @@ class MCSCForgingDelegation(SidechainTestFramework):
         # Check SC nodes balances
         # SC node 1 owns ForgerBoxes
         check_wallet_coins_balance(sc_node1, self.sc_nodes_bootstrap_info.genesis_account_balance + ft_amount)
-        check_box_balance(sc_node1, sc_node1_account, 3, 2, ft_amount)  # ForgerBox type = 3
+        check_box_balance(sc_node1, sc_node1_account, "ForgerBox", 2, ft_amount)
         # SC node 2 doesn't own ForgerBoxes
         check_wallet_coins_balance(sc_node2, 0)
 

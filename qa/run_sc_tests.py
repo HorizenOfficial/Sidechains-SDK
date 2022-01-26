@@ -1,10 +1,13 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 import sys
 
 from mc_sc_forging_delegation import MCSCForgingDelegation
 from sc_ceased import SCCeased
 from sc_cert_no_coin_record import SCCertNoCoinRecord
 from sc_cert_submission_decentralization import SCCertSubmissionDecentralization
+from sc_csw_ceased_at_epoch_1 import SCCswCeasedAtEpoch1
+from sc_csw_ceased_at_epoch_2 import SCCswCeasedAtEpoch2
+from sc_csw_ceased_at_epoch_3 import SCCswCeasedAtEpoch3
 from sc_cum_comm_tree_hash import SCCumCommTreeHash
 from sc_multiple_certs import SCMultipleCerts
 from sc_nodes_initialize import SidechainNodesInitializationTest
@@ -94,6 +97,16 @@ def run_tests(log_file):
 
     result = run_test(SCBwtMinValue())
     assert_equal(0, result, "sc_bwt_min_value test failed!")
+
+    result = run_test(SCCswCeasedAtEpoch1())
+    assert_equal(0, result, "sc_csw_ceased_at_epoch_1 test failed!")
+
+    result = run_test(SCCswCeasedAtEpoch2())
+    assert_equal(0, result, "sc_csw_ceased_at_epoch_2 test failed!")
+
+    result = run_test(SCCswCeasedAtEpoch3())
+    assert_equal(0, result, "sc_csw_ceased_at_epoch_3 test failed!")
+
 
 if __name__ == "__main__":
     log_file = open("sc_test.log", "w")

@@ -48,8 +48,10 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
           @Named("WalletTransactionStorage")  walletTransactionStorage: Storage,
           @Named("StateStorage")  stateStorage: Storage,
           @Named("StateForgerBoxStorage") forgerBoxStorage: Storage,
+          @Named("StateUtxoMerkleTreeStorage") utxoMerkleTreeStorage: Storage,
           @Named("HistoryStorage")  historyStorage: Storage,
           @Named("WalletForgingBoxesInfoStorage")  walletForgingBoxesInfoStorage: Storage,
+          @Named("WalletCswDataStorage") walletCswDataStorage: Storage,
           @Named("ConsensusStorage")  consensusStorage: Storage,
           @Named("CustomApiGroups")  customApiGroups: JList[ApplicationApiGroup],
           @Named("RejectedApiPaths")  rejectedApiPaths : JList[Pair[String, String]]
@@ -68,8 +70,10 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
           walletTransactionStorage,
           stateStorage,
           forgerBoxStorage,
+          utxoMerkleTreeStorage,
           historyStorage,
           walletForgingBoxesInfoStorage,
+          walletCswDataStorage,
           consensusStorage,
           customApiGroups,
           rejectedApiPaths

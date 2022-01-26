@@ -1,7 +1,7 @@
 package com.horizen.block
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
-import com.horizen.box.{ForgerBox, NoncedBox}
+import com.horizen.box.{Box, ForgerBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.params.NetworkParams
@@ -26,7 +26,7 @@ import scala.util.{Failure, Success, Try}
 @JsonView(Array(classOf[Views.Default]))
 @JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder", "companion", "feeInfo"))
 class SidechainBlock(override val header: SidechainBlockHeader,
-                      val sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]],
+                      val sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]],
                       val mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
                       override val mainchainHeaders: Seq[MainchainHeader],
                       override val ommers: Seq[Ommer],
@@ -218,7 +218,7 @@ object SidechainBlock extends ScorexEncoding {
              blockVersion: Block.Version,
              timestamp: Block.Timestamp,
              mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-             sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]],
+             sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]],
              mainchainHeaders: Seq[MainchainHeader],
              ommers: Seq[Ommer],
              ownerPrivateKey: PrivateKey25519,
@@ -291,7 +291,7 @@ object SidechainBlock extends ScorexEncoding {
     block
   }
 
-  def calculateTransactionsMerkleRootHash(sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]]): Array[Byte] = {
+  def calculateTransactionsMerkleRootHash(sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]]): Array[Byte] = {
     if(sidechainTransactions.nonEmpty)
       MerkleTree.createMerkleTree(sidechainTransactions.map(tx => idToBytes(ModifierId @@ tx.id)).asJava).rootHash()
     else
@@ -359,7 +359,7 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
 
     val sidechainBlockHeader: SidechainBlockHeader = SidechainBlockHeaderSerializer.parse(r)
     val sidechainTransactions = sidechainTransactionsSerializer.parse(r)
-      .asScala.map(t => t.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]])
+      .asScala.map(t => t.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]])
     val mainchainBlockReferencesData = mcBlocksDataSerializer.parse(r).asScala
     val mainchainHeaders = mainchainHeadersSerializer.parse(r).asScala
     val ommers = ommersSerializer.parse(r).asScala

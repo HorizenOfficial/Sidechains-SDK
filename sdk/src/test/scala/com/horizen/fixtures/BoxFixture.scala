@@ -1,11 +1,11 @@
 package com.horizen.fixtures
 
+import com.google.common.primitives.Longs
 import scorex.core.bytesToId
 import com.horizen.box._
 import com.horizen.proposition.{MCPublicKeyHashProposition, Proposition, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.secret.PrivateKey25519
 import java.util.{ArrayList => JArrayList, List => JList}
-
 import com.horizen.box.data.{ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
 import com.horizen.{SidechainTypes, WalletBox}
 
@@ -29,8 +29,17 @@ trait BoxFixture
     new ZenBox(new ZenBoxData(getPrivateKey25519.publicImage(), Random.nextInt(100)), 1)
   }
 
+  def getZenBox(seed: Long): ZenBox = {
+    val random: Random = new Random(seed)
+    new ZenBox(new ZenBoxData(getPrivateKey25519(Longs.toByteArray(seed)).publicImage(), random.nextInt(100)), random.nextLong())
+  }
+
   def getZenBox(privateKey: PrivateKey25519, nonce: Long, value: Long): ZenBox = {
     new ZenBox(new ZenBoxData(privateKey.publicImage(), value), nonce)
+  }
+
+  def getZenBox(proposition: PublicKey25519Proposition): ZenBox = {
+    new ZenBox(new ZenBoxData(proposition, Random.nextInt(100)), Random.nextInt(100))
   }
 
   def getZenBox(proposition: PublicKey25519Proposition, nonce: Long, value: Long): ZenBox = {

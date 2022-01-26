@@ -8,8 +8,8 @@ import java.util.Random
 import com.google.common.primitives.{Ints, Longs}
 import com.horizen.block._
 import com.horizen.box.data.ForgerBoxData
-import com.horizen.box.{ForgerBox, NoncedBox}
-import com.horizen.commitmenttree.CustomBitvectorElementsConfig
+import com.horizen.box.{ForgerBox, Box}
+import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
 import com.horizen.fixtures._
@@ -193,7 +193,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
 
     val vrfProofInBlock: VrfProof = generationRules.corruption.forcedVrfProof.getOrElse(vrfProof)
 
-    val sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] = Seq(
+    val sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]] = Seq(
       SidechainBlocksGenerator.txGen.generateRegularTransaction(rnd = rnd, transactionBaseTimeStamp = timestamp, inputTransactionsSize = 1, outputTransactionsSize = 1)
     )
 
@@ -523,11 +523,13 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val consensusSlotsInEpoch: Int = params.consensusSlotsInEpoch
       override val signersPublicKeys: Seq[SchnorrProposition] = params.signersPublicKeys
       override val signersThreshold: Int = params.signersThreshold
-      override val provingKeyFilePath: String = params.provingKeyFilePath
-      override val verificationKeyFilePath: String = params.verificationKeyFilePath
+      override val certProvingKeyFilePath: String = params.certProvingKeyFilePath
+      override val certVerificationKeyFilePath: String = params.certVerificationKeyFilePath
       override val calculatedSysDataConstant: Array[Byte] = new Array[Byte](32) //calculate if we need for some reason that data
       override val initialCumulativeCommTreeHash: Array[Byte] = params.initialCumulativeCommTreeHash
       override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig] = Seq()
+      override val cswProvingKeyFilePath: String = params.cswProvingKeyFilePath
+      override val cswVerificationKeyFilePath: String = params.cswVerificationKeyFilePath
     }
   }
 

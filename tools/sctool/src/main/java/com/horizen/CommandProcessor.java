@@ -10,8 +10,8 @@ import com.google.common.primitives.Ints;
 import com.horizen.block.MainchainBlockReference;
 import com.horizen.block.Ommer;
 import com.horizen.block.SidechainBlock;
+import com.horizen.box.Box;
 import com.horizen.box.ForgerBox;
-import com.horizen.box.NoncedBox;
 import com.horizen.companion.SidechainSecretsCompanion;
 import com.horizen.companion.SidechainTransactionsCompanion;
 import com.horizen.consensus.ForgingStakeInfo;
@@ -60,8 +60,11 @@ public class CommandProcessor {
             case "generateVrfKey":
                 processGenerateVrfKey(command.data());
                 break;
-            case "generateProofInfo":
-                processGenerateProofInfo(command.data());
+            case "generateCertProofInfo":
+                processGenerateCertProofInfo(command.data());
+                break;
+            case "generateCswProofInfo":
+                processGenerateCswProofInfo(command.data());
                 break;
             default:
                 printUnsupportedCommandMsg(command.name());
@@ -121,7 +124,8 @@ public class CommandProcessor {
                       "\thelp\n" +
                       "\tgeneratekey <arguments>\n" +
                       "\tgenerateVrfKey <arguments>\n" +
-                      "\tgenerateProofInfo <arguments>\n" +
+                      "\tgenerateCertProofInfo <arguments>\n" +
+                      "\tgenerateCswProofInfo <arguments>\n" +
                       "\tgenesisinfo <arguments>\n" +
                       "\texit\n"
         );
@@ -180,56 +184,56 @@ public class CommandProcessor {
         printer.print(res);
     }
 
-    private void printGenerateProofInfoUsageMsg(String error) {
+    private void printGenerateCertProofInfoUsageMsg(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                      "\tgenerateProofInfo {\"seed\":\"my seed\", \"maxPks\":7, \"threshold\":5, " +
+                      "\tgenerateCertProofInfo {\"seed\":\"my seed\", \"maxPks\":7, \"threshold\":5, " +
                       "\"provingKeyPath\": \"/tmp/sidechain/snark_proving_key\", " +
                       "\"verificationKeyPath\": \"/tmp/sidechain/snark_verification_key\" }" +
                       "\tthreshold parameter should be less or equal to keyCount.");
     }
 
-    private void processGenerateProofInfo(JsonNode json) {
+    private void processGenerateCertProofInfo(JsonNode json) {
 
         if(!json.has("seed") || !json.get("seed").isTextual()) {
-            printGenerateProofInfoUsageMsg("seed is not specified or has invalid format.");
+            printGenerateCertProofInfoUsageMsg("seed is not specified or has invalid format.");
             return;
         }
 
         byte[] seed = json.get("seed").asText().getBytes();
 
         if (!json.has("maxPks") || !json.get("maxPks").isInt()) {
-            printGenerateProofInfoUsageMsg("wrong maxPks");
+            printGenerateCertProofInfoUsageMsg("wrong maxPks");
             return;
         }
 
         int maxPks = json.get("maxPks").asInt();
 
         if (maxPks <= 0) {
-            printGenerateProofInfoUsageMsg("wrong max keys number: " + maxPks);
+            printGenerateCertProofInfoUsageMsg("wrong max keys number: " + maxPks);
             return;
         }
 
         if (!json.has("threshold") || !json.get("threshold").isInt()) {
-            printGenerateProofInfoUsageMsg("wrong threshold");
+            printGenerateCertProofInfoUsageMsg("wrong threshold");
             return;
         }
 
         int threshold = json.get("threshold").asInt();
 
         if (threshold <= 0 || threshold > maxPks) {
-            printGenerateProofInfoUsageMsg("wrong threshold: " + threshold);
+            printGenerateCertProofInfoUsageMsg("wrong threshold: " + threshold);
             return;
         }
 
         if (!json.has("provingKeyPath") || !json.get("provingKeyPath").isTextual()) {
-            printGenerateProofInfoUsageMsg("wrong provingKeyPath value. Textual value expected.");
+            printGenerateCertProofInfoUsageMsg("wrong provingKeyPath value. Textual value expected.");
             return;
         }
         String provingKeyPath = json.get("provingKeyPath").asText();
 
         if (!json.has("verificationKeyPath") || !json.get("verificationKeyPath").isTextual()) {
-            printGenerateProofInfoUsageMsg("wrong verificationKeyPath value. Textual value expected.");
+            printGenerateCertProofInfoUsageMsg("wrong verificationKeyPath value. Textual value expected.");
             return;
         }
         String verificationKeyPath = json.get("verificationKeyPath").asText();
@@ -239,7 +243,7 @@ public class CommandProcessor {
         // Generate all keys only if verification key doesn't exist.
         // Note: we are interested only in verification key raw data.
         if(!Files.exists(Paths.get(verificationKeyPath))) {
-            if (!CryptoLibProvider.sigProofThresholdCircuitFunctions().generateCoboundaryMarlinDLogKeys()) {
+            if (!CryptoLibProvider.commonCircuitFunctions().generateCoboundaryMarlinDLogKeys()) {
                 printer.print("Error occurred during dlog key generation.");
                 return;
             }
@@ -250,7 +254,7 @@ public class CommandProcessor {
             }
         }
         // Read verification key from file
-        String verificationKey = CryptoLibProvider.sigProofThresholdCircuitFunctions().getCoboundaryMarlinSnarkVerificationKeyHex(verificationKeyPath);
+        String verificationKey = CryptoLibProvider.commonCircuitFunctions().getCoboundaryMarlinSnarkVerificationKeyHex(verificationKeyPath);
         if(verificationKey.isEmpty()) {
             printer.print("Verification key file is empty or the key is broken.");
             return;
@@ -286,6 +290,72 @@ public class CommandProcessor {
         String res = resJson.toString();
         printer.print(res);
     }
+
+
+    private void printGenerateCswProofInfoUsageMsg(String error) {
+        printer.print("Error: " + error);
+        printer.print("Usage:\n" +
+                "\tgenerateCswProofInfo {\"withdrawalEpochLen\":100, " +
+                "\"provingKeyPath\": \"/tmp/sidechain/csw_proving_key\", " +
+                "\"verificationKeyPath\": \"/tmp/sidechain/csw_verification_key\" }");
+    }
+
+    private void processGenerateCswProofInfo(JsonNode json) {
+
+        if (!json.has("withdrawalEpochLen") || !json.get("withdrawalEpochLen").isInt()) {
+            printGenerateCswProofInfoUsageMsg("wrong withdrawalEpochLen");
+            return;
+        }
+
+        int withdrawalEpochLen = json.get("withdrawalEpochLen").asInt();
+
+        if (withdrawalEpochLen <= 0) {
+            printGenerateCswProofInfoUsageMsg("wrong withdrawalEpochLen: " + withdrawalEpochLen);
+            return;
+        }
+
+        if (!json.has("provingKeyPath") || !json.get("provingKeyPath").isTextual()) {
+            printGenerateCswProofInfoUsageMsg("wrong provingKeyPath value. Textual value expected.");
+            return;
+        }
+        String provingKeyPath = json.get("provingKeyPath").asText();
+
+        if (!json.has("verificationKeyPath") || !json.get("verificationKeyPath").isTextual()) {
+            printGenerateCertProofInfoUsageMsg("wrong verificationKeyPath value. Textual value expected.");
+            return;
+        }
+        String verificationKeyPath = json.get("verificationKeyPath").asText();
+
+        // Generate all keys only if verification key doesn't exist.
+        // Note: we are interested only in verification key raw data.
+        if(!Files.exists(Paths.get(verificationKeyPath))) {
+            if (!CryptoLibProvider.commonCircuitFunctions().generateCoboundaryMarlinDLogKeys()) {
+                printer.print("Error occurred during dlog key generation.");
+                return;
+            }
+
+            if (!CryptoLibProvider.cswCircuitFunctions().generateCoboundaryMarlinSnarkKeys(withdrawalEpochLen, provingKeyPath, verificationKeyPath)) {
+                printer.print("Error occurred during snark keys generation.");
+                return;
+            }
+        }
+        // Read verification key from file
+        String verificationKey = CryptoLibProvider.commonCircuitFunctions().getCoboundaryMarlinSnarkVerificationKeyHex(verificationKeyPath);
+        if(verificationKey.isEmpty()) {
+            printer.print("Verification key file is empty or the key is broken.");
+            return;
+        }
+
+        ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+        ObjectNode resJson = mapper.createObjectNode();
+
+        resJson.put("withdrawalEpochLen", withdrawalEpochLen);
+        resJson.put("verificationKey", verificationKey);
+
+        String res = resJson.toString();
+        printer.print(res);
+    }
+
 
     private void printGenesisInfoUsageMsg(String error) {
         printer.print("Error: " + error);
@@ -439,7 +509,7 @@ public class CommandProcessor {
                     SidechainBlock.BLOCK_VERSION(),
                     timestamp,
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.data())).asScala().toSeq(),
-                    scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, NoncedBox<Proposition>>>()).asScala().toSeq(),
+                    scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, Box<Proposition>>>()).asScala().toSeq(),
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.header())).asScala().toSeq(),
                     scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer>()).asScala().toSeq(),
                     key,
@@ -507,11 +577,11 @@ public class CommandProcessor {
     private NetworkParams getNetworkParams(byte network, byte[] scId) {
         switch(network) {
             case 0: // mainnet
-                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, 0, null, null, null, null, null);
+                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, 0, null, null, null, null, null, null, null);
             case 1: // testnet
-                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null, null, null);
+                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null, null, null, null, null);
             case 2: // regtest
-                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null, null, null);
+                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null, null, null, null, null);
             default:
                 throw new IllegalStateException("Unexpected network type: " + network);
         }

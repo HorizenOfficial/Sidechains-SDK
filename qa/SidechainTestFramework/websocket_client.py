@@ -26,7 +26,7 @@ class WebsocketClient():
     def sendMessage(self, ws, msgType, requestId, requestType, requestPayload):
         ws.send('{"msgType":'+str(msgType)+', "requestId":'+str(requestId)+', "requestType":'+str(requestType)+', "requestPayload":'+requestPayload+' }')
         timeout = 500
-        for x in xrange(1, timeout):
+        for x in range(1, timeout):
             results = ws.recv()
             if len(results)==0:
                 time.sleep(1)

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 import json
 import os
 import time
@@ -10,7 +10,8 @@ from test_framework.util import assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index, initialize_chain_clean, connect_nodes_bi
 from SidechainTestFramework.scutil import start_sc_nodes, \
     generate_secrets, generate_vrf_secrets, generate_certificate_proof_info, \
-    bootstrap_sidechain_node, generate_next_blocks, launch_bootstrap_tool, proof_keys_paths
+    bootstrap_sidechain_node, generate_next_blocks, launch_bootstrap_tool, cert_proof_keys_paths, \
+    csw_proof_keys_paths, generate_csw_proof_info
 
 """
 Demo flow of how to bootstrap SC network and start SC nodes.
@@ -81,8 +82,11 @@ class Demo(SidechainTestFramework):
         if not os.path.isdir(ps_keys_dir):
             os.makedirs(ps_keys_dir)
 
-        keys_paths = proof_keys_paths(ps_keys_dir)
-        certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, keys_paths)
+        cert_keys_paths = cert_proof_keys_paths(ps_keys_dir)
+        certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, cert_keys_paths)
+
+        csw_keys_paths = csw_proof_keys_paths(ps_keys_dir, sc_creation_info.withdrawal_epoch_length)
+        csw_vr_key = generate_csw_proof_info(withdrawal_epoch_length, csw_keys_paths)
 
         custom_data = vrf_key.publicKey
         cmdInput = {
@@ -106,14 +110,14 @@ class Demo(SidechainTestFramework):
         sc_create_res = mc_node.sc_create(cmdInput)
 
         transaction_id = sc_create_res["txid"]
-        print "Sidechain creation transaction Id - {0}".format(transaction_id)
+        print("Sidechain creation transaction Id - {0}".format(transaction_id))
 
         sidechain_id = sc_create_res["scid"]
-        print "Sidechain created with Id -  {0}\n".format(sidechain_id)
+        print("Sidechain created with Id -  {0}\n".format(sidechain_id))
 
-        print "Generating Block with sidechain creation transaction..."
+        print("Generating Block with sidechain creation transaction...")
         block_id = mc_node.generate(1)[0]
-        print "Block id - {}\n".format(block_id)
+        print("Block id - {}\n".format(block_id))
 
         self.pause()
 
@@ -148,7 +152,7 @@ class Demo(SidechainTestFramework):
         sc_bootstrap_info = SCBootstrapInfo(sidechain_id, genesis_account, sc_creation_info.forward_amount, genesis_info[1],
                                genesis_data["scGenesisBlockHex"], genesis_data["powData"], genesis_data["mcNetwork"],
                                sc_creation_info.withdrawal_epoch_length, vrf_key, certificate_proof_info,
-                               genesis_data["initialCumulativeCommTreeHash"], keys_paths)
+                               genesis_data["initialCumulativeCommTreeHash"], cert_keys_paths, csw_keys_paths)
 
 
         bootstrap_sidechain_node(self.options.tmpdir, 0, sc_bootstrap_info, sc_node_configuration)
@@ -191,12 +195,12 @@ class Demo(SidechainTestFramework):
 
 
         # Generate MC block and SC block and check that FT appears in SC node wallet
-        print "Generating MC Block with Forward Transfer..."
+        print("Generating MC Block with Forward Transfer...")
         self.sync_all()
         mcblock_hash1 = mc_node_miner.generate(1)[0]
         self.sync_all()
-        print "MC Block id - {}\n".format(mcblock_hash1)
-        print "Generating SC Block to include MC Block Forward Transfer..."
+        print("MC Block id - {}\n".format(mcblock_hash1))
+        print("Generating SC Block to include MC Block Forward Transfer...")
         scblock_id1 = generate_next_blocks(sc_node, "first node", 1)[0]
 
         self.pause()
@@ -224,7 +228,7 @@ class Demo(SidechainTestFramework):
         print(sc_address)
         self.send_coins(sc_node, sc_address, sc_send_amount * coin, 100)
 
-        print "Generating SC Block with send coins transaction..."
+        print("Generating SC Block with send coins transaction...")
         scblock_id2 = generate_next_blocks(sc_node, "first node", 1)[0]
 
         self.pause()
@@ -251,7 +255,7 @@ class Demo(SidechainTestFramework):
         print("\nCreating Backward Transfer request to withdraw {} satoshi ({} Zen) to the Mainchain...".format(bt_amount * coin, bt_amount))
         sc_node.transaction_withdrawCoins(json.dumps(withdrawal_request))
 
-        print "Generating SC Block with Backward Transfer request transaction..."
+        print("Generating SC Block with Backward Transfer request transaction...")
         scblock_id3 = generate_next_blocks(sc_node, "first node", 1)[0]
 
         self.pause()
@@ -259,7 +263,7 @@ class Demo(SidechainTestFramework):
         # Run block generation till epoch end -> automatic block generation
         print("Generating 9 more MC blocks to finish withdrawal epoch for the Sidechain...")
         mc_block_ids = mc_node.generate(9)
-        print "MC Block ids - {}\n".format(mc_block_ids)
+        print("MC Block ids - {}\n".format(mc_block_ids))
         print("Generating SC blocks to synchronize MC blocks and automatically start creation of Withdrawal Certificate...")
         sc_block_ids = generate_next_blocks(sc_node, "first node", 4)
         print("\nGenerating Withdrawal Certificate...\n")
@@ -286,7 +290,7 @@ class Demo(SidechainTestFramework):
         # Generate MC block to include the certificate
         print("\nGenerating 1 more MC block to include Withdrawal certificate in the chain...")
         mc_block_4 = mc_node.generate(1)[0]
-        print "MC Block id - {}\n".format(mc_block_4)
+        print("MC Block id - {}\n".format(mc_block_4))
 
         self.pause()
 
@@ -306,7 +310,7 @@ class Demo(SidechainTestFramework):
         self.pause()
 
     def pause(self):
-        raw_input("Press the <ENTER> key to continue...")
+        input("Press the <ENTER> key to continue...")
 
     def send_coins(self, sc_node, receiver, amount, fee):
         j = {"outputs": [ {

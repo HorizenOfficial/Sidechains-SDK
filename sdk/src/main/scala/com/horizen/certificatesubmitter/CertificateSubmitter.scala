@@ -3,6 +3,7 @@ package com.horizen.certificatesubmitter
 
 import java.io.File
 import java.util.Optional
+
 import akka.actor.{Actor, ActorRef, ActorSystem, Props, Timers}
 import akka.pattern.ask
 import akka.util.Timeout
@@ -10,8 +11,7 @@ import com.horizen._
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter.{CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, CertificateSubmissionStarted, CertificateSubmissionStopped, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, SignaturesStatus, SubmissionWindowStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
-import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.librustsidechains.FieldElement
+import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
@@ -24,8 +24,8 @@ import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 import scorex.util.ScorexLogging
-
 import java.util
+
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.Platform.EOL
@@ -133,11 +133,11 @@ class CertificateSubmitter(settings: SidechainSettings,
         s"'${BytesUtils.toHexString(expectedSysDataConstantOpt.getOrElse(Array.emptyByteArray))}' but actual is '${BytesUtils.toHexString(actualSysDataConstant)}'")
     }
 
-    if (params.provingKeyFilePath.isEmpty) {
+    if (params.certProvingKeyFilePath.isEmpty) {
       throw new IllegalStateException(s"Proving key file name is not set")
     }
 
-    val provingFile: File = new File(params.provingKeyFilePath)
+    val provingFile: File = new File(params.certProvingKeyFilePath)
     if (!provingFile.canRead) {
       throw new IllegalStateException(s"Proving key file at path ${provingFile.getAbsolutePath} is not exist or can't be read")
     }
@@ -234,13 +234,16 @@ class CertificateSubmitter(settings: SidechainSettings,
       val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
       val sidechainId = params.sidechainId
 
-      CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned (
-      withdrawalRequests.asJava,
-      sidechainId,
-      referencedWithdrawalEpochNumber,
-      endEpochCumCommTreeHash,
-      btrFee,
-      ftMinAmount)
+      val utxoMerkleTreeRoot = state.utxoMerkleTreeRoot(referencedWithdrawalEpochNumber).get
+
+      CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(
+        withdrawalRequests.asJava,
+        sidechainId,
+        referencedWithdrawalEpochNumber,
+        endEpochCumCommTreeHash,
+        btrFee,
+        ftMinAmount,
+        utxoMerkleTreeRoot)
     }
 
     Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getMessage), timeoutDuration).asInstanceOf[Array[Byte]]
@@ -405,6 +408,7 @@ class CertificateSubmitter(settings: SidechainSettings,
                   dataForProofGeneration.withdrawalRequests,
                   dataForProofGeneration.ftMinAmount,
                   dataForProofGeneration.btrFee,
+                  dataForProofGeneration.utxoMerkleTreeRoot,
                   certificateFee,
                   params)
 
@@ -435,6 +439,7 @@ class CertificateSubmitter(settings: SidechainSettings,
                                     endEpochCumCommTreeHash: Array[Byte],
                                     btrFee: Long,
                                     ftMinAmount: Long,
+                                    utxoMerkleTreeRoot: Array[Byte],
                                     schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])])
 
   private def buildDataForProofGeneration(sidechainNodeView: View, status: SignaturesStatus): DataForProofGeneration = {
@@ -447,6 +452,7 @@ class CertificateSubmitter(settings: SidechainSettings,
     val ftMinAmount: Long = getFtMinAmount(status.referencedEpoch)
     val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, status.referencedEpoch)
     val sidechainId = params.sidechainId
+    val utxoMerkleTreeRoot = state.utxoMerkleTreeRoot(status.referencedEpoch).get
 
     val signersPublicKeyWithSignatures = params.signersPublicKeys.zipWithIndex.map{
       case (pubKey, pubKeyIndex) =>
@@ -460,6 +466,7 @@ class CertificateSubmitter(settings: SidechainSettings,
       endEpochCumCommTreeHash,
       btrFee,
       ftMinAmount,
+      utxoMerkleTreeRoot,
       signersPublicKeyWithSignatures)
   }
 
@@ -486,6 +493,7 @@ class CertificateSubmitter(settings: SidechainSettings,
       s"with parameters: sidechainId LE = ${BytesUtils.toHexString(dataForProofGeneration.sidechainId)}, " +
       s"withdrawalRequests=${dataForProofGeneration.withdrawalRequests.foreach(_.toString)}, " +
       s"endEpochCumCommTreeHash=${BytesUtils.toHexString(dataForProofGeneration.endEpochCumCommTreeHash)}, " +
+      s"utxoMerkleTreeRoot=${BytesUtils.toHexString(dataForProofGeneration.utxoMerkleTreeRoot)}, " +
       s"signersThreshold=${params.signersThreshold}. " +
       s"It can take a while.")
 
@@ -497,6 +505,7 @@ class CertificateSubmitter(settings: SidechainSettings,
       dataForProofGeneration.endEpochCumCommTreeHash,
       dataForProofGeneration.btrFee,
       dataForProofGeneration.ftMinAmount,
+      dataForProofGeneration.utxoMerkleTreeRoot,
       signaturesBytes.asJava,
       signersPublicKeysBytes.asJava,
       params.signersThreshold,
@@ -556,7 +565,7 @@ object CertificateSubmitter {
 
   case class CertificateSignatureFromRemoteInfo(pubKeyIndex: Int, messageToSign: Array[Byte], signature: SchnorrProof) {
     require(pubKeyIndex >= 0, "pubKeyIndex can't be negative value.")
-    require(messageToSign.length == FieldElement.FIELD_ELEMENT_LENGTH, "messageToSign has invalid length")
+    require(messageToSign.length == FieldElementUtils.fieldElementLength(), "messageToSign has invalid length")
   }
 
   // Internal interface

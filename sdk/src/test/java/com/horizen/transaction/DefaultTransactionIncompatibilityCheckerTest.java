@@ -1,8 +1,8 @@
 package com.horizen.transaction;
 
-import com.horizen.box.NoncedBox;
+import com.horizen.box.Box;
 import com.horizen.box.ZenBox;
-import com.horizen.box.data.NoncedBoxData;
+import com.horizen.box.data.BoxData;
 import com.horizen.box.data.ZenBoxData;
 import com.horizen.fixtures.BoxFixtureClass;
 import com.horizen.proposition.Proposition;
@@ -53,7 +53,7 @@ public class DefaultTransactionIncompatibilityCheckerTest extends BoxFixtureClas
 
         // Set outputs, the same for all transactions
         PrivateKey25519 pk7 = creator.generateSecret("test_seed7".getBytes());
-        List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to = new ArrayList<>();
+        List<BoxData<? extends Proposition, ? extends Box<? extends Proposition>>> to = new ArrayList<>();
         to.add(new ZenBoxData(pk7.publicImage(), 10L));
 
         RegularTransaction newTx = RegularTransaction.create(from1, to, fee);

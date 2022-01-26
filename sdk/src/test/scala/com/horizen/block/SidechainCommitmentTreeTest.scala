@@ -1,7 +1,10 @@
 package com.horizen.block
 
 import com.google.common.primitives.{Bytes, Ints}
+import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.fixtures.SecretFixture
+import com.horizen.librustsidechains.{Constants, FieldElement}
+import com.horizen.merkletreenative.MerklePath
 import com.horizen.transaction.mainchain.ForwardTransfer
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.junit.Assert.assertTrue
@@ -11,7 +14,7 @@ import org.scalatest.mockito.MockitoSugar
 
 import scala.util.Random
 
-class SidechainsCommitmentTreeTest extends JUnitSuite with MockitoSugar with SecretFixture {
+class SidechainCommitmentTreeTest extends JUnitSuite with MockitoSugar with SecretFixture {
 
   def getWithPadding(bytes: Array[Byte]): Array[Byte] =
     Bytes.concat(new Array[Byte](32 - bytes.length), bytes)
@@ -93,6 +96,8 @@ class SidechainsCommitmentTreeTest extends JUnitSuite with MockitoSugar with Sec
     assertTrue("Absence proof must exist.", absenceProof3.isDefined)
     assertTrue("Absence proof must be valid.",
       SidechainCommitmentTree.verifyAbsenceProof(afterRightmostSidechainId.data, absenceProof3.get, commitmentBE))
+
+    commitmentTree.free()
   }
 
   @Test
@@ -124,5 +129,59 @@ class SidechainsCommitmentTreeTest extends JUnitSuite with MockitoSugar with Sec
       assertTrue("Absence proof must be valid.",
         SidechainCommitmentTree.verifyExistenceProof(scCommitmentOpt.get, existenceProof.get, commitmentBE))
     })
+
+    commitmentTree.free()
+  }
+
+  @Test
+  def merklePath(): Unit = {
+    val commitmentTree = new SidechainCommitmentTree()
+    val scId = FieldElementUtils.randomFieldElementBytes(12345)
+
+    // Test FT merkle path
+    val output = new MainchainTxForwardTransferCrosschainOutput(new Array[Byte](1), scId,
+      Random.nextInt(10000), getMCPublicKeyHashProposition.bytes(), getMcReturnAddress)
+    val forwardTransferHash = new Array[Byte](32)
+    Random.nextBytes(forwardTransferHash)
+    val ft = new ForwardTransfer(output, forwardTransferHash, Random.nextInt(100))
+
+    assertTrue("FT must be added.", commitmentTree.addForwardTransfer(ft))
+
+    val ftCommitmentOpt = commitmentTree.getFtCommitment(scId)
+    assertTrue("FT commitment should exist.", ftCommitmentOpt.isDefined)
+    val ftMerklePathOpt = commitmentTree.getForwardTransferMerklePath(scId, 0)
+    assertTrue("FT merkle path should exist.", ftCommitmentOpt.isDefined)
+
+    val ftLeaf = FieldElement.deserialize(commitmentTree.getFtLeaves(scId).head)
+    val ftCommitment = FieldElement.deserialize(ftCommitmentOpt.get)
+    val ftMerklePath = MerklePath.deserialize(ftMerklePathOpt.get)
+    assertTrue("FT merkle path is inconsistent to the leaf and root.",
+      ftMerklePath.verify(ftLeaf, ftCommitment))
+    assertTrue("FT merkle path is inconsistent to the merkle tree height.",
+      ftMerklePath.verify(Constants.SC_COMM_TREE_FT_SUBTREE_HEIGHT(), ftLeaf, ftCommitment))
+
+    ftLeaf.freeFieldElement()
+    ftCommitment.freeFieldElement()
+    ftMerklePath.freeMerklePath()
+
+    // Test SC merkle path
+    val scCommitmentOpt = commitmentTree.getSidechainCommitment(scId)
+    assertTrue("SC commitment should exist.", scCommitmentOpt.isDefined)
+    val scCommitmentMerklePathOpt = commitmentTree.getSidechainCommitmentMerklePath(scId)
+    assertTrue("SC commitment merkle path should exist.", scCommitmentMerklePathOpt.isDefined)
+    val commitmentOpt = commitmentTree.getCommitment
+    assertTrue("Commitment should exist.", commitmentOpt.isDefined)
+
+    val scCommitment = FieldElement.deserialize(scCommitmentOpt.get)
+    val commitment = FieldElement.deserialize(commitmentOpt.get)
+    val scCommitmentMerklePath = MerklePath.deserialize(scCommitmentMerklePathOpt.get)
+    assertTrue("SC merkle path is inconsistent to the leaf and root.",
+      scCommitmentMerklePath.verify(scCommitment, commitment))
+    assertTrue("SC merkle path is inconsistent to the merkle tree height.",
+      scCommitmentMerklePath.verify(Constants.SC_COMM_TREE_HEIGHT(), scCommitment, commitment))
+
+    scCommitment.freeFieldElement()
+    commitment.freeFieldElement()
+    scCommitmentMerklePath.freeMerklePath()
   }
 }

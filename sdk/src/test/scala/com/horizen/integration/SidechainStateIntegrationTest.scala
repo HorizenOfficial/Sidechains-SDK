@@ -1,20 +1,20 @@
 package com.horizen.integration
 
 import com.google.common.primitives.{Bytes, Ints}
+
 import java.io.{File => JFile}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
-
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock}
-import com.horizen.box.data.{ForgerBoxData, NoncedBoxData, ZenBoxData}
-import com.horizen.box.{ForgerBox, NoncedBox, WithdrawalRequestBox, ZenBox}
+import com.horizen.box.data.{ForgerBoxData, BoxData, ZenBoxData}
+import com.horizen.box.{ForgerBox, Box, WithdrawalRequestBox, ZenBox}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
 import com.horizen.customtypes.DefaultApplicationState
-import com.horizen.fixtures.{SidechainTypesTestsExtension, SecretFixture, StoreFixture, TransactionFixture}
+import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
-import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage}
+import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
 import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo, Pair => JPair}
 import com.horizen.{SidechainState, SidechainTypes}
@@ -30,7 +30,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
-class SidechainStateTestTestsExtension
+class SidechainStateIntegrationTest
   extends JUnitSuite
     with SecretFixture
     with TransactionFixture
@@ -43,6 +43,7 @@ class SidechainStateTestTestsExtension
 
   var stateStorage: SidechainStateStorage = _
   var stateForgerBoxStorage: SidechainStateForgerBoxStorage = _
+  var stateUtxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage = _
   var initialVersion: ByteArrayWrapper = _
 
   var initialForgerBoxes: Seq[ForgerBox] = _
@@ -59,7 +60,7 @@ class SidechainStateTestTestsExtension
     val outputsCount = zenOutputsCount + forgerOutputsCount
 
     val from: JList[JPair[ZenBox,PrivateKey25519]] = new JArrayList[JPair[ZenBox,PrivateKey25519]]()
-    val to: JList[NoncedBoxData[_ <: Proposition, _ <: NoncedBox[_ <: Proposition]]] = new JArrayList()
+    val to: JList[BoxData[_ <: Proposition, _ <: Box[_ <: Proposition]]] = new JArrayList()
     var totalFrom = 0L
 
 
@@ -126,7 +127,9 @@ class SidechainStateTestTestsExtension
       Seq[WithdrawalRequestBox](),
       initialConsensusEpoch,
       None,
-      initialBlockFeeInfo
+      initialBlockFeeInfo,
+      None,
+      scHasCeased = false
     )
 
     // Init SidechainStateForgerBoxStorage with forger boxes
@@ -140,12 +143,22 @@ class SidechainStateTestTestsExtension
       initialForgerBoxes,
       Set()
     )
+
+    val stateUtxoMerkleTree = new JFile(s"${tmpDir.getAbsolutePath}/utxoMerkleTree")
+    stateUtxoMerkleTree.mkdirs()
+    val utxoMerkleTreeStore = getStorage(stateUtxoMerkleTree)
+    stateUtxoMerkleTreeStorage = new SidechainStateUtxoMerkleTreeStorage(utxoMerkleTreeStore)
+    stateUtxoMerkleTreeStorage.update(
+      initialVersion,
+      boxList, // All boxes in the list are coin boxes
+      Set()
+    )
   }
 
 
   @Test
   def closedBoxes(): Unit = {
-    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, params, applicationState).get
+    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage, params, applicationState).get
 
     // Test that initial boxes list present in the State
     for (box <- boxList) {
@@ -160,7 +173,7 @@ class SidechainStateTestTestsExtension
 
   @Test
   def currentConsensusEpochInfo(): Unit = {
-    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, params, applicationState).get
+    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage, params, applicationState).get
 
     // Test that initial currentConsensusEpochInfo is valid
     val(modId, consensusEpochInfo) = sidechainState.getCurrentConsensusEpochInfo
@@ -192,7 +205,7 @@ class SidechainStateTestTestsExtension
   @Test
   def feePayments(): Unit = {
     // Create sidechainState with initial block applied.
-    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, params, applicationState).get
+    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage, params, applicationState).get
 
     // Collect and verify getFeePayments value
     val withdrawalEpochNumber: Int = initialWithdrawalEpochInfo.epoch
@@ -209,7 +222,7 @@ class SidechainStateTestTestsExtension
 
   @Test
   def applyModifier(): Unit = {
-    var sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, params, applicationState).get
+    var sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage, params, applicationState).get
 
     // Test applyModifier with a single RegularTransaction with zen and forger outputs
     val mockedBlock = mock[SidechainBlock]
@@ -234,6 +247,7 @@ class SidechainStateTestTestsExtension
 
     // Mock 1 MCBlockRefData entry to simulate the last withdrawal epoch SidechainBlock
     // to check that fee payment boxes were created and appended to closed boxes.
+    // to check that utxo merkle tree root was stored for the given epoch
     Mockito.when(mockedBlock.mainchainBlockReferencesData)
       .thenReturn(Seq[MainchainBlockReferenceData](mock[MainchainBlockReferenceData]))
 
@@ -241,6 +255,13 @@ class SidechainStateTestTestsExtension
 
     val blockFeeInfo = BlockFeeInfo(307, getPrivateKey25519("mod".getBytes()).publicImage())
     Mockito.when(mockedBlock.feeInfo).thenReturn(blockFeeInfo)
+
+    // Check that there is no record for utxo merkle tree before applying the last block of the withdrawal epoch
+    assertTrue("No utxo merkle tree root expected to be found before finishing the epoch: " + initialWithdrawalEpochInfo,
+      sidechainState.utxoMerkleTreeRoot(initialWithdrawalEpochInfo.epoch).isEmpty)
+
+    // Check that SC is alive
+    assertFalse("SC must be alive", sidechainState.hasCeased)
 
     val applyTry = sidechainState.applyModifier(mockedBlock)
     assertTrue("ApplyChanges for block must be successful.",
@@ -264,6 +285,9 @@ class SidechainStateTestTestsExtension
         sidechainState.closedBox(b).isEmpty)
     }
 
+    // Test that utxo merkle tree root was stored
+    assertTrue("Utxo merkle tree root expected to be found after finishing the epoch: " + initialWithdrawalEpochInfo,
+      sidechainState.utxoMerkleTreeRoot(initialWithdrawalEpochInfo.epoch).isDefined)
 
     // Test that currentConsensusEpochInfo was changed
     val(modId, consensusEpochInfo) = sidechainState.getCurrentConsensusEpochInfo

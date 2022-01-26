@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 import json
 import time
 import math
@@ -26,13 +26,10 @@ Test:
     - generate SC blocks to sync with MC node.
     - generate 1 MC block to reach the end of the certificate submission window.
     - check with MC node that sidechain is ceased from MC perspective.
-    - try to generate SC block with 1 MC ref:
+    - generate SC block with 1 MC ref: check that SC has ceased from SC perspective.
+    - try to generate one more SC block:
         * check that it's not valid
-        * SC node can't grow SC chain, because sidechain is ceased.
-    - generate 1 more MC block
-    - try to generate SC block with 2 MC refs which exceed the submission window end:
-        * check that it's not valid
-        * SC node can't grow SC chain, because sidechain is ceased.
+        * SC node can't grow SC chain, because sidechain has ceased.
 """
 class SCCeased(SidechainTestFramework):
 
@@ -78,7 +75,7 @@ class SCCeased(SidechainTestFramework):
         generate_next_block(sc_node, "first node")
 
         # Generate MC blocks to reach one block before the end of the certificate submission window.
-        mc_blocks_left_for_window_end = self.sc_withdrawal_epoch_length / 5
+        mc_blocks_left_for_window_end = int(self.sc_withdrawal_epoch_length / 5)
         mc_block_hashes = mc_node.generate(mc_blocks_left_for_window_end - 1)
         mc_blocks_left_for_window_end -= len(mc_block_hashes)
         assert_equal(1, mc_blocks_left_for_window_end, "1 MC block till the end of the withdrawal epoch expected.")
@@ -90,28 +87,21 @@ class SCCeased(SidechainTestFramework):
         generate_next_block(sc_node, "first node")
 
         # Generate 1 MC block to reach the end of the certificate submission window.
-        mc_node.generate(1)
+        mcblock_hash = mc_node.generate(1)[0]
         # Check sidechain status
         sc_info = mc_node.getscinfo(self.sc_nodes_bootstrap_info.sidechain_id)['items'][0]
         assert_equal("CEASED", sc_info['state'], "Sidechain expected to be ceased.")
 
-        # Try to generate 1 SC block. Node must fail on apply block, because of missed cert in the end of the window.
+        # Generate 1 SC block.
         # SC block should contain 1 MC block refs, so the block will reach the end of the submission window.
-        error_occur = False
-        try:
-            generate_next_block(sc_node, "first node")
-        except SCAPIException as e:
-            print("Expected SCAPIException: " + e.error)
-            error_occur = True
+        # SC must become ceased right after block was applied
+        sc_block_id = generate_next_block(sc_node, "first node")
+        check_mcreference_presence(mcblock_hash, sc_block_id, sc_node)
+        has_ceased = sc_node.csw_hasCeased()["result"]["state"]
+        assert_true("Sidechain expected to be ceased.", has_ceased)
 
-        assert_true(error_occur,
-                    "Node wrongly verified block at the end of the submission window for epoch with no certs.")
-
-        # Generate 1 more MC block.
-        mc_node.generate(1)
-
-        # Try to generate 1 SC block. Node must fail on apply block, because of missed cert in the end of the window.
-        # SC block should contain 2 MC block refs, so the block will exceed the end of the submission window.
+        # Try to generate 1 SC block after SC has ceased.
+        # Node must fail on apply block, because of ceased SC.
         error_occur = False
         try:
             generate_next_block(sc_node, "first node")

@@ -20,7 +20,7 @@ import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.fixtures.FieldElementFixture
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
-import com.horizen.utils.WithdrawalEpochInfo
+import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
 import org.junit.Assert._
 import org.junit.{Assert, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -125,7 +125,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val provingKeyPath: String = ""
     val params: NetworkParams = RegTestParams(
       calculatedSysDataConstant = calculatedSysDataConstant,
-      provingKeyFilePath = provingKeyPath)
+      certProvingKeyFilePath = provingKeyPath)
 
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
 
@@ -164,7 +164,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val provingKeyPath: String = ""
     val params: NetworkParams = RegTestParams(
       calculatedSysDataConstant = calculatedSysDataConstant,
-      provingKeyFilePath = provingKeyPath)
+      certProvingKeyFilePath = provingKeyPath)
 
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
 
@@ -203,7 +203,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val provingKeyPath: String = "wrong_file_path"
     val params: NetworkParams = RegTestParams(
       calculatedSysDataConstant = calculatedSysDataConstant,
-      provingKeyFilePath = provingKeyPath)
+      certProvingKeyFilePath = provingKeyPath)
 
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
 
@@ -243,7 +243,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val provingKeyPath: String = getClass.getClassLoader.getResource("mcblock473173_mainnet").getFile
     val params: NetworkParams = RegTestParams(
       calculatedSysDataConstant = calculatedSysDataConstant,
-      provingKeyFilePath = provingKeyPath)
+      certProvingKeyFilePath = provingKeyPath)
 
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
 
@@ -413,6 +413,10 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     Mockito.when(state.withdrawalRequests(ArgumentMatchers.any[Int])).thenAnswer(answer => {
       assertEquals("Invalid referenced epoch number retrieved for state.withdrawalRequests.", referencedEpochNumber, answer.getArgument(0).asInstanceOf[Int])
       Seq()
+    })
+    Mockito.when(state.utxoMerkleTreeRoot(ArgumentMatchers.any[Int])).thenAnswer(answer => {
+      assertEquals("Invalid referenced epoch number retrieved for state.withdrawalRequests.", referencedEpochNumber, answer.getArgument(0).asInstanceOf[Int])
+      Some(BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000000"))
     })
 
     Mockito.reset(history)

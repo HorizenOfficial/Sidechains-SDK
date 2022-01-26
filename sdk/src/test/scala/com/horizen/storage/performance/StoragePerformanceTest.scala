@@ -1,5 +1,6 @@
 package com.horizen.storage.performance
 
+import org.junit.Ignore
 import org.scalatest.junit.JUnitSuite
 
 class StoragePerformanceTest extends JUnitSuite {
@@ -41,7 +42,7 @@ class StoragePerformanceTest extends JUnitSuite {
     println()
   }
 
-  //@Test
+  @Ignore
   def runMeasures(): Unit = {
     runner.measurePerformance().foreach{
       case(storageDescription, results) =>

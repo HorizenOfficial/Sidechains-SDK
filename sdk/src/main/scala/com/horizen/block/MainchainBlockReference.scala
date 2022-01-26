@@ -77,28 +77,17 @@ case class MainchainBlockReference(
       if (data.absenceProof.isDefined)
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
 
-      val commitmentTree = new SidechainCommitmentTree();
-
-      if (data.sidechainRelatedAggregatedTransaction.isDefined) {
-        data.sidechainRelatedAggregatedTransaction.get.mc2scTransactionsOutputs().asScala.foreach {
-          case sc: SidechainCreation => commitmentTree.addSidechainCreation(sc)
-          case ft: ForwardTransfer => commitmentTree.addForwardTransfer(ft)
-        }
-      }
-
-      // Add certificates in the original order
-      data.lowerCertificateLeaves.foreach(leaf => commitmentTree.addCertLeaf(sidechainId.data, leaf))
+      // Check top quality certificate custom fields.
       data.topQualityCertificate.foreach(cert => {
-        if(params.scCreationBitVectorCertificateFieldConfigs.size != cert.bitVectorCertificateFields.size) {
+        if (params.scCreationBitVectorCertificateFieldConfigs.size != cert.bitVectorCertificateFields.size) {
           throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} Top quality certificate " +
             s"bitvectors number is inconsistent to Sc Creation info.")
         }
         for (i <- cert.bitVectorCertificateFields.indices) {
-          if(cert.bitVectorCertificateFields(i).tryMerkleRootBytesWithCheck(params.scCreationBitVectorCertificateFieldConfigs(i).getBitVectorSizeBits).isFailure)
+          if (cert.bitVectorCertificateFields(i).tryMerkleRootBytesWithCheck(params.scCreationBitVectorCertificateFieldConfigs(i).getBitVectorSizeBits).isFailure)
             throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} Top quality certificate " +
               s"bitvectors data length is invalid.")
         }
-        commitmentTree.addCertificate(cert)
       })
 
       if (data.sidechainRelatedAggregatedTransaction.isDefined) {
@@ -111,12 +100,15 @@ case class MainchainBlockReference(
         }
       }
 
+      val commitmentTree = data.commitmentTree(sidechainId.data)
       val scCommitmentOpt = commitmentTree.getSidechainCommitment(sidechainId.data)
+      commitmentTree.free()
+
       if (scCommitmentOpt.isEmpty)
-        throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader hashScTxsCommitment");
+        throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader hashScTxsCommitment")
 
       if (!SidechainCommitmentTree.verifyExistenceProof(scCommitmentOpt.get, data.existenceProof.get, header.hashScTxsCommitment))
-        throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader hashScTxsCommitment");
+        throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader hashScTxsCommitment")
     } else { // Current sidechain was not mentioned in MainchainBlockReference.
       // Check for empty transaction and certificates.
       if (data.sidechainRelatedAggregatedTransaction.isDefined || data.topQualityCertificate.isDefined || data.lowerCertificateLeaves.nonEmpty)
@@ -191,7 +183,7 @@ object MainchainBlockReference extends ScorexLogging {
         // So get the last sidechain related certificate if present
         val topQualityCertificate: Option[WithdrawalEpochCertificate] = certificates.reverse.find(c => util.Arrays.equals(c.sidechainId, sidechainId.data))
         // Get lower quality cert leaves if present.
-        val certLeaves = commitmentTree.getCertLeafs(sidechainId.data)
+        val certLeaves = commitmentTree.getCertLeaves(sidechainId.data)
         val lowerCertificateLeaves: Seq[Array[Byte]] = if(certLeaves.isEmpty) Seq() else certLeaves.init
 
         val data: MainchainBlockReferenceData =
@@ -213,6 +205,7 @@ object MainchainBlockReference extends ScorexLogging {
               None)
           }
 
+        commitmentTree.free()
         Success(MainchainBlockReference(header, data))
 
       case Failure(e) =>

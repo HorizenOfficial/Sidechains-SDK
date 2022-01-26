@@ -1,8 +1,7 @@
 package com.horizen.block
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.librustsidechains.FieldElement
+import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
 import com.horizen.serialization.ReverseBytesSerializer
 import com.horizen.utils.{BytesUtils, Utils, VarInt}
 
@@ -37,9 +36,9 @@ object MainchainTxBwtRequestCrosschainOutput {
       val dataSize = BytesUtils.getReversedVarInt(bwtRequestOutputBytes, currentOffset)
       currentOffset += dataSize.size()
 
-      if(dataSize.value() != FieldElement.FIELD_ELEMENT_LENGTH)
+      if(dataSize.value() != FieldElementUtils.fieldElementLength())
         throw new IllegalArgumentException(s"Input data corrupted: scRequestData[$idx] size ${dataSize.value()} " +
-          s"is expected to be FieldElement size ${FieldElement.FIELD_ELEMENT_LENGTH}")
+          s"is expected to be FieldElement size ${FieldElementUtils.fieldElementLength()}")
 
       val scRequestData: Array[Byte] = bwtRequestOutputBytes.slice(currentOffset, currentOffset + dataSize.value().intValue())
       currentOffset += dataSize.value().intValue()

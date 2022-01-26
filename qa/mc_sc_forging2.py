@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -68,7 +68,7 @@ class MCSCForging2(SidechainTestFramework):
         )
         sc_node_2_configuration = SCNodeConfiguration(MCConnectionInfo(), False)
 
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, 1000),
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, 900),
                                          sc_node_1_configuration, sc_node_2_configuration)
         bootstrap_sidechain_nodes(self.options.tmpdir, network)
 

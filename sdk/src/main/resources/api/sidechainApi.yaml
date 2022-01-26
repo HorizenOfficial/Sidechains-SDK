@@ -484,7 +484,7 @@ paths:
                     properties:
                       boxId:
                         type: string
-                        description: id of ZenBox
+                        description: coin box id in hex
                 regularOutputs:
                   type: array
                   items:
@@ -1287,6 +1287,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
+  # Mainchain references info
   /mainchain/bestBlockReferenceInfo:
     post:
       tags:
@@ -1441,6 +1442,391 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
+  #Certificate Submitter operations
+  /submitter/isCertGenerationActive:
+    post:
+      tags:
+        - submitter
+      summary: returns if certificate generation is in progress
+      description: returns if certificate generation is in progress
+      operationId: isCertGenerationActive
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      state:
+                        type: boolean
+                        description: True or False depending on generation status
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /submitter/isCertificateSubmitterEnabled:
+    post:
+      tags:
+        - submitter
+      summary: returns if certificate submitter is enabled
+      description: returns if certificate submitter is enabled, so will automatically try to create and send certificate during the submission window.
+      operationId: isCertificateSubmitterEnabled
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                        description: True or False depends on submitter status
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /submitter/enableCertificateSubmitter:
+    post:
+      tags:
+        - submitter
+      summary: enables automatic certificate submission
+      description: enables automatic certificate submission
+      operationId: enableCertificateSubmitter
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /submitter/disableCertificateSubmitter:
+    post:
+      tags:
+        - submitter
+      summary: disables automatic certificate submission
+      description: disables automatic certificate submission
+      operationId: disableCertificateSubmitter
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /submitter/isCertificateSignerEnabled:
+    post:
+      tags:
+        - submitter
+      summary: returns if certificate signing option is enabled
+      description: returns if certificate signing is enabled, so will automatically try to sign certificate and broadcast the signature to the network.
+      operationId: isCertificateSignerEnabled
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                        description: True or False depends on submitter status
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /submitter/enableCertificateSigner:
+    post:
+      tags:
+        - submitter
+      summary: enables automatic certificate signing
+      description: enables automatic certificate signing
+      operationId: enableCertificateSigner
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /submitter/disableCertificateSigner:
+    post:
+      tags:
+        - submitter
+      summary: disables automatic certificate signing
+      description: disables automatic certificate signing
+      operationId: disableCertificateSigner
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  # Ceased Sidechain Withdrawal operations
+  /csw/hasCeased:
+    post:
+      tags:
+        - csw
+      summary: returns current status of the Sidechain
+      description: returns current status of the Sidechain
+      operationId: hasCeased
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      state:
+                        type: boolean
+                        description: True or False depending if Sidechain is ceased
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /csw/generateCswProof:
+    post:
+      tags:
+        - csw
+      summary: generates csw proof
+      description: try to generate csw proof and return current status of this operation
+      operationId: generateCswProof
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - boxId
+              properties:
+                boxId:
+                  type: string
+                  description: coin box id in hex
+                receiverAddress:
+                  type: string
+                  description: Horizen transparent address
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      state:
+                        type: string
+                        description: short description of current proof generation state
+                      description:
+                        type: string
+                        description: full description of current proof generation state
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /csw/cswInfo:
+    post:
+      tags:
+        - csw
+      summary: csw information
+      description: retrieves information about csw proof for given box id
+      operationId: cswInfo
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - boxId
+              properties:
+                boxId:
+                  type: string
+                  description: coin box id in hex
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      cswInfo:
+                        $ref: '#/components/schemas/CswInfo'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /csw/cswBoxIds:
+    post:
+      tags:
+        - csw
+      summary: return list of available box ids for csw
+      description: return list of available box ids for csw
+      operationId: cswBoxIds
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      cswBoxIds:
+                        type: array
+                        items:
+                          type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /csw/nullifier:
+    post:
+      tags:
+        - csw
+      summary: retrieves nullifier
+      description: retrieves nullifier for given box id
+      operationId: nullifier
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - boxId
+              properties:
+                boxId:
+                  type: string
+                  description: coin box id in hex
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      nullifier:
+                        type: String
+                        description: nullifier for given box id
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
 components:
   schemas:
     # Objects
@@ -1544,6 +1930,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Box'
+        typeName:
+          type: string
+        isCustom:
+          type: boolean
 
     Box:
       type: object
@@ -1561,9 +1951,10 @@ components:
         activeFromWithdrawalEpoch:
           type: integer
           format: int64
-        typeId:
-          type: integer
-          format: int64
+        typeName:
+          type: string
+        isCustom:
+          type: boolean
 
     MainchainBlock:
       type: object
@@ -1620,3 +2011,31 @@ components:
           $ref: '#/components/schemas/Proposition'
         signature:
           $ref: '#/components/schemas/Signature25519'
+
+    CswInfo:
+      type: object
+      properties:
+        cswType:
+          type: string
+        amount:
+          type: integer
+        scId:
+          type: string
+        nullifier:
+          type: string
+        proofInfo:
+          $ref: '#/components/schemas/CswProofInfo'
+        activeCertData:
+          type: string
+        ceasingCumScTxCommTree:
+          type: string
+
+    CswProofInfo:
+      type: object
+      properties:
+        status:
+          type: string
+        scProof:
+          type: string
+        receiverAddress:
+          type: string

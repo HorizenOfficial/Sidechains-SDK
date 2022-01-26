@@ -91,27 +91,16 @@ trait SidechainNodeViewHolderFixture
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
   }
 
-  val sidechainSecretStorage = new SidechainSecretStorage(
-    getStorage(),
-    sidechainSecretsCompanion)
-  val sidechainWalletBoxStorage = new SidechainWalletBoxStorage(
-    getStorage(),
-    sidechainBoxesCompanion)
-  val sidechainStateStorage = new SidechainStateStorage(
-    getStorage(),
-    sidechainBoxesCompanion)
-  val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(
-    getStorage())
-  val sidechainHistoryStorage = new SidechainHistoryStorage(
-    getStorage(),
-    sidechainTransactionsCompanion, params)
-  val consensusDataStorage = new ConsensusDataStorage(
-    getStorage())
-  val sidechainWalletTransactionStorage = new SidechainWalletTransactionStorage(
-    getStorage(),
-    sidechainTransactionsCompanion)
-  val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(
-    getStorage())
+  val sidechainSecretStorage = new SidechainSecretStorage(getStorage(), sidechainSecretsCompanion)
+  val sidechainWalletBoxStorage = new SidechainWalletBoxStorage(getStorage(), sidechainBoxesCompanion)
+  val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion)
+  val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(getStorage())
+  val sidechainStateUtxoMerkleTreeStorage = new SidechainStateUtxoMerkleTreeStorage(getStorage())
+  val sidechainHistoryStorage = new SidechainHistoryStorage(getStorage(), sidechainTransactionsCompanion, params)
+  val consensusDataStorage = new ConsensusDataStorage(getStorage())
+  val sidechainWalletTransactionStorage = new SidechainWalletTransactionStorage(getStorage(), sidechainTransactionsCompanion)
+  val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(getStorage())
+  val cswDataStorage = new SidechainWalletCswDataStorage(getStorage())
 
   // Append genesis secrets if we start the node first time
   if(sidechainSecretStorage.isEmpty) {
@@ -125,10 +114,12 @@ trait SidechainNodeViewHolderFixture
     consensusDataStorage,
     sidechainStateStorage,
     sidechainStateForgerBoxStorage,
+    sidechainStateUtxoMerkleTreeStorage,
     sidechainWalletBoxStorage,
     sidechainSecretStorage,
     sidechainWalletTransactionStorage,
     forgingBoxesMerklePathStorage,
+    cswDataStorage,
     params,
     timeProvider,
     defaultApplicationWallet,
