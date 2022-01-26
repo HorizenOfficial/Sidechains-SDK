@@ -149,7 +149,7 @@ class StoragePerformanceRunner(config: StoragePerformanceTestConfig, debug: Bool
     require(receivedData.isPresent)
     val totalSize = receivedData.get().length
 
-    TimeMeasure(StorageReadOnce, totalTime, toRead.size, totalSize, totalSize, totalSize, storageData.availableKeysSize)
+    TimeMeasure(StorageReadOnce, totalTime, toRead.size().longValue(), totalSize, totalSize, totalSize, storageData.availableKeysSize)
   }
 
   private def readFromStorageBatching(batchingSizeInBytes: Int)(storageData: StorageData): TimeMeasure = {

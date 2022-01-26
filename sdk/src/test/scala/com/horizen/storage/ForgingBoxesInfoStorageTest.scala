@@ -1,18 +1,18 @@
 package com.horizen.storage
 
 import com.horizen.SidechainTypes
-import com.horizen.fixtures.{BoxFixture, StoreFixture}
+import com.horizen.box.ForgerBox
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
+import com.horizen.fixtures.{BoxFixture, StoreFixture}
+import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.utils.{ByteArrayWrapper, ForgingStakeMerklePathInfo, MerklePath, Pair}
-import org.junit.{Before, Test}
+import org.junit.Assert.{assertEquals, assertTrue}
+import org.junit.Test
+import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatest.junit.JUnitSuite
 import org.scalatest.mockito.MockitoSugar
-import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
-import org.mockito.{ArgumentMatchers, Mockito}
+
 import java.util.{ArrayList => JArrayList, Optional => JOptional}
-
-import com.horizen.box.ForgerBox
-
 import scala.collection.JavaConverters._
 
 
@@ -24,7 +24,7 @@ class ForgingBoxesInfoStorageTest extends JUnitSuite
 
   @Test
   def updateForgerBoxes(): Unit = {
-    val mockedStorage: Storage = mock[IODBStoreAdapter]
+    val mockedStorage: Storage = mock[VersionedLevelDbStorageAdapter]
     val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(mockedStorage)
 
     val version = getVersion
@@ -89,7 +89,7 @@ class ForgingBoxesInfoStorageTest extends JUnitSuite
 
   @Test
   def updateForgerBoxMerklePathInfo(): Unit = {
-    val mockedStorage: Storage = mock[IODBStoreAdapter]
+    val mockedStorage: Storage = mock[VersionedLevelDbStorageAdapter]
     val forgingBoxesInfoStorage = new ForgingBoxesInfoStorage(mockedStorage)
 
     // Prepare data to update.
