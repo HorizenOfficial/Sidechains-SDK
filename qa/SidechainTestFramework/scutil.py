@@ -16,12 +16,25 @@ from test_framework.util import initialize_new_sidechain_in_mainchain
 
 WAIT_CONST = 1
 
+# log levels of the log4j trace system used by java applications
+LEVEL_OFF   = "off"
+LEVEL_FATAL = "fatal"
+LEVEL_ERROR = "error"
+LEVEL_WARN  = "warn"
+LEVEL_INFO  = "info"
+LEVEL_DEBUG = "debug"
+LEVEL_TRACE = "trace"
+LEVEL_ALL   = "all"
 
 class TimeoutException(Exception):
     def __init__(self, operation):
         Exception.__init__(self)
         self.operation = operation
 
+class LogInfo(object):
+    def __init__(self, logFileLevel=LEVEL_ALL, logConsoleLevel=LEVEL_ERROR):
+        self.logFileLevel = logFileLevel
+        self.logConsoleLevel = logConsoleLevel
 
 def sc_p2p_port(n):
     return 8300 + n + os.getpid() % 999
@@ -224,7 +237,7 @@ Parameters:
  - bootstrap_info: an instance of SCBootstrapInfo (see sc_bootstrap_info.py)
  - websocket_config: an instance of MCConnectionInfo (see sc_boostrap_info.py)
 """
-def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_config=SCNodeConfiguration()):
+def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_config=SCNodeConfiguration(), log_info=LogInfo()):
 
     apiAddress = "127.0.0.1"
     configsData = []
@@ -257,6 +270,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
     config = tmpConfig % {
         'NODE_NUMBER': n,
         'DIRECTORY': dirname,
+        'LOG_FILE_LEVEL': log_info.logFileLevel,
+        'LOG_CONSOLE_LEVEL': log_info.logConsoleLevel,
         'WALLET_SEED': "sidechain_seed_{0}".format(n),
         'API_ADDRESS': "127.0.0.1",
         'API_PORT': str(apiPort),
@@ -377,7 +392,13 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     if binary is None:
         binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.2.7.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
     #        else if platform.system() == 'Linux':
-    bashcmd = 'java -cp ' + binary + " " + (datadir + ('/node%s.conf' % i))
+    '''
+    Some tools and libraries use reflection to access parts of the JDK that are meant for internal use only.
+    This illegal reflective access will be disabled in a future release of the JDK.
+    Currently, it is permitted by default and a warning is issued.
+    The --add-opens VM option remove this warning
+    '''
+    bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED -cp ' + binary + " " + (datadir + ('/node%s.conf' % i))
     if print_output_to_file:
         with open(datadir + "/log_out.txt", "wb") as out, open(datadir + "/log_err.txt", "wb") as err:
             sidechainclient_processes[i] = subprocess.Popen(bashcmd.split(), stdout=out, stderr=err)
@@ -643,7 +664,9 @@ network: {
  Output:
  - bootstrap information of the sidechain nodes. An instance of SCBootstrapInfo (see sc_boostrap_info.py)    
 """
-def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration, block_timestamp_rewind=DefaultBlockTimestampRewind):
+def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration, block_timestamp_rewind=DefaultBlockTimestampRewind,
+                              logFileLevel=LEVEL_ALL, logConsoleLevel=LEVEL_ERROR):
+    log_info = LogInfo(logFileLevel, logConsoleLevel)
     total_number_of_sidechain_nodes = len(network.sc_nodes_configuration)
     sc_creation_info = network.sc_creation_info
     ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
@@ -666,9 +689,9 @@ def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration, block_tim
     for i in range(total_number_of_sidechain_nodes):
         sc_node_conf = network.sc_nodes_configuration[i]
         if i == 0:
-            bootstrap_sidechain_node(dirname, i, sc_nodes_bootstrap_info, sc_node_conf)
+            bootstrap_sidechain_node(dirname, i, sc_nodes_bootstrap_info, sc_node_conf, log_info)
         else:
-            bootstrap_sidechain_node(dirname, i, sc_nodes_bootstrap_info_empty_account, sc_node_conf)
+            bootstrap_sidechain_node(dirname, i, sc_nodes_bootstrap_info_empty_account, sc_node_conf, log_info)
 
     return sc_nodes_bootstrap_info
 
@@ -718,10 +741,11 @@ Parameters:
  - n: sidechain node nth: used to create directory "sc_node_n"
  - bootstrap_info: an instance of SCBootstrapInfo (see sc_boostrap_info.py)
  - sc_node_configuration: an instance of SCNodeConfiguration (see sc_boostrap_info.py)
+ - log_info: optional, an instance of LogInfo with log file name and levels for the log file and console
  
 """
-def bootstrap_sidechain_node(dirname, n, bootstrap_info, sc_node_configuration):
-    initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration)
+def bootstrap_sidechain_node(dirname, n, bootstrap_info, sc_node_configuration, log_info = LogInfo()):
+    initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration, log_info)
 
 def generate_forging_request(epoch, slot):
     return json.dumps({"epochNumber": epoch, "slotNumber": slot})

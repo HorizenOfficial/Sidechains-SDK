@@ -186,7 +186,10 @@ def start_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=
     """
     datadir = os.path.join(dirname, "node"+str(i))
     if binary is None:
-        binary = os.getenv("BITCOIND", "bitcoind")
+        binary = os.getenv("BITCOIND", "zend")
+    if not os.path.isfile(binary):
+        raise Exception('no such file: ' + binary)
+
     args = [ binary, "-datadir="+datadir, "-keypool=1", "-discover=0", "-rest", "-websocket"]
     if extra_args is not None: args.extend(extra_args)
     bitcoind_processes[i] = subprocess.Popen(args)
