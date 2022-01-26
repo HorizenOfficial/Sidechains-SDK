@@ -103,6 +103,9 @@ public final class MC2SCAggregatedTransaction
     }
 
     @Override
+    public Boolean isCustom() { return false; }
+
+    @Override
     public byte[] messageToSign() {
         throw new UnsupportedOperationException("MC2SCAggregatedTransaction can not be signed.");
     }

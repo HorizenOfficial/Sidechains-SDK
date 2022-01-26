@@ -59,4 +59,7 @@ public final class ForgerBox
 
         return boxData.getBox(nonce);
     }
+
+    @Override
+    public Boolean isCustom() { return false; }
 }

@@ -38,4 +38,7 @@ public final class WithdrawalRequestBox
 
         return new WithdrawalRequestBox(boxData, nonce);
     }
+
+    @Override
+    public Boolean isCustom() { return false; }
 }

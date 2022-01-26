@@ -1,5 +1,6 @@
 package com.horizen.secret;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Bytes;
 import com.horizen.proof.Signature25519;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
@@ -97,4 +98,7 @@ public final class PrivateKey25519 implements Secret
                 ", _publicKeyBytes=" + BytesUtils.toHexString(_publicKeyBytes) +
                 '}';
     }
+
+    @Override
+    public Boolean isCustom() { return false; }
 }
