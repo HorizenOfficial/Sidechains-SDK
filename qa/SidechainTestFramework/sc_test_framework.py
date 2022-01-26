@@ -120,6 +120,8 @@ class SidechainTestFramework(BitcoinTestFramework):
                           help="Root directory for datadirs")
         parser.add_option("--tracerpc", dest="trace_rpc", default=False, action="store_true",
                           help="Print out all RPC calls as they are made")
+        parser.add_option("--restapitimeout", dest="restapitimeout", default=5, action="store",
+                          help="timeout in seconds for rest API execution, might be useful when debugging")
         parser.add_option("--logfilelevel", dest="logfilelevel", default=LEVEL_ALL, action="store",
                           help="log4j log level for application log file")
         parser.add_option("--logconsolelevel", dest="logconsolelevel", default=LEVEL_ERROR, action="store",
