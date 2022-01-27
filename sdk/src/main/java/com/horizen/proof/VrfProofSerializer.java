@@ -25,6 +25,6 @@ public class VrfProofSerializer implements ProofSerializer<VrfProof> {
 
     @Override
     public VrfProof parse(Reader reader) {
-        return new VrfProof(reader.getBytes(VrfProof.SIGNATURE_LENGTH));
+        return new VrfProof(reader.getBytes(VrfProof.PROOF_LENGTH));
     }
 }

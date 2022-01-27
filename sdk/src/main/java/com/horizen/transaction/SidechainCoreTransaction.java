@@ -91,10 +91,6 @@ public final class SidechainCoreTransaction
                     "unsupported version number.", id()));
         }
 
-        if (bytes().length > MAX_TRANSACTION_SIZE) {
-            throw new TransactionSemanticValidityException("Transaction is too large.");
-        }
-
         if (inputsIds.isEmpty() || outputsData.isEmpty())
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "no input and output data present.", id()));

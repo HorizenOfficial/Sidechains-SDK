@@ -24,20 +24,19 @@ public final class ForwardTransferSerializer implements SidechainRelatedMainchai
 
     @Override
     public void serialize(ForwardTransfer forwardTransferOutput, Writer writer) {
-        writer.putBytes(forwardTransferOutput.getFtOutput().forwardTransferOutputBytes());
+        byte[] ftOutputBytes = forwardTransferOutput.getFtOutput().forwardTransferOutputBytes();
+        writer.putInt(ftOutputBytes.length);
+        writer.putBytes(ftOutputBytes);
         writer.putBytes(forwardTransferOutput.transactionHash());
         writer.putInt(forwardTransferOutput.transactionIndex());
     }
 
     @Override
     public ForwardTransfer parse(Reader reader) {
-        // Serialized transactionIndex can have length from 1 up to 4 bytes.
-        if(reader.remaining() < 1 + CommonParams.transactionHashLength() + MainchainTxForwardTransferCrosschainOutput.FORWARD_TRANSFER_OUTPUT_SIZE())
-            throw new IllegalArgumentException("Input data corrupted.");
-
-        byte[] ftOutputBytes = reader.getBytes(MainchainTxForwardTransferCrosschainOutput.FORWARD_TRANSFER_OUTPUT_SIZE());
+        int ftOutputLength = reader.getInt();;
+        byte[] ftOutputBytes = reader.getBytes(ftOutputLength);
         MainchainTxForwardTransferCrosschainOutput output = MainchainTxForwardTransferCrosschainOutput.create(ftOutputBytes, 0).get();
-        byte[] transactionHash = reader.getBytes(CommonParams.transactionHashLength());
+        byte[] transactionHash = reader.getBytes(CommonParams.mainchainTransactionHashLength());
         int transactionIndex = reader.getInt();
 
         return new ForwardTransfer(output, transactionHash, transactionIndex);

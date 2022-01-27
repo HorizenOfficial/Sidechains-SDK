@@ -29,8 +29,6 @@ case class SidechainBlockInfo(height: Int,
 
   override lazy val serializer: ScorexSerializer[SidechainBlockInfo] = SidechainBlockInfoSerializer
 
-  override def bytes: Array[Byte] = SidechainBlockInfoSerializer.toBytes(this)
-
   lazy val mainchainHeaderHashes: Seq[MainchainHeaderHash] = {mainchainHeaderBaseInfo.map(info => info.hash)}
 }
 

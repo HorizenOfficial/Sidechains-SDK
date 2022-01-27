@@ -123,11 +123,6 @@ public final class RegularTransaction
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "contains box data output of invalid type.", id()));
 
-        if (bytes().length >  MAX_TRANSACTION_SIZE) {
-            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                    "transaction is too large.", id()));
-        }
-
         long outputsAmount = 0L;
         for(BoxData output: outputs) {
             outputsAmount += output.value();

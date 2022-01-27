@@ -1,15 +1,10 @@
 package com.horizen.transaction.mainchain;
 
-import com.google.common.primitives.Ints;
 import com.horizen.CommonParams;
-import com.horizen.block.MainchainTxBwtRequestCrosschainOutput;
 import com.horizen.block.MainchainTxSidechainCreationCrosschainOutput;
 import com.horizen.block.MainchainTxSidechainCreationCrosschainOutputData;
-import com.horizen.utils.BytesUtils;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
-
-import java.util.Arrays;
 
 public final class SidechainCreationSerializer implements SidechainRelatedMainchainOutputSerializer<SidechainCreation>
 {
@@ -41,7 +36,7 @@ public final class SidechainCreationSerializer implements SidechainRelatedMainch
         int scCreationOutputLength = reader.getInt();
         byte[] scCreationOutputBytes = reader.getBytes(scCreationOutputLength);
         MainchainTxSidechainCreationCrosschainOutputData scCreationOutputData = MainchainTxSidechainCreationCrosschainOutputData.create(scCreationOutputBytes, 0).get();
-        byte[] transactionHash = reader.getBytes(CommonParams.transactionHashLength());
+        byte[] transactionHash = reader.getBytes(CommonParams.mainchainTransactionHashLength());
         int transactionIndex = reader.getInt();
         byte[] sidechainId = MainchainTxSidechainCreationCrosschainOutput.calculateSidechainId(transactionHash, transactionIndex);
 

@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import static com.horizen.box.CoreBoxesIdsEnum.*;
+import static com.horizen.transaction.BoxTransaction.MAX_TRANSACTION_NEW_BOXES;
 import static com.horizen.transaction.BoxTransaction.MAX_TRANSACTION_UNLOCKERS;
 
 
@@ -37,7 +38,7 @@ public final class RegularTransactionSerializer implements TransactionSerializer
                         put(WithdrawalRequestBoxId.id(), WithdrawalRequestBoxDataSerializer.getSerializer());
                         put(ForgerBoxId.id(), ForgerBoxDataSerializer.getSerializer());
                     }}, new HashMap<>()
-            ));
+            ), MAX_TRANSACTION_NEW_BOXES);
     private static ListSerializer<Signature25519> signaturesSerializer =
             new ListSerializer<>(Signature25519Serializer.getSerializer(), MAX_TRANSACTION_UNLOCKERS);
 

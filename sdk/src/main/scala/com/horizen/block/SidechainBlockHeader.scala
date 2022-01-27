@@ -6,7 +6,7 @@ import com.google.common.primitives.{Bytes, Longs}
 import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof, VrfProofSerializer}
-import com.horizen.serialization.{ScorexModifierIdSerializer, Views}
+import com.horizen.serialization.{MerklePathJsonSerializer, ScorexModifierIdSerializer, Views}
 import com.horizen.utils.{MerklePath, MerklePathSerializer}
 import com.horizen.validation.InvalidSidechainBlockHeaderException
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
@@ -26,7 +26,7 @@ case class SidechainBlockHeader(
                                  @JsonSerialize(using = classOf[ScorexModifierIdSerializer]) parentId: ModifierId,
                                  timestamp: Block.Timestamp,
                                  forgingStakeInfo: ForgingStakeInfo,
-                                 @JsonSerialize(using = classOf[MerklePathSerializer]) forgingStakeMerklePath: MerklePath,
+                                 @JsonSerialize(using = classOf[MerklePathJsonSerializer]) forgingStakeMerklePath: MerklePath,
                                  vrfProof: VrfProof,
                                  sidechainTransactionsMerkleRootHash: Array[Byte], // don't need to care about MC2SCAggTxs here
                                  mainchainMerkleRootHash: Array[Byte], // root hash of MainchainBlockReference.dataHash() root hash and MainchainHeaders root hash
@@ -87,13 +87,13 @@ object SidechainBlockHeaderSerializer extends ScorexSerializer[SidechainBlockHea
 
     w.putLong(obj.timestamp)
 
-    val forgingStakeInfoBytes = ForgingStakeInfoSerializer.toBytes(obj.forgingStakeInfo)
-    w.putInt(forgingStakeInfoBytes.length)
-    w.putBytes(forgingStakeInfoBytes)
+    ForgingStakeInfoSerializer.serialize(obj.forgingStakeInfo, w)
 
     val forgingStakeMerklePathBytes = obj.forgingStakeMerklePath.bytes()
     w.putInt(forgingStakeMerklePathBytes.length)
     w.putBytes(forgingStakeMerklePathBytes)
+
+    MerklePathSerializer.getSerializer.serialize(obj.forgingStakeMerklePath, w)
 
     VrfProofSerializer.getSerializer.serialize(obj.vrfProof, w)
 
@@ -105,9 +105,7 @@ object SidechainBlockHeaderSerializer extends ScorexSerializer[SidechainBlockHea
 
     w.putLong(obj.ommersCumulativeScore)
 
-    val signatureBytes = Signature25519Serializer.getSerializer.toBytes(obj.signature)
-    w.putInt(signatureBytes.length)
-    w.putBytes(signatureBytes)
+    Signature25519Serializer.getSerializer.serialize(obj.signature, w)
   }
 
   override def parse(r: Reader): SidechainBlockHeader = {
@@ -120,11 +118,9 @@ object SidechainBlockHeaderSerializer extends ScorexSerializer[SidechainBlockHea
 
     val timestamp: Block.Timestamp = r.getLong()
 
-    val forgingStakeInfoBytesLength: Int = r.getInt()
-    val forgingStakeInfo: ForgingStakeInfo = ForgingStakeInfoSerializer.parseBytes(r.getBytes(forgingStakeInfoBytesLength))
+    val forgingStakeInfo: ForgingStakeInfo = ForgingStakeInfoSerializer.parse(r)
 
-    val forgingStakeMerklePathBytesLength: Int = r.getInt()
-    val forgingStakeMerkle: MerklePath = MerklePath.parseBytes(r.getBytes(forgingStakeMerklePathBytesLength))
+    val forgingStakeMerkle: MerklePath = MerklePathSerializer.getSerializer.parse(r)
 
     val vrfProof: VrfProof = VrfProofSerializer.getSerializer.parse(r)
 
@@ -136,8 +132,7 @@ object SidechainBlockHeaderSerializer extends ScorexSerializer[SidechainBlockHea
 
     val ommersCumulativeScore: Long = r.getLong()
 
-    val signatureLength: Int = r.getInt()
-    val signature: Signature25519 = Signature25519Serializer.getSerializer.parseBytes(r.getBytes(signatureLength))
+    val signature: Signature25519 = Signature25519Serializer.getSerializer.parse(r)
 
     SidechainBlockHeader(
       version,

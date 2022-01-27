@@ -14,14 +14,14 @@ import java.util.Optional;
 
 @JsonView(Views.Default.class)
 public final class VrfProof implements ProofOfKnowledge<VrfSecretKey, VrfPublicKey> {
-    public static final int SIGNATURE_LENGTH = CryptoLibProvider.vrfFunctions().vrfProofLen();
+    public static final int PROOF_LENGTH = CryptoLibProvider.vrfFunctions().vrfProofLen();
 
     @JsonProperty("vrfProof")
     final byte[] proofBytes;
 
     public VrfProof(byte[] proof) {
-        if (proof.length != SIGNATURE_LENGTH)
-            throw new IllegalArgumentException(String.format("Incorrect signature length, %d expected, %d found", SIGNATURE_LENGTH,
+        if (proof.length != PROOF_LENGTH)
+            throw new IllegalArgumentException(String.format("Incorrect proof length, %d expected, %d found", PROOF_LENGTH,
                     proof.length));
 
         proofBytes = Arrays.copyOf(proof, proof.length);

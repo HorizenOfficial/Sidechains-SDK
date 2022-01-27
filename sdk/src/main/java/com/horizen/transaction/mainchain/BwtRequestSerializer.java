@@ -35,7 +35,7 @@ public final class BwtRequestSerializer implements SidechainRelatedMainchainOutp
         int bwtOutputLength = reader.getInt();
         byte[] bwtOutputBytes = reader.getBytes(bwtOutputLength);
         MainchainTxBwtRequestCrosschainOutput bwtOutput = MainchainTxBwtRequestCrosschainOutput.create(bwtOutputBytes, 0).get();
-        byte[] transactionHash = reader.getBytes(CommonParams.transactionHashLength());
+        byte[] transactionHash = reader.getBytes(CommonParams.mainchainTransactionHashLength());
         int transactionIndex = reader.getInt();
 
         return new BwtRequest(bwtOutput, transactionHash, transactionIndex);

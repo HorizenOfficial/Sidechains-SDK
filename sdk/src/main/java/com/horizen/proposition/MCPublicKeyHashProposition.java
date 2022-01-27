@@ -20,7 +20,7 @@ public final class MCPublicKeyHashProposition implements Proposition {
 
     @JsonProperty("mainchainAddress")
     @JsonSerialize(using = JsonHorizenPublicKeyHashSerializer.class)
-    byte[] pubKeyHashBytes;
+    final byte[] pubKeyHashBytes;
 
     public MCPublicKeyHashProposition(byte[] bytes)
     {
