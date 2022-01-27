@@ -3,7 +3,7 @@ package com.horizen.integration.storage
 import com.horizen.SidechainTypes
 import com.horizen.box.ForgerBox
 import com.horizen.fixtures.{BoxFixture, StoreFixture}
-import com.horizen.storage.{IODBStoreAdapter, SidechainStateForgerBoxStorage}
+import com.horizen.storage.SidechainStateForgerBoxStorage
 import com.horizen.utils.ByteArrayWrapper
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite

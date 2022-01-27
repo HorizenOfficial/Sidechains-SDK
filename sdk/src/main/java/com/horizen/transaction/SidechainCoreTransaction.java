@@ -112,6 +112,9 @@ public final class SidechainCoreTransaction
     }
 
     @Override
+    public Boolean isCustom() { return false; }
+
+    @Override
     public byte[] customFieldsData() {
         return Array.emptyByteArray();
     }

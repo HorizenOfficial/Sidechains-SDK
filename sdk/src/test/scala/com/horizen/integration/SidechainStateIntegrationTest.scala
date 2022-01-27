@@ -14,7 +14,7 @@ import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreF
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
-import com.horizen.storage.{IODBStoreAdapter, SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
+import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
 import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo, Pair => JPair}
 import com.horizen.{SidechainState, SidechainTypes}

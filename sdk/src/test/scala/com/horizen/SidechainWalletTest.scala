@@ -39,11 +39,11 @@ class SidechainWalletTest
     with StoreFixture
     with MockitoSugar
 {
-  val mockedBoxStorage: Storage = mock[IODBStoreAdapter]
-  val mockedSecretStorage: Storage = mock[IODBStoreAdapter]
-  val mockedTransactionStorage: Storage = mock[IODBStoreAdapter]
-  val mockedForgingBoxesMerklePathStorage: Storage = mock[IODBStoreAdapter]
-  val mockedCswDataStorage: Storage = mock[IODBStoreAdapter]
+  val mockedBoxStorage: Storage = mock[Storage]
+  val mockedSecretStorage: Storage = mock[Storage]
+  val mockedTransactionStorage: Storage = mock[Storage]
+  val mockedForgingBoxesMerklePathStorage: Storage = mock[Storage]
+  val mockedCswDataStorage: Storage = mock[Storage]
 
   val boxList = new ListBuffer[WalletBox]()
   val storedBoxList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()

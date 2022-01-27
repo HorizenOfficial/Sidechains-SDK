@@ -21,4 +21,7 @@ public final class WithdrawalRequestBox
     public BoxSerializer serializer() {
         return WithdrawalRequestBoxSerializer.getSerializer();
     }
+
+    @Override
+    public Boolean isCustom() { return false; }
 }

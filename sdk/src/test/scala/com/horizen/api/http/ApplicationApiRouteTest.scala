@@ -38,7 +38,7 @@ class ApplicationApiRouteTest extends SidechainApiRouteTest {
         assertEquals(2, result.get("secrets").elements().asScala.length)
         result.get("secrets").elements().asScala.toList.foreach(node => {
           assertTrue(node.isObject)
-          assertEquals(0, node.elements().asScala.length)
+          assertEquals(4, node.elements().asScala.length)
         })
       }
     }

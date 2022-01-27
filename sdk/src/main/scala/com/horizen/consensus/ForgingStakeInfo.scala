@@ -5,8 +5,7 @@ import com.google.common.primitives.{Bytes, Longs}
 import com.horizen.box.ForgerBox
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
 import com.horizen.serialization.Views
-import com.horizen.utils.Utils
-import io.iohk.iodb.ByteArrayWrapper
+import com.horizen.utils.{ByteArrayWrapper, Utils}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
@@ -31,9 +30,9 @@ case class ForgingStakeInfo(blockSignPublicKey: PublicKey25519Proposition,
     // Compare by stake
     stakeAmount.compareTo(that.stakeAmount) match {
         // if equals -> compare by blockSignPublicKey
-      case 0 => ByteArrayWrapper(blockSignPublicKey.pubKeyBytes()).compare(ByteArrayWrapper(that.blockSignPublicKey.pubKeyBytes())) match {
+      case 0 => ByteArrayWrapper.compare(blockSignPublicKey.pubKeyBytes(), that.blockSignPublicKey.pubKeyBytes()) match {
         // if equals -> compare by vrfPublicKey
-        case 0 => ByteArrayWrapper(vrfPublicKey.pubKeyBytes()).compare(ByteArrayWrapper(that.vrfPublicKey.pubKeyBytes()))
+        case 0 => ByteArrayWrapper.compare(vrfPublicKey.pubKeyBytes(), that.vrfPublicKey.pubKeyBytes())
         case diff => diff
       }
       case diff => diff

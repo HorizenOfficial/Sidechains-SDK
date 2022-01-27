@@ -79,6 +79,14 @@ public abstract class AbstractBox<P extends Proposition, BD extends AbstractBoxD
     public String toString() {
         return String.format("%s(id: %s, proposition: %s, value: %d, nonce: %d)", this.getClass().toString(), encoder().encode(id()), proposition(), value(), nonce());
     }
+
+    @Override
+    public String typeName() {
+        return this.getClass().getSimpleName();
+    }
+
+    @Override
+    public Boolean isCustom() { return true; } // All boxes presume customs until it not defined otherwise
 }
 
 

@@ -9,7 +9,7 @@ import com.horizen.params.{NetworkParams, NetworkParamsUtils}
 import com.horizen.storage.SidechainBlockInfoProvider
 import com.horizen.utils.{LruCache, TimeToEpochUtils, Utils}
 import com.horizen.vrf.VrfOutput
-import io.iohk.iodb.ByteArrayWrapper
+import com.horizen.utils.ByteArrayWrapper
 import scorex.core.block.Block
 import scorex.core.block.Block.Timestamp
 import scorex.util.{ModifierId, ScorexLogging}

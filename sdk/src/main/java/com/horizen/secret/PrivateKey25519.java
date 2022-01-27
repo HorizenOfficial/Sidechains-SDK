@@ -1,4 +1,5 @@
 package com.horizen.secret;
+
 import com.horizen.proof.Signature25519;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.proposition.PublicKey25519Proposition;
@@ -83,4 +84,7 @@ public final class PrivateKey25519 implements Secret
                 ", publicKeyBytes=" + BytesUtils.toHexString(publicKeyBytes) +
                 '}';
     }
+
+    @Override
+    public Boolean isCustom() { return false; }
 }

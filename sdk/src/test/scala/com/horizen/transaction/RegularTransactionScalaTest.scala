@@ -10,7 +10,7 @@ import com.horizen.fixtures.BoxFixture
 import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.serialization.ApplicationJsonSerializer
-import org.junit.Assert.assertEquals
+import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import org.scalatest.junit.JUnitSuite
 import scorex.core.utils.ScorexEncoder
@@ -91,6 +91,27 @@ class RegularTransactionScalaTest extends JUnitSuite with BoxFixture
       case _: Throwable => fail("Transaction new boxes do not found in json.")
     }
 
+    try {
+      val typeName = node.path("typeName").asText()
+      try {
+        assertTrue("Type name should be the same", typeName.equals("RegularTransaction"))
+      } catch {
+        case _: Throwable => fail("TypeName have invalid value.")
+      }
+    } catch {
+      case _: Throwable => fail("TypeName is not found in json.")
+    }
+
+    try {
+      val isCustom = node.path("isCustom").asBoolean()
+      try {
+        assertTrue("Regular transaction should not be custom.", isCustom)
+      } catch {
+        case _: Throwable => fail("Field isCustom have invalid value.")
+      }
+    } catch {
+      case _: Throwable => fail("Field isCustom is not found in json.")
+    }
   }
 
 }

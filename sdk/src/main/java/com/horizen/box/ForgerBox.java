@@ -44,4 +44,7 @@ public final class ForgerBox
     public String toString() {
         return String.format("%s(id: %s, proposition: %s, value: %d, vrfPubKey: %s, blockSignProposition: %s, nonce: %d)", this.getClass().toString(), encoder().encode(id()), proposition(), value(), vrfPubKey(), blockSignProposition(), nonce());
     }
+
+    @Override
+    public Boolean isCustom() { return false; }
 }

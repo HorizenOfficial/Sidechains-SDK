@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -117,7 +117,7 @@ class MCSCForgingFeePayments(SidechainTestFramework):
 
         # check all keys/boxes/balances are coherent with the default initialization
         check_wallet_coins_balance(sc_node2, ft_amount)
-        check_box_balance(sc_node2, sc_node2_account, 1, 1, ft_amount)
+        check_box_balance(sc_node2, sc_node2_account, "ZenBox", 1, ft_amount)
 
         # Create forger stake with 499 Zen for SC node 2
         sc_node2_rewards_address = sc_node2.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
@@ -150,7 +150,7 @@ class MCSCForgingFeePayments(SidechainTestFramework):
         self.sc_sync_all()
 
         # Check SC node 2 ForgerBoxes
-        check_box_balance(sc_node2, sc_node2_account, 3, 1, forgerStake_amount)
+        check_box_balance(sc_node2, sc_node2_account, "ForgerBox", 1, forgerStake_amount)
 
         # Generate SC block on SC node 1 for the next consensus epoch
         generate_next_block(sc_node1, "first node", force_switch_to_next_epoch=True)
