@@ -67,7 +67,7 @@ class SCCertNoCoinRecord(SidechainTestFramework):
             sc_node_2_configuration)
 
         # rewind sc genesis block timestamp for 5 consensus epochs
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options.tmpdir, network, 720*120*5)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720*120*5)
 
     def sc_setup_nodes(self):
         return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
