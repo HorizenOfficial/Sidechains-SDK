@@ -4,15 +4,13 @@ import com.google.common.collect.*;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.merkletreenative.InMemorySparseMerkleTree;
 import com.horizen.merkletreenative.MerklePath;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 
-// TODO: change the logger after 304 is merged
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 public class InMemorySparseMerkleTreeWrapper implements AutoCloseable {
-    private final Logger log = LoggerFactory.getLogger(this.getClass().getName());
+    private final Logger log = LogManager.getLogger(this.getClass().getName());
 
     private final InMemorySparseMerkleTree merkleTree;
     private final long leavesNumber;
