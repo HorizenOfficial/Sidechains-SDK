@@ -123,7 +123,7 @@ def launch_bootstrap_tool(command_name, json_parameters):
         return jsone_node
     except ValueError:
         print("Bootstrap tool error occurred for command=" + command_name + "\nparams: " +
-              json_param + "\nError: " + sc_bootstrap_output + "\n")
+              json_param + "\nError: " + sc_bootstrap_output.decode() + "\n")
         raise Exception("Bootstrap tool error occurred")
 
 

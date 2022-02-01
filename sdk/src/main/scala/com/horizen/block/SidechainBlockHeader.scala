@@ -89,10 +89,6 @@ object SidechainBlockHeaderSerializer extends ScorexSerializer[SidechainBlockHea
 
     ForgingStakeInfoSerializer.serialize(obj.forgingStakeInfo, w)
 
-    val forgingStakeMerklePathBytes = obj.forgingStakeMerklePath.bytes()
-    w.putInt(forgingStakeMerklePathBytes.length)
-    w.putBytes(forgingStakeMerklePathBytes)
-
     MerklePathSerializer.getSerializer.serialize(obj.forgingStakeMerklePath, w)
 
     VrfProofSerializer.getSerializer.serialize(obj.vrfProof, w)

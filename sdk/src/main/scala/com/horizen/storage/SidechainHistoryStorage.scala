@@ -91,8 +91,12 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     val baw = storage.get(blockIdBytes).asScala
     baw match {
       case Some(value) => {
-        log.debug("blockById: serilized block : %s".format(BytesUtils.toHexString(value.data)))
-        sidechainBlockSerializer.parseBytesTry(value.data).toOption
+        sidechainBlockSerializer.parseBytesTry(value) match {
+          case Success(block) => Option(block)
+          case Failure(exception) =>
+            log.error("Error while sidechain block parsing.", exception)
+            Option.empty
+        }
       }
       case None => {
         log.info("SidechainHistoryStorage:blockById: byte array is empty")

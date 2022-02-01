@@ -22,12 +22,6 @@ public class SemanticallyInvalidTransactionSerializer implements TransactionSeri
         return serializer;
     }
 
-
-    @Override
-    public byte[] toBytes(SemanticallyInvalidTransaction obj) {
-        return obj.bytes();
-    }
-
     @Override
     public Try<SemanticallyInvalidTransaction> parseBytesTry(byte[] bytes) {
         return new Success<>(new SemanticallyInvalidTransaction());

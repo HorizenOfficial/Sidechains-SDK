@@ -10,6 +10,7 @@ import supertagged.TaggedType
 package object consensus {
   val merkleTreeHashLen: Int = 32
   val sha256HashLen: Int = 32
+  val consensusNonceLength: Int = Longs.BYTES
 
   val consensusHardcodedSaltString: Array[Byte] = "TEST".getBytes()
   val forgerStakePercentPrecision: BigDecimal = BigDecimal.valueOf(1000000) // where 1 / forgerStakePercentPrecision -- minimal possible forger stake percentage to be able to forge
@@ -43,8 +44,6 @@ package object consensus {
   object ConsensusNonce extends TaggedType[Array[Byte]]
   type ConsensusNonce = ConsensusNonce.Type
   def byteArrayToConsensusNonce(bytes: Array[Byte]): ConsensusNonce = ConsensusNonce @@ bytes
-
-  val consensusNonceLength: Int = Longs.BYTES
 
   object VrfMessage extends TaggedType[Array[Byte]]
   type VrfMessage = VrfMessage.Type

@@ -53,8 +53,8 @@ object MainchainBlockReferenceDataSerializer extends ScorexSerializer[MainchainB
   override def serialize(obj: MainchainBlockReferenceData, w: Writer): Unit = {
     w.putBytes(obj.headerHash)
 
-    w.putOption(obj.sidechainRelatedAggregatedTransaction) {case (writer: Writer, agregatedTransaction: MC2SCAggregatedTransaction) =>
-      MC2SCAggregatedTransactionSerializer.getSerializer.serialize(agregatedTransaction, writer)
+    w.putOption(obj.sidechainRelatedAggregatedTransaction) {case (writer: Writer, aggregatedTransaction: MC2SCAggregatedTransaction) =>
+      MC2SCAggregatedTransactionSerializer.getSerializer.serialize(aggregatedTransaction, writer)
     }
 
     obj.existenceProof match {

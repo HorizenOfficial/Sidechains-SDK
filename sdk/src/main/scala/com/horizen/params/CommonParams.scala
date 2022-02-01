@@ -1,6 +1,5 @@
 package com.horizen
 
-import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.utils.Utils
 import scorex.core.NodeViewModifier
 

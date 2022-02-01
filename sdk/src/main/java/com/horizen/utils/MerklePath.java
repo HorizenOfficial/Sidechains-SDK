@@ -1,8 +1,5 @@
 package com.horizen.utils;
 
-import scorex.core.serialization.BytesSerializable;
-import scorex.core.serialization.ScorexSerializer;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;

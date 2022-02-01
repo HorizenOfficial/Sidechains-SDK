@@ -5,8 +5,8 @@ import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 import java.util.ArrayList;
 
-public class MerklePathSerializer<T extends MerklePath> implements ScorexSerializer<MerklePath> {
-    private static MerklePathSerializer<MerklePath> serializer;
+public class MerklePathSerializer<T extends MerklePath> implements ScorexSerializer<T> {
+    private static MerklePathSerializer serializer;
 
     static {
         serializer = new MerklePathSerializer();
@@ -29,13 +29,13 @@ public class MerklePathSerializer<T extends MerklePath> implements ScorexSeriali
     }
 
     @Override
-    public MerklePath parse(Reader reader) {
+    public T parse(Reader reader) {
         int size = reader.getInt();
 
         if(size < 0)
             throw new IllegalArgumentException("Input data corrupted.");
         else if (size == 0)
-            return new MerklePath(new ArrayList<>());
+            return (T) new MerklePath(new ArrayList<>());
 
         ArrayList<Pair<Byte, byte[]>> merklePath = new ArrayList<>();
         while(size > 0) {
@@ -45,6 +45,6 @@ public class MerklePathSerializer<T extends MerklePath> implements ScorexSeriali
             size--;
         }
 
-        return new MerklePath(merklePath);
+        return (T) new MerklePath(merklePath);
     }
 }
