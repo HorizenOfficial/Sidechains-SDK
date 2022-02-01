@@ -13,16 +13,16 @@ import java.util.Arrays;
 @JsonView(Views.Default.class)
 public class CustomPublicKeyProposition extends ScorexEncoding implements ProofOfKnowledgeProposition<CustomPrivateKey>
 {
-    public static final int KEY_LENGTH = 128;
+    public static final int PUBLIC_KEY_LENGTH = 128;
 
     @JsonProperty("publicKey")
     private byte[] pubKeyBytes;
 
     public CustomPublicKeyProposition (byte[] pubKeyBytes) {
-        if(pubKeyBytes.length != KEY_LENGTH)
-            throw new IllegalArgumentException(String.format("Incorrect pubKey length, %d expected, %d found", KEY_LENGTH, pubKeyBytes.length));
+        if(pubKeyBytes.length != PUBLIC_KEY_LENGTH)
+            throw new IllegalArgumentException(String.format("Incorrect pubKey length, %d expected, %d found", PUBLIC_KEY_LENGTH, pubKeyBytes.length));
 
-        this.pubKeyBytes = Arrays.copyOf(pubKeyBytes, KEY_LENGTH);
+        this.pubKeyBytes = Arrays.copyOf(pubKeyBytes, PUBLIC_KEY_LENGTH);
     }
 
     @Override
@@ -44,18 +44,18 @@ public class CustomPublicKeyProposition extends ScorexEncoding implements ProofO
     }
 
     public static int getLength() {
-        return KEY_LENGTH;
+        return PUBLIC_KEY_LENGTH;
     }
 
     @Override
     public String toString() {
         return "CustomPublicKeyProposition{" +
-                "_pubKeyBytes=" + BytesUtils.toHexString(pubKeyBytes) +
+                "pubKeyBytes=" + BytesUtils.toHexString(pubKeyBytes) +
                 '}';
     }
 
     @Override
     public byte[] pubKeyBytes() {
-        return Arrays.copyOf(pubKeyBytes, KEY_LENGTH);
+        return Arrays.copyOf(pubKeyBytes, PUBLIC_KEY_LENGTH);
     }
 }

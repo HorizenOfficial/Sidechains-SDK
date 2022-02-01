@@ -27,6 +27,6 @@ public class CustomPublicKeyPropositionSerializer implements PropositionSerializ
 
     @Override
     public CustomPublicKeyProposition parse(Reader reader) {
-        return new CustomPublicKeyProposition(reader.getBytes(CustomPublicKeyProposition.KEY_LENGTH));
+        return new CustomPublicKeyProposition(reader.getBytes(CustomPublicKeyProposition.PUBLIC_KEY_LENGTH));
     }
 }
