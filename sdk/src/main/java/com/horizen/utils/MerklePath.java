@@ -1,5 +1,7 @@
 package com.horizen.utils;
 
+import scorex.core.serialization.ScorexSerializer;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -56,7 +58,7 @@ public class MerklePath implements scorex.core.serialization.BytesSerializable {
     }
 
     @Override
-    public MerklePathSerializer serializer() {
+    public ScorexSerializer serializer() {
         return MerklePathSerializer.getSerializer();
     }
 
