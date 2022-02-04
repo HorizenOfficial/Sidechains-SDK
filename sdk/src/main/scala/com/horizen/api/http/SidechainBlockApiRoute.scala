@@ -17,11 +17,11 @@ import com.horizen.utils.BytesUtils
 import scorex.core.settings.RESTApiSettings
 import scorex.util.ModifierId
 
+import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
-import java.util.{Optional => JOptional}
 
 case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, sidechainBlockActorRef: ActorRef, forgerRef: ActorRef)
                                  (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
@@ -37,12 +37,15 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
   def findById: Route = (post & path("findById")) {
     entity(as[ReqFindById]) { body =>
       withNodeView { sidechainNodeView =>
-        var optionSidechainBlock = sidechainNodeView.getNodeHistory.getBlockById(body.blockId)
+        val sidechainHistory = sidechainNodeView.getNodeHistory
+        val optionSidechainBlock = sidechainHistory.getBlockById(body.blockId)
 
         if (optionSidechainBlock.isPresent) {
-          var sblock = optionSidechainBlock.get()
-          var sblock_serialized = sblock.serializer.toBytes(sblock)
-          ApiResponseUtil.toResponse(RespFindById(BytesUtils.toHexString(sblock_serialized), sblock))
+          val sblock = optionSidechainBlock.get()
+          val sblock_serialized = sblock.serializer.toBytes(sblock)
+          val height = sidechainHistory.getBlockHeightById(body.blockId).get
+
+          ApiResponseUtil.toResponse(RespFindById(BytesUtils.toHexString(sblock_serialized), sblock, height))
         }
         else
           ApiResponseUtil.toResponse(ErrorInvalidBlockId(s"Invalid id: ${body.blockId}", JOptional.empty()))
@@ -71,8 +74,9 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
       withNodeView { sidechainNodeView =>
         var sidechainHistory = sidechainNodeView.getNodeHistory
         val blockIdOptional = sidechainHistory.getBlockIdByHeight(body.height)
-        if (blockIdOptional.isPresent)
+        if (blockIdOptional.isPresent) {
           ApiResponseUtil.toResponse(RespFindIdByHeight(blockIdOptional.get()))
+        }
         else
           ApiResponseUtil.toResponse(ErrorInvalidBlockHeight(s"Invalid height: ${body.height}", JOptional.empty()))
       }
@@ -171,7 +175,7 @@ object SidechainBlockRestSchema {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespFindById(blockHex: String, block: SidechainBlock) extends SuccessResponse
+  private[api] case class RespFindById(blockHex: String, block: SidechainBlock, height: Int) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqLastIds(number: Int) {

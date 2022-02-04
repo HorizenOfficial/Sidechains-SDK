@@ -55,6 +55,7 @@ import java.util.{HashMap => JHashMap}
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.collection.mutable.ListBuffer
 
+import java.io.File
 import scala.language.postfixOps
 
 @RunWith(classOf[JUnitRunner])
@@ -63,6 +64,15 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
 
   implicit def rejectionHandler: RejectionHandler = SidechainApiRejectionHandler.rejectionHandler
+
+  // initialize log properties since this app uses log4j from sdk libraries
+  // - default name for the log file
+  val logFileName = System.getProperty("java.io.tmpdir") + File.separator + getClass + ".log"
+  System.setProperty("logFilename", logFileName)
+  // - default levels: all in the file and just errors on console
+  System.setProperty("logFileLevel", "all")
+  System.setProperty("logConsoleLevel", "error")
+
 
   val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
 

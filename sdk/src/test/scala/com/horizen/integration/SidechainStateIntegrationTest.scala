@@ -34,6 +34,14 @@ class SidechainStateIntegrationTest
     with MockitoSugar
     with SidechainTypesTestsExtension
 {
+  // initialize log properties since this app uses log4j from sdk libraries
+  // - default name for the log file
+  val logFileName = System.getProperty("java.io.tmpdir") + JFile.separator + getClass + ".log"
+  System.setProperty("logFilename", logFileName)
+  // - default levels: all in the file and just errors on console
+  System.setProperty("logFileLevel", "all")
+  System.setProperty("logConsoleLevel", "error")
+
   val sidechainBoxesCompanion = SidechainBoxesCompanion(new JHashMap())
   val applicationState = new DefaultApplicationState()
 

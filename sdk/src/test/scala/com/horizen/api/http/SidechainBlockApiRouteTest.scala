@@ -73,9 +73,10 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
         if (result == null)
           fail("Serialization failed for object SidechainApiResponseBody")
 
-        assertEquals(2, result.elements().asScala.length)
+        assertEquals(3, result.elements().asScala.length)
         assertTrue(result.get("blockHex").isTextual)
         assertTrue(result.get("block").isObject)
+        assertTrue(result.get("height").isInt)
         jsonChecker.assertsOnBlockJson(result.get("block"), genesisBlock)
       }
       Post(basePath + "findById")
