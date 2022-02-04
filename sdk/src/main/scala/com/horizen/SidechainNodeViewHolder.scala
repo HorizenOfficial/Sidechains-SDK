@@ -316,7 +316,7 @@ object SidechainNodeViewHolderRef {
             applicationState: ApplicationState,
             genesisBlock: SidechainBlock): Props =
     Props(new SidechainNodeViewHolder(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock))
+      walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock)).withMailbox("akka.actor.deployment.prio-mailbox")
 
   def apply(sidechainSettings: SidechainSettings,
             historyStorage: SidechainHistoryStorage,
@@ -336,7 +336,7 @@ object SidechainNodeViewHolderRef {
             genesisBlock: SidechainBlock)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock))
+      walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock).withMailbox("akka.actor.deployment.prio-mailbox"))
 
   def apply(name: String,
             sidechainSettings: SidechainSettings,
@@ -357,5 +357,5 @@ object SidechainNodeViewHolderRef {
             genesisBlock: SidechainBlock)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock), name)
+      walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock).withMailbox("akka.actor.deployment.prio-mailbox"), name)
 }

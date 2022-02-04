@@ -3,7 +3,7 @@ package com.horizen
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
 import java.util.{HashMap => JHashMap, List => JList}
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import com.google.inject.name.Named
 import com.google.inject.{Inject, _}
@@ -15,6 +15,7 @@ import com.horizen.certificatesubmitter.network.{CertificateSignaturesManagerRef
 import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.customconfig.CustomAkkaConfiguration
 import com.horizen.csw.CswManagerRef
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
 import com.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, SecretSubmitProvider, SecretSubmitProviderImpl, TransactionSubmitProvider, TransactionSubmitProviderImpl}
@@ -35,6 +36,7 @@ import scorex.core.settings.ScorexSettings
 import scorex.core.transaction.Transaction
 import scorex.core.{ModifierTypeId, NodeViewModifier}
 import scorex.util.ScorexLogging
+import com.typesafe.config.Config
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Map
@@ -77,6 +79,8 @@ class SidechainApp @Inject()
   override type NVHT = SidechainNodeViewHolder
 
   override implicit lazy val settings: ScorexSettings = sidechainSettings.scorexSettings
+
+  override protected implicit lazy val actorSystem: ActorSystem = ActorSystem(settings.network.agentName, CustomAkkaConfiguration.getCustomConfig())
 
   private val storageList = mutable.ListBuffer[Storage]()
 
