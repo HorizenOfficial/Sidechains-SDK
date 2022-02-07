@@ -67,7 +67,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
 
   // initialize log properties since this app uses log4j from sdk libraries
   // - default name for the log file
-  val logFileName = System.getProperty("java.io.tmpdir") + File.separator + getClass + ".log"
+  val logFileName = System.getProperty("java.io.tmpdir") + File.separator + getClass().getName + ".log"
   System.setProperty("logFilename", logFileName)
   // - default levels: all in the file and just errors on console
   System.setProperty("logFileLevel", "all")

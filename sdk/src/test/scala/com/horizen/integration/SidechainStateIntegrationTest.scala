@@ -36,7 +36,7 @@ class SidechainStateIntegrationTest
 {
   // initialize log properties since this app uses log4j from sdk libraries
   // - default name for the log file
-  val logFileName = System.getProperty("java.io.tmpdir") + JFile.separator + getClass + ".log"
+  val logFileName = System.getProperty("java.io.tmpdir") + JFile.separator + getClass().getName + ".log"
   System.setProperty("logFilename", logFileName)
   // - default levels: all in the file and just errors on console
   System.setProperty("logFileLevel", "all")
