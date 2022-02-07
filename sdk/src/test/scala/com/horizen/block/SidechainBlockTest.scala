@@ -2,6 +2,7 @@ package com.horizen.block
 
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
 import java.util.Random
+
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.box.Box
 import com.horizen.companion.SidechainTransactionsCompanion

@@ -13,21 +13,16 @@ import java.util.Arrays;
 @JsonView(Views.Default.class)
 public class CustomPublicKeyProposition extends ScorexEncoding implements ProofOfKnowledgeProposition<CustomPrivateKey>
 {
+    public static final int PUBLIC_KEY_LENGTH = 128;
 
-    private static final int KEY_LENGTH = 128;
     @JsonProperty("publicKey")
-    private byte[] _pubKeyBytes;
+    private byte[] pubKeyBytes;
 
     public CustomPublicKeyProposition (byte[] pubKeyBytes) {
-        if(pubKeyBytes.length != KEY_LENGTH)
-            throw new IllegalArgumentException(String.format("Incorrect pubKey length, %d expected, %d found", KEY_LENGTH, pubKeyBytes.length));
+        if(pubKeyBytes.length != PUBLIC_KEY_LENGTH)
+            throw new IllegalArgumentException(String.format("Incorrect pubKey length, %d expected, %d found", PUBLIC_KEY_LENGTH, pubKeyBytes.length));
 
-        _pubKeyBytes = Arrays.copyOf(pubKeyBytes, KEY_LENGTH);
-    }
-
-    @Override
-    public byte[] bytes() {
-        return _pubKeyBytes;
+        this.pubKeyBytes = Arrays.copyOf(pubKeyBytes, PUBLIC_KEY_LENGTH);
     }
 
     @Override
@@ -35,36 +30,32 @@ public class CustomPublicKeyProposition extends ScorexEncoding implements ProofO
         return CustomPublicKeyPropositionSerializer.getSerializer();
     }
 
-    public static CustomPublicKeyProposition parseBytes(byte[] bytes) {
-        return new CustomPublicKeyProposition(bytes);
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         CustomPublicKeyProposition that = (CustomPublicKeyProposition) o;
-        return Arrays.equals(_pubKeyBytes, that._pubKeyBytes);
+        return Arrays.equals(pubKeyBytes, that.pubKeyBytes);
     }
 
     @Override
     public int hashCode() {
-        return Arrays.hashCode(_pubKeyBytes);
+        return Arrays.hashCode(pubKeyBytes);
     }
 
     public static int getLength() {
-        return KEY_LENGTH;
+        return PUBLIC_KEY_LENGTH;
     }
 
     @Override
     public String toString() {
         return "CustomPublicKeyProposition{" +
-                "_pubKeyBytes=" + BytesUtils.toHexString(_pubKeyBytes) +
+                "pubKeyBytes=" + BytesUtils.toHexString(pubKeyBytes) +
                 '}';
     }
 
     @Override
     public byte[] pubKeyBytes() {
-        return Arrays.copyOf(_pubKeyBytes, KEY_LENGTH);
+        return Arrays.copyOf(pubKeyBytes, PUBLIC_KEY_LENGTH);
     }
 }

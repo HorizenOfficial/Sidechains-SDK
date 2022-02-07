@@ -19,7 +19,9 @@ public interface SidechainRelatedMainchainOutput<B extends Box<? extends Proposi
     B getBox();
 
     @Override
-    byte[] bytes();
+    default byte[] bytes() {
+        return serializer().toBytes(this);
+    }
 
     @Override
     SidechainRelatedMainchainOutputSerializer serializer();

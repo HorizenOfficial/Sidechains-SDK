@@ -7,7 +7,6 @@ import com.horizen.utils.Ed25519;
 import com.horizen.utils.Pair;
 import com.horizen.vrf.VrfGeneratedDataProvider;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import scala.util.Try;
 
@@ -15,7 +14,6 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
-import java.util.Arrays;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -36,7 +34,7 @@ public class ForgerBoxSerializationTest extends BoxFixtureClass
         }
 
         Pair<byte[], byte[]> keyPair = Ed25519.createKeyPair("12345".getBytes());
-        // Note: current box bytes are also stored in "src/test/resources/forgerrbox_hex"
+        // Note: current box bytes are also stored in "src/test/resources/forgerbox_hex"
         box = getForgerBox(
                 new PublicKey25519Proposition(keyPair.getValue()),
                 1000,
@@ -47,7 +45,7 @@ public class ForgerBoxSerializationTest extends BoxFixtureClass
      //Set to true and run if you want to update regression data.
         if (false) {
             try {
-                BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/forgerrbox_hex"));
+                BufferedWriter out = new BufferedWriter(new FileWriter("src/test/resources/forgerbox_hex"));
                 out.write(BytesUtils.toHexString(box.bytes()));
                 out.close();
             }
@@ -74,7 +72,7 @@ public class ForgerBoxSerializationTest extends BoxFixtureClass
         byte[] bytes;
         try {
             ClassLoader classLoader = getClass().getClassLoader();
-            FileReader file = new FileReader(classLoader.getResource("forgerrbox_hex").getFile());
+            FileReader file = new FileReader(classLoader.getResource("forgerbox_hex").getFile());
             bytes = BytesUtils.fromHexString(new BufferedReader(file).readLine());
         }
         catch (Exception e) {

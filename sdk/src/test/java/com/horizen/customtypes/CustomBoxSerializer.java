@@ -1,7 +1,6 @@
 package com.horizen.customtypes;
 
 import com.horizen.box.BoxSerializer;
-import scala.util.Try;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
@@ -24,11 +23,14 @@ public class CustomBoxSerializer implements BoxSerializer<CustomBox>
 
     @Override
     public void serialize(CustomBox box, Writer writer) {
-        writer.putBytes(box.bytes());
+        writer.putLong(box.nonce());
+        box.getBoxData().serializer().serialize(box.getBoxData(), writer);
     }
 
     @Override
     public CustomBox parse(Reader reader) {
-        return CustomBox.parseBytes(reader.getBytes(reader.remaining()));
+        long nonce = reader.getLong();
+        CustomBoxData boxData = CustomBoxDataSerializer.getSerializer().parse(reader);
+        return new CustomBox(boxData, nonce);
     }
 }

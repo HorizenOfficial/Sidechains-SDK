@@ -3,7 +3,6 @@ package com.horizen.transaction.mainchain;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.block.MainchainTxSidechainCreationCrosschainOutput;
-import com.horizen.block.MainchainTxSidechainCreationCrosschainOutputData;
 import com.horizen.box.ForgerBox;
 import com.horizen.box.data.ForgerBoxData;
 import com.horizen.proposition.PublicKey25519Proposition;
@@ -12,12 +11,9 @@ import com.horizen.utils.Utils;
 import com.horizen.proposition.VrfPublicKey;
 import scala.compat.java8.OptionConverters;
 import scorex.crypto.hash.Blake2b256;
-
-import java.util.Arrays;
 import java.util.Optional;
 
 public final class SidechainCreation implements SidechainRelatedMainchainOutput<ForgerBox> {
-
     private MainchainTxSidechainCreationCrosschainOutput output;
     private byte[] containingTxHash;
     private int index;
@@ -62,15 +58,6 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
     }
 
     @Override
-    public byte[] bytes() {
-        return Bytes.concat(
-                output.sidechainCreationOutputBytes(),
-                containingTxHash,
-                Ints.toByteArray(index)
-        );
-    }
-
-    @Override
     public int transactionIndex() {
         return index;
     }
@@ -81,21 +68,6 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
 
     public Optional<byte[]> getGenSysConstantOpt() {
         return OptionConverters.toJava(output.constantOpt());
-    }
-
-    public static SidechainCreation parseBytes(byte[] bytes) {
-        int offset = 0;
-
-        MainchainTxSidechainCreationCrosschainOutputData output = MainchainTxSidechainCreationCrosschainOutputData.create(bytes, offset).get();
-        offset += output.size();
-
-        byte[] txHash = Arrays.copyOfRange(bytes, offset, offset + 32);
-        offset += 32;
-
-        int index = BytesUtils.getInt(bytes, offset);
-
-        byte[] sidechainId = MainchainTxSidechainCreationCrosschainOutput.calculateSidechainId(txHash, index);
-        return new SidechainCreation(new MainchainTxSidechainCreationCrosschainOutput(sidechainId, output), txHash, index);
     }
 
     @Override

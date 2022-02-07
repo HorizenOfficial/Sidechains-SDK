@@ -7,15 +7,17 @@ import com.horizen.secret.SchnorrSecret;
 import com.horizen.serialization.Views;
 
 import java.util.Arrays;
-import java.util.Objects;
 
 @JsonView(Views.Default.class)
-public class SchnorrProof implements ProofOfKnowledge<SchnorrSecret, SchnorrProposition>
-{
-    private final byte[] signature;
+public class SchnorrProof implements ProofOfKnowledge<SchnorrSecret, SchnorrProposition> {
+    public static int SIGNATURE_LENGTH = CryptoLibProvider.schnorrFunctions().schnorrSignatureLength();
+
+    final byte[] signature;
 
     public SchnorrProof(byte[] signatureBytes) {
-        Objects.requireNonNull(signatureBytes, "SchnorrProofBytes can't be null");
+        if (signatureBytes.length != SIGNATURE_LENGTH)
+            throw new IllegalArgumentException(String.format("Incorrect signature length, %d expected, %d found", SIGNATURE_LENGTH,
+                    signatureBytes.length));
 
         signature = Arrays.copyOf(signatureBytes, signatureBytes.length);
     }
@@ -26,16 +28,7 @@ public class SchnorrProof implements ProofOfKnowledge<SchnorrSecret, SchnorrProp
     }
 
     @Override
-    public byte[] bytes() {
-        return Arrays.copyOf(signature, signature.length);
-    }
-
-    @Override
     public ProofSerializer serializer() {
         return SchnorrSignatureSerializer.getSerializer();
-    }
-
-    public static SchnorrProof parse(byte[] bytes) {
-        return new SchnorrProof(bytes);
     }
 }

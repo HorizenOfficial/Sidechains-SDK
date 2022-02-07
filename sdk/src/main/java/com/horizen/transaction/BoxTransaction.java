@@ -47,6 +47,11 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
     @Override
     public abstract byte version();
 
+    @Override
+    public byte[] bytes() {
+        return serializer().toBytes(this);
+    }
+
     @JsonProperty("typeName")
     public String typeName() {
         return this.getClass().getSimpleName();

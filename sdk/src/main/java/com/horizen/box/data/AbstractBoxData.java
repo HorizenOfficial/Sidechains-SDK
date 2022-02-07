@@ -31,9 +31,6 @@ public abstract class AbstractBoxData<P extends Proposition, B extends AbstractB
     }
 
     @Override
-    public abstract byte[] bytes();
-
-    @Override
     public byte[] customFieldsHash() {
         // By default no custom fields present, so return all zeros hash.
         return Utils.ZEROS_HASH;

@@ -1,7 +1,6 @@
 package com.horizen.customtypes;
 
 import com.horizen.transaction.TransactionSerializer;
-import scala.util.Failure;
 import scala.util.Success;
 import scala.util.Try;
 import scorex.util.serialization.Reader;
@@ -23,28 +22,16 @@ public class SemanticallyInvalidTransactionSerializer implements TransactionSeri
         return serializer;
     }
 
-
-    @Override
-    public byte[] toBytes(SemanticallyInvalidTransaction obj) {
-        return obj.bytes();
-    }
-
     @Override
     public Try<SemanticallyInvalidTransaction> parseBytesTry(byte[] bytes) {
-        try {
-            return new Success<>(SemanticallyInvalidTransaction.parseBytes(bytes));
-        } catch (Throwable e) {
-            return new Failure<>(e);
-        }
+        return new Success<>(new SemanticallyInvalidTransaction());
     }
 
     @Override
-    public void serialize(SemanticallyInvalidTransaction obj, Writer writer) {
-        writer.putBytes(obj.bytes());
-    }
+    public void serialize(SemanticallyInvalidTransaction obj, Writer writer) {}
 
     @Override
     public SemanticallyInvalidTransaction parse(Reader reader) {
-        return SemanticallyInvalidTransaction.parseBytes(reader.getBytes(reader.remaining()));
+        return new SemanticallyInvalidTransaction();
     }
 }

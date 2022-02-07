@@ -4,10 +4,8 @@ import com.horizen.box.BoxUnlocker;
 import com.horizen.box.ZenBox;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.transaction.SidechainTransaction;
-import com.horizen.transaction.Transaction;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
-import scala.Array;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,9 +38,6 @@ public final class SemanticallyInvalidTransaction extends SidechainTransaction<P
     }
 
     @Override
-    public byte[] bytes() {return new byte[0];}
-
-    @Override
     public byte[] customFieldsData() {
         return new byte[0];
     }
@@ -55,10 +50,6 @@ public final class SemanticallyInvalidTransaction extends SidechainTransaction<P
     @Override
     public TransactionSerializer serializer() {
         return SemanticallyInvalidTransactionSerializer.getSerializer();
-    }
-
-    public static SemanticallyInvalidTransaction parseBytes(byte[] bytes) {
-        return new SemanticallyInvalidTransaction();
     }
 
     @Override

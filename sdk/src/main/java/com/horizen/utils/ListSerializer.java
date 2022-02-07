@@ -4,8 +4,6 @@ import scorex.core.serialization.BytesSerializable;
 import scorex.core.serialization.ScorexSerializer;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
-
-import java.io.ByteArrayOutputStream;
 import java.util.*;
 
 public class ListSerializer<T extends BytesSerializable> implements ScorexSerializer<List<T>> {
@@ -23,28 +21,19 @@ public class ListSerializer<T extends BytesSerializable> implements ScorexSerial
 
     @Override
     public void serialize(List<T> objectsList, Writer writer) {
-        List<Integer> lengthsList = new ArrayList<>();
-        ByteArrayOutputStream objects = new ByteArrayOutputStream();
-
-        for(T object : objectsList) {
-            byte[] objectBytes = serializer.toBytes(object);
-            lengthsList.add(objectBytes.length);
-            objects.write(objectBytes, 0, objectBytes.length);
-        }
+        if(maxListLength > 0 && objectsList.size() > maxListLength)
+            throw new IllegalArgumentException("Serializable data contains to many elements - " + objectsList.size());
 
         writer.putInt(objectsList.size());
 
-        for(int length : lengthsList)
-            writer.putInt(length);
-
-        writer.putBytes(objects.toByteArray());
-
+        for(T object : objectsList) {
+            serializer.serialize(object, writer);
+        }
     }
 
     @Override
     public List<T> parse(Reader reader) {
         int objectsCount = reader.getInt();
-        int objectsTotalLength = 0;
 
         if(objectsCount < 0)
             throw new IllegalArgumentException("Input data contains illegal elements count - " + objectsCount);
@@ -52,18 +41,11 @@ public class ListSerializer<T extends BytesSerializable> implements ScorexSerial
         if(maxListLength > 0 && objectsCount > maxListLength)
             throw new IllegalArgumentException("Input data contains to many elements - " + objectsCount);
 
-        List<Integer> lengthsList = new ArrayList<>();
-        for(int i = 0; i < objectsCount; i++) {
-            int length = reader.getInt();
-            lengthsList.add(length);
-            objectsTotalLength += length;
-        }
-
-        if (reader.remaining() < objectsTotalLength)
-            throw new IllegalArgumentException("Input data is corrupted.");
-
         List<T> objectsList = new ArrayList<>(objectsCount);
-        lengthsList.forEach(length -> objectsList.add(serializer.parseBytes(reader.getBytes(length))));
+        for(int i = 0; i < objectsCount; i++) {
+            T parseObject = serializer.parse(reader);
+            objectsList.add(parseObject);
+        }
 
         return objectsList;
     }

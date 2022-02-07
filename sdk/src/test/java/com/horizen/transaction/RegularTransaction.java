@@ -1,35 +1,24 @@
 package com.horizen.transaction;
 
-import com.google.common.primitives.Bytes;
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
 import com.horizen.box.*;
 import com.horizen.box.data.*;
 import com.horizen.proof.Proof;
 import com.horizen.proposition.*;
 import com.horizen.proof.Signature25519;
-import com.horizen.proof.Signature25519Serializer;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
-import com.horizen.utils.DynamicTypedSerializer;
-import com.horizen.utils.ListSerializer;
-import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Pair;
 import scala.Array;
-
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.horizen.box.CoreBoxesIdsEnum.ForgerBoxId;
-import static com.horizen.box.CoreBoxesIdsEnum.ZenBoxId;
-import static com.horizen.box.CoreBoxesIdsEnum.WithdrawalRequestBoxId;
 
 public final class RegularTransaction
     extends SidechainTransaction<Proposition, Box<Proposition>>
 {
-    private List<ZenBox> inputs;
-    private List<BoxData<? extends Proposition, ? extends Box<? extends Proposition>>> outputs;
-    private List<Signature25519> signatures;
+    List<ZenBox> inputs;
+    List<BoxData<? extends Proposition, ? extends Box<? extends Proposition>>> outputs;
+    List<Signature25519> signatures;
 
     private long fee;
 
@@ -37,21 +26,7 @@ public final class RegularTransaction
     private List<Box<Proposition>> newBoxes;
     private List<BoxUnlocker<Proposition>> unlockers;
 
-    // Serializers definition
-    private static ListSerializer<ZenBox> boxListSerializer =
-            new ListSerializer<>(ZenBoxSerializer.getSerializer(), MAX_TRANSACTION_UNLOCKERS);
-    private static ListSerializer<BoxData<? extends Proposition, ? extends Box<? extends Proposition>>> boxDataListSerializer =
-            new ListSerializer<>(new DynamicTypedSerializer<>(
-                    new HashMap<Byte, BoxDataSerializer>() {{
-                        put(ZenBoxId.id(), ZenBoxDataSerializer.getSerializer());
-                        put(WithdrawalRequestBoxId.id(), WithdrawalRequestBoxDataSerializer.getSerializer());
-                        put(ForgerBoxId.id(), ForgerBoxDataSerializer.getSerializer());
-                    }}, new HashMap<>()
-            ));
-    private static ListSerializer<Signature25519> signaturesSerializer =
-            new ListSerializer<>(Signature25519Serializer.getSerializer(), MAX_TRANSACTION_UNLOCKERS);
-
-    private RegularTransaction(List<ZenBox> inputs,
+    RegularTransaction(List<ZenBox> inputs,
                                List<BoxData<? extends Proposition, ? extends Box<? extends Proposition>>> outputs,
                                List<Signature25519> signatures,
                                long fee) {
@@ -176,57 +151,6 @@ public final class RegularTransaction
         return 100;
     }
 
-    @Override
-    public byte[] bytes() {
-        byte[] inputBoxesBytes = boxListSerializer.toBytes(inputs);
-        byte[] outputBoxDataBytes = boxDataListSerializer.toBytes(outputs);
-
-        byte[] signaturesBytes = signaturesSerializer.toBytes(signatures);
-
-        return Bytes.concat(                                            // minimum RegularTransaction length is 32 bytes
-                Longs.toByteArray(fee()),                               // 8 bytes
-                Ints.toByteArray(inputBoxesBytes.length),               // 4 bytes
-                inputBoxesBytes,                                        // depends on previous value (>=4 bytes)
-                Ints.toByteArray(outputBoxDataBytes.length),            // 4 bytes
-                outputBoxDataBytes,                                     // depends on previous value (>=4 bytes)
-                Ints.toByteArray(signaturesBytes.length),               // 4 bytes
-                signaturesBytes                                         // depends on previous value (>=4 bytes)
-        );
-    }
-
-    public static RegularTransaction parseBytes(byte[] bytes) {
-        if(bytes.length < 32)
-            throw new IllegalArgumentException("Input data corrupted.");
-
-        if(bytes.length > MAX_TRANSACTION_SIZE)
-            throw new IllegalArgumentException("Input data length is too large.");
-
-        int offset = 0;
-
-        long fee = BytesUtils.getLong(bytes, offset);
-        offset += 8;
-
-        int batchSize = BytesUtils.getInt(bytes, offset);
-        offset += 4;
-
-        List<ZenBox> inputs = boxListSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
-        offset += batchSize;
-
-        batchSize = BytesUtils.getInt(bytes, offset);
-        offset += 4;
-
-        List<BoxData<? extends Proposition, ? extends Box<? extends Proposition>>> outputs = boxDataListSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
-        offset += batchSize;
-
-        batchSize = BytesUtils.getInt(bytes, offset);
-        offset += 4;
-        if(bytes.length != offset + batchSize)
-            throw new IllegalArgumentException("Input data corrupted.");
-
-        List<Signature25519> signatures = signaturesSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
-
-        return new RegularTransaction(inputs, outputs, signatures, fee);
-    }
 
     private static Boolean checkSupportedBoxDataTypes(List<BoxData<? extends Proposition, ? extends Box<? extends Proposition>>> boxDataList) {
         for(BoxData boxData: boxDataList) {

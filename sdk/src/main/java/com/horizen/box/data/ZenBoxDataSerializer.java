@@ -1,7 +1,10 @@
 package com.horizen.box.data;
 
+import com.horizen.proposition.PublicKey25519Proposition;
+import com.horizen.proposition.PublicKey25519PropositionSerializer;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
+
 
 public final class ZenBoxDataSerializer implements BoxDataSerializer<ZenBoxData> {
 
@@ -17,11 +20,15 @@ public final class ZenBoxDataSerializer implements BoxDataSerializer<ZenBoxData>
 
     @Override
     public void serialize(ZenBoxData boxData, Writer writer) {
-        writer.putBytes(boxData.bytes());
+        boxData.proposition().serializer().serialize(boxData.proposition(), writer);
+        writer.putLong(boxData.value());
     }
 
     @Override
     public ZenBoxData parse(Reader reader) {
-        return ZenBoxData.parseBytes(reader.getBytes(reader.remaining()));
+        PublicKey25519Proposition proposition = PublicKey25519PropositionSerializer.getSerializer().parse(reader);
+        long value = reader.getLong();
+
+        return new ZenBoxData(proposition, value);
     }
 }

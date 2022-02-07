@@ -9,7 +9,6 @@ import com.horizen.secret.VrfKeyGenerator;
 import com.horizen.proposition.VrfPublicKey;
 import org.junit.Test;
 import java.util.Random;
-
 import static org.junit.Assert.*;
 
 public class ForgerBoxTest extends BoxFixtureClass {
@@ -50,12 +49,12 @@ public class ForgerBoxTest extends BoxFixtureClass {
 
     private void checkSerialization(int seed) {
         ForgerBox initial = ForgerBoxFixture.generateForgerBox(seed)._1;
-
         byte[] serialized = initial.bytes();
-        ForgerBox parsed = ForgerBox.parseBytes(serialized);
+        ForgerBox parsed = ForgerBoxSerializer.getSerializer().parseBytes(serialized);
 
         assertEquals(initial, parsed);
     }
+
 
     @Test
     public void serializationTest() {

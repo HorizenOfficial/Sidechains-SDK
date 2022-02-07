@@ -14,8 +14,6 @@ case class MainchainHeaderBaseInfo (hash: MainchainHeaderHash,
 
   override lazy val serializer: ScorexSerializer[MainchainHeaderBaseInfo] = MainchainHeaderBaseInfoSerializer
 
-  override def bytes: Array[Byte] = MainchainHeaderBaseInfoSerializer.toBytes(this)
-
   override def equals(obj: Any): Boolean = {
     obj match {
       case headerBaseInfo:M  => {

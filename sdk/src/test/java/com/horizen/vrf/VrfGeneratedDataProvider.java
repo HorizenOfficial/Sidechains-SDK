@@ -6,6 +6,7 @@ import com.horizen.proof.VrfProof;
 import com.horizen.proposition.VrfPublicKey;
 import com.horizen.secret.VrfKeyGenerator;
 import com.horizen.secret.VrfSecretKey;
+import com.horizen.secret.VrfSecretKeySerializer;
 import com.horizen.utils.BytesUtils;
 
 import java.io.BufferedReader;
@@ -25,7 +26,8 @@ public class VrfGeneratedDataProvider {
     }
 
     public static VrfSecretKey getVrfSecretKey(String prefix, Integer seed) {
-        return VrfSecretKey.parse(readBytesFromFile(prefix, seed, VrfSecretKey.class));
+
+        return VrfSecretKeySerializer.getSerializer().parseBytes(readBytesFromFile(prefix, seed, VrfSecretKey.class));
     }
 
     public static VrfPublicKey updateVrfPublicKey(String prefix, Integer seed) {

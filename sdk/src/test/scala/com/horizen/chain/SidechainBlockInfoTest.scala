@@ -3,7 +3,6 @@ package com.horizen.chain
 import java.io._
 
 import com.horizen.fixtures.SidechainBlockInfoFixture
-import com.horizen.librustsidechains.FieldElement
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
 import com.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
 import org.junit.Assert.{assertEquals, assertTrue}

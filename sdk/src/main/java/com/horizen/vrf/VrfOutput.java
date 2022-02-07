@@ -2,6 +2,7 @@ package com.horizen.vrf;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
+import com.horizen.cryptolibprovider.CryptoLibProvider;
 import com.horizen.serialization.Views;
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils;
 import scorex.core.serialization.BytesSerializable;
@@ -11,16 +12,22 @@ import java.util.Arrays;
 
 @JsonView(Views.Default.class)
 public class VrfOutput implements BytesSerializable {
-    private final byte[] vrfOutputBytes;
+    public static final int OUTPUT_LENGTH = CryptoLibProvider.vrfFunctions().vrfOutputLen();
+
+    @JsonProperty("bytes")
+    final byte[] vrfOutputBytes;
 
     public VrfOutput(byte[] bytes) {
+        if (bytes.length != OUTPUT_LENGTH)
+            throw new IllegalArgumentException(String.format("Incorrect output length, %d expected, %d found", OUTPUT_LENGTH,
+                    bytes.length));
+
         vrfOutputBytes = Arrays.copyOf(bytes, bytes.length);
     }
 
-    @JsonProperty("bytes")
     @Override
     public byte[] bytes() {
-        return Arrays.copyOf(vrfOutputBytes, vrfOutputBytes.length);
+        return serializer().toBytes(this);
     }
 
     @Override
@@ -39,10 +46,6 @@ public class VrfOutput implements BytesSerializable {
     @Override
     public int hashCode() {
         return Arrays.hashCode(vrfOutputBytes);
-    }
-
-    public static VrfOutput parse(byte[] bytes) {
-        return new VrfOutput(bytes);
     }
 
     @Override

@@ -20,11 +20,11 @@ public final class PublicKey25519PropositionSerializer implements PropositionSer
 
     @Override
     public void serialize(PublicKey25519Proposition proposition, Writer writer) {
-        writer.putBytes(proposition.bytes());
+        writer.putBytes(proposition.pubKeyBytes());
     }
 
     @Override
     public PublicKey25519Proposition parse(Reader reader) {
-        return PublicKey25519Proposition.parseBytes(reader.getBytes(reader.remaining()));
+        return new PublicKey25519Proposition(reader.getBytes(PublicKey25519Proposition.KEY_LENGTH));
     }
 }

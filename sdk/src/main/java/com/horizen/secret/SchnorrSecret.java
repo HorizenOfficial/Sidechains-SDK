@@ -1,21 +1,21 @@
 package com.horizen.secret;
 
-import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.proof.SchnorrProof;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.proposition.SchnorrProposition;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
-
 import java.util.Arrays;
 import java.util.Objects;
 
 import static com.horizen.secret.SecretsIdsEnum.SchnorrSecretKeyId;
 
-//@TODO add JSON serialization
 public class SchnorrSecret implements Secret {
-    private final byte[] secretBytes;
-    private final byte[] publicBytes;
+    public static final int SECRET_KEY_LENGTH = CryptoLibProvider.schnorrFunctions().schnorrSecretKeyLength();
+    public static final int PUBLIC_KEY_LENGTH = CryptoLibProvider.schnorrFunctions().schnorrPublicKeyLength();
+
+    final byte[] secretBytes;
+    final byte[] publicBytes;
 
     public SchnorrSecret(byte[] secretKey, byte[] publicKey) {
         Objects.requireNonNull(secretKey, "Secret key can't be null");
@@ -42,23 +42,6 @@ public class SchnorrSecret implements Secret {
     public SchnorrProposition publicImage() {
         byte[] publicKey = Arrays.copyOf(publicBytes, publicBytes.length);
         return new SchnorrProposition(publicKey);
-    }
-
-    @Override
-    public byte[] bytes() {
-        int secretLength = secretBytes.length;
-        return Bytes.concat(Ints.toByteArray(secretLength), secretBytes, publicBytes);
-    }
-
-    public static SchnorrSecret parse(byte[] bytes) {
-        int secretKeyOffset = Ints.BYTES;
-        int secretKeyLength = Ints.fromByteArray(Arrays.copyOfRange(bytes, 0, secretKeyOffset));
-        int publicKeyOffset = secretKeyOffset + secretKeyLength;
-
-        byte[] secretKey = Arrays.copyOfRange(bytes, secretKeyOffset, publicKeyOffset);
-        byte[] publicKey = Arrays.copyOfRange(bytes, publicKeyOffset, bytes.length);
-
-        return new SchnorrSecret(secretKey, publicKey);
     }
 
     @Override

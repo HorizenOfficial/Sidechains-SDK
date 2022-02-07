@@ -34,8 +34,10 @@ class ConsensusDataStorageTest {
 
     val nonceData: Map[ConsensusEpochId, NonceConsensusEpochInfo] = (1 to 100).map{ _ =>
       val id = blockIdToEpochId(bytesToId(Utils.doubleSHA256Hash(rnd.nextLong().toString.getBytes)))
+      val nonceBytes:Array[Byte] = new Array[Byte](consensusNonceLength)
+      rnd.nextBytes(nonceBytes)
       val nonceInfo =
-        NonceConsensusEpochInfo(byteArrayToConsensusNonce(Utils.doubleSHA256Hash(rnd.nextLong().toString.getBytes)))
+        NonceConsensusEpochInfo(byteArrayToConsensusNonce(nonceBytes))
       (id, nonceInfo)
     }.toMap
 

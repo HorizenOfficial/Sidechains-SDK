@@ -14,6 +14,8 @@ import java.util.Objects;
 @JsonView(Views.Default.class)
 @JsonIgnoreProperties("valid")
 public class SchnorrProposition implements ProofOfKnowledgeProposition<SchnorrSecret> {
+    public static final int KEY_LENGTH = CryptoLibProvider.schnorrFunctions().schnorrPublicKeyLength();
+
     private final byte[] publicBytes;
 
     public SchnorrProposition(byte[] publicKey) {
@@ -34,11 +36,6 @@ public class SchnorrProposition implements ProofOfKnowledgeProposition<SchnorrSe
     }
 
     @Override
-    public byte[] bytes() {
-        return pubKeyBytes();
-    }
-
-    @Override
     public PropositionSerializer serializer() {
         return SchnorrPropositionSerializer.getSerializer();
     }
@@ -54,10 +51,6 @@ public class SchnorrProposition implements ProofOfKnowledgeProposition<SchnorrSe
     @Override
     public int hashCode() {
         return Arrays.hashCode(publicBytes);
-    }
-
-    public static SchnorrProposition parseBytes(byte[] bytes) {
-        return new SchnorrProposition(bytes);
     }
 
     @Override

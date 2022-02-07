@@ -3,8 +3,8 @@ package com.horizen.block
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ListSerializer, MerkleTree, Utils}
-import com.horizen.validation.{InconsistentOmmerDataException, InvalidOmmerDataException, InvalidSidechainBlockDataException}
+import com.horizen.utils.{BytesUtils, ListSerializer, MerkleTree, Utils}
+import com.horizen.validation.{InconsistentOmmerDataException, InvalidOmmerDataException}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 import scorex.util.idToBytes

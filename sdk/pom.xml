@@ -247,7 +247,7 @@
           <include>OmmerTestVrfProof143</include>
           <include>OmmerTestVrfSecretKey143</include>
           <include>zenbox_hex</include>
-          <include>forgerrbox_hex</include>
+          <include>forgerbox_hex</include>
           <include>certifierrightbox_hex</include>
           <include>sidechainblockinfo_hex</include>
           <include>sidechainsyncinfo_hex</include>
