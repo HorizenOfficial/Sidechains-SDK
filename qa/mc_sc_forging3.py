@@ -2,7 +2,7 @@
 
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration
+    SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from test_framework.util import initialize_chain_clean, start_nodes, \
     websocket_port_by_mc_node_index, connect_nodes_bi, disconnect_nodes_bi
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks
@@ -68,9 +68,9 @@ class MCSCForging3(SidechainTestFramework):
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0)))
         )
 
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, 900),
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, LARGE_WITHDRAWAL_EPOCH_LENGTH),
                                          sc_node_1_configuration)
-        bootstrap_sidechain_nodes(self.options.tmpdir, network)
+        bootstrap_sidechain_nodes(self.options, network)
 
     def sc_setup_nodes(self):
         # Start 1 SC node

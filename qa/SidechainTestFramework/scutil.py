@@ -5,7 +5,7 @@ import sys
 import json
 
 from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
-    VrfAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths
+    VrfAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sidechainauthproxy import SidechainAuthServiceProxy
 import subprocess
 import time
@@ -29,15 +29,18 @@ LEVEL_ALL   = "all"
 # timeout in secs for rest api
 DEFAULT_REST_API_TIMEOUT = 5
 
+
 class TimeoutException(Exception):
     def __init__(self, operation):
         Exception.__init__(self)
         self.operation = operation
 
+
 class LogInfo(object):
     def __init__(self, logFileLevel=LEVEL_ALL, logConsoleLevel=LEVEL_ERROR):
         self.logFileLevel = logFileLevel
         self.logConsoleLevel = logConsoleLevel
+
 
 def sc_p2p_port(n):
     return 8300 + n + os.getpid() % 999
@@ -115,15 +118,16 @@ sidechainclient_processes = {}
 def launch_bootstrap_tool(command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
-                               os.getenv("SIDECHAIN_SDK", "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.2.7.jar",
-                               command_name, json_param], stdout=subprocess.PIPE)
+                                os.getenv("SIDECHAIN_SDK",
+                                          "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.2.7.jar",
+                                command_name, json_param], stdout=subprocess.PIPE)
     sc_bootstrap_output = java_ps.communicate()[0]
     try:
         jsone_node = json.loads(sc_bootstrap_output)
         return jsone_node
     except ValueError:
-        print("Bootstrap tool error occurred for command=" + command_name + "\nparams: " +
-              json_param + "\nError: " + sc_bootstrap_output.decode() + "\n")
+        print("Bootstrap tool error occurred for command= {}\nparams: {}\nError: {}\n"
+              .format(command_name, json_param, sc_bootstrap_output.decode()))
         raise Exception("Bootstrap tool error occurred")
 
 
@@ -146,8 +150,11 @@ Output: a JSON object to be included in the settings file of the sidechain node 
     "initialCumulativeCommTreeHash": xxx
 }
 """
+
+
 def generate_genesis_data(genesis_info, genesis_secret, vrf_secret, block_timestamp_rewind):
-    jsonParameters = {"secret": genesis_secret, "vrfSecret": vrf_secret, "info": genesis_info, "regtestBlockTimestampRewind": block_timestamp_rewind}
+    jsonParameters = {"secret": genesis_secret, "vrfSecret": vrf_secret, "info": genesis_info,
+                      "regtestBlockTimestampRewind": block_timestamp_rewind}
     jsonNode = launch_bootstrap_tool("genesisinfo", jsonParameters)
     return jsonNode
 
@@ -160,6 +167,8 @@ Parameters:
  
 Output: an array of instances of Account (see sc_bootstrap_info.py).
 """
+
+
 def generate_secrets(seed, number_of_accounts):
     accounts = []
     secrets = []
@@ -182,6 +191,7 @@ Parameters:
 Output: an array of instances of VrfKey (see sc_bootstrap_info.py).
 """
 
+
 def generate_vrf_secrets(seed, number_of_vrf_keys):
     vrf_keys = []
     secrets = []
@@ -194,6 +204,7 @@ def generate_vrf_secrets(seed, number_of_vrf_keys):
         vrf_keys.append(VrfAccount(secret["vrfSecret"], secret["vrfPublicKey"]))
     return vrf_keys
 
+
 # Maybe should we give the possibility to customize the configuration file by adding more fields ?
 
 """
@@ -205,6 +216,8 @@ Parameters:
 
 Output: CertificateProofInfo (see sc_bootstrap_info.py).
 """
+
+
 def generate_certificate_proof_info(seed, number_of_schnorr_keys, threshold, keys_paths):
     json_parameters = {
         "seed": seed,
@@ -227,8 +240,10 @@ def generate_certificate_proof_info(seed, number_of_schnorr_keys, threshold, key
         schnorr_secrets.append(keys["schnorrSecret"])
         schnorr_public_keys.append(keys["schnorrPublicKey"])
 
-    certificate_proof_info = CertificateProofInfo(threshold, gen_sys_constant, verification_key, schnorr_secrets, schnorr_public_keys)
+    certificate_proof_info = CertificateProofInfo(threshold, gen_sys_constant, verification_key, schnorr_secrets,
+                                                  schnorr_public_keys)
     return certificate_proof_info
+
 
 """
 Generate ceased sidechain withdrawal proof info calling ScBootstrappingTools with command "generateCswProofInfo"
@@ -238,6 +253,8 @@ Parameters:
 
 Output: Verification key
 """
+
+
 def generate_csw_proof_info(withdrawal_epoch_len, keys_paths):
     json_parameters = {
         "withdrawalEpochLen": withdrawal_epoch_len,
@@ -249,6 +266,7 @@ def generate_csw_proof_info(withdrawal_epoch_len, keys_paths):
     verification_key = output["verificationKey"]
     return verification_key
 
+
 """
 Create directories for each node and configuration files inside them.
 For each node put also genesis data in configuration files.
@@ -259,9 +277,10 @@ Parameters:
  - bootstrap_info: an instance of SCBootstrapInfo (see sc_bootstrap_info.py)
  - websocket_config: an instance of MCConnectionInfo (see sc_boostrap_info.py)
 """
+
+
 def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_config=SCNodeConfiguration(),
                           log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT):
-
     apiAddress = "127.0.0.1"
     configsData = []
     apiPort = sc_rpc_port(n)
@@ -272,7 +291,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
     if not os.path.isdir(datadir):
         os.makedirs(datadir)
 
-    customFileName = './resources/template_' + str(n+1) + '.conf'
+    customFileName = './resources/template_' + str(n + 1) + '.conf'
     fileToOpen = './resources/template.conf'
     if os.path.isfile(customFileName):
         fileToOpen = customFileName
@@ -337,10 +356,13 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
 
     return configsData
 
+
 """
 Create directories for each node and default configuration files inside them.
 For each node put also genesis data in configuration files.
 """
+
+
 def initialize_default_sc_datadir(dirname, n):
     apiAddress = "127.0.0.1"
     configsData = []
@@ -354,7 +376,7 @@ def initialize_default_sc_datadir(dirname, n):
     if not os.path.isdir(ps_keys_dir):
         os.makedirs(ps_keys_dir)
     cert_keys_paths = cert_proof_keys_paths(ps_keys_dir)
-    csw_keys_paths = csw_proof_keys_paths(ps_keys_dir, 900)  # withdrawal epoch length taken from the config file.
+    csw_keys_paths = csw_proof_keys_paths(ps_keys_dir, LARGE_WITHDRAWAL_EPOCH_LENGTH)  # withdrawal epoch length taken from the config file.
 
     with open('./resources/template_predefined_genesis.conf', 'r') as templateFile:
         tmpConfig = templateFile.read()
@@ -436,7 +458,8 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     Currently, it is permitted by default and a warning is issued.
     The --add-opens VM option remove this warning.
     '''
-    bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + dbg_agent_opt + ' -cp ' + binary + " " + (datadir + ('/node%s.conf' % i))
+    bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + dbg_agent_opt + ' -cp ' + binary + " " + (
+                datadir + ('/node%s.conf' % i))
 
     if print_output_to_file:
         with open(datadir + "/log_out.txt", "wb") as out, open(datadir + "/log_err.txt", "wb") as err:
@@ -456,7 +479,9 @@ def start_sc_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=Non
     """
     if extra_args is None: extra_args = [None for i in range(num_nodes)]
     if binary is None: binary = [None for i in range(num_nodes)]
-    nodes = [start_sc_node(i, dirname, extra_args[i], rpchost, binary=binary[i], print_output_to_file=print_output_to_file) for i in range(num_nodes)]
+    nodes = [
+        start_sc_node(i, dirname, extra_args[i], rpchost, binary=binary[i], print_output_to_file=print_output_to_file)
+        for i in range(num_nodes)]
     wait_for_sc_node_initialization(nodes)
     return nodes
 
@@ -529,10 +554,12 @@ def disconnect_sc_nodes(from_connection, node_num):
 def sc_connected_peers(node):
     return node.node_connectedPeers()["result"]["peers"]
 
+
 def disconnect_sc_nodes_bi(nodes, a, b):
     disconnect_sc_nodes(nodes[a], b)
     disconnect_sc_nodes(nodes[b], a)
     time.sleep(WAIT_CONST)
+
 
 def connect_sc_nodes_bi(nodes, a, b):
     connect_sc_nodes(nodes[a], b)
@@ -562,6 +589,8 @@ Parameters:
  - mc_block_reference_info: the JSON representation of a mainchain block reference info. See com.horizen.node.util.MainchainBlockReferenceInfo
  - expected_mc_block: the JSON representation of a mainchain block
 """
+
+
 def check_mainchain_block_reference_info(mc_block_reference_info, expected_mc_block):
     try:
 
@@ -583,6 +612,7 @@ def check_mainchain_block_reference_info(mc_block_reference_info, expected_mc_bl
     except Exception:
         return False
 
+
 """
 Verify if a mainchain block is included in a sidechain block.
 
@@ -590,8 +620,9 @@ Parameters:
  - sc_block: the JSON representation of a sidechain block. See com.horizen.block.SidechainBlock
  - expected_mc_block: the JSON representation of a mainchain block
 """
-def is_mainchain_block_included_in_sc_block(sc_block, expected_mc_block):
 
+
+def is_mainchain_block_included_in_sc_block(sc_block, expected_mc_block):
     mc_block_headers_json = sc_block["mainchainHeaders"]
     is_mac_block_included = False
 
@@ -606,6 +637,7 @@ def is_mainchain_block_included_in_sc_block(sc_block, expected_mc_block):
 
     return is_mac_block_included
 
+
 """
 Verify the wallet coins balance is equal to an expected coins balance.
 Note: core coins boxes are: ZenBox and ForgerBox
@@ -614,6 +646,8 @@ Parameters:
  - sc_node: a sidechain node
  - expected_wallet_balance
 """
+
+
 def check_wallet_coins_balance(sc_node, expected_wallet_balance):
     response = sc_node.wallet_coinsBalance()
     balance = response["result"]
@@ -630,6 +664,8 @@ Parameters:
  - expected_boxes_count: the number of expected boxes for that account
  - expected_balance: expected balance for that account
 """
+
+
 def check_box_balance(sc_node, account, box_class_name, expected_boxes_count, expected_balance):
     response = sc_node.wallet_allBoxes()
     boxes = response["result"]["boxes"]
@@ -645,11 +681,12 @@ def check_box_balance(sc_node, account, box_class_name, expected_boxes_count, ex
             boxes_count += 1
 
     assert_equal(expected_boxes_count, boxes_count,
-                "Unexpected number of boxes for public key {0}. Expected {1} but found {2}."
-                .format(pub_key, expected_boxes_count, boxes_count))
+                 "Unexpected number of boxes for public key {0}. Expected {1} but found {2}."
+                 .format(pub_key, expected_boxes_count, boxes_count))
     assert_equal(expected_balance * 100000000, boxes_balance,
-                "Unexpected sum of balances for public key {0}. Expected {1} but found {2}."
-                .format(pub_key, expected_balance * 100000000, boxes_balance))
+                 "Unexpected sum of balances for public key {0}. Expected {1} but found {2}."
+                 .format(pub_key, expected_balance * 100000000, boxes_balance))
+
 
 # In STF we need to create SC genesis block with a timestamp in the past to be able to forge next block
 # without receiving "block in future" error. By default we rewind half of the consensus epoch.
@@ -704,9 +741,12 @@ network: {
  Output:
  - bootstrap information of the sidechain nodes. An instance of SCBootstrapInfo (see sc_boostrap_info.py)    
 """
-def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration, block_timestamp_rewind=DefaultBlockTimestampRewind,
-                              logFileLevel=LEVEL_ALL, logConsoleLevel=LEVEL_ERROR, restApiTimeout=DEFAULT_REST_API_TIMEOUT):
-    log_info = LogInfo(logFileLevel, logConsoleLevel)
+
+
+def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
+                              block_timestamp_rewind=DefaultBlockTimestampRewind):
+    log_info = LogInfo(options.logfilelevel, options.logconsolelevel)
+    print(options)
     total_number_of_sidechain_nodes = len(network.sc_nodes_configuration)
     sc_creation_info = network.sc_creation_info
     ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
@@ -734,9 +774,11 @@ def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration, block_tim
     for i in range(total_number_of_sidechain_nodes):
         sc_node_conf = network.sc_nodes_configuration[i]
         if i == 0:
-            bootstrap_sidechain_node(dirname, i, sc_nodes_bootstrap_info, sc_node_conf, log_info, restApiTimeout)
+            bootstrap_sidechain_node(options.tmpdir, i, sc_nodes_bootstrap_info, sc_node_conf, log_info,
+                                     options.restapitimeout)
         else:
-            bootstrap_sidechain_node(dirname, i, sc_nodes_bootstrap_info_empty_account, sc_node_conf, log_info, restApiTimeout)
+            bootstrap_sidechain_node(options.tmpdir, i, sc_nodes_bootstrap_info_empty_account, sc_node_conf, log_info,
+                                     options.restapitimeout)
 
     return sc_nodes_bootstrap_info
 
@@ -749,8 +791,9 @@ def cert_proof_keys_paths(dirname):
 
 def csw_proof_keys_paths(dirname, withdrawal_epoch_length):
     # use replace for Windows OS to be able to parse the path to the keys in the config file
-    return ProofKeysPaths(os.path.join(dirname, "csw_marlin_snark_pk_" + str(withdrawal_epoch_length)).replace("\\", "/"),
-                          os.path.join(dirname, "csw_marlin_snark_vk_" + str(withdrawal_epoch_length)).replace("\\", "/"))
+    return ProofKeysPaths(
+        os.path.join(dirname, "csw_marlin_snark_pk_" + str(withdrawal_epoch_length)).replace("\\", "/"),
+        os.path.join(dirname, "csw_marlin_snark_vk_" + str(withdrawal_epoch_length)).replace("\\", "/"))
 
 
 """
@@ -762,6 +805,8 @@ Parameters:
  Output:
   - an instance of SCBootstrapInfo (see sc_boostrap_info.py)
 """
+
+
 def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, csw_keys_paths):
     accounts = generate_secrets("seed", 1)
     vrf_keys = generate_vrf_secrets("seed", 1)
@@ -770,23 +815,25 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
     certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, cert_keys_paths)
     csw_verification_key = generate_csw_proof_info(sc_creation_info.withdrawal_epoch_length, csw_keys_paths)
     genesis_info = initialize_new_sidechain_in_mainchain(
-                                    sc_creation_info.mc_node,
-                                    sc_creation_info.withdrawal_epoch_length,
-                                    genesis_account.publicKey,
-                                    sc_creation_info.forward_amount,
-                                    vrf_key.publicKey,
-                                    certificate_proof_info.genSysConstant,
-                                    certificate_proof_info.verificationKey,
-                                    csw_verification_key,
-                                    sc_creation_info.btr_data_length)
+        sc_creation_info.mc_node,
+        sc_creation_info.withdrawal_epoch_length,
+        genesis_account.publicKey,
+        sc_creation_info.forward_amount,
+        vrf_key.publicKey,
+        certificate_proof_info.genSysConstant,
+        certificate_proof_info.verificationKey,
+        csw_verification_key,
+        sc_creation_info.btr_data_length)
 
-    genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret, vrf_key.secret, block_timestamp_rewind)
+    genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret, vrf_key.secret,
+                                         block_timestamp_rewind)
     sidechain_id = genesis_info[2]
 
     return SCBootstrapInfo(sidechain_id, genesis_account, sc_creation_info.forward_amount, genesis_info[1],
                            genesis_data["scGenesisBlockHex"], genesis_data["powData"], genesis_data["mcNetwork"],
                            sc_creation_info.withdrawal_epoch_length, vrf_key, certificate_proof_info,
                            genesis_data["initialCumulativeCommTreeHash"], cert_keys_paths, csw_keys_paths)
+
 
 """
 Bootstrap one sidechain node: create directory and configuration file for the node.
@@ -799,9 +846,12 @@ Parameters:
  - rest_api_timeout: optional, SC node api timeout, 5 seconds by default.
  
 """
+
+
 def bootstrap_sidechain_node(dirname, n, bootstrap_info, sc_node_configuration,
-                             log_info = LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT):
+                             log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT):
     initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration, log_info, rest_api_timeout)
+
 
 def generate_forging_request(epoch, slot):
     return json.dumps({"epochNumber": epoch, "slotNumber": slot})
@@ -827,17 +877,18 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False):
 
     forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot))
 
-    #"while" will break if whole epoch no generated block, due changed error code
+    # "while" will break if whole epoch no generated block, due changed error code
     while "error" in forge_result and forge_result["error"]["code"] == "0105":
-        if("no forging stake" in forge_result["error"]["description"]):
+        if ("no forging stake" in forge_result["error"]["description"]):
             raise AssertionError("No forging stake for the epoch")
-        print("Skip block generation for epoch {epochNumber} slot {slotNumber}".format(epochNumber = next_epoch, slotNumber = next_slot))
+        print("Skip block generation for epoch {epochNumber} slot {slotNumber}".format(epochNumber=next_epoch,
+                                                                                       slotNumber=next_slot))
         next_epoch, next_slot = get_next_epoch_slot(next_epoch, next_slot, slots_in_epoch)
         forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot))
 
     assert_true("result" in forge_result, "Error during block generation for SC {0}".format(node_name))
     block_id = forge_result["result"]["blockId"]
-    print("Successfully forged block with id {blockId}".format(blockId = block_id))
+    print("Successfully forged block with id {blockId}".format(blockId=block_id))
     return forge_result["result"]["blockId"]
 
 
@@ -854,6 +905,7 @@ SC_FIELD_SAFE_SIZE = 31
 
 def generate_random_field_element_hex():
     return binascii.b2a_hex(os.urandom(SC_FIELD_SAFE_SIZE)) + "00" * (SC_FIELD_SIZE - SC_FIELD_SAFE_SIZE)
+
 
 # Check if the CSW proofs for the required boxes were finished (or absent if was not able to create a proof)
 def if_csws_were_generated(sc_node, csw_box_ids, allow_absent=False):

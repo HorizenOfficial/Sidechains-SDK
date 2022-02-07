@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 from netrc import netrc
 
-from SidechainTestFramework.sc_boostrap_info import SCNetworkConfiguration, SCBootstrapInfo
+from SidechainTestFramework.sc_boostrap_info import SCNetworkConfiguration, SCBootstrapInfo, \
+    LARGE_WITHDRAWAL_EPOCH_LENGTH
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.authproxy import JSONRPCException
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
@@ -11,8 +12,7 @@ from test_framework.util import check_json_precision, \
     sync_blocks, sync_mempools, wait_bitcoinds, websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import initialize_default_sc_chain_clean, \
     start_sc_nodes, stop_sc_nodes, \
-    sync_sc_blocks, sync_sc_mempools, TimeoutException, \
-    bootstrap_sidechain_nodes
+    sync_sc_blocks, sync_sc_mempools, TimeoutException, bootstrap_sidechain_nodes
 import os
 import tempfile
 import traceback
@@ -21,7 +21,7 @@ import shutil
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
 
-from SidechainTestFramework.scutil import LEVEL_ERROR, LEVEL_ALL
+from SidechainTestFramework.scutil import LEVEL_ERROR, LEVEL_DEBUG
 
 '''
 The workflow is the following:
@@ -77,8 +77,8 @@ class SidechainTestFramework(BitcoinTestFramework):
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0)))
         )
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, 900), sc_node_1_configuration)
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options.tmpdir, network)
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, LARGE_WITHDRAWAL_EPOCH_LENGTH), sc_node_1_configuration)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
 
     def sc_setup_network(self, split = False):
         self.sc_nodes = self.sc_setup_nodes()
@@ -122,7 +122,7 @@ class SidechainTestFramework(BitcoinTestFramework):
                           help="Print out all RPC calls as they are made")
         parser.add_option("--restapitimeout", dest="restapitimeout", default=5, action="store",
                           help="timeout in seconds for rest API execution, might be useful when debugging")
-        parser.add_option("--logfilelevel", dest="logfilelevel", default=LEVEL_ALL, action="store",
+        parser.add_option("--logfilelevel", dest="logfilelevel", default=LEVEL_DEBUG, action="store",
                           help="log4j log level for application log file")
         parser.add_option("--logconsolelevel", dest="logconsolelevel", default=LEVEL_ERROR, action="store",
                           help="log4j log level for application console")
