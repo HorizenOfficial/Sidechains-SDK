@@ -8,7 +8,7 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import start_nodes
 from SidechainTestFramework.scutil import create_sidechain, cert_proof_keys_paths, \
     generate_random_field_element_hex, csw_proof_keys_paths
-from SidechainTestFramework.sc_boostrap_info import SCCreationInfo
+from SidechainTestFramework.sc_boostrap_info import SCCreationInfo, LARGE_WITHDRAWAL_EPOCH_LENGTH
 
 """
 Generate MC transactions for Unit tests
@@ -54,7 +54,7 @@ class McTxsData(SidechainTestFramework):
         # Generate Tx with version -4 with single SidechainCreation output
         # Use the same amount and withdrawal epoch length as for unit test
         creation_amount = 50
-        withdrawal_epoch_length = 900
+        withdrawal_epoch_length = LARGE_WITHDRAWAL_EPOCH_LENGTH
         btr_data_length = 2
 
         sc_creation_info = SCCreationInfo(mc_node, creation_amount, withdrawal_epoch_length, btr_data_length)
