@@ -1,6 +1,6 @@
 package com.horizen
 
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 import org.junit.{Before, Test}
 import org.junit.Assert._
 

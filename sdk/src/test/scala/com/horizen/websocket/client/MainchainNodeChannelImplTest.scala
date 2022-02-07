@@ -9,8 +9,8 @@ import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito.MockitoSugar
 
 import scala.concurrent.Promise
 import scala.concurrent.duration.{FiniteDuration, _}

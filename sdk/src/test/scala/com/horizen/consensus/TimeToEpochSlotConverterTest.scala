@@ -9,7 +9,7 @@ import com.horizen.proposition.SchnorrProposition
 import com.horizen.utils.TimeToEpochUtils
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 import scorex.core.block.Block
 import scorex.util.{ModifierId, bytesToId}
 

@@ -21,8 +21,8 @@ import com.horizen.{SidechainState, SidechainTypes}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.Mockito
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito.MockitoSugar
 import scorex.core.{bytesToId, bytesToVersion, idToBytes, versionToBytes}
 import scorex.crypto.hash.Blake2b256
 

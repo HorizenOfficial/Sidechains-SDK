@@ -9,8 +9,8 @@ import com.horizen.transaction.mainchain.ForwardTransfer
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito.MockitoSugar
 
 import scala.util.Random
 

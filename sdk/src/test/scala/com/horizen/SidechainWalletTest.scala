@@ -21,8 +21,8 @@ import com.horizen.wallet.ApplicationWallet
 import org.junit.Assert._
 import org.junit._
 import org.mockito._
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito._
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito._
 import scorex.core.{VersionTag, bytesToId}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ModifierId

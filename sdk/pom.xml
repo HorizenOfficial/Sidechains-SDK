@@ -100,35 +100,62 @@
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>21.0</version>
+      <version>31.0.1-jre</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/com.google.inject/guice -->
     <dependency>
       <groupId>com.google.inject</groupId>
       <artifactId>guice</artifactId>
-      <version>4.2.2</version>
+      <version>5.1.0</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/com.google.inject.extensions/guice-assistedinject -->
     <dependency>
       <groupId>com.google.inject.extensions</groupId>
       <artifactId>guice-assistedinject</artifactId>
-      <version>4.2.2</version>
+      <version>5.1.0</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.13.1</version>
+      <version>4.13.2</version>
       <scope>test</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.scalatest/scalatest -->
     <dependency>
       <groupId>org.scalatest</groupId>
       <artifactId>scalatest_2.12</artifactId>
-      <version>3.0.5</version>
+      <version>3.2.11</version>
       <scope>test</scope>
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/org.scalatest/scalatest-funsuite -->
+    <dependency>
+      <groupId>org.scalatest</groupId>
+      <artifactId>scalatest-funsuite_2.12</artifactId>
+      <version>3.2.11</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/org.scalatest/scalatest-shouldmatchers -->
+    <dependency>
+      <groupId>org.scalatest</groupId>
+      <artifactId>scalatest-shouldmatchers_2.12</artifactId>
+      <version>3.2.11</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/org.scalatestplus/junit-4-13 -->
+    <dependency>
+      <groupId>org.scalatestplus</groupId>
+      <artifactId>junit-4-13_2.12</artifactId>
+      <version>3.2.11.0</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/org.scalatestplus/mockito-4-2 -->
+    <dependency>
+      <groupId>org.scalatestplus</groupId>
+      <artifactId>mockito-4-2_2.12</artifactId>
+      <version>3.2.11.0</version>
     </dependency>
     <!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-testkit -->
     <dependency>
@@ -144,22 +171,23 @@
       <version>10.1.9</version>
       <scope>test</scope>
     </dependency>
+    <!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-http-jackson -->
     <dependency>
       <groupId>com.typesafe.akka</groupId>
       <artifactId>akka-http-jackson_2.12</artifactId>
-      <version>10.1.9</version>
-      <scope>compile</scope>
+      <version>10.2.7</version>
     </dependency>
+    <!-- https://mvnrepository.com/artifact/org.mockito/mockito-core -->
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
-      <version>2.27.0</version>
+      <version>4.3.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-inline</artifactId>
-      <version>4.1.0</version>
+      <version>4.3.1</version>
       <scope>test</scope>
     </dependency>
 
@@ -167,28 +195,28 @@
     <dependency>
       <groupId>com.fasterxml.jackson.module</groupId>
       <artifactId>jackson-module-scala_2.12</artifactId>
-      <version>2.9.9</version>
-      <scope>compile</scope>
+      <version>2.10.5</version>
     </dependency>
+
     <!-- https://mvnrepository.com/artifact/org.glassfish.tyrus.bundles/tyrus-standalone-client -->
     <dependency>
       <groupId>org.glassfish.tyrus.bundles</groupId>
       <artifactId>tyrus-standalone-client</artifactId>
-      <version>1.15</version>
+      <version>1.18</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.glassfish.tyrus/tyrus-container-grizzly-server -->
     <dependency>
       <groupId>org.glassfish.tyrus</groupId>
       <artifactId>tyrus-container-grizzly-server</artifactId>
-      <version>1.15</version>
+      <version>1.18</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.glassfish.tyrus/tyrus-server -->
     <dependency>
       <groupId>org.glassfish.tyrus</groupId>
       <artifactId>tyrus-server</artifactId>
-      <version>1.15</version>
+      <version>1.18</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.iq80.leveldb/leveldb-project -->
@@ -209,7 +237,7 @@
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcprov-jdk15on</artifactId>
-      <version>1.67</version>
+      <version>1.69</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://repo.softmotions.com/repository/softmotions-public/org/ethereum/leveldbjni-all -->

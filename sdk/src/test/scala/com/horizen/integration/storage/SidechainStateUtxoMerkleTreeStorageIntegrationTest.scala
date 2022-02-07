@@ -7,7 +7,7 @@ import com.horizen.storage.SidechainStateUtxoMerkleTreeStorage
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, UtxoMerkleTreeLeafInfo}
 import org.junit.Assert._
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 
 import scala.collection.JavaConverters._
 

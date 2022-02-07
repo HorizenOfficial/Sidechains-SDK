@@ -4,7 +4,7 @@ import java.io._
 
 import com.horizen.fixtures.SidechainBlockInfoFixture
 import com.horizen.utils.BytesUtils
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import scorex.util.ModifierId

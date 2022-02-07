@@ -2,7 +2,7 @@ package com.horizen.block
 
 import com.horizen.utils.BytesUtils
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 import org.junit.Assert._
 
 import scala.io.Source

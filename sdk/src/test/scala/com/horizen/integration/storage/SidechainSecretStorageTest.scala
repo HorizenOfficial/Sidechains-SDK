@@ -11,7 +11,7 @@ import com.horizen.secret.{VrfKeyGenerator, _}
 import com.horizen.storage.SidechainSecretStorage
 import org.junit.Assert._
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 
 import scala.collection.JavaConverters._
 import scala.util.Try
