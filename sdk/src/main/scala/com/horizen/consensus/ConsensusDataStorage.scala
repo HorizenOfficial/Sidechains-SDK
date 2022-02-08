@@ -61,4 +61,8 @@ class ConsensusDataStorage(consensusEpochInfoStorage: Storage) extends ScorexLog
     listForUpdate.add(addedData)
     consensusEpochInfoStorage.update(new ByteArrayWrapper(nextVersion), listForUpdate, java.util.Collections.emptyList())
   }
+
+  def lastVersionId: Option[ByteArrayWrapper] = {
+    consensusEpochInfoStorage.lastVersionID().asScala
+  }
 }

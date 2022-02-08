@@ -1,7 +1,6 @@
 package com.horizen.storage
 
-import java.util.{ArrayList => JArrayList}
-
+import java.util.{Optional, ArrayList => JArrayList}
 import com.horizen.SidechainTypes
 import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.utils.{ByteArrayWrapper, Pair => JPair}
@@ -124,4 +123,7 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
 
   def isEmpty: Boolean = storage.isEmpty
 
+  def lastVersionId : Optional[ByteArrayWrapper] = {
+    storage.lastVersionID()
+  }
 }

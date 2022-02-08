@@ -16,7 +16,7 @@ import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgingStakeMerklePathInfo}
 import scorex.core.VersionTag
 import com.horizen.utils._
-import scorex.util.ModifierId
+import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.util.Try
 import scala.collection.JavaConverters._
@@ -57,6 +57,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
                  SidechainWallet]
   with SidechainTypes
   with NodeWallet
+  with ScorexLogging
 {
   override type NVCT = SidechainWallet
 
@@ -159,7 +160,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     val ftCswData = calculateForwardTransferCswData(modifier.mainchainBlockReferencesData, pubKeys)
 
     cswDataStorage.update(new ByteArrayWrapper(version), withdrawalEpoch, ftCswData ++ utxoCswData)
-
+    log.debug("wallet storages updates applied, now calling applicationWallet.onChangeBoxes")
     applicationWallet.onChangeBoxes(version, newBoxes.toList.asJava, boxIdsToRemove.toList.asJava)
 
     this
@@ -215,6 +216,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
 
   // rollback BoxStorage and TransactionsStorage only. SecretStorage must not change.
   override def rollback(to: VersionTag): Try[SidechainWallet] = Try {
+    log.warn(s"rolling back wallet to version = ${to}")
     require(to != null, "Version to rollback to must be NOT NULL.")
     val version = new ByteArrayWrapper(BytesUtils.fromHexString(to))
     walletBoxStorage.rollback(version).get

@@ -1,18 +1,16 @@
 package com.horizen.storage
 
-import java.util.{ArrayList => JArrayList, List => JList}
-
-import com.horizen.block.{SidechainBlockSerializer, _}
-import com.horizen.chain.{MainchainBlockReferenceDataInfo, _}
+import com.horizen.block._
+import com.horizen.chain._
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.NetworkParams
-import com.horizen.utils._
-import com.horizen.utils.{Pair => JPair}
+import com.horizen.utils.{Pair => JPair, _}
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
 
+import java.util.{Optional, ArrayList => JArrayList, List => JList}
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Random, Success, Try}
@@ -36,10 +34,13 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
 
   private val activeChain: ActiveChain = loadActiveChain()
 
+  log.info("height of active chain: " + activeChain.height)
+
   private def loadActiveChain(): ActiveChain = {
     if (storage.isEmpty) {
       return ActiveChain(params.mainchainCreationBlockHeight)
     }
+    log.info("Loading active chain from a storage with size: " + storage.size)
 
     val activeChainBlocksInfo: ArrayBuffer[(ModifierId, SidechainBlockInfo)] = new ArrayBuffer()
 
@@ -272,6 +273,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
       java.util.Arrays.asList(new JPair(new ByteArrayWrapper(blockInfoKey(block.id)), new ByteArrayWrapper(blockInfo.bytes))),
       new JArrayList()
     )
+    log.debug("block updated in storage with validity = " + status)
     this
   }
 
@@ -281,11 +283,19 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
       java.util.Arrays.asList(new JPair(bestBlockIdKey, new ByteArrayWrapper(idToBytes(block.id)))),
       new JArrayList()
     )
-
+    
     val mainchainParent: Option[MainchainHeaderHash] = block.mainchainHeaders.headOption.map(header => byteArrayToMainchainHeaderHash(header.hashPrevBlock))
     activeChain.setBestBlock(block.id, blockInfo, mainchainParent)
+    log.info("best block info updated in storage and in active chain: " + blockInfo)
+
     this
   }
 
   def isEmpty: Boolean = storage.isEmpty
+  
+  def size: Int = storage.size
+  
+  def lastVersionId : Optional[ByteArrayWrapper] = {
+    storage.lastVersionID()
+  }
 }

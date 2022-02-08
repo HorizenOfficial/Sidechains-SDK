@@ -66,6 +66,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   private def checkVersion(): Unit = {
     val versionBytes = versionToBytes(version)
 
+    log.debug(s"State storage version bytes: ${BytesUtils.toHexString(versionBytes)}")
+
     require({
       stateStorage.lastVersionId match {
         case Some(storageVersion) => storageVersion.data.sameElements(versionBytes)
@@ -374,6 +376,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   override def rollbackTo(to: VersionTag): Try[SidechainState] = Try {
     require(to != null, "Version to rollback to must be NOT NULL.")
+    log.warn(s"rolling back state to version = ${to}")
     val version = BytesUtils.fromHexString(to)
     applicationState.onRollback(version) match {
       case Success(appState) => new SidechainState(

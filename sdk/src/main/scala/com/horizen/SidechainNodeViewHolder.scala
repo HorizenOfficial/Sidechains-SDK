@@ -8,15 +8,17 @@ import com.horizen.node.SidechainNodeView
 import com.horizen.params.NetworkParams
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
+import com.horizen.utils.BytesUtils
 import com.horizen.validation._
 import com.horizen.wallet.ApplicationWallet
 import scorex.core.NodeViewHolder.DownloadRequest
 import scorex.core.consensus.History.ProgressInfo
-import scorex.core.idToVersion
+import scorex.core.consensus.ModifierSemanticValidity
+import scorex.core.{idToVersion, versionToId}
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages._
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
-import scorex.util.{ModifierId, ScorexLogging}
+import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
@@ -64,13 +66,115 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     new ConsensusValidator(timeProvider)
   )
 
-  override def restoreState(): Option[(HIS, MS, VL, MP)] = for {
-    history <- SidechainHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
-    state <- SidechainState.restoreState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, applicationState)
-    wallet <- SidechainWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, params, applicationWallet)
-    pool <- Some(SidechainMemoryPool.emptyPool)
-  } yield (history, state, wallet, pool)
+  override def restoreState(): Option[(HIS, MS, VL, MP)] = {
+    log.info("Restoring state")
+    val op = for {
+      history <- SidechainHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
+      state <- SidechainState.restoreState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, applicationState)
+      wallet <- SidechainWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes, walletBoxStorage, secretStorage,
+        walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, params, applicationWallet)
+      pool <- Some(SidechainMemoryPool.emptyPool)
+    } yield (history, state, wallet, pool)
+
+    if (op.isEmpty) {
+      // this is the case for the genesis state
+      return op
+    }
+
+    dumpStorages
+
+    log.info("############################ Checking state consistency...")
+
+    val h = op.get._1
+    val s = op.get._2
+    val w = op.get._3
+    val m = op.get._4
+
+    val bestBlockId = h.bestBlockId
+    val stateVersion = s.version
+
+    log.info(s"################ history bestBlockId = ${bestBlockId}")
+    log.info(s"################        stateVersion = ${stateVersion}")
+    log.info(s"################    walletBoxVersion = ${BytesUtils.toHexString(walletBoxStorage.lastVersionId.get)}")
+
+    val chainTip = h.blockInfoById(bestBlockId)
+    val stateTip = h.blockInfoById(versionToId(stateVersion))
+    val height_h = chainTip.height
+    val height_s = stateTip.height
+    log.info(s"################    history h = ${height_h}")
+    log.info(s"################      state h = ${height_s}")
+
+    if (bestBlockId == stateVersion) {
+      log.info("Consistent storage and history repositories")
+      return op
+    }
+    log.warn("Inconsistent storage and history repositories, trying to recover that")
+
+    // this is the sequence of blocks starting from active chain up to input block, which is the head
+    // of the returned sequence, unless a None is returned in case of errors
+    val t = h.chainBack(versionToId(stateVersion), h.storage.isInActiveChain, Int.MaxValue)
+    log.info(s"################      t = ${t}")
+
+    if (t.isEmpty)
+    {
+      log.error("Could not recover")
+      return None
+    } else {
+      val rollback_to = t.get.head
+
+      val child_block = t.get.tail.head
+      h.storage.blockById(child_block) match {
+        case Some(_) =>
+          {
+            log.info(s"Child ${BytesUtils.toHexString(idToBytes(child_block))} is in history")
+            log.info("Child info " + h.blockInfoById(child_block))
+            // Issue: after restoring, this child block is never reprocessed again, even if its state is 'Unknown' in history ledger
+            // therefore no further blocks are added to the history or the state in the pmodModify
+          }
+        case None =>
+          {
+            log.info(s"Child ${BytesUtils.toHexString(idToBytes(child_block))} is NOT in history")
+          }
+      }
+      log.warn(s"Inconsistent storage and history, rolling back state and wallets to history best block id = ${rollback_to}")
+      // we can rollback to current best block in history or the ancestor of state block in active chain (which might as well be the same)
+
+      // state rollback -->
+      //      if (applicationState rollback ok) -->
+      //      stateStorage.rollback
+      //      forgerBoxStorage.rollback
+      //      utxoMerkleTreeStorage.rollback
+      // wallet rollback -->
+      //      walletBoxStorage.rollback
+      //      walletTransactionStorage.rollback
+      //      forgingBoxesInfoStorage.rollback  <----- which version does it use?
+      //      cswDataStorage.rollback(version
+      //      ----> applicationWallet callback
+      val rolledBackState  = s.rollbackTo(idToVersion(rollback_to))
+      val rolledBackWallet = w.rollback(idToVersion(rollback_to))
+
+      dumpStorages
+      return Some((h, rolledBackState.get, rolledBackWallet.get, m))
+    }
+    None
+  }
+
+  def dumpStorages : Unit = {
+    if (historyStorage.lastVersionId.isPresent) { // also other storages should be checked before 'get' methods
+      log.info(s"HistoryStorage:             ${BytesUtils.toHexString(historyStorage.lastVersionId.get)}")
+      log.info(s"ConsensusStorage:           ${BytesUtils.toHexString(consensusDataStorage.lastVersionId.get)}")
+      log.info(s"secretStorage:              ${BytesUtils.toHexString(secretStorage.lastVersionId.get)}")
+      log.info("--------------------")
+      log.info(s"StateStorage:               ${BytesUtils.toHexString(stateStorage.lastVersionId.get)}")
+      log.info(s"StateForgerBoxStorage:      ${BytesUtils.toHexString(forgerBoxStorage.lastVersionId.get)}")
+      log.info(s"UtxoMerkleTreeStorage:      ${BytesUtils.toHexString(utxoMerkleTreeStorage.lastVersionId.get)}")
+      log.info("--------------------")
+      log.info(s"WalletBoxStorage:           ${BytesUtils.toHexString(walletBoxStorage.lastVersionId.get)}")
+      log.info(s"WalletTransactionStorage:   ${BytesUtils.toHexString(walletTransactionStorage.lastVersionId.get)}")
+      log.info(s"ForgingBoxesInfoStorage:    ${BytesUtils.toHexString(forgingBoxesInfoStorage.lastVersionId.get)}")
+      log.info(s"    ForgingBoxesInfoStorage vers:    ${forgingBoxesInfoStorage.rollbackVersions}")
+      log.info(s"CswDataStorage:             ${BytesUtils.toHexString(cswDataStorage.lastVersionId.get)}")
+    }}
 
   override protected def genesisState: (HIS, MS, VL, MP) = {
     val result = for {
@@ -161,7 +265,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                 val newMemPool = updateMemPool(progressInfo.toRemove, blocksApplied, memoryPool(), newState)
                 // Note: in parent NodeViewHolder.pmodModify wallet was updated here.
 
-                log.info(s"Persistent modifier ${pmod.encodedId} applied successfully")
+                log.info(s"Persistent modifier ${pmod.encodedId} applied successfully, now updating node view")
                 updateNodeView(Some(newHistory), Some(newState), Some(newWallet), Some(newMemPool))
 
 
@@ -214,7 +318,8 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     } else (Success(state), Success(wallet), suffixApplied)
 
     (stateToApplyTry, walletToApplyTry) match {
-      case (Success(stateToApply), Success(walletToApply)) =>
+      case (Success(stateToApply), Success(walletToApply)) => {
+        log.debug("calling applyStateAndWallet")
         val nodeUpdateInfo = applyStateAndWallet(history, stateToApply, walletToApply, suffixTrimmed, progressInfo)
 
         nodeUpdateInfo.failedMod match {
@@ -224,6 +329,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
             updateStateAndWallet(nodeUpdateInfo.history, nodeUpdateInfo.state, nodeUpdateInfo.wallet, alternativeProgressInfo, nodeUpdateInfo.suffix)
           case None => (nodeUpdateInfo.history, Success(nodeUpdateInfo.state), nodeUpdateInfo.wallet, nodeUpdateInfo.suffix)
         }
+      }
       case (Failure(e), _) =>
         log.error("State rollback failed: ", e)
         context.system.eventStream.publish(RollbackFailed)
@@ -254,6 +360,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       if (updateInfo.failedMod.isEmpty) {
         // Check if the next modifier will change Consensus Epoch, so notify History and Wallet with current info.
         val (newHistory, newWallet) = if(updateInfo.state.isSwitchingConsensusEpoch(modToApply)) {
+          log.debug("Changing consensus epoch")
           val (lastBlockInEpoch, consensusEpochInfo) = updateInfo.state.getCurrentConsensusEpochInfo
           val nonceConsensusEpochInfo = updateInfo.history.calculateNonceForEpoch(blockIdToEpochId(lastBlockInEpoch))
           val stakeConsensusEpochInfo = StakeConsensusEpochInfo(consensusEpochInfo.forgingStakeInfoTree.rootHash(), consensusEpochInfo.forgersStake)
@@ -266,9 +373,13 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
         } else
           (updateInfo.history, updateInfo.wallet)
 
+        log.debug("applying modifier to state, history blockInfo " + history.blockToBlockInfo(modToApply))
         updateInfo.state.applyModifier(modToApply) match {
-          case Success(stateAfterApply) =>
+          case Success(stateAfterApply) => {
+            log.debug("success: modifier applied to state, history blockInfo " + newHistory.blockInfoById(modToApply.id))
             val historyAfterApply = newHistory.reportModifierIsValid(modToApply)
+            log.debug("success: modifier applied to history, blockInfo " + historyAfterApply.blockInfoById(modToApply.id))
+
             context.system.eventStream.publish(SemanticallySuccessfulModifier(modToApply))
 
             val stateWithdrawalEpochNumber: Int = stateAfterApply.getWithdrawalEpochInfo.epoch
@@ -279,10 +390,13 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
             }
 
             SidechainNodeUpdateInformation(historyAfterApply, stateAfterApply, walletAfterApply, None, None, updateInfo.suffix :+ modToApply)
-          case Failure(e) =>
+          }
+          case Failure(e) => {
+            log.error(s"Could not apply modifier ${BytesUtils.toHexString(idToBytes(modToApply.id))}, exception:" + e)
             val (historyAfterApply, newProgressInfo) = newHistory.reportModifierIsInvalid(modToApply, progressInfo)
             context.system.eventStream.publish(SemanticallyFailedModification(modToApply, e))
             SidechainNodeUpdateInformation(historyAfterApply, updateInfo.state, newWallet, Some(modToApply), Some(newProgressInfo), updateInfo.suffix)
+          }
         }
       } else updateInfo
     }

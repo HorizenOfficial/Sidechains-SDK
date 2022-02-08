@@ -33,6 +33,8 @@ class InMemoryStorageAdapter(hashMap: mutable.HashMap[ByteArrayWrapper, ByteArra
 
   override def isEmpty: Boolean = hashMap.isEmpty
 
+  override def size(): Int = hashMap.size
+
   override def close(): Unit = {}
 
   def copy(): InMemoryStorageAdapter = new InMemoryStorageAdapter(hashMap.clone())

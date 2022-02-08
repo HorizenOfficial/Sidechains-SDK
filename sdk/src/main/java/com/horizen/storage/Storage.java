@@ -23,5 +23,7 @@ public interface Storage {
 
     boolean isEmpty();
 
+    int size();
+
     void close();
 }
