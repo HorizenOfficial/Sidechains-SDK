@@ -59,6 +59,7 @@ class sc_node_holder_fixter_settings extends CompanionsFixture {
       mainchainMerkleRootHash,
       ommersMerkleRootHash,
       0,
+      new Array[Byte](32),
       new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH)) // empty signature
     )
 
@@ -75,6 +76,7 @@ class sc_node_holder_fixter_settings extends CompanionsFixture {
       mainchainMerkleRootHash,
       ommersMerkleRootHash,
       0,
+      new Array[Byte](32),
       signature
     )
 

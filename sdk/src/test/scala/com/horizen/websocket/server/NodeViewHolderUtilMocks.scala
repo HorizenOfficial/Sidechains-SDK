@@ -63,6 +63,7 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
     forgerBoxMetadata.forgingStakeInfo,
     VrfGenerator.generateProof(456L),
     MerkleTreeFixture.generateRandomMerklePath(456L),
+    new Array[Byte](32),
     sidechainTransactionsCompanion).get
 
   val genesisBlockInfo: SidechainBlockInfo = new SidechainBlockInfo(

@@ -2,7 +2,7 @@ package com.horizen.forge
 
 import akka.util.Timeout
 import com.horizen.block._
-import com.horizen.box.{ForgerBox, Box}
+import com.horizen.box.{Box, ForgerBox}
 import com.horizen.chain.{MainchainHeaderHash, SidechainBlockInfo}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
@@ -18,6 +18,7 @@ import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.collection.JavaConverters._
 import com.horizen.vrf.VrfOutput
+import scorex.core.NodeViewModifier
 
 import scala.collection.mutable.ArrayBuffer
 import scala.util.{Failure, Success, Try}
@@ -219,6 +220,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       Long.MaxValue,
+      new Array[Byte](NodeViewModifier.ModifierIdSize),
       new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH)) // empty signature
     )
 
@@ -314,6 +316,10 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
         }).map(tx => tx.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]).toSeq // TO DO: problems with types
       }
 
+    // TODO: define non-zero value in case fee payments are needed.
+    // TODO: check ommers case, when we branch from the non-tip, so don't have an access to the proper fee payments. Do we allow to add MC block ref data?
+    val feePaymentsHash: Array[Byte] = new Array[Byte](32)
+
     val tryBlock = SidechainBlock.create(
       parentBlockId,
       SidechainBlock.BLOCK_VERSION,
@@ -326,6 +332,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       forgingStakeMerklePathInfo.forgingStakeInfo,
       vrfProof,
       forgingStakeMerklePathInfo.merklePath,
+      feePaymentsHash,
       companion)
 
     tryBlock match {

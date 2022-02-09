@@ -225,6 +225,7 @@ object SidechainBlock extends ScorexEncoding {
              forgingStakeInfo: ForgingStakeInfo,
              vrfProof: VrfProof,
              forgingStakeInfoMerklePath: MerklePath,
+             feePaymentsHash: Array[Byte],
              companion: SidechainTransactionsCompanion,
              signatureOption: Option[Signature25519] = None // TO DO: later we should think about different unsigned/signed blocks creation methods
             ): Try[SidechainBlock] = Try {
@@ -258,6 +259,7 @@ object SidechainBlock extends ScorexEncoding {
           mainchainMerkleRootHash,
           ommersMerkleRootHash,
           ommers.map(_.score).sum,
+          feePaymentsHash,
           new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH)) // empty signature
         )
 
@@ -276,6 +278,7 @@ object SidechainBlock extends ScorexEncoding {
       mainchainMerkleRootHash,
       ommersMerkleRootHash,
       ommers.map(_.score).sum,
+      feePaymentsHash,
       signature
     )
 
