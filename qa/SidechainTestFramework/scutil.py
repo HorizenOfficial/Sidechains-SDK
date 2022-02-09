@@ -904,7 +904,7 @@ SC_FIELD_SAFE_SIZE = 31
 
 
 def generate_random_field_element_hex():
-    return binascii.b2a_hex(os.urandom(SC_FIELD_SAFE_SIZE)) + "00" * (SC_FIELD_SIZE - SC_FIELD_SAFE_SIZE)
+    return binascii.b2a_hex(os.urandom(SC_FIELD_SAFE_SIZE)).decode('utf-8') + "00" * (SC_FIELD_SIZE - SC_FIELD_SAFE_SIZE)
 
 
 # Check if the CSW proofs for the required boxes were finished (or absent if was not able to create a proof)

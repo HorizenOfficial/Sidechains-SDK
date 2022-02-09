@@ -511,9 +511,11 @@ def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_lengt
     print("Id of the sidechain transaction creation: {0}".format(transaction_id))
     print("Sidechain created with Id: {0}".format(sidechain_id))
 
-    mainchain_node.generate(1)
+    mc_block_hash = mainchain_node.generate(1)[0]
     # For docs update
     tx_json_str = json.dumps(mainchain_node.gettransaction(transaction_id), indent=4, default=str)
+    mc_block_hex = mainchain_node.getblock(mc_block_hash, False)
+    #print(mc_block_hex)
 
     return [mainchain_node.getscgenesisinfo(sidechain_id), mainchain_node.getblockcount(), sidechain_id]
 
