@@ -362,7 +362,10 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           newVersion,
           appState
         )
-      case Failure(exception) => throw exception
+      case Failure(exception) => {
+        log.error("call to onApplyChanges() method has failed: " + exception)
+        throw exception
+      }
     }
   }.recoverWith{
     case exception =>
@@ -502,7 +505,7 @@ object SidechainState
         (sr ++ tx.unlockers().asScala.map(_.closedBoxId()), sa ++ tx.newBoxes().asScala, f + tx.fee())
       }
 
-    // calculate list of ID of unlokers' boxes -> toRemove
+    // calculate list of ID of unlockers' boxes -> toRemove
     // calculate list of new boxes -> toAppend
     // calculate the rewards for Miner/Forger -> create another regular tx OR Forger need to add his Reward during block creation
     @SuppressWarnings(Array("org.wartremover.warts.Product","org.wartremover.warts.Serializable"))

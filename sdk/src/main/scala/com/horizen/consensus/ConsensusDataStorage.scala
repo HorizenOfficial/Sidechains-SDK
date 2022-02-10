@@ -59,7 +59,9 @@ class ConsensusDataStorage(consensusEpochInfoStorage: Storage) extends ScorexLog
     val listForUpdate = new JArrayList[JPair[ByteArrayWrapper, ByteArrayWrapper]]()
     val addedData = new JPair(key, new ByteArrayWrapper(value))
     listForUpdate.add(addedData)
-    consensusEpochInfoStorage.update(new ByteArrayWrapper(nextVersion), listForUpdate, java.util.Collections.emptyList())
+    val version = new ByteArrayWrapper(nextVersion)
+    consensusEpochInfoStorage.update(version, listForUpdate, java.util.Collections.emptyList())
+    log.debug("Consensus data storage updated with version: " + version)
   }
 
   def lastVersionId: Option[ByteArrayWrapper] = {

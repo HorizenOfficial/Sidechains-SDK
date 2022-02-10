@@ -47,7 +47,11 @@ class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with Scor
     val updateList = new JArrayList[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
     updateList.add(new Pair(epochKey(epoch), new ByteArrayWrapper(forgingStakeMerklePathInfoListSerializer.toBytes(boxMerklePathInfoSeq.asJava))))
 
-    storage.update(nextVersion, updateList, removeList)
+    // get a random version
+    val version = nextVersion
+    storage.update(version, updateList, removeList)
+    log.debug("Forging boxes info storage updated with version: " + version)
+    log.debug(s"    ForgingBoxesInfoStorage vers:    ${rollbackVersions}")
 
     this
   }
@@ -68,6 +72,9 @@ class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with Scor
       toUpdate.add(new Pair(forgerBoxesKey, new ByteArrayWrapper(forgerBoxListSerializer.toBytes(newForgerBoxSeq.asJava))))
 
     storage.update(version, toUpdate, new JArrayList())
+    log.debug("Wallet Forging Boxes storage updated with version: " + version)
+    log.debug(s"    ForgingBoxesInfoStorage vers:    ${rollbackVersions}")
+
     this
   }
 
@@ -108,6 +115,8 @@ class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with Scor
   def rollback(version: ByteArrayWrapper): Try[ForgingBoxesInfoStorage] = Try {
     require(version != null, "Version to rollback to must be NOT NULL.")
     storage.rollback(version)
+    log.debug("Wallet Forging Boxes storage rollback to version: " + version)
+
     this
   }
 

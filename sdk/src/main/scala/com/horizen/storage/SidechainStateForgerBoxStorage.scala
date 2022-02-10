@@ -65,6 +65,7 @@ class SidechainStateForgerBoxStorage(storage: Storage)
         new ByteArrayWrapper(forgerBoxSerializer.toBytes(box))))
 
     storage.update(version, updateList, removeList)
+    log.debug("Sidechain state forger box storage updated with version: " + version)
 
     this
   }

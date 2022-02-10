@@ -1,7 +1,6 @@
 package com.horizen.storage
 
 
-import java.util.{ArrayList => JArrayList}
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.SidechainTypes
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
@@ -12,7 +11,7 @@ import com.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo,
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
 
-import java.util
+import java.util.{ArrayList => JArrayList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters._
@@ -284,7 +283,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       updateList.add(new JPair(ceasingStateKey, new ByteArrayWrapper(Array.emptyByteArray)))
 
     storage.update(version, updateList, removeList)
-
+    log.debug("Sidechain state storage updated with version: " + version)
     this
   }
 

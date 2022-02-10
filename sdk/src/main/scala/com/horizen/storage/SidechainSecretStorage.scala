@@ -1,14 +1,15 @@
 package com.horizen.storage
 
-import java.util.{Optional, ArrayList => JArrayList}
 import com.horizen.SidechainTypes
 import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.utils.{ByteArrayWrapper, Pair => JPair}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
 
+import java.util.{ArrayList => JArrayList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable
+import scala.compat.java8.OptionConverters.RichOptionalGeneric
 import scala.util.Try
 
 class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: SidechainSecretsCompanion)
@@ -123,7 +124,7 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
 
   def isEmpty: Boolean = storage.isEmpty
 
-  def lastVersionId : Optional[ByteArrayWrapper] = {
-    storage.lastVersionID()
+  def lastVersionId : Option[ByteArrayWrapper] = {
+    storage.lastVersionID().asScala
   }
 }

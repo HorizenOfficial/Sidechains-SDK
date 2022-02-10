@@ -112,6 +112,8 @@ class SidechainWalletCswDataStorage(storage: Storage) extends ScorexLogging with
     }
 
     storage.update(version, updateList, removeList)
+    log.debug("Wallet CSW data storage updated with version: " + version)
+
     this
   }
 

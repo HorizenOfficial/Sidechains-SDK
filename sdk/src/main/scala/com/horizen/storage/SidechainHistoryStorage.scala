@@ -10,7 +10,7 @@ import scorex.core.consensus.ModifierSemanticValidity
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
 
-import java.util.{Optional, ArrayList => JArrayList, List => JList}
+import java.util.{ArrayList => JArrayList, List => JList}
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Random, Success, Try}
@@ -268,25 +268,29 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     val oldInfo: SidechainBlockInfo = activeChain.blockInfoById(block.id).getOrElse(blockInfoById(block.id))
     val blockInfo = oldInfo.copy(semanticValidity = status)
 
+    val version = nextVersion
     storage.update(
-      new ByteArrayWrapper(nextVersion),
+      new ByteArrayWrapper(version),
       java.util.Arrays.asList(new JPair(new ByteArrayWrapper(blockInfoKey(block.id)), new ByteArrayWrapper(blockInfo.bytes))),
       new JArrayList()
     )
-    log.debug("block updated in storage with validity = " + status)
+    log.debug(s"block updated in history storage with validity = ${status} and with version: ${version}")
+
     this
   }
 
   def setAsBestBlock(block: SidechainBlock, blockInfo: SidechainBlockInfo): Try[SidechainHistoryStorage] = Try {
+    val version = nextVersion
     storage.update(
-      new ByteArrayWrapper(nextVersion),
+      new ByteArrayWrapper(version),
       java.util.Arrays.asList(new JPair(bestBlockIdKey, new ByteArrayWrapper(idToBytes(block.id)))),
       new JArrayList()
     )
-    
+    log.debug(s"best block updated in history storage with version: ${version}")
+
     val mainchainParent: Option[MainchainHeaderHash] = block.mainchainHeaders.headOption.map(header => byteArrayToMainchainHeaderHash(header.hashPrevBlock))
     activeChain.setBestBlock(block.id, blockInfo, mainchainParent)
-    log.info("best block info updated in storage and in active chain: " + blockInfo)
+    log.info("best block info updated in active chain: " + blockInfo)
 
     this
   }
@@ -295,7 +299,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
   
   def size: Int = storage.size
   
-  def lastVersionId : Optional[ByteArrayWrapper] = {
-    storage.lastVersionID()
+  def lastVersionId : Option[ByteArrayWrapper] = {
+    storage.lastVersionID().asScala
   }
 }

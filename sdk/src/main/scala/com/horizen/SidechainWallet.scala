@@ -14,8 +14,9 @@ import com.horizen.storage._
 import com.horizen.transaction.Transaction
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgingStakeMerklePathInfo}
-import scorex.core.VersionTag
+import scorex.core.{VersionTag, bytesToVersion, versionToId}
 import com.horizen.utils._
+import org.scalacheck.Prop.True
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.util.Try
@@ -57,8 +58,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
                  SidechainWallet]
   with SidechainTypes
   with NodeWallet
-  with ScorexLogging
-{
+  with ScorexLogging {
   override type NVCT = SidechainWallet
 
   require(applicationWallet != null, "ApplicationWallet must be NOT NULL.")
@@ -123,8 +123,9 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
 
     val txBoxes: Map[ByteArrayWrapper, SidechainTypes#SCBT] = modifier.transactions
       .foldLeft(Map.empty[ByteArrayWrapper, SidechainTypes#SCBT]) {
-        (accMap, tx) => accMap ++ tx.boxIdsToOpen().asScala.map(boxId => boxId -> tx) ++
-          tx.newBoxes().asScala.map(b => new ByteArrayWrapper(b.id()) -> tx)
+        (accMap, tx) =>
+          accMap ++ tx.boxIdsToOpen().asScala.map(boxId => boxId -> tx) ++
+            tx.newBoxes().asScala.map(b => new ByteArrayWrapper(b.id()) -> tx)
       }
 
     val newBoxes: Seq[SidechainTypes#SCB] = changes.toAppend.map(_.box) ++ feePaymentBoxes
@@ -182,23 +183,23 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
       mcBlockRefData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {
         var ftLeafIdx: Int = -1
         val walletFTs: Seq[(ForwardTransfer, Int)] = aggTx.mc2scTransactionsOutputs().asScala.flatMap(_ match {
-          case _: SidechainCreation => None// No CSW support for ScCreation outputs as FT
+          case _: SidechainCreation => None // No CSW support for ScCreation outputs as FT
           case ft: ForwardTransfer =>
             ftLeafIdx += 1
-            if(pubKeys.contains(ft.getBox.proposition()))
+            if (pubKeys.contains(ft.getBox.proposition()))
               Some((ft, ftLeafIdx))
             else
               None
         })
 
-        if(walletFTs.nonEmpty) {
+        if (walletFTs.nonEmpty) {
           val commitmentTree = mcBlockRefData.commitmentTree(params.sidechainId)
           val scCommitmentMerklePath = commitmentTree.getSidechainCommitmentMerklePath(params.sidechainId).get
           val btrCommitment = commitmentTree.getBtrCommitment(params.sidechainId).get
           val certCommitment = commitmentTree.getCertCommitment(params.sidechainId).get
           val scCrCommitment = commitmentTree.getScCrCommitment(params.sidechainId).get
 
-          for((ft: ForwardTransfer, leafIdx: Int) <- walletFTs) {
+          for ((ft: ForwardTransfer, leafIdx: Int) <- walletFTs) {
             val ftMerklePath = commitmentTree.getForwardTransferMerklePath(params.sidechainId, leafIdx).get
             ftCswDataList.append(
               ForwardTransferCswData(ft.getBox.id(), ft.getFtOutput.amount, ft.getFtOutput.propositionBytes,
@@ -228,13 +229,13 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
   }
 
   // Java NodeWallet interface definition
-  override def allBoxes : JList[Box[Proposition]] = {
+  override def allBoxes: JList[Box[Proposition]] = {
     walletBoxStorage.getAll.map(_.box).asJava
   }
 
   override def allBoxes(boxIdsToExclude: JList[Array[Byte]]): JList[Box[Proposition]] = {
     walletBoxStorage.getAll
-      .filter((wb : WalletBox) => !BytesUtils.contains(boxIdsToExclude, wb.box.id()))
+      .filter((wb: WalletBox) => !BytesUtils.contains(boxIdsToExclude, wb.box.id()))
       .map(_.box)
       .asJava
   }
@@ -247,7 +248,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
 
   override def boxesOfType(boxType: Class[_ <: Box[_ <: Proposition]], boxIdsToExclude: JList[Array[Byte]]): JList[Box[Proposition]] = {
     walletBoxStorage.getByType(boxType)
-      .filter((wb : WalletBox) => !BytesUtils.contains(boxIdsToExclude, wb.box.id()))
+      .filter((wb: WalletBox) => !BytesUtils.contains(boxIdsToExclude, wb.box.id()))
       .map(_.box)
       .asJava
   }
@@ -310,6 +311,21 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
 
   def getCswData(withdrawalEpochNumber: Int): Seq[CswData] = {
     cswDataStorage.getCswData(withdrawalEpochNumber)
+  }
+
+  def areStorageVersionsConsistent: Option[VersionTag] = {
+    val version = walletBoxStorage.lastVersionId
+    if (
+        version == walletTransactionStorage.lastVersionId &&
+        version == cswDataStorage.lastVersionId           &&
+        version == forgingBoxesInfoStorage.lastVersionId
+    ) {
+      log.debug("All wallet storage versions are consistent")
+      Some(bytesToVersion(version.get))
+    } else {
+      log.warn("Wallet storage versions are NOT consistent")
+      None
+    }
   }
 }
 
