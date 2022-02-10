@@ -1427,6 +1427,8 @@ paths:
                     properties:
                       listOfVersions:
                         type: object
+                        additionalProperties:
+                          type: string
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
