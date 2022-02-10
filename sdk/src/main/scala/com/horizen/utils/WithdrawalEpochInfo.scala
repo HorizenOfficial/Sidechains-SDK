@@ -1,9 +1,12 @@
 package com.horizen.utils
 
+import com.fasterxml.jackson.annotation.JsonView
+import com.horizen.serialization.Views
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
 
+@JsonView(Array(classOf[Views.Default]))
 case class WithdrawalEpochInfo(epoch: Int, // epoch number, SidechainBlock belongs to. Counted in MC Blocks.
                                lastEpochIndex: Int // position of SidechainBlock in the epoch. Equals to the most recent MC block reference position in current withdrawal epoch.
                               ) extends BytesSerializable {

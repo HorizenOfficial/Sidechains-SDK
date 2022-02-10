@@ -61,6 +61,20 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
+
+      Post(basePath + "findBlockInfoById") ~> sidechainBlockApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+      }
+      Post(basePath + "findBlockInfoById").withEntity("maybe_a_json") ~> sidechainBlockApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+      }
+      Post(basePath + "findBlockInfoById").withEntity("f870089a2e7eefb8fc3c5d171dfa31fa8aed2fe0d71286225a222621d17dfe04") ~> sidechainBlockApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+      }
+      Post(basePath + "findBlockInfoById") ~> Route.seal(sidechainBlockApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.BadRequest.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
     }
 
     "reply at /findById" in {
@@ -201,6 +215,39 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorInvalidBlockHeight("", JOptional.empty()).code)
+      }
+    }
+
+    "reply at /findBlockInfoById" in {
+      val invalid_block_id_lenght_json = "{\"blockId\": \"invalid_block_id_length\"}"
+      Post(basePath + "findBlockInfoById")
+        .withEntity(SerializationUtil.serialize(ReqFindBlockInfoById("valid_block_id_0000000000000000000000000000000000000000000000000"))) ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(2, result.elements().asScala.length)
+        assertTrue(result.get("block").isObject)
+        assertTrue(result.get("isInActiveChain").isBoolean)
+        jsonChecker.assertsOnBlockInfoJson(result.get("block"), genesisBlockInfo)
+      }
+      Post(basePath + "findBlockInfoById")
+        .withEntity(invalid_block_id_lenght_json) ~> sidechainBlockApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+      }
+      Post(basePath + "findBlockInfoById")
+        .withEntity(invalid_block_id_lenght_json) ~> Route.seal(sidechainBlockApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.BadRequest.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+      sidechainApiMockConfiguration.setShould_history_getBlockInfoById_return_value(false)
+      Post(basePath + "findBlockInfoById")
+        .withEntity(SerializationUtil.serialize(ReqFindBlockInfoById("invalid_block_id_00000000000000000000000000000000000000000000000"))) ~> sidechainBlockApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorInvalidBlockId("", JOptional.empty()).code)
       }
     }
 

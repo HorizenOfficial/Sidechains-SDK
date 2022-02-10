@@ -8,7 +8,7 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
-import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
+import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, GetStorageVersions, LocallyGeneratedSecret}
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.companion.SidechainTransactionsCompanion
@@ -107,6 +107,8 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   val memoryPool: util.List[RegularTransaction] = utilMocks.transactionList
   val allBoxes = utilMocks.allBoxes
   val genesisBlock = utilMocks.genesisBlock
+  val genesisBlockInfo = utilMocks.genesisBlockInfo
+  val listOfStorageVersions = utilMocks.listOfNodeStorageVersion
 
   val mainchainBlockReferenceInfoRef = utilMocks.mainchainBlockReferenceInfoRef
 
@@ -139,6 +141,9 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
           if (sidechainApiMockConfiguration.getShould_nodeViewHolder_LocallyGeneratedSecret_reply())
             sender ! Success(Unit)
           else sender ! Failure(new Exception("Secret not added."))
+        case GetStorageVersions =>
+          if (sidechainApiMockConfiguration.getShould_nodeViewHolder_GetStorageVersions_reply())
+            sender ! listOfStorageVersions
       }
       TestActor.KeepRunning
     }

@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import assert_equal, assert_true, initialize_chain_clean, start_nodes, connect_nodes_bi, sync_mempools, sync_blocks
-from SidechainTestFramework.scutil import initialize_default_sc_chain_clean, start_sc_nodes, connect_sc_nodes, connect_sc_nodes_bi, sync_sc_mempools, sync_sc_blocks, \
-                                          wait_for_next_sc_blocks, generate_next_blocks
+from test_framework.util import assert_equal, assert_true
+from SidechainTestFramework.scutil import initialize_default_sc_chain_clean, start_sc_nodes, \
+                                         generate_next_blocks
 from httpCalls.block.findBlockByID import http_block_findById
-import time
 import json
-import random
+
 
 """
     Sets up 1 SC Node and tests the http Apis.
@@ -35,12 +34,12 @@ class SidechainNodeApiTest(SidechainTestFramework):
     def run_test(self):
         
         print("Node initialization...")
-        scNodeName = "node0"
+        sc_node_name = "node0"
         sc_node = self.sc_nodes[0]
 
         #Node generates some blocks, then checking the best block height in chain
         print("Generating new blocks...")
-        blocks = generate_next_blocks(sc_node, scNodeName, 3)
+        blocks = generate_next_blocks(sc_node, sc_node_name, 3)
         print("OK\n")
         
         print("Getting the new best block...")
@@ -57,8 +56,26 @@ class SidechainNodeApiTest(SidechainTestFramework):
         assert_equal(sc_node_best_block_height, block_height, "The best block height returned from findById is not the same as the one from best.")
         print("OK\n")
 
+        print("-->Calling findBlockInfoById...")
 
-        
+        j = {
+            "blockId": sc_node_best_block_id
+        }
+        request = json.dumps(j)
+        block_info_result = sc_node.block_findBlockInfoById(request)
+
+        assert_equal(block_height,block_info_result["result"]["block"]["height"])
+        is_in_active_chain = block_info_result["result"]["isInActiveChain"]
+        assert_true(is_in_active_chain, "The best block is not in the active chain.")
+        print("OK\n")
+
+        print("-->Calling storageVersions...")
+        storage_versions_result = sc_node.node_storageVersions()
+        print(storage_versions_result) #TODO needs a more meaningful test
+        print("OK\n")
+
+
+
 if __name__ == "__main__":
     SidechainNodeApiTest().main()
     

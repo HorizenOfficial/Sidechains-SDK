@@ -3,13 +3,16 @@ package com.horizen.api.http
 import java.net.{InetAddress, InetSocketAddress}
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
+import com.fasterxml.jackson.annotation.JsonView
+import com.horizen.SidechainNodeViewHolder.ReceivableMessages.GetStorageVersions
+import com.horizen.api.http.JacksonSupport._
+import com.horizen.api.http.SidechainNodeErrorResponse.ErrorInvalidHost
 import com.horizen.api.http.SidechainNodeRestSchema._
-import scorex.core.settings.RESTApiSettings
-
-import scala.concurrent.{Await, ExecutionContext}
+import com.horizen.serialization.Views
 import scorex.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
 import scorex.core.network.peer.PeerInfo
 import scorex.core.network.peer.PeerManager.ReceivableMessages.{Blacklisted, GetAllPeers, GetBlacklistedPeers, RemovePeer}
+import scorex.core.settings.RESTApiSettings
 import scorex.core.utils.NetworkTimeProvider
 import JacksonSupport._
 import com.fasterxml.jackson.annotation.JsonView
@@ -18,7 +21,9 @@ import com.horizen.api.http.SidechainNodeErrorResponse.{ErrorInvalidHost, ErrorS
 import com.horizen.serialization.Views
 
 import java.lang.Thread.sleep
+
 import java.util.{Optional => JOptional}
+import scala.concurrent.{Await, ExecutionContext}
 
 case class SidechainNodeApiRoute(peerManager: ActorRef,
                                  networkController: ActorRef,
@@ -27,7 +32,8 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
                                 (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
 
   override val route: Route = pathPrefix("node") {
-    connect ~ allPeers ~ connectedPeers ~ blacklistedPeers ~ disconnect ~ stop
+
+    connect ~ allPeers ~ connectedPeers ~ blacklistedPeers ~ disconnect ~ stop ~ getNodeStorageVersions
   }
 
   private val addressAndPortRegexp = "([\\w\\.]+):(\\d{1,5})".r
@@ -141,6 +147,18 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
       ApiResponseUtil.toResponse(ErrorStopNodeAlreadyInProgress("Stop node procedure already in progress", JOptional.empty()))
     }
   }
+
+  def getNodeStorageVersions: Route = (post & path("storageVersions")) {
+    try {
+      val result = askActor[Map[String,String]](sidechainNodeViewHolderRef, GetStorageVersions)
+        .map(x => RespGetNodeStorageVersions(x))
+      val resultList = Await.result(result, settings.timeout)
+      ApiResponseUtil.toResponse(resultList)
+    } catch {
+      case e: Throwable => SidechainApiError(e)
+    }
+  }
+
 }
 
 object SidechainNodeRestSchema {
@@ -168,6 +186,9 @@ object SidechainNodeRestSchema {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqStop()
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespGetNodeStorageVersions(listOfVersions: Map[String,String]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespStop() extends SuccessResponse

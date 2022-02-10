@@ -26,7 +26,7 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
       }
 
       Post(basePath + "connect").withEntity("maybe_a_json") ~> sidechainNodeApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "connect").withEntity("maybe_a_json") ~> Route.seal(sidechainNodeApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
@@ -152,5 +152,30 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
     }
+
+    "reply at /storageVersions" in {
+      Post(basePath + "storageVersions") ~> sidechainNodeApiRoute ~> check {
+        status.intValue shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements.asScala.length)
+        assertTrue(result.get("listOfVersions").isObject)
+        assertEquals(listOfStorageVersions.size, result.get("listOfVersions").elements.asScala.length)
+        val listOfVersions = result.get("listOfVersions")
+
+        assertTrue(listOfStorageVersions.forall(x => listOfVersions.get(x._1).asText == x._2))
+      }
+
+      sidechainApiMockConfiguration.setShould_nodeViewHolder_GetStorageVersions_reply(false)
+      Post(basePath + "storageVersions") ~> sidechainNodeApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.InternalServerError.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+    }
+
   }
 }
