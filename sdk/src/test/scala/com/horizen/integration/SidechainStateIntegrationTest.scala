@@ -1,12 +1,10 @@
 package com.horizen.integration
 
-import com.google.common.primitives.{Bytes, Ints}
-
 import java.io.{File => JFile}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock}
-import com.horizen.box.data.{ForgerBoxData, BoxData, ZenBoxData}
-import com.horizen.box.{ForgerBox, Box, WithdrawalRequestBox, ZenBox}
+import com.horizen.box.data.{BoxData, ForgerBoxData, ZenBoxData}
+import com.horizen.box.{Box, ForgerBox, WithdrawalRequestBox, ZenBox}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
 import com.horizen.customtypes.DefaultApplicationState
@@ -16,19 +14,17 @@ import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
 import com.horizen.transaction.RegularTransaction
-import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo, Pair => JPair}
+import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, WithdrawalEpochInfo, Pair => JPair}
 import com.horizen.{SidechainState, SidechainTypes}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.core.{bytesToId, bytesToVersion, idToBytes, versionToBytes}
-import scorex.crypto.hash.Blake2b256
+import scorex.core.{bytesToId, bytesToVersion}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
-import scala.util.Random
 
 class SidechainStateIntegrationTest
   extends JUnitSuite
@@ -255,6 +251,11 @@ class SidechainStateIntegrationTest
 
     val blockFeeInfo = BlockFeeInfo(307, getPrivateKey25519("mod".getBytes()).publicImage())
     Mockito.when(mockedBlock.feeInfo).thenReturn(blockFeeInfo)
+
+    Mockito.when(mockedBlock.feePaymentsHash).thenAnswer(_ =>{
+      val feePayments = sidechainState.getFeePayments(initialWithdrawalEpochInfo.epoch, Some(blockFeeInfo))
+      FeePaymentsUtils.calculateFeePaymentsHash(feePayments)
+    })
 
     // Check that there is no record for utxo merkle tree before applying the last block of the withdrawal epoch
     assertTrue("No utxo merkle tree root expected to be found before finishing the epoch: " + initialWithdrawalEpochInfo,

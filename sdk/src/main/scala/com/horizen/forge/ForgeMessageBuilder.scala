@@ -2,17 +2,16 @@ package com.horizen.forge
 
 import akka.util.Timeout
 import com.horizen.block._
-import com.horizen.box.{Box, ForgerBox}
+import com.horizen.box.Box
 import com.horizen.chain.{MainchainHeaderHash, SidechainBlockInfo}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
-import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, VrfSecretKey}
 import com.horizen.transaction.SidechainTransaction
-import com.horizen.utils.{BlockFeeInfo, ForgingStakeMerklePathInfo, ListSerializer, MerkleTree, TimeToEpochUtils}
+import com.horizen.utils.{FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerkleTree, TimeToEpochUtils}
 import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.util.{ModifierId, ScorexLogging}
@@ -319,7 +318,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
         }).map(tx => tx.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]).toSeq // TO DO: problems with types
       }
 
-    val feePaymentsHash: Array[Byte] = if(isWithdrawalEpochLastBlock) {
+    val feePayments = if(isWithdrawalEpochLastBlock) {
       // Current block is expect to be the continuation of the current tip, so there are no ommers.
       require(nodeView.history.bestBlockId == branchPointInfo.branchPointId, "Last block of the withdrawal epoch expect to be a continuation of the tip.")
       require(ommers.isEmpty, "No Ommers allowed for the last block of the withdrawal epoch.")
@@ -344,17 +343,12 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
         case Failure(exception) => return ForgeFailed(exception)
       }
 
-      val feePayments = nodeView.state.getFeePayments(withdrawalEpochNumber, Some(forgedBlockFeeInfo))
-      if(feePayments.isEmpty) {
-        // No fees for the whole epoch, so no fee payments for the Forgers.
-        new Array[Byte](32)
-      } else {
-        // TODO: create FeePaymentsTransaction and return its id() in bytes
-        FieldElementUtils.randomFieldElementBytes(feePayments.size)
-      }
+      nodeView.state.getFeePayments(withdrawalEpochNumber, Some(forgedBlockFeeInfo))
     } else {
-      new Array[Byte](32)
+      Seq()
     }
+
+    val feePaymentsHash: Array[Byte] = FeePaymentsUtils.calculateFeePaymentsHash(feePayments)
 
     val tryBlock = SidechainBlock.create(
       parentBlockId,

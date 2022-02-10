@@ -65,6 +65,8 @@ class SidechainBlock(override val header: SidechainBlockHeader,
     txs
   }
 
+  def feePaymentsHash: Array[Byte] = header.feePaymentsHash
+
   lazy val feeInfo: BlockFeeInfo = BlockFeeInfo(transactions.map(_.fee()).sum, header.forgingStakeInfo.blockSignPublicKey)
 
   // Check that Sidechain Block data is consistent to SidechainBlockHeader
