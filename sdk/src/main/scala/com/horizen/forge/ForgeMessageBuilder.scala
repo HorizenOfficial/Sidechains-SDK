@@ -6,12 +6,13 @@ import com.horizen.box.{Box, ForgerBox}
 import com.horizen.chain.{MainchainHeaderHash, SidechainBlockInfo}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
+import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, VrfSecretKey}
 import com.horizen.transaction.SidechainTransaction
-import com.horizen.utils.{ForgingStakeMerklePathInfo, ListSerializer, MerkleTree, TimeToEpochUtils}
+import com.horizen.utils.{BlockFeeInfo, ForgingStakeMerklePathInfo, ListSerializer, MerkleTree, TimeToEpochUtils}
 import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.util.{ModifierId, ScorexLogging}
@@ -182,7 +183,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       val newMainchainHeadersNumber = newHeaderHashes.size
 
       if (orphanedMainchainHeadersNumber >= newMainchainHeadersNumber) {
-        ForgeFailed(new Exception("No sense to forge: active branch contains orphaned MainchainHeaders, that number is greater or equal to actual new MainchainHeaders."))
+        throw new Exception("No sense to forge: active branch contains orphaned MainchainHeaders, that number is greater or equal to actual new MainchainHeaders.")
       }
 
       val firstOrphanedHashHeight: Int = bestMainchainCommonPointHeight + 1
@@ -298,9 +299,11 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       }
     })
 
+    val isWithdrawalEpochLastBlock: Boolean = mainchainReferenceData.size == withdrawalEpochMcBlocksLeft
+
     // Collect transactions if possible
     val transactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]] =
-      if (mainchainReferenceData.size == withdrawalEpochMcBlocksLeft) { // SC block is going to become the last block of the withdrawal epoch
+      if (isWithdrawalEpochLastBlock) { // SC block is going to become the last block of the withdrawal epoch
         Seq() // no SC Txs allowed
       } else { // SC block is in the middle of the epoch
         var txsCounter: Int = 0
@@ -316,9 +319,42 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
         }).map(tx => tx.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]).toSeq // TO DO: problems with types
       }
 
-    // TODO: define non-zero value in case fee payments are needed.
-    // TODO: check ommers case, when we branch from the non-tip, so don't have an access to the proper fee payments. Do we allow to add MC block ref data?
-    val feePaymentsHash: Array[Byte] = new Array[Byte](32)
+    val feePaymentsHash: Array[Byte] = if(isWithdrawalEpochLastBlock) {
+      // Current block is expect to be the continuation of the current tip, so there are no ommers.
+      require(nodeView.history.bestBlockId == branchPointInfo.branchPointId, "Last block of the withdrawal epoch expect to be a continuation of the tip.")
+      require(ommers.isEmpty, "No Ommers allowed for the last block of the withdrawal epoch.")
+
+      val withdrawalEpochNumber: Int = nodeView.state.getWithdrawalEpochInfo.epoch
+
+      val forgedBlockFeeInfo = SidechainBlock.create(
+        parentBlockId,
+        SidechainBlock.BLOCK_VERSION,
+        timestamp,
+        mainchainReferenceData,
+        transactions,
+        mainchainHeaders,
+        ommers,
+        blockSignPrivateKey,
+        forgingStakeMerklePathInfo.forgingStakeInfo,
+        vrfProof,
+        forgingStakeMerklePathInfo.merklePath,
+        new Array[Byte](32), // dummy feePaymentsHash value
+        companion) match {
+        case Success(blockTemplate) => blockTemplate.feeInfo
+        case Failure(exception) => return ForgeFailed(exception)
+      }
+
+      val feePayments = nodeView.state.getFeePayments(withdrawalEpochNumber, Some(forgedBlockFeeInfo))
+      if(feePayments.isEmpty) {
+        // No fees for the whole epoch, so no fee payments for the Forgers.
+        new Array[Byte](32)
+      } else {
+        // TODO: create FeePaymentsTransaction and return its id() in bytes
+        FieldElementUtils.randomFieldElementBytes(feePayments.size)
+      }
+    } else {
+      new Array[Byte](32)
+    }
 
     val tryBlock = SidechainBlock.create(
       parentBlockId,

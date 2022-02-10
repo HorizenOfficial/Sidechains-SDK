@@ -214,7 +214,7 @@ class SidechainStateIntegrationTest
     assertEquals(s"Fee payments for epoch $withdrawalEpochNumber size expected to be different.",
       1, feePayments.size)
 
-    val nonce: Long = SidechainState.calculateFeePaymentBoxNonce(versionToBytes(sidechainState.version), 0)
+    val nonce: Long = SidechainState.calculateFeePaymentBoxNonce(withdrawalEpochNumber, 0)
     val expectedFeePaymentBox: ZenBox = new ZenBox(new ZenBoxData(initialBlockFeeInfo.forgerRewardKey, initialBlockFeeInfo.fee), nonce)
     assertEquals(s"Fee payments for epoch $withdrawalEpochNumber expected to be different.",
       Seq(expectedFeePaymentBox), feePayments)
@@ -312,12 +312,12 @@ class SidechainStateIntegrationTest
 
     val poolPayments: Long = Math.ceil((initialBlockFeeInfo.fee + blockFeeInfo.fee) * (1 - params.forgerBlockFeeCoefficient)).longValue()
 
-    val nonce1: Long = SidechainState.calculateFeePaymentBoxNonce(idToBytes(mockedBlock.id), 0)
+    val nonce1: Long = SidechainState.calculateFeePaymentBoxNonce(withdrawalEpochNumber, 0)
     // Simplified version of fee computation with lower precision, but is quite enough for the tests.
     val payment1: Long = (initialBlockFeeInfo.fee * params.forgerBlockFeeCoefficient).longValue() + poolPayments / 2 + poolPayments % 2
     val expectedFeePaymentBox1: ZenBox = new ZenBox(new ZenBoxData(initialBlockFeeInfo.forgerRewardKey, payment1), nonce1)
 
-    val nonce2: Long = SidechainState.calculateFeePaymentBoxNonce(idToBytes(mockedBlock.id), 1)
+    val nonce2: Long = SidechainState.calculateFeePaymentBoxNonce(withdrawalEpochNumber, 1)
     // Simplified version of fee computation with lower precision, but is quite enough for the tests.
     val payment2: Long = (blockFeeInfo.fee * params.forgerBlockFeeCoefficient).longValue() + poolPayments / 2
     val expectedFeePaymentBox2: ZenBox = new ZenBox(new ZenBoxData(blockFeeInfo.forgerRewardKey, payment2), nonce2)

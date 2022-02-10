@@ -8,7 +8,7 @@ import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus.{ConsensusEpochInfo, FullConsensusEpochInfo, intToConsensusEpochNumber}
 import com.horizen.fixtures._
 import com.horizen.params.{NetworkParams, RegTestParams}
-import com.horizen.utils.{MerkleTree, WithdrawalEpochInfo}
+import com.horizen.utils.{BlockFeeInfo, MerkleTree, WithdrawalEpochInfo}
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.{Before, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -342,7 +342,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
 
     // Mock state fee payments with checks
     var feePaymentsCalculationEvent: Boolean = false
-    Mockito.when(state.getFeePayments(ArgumentMatchers.any[Int]())).thenAnswer(args => {
+    Mockito.when(state.getFeePayments(ArgumentMatchers.any[Int](), ArgumentMatchers.any[Option[BlockFeeInfo]])).thenAnswer(args => {
       feePaymentsCalculationEvent = true
       Seq()
     })
@@ -403,7 +403,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     // Mock state fee payments with checks
     var stateChecksPassed: Boolean = false
     val expectedFeePayments: Seq[SidechainTypes#SCB] = Seq(getZenBox, getZenBox)
-    Mockito.when(state.getFeePayments(ArgumentMatchers.any[Int]())).thenAnswer(args => {
+    Mockito.when(state.getFeePayments(ArgumentMatchers.any[Int](), ArgumentMatchers.any[Option[BlockFeeInfo]]())).thenAnswer(args => {
       val epochNumber: Int = args.getArgument(0)
       assertEquals("Different withdrawal epoch number expected.", withdrawalEpochInfo.epoch, epochNumber)
 
