@@ -52,7 +52,9 @@ class SidechainStateTest
 
   val params = MainNetParams()
 
-
+  val closedForge = false
+  val forgerList = Seq()
+  
   def getRegularTransaction(regularOutputsCount: Int,
                             forgerOutputsCount: Int,
                             boxesWithSecretToOpen: Seq[(ZenBox,PrivateKey25519)],
@@ -124,7 +126,7 @@ class SidechainStateTest
     Mockito.when(mockedStateUtxoMerkleTreeStorage.lastVersionId).thenReturn(Some(stateVersion.last))
 
     val sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeStorage,
-      params, bytesToVersion(stateVersion.last.data), mockedApplicationState)
+      params, bytesToVersion(stateVersion.last.data), mockedApplicationState, forgerList, closedForge)
 
     //Test get
     assertEquals("State must return existing box.",
@@ -388,7 +390,7 @@ class SidechainStateTest
       .thenReturn(Success(mockedApplicationState))
 
     val sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeStorage,
-      params, bytesToVersion(stateVersion.last.data), mockedApplicationState)
+      params, bytesToVersion(stateVersion.last.data), mockedApplicationState, forgerList, closedForge)
 
     val applyTry = sidechainState.applyModifier(mockedBlock)
 
@@ -412,8 +414,7 @@ class SidechainStateTest
     Mockito.when(stateUtxoMerkleTreeStorage.lastVersionId).thenReturn(Some(version))
 
     val sidechainState = new SidechainState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage,
-      params, bytesToVersion(version.data), applicationState)
-
+      params, bytesToVersion(version.data), applicationState, forgerList, closedForge)
 
     // Test 1: No block fee info record in the storage
     Mockito.when(stateStorage.getFeePayments(ArgumentMatchers.any[Int]())).thenReturn(Seq())

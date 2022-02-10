@@ -277,10 +277,8 @@ Parameters:
  - bootstrap_info: an instance of SCBootstrapInfo (see sc_bootstrap_info.py)
  - websocket_config: an instance of MCConnectionInfo (see sc_boostrap_info.py)
 """
-
-
 def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_config=SCNodeConfiguration(),
-                          log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT):
+                          log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT, config_path = ""):
     apiAddress = "127.0.0.1"
     configsData = []
     apiPort = sc_rpc_port(n)
@@ -293,6 +291,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
 
     customFileName = './resources/template_' + str(n + 1) + '.conf'
     fileToOpen = './resources/template.conf'
+    if config_path != "":
+        fileToOpen = config_path
     if os.path.isfile(customFileName):
         fileToOpen = customFileName
 
@@ -741,10 +741,7 @@ network: {
  Output:
  - bootstrap information of the sidechain nodes. An instance of SCBootstrapInfo (see sc_boostrap_info.py)    
 """
-
-
-def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
-                              block_timestamp_rewind=DefaultBlockTimestampRewind):
+def bootstrap_sidechain_nodes(dirname, network=SCNetworkConfiguration, block_timestamp_rewind=DefaultBlockTimestampRewind, config_path = ""):
     log_info = LogInfo(options.logfilelevel, options.logconsolelevel)
     print(options)
     total_number_of_sidechain_nodes = len(network.sc_nodes_configuration)
@@ -775,10 +772,10 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
         sc_node_conf = network.sc_nodes_configuration[i]
         if i == 0:
             bootstrap_sidechain_node(options.tmpdir, i, sc_nodes_bootstrap_info, sc_node_conf, log_info,
-                                     options.restapitimeout)
+                                     options.restapitimeout, config_path)
         else:
             bootstrap_sidechain_node(options.tmpdir, i, sc_nodes_bootstrap_info_empty_account, sc_node_conf, log_info,
-                                     options.restapitimeout)
+                                     options.restapitimeout, config_path)
 
     return sc_nodes_bootstrap_info
 
@@ -847,9 +844,8 @@ Parameters:
  
 """
 
-
 def bootstrap_sidechain_node(dirname, n, bootstrap_info, sc_node_configuration,
-                             log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT):
+                             log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT, config_path = ""):
     initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration, log_info, rest_api_timeout)
 
 

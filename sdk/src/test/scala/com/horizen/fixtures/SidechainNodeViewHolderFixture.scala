@@ -108,6 +108,10 @@ trait SidechainNodeViewHolderFixture
       sidechainSecretStorage.add(PrivateKey25519Serializer.getSerializer.parseBytes(BytesUtils.fromHexString(secretHex)))
   }
 
+  val forgerList = Seq()
+
+  val closedForger = false
+
   val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(
     sidechainSettings,
     sidechainHistoryStorage,
@@ -124,7 +128,9 @@ trait SidechainNodeViewHolderFixture
     timeProvider,
     defaultApplicationWallet,
     defaultApplicationState,
-    genesisBlock)
+    genesisBlock,
+    forgerList,
+    closedForger)
 
   val sidechainTransactionActorRef : ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
 

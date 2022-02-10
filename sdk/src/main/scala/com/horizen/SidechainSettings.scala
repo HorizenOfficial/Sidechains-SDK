@@ -35,7 +35,9 @@ case class WithdrawalEpochCertificateSettings(submitterIsEnabled: Boolean,
                                               certificateFee: String = "0.0001"
                                              )
 
-case class ForgerSettings(automaticForging: Boolean = false)
+case class ForgerSettings(automaticForging: Boolean = false,
+                          closedForge: Boolean = false,
+                          forgerList: Seq[Seq[String]])
 
 case class WalletSettings(seed: String,
                           genesisSecrets: Seq[String])

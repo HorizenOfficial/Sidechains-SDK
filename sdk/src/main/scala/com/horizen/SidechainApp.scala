@@ -19,7 +19,7 @@ import com.horizen.csw.CswManagerRef
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
 import com.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, SecretSubmitProvider, SecretSubmitProviderImpl, TransactionSubmitProvider, TransactionSubmitProviderImpl}
 import com.horizen.params._
-import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
+import com.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, SchnorrPropositionSerializer, VrfPublicKey}
 import com.horizen.secret.SecretSerializer
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
@@ -111,6 +111,9 @@ class SidechainApp @Inject()
 
   val calculatedSysDataConstant: Array[Byte] = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold)
   log.info(s"calculated sysDataConstant is: ${BytesUtils.toHexString(calculatedSysDataConstant)}")
+
+  val forgerList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = sidechainSettings.forger.forgerList.map(el =>
+    (PublicKey25519Proposition.parseBytes(BytesUtils.fromHexString(el(0))), VrfPublicKey.parseBytes(BytesUtils.fromHexString(el(1)))))
 
   // Init proper NetworkParams depend on MC network
   val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
@@ -252,7 +255,10 @@ class SidechainApp @Inject()
     timeProvider,
     applicationWallet,
     applicationState,
-    genesisBlock) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
+    genesisBlock,
+    forgerList,
+    sidechainSettings.forger.closedForge
+    ) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
   def modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =
     Map(SidechainBlock.ModifierTypeId -> new SidechainBlockSerializer(sidechainTransactionsCompanion),

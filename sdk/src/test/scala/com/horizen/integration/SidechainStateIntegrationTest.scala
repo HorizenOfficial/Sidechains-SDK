@@ -1,7 +1,5 @@
 package com.horizen.integration
 
-import com.google.common.primitives.{Bytes, Ints}
-
 import java.io.{File => JFile}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock}
@@ -24,11 +22,9 @@ import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import scorex.core.{bytesToId, bytesToVersion, idToBytes, versionToBytes}
-import scorex.crypto.hash.Blake2b256
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
-import scala.util.Random
 
 class SidechainStateIntegrationTest
   extends JUnitSuite
@@ -55,6 +51,9 @@ class SidechainStateIntegrationTest
   val initialConsensusEpoch: ConsensusEpochNumber = intToConsensusEpochNumber(1)
 
   val initialBlockFeeInfo: BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("1234".getBytes()).publicImage())
+
+  val forgerList = Seq()
+  val closedForger = false
 
   def getRegularTransaction(zenOutputsCount: Int, forgerOutputsCount: Int): RegularTransaction = {
     val outputsCount = zenOutputsCount + forgerOutputsCount
@@ -158,7 +157,7 @@ class SidechainStateIntegrationTest
 
   @Test
   def closedBoxes(): Unit = {
-    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage, params, applicationState).get
+    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage, params, applicationState, forgerList, closedForger).get
 
     // Test that initial boxes list present in the State
     for (box <- boxList) {
@@ -173,7 +172,7 @@ class SidechainStateIntegrationTest
 
   @Test
   def currentConsensusEpochInfo(): Unit = {
-    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage, params, applicationState).get
+    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage, params, applicationState, forgerList, closedForger).get
 
     // Test that initial currentConsensusEpochInfo is valid
     val(modId, consensusEpochInfo) = sidechainState.getCurrentConsensusEpochInfo
@@ -205,7 +204,7 @@ class SidechainStateIntegrationTest
   @Test
   def feePayments(): Unit = {
     // Create sidechainState with initial block applied.
-    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage, params, applicationState).get
+    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage, params, applicationState, forgerList, closedForger).get
 
     // Collect and verify getFeePayments value
     val withdrawalEpochNumber: Int = initialWithdrawalEpochInfo.epoch
@@ -222,7 +221,7 @@ class SidechainStateIntegrationTest
 
   @Test
   def applyModifier(): Unit = {
-    var sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage, params, applicationState).get
+    var sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage, params, applicationState, forgerList, closedForger).get
 
     // Test applyModifier with a single RegularTransaction with zen and forger outputs
     val mockedBlock = mock[SidechainBlock]

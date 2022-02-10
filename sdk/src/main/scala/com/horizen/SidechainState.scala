@@ -10,7 +10,7 @@ import com.horizen.box.{Box, CoinsBox, ForgerBox, WithdrawalRequestBox, ZenBox}
 import com.horizen.consensus._
 import com.horizen.node.NodeState
 import com.horizen.params.NetworkParams
-import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
+import com.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.ApplicationState
 import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
 import com.horizen.transaction.MC2SCAggregatedTransaction
@@ -34,7 +34,9 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
                                        utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
                                        val params: NetworkParams,
                                        override val version: VersionTag,
-                                       val applicationState: ApplicationState)
+                                       val applicationState: ApplicationState,
+                                       val forgerList: Seq[(PublicKey25519Proposition, VrfPublicKey)],
+                                       val closedForger: Boolean)
   extends MinimalState[SidechainBlock, SidechainState]
     with TransactionValidation[SidechainTypes#SCBT]
     with ModifierValidation[SidechainBlock]
@@ -249,7 +251,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     semanticValidity(tx).get
 
     var closedCoinsBoxesAmount : Long = 0L
-    var newCoinsBoxesAmount : Long = 0L
 
     if (!tx.isInstanceOf[MC2SCAggregatedTransaction]) {
 
@@ -266,9 +267,19 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         }
       }
 
-      newCoinsBoxesAmount = tx.newBoxes().asScala
+      var newCoinsBoxesAmount: Long = 0L
+      tx.newBoxes().asScala
         .filter(box => box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]] || box.isInstanceOf[WithdrawalRequestBox])
-        .map(_.value()).sum
+        .foreach(coinBox => {
+          newCoinsBoxesAmount += coinBox.value()
+          if (closedForger && coinBox.isInstanceOf[ForgerBox]) {
+            val vrfPublicKey: VrfPublicKey = coinBox.vrfPubKey()
+            val blockSignProposition: PublicKey25519Proposition = coinBox.blockSignProposition()
+            if (!forgerList.contains((blockSignProposition, vrfPublicKey))) {
+              throw new Exception("This publicKey is not allowed to forge!")
+            }
+          }
+      })
 
       if (closedCoinsBoxesAmount != newCoinsBoxesAmount + tx.fee())
         throw new Exception("Amounts sum of CoinsBoxes is incorrect. " +
@@ -358,7 +369,9 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           updatedUtxoMerkleTreeStorage,
           params,
           newVersion,
-          appState
+          appState,
+          forgerList,
+          closedForger
         )
       case Failure(exception) => throw exception
     }
@@ -382,7 +395,9 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         utxoMerkleTreeStorage.rollback(new ByteArrayWrapper(version)).get,
         params,
         to,
-        appState)
+        appState,
+        forgerList,
+        closedForger)
       case Failure(exception) => throw exception
     }
   }.recoverWith{case exception =>
@@ -518,11 +533,17 @@ object SidechainState
                                     forgerBoxStorage: SidechainStateForgerBoxStorage,
                                     utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
                                     params: NetworkParams,
-                                    applicationState: ApplicationState): Option[SidechainState] = {
+                                    applicationState: ApplicationState,
+                                    forgerList: Seq[(PublicKey25519Proposition, VrfPublicKey)],
+                                    closedForger: Boolean): Option[SidechainState] = {
 
     if (!stateStorage.isEmpty)
+<<<<<<< HEAD
       Some(new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage,
         params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState))
+=======
+      Some(new SidechainState(stateStorage, forgerBoxStorage, params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState, forgerList, closedForger))
+>>>>>>> Added the possibility to restrict the forge to a predefined list of forger
     else
       None
   }
@@ -532,10 +553,16 @@ object SidechainState
                                           utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
                                           params: NetworkParams,
                                           applicationState: ApplicationState,
-                                          genesisBlock: SidechainBlock): Try[SidechainState] = Try {
+                                          genesisBlock: SidechainBlock,
+                                          forgerList: Seq[(PublicKey25519Proposition, VrfPublicKey)],
+                                          closedForger: Boolean): Try[SidechainState] = Try {
 
     if (stateStorage.isEmpty)
+<<<<<<< HEAD
       new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, idToVersion(genesisBlock.parentId), applicationState)
+=======
+      new SidechainState(stateStorage, forgerBoxStorage, params, idToVersion(genesisBlock.parentId), applicationState, forgerList, closedForger)
+>>>>>>> Added the possibility to restrict the forge to a predefined list of forger
         .applyModifier(genesisBlock).get
     else
       throw new RuntimeException("State storage is not empty!")
