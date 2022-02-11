@@ -56,11 +56,9 @@ public class FeePaymentsTransaction extends BoxTransaction<PublicKey25519Proposi
         return emptyList();
     }
 
-    // no checker exists for current transaction type
-    // keep check in mempool against this
     @Override
     public TransactionIncompatibilityChecker incompatibilityChecker() {
-        return null;
+        return MempoolIncompatibleTransactionIncompatibilityChecker.getChecker();
     }
 
     @Override
