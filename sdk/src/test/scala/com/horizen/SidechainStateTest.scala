@@ -496,7 +496,7 @@ class SidechainStateTest
     Mockito.when(stateUtxoMerkleTreeStorage.lastVersionId).thenReturn(Some(version))
 
     val sidechainState = new SidechainState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage,
-      params, bytesToVersion(version.data), applicationState)
+      params, bytesToVersion(version.data), applicationState, forgerList, closedForge)
 
 
     // Test 1: No utxoMerkleTreeRoot found for given epoch
@@ -536,7 +536,7 @@ class SidechainStateTest
     Mockito.when(stateUtxoMerkleTreeStorage.lastVersionId).thenReturn(Some(version))
 
     val sidechainState = new SidechainState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage,
-      params, bytesToVersion(version.data), applicationState)
+      params, bytesToVersion(version.data), applicationState, forgerList, closedForge)
 
 
     // Test 1: Sidechain is alive

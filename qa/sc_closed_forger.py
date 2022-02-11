@@ -37,7 +37,7 @@ class SidechainClosedForgerTest(SidechainTestFramework):
 
         network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, 1000),
                                          sc_node_1_configuration)
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options.tmpdir, network, DefaultBlockTimestampRewind, "./resources/template_closed_forger.conf")
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, DefaultBlockTimestampRewind, "./resources/template_closed_forger.conf")
 
     def sc_setup_nodes(self):
         # Start 1 SC node

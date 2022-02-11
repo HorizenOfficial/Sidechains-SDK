@@ -538,12 +538,8 @@ object SidechainState
                                     closedForger: Boolean): Option[SidechainState] = {
 
     if (!stateStorage.isEmpty)
-<<<<<<< HEAD
       Some(new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage,
-        params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState))
-=======
-      Some(new SidechainState(stateStorage, forgerBoxStorage, params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState, forgerList, closedForger))
->>>>>>> Added the possibility to restrict the forge to a predefined list of forger
+        params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState, forgerList, closedForger))
     else
       None
   }
@@ -558,12 +554,7 @@ object SidechainState
                                           closedForger: Boolean): Try[SidechainState] = Try {
 
     if (stateStorage.isEmpty)
-<<<<<<< HEAD
-      new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, idToVersion(genesisBlock.parentId), applicationState)
-=======
-      new SidechainState(stateStorage, forgerBoxStorage, params, idToVersion(genesisBlock.parentId), applicationState, forgerList, closedForger)
->>>>>>> Added the possibility to restrict the forge to a predefined list of forger
-        .applyModifier(genesisBlock).get
+      new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, idToVersion(genesisBlock.parentId), applicationState, forgerList, closedForger)
     else
       throw new RuntimeException("State storage is not empty!")
   }

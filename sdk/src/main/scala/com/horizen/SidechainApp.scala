@@ -113,7 +113,7 @@ class SidechainApp @Inject()
   log.info(s"calculated sysDataConstant is: ${BytesUtils.toHexString(calculatedSysDataConstant)}")
 
   val forgerList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = sidechainSettings.forger.forgerList.map(el =>
-    (PublicKey25519Proposition.parseBytes(BytesUtils.fromHexString(el(0))), VrfPublicKey.parseBytes(BytesUtils.fromHexString(el(1)))))
+    (new PublicKey25519Proposition(BytesUtils.fromHexString(el(0))), new VrfPublicKey(BytesUtils.fromHexString(el(1)))))
 
   // Init proper NetworkParams depend on MC network
   val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
