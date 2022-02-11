@@ -44,7 +44,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     with UtxoMerkleTreeView
 {
 
-  checkVersion()
+  // TODO this prevents the restoring of db in case of corruption
+  // checkVersion()
 
   override type NVCT = SidechainState
 
@@ -438,6 +439,67 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   def getFeePayments(withdrawalEpochNumber: Int): Seq[SidechainTypes#SCB] = {
     getFeePayments(withdrawalEpochNumber, None)
+  }
+
+  // Check that all storages are consistent and in case try some rollbacks.
+  // Return the common version or None if some unrecoverable misalignment has been detected
+  def ensureStorageConsistencyAfterRestore: Option[VersionTag] = {
+    // this is the order of update
+    val versionUmt = utxoMerkleTreeStorage.lastVersionId
+    val versionSt  = stateStorage.lastVersionId
+    val versionFb  = forgerBoxStorage.lastVersionId
+
+    if (versionUmt == versionSt) {
+      if (versionSt == versionFb) {
+        Some(bytesToVersion(versionSt.get.data()))
+      } else {
+        // state can only be one version ahead forger box
+        val rollbackList = stateStorage.rollbackVersions
+        if (rollbackList.length > 1 && rollbackList(1) == versionFb.get) {
+          // we have to rollback both previous storages to this
+          val rollbackVersionUmt = utxoMerkleTreeStorage.rollback(versionFb.get)
+          val rollbackVersionSt  = stateStorage.rollback(versionFb.get)
+
+          (rollbackVersionUmt, rollbackVersionSt) match {
+            case (Success(_), Success(_)) => {
+              Some(bytesToVersion(versionSt.get.data()))
+            }
+            case (Failure(e), _) => {
+              log.error("roll back failed" + e)
+              None
+            }
+            case (_, Failure(e)) => {
+              log.error("roll back failed" + e)
+              None
+            }
+          }
+        } else {
+          // unrecoverable
+          log.error("Could not recover state storages")
+          None
+        }
+      }
+    } else {
+      // state can only be one version behind
+      val rollbackList = utxoMerkleTreeStorage.rollbackVersions
+      if (rollbackList.length > 1 && rollbackList(1) == versionSt.get) {
+        // we have to rollback to this
+        val rollbackVersion = utxoMerkleTreeStorage.rollback(versionSt.get) match {
+          case (Success(_)) => Some(bytesToVersion(versionSt.get.data()))
+          case Failure(exception) => {
+            log.error("Could not rollback forging boxes info storage: " + exception)
+            None
+          }
+        }
+        // and forger box storage must be the same
+        require(versionFb == versionSt)
+        rollbackVersion
+      } else {
+        // unrecoverable
+        log.error("Could not recover state storages")
+        None
+      }
+    }
   }
 
   // Collect Fee payments during the appending of the last withdrawal epoch block, considering that block fee info as well.

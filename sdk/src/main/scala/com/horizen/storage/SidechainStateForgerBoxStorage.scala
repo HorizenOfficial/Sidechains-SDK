@@ -81,6 +81,7 @@ class SidechainStateForgerBoxStorage(storage: Storage)
   def rollback(version: ByteArrayWrapper): Try[SidechainStateForgerBoxStorage] = Try {
     require(version != null, "SidechainStateForgerBoxStorage: Version to rollback to must be NOT NULL.")
     storage.rollback(version)
+    log.debug("Forger box state storage rollback to version: " + version)
     this
   }
 

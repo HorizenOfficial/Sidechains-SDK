@@ -19,7 +19,7 @@ import com.horizen.utils._
 import org.scalacheck.Prop.True
 import scorex.util.{ModifierId, ScorexLogging}
 
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.language.postfixOps
@@ -313,17 +313,52 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     cswDataStorage.getCswData(withdrawalEpochNumber)
   }
 
-  def areStorageVersionsConsistent: Option[VersionTag] = {
+  // Check that all wallet storages are consistent and in case forging box info storage is not, then try a rollback for it.
+  // Return the common version or None if some unrecoverable misalignment has been detected
+  def ensureStorageConsistencyAfterRestore: Option[VersionTag] = {
     val version = walletBoxStorage.lastVersionId
     if (
+      // check these storages first, they are updated always together
+        version == walletBoxStorage.lastVersionId         &&
         version == walletTransactionStorage.lastVersionId &&
-        version == cswDataStorage.lastVersionId           &&
-        version == forgingBoxesInfoStorage.lastVersionId
+        version == cswDataStorage.lastVersionId
     ) {
-      log.debug("All wallet storage versions are consistent")
-      Some(bytesToVersion(version.get))
+      // check forger box info storage, which is updated before state in case of epoch switch
+      if (version == forgingBoxesInfoStorage.lastVersionId) {
+        log.debug("All wallet storage versions are consistent")
+        Some(bytesToVersion(version.get.data()))
+      } else {
+        val versionSome = version.get
+        val rollbackList = forgingBoxesInfoStorage.rollbackVersions
+        val isVersionInRollbackList = rollbackList.contains(versionSome)
+        if (rollbackList.length == 2 && rollbackList.last == versionSome) {
+          // this is ok, we have just the genesis block whose modId is the very first version, and the second
+          // is the non-rollback version used when updating the ForgingStakeMerklePathInfo at the startup
+          log.debug("All wallet storage versions are consistent")
+          Some(bytesToVersion(versionSome))
+        } else {
+          // it can be the case of process stopped when we had not yet updated the state.
+          // Find the common version backwards in the rollbacks and apply a rollback to it if possible, otherwise return None
+          if (isVersionInRollbackList) {
+            val idx = rollbackList.indexOf(versionSome)
+            // idx should be 1 or 2 at most
+            log.warn(s"Wallet forger box storage versions is NOT consistent, trying to rollback $idx version(s) back")
+            val rollbackVersion = forgingBoxesInfoStorage.rollback(versionSome) match {
+              case (Success(_)) => Some(bytesToVersion(versionSome.data()))
+              case Failure(exception) => {
+                log.error("Could not rollback forging boxes info storage: " + exception)
+                None
+              }
+            }
+            rollbackVersion
+          } else {
+            log.error("Forging boxes info storage does not have the expected version in the rollback list")
+            None
+          }
+        }
+      }
     } else {
-      log.warn("Wallet storage versions are NOT consistent")
+      log.error("Wallet storage versions are NOT consistent")
       None
     }
   }

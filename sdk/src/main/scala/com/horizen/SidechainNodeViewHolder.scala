@@ -78,6 +78,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
     if (restoredData.isEmpty) {
       // this is the case for the genesis state
+      log.info("Nothing to restore, exiting")
       restoredData
     } else {
 
@@ -91,38 +92,54 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       val restoredMempool = restoredData.get._4
 
       val historyVersion = restoredHistory.bestBlockId
-      val walletVersion  = restoredWallet.areStorageVersionsConsistent
-      val stateVersion   = restoredState.version
 
-      log.info(s"history bestBlockId = ${historyVersion}, stateVersion = ${stateVersion}, walletVersion = ${walletVersion.getOrElse("None")}")
+      // get common version of the state storages, if necessary some rollback is applied internally
+      // according to the update procedure sequence
+      val stateVersion   = restoredState.ensureStorageConsistencyAfterRestore
+
+      log.info(s"history bestBlockId = ${historyVersion}, stateVersion = ${stateVersion}")
+
+      if (stateVersion.isEmpty) {
+        log.error("state storages are not consistent")
+        return None
+      }
 
       val height_h = restoredHistory.blockInfoById(historyVersion).height
-      val height_s = restoredHistory.blockInfoById(versionToId(stateVersion)).height
+      val height_s = restoredHistory.blockInfoById(versionToId(stateVersion.get)).height
       log.info(s"history  height = ${height_h}, state height = ${height_s}")
 
-      if (historyVersion == stateVersion) {
+      if (historyVersion == versionToId(stateVersion.get)) {
         log.info("state and history storages are consistent")
 
-        if (historyVersion == walletVersion.getOrElse(None)) {
+        // get common version of the wallet storages, if necessary some rollback is applied internally
+        // according to the update procedure sequence
+        val walletVersion = restoredWallet.ensureStorageConsistencyAfterRestore
+        if (walletVersion.isEmpty) {
+          log.error("wallet storages are not consistent")
+          return None
+        }
+
+        log.info(s"walletVersion = ${walletVersion.get}")
+        if (historyVersion == versionToId(walletVersion.get)) {
+          // This is the succesful case
           log.info("state, history and wallet storages are consistent")
           restoredData
         }
         else {
           log.error("state and wallet storages are not consistent")
-          // TODO - wallet and state are not consistent, while state and history are.
-          // Probably we have to rollback both history (not possible) and state to the previous block, since the update order is:
-          // state --> history --> wallet
+          // wallet and state are not consistent, while state and history are, this should never happen
+          // state --> wallet --> history
           None
         }
       } else {
-        log.warn("Inconsistent storage and history repositories, trying to recover...")
+        log.warn("Inconsistent state and history storages, trying to recover...")
 
         // this is the sequence of blocks starting from active chain up to input block, unless a None is returned in case of errors
-        val nonChainSuffix = restoredHistory.chainBack(versionToId(stateVersion), restoredHistory.storage.isInActiveChain, Int.MaxValue)
+        val nonChainSuffix = restoredHistory.chainBack(versionToId(stateVersion.get), restoredHistory.storage.isInActiveChain, Int.MaxValue)
         log.info(s"sequence of blocks not in active chain (root included) = ${nonChainSuffix}")
 
         if (nonChainSuffix.isEmpty) {
-          log.error("Could not recover storages inconsistency")
+          log.error("Could not recover storages inconsistency, could not find a rollback point in history")
           None
         } else {
           val rollback_to = nonChainSuffix.get.head
@@ -132,20 +149,10 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
             log.info(s"Child info ${restoredHistory.blockInfoById(child_block.get)}")
           }
 
+          // since the update order is state --> wallet --> history
+          // we can rollback both state and wallet to current best block in history or the ancestor of state block in active chain (which might as well be the same)
           log.warn(s"Inconsistent storage and history, rolling back state and wallets to history best block id = ${rollback_to}")
-          // we can rollback to current best block in history or the ancestor of state block in active chain (which might as well be the same)
 
-          // state rollback -->
-          //      if (applicationState rollback ok) -->
-          //      stateStorage.rollback
-          //      forgerBoxStorage.rollback
-          //      utxoMerkleTreeStorage.rollback
-          // wallet rollback -->
-          //      walletBoxStorage.rollback
-          //      walletTransactionStorage.rollback
-          //      forgingBoxesInfoStorage.rollback  <----- which version does it use?
-          //      cswDataStorage.rollback(version
-          //      ----> applicationWallet callback
           val rolledBackState  = restoredState.rollbackTo(idToVersion(rollback_to))
           val rolledBackWallet = restoredWallet.rollback(idToVersion(rollback_to))
 
@@ -153,7 +160,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
             case (Success(s), Success(w)) => {
               log.debug("State and wallet succesfully rolled back")
               dumpStorages
-              Some((restoredHistory, rolledBackState.get, rolledBackWallet.get, restoredMempool))            }
+              Some((restoredHistory, s, w, restoredMempool))            }
             case (Failure(e), _) => {
               log.error("State roll back failed")
               context.system.eventStream.publish(RollbackFailed)

@@ -298,6 +298,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   def rollback (version : ByteArrayWrapper) : Try[SidechainStateStorage] = Try {
     require(version != null, "Version to rollback to must be NOT NULL.")
     storage.rollback(version)
+    log.debug("Sidechain state storage rollback to version: " + version)
     this
   }
 
