@@ -1,10 +1,10 @@
 package com.horizen.transaction;
 
-import com.horizen.box.data.ZenBoxDataSerializer;
+import com.horizen.box.ZenBox;
+import com.horizen.box.ZenBoxSerializer;
 import com.horizen.utils.ListSerializer;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
-import com.horizen.box.data.ZenBoxData;
 
 import java.util.List;
 
@@ -12,7 +12,7 @@ class FeePaymentsTransactionSerializer implements TransactionSerializer<FeePayme
 {
     private static FeePaymentsTransactionSerializer serializer;
 
-    private static ListSerializer<ZenBoxData> outputsSerializer = new ListSerializer(ZenBoxDataSerializer.getSerializer());
+    private static ListSerializer<ZenBox> outputsSerializer = new ListSerializer(ZenBoxSerializer.getSerializer());
 
     static {
         serializer = new FeePaymentsTransactionSerializer();
@@ -29,14 +29,14 @@ class FeePaymentsTransactionSerializer implements TransactionSerializer<FeePayme
     @Override
     public void serialize(FeePaymentsTransaction transaction, Writer writer) {
         writer.put(transaction.version());
-        outputsSerializer.serialize(transaction.getOutputData(), writer);
+        outputsSerializer.serialize(transaction.newBoxes(), writer);
     }
 
     @Override
     public FeePaymentsTransaction parse(Reader reader) {
         byte version = reader.getByte();
-        List<ZenBoxData> outputList = outputsSerializer.parse(reader);
+        List<ZenBox> feePayments = outputsSerializer.parse(reader);
 
-        return new FeePaymentsTransaction(outputList, version);
+        return new FeePaymentsTransaction(feePayments, version);
     }
 }

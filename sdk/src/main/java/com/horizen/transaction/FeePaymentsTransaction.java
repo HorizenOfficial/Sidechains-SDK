@@ -3,47 +3,42 @@ package com.horizen.transaction;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.box.ZenBox;
-import com.horizen.box.data.ZenBoxData;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import scala.Array;
 import scorex.core.serialization.ScorexSerializer;
 
+import java.util.Collections;
 import java.util.List;
-import java.util.ArrayList;
 
 import static com.horizen.transaction.CoreTransactionsIdsEnum.FeePaymentsTransactionId;
+import static java.util.Collections.emptyList;
 
-public class FeePaymentsTransaction extends SidechainTransaction<PublicKey25519Proposition, ZenBox>
+/*
+ * FeePaymentsTransaction is used for transaction-like representation of the forger fee payments
+ * It is not supposed to be put into the mempool or being included into the SidechainBlock.
+ */
+public class FeePaymentsTransaction extends BoxTransaction<PublicKey25519Proposition, ZenBox>
 {
     public final static byte FEE_PAYMENTS_TRANSACTION_VERSION = 1;
 
-    private final List<ZenBoxData> outputsData;
+    private final List<ZenBox> feePayments;
     private final byte version;
 
-    public FeePaymentsTransaction(List<ZenBoxData> outputsData, byte version) {
-        this.outputsData = outputsData;
+    public FeePaymentsTransaction(List<ZenBox> feePayments, byte version) {
+        this.feePayments = feePayments;
         this.version = version;
     }
 
-    List<ZenBoxData> getOutputData() {
-        return outputsData;
-    }
-
     @Override
-    public void transactionSemanticValidity() throws TransactionSemanticValidityException {
+    public void semanticValidity() throws TransactionSemanticValidityException {
         if (version != FEE_PAYMENTS_TRANSACTION_VERSION) {
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "unsupported version number.", id()));
         }
 
-        if (outputsData.isEmpty())
+        if (feePayments.isEmpty())
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "no output data present.", id()));
-    }
-
-    @Override
-    public List<PublicKey25519Proposition> newBoxesPropositions() {
-        return new ArrayList<>();
     }
 
     @Override
@@ -58,7 +53,7 @@ public class FeePaymentsTransaction extends SidechainTransaction<PublicKey25519P
 
     @Override
     public List<BoxUnlocker<PublicKey25519Proposition>> unlockers() {
-        return null;
+        return emptyList();
     }
 
     // no checker exists for current transaction type
@@ -70,7 +65,7 @@ public class FeePaymentsTransaction extends SidechainTransaction<PublicKey25519P
 
     @Override
     public List<ZenBox> newBoxes() {
-        return null;
+        return Collections.unmodifiableList(feePayments);
     }
 
     @Override

@@ -335,7 +335,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     if(isWithdrawalEpochFinished) {
       // Calculate and append fee payment boxes to the boxesToAppend
       // Note: that current block fee info is still not in the state storage, so consider it during result calculation.
-      boxesToAppend ++= getFeePayments(withdrawalEpochInfo.epoch, Some(blockFeeInfo))
+      boxesToAppend ++= getFeePayments(withdrawalEpochInfo.epoch, Some(blockFeeInfo)).map(_.asInstanceOf[SidechainTypes#SCB])
     }
 
     boxesToAppend.foreach(box => {
@@ -442,7 +442,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   }
 
   // Collect Fee payments while appending the last withdrawal epoch block (optional), considering that block fee info as well.
-  def getFeePayments(withdrawalEpochNumber: Int, blockToAppendFeeInfo: Option[BlockFeeInfo] = None): Seq[SidechainTypes#SCB] = {
+  def getFeePayments(withdrawalEpochNumber: Int, blockToAppendFeeInfo: Option[BlockFeeInfo] = None): Seq[ZenBox] = {
     var blockFeeInfoSeq: Seq[BlockFeeInfo] = stateStorage.getFeePayments(withdrawalEpochNumber)
     blockToAppendFeeInfo.foreach(blockFeeInfo => blockFeeInfoSeq = blockFeeInfoSeq :+ blockFeeInfo)
 
@@ -485,7 +485,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         val data = new ZenBoxData(forgerRewardInfo._1, forgerRewardInfo._2)
         // Note: must be replaced with the Poseidon hash later.
         val nonce = SidechainState.calculateFeePaymentBoxNonce(withdrawalEpochNumber, index)
-        new ZenBox(data, nonce).asInstanceOf[SidechainTypes#SCB]
+        new ZenBox(data, nonce)
     }.filter(box => box.value() > 0)
   }
 }

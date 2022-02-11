@@ -205,7 +205,7 @@ class SidechainStateIntegrationTest
 
     // Collect and verify getFeePayments value
     val withdrawalEpochNumber: Int = initialWithdrawalEpochInfo.epoch
-    val feePayments: Seq[SidechainTypes#SCB] = sidechainState.getFeePayments(withdrawalEpochNumber)
+    val feePayments: Seq[ZenBox] = sidechainState.getFeePayments(withdrawalEpochNumber)
 
     assertEquals(s"Fee payments for epoch $withdrawalEpochNumber size expected to be different.",
       1, feePayments.size)
@@ -302,7 +302,7 @@ class SidechainStateIntegrationTest
 
     // Test that getFeePayments changed after modifier was applied
     val withdrawalEpochNumber: Int = initialWithdrawalEpochInfo.epoch
-    val feePayments: Seq[SidechainTypes#SCB] = sidechainState.getFeePayments(withdrawalEpochNumber)
+    val feePayments: Seq[ZenBox] = sidechainState.getFeePayments(withdrawalEpochNumber)
 
     assertEquals(s"Fee payments for epoch $withdrawalEpochNumber size expected to be different.",
       2, feePayments.size)
