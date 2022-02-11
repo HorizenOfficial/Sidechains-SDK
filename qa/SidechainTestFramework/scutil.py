@@ -846,7 +846,7 @@ Parameters:
 
 def bootstrap_sidechain_node(dirname, n, bootstrap_info, sc_node_configuration,
                              log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT, config_path = ""):
-    initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration, log_info, rest_api_timeout)
+    initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration, log_info, rest_api_timeout, config_path)
 
 
 def generate_forging_request(epoch, slot):

@@ -555,6 +555,7 @@ object SidechainState
 
     if (stateStorage.isEmpty)
       new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, idToVersion(genesisBlock.parentId), applicationState, forgerList, closedForger)
+        .applyModifier(genesisBlock).get
     else
       throw new RuntimeException("State storage is not empty!")
   }
