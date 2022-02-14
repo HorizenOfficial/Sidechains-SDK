@@ -181,6 +181,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
     // If SC block has reached the end of the withdrawal epoch -> fee payments expected to be produced.
     // Verify that Forger assumed the same fees to be paid as the current node does.
+    // If SC block is in the middle of the withdrawal epoch -> no fee payments hash expected to be defined.
     val isWithdrawalEpochFinished: Boolean = WithdrawalEpochUtils.isEpochLastIndex(modWithdrawalEpochInfo, params)
     if(isWithdrawalEpochFinished) {
       // Note: that current block fee info is still not in the state storage, so consider it during result calculation.
@@ -189,6 +190,10 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
       if(!mod.feePaymentsHash.sameElements(feePaymentsHash))
         throw new IllegalArgumentException(s"Block ${mod.id} has feePaymentsHash different to expected one: ${BytesUtils.toHexString(feePaymentsHash)}")
+    } else {
+      // No fee payments expected
+      if(!mod.feePaymentsHash.sameElements(FeePaymentsUtils.DEFAULT_FEE_PAYMENTS_HASH))
+        throw new IllegalArgumentException(s"Block ${mod.id} has feePaymentsHash ${BytesUtils.toHexString(mod.feePaymentsHash)} defined when no fee payments expected.")
     }
 
     applicationState.validate(this, mod)

@@ -2,7 +2,7 @@ package com.horizen
 
 import java.util.{ArrayList => JArrayList, List => JList}
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, WithdrawalEpochCertificate}
-import com.horizen.box.data.{ForgerBoxData, BoxData, ZenBoxData}
+import com.horizen.box.data.{BoxData, ForgerBoxData, ZenBoxData}
 import com.horizen.box._
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.cryptolibprovider.FieldElementUtils
@@ -15,7 +15,7 @@ import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorag
 import com.horizen.state.{ApplicationState, SidechainStateReader}
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.transaction.{BoxTransaction, RegularTransaction}
-import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo, Pair => JPair}
+import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, WithdrawalEpochInfo, Pair => JPair}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -164,10 +164,13 @@ class SidechainStateTest
 
     Mockito.when(mockedBlock.mainchainBlockReferencesData).thenReturn(Seq())
 
+    Mockito.when(mockedBlock.feePaymentsHash).thenReturn(FeePaymentsUtils.DEFAULT_FEE_PAYMENTS_HASH)
+
     Mockito.when(mockedBlock.parentId)
       .thenReturn(bytesToId(stateVersion.last.data))
       .thenReturn(bytesToId(stateVersion.last.data))
       .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
+
 
     Mockito.doNothing().when(mockedApplicationState).validate(ArgumentMatchers.any[SidechainStateReader](),
       ArgumentMatchers.any[SidechainBlock]())
@@ -375,6 +378,8 @@ class SidechainStateTest
 
     Mockito.when(mockedBlock.feeInfo).thenReturn(modBlockFeeInfo)
 
+    Mockito.when(mockedBlock.feePaymentsHash).thenReturn(FeePaymentsUtils.DEFAULT_FEE_PAYMENTS_HASH)
+
     Mockito.doNothing().when(mockedApplicationState).validate(ArgumentMatchers.any[SidechainStateReader](),
       ArgumentMatchers.any[SidechainBlock]())
 
@@ -392,7 +397,7 @@ class SidechainStateTest
 
     val applyTry = sidechainState.applyModifier(mockedBlock)
 
-    assertTrue("ApplyChanges for block must be successful.",
+    assertTrue(s"ApplyChanges for block must be successful. But result is - $applyTry",
       applyTry.isSuccess)
 
     assertTrue("Box in state must be same as in transaction.",
