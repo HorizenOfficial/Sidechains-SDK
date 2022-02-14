@@ -8,7 +8,7 @@ import scorex.util.serialization.Writer;
 
 import java.util.List;
 
-class FeePaymentsTransactionSerializer implements TransactionSerializer<FeePaymentsTransaction>
+public class FeePaymentsTransactionSerializer implements TransactionSerializer<FeePaymentsTransaction>
 {
     private static FeePaymentsTransactionSerializer serializer;
 
