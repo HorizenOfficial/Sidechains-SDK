@@ -8,7 +8,7 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
-import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, GetStorageVersions, LocallyGeneratedSecret}
+import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, GetSidechainId, GetStorageVersions, LocallyGeneratedSecret}
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.companion.SidechainTransactionsCompanion
@@ -65,14 +65,6 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
 
   implicit def rejectionHandler: RejectionHandler = SidechainApiRejectionHandler.rejectionHandler
 
-  // initialize log properties since this app uses log4j from sdk libraries
-  // - default name for the log file
-  val logFileName = System.getProperty("java.io.tmpdir") + File.separator + getClass().getName + ".log"
-  System.setProperty("logFilename", logFileName)
-  // - default levels: all in the file and just errors on console
-  System.setProperty("logFileLevel", "all")
-  System.setProperty("logConsoleLevel", "error")
-
 
   val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
 
@@ -109,7 +101,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   val genesisBlock = utilMocks.genesisBlock
   val genesisBlockInfo = utilMocks.genesisBlockInfo
   val listOfStorageVersions = utilMocks.listOfNodeStorageVersion
-
+  val sidechainId = utilMocks.sidechainId
   val mainchainBlockReferenceInfoRef = utilMocks.mainchainBlockReferenceInfoRef
 
   val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
@@ -144,6 +136,9 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
         case GetStorageVersions =>
           if (sidechainApiMockConfiguration.getShould_nodeViewHolder_GetStorageVersions_reply())
             sender ! listOfStorageVersions
+        case GetSidechainId =>
+          if (sidechainApiMockConfiguration.getShould_nodeViewHolder_GetSidechainId_reply())
+            sender ! utilMocks.sidechainIdArray
       }
       TestActor.KeepRunning
     }

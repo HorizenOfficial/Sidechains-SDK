@@ -1438,8 +1438,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
-
-
   /node/sidechainId:
     post:
       tags:

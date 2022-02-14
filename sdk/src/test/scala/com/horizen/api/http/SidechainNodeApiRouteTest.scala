@@ -177,5 +177,26 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
       }
     }
 
+    "reply at /sidechainId" in {
+      Post(basePath + "sidechainId") ~> sidechainNodeApiRoute ~> check {
+        status.intValue shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements.asScala.length)
+        assertTrue(result.get("sidechainId").isTextual)
+        assertEquals(sidechainId, result.get("sidechainId").asText())
+     }
+
+      sidechainApiMockConfiguration.setShould_nodeViewHolder_GetSidechainId_reply(false)
+      Post(basePath + "sidechainId") ~> sidechainNodeApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.InternalServerError.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+    }
+
   }
 }

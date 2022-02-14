@@ -286,4 +286,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
         mock[ApplicationWallet])
 
   val listOfNodeStorageVersion : Map[String, String] =  Map(("history", "jdfhsjghf"), ("wallet", ""), ("state", "dsdfg4353nfsgsg"))
+  val sidechainId = "1f56e0a44b48148ed70a69ad3529d646a8ca6c537f941f80ea9cf445460c7809"
+  val sidechainIdArray = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainId))
+
 }

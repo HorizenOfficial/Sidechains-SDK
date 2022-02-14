@@ -5,7 +5,7 @@ from SidechainTestFramework.scutil import initialize_default_sc_chain_clean, sta
                                          generate_next_blocks
 from httpCalls.block.findBlockByID import http_block_findById
 import json
-
+import os
 
 """
     Sets up 1 SC Node and tests the http Apis.
@@ -41,7 +41,8 @@ class SidechainNodeApiTest(SidechainTestFramework):
         print("Generating new blocks...")
         blocks = generate_next_blocks(sc_node, sc_node_name, 3)
         print("OK\n")
-        
+
+
         print("Getting the new best block...")
         sc_node_best_block_id = sc_node.block_best()["result"]["block"]["id"]
         sc_node_best_block_height = sc_node.block_best()["result"]["height"]
@@ -49,14 +50,15 @@ class SidechainNodeApiTest(SidechainTestFramework):
         print("-->Node best block height: {0}".format(sc_node_best_block_height))
 
         print("Checking that the height returned by findById api is the same returned by best api")
-        print("-->Calling findById...")
+        print("-->Calling findById API...")
+
         block_height = http_block_findById(sc_node,sc_node_best_block_id)["height"]
         print("-->Node best block height from findById: {0}".format(block_height))
 
         assert_equal(sc_node_best_block_height, block_height, "The best block height returned from findById is not the same as the one from best.")
         print("OK\n")
 
-        print("-->Calling findBlockInfoById...")
+        print("-->Calling findBlockInfoById API...")
 
         j = {
             "blockId": sc_node_best_block_id
@@ -69,11 +71,27 @@ class SidechainNodeApiTest(SidechainTestFramework):
         assert_true(is_in_active_chain, "The best block is not in the active chain.")
         print("OK\n")
 
-        print("-->Calling storageVersions...")
+        print("-->Calling storageVersions API...")
         storage_versions_result = sc_node.node_storageVersions()
         print(storage_versions_result) #TODO needs a more meaningful test
         print("OK\n")
 
+        print("-->Calling sidechainId API...")
+        sidechain_id_result = sc_node.node_sidechainId()
+
+        #Getting the sidechain_id from the sidechain configuration file
+        with open(os.path.join(self.options.tmpdir, "sc_node0/node0.conf"), 'r') as config_file:
+            tmp_config = config_file.readlines()
+        line = ""
+        for line in tmp_config:
+            if "scId" in line:
+                break
+
+        assert_true("scId" in line, "Sidechain configuration file doesn't contain scId parameter.")
+        sidechain_id = line.split('=')[1].strip(" \n\"")
+
+        assert_equal(sidechain_id, sidechain_id_result["result"]["sidechainId"], "Returned sidechain_id is different from the one in the configuration file")
+        print("OK\n")
 
 
 if __name__ == "__main__":

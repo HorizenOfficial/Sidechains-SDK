@@ -37,6 +37,7 @@ class SidechainApiMockConfiguration {
   private var should_nodeViewHolder_ApplyFunctionOnNodeView_reply = true
   private var should_nodeViewHolder_ApplyBiFunctionOnNodeView_reply = true
   private var should_nodeViewHolder_GetStorageVersions_reply: Boolean = true
+  private var should_nodeViewHolder_GetSidechainId_reply: Boolean = true
 
   def getShould_nodeViewHolder_LocallyGeneratedSecret_reply(): Boolean = should_nodeViewHolder_LocallyGeneratedSecret_reply
 
@@ -45,6 +46,10 @@ class SidechainApiMockConfiguration {
   def getShould_nodeViewHolder_GetStorageVersions_reply(): Boolean = should_nodeViewHolder_GetStorageVersions_reply
 
   def setShould_nodeViewHolder_GetStorageVersions_reply(value: Boolean): Unit = should_nodeViewHolder_GetStorageVersions_reply = value
+
+  def getShould_nodeViewHolder_GetSidechainId_reply(): Boolean = should_nodeViewHolder_GetSidechainId_reply
+
+  def setShould_nodeViewHolder_GetSidechainId_reply(value: Boolean): Unit = should_nodeViewHolder_GetSidechainId_reply = value
 
   def getShould_history_getBlockById_return_value(): Boolean = should_history_getBlockById_return_value
 
