@@ -248,10 +248,12 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     // add block
     toUpdate.add(new JPair(new ByteArrayWrapper(idToBytes(block.id)), new ByteArrayWrapper(block.bytes)))
 
+    val version = nextVersion
     storage.update(
-      new ByteArrayWrapper(nextVersion),
+      new ByteArrayWrapper(version),
       toUpdate,
       new JArrayList[ByteArrayWrapper]())
+    log.debug("Sidechain history storage updated with version: " + new ByteArrayWrapper(version))
 
     this
   }
@@ -274,7 +276,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
       java.util.Arrays.asList(new JPair(new ByteArrayWrapper(blockInfoKey(block.id)), new ByteArrayWrapper(blockInfo.bytes))),
       new JArrayList()
     )
-    log.debug(s"block updated in history storage with validity = ${status} and with version: ${version}")
+    log.debug("block updated in history storage with validity " + status + " and with version: " + new ByteArrayWrapper(version))
 
     this
   }
@@ -286,7 +288,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
       java.util.Arrays.asList(new JPair(bestBlockIdKey, new ByteArrayWrapper(idToBytes(block.id)))),
       new JArrayList()
     )
-    log.debug(s"best block updated in history storage with version: ${version}")
+    log.debug("best block updated in history storage with version: " + new ByteArrayWrapper(version))
 
     val mainchainParent: Option[MainchainHeaderHash] = block.mainchainHeaders.headOption.map(header => byteArrayToMainchainHeaderHash(header.hashPrevBlock))
     activeChain.setBestBlock(block.id, blockInfo, mainchainParent)

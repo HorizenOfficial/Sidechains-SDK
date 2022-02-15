@@ -2,17 +2,23 @@ package com.horizen;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.horizen.companion.SidechainSecretsCompanion;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.PrivateKey25519Creator;
+import com.horizen.secret.SchnorrSecret;
 import com.horizen.storage.Storage;
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter;
+import com.horizen.utils.ByteArrayWrapper;
 import com.horizen.utils.BytesUtils;
 import org.apache.logging.log4j.Logger;
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 public class CommandProcessor {
     private MessagePrinter printer;
@@ -38,6 +44,10 @@ public class CommandProcessor {
 
             case "rollback":
                 processRollback(command.data());
+                break;
+
+            case "versionsList":
+                processVersionsList(command.data());
                 break;
 
             default:
@@ -98,7 +108,8 @@ public class CommandProcessor {
                       "\thelp\n" +
                 "\tlastVersionID <arguments>\n" +
                 "\trollback <arguments>\n" +
-                      "\texit\n"
+                "\tversionsList <arguments>\n" +
+                "\texit\n"
         );
     }
 
@@ -127,24 +138,81 @@ public class CommandProcessor {
     private void printRollbackUsageMsg(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                "\trollback {\"storage\":\"<name>\", \"numberOfVersionToRollback\":<int>}");
+                "\trollback {\"storage\":\"<name>\", \"versionToRollback\":<version>}");
     }
 
     private void processRollback(JsonNode json) {
-        if (!json.has("numberOfVersionToRollback") || !json.get("numberOfVersionToRollback").isInt()) {
-            printRollbackUsageMsg("numberOfVersionToRollback is not specified or is not an int.");
+        if (!json.has("versionToRollback") || !json.get("versionToRollback").isTextual()) {
+            printRollbackUsageMsg("versionToRollback is not specified or is not a string.");
             return;
         }
+        String versionToRollback = json.get("versionToRollback").asText();
+        ByteArrayWrapper version = new ByteArrayWrapper(BytesUtils.fromHexString(versionToRollback));
+
         try {
             File storageFile = getStorageFile(json);
             Storage storage = new VersionedLevelDbStorageAdapter(storageFile);
 
-            // TODO do the real implementation
-            String storageVersion = storage.lastVersionID().toString();
-            log.info(storageVersion);
+            String storageVersionPre  = BytesUtils.toHexString(storage.lastVersionID().get().data());
+            storage.rollback(version);
+            String storageVersionPost = BytesUtils.toHexString(storage.lastVersionID().get().data());
+
+            ObjectNode resJson = new ObjectMapper().createObjectNode();
+            resJson.put("storage", json.get("storage").asText());
+            resJson.put("versionPrevious", storageVersionPre);
+            resJson.put("versionCurrent", storageVersionPost);
+
+            String res = resJson.toString();
+            printer.print(res);
+            storage.close();
 
         } catch (IllegalArgumentException e) {
             printRollbackUsageMsg("Error in processing the command: " + e);
+        }  catch (Exception e) {
+            log.error("Error in processing the command: " + e);
+        }
+    }
+
+    private void printVersionsListUsageMsg(String error) {
+        printer.print("Error: " + error);
+        printer.print("Usage:\n" +
+                "\tversionsList {\"storage\":\"<name>\", \"numberOfVersionToRetrieve\":<int>}");
+    }
+
+    private void processVersionsList(JsonNode json) {
+        if (!json.has("numberOfVersionToRetrieve") || !json.get("numberOfVersionToRetrieve").isInt()) {
+            printVersionsListUsageMsg("numberOfVersionToRetrieve is not specified or is not an int.");
+            return;
+        }
+        int numOfVersions = json.get("numberOfVersionToRetrieve").asInt();
+        try {
+            File storageFile = getStorageFile(json);
+            Storage storage = new VersionedLevelDbStorageAdapter(storageFile);
+
+            List<ByteArrayWrapper> bawList = storage.rollbackVersions();
+            log.info(bawList);
+
+            ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+            ObjectNode resJson = mapper.createObjectNode();
+
+            resJson.put("storage", json.get("storage").asText());
+
+            ArrayNode keyArrayNode = resJson.putArray("versionsList");
+
+            List<String> storageVersionsList = new ArrayList<>();
+            for (ByteArrayWrapper e : bawList) {
+                keyArrayNode.add(BytesUtils.toHexString(e.data()));
+                if (numOfVersions > 0 && keyArrayNode.size() >= numOfVersions) {
+                    break;
+                }
+            }
+
+            String res = resJson.toString();
+            printer.print(res);
+            storage.close();
+
+        } catch (IllegalArgumentException e) {
+            printVersionsListUsageMsg("Error in processing the command: " + e);
         }  catch (Exception e) {
             log.error("Error in processing the command: " + e);
         }
@@ -170,6 +238,7 @@ public class CommandProcessor {
 
             String res = resJson.toString();
             printer.print(res);
+            storage.close();
 
         } catch (IllegalArgumentException e) {
             printLastVersionIDUsageMsg("Error in processing the command: " + e);
