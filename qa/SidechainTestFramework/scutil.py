@@ -130,6 +130,20 @@ def launch_bootstrap_tool(command_name, json_parameters):
               .format(command_name, json_param, sc_bootstrap_output.decode()))
         raise Exception("Bootstrap tool error occurred")
 
+def launch_db_tool(cfgFileName, command_name, json_parameters):
+    json_param = json.dumps(json_parameters)
+    java_ps = subprocess.Popen(["java", "-jar",
+                                os.getenv("SIDECHAIN_SDK",
+                                          "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-0.2.7.jar",
+                                cfgFileName, command_name, json_param], stdout=subprocess.PIPE)
+    db_tool_output = java_ps.communicate()[0]
+    try:
+        jsone_node = json.loads(db_tool_output)
+        return jsone_node
+    except ValueError:
+        print("DB tool error occurred for command= {}\nparams: {}\nError: {}\n"
+              .format(command_name, json_param, db_tool_output.decode()))
+        raise Exception("DB tool error occurred")
 
 """
 Generate a genesis info by calling ScBootstrappingTools with command "genesisinfo"
@@ -452,15 +466,14 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     if (extra_args is not None) and ("-agentlib" in extra_args):
         dbg_agent_opt = ' -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005'
 
+    cfgFileName = datadir + ('/node%s.conf' % i)
     '''
     Some tools and libraries use reflection to access parts of the JDK that are meant for internal use only.
     This illegal reflective access will be disabled in a future release of the JDK.
     Currently, it is permitted by default and a warning is issued.
     The --add-opens VM option remove this warning.
     '''
-    bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + dbg_agent_opt + ' -cp ' + binary + " " + (
-                datadir + ('/node%s.conf' % i))
-
+    bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + dbg_agent_opt + ' -cp ' + binary + " " + cfgFileName
     if print_output_to_file:
         with open(datadir + "/log_out.txt", "wb") as out, open(datadir + "/log_err.txt", "wb") as err:
             sidechainclient_processes[i] = subprocess.Popen(bashcmd.split(), stdout=out, stderr=err)
@@ -470,6 +483,7 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     url = "http://rt:rt@%s:%d" % ('127.0.0.1' or rpchost, sc_rpc_port(i))
     proxy = SidechainAuthServiceProxy(url)
     proxy.url = url  # store URL on proxy for info
+    proxy.cfgFileName = cfgFileName # store the name of the cfg file with path
     return proxy
 
 
@@ -494,7 +508,7 @@ def check_sc_node(i):
     return sidechainclient_processes[i].returncode
 
 
-def stop_sc_node(node, i):
+def stop_sc_node(i):
     # Must be changed with a sort of .stop() API Call
     sidechainclient_processes[i].kill()
     del sidechainclient_processes[i]
