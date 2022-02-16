@@ -257,14 +257,16 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     this
   }
 
-  def updateFeePayments(blockId: ModifierId, feePaymentsInfo: FeePaymentsInfo): Unit = {
+  def updateFeePaymentsInfo(blockId: ModifierId, feePaymentsInfo: FeePaymentsInfo): Try[SidechainHistoryStorage] = Try {
     storage.update(
       nextVersion,
       java.util.Arrays.asList(new JPair(new ByteArrayWrapper(feePaymentsInfoKey(blockId)), new ByteArrayWrapper(feePaymentsInfo.bytes))),
-      new JArrayList[ByteArrayWrapper]())
+      new JArrayList[ByteArrayWrapper]()
+    )
+    this
   }
 
-  def getFeePayments(blockId: ModifierId): Option[FeePaymentsInfo] = {
+  def getFeePaymentsInfo(blockId: ModifierId): Option[FeePaymentsInfo] = {
     storage.get(feePaymentsInfoKey(blockId)).asScala.flatMap(baw => FeePaymentsInfoSerializer.parseBytesTry(baw.data).toOption)
   }
 

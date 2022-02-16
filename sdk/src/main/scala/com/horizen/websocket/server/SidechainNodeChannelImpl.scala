@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainSyncInfo, SidechainWallet}
 import com.horizen.block.SidechainBlock
+import com.horizen.chain.FeePaymentsInfo
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -46,14 +47,18 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
         //get block hash by id
         val sidechainBlockHash: Option[String] = sidechainNodeView.history.blockIdByHeight(height)
         if (sidechainBlockHash.isEmpty) throw new IllegalStateException(s"Block not found for height: " + height)
+        val blockId: ModifierId = ModifierId @@ sidechainBlockHash.get
         //get block by hash
-        val sblockOpt = sidechainNodeView.history.modifierById(sidechainBlockHash.get.asInstanceOf[ModifierId])
+        val sblockOpt = sidechainNodeView.history.modifierById(blockId)
         if (sblockOpt.isEmpty) throw new IllegalStateException(s"Block not found for hash: " + sidechainBlockHash)
-        sblockOpt.get
+
+        // get fee payments made during the block apply if exists.
+        val feePaymentsInfoOpt = sidechainNodeView.history.getFeePaymentsInfo(blockId)
+        (sblockOpt.get, feePaymentsInfoOpt)
       }
-    }.map(block => {
+    }.map(blockInfo => {
       //serialize JSON
-      calculateBlockPayload(block, height)
+      calculateBlockPayload(blockInfo._1, height, blockInfo._2)
     })
 
   }
@@ -62,16 +67,19 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
   override def getBlockInfoByHash(hash: String): Try[ObjectNode] = {
     applyOnNodeView { sidechainNodeView =>
       Try {
+        val blockId: ModifierId = ModifierId @@ hash
         //get block by hash
-        val blockOpt = sidechainNodeView.history.modifierById(hash.asInstanceOf[ModifierId])
+        val blockOpt = sidechainNodeView.history.modifierById(blockId)
         if (blockOpt.isEmpty) throw new IllegalStateException(s"Block not found for hash: " + hash)
         //get block height by hash
-        val height = sidechainNodeView.history.blockInfoById(hash.asInstanceOf[ModifierId]).height
-        (blockOpt.get, height)
+        val height = sidechainNodeView.history.blockInfoById(blockId).height
+        // get fee payments made during the block apply if exists.
+        val feePaymentsInfoOpt = sidechainNodeView.history.getFeePaymentsInfo(blockId)
+        (blockOpt.get, height, feePaymentsInfoOpt)
       }
     }.map(blockInfo => {
       //serialize JSON
-      calculateBlockPayload(blockInfo._1, blockInfo._2)
+      calculateBlockPayload(blockInfo._1, blockInfo._2, blockInfo._3)
     })
   }
 
@@ -88,9 +96,9 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
       headers
     }
 
-    val hashes = mapper.readTree(SerializationUtil.serializeWithResult(headerList.map(el => el._2)))
+    val hashes = mapper.readTree(SerializationUtil.serialize(headerList.map(el => el._2)))
     responsePayload.put("height", lastHeight)
-    responsePayload.put("hashes", hashes.get("result"))
+    responsePayload.set("hashes", hashes)
 
     responsePayload
   }
@@ -102,8 +110,8 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
       sidechainNodeView.pool.getAll(txids.asInstanceOf[Seq[ModifierId]])
     }
 
-    val txsJson = mapper.readTree(SerializationUtil.serializeWithResult(txs))
-    responsePayload.put("transactions", txsJson.get("result"))
+    val txsJson = mapper.readTree(SerializationUtil.serialize(txs))
+    responsePayload.set("transactions", txsJson)
     responsePayload
   }
 
@@ -116,42 +124,49 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
       txs
     }
 
-    val json = mapper.readTree(SerializationUtil.serializeWithResult(txids.toArray()))
+    val json = mapper.readTree(SerializationUtil.serialize(txids.toArray()))
 
-    responsePayload.set("transactions", json.get("result"))
+    responsePayload.set("transactions", json)
     responsePayload.put("size", txids.size())
 
     responsePayload
   }
 
   override def getBestBlockInfo(): Try[ObjectNode] = Try {
-    val bestBlock: (SidechainBlock, Integer) = applyOnNodeView { sidechainNodeView =>
+    val (bestBlock: SidechainBlock, height: Int, feePaymentsInfoOpt: Option[FeePaymentsInfo]) = applyOnNodeView { sidechainNodeView =>
       //get best block
       val bBlock = sidechainNodeView.history.bestBlock
       //get block height by hash
       val height = sidechainNodeView.history.height
-      (bBlock, height)
+      // get fee payments made during the block apply if exists.
+      val feePaymentsInfoOpt = sidechainNodeView.history.getFeePaymentsInfo(bBlock.id)
+      (bBlock, height, feePaymentsInfoOpt)
     }
 
-    calculateBlockPayload(bestBlock._1, bestBlock._2)
+    calculateBlockPayload(bestBlock, height, feePaymentsInfoOpt)
   }
 
   override def getBlockInfo(block: SidechainBlock): Try[ObjectNode] = Try {
-    val blockHeight = applyOnNodeView {
-      sidechainNodeView => sidechainNodeView.history.blockInfoById(block.id).height
+    val (height: Int, feePaymentsInfoOpt: Option[FeePaymentsInfo])  = applyOnNodeView { sidechainNodeView =>
+        (sidechainNodeView.history.blockInfoById(block.id).height,
+          sidechainNodeView.history.getFeePaymentsInfo(block.id))
     }
 
-    calculateBlockPayload(block, blockHeight)
+    calculateBlockPayload(block, height, feePaymentsInfoOpt)
   }
 
-  private def calculateBlockPayload(block: SidechainBlock, height: Int): ObjectNode = {
+  private def calculateBlockPayload(block: SidechainBlock, height: Int, feePaymentsInfoOpt: Option[FeePaymentsInfo]): ObjectNode = {
     val eventPayload = mapper.createObjectNode()
 
-    val blockJson = mapper.readTree(SerializationUtil.serializeWithResult(block))
+    val blockJson = mapper.readTree(SerializationUtil.serialize(block))
 
     eventPayload.put("height", height)
     eventPayload.put("hash", block.id)
-    eventPayload.set("block", blockJson.get("result"))
+    eventPayload.set("block", blockJson)
+    feePaymentsInfoOpt.foreach(feePaymentsInfo => {
+      val feePaymentsTxJson = mapper.readTree(SerializationUtil.serialize(feePaymentsInfo.transaction))
+      eventPayload.set("feePayments", feePaymentsTxJson)
+    })
 
     eventPayload
   }

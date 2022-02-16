@@ -9,9 +9,9 @@ import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, Sidec
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.data.{BoxData, ZenBoxData}
 import com.horizen.box.{Box, ForgerBox, ZenBox}
-import com.horizen.chain.SidechainBlockInfo
+import com.horizen.chain.{FeePaymentsInfo, SidechainBlockInfo}
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.fixtures.{BoxFixture, CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture, VrfGenerator}
+import com.horizen.fixtures.{BoxFixture, CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture, SidechainBlockInfoFixture, VrfGenerator}
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
@@ -27,7 +27,7 @@ import scala.collection.JavaConverters._
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
 
-class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with CompanionsFixture {
+class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with CompanionsFixture with SidechainBlockInfoFixture {
 
   val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
 
@@ -79,6 +79,10 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
     bytesToId(new Array[Byte](32)),
   )
 
+  val feePaymentsBlockId: ModifierId = getRandomModifier()
+  val feePaymentsBlockHeight: Int = 10000
+  val feePaymentsInfo: FeePaymentsInfo = FeePaymentsInfo(Seq(getZenBox, getZenBox, getZenBox))
+
   def getNodeHistoryMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): SidechainHistory = {
     val history: SidechainHistory = mock[SidechainHistory]
 
@@ -106,6 +110,15 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
     Mockito.when(history.blockInfoById(ArgumentMatchers.any[ModifierId])).thenAnswer(_ =>
       genesisBlockInfo
     )
+
+    Mockito.when(history.getFeePaymentsInfo(ArgumentMatchers.any[ModifierId])).thenAnswer(args => {
+      val blockId: ModifierId = args.getArgument(0)
+      if(blockId.equals(feePaymentsBlockId)) {
+        Some(feePaymentsInfo)
+      } else {
+        None
+      }
+    })
 
     Mockito.when(history.getBlockHeightById(ArgumentMatchers.any[String])).thenAnswer(_ => Optional.of(100))
 

@@ -11,7 +11,7 @@ import com.horizen.block.SidechainBlock
 import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.CountDownLatchController
 import org.glassfish.tyrus.client.ClientManager
-import org.junit.Assert.{assertEquals, assertTrue}
+import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertTrue}
 import org.junit.{After, Assert, Test}
 import org.mockito.Mockito
 import org.scalatest.BeforeAndAfterAll
@@ -233,6 +233,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
     assertTrue(responsePayload.has("block"))
     assertTrue(responsePayload.has("hash"))
     assertTrue(responsePayload.has("height"))
+    assertFalse(responsePayload.has("feePayments"))
 
     assertEquals(utilMocks.genesisBlock.id, responsePayload.get("hash").asText())
 
@@ -256,8 +257,49 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
     assertTrue(responsePayload.has("block"))
     assertTrue(responsePayload.has("hash"))
     assertTrue(responsePayload.has("height"))
+    assertFalse(responsePayload.has("feePayments"))
 
     session.close()
+  }
+
+  @Test
+  def getSingleBlockWithFeePayments(): Unit = {
+    // Test the getSingleBlock request
+    val cec = ClientEndpointConfig.Builder.create.build
+    val client = ClientManager.createClient
+
+    val countDownController: CountDownLatchController = new CountDownLatchController(1)
+    val endpoint = new WsEndpoint(countDownController)
+    val session: Session = startSession(client, cec, endpoint)
+
+    // Get block by hash
+    val blockByHashtRequest = mapper.createObjectNode()
+      .put("msgType", REQUEST_MESSAGE.code)
+      .put("requestId", 0)
+      .put("requestType", GET_SINGLE_BLOCK_REQUEST_TYPE.code)
+    blockByHashtRequest.putObject("requestPayload").put("hash", utilMocks.feePaymentsBlockId)
+
+    session.getBasicRemote.sendText(blockByHashtRequest.toString)
+    assertTrue("No message received.", countDownController.await(3000))
+
+    var json = mapper.readTree(endpoint.receivedMessage.get(0))
+
+    assertTrue(checkStaticResponseFields(json, RESPONSE_MESSAGE.code, 0, GET_SINGLE_BLOCK_REQUEST_TYPE.code))
+
+    assertTrue(json.has("responsePayload"))
+    val responsePayload = json.get("responsePayload")
+    assertTrue(responsePayload.has("block"))
+    assertTrue(responsePayload.has("hash"))
+    assertTrue(responsePayload.has("height"))
+    assertTrue(responsePayload.has("feePayments"))
+
+    val feePaymentsJson = responsePayload.get("feePayments")
+    assertTrue(feePaymentsJson.has("unlockers"))
+    assertTrue(feePaymentsJson.get("unlockers").isArray)
+    assertEquals(0, feePaymentsJson.get("unlockers").size())
+    assertTrue(feePaymentsJson.has("newBoxes"))
+    assertTrue(feePaymentsJson.get("newBoxes").isArray)
+    assertEquals(utilMocks.feePaymentsInfo.transaction.newBoxes().size(), feePaymentsJson.get("newBoxes").size())
   }
 
   @Test
@@ -311,7 +353,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
   def eventsTest(): Unit = {
     // Test the websocket server events
 
-    //Connect to the websocket server with some request
+    // Connect to the websocket server with some request
     val cec = ClientEndpointConfig.Builder.create.build
     val client = ClientManager.createClient
 
@@ -320,11 +362,11 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
     val session: Session = startSession(client, cec, endpoint)
 
 
-    //Check SemanticallySuccessfulModifier event
+    // Test 1: Check SemanticallySuccessfulModifier event
     countDownController.reset(1)
     publishNewTipEvent()
     assertTrue("No event message received.", countDownController.await(5000))
-    val tipJson = mapper.readTree(endpoint.receivedMessage.get(0))
+    val tipJson = mapper.readTree(endpoint.receivedMessage.get(endpoint.receivedMessage.size() - 1))
 
     assertTrue(checkStaticResponseFields(tipJson, EVENT_MESSAGE.code, -1, 0))
 
@@ -333,12 +375,38 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
     assertTrue(eventPayload.has("height"))
     assertTrue(eventPayload.has("hash"))
     assertTrue(eventPayload.has("block"))
+    assertFalse(eventPayload.has("feePayments"))
 
-    //Check ChangedMempool event
+
+    // Test 2: Check SemanticallySuccessfulModifier event with FeePayments
+    countDownController.reset(1)
+    publishNewTipEventWithFeePayments()
+    assertTrue("No event message received.", countDownController.await(5000))
+    val tipWithFeePaymentsJson = mapper.readTree(endpoint.receivedMessage.get(endpoint.receivedMessage.size() - 1))
+
+    assertTrue(checkStaticResponseFields(tipWithFeePaymentsJson, EVENT_MESSAGE.code, -1, 0))
+
+    assertTrue(tipWithFeePaymentsJson.has("eventPayload"))
+    eventPayload = tipWithFeePaymentsJson.get("eventPayload")
+    assertTrue(eventPayload.has("height"))
+    assertTrue(eventPayload.has("hash"))
+    assertTrue(eventPayload.has("block"))
+    assertTrue(eventPayload.has("feePayments"))
+
+    val feePaymentsJson = eventPayload.get("feePayments")
+    assertTrue(feePaymentsJson.has("unlockers"))
+    assertTrue(feePaymentsJson.get("unlockers").isArray)
+    assertEquals(0, feePaymentsJson.get("unlockers").size())
+    assertTrue(feePaymentsJson.has("newBoxes"))
+    assertTrue(feePaymentsJson.get("newBoxes").isArray)
+    assertEquals(utilMocks.feePaymentsInfo.transaction.newBoxes().size(), feePaymentsJson.get("newBoxes").size())
+
+
+    // Test 3: Check ChangedMempool event
     countDownController.reset(1)
     publishMempoolEvent()
     assertTrue("No event message received.", countDownController.await(5000))
-    val mempoolJson = mapper.readTree(endpoint.receivedMessage.get(1))
+    val mempoolJson = mapper.readTree(endpoint.receivedMessage.get(endpoint.receivedMessage.size() - 1))
 
     assertTrue(checkStaticResponseFields(mempoolJson, EVENT_MESSAGE.code, -1, 2))
 
@@ -457,6 +525,12 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
   def publishNewTipEvent(): Unit = {
     val block: SidechainBlock = mock[SidechainBlock]
     Mockito.when(block.id).thenReturn(utilMocks.genesisBlock.id)
+    actorSystem.eventStream.publish(SemanticallySuccessfulModifier[scorex.core.PersistentNodeViewModifier](block))
+  }
+
+  def publishNewTipEventWithFeePayments(): Unit = {
+    val block: SidechainBlock = mock[SidechainBlock]
+    Mockito.when(block.id).thenReturn(utilMocks.feePaymentsBlockId)
     actorSystem.eventStream.publish(SemanticallySuccessfulModifier[scorex.core.PersistentNodeViewModifier](block))
   }
 

@@ -3,6 +3,7 @@ package com.horizen
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen.block.SidechainBlock
+import com.horizen.chain.FeePaymentsInfo
 import com.horizen.consensus._
 import com.horizen.node.SidechainNodeView
 import com.horizen.params.NetworkParams
@@ -268,12 +269,15 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
         updateInfo.state.applyModifier(modToApply) match {
           case Success(stateAfterApply) =>
-            val historyAfterApply = newHistory.reportModifierIsValid(modToApply)
+            var historyAfterApply = newHistory.reportModifierIsValid(modToApply)
             context.system.eventStream.publish(SemanticallySuccessfulModifier(modToApply))
 
             val stateWithdrawalEpochNumber: Int = stateAfterApply.getWithdrawalEpochInfo.epoch
             val walletAfterApply: SidechainWallet = if(stateAfterApply.isWithdrawalEpochLastIndex) {
-              newWallet.scanPersistent(modToApply, stateWithdrawalEpochNumber, stateAfterApply.getFeePayments(stateWithdrawalEpochNumber), Some(stateAfterApply))
+              val feePayments = stateAfterApply.getFeePayments(stateWithdrawalEpochNumber)
+              historyAfterApply = historyAfterApply.updateFeePaymentsInfo(modToApply.id, FeePaymentsInfo(feePayments))
+
+              newWallet.scanPersistent(modToApply, stateWithdrawalEpochNumber, feePayments, Some(stateAfterApply))
             } else {
               newWallet.scanPersistent(modToApply, stateWithdrawalEpochNumber, Seq(), None)
             }

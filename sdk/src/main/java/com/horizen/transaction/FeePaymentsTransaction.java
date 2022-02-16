@@ -82,6 +82,9 @@ public class FeePaymentsTransaction extends BoxTransaction<PublicKey25519Proposi
     }
 
     @Override
+    public Boolean isCustom() { return false; }
+
+    @Override
     public ScorexSerializer serializer() {
         return FeePaymentsTransactionSerializer.getSerializer();
     }

@@ -1,9 +1,8 @@
 package com.horizen
 
 import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
-
 import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlock}
-import com.horizen.chain.{MainchainBlockReferenceDataInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
+import com.horizen.chain.{FeePaymentsInfo, MainchainBlockReferenceDataInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
 import com.horizen.consensus._
 import com.horizen.node.NodeHistory
 import com.horizen.node.util.MainchainBlockReferenceInfo
@@ -451,6 +450,15 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     }
 
     transaction
+  }
+
+  def updateFeePaymentsInfo(blockId: ModifierId, feePaymentsInfo: FeePaymentsInfo): SidechainHistory = {
+    val newStorage = storage.updateFeePaymentsInfo(blockId, feePaymentsInfo).get
+    new SidechainHistory(newStorage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
+  }
+
+  def getFeePaymentsInfo(blockId: ModifierId): Option[FeePaymentsInfo] = {
+    storage.getFeePaymentsInfo(blockId)
   }
 
   /*
