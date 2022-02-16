@@ -4,10 +4,11 @@ import java.net.{InetAddress, InetSocketAddress}
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{GetSidechainId, GetStorageVersions}
+import com.horizen.SidechainNodeViewHolder.ReceivableMessages.GetStorageVersions
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainNodeErrorResponse.ErrorInvalidHost
 import com.horizen.api.http.SidechainNodeRestSchema._
+import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import scorex.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
@@ -29,7 +30,7 @@ import scala.concurrent.{Await, ExecutionContext}
 case class SidechainNodeApiRoute(peerManager: ActorRef,
                                  networkController: ActorRef,
                                  timeProvider: NetworkTimeProvider,
-                                 override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, app: SidechainApp)
+                                 override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, app: SidechainApp, params: NetworkParams)
                                 (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
 
   override val route: Route = pathPrefix("node") {
@@ -162,10 +163,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
 
   def getSidechainId: Route = (post & path("sidechainId")) {
     try {
-      val result = askActor[Array[Byte]](sidechainNodeViewHolderRef, GetSidechainId)
-        .map(x => BytesUtils.toHexString(BytesUtils.reverseBytes(x)))
-
-      val sidechainId = Await.result(result, settings.timeout)
+      val sidechainId = BytesUtils.toHexString(BytesUtils.reverseBytes(params.sidechainId))
       ApiResponseUtil.toResponse(RespGetSidechainId(sidechainId))
     } catch {
       case e: Throwable =>  SidechainApiError(e)

@@ -8,7 +8,7 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
-import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, GetSidechainId, GetStorageVersions, LocallyGeneratedSecret}
+import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, GetStorageVersions, LocallyGeneratedSecret}
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.companion.SidechainTransactionsCompanion
@@ -55,7 +55,6 @@ import java.util.{HashMap => JHashMap}
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.collection.mutable.ListBuffer
 
-import java.io.File
 import scala.language.postfixOps
 
 @RunWith(classOf[JUnitRunner])
@@ -136,9 +135,6 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
         case GetStorageVersions =>
           if (sidechainApiMockConfiguration.getShould_nodeViewHolder_GetStorageVersions_reply())
             sender ! listOfStorageVersions
-        case GetSidechainId =>
-          if (sidechainApiMockConfiguration.getShould_nodeViewHolder_GetSidechainId_reply())
-            sender ! utilMocks.sidechainIdArray
       }
       TestActor.KeepRunning
     }
@@ -323,14 +319,15 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
 
   implicit def default() = RouteTestTimeout(3.second)
 
-  val params = MainNetParams()
+  val params = MainNetParams(sidechainId = utilMocks.sidechainIdArray)
   val sidechainTransactionApiRoute: Route = SidechainTransactionApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainTransactionActorRef,
     sidechainTransactionsCompanion, params).route
   val sidechainWalletApiRoute: Route = SidechainWalletApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
 
   val mockedSidechainApp: SidechainApp = mock[SidechainApp]
 
-  val sidechainNodeApiRoute: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainApp).route
+  val sidechainNodeApiRoute: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainApp, params).route
+
   val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, mockedSidechainBlockForgerActorRef).route
   val mainchainBlockApiRoute: Route = MainchainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val applicationApiRoute: Route = ApplicationApiRoute(mockedRESTSettings, new SimpleCustomApi(), mockedSidechainNodeViewHolderRef).route

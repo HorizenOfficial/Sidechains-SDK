@@ -191,11 +191,6 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
         assertEquals(sidechainId, result.get("sidechainId").asText())
      }
 
-      sidechainApiMockConfiguration.setShould_nodeViewHolder_GetSidechainId_reply(false)
-      Post(basePath + "sidechainId") ~> sidechainNodeApiRoute ~> check {
-        status.intValue() shouldBe StatusCodes.InternalServerError.intValue
-        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-      }
     }
 
   }

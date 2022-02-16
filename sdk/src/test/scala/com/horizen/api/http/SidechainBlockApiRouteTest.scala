@@ -229,9 +229,9 @@ class SidechainBlockApiRouteTest extends SidechainApiRouteTest {
           fail("Serialization failed for object SidechainApiResponseBody")
 
         assertEquals(2, result.elements().asScala.length)
-        assertTrue(result.get("block").isObject)
+        assertTrue(result.get("blockInfo").isObject)
         assertTrue(result.get("isInActiveChain").isBoolean)
-        jsonChecker.assertsOnBlockInfoJson(result.get("block"), genesisBlockInfo)
+        jsonChecker.assertsOnBlockInfoJson(result.get("blockInfo"), genesisBlockInfo)
       }
       Post(basePath + "findBlockInfoById")
         .withEntity(invalid_block_id_lenght_json) ~> sidechainBlockApiRoute ~> check {

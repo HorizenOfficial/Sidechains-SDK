@@ -66,7 +66,7 @@ class SidechainNodeApiTest(SidechainTestFramework):
         request = json.dumps(j)
         block_info_result = sc_node.block_findBlockInfoById(request)
 
-        assert_equal(block_height,block_info_result["result"]["block"]["height"])
+        assert_equal(block_height,block_info_result["result"]["blockInfo"]["height"])
         is_in_active_chain = block_info_result["result"]["isInActiveChain"]
         assert_true(is_in_active_chain, "The best block is not in the active chain.")
         print("OK\n")
