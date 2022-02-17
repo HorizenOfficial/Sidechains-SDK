@@ -2,28 +2,22 @@
 import json
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration, Account
+    SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import assert_equal, assert_true, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, is_mainchain_block_included_in_sc_block, check_box_balance, \
-    check_mainchain_block_reference_info, generate_next_blocks
+from httpCalls.block.getFeePayments import http_block_getFeePayments
+from test_framework.util import assert_equal, assert_true, websocket_port_by_mc_node_index,\
+    forward_transfer_to_sidechain
+from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, generate_next_blocks
 from httpCalls.wallet.balance import http_wallet_balance
 from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress
-from httpCalls.wallet.createPrivateKey25519 import  http_wallet_createPrivateKey25519
-from httpCalls.transaction.findTransactionByID import http_transaction_findById
-from httpCalls.block.findBlockByID import http_block_findById
-from httpCalls.block.best import http_block_best
 from SidechainTestFramework.websocket_client import WebsocketClient
 try:
     import thread
 except ImportError:
     import _thread as thread
-import time
 
 """
-The purpose of this test is to verify the websocket server inside the SC node
+The purpose of this test is to verify the websocket server inside the SC node for the fee payments related logic.
 
 Network Configuration:
     1 MC nodes, 1 SC node and 1 websocket client
@@ -83,7 +77,7 @@ class SCWsServerFeePayments(SidechainTestFramework):
         assert_equal(http_wallet_balance(sc_node),  (self.sc_nodes_bootstrap_info.genesis_account_balance * 2) * 100000000)
 
         # Send some coins to ourselves and pay fee
-        fee = 12
+        fee = self.sc_nodes_bootstrap_info.genesis_account_balance / 10
         sendCoinsToAddress(sc_node, public_key1, self.sc_nodes_bootstrap_info.genesis_account_balance - fee, fee)
         assert_equal(1, len(sc_node.transaction_allTransactions()["result"]["transactions"]),
                      "1 Tx expected to be in the SC node mempool.")
@@ -131,7 +125,9 @@ class SCWsServerFeePayments(SidechainTestFramework):
         assert_equal(event_payload['hash'], sc_last_we_block_id)
         assert_equal(event_payload['height'], sc_last_we_block_height)
         assert_true('feePayments' in event_payload)
-        # TODO: check fee payments result compared to API result
+        expected_fee_payments = http_block_getFeePayments(sc_node, sc_last_we_block_id)['feePayments']
+        assert_equal(expected_fee_payments, event_payload['feePayments']['newBoxes'],
+                     "Different fee payments retrieved by new tip event.")
 
         ###########################################################
         #               Get single block request test             #
@@ -154,7 +150,8 @@ class SCWsServerFeePayments(SidechainTestFramework):
         assert_equal(response_payload['hash'], sc_last_we_block_id)
         assert_equal(response_payload['height'], sc_last_we_block_height)
         assert_true('feePayments' in event_payload)
-        # TODO: check fee payments result compared to API result
+        assert_equal(expected_fee_payments, event_payload['feePayments']['newBoxes'],
+                     "Different fee payments retrieved for the block.")
 
         # Send get single block request with block height of the last block of the WE
         response = json.loads(ws.sendMessage(ws_connection,
@@ -173,7 +170,8 @@ class SCWsServerFeePayments(SidechainTestFramework):
         assert_equal(response_payload['height'], sc_last_we_block_height)
 
         assert_true('feePayments' in event_payload)
-        # TODO: check fee payments result compared to API result
+        assert_equal(expected_fee_payments, event_payload['feePayments']['newBoxes'],
+                     "Different fee payments retrieved for the block.")
 
         ###########################################################
         #       Check new tip event without payments info         #
@@ -204,6 +202,8 @@ class SCWsServerFeePayments(SidechainTestFramework):
         assert_equal(event_payload['hash'], self.blocks[-1])
         assert_equal(event_payload['height'], sc_last_we_block_height + 1)
         assert_true('feePayments' not in event_payload)
+        expected_fee_payments = http_block_getFeePayments(sc_node, self.blocks[-1])['feePayments']
+        assert_equal(0, len(expected_fee_payments), "No fee payments expected to be paid.")
 
         ###########################################################
         #  Test single block request for block without payments   #
@@ -225,6 +225,8 @@ class SCWsServerFeePayments(SidechainTestFramework):
         assert_equal(response_payload['hash'], self.blocks[-3])
         assert_equal(response_payload['height'], sc_last_we_block_height - 1)
         assert_true('feePayments' not in event_payload)
+        expected_fee_payments = http_block_getFeePayments(sc_node, self.blocks[-3])['feePayments']
+        assert_equal(0, len(expected_fee_payments), "No fee payments expected to be paid.")
 
         # SC block after the last one of the WE
         response = json.loads(ws.sendMessage(ws_connection,
@@ -242,6 +244,8 @@ class SCWsServerFeePayments(SidechainTestFramework):
         assert_equal(response_payload['hash'], self.blocks[-1])
         assert_equal(response_payload['height'], sc_last_we_block_height + 1)
         assert_true('feePayments' not in event_payload)
+        expected_fee_payments = http_block_getFeePayments(sc_node, self.blocks[-1])['feePayments']
+        assert_equal(0, len(expected_fee_payments), "No fee payments expected to be paid.")
 
 
 if __name__ == "__main__":
