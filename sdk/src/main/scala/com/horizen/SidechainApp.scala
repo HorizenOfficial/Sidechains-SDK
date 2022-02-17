@@ -19,7 +19,7 @@ import com.horizen.csw.CswManagerRef
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
 import com.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, SecretSubmitProvider, SecretSubmitProviderImpl, TransactionSubmitProvider, TransactionSubmitProviderImpl}
 import com.horizen.params._
-import com.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, SchnorrPropositionSerializer, VrfPublicKey}
+import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, SchnorrProposition, SchnorrPropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
 import com.horizen.secret.SecretSerializer
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
@@ -112,8 +112,8 @@ class SidechainApp @Inject()
   val calculatedSysDataConstant: Array[Byte] = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold)
   log.info(s"calculated sysDataConstant is: ${BytesUtils.toHexString(calculatedSysDataConstant)}")
 
-  val forgerList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = sidechainSettings.forger.forgerList.map(el =>
-    (new PublicKey25519Proposition(BytesUtils.fromHexString(el(0))), new VrfPublicKey(BytesUtils.fromHexString(el(1)))))
+  val forgerList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = sidechainSettings.forger.allowedForgersList.map(el =>
+    (PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(el.blockSignProposition)), VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(el.vrfPublicKey))))
 
   // Init proper NetworkParams depend on MC network
   val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
@@ -133,7 +133,9 @@ class SidechainApp @Inject()
       calculatedSysDataConstant = calculatedSysDataConstant,
       initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash),
       cswProvingKeyFilePath = sidechainSettings.csw.cswProvingKeyFilePath,
-      cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath
+      cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath,
+      restrictForgers = sidechainSettings.forger.restrictForgers,
+      allowedForgersList = forgerList
   )
 
     case "testnet" => TestNetParams(
@@ -152,7 +154,9 @@ class SidechainApp @Inject()
       calculatedSysDataConstant = calculatedSysDataConstant,
       initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash),
       cswProvingKeyFilePath = sidechainSettings.csw.cswProvingKeyFilePath,
-      cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath
+      cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath,
+      restrictForgers = sidechainSettings.forger.restrictForgers,
+      allowedForgersList = forgerList
     )
 
     case "mainnet" => MainNetParams(
@@ -171,7 +175,9 @@ class SidechainApp @Inject()
       calculatedSysDataConstant = calculatedSysDataConstant,
       initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash),
       cswProvingKeyFilePath = sidechainSettings.csw.cswProvingKeyFilePath,
-      cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath
+      cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath,
+      restrictForgers = sidechainSettings.forger.restrictForgers,
+      allowedForgersList = forgerList
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
   }
@@ -255,9 +261,7 @@ class SidechainApp @Inject()
     timeProvider,
     applicationWallet,
     applicationState,
-    genesisBlock,
-    forgerList,
-    sidechainSettings.forger.closedForge
+    genesisBlock
     ) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
   def modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =

@@ -278,7 +278,7 @@ Parameters:
  - websocket_config: an instance of MCConnectionInfo (see sc_boostrap_info.py)
 """
 def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_config=SCNodeConfiguration(),
-                          log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT, config_path = ""):
+                          log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT):
     apiAddress = "127.0.0.1"
     configsData = []
     apiPort = sc_rpc_port(n)
@@ -291,8 +291,6 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
 
     customFileName = './resources/template_' + str(n + 1) + '.conf'
     fileToOpen = './resources/template.conf'
-    if config_path != "":
-        fileToOpen = config_path
     if os.path.isfile(customFileName):
         fileToOpen = customFileName
 
@@ -345,12 +343,16 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "CERTIFICATE_FEE": sc_node_config.certificate_fee,
         "CSW_PROVING_KEY_PATH": bootstrap_info.csw_keys_paths.proving_key_path,
         "CSW_VERIFICATION_KEY_PATH": bootstrap_info.csw_keys_paths.verification_key_path,
+        "RESTRICT_FORGERS": ("true" if sc_node_config.forger_options.restrict_forgers else "false"),
+        "ALLOWED_FORGERS_LIST": sc_node_config.forger_options.allowed_forgers,
     }
-
+    config = config.replace("'","")
+    config = config.replace("NEW_LINE", "\n")
     configsData.append({
         "name": "node" + str(n),
         "url": "http://" + apiAddress + ":" + str(apiPort)
     })
+
     with open(os.path.join(datadir, "node" + str(n) + ".conf"), 'w+') as configFile:
         configFile.write(config)
 
@@ -395,7 +397,9 @@ def initialize_default_sc_datadir(dirname, n):
         "CERT_PROVING_KEY_PATH": cert_keys_paths.proving_key_path,
         "CERT_VERIFICATION_KEY_PATH": cert_keys_paths.verification_key_path,
         "CSW_PROVING_KEY_PATH": csw_keys_paths.proving_key_path,
-        "CSW_VERIFICATION_KEY_PATH": csw_keys_paths.verification_key_path
+        "CSW_VERIFICATION_KEY_PATH": csw_keys_paths.verification_key_path,
+        "RESTRICT_FORGERS": "false",
+        "ALLOWED_FORGERS_LIST": []
     }
 
     configsData.append({
@@ -741,7 +745,7 @@ network: {
  Output:
  - bootstrap information of the sidechain nodes. An instance of SCBootstrapInfo (see sc_boostrap_info.py)    
 """
-def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration, block_timestamp_rewind=DefaultBlockTimestampRewind, config_path = ""):
+def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration, block_timestamp_rewind=DefaultBlockTimestampRewind):
     log_info = LogInfo(options.logfilelevel, options.logconsolelevel)
     print(options)
     total_number_of_sidechain_nodes = len(network.sc_nodes_configuration)
@@ -772,11 +776,10 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration, block_tim
         sc_node_conf = network.sc_nodes_configuration[i]
         if i == 0:
             bootstrap_sidechain_node(options.tmpdir, i, sc_nodes_bootstrap_info, sc_node_conf, log_info,
-                                     options.restapitimeout, config_path)
+                                     options.restapitimeout)
         else:
             bootstrap_sidechain_node(options.tmpdir, i, sc_nodes_bootstrap_info_empty_account, sc_node_conf, log_info,
-                                     options.restapitimeout, config_path)
-
+                                     options.restapitimeout)
     return sc_nodes_bootstrap_info
 
 
@@ -845,8 +848,8 @@ Parameters:
 """
 
 def bootstrap_sidechain_node(dirname, n, bootstrap_info, sc_node_configuration,
-                             log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT, config_path = ""):
-    initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration, log_info, rest_api_timeout, config_path)
+                             log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT):
+    initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration, log_info, rest_api_timeout)
 
 
 def generate_forging_request(epoch, slot):

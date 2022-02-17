@@ -4,6 +4,8 @@ import scorex.core.settings.ScorexSettings
 
 import scala.concurrent.duration.FiniteDuration
 
+case class ForgerKeysData(blockSignProposition: String,
+                          vrfPublicKey: String)
 
 case class WebSocketSettings(address: String,
                              connectionTimeout: FiniteDuration,
@@ -36,8 +38,8 @@ case class WithdrawalEpochCertificateSettings(submitterIsEnabled: Boolean,
                                              )
 
 case class ForgerSettings(automaticForging: Boolean = false,
-                          closedForge: Boolean = false,
-                          forgerList: Seq[Seq[String]])
+                          restrictForgers: Boolean = false,
+                          allowedForgersList: Seq[ForgerKeysData] = Seq())
 
 case class WalletSettings(seed: String,
                           genesisSecrets: Seq[String])

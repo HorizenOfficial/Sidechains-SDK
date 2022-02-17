@@ -52,9 +52,6 @@ class SidechainStateIntegrationTest
 
   val initialBlockFeeInfo: BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("1234".getBytes()).publicImage())
 
-  val forgerList = Seq()
-  val closedForger = false
-
   def getRegularTransaction(zenOutputsCount: Int, forgerOutputsCount: Int): RegularTransaction = {
     val outputsCount = zenOutputsCount + forgerOutputsCount
 
@@ -157,7 +154,7 @@ class SidechainStateIntegrationTest
 
   @Test
   def closedBoxes(): Unit = {
-    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage, params, applicationState, forgerList, closedForger).get
+    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage, params, applicationState).get
 
     // Test that initial boxes list present in the State
     for (box <- boxList) {
@@ -172,7 +169,7 @@ class SidechainStateIntegrationTest
 
   @Test
   def currentConsensusEpochInfo(): Unit = {
-    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage, params, applicationState, forgerList, closedForger).get
+    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage, params, applicationState).get
 
     // Test that initial currentConsensusEpochInfo is valid
     val(modId, consensusEpochInfo) = sidechainState.getCurrentConsensusEpochInfo
@@ -204,7 +201,7 @@ class SidechainStateIntegrationTest
   @Test
   def feePayments(): Unit = {
     // Create sidechainState with initial block applied.
-    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage, params, applicationState, forgerList, closedForger).get
+    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage, params, applicationState).get
 
     // Collect and verify getFeePayments value
     val withdrawalEpochNumber: Int = initialWithdrawalEpochInfo.epoch
@@ -221,7 +218,7 @@ class SidechainStateIntegrationTest
 
   @Test
   def applyModifier(): Unit = {
-    var sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage, params, applicationState, forgerList, closedForger).get
+    var sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage, params, applicationState).get
 
     // Test applyModifier with a single RegularTransaction with zen and forger outputs
     val mockedBlock = mock[SidechainBlock]
