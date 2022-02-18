@@ -881,7 +881,7 @@ def get_next_epoch_slot(epoch, slot, slots_in_epoch, force_switch_to_next_epoch=
     return next_epoch, next_slot
 
 
-def generate_next_block(node, node_name, force_switch_to_next_epoch=False):
+def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbose=True):
     forging_info = node.block_forgingInfo()["result"]
     slots_in_epoch = forging_info["consensusSlotsInEpoch"]
     best_slot = forging_info["bestSlotNumber"]
@@ -902,14 +902,15 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False):
 
     assert_true("result" in forge_result, "Error during block generation for SC {0}".format(node_name))
     block_id = forge_result["result"]["blockId"]
-    print("Successfully forged block with id {blockId}".format(blockId=block_id))
+    if verbose == True:
+        print("Successfully forged block with id {blockId}".format(blockId=block_id))
     return forge_result["result"]["blockId"]
 
 
-def generate_next_blocks(node, node_name, blocks_count):
+def generate_next_blocks(node, node_name, blocks_count, verbose = True):
     blocks_ids = []
     for i in range(blocks_count):
-        blocks_ids.append(generate_next_block(node, node_name))
+        blocks_ids.append(generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbose=verbose))
     return blocks_ids
 
 
