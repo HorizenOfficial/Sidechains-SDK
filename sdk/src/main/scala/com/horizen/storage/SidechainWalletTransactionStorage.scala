@@ -72,6 +72,8 @@ with ScorexLogging
   def rollback (version : ByteArrayWrapper) : Try[SidechainWalletTransactionStorage] = Try {
     require(version != null, "Version to rollback to must be NOT NULL.")
     storage.rollback(version)
+    log.debug("Wallet Transaction storage rollback to version: " + version)
+
     this
   }
 

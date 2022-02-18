@@ -314,8 +314,9 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
   }
 
   // Check that all wallet storages are consistent and in case forging box info storage is not, then try a rollback for it.
-  // Return the common version or None if some unrecoverable misalignment has been detected
-  def ensureStorageConsistencyAfterRestore: Option[VersionTag] = {
+  // Return the state and common version or throw an exception if some unrecoverable misalignment has been detected
+  def ensureStorageConsistencyAfterRestore: Try[(SidechainWallet, ByteArrayWrapper)] = {
+    // TODO csw capability will be optional, related storage might even be empty
     val version = walletBoxStorage.lastVersionId
     if (
       // check these storages first, they are updated always together
@@ -326,18 +327,19 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
       // check forger box info storage, which is updated before state in case of epoch switch
       if (version == forgingBoxesInfoStorage.lastVersionId) {
         log.debug("All wallet storage versions are consistent")
-        Some(bytesToVersion(version.get.data()))
+        Success(this, version.get)
       } else {
         val versionSome = version.get
+        // TODO implement an api with a number of items as input, we do not need all of them, can be a huge amount of data
         val rollbackList = forgingBoxesInfoStorage.rollbackVersions
         val isVersionInRollbackList = rollbackList.contains(versionSome)
         if (rollbackList.length == 2 && rollbackList.last == versionSome) {
           // this is ok, we have just the genesis block whose modId is the very first version, and the second
           // is the non-rollback version used when updating the ForgingStakeMerklePathInfo at the startup
           log.debug("All wallet storage versions are consistent")
-          Some(bytesToVersion(versionSome))
+          Success(this, version.get)
         } else {
-          // it can be the case of process stopped when we had not yet updated the state.
+          // it can be the case of process stopped when we had not yet updated the state and ewe are switching epoch
           // Find the common version backwards in the rollbacks and apply a rollback to it if possible, otherwise return None
           if (isVersionInRollbackList) {
             val idx = rollbackList.indexOf(versionSome)
@@ -346,20 +348,25 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
             val rollbackVersion = forgingBoxesInfoStorage.rollback(versionSome) match {
               case (Success(_)) => Some(bytesToVersion(versionSome.data()))
               case Failure(exception) => {
-                log.error("Could not rollback forging boxes info storage: " + exception)
                 None
               }
             }
-            rollbackVersion
+            if (!rollbackVersion.isEmpty) {
+                Success(this, version.get)
+            } else {
+              // unrecoverable
+              log.error("Could not recover wallet forging storages")
+              throw new RuntimeException("Could not rollback wallet forging box info storages")
+            }
           } else {
             log.error("Forging boxes info storage does not have the expected version in the rollback list")
-            None
+            throw new RuntimeException("Forging boxes info storage does not have the expected version in the rollback list")
           }
         }
       }
     } else {
       log.error("Wallet storage versions are NOT consistent")
-      None
+      throw new RuntimeException("Wallet storage versions are NOT consistent")
     }
   }
 }

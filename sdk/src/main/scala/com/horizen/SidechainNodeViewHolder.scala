@@ -17,7 +17,7 @@ import scorex.core.network.NodeViewSynchronizer.ReceivableMessages._
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
 import scorex.core.{idToVersion, versionToId}
-import scorex.util.{ModifierId, ScorexLogging, idToBytes}
+import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
 
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -92,38 +92,44 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       val restoredMempool = restoredData.get._4
 
       val historyVersion = restoredHistory.bestBlockId
+      // TODO check that validity of best block info is consistent, that is updated in storage as a last step
 
       // get common version of the state storages, if necessary some rollback is applied internally
       // according to the update procedure sequence
-      val stateVersion   = restoredState.ensureStorageConsistencyAfterRestore
-
-      log.info(s"history bestBlockId = ${historyVersion}, stateVersion = ${stateVersion}")
-
-      if (stateVersion.isEmpty) {
+      val checkedStateData = restoredState.ensureStorageConsistencyAfterRestore
+      if (checkedStateData.isFailure) {
         log.error("state storages are not consistent")
         return None
       }
 
+      val checkedState = checkedStateData.get._1
+      val stateVersion = checkedStateData.get._2
+      log.info(s"history bestBlockId = ${historyVersion}, stateVersion = ${stateVersion}")
+
       val height_h = restoredHistory.blockInfoById(historyVersion).height
-      val height_s = restoredHistory.blockInfoById(versionToId(stateVersion.get)).height
+      val height_s = restoredHistory.blockInfoById(bytesToId(stateVersion.data)).height
       log.info(s"history  height = ${height_h}, state height = ${height_s}")
 
-      if (historyVersion == versionToId(stateVersion.get)) {
+      if (historyVersion == bytesToId(stateVersion.data)) {
         log.info("state and history storages are consistent")
 
         // get common version of the wallet storages, if necessary some rollback is applied internally
         // according to the update procedure sequence
-        val walletVersion = restoredWallet.ensureStorageConsistencyAfterRestore
-        if (walletVersion.isEmpty) {
+        val checkedWalletData = restoredWallet.ensureStorageConsistencyAfterRestore
+        if (checkedWalletData.isFailure) {
           log.error("wallet storages are not consistent")
           return None
         }
 
-        log.info(s"walletVersion = ${walletVersion.get}")
-        if (historyVersion == versionToId(walletVersion.get)) {
-          // This is the succesful case
+        val checkedWallet = checkedWalletData.get._1
+        val walletVersion = checkedWalletData.get._2
+
+        log.info(s"walletVersion = ${walletVersion}")
+        if (historyVersion == bytesToId(walletVersion.data)) {
+          // This is the successful case
           log.info("state, history and wallet storages are consistent")
-          restoredData
+          dumpStorages
+          Some(restoredHistory, checkedState, checkedWallet, restoredMempool)//restoredData
         }
         else {
           log.error("state and wallet storages are not consistent")
@@ -135,7 +141,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
         log.warn("Inconsistent state and history storages, trying to recover...")
 
         // this is the sequence of blocks starting from active chain up to input block, unless a None is returned in case of errors
-        val nonChainSuffix = restoredHistory.chainBack(versionToId(stateVersion.get), restoredHistory.storage.isInActiveChain, Int.MaxValue)
+        val nonChainSuffix = restoredHistory.chainBack(bytesToId(stateVersion.data), restoredHistory.storage.isInActiveChain, Int.MaxValue)
         log.info(s"sequence of blocks not in active chain (root included) = ${nonChainSuffix}")
 
         if (nonChainSuffix.isEmpty) {
@@ -179,26 +185,26 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   def dumpStorages : Unit = {
     if (!historyStorage.lastVersionId.isEmpty) { // also other storages should be checked before 'get' methods
-      log.info(s"HistoryStorage:             ${BytesUtils.toHexString(historyStorage.lastVersionId.get.data())}")
-      log.info(s"ConsensusStorage:           ${BytesUtils.toHexString(consensusDataStorage.lastVersionId.get.data())}")
-      log.info(s"secretStorage:              ${BytesUtils.toHexString(secretStorage.lastVersionId.get.data())}")
-      log.info("--------------------")
-      log.info(s"StateStorage:               ${BytesUtils.toHexString(stateStorage.lastVersionId.get.data())}")
-      log.info(s"StateForgerBoxStorage:      ${BytesUtils.toHexString(forgerBoxStorage.lastVersionId.get.data())}")
-      log.info(s"UtxoMerkleTreeStorage:      ${BytesUtils.toHexString(utxoMerkleTreeStorage.lastVersionId.get.data())}")
-      log.info("--------------------")
-      log.info(s"WalletBoxStorage:           ${BytesUtils.toHexString(walletBoxStorage.lastVersionId.get.data())}")
-      log.info(s"WalletTransactionStorage:   ${BytesUtils.toHexString(walletTransactionStorage.lastVersionId.get.data())}")
-      log.info(s"ForgingBoxesInfoStorage:    ${BytesUtils.toHexString(forgingBoxesInfoStorage.lastVersionId.get.data())}")
-      log.info(s"    ForgingBoxesInfoStorage vers:    ${forgingBoxesInfoStorage.rollbackVersions}")
-      log.info(s"CswDataStorage:             ${BytesUtils.toHexString(cswDataStorage.lastVersionId.get.data())}")
+      log.debug(s"HistoryStorage:             ${BytesUtils.toHexString(historyStorage.lastVersionId.get.data())}")
+      log.debug(s"ConsensusStorage:           ${BytesUtils.toHexString(consensusDataStorage.lastVersionId.get.data())}")
+      log.debug(s"secretStorage:              ${BytesUtils.toHexString(secretStorage.lastVersionId.get.data())}")
+      log.debug("--------------------")
+      log.debug(s"StateStorage:               ${BytesUtils.toHexString(stateStorage.lastVersionId.get.data())}")
+      log.debug(s"StateForgerBoxStorage:      ${BytesUtils.toHexString(forgerBoxStorage.lastVersionId.get.data())}")
+      log.debug(s"UtxoMerkleTreeStorage:      ${BytesUtils.toHexString(utxoMerkleTreeStorage.lastVersionId.get.data())}")
+      log.debug("--------------------")
+      log.debug(s"WalletBoxStorage:           ${BytesUtils.toHexString(walletBoxStorage.lastVersionId.get.data())}")
+      log.debug(s"WalletTransactionStorage:   ${BytesUtils.toHexString(walletTransactionStorage.lastVersionId.get.data())}")
+      log.debug(s"ForgingBoxesInfoStorage:    ${BytesUtils.toHexString(forgingBoxesInfoStorage.lastVersionId.get.data())}")
+      log.debug(s"    ForgingBoxesInfoStorage vers:    ${forgingBoxesInfoStorage.rollbackVersions.slice(0, 10)}")
+      log.debug(s"CswDataStorage:             ${BytesUtils.toHexString(cswDataStorage.lastVersionId.get.data())}")
 //      val m = getStorageVersions.map{ case(k, v) => {k.toString() + ": " + v.toString()}}
 //      log.debug(s"${m}")
     }}
 
   def getStorageVersions : Map[String, String] = {
     val m = mutable.Map[String, String]()
-    // fill it, for instance
+    // TODO fill it. For instance:
     val v = historyStorage.lastVersionId match {
       case Some(value) => BytesUtils.toHexString(value.data())
       case None => ""

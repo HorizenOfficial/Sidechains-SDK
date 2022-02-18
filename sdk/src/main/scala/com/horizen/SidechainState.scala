@@ -442,62 +442,47 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   }
 
   // Check that all storages are consistent and in case try some rollbacks.
-  // Return the common version or None if some unrecoverable misalignment has been detected
-  def ensureStorageConsistencyAfterRestore: Option[VersionTag] = {
+  // Return the state and common version, throw an exception if some unrecoverable misalignment has been detected
+  def ensureStorageConsistencyAfterRestore: Try[(SidechainState, ByteArrayWrapper)] = {
+    // TODO csw capability will be optional, related storage might even be empty
+
     // this is the order of update
     val versionUmt = utxoMerkleTreeStorage.lastVersionId
     val versionSt  = stateStorage.lastVersionId
     val versionFb  = forgerBoxStorage.lastVersionId
 
-    if (versionUmt == versionSt) {
-      if (versionSt == versionFb) {
-        Some(bytesToVersion(versionSt.get.data()))
-      } else {
-        // state can only be one version ahead forger box
-        val rollbackList = stateStorage.rollbackVersions
-        if (rollbackList.length > 1 && rollbackList(1) == versionFb.get) {
-          // we have to rollback both previous storages to this
-          val rollbackVersionUmt = utxoMerkleTreeStorage.rollback(versionFb.get)
-          val rollbackVersionSt  = stateStorage.rollback(versionFb.get)
-
-          (rollbackVersionUmt, rollbackVersionSt) match {
-            case (Success(_), Success(_)) => {
-              Some(bytesToVersion(versionSt.get.data()))
-            }
-            case (Failure(e), _) => {
-              log.error("roll back failed" + e)
-              None
-            }
-            case (_, Failure(e)) => {
-              log.error("roll back failed" + e)
-              None
-            }
-          }
-        } else {
-          // unrecoverable
-          log.error("Could not recover state storages")
-          None
-        }
-      }
+    if (versionUmt == versionSt && versionSt == versionFb) {
+        log.debug("All state storages are consistent")
+        Success(this, versionSt.get)
     } else {
-      // state can only be one version behind
-      val rollbackList = utxoMerkleTreeStorage.rollbackVersions
-      if (rollbackList.length > 1 && rollbackList(1) == versionSt.get) {
-        // we have to rollback to this
-        val rollbackVersion = utxoMerkleTreeStorage.rollback(versionSt.get) match {
-          case (Success(_)) => Some(bytesToVersion(versionSt.get.data()))
-          case Failure(exception) => {
-            log.error("Could not rollback forging boxes info storage: " + exception)
-            None
-          }
+      log.debug("state storages are not consistent")
+      val versionRollback = if (versionUmt == versionSt) {
+        log.debug("Fb and state storages are not consistent")
+        // state can only be one version ahead forger box
+        val rollbackList = stateStorage.rollbackVersions // TODO use an api with number of items in input
+        if (rollbackList.length > 1 && rollbackList(1) == versionFb.get) {
+          versionFb
         }
-        // and forger box storage must be the same
-        require(versionFb == versionSt)
-        rollbackVersion
+        else None
+      } else {
+        log.debug("Umt and state storages are not consistent")
+        // umt can only be one version ahead state
+        val rollbackList = utxoMerkleTreeStorage.rollbackVersions
+        if (rollbackList.length > 1 && rollbackList(1) == versionSt.get) {
+          versionSt
+        } else None
+      }
+      if (!versionRollback.isEmpty) {
+        val rolledBackState = rollbackTo(bytesToVersion(versionRollback.get.data()))
+        if (rolledBackState.isFailure) {
+          throw new IllegalStateException("Could not rollback state")
+        } else {
+          Success(rolledBackState.get, versionRollback.get)
+        }
       } else {
         // unrecoverable
         log.error("Could not recover state storages")
-        None
+        throw new IllegalStateException("Could not recover inconsistent state and forger box info storages")
       }
     }
   }

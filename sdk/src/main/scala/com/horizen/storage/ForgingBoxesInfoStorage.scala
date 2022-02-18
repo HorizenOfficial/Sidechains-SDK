@@ -2,15 +2,14 @@ package com.horizen.storage
 
 import com.horizen.SidechainTypes
 import com.horizen.consensus.ConsensusEpochNumber
-import com.horizen.utils.{ByteArrayWrapper, ForgingStakeMerklePathInfo, ForgerBoxMerklePathInfoSerializer, ListSerializer, Pair}
-import scorex.util.ScorexLogging
+import com.horizen.utils.{ByteArrayWrapper, ForgerBoxMerklePathInfoSerializer, ForgingStakeMerklePathInfo, ListSerializer, Pair}
+import scorex.util.{ScorexLogging, bytesToId}
 import scorex.crypto.hash.Blake2b256
 
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Random, Success, Try}
 import java.util.{ArrayList => JArrayList}
-
 import com.horizen.box.{ForgerBox, ForgerBoxSerializer}
 
 
@@ -51,7 +50,7 @@ class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with Scor
     val version = nextVersion
     storage.update(version, updateList, removeList)
     log.debug("Forging boxes info storage updated with version: " + version)
-    log.debug(s"    ForgingBoxesInfoStorage vers:    ${rollbackVersions}")
+    log.debug(s"    ForgingBoxesInfoStorage vers:    ${rollbackVersions.slice(0, 20).map{x => bytesToId(x.data())}}")
 
     this
   }
@@ -73,7 +72,7 @@ class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with Scor
 
     storage.update(version, toUpdate, new JArrayList())
     log.debug("Wallet Forging Boxes storage updated with version: " + version)
-    log.debug(s"    ForgingBoxesInfoStorage vers:    ${rollbackVersions}")
+    log.debug(s"    ForgingBoxesInfoStorage vers:    ${rollbackVersions.slice(0, 20).map{x => bytesToId(x.data())}}")
 
     this
   }

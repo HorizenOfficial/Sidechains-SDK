@@ -49,18 +49,6 @@ public class DbTool {
 
         String dataDirAbsolutePath = sidechainSettings.scorexSettings().dataDir().getAbsolutePath();
 
-        File secretStore = new File(dataDirAbsolutePath + "/secret");
-        File walletBoxStore = new File(dataDirAbsolutePath + "/wallet");
-        File walletTransactionStore = new File(dataDirAbsolutePath + "/walletTransaction");
-        File walletForgingBoxesInfoStorage = new File(dataDirAbsolutePath + "/walletForgingStake");
-        File walletCswDataStorage = new File(dataDirAbsolutePath + "/walletCswDataStorage");
-        File stateForgerBoxStore = new File(dataDirAbsolutePath + "/stateForgerBox");
-        File stateUtxoMerkleTreeStore = new File(dataDirAbsolutePath + "/stateUtxoMerkleTree");
-        File historyStore = new File(dataDirAbsolutePath + "/history");
-        File consensusStore = new File(dataDirAbsolutePath + "/consensusData");
-
-
-
         MessagePrinter printer = new ConsolePrinter();
         CommandProcessor processor = new CommandProcessor(printer, dataDirAbsolutePath, log);
         if(args.length > 1)
@@ -70,7 +58,7 @@ public class DbTool {
                     cmd.append(" ").append(args[i]);
                 log.info("Starting db tool with cmd input: " + cmd);
                 processor.processCommand(cmd.toString());
-            }catch (Exception e){
+            } catch (Exception e) {
                 printer.print(e.getMessage());
             }
         else{

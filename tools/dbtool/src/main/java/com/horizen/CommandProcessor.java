@@ -167,6 +167,7 @@ public class CommandProcessor {
             storage.close();
 
         } catch (IllegalArgumentException e) {
+            // for instance when trying to rollback to an not-existing version
             printRollbackUsageMsg("Error in processing the command: " + e);
         }  catch (Exception e) {
             log.error("Error in processing the command: " + e);

@@ -157,6 +157,8 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
   def rollback (version : ByteArrayWrapper) : Try[SidechainWalletBoxStorage] = Try {
     require(version != null, "Version to rollback to must be NOT NULL.")
     storage.rollback(version)
+    log.debug("Wallet Box storage rollback to version: " + version)
+
     loadWalletBoxes()
     this
   }

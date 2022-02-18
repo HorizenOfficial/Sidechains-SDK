@@ -17,5 +17,6 @@
 		<module>sdk</module>
 		<module>examples/simpleapp</module>
 		<module>tools/sctool</module>
+		<module>tools/dbtool</module>
 	</modules>
 </project>
