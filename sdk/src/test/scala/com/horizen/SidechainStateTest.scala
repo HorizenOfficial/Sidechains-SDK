@@ -589,10 +589,11 @@ class SidechainStateTest
 
     //Test validate(Transaction) with restrict forger enable and no forger in the list
     Mockito.when(mockedParams.restrictForgers).thenReturn(true)
+    Mockito.when(mockedParams.allowedForgersList).thenReturn(Seq())
     tryValidate = sidechainState.validate(stakeTransaction)
     assertFalse("Transaction validation must fail.",
       tryValidate.isSuccess)
-    assertTrue(tryValidate.failed.get.isInstanceOf[NullPointerException])
+    assertTrue(tryValidate.failed.get.getMessage.equals("This publicKey is not allowed to forge!"))
 
     //Test validate(Transaction) with restrict forger enable and invalid blockSignProposition
     Mockito.when(mockedParams.allowedForgersList).thenReturn(Seq((invalidBlockSignProposition,allowedVrfPublicKey)))

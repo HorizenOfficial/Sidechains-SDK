@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_true, initialize_chain_clean, start_nodes, connect_nodes_bi, websocket_port_by_mc_node_index, forward_transfer_to_sidechain
-from SidechainTestFramework.scutil import start_sc_nodes, DefaultBlockTimestampRewind, generate_next_blocks, bootstrap_sidechain_nodes
+from SidechainTestFramework.scutil import generate_secrets, start_sc_nodes, generate_next_blocks, bootstrap_sidechain_nodes, generate_secrets, generate_vrf_secrets
 from httpCalls.wallet.createPrivateKey25519 import http_wallet_createPrivateKey25519
 from httpCalls.transaction.makeForgerStake import makeForgerStake
 from httpCalls.wallet.createVrfSecret import http_wallet_createVrfSecret
@@ -13,8 +13,8 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
 class SidechainClosedForgerTest(SidechainTestFramework):
     number_of_mc_nodes = 3
     number_of_sidechain_nodes = 1
-    allowed_forger_proposition = "a5b10622d70f094b7276e04608d97c7c699c8700164f78e16fe5e8082f4bb2ac"
-    allowed_forger_vrf_public_key = "894dba38c1b29a58900abac445c01201f677615f741773a6a5c8c8c9c705842b80"
+    allowed_forger_proposition = generate_secrets("seed", 1)[0].publicKey
+    allowed_forger_vrf_public_key = generate_vrf_secrets("seed", 1)[0].publicKey
 
     def setup_chain(self):
         initialize_chain_clean(self.options.tmpdir, self.number_of_mc_nodes)
@@ -39,13 +39,7 @@ class SidechainClosedForgerTest(SidechainTestFramework):
 
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0))),
-            True,
-            True,
-            None,
-            100,
-            True,
-            0.0001,
-            forger_configuration
+            forger_options = forger_configuration
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, 1000),
                                          sc_node_1_configuration)
