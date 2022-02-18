@@ -23,6 +23,9 @@ import com.horizen.params.TestNetParams;
 import com.horizen.proof.VrfProof;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.*;
+import com.horizen.tools.utils.Command;
+import com.horizen.tools.utils.CommandProcessor;
+import com.horizen.tools.utils.MessagePrinter;
 import com.horizen.transaction.SidechainTransaction;
 import com.horizen.transaction.mainchain.SidechainCreation;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
@@ -37,13 +40,13 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class CommandProcessor {
-    private MessagePrinter printer;
+public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
-    public CommandProcessor(MessagePrinter printer) {
-        this.printer = printer;
+    public ScBootstrappingToolCommandProcessor(MessagePrinter printer) {
+        super(printer);
     }
 
+    @Override
     public void processCommand(String input) throws IOException {
         Command command = parseCommand(input);
 
@@ -75,7 +78,8 @@ public class CommandProcessor {
     // 1) <command name>
     // 1) <command name> <json argument>
     // 2) <command name> -f <path to file with json argument>
-    private Command parseCommand(String input) throws IOException {
+    @Override
+    protected Command parseCommand(String input) throws IOException {
         String[] inputData = input.trim().split(" ", 2);
         if(inputData.length == 0)
             throw new IOException(String.format("Error: unrecognized input structure '%s'.%nSee 'help' for usage guideline.", input));
@@ -115,7 +119,8 @@ public class CommandProcessor {
         return new Command(inputData[0], jsonNode);
     }
 
-    private void printUsageMsg() {
+    @Override
+    protected void printUsageMsg() {
         printer.print("Usage:\n" +
                       "\tFrom command line: <program name> <command name> [<json data>]\n" +
                       "\tFor interactive mode: <command name> [<json data>]\n" +
@@ -129,10 +134,6 @@ public class CommandProcessor {
                       "\tgenesisinfo <arguments>\n" +
                       "\texit\n"
         );
-    }
-
-    private void printUnsupportedCommandMsg(String command) {
-        printer.print(String.format("Error: unsupported command '%s'.\nSee 'help' for usage guideline.", command));
     }
 
     private void printGenerateKeyUsageMsg(String error) {

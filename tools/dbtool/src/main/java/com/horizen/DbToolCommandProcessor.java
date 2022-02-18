@@ -5,34 +5,35 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.horizen.companion.SidechainSecretsCompanion;
-import com.horizen.secret.PrivateKey25519;
-import com.horizen.secret.PrivateKey25519Creator;
-import com.horizen.secret.SchnorrSecret;
 import com.horizen.storage.Storage;
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter;
+import com.horizen.tools.utils.Command;
+
+import com.horizen.tools.utils.CommandProcessor;
+import com.horizen.tools.utils.MessagePrinter;
 import com.horizen.utils.ByteArrayWrapper;
 import com.horizen.utils.BytesUtils;
 import org.apache.logging.log4j.Logger;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
-public class CommandProcessor {
-    private MessagePrinter printer;
+public class DbToolCommandProcessor extends CommandProcessor {
+
     private String dataDirAbsolutePath;
     private Logger log;
 
-    public CommandProcessor(MessagePrinter printer, String dataDirAbsolutePath, Logger log) {
+
+    public DbToolCommandProcessor(MessagePrinter printer, String dataDirAbsolutePath, Logger log) {
+        super(printer);
         this.dataDirAbsolutePath = dataDirAbsolutePath;
-        this.printer = printer;
         this.log = log;
     }
 
+    @Override
     public void processCommand(String input) throws IOException {
-        Command command = parseCommand(input);
+        com.horizen.tools.utils.Command command = parseCommand(input);
 
         switch(command.name()) {
             case "help":
@@ -59,7 +60,8 @@ public class CommandProcessor {
     // 1) <command name>
     // 1) <command name> <json argument>
     // 2) <command name> -f <path to file with json argument>
-    private Command parseCommand(String input) throws IOException {
+    @Override
+    protected Command parseCommand(String input) throws IOException {
         String[] inputData = input.trim().split(" ", 2);
         if(inputData.length == 0)
             throw new IOException(String.format("Error: unrecognized input structure '%s'.%nSee 'help' for usage guideline.", input));
@@ -99,7 +101,8 @@ public class CommandProcessor {
         return new Command(inputData[0], jsonNode);
     }
 
-    private void printUsageMsg() {
+    @Override
+    protected void printUsageMsg() {
         printer.print("Usage:\n" +
                 "\tFrom command line: <program name> <command name> [<json data>]\n" +
                 "\tFor interactive mode: <command name> [<json data>]\n" +
@@ -111,10 +114,6 @@ public class CommandProcessor {
                 "\tversionsList <arguments>\n" +
                 "\texit\n"
         );
-    }
-
-    private void printUnsupportedCommandMsg(String command) {
-        printer.print(String.format("Error db tool: unsupported command '%s'.\nSee 'help' for usage guideline.", command));
     }
 
     private File getStorageFile(JsonNode json) throws IllegalArgumentException, FileNotFoundException {

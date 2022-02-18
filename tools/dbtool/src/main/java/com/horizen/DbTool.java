@@ -3,8 +3,8 @@ import java.io.File;
 import java.util.*;
 
 import com.horizen.settings.SettingsReader;
-import com.horizen.storage.Storage;
-import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter;
+import com.horizen.tools.utils.ConsolePrinter;
+import com.horizen.tools.utils.MessagePrinter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -50,7 +50,7 @@ public class DbTool {
         String dataDirAbsolutePath = sidechainSettings.scorexSettings().dataDir().getAbsolutePath();
 
         MessagePrinter printer = new ConsolePrinter();
-        CommandProcessor processor = new CommandProcessor(printer, dataDirAbsolutePath, log);
+        DbToolCommandProcessor processor = new DbToolCommandProcessor(printer, dataDirAbsolutePath, log);
         if(args.length > 1)
             try {
                 StringBuilder cmd = new StringBuilder(args[1]);
