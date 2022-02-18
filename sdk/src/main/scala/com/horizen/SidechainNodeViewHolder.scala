@@ -91,8 +91,8 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       val restoredWallet  = restoredData.get._3
       val restoredMempool = restoredData.get._4
 
+      // it is updated in storage as a last step
       val historyVersion = restoredHistory.bestBlockId
-      // TODO check that validity of best block info is consistent, that is updated in storage as a last step
 
       // get common version of the state storages, if necessary some rollback is applied internally
       // according to the update procedure sequence
@@ -113,8 +113,10 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       if (historyVersion == bytesToId(stateVersion.data)) {
         log.info("state and history storages are consistent")
 
-        // get common version of the wallet storages, if necessary some rollback is applied internally
-        // according to the update procedure sequence
+        // get common version of the wallet storages, that at this point must be consistent among them
+        // since history and state are (according to the update procedure sequence: state --> wallet --> history)
+        // if necessary a rollback is applied internally to the forging box info storage, because
+        // it might have been updated upon consensus epoch switch even before the state
         val checkedWalletData = restoredWallet.ensureStorageConsistencyAfterRestore
         if (checkedWalletData.isFailure) {
           log.error("wallet storages are not consistent")

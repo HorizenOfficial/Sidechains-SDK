@@ -81,6 +81,10 @@ class VersionedLevelDbStorageAdapter(pathToDB: File) extends Storage{
 
   override def rollbackVersions(): JList[ByteArrayWrapper] = dataBase.versions.map(byteArrayToWrapper).asJava
 
+  override def rollbackVersions(maxNumberOfItems: Int): JList[ByteArrayWrapper] = {
+    dataBase.versions.slice(0,maxNumberOfItems).map(byteArrayToWrapper).asJava
+  }
+
   override def close(): Unit = dataBase.close()
 
   private def createDb(path: File): VersionedLDBKVStore = {

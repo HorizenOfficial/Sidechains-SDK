@@ -459,18 +459,23 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       val versionRollback = if (versionUmt == versionSt) {
         log.debug("Fb and state storages are not consistent")
         // state can only be one version ahead forger box
-        val rollbackList = stateStorage.rollbackVersions // TODO use an api with number of items in input
+        val rollbackList = stateStorage.rollbackVersions(2)
         if (rollbackList.length > 1 && rollbackList(1) == versionFb.get) {
           versionFb
+        } else {
+          log.error("state storage not consistent with forger box storage")
+          None
         }
-        else None
       } else {
         log.debug("Umt and state storages are not consistent")
         // umt can only be one version ahead state
-        val rollbackList = utxoMerkleTreeStorage.rollbackVersions
+        val rollbackList = utxoMerkleTreeStorage.rollbackVersions(2)
         if (rollbackList.length > 1 && rollbackList(1) == versionSt.get) {
           versionSt
-        } else None
+        } else {
+          log.error("UTXO mkl tree storage not consistent with state storage")
+          None
+        }
       }
       if (!versionRollback.isEmpty) {
         val rolledBackState = rollbackTo(bytesToVersion(versionRollback.get.data()))

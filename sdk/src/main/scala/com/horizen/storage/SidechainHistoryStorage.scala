@@ -292,7 +292,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
 
     val mainchainParent: Option[MainchainHeaderHash] = block.mainchainHeaders.headOption.map(header => byteArrayToMainchainHeaderHash(header.hashPrevBlock))
     activeChain.setBestBlock(block.id, blockInfo, mainchainParent)
-    log.info("best block info updated in active chain: " + blockInfo)
+    log.info("best block info set in active chain: " + blockInfo)
 
     this
   }

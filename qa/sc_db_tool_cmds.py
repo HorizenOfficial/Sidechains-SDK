@@ -187,6 +187,15 @@ class DBToolTest(SidechainTestFramework):
         stop_sc_node(1)
 
         # -----------------------------------------------------------------------------------------
+        # modify the history db rolling back the last update
+        #   History storage (best block id)
+
+        storages_list = ["history"]
+        rollbackStorages(sc_node2, storages_list, 2)
+
+        self.forgeBlockAndCheckSync()
+
+        # -----------------------------------------------------------------------------------------
         # modify the history db rolling back the last two updates
         #   History storage (block info validity)
         #   History storage (best block id)

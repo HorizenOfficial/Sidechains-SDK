@@ -320,9 +320,8 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     val version = walletBoxStorage.lastVersionId
     if (
       // check these storages first, they are updated always together
-        version == walletBoxStorage.lastVersionId         &&
         version == walletTransactionStorage.lastVersionId &&
-        version == cswDataStorage.lastVersionId
+          version == cswDataStorage.lastVersionId
     ) {
       // check forger box info storage, which is updated before state in case of epoch switch
       if (version == forgingBoxesInfoStorage.lastVersionId) {
@@ -330,38 +329,34 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
         Success(this, version.get)
       } else {
         val versionSome = version.get
-        // TODO implement an api with a number of items as input, we do not need all of them, can be a huge amount of data
-        val rollbackList = forgingBoxesInfoStorage.rollbackVersions
-        val isVersionInRollbackList = rollbackList.contains(versionSome)
-        if (rollbackList.length == 2 && rollbackList.last == versionSome) {
-          // this is ok, we have just the genesis block whose modId is the very first version, and the second
-          // is the non-rollback version used when updating the ForgingStakeMerklePathInfo at the startup
-          log.debug("All wallet storage versions are consistent")
-          Success(this, version.get)
-        } else {
-          // it can be the case of process stopped when we had not yet updated the state and ewe are switching epoch
-          // Find the common version backwards in the rollbacks and apply a rollback to it if possible, otherwise return None
-          if (isVersionInRollbackList) {
-            val idx = rollbackList.indexOf(versionSome)
-            // idx should be 1 or 2 at most
-            log.warn(s"Wallet forger box storage versions is NOT consistent, trying to rollback $idx version(s) back")
-            val rollbackVersion = forgingBoxesInfoStorage.rollback(versionSome) match {
+        // the version should be the previous at most
+        val maxNumberOfVersionToRetrieve = 2
+        val rollbackList = forgingBoxesInfoStorage.rollbackVersions(maxNumberOfVersionToRetrieve)
+        if (rollbackList.last == versionSome) {
+          if (forgingBoxesInfoStorage.size == maxNumberOfVersionToRetrieve) {
+            // this is ok, we have just the genesis block whose modId is the very first version, and the second
+            // is the non-rollback version used when updating the ForgingStakeMerklePathInfo at the startup
+            log.debug("All wallet storage versions are consistent")
+            Success(this, version.get)
+          } else {
+            // it can be the case of process stopped when we had not yet updated the state and we are switching epoch
+            log.warn(s"Wallet forger box storage versions is NOT consistent, trying to rollback")
+            val rbVersion = forgingBoxesInfoStorage.rollback(versionSome) match {
               case (Success(_)) => Some(bytesToVersion(versionSome.data()))
               case Failure(exception) => {
                 None
               }
             }
-            if (!rollbackVersion.isEmpty) {
-                Success(this, version.get)
-            } else {
+            if (rbVersion.isEmpty) {
               // unrecoverable
               log.error("Could not recover wallet forging storages")
               throw new RuntimeException("Could not rollback wallet forging box info storages")
             }
-          } else {
-            log.error("Forging boxes info storage does not have the expected version in the rollback list")
-            throw new RuntimeException("Forging boxes info storage does not have the expected version in the rollback list")
+            Success(this, version.get)
           }
+        } else {
+          log.error("Forging boxes info storage does not have the expected version in the rollback list")
+          throw new RuntimeException("Forging boxes info storage does not have the expected version in the rollback list")
         }
       }
     } else {

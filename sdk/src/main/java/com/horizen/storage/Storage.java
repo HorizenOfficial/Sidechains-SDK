@@ -21,6 +21,8 @@ public interface Storage {
 
     List<ByteArrayWrapper> rollbackVersions();
 
+    List<ByteArrayWrapper> rollbackVersions(int maxNumberOfItems);
+
     boolean isEmpty();
 
     int size();

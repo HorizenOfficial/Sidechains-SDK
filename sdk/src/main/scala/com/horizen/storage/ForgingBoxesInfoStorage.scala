@@ -107,8 +107,12 @@ class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with Scor
     storage.lastVersionID().asScala
   }
 
-  def rollbackVersions: List[ByteArrayWrapper] = {
+  def rollbackVersions(): List[ByteArrayWrapper] = {
     storage.rollbackVersions().asScala.toList
+  }
+
+  def rollbackVersions(maxNumberOfVersions: Int): List[ByteArrayWrapper] = {
+    storage.rollbackVersions(maxNumberOfVersions).asScala.toList
   }
 
   def rollback(version: ByteArrayWrapper): Try[ForgingBoxesInfoStorage] = Try {
@@ -120,4 +124,6 @@ class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with Scor
   }
 
   def isEmpty: Boolean = storage.isEmpty
+
+  def size : Int = storage.size()
 }

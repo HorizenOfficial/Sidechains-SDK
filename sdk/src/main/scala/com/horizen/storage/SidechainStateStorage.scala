@@ -291,8 +291,12 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     storage.lastVersionID().asScala
   }
 
-  def rollbackVersions : Seq[ByteArrayWrapper] = {
+  def rollbackVersions() : Seq[ByteArrayWrapper] = {
     storage.rollbackVersions().asScala.toList
+  }
+
+  def rollbackVersions(maxNumberOfVersions: Int): List[ByteArrayWrapper] = {
+    storage.rollbackVersions(maxNumberOfVersions).asScala.toList
   }
 
   def rollback (version : ByteArrayWrapper) : Try[SidechainStateStorage] = Try {
