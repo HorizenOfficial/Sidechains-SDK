@@ -14,7 +14,8 @@ import scala.util.Try
 
 class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: SidechainSecretsCompanion)
   extends SidechainTypes
-  with ScorexLogging
+    with SidechainStorageInfo
+    with ScorexLogging
 {
   // Version - RandomBytes(32)
   // Key - Blake2b256 hash from public key bytes

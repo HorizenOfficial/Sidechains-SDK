@@ -16,7 +16,8 @@ import scala.util.Try
 
 class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: SidechainBoxesCompanion)
   extends SidechainTypes
-  with ScorexLogging
+    with SidechainStorageInfo
+    with ScorexLogging
 {
   // Version - block Id
   // Key - byte array box Id

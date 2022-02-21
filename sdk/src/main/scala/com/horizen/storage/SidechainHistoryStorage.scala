@@ -22,7 +22,8 @@ trait SidechainBlockInfoProvider {
 
 class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: SidechainTransactionsCompanion, params: NetworkParams)
   extends SidechainBlockInfoProvider
-  with ScorexLogging {
+    with SidechainStorageInfo
+    with ScorexLogging {
   // Version - RandomBytes(32)
 
   require(storage != null, "Storage must be NOT NULL.")

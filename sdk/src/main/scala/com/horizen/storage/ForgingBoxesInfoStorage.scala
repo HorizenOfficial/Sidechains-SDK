@@ -13,7 +13,7 @@ import java.util.{ArrayList => JArrayList}
 import com.horizen.box.{ForgerBox, ForgerBoxSerializer}
 
 
-class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with ScorexLogging
+class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with SidechainStorageInfo with ScorexLogging
 {
   require(storage != null, "Storage must be NOT NULL.")
 

@@ -21,6 +21,7 @@ import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
 
 import scala.annotation.tailrec
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
 class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
@@ -57,6 +58,9 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                             suffix: IndexedSeq[SidechainBlock])
 
   override val scorexSettings: ScorexSettings = sidechainSettings.scorexSettings
+
+  // this will be initialized as soon it is used, TODO check this
+  val listOfStorageInfo : mutable.ListBuffer[SidechainStorageInfo] = ListBuffer[SidechainStorageInfo]()
 
   private def semanticBlockValidators(params: NetworkParams): Seq[SemanticBlockValidator] = Seq(new SidechainBlockSemanticValidator(params))
   private def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator] = Seq(
@@ -186,35 +190,41 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   }
 
   def dumpStorages : Unit = {
-    if (!historyStorage.lastVersionId.isEmpty) { // also other storages should be checked before 'get' methods
-      log.debug(s"HistoryStorage:             ${BytesUtils.toHexString(historyStorage.lastVersionId.get.data())}")
-      log.debug(s"ConsensusStorage:           ${BytesUtils.toHexString(consensusDataStorage.lastVersionId.get.data())}")
-      log.debug(s"secretStorage:              ${BytesUtils.toHexString(secretStorage.lastVersionId.get.data())}")
-      log.debug("--------------------")
-      log.debug(s"StateStorage:               ${BytesUtils.toHexString(stateStorage.lastVersionId.get.data())}")
-      log.debug(s"StateForgerBoxStorage:      ${BytesUtils.toHexString(forgerBoxStorage.lastVersionId.get.data())}")
-      log.debug(s"UtxoMerkleTreeStorage:      ${BytesUtils.toHexString(utxoMerkleTreeStorage.lastVersionId.get.data())}")
-      log.debug("--------------------")
-      log.debug(s"WalletBoxStorage:           ${BytesUtils.toHexString(walletBoxStorage.lastVersionId.get.data())}")
-      log.debug(s"WalletTransactionStorage:   ${BytesUtils.toHexString(walletTransactionStorage.lastVersionId.get.data())}")
-      log.debug(s"ForgingBoxesInfoStorage:    ${BytesUtils.toHexString(forgingBoxesInfoStorage.lastVersionId.get.data())}")
+    try {
+      val m = getStorageVersions.map{ case(k, v) => {"%-36s".format(k) + ": " + v}}
+      m.foreach(x => log.debug(s"${x}"))
       log.debug(s"    ForgingBoxesInfoStorage vers:    ${forgingBoxesInfoStorage.rollbackVersions.slice(0, 10)}")
-      log.debug(s"CswDataStorage:             ${BytesUtils.toHexString(cswDataStorage.lastVersionId.get.data())}")
-//      val m = getStorageVersions.map{ case(k, v) => {k.toString() + ": " + v.toString()}}
-//      log.debug(s"${m}")
-    }}
+    } catch {
+      case e: Exception =>
+        // can happen during unit test with mocked objects
+        log.warn("Could not print debug info about storages: " + e.getMessage)
+    }
+  }
 
-  def getStorageVersions : Map[String, String] = {
-    val m = mutable.Map[String, String]()
-    // TODO fill it. For instance:
-    val v = historyStorage.lastVersionId match {
-      case Some(value) => BytesUtils.toHexString(value.data())
-      case None => ""
+  def getStorageVersions : scala.collection.immutable.ListMap[String, String] = {
+
+    val m = mutable.LinkedHashMap[String, String]()
+
+    if (listOfStorageInfo != null) {
+      // initialize just once
+      if (listOfStorageInfo.isEmpty) {
+        log.warn("Filling list of storage info")
+        List[SidechainStorageInfo](
+          historyStorage, consensusDataStorage, secretStorage,
+          stateStorage, forgerBoxStorage, utxoMerkleTreeStorage,
+          walletBoxStorage, walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage).foreach(x=>listOfStorageInfo += x)
+      }
+
+      listOfStorageInfo.foreach(x =>{
+        val s = x.lastVersionId.map{
+          value => BytesUtils.toHexString(value.data())
+        }.getOrElse("")
+        m += (x.getClass.getSimpleName.toString -> s)
+      })
     }
 
-    m += (historyStorage.getClass.toString -> v)
-    scala.collection.immutable.Map[String, String](m.toList:_*)
-  } // TODO
+    scala.collection.immutable.ListMap[String, String](m.toList:_*)
+  }
 
   override protected def genesisState: (HIS, MS, VL, MP) = {
     val result = for {
@@ -470,6 +480,7 @@ object SidechainNodeViewHolder /*extends ScorexLogging with ScorexEncoding*/ {
 }
 
 object SidechainNodeViewHolderRef {
+
   def props(sidechainSettings: SidechainSettings,
             historyStorage: SidechainHistoryStorage,
             consensusDataStorage: ConsensusDataStorage,

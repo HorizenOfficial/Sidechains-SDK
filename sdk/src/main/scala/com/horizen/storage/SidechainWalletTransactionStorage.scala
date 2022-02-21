@@ -13,7 +13,8 @@ import scala.util.{Failure, Success, Try}
 
 class SidechainWalletTransactionStorage (storage : Storage, sidechainTransactionsCompanion: SidechainTransactionsCompanion)
 extends SidechainTypes
-with ScorexLogging
+  with SidechainStorageInfo
+  with ScorexLogging
 {
   // Version - block Id
   // Key - byte array transaction Id

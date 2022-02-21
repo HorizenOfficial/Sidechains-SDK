@@ -19,7 +19,8 @@ import scala.util._
 
 class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: SidechainBoxesCompanion)
   extends ScorexLogging
-  with SidechainTypes
+    with SidechainStorageInfo
+    with SidechainTypes
 {
   // Version - block Id
   // Key - byte array box Id

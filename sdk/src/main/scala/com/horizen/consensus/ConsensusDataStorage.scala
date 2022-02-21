@@ -1,8 +1,7 @@
 package com.horizen.consensus
 
 import java.util.{ArrayList => JArrayList}
-
-import com.horizen.storage.Storage
+import com.horizen.storage.{SidechainStorageInfo, Storage}
 import com.horizen.utils.{ByteArrayWrapper, Pair => JPair}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
@@ -10,7 +9,9 @@ import scorex.util.ScorexLogging
 import scala.compat.java8.OptionConverters._
 import scala.util.Random
 
-class ConsensusDataStorage(consensusEpochInfoStorage: Storage) extends ScorexLogging {
+class ConsensusDataStorage(consensusEpochInfoStorage: Storage)
+  extends ScorexLogging
+  with SidechainStorageInfo {
   def addStakeConsensusEpochInfo(epochId: ConsensusEpochId, stakeEpochInfo: StakeConsensusEpochInfo): Unit = {
     log.info(s"Storage with id:${this.hashCode()} -- Add stake to consensus data storage: for epochId ${epochId} stake info: ${stakeEpochInfo}")
 

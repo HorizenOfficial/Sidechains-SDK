@@ -13,7 +13,7 @@ import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
 class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
-  extends ScorexLogging with SidechainTypes {
+  extends ScorexLogging with SidechainStorageInfo with SidechainTypes {
 
   var merkleTreeWrapper: InMemorySparseMerkleTreeWrapper = loadMerkleTree()
 
