@@ -70,16 +70,11 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     new ConsensusValidator(timeProvider)
   )
 
-  override def restoreState(): Option[(HIS, MS, VL, MP)] = {
-    log.info("Restoring persistent state from storage...")
-    val restoredData = for {
-      history <- SidechainHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
-      state <- SidechainState.restoreState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, applicationState)
-      wallet <- SidechainWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes, walletBoxStorage, secretStorage,
-        walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, params, applicationWallet)
-      pool <- Some(SidechainMemoryPool.emptyPool)
-    } yield (history, state, wallet, pool)
-
+  // this method is called at the startup after the load of the storages from the persistent db. It might happen that the node was not
+  // stopped gracefully and therefore the consistency among storages might not be ensured. This method tries to recover this situation
+  def checkAndRecoverStorages(restoredData:  Option[(SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool)]) :
+      Option[(SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool)] =
+  {
     if (restoredData.isEmpty) {
       // this is the case for the genesis state
       log.info("Nothing to restore, exiting")
@@ -95,26 +90,26 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       val restoredWallet  = restoredData.get._3
       val restoredMempool = restoredData.get._4
 
-      // it is updated in storage as a last step
+      // best block id is updated in history storage as very last step
       val historyVersion = restoredHistory.bestBlockId
 
       // get common version of the state storages, if necessary some rollback is applied internally
       // according to the update procedure sequence
       val checkedStateData = restoredState.ensureStorageConsistencyAfterRestore
       if (checkedStateData.isFailure) {
-        log.error("state storages are not consistent")
+        log.error("state storages are not consistent and could not be recovered")
         return None
       }
 
       val checkedState = checkedStateData.get._1
-      val stateVersion = checkedStateData.get._2
-      log.info(s"history bestBlockId = ${historyVersion}, stateVersion = ${stateVersion}")
+      val checkedStateVersion = checkedStateData.get._2
+      log.info(s"history bestBlockId = ${historyVersion}, stateVersion = ${checkedStateVersion}")
 
       val height_h = restoredHistory.blockInfoById(historyVersion).height
-      val height_s = restoredHistory.blockInfoById(bytesToId(stateVersion.data)).height
-      log.info(s"history  height = ${height_h}, state height = ${height_s}")
+      val height_s = restoredHistory.blockInfoById(bytesToId(checkedStateVersion.data)).height
+      log.debug(s"history height = ${height_h}, state height = ${height_s}")
 
-      if (historyVersion == bytesToId(stateVersion.data)) {
+      if (historyVersion == bytesToId(checkedStateVersion.data)) {
         log.info("state and history storages are consistent")
 
         // get common version of the wallet storages, that at this point must be consistent among them
@@ -128,17 +123,17 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
         }
 
         val checkedWallet = checkedWalletData.get._1
-        val walletVersion = checkedWalletData.get._2
+        val checkedWalletVersion = checkedWalletData.get._2
 
-        log.info(s"walletVersion = ${walletVersion}")
-        if (historyVersion == bytesToId(walletVersion.data)) {
+        log.info(s"walletVersion = ${checkedWalletVersion}")
+        if (historyVersion == bytesToId(checkedWalletVersion.data)) {
           // This is the successful case
           log.info("state, history and wallet storages are consistent")
           dumpStorages
-          Some(restoredHistory, checkedState, checkedWallet, restoredMempool)//restoredData
+          Some(restoredHistory, checkedState, checkedWallet, restoredMempool)
         }
         else {
-          log.error("state and wallet storages are not consistent")
+          log.error("state and wallet storages are not consistent and could not be recovered")
           // wallet and state are not consistent, while state and history are, this should never happen
           // state --> wallet --> history
           None
@@ -147,7 +142,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
         log.warn("Inconsistent state and history storages, trying to recover...")
 
         // this is the sequence of blocks starting from active chain up to input block, unless a None is returned in case of errors
-        val nonChainSuffix = restoredHistory.chainBack(bytesToId(stateVersion.data), restoredHistory.storage.isInActiveChain, Int.MaxValue)
+        val nonChainSuffix = restoredHistory.chainBack(bytesToId(checkedStateVersion.data), restoredHistory.storage.isInActiveChain, Int.MaxValue)
         log.info(s"sequence of blocks not in active chain (root included) = ${nonChainSuffix}")
 
         if (nonChainSuffix.isEmpty) {
@@ -187,6 +182,20 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
         }
       }
     }
+  }
+
+  override def restoreState(): Option[(HIS, MS, VL, MP)] = {
+    log.info("Restoring persistent state from storage...")
+    val restoredData = for {
+      history <- SidechainHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
+      state <- SidechainState.restoreState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, applicationState)
+      wallet <- SidechainWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes, walletBoxStorage, secretStorage,
+        walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, params, applicationWallet)
+      pool <- Some(SidechainMemoryPool.emptyPool)
+    } yield (history, state, wallet, pool)
+
+    val result = checkAndRecoverStorages((restoredData))
+    result
   }
 
   def dumpStorages : Unit = {
