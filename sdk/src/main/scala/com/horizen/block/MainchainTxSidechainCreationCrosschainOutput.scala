@@ -1,6 +1,7 @@
 package com.horizen.block
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 import com.horizen.commitmenttreenative.{CustomBitvectorElementsConfig, CustomFieldElementsConfig}
 import com.horizen.utils.{BytesUtils, Utils, VarInt}
 import com.horizen.librustsidechains.{Utils => ScCryptoUtils}
@@ -9,6 +10,7 @@ import com.horizen.serialization.{ReverseBytesOptSerializer, ReverseBytesSeriali
 import scala.util.Try
 
 case class MainchainTxSidechainCreationCrosschainOutputData(sidechainCreationOutputBytes: Array[Byte],
+                                                            version: SidechainCreationVersion,
                                                             withdrawalEpochLength: Int,
                                                             amount: Long,
                                                             @JsonSerialize(using = classOf[ReverseBytesSerializer]) address: Array[Byte],
@@ -32,8 +34,12 @@ object MainchainTxSidechainCreationCrosschainOutputData {
 
     var currentOffset: Int = offset
 
-    val withdrawalEpochLength: Int = BytesUtils.getReversedInt(sidechainCreationOutputBytes, currentOffset)
+    val withdrawalEpochLengthAndVersion: Int = BytesUtils.getReversedInt(sidechainCreationOutputBytes, currentOffset)
     currentOffset += 4
+
+    val version: SidechainCreationVersion = SidechainCreationVersions.getVersion(withdrawalEpochLengthAndVersion >> 24)
+
+    val withdrawalEpochLength: Int = withdrawalEpochLengthAndVersion & 0x00FFFFFF
 
     val amount: Long = BytesUtils.getReversedLong(sidechainCreationOutputBytes, currentOffset)
     currentOffset += 8
@@ -108,7 +114,7 @@ object MainchainTxSidechainCreationCrosschainOutputData {
     currentOffset += 1
 
     MainchainTxSidechainCreationCrosschainOutputData(sidechainCreationOutputBytes.slice(offset, currentOffset),
-      withdrawalEpochLength, amount, address, customCreationData, constantOpt, certVk,
+      version, withdrawalEpochLength, amount, address, customCreationData, constantOpt, certVk,
       ceasedVk, fieldElementCertificateFieldConfigs, bitVectorCertificateFieldConfigs,
       ftMinAmount, btrFee, mainchainBackwardTransferRequestDataLength)
   }
@@ -117,6 +123,7 @@ object MainchainTxSidechainCreationCrosschainOutputData {
 class MainchainTxSidechainCreationCrosschainOutput(override val sidechainId: Array[Byte], data: MainchainTxSidechainCreationCrosschainOutputData)
                                                     extends MainchainTxSidechainCreationCrosschainOutputData(
                                                       data.sidechainCreationOutputBytes,
+                                                      data.version,
                                                       data.withdrawalEpochLength,
                                                       data.amount,
                                                       data.address,

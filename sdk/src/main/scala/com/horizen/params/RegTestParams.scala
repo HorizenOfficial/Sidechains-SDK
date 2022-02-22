@@ -1,6 +1,7 @@
 package com.horizen.params
-import java.math.BigInteger
+import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
 
+import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import com.horizen.cryptolibprovider.CumulativeHashFunctions
 import com.horizen.proposition.SchnorrProposition
@@ -27,7 +28,8 @@ case class RegTestParams(
                           override val initialCumulativeCommTreeHash: Array[Byte] = new Array[Byte](CumulativeHashFunctions.hashLength()),
                           override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig] = Seq(),
                           override val cswProvingKeyFilePath: String = "",
-                          override val cswVerificationKeyFilePath: String = ""
+                          override val cswVerificationKeyFilePath: String = "",
+                          override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1
 ) extends NetworkParams {
   override val EquihashN: Int = 48
   override val EquihashK: Int = 5

@@ -1,7 +1,8 @@
 package com.horizen.params
 
-import java.math.BigInteger
+import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 
+import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import com.horizen.proposition.SchnorrProposition
 import scorex.core.block.Block
@@ -39,6 +40,7 @@ trait NetworkParams {
   val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig]
   val cswProvingKeyFilePath: String
   val cswVerificationKeyFilePath: String
+  val sidechainCreationVersion: SidechainCreationVersion
 
   val maxHistoryRewritingLength: Int = 100
 

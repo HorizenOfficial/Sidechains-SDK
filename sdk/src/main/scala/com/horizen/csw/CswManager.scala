@@ -198,8 +198,13 @@ class CswManager(settings: SidechainSettings,
               case Some(data: CswData) =>
                 val infoTry = Try {
                   // Sidechain id in BigEndian as MC RPC expects.
-                  CswInfo(data.getClass.getSimpleName, data.amount, BytesUtils.reverseBytes(params.sidechainId), data.getNullifier,
-                    getProofInfo(boxId), cswWitnessHolder.lastActiveCertOpt.map(CryptoLibProvider.cswCircuitFunctions.getCertDataHash),
+                  CswInfo(
+                    data.getClass.getSimpleName,
+                    data.amount,
+                    BytesUtils.reverseBytes(params.sidechainId),
+                    data.getNullifier,
+                    getProofInfo(boxId),
+                    cswWitnessHolder.lastActiveCertOpt.map(cert => CryptoLibProvider.cswCircuitFunctions.getCertDataHash(cert, params)),
                     cswWitnessHolder.mcbScTxsCumComEnd)
                 }
                 sender() ! infoTry
@@ -236,11 +241,11 @@ class CswManager(settings: SidechainSettings,
                         CryptoLibProvider.cswCircuitFunctions.ftCreateProof(ft, cswWitnessHolder.lastActiveCertOpt.asJava,
                           cswWitnessHolder.mcbScTxsCumComStart, cswWitnessHolder.scTxsComHashes.asJava,
                           cswWitnessHolder.mcbScTxsCumComEnd, receiverPubKeyHash, pk, params.withdrawalEpochLength,
-                          params.calculatedSysDataConstant, params.sidechainId, params.cswProvingKeyFilePath, true, true);
+                          params.calculatedSysDataConstant, params.sidechainId, params.cswProvingKeyFilePath, true, true, params);
                       case utxo: UtxoCswData =>
                         CryptoLibProvider.cswCircuitFunctions.utxoCreateProof(utxo, cswWitnessHolder.lastActiveCertOpt.get,
                           cswWitnessHolder.mcbScTxsCumComEnd, receiverPubKeyHash, pk, params.withdrawalEpochLength,
-                          params.calculatedSysDataConstant, params.sidechainId, params.cswProvingKeyFilePath, true, true);
+                          params.calculatedSysDataConstant, params.sidechainId, params.cswProvingKeyFilePath, true, true, params);
                     }
                   } match {
                     case Success(proof) =>

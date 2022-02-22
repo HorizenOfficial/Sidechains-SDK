@@ -100,7 +100,7 @@ case class MainchainBlockReference(
         }
       }
 
-      val commitmentTree = data.commitmentTree(sidechainId.data)
+      val commitmentTree = data.commitmentTree(sidechainId.data, params.sidechainCreationVersion)
       val scCommitmentOpt = commitmentTree.getSidechainCommitment(sidechainId.data)
       commitmentTree.free()
 
@@ -125,11 +125,10 @@ case class MainchainBlockReference(
 }
 
 object MainchainBlockReference extends ScorexLogging {
-  // TO DO: check size
-  val MAX_MAINCHAIN_BLOCK_SIZE: Int = 4000000 // 4Mb since SC fork actvated
+  val MAX_MAINCHAIN_BLOCK_SIZE: Int = 4000000 // 4Mb since SC fork activated
   val SC_CERT_BLOCK_VERSION = 3
 
-  def create(mainchainBlockBytes: Array[Byte], params: NetworkParams): Try[MainchainBlockReference] = {
+  def create(mainchainBlockBytes: Array[Byte], params: NetworkParams, versionsManager: SidechainsVersionsManager): Try[MainchainBlockReference] = {
     require(mainchainBlockBytes.length < MAX_MAINCHAIN_BLOCK_SIZE)
     require(params.sidechainId.length == 32)
 
@@ -174,8 +173,11 @@ object MainchainBlockReference extends ScorexLogging {
           case btr: BwtRequest => commitmentTree.addBwtRequest(btr);
         }
 
-        scIds = scIds ++ certificates.map(c => new ByteArrayWrapper(c.sidechainId))
-        certificates.foreach(cert => commitmentTree.addCertificate(cert))
+        val certScIds = certificates.map(c => new ByteArrayWrapper(c.sidechainId)).distinct
+        scIds = scIds ++ certScIds
+
+        val scVersions = versionsManager.getVersions(certScIds)
+        certificates.foreach(cert => commitmentTree.addCertificate(cert, scVersions(new ByteArrayWrapper(cert.sidechainId))))
 
         val mc2scTransaction: Option[MC2SCAggregatedTransaction] =
           sidechainRelatedCrosschainOutputs.get(sidechainId).map(outputs => new MC2SCAggregatedTransaction(outputs.asJava, MC2SCAggregatedTransaction.MC2SC_AGGREGATED_TRANSACTION_VERSION))

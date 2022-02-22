@@ -1,12 +1,14 @@
 package com.horizen.block
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
+import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.serialization.Views
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
+
 import scala.collection.JavaConverters._
 
 @JsonView(Array(classOf[Views.Default]))
@@ -31,7 +33,7 @@ case class MainchainBlockReferenceData(
     }
   }
 
-  def commitmentTree(sidechainId: Array[Byte]): SidechainCommitmentTree = {
+  def commitmentTree(sidechainId: Array[Byte], version: SidechainCreationVersion): SidechainCommitmentTree = {
     val commitmentTree = new SidechainCommitmentTree()
 
     sidechainRelatedAggregatedTransaction.foreach(_.mc2scTransactionsOutputs().asScala.foreach {
@@ -40,7 +42,7 @@ case class MainchainBlockReferenceData(
     })
 
     lowerCertificateLeaves.foreach(leaf => commitmentTree.addCertLeaf(sidechainId, leaf))
-    topQualityCertificate.foreach(cert => commitmentTree.addCertificate(cert))
+    topQualityCertificate.foreach(cert => commitmentTree.addCertificate(cert, version))
 
     commitmentTree
   }

@@ -432,7 +432,7 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
         assertArrayEquals("Different CswInfo value: amount", params.sidechainId, cswInfo.scId)
         assertArrayEquals("Different CswInfo value: nullifier", utxoData1.getNullifier, cswInfo.nullifier)
         assertEquals("Different CswInfo value: proofInfo", expectedProofInfo, cswInfo.proofInfo)
-        assertEquals("Different CswInfo value: activeCertData",  cswManager.cswWitnessHolderOpt.get.lastActiveCertOpt.map(CryptoLibProvider.cswCircuitFunctions.getCertDataHash), cswInfo.activeCertData)
+        assertEquals("Different CswInfo value: activeCertData",  cswManager.cswWitnessHolderOpt.get.lastActiveCertOpt.map(cert => CryptoLibProvider.cswCircuitFunctions.getCertDataHash(cert, params)), cswInfo.activeCertData)
         assertArrayEquals("Different CswInfo value: nullifier", cswManager.cswWitnessHolderOpt.get.mcbScTxsCumComEnd, cswInfo.ceasingCumScTxCommTree)
 
       case Failure(_) => Assert.fail("Exception found.")
