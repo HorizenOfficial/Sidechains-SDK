@@ -21,13 +21,15 @@
             <DefaultRolloverStrategy max="10"/>
         </RollingFile-->
 
+        <!-- if filePattern ends in .gz, the rollover files are compressed -->
         <RollingFile name="debugLog" fileName="${sys:logFilename}"
-                     filePattern="log/application-%d{yyyy-MM-dd}-%i.log" >
+                     filePattern="${sys:logFilename}-%d{yyyy-MM-dd}-%i.gz" >
             <ThresholdFilter level="all" onMatch="ACCEPT" onMismatch="DENY"/>
             <PatternLayout pattern="${LOG_PATTERN}"/>
             <Policies>
-                <SizeBasedTriggeringPolicy size="10000KB" />
+                <SizeBasedTriggeringPolicy size="50 MB" />
             </Policies>
+            <!-- Maximum number of files to rollover with the same filePattern %d prefix-->
             <DefaultRolloverStrategy max="10"/>
         </RollingFile>
 
