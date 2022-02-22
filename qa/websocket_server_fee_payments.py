@@ -125,8 +125,8 @@ class SCWsServerFeePayments(SidechainTestFramework):
         assert_equal(event_payload['hash'], sc_last_we_block_id)
         assert_equal(event_payload['height'], sc_last_we_block_height)
         assert_true('feePayments' in event_payload)
-        expected_fee_payments = http_block_getFeePayments(sc_node, sc_last_we_block_id)['feePayments']
-        assert_equal(expected_fee_payments, event_payload['feePayments']['newBoxes'],
+        api_fee_payments = http_block_getFeePayments(sc_node, sc_last_we_block_id)['feePayments']
+        assert_equal(api_fee_payments, event_payload['feePayments']['newBoxes'],
                      "Different fee payments retrieved by new tip event.")
 
         ###########################################################
@@ -150,7 +150,7 @@ class SCWsServerFeePayments(SidechainTestFramework):
         assert_equal(response_payload['hash'], sc_last_we_block_id)
         assert_equal(response_payload['height'], sc_last_we_block_height)
         assert_true('feePayments' in event_payload)
-        assert_equal(expected_fee_payments, event_payload['feePayments']['newBoxes'],
+        assert_equal(api_fee_payments, event_payload['feePayments']['newBoxes'],
                      "Different fee payments retrieved for the block.")
 
         # Send get single block request with block height of the last block of the WE
@@ -170,7 +170,7 @@ class SCWsServerFeePayments(SidechainTestFramework):
         assert_equal(response_payload['height'], sc_last_we_block_height)
 
         assert_true('feePayments' in event_payload)
-        assert_equal(expected_fee_payments, event_payload['feePayments']['newBoxes'],
+        assert_equal(api_fee_payments, event_payload['feePayments']['newBoxes'],
                      "Different fee payments retrieved for the block.")
 
         ###########################################################
@@ -202,8 +202,8 @@ class SCWsServerFeePayments(SidechainTestFramework):
         assert_equal(event_payload['hash'], self.blocks[-1])
         assert_equal(event_payload['height'], sc_last_we_block_height + 1)
         assert_true('feePayments' not in event_payload)
-        expected_fee_payments = http_block_getFeePayments(sc_node, self.blocks[-1])['feePayments']
-        assert_equal(0, len(expected_fee_payments), "No fee payments expected to be paid.")
+        api_fee_payments = http_block_getFeePayments(sc_node, self.blocks[-1])['feePayments']
+        assert_equal(0, len(api_fee_payments), "No fee payments expected to be paid.")
 
         ###########################################################
         #  Test single block request for block without payments   #
@@ -225,8 +225,8 @@ class SCWsServerFeePayments(SidechainTestFramework):
         assert_equal(response_payload['hash'], self.blocks[-3])
         assert_equal(response_payload['height'], sc_last_we_block_height - 1)
         assert_true('feePayments' not in event_payload)
-        expected_fee_payments = http_block_getFeePayments(sc_node, self.blocks[-3])['feePayments']
-        assert_equal(0, len(expected_fee_payments), "No fee payments expected to be paid.")
+        api_fee_payments = http_block_getFeePayments(sc_node, self.blocks[-3])['feePayments']
+        assert_equal(0, len(api_fee_payments), "No fee payments expected to be paid.")
 
         # SC block after the last one of the WE
         response = json.loads(ws.sendMessage(ws_connection,
@@ -244,8 +244,8 @@ class SCWsServerFeePayments(SidechainTestFramework):
         assert_equal(response_payload['hash'], self.blocks[-1])
         assert_equal(response_payload['height'], sc_last_we_block_height + 1)
         assert_true('feePayments' not in event_payload)
-        expected_fee_payments = http_block_getFeePayments(sc_node, self.blocks[-1])['feePayments']
-        assert_equal(0, len(expected_fee_payments), "No fee payments expected to be paid.")
+        api_fee_payments = http_block_getFeePayments(sc_node, self.blocks[-1])['feePayments']
+        assert_equal(0, len(api_fee_payments), "No fee payments expected to be paid.")
 
 
 if __name__ == "__main__":

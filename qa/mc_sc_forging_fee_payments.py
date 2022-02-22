@@ -227,21 +227,21 @@ class MCSCForgingFeePayments(SidechainTestFramework):
 
         # Check fee payments from API perspective
         # Non-last block of the epoch:
-        expected_fee_payments_node1 = http_block_getFeePayments(sc_node1, sc_middle_we_block_id)['feePayments']
-        assert_equal(0, len(expected_fee_payments_node1),
+        api_fee_payments_node1 = http_block_getFeePayments(sc_node1, sc_middle_we_block_id)['feePayments']
+        assert_equal(0, len(api_fee_payments_node1),
                      "No fee payments expected to be found for the block in the middle of WE")
-        expected_fee_payments_node2 = http_block_getFeePayments(sc_node2, sc_middle_we_block_id)['feePayments']
-        assert_equal(0, len(expected_fee_payments_node2),
+        api_fee_payments_node2 = http_block_getFeePayments(sc_node2, sc_middle_we_block_id)['feePayments']
+        assert_equal(0, len(api_fee_payments_node2),
                      "No fee payments expected to be found for the block in the middle of WE")
 
         # Last block of the epoch:
-        expected_fee_payments_node1 = http_block_getFeePayments(sc_node1, sc_last_we_block_id)['feePayments']
-        expected_fee_payments_node2 = http_block_getFeePayments(sc_node2, sc_last_we_block_id)['feePayments']
-        assert_equal(expected_fee_payments_node1, expected_fee_payments_node2,
+        api_fee_payments_node1 = http_block_getFeePayments(sc_node1, sc_last_we_block_id)['feePayments']
+        api_fee_payments_node2 = http_block_getFeePayments(sc_node2, sc_last_we_block_id)['feePayments']
+        assert_equal(api_fee_payments_node1, api_fee_payments_node2,
                      "SC nodes have different view on the fee payments")
 
         for i in range(1, len(forger_fees) + 1):
-            assert_equal(forger_fees[i], expected_fee_payments_node1[i - 1]['value'],
+            assert_equal(forger_fees[i], api_fee_payments_node1[i - 1]['value'],
                          "Different fee value found for payment " + str(i))
 
 
