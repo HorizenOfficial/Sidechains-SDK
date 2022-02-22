@@ -412,7 +412,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
   }
 
   override def getFeePaymentsInfo(blockId: String): JOptional[FeePaymentsInfo] = {
-    getFeePaymentsInfo(ModifierId @@ blockId).asJava
+    feePaymentsInfo(ModifierId @@ blockId).asJava
   }
 
   override def getBlockHeight(blockId: String): JOptional[Integer] = {
@@ -461,7 +461,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     new SidechainHistory(newStorage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
   }
 
-  def getFeePaymentsInfo(blockId: ModifierId): Option[FeePaymentsInfo] = {
+  def feePaymentsInfo(blockId: ModifierId): Option[FeePaymentsInfo] = {
     storage.getFeePaymentsInfo(blockId)
   }
 

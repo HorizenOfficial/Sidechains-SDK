@@ -53,7 +53,7 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
         if (sblockOpt.isEmpty) throw new IllegalStateException(s"Block not found for hash: " + sidechainBlockHash)
 
         // get fee payments made during the block apply if exists.
-        val feePaymentsInfoOpt = sidechainNodeView.history.getFeePaymentsInfo(blockId)
+        val feePaymentsInfoOpt = sidechainNodeView.history.feePaymentsInfo(blockId)
         (sblockOpt.get, feePaymentsInfoOpt)
       }
     }.map(blockInfo => {
@@ -74,7 +74,7 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
         //get block height by hash
         val height = sidechainNodeView.history.blockInfoById(blockId).height
         // get fee payments made during the block apply if exists.
-        val feePaymentsInfoOpt = sidechainNodeView.history.getFeePaymentsInfo(blockId)
+        val feePaymentsInfoOpt = sidechainNodeView.history.feePaymentsInfo(blockId)
         (blockOpt.get, height, feePaymentsInfoOpt)
       }
     }.map(blockInfo => {
@@ -139,7 +139,7 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
       //get block height by hash
       val height = sidechainNodeView.history.height
       // get fee payments made during the block apply if exists.
-      val feePaymentsInfoOpt = sidechainNodeView.history.getFeePaymentsInfo(bBlock.id)
+      val feePaymentsInfoOpt = sidechainNodeView.history.feePaymentsInfo(bBlock.id)
       (bBlock, height, feePaymentsInfoOpt)
     }
 
@@ -149,7 +149,7 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
   override def getBlockInfo(block: SidechainBlock): Try[ObjectNode] = Try {
     val (height: Int, feePaymentsInfoOpt: Option[FeePaymentsInfo])  = applyOnNodeView { sidechainNodeView =>
         (sidechainNodeView.history.blockInfoById(block.id).height,
-          sidechainNodeView.history.getFeePaymentsInfo(block.id))
+          sidechainNodeView.history.feePaymentsInfo(block.id))
     }
 
     calculateBlockPayload(block, height, feePaymentsInfoOpt)

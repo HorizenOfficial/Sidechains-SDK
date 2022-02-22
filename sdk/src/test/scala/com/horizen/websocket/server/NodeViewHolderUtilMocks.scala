@@ -111,7 +111,7 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
       genesisBlockInfo
     )
 
-    Mockito.when(history.getFeePaymentsInfo(ArgumentMatchers.any[ModifierId])).thenAnswer(args => {
+    Mockito.when(history.feePaymentsInfo(ArgumentMatchers.any[ModifierId])).thenAnswer(args => {
       val blockId: ModifierId = args.getArgument(0)
       if(blockId.equals(feePaymentsBlockId)) {
         Some(feePaymentsInfo)
