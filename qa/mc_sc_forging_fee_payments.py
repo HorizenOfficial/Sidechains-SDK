@@ -159,7 +159,7 @@ class MCSCForgingFeePayments(SidechainTestFramework):
 
         self.sc_sync_all()
 
-        fee = 200
+        fee = 201
         sendCoins = {
             "outputs": [
                 {
@@ -208,7 +208,7 @@ class MCSCForgingFeePayments(SidechainTestFramework):
             else:
                 forger_fees[sc_block_fee.node] = math.floor(sc_block_fee.fee * 0.7)
 
-            forger_fees[sc_block_fee.node] += pool_fee / len(sc_block_fee_info)
+            forger_fees[sc_block_fee.node] += math.floor(pool_fee / len(sc_block_fee_info))
 
             if idx < pool_fee % len(sc_block_fee_info):
                 forger_fees[sc_block_fee.node] += 1

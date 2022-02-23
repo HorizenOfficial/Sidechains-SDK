@@ -269,21 +269,23 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
         updateInfo.state.applyModifier(modToApply) match {
           case Success(stateAfterApply) =>
-            var historyAfterApply = newHistory.reportModifierIsValid(modToApply)
+            val historyAfterApply = newHistory.reportModifierIsValid(modToApply)
             context.system.eventStream.publish(SemanticallySuccessfulModifier(modToApply))
 
             val stateWithdrawalEpochNumber: Int = stateAfterApply.getWithdrawalEpochInfo.epoch
-            val walletAfterApply: SidechainWallet = if(stateAfterApply.isWithdrawalEpochLastIndex) {
+            if(stateAfterApply.isWithdrawalEpochLastIndex) {
               val feePayments = stateAfterApply.getFeePayments(stateWithdrawalEpochNumber)
-              historyAfterApply = historyAfterApply.updateFeePaymentsInfo(modToApply.id, FeePaymentsInfo(feePayments))
+              val historyAfterUpdateFee = historyAfterApply.updateFeePaymentsInfo(modToApply.id, FeePaymentsInfo(feePayments))
 
-              newWallet.scanPersistent(modToApply, stateWithdrawalEpochNumber, feePayments, Some(stateAfterApply))
+              val walletAfterApply: SidechainWallet = newWallet.scanPersistent(modToApply, stateWithdrawalEpochNumber, feePayments, Some(stateAfterApply))
+              SidechainNodeUpdateInformation(historyAfterUpdateFee, stateAfterApply, walletAfterApply, None, None, updateInfo.suffix :+ modToApply)
+
             } else {
-              newWallet.scanPersistent(modToApply, stateWithdrawalEpochNumber, Seq(), None)
+              val walletAfterApply: SidechainWallet = newWallet.scanPersistent(modToApply, stateWithdrawalEpochNumber, Seq(), None)
+              SidechainNodeUpdateInformation(historyAfterApply, stateAfterApply, walletAfterApply, None, None, updateInfo.suffix :+ modToApply)
             }
-
-            SidechainNodeUpdateInformation(historyAfterApply, stateAfterApply, walletAfterApply, None, None, updateInfo.suffix :+ modToApply)
           case Failure(e) =>
+            log.error(s"Failed to apply block ${modToApply.id} to the state.", e)
             val (historyAfterApply, newProgressInfo) = newHistory.reportModifierIsInvalid(modToApply, progressInfo)
             context.system.eventStream.publish(SemanticallyFailedModification(modToApply, e))
             SidechainNodeUpdateInformation(historyAfterApply, updateInfo.state, newWallet, Some(modToApply), Some(newProgressInfo), updateInfo.suffix)

@@ -12,7 +12,6 @@ object FeePaymentsUtils {
       // No fees for the whole epoch, so no fee payments for the Forgers.
       DEFAULT_FEE_PAYMENTS_HASH
     } else {
-      // TODO: create FeePaymentsTransaction and return its id() in bytes
       val tx = new FeePaymentsTransaction(feePayments.asJava, FeePaymentsTransaction.FEE_PAYMENTS_TRANSACTION_VERSION)
       BytesUtils.fromHexString(tx.id())
     }
