@@ -478,8 +478,9 @@ Output: an array of two information:
 
 """
 def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_length, public_key, forward_transfer_amount,
-                                          vrf_public_key, gen_sys_constant, cert_vk, csw_vk, btr_data_length):
-    number_of_blocks_to_enable_sc_logic = 419
+                                          vrf_public_key, gen_sys_constant, cert_vk, csw_vk, btr_data_length,
+                                          sc_creation_version):
+    number_of_blocks_to_enable_sc_logic = 449
     number_of_blocks = mainchain_node.getblockcount()
     diff = number_of_blocks_to_enable_sc_logic - number_of_blocks
     if diff > 1:
@@ -492,6 +493,7 @@ def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_lengt
     btr_fee = 0
 
     sc_create_args = {
+        "version": sc_creation_version,
         "withdrawalEpochLength": withdrawal_epoch_length,
         "toaddress": public_key,
         "amount": forward_transfer_amount,

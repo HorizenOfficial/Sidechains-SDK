@@ -133,7 +133,10 @@ object MainchainBlockReference extends ScorexLogging {
     require(params.sidechainId.length == 32)
 
     val tryBlock: Try[MainchainBlockReference] = parseMainchainBlockBytes(mainchainBlockBytes) match {
-      case Success((header, mainchainTxs, certificates)) =>
+      case Success((header, mainchainTxs, certificates, blockSize)) =>
+        if(blockSize < mainchainBlockBytes.length)
+          throw new IllegalArgumentException("Input data corrupted. There are unprocessed %d bytes.".format(mainchainBlockBytes.length - blockSize))
+
         if (header.version != SC_CERT_BLOCK_VERSION) {
           val data: MainchainBlockReferenceData = MainchainBlockReferenceData(header.hash, None, None, None, Seq(), None)
           return Success(MainchainBlockReference(header, data))
@@ -237,9 +240,10 @@ object MainchainBlockReference extends ScorexLogging {
     })
   }
 
-  // Try to parse Mainchain block and return MainchainHeader, SCMap and MainchainTransactions sequence.
-  private def parseMainchainBlockBytes(mainchainBlockBytes: Array[Byte]):
-    Try[(MainchainHeader, Seq[MainchainTransaction], Seq[WithdrawalEpochCertificate])] = Try {
+  // Try to parse Mainchain block and return MainchainHeader, Transactions, Certificates
+  // and the actual size of the parsed block.
+  def parseMainchainBlockBytes(mainchainBlockBytes: Array[Byte]):
+    Try[(MainchainHeader, Seq[MainchainTransaction], Seq[WithdrawalEpochCertificate], Int)] = Try {
     var offset: Int = 0
 
     MainchainHeader.create(mainchainBlockBytes, offset) match {
@@ -273,10 +277,7 @@ object MainchainBlockReference extends ScorexLogging {
             }
         }
 
-        if(offset < mainchainBlockBytes.length)
-          throw new IllegalArgumentException("Input data corrupted. There are unprocessed %d bytes.".format(mainchainBlockBytes.length - offset))
-
-        (header, transactions, certificates)
+        (header, transactions, certificates, offset)
 
       case Failure(e) =>
         throw e
