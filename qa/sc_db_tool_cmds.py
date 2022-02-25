@@ -167,6 +167,7 @@ class DBToolTest(SidechainTestFramework):
         print("SC1 generates {} blocks...".format(NUM_BLOCKS))
         self.blocks.extend(generate_next_blocks(sc_node1, "first node", NUM_BLOCKS))
 
+        print("Test 0 ######")
         # Check that in stopped node SC2 all storages versioned with blockid (but "walletForgingStake")
         # are consistent with genesis block id
         storages_list = ["wallet", "walletTransaction", "walletCswDataStorage",
@@ -186,59 +187,78 @@ class DBToolTest(SidechainTestFramework):
         print("Stopping SC2")
         stop_sc_node(1)
 
-        # -----------------------------------------------------------------------------------------
-        # modify the history db rolling back the last update
-        #   History storage (best block id)
-
+        print("Test 10 ######")
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 2)
-
         self.forgeBlockAndCheckSync()
 
-        # -----------------------------------------------------------------------------------------
-        # modify the history db rolling back the last two updates
-        #   History storage (block info validity)
-        #   History storage (best block id)
+        print("Test 9 ######")
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 3)
-
         self.forgeBlockAndCheckSync()
 
-        # -----------------------------------------------------------------------------------------
-        # modify the history db rolling back the last two updates and also 3 wallet storages
-        #   walletTransaction
-        #   walletForgingStake
-        #   walletCswDataStorage
-        #   History storage (block info validity)
-        #   History storage (best block id)
+        print("Test 8 ######")
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 3)
+        storages_list = ["walletCswDataStorage"]
+        rollbackStorages(sc_node2, storages_list, 2)
+        self.forgeBlockAndCheckSync()
 
+        print("Test 7 ######")
+        storages_list = ["history"]
+        rollbackStorages(sc_node2, storages_list, 3)
+        storages_list = ["walletForgingStake", "walletCswDataStorage"]
+        rollbackStorages(sc_node2, storages_list, 2)
+        self.forgeBlockAndCheckSync()
+
+        print("Test 6 ######")
+        storages_list = ["history"]
+        rollbackStorages(sc_node2, storages_list, 3)
         storages_list = ["walletTransaction", "walletForgingStake", "walletCswDataStorage"]
         rollbackStorages(sc_node2, storages_list, 2)
-
         self.forgeBlockAndCheckSync()
 
-        # -----------------------------------------------------------------------------------------
-        # modify the history db rolling back the last two updates + all wallet storages + forger box state storage 
-        #   stateForgerBox
-        #   wallet
-        #   walletTransaction
-        #   walletForgingStake
-        #   walletCswDataStorage
-        #   History storage (block info validity)
-        #   History storage (best block id)
-        # Then restart the node
+        print("Test 5 ######")
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 3)
-
-        storages_list = ["stateForgerBox", "wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
+        storages_list = ["wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
         rollbackStorages(sc_node2, storages_list, 2)
-
         self.forgeBlockAndCheckSync()
 
-        self.startAndSyncScNode2()
+        print("Test 4 ######")
+        storages_list = ["history"]
+        rollbackStorages(sc_node2, storages_list, 3)
+        storages_list = ["stateForgerBox",
+                         "wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
+        rollbackStorages(sc_node2, storages_list, 2)
+        self.forgeBlockAndCheckSync()
 
+        print("Test 3 ######")
+        storages_list = ["history"]
+        rollbackStorages(sc_node2, storages_list, 3)
+        storages_list = ["state", "stateForgerBox",
+                         "wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
+        rollbackStorages(sc_node2, storages_list, 2)
+        self.forgeBlockAndCheckSync()
+
+        print("Test 2 ######")
+        storages_list = ["history"]
+        rollbackStorages(sc_node2, storages_list, 3)
+        storages_list = ["stateUtxoMerkleTree", "state", "stateForgerBox",
+                         "wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
+        rollbackStorages(sc_node2, storages_list, 2)
+        self.forgeBlockAndCheckSync()
+
+        print("Test 1 ######")
+        storages_list = ["history"]
+        rollbackStorages(sc_node2, storages_list, 4)
+        storages_list = ["stateUtxoMerkleTree", "state", "stateForgerBox",
+                         "wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
+        rollbackStorages(sc_node2, storages_list, 2)
+        self.forgeBlockAndCheckSync()
+
+
+        self.startAndSyncScNode2()
         # reach the end of consensus epoch
         h = len(self.blocks) + 1
         print("Reaching end of consensus epoch, currently at bloch height {}...".format(h))
@@ -250,31 +270,34 @@ class DBToolTest(SidechainTestFramework):
         assert_equal(sc_node1.block_best()["result"], sc_node2.block_best()["result"])
         stop_sc_node(1)
 
+        print("Test end consensus epoch ######")
         # -----------------------------------------------------------------------------------------
-        # Modify history state and wallet storages and verify that we are able to recover also at the edge of consensus epoch switch
+        # Modify history state and wallet storages and verify that we are able to recover also at
+        # the edge of consensus epoch switch
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 3)
-
-        storages_list = ["stateUtxoMerkleTree", "state", "stateForgerBox", "wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
+        storages_list = ["stateUtxoMerkleTree", "state", "stateForgerBox",
+                         "wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
         rollbackStorages(sc_node2, storages_list, 2)
 
+        # Check that wallet forging stake has the same blockid version of the wallet in its rollback versions
+        # and is precisely one commit ahead since we reached the consensus epoch change block
         rolbackBlockVersionId = self.blocks[-2]
+        # --wallet has been rollbacked to the previous block:
         checkStoragesVersion(sc_node2, ["wallet"], rolbackBlockVersionId)
 
-        # Check that wallet forging stake has the same block id in the rollback versions and precisely
-        # one commit behind since we reached the consensus epoch change block
         json_params = {"storage": "walletForgingStake", "numberOfVersionToRetrieve": 2}
         versionsList = launch_db_tool(sc_node2.cfgFileName, "versionsList", json_params)["versionsList"]
         assert_true(rolbackBlockVersionId in versionsList)
+        # -- wallet forging stake is ahead by one version
         assert_equal(rolbackBlockVersionId, versionsList[-1])
 
 
         self.forgeBlockAndCheckSync()
 
 
-
+        print("Test negative ######")
         # reproduce an unexpected inconsistency and check we are not able to recover
-        print("Negative test...")
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 3)
 
