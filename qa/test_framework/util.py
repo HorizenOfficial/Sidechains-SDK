@@ -23,6 +23,8 @@ import re
 
 from test_framework.authproxy import AuthServiceProxy
 
+COIN = 100000000 # 1 zen in zatoshis
+
 def p2p_port(n):
     return 11000 + n + os.getpid()%999
 def rpc_port(n):
@@ -484,6 +486,7 @@ def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_lengt
     number_of_blocks = mainchain_node.getblockcount()
     diff = number_of_blocks_to_enable_sc_logic - number_of_blocks
     if diff > 1:
+        print("Generating {} blocks for reaching needed mc fork point...".format(diff))
         mainchain_node.generate(diff)
 
     custom_creation_data = vrf_public_key

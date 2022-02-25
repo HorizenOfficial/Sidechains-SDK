@@ -900,14 +900,6 @@ def generate_next_blocks(node, node_name, blocks_count):
     return blocks_ids
 
 
-SC_FIELD_SIZE = 32
-SC_FIELD_SAFE_SIZE = 31
-
-
-def generate_random_field_element_hex():
-    return binascii.b2a_hex(os.urandom(SC_FIELD_SAFE_SIZE)).decode('utf-8') + "00" * (SC_FIELD_SIZE - SC_FIELD_SAFE_SIZE)
-
-
 # Check if the CSW proofs for the required boxes were finished (or absent if was not able to create a proof)
 def if_csws_were_generated(sc_node, csw_box_ids, allow_absent=False):
     for box_id in csw_box_ids:

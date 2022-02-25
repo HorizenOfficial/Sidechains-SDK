@@ -5,11 +5,10 @@ from decimal import Decimal
 
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.authproxy import EncodeDecimal
-from test_framework.util import assert_equal, assert_true, start_nodes, forward_transfer_to_sidechain
-from SidechainTestFramework.scutil import create_sidechain, \
-    check_mainchain_block_reference_info, check_wallet_coins_balance, generate_next_blocks, cert_proof_keys_paths, \
-    generate_random_field_element_hex, csw_proof_keys_paths
-from SidechainTestFramework.sc_boostrap_info import SCCreationInfo, Account, LARGE_WITHDRAWAL_EPOCH_LENGTH
+from test_framework.util import start_nodes
+from SidechainTestFramework.scutil import create_sidechain, cert_proof_keys_paths, csw_proof_keys_paths
+from SidechainTestFramework.sc_boostrap_info import SCCreationInfo, LARGE_WITHDRAWAL_EPOCH_LENGTH
+from test_framework.mc_test.mc_test import generate_random_field_element_hex
 
 """
 Generate MC Blocks data for Unit tests
