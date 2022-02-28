@@ -59,9 +59,6 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override val scorexSettings: ScorexSettings = sidechainSettings.scorexSettings
 
-  // this will be initialized as soon it is used, TODO check this
-  val listOfStorageInfo : mutable.ListBuffer[SidechainStorageInfo] = ListBuffer[SidechainStorageInfo]()
-
   private def semanticBlockValidators(params: NetworkParams): Seq[SemanticBlockValidator] = Seq(new SidechainBlockSemanticValidator(params))
   private def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator] = Seq(
     new WithdrawalEpochValidator(params),
@@ -214,23 +211,21 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
     val m = mutable.LinkedHashMap[String, String]()
 
-    if (listOfStorageInfo != null) {
-      // initialize just once
-      if (listOfStorageInfo.isEmpty) {
-        log.warn("Filling list of storage info")
-        List[SidechainStorageInfo](
-          historyStorage, consensusDataStorage, secretStorage,
-          stateStorage, forgerBoxStorage, utxoMerkleTreeStorage,
-          walletBoxStorage, walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage).foreach(x=>listOfStorageInfo += x)
-      }
-
-      listOfStorageInfo.foreach(x =>{
-        val s = x.lastVersionId.map{
-          value => BytesUtils.toHexString(value.data())
-        }.getOrElse("")
-        m += (x.getClass.getSimpleName.toString -> s)
-      })
+    // initialize just once
+    if (SidechainNodeViewHolder.listOfStorageInfo.isEmpty) {
+      log.warn("Filling list of storage info")
+      List[SidechainStorageInfo](
+        historyStorage, consensusDataStorage, secretStorage,
+        stateStorage, forgerBoxStorage, utxoMerkleTreeStorage,
+        walletBoxStorage, walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage).foreach(x=>SidechainNodeViewHolder.listOfStorageInfo += x)
     }
+
+    SidechainNodeViewHolder.listOfStorageInfo.foreach(x =>{
+      val s = x.lastVersionId.map{
+        value => BytesUtils.toHexString(value.data())
+      }.getOrElse("")
+      m += (x.getClass.getSimpleName.toString -> s)
+    })
 
     scala.collection.immutable.ListMap[String, String](m.toList:_*)
   }
@@ -480,6 +475,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 }
 
 object SidechainNodeViewHolder /*extends ScorexLogging with ScorexEncoding*/ {
+  val listOfStorageInfo : mutable.ListBuffer[SidechainStorageInfo] = ListBuffer[SidechainStorageInfo]()
   object ReceivableMessages{
     case class GetDataFromCurrentSidechainNodeView[HIS, MS, VL, MP, A](f: SidechainNodeView => A)
     case class ApplyFunctionOnNodeView[HIS, MS, VL, MP, A](f: java.util.function.Function[SidechainNodeView, A])

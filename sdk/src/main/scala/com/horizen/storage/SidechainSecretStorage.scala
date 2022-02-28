@@ -10,7 +10,7 @@ import java.util.{ArrayList => JArrayList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
-import scala.util.Try
+import scala.util.{Random, Try}
 
 class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: SidechainSecretsCompanion)
   extends SidechainTypes
@@ -45,20 +45,26 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
 
   def getAll: List[SidechainTypes#SCS] = secrets.values.toList
 
+  private def nextVersion: Array[Byte] = {
+    val version = new Array[Byte](32)
+    Random.nextBytes(version)
+    version
+  }
+
   def add (secret: SidechainTypes#SCS): Try[SidechainSecretStorage] = Try {
     require(secret != null, "Secret must be NOT NULL.")
-    val version = new Array[Byte](32)
+
     val key = calculateKey(secret.publicImage())
 
     require(!secrets.contains(key), "Key already exists - " + secret)
 
     val value = new ByteArrayWrapper(sidechainSecretsCompanion.toBytes(secret))
 
-    scala.util.Random.nextBytes(version)
-
+    val version = nextVersion
     storage.update(new ByteArrayWrapper(version),
       List(new JPair(key, value)).asJava,
       List[ByteArrayWrapper]().asJava)
+    log.debug("Sidechain secret storage updated with version: " + new ByteArrayWrapper(version))
 
     secrets.put(key, secret)
 
@@ -68,9 +74,7 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
   def add (secretList: List[SidechainTypes#SCS]): Try[SidechainSecretStorage] = Try {
     require(!secretList.contains(null), "Secret must be NOT NULL.")
     val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
-    val version = new Array[Byte](32)
-
-    scala.util.Random.nextBytes(version)
+    val version = nextVersion
 
     for (s <- secretList) {
       val key = calculateKey(s.publicImage())
@@ -83,20 +87,22 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
     storage.update(new ByteArrayWrapper(version),
       updateList,
       List[ByteArrayWrapper]().asJava)
+    log.debug("Sidechain secret storage updated with version: " + new ByteArrayWrapper(version))
 
     this
   }
 
   def remove (proposition: SidechainTypes#SCP): Try[SidechainSecretStorage] = Try {
     require(proposition != null, "Proposition must be NOT NULL.")
-    val version = new Array[Byte](32)
+
     val key = calculateKey(proposition)
 
-    scala.util.Random.nextBytes(version)
+    val version = nextVersion
 
     storage.update(new ByteArrayWrapper(version),
       List[JPair[ByteArrayWrapper,ByteArrayWrapper]]().asJava,
       List(key).asJava)
+    log.debug("Sidechain secret storage updated with version: " + new ByteArrayWrapper(version))
 
     secrets.remove(key)
 
@@ -106,9 +112,6 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
   def remove (propositionList: List[SidechainTypes#SCP]): Try[SidechainSecretStorage] = Try {
     require(!propositionList.contains(null), "Proposition must be NOT NULL.")
     val removeList = new JArrayList[ByteArrayWrapper]()
-    val version = new Array[Byte](32)
-
-    scala.util.Random.nextBytes(version)
 
     for (p <- propositionList) {
       val key = calculateKey(p)
@@ -116,9 +119,11 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
       removeList.add(key)
     }
 
+    val version = nextVersion
     storage.update(new ByteArrayWrapper(version),
       List[JPair[ByteArrayWrapper,ByteArrayWrapper]]().asJava,
       removeList)
+    log.debug("Sidechain secret storage updated with version: " + new ByteArrayWrapper(version))
 
     this
   }
