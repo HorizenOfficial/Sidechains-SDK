@@ -117,6 +117,7 @@ class DBToolTest(SidechainTestFramework):
         print("Starting SC2")
         start_sc_node(1, self.options.tmpdir)
         wait_for_sc_node_initialization(self.sc_nodes)
+        time.sleep(1)
 
         print("Connecting SC2")
         connect_sc_nodes(self.sc_nodes[0], 1)
@@ -136,12 +137,14 @@ class DBToolTest(SidechainTestFramework):
         NUM_BLOCKS = 1
         print("SC1 generates {} block".format(NUM_BLOCKS))
         self.blocks.extend(generate_next_blocks(self.sc_nodes[0], "first node", NUM_BLOCKS))
+        time.sleep(1)
 
         self.startAndSyncScNode2()
 
         assert_equal(self.sc_nodes[0].block_best()["result"], self.sc_nodes[1].block_best()["result"])
         print("Stopping SC2")
         stop_sc_node(1)
+        time.sleep(1)
 
         # Check that all storages versioned with blockid are consistent with chainTip in SC node 2
         storages_list = ["wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage",
@@ -299,17 +302,20 @@ class DBToolTest(SidechainTestFramework):
         print("Test negative ######")
         # reproduce an unexpected inconsistency and check we are not able to recover
         storages_list = ["history"]
-        rollbackStorages(sc_node2, storages_list, 3)
+        rollbackStorages(sc_node2, storages_list, 7)
 
-        storages_list = ["stateUtxoMerkleTree", "stateForgerBox", "walletCswDataStorage"]
+        storages_list = ["stateUtxoMerkleTree", "walletCswDataStorage"]
         rollbackStorages(sc_node2, storages_list, 5)
-        storages_list = ["state", "wallet", "walletTransaction", "walletForgingStake"]
+        storages_list = ["stateForgerBox", "walletCswDataStorage"]
         rollbackStorages(sc_node2, storages_list, 2)
+        storages_list = ["state", "wallet", "walletTransaction", "walletForgingStake"]
+        rollbackStorages(sc_node2, storages_list, 13)
 
 
         try:
             # restart SC2
-            self.startAndSyncScNode2()
+            self.forgeBlockAndCheckSync()
+
         except Exception as e:
             print("Expected exception caught during negative testing: " + str(e))
             print("Stopping SC2")

@@ -16,7 +16,7 @@ import scorex.core.consensus.History.ProgressInfo
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages._
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
-import scorex.core.{idToVersion, versionToId}
+import scorex.core.{bytesToVersion, idToVersion, versionToId}
 import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
 
 import scala.annotation.tailrec
@@ -99,14 +99,14 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       }
 
       val checkedState = checkedStateData.get._1
-      val checkedStateVersion = checkedStateData.get._2
+      val checkedStateVersion = bytesToId(checkedStateData.get._2.data())
       log.info(s"history bestBlockId = ${historyVersion}, stateVersion = ${checkedStateVersion}")
 
       val height_h = restoredHistory.blockInfoById(historyVersion).height
-      val height_s = restoredHistory.blockInfoById(bytesToId(checkedStateVersion.data)).height
+      val height_s = restoredHistory.blockInfoById(checkedStateVersion).height
       log.debug(s"history height = ${height_h}, state height = ${height_s}")
 
-      if (historyVersion == bytesToId(checkedStateVersion.data)) {
+      if (historyVersion == checkedStateVersion) {
         log.info("state and history storages are consistent")
 
         // get common version of the wallet storages, that at this point must be consistent among them
@@ -139,7 +139,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
         log.warn("Inconsistent state and history storages, trying to recover...")
 
         // this is the sequence of blocks starting from active chain up to input block, unless a None is returned in case of errors
-        val nonChainSuffix = restoredHistory.chainBack(bytesToId(checkedStateVersion.data), restoredHistory.storage.isInActiveChain, Int.MaxValue)
+        val nonChainSuffix = restoredHistory.chainBack(checkedStateVersion, restoredHistory.storage.isInActiveChain, Int.MaxValue)
         log.info(s"sequence of blocks not in active chain (root included) = ${nonChainSuffix}")
 
         if (nonChainSuffix.isEmpty) {
@@ -196,6 +196,8 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   }
 
   def dumpStorages : Unit = {
+    log.debug(s"Application state version           : ${bytesToVersion(applicationState.getCurrentVersion)}")
+
     try {
       val m = getStorageVersions.map{ case(k, v) => {"%-36s".format(k) + ": " + v}}
       m.foreach(x => log.debug(s"${x}"))
@@ -215,9 +217,10 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     if (SidechainNodeViewHolder.listOfStorageInfo.isEmpty) {
       log.warn("Filling list of storage info")
       List[SidechainStorageInfo](
-        historyStorage, consensusDataStorage, secretStorage,
-        stateStorage, forgerBoxStorage, utxoMerkleTreeStorage,
-        walletBoxStorage, walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage).foreach(x=>SidechainNodeViewHolder.listOfStorageInfo += x)
+        historyStorage, consensusDataStorage,
+        utxoMerkleTreeStorage, stateStorage, forgerBoxStorage,
+        secretStorage, walletBoxStorage, walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage)
+        .foreach(x=>SidechainNodeViewHolder.listOfStorageInfo += x)
     }
 
     SidechainNodeViewHolder.listOfStorageInfo.foreach(x =>{

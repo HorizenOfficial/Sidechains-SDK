@@ -31,4 +31,9 @@ public class DefaultApplicationState implements ApplicationState {
     public Try<ApplicationState> onRollback(byte[] blockId) {
         return new Success<>(this);
     }
+
+    @Override
+    public byte[] getCurrentVersion() {
+        return new byte[0];
+    }
 }

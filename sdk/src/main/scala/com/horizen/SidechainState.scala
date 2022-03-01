@@ -18,7 +18,7 @@ import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, MerkleTree
 import scorex.core._
 import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, MinimalState, ModifierValidation, Removal, TransactionValidation}
 import scorex.crypto.hash.Blake2b256
-import scorex.util.{ModifierId, ScorexLogging}
+import scorex.util.{ModifierId, ScorexLogging, bytesToId}
 
 import java.math.{BigDecimal, MathContext}
 import com.horizen.box.data.ZenBoxData
@@ -383,13 +383,18 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     log.warn(s"rolling back state to version = ${to}")
     val version = BytesUtils.fromHexString(to)
     applicationState.onRollback(version) match {
-      case Success(appState) => new SidechainState(
-        stateStorage.rollback(new ByteArrayWrapper(version)).get,
-        forgerBoxStorage.rollback(new ByteArrayWrapper(version)).get,
-        utxoMerkleTreeStorage.rollback(new ByteArrayWrapper(version)).get,
-        params,
-        to,
-        appState)
+      case Success(appState) => {
+        val forgerBoxStorageNew = forgerBoxStorage.rollback(new ByteArrayWrapper(version)).get
+        val stateStorageNew = stateStorage.rollback(new ByteArrayWrapper(version)).get
+        val utxoMerkleTreeStorageNew = utxoMerkleTreeStorage.rollback(new ByteArrayWrapper(version)).get
+        new SidechainState(
+          stateStorageNew,
+          forgerBoxStorageNew,
+          utxoMerkleTreeStorageNew,
+          params,
+          to,
+          appState)
+      }
       case Failure(exception) => throw exception
     }
   }.recoverWith{case exception =>
@@ -444,52 +449,35 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   // Check that all storages are consistent and in case try some rollbacks.
   // Return the state and common version, throw an exception if some unrecoverable misalignment has been detected
   def ensureStorageConsistencyAfterRestore: Try[(SidechainState, ByteArrayWrapper)] = {
-    // TODO csw capability will be optional, related storage might even be empty
+    // updates are in order:
+    //      appState--> utxoMerkleTreeStorage --> stateStorage --> forgerBoxStorage
+    val appStateVersion = bytesToId(applicationState.getCurrentVersion())
+    val versionFb       = bytesToId(forgerBoxStorage.lastVersionId.get.data())
 
-    // this is the order of update
-    val versionUmt = utxoMerkleTreeStorage.lastVersionId
-    val versionSt  = stateStorage.lastVersionId
-    val versionFb  = forgerBoxStorage.lastVersionId
+    val result = if (appStateVersion == versionFb) {
+      // TODO csw capability will be optional, related utxo mrkl tree storage might even be empty
+      if (utxoMerkleTreeStorage.lastVersionId.isDefined) {
+        val versionUmt = bytesToId(utxoMerkleTreeStorage.lastVersionId.get.data())
+        require(appStateVersion == versionUmt)
+      }
 
-    if (versionUmt == versionSt && versionSt == versionFb) {
-        log.debug("All state storages are consistent")
-        Success(this, versionSt.get)
+      val versionSt  = bytesToId(stateStorage.lastVersionId.get.data())
+      require(appStateVersion == versionSt)
+      log.debug("All state storages are consistent")
+      val baw = new ByteArrayWrapper(versionToBytes(version))
+      Success(this, baw)
     } else {
       log.debug("state storages are not consistent")
-      val versionRollback = if (versionUmt == versionSt) {
-        log.debug("Fb and state storages are not consistent")
-        // state can only be one version ahead forger box
-        val rollbackList = stateStorage.rollbackVersions(2)
-        if (rollbackList.length > 1 && rollbackList(1) == versionFb.get) {
-          versionFb
-        } else {
-          log.error("state storage not consistent with forger box storage")
-          None
-        }
+
+      val rolledBackState = rollbackTo(idToVersion(versionFb))
+      if (rolledBackState.isFailure) {
+        throw new IllegalStateException("Could not rollback state")
       } else {
-        log.debug("Umt and state storages are not consistent")
-        // umt can only be one version ahead state
-        val rollbackList = utxoMerkleTreeStorage.rollbackVersions(2)
-        if (rollbackList.length > 1 && rollbackList(1) == versionSt.get) {
-          versionSt
-        } else {
-          log.error("UTXO mkl tree storage not consistent with state storage")
-          None
-        }
-      }
-      if (!versionRollback.isEmpty) {
-        val rolledBackState = rollbackTo(bytesToVersion(versionRollback.get.data()))
-        if (rolledBackState.isFailure) {
-          throw new IllegalStateException("Could not rollback state")
-        } else {
-          Success(rolledBackState.get, versionRollback.get)
-        }
-      } else {
-        // unrecoverable
-        log.error("Could not recover state storages")
-        throw new IllegalStateException("Could not recover inconsistent state and forger box info storages")
+        val baw = new ByteArrayWrapper(idToBytes(versionFb))
+        Success(rolledBackState.get, baw)
       }
     }
+    result
   }
 
   // Collect Fee payments during the appending of the last withdrawal epoch block, considering that block fee info as well.

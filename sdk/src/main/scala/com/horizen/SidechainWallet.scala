@@ -317,6 +317,13 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
   // Return the state and common version or throw an exception if some unrecoverable misalignment has been detected
   def ensureStorageConsistencyAfterRestore: Try[(SidechainWallet, ByteArrayWrapper)] = {
     // TODO csw capability will be optional, related storage might even be empty
+
+    // It is assumed that when this method is called, all thr versions must be consistent among them
+    // since history and state are (according to the update procedure sequence: state --> wallet --> history)
+    // The only exception can be the forging box info storage, because, it might have been updated upon
+    // consensus epoch switch even before the state update.
+    // In that case it can be ahead by one version only (except in the genesis phase), and that is checked
+    // before applying a rollback
     val version = walletBoxStorage.lastVersionId
     if (
       // check these storages first, they are updated always together

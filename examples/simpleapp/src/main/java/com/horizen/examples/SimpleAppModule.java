@@ -43,9 +43,12 @@ public class SimpleAppModule extends SidechainAppModule
         HashMap<Byte, TransactionSerializer<BoxTransaction<Proposition, Box<Proposition>>>> customTransactionSerializers = new HashMap<>();
 
         ApplicationWallet defaultApplicationWallet = new DefaultApplicationWallet();
-        ApplicationState defaultApplicationState = new DefaultApplicationState();
 
         String dataDirAbsolutePath = sidechainSettings.scorexSettings().dataDir().getAbsolutePath();
+
+        File appStore = new File(dataDirAbsolutePath + "/app");
+        ApplicationState defaultApplicationState = new DefaultApplicationState(appStore);
+
         File secretStore = new File(dataDirAbsolutePath + "/secret");
         File walletBoxStore = new File(dataDirAbsolutePath + "/wallet");
         File walletTransactionStore = new File(dataDirAbsolutePath + "/walletTransaction");

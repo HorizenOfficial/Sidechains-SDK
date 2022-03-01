@@ -26,6 +26,8 @@ public interface ApplicationState {
     Try<ApplicationState> onApplyChanges(SidechainStateReader stateReader, byte[] blockId, List<Box<Proposition>> newBoxes, List<byte[]> boxIdsToRemove);
 
     Try<ApplicationState> onRollback(byte[] blockId); // return Try[...]
+
+    byte[] getCurrentVersion();
 }
 
 
