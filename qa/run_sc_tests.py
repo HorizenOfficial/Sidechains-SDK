@@ -25,7 +25,7 @@ from websocket_server import SCWsServer
 from mc_sc_forging_fee_payments import MCSCForgingFeePayments
 from sc_cert_fee_conf import CertFeeConfiguration
 from sc_bwt_minimum_value import SCBwtMinValue
-from qa.sc_db_tool_cmds import DBToolTest
+from sc_db_tool_cmds import DBToolTest
 
 
 def run_test(test):

@@ -382,11 +382,13 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     require(to != null, "Version to rollback to must be NOT NULL.")
     log.warn(s"rolling back state to version = ${to}")
     val version = BytesUtils.fromHexString(to)
+
+    val forgerBoxStorageNew = forgerBoxStorage.rollback(new ByteArrayWrapper(version)).get
+    val stateStorageNew = stateStorage.rollback(new ByteArrayWrapper(version)).get
+    val utxoMerkleTreeStorageNew = utxoMerkleTreeStorage.rollback(new ByteArrayWrapper(version)).get
+
     applicationState.onRollback(version) match {
       case Success(appState) => {
-        val forgerBoxStorageNew = forgerBoxStorage.rollback(new ByteArrayWrapper(version)).get
-        val stateStorageNew = stateStorage.rollback(new ByteArrayWrapper(version)).get
-        val utxoMerkleTreeStorageNew = utxoMerkleTreeStorage.rollback(new ByteArrayWrapper(version)).get
         new SidechainState(
           stateStorageNew,
           forgerBoxStorageNew,
@@ -446,12 +448,28 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     getFeePayments(withdrawalEpochNumber, None)
   }
 
+  def getAppStateVersion(versions: util.List[Array[Byte]]) : VersionTag =
+  {
+    val applicationStateVersionsSet = versions.asScala.toSet
+    if (applicationStateVersionsSet.size == 1) {
+      log.debug("All application state storages are consistent, common version: " + BytesUtils.toHexString(applicationStateVersionsSet.head))
+      bytesToVersion(applicationStateVersionsSet.head)
+    } else {
+      log.warn("Not all application state storages are consistent")
+      versions.asScala.zipWithIndex.foreach{
+        case(x,i) => log.warn(s"app storage ${i} version: ${bytesToVersion(x)}")
+      }
+      // application has internal storages which are not aligned, return a null version tag
+      bytesToVersion(new ByteArrayWrapper(0).data())
+    }
+  }
+
   // Check that all storages are consistent and in case try some rollbacks.
   // Return the state and common version, throw an exception if some unrecoverable misalignment has been detected
   def ensureStorageConsistencyAfterRestore: Try[(SidechainState, ByteArrayWrapper)] = {
     // updates are in order:
     //      appState--> utxoMerkleTreeStorage --> stateStorage --> forgerBoxStorage
-    val appStateVersion = bytesToId(applicationState.getCurrentVersion())
+    val appStateVersion = getAppStateVersion(applicationState.getStoragesVersionList)
     val versionFb       = bytesToId(forgerBoxStorage.lastVersionId.get.data())
 
     val result = if (appStateVersion == versionFb) {
@@ -463,6 +481,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
       val versionSt  = bytesToId(stateStorage.lastVersionId.get.data())
       require(appStateVersion == versionSt)
+
       log.debug("All state storages are consistent")
       val baw = new ByteArrayWrapper(versionToBytes(version))
       Success(this, baw)

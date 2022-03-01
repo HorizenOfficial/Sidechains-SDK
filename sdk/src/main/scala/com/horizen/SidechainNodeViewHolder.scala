@@ -19,7 +19,9 @@ import scorex.core.utils.NetworkTimeProvider
 import scorex.core.{bytesToVersion, idToVersion, versionToId}
 import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
 
+import java.util
 import scala.annotation.tailrec
+import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
@@ -196,7 +198,8 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   }
 
   def dumpStorages : Unit = {
-    log.debug(s"Application state version           : ${bytesToVersion(applicationState.getCurrentVersion)}")
+    val versions = applicationState.getStoragesVersionList
+    versions.asScala.zipWithIndex.foreach{case(x, i) => log.debug(s"Application state ${i}, version        : ${bytesToVersion(x)}")}
 
     try {
       val m = getStorageVersions.map{ case(k, v) => {"%-36s".format(k) + ": " + v}}

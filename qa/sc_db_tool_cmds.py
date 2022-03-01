@@ -35,6 +35,7 @@ Test:
       
     Order of storages update in a complete pmodModify cycle:
         1. History storage (block)
+            appState (app1, app2 storages)
         ------------------------
         2. stateUtxoMerkleTree
         3. state
@@ -117,7 +118,7 @@ class DBToolTest(SidechainTestFramework):
         print("Starting SC2")
         start_sc_node(1, self.options.tmpdir)
         wait_for_sc_node_initialization(self.sc_nodes)
-        time.sleep(1)
+        time.sleep(2)
 
         print("Connecting SC2")
         connect_sc_nodes(self.sc_nodes[0], 1)
@@ -137,7 +138,7 @@ class DBToolTest(SidechainTestFramework):
         NUM_BLOCKS = 1
         print("SC1 generates {} block".format(NUM_BLOCKS))
         self.blocks.extend(generate_next_blocks(self.sc_nodes[0], "first node", NUM_BLOCKS))
-        time.sleep(1)
+        time.sleep(2)
 
         self.startAndSyncScNode2()
 
@@ -260,6 +261,14 @@ class DBToolTest(SidechainTestFramework):
         rollbackStorages(sc_node2, storages_list, 2)
         self.forgeBlockAndCheckSync()
 
+        print("Test app storages misalignment ######")
+        storages_list = ["history"]
+        rollbackStorages(sc_node2, storages_list, 4)
+        # rollback just one of the two app storages (simple app has app1 and app2 storages)
+        storages_list = ["app1", "stateUtxoMerkleTree", "state", "stateForgerBox",
+                         "wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
+        rollbackStorages(sc_node2, storages_list, 2)
+        self.forgeBlockAndCheckSync()
 
         self.startAndSyncScNode2()
         # reach the end of consensus epoch

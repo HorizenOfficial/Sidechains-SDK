@@ -46,8 +46,10 @@ public class SimpleAppModule extends SidechainAppModule
 
         String dataDirAbsolutePath = sidechainSettings.scorexSettings().dataDir().getAbsolutePath();
 
-        File appStore = new File(dataDirAbsolutePath + "/app");
-        ApplicationState defaultApplicationState = new DefaultApplicationState(appStore);
+        // two distinct storages are used in order to test a version misalignment during startup and the recover logic
+        File appStore1 = new File(dataDirAbsolutePath + "/app1");
+        File appStore2 = new File(dataDirAbsolutePath + "/app2");
+        ApplicationState defaultApplicationState = new DefaultApplicationState(appStore1, appStore2);
 
         File secretStore = new File(dataDirAbsolutePath + "/secret");
         File walletBoxStore = new File(dataDirAbsolutePath + "/wallet");

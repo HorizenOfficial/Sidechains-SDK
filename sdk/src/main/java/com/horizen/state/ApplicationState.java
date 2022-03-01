@@ -4,8 +4,6 @@ import com.horizen.block.SidechainBlock;
 import com.horizen.box.Box;
 import com.horizen.proposition.Proposition;
 import com.horizen.transaction.BoxTransaction;
-import com.horizen.transaction.SidechainTransaction;
-import com.horizen.utils.ByteArrayWrapper;
 
 import java.util.List;
 
@@ -27,7 +25,7 @@ public interface ApplicationState {
 
     Try<ApplicationState> onRollback(byte[] blockId); // return Try[...]
 
-    byte[] getCurrentVersion();
+    List<byte[]> getStoragesVersionList();
 }
 
 

@@ -9,6 +9,7 @@ import com.horizen.transaction.BoxTransaction;
 import scala.util.Success;
 import scala.util.Try;
 
+import java.util.Collections;
 import java.util.List;
 
 public class DefaultApplicationState implements ApplicationState {
@@ -33,7 +34,7 @@ public class DefaultApplicationState implements ApplicationState {
     }
 
     @Override
-    public byte[] getCurrentVersion() {
-        return new byte[0];
+    public List<byte[]> getStoragesVersionList() {
+        return Collections.singletonList(new byte[0]);
     }
 }

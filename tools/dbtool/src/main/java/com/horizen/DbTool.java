@@ -19,7 +19,8 @@ public class DbTool {
             "stateForgerBox",
             "stateUtxoMerkleTree",
             "history",
-            "consensusData"
+            "consensusData",
+            "app1", "app2" // simple app tests
     ));
 
     public static void main(String args[]) {
