@@ -91,6 +91,7 @@ class SCVersionsAndMCCertificates(SidechainTestFramework):
         mc_node.generate(450)
         self.mcTest = CertTestUtils(self.options.tmpdir)
 
+        '''
         # bootstrapping tool to be fixed for supporting versions. Currently assumes ver0 fe bytes handling
         ret = self.create_sidechain(scVersion=0, epochLength=10, customHexTag="5c00")
         self.scid0 = ret['scid']
@@ -105,19 +106,20 @@ class SCVersionsAndMCCertificates(SidechainTestFramework):
         print("Mc height = {}".format(mc_node.getblockcount()))
         print("MC mempool content: {}".format(mc_node.getrawmempool()))
         #----------------------------------------
+        '''
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
 
     def sc_setup_nodes(self):
         return start_sc_nodes(1, self.options.tmpdir)
 
-    def create_sidechain(self, scVersion, epochLength, customHexTag):
+    def create_fake_sidechain(self, scVersion, epochLength, customHexTag):
         sc_tag = customHexTag
         vk = self.mcTest.generate_params(sc_tag)
         constant = generate_random_field_element_hex()
         # we use this field to store sc_tag, used by mcTool when creating certificates
         customData = sc_tag
         cswVk = ""
-        feCfg = [16]
+        feCfg = [128, 128]
         cmtCfg = []
 
         cmdInput = {
@@ -150,9 +152,11 @@ class SCVersionsAndMCCertificates(SidechainTestFramework):
 
         # cfgs for SC2: [16], []
         # we must be careful with ending bits for having valid fe.
+        # ["1c5478a72455c080282cef34794014c8","4b21c0f7bc8d1d4f02b7b0cc2e78072b"]
         if fePattern==None:
             fePattern = "0100"
-        vCfe = [fePattern]
+        #vCfe = [fePattern]
+        vCfe = ["1c5478a72455c080282cef34794014c8","4b21c0f7bc8d1d4f02b7b0cc2e78072b"]
         vCmt = []
 
         MBTR_SC_FEE = 0.0
@@ -166,12 +170,13 @@ class SCVersionsAndMCCertificates(SidechainTestFramework):
         outputs = { mc_node.getnewaddress() : change }
 
         # serialized fe for the proof has 32 byte size
-        fe1 = get_field_element_with_padding(fePattern, sc_version)
+        fe1 = get_field_element_with_padding("1c5478a72455c080282cef34794014c8", sc_version)
+        fe2 = get_field_element_with_padding("4b21c0f7bc8d1d4f02b7b0cc2e78072b", sc_version)
         scid_swapped = str(swap_bytes(scid))
 
         scProof = self.mcTest.create_test_proof(
             sc_tag, scid_swapped, epoch_number_1, 10, MBTR_SC_FEE, FT_SC_FEE, epoch_cum_tree_hash_1, constant, [], [],
-            [fe1])
+            [fe1, fe2])
 
         print("cum =", epoch_cum_tree_hash_1)
         params = {
@@ -205,13 +210,13 @@ class SCVersionsAndMCCertificates(SidechainTestFramework):
 
         print("Mc height = {}".format(mc_node.getblockcount()))
 
-        ret = self.create_sidechain(0, epochLength=9, customHexTag="5c01")
-        self.scid1_ver0 = ret['scid']
-        crtx1 = ret['txid']
+        #ret = self.create_sidechain(0, epochLength=9, customHexTag="5c01")
+        #self.scid1_ver0 = ret['scid']
+        #crtx1 = ret['txid']
 
-        assert_true(crtx1 in mc_node.getrawmempool(), "Sc Creation is expected to be added to mempool.")
+        #assert_true(crtx1 in mc_node.getrawmempool(), "Sc Creation is expected to be added to mempool.")
 
-        ret = self.create_sidechain(1, epochLength=9, customHexTag="5c02")
+        ret = self.create_fake_sidechain(1, epochLength=9, customHexTag="5c02")
         self.scid2_ver1 = ret['scid']
         crtx2 = ret['txid']
 
@@ -220,7 +225,7 @@ class SCVersionsAndMCCertificates(SidechainTestFramework):
         # Generate MC block and SC block
         mcblock_hash1 = mc_node.generate(1)[0]
 
-        assert_true(crtx1 in mc_node.getblock(mcblock_hash1)['tx'])
+        #assert_true(crtx1 in mc_node.getblock(mcblock_hash1)['tx'])
         assert_true(crtx2 in mc_node.getblock(mcblock_hash1)['tx'])
 
         scblock_id1 = generate_next_blocks(sc_node, "first node", 1)[0]
@@ -237,7 +242,7 @@ class SCVersionsAndMCCertificates(SidechainTestFramework):
 
         expEndEpochHeight = None
         scInfoItems = mc_node.getscinfo("*")['items']
-        assert_equal(4, len(scInfoItems), "Unexpected number of sc info in MC")
+        assert_equal(2, len(scInfoItems), "Unexpected number of sc info in MC")
         for it in scInfoItems:
             scid = it['scid']
             if expEndEpochHeight == None:
@@ -263,9 +268,9 @@ class SCVersionsAndMCCertificates(SidechainTestFramework):
 
 
         #-----------------------------------------------------------------------------------------------------------------------
-        self.create_certificate(self.scid0, mc_node)
-        self.create_certificate(self.scid1_ver0, mc_node, fePattern="ff3f")# b'1111 1111' '0011' 1111'
-        self.create_certificate(self.scid2_ver1, mc_node, fePattern="ffff")
+        #self.create_certificate(self.scid0, mc_node)
+        self.create_certificate(self.scid2_ver1, mc_node, fePattern="ff3f")# b'1111 1111' '0011' 1111'
+        #self.create_certificate(self.scid2_ver1, mc_node, fePattern="ffff")
 
 
         #-----------------------------------------------------------------------------------------------------------------------
@@ -302,7 +307,7 @@ class SCVersionsAndMCCertificates(SidechainTestFramework):
         we1_2_mcblock_hash = mc_node.generate(1)[0]
         assert_equal(0, mc_node.getmempoolinfo()["size"], "Certificate expected to be removed from MC node mempool.")
         assert_equal(1, len(mc_node.getblock(we1_2_mcblock_hash)["tx"]), "MC block expected to contain 1 transaction (the coinbase only).")
-        assert_equal(4, len(mc_node.getblock(we1_2_mcblock_hash)["cert"]), "MC block expected to contain 4 Certificates.")
+        assert_equal(2, len(mc_node.getblock(we1_2_mcblock_hash)["cert"]), "MC block expected to contain 4 Certificates.")
 
         #assert_equal(we0_certHash, mc_node.getblock(we1_2_mcblock_hash)["cert"][0], "MC block expected to contain certificate.")
         print("MC block with withdrawal certificates for epoch 0 = {0}\n".format(str(mc_node.getblock(we1_2_mcblock_hash, False))))
