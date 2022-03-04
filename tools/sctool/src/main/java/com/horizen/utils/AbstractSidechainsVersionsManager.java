@@ -16,7 +16,7 @@ public abstract class AbstractSidechainsVersionsManager implements SidechainsVer
     public Map<ByteArrayWrapper, Enumeration.Value> getVersions(Seq<ByteArrayWrapper> sidechainIds) {
         HashMap<ByteArrayWrapper, Enumeration.Value> res = new HashMap<>();
         for (ByteArrayWrapper id : JavaConverters.seqAsJavaList(sidechainIds))
-            res.put(id, SidechainCreationVersions.SidechainCreationVersion0());
+            res.put(id, getVersion(id));
 
         return JavaConverters.mapAsScalaMapConverter(res).asScala().toMap(Predef.conforms());
     }

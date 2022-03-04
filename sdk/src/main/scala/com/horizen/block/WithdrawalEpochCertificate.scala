@@ -10,21 +10,26 @@ import com.horizen.utils.{BytesUtils, Utils, VarInt}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 import com.horizen.librustsidechains.{Utils => ScCryptoUtils}
+import scorex.util.ScorexLogging
 
 import scala.util.Try
 
-case class FieldElementCertificateField(rawData: Array[Byte]) {
+case class FieldElementCertificateField(rawData: Array[Byte]) extends ScorexLogging {
   def fieldElementBytes(version: SidechainCreationVersion): Array[Byte] = {
-    version match {
+    logger.info("Fe before: " + BytesUtils.toHexString(rawData))
+    val bytes = version match {
       case SidechainCreationVersion0 =>
-        // prepend raw data to the FieldElement size
+        logger.debug(s"sc version=${SidechainCreationVersion0}: prepend raw data to the FieldElement of size=${rawData.length}")
+          // prepend raw data to the FieldElement size
         Bytes.concat(new Array[Byte](FieldElementUtils.fieldElementLength() - rawData.length), rawData)
       case SidechainCreationVersion1 =>
+        logger.debug(s"sc version=${SidechainCreationVersion1}: append raw data to the FieldElement of size=${rawData.length}")
         // append raw data to the FieldElement size
         Bytes.concat(rawData, new Array[Byte](FieldElementUtils.fieldElementLength() - rawData.length))
       case other => throw new IllegalArgumentException(s"Version $other is not supported.")
     }
-    Bytes.concat(new Array[Byte](FieldElementUtils.fieldElementLength() - rawData.length), rawData)
+    logger.debug("Fe after:  " + BytesUtils.toHexString(bytes))
+    bytes
   }
 }
 case class BitVectorCertificateField(rawData: Array[Byte]) {
