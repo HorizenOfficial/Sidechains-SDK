@@ -8,6 +8,7 @@
 #
 
 # Add python-bitcoinrpc to module search path:
+import codecs
 import os
 import sys
 
@@ -555,3 +556,24 @@ def forward_transfer_to_sidechain(sidechain_id, mainchain_node,
     if generate_block:
         mainchain_node.generate(1)
     return [mainchain_node.getscinfo(sidechain_id), mainchain_node.getblockcount()]
+
+
+def swap_bytes(input_buf):
+    return codecs.encode(codecs.decode(input_buf, 'hex')[::-1], 'hex').decode()
+
+
+def get_spendable(mc_node, min_amount):
+    # get a UTXO in node's wallet with minimal amount
+    utx = False
+    listunspent = mc_node.listunspent()
+    for aUtx in listunspent:
+        if aUtx['amount'] > min_amount:
+            utx = aUtx
+            change = aUtx['amount'] - min_amount
+            break
+
+    if utx == False:
+        print(listunspent)
+
+    assert_equal(utx!=False, True)
+    return utx, change
