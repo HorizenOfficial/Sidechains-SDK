@@ -39,6 +39,7 @@ trait NetworkParams {
   val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig]
   val cswProvingKeyFilePath: String
   val cswVerificationKeyFilePath: String
+  val isCSWEnabled: Boolean
 
   val maxHistoryRewritingLength: Int = 100
 

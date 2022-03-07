@@ -24,7 +24,7 @@ import com.horizen.secret.SecretSerializer
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.transaction._
-import com.horizen.utils.{BytesUtils, Pair}
+import com.horizen.utils.{BlockUtils, BytesUtils, Pair}
 import com.horizen.wallet.ApplicationWallet
 import scorex.core.api.http.ApiRoute
 import scorex.core.app.Application
@@ -44,8 +44,9 @@ import com.horizen.network.SidechainNodeViewSynchronizer
 import com.horizen.websocket.client.{DefaultWebSocketReconnectionHandler, MainchainNodeChannelImpl, WebSocketChannel, WebSocketCommunicationClient, WebSocketConnector, WebSocketConnectorImpl, WebSocketReconnectionHandler}
 import com.horizen.websocket.server.WebSocketServerRef
 import com.horizen.serialization.JsonHorizenPublicKeyHashSerializer
+import com.horizen.transaction.mainchain.SidechainCreation
 
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 
 class SidechainApp @Inject()
@@ -112,6 +113,15 @@ class SidechainApp @Inject()
   val calculatedSysDataConstant: Array[Byte] = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold)
   log.info(s"calculated sysDataConstant is: ${BytesUtils.toHexString(calculatedSysDataConstant)}")
 
+  val sidechainCreationOutput: SidechainCreation = BlockUtils.tryGetSidechainCreation(genesisBlock) match {
+    case Success(output) => output
+    case Failure(exception) => throw new IllegalArgumentException("Genesis block specified in the configuration file has no Sidechain Creation info.", exception)
+  }
+
+
+  val isCSWEnabled = sidechainCreationOutput.getScCrOutput.ceasedVkOpt.isDefined
+  log.info(s"Ceased Sidechain Withdrawal enabled: $isCSWEnabled")
+
   // Init proper NetworkParams depend on MC network
   val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
     case "regtest" => RegTestParams(
@@ -130,7 +140,8 @@ class SidechainApp @Inject()
       calculatedSysDataConstant = calculatedSysDataConstant,
       initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash),
       cswProvingKeyFilePath = sidechainSettings.csw.cswProvingKeyFilePath,
-      cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath
+      cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath,
+      isCSWEnabled = isCSWEnabled
   )
 
     case "testnet" => TestNetParams(
@@ -149,7 +160,8 @@ class SidechainApp @Inject()
       calculatedSysDataConstant = calculatedSysDataConstant,
       initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash),
       cswProvingKeyFilePath = sidechainSettings.csw.cswProvingKeyFilePath,
-      cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath
+      cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath,
+      isCSWEnabled = isCSWEnabled
     )
 
     case "mainnet" => MainNetParams(
@@ -168,7 +180,8 @@ class SidechainApp @Inject()
       calculatedSysDataConstant = calculatedSysDataConstant,
       initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash),
       cswProvingKeyFilePath = sidechainSettings.csw.cswProvingKeyFilePath,
-      cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath
+      cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath,
+      isCSWEnabled = isCSWEnabled
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
   }
@@ -190,11 +203,22 @@ class SidechainApp @Inject()
       throw new IllegalArgumentException("Can't generate Cert Coboundary Marlin ProvingSystem snark keys.")
     }
   }
-  if (!Files.exists(Paths.get(params.cswVerificationKeyFilePath)) || !Files.exists(Paths.get(params.cswProvingKeyFilePath))) {
-    log.info("Generating CSW snark keys. It may take some time.")
-    if (!CryptoLibProvider.cswCircuitFunctions.generateCoboundaryMarlinSnarkKeys(
-      params.withdrawalEpochLength, params.cswProvingKeyFilePath, params.cswVerificationKeyFilePath)) {
-      throw new IllegalArgumentException("Can't generate CSW Coboundary Marlin ProvingSystem snark keys.")
+  if (isCSWEnabled) {
+    if (Option(params.cswVerificationKeyFilePath).forall(_.trim.isEmpty)){
+      log.error("CSW Verification Key file path is not defined.")
+      throw new IllegalArgumentException("CSW Verification Key file path is not defined.")
+    }
+    if (Option(params.cswProvingKeyFilePath).forall(_.trim.isEmpty)){
+      log.error("CSW Proving Key file path is not defined.")
+      throw new IllegalArgumentException("CSW Proving Key file path is not defined.")
+    }
+
+    if (!Files.exists(Paths.get(params.cswVerificationKeyFilePath)) || !Files.exists(Paths.get(params.cswProvingKeyFilePath))) {
+      log.info("Generating CSW snark keys. It may take some time.")
+      if (!CryptoLibProvider.cswCircuitFunctions.generateCoboundaryMarlinSnarkKeys(
+        params.withdrawalEpochLength, params.cswProvingKeyFilePath, params.cswVerificationKeyFilePath)) {
+        throw new IllegalArgumentException("Can't generate CSW Coboundary Marlin ProvingSystem snark keys.")
+      }
     }
   }
 
@@ -320,7 +344,7 @@ class SidechainApp @Inject()
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef),
-    SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager)
+    SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager, params)
   )
 
   val transactionSubmitProvider : TransactionSubmitProvider = new TransactionSubmitProviderImpl(sidechainTransactionActorRef)

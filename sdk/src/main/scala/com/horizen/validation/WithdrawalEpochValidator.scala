@@ -29,15 +29,17 @@ class WithdrawalEpochValidator(params: NetworkParams) extends HistoryBlockValida
       throw new IllegalArgumentException("Sidechain block validation failed for %s: genesis block contains different withdrawal epoch length than expected in configs.".format(BytesUtils.toHexString(idToBytes(block.id))))
 
     // Check that sidechain supports CSWs
-    if(sidechainCreation.getScCrOutput.ceasedVkOpt.isEmpty) {
-      throw new IllegalArgumentException(s"Sidechain block validation failed for ${BytesUtils.toHexString(idToBytes(block.id))}: " +
-        "genesis block declares sidechain without CSW support.")
-    }
+//    if(sidechainCreation.getScCrOutput.ceasedVkOpt.isEmpty) {
+//      throw new IllegalArgumentException(s"Sidechain block validation failed for ${BytesUtils.toHexString(idToBytes(block.id))}: " +
+//        "genesis block declares sidechain without CSW support.")
+//    }
 
-    // Check that sidechain declares proper number of custom fields
-    if(sidechainCreation.getScCrOutput.fieldElementCertificateFieldConfigs.size != CommonCircuit.customFieldsNumber) {
-      throw new IllegalArgumentException(s"Sidechain block validation failed for ${BytesUtils.toHexString(idToBytes(block.id))}: " +
-        "genesis block declares sidechain with different number of custom field configs.")
+    if (params.isCSWEnabled){
+      // Check that sidechain declares proper number of custom fields
+      if(sidechainCreation.getScCrOutput.fieldElementCertificateFieldConfigs.size != CommonCircuit.customFieldsNumber) {
+        throw new IllegalArgumentException(s"Sidechain block validation failed for ${BytesUtils.toHexString(idToBytes(block.id))}: " +
+          "genesis block declares sidechain with different number of custom field configs.")
+      }
     }
 
     // Check that sidechain declares no custom bitvectors

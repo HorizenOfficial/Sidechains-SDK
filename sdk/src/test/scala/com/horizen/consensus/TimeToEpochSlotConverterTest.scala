@@ -43,6 +43,7 @@ class TimeToEpochSlotConverterTest extends JUnitSuite {
     override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig] = Seq()
     override val cswProvingKeyFilePath: String = ""
     override val cswVerificationKeyFilePath: String = ""
+    override val isCSWEnabled: Boolean = true
   }
 
   private def checkSlotAndEpoch(timeStamp: Block.Timestamp,

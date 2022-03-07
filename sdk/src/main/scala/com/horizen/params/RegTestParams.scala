@@ -27,7 +27,8 @@ case class RegTestParams(
                           override val initialCumulativeCommTreeHash: Array[Byte] = new Array[Byte](CumulativeHashFunctions.hashLength()),
                           override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig] = Seq(),
                           override val cswProvingKeyFilePath: String = "",
-                          override val cswVerificationKeyFilePath: String = ""
+                          override val cswVerificationKeyFilePath: String = "",
+                          override val isCSWEnabled: Boolean = true
 ) extends NetworkParams {
   override val EquihashN: Int = 48
   override val EquihashK: Int = 5

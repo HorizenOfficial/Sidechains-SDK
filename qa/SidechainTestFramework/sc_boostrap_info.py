@@ -14,17 +14,20 @@ SCCreationInfo: {
     "forward_amout":
     "withdrawal_epoch_length":
     "btr_data_length": size of scRequestData array for MBTRs. 0 if MBTRs are not supported at all.
+    "csw_enabled":
 }
 """
 class SCCreationInfo(object):
 
     # Note: the maximum withdrawal_epoch_length allowed is around 900, otherwise snark keys size check will fail
     # because of too complex circuit from MC perspective.
-    def __init__(self, mc_node, forward_amount=100, withdrawal_epoch_length=LARGE_WITHDRAWAL_EPOCH_LENGTH, btr_data_length=0):
+    def __init__(self, mc_node, forward_amount=100, withdrawal_epoch_length=LARGE_WITHDRAWAL_EPOCH_LENGTH,
+                 btr_data_length=0, csw_enabled=True):
         self.mc_node = mc_node
         self.forward_amount = forward_amount
         self.withdrawal_epoch_length = withdrawal_epoch_length
         self.btr_data_length = btr_data_length
+        self.csw_enabled = csw_enabled
 
 
 """

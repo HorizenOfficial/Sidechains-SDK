@@ -2,44 +2,63 @@ package com.horizen.api.http
 
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
-import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.api.http.SidechainCswRestScheme.{ReqCswInfo, ReqGenerationCswState, ReqNullifier, RespCswBoxIds, RespCswHasCeasedState, RespCswInfo, RespGenerationCswState, RespNullifier}
-import com.horizen.serialization.Views
-
-import java.util.{Optional => JOptional}
 import akka.pattern.ask
-import com.horizen.api.http.SidechainCswErrorResponse.{ErrorCswGenerationState, ErrorRetrievingCeasingState, ErrorRetrievingCswBoxIds, ErrorRetrievingCswInfo, ErrorRetrievingNullifier}
-import com.horizen.csw.CswManager.ReceivableMessages.{GenerateCswProof, GetBoxNullifier, GetCeasedStatus, GetCswBoxIds, GetCswInfo}
-import com.horizen.csw.CswManager.Responses.{CswInfo, GenerateCswProofStatus, InvalidAddress, NoProofData, ProofCreationFinished, ProofGenerationInProcess, ProofGenerationStarted, SidechainIsAlive}
+import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.api.http.JacksonSupport._
+import com.horizen.api.http.SidechainCswErrorResponse._
+import com.horizen.api.http.SidechainCswRestScheme._
+import com.horizen.csw.CswManager.ReceivableMessages.{GenerateCswProof, GetBoxNullifier, GetCswBoxIds, GetCswInfo}
+import com.horizen.csw.CswManager.Responses._
+import com.horizen.params.NetworkParams
+import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import scorex.core.settings.RESTApiSettings
 
+import java.util.{Optional => JOptional}
 import scala.concurrent.{Await, ExecutionContext}
 import scala.util.{Failure, Success, Try}
 
 case class SidechainCswApiRoute(override val settings: RESTApiSettings,
                                 sidechainNodeViewHolderRef: ActorRef,
-                                cswManager: ActorRef)
+                                cswManager: ActorRef,
+                                params: NetworkParams)
                                (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
 
   override val route: Route = pathPrefix("csw") {
-    hasCeased ~ generateCswProof ~ cswInfo ~ cswBoxIds ~ nullifier
+    hasCeased ~ generateCswProof ~ cswInfo ~ cswBoxIds ~ nullifier ~ isCeasedSidechainWithdrawalEnabled
   }
 
   /**
    * Return ceasing status of the Sidechain
    */
   def hasCeased: Route = (post & path("hasCeased")) {
+
     Try {
-      Await.result(cswManager ? GetCeasedStatus, timeout.duration).asInstanceOf[Boolean]
-    } match {
-      case Success(res) =>
-        ApiResponseUtil.toResponse(RespCswHasCeasedState(res))
-      case Failure(e) => {
-        log.error("Unable to retrieve ceasing status of the Sidechain.")
-        ApiResponseUtil.toResponse(ErrorRetrievingCeasingState("Unable to retrieve ceasing status of the Sidechain.", JOptional.of(e)))
+      applyOnNodeView {
+        sidechainNodeView =>
+          val sidechainState = sidechainNodeView.getNodeState
+          ApiResponseUtil.toResponse(RespCswHasCeasedState(sidechainState.hasCeased))
       }
+    } match {
+      case Success(res) => res
+      case Failure(e) =>
+        log.error("Unable to retrieve ceasing status of the Sidechain.", e)
+        ApiResponseUtil.toResponse(ErrorRetrievingCeasingState("Unable to retrieve ceasing status of the Sidechain.", JOptional.of(e)))
+    }
+  }
+
+  /**
+   * Return if CSW is enabled in the Sidechain
+   */
+  def isCeasedSidechainWithdrawalEnabled: Route = (post & path("isCSWEnabled")) {
+
+    Try {
+      ApiResponseUtil.toResponse(RespCswIsEnabled(params.isCSWEnabled))
+    } match {
+      case Success(res) => res
+      case Failure(e) =>
+        log.error("Unable to retrieve is the ceased sidechain withdrawal is enabled.", e)
+        ApiResponseUtil.toResponse(ErrorRetrievingCSWEnabled("Unable to retrieve is the ceased sidechain withdrawal is enabled.", JOptional.of(e)))
     }
   }
 
@@ -141,6 +160,9 @@ object SidechainCswRestScheme {
   private[api] case class RespCswHasCeasedState(state: Boolean) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespCswIsEnabled(cswEnabled: Boolean) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqGenerationCswState(boxId: String, receiverAddress: String) {
     require(boxId.length == 64, s"Invalid id $boxId. Id length must be 64")
   }
@@ -187,5 +209,9 @@ object SidechainCswErrorResponse {
 
   case class ErrorRetrievingNullifier(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0705"
+  }
+
+  case class ErrorRetrievingCSWEnabled(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
+    override val code: String = "0706"
   }
 }

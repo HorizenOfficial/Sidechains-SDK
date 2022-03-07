@@ -3,8 +3,10 @@ package com.horizen.api.http
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import com.horizen.fixtures.BoxFixture
+import com.horizen.params.MainNetParams
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import org.junit.Assert._
+import org.mockito.Mockito
 
 import scala.collection.JavaConverters._
 
@@ -24,11 +26,20 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
-      Post(basePath + "hasCeased").withEntity("maybe_a_json") ~> sidechainCswApiRoute ~> check {
+     Post(basePath + "hasCeased").withEntity("maybe_a_json") ~> sidechainCswApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
       Post(basePath + "hasCeased").withEntity("maybe_a_json") ~> Route.seal(sidechainCswApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+
+      Post(basePath + "isCSWEnabled").withEntity("maybe_a_json") ~> sidechainCswApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+      Post(basePath + "isCSWEnabled").withEntity("maybe_a_json") ~> Route.seal(sidechainCswApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
@@ -71,6 +82,62 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
       Post(basePath + "hasCeased") ~> sidechainCswApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("state").isBoolean)
+        assertTrue(result.get("state").asBoolean)
+      }
+      //Testing response in case of internal error
+      sidechainApiMockConfiguration.setShould_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply(false)
+      Post(basePath + "hasCeased") ~> sidechainCswApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("error")
+        if (result == null)
+          fail("Serialization failed for object ErrorRetrievingCeasingState")
+        assertEquals(3, result.elements().asScala.length)
+        assertTrue(result.get("code").isTextual)
+        assertEquals("0701", result.get("code").asText())
+      }
+
+    }
+
+    "reply at /isCSWEnabled" in {
+      Post(basePath + "isCSWEnabled") ~> sidechainCswApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("cswEnabled").isBoolean)
+        assertTrue(result.get("cswEnabled").asBoolean)
+      }
+      val params = MainNetParams(isCSWEnabled = false)
+      val sidechainCswApiRouteWithDisabledCSW = SidechainCswApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedCswManagerActorRef,params).route
+      Post(basePath + "isCSWEnabled") ~> sidechainCswApiRouteWithDisabledCSW ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("cswEnabled").isBoolean)
+        assertFalse(result.get("cswEnabled").asBoolean)
+      }
+      //Testing response in case of internal error
+      val sidechainCswApiRouteWithError = SidechainCswApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedCswManagerActorRef,null).route
+      Post(basePath + "isCSWEnabled") ~> sidechainCswApiRouteWithError ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("error")
+        if (result == null)
+          fail("Serialization failed for object ErrorRetrievingCeasingState")
+        assertEquals(3, result.elements().asScala.length)
+        assertTrue(result.get("code").isTextual)
+        assertEquals("0706", result.get("code").asText())
       }
     }
 

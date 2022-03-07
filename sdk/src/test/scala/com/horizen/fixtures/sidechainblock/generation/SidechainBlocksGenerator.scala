@@ -530,6 +530,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig] = Seq()
       override val cswProvingKeyFilePath: String = params.cswProvingKeyFilePath
       override val cswVerificationKeyFilePath: String = params.cswVerificationKeyFilePath
+      override val isCSWEnabled: Boolean = params.isCSWEnabled
     }
   }
 

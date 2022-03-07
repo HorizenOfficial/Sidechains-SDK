@@ -1668,6 +1668,36 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
+  /csw/isCSWEnabled:
+    post:
+      tags:
+        - csw
+      summary: returns if the Ceased Sidechain Withdrawal is enabled in the Sidechain
+      description: returns if the Ceased Sidechain Withdrawal is enabled in the Sidechain
+      operationId: isCSWEnabled
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      state:
+                        type: boolean
+                        description: True or False depending if CSW is enabled
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
   /csw/generateCswProof:
     post:
       tags:

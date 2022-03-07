@@ -5,7 +5,7 @@ import sys
 import json
 
 from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
-    VrfAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths, LARGE_WITHDRAWAL_EPOCH_LENGTH
+    VrfAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths, LARGE_WITHDRAWAL_EPOCH_LENGTH, SCCreationInfo
 from SidechainTestFramework.sidechainauthproxy import SidechainAuthServiceProxy
 import subprocess
 import time
@@ -343,8 +343,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "CERT_VERIFICATION_KEY_PATH": bootstrap_info.cert_keys_paths.verification_key_path,
         "AUTOMATIC_FEE_COMPUTATION": ("true" if sc_node_config.automatic_fee_computation else "false"),
         "CERTIFICATE_FEE": sc_node_config.certificate_fee,
-        "CSW_PROVING_KEY_PATH": bootstrap_info.csw_keys_paths.proving_key_path,
-        "CSW_VERIFICATION_KEY_PATH": bootstrap_info.csw_keys_paths.verification_key_path,
+        "CSW_PROVING_KEY_PATH": bootstrap_info.csw_keys_paths.proving_key_path if bootstrap_info.csw_keys_paths is not None else "",
+        "CSW_VERIFICATION_KEY_PATH": bootstrap_info.csw_keys_paths.verification_key_path if bootstrap_info.csw_keys_paths is not None else "",
     }
 
     configsData.append({
@@ -753,7 +753,11 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
     if not os.path.isdir(ps_keys_dir):
         os.makedirs(ps_keys_dir)
     cert_keys_paths = cert_proof_keys_paths(ps_keys_dir)
-    csw_keys_paths = csw_proof_keys_paths(ps_keys_dir, sc_creation_info.withdrawal_epoch_length)
+    if sc_creation_info.csw_enabled:
+        csw_keys_paths = csw_proof_keys_paths(ps_keys_dir, sc_creation_info.withdrawal_epoch_length)
+    else:
+        csw_keys_paths = None
+
     sc_nodes_bootstrap_info = create_sidechain(sc_creation_info,
                                                block_timestamp_rewind,
                                                cert_keys_paths,
@@ -813,7 +817,11 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
     genesis_account = accounts[0]
     vrf_key = vrf_keys[0]
     certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, cert_keys_paths)
-    csw_verification_key = generate_csw_proof_info(sc_creation_info.withdrawal_epoch_length, csw_keys_paths)
+    if csw_keys_paths is None:
+        csw_verification_key = ""
+    else:
+        csw_verification_key = generate_csw_proof_info(sc_creation_info.withdrawal_epoch_length, csw_keys_paths)
+
     genesis_info = initialize_new_sidechain_in_mainchain(
         sc_creation_info.mc_node,
         sc_creation_info.withdrawal_epoch_length,
