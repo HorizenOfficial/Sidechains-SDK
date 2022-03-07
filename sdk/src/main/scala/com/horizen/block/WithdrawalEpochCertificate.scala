@@ -24,7 +24,6 @@ case class FieldElementCertificateField(rawData: Array[Byte]) {
         Bytes.concat(rawData, new Array[Byte](FieldElementUtils.fieldElementLength() - rawData.length))
       case other => throw new IllegalArgumentException(s"Version $other is not supported.")
     }
-    Bytes.concat(new Array[Byte](FieldElementUtils.fieldElementLength() - rawData.length), rawData)
   }
 }
 case class BitVectorCertificateField(rawData: Array[Byte]) {

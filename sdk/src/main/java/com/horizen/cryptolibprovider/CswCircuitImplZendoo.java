@@ -21,6 +21,7 @@ import com.horizen.utils.ForwardTransferCswData;
 import com.horizen.merkletreenative.MerklePath;
 import com.horizen.utils.UtxoCswData;
 import com.horizen.utils.WithdrawalEpochUtils;
+import scala.Enumeration;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -46,8 +47,8 @@ public class CswCircuitImplZendoo implements CswCircuit {
     }
 
     @Override
-    public byte[] getCertDataHash(WithdrawalEpochCertificate cert, NetworkParams params) throws Exception {
-        try(WithdrawalCertificate wc = createWithdrawalCertificate(cert, params); FieldElement hashFe = wc.getHash()) {
+    public byte[] getCertDataHash(WithdrawalEpochCertificate cert, Enumeration.Value sidechainCreationVersion) throws Exception {
+        try(WithdrawalCertificate wc = createWithdrawalCertificate(cert, sidechainCreationVersion); FieldElement hashFe = wc.getHash()) {
             return hashFe.serializeFieldElement();
         }
     }
@@ -92,7 +93,7 @@ public class CswCircuitImplZendoo implements CswCircuit {
                 isConstantPresent, provingKeyPath, verificationKeyPath, CommonCircuit.maxProofPlusVkSize);
     }
 
-    private WithdrawalCertificate createWithdrawalCertificate(WithdrawalEpochCertificate cert, NetworkParams params) {
+    private WithdrawalCertificate createWithdrawalCertificate(WithdrawalEpochCertificate cert, Enumeration.Value sidechainCreationVersion) {
         return new WithdrawalCertificate(
                 FieldElement.deserialize(cert.sidechainId()),
                 cert.epochNumber(),
@@ -101,7 +102,7 @@ public class CswCircuitImplZendoo implements CswCircuit {
                 FieldElement.deserialize(cert.endCumulativeScTxCommitmentTreeRoot()),
                 cert.ftMinAmount(),
                 cert.btrFee(),
-                Arrays.stream(cert.customFieldsOpt(params.sidechainCreationVersion()).get()).map(FieldElement::deserialize).collect(Collectors.toList())
+                Arrays.stream(cert.customFieldsOpt(sidechainCreationVersion).get()).map(FieldElement::deserialize).collect(Collectors.toList())
         );
     }
 
@@ -117,9 +118,9 @@ public class CswCircuitImplZendoo implements CswCircuit {
                                   String provingKeyPath,
                                   boolean checkProvingKey,
                                   boolean zk,
-                                  NetworkParams params) throws Exception {
+                                  Enumeration.Value sidechainCreationVersion) throws Exception {
         try(
-                WithdrawalCertificate we = createWithdrawalCertificate(lastActiveCert, params);
+                WithdrawalCertificate we = createWithdrawalCertificate(lastActiveCert, sidechainCreationVersion);
                 CswSysData sysData = new CswSysData(
                     Optional.of(FieldElement.deserialize(constant)),
                     Optional.of(we.getHash()),
@@ -153,8 +154,8 @@ public class CswCircuitImplZendoo implements CswCircuit {
                                 String provingKeyPath,
                                 boolean checkProvingKey,
                                 boolean zk,
-                                NetworkParams params) throws Exception {
-        Optional<WithdrawalCertificate> weOpt = lastActiveCertOpt.map(cert -> createWithdrawalCertificate(cert, params));
+                                Enumeration.Value sidechainCreationVersion) throws Exception {
+        Optional<WithdrawalCertificate> weOpt = lastActiveCertOpt.map(cert -> createWithdrawalCertificate(cert, sidechainCreationVersion));
         try(
                 CswSysData sysData = new CswSysData(
                         Optional.of(FieldElement.deserialize(constant)),
