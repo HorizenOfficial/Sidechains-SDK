@@ -379,7 +379,7 @@ class SCCswCeasedAtEpoch3(SidechainTestFramework):
         assert_equal("CEASED", sc_info['state'], "Sidechain expected to be ceased.")
         # Same for SC
         has_ceased = sc_node.csw_hasCeased()["result"]["state"]
-        assert_true("Sidechain expected to be ceased.", has_ceased)
+        assert_true(has_ceased, "Sidechain expected to be ceased.")
 
         # Check SC node owned boxes:
         forger_boxes_req = {"boxTypeClass": "ForgerBox"}
