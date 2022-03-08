@@ -20,7 +20,7 @@ public class DbTool {
             "stateUtxoMerkleTree",
             "history",
             "consensusData",
-            "app1", "app2" // simple app tests
+            "appState1", "appState2", "appWallet1", "appWallet2" // simple app tests
     ));
 
     public static void main(String args[]) {

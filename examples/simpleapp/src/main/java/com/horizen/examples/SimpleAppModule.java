@@ -42,14 +42,17 @@ public class SimpleAppModule extends SidechainAppModule
         HashMap<Byte, SecretSerializer<Secret>> customSecretSerializers = new HashMap<>();
         HashMap<Byte, TransactionSerializer<BoxTransaction<Proposition, Box<Proposition>>>> customTransactionSerializers = new HashMap<>();
 
-        ApplicationWallet defaultApplicationWallet = new DefaultApplicationWallet();
-
         String dataDirAbsolutePath = sidechainSettings.scorexSettings().dataDir().getAbsolutePath();
 
-        // two distinct storages are used in order to test a version misalignment during startup and the recover logic
-        File appStore1 = new File(dataDirAbsolutePath + "/app1");
-        File appStore2 = new File(dataDirAbsolutePath + "/app2");
-        ApplicationState defaultApplicationState = new DefaultApplicationState(appStore1, appStore2);
+        // two distinct storages are used in application state and wallet in order to test a version
+        // misalignment during startup and the recover logic
+        File appWalletStorage1 = new File(dataDirAbsolutePath + "/appWallet1");
+        File appWalletStorage2 = new File(dataDirAbsolutePath + "/appWallet2");
+        ApplicationWallet defaultApplicationWallet = new DefaultApplicationWallet(appWalletStorage1, appWalletStorage2);
+
+        File appStateStorage1 = new File(dataDirAbsolutePath + "/appState1");
+        File appStateStorage2 = new File(dataDirAbsolutePath + "/appState2");
+        ApplicationState defaultApplicationState = new DefaultApplicationState(appStateStorage1, appStateStorage2);
 
         File secretStore = new File(dataDirAbsolutePath + "/secret");
         File walletBoxStore = new File(dataDirAbsolutePath + "/wallet");

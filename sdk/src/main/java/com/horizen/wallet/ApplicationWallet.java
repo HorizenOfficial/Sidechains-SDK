@@ -12,4 +12,5 @@ public interface ApplicationWallet {
     void onRemoveSecret(Proposition proposition);
     void onChangeBoxes(byte[] blockId, List<Box<Proposition>> boxesToUpdate, List<byte[]> boxIdsToRemove);
     void onRollback(byte[] blockId);
+    List<byte[]> getStoragesVersionList();
 }

@@ -20,27 +20,29 @@ from SidechainTestFramework.sc_forging_util import *
 Test the offline db tool useful for interacting with the storage dbs 
 
 Configuration:
-    Start 1 MC nodes and 2 SC nodes .
+    Start 1 MC nodes and 2 SC nodes.
     First SC1 node is connected to the MC node.
     Second SC2 Node is not connected to MC nor to first SC1 node
 
 Test:
     - Synchronize MC node to the point of SC Creation Block.
     - SC1 forges 5 SC blocks
-    - get storage versions for SC2 and check that thay are as expected in this stage (only genesis data)
-    - Connect SC2 node to the SC1 node so that it is aligned
-    - Stop the SC2 node and try to disalign its storages in various way, reproducing the node behaviour in case of a node crash during the storages update
-      verifying that, restarting the SC2 node and reconnecting to the network, it can recover the situation and achieve synchronization with the SC1
+    - get storage versions for SC2 and check that they are as expected in this stage (only genesis data)
+    - Connect SC2 node to the SC1 node so that it gets aligned
+    - Stop the SC2 node and try to misalign its storages in various way, reproducing the node behaviour in case of a
+      node crash during the storages update verifying that, restarting the SC2 node and reconnecting to the network, it
+      can recover the situation and achieve synchronization with the SC1
       
       
     Order of storages update in a complete pmodModify cycle:
         1. History storage (block)
-            appState (app1, app2 storages)
         ------------------------
+            application (appState1, appState2 storages)
         2. stateUtxoMerkleTree
         3. state
         4. stateForgerBox
         ------------------------
+            application (appWallet1, appWallet2 storages)
         5. wallet
         6. walletTransaction
         7. walletForgingStake
@@ -95,7 +97,7 @@ class DBToolTest(SidechainTestFramework):
     def setup_nodes(self):
         # Start MC node
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir,
-                           extra_args=[['-debug=sc', '-debug=ws', '-logtimemicros=1', '-scproofqueuesize=0']] * 1)
+                           extra_args=[['-debug=sc', '-debug=ws', '-logtimemicros=1', '-scproofqueuesize=0']])
 
     def sc_setup_chain(self):
         # Bootstrap new SC, specify SC node 1 connection to MC node 1
@@ -229,10 +231,18 @@ class DBToolTest(SidechainTestFramework):
         rollbackStorages(sc_node2, storages_list, 2)
         self.forgeBlockAndCheckSync()
 
+        print("Test application wallet misalignment ######")
+        storages_list = ["history"]
+        rollbackStorages(sc_node2, storages_list, 3)
+        storages_list = ["appWallet2", "wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
+        rollbackStorages(sc_node2, storages_list, 2)
+        self.forgeBlockAndCheckSync()
+
         print("Test 4 ######")
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 3)
         storages_list = ["stateForgerBox",
+                         "appWallet1", "appWallet2",
                          "wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
         rollbackStorages(sc_node2, storages_list, 2)
         self.forgeBlockAndCheckSync()
@@ -241,6 +251,7 @@ class DBToolTest(SidechainTestFramework):
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 3)
         storages_list = ["state", "stateForgerBox",
+                         "appWallet1", "appWallet2",
                          "wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
         rollbackStorages(sc_node2, storages_list, 2)
         self.forgeBlockAndCheckSync()
@@ -249,6 +260,18 @@ class DBToolTest(SidechainTestFramework):
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 3)
         storages_list = ["stateUtxoMerkleTree", "state", "stateForgerBox",
+                         "appWallet1", "appWallet2",
+                         "wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
+        rollbackStorages(sc_node2, storages_list, 2)
+        self.forgeBlockAndCheckSync()
+
+        print("Test app state misalignment ######")
+        storages_list = ["history"]
+        rollbackStorages(sc_node2, storages_list, 3)
+        # rollback just one of the two app storages (simple app has app1 and app2 storages)
+        storages_list = ["appState2",
+                         "stateUtxoMerkleTree", "state", "stateForgerBox",
+                         "appWallet1", "appWallet2",
                          "wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
         rollbackStorages(sc_node2, storages_list, 2)
         self.forgeBlockAndCheckSync()
@@ -256,16 +279,9 @@ class DBToolTest(SidechainTestFramework):
         print("Test 1 ######")
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 4)
-        storages_list = ["stateUtxoMerkleTree", "state", "stateForgerBox",
-                         "wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
-        rollbackStorages(sc_node2, storages_list, 2)
-        self.forgeBlockAndCheckSync()
-
-        print("Test app storages misalignment ######")
-        storages_list = ["history"]
-        rollbackStorages(sc_node2, storages_list, 4)
-        # rollback just one of the two app storages (simple app has app1 and app2 storages)
-        storages_list = ["app1", "stateUtxoMerkleTree", "state", "stateForgerBox",
+        storages_list = ["appState1", "appState2",
+                         "stateUtxoMerkleTree", "state", "stateForgerBox",
+                         "appWallet1", "appWallet2",
                          "wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
         rollbackStorages(sc_node2, storages_list, 2)
         self.forgeBlockAndCheckSync()
@@ -288,7 +304,9 @@ class DBToolTest(SidechainTestFramework):
         # the edge of consensus epoch switch
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 3)
-        storages_list = ["stateUtxoMerkleTree", "state", "stateForgerBox",
+        storages_list = ["appState1", "appState2",
+                         "stateUtxoMerkleTree", "state", "stateForgerBox",
+                         "appWallet1", "appWallet2",
                          "wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
         rollbackStorages(sc_node2, storages_list, 2)
 

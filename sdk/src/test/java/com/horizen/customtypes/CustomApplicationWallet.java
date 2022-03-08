@@ -5,6 +5,7 @@ import com.horizen.proposition.Proposition;
 import com.horizen.secret.Secret;
 import com.horizen.wallet.ApplicationWallet;
 
+import java.util.Collections;
 import java.util.List;
 
 public class CustomApplicationWallet implements ApplicationWallet {
@@ -26,5 +27,9 @@ public class CustomApplicationWallet implements ApplicationWallet {
     @Override
     public void onRollback(byte[] blockId) {
 
+    }
+    @Override
+    public List<byte[]> getStoragesVersionList() {
+        return Collections.singletonList(new byte[0]);
     }
 }

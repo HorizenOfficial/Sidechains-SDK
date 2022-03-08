@@ -450,10 +450,11 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   def getAppStateVersion(versions: util.List[Array[Byte]]) : VersionTag =
   {
-    val applicationStateVersionsSet = versions.asScala.toSet
+    val applicationStateVersionsSet = versions.asScala.map{x=>new ByteArrayWrapper(x)}.toSet
+
     if (applicationStateVersionsSet.size == 1) {
       log.debug("All application state storages are consistent, common version: " + BytesUtils.toHexString(applicationStateVersionsSet.head))
-      bytesToVersion(applicationStateVersionsSet.head)
+      bytesToVersion(applicationStateVersionsSet.head.data())
     } else {
       log.warn("Not all application state storages are consistent")
       versions.asScala.zipWithIndex.foreach{

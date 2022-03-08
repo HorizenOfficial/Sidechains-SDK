@@ -24,6 +24,9 @@ public class DefaultApplicationState implements ApplicationState {
     private VersionedLevelDbStorageAdapter appStorage1;
     private VersionedLevelDbStorageAdapter appStorage2;
 
+    public static byte[] NULL_VERSION = new byte[32];
+    public static byte[] DUMMY_KEY    = BytesUtils.fromHexString("abcd");
+
     public DefaultApplicationState(File storage1, File storage2) {
         appStorage1 = new VersionedLevelDbStorageAdapter(storage1);
         appStorage2 = new VersionedLevelDbStorageAdapter(storage2);
@@ -45,9 +48,8 @@ public class DefaultApplicationState implements ApplicationState {
     public Try<ApplicationState> onApplyChanges(SidechainStateReader stateReader, byte[] blockId, List<Box<Proposition>> newBoxes, List<byte[]> boxIdsToRemove) {
         ByteArrayWrapper version = new ByteArrayWrapper(blockId);
 
-        // version can not be used as a key, reverse it just to save some dummy key/value data
-        ByteArrayWrapper key   = new ByteArrayWrapper(BytesUtils.reverseBytes(blockId));
-        ByteArrayWrapper value = new ByteArrayWrapper(1);
+        ByteArrayWrapper key   = new ByteArrayWrapper(DUMMY_KEY);
+        ByteArrayWrapper value = new ByteArrayWrapper(blockId);
 
         List<Pair<ByteArrayWrapper, ByteArrayWrapper>> toUpdate = Arrays.asList(new Pair<>(key, value));
 
@@ -72,12 +74,11 @@ public class DefaultApplicationState implements ApplicationState {
     @Override
     public List<byte[]> getStoragesVersionList() {
         List<byte[]> list = new ArrayList<>();
-        byte[] nullVersion = new byte[32];
 
-        ByteArrayWrapper ver1 = appStorage1.lastVersionID().orElse(new ByteArrayWrapper(nullVersion));
+        ByteArrayWrapper ver1 = appStorage1.lastVersionID().orElse(new ByteArrayWrapper(NULL_VERSION));
         list.add(ver1.data());
 
-        ByteArrayWrapper ver2 = appStorage2.lastVersionID().orElse(new ByteArrayWrapper(nullVersion));
+        ByteArrayWrapper ver2 = appStorage2.lastVersionID().orElse(new ByteArrayWrapper(NULL_VERSION));
         list.add(ver2.data());
 
         logger.debug(String.format("Application state current versions: '%s', '%s'",

@@ -1,6 +1,6 @@
 package com.horizen
 
-import java.lang
+import java.{lang, util}
 import java.util.{List => JList, Optional => JOptional}
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock}
 import com.horizen.box.{Box, CoinsBox, ForgerBox}
@@ -14,7 +14,7 @@ import com.horizen.storage._
 import com.horizen.transaction.Transaction
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgingStakeMerklePathInfo}
-import scorex.core.{VersionTag, bytesToVersion, versionToId}
+import scorex.core.{VersionTag, bytesToVersion, versionToBytes, versionToId}
 import com.horizen.utils._
 import org.scalacheck.Prop.True
 import scorex.util.{ModifierId, ScorexLogging}
@@ -146,23 +146,30 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
 
     val boxIdsToRemove = changes.toRemove.map(_.boxId.array)
 
-    // Note: the fee payment boxes have no related transactions
-    val transactions: Seq[SidechainTypes#SCBT] = (newWalletBoxes.map(_.box.id()) ++ boxIdsToRemove).flatMap(id => txBoxes.get(id)).distinct
+    try {
+      log.debug("calling applicationWallet.onChangeBoxes")
+      applicationWallet.onChangeBoxes(version, newBoxes.toList.asJava, boxIdsToRemove.toList.asJava)
 
-    walletBoxStorage.update(new ByteArrayWrapper(version), newWalletBoxes.toList, boxIdsToRemove.toList).get
+      // Note: the fee payment boxes have no related transactions
+      val transactions: Seq[SidechainTypes#SCBT] = (newWalletBoxes.map(_.box.id()) ++ boxIdsToRemove).flatMap(id => txBoxes.get(id)).distinct
 
-    walletTransactionStorage.update(new ByteArrayWrapper(version), transactions).get
+      walletBoxStorage.update(new ByteArrayWrapper(version), newWalletBoxes.toList, boxIdsToRemove.toList).get
 
-    // We keep forger boxes separate to manage forging stake delegation
-    forgingBoxesInfoStorage.updateForgerBoxes(new ByteArrayWrapper(version), newDelegatedForgerBoxes, boxIdsToRemove).get
+      walletTransactionStorage.update(new ByteArrayWrapper(version), transactions).get
 
-    // In case utxoMerkleTreeViewOpt is defined, calculate and store the CSW data for every coin box in the Wallet
-    val utxoCswData: Seq[CswData] = utxoMerkleTreeViewOpt.map(view => calculateUtxoCswData(view)).getOrElse(Seq())
-    val ftCswData = calculateForwardTransferCswData(modifier.mainchainBlockReferencesData, pubKeys)
+      // We keep forger boxes separate to manage forging stake delegation
+      forgingBoxesInfoStorage.updateForgerBoxes(new ByteArrayWrapper(version), newDelegatedForgerBoxes, boxIdsToRemove).get
 
-    cswDataStorage.update(new ByteArrayWrapper(version), withdrawalEpoch, ftCswData ++ utxoCswData)
-    log.debug("wallet storages updates applied, now calling applicationWallet.onChangeBoxes")
-    applicationWallet.onChangeBoxes(version, newBoxes.toList.asJava, boxIdsToRemove.toList.asJava)
+      // In case utxoMerkleTreeViewOpt is defined, calculate and store the CSW data for every coin box in the Wallet
+      val utxoCswData: Seq[CswData] = utxoMerkleTreeViewOpt.map(view => calculateUtxoCswData(view)).getOrElse(Seq())
+      val ftCswData = calculateForwardTransferCswData(modifier.mainchainBlockReferencesData, pubKeys)
+
+      cswDataStorage.update(new ByteArrayWrapper(version), withdrawalEpoch, ftCswData ++ utxoCswData)
+    } catch {
+      case e: Exception =>
+        log.error("Could not update application wallet and storages: " + e.getMessage)
+        throw  new Exception(e)
+    }
 
     this
   }
@@ -220,10 +227,11 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     log.warn(s"rolling back wallet to version = ${to}")
     require(to != null, "Version to rollback to must be NOT NULL.")
     val version = new ByteArrayWrapper(BytesUtils.fromHexString(to))
-    walletBoxStorage.rollback(version).get
-    walletTransactionStorage.rollback(version).get
-    forgingBoxesInfoStorage.rollback(version).get
+    // reverse order of update
     cswDataStorage.rollback(version).get
+    forgingBoxesInfoStorage.rollback(version).get
+    walletTransactionStorage.rollback(version).get
+    walletBoxStorage.rollback(version).get
     applicationWallet.onRollback(version.data)
     this
   }
@@ -313,53 +321,69 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     cswDataStorage.getCswData(withdrawalEpochNumber)
   }
 
+  def getAppWalletVersion(versions: util.List[Array[Byte]]) : VersionTag =
+  {
+    val applicationWalletVersionsSet = versions.asScala.map{x=>new ByteArrayWrapper(x)}.toSet
+    if (applicationWalletVersionsSet.size == 1) {
+      log.debug("All application wallet storages are consistent, common version: " + BytesUtils.toHexString(applicationWalletVersionsSet.head))
+      bytesToVersion(applicationWalletVersionsSet.head.data())
+    } else {
+      log.warn("Not all application wallet storages are consistent")
+      versions.asScala.zipWithIndex.foreach{
+        case(x,i) => log.warn(s"app storage ${i} version: ${bytesToVersion(x)}")
+      }
+      // application has internal storages which are not aligned, return a null version tag
+      bytesToVersion(new ByteArrayWrapper(0).data())
+    }
+  }
+
   // Check that all wallet storages are consistent and in case forging box info storage is not, then try a rollback for it.
   // Return the state and common version or throw an exception if some unrecoverable misalignment has been detected
   def ensureStorageConsistencyAfterRestore: Try[(SidechainWallet, ByteArrayWrapper)] = {
     // TODO csw capability will be optional, related storage might even be empty
 
-    // It is assumed that when this method is called, all thr versions must be consistent among them
+    // It is assumed that when this method is called, all the versions must be consistent among them
     // since history and state are (according to the update procedure sequence: state --> wallet --> history)
     // The only exception can be the forging box info storage, because, it might have been updated upon
     // consensus epoch switch even before the state update.
     // In that case it can be ahead by one version only (except in the genesis phase), and that is checked
     // before applying a rollback
-    val version = walletBoxStorage.lastVersionId
+    val appWalletVersion = getAppWalletVersion(applicationWallet.getStoragesVersionList)
+    val version = bytesToVersion(walletBoxStorage.lastVersionId.get.data())
     if (
       // check these storages first, they are updated always together
-        version == walletTransactionStorage.lastVersionId &&
-          version == cswDataStorage.lastVersionId
+        version == bytesToVersion(walletTransactionStorage.lastVersionId.get.data()) &&
+          version == bytesToVersion(cswDataStorage.lastVersionId.get.data()) &&
+          version == appWalletVersion
     ) {
       // check forger box info storage, which is updated before state in case of epoch switch
-      if (version == forgingBoxesInfoStorage.lastVersionId) {
+      if (version == bytesToVersion(forgingBoxesInfoStorage.lastVersionId.get.data())) {
         log.debug("All wallet storage versions are consistent")
-        Success(this, version.get)
+        Success(this, new ByteArrayWrapper(versionToBytes(version)))
       } else {
-        val versionSome = version.get
+        val versionBaw = new ByteArrayWrapper(versionToBytes(version))
         // the version should be the previous at most
         val maxNumberOfVersionToRetrieve = 2
         val rollbackList = forgingBoxesInfoStorage.rollbackVersions(maxNumberOfVersionToRetrieve)
-        if (rollbackList.last == versionSome) {
+        if (rollbackList.last == versionBaw) {
           if (forgingBoxesInfoStorage.size == maxNumberOfVersionToRetrieve) {
             // this is ok, we have just the genesis block whose modId is the very first version, and the second
             // is the non-rollback version used when updating the ForgingStakeMerklePathInfo at the startup
             log.debug("All wallet storage versions are consistent")
-            Success(this, version.get)
+            Success(this, versionBaw)
           } else {
             // it can be the case of process stopped when we had not yet updated the state and we are switching epoch
             log.warn(s"Wallet forger box storage versions is NOT consistent, trying to rollback")
-            val rbVersion = forgingBoxesInfoStorage.rollback(versionSome) match {
-              case (Success(_)) => Some(bytesToVersion(versionSome.data()))
-              case Failure(exception) => {
-                None
-              }
+            val rbVersion = forgingBoxesInfoStorage.rollback(versionBaw) match {
+              case Success(_) => Some(bytesToVersion(versionBaw.data()))
+              case Failure(_) => None
             }
             if (rbVersion.isEmpty) {
               // unrecoverable
               log.error("Could not recover wallet forging storages")
               throw new RuntimeException("Could not rollback wallet forging box info storages")
             }
-            Success(this, version.get)
+            Success(this, versionBaw)
           }
         } else {
           log.error("Forging boxes info storage does not have the expected version in the rollback list")
