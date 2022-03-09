@@ -506,7 +506,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     val params1 = RegTestParams(
       scId1.data,
       scCreationBitVectorCertificateFieldConfigs = Seq(
-        new CustomBitvectorElementsConfig(127, 255)
+        // 4 field elements in a bitvector
+        new CustomBitvectorElementsConfig(254*4, 255)
       ),
       sidechainCreationVersion = SidechainCreationVersion0
     )

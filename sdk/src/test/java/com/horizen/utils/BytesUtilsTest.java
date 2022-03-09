@@ -365,4 +365,13 @@ public class BytesUtilsTest {
         }
         assertTrue("Invalid length Horizen public key hash expected to throw exception during parsing.", exceptionOccurred);
     }
+
+    @Test
+    public void getBytesFromBits() {
+        assertEquals("Different byte size expected.", 0, BytesUtils.getBytesFromBits(-1));
+        assertEquals("Different byte size expected.", 0, BytesUtils.getBytesFromBits(0));
+        assertEquals("Different byte size expected.", 1, BytesUtils.getBytesFromBits(3));
+        assertEquals("Different byte size expected.", 1, BytesUtils.getBytesFromBits(8));
+        assertEquals("Different byte size expected.", 2, BytesUtils.getBytesFromBits(9));
+    }
 }
