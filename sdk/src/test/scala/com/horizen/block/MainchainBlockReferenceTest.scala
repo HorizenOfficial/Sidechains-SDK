@@ -1,6 +1,7 @@
 package com.horizen.block
 
 import com.google.common.primitives.Ints
+import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion0, SidechainCreationVersion1}
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import com.horizen.params.{MainNetParams, RegTestParams, TestNetParams}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, CurrentSidechainVersionOnly, SidechainVersionZero, TestSidechainsVersionsManager}
@@ -506,7 +507,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
       scId1.data,
       scCreationBitVectorCertificateFieldConfigs = Seq(
         new CustomBitvectorElementsConfig(127, 255)
-      )
+      ),
+      sidechainCreationVersion = SidechainCreationVersion0
     )
 
     val mcblockTry1 = MainchainBlockReference.create(mcBlockBytes, params1, TestSidechainsVersionsManager(SidechainVersionZero))
@@ -529,7 +531,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     val scIdHex2 = "0000000000000000000000000000000000000000000000000000000000000000"
     val scId2 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex2))) // LE
 
-    val params2 = RegTestParams(scId2.data)
+    val params2 = RegTestParams(scId2.data, sidechainCreationVersion = SidechainCreationVersion0)
 
     val mcblockTry2 = MainchainBlockReference.create(mcBlockBytes, params2, TestSidechainsVersionsManager(SidechainVersionZero))
 
