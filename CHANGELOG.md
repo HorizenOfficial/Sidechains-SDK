@@ -1,3 +1,6 @@
+**0.3.1**
+1. Sidechain creation versioning support.
+
 **Blaze changes (0.3.0)**
 1. New proving system for certificates verification: Coboundary Marlin.
 2. PGD: decentralized certificates signing.
