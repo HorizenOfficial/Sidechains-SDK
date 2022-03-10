@@ -1,6 +1,3 @@
-**0.3.1**
-1. Sidechain creation versioning support.
-
 **Blaze changes (0.3.0)**
 1. New proving system for certificates verification: Coboundary Marlin.
 2. PGD: decentralized certificates signing.
@@ -14,6 +11,7 @@
 10. Ceased sidechain withdrawals support.
 11. Better logging mechanism. Logging options introduced in the configuration file.
 12. Objects serialization improved. New stream-based serialization schema introduced.
+13. Sidechain creation versioning support.
 
 **Beta changes**
 1. Mainchain synchronization: added backward transfer support with Withdrawal certificate with threshold signature zero-knowledge proof by using [zendoo-sc-cryptolib](https://github.com/HorizenOfficial/zendoo-sc-cryptolib)
