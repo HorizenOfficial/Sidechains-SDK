@@ -22,7 +22,9 @@ Configuration:
     SC node connected to the first MC node.
 
 Test:
-    TODO    
+    Create 2 alien sidechains of version 0 and 1. Test that a MC referenced block containing 3 certificates, one from the local SC and
+    2 from the aliens with custom field elements of length less than  32 bytes, is correctly handled when forging takes
+    place.    
 """
 
 
@@ -44,8 +46,6 @@ class SCVersionsAndMCCertificates(SidechainTestFramework):
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length, btr_data_length=0
                                                         , sc_creation_version=1), sc_node_configuration)
 
-        mc_node.generate(450)
-
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
 
     def sc_setup_nodes(self):
@@ -60,12 +60,12 @@ class SCVersionsAndMCCertificates(SidechainTestFramework):
         print("Mc height = {}".format(mc_node.getblockcount()))
         self.mcTest = CertTestUtils(self.options.tmpdir)
 
-        ret = create_alien_sidechain(self.mcTest, mc_node, scVersion=0, epochLength=9, customHexTag="5c00", feCfgList=[128, 128])
+        ret = create_alien_sidechain(self.mcTest, mc_node, scVersion=0, epochLength=self.sc_withdrawal_epoch_length-1, customHexTag="5c00", feCfgList=[128, 128])
         self.scid_ver0 = ret['scid']
         crtx1 = ret['txid']
         assert_true(crtx1 in mc_node.getrawmempool(), "Sc Creation is expected to be added to mempool.")
 
-        ret = create_alien_sidechain(self.mcTest, mc_node, scVersion=1, epochLength=9, customHexTag="5c01", feCfgList=[128, 128])
+        ret = create_alien_sidechain(self.mcTest, mc_node, scVersion=1, epochLength=self.sc_withdrawal_epoch_length-1, customHexTag="5c01", feCfgList=[128, 128])
         self.scid_ver1 = ret['scid']
         crtx2 = ret['txid']
         assert_true(crtx2 in mc_node.getrawmempool(), "Sc Creation is expected to be added to mempool.")

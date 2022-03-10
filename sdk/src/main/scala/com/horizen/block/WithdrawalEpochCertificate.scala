@@ -16,7 +16,7 @@ import scala.util.Try
 
 case class FieldElementCertificateField(rawData: Array[Byte]) extends ScorexLogging {
   def fieldElementBytes(version: SidechainCreationVersion): Array[Byte] = {
-    logger.info("Fe before: " + BytesUtils.toHexString(rawData))
+    logger.debug("Fe before: " + BytesUtils.toHexString(rawData))
     val bytes = version match {
       case SidechainCreationVersion0 =>
         logger.debug(s"sc version=${SidechainCreationVersion0}: prepend raw data to the FieldElement of size=${rawData.length}")

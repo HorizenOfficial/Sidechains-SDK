@@ -12,6 +12,7 @@ from sc_cum_comm_tree_hash import SCCumCommTreeHash
 from sc_genesisinfo_sc_versions import SCGenesisInfoScVersions
 from sc_multiple_certs import SCMultipleCerts
 from sc_nodes_initialize import SidechainNodesInitializationTest
+from sc_versions_and_mc_certs import SCVersionsAndMCCertificates
 from test_framework.util import assert_equal
 from mc_sc_connected_nodes import MCSCConnectedNodes
 from mc_sc_forging1 import MCSCForging1
@@ -109,7 +110,11 @@ def run_tests(log_file):
     assert_equal(0, result, "sc_csw_ceased_at_epoch_3 test failed!")
 
     result = run_test(SCGenesisInfoScVersions())
-    assert_equal(0, result, "sc_csw_ceased_at_epoch_3 test failed!")
+    assert_equal(0, result, "sc_genesisinfo_sc_versions test failed!")
+
+
+    result = run_test(SCVersionsAndMCCertificates())
+    assert_equal(0, result, "sc_versions_and_mc_certs test failed!")
 
 
 
