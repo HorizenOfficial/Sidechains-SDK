@@ -115,20 +115,11 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
         assertTrue(result.get("cswEnabled").isBoolean)
         assertTrue(result.get("cswEnabled").asBoolean)
       }
-      val params = MainNetParams(isCSWEnabled = false)
-      val sidechainCswApiRouteWithDisabledCSW = SidechainCswApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedCswManagerActorRef,params).route
-      Post(basePath + "isCSWEnabled") ~> sidechainCswApiRouteWithDisabledCSW ~> check {
-        status.intValue() shouldBe StatusCodes.OK.intValue
-        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        val result = mapper.readTree(entityAs[String]).get("result")
-        if (result == null)
-          fail("Serialization failed for object SidechainApiResponseBody")
-        assertEquals(1, result.elements().asScala.length)
-        assertTrue(result.get("cswEnabled").isBoolean)
-        assertFalse(result.get("cswEnabled").asBoolean)
-      }
       //Testing response in case of internal error
-      val sidechainCswApiRouteWithError = SidechainCswApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedCswManagerActorRef,null).route
+      val mockParams: MainNetParams = mock[MainNetParams]
+      Mockito.when(mockParams.isCSWEnabled).thenReturn(true).thenThrow(new RuntimeException)
+
+      val sidechainCswApiRouteWithError = SidechainCswApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedCswManagerActorRef,mockParams).route
       Post(basePath + "isCSWEnabled") ~> sidechainCswApiRouteWithError ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
@@ -229,4 +220,98 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
       }
     }
   }
+
+  "When CSW is disabled, the Api" should {
+    val params = MainNetParams(isCSWEnabled = false)
+    val sidechainCswApiRouteWithDisabledCSW = SidechainCswApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedCswManagerActorRef,params).route
+
+    "reply at /hasCeased" in {
+      sidechainApiMockConfiguration.setShould_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply(true)
+      Post(basePath + "hasCeased") ~> sidechainCswApiRouteWithDisabledCSW ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("state").isBoolean)
+        assertTrue(result.get("state").asBoolean)
+      }
+    }
+
+    "reply at /isCSWEnabled" in {
+      Post(basePath + "isCSWEnabled") ~> sidechainCswApiRouteWithDisabledCSW ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("cswEnabled").isBoolean)
+        assertFalse(result.get("cswEnabled").asBoolean)
+      }
+    }
+
+    def checkIsNotImplemented(): Unit = {
+      status.intValue() shouldBe StatusCodes.OK.intValue
+      responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      val result = mapper.readTree(entityAs[String]).get("error")
+      if (result == null)
+        fail("Serialization failed for object ErrorCSWNotEnabled")
+
+      assertEquals(3, result.elements().asScala.length)
+      assertTrue(result.get("code").isTextual)
+      assertEquals("0707", result.get("code").asText())
+    }
+
+    "reply that it is not implemented at /cswBoxIds" in {
+      Post(basePath + "cswBoxIds") ~> sidechainCswApiRouteWithDisabledCSW ~> check {
+        checkIsNotImplemented()
+      }
+    }
+
+    "reply that it is not implemented at /cswInfo" in {
+      Post(basePath + "cswInfo")
+        .withEntity("{\"boxId\":\"" + ByteUtils.toHexString(getRandomBoxId(0)) + "\"}") ~> sidechainCswApiRouteWithDisabledCSW ~> check {
+        checkIsNotImplemented()
+      }
+    }
+
+    "reply that it is not implemented at /nullifier" in {
+      Post(basePath + "nullifier")
+        .withEntity("{\"boxId\":\"" + ByteUtils.toHexString(getRandomBoxId(0)) + "\"}") ~> sidechainCswApiRouteWithDisabledCSW ~> check {
+        checkIsNotImplemented()
+      }
+    }
+
+
+    "reply that it is not implemented at /generateCswProof" in {
+      Post(basePath + "generateCswProof")
+        .withEntity("{\"boxId\":\"" + ByteUtils.toHexString(getRandomBoxId(0)) + "\", \"receiverAddress\":\"" + mcAddress + "\"}") ~> sidechainCswApiRouteWithDisabledCSW ~> check {
+        checkIsNotImplemented()
+      }
+    }
+
+    "reject and reply with http error" in {
+      Get(basePath) ~> sidechainCswApiRouteWithDisabledCSW ~> check {
+        rejection shouldBe MethodRejection(HttpMethods.POST)
+      }
+
+      Get(basePath) ~> Route.seal(sidechainCswApiRouteWithDisabledCSW) ~> check {
+        status.intValue() shouldBe StatusCodes.MethodNotAllowed.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+
+
+      Post(basePath + "randomMethodName").withEntity("maybe_a_json") ~> Route.seal(sidechainCswApiRouteWithDisabledCSW) ~> check {
+        status.intValue() shouldBe StatusCodes.NotFound.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+
+    }
+
+
+
+  }
+
 }

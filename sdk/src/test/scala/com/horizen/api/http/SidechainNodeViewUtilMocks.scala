@@ -139,7 +139,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
 
   def getNodeStateMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeState = {
     val nodeState: NodeState = mock[NodeState]
-    Mockito.when(nodeState.hasCeased()).thenAnswer(_ => true)
+    Mockito.when(nodeState.hasCeased()).thenReturn(true)
     nodeState
   }
 

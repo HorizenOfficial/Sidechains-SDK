@@ -274,7 +274,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
       TestActor.KeepRunning
     }
   })
-  val mockedCswManagerActorRef: ActorRef = mockedCswManagerActor.ref
+  val mockedCswManagerActorRef: Option[ActorRef] = Some(mockedCswManagerActor.ref)
 
   implicit def default() = RouteTestTimeout(3.second)
 

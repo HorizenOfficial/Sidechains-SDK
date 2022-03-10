@@ -117,8 +117,6 @@ class SidechainApp @Inject()
     case Success(output) => output
     case Failure(exception) => throw new IllegalArgumentException("Genesis block specified in the configuration file has no Sidechain Creation info.", exception)
   }
-
-
   val isCSWEnabled = sidechainCreationOutput.getScCrOutput.ceasedVkOpt.isDefined
   log.info(s"Ceased Sidechain Withdrawal enabled: $isCSWEnabled")
 
@@ -321,7 +319,7 @@ class SidechainApp @Inject()
   val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.scorexSettings.network)
 
   // Init CSW manager
-  val cswManager: ActorRef = CswManagerRef(sidechainSettings, params, nodeViewHolderRef)
+  val cswManager: Option[ActorRef] = if (isCSWEnabled) Some(CswManagerRef(sidechainSettings, params, nodeViewHolderRef)) else None
 
   //Websocket server for the Explorer
   if(sidechainSettings.websocket.wsServer) {

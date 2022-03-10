@@ -3,8 +3,8 @@
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import assert_true, start_nodes, \
-    websocket_port_by_mc_node_index, assert_false
+from test_framework.util import start_nodes, \
+    websocket_port_by_mc_node_index, assert_false, assert_equal
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes
 
@@ -23,7 +23,7 @@ Note: the other API methods are already tested with other tests, so they won't b
 """
 
 
-class CSWApiWithCSWEnabledTest(SidechainTestFramework):
+class CSWApiWithCSWDisabledTest(SidechainTestFramework):
     number_of_mc_nodes = 1
     number_of_sidechain_nodes = 1
 
@@ -55,12 +55,48 @@ class CSWApiWithCSWEnabledTest(SidechainTestFramework):
     def run_test(self):
         sc_node = self.sc_nodes[0]
 
+        print("Calling hasCeased...")
+        has_ceased = sc_node.csw_hasCeased()["result"]["state"]
+
+        assert_false(has_ceased, "Sidechain expected to not be ceased.")
+        print("OK\n")
+
         print("Calling isCSWEnabled...")
         is_csw_enabled = sc_node.csw_isCSWEnabled()["result"]["cswEnabled"]
 
         assert_false(is_csw_enabled, "Ceased Sidechain Withdrawal expected to be disabled.")
         print("OK\n")
 
+        print("Calling cswBoxIds...")
+        error_code = sc_node.csw_cswBoxIds()["error"]["code"]
+        print(error_code)
+
+        assert_equal("0707",error_code, "Expected CSW disabled error code")
+        print("OK\n")
+
+        print("Calling cswInfo...")
+        error_code = sc_node.csw_cswInfo()["error"]["code"]
+        print(error_code)
+
+        assert_equal("0707",error_code, "Expected CSW disabled error code")
+        print("OK\n")
+
+        print("Calling nullifier...")
+        error_code = sc_node.csw_nullifier()["error"]["code"]
+        print(error_code)
+
+        assert_equal("0707",error_code, "Expected CSW disabled error code")
+        print("OK\n")
+
+        print("Calling generateCswProof...")
+        error_code = sc_node.csw_generateCswProof()["error"]["code"]
+        print(error_code)
+
+        assert_equal("0707",error_code, "Expected CSW disabled error code")
+        print("OK\n")
+
+
+
 
 if __name__ == "__main__":
-    CSWApiWithCSWEnabledTest().main()
+    CSWApiWithCSWDisabledTest().main()
