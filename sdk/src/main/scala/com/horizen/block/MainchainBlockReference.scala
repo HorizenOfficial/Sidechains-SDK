@@ -84,7 +84,8 @@ case class MainchainBlockReference(
             s"bitvectors number is inconsistent to Sc Creation info.")
         }
         for (i <- cert.bitVectorCertificateFields.indices) {
-          if (cert.bitVectorCertificateFields(i).tryMerkleRootBytesWithCheck(params.scCreationBitVectorCertificateFieldConfigs(i).getBitVectorSizeBits).isFailure)
+          // Note: bitVectorSizeBits must be transformed to bytes first. Considering the protocol we are sure that bit size % 8 == 0.
+          if (cert.bitVectorCertificateFields(i).tryMerkleRootBytesWithCheck(BytesUtils.getBytesFromBits(params.scCreationBitVectorCertificateFieldConfigs(i).getBitVectorSizeBits)).isFailure)
             throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} Top quality certificate " +
               s"bitvectors data length is invalid.")
         }

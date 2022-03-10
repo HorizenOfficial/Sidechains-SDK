@@ -204,7 +204,7 @@ class CswManager(settings: SidechainSettings,
                     BytesUtils.reverseBytes(params.sidechainId),
                     data.getNullifier,
                     getProofInfo(boxId),
-                    cswWitnessHolder.lastActiveCertOpt.map(cert => CryptoLibProvider.cswCircuitFunctions.getCertDataHash(cert, params)),
+                    cswWitnessHolder.lastActiveCertOpt.map(cert => CryptoLibProvider.cswCircuitFunctions.getCertDataHash(cert, params.sidechainCreationVersion)),
                     cswWitnessHolder.mcbScTxsCumComEnd)
                 }
                 sender() ! infoTry
@@ -241,11 +241,13 @@ class CswManager(settings: SidechainSettings,
                         CryptoLibProvider.cswCircuitFunctions.ftCreateProof(ft, cswWitnessHolder.lastActiveCertOpt.asJava,
                           cswWitnessHolder.mcbScTxsCumComStart, cswWitnessHolder.scTxsComHashes.asJava,
                           cswWitnessHolder.mcbScTxsCumComEnd, receiverPubKeyHash, pk, params.withdrawalEpochLength,
-                          params.calculatedSysDataConstant, params.sidechainId, params.cswProvingKeyFilePath, true, true, params);
+                          params.calculatedSysDataConstant, params.sidechainId, params.cswProvingKeyFilePath, true, true,
+                          params.sidechainCreationVersion);
                       case utxo: UtxoCswData =>
                         CryptoLibProvider.cswCircuitFunctions.utxoCreateProof(utxo, cswWitnessHolder.lastActiveCertOpt.get,
                           cswWitnessHolder.mcbScTxsCumComEnd, receiverPubKeyHash, pk, params.withdrawalEpochLength,
-                          params.calculatedSysDataConstant, params.sidechainId, params.cswProvingKeyFilePath, true, true, params);
+                          params.calculatedSysDataConstant, params.sidechainId, params.cswProvingKeyFilePath, true, true,
+                          params.sidechainCreationVersion);
                     }
                   } match {
                     case Success(proof) =>

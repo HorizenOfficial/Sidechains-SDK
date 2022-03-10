@@ -8,6 +8,7 @@ import com.horizen.proposition.Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.utils.ForwardTransferCswData;
 import com.horizen.utils.UtxoCswData;
+import scala.Enumeration;
 
 import java.util.List;
 import java.util.Optional;
@@ -17,7 +18,7 @@ public interface CswCircuit {
 
     FieldElement getUtxoMerkleTreeLeaf(Box<Proposition> box);
 
-    byte[] getCertDataHash(WithdrawalEpochCertificate cert, NetworkParams params) throws Exception;
+    byte[] getCertDataHash(WithdrawalEpochCertificate cert, Enumeration.Value sidechainCreationVersion) throws Exception;
 
     int rangeSize(int withdrawalEpochLength);
 
@@ -36,7 +37,7 @@ public interface CswCircuit {
                            String provingKeyPath,
                            boolean checkProvingKey,
                            boolean zk,
-                           NetworkParams params) throws Exception;
+                           Enumeration.Value sidechainCreationVersion) throws Exception;
 
     byte[] ftCreateProof(ForwardTransferCswData ft,
                          Optional<WithdrawalEpochCertificate> lastActiveCertOpt,
@@ -51,5 +52,5 @@ public interface CswCircuit {
                          String provingKeyPath,
                          boolean checkProvingKey,
                          boolean zk,
-                         NetworkParams params) throws Exception;
+                         Enumeration.Value sidechainCreationVersion) throws Exception;
 }

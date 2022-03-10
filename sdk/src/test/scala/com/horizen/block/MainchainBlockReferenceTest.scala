@@ -506,7 +506,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     val params1 = RegTestParams(
       scId1.data,
       scCreationBitVectorCertificateFieldConfigs = Seq(
-        new CustomBitvectorElementsConfig(127, 255)
+        // 4 field elements in a bitvector
+        new CustomBitvectorElementsConfig(254*4, 255)
       ),
       sidechainCreationVersion = SidechainCreationVersion0
     )
@@ -531,7 +532,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     val scIdHex2 = "0000000000000000000000000000000000000000000000000000000000000000"
     val scId2 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex2))) // LE
 
-    val params2 = RegTestParams(scId2.data)
+    val params2 = RegTestParams(scId2.data, sidechainCreationVersion = SidechainCreationVersion0)
 
     val mcblockTry2 = MainchainBlockReference.create(mcBlockBytes, params2, TestSidechainsVersionsManager(SidechainVersionZero))
 
@@ -561,7 +562,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_with_certificate_with_custom_fields_mixed_sc_versions").getLines().next()
     val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
-    val bitVectorSizeInBytes = 254*4 / 8
+    val bitVectorSizeInBits = 254*4
 
     // Test 1: Check for existing sidechain
     val scIdHex1 = "269cdebdefc7fb0c4b198cb476c976af6b95b571d7f482650387070d2c7eb8af"
@@ -591,7 +592,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     val params2 = RegTestParams(
       scId2.data,
       scCreationBitVectorCertificateFieldConfigs = Seq(
-        new CustomBitvectorElementsConfig(bitVectorSizeInBytes, 151)
+        new CustomBitvectorElementsConfig(bitVectorSizeInBits, 151)
       ),
       sidechainCreationVersion = SidechainCreationVersion0
     )
@@ -618,7 +619,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     val params3 = RegTestParams(
       scId3.data,
       scCreationBitVectorCertificateFieldConfigs = Seq(
-        new CustomBitvectorElementsConfig(bitVectorSizeInBytes, 151)
+        new CustomBitvectorElementsConfig(bitVectorSizeInBits, 151)
       ),
       sidechainCreationVersion = SidechainCreationVersion1
     )
