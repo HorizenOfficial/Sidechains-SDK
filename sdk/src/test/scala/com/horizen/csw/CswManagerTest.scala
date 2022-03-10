@@ -21,8 +21,8 @@ import com.horizen.utils.{ByteArrayWrapper, CswData, ForwardTransferCswData, Utx
 import org.junit.Assert._
 import org.junit.{Assert, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito.MockitoSugar
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.ChangedState
@@ -37,7 +37,7 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
 
   implicit lazy val actorSystem: ActorSystem = ActorSystem("csw-actor-test")
   implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("scorex.executionContext")
-  implicit val timeout: Timeout = 100 milliseconds
+  implicit val timeout: Timeout = 300 milliseconds
 
   case object WatchOk
 

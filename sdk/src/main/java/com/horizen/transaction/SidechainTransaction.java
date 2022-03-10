@@ -61,14 +61,20 @@ abstract public class SidechainTransaction<P extends Proposition, B extends Box<
     public abstract void transactionSemanticValidity() throws TransactionSemanticValidityException;
 
     // We check, that:
-    // 1) there is no double spend boxes.
-    // 2) nonces for new boxes were enforced according to our algorithm;
-    // 3) coin balances are valid;
-    // 4) non-coin boxes values are non-negative;
-    // 5) fee is non-negative.
+    // 1) transaction isn't too large
+    // 2) there is no double spend boxes.
+    // 3) nonces for new boxes were enforced according to our algorithm;
+    // 4) coin balances are valid;
+    // 5) non-coin boxes values are non-negative;
+    // 6) fee is non-negative.
     // Then do inheritors check.
     @Override
     public final void semanticValidity() throws TransactionSemanticValidityException {
+        // Check size of the transaction
+        if (bytes().length > MAX_TRANSACTION_SIZE) {
+            throw new TransactionSemanticValidityException("Transaction is too large.");
+        }
+
         // Check that transaction doesn't make a double spend,
         // by verifying that the the size of the unique set of box ids is equal to the unlockers size.
         if(unlockers().size() != boxIdsToOpen().size())

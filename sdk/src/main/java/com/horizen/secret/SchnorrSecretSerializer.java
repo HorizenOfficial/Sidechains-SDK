@@ -1,6 +1,5 @@
 package com.horizen.secret;
 
-import com.horizen.cryptolibprovider.CryptoLibProvider;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
@@ -21,11 +20,15 @@ public class SchnorrSecretSerializer implements SecretSerializer<SchnorrSecret> 
 
     @Override
     public void serialize(SchnorrSecret secret, Writer writer) {
-        writer.putBytes(secret.bytes());
+        writer.putBytes(secret.secretBytes);
+        writer.putBytes(secret.publicBytes);
     }
 
     @Override
     public SchnorrSecret parse(Reader reader) {
-        return SchnorrSecret.parse(reader.getBytes(reader.remaining()));
+        byte[] secretKey = reader.getBytes(SchnorrSecret.SECRET_KEY_LENGTH);
+        byte[] publicKey = reader.getBytes(SchnorrSecret.PUBLIC_KEY_LENGTH);
+
+        return new SchnorrSecret(secretKey, publicKey);
     }
 }

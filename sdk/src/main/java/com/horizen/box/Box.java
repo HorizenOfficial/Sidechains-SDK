@@ -1,6 +1,5 @@
 package com.horizen.box;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
@@ -46,7 +45,9 @@ public interface Box<P extends Proposition>
     byte[] customFieldsHash();
 
     @Override
-    byte[] bytes();
+    default byte[] bytes() {
+        return serializer().toBytes(this);
+    }
 
     @Override
     BoxSerializer serializer();

@@ -19,7 +19,7 @@ import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.{BytesUtils, Pair}
 import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.util.{ModifierId, bytesToId, idToBytes}
 

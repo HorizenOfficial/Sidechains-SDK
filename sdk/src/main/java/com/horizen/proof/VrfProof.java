@@ -10,15 +10,19 @@ import com.horizen.vrf.VrfOutput;
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils;
 
 import java.util.Arrays;
-import java.util.Objects;
 import java.util.Optional;
 
 @JsonView(Views.Default.class)
 public final class VrfProof implements ProofOfKnowledge<VrfSecretKey, VrfPublicKey> {
-    private final byte[] proofBytes;
+    public static final int PROOF_LENGTH = CryptoLibProvider.vrfFunctions().vrfProofLen();
+
+    @JsonProperty("vrfProof")
+    final byte[] proofBytes;
 
     public VrfProof(byte[] proof) {
-        Objects.requireNonNull(proof, "Vrf proof can't be null");
+        if (proof.length != PROOF_LENGTH)
+            throw new IllegalArgumentException(String.format("Incorrect proof length, %d expected, %d found", PROOF_LENGTH,
+                    proof.length));
 
         proofBytes = Arrays.copyOf(proof, proof.length);
     }
@@ -30,12 +34,6 @@ public final class VrfProof implements ProofOfKnowledge<VrfSecretKey, VrfPublicK
     @Override
     public boolean isValid(VrfPublicKey proposition, byte[] message) {
         return CryptoLibProvider.vrfFunctions().verifyProof(message, proposition.pubKeyBytes(), proofBytes);
-    }
-
-    @JsonProperty("vrfProof")
-    @Override
-    public byte[] bytes() {
-        return Arrays.copyOf(proofBytes, proofBytes.length);
     }
 
     @Override
@@ -54,10 +52,6 @@ public final class VrfProof implements ProofOfKnowledge<VrfSecretKey, VrfPublicK
     @Override
     public int hashCode() {
         return Arrays.hashCode(proofBytes);
-    }
-
-    public static VrfProof parse(byte[] bytes) {
-        return new VrfProof(bytes);
     }
 
     @Override

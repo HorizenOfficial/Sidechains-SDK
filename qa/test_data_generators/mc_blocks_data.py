@@ -4,11 +4,12 @@ import os
 from decimal import Decimal
 
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
+from test_framework.authproxy import EncodeDecimal
 from test_framework.util import assert_equal, assert_true, start_nodes, forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import create_sidechain, \
     check_mainchain_block_reference_info, check_wallet_coins_balance, generate_next_blocks, cert_proof_keys_paths, \
     generate_random_field_element_hex, csw_proof_keys_paths
-from SidechainTestFramework.sc_boostrap_info import SCCreationInfo, Account
+from SidechainTestFramework.sc_boostrap_info import SCCreationInfo, Account, LARGE_WITHDRAWAL_EPOCH_LENGTH
 
 """
 Generate MC Blocks data for Unit tests
@@ -45,7 +46,9 @@ class McTxsData(SidechainTestFramework):
         block_json = mc_node.getblock(block_id)
 
         print("MC Block without SC data: \nHash = {0}\nHex = {1}\nJson = {2}\n"
-              .format(str(block_id), str(block_hex), str(block_json)))
+              .format(str(block_id),
+                      str(block_hex),
+                      json.dumps(block_json, sort_keys=True, indent=4, default=EncodeDecimal)))
 
 
         ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
@@ -54,7 +57,7 @@ class McTxsData(SidechainTestFramework):
 
 
         # Generate MC block with single sidechain mentioned - sidechain creation output
-        sc_creation_info = SCCreationInfo(mc_node, 100, 900, btr_data_length=2)
+        sc_creation_info = SCCreationInfo(mc_node, 100, LARGE_WITHDRAWAL_EPOCH_LENGTH, btr_data_length=2)
         boot_info = create_sidechain(sc_creation_info, 0, cert_proof_keys_paths(ps_keys_dir),
                                      csw_proof_keys_paths(ps_keys_dir, sc_creation_info.withdrawal_epoch_length))
         sidechain_id_1 = str(boot_info.sidechain_id)
@@ -63,7 +66,10 @@ class McTxsData(SidechainTestFramework):
         block_hex = mc_node.getblock(block_id, False)
         block_json = mc_node.getblock(block_id)
         print("MC Block with Tx with single ScCreation output: \nHash = {0}\nHex = {1}\nJson = {2}\nScId = {3}\n\n"
-              .format(str(block_id), str(block_hex), str(block_json), sidechain_id_1))
+              .format(str(block_id),
+                      str(block_hex),
+                      json.dumps(block_json, sort_keys=True, indent=4, default=EncodeDecimal),
+                      sidechain_id_1))
 
 
         # Declare 2 more sidechains
@@ -91,7 +97,10 @@ class McTxsData(SidechainTestFramework):
         block_hex = mc_node.getblock(block_id, False)
         block_json = mc_node.getblock(block_id)
         print("MC Block with with Tx single FT: \nHash = {0}\nHex = {1}\nJson = {2}\nScId = {3}\n\n"
-            .format(str(block_id), str(block_hex), str(block_json), sidechain_id_1))
+            .format(str(block_id),
+                    str(block_hex),
+                    json.dumps(block_json, sort_keys=True, indent=4, default=EncodeDecimal),
+                    sidechain_id_1))
 
 
         # Generate MC block with 3 sidechains mentioned.
@@ -113,7 +122,10 @@ class McTxsData(SidechainTestFramework):
         sidechain_ids = [sidechain_id_1, sidechain_id_2, sidechain_id_3]
         sorted_sidechain_ids = sorted(sidechain_ids, key = lambda x: x[-2:])
         print("MC Block with multiple SCs mentioned (3 FT for different sidechains): \nHash = {0}\nHex = {1}\nJson = {2}\nSidechains = {3}\n"
-              .format(str(block_id), str(block_hex), str(block_json), sorted_sidechain_ids))
+              .format(str(block_id),
+                      str(block_hex),
+                      json.dumps(block_json, sort_keys=True, indent=4, default=EncodeDecimal),
+                      sorted_sidechain_ids))
 
 
         # Generate block with 1 MBTR
@@ -133,7 +145,10 @@ class McTxsData(SidechainTestFramework):
         block_hex = mc_node.getblock(block_id, False)
         block_json = mc_node.getblock(block_id)
         print("MC Block with Tx with single MBTR output: \nHash = {0}\nHex = {1}\nJson = {2}\nScId = {3}\n\n"
-              .format(str(block_id), str(block_hex), str(block_json), sidechain_id_1))
+              .format(str(block_id),
+                      str(block_hex),
+                      json.dumps(block_json, sort_keys=True, indent=4, default=EncodeDecimal),
+                      sidechain_id_1))
 
 
 if __name__ == "__main__":

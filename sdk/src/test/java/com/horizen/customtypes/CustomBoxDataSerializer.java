@@ -22,11 +22,14 @@ public class CustomBoxDataSerializer implements BoxDataSerializer<CustomBoxData>
 
     @Override
     public void serialize(CustomBoxData boxData, Writer writer) {
-        writer.putBytes(boxData.bytes());
+        boxData.proposition().serializer().serialize(boxData.proposition(), writer);
+        writer.putLong(boxData.value());
     }
 
     @Override
     public CustomBoxData parse(Reader reader) {
-        return CustomBoxData.parseBytes(reader.getBytes(reader.remaining()));
+        CustomPublicKeyProposition proposition = CustomPublicKeyPropositionSerializer.getSerializer().parse(reader);
+        long value = reader.getLong();
+        return new CustomBoxData(proposition, value);
     }
 }

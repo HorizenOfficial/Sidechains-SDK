@@ -2,7 +2,7 @@ package com.horizen.chain
 
 import org.junit.Assert.{assertEquals, assertFalse, assertNotEquals, assertTrue}
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 
 import scala.util.Try
 

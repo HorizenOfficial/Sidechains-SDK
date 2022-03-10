@@ -12,7 +12,7 @@ import com.horizen.utils.{MerkleTree, WithdrawalEpochInfo}
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.{Before, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 import scorex.core.NodeViewHolder.DownloadRequest
 import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
 import scorex.core.consensus.History.ProgressInfo

@@ -6,7 +6,7 @@ import com.horizen.params.{MainNetParams, RegTestParams, TestNetParams}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.junit.{Ignore, Test}
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue, fail => jFail}
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 
 import scala.io.Source

@@ -53,12 +53,8 @@ object MainchainBlockReferenceDataSerializer extends ScorexSerializer[MainchainB
   override def serialize(obj: MainchainBlockReferenceData, w: Writer): Unit = {
     w.putBytes(obj.headerHash)
 
-    obj.sidechainRelatedAggregatedTransaction match {
-      case Some(tx) =>
-        w.putInt(tx.bytes().length)
-        w.putBytes(tx.bytes())
-      case _ =>
-        w.putInt(0)
+    w.putOption(obj.sidechainRelatedAggregatedTransaction) {case (writer: Writer, aggregatedTransaction: MC2SCAggregatedTransaction) =>
+      MC2SCAggregatedTransactionSerializer.getSerializer.serialize(aggregatedTransaction, writer)
     }
 
     obj.existenceProof match {
@@ -93,14 +89,7 @@ object MainchainBlockReferenceDataSerializer extends ScorexSerializer[MainchainB
   override def parse(r: Reader): MainchainBlockReferenceData = {
     val headerHash: Array[Byte] = r.getBytes(HASH_BYTES_LENGTH)
 
-    val mc2scAggregatedTransactionSize: Int = r.getInt()
-
-    val mc2scTx: Option[MC2SCAggregatedTransaction] = {
-      if (mc2scAggregatedTransactionSize > 0)
-        Some(MC2SCAggregatedTransactionSerializer.getSerializer.parseBytes(r.getBytes(mc2scAggregatedTransactionSize)))
-      else
-        None
-    }
+    val mc2scTx: Option[MC2SCAggregatedTransaction] = r.getOption(MC2SCAggregatedTransactionSerializer.getSerializer.parse(r))
 
     val existenceProofSize: Int = r.getInt()
 

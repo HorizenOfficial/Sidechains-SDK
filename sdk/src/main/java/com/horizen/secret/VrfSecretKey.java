@@ -1,6 +1,5 @@
 package com.horizen.secret;
 
-import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.utils.Pair;
@@ -19,8 +18,11 @@ import static com.horizen.cryptolibprovider.VrfFunctions.ProofType.VRF_PROOF;
 import static com.horizen.cryptolibprovider.VrfFunctions.ProofType.VRF_OUTPUT;
 
 public class VrfSecretKey implements Secret {
-    private final byte[] secretBytes;
-    private final byte[] publicBytes;
+    public static final int SECRET_KEY_LENGTH = CryptoLibProvider.vrfFunctions().vrfSecretKeyLength();
+    public static final int PUBLIC_KEY_LENGTH = CryptoLibProvider.vrfFunctions().vrfPublicKeyLen();
+
+    final byte[] secretBytes;
+    final byte[] publicBytes;
 
     public VrfSecretKey(byte[] secretKey, byte[] publicKey) {
         Objects.requireNonNull(secretKey, "Secret key can't be null");
@@ -52,23 +54,6 @@ public class VrfSecretKey implements Secret {
     public VrfPublicKey publicImage() {
         byte[] publicKey = Arrays.copyOf(publicBytes, publicBytes.length);
         return new VrfPublicKey(publicKey);
-    }
-
-    @Override
-    public byte[] bytes() {
-        int secretLength = secretBytes.length;
-        return Bytes.concat(Ints.toByteArray(secretLength), secretBytes, publicBytes);
-    }
-
-    public static VrfSecretKey parse(byte[] bytes) {
-        int secretKeyOffset = Ints.BYTES;
-        int secretKeyLength = Ints.fromByteArray(Arrays.copyOfRange(bytes, 0, secretKeyOffset));
-        int publicKeyOffset = secretKeyOffset + secretKeyLength;
-
-        byte[] secretKey = Arrays.copyOfRange(bytes, secretKeyOffset, publicKeyOffset);
-        byte[] publicKey = Arrays.copyOfRange(bytes, publicKeyOffset, bytes.length);
-
-        return new VrfSecretKey(secretKey, publicKey);
     }
 
     @Override

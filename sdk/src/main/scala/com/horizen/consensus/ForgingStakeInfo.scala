@@ -51,24 +51,14 @@ object ForgingStakeInfo {
 
 object ForgingStakeInfoSerializer extends ScorexSerializer[ForgingStakeInfo]{
   override def serialize(obj: ForgingStakeInfo, w: Writer): Unit = {
-    val blockSignPublicKeyBytes = PublicKey25519PropositionSerializer.getSerializer.toBytes(obj.blockSignPublicKey)
-    w.putInt(blockSignPublicKeyBytes.length)
-    w.putBytes(blockSignPublicKeyBytes)
-
-    val vrfPublicKeyBytes = VrfPublicKeySerializer.getSerializer.toBytes(obj.vrfPublicKey)
-    w.putInt(vrfPublicKeyBytes.length)
-    w.putBytes(vrfPublicKeyBytes)
-
+    PublicKey25519PropositionSerializer.getSerializer.serialize(obj.blockSignPublicKey, w)
+    VrfPublicKeySerializer.getSerializer.serialize(obj.vrfPublicKey, w)
     w.putLong(obj.stakeAmount)
   }
 
   override def parse(r: Reader): ForgingStakeInfo = {
-    val blockSignPublicKeyBytesLength = r.getInt()
-    val blockSignPublicKey = PublicKey25519PropositionSerializer.getSerializer.parseBytes(r.getBytes(blockSignPublicKeyBytesLength))
-
-    val vrfPublicKeyBytesLength = r.getInt()
-    val vrfPublicKey = VrfPublicKeySerializer.getSerializer.parseBytes(r.getBytes(vrfPublicKeyBytesLength))
-
+    val blockSignPublicKey = PublicKey25519PropositionSerializer.getSerializer.parse(r)
+    val vrfPublicKey = VrfPublicKeySerializer.getSerializer.parse(r)
     val stakeAmount = r.getLong()
 
     ForgingStakeInfo(blockSignPublicKey, vrfPublicKey, stakeAmount)

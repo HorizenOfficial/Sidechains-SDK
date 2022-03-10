@@ -66,7 +66,7 @@ def run_tests(log_file):
     assert_equal(0, result, "mc_sc_forging_delegation test failed!")
 
     result = run_test(MCSCForgingFeePayments())
-    assert_equal(0, result, "mc_sc_forging_delegation test failed!")
+    assert_equal(0, result, "mc_sc_forging_fee_payments test failed!")
 
     result = run_test(SCForwardTransfer())
     assert_equal(0, result, "sc_forward_transfer test failed!")

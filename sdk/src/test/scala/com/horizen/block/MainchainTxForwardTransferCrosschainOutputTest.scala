@@ -6,7 +6,7 @@ import com.horizen.secret.PrivateKey25519Creator
 import com.horizen.utils.{BytesUtils, Utils}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 
 import scala.util.Random
 import scala.util.Try

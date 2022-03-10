@@ -1,14 +1,12 @@
 package com.horizen.utils;
 
-import com.google.common.primitives.Ints;
+import scorex.core.serialization.ScorexSerializer;
 
-import java.io.ByteArrayOutputStream;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-public class MerklePath {
+public class MerklePath implements scorex.core.serialization.BytesSerializable {
     List<Pair<Byte, byte[]>> merklePath;
 
     // Merkle Tree:
@@ -54,42 +52,14 @@ public class MerklePath {
         return tmp;
     }
 
+    @Override
     public byte[] bytes() {
-        int size = merklePath.size();
-        ByteArrayOutputStream resStream = new ByteArrayOutputStream();
-        resStream.write(Ints.toByteArray(size), 0, 4);
-        for(Pair<Byte, byte[]> pair : merklePath) {
-            resStream.write(pair.getKey());
-            resStream.write(pair.getValue(), 0, Utils.SHA256_LENGTH);
-        }
-        return resStream.toByteArray();
+        return serializer().toBytes(this);
     }
 
-    public static MerklePath parseBytes(byte[] bytes) {
-        if (bytes.length < 4)
-            throw new IllegalArgumentException("Input data corrupted.");
-
-        int offset = 0;
-
-        int size = BytesUtils.getInt(bytes, offset);
-        offset += 4;
-
-        if(size < 0)
-            throw new IllegalArgumentException("Input data corrupted.");
-        else if (size == 0)
-            return new MerklePath(new ArrayList<>());
-
-        if(bytes.length != 4 + size * (1 + Utils.SHA256_LENGTH))
-            throw new IllegalArgumentException("Input data corrupted.");
-
-        ArrayList<Pair<Byte, byte[]>> merklePath =  new ArrayList<>();
-        while(size > 0) {
-            merklePath.add(new Pair<>(bytes[offset], Arrays.copyOfRange(bytes, offset + 1, offset + 1 + Utils.SHA256_LENGTH)));
-            offset += 1 + Utils.SHA256_LENGTH;
-            size--;
-        }
-
-        return new MerklePath(merklePath);
+    @Override
+    public ScorexSerializer serializer() {
+        return MerklePathSerializer.getSerializer();
     }
 
     public boolean isLeftmost() {

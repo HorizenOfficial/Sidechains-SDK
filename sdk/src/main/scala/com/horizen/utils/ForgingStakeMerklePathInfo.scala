@@ -14,20 +14,13 @@ case class ForgingStakeMerklePathInfo(forgingStakeInfo: ForgingStakeInfo, merkle
 
 object ForgerBoxMerklePathInfoSerializer extends ScorexSerializer[ForgingStakeMerklePathInfo] {
   override def serialize(obj: ForgingStakeMerklePathInfo, w: Writer): Unit = {
-    val forgingStakeInfoBytes = ForgingStakeInfoSerializer.toBytes(obj.forgingStakeInfo)
-    w.putInt(forgingStakeInfoBytes.length)
-    w.putBytes(forgingStakeInfoBytes)
-    val merklePathBytes = obj.merklePath.bytes()
-    w.putInt(merklePathBytes.length)
-    w.putBytes(merklePathBytes)
+    ForgingStakeInfoSerializer.serialize(obj.forgingStakeInfo, w)
+    MerklePathSerializer.getSerializer.serialize(obj.merklePath, w)
   }
 
   override def parse(r: Reader): ForgingStakeMerklePathInfo = {
-    val forgingStakeInfoBytes = r.getInt()
-    val forgingStakeInfo = ForgingStakeInfoSerializer.parseBytes(r.getBytes(forgingStakeInfoBytes))
-
-    val merklePathBytesLength = r.getInt()
-    val merklePath = MerklePath.parseBytes(r.getBytes(merklePathBytesLength))
+    val forgingStakeInfo = ForgingStakeInfoSerializer.parse(r)
+    val merklePath = MerklePathSerializer.getSerializer.parse(r)
     ForgingStakeMerklePathInfo(forgingStakeInfo, merklePath)
   }
 }

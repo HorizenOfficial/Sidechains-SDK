@@ -7,7 +7,7 @@ import com.horizen.storage.ForgingBoxesInfoStorage
 import com.horizen.utils.{BytesUtils, ForgingStakeMerklePathInfo, MerklePath}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 import java.util.{ArrayList => JArrayList}
 
 import com.horizen.box.ForgerBox

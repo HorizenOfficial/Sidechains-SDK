@@ -3,7 +3,7 @@ package com.horizen.fixtures
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen._
 import org.mockito.Mockito
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 import scorex.core.settings.{NetworkSettings, ScorexSettings}
 
 class MockedSidechainNodeViewHolder(sidechainSettings: SidechainSettings,

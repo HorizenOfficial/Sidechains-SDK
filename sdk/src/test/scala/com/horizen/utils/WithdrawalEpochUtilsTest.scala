@@ -9,8 +9,8 @@ import com.horizen.params.NetworkParams
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.mockito.Mockito
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito.MockitoSugar
 import scorex.util.bytesToId
 
 

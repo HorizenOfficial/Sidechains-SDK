@@ -9,7 +9,7 @@ import com.horizen.utils.BytesUtils
 import com.horizen.validation.{InvalidMainchainHeaderException, MainchainHeaderTimestampInFutureException}
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue, fail => jFail}
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 
 import scala.io.Source
 import scala.util.{Failure, Success, Try}

@@ -5,7 +5,7 @@ import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.utils.Ed25519
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 import scorex.core.utils.ScorexEncoder
 
 class PublicKey25519PropositionScalaTest

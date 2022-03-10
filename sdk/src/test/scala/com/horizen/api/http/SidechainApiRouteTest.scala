@@ -24,9 +24,10 @@ import com.horizen.{SidechainSettings, SidechainTypes}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
 import org.mockito.Mockito
-import org.scalatest.junit.JUnitRunner
-import org.scalatest.mockito.MockitoSugar
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatestplus.junit.JUnitRunner
+import org.scalatestplus.mockito.MockitoSugar
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import scorex.core.app.Version
 import scorex.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
 import scorex.core.network.peer.PeerInfo
@@ -39,7 +40,6 @@ import scorex.util.{ModifierId, bytesToId}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
-import akka.http.javadsl.marshallers.jackson.Jackson
 import com.horizen.csw.CswManager.ReceivableMessages.{GenerateCswProof, GetBoxNullifier, GetCeasedStatus, GetCswBoxIds, GetCswInfo}
 import com.horizen.csw.CswManager.Responses.{Absent, CswInfo, CswProofInfo, NoProofData, ProofCreationFinished}
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
@@ -47,7 +47,7 @@ import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import scala.language.postfixOps
 
 @RunWith(classOf[JUnitRunner])
-abstract class SidechainApiRouteTest extends WordSpec with Matchers with ScalatestRouteTest with MockitoSugar with SidechainBlockFixture with CompanionsFixture with SidechainTypes {
+abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with ScalatestRouteTest with MockitoSugar with SidechainBlockFixture with CompanionsFixture with SidechainTypes {
 
   implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
 

@@ -6,7 +6,7 @@ import com.horizen.storage.{SidechainWalletCswDataStorage, Storage}
 import com.horizen.utils.CswData
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 class SidechainWalletCswDataStorageIntegrationTest extends JUnitSuite with StoreFixture with CswDataFixture with SidechainTypes {
 
   @Test

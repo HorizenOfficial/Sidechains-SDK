@@ -62,7 +62,7 @@ class SCCswCeasedAtEpoch2(SidechainTestFramework):
             cert_signing_enabled=True  # enable signer
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length), sc_node_configuration)
-        self.sidechain_id = bootstrap_sidechain_nodes(self.options.tmpdir, network).sidechain_id
+        self.sidechain_id = bootstrap_sidechain_nodes(self.options, network).sidechain_id
 
     def sc_setup_nodes(self):
         return start_sc_nodes(1, self.options.tmpdir)

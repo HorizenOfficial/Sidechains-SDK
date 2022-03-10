@@ -13,8 +13,8 @@ import org.glassfish.tyrus.client.ClientManager
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{After, Assert, Test}
 import org.scalatest.BeforeAndAfterAll
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito.MockitoSugar
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedMempool, SemanticallySuccessfulModifier}
 

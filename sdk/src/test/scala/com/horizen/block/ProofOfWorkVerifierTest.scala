@@ -11,8 +11,8 @@ import com.horizen.utils.{BytesUtils, Utils}
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito._
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito._
 import scorex.core.block.Block.Timestamp
 import scorex.util.ModifierId
 

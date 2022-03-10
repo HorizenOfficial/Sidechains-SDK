@@ -27,6 +27,8 @@ case class MainchainTxSidechainCreationCrosschainOutputData(sidechainCreationOut
 object MainchainTxSidechainCreationCrosschainOutputData {
 
   def create(sidechainCreationOutputBytes: Array[Byte], offset: Int): Try[MainchainTxSidechainCreationCrosschainOutputData] = Try {
+    if(offset < 0)
+      throw new IllegalArgumentException("Input data corrupted.")
 
     var currentOffset: Int = offset
 

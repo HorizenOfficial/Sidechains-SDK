@@ -19,7 +19,9 @@ public interface Secret
 
     @Override
     @JsonProperty("bytes")
-    byte[] bytes();
+    default byte[] bytes() {
+        return serializer().toBytes(this);
+    }
 
     @Override
     SecretSerializer serializer();

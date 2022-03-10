@@ -19,7 +19,7 @@ import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.{BytesUtils, Pair}
 import com.horizen.wallet.ApplicationWallet
 import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 import scorex.util.{ModifierId, bytesToId, idToBytes}
 
 import scala.collection.JavaConverters._

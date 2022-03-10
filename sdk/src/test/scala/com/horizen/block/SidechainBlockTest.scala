@@ -2,6 +2,7 @@ package com.horizen.block
 
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
 import java.util.Random
+
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.box.Box
 import com.horizen.companion.SidechainTransactionsCompanion
@@ -17,7 +18,7 @@ import com.horizen.validation._
 import com.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertEquals, assertTrue, fail => jFail}
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 import scorex.util.{ModifierId, idToBytes}
 
 import scala.io.Source

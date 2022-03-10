@@ -5,8 +5,8 @@ import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import org.junit.Assert._
 import org.junit.{Before, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito.MockitoSugar
 import scala.concurrent.duration._
 
 import scala.concurrent.{Await, Future, TimeoutException}
