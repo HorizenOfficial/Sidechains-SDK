@@ -37,7 +37,7 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
 
   implicit lazy val actorSystem: ActorSystem = ActorSystem("csw-actor-test")
   implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("scorex.executionContext")
-  implicit val timeout: Timeout = 200 milliseconds
+  implicit val timeout: Timeout = 300 milliseconds
 
   case object WatchOk
 

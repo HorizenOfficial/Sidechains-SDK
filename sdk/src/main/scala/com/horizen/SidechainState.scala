@@ -10,7 +10,7 @@ import com.horizen.box.{Box, CoinsBox, ForgerBox, WithdrawalRequestBox, ZenBox}
 import com.horizen.consensus._
 import com.horizen.node.NodeState
 import com.horizen.params.NetworkParams
-import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
+import com.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.ApplicationState
 import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
 import com.horizen.transaction.MC2SCAggregatedTransaction
@@ -282,13 +282,27 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         }
       }
 
-      newCoinsBoxesAmount = tx.newBoxes().asScala
+      val newBoxes = tx.newBoxes().asScala
+
+      newCoinsBoxesAmount = newBoxes
         .filter(box => box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]] || box.isInstanceOf[WithdrawalRequestBox])
         .map(_.value()).sum
 
       if (closedCoinsBoxesAmount != newCoinsBoxesAmount + tx.fee())
         throw new Exception("Amounts sum of CoinsBoxes is incorrect. " +
           s"ClosedBox amount - $closedCoinsBoxesAmount, NewBoxesAmount - $newCoinsBoxesAmount, Fee - ${tx.fee()}")
+
+      newBoxes
+        .filter(box => box.isInstanceOf[ForgerBox])
+        .foreach(forgerBox => {
+          if (params.restrictForgers) {
+            val vrfPublicKey: VrfPublicKey = forgerBox.vrfPubKey()
+            val blockSignProposition: PublicKey25519Proposition = forgerBox.blockSignProposition()
+            if (!params.allowedForgersList.contains((blockSignProposition, vrfPublicKey))) {
+              throw new Exception("This publicKey is not allowed to forge!")
+            }
+          }
+        })
 
     }
 

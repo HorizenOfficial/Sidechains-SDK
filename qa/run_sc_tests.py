@@ -26,6 +26,7 @@ from mc_sc_forging_fee_payments import MCSCForgingFeePayments
 from sc_cert_fee_conf import CertFeeConfiguration
 from sc_bwt_minimum_value import SCBwtMinValue
 from websocket_server_fee_payments import SCWsServerFeePayments
+from sc_closed_forger import SidechainClosedForgerTest
 
 
 def run_test(test):
@@ -111,6 +112,8 @@ def run_tests(log_file):
     result = run_test(SCCswCeasedAtEpoch3())
     assert_equal(0, result, "sc_csw_ceased_at_epoch_3 test failed!")
 
+    result = run_test(SidechainClosedForgerTest())
+    assert_equal(0, result, "sc_closed_forger test failed!")
 
 if __name__ == "__main__":
     log_file = open("sc_test.log", "w")
