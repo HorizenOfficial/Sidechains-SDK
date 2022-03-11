@@ -4,7 +4,7 @@ import com.google.common.primitives.Ints
 import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion0, SidechainCreationVersion1}
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import com.horizen.params.{MainNetParams, RegTestParams, TestNetParams}
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, CurrentSidechainVersionOnly, SidechainVersionZero, TestSidechainsVersionsManager}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, CurrentSidechainVersionOnly, CustomSidechainsVersions, SidechainVersionOne, SidechainVersionZero, TestSidechainsVersionsManager}
 import org.junit.{Ignore, Test}
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue, fail => jFail}
 import org.scalatestplus.junit.JUnitSuite
@@ -546,6 +546,124 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block must not-contain lower quality certificate leaves.", mcblock2.data.lowerCertificateLeaves.isEmpty)
     assertTrue("Block must contain proof of existence.", mcblock2.data.existenceProof.isEmpty)
     assertTrue("Block must not contain proof of absence", mcblock2.data.absenceProof.isDefined)
+  }
+
+  @Test
+  def blockWithCertificateWithCustomFieldAndBitvectorMixedScVersions(): Unit = {
+    // Test: parse MC block with:
+    // SC1: 08dffd98cc9ca80760bcd6b88274e2b24e0f7a4ef0f5ca0b0a2df4f6905109b9 (version=1)
+    //   ---> creation
+    // SC2: 17e563f84d4b00b5bca08ab9bacb43c0743b951a35916352c5f899394cbc8113 (version=0)
+    //   ---> a single certificate with 2 custom fields and 0 bitvector field.
+    // SC3: 1635b4e5db419d9c87baf47574b546056c6ab164bffe6b75012403255ee87efd (version=1)
+    //   ---> a single certificate with 2 custom fields and 0 bitvector field.
+
+    val scIdHex1 = "08dffd98cc9ca80760bcd6b88274e2b24e0f7a4ef0f5ca0b0a2df4f6905109b9"
+    val scId1 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex1))) // LE
+    val scIdHex2 = "17e563f84d4b00b5bca08ab9bacb43c0743b951a35916352c5f899394cbc8113"
+    val scId2 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex2))) // LE
+    val scIdHex3 = "1635b4e5db419d9c87baf47574b546056c6ab164bffe6b75012403255ee87efd"
+    val scId3 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex3))) // LE
+
+    val versionsManager = TestSidechainsVersionsManager(
+      CustomSidechainsVersions(
+        Map(
+          scId1 -> SidechainCreationVersion1,
+          scId2 -> SidechainCreationVersion0,
+          scId3 -> SidechainCreationVersion1
+        )
+      )
+    )
+
+    val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_with_certificate_with_custom_fields_mixed_sc_versions").getLines().next()
+    val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
+    val bitVectorSizeInBits = 254*4
+
+    // Test 1: Check for existing sidechain
+    val params1 = RegTestParams(
+      scId1.data,
+      sidechainCreationVersion = SidechainCreationVersion1
+    )
+
+    val mcblockTry1 = MainchainBlockReference.create(mcBlockBytes, params1, versionsManager)
+
+    assertTrue("Block expected to be parsed", mcblockTry1.isSuccess)
+    val mcblock1 = mcblockTry1.get
+
+    assertTrue("Block expected to be semantically valid", mcblock1.semanticValidity(params1).isSuccess)
+
+    assertTrue("Block must not contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isEmpty)
+    assertTrue("Block must contain certificate.", mcblock1.data.topQualityCertificate.isDefined)
+    assertTrue("Block must contain proof of existence.", mcblock1.data.existenceProof.isDefined)
+    assertTrue("Block must not contain proof of absence", mcblock1.data.absenceProof.isEmpty)
+
+    // Test 2: Check for existing sidechain
+    val params2 = RegTestParams(
+      scId2.data,
+      scCreationBitVectorCertificateFieldConfigs = Seq(
+        //new CustomBitvectorElementsConfig(bitVectorSizeInBits, 151)
+      ),
+      sidechainCreationVersion = SidechainCreationVersion0
+    )
+
+    val mcblockTry2 = MainchainBlockReference.create(mcBlockBytes, params2, versionsManager)
+
+    assertTrue("Block expected to be parsed", mcblockTry2.isSuccess)
+    val mcblock2 = mcblockTry2.get
+
+    assertTrue("Block expected to be semantically valid", mcblock2.semanticValidity(params2).isSuccess)
+
+    assertTrue("Block must not contain transaction.", mcblock2.data.sidechainRelatedAggregatedTransaction.isEmpty)
+    assertTrue("Block must contain certificate.", mcblock2.data.topQualityCertificate.isDefined)
+    assertEquals("Block must contain certificate with 2 cert field elements.", 2, mcblock2.data.topQualityCertificate.get.fieldElementCertificateFields.length)
+    assertEquals("Block must contain certificate with 0 cert bitvector.", 0, mcblock2.data.topQualityCertificate.get.bitVectorCertificateFields.length)
+    assertTrue("Block must not-contain lower quality certificate leaves.", mcblock2.data.lowerCertificateLeaves.isEmpty)
+    assertTrue("Block must contain proof of existence.", mcblock2.data.existenceProof.isDefined)
+    assertTrue("Block must not contain proof of absence", mcblock2.data.absenceProof.isEmpty)
+
+    // Test 3: Check for existing sidechain
+    val params3 = RegTestParams(
+      scId3.data,
+      scCreationBitVectorCertificateFieldConfigs = Seq(
+        //new CustomBitvectorElementsConfig(bitVectorSizeInBits, 151)
+      ),
+      sidechainCreationVersion = SidechainCreationVersion1
+    )
+
+    val mcblockTry3 = MainchainBlockReference.create(mcBlockBytes, params3, versionsManager)
+
+    assertTrue("Block expected to be parsed", mcblockTry3.isSuccess)
+    val mcblock3 = mcblockTry3.get
+
+    assertTrue("Block expected to be semantically valid", mcblock3.semanticValidity(params3).isSuccess)
+
+    assertTrue("Block must not contain transaction.", mcblock3.data.sidechainRelatedAggregatedTransaction.isEmpty)
+    assertTrue("Block must contain certificate.", mcblock3.data.topQualityCertificate.isDefined)
+    assertEquals("Block must contain certificate with 2 cert field elements.", 2, mcblock3.data.topQualityCertificate.get.fieldElementCertificateFields.length)
+    assertEquals("Block must contain certificate with 0 cert bitvector.", 0, mcblock3.data.topQualityCertificate.get.bitVectorCertificateFields.length)
+    assertTrue("Block must not-contain lower quality certificate leaves.", mcblock3.data.lowerCertificateLeaves.isEmpty)
+    assertTrue("Block must contain proof of existence.", mcblock3.data.existenceProof.isDefined)
+    assertTrue("Block must not contain proof of absence", mcblock3.data.absenceProof.isEmpty)
+
+
+    // Test 4: Check for non-existing sidechain
+    val scIdHex4 = "0000000000000000000000000000000000000000000000000000000000000000"
+    val scId4 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex4))) // LE
+
+    val params4 = RegTestParams(scId4.data)
+
+    val mcblockTry4 = MainchainBlockReference.create(mcBlockBytes, params4, versionsManager)
+
+    assertTrue("Block expected to be parsed", mcblockTry4.isSuccess)
+    val mcblock4 = mcblockTry4.get
+
+    assertTrue("Block expected to be semantically valid", mcblock4.semanticValidity(params4).isSuccess)
+
+    assertTrue("Block must not contain transaction.", mcblock4.data.sidechainRelatedAggregatedTransaction.isEmpty)
+    assertTrue("Block must not contain certificate.", mcblock4.data.topQualityCertificate.isEmpty)
+    assertTrue("Block must not contain lower quality certificate leaves.", mcblock4.data.lowerCertificateLeaves.isEmpty)
+    assertTrue("Block must not contain proof of existence.", mcblock4.data.existenceProof.isEmpty)
+    assertTrue("Block must contain proof of absence", mcblock4.data.absenceProof.isDefined)
   }
 
   @Test
