@@ -504,6 +504,9 @@ public class CommandProcessor {
             long currentTimeSeconds = System.currentTimeMillis() / 1000;
             long timestamp = (params instanceof RegTestParams) ? currentTimeSeconds - regtestBlockTimestampRewind : currentTimeSeconds;
 
+            // no fee payments expected for the genesis block
+            byte[] feePaymentsHash = new byte[32];
+
             SidechainBlock sidechainBlock = SidechainBlock.create(
                     params.sidechainGenesisBlockParentId(),
                     SidechainBlock.BLOCK_VERSION(),
@@ -516,6 +519,7 @@ public class CommandProcessor {
                     forgingStakeInfo,
                     vrfProof,
                     mp,
+                    feePaymentsHash,
                     sidechainTransactionsCompanion,
                     scala.Option.empty()
             ).get();

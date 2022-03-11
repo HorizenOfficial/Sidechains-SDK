@@ -57,20 +57,20 @@ class SidechainClosedForgerTest(SidechainTestFramework):
         sc_fee = 0
 
         # Generate 1 SC block
-        generate_next_blocks(sc_node1, "first node", 1)[0]
+        generate_next_blocks(sc_node1, "first node", 1)
 
-        #we need regular coins (the genesis account balance is locked into forging stake), so we perform a
-        #forward transfer to sidechain for an amount equals to the genesis_account_balance
+        # We need regular coins (the genesis account balance is locked into forging stake), so we perform a
+        # Forward transfer to sidechain for an amount equals to the genesis_account_balance
         forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
                                       mc_node1,
                                       self.allowed_forger_proposition,
                                       self.sc_nodes_bootstrap_info.genesis_account_balance,
                                       mc_node1.getnewaddress())
         self.sc_sync_all()
-        generate_next_blocks(sc_node1, "first node", 1)[0]
+        generate_next_blocks(sc_node1, "first node", 1)
         self.sc_sync_all()
 
-        #Try to stake to an invalid blockSignProposition
+        # Try to stake to an invalid blockSignProposition
         print("Try to stake to an invalid blockSignProposition...")
         new_public_key = http_wallet_createPrivateKey25519(self.sc_nodes[0])
         new_vrf_public_key = http_wallet_createVrfSecret(sc_node1)
@@ -80,7 +80,7 @@ class SidechainClosedForgerTest(SidechainTestFramework):
         assert_true('This publicKey is not allowed to forge' in result['error']['detail'])
         print("Ok!")
 
-        #Try to stake to an invalid vrfPublicKey
+        # Try to stake to an invalid vrfPublicKey
         print("Try to stake to an invalid vrfPublicKey...")
         result = makeForgerStake(self.sc_nodes[0], self.allowed_forger_proposition, self.allowed_forger_proposition, new_vrf_public_key, forger_amount, sc_fee)
         print(result)
@@ -88,7 +88,7 @@ class SidechainClosedForgerTest(SidechainTestFramework):
         assert_true('This publicKey is not allowed to forge' in result['error']['detail'])
         print("Ok!")
 
-        #Try to stake with an invalid blockSignProposition and an invalid vrfPublicKey
+        # Try to stake with an invalid blockSignProposition and an invalid vrfPublicKey
         print("Try to stake to an invalid vrfPublicKey...")
         result = makeForgerStake(self.sc_nodes[0], self.allowed_forger_proposition, new_public_key, new_vrf_public_key, forger_amount, sc_fee)
         print(result)
@@ -96,7 +96,7 @@ class SidechainClosedForgerTest(SidechainTestFramework):
         assert_true('This publicKey is not allowed to forge' in result['error']['detail'])
         print("Ok!")
 
-        #Try to stake with a valid blockSignProposition and a valid vrfPublickey
+        # Try to stake with a valid blockSignProposition and a valid vrfPublickey
         print("Try to stake with a valid blockSignProposition and a valid vrfPublickey")
         result = makeForgerStake(self.sc_nodes[0], self.allowed_forger_proposition, self.allowed_forger_proposition, self.allowed_forger_vrf_public_key, forger_amount, sc_fee)
         print(result)
@@ -104,9 +104,8 @@ class SidechainClosedForgerTest(SidechainTestFramework):
         assert_true('transactionId' in result['result'])
 
         self.sc_sync_all()
-        generate_next_blocks(sc_node1, "first node", 1)[0]
+        generate_next_blocks(sc_node1, "first node", 1)
         self.sc_sync_all()
-
 
 
 if __name__ == "__main__":

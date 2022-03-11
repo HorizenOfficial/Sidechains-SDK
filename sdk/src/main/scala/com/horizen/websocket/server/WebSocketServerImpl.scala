@@ -1,5 +1,7 @@
 package com.horizen.websocket.server
 
+import com.horizen.block.SidechainBlock
+
 import javax.websocket._
 import org.glassfish.tyrus.server.Server
 import scorex.util.ScorexLogging
@@ -39,8 +41,8 @@ class WebSocketServerImpl(bindPort: Int, configuration: Class[_]) extends WebSoc
     WebSocketServerEndpoint.notifyMempoolChanged()
   }
 
-  def onSemanticallySuccessfulModifier(): Unit = {
-    WebSocketServerEndpoint.notifySemanticallySuccessfulModifier()
+  def onSemanticallySuccessfulModifier(block: SidechainBlock): Unit = {
+    WebSocketServerEndpoint.notifySemanticallySuccessfulModifier(block)
   }
 
   override def stop(): Try[Unit] = Try {

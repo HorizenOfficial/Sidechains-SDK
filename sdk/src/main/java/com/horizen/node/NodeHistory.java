@@ -4,6 +4,7 @@ import com.horizen.block.MainchainBlockReference;
 import com.horizen.block.MainchainHeader;
 import com.horizen.block.SidechainBlock;
 import com.horizen.box.Box;
+import com.horizen.chain.FeePaymentsInfo;
 import com.horizen.chain.MainchainHeaderInfo;
 import com.horizen.node.util.MainchainBlockReferenceInfo;
 import com.horizen.proposition.Proposition;
@@ -24,6 +25,8 @@ public interface NodeHistory {
     Optional<Integer> getBlockHeightById(String id);
 
     int getCurrentHeight();
+
+    Optional<FeePaymentsInfo> getFeePaymentsInfo(String blockId);
 
     Optional<Integer> getBlockHeight(String blockId);
 
