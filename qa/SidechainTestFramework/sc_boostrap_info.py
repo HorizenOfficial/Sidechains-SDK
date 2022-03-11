@@ -4,6 +4,8 @@
 # LARGE_WITHDRAWAL_EPOCH_LENGTH = 148
 LARGE_WITHDRAWAL_EPOCH_LENGTH = 900
 
+SC_CREATION_VERSION_0 = 0
+SC_CREATION_VERSION_1 = 1
 """
 All information needed to bootstrap sidechain network within specified mainchain node.
 The JSON representation is only for documentation.
@@ -20,11 +22,13 @@ class SCCreationInfo(object):
 
     # Note: the maximum withdrawal_epoch_length allowed is around 900, otherwise snark keys size check will fail
     # because of too complex circuit from MC perspective.
-    def __init__(self, mc_node, forward_amount=100, withdrawal_epoch_length=LARGE_WITHDRAWAL_EPOCH_LENGTH, btr_data_length=0):
+    def __init__(self, mc_node, forward_amount=100, withdrawal_epoch_length=LARGE_WITHDRAWAL_EPOCH_LENGTH,
+                 btr_data_length=0, sc_creation_version=SC_CREATION_VERSION_1):
         self.mc_node = mc_node
         self.forward_amount = forward_amount
         self.withdrawal_epoch_length = withdrawal_epoch_length
         self.btr_data_length = btr_data_length
+        self.sc_creation_version = sc_creation_version
 
 
 """

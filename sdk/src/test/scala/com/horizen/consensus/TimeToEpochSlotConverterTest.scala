@@ -1,7 +1,8 @@
 package com.horizen.consensus
 
-import java.math.BigInteger
+import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
 
+import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import com.horizen.librustsidechains.FieldElement
 import com.horizen.params.NetworkParams
@@ -43,6 +44,7 @@ class TimeToEpochSlotConverterTest extends JUnitSuite {
     override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig] = Seq()
     override val cswProvingKeyFilePath: String = ""
     override val cswVerificationKeyFilePath: String = ""
+    override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1
   }
 
   private def checkSlotAndEpoch(timeStamp: Block.Timestamp,

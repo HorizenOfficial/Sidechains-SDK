@@ -46,7 +46,7 @@ class WebSocketConnectorImpl(bindAddress: String, connectionTimeout: FiniteDurat
 
     client.getProperties.put(ClientProperties.RECONNECT_HANDLER, reconnectHandler)
     client.getProperties.put(ClientProperties.HANDSHAKE_TIMEOUT, String.valueOf(connectionTimeout.toMillis))
-    log.info("Starting web socket connector...")
+    log.info(s"Starting web socket connector, ws address = ${bindAddress}...")
     userSession = client.connectToServer(this, new URI(bindAddress))
     reconnectionHandler.onConnectionSuccess()
     log.info("Web socket connector started.")

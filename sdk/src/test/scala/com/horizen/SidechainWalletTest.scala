@@ -898,7 +898,7 @@ class SidechainWalletTest
 
     val refDataWithFTs: MainchainBlockReferenceData = MainchainBlockReferenceData(null, Some(aggTx), None, None, Seq(), None)
 
-    val commTree = refDataWithFTs.commitmentTree(params.sidechainId)
+    val commTree = refDataWithFTs.commitmentTree(params.sidechainId, params.sidechainCreationVersion)
     val expectedCswData = Seq(
       ftToCswData(walletFt1, 0, commTree),
       ftToCswData(walletFt2, 3, commTree)

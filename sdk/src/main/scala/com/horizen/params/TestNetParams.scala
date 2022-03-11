@@ -1,4 +1,6 @@
 package com.horizen.params
+
+import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
 import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import com.horizen.cryptolibprovider.CumulativeHashFunctions
@@ -28,7 +30,8 @@ case class TestNetParams(
                           override val cswProvingKeyFilePath: String = "",
                           override val cswVerificationKeyFilePath: String = "",
                           override val restrictForgers: Boolean = false,
-                          override val allowedForgersList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = Seq()
+                          override val allowedForgersList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = Seq(),
+                          override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1
                         ) extends NetworkParams {
   override val EquihashN: Int = 200
   override val EquihashK: Int = 9

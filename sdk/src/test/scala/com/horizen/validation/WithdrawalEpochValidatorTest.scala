@@ -1,7 +1,6 @@
 package com.horizen.validation
 
 import java.time.Instant
-
 import com.horizen.SidechainHistory
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.Box
@@ -12,7 +11,7 @@ import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proposition.Proposition
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.transaction.SidechainTransaction
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, TestSidechainsVersionsManager, WithdrawalEpochInfo}
 import org.junit.Assert.assertTrue
 import org.junit.{Before, Ignore, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -130,7 +129,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     val scId = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex)))
     val mcBlockRefRegTestParams = RegTestParams(scId.data)
     val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
-    val mcBlockRef = MainchainBlockReference.create(mcBlockBytes, mcBlockRefRegTestParams).get
+    val mcBlockRef = MainchainBlockReference.create(mcBlockBytes, mcBlockRefRegTestParams, TestSidechainsVersionsManager(mcBlockRefRegTestParams)).get
     mcRefs = Seq(mcBlockRef)
 
     val (forgerBox4, forgerMeta4) = ForgerBoxFixture.generateForgerBox(324)
@@ -356,7 +355,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     val scId = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex)))
     val mcBlockRefRegTestParams = RegTestParams(scId.data)
     val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
-    val mcBlockRef = MainchainBlockReference.create(mcBlockBytes, mcBlockRefRegTestParams).get
+    val mcBlockRef = MainchainBlockReference.create(mcBlockBytes, mcBlockRefRegTestParams, TestSidechainsVersionsManager(mcBlockRefRegTestParams)).get
 
     val (forgerBox11, forgerMeta11) = ForgerBoxFixture.generateForgerBox(32114)
     block = SidechainBlock.create(

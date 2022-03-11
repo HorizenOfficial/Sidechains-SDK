@@ -243,8 +243,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     utxoMerkleTreeRoot(certReferencedEpochNumber) match {
       case Some(expectedMerkleTreeRoot) =>
         val certUtxoMerkleRoot = CryptoLibProvider.sigProofThresholdCircuitFunctions.reconstructUtxoMerkleTreeRoot(
-          topQualityCertificate.fieldElementCertificateFields.head.fieldElementBytes,
-          topQualityCertificate.fieldElementCertificateFields(1).fieldElementBytes
+          topQualityCertificate.fieldElementCertificateFields.head.fieldElementBytes(params.sidechainCreationVersion),
+          topQualityCertificate.fieldElementCertificateFields(1).fieldElementBytes(params.sidechainCreationVersion)
         )
         if(!expectedMerkleTreeRoot.sameElements(certUtxoMerkleRoot))
           throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate utxo merkle tree root " +

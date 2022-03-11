@@ -17,7 +17,7 @@ import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.transaction.RegularTransaction
-import com.horizen.utils.{BytesUtils, Pair}
+import com.horizen.utils.{BytesUtils, Pair, TestSidechainsVersionsManager}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
 import scorex.core.NodeViewHolder.CurrentView
@@ -157,7 +157,7 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
       if (sidechainApiMockConfiguration.getShould_history_getMainchainBlockReferenceByHash_return_value()) {
         val mcBlockHex = Source.fromResource("mcblock473173_mainnet").getLines().next()
         val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
-        MainchainBlockReference.create(mcBlockBytes, MainNetParams()) match {
+        MainchainBlockReference.create(mcBlockBytes, MainNetParams(), TestSidechainsVersionsManager()) match {
           case Success(ref) => Optional.of(ref)
           case Failure(_) => Optional.empty()
         }

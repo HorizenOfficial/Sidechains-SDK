@@ -1,5 +1,7 @@
 package com.horizen.params
 
+
+import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import com.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
@@ -38,10 +40,11 @@ trait NetworkParams {
   val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig]
   val cswProvingKeyFilePath: String
   val cswVerificationKeyFilePath: String
+  val sidechainCreationVersion: SidechainCreationVersion
 
   val maxHistoryRewritingLength: Int = 100
 
-  // fee payment params:
+  // Fee payment params:
   final val forgerBlockFeeCoefficient: Double = 0.7 // forger portion of fees for the submitted Block
 
   // Sidechain genesis params:
@@ -55,7 +58,7 @@ trait NetworkParams {
   val consensusSlotsInEpoch: Int
   val initialCumulativeCommTreeHash: Array[Byte] // CumulativeCommTreeHash value before genesis block
 
-  //Sidechain forger restriction
+  // Sidechain forger restriction
   val restrictForgers: Boolean = false
   val allowedForgersList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = Seq()
 }

@@ -191,7 +191,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
         })
 
         if(walletFTs.nonEmpty) {
-          val commitmentTree = mcBlockRefData.commitmentTree(params.sidechainId)
+          val commitmentTree = mcBlockRefData.commitmentTree(params.sidechainId, params.sidechainCreationVersion)
           val scCommitmentMerklePath = commitmentTree.getSidechainCommitmentMerklePath(params.sidechainId).get
           val btrCommitment = commitmentTree.getBtrCommitment(params.sidechainId).get
           val certCommitment = commitmentTree.getCertCommitment(params.sidechainId).get
