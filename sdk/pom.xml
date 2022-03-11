@@ -351,6 +351,7 @@
           <include>new_mc_blocks/mc_block_with_2_certificates</include>
           <!-- generated on regtest on 31.05.2021 using MC qa/sc_cert_customfields.py -->
           <include>new_mc_blocks/mc_block_with_certificate_with_custom_fields</include>
+          <!-- generated on regtest on 11.03.2022 using qa/sc_versions_and_mc_certs.py -->
           <include>new_mc_blocks/mc_block_with_certificate_with_custom_fields_mixed_sc_versions</include>
           <include>backward_transfer_certificate_empty</include>
           <include>backward_transfer_certificate_non_empty</include>

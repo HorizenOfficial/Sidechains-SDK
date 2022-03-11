@@ -873,6 +873,7 @@ class SidechainBlockTest
       forgerMetadata.forgingStakeInfo,
       vrfProof,
       MerkleTreeFixture.generateRandomMerklePath(rnd.nextLong()),
+      new Array[Byte](32),
       sidechainTransactionsCompanion
     ).get
   }

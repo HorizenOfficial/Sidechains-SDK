@@ -1,10 +1,11 @@
 package com.horizen.websocket.server
 
 import java.util
-
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
+import com.horizen.block.SidechainBlock
+
 import javax.websocket.{OnClose, OnError, OnMessage, OnOpen, SendHandler, SendResult, Session}
 import javax.websocket.server.ServerEndpoint
 import scorex.util.ScorexLogging
@@ -18,8 +19,9 @@ case object GET_MEMPOOL_TXS extends RequestType(4)
 case object GET_RAW_MEMPOOL extends RequestType(5)
 
 abstract class MsgType(val code:Int)
-case object RESPONSE_MESSAGE extends MsgType(2)
 case object EVENT_MESSAGE extends MsgType(0)
+case object REQUEST_MESSAGE extends MsgType(1)
+case object RESPONSE_MESSAGE extends MsgType(2)
 case object ERROR_MESSAGE extends MsgType(3)
 
 @ServerEndpoint("/")
@@ -83,7 +85,7 @@ class WebSocketServerEndpoint() extends ScorexLogging {
       case GET_SINGLE_BLOCK_REQUEST_TYPE.code => // Get single block
         if (requestPayload.has("hash")) {
           val hash = requestPayload.get("hash").asText()
-          sidechainNodeChannel.getBlockByHash(hash) match {
+          sidechainNodeChannel.getBlockInfoByHash(hash) match {
             case Success(responsePayload) => {
               WebSocketServerEndpoint.sendMessage(RESPONSE_MESSAGE.code, requestId, requestType, responsePayload, session)
 
@@ -96,7 +98,7 @@ class WebSocketServerEndpoint() extends ScorexLogging {
         }
         else if (requestPayload.has("height")) {
           val height = requestPayload.get("height").asInt()
-          sidechainNodeChannel.getBlockByHeight(height) match{
+          sidechainNodeChannel.getBlockInfoByHeight(height) match{
             case Success(responsePayload) => {
               WebSocketServerEndpoint.sendMessage(RESPONSE_MESSAGE.code, requestId, requestType, responsePayload, session)
 
@@ -218,14 +220,13 @@ private object WebSocketServerEndpoint extends ScorexLogging {
 
   }
 
-  def notifySemanticallySuccessfulModifier(): Unit = {
-    val eventPayload = sidechainNodeChannelImpl.getBestBlock() match {
+  def notifySemanticallySuccessfulModifier(block: SidechainBlock): Unit = {
+    sidechainNodeChannelImpl.getBlockInfo(block) match {
       case Success(eventPayload) =>
         this.sessions.forEach(session =>{
           WebSocketServerEndpoint.sendMessage(EVENT_MESSAGE.code, -1, 0, eventPayload, session)
         })
-      case Failure(ex)  => log.error("Error on notifySemanticallySuccessfulModifier!: "+ex.toString)
-
+      case Failure(ex)  => log.error("Error on notifySemanticallySuccessfulModifier!: "+ ex.toString)
     }
   }
 

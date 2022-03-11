@@ -41,11 +41,9 @@ public final class MC2SCAggregatedTransaction
         return MC2SCAggregatedTransactionSerializer.getSerializer();
     }
 
-    // no checker exists for current transaction type
-    // keep check in mempool against this
     @Override
     public TransactionIncompatibilityChecker incompatibilityChecker() {
-        return null;
+        return MempoolIncompatibleTransactionIncompatibilityChecker.getChecker();
     }
 
     @Override

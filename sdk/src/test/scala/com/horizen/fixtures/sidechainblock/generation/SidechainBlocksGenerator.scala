@@ -214,6 +214,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
       mainchainMerkleRootHash,
       ommersMerkleRootHash,
       ommers.map(_.score).sum,
+      new Array[Byte](32),
       new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH)) // empty signature
     )
 
@@ -230,6 +231,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
       mainchainMerkleRootHash,
       ommersMerkleRootHash,
       ommers.map(_.score).sum,
+      new Array[Byte](32),
       signature
     )
     val generatedBlock = new SidechainBlock(
@@ -459,6 +461,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       mainchainMerkleRootHash,
       ommersMerkleRootHash,
       0,
+      new Array[Byte](32),
       new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH)) // empty signature
     )
 
@@ -475,6 +478,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       mainchainMerkleRootHash,
       ommersMerkleRootHash,
       0,
+      new Array[Byte](32),
       signature
     )
 

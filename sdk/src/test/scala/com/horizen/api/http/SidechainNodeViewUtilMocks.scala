@@ -62,6 +62,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
     forgerBoxMetadata.forgingStakeInfo,
     VrfGenerator.generateProof(456L),
     MerkleTreeFixture.generateRandomMerklePath(456L),
+    new Array[Byte](32),
     sidechainTransactionsCompanion).get
 
   def getNodeHistoryMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeHistory = {

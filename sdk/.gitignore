@@ -1,2 +1,3 @@
 hs_err_*
 ${sys:logFilename}
+log

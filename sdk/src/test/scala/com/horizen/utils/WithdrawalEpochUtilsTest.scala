@@ -38,6 +38,7 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
       forgerMeta1.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
+      new Array[Byte](32),
       sidechainTransactionsCompanion
     ).get
 
@@ -67,6 +68,7 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
       forgerMeta2.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
+      new Array[Byte](32),
       sidechainTransactionsCompanion
     ).get
 
@@ -101,6 +103,7 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
       forgerMeta3.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
+      new Array[Byte](32),
       sidechainTransactionsCompanion
     ).get
 
@@ -134,6 +137,7 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
       forgerMeta4.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
+      new Array[Byte](32),
       sidechainTransactionsCompanion
     ).get
 
