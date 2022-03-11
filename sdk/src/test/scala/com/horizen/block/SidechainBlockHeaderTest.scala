@@ -11,7 +11,7 @@ import com.horizen.validation.InvalidSidechainBlockHeaderException
 import com.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue, fail => jFail}
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 
 import scala.util.{Failure, Success}
 

@@ -12,7 +12,7 @@ import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.serialization.ApplicationJsonSerializer
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 import scorex.core.utils.ScorexEncoder
 
 class RegularTransactionScalaTest extends JUnitSuite with BoxFixture

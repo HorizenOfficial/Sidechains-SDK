@@ -8,7 +8,7 @@ import com.horizen.fixtures._
 import com.horizen.storage.SidechainWalletBoxStorage
 import org.junit.Assert._
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 
 import scala.collection.JavaConverters._
 import java.util.{HashMap => JHashMap}

@@ -2,7 +2,6 @@ package com.horizen.block
 
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
 import java.util.Random
-
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.box.Box
 import com.horizen.companion.SidechainTransactionsCompanion
@@ -13,12 +12,12 @@ import com.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPubli
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfSecretKey}
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.transaction.{BoxTransaction, RegularTransaction, SidechainTransaction}
-import com.horizen.utils.BytesUtils
+import com.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
 import com.horizen.validation._
 import com.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertEquals, assertTrue, fail => jFail}
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 import scorex.util.{ModifierId, idToBytes}
 
 import scala.io.Source
@@ -37,10 +36,10 @@ class SidechainBlockTest
   val random = new java.util.Random(123L)
 
   val params: NetworkParams = MainNetParams()
-  val mcBlockRef1: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(Source.fromResource("mcblock473173_mainnet").getLines().next()), params).get
-  val mcBlockRef2: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(Source.fromResource("mcblock473174_mainnet").getLines().next()), params).get
-  val mcBlockRef3: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(Source.fromResource("mcblock473175_mainnet").getLines().next()), params).get
-  val mcBlockRef4: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(Source.fromResource("mcblock473176_mainnet").getLines().next()), params).get
+  val mcBlockRef1: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(Source.fromResource("mcblock473173_mainnet").getLines().next()), params, TestSidechainsVersionsManager()).get
+  val mcBlockRef2: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(Source.fromResource("mcblock473174_mainnet").getLines().next()), params, TestSidechainsVersionsManager()).get
+  val mcBlockRef3: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(Source.fromResource("mcblock473175_mainnet").getLines().next()), params, TestSidechainsVersionsManager()).get
+  val mcBlockRef4: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(Source.fromResource("mcblock473176_mainnet").getLines().next()), params, TestSidechainsVersionsManager()).get
 
   val seed: Long = 11L
   val parentId: ModifierId = getRandomBlockId(seed)
@@ -874,6 +873,7 @@ class SidechainBlockTest
       forgerMetadata.forgingStakeInfo,
       vrfProof,
       MerkleTreeFixture.generateRandomMerklePath(rnd.nextLong()),
+      new Array[Byte](32),
       sidechainTransactionsCompanion
     ).get
   }

@@ -6,7 +6,7 @@ import com.horizen.serialization.{ApplicationJsonSerializer, JsonHorizenPublicKe
 import com.horizen.utils.{BytesUtils, Ed25519}
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
 import org.junit.{Assert, Test}
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 import scorex.core.utils.ScorexEncoder
 
 import java.util.Random

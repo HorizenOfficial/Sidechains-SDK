@@ -3,7 +3,6 @@ package com.horizen.api.http
 import java.time.Instant
 import java.util
 import java.util.{Optional, ArrayList => JArrayList, List => JList}
-
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.data.{BoxData, ZenBoxData}
 import com.horizen.box.{Box, ZenBox}
@@ -16,10 +15,10 @@ import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.state.ApplicationState
 import com.horizen.transaction.RegularTransaction
-import com.horizen.utils.{BytesUtils, Pair}
+import com.horizen.utils.{BytesUtils, Pair, TestSidechainsVersionsManager}
 import com.horizen.wallet.ApplicationWallet
 import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 import scorex.util.{ModifierId, bytesToId, idToBytes}
 
 import scala.collection.JavaConverters._
@@ -63,6 +62,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
     forgerBoxMetadata.forgingStakeInfo,
     VrfGenerator.generateProof(456L),
     MerkleTreeFixture.generateRandomMerklePath(456L),
+    new Array[Byte](32),
     sidechainTransactionsCompanion).get
 
   def getNodeHistoryMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeHistory = {
@@ -111,7 +111,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
       if (sidechainApiMockConfiguration.getShould_history_getMainchainBlockReferenceByHash_return_value()) {
         val mcBlockHex = Source.fromResource("mcblock473173_mainnet").getLines().next()
         val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
-        MainchainBlockReference.create(mcBlockBytes, MainNetParams()) match {
+        MainchainBlockReference.create(mcBlockBytes, MainNetParams(), TestSidechainsVersionsManager()) match {
           case Success(ref) => Optional.of(ref)
           case Failure(exception) => Optional.empty()
         }

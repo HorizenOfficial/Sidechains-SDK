@@ -15,8 +15,8 @@ import org.junit.Assert._
 
 import scala.collection.mutable.ListBuffer
 import org.junit._
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito._
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito._
 
 import scala.collection.JavaConverters._
 import org.mockito._

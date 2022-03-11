@@ -1,7 +1,7 @@
 package com.horizen.storage.performance
 
 import org.junit.Ignore
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 
 class StoragePerformanceTest extends JUnitSuite {
   private val performanceConfig =

@@ -19,12 +19,12 @@ import com.horizen.csw.CswManagerRef
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
 import com.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, SecretSubmitProvider, SecretSubmitProviderImpl, TransactionSubmitProvider, TransactionSubmitProviderImpl}
 import com.horizen.params._
-import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
+import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, SchnorrProposition, SchnorrPropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
 import com.horizen.secret.SecretSerializer
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.transaction._
-import com.horizen.utils.{BytesUtils, Pair}
+import com.horizen.utils.{BlockUtils, BytesUtils, Pair}
 import com.horizen.wallet.ApplicationWallet
 import scorex.core.api.http.ApiRoute
 import scorex.core.app.Application
@@ -44,8 +44,9 @@ import com.horizen.network.SidechainNodeViewSynchronizer
 import com.horizen.websocket.client.{DefaultWebSocketReconnectionHandler, MainchainNodeChannelImpl, WebSocketChannel, WebSocketCommunicationClient, WebSocketConnector, WebSocketConnectorImpl, WebSocketReconnectionHandler}
 import com.horizen.websocket.server.WebSocketServerRef
 import com.horizen.serialization.JsonHorizenPublicKeyHashSerializer
+import com.horizen.transaction.mainchain.SidechainCreation
 
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 
 class SidechainApp @Inject()
@@ -112,6 +113,14 @@ class SidechainApp @Inject()
   val calculatedSysDataConstant: Array[Byte] = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateSysDataConstant(signersPublicKeys.map(_.bytes()).asJava, sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold)
   log.info(s"calculated sysDataConstant is: ${BytesUtils.toHexString(calculatedSysDataConstant)}")
 
+  val sidechainCreationOutput: SidechainCreation = BlockUtils.tryGetSidechainCreation(genesisBlock) match {
+    case Success(output) => output
+    case Failure(exception) => throw new IllegalArgumentException("Genesis block specified in the configuration file has no Sidechain Creation info.", exception)
+  }
+
+  val forgerList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = sidechainSettings.forger.allowedForgersList.map(el =>
+    (PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(el.blockSignProposition)), VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(el.vrfPublicKey))))
+
   // Init proper NetworkParams depend on MC network
   val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
     case "regtest" => RegTestParams(
@@ -130,7 +139,10 @@ class SidechainApp @Inject()
       calculatedSysDataConstant = calculatedSysDataConstant,
       initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash),
       cswProvingKeyFilePath = sidechainSettings.csw.cswProvingKeyFilePath,
-      cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath
+      cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath,
+      restrictForgers = sidechainSettings.forger.restrictForgers,
+      allowedForgersList = forgerList,
+      sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version
   )
 
     case "testnet" => TestNetParams(
@@ -149,7 +161,10 @@ class SidechainApp @Inject()
       calculatedSysDataConstant = calculatedSysDataConstant,
       initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash),
       cswProvingKeyFilePath = sidechainSettings.csw.cswProvingKeyFilePath,
-      cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath
+      cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath,
+      restrictForgers = sidechainSettings.forger.restrictForgers,
+      allowedForgersList = forgerList,
+      sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version
     )
 
     case "mainnet" => MainNetParams(
@@ -168,7 +183,10 @@ class SidechainApp @Inject()
       calculatedSysDataConstant = calculatedSysDataConstant,
       initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash),
       cswProvingKeyFilePath = sidechainSettings.csw.cswProvingKeyFilePath,
-      cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath
+      cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath,
+      restrictForgers = sidechainSettings.forger.restrictForgers,
+      allowedForgersList = forgerList,
+      sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
   }
@@ -252,7 +270,8 @@ class SidechainApp @Inject()
     timeProvider,
     applicationWallet,
     applicationState,
-    genesisBlock) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
+    genesisBlock
+    ) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
   def modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =
     Map(SidechainBlock.ModifierTypeId -> new SidechainBlockSerializer(sidechainTransactionsCompanion),

@@ -9,13 +9,15 @@ import akka.util.Timeout
 import com.horizen.SidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView
 import com.horizen.fixtures.SidechainNodeViewHolderFixture
 import com.horizen.node.SidechainNodeView
-import org.scalatest.{BeforeAndAfterAll, FunSuiteLike}
-
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.funsuite.AnyFunSuiteLike
+import org.scalatest.featurespec.AnyFeatureSpecLike
+import org.scalatest.matchers.should.Matchers
 import scala.concurrent._
 import scala.concurrent.duration._
 import org.scalatest._
 import org.junit.runner.RunWith
-import org.scalatest.junit.JUnitRunner
+import org.scalatestplus.junit.JUnitRunner
 import scala.language.postfixOps
 
 
@@ -28,7 +30,7 @@ class SidechainNodeViewHolderActorTest extends Suites(
 @RunWith(classOf[JUnitRunner])
 class SidechainNodeViewHolderActorTest1
   extends TestKit(ActorSystem("testsystem"))
-  with FunSuiteLike
+  with AnyFunSuiteLike
   with BeforeAndAfterAll
   with SidechainNodeViewHolderFixture
 {
@@ -53,7 +55,7 @@ class SidechainNodeViewHolderActorTest1
 @RunWith(classOf[JUnitRunner])
 class SidechainNodeViewHolderActorTest2
   extends TestKit(ActorSystem("testSystem"))
-  with FeatureSpecLike
+  with AnyFeatureSpecLike
   with BeforeAndAfterAll
   with Matchers
   with SidechainNodeViewHolderFixture
@@ -66,8 +68,8 @@ class SidechainNodeViewHolderActorTest2
     TestKit.shutdownActorSystem(system)
   }
 
-  feature("Actor1") {
-    scenario("Scenario 1"){
+  Feature("Actor1") {
+    Scenario("Scenario 1"){
       system should not be(null)
 
       def f(v: SidechainNodeView) = v

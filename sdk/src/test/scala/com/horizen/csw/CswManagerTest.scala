@@ -5,6 +5,7 @@ import akka.pattern.ask
 import akka.testkit.{TestActor, TestActorRef, TestProbe}
 import akka.util.Timeout
 import com.google.common.primitives.Longs
+import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion1
 import com.horizen.block.{MainchainHeader, WithdrawalEpochCertificate}
 import com.horizen.chain.{MainchainHeaderHash, MainchainHeaderInfo}
 import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
@@ -21,8 +22,8 @@ import com.horizen.utils.{ByteArrayWrapper, CswData, ForwardTransferCswData, Utx
 import org.junit.Assert._
 import org.junit.{Assert, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito.MockitoSugar
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.ChangedState
@@ -37,7 +38,7 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
 
   implicit lazy val actorSystem: ActorSystem = ActorSystem("csw-actor-test")
   implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("scorex.executionContext")
-  implicit val timeout: Timeout = 100 milliseconds
+  implicit val timeout: Timeout = 300 milliseconds
 
   case object WatchOk
 
@@ -432,7 +433,7 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
         assertArrayEquals("Different CswInfo value: amount", params.sidechainId, cswInfo.scId)
         assertArrayEquals("Different CswInfo value: nullifier", utxoData1.getNullifier, cswInfo.nullifier)
         assertEquals("Different CswInfo value: proofInfo", expectedProofInfo, cswInfo.proofInfo)
-        assertEquals("Different CswInfo value: activeCertData",  cswManager.cswWitnessHolderOpt.get.lastActiveCertOpt.map(CryptoLibProvider.cswCircuitFunctions.getCertDataHash), cswInfo.activeCertData)
+        assertEquals("Different CswInfo value: activeCertData",  cswManager.cswWitnessHolderOpt.get.lastActiveCertOpt.map(cert => CryptoLibProvider.cswCircuitFunctions.getCertDataHash(cert, SidechainCreationVersion1)), cswInfo.activeCertData)
         assertArrayEquals("Different CswInfo value: nullifier", cswManager.cswWitnessHolderOpt.get.mcbScTxsCumComEnd, cswInfo.ceasingCumScTxCommTree)
 
       case Failure(_) => Assert.fail("Exception found.")

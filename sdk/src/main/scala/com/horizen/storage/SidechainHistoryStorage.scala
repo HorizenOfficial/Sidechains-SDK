@@ -3,7 +3,7 @@ package com.horizen.storage
 import java.util.{ArrayList => JArrayList, List => JList}
 
 import com.horizen.block.{SidechainBlockSerializer, _}
-import com.horizen.chain.{MainchainBlockReferenceDataInfo, _}
+import com.horizen.chain.{FeePaymentsInfo, MainchainBlockReferenceDataInfo, _}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.NetworkParams
@@ -61,6 +61,8 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
   }
 
   private def blockInfoKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"blockInfo$blockId"))
+
+  private def feePaymentsInfoKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"feePaymentsInfo$blockId"))
 
   private def nextVersion: Array[Byte] = {
     val version = new Array[Byte](32)
@@ -253,6 +255,19 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
       new JArrayList[ByteArrayWrapper]())
 
     this
+  }
+
+  def updateFeePaymentsInfo(blockId: ModifierId, feePaymentsInfo: FeePaymentsInfo): Try[SidechainHistoryStorage] = Try {
+    storage.update(
+      nextVersion,
+      java.util.Arrays.asList(new JPair(new ByteArrayWrapper(feePaymentsInfoKey(blockId)), new ByteArrayWrapper(feePaymentsInfo.bytes))),
+      new JArrayList[ByteArrayWrapper]()
+    )
+    this
+  }
+
+  def getFeePaymentsInfo(blockId: ModifierId): Option[FeePaymentsInfo] = {
+    storage.get(feePaymentsInfoKey(blockId)).asScala.flatMap(baw => FeePaymentsInfoSerializer.parseBytesTry(baw.data).toOption)
   }
 
   def semanticValidity(blockId: ModifierId): ModifierSemanticValidity = {

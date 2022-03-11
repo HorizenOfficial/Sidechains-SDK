@@ -3,18 +3,33 @@ package com.horizen.block
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.Bytes
+import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion0, SidechainCreationVersion1}
 import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.serialization.{ReverseBytesSerializer, Views}
 import com.horizen.utils.{BytesUtils, Utils, VarInt}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 import com.horizen.librustsidechains.{Utils => ScCryptoUtils}
+import scorex.util.ScorexLogging
 
 import scala.util.Try
 
-case class FieldElementCertificateField(rawData: Array[Byte]) {
-  lazy val fieldElementBytes: Array[Byte] = {
-    Bytes.concat(new Array[Byte](FieldElementUtils.fieldElementLength() - rawData.length), rawData)
+case class FieldElementCertificateField(rawData: Array[Byte]) extends ScorexLogging {
+  def fieldElementBytes(version: SidechainCreationVersion): Array[Byte] = {
+    logger.debug("Fe before: " + BytesUtils.toHexString(rawData))
+    val bytes = version match {
+      case SidechainCreationVersion0 =>
+        logger.debug(s"sc version=${SidechainCreationVersion0}: prepend raw data to the FieldElement of size=${rawData.length}")
+          // prepend raw data to the FieldElement size
+        Bytes.concat(new Array[Byte](FieldElementUtils.fieldElementLength() - rawData.length), rawData)
+      case SidechainCreationVersion1 =>
+        logger.debug(s"sc version=${SidechainCreationVersion1}: append raw data to the FieldElement of size=${rawData.length}")
+        // append raw data to the FieldElement size
+        Bytes.concat(rawData, new Array[Byte](FieldElementUtils.fieldElementLength() - rawData.length))
+      case other => throw new IllegalArgumentException(s"Version $other is not supported.")
+    }
+    logger.debug("Fe after:  " + BytesUtils.toHexString(bytes))
+    bytes
   }
 }
 case class BitVectorCertificateField(rawData: Array[Byte]) {
@@ -54,11 +69,11 @@ case class WithdrawalEpochCertificate
 
   lazy val hash: Array[Byte] = BytesUtils.reverseBytes(Utils.doubleSHA256Hash(certificateBytes))
 
-  lazy val customFieldsOpt: Option[Array[Array[Byte]]] = {
+  def customFieldsOpt(version: SidechainCreationVersion): Option[Array[Array[Byte]]] = {
     if(fieldElementCertificateFields.isEmpty && bitVectorCertificateFields.isEmpty)
       None
     else {
-      val customFields: Seq[Array[Byte]] = fieldElementCertificateFields.map(_.fieldElementBytes) ++ bitVectorCertificateFields.map(_.merkleRootBytes)
+      val customFields: Seq[Array[Byte]] = fieldElementCertificateFields.map(_.fieldElementBytes(version)) ++ bitVectorCertificateFields.map(_.merkleRootBytes)
       Some(customFields.toArray)
     }
   }

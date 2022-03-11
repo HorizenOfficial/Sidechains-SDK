@@ -2,25 +2,24 @@ package com.horizen
 
 import java.util.{ArrayList => JArrayList, List => JList}
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, WithdrawalEpochCertificate}
-import com.horizen.box.data.{ForgerBoxData, BoxData, ZenBoxData}
+import com.horizen.box.data.{BoxData, ForgerBoxData, ZenBoxData}
 import com.horizen.box._
-import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
+import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
-import com.horizen.librustsidechains.FieldElement
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
 import com.horizen.state.{ApplicationState, SidechainStateReader}
 import com.horizen.transaction.exception.TransactionSemanticValidityException
+import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, WithdrawalEpochInfo, Pair => JPair}
 import com.horizen.transaction.{BoxTransaction, RegularTransaction}
-import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo, Pair => JPair}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito.MockitoSugar
 import scorex.core.{bytesToId, bytesToVersion}
 import scorex.util.ModifierId
 
@@ -51,8 +50,7 @@ class SidechainStateTest
   val secretList = new ListBuffer[PrivateKey25519]()
 
   val params = MainNetParams()
-
-
+  
   def getRegularTransaction(regularOutputsCount: Int,
                             forgerOutputsCount: Int,
                             boxesWithSecretToOpen: Seq[(ZenBox,PrivateKey25519)],
@@ -164,10 +162,13 @@ class SidechainStateTest
 
     Mockito.when(mockedBlock.mainchainBlockReferencesData).thenReturn(Seq())
 
+    Mockito.when(mockedBlock.feePaymentsHash).thenReturn(FeePaymentsUtils.DEFAULT_FEE_PAYMENTS_HASH)
+
     Mockito.when(mockedBlock.parentId)
       .thenReturn(bytesToId(stateVersion.last.data))
       .thenReturn(bytesToId(stateVersion.last.data))
       .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
+
 
     Mockito.doNothing().when(mockedApplicationState).validate(ArgumentMatchers.any[SidechainStateReader](),
       ArgumentMatchers.any[SidechainBlock]())
@@ -375,6 +376,8 @@ class SidechainStateTest
 
     Mockito.when(mockedBlock.feeInfo).thenReturn(modBlockFeeInfo)
 
+    Mockito.when(mockedBlock.feePaymentsHash).thenReturn(FeePaymentsUtils.DEFAULT_FEE_PAYMENTS_HASH)
+
     Mockito.doNothing().when(mockedApplicationState).validate(ArgumentMatchers.any[SidechainStateReader](),
       ArgumentMatchers.any[SidechainBlock]())
 
@@ -392,7 +395,7 @@ class SidechainStateTest
 
     val applyTry = sidechainState.applyModifier(mockedBlock)
 
-    assertTrue("ApplyChanges for block must be successful.",
+    assertTrue(s"ApplyChanges for block must be successful. But result is - $applyTry",
       applyTry.isSuccess)
 
     assertTrue("Box in state must be same as in transaction.",
@@ -413,7 +416,6 @@ class SidechainStateTest
 
     val sidechainState = new SidechainState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage,
       params, bytesToVersion(version.data), applicationState)
-
 
     // Test 1: No block fee info record in the storage
     Mockito.when(stateStorage.getFeePayments(ArgumentMatchers.any[Int]())).thenReturn(Seq())
@@ -545,5 +547,75 @@ class SidechainStateTest
     // Test 1: Sidechain has ceased
     Mockito.when(stateStorage.hasCeased).thenReturn(true)
     assertTrue(s"Sidechain must be ceased.", sidechainState.hasCeased)
+  }
+
+  @Test
+  def restrictForgersTest(): Unit = {
+    // Set base Secrets data
+    secretList.clear()
+    secretList ++= getPrivateKey25519List(5).asScala
+    // Set base Box data
+    boxList.clear()
+    boxList ++= getZenBoxList(secretList.asJava).asScala.toList
+    stateVersion.clear()
+    stateVersion += getVersion
+    transactionList.clear()
+    transactionList += getRegularTransaction(1, 1, Seq(), 5)
+    val stakeTransaction = transactionList.head
+    val allowedBlockSignProposition = stakeTransaction.newBoxes().get(1).blockSignProposition()
+    val allowedVrfPublicKey = stakeTransaction.newBoxes().get(1).vrfPubKey()
+    val invalidVrfPublicKey = getVRFPublicKey
+    val invalidBlockSignProposition = getPrivateKey25519.publicImage()
+
+    Mockito.when(mockedStateStorage.lastVersionId).thenReturn(Some(stateVersion.last))
+
+    Mockito.when(mockedStateStorage.getBox(ArgumentMatchers.any[Array[Byte]]()))
+      .thenAnswer(answer => {
+        val boxId = answer.getArgument(0).asInstanceOf[Array[Byte]]
+        boxList.find(_.id().sameElements(boxId))
+      })
+
+    Mockito.when(mockedStateForgerBoxStorage.lastVersionId).thenReturn(Some(stateVersion.last))
+
+    Mockito.when(mockedStateUtxoMerkleTreeStorage.lastVersionId).thenReturn(Some(stateVersion.last))
+
+    val mockedParams = mock[MainNetParams]
+    Mockito.when(mockedParams.restrictForgers).thenReturn(false)
+
+    val sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeStorage,
+      mockedParams, bytesToVersion(stateVersion.last.data), mockedApplicationState)
+
+    //Test validate(Transaction) with no restrict forgers enabled
+    var tryValidate = sidechainState.validate(stakeTransaction)
+    assertTrue("Transaction validation must be successful.",
+      tryValidate.isSuccess)
+
+    //Test validate(Transaction) with restrict forger enable and no forger in the list
+    Mockito.when(mockedParams.restrictForgers).thenReturn(true)
+    Mockito.when(mockedParams.allowedForgersList).thenReturn(Seq())
+    tryValidate = sidechainState.validate(stakeTransaction)
+    assertFalse("Transaction validation must fail.",
+      tryValidate.isSuccess)
+    assertTrue(tryValidate.failed.get.getMessage.equals("This publicKey is not allowed to forge!"))
+
+    //Test validate(Transaction) with restrict forger enable and invalid blockSignProposition
+    Mockito.when(mockedParams.allowedForgersList).thenReturn(Seq((invalidBlockSignProposition,allowedVrfPublicKey)))
+    tryValidate = sidechainState.validate(stakeTransaction)
+    assertFalse("Transaction validation must fail.",
+      tryValidate.isSuccess)
+    assertTrue(tryValidate.failed.get.getMessage.equals("This publicKey is not allowed to forge!"))
+
+    //Test validate(Transaction) with restrict forger enable and invalid vrfPublicKey
+    Mockito.when(mockedParams.allowedForgersList).thenReturn(Seq((allowedBlockSignProposition,invalidVrfPublicKey)))
+    tryValidate = sidechainState.validate(stakeTransaction)
+    assertFalse("Transaction validation must fail.",
+      tryValidate.isSuccess)
+    assertTrue(tryValidate.failed.get.getMessage.equals("This publicKey is not allowed to forge!"))
+
+    //Test validate(Transaction) with restrict forger enable and valid blockSignProposition and vrfPublicKey
+    Mockito.when(mockedParams.allowedForgersList).thenReturn(Seq((allowedBlockSignProposition,allowedVrfPublicKey)))
+    tryValidate = sidechainState.validate(stakeTransaction)
+    assertTrue("Transaction validation must fail.",
+      tryValidate.isSuccess)
   }
 }

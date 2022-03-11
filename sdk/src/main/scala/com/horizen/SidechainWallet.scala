@@ -3,7 +3,7 @@ package com.horizen
 import java.lang
 import java.util.{List => JList, Optional => JOptional}
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock}
-import com.horizen.box.{Box, CoinsBox, ForgerBox}
+import com.horizen.box.{Box, CoinsBox, ForgerBox, ZenBox}
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.wallet.ApplicationWallet
 import com.horizen.node.NodeWallet
@@ -113,7 +113,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
   // 3) update CSW FT metadata for all FT related to current wallet.
   def scanPersistent(modifier: SidechainBlock,
                      withdrawalEpoch: Int,
-                     feePaymentBoxes: Seq[SidechainTypes#SCB],
+                     feePaymentBoxes: Seq[ZenBox],
                      utxoMerkleTreeViewOpt: Option[UtxoMerkleTreeView]): SidechainWallet = {
     //require(modifier != null, "SidechainBlock must be NOT NULL.")
     val version = BytesUtils.fromHexString(modifier.id)
@@ -126,7 +126,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
           tx.newBoxes().asScala.map(b => new ByteArrayWrapper(b.id()) -> tx)
       }
 
-    val newBoxes: Seq[SidechainTypes#SCB] = changes.toAppend.map(_.box) ++ feePaymentBoxes
+    val newBoxes: Seq[SidechainTypes#SCB] = changes.toAppend.map(_.box) ++ feePaymentBoxes.map(_.asInstanceOf[SidechainTypes#SCB])
 
     val newWalletBoxes = newBoxes
       .withFilter(box => pubKeys.contains(box.proposition()))
@@ -191,7 +191,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
         })
 
         if(walletFTs.nonEmpty) {
-          val commitmentTree = mcBlockRefData.commitmentTree(params.sidechainId)
+          val commitmentTree = mcBlockRefData.commitmentTree(params.sidechainId, params.sidechainCreationVersion)
           val scCommitmentMerklePath = commitmentTree.getSidechainCommitmentMerklePath(params.sidechainId).get
           val btrCommitment = commitmentTree.getBtrCommitment(params.sidechainId).get
           val certCommitment = commitmentTree.getCertCommitment(params.sidechainId).get

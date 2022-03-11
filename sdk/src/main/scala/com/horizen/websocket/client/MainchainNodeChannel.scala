@@ -1,15 +1,16 @@
 package com.horizen.websocket.client
 import com.horizen.block.{MainchainBlockReference, MainchainHeader}
-import com.horizen.mainchain.api.MainchainNodeApi
+import com.horizen.mainchain.api.MainchainNodeCertificateApi
 
 import scala.util.Try
 
+case class SidechainVersionsInfo(scId: String, version: Int)
 
 case class OnUpdateTipEventPayload(height: Int, hash: String, block: String) extends EventPayload
 trait OnUpdateTipEventHandler extends EventHandler[OnUpdateTipEventPayload]
 
 
-trait MainchainNodeChannel extends MainchainNodeApi {
+trait MainchainNodeChannel extends MainchainNodeCertificateApi {
   // Get reference for given height in MC node active chain
   def getBlockByHeight(height: Int): Try[MainchainBlockReference]
 
@@ -42,4 +43,6 @@ trait MainchainNodeChannel extends MainchainNodeApi {
 
   // Unsubscribe from new tip event.
   def unsubscribeOnUpdateTipEvent(handler: OnUpdateTipEventHandler): Unit
+
+  def getSidechainVersions(scIds: Seq[String]): Try[Seq[SidechainVersionsInfo]]
 }

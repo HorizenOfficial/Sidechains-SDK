@@ -9,8 +9,8 @@ import com.horizen.api.http.SidechainTransactionActorRef
 import com.horizen.fixtures.{SidechainTypesTestsExtension, TransactionFixture}
 import com.horizen.transaction.RegularTransaction
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito.MockitoSugar
 import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, SuccessfulTransaction}
 

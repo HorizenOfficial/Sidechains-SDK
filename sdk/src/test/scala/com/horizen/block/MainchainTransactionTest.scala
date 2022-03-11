@@ -3,7 +3,7 @@ package com.horizen.block
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Test, Ignore}
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 import com.horizen.librustsidechains.{ Utils => ScCryptoUtils }
 
 import scala.io.Source

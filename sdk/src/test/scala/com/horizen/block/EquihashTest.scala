@@ -8,7 +8,7 @@ import org.bouncycastle.crypto.digests.Blake2bDigest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertArrayEquals
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 
 class EquihashTest extends JUnitSuite {
 

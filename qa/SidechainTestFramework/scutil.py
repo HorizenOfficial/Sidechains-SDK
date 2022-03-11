@@ -3,6 +3,7 @@ import os
 import sys
 
 import json
+from decimal import Decimal
 
 from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
     VrfAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths, LARGE_WITHDRAWAL_EPOCH_LENGTH
@@ -12,7 +13,8 @@ import time
 import socket
 from contextlib import closing
 
-from test_framework.util import initialize_new_sidechain_in_mainchain
+from test_framework.mc_test.mc_test import generate_random_field_element_hex, get_field_element_with_padding
+from test_framework.util import initialize_new_sidechain_in_mainchain, get_spendable, swap_bytes, assert_equal
 
 WAIT_CONST = 1
 
@@ -119,7 +121,7 @@ def launch_bootstrap_tool(command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK",
-                                          "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.2.7.jar",
+                                          "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.3.0.jar",
                                 command_name, json_param], stdout=subprocess.PIPE)
     sc_bootstrap_output = java_ps.communicate()[0]
     try:
@@ -277,8 +279,6 @@ Parameters:
  - bootstrap_info: an instance of SCBootstrapInfo (see sc_bootstrap_info.py)
  - websocket_config: an instance of MCConnectionInfo (see sc_boostrap_info.py)
 """
-
-
 def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_config=SCNodeConfiguration(),
                           log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT):
     apiAddress = "127.0.0.1"
@@ -345,12 +345,16 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "CERTIFICATE_FEE": sc_node_config.certificate_fee,
         "CSW_PROVING_KEY_PATH": bootstrap_info.csw_keys_paths.proving_key_path,
         "CSW_VERIFICATION_KEY_PATH": bootstrap_info.csw_keys_paths.verification_key_path,
+        "RESTRICT_FORGERS": ("true" if sc_node_config.forger_options.restrict_forgers else "false"),
+        "ALLOWED_FORGERS_LIST": sc_node_config.forger_options.allowed_forgers,
     }
-
+    config = config.replace("'","")
+    config = config.replace("NEW_LINE", "\n")
     configsData.append({
         "name": "node" + str(n),
         "url": "http://" + apiAddress + ":" + str(apiPort)
     })
+
     with open(os.path.join(datadir, "node" + str(n) + ".conf"), 'w+') as configFile:
         configFile.write(config)
 
@@ -395,7 +399,9 @@ def initialize_default_sc_datadir(dirname, n):
         "CERT_PROVING_KEY_PATH": cert_keys_paths.proving_key_path,
         "CERT_VERIFICATION_KEY_PATH": cert_keys_paths.verification_key_path,
         "CSW_PROVING_KEY_PATH": csw_keys_paths.proving_key_path,
-        "CSW_VERIFICATION_KEY_PATH": csw_keys_paths.verification_key_path
+        "CSW_VERIFICATION_KEY_PATH": csw_keys_paths.verification_key_path,
+        "RESTRICT_FORGERS": "false",
+        "ALLOWED_FORGERS_LIST": []
     }
 
     configsData.append({
@@ -442,7 +448,7 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
         lib_separator = ";"
 
     if binary is None:
-        binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.2.7.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+        binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.3.0.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
     #        else if platform.system() == 'Linux':
     '''
     In order to effectively attach a debugger (e.g IntelliJ) to the simpleapp, it is necessary to start the process
@@ -741,10 +747,7 @@ network: {
  Output:
  - bootstrap information of the sidechain nodes. An instance of SCBootstrapInfo (see sc_boostrap_info.py)    
 """
-
-
-def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
-                              block_timestamp_rewind=DefaultBlockTimestampRewind):
+def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration, block_timestamp_rewind=DefaultBlockTimestampRewind):
     log_info = LogInfo(options.logfilelevel, options.logconsolelevel)
     print(options)
     total_number_of_sidechain_nodes = len(network.sc_nodes_configuration)
@@ -779,7 +782,6 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
         else:
             bootstrap_sidechain_node(options.tmpdir, i, sc_nodes_bootstrap_info_empty_account, sc_node_conf, log_info,
                                      options.restapitimeout)
-
     return sc_nodes_bootstrap_info
 
 
@@ -823,7 +825,8 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
         certificate_proof_info.genSysConstant,
         certificate_proof_info.verificationKey,
         csw_verification_key,
-        sc_creation_info.btr_data_length)
+        sc_creation_info.btr_data_length,
+        sc_creation_info.sc_creation_version)
 
     genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret, vrf_key.secret,
                                          block_timestamp_rewind)
@@ -846,7 +849,6 @@ Parameters:
  - rest_api_timeout: optional, SC node api timeout, 5 seconds by default.
  
 """
-
 
 def bootstrap_sidechain_node(dirname, n, bootstrap_info, sc_node_configuration,
                              log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT):
@@ -899,14 +901,6 @@ def generate_next_blocks(node, node_name, blocks_count):
     return blocks_ids
 
 
-SC_FIELD_SIZE = 32
-SC_FIELD_SAFE_SIZE = 31
-
-
-def generate_random_field_element_hex():
-    return binascii.b2a_hex(os.urandom(SC_FIELD_SAFE_SIZE)) + "00" * (SC_FIELD_SIZE - SC_FIELD_SAFE_SIZE)
-
-
 # Check if the CSW proofs for the required boxes were finished (or absent if was not able to create a proof)
 def if_csws_were_generated(sc_node, csw_box_ids, allow_absent=False):
     for box_id in csw_box_ids:
@@ -917,3 +911,105 @@ def if_csws_were_generated(sc_node, csw_box_ids, allow_absent=False):
         elif status != "Generated":
             return False
     return True
+
+
+def get_scinfo_data(scid, mc_node):
+    ret = mc_node.getscinfo(scid)['items'][0]
+    sc_creating_height = ret['createdAtBlockHeight']
+    sc_version = ret['sidechainVersion']
+    sc_constant = ret['constant']
+    sc_customData = ret['customData']
+    epochLen = ret['withdrawalEpochLength']
+    current_height = mc_node.getblockcount()
+    epoch_number = (current_height - sc_creating_height + 1) // epochLen - 1
+    end_epoch_block_hash = mc_node.getblockhash(sc_creating_height - 1 + ((epoch_number + 1) * epochLen))
+    epoch_cum_tree_hash = mc_node.getblock(end_epoch_block_hash)['scCumTreeHash']
+    return epoch_number, epoch_cum_tree_hash, sc_version, sc_constant, sc_customData
+
+
+def create_alien_sidechain(mcTest, mc_node, scVersion, epochLength, customHexTag, feCfgList=[]):
+    sc_tag = customHexTag
+    vk = mcTest.generate_params(sc_tag)
+    constant = generate_random_field_element_hex()
+    # we use this field to store sc_tag, used by mcTool when creating certificates
+    customData = sc_tag
+    cswVk = ""
+    cmtCfg = []
+
+    cmdInput = {
+        "version": scVersion,
+        "withdrawalEpochLength": epochLength,
+        "toaddress": "dada",
+        "amount": 0.1,
+        "wCertVk": vk,
+        "constant": constant,
+        'customData': customData,
+        'wCeasedVk': cswVk,
+        'vFieldElementCertificateFieldConfig': feCfgList,
+        'vBitVectorCertificateFieldConfig': cmtCfg
+    }
+    try:
+        ret = mc_node.sc_create(cmdInput)
+    except Exception as e:
+        print(e)
+        assert_true(False)
+    # self.sync_all()
+    # time.sleep(1) # if we have one node the sync_all won't sleep
+    assert_equal(True, ret['txid'] in mc_node.getrawmempool())
+
+    return ret
+
+
+def create_certificate_for_alien_sc(mcTest, scid, mc_node, fePatternArray):
+    epoch_number_1, epoch_cum_tree_hash_1, sc_version, constant, sc_tag = get_scinfo_data(scid, mc_node)
+
+    print("sc_tag[{}]".format(sc_tag))
+    print("constant={}".format(constant))
+    print("sc_version={}".format(sc_version))
+
+    vCfe = fePatternArray
+    vCmt = []
+
+    MBTR_SC_FEE = 0.0
+    FT_SC_FEE = 0.0
+    CERT_FEE = Decimal('0.0001')
+
+    # get a UTXO
+    utx, change = get_spendable(mc_node, CERT_FEE)
+
+    inputs = [{'txid': utx['txid'], 'vout': utx['vout']}]
+    outputs = {mc_node.getnewaddress(): change}
+
+    # serialized fe for the proof has 32 byte size
+    feList = []
+    for pattern in fePatternArray:
+        feList.append(get_field_element_with_padding(pattern, sc_version))
+    scid_swapped = str(swap_bytes(scid))
+
+    scProof = mcTest.create_test_proof(
+        sc_tag, scid_swapped, epoch_number_1, quality=10,
+        btr_fee=MBTR_SC_FEE, ft_min_amount=FT_SC_FEE,
+        end_cum_comm_tree_root=epoch_cum_tree_hash_1, constant=constant,
+        pks=[], amounts=[], custom_fields=feList)
+
+    print("cum =", epoch_cum_tree_hash_1)
+    params = {
+        'scid': scid,
+        'quality': 10,
+        'endEpochCumScTxCommTreeRoot': epoch_cum_tree_hash_1,
+        'scProof': scProof,
+        'withdrawalEpochNumber': epoch_number_1,
+        'vFieldElementCertificateField': vCfe,
+        'vBitVectorCertificateField': vCmt
+    }
+
+    try:
+        rawcert = mc_node.createrawcertificate(inputs, outputs, [], params)
+        signed_cert = mc_node.signrawtransaction(rawcert)
+        cert = mc_node.sendrawtransaction(signed_cert['hex'])
+    except Exception as e:
+        print("Send certificate failed with reason {}".format(e))
+        assert (False)
+
+    assert_equal(True, cert in mc_node.getrawmempool())
+    return cert

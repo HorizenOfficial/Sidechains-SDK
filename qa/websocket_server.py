@@ -227,9 +227,11 @@ class SCWsServer(SidechainTestFramework):
         assert_equal(responsePayload['hash'],block)
         assert_equal(responsePayload['height'],3)
 
-        #The block result should be the same of findBlockByID sc endpoint response
+        # The block result should be the same of findBlockByID sc endpoint response
         blockJson  = http_block_findById(sc_node1,block)
-        assert_equal(responsePayload['block'],blockJson['block'])
+        assert_equal(responsePayload['block'], blockJson['block'])
+        # No fee payments expected
+        assert_true('feePayments' not in responsePayload)
 
         # Send get single block request with block height
         response = json.loads(ws.sendMessage(ws_connection,
@@ -247,10 +249,12 @@ class SCWsServer(SidechainTestFramework):
         assert_equal(responsePayload['hash'],block)
         assert_equal(responsePayload['height'],3)
 
-        #The block result should be the same of findBlockByID sc endpoint response
-        assert_equal(responsePayload['block'],blockJson['block'])
+        # The block result should be the same of findBlockByID sc endpoint response
+        assert_equal(responsePayload['block'], blockJson['block'])
+        # No fee payments expected
+        assert_true('feePayments' not in responsePayload)
 
-        # Test get single block request with non existing block
+        # Test get single block request with non-existing block
 
         # Send get single block request with block hash
         response = json.loads(ws.sendMessage(ws_connection,

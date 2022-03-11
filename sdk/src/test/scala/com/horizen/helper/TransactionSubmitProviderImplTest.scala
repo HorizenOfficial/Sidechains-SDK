@@ -9,8 +9,8 @@ import com.horizen.fixtures.{SidechainTypesTestsExtension, TransactionFixture}
 import com.horizen.transaction.RegularTransaction
 import org.junit.Assert.{assertEquals, assertTrue, assertFalse}
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito.MockitoSugar
 import scorex.util.ModifierId
 
 import scala.concurrent.{ExecutionContext, Promise}
