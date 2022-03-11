@@ -1,9 +1,8 @@
 package com.horizen.params
 
 import java.math.BigInteger
-
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
-import com.horizen.proposition.SchnorrProposition
+import com.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
 import scorex.core.block.Block
 import scorex.util.{ModifierId, bytesToId}
 
@@ -55,4 +54,8 @@ trait NetworkParams {
   val consensusSecondsInSlot: Int
   val consensusSlotsInEpoch: Int
   val initialCumulativeCommTreeHash: Array[Byte] // CumulativeCommTreeHash value before genesis block
+
+  //Sidechain forger restriction
+  val restrictForgers: Boolean = false
+  val allowedForgersList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = Seq()
 }

@@ -1,7 +1,5 @@
 package com.horizen.integration
 
-import com.google.common.primitives.{Bytes, Ints}
-
 import java.io.{File => JFile}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock}
@@ -24,11 +22,9 @@ import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import scorex.core.{bytesToId, bytesToVersion, idToBytes, versionToBytes}
-import scorex.crypto.hash.Blake2b256
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
-import scala.util.Random
 
 class SidechainStateIntegrationTest
   extends JUnitSuite
