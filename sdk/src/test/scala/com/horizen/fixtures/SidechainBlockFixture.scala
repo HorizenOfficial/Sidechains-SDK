@@ -67,6 +67,7 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
       forgerMetadata.forgingStakeInfo,
       firstOrSecond(vrfProof, initialBlock.header.vrfProof),
       firstOrSecond(merklePath, initialBlock.header.forgingStakeMerklePath),
+      initialBlock.header.feePaymentsHash,
       firstOrSecond(companion, sidechainTransactionsCompanion),
       signatureOption
     ).get
@@ -108,6 +109,7 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
       forgerMetadata.forgingStakeInfo,
       vrfProof,
       MerkleTreeFixture.generateRandomMerklePath(basicSeed),
+      new Array[Byte](32),
       companion
     ).get
   }

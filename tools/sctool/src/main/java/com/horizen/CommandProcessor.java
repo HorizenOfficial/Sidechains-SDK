@@ -524,6 +524,9 @@ public class CommandProcessor {
             long currentTimeSeconds = System.currentTimeMillis() / 1000;
             long timestamp = (params instanceof RegTestParams) ? currentTimeSeconds - regtestBlockTimestampRewind : currentTimeSeconds;
 
+            // no fee payments expected for the genesis block
+            byte[] feePaymentsHash = new byte[32];
+
             SidechainBlock sidechainBlock = SidechainBlock.create(
                     params.sidechainGenesisBlockParentId(),
                     SidechainBlock.BLOCK_VERSION(),
@@ -536,6 +539,7 @@ public class CommandProcessor {
                     forgingStakeInfo,
                     vrfProof,
                     mp,
+                    feePaymentsHash,
                     sidechainTransactionsCompanion,
                     scala.Option.empty()
             ).get();
@@ -597,11 +601,11 @@ public class CommandProcessor {
     private NetworkParams getNetworkParams(byte network, byte[] scId) {
         switch(network) {
             case 0: // mainnet
-                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, 0, null, null, null, null, null, null, null, null);
+                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, 0, null, null, null, null, null, null, null, false, null, null);
             case 1: // testnet
-                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null, null, null, null, null, null);
+                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null, null, null, null, null, false, null, null);
             case 2: // regtest
-                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null, null, null, null, null, null);
+                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null, null, null, null, null, false, null, null);
             default:
                 throw new IllegalStateException("Unexpected network type: " + network);
         }

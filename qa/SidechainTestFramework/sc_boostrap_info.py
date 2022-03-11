@@ -51,6 +51,17 @@ class MCConnectionInfo(object):
         self.reconnectionDelay = reconnectionDelay
         self.reconnectionMaxAttempts = reconnectionMaxAttempts
 
+"""
+Configration that enables the possibility to restrict the forging phase
+ to a specific list of forgers.
+"""
+class SCForgerConfiguration(object):
+    def __init__(self, restrict_forgers = False, allowed_forgers = []):
+        self.restrict_forgers = restrict_forgers
+        self.allowed_forgers = []
+        for forger in allowed_forgers:
+            self.allowed_forgers.append('{ blockSignProposition = "'+forger[0]+'" NEW_LINE vrfPublicKey = "'+forger[1]+'" }')
+
 
 """
 Information needed to start a sidechain node connected to specific mainchain node.
@@ -75,7 +86,8 @@ class SCNodeConfiguration(object):
                  submitter_private_keys_indexes=None,
                  max_connections=100,
                  automatic_fee_computation=True,
-                 certificate_fee=0.0001):
+                 certificate_fee=0.0001,
+                 forger_options = SCForgerConfiguration()):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))
         self.mc_connection_info = mc_connection_info
@@ -85,6 +97,7 @@ class SCNodeConfiguration(object):
         self.max_connections = max_connections
         self.automatic_fee_computation = automatic_fee_computation
         self.certificate_fee = certificate_fee
+        self.forger_options = forger_options
 
 
 """

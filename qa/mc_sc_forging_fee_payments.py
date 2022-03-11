@@ -3,6 +3,7 @@
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, Account
+from httpCalls.block.getFeePayments import http_block_getFeePayments
 from test_framework.util import assert_equal, assert_true, initialize_chain_clean, start_nodes, \
     websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, \
@@ -158,7 +159,7 @@ class MCSCForgingFeePayments(SidechainTestFramework):
 
         self.sc_sync_all()
 
-        fee = 200
+        fee = 201
         sendCoins = {
             "outputs": [
                 {
@@ -175,7 +176,7 @@ class MCSCForgingFeePayments(SidechainTestFramework):
             print("send coins tx created: " + json.dumps(jsonRes))
 
         # Generate SC block on SC node 2 for the next consensus epoch
-        generate_next_block(sc_node2, "second node", force_switch_to_next_epoch=True)
+        sc_middle_we_block_id = generate_next_block(sc_node2, "second node", force_switch_to_next_epoch=True)
         sc_block_fee_info.append(BlockFeeInfo(2, fee))
 
         self.sc_sync_all()
@@ -188,7 +189,7 @@ class MCSCForgingFeePayments(SidechainTestFramework):
         sc_node2_balance_before_payments = int(sc_node2.wallet_coinsBalance()["result"]["balance"])
 
         # Generate one more block with no fee by SC node 2 to reach the end of the withdrawal epoch
-        generate_next_block(sc_node2, "second node")
+        sc_last_we_block_id = generate_next_block(sc_node2, "second node")
         sc_block_fee_info.append(BlockFeeInfo(2, 0))
 
         self.sc_sync_all()
@@ -207,7 +208,7 @@ class MCSCForgingFeePayments(SidechainTestFramework):
             else:
                 forger_fees[sc_block_fee.node] = math.floor(sc_block_fee.fee * 0.7)
 
-            forger_fees[sc_block_fee.node] += pool_fee / len(sc_block_fee_info)
+            forger_fees[sc_block_fee.node] += math.floor(pool_fee / len(sc_block_fee_info))
 
             if idx < pool_fee % len(sc_block_fee_info):
                 forger_fees[sc_block_fee.node] += 1
@@ -224,7 +225,24 @@ class MCSCForgingFeePayments(SidechainTestFramework):
         assert_equal(sc_node2_balance_after_payments, sc_node2_balance_before_payments + node_2_fees,
                      "Wrong fee payment amount for SC node 2")
 
+        # Check fee payments from API perspective
+        # Non-last block of the epoch:
+        api_fee_payments_node1 = http_block_getFeePayments(sc_node1, sc_middle_we_block_id)['feePayments']
+        assert_equal(0, len(api_fee_payments_node1),
+                     "No fee payments expected to be found for the block in the middle of WE")
+        api_fee_payments_node2 = http_block_getFeePayments(sc_node2, sc_middle_we_block_id)['feePayments']
+        assert_equal(0, len(api_fee_payments_node2),
+                     "No fee payments expected to be found for the block in the middle of WE")
 
+        # Last block of the epoch:
+        api_fee_payments_node1 = http_block_getFeePayments(sc_node1, sc_last_we_block_id)['feePayments']
+        api_fee_payments_node2 = http_block_getFeePayments(sc_node2, sc_last_we_block_id)['feePayments']
+        assert_equal(api_fee_payments_node1, api_fee_payments_node2,
+                     "SC nodes have different view on the fee payments")
+
+        for i in range(1, len(forger_fees) + 1):
+            assert_equal(forger_fees[i], api_fee_payments_node1[i - 1]['value'],
+                         "Different fee value found for payment " + str(i))
 
 
 if __name__ == "__main__":

@@ -1,12 +1,10 @@
 package com.horizen.integration
 
-import com.google.common.primitives.{Bytes, Ints}
-
 import java.io.{File => JFile}
 import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock}
-import com.horizen.box.data.{ForgerBoxData, BoxData, ZenBoxData}
-import com.horizen.box.{ForgerBox, Box, WithdrawalRequestBox, ZenBox}
+import com.horizen.box.data.{BoxData, ForgerBoxData, ZenBoxData}
+import com.horizen.box.{Box, ForgerBox, WithdrawalRequestBox, ZenBox}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
 import com.horizen.customtypes.DefaultApplicationState
@@ -16,19 +14,17 @@ import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
 import com.horizen.transaction.RegularTransaction
-import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo, Pair => JPair}
+import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, WithdrawalEpochInfo, Pair => JPair}
 import com.horizen.{SidechainState, SidechainTypes}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.core.{bytesToId, bytesToVersion, idToBytes, versionToBytes}
-import scorex.crypto.hash.Blake2b256
+import scorex.core.{bytesToId, bytesToVersion}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
-import scala.util.Random
 
 class SidechainStateIntegrationTest
   extends JUnitSuite
@@ -209,12 +205,12 @@ class SidechainStateIntegrationTest
 
     // Collect and verify getFeePayments value
     val withdrawalEpochNumber: Int = initialWithdrawalEpochInfo.epoch
-    val feePayments: Seq[SidechainTypes#SCB] = sidechainState.getFeePayments(withdrawalEpochNumber)
+    val feePayments: Seq[ZenBox] = sidechainState.getFeePayments(withdrawalEpochNumber)
 
     assertEquals(s"Fee payments for epoch $withdrawalEpochNumber size expected to be different.",
       1, feePayments.size)
 
-    val nonce: Long = SidechainState.calculateFeePaymentBoxNonce(versionToBytes(sidechainState.version), 0)
+    val nonce: Long = SidechainState.calculateFeePaymentBoxNonce(withdrawalEpochNumber, 0)
     val expectedFeePaymentBox: ZenBox = new ZenBox(new ZenBoxData(initialBlockFeeInfo.forgerRewardKey, initialBlockFeeInfo.fee), nonce)
     assertEquals(s"Fee payments for epoch $withdrawalEpochNumber expected to be different.",
       Seq(expectedFeePaymentBox), feePayments)
@@ -255,6 +251,11 @@ class SidechainStateIntegrationTest
 
     val blockFeeInfo = BlockFeeInfo(307, getPrivateKey25519("mod".getBytes()).publicImage())
     Mockito.when(mockedBlock.feeInfo).thenReturn(blockFeeInfo)
+
+    Mockito.when(mockedBlock.feePaymentsHash).thenAnswer(_ =>{
+      val feePayments = sidechainState.getFeePayments(initialWithdrawalEpochInfo.epoch, Some(blockFeeInfo))
+      FeePaymentsUtils.calculateFeePaymentsHash(feePayments)
+    })
 
     // Check that there is no record for utxo merkle tree before applying the last block of the withdrawal epoch
     assertTrue("No utxo merkle tree root expected to be found before finishing the epoch: " + initialWithdrawalEpochInfo,
@@ -301,7 +302,7 @@ class SidechainStateIntegrationTest
 
     // Test that getFeePayments changed after modifier was applied
     val withdrawalEpochNumber: Int = initialWithdrawalEpochInfo.epoch
-    val feePayments: Seq[SidechainTypes#SCB] = sidechainState.getFeePayments(withdrawalEpochNumber)
+    val feePayments: Seq[ZenBox] = sidechainState.getFeePayments(withdrawalEpochNumber)
 
     assertEquals(s"Fee payments for epoch $withdrawalEpochNumber size expected to be different.",
       2, feePayments.size)
@@ -312,12 +313,12 @@ class SidechainStateIntegrationTest
 
     val poolPayments: Long = Math.ceil((initialBlockFeeInfo.fee + blockFeeInfo.fee) * (1 - params.forgerBlockFeeCoefficient)).longValue()
 
-    val nonce1: Long = SidechainState.calculateFeePaymentBoxNonce(idToBytes(mockedBlock.id), 0)
+    val nonce1: Long = SidechainState.calculateFeePaymentBoxNonce(withdrawalEpochNumber, 0)
     // Simplified version of fee computation with lower precision, but is quite enough for the tests.
     val payment1: Long = (initialBlockFeeInfo.fee * params.forgerBlockFeeCoefficient).longValue() + poolPayments / 2 + poolPayments % 2
     val expectedFeePaymentBox1: ZenBox = new ZenBox(new ZenBoxData(initialBlockFeeInfo.forgerRewardKey, payment1), nonce1)
 
-    val nonce2: Long = SidechainState.calculateFeePaymentBoxNonce(idToBytes(mockedBlock.id), 1)
+    val nonce2: Long = SidechainState.calculateFeePaymentBoxNonce(withdrawalEpochNumber, 1)
     // Simplified version of fee computation with lower precision, but is quite enough for the tests.
     val payment2: Long = (blockFeeInfo.fee * params.forgerBlockFeeCoefficient).longValue() + poolPayments / 2
     val expectedFeePaymentBox2: ZenBox = new ZenBox(new ZenBoxData(blockFeeInfo.forgerRewardKey, payment2), nonce2)
