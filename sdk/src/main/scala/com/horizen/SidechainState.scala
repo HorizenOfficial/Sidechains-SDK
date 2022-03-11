@@ -22,7 +22,7 @@ import scorex.util.{ModifierId, ScorexLogging}
 
 import java.math.{BigDecimal, MathContext}
 import com.horizen.box.data.ZenBoxData
-import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
@@ -221,20 +221,26 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       }
     }
 
-    if(topQualityCertificate.fieldElementCertificateFields.size != 2)
-      throw new IllegalArgumentException(s"Top quality certificate should contain exactly 2 custom fields.")
+    if (params.isCSWEnabled) {
+      if (topQualityCertificate.fieldElementCertificateFields.size != CommonCircuit.customFieldsNumber)
+        throw new IllegalArgumentException(s"Top quality certificate should contain exactly ${CommonCircuit.customFieldsNumber} custom fields.")
 
-    utxoMerkleTreeRoot(certReferencedEpochNumber) match {
-      case Some(expectedMerkleTreeRoot) =>
-        val certUtxoMerkleRoot = CryptoLibProvider.sigProofThresholdCircuitFunctions.reconstructUtxoMerkleTreeRoot(
-          topQualityCertificate.fieldElementCertificateFields.head.fieldElementBytes,
-          topQualityCertificate.fieldElementCertificateFields(1).fieldElementBytes
-        )
-        if(!expectedMerkleTreeRoot.sameElements(certUtxoMerkleRoot))
-          throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate utxo merkle tree root " +
-            s"data is different than expected. Node's active chain is the fork from MC perspective.")
-      case None =>
-        throw new IllegalArgumentException(s"There is no utxo merkle tree root stored for the referenced epoch $certReferencedEpochNumber.")
+      utxoMerkleTreeRoot(certReferencedEpochNumber) match {
+        case Some(expectedMerkleTreeRoot) =>
+          val certUtxoMerkleRoot = CryptoLibProvider.sigProofThresholdCircuitFunctions.reconstructUtxoMerkleTreeRoot(
+            topQualityCertificate.fieldElementCertificateFields.head.fieldElementBytes,
+            topQualityCertificate.fieldElementCertificateFields(1).fieldElementBytes
+          )
+          if (!expectedMerkleTreeRoot.sameElements(certUtxoMerkleRoot))
+            throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate utxo merkle tree root " +
+              s"data is different than expected. Node's active chain is the fork from MC perspective.")
+        case None =>
+          throw new IllegalArgumentException(s"There is no utxo merkle tree root stored for the referenced epoch $certReferencedEpochNumber.")
+      }
+    }
+    else {
+      if (!topQualityCertificate.fieldElementCertificateFields.isEmpty )
+        throw new IllegalArgumentException(s"Top quality certificate should not contain custom fields when ceased sidechain withdrawal is disabled.")
     }
   }
 
