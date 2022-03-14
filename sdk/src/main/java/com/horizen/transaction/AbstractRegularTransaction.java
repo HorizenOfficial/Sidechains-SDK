@@ -35,19 +35,7 @@ public abstract class AbstractRegularTransaction
     public AbstractRegularTransaction(List<byte[]> inputZenBoxIds,              // zen box ids to spent
                                       List<Signature25519> inputZenBoxProofs,   // proofs to spent zen boxes
                                       List<ZenBoxData> outputZenBoxesData,      // destinations where to send zen coins
-                                      long fee) {                                 // fee to be paid
-
-        // Parameters sanity check
-        if(inputZenBoxIds == null || inputZenBoxProofs == null || outputZenBoxesData == null || fee < 0 ||
-           inputZenBoxIds.isEmpty() || inputZenBoxProofs.isEmpty() || outputZenBoxesData.isEmpty()){
-            throw new IllegalArgumentException("Some of the input parameters are unacceptable!");
-        }
-
-        // Number of input ids should be equal to number of proofs, otherwise transaction is for sure invalid.
-        if(inputZenBoxIds.size() != inputZenBoxProofs.size()){
-            throw new IllegalArgumentException("Zen box inputs list size is different to proving signatures list size!");
-        }
-
+                                      long fee) {                               // fee to be paid
         this.inputZenBoxIds = inputZenBoxIds;
         this.inputZenBoxProofs = inputZenBoxProofs;
         this.outputZenBoxesData = outputZenBoxesData;
@@ -57,7 +45,7 @@ public abstract class AbstractRegularTransaction
     abstract protected List<BoxData<Proposition, Box<Proposition>>> getCustomOutputData();
 
     @Override
-    final protected List<BoxData<Proposition, Box<Proposition>>> getOutputData(){
+    final protected List<BoxData<Proposition, Box<Proposition>>> getOutputData() {
         if(allBoxesData == null){
             allBoxesData = new ArrayList<>();
             // Add own zen boxes data
@@ -107,6 +95,12 @@ public abstract class AbstractRegularTransaction
         if(inputZenBoxIds.size() != inputZenBoxProofs.size()) {
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "inputs number is not consistent to proofs number.", id()));
+        }
+
+        // Check that we have at least one input
+        if(inputZenBoxIds.isEmpty()) {
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "no zen inputs found.", id()));
         }
     }
 }

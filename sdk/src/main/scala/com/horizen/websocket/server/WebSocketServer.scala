@@ -1,7 +1,8 @@
 package com.horizen.websocket.server
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ ChangedMempool, SemanticallySuccessfulModifier}
+import com.horizen.block.SidechainBlock
+import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedMempool, SemanticallySuccessfulModifier}
 import scorex.util.ScorexLogging
 
 import scala.concurrent.ExecutionContext
@@ -38,8 +39,8 @@ class WebSocketServer(wsPort: Int)
     case ChangedMempool(_) => {
       websocket.onMempoolChanged()
     }
-    case SemanticallySuccessfulModifier(_) => {
-      websocket.onSemanticallySuccessfulModifier()
+    case SemanticallySuccessfulModifier(block: SidechainBlock) => {
+      websocket.onSemanticallySuccessfulModifier(block)
     }
   }
 }

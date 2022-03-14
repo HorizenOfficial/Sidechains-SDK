@@ -12,4 +12,3 @@ object BlockUtils {
       .mc2scTransactionsOutputs.get(0).asInstanceOf[SidechainCreation]
   }
 }
-

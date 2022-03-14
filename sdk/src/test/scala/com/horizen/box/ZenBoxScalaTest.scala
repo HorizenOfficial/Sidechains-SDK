@@ -7,7 +7,7 @@ import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.utils.{BytesUtils, Ed25519}
 import org.junit.Assert._
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 import scorex.core.utils.ScorexEncoder
 
 class ZenBoxScalaTest

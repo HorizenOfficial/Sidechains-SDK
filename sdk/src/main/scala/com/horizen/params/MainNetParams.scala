@@ -1,9 +1,10 @@
 package com.horizen.params
-import java.math.BigInteger
 
+import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
+import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import com.horizen.cryptolibprovider.CumulativeHashFunctions
-import com.horizen.proposition.SchnorrProposition
+import com.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
 import scorex.core.block.Block
 import scorex.util.ModifierId
 import scorex.util.bytesToId
@@ -28,6 +29,9 @@ case class MainNetParams(
                           override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig] = Seq(),
                           override val cswProvingKeyFilePath: String = "",
                           override val cswVerificationKeyFilePath: String = "",
+                          override val restrictForgers: Boolean = false,
+                          override val allowedForgersList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = Seq(),
+                          override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1,
                           override val isCSWEnabled: Boolean = true
                         ) extends NetworkParams {
   override val EquihashN: Int = 200

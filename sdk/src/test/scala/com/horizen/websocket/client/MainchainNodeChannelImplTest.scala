@@ -9,8 +9,8 @@ import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito.MockitoSugar
 
 import scala.concurrent.Promise
 import scala.concurrent.duration.{FiniteDuration, _}
@@ -206,6 +206,49 @@ class MainchainNodeChannelImplTest extends JUnitSuite with MockitoSugar {
     assertEquals("Result headers is different.", expectedHeaders, headersTry.get)
   }
 
+
+  @Test
+  def getSidechainVersions(): Unit = {
+    val mockedCommunicationClient: CommunicationClient = mock[CommunicationClient]
+
+    val timeoutDuration: FiniteDuration = new FiniteDuration(100, MILLISECONDS)
+
+    val reqScIds = Seq(
+      "0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb600",
+      "0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb610",
+      "0000000024ebb5c6d558daa34ad9b9a4c5503b057e14815a48e241612b1eb620"
+    )
+    val expectedReqType = GET_SIDECHAIN_VERSIONS_TYPE
+    val respSidechainVersionsInfo = reqScIds.map(scId => SidechainVersionsInfo(scId, 0))
+
+    Mockito.when(mockedCommunicationClient.requestTimeoutDuration()).thenReturn(timeoutDuration)
+    Mockito.when(mockedCommunicationClient.sendRequest[RequestPayload, ResponsePayload](
+      ArgumentMatchers.any[RequestType], ArgumentMatchers.any[RequestPayload], ArgumentMatchers.any[Class[ResponsePayload]]
+    )).thenAnswer(answer => {
+      val reqType = answer.getArgument(0).asInstanceOf[RequestType]
+      assertEquals("Get new block hashes request type is wrong.", expectedReqType, reqType)
+      val req = answer.getArgument(1).asInstanceOf[GetSidechainVersionsRequestPayload]
+      assertEquals("Get sidechain versions request data (sidechain ids) is wrong.", reqScIds, req.sidechainIds)
+      assertTrue("Get sidechain versions response payload type is wrong", answer.getArgument(2).isInstanceOf[Class[GetSidechainVersionsResponsePayload]])
+
+      val p = Promise[ResponsePayload]
+      val thread = new Thread {
+        override def run(): Unit = {
+          Thread.sleep(timeoutDuration.div(2L).toMillis)
+          p.complete(Success(GetSidechainVersionsResponsePayload(respSidechainVersionsInfo)))
+        }
+      }
+      thread.start()
+      p.future
+    })
+
+    val params = MainNetParams()
+    val mcnode = new MainchainNodeChannelImpl(mockedCommunicationClient, params)
+
+    val versionsTry = mcnode.getSidechainVersions(reqScIds)
+    assertTrue("Result expected to be successful.", versionsTry.isSuccess)
+    assertEquals("Result hashes is different.", respSidechainVersionsInfo, versionsTry.get)
+  }
 
   @Test
   def onUpdateTipEvent(): Unit = {

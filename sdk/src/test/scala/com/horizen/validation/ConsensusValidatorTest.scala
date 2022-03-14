@@ -10,7 +10,7 @@ import com.horizen.fixtures.VrfGenerator
 import com.horizen.fixtures.sidechainblock.generation.{ForgingStakeCorruptionRules, GenerationRules, SidechainBlocksGenerator}
 import com.horizen.params.TestNetParams
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}

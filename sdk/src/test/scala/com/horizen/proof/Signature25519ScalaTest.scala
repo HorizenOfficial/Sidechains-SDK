@@ -7,7 +7,7 @@ import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertFalse}
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 import scorex.core.utils.ScorexEncoder
 
 class Signature25519ScalaTest

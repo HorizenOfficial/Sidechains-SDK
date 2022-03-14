@@ -6,7 +6,7 @@ import com.horizen.fixtures.{BoxFixture, StoreFixture}
 import com.horizen.storage.SidechainStateForgerBoxStorage
 import com.horizen.utils.ByteArrayWrapper
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 import org.junit.Assert._
 
 import scala.collection.JavaConverters._

@@ -243,4 +243,17 @@ public final class BytesUtils {
         byte[] checksum = Arrays.copyOfRange(Utils.doubleSHA256Hash(addressBytes), 0, HORIZEN_PUBLIC_KEY_ADDRESS_CHECKSUM_LENGTH);
         return Base58.encode(Bytes.concat(addressBytes, checksum));
     }
+
+    // Get size in bytes needed to fit the number of bits
+    public static int getBytesFromBits(int nbits) {
+        if(nbits < 0)
+            return 0;
+
+        int reminder = nbits % 8;
+        int bytes = nbits / 8;
+        if(reminder > 0)
+            bytes++;
+
+        return bytes;
+    }
 }

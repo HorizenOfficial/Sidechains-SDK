@@ -1,5 +1,6 @@
 package com.horizen.block
 
+import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 import com.horizen.utils.BytesUtils
 import com.horizen.commitmenttreenative.{CommitmentTree, ScAbsenceProof, ScExistenceProof}
 import com.horizen.librustsidechains.FieldElement
@@ -65,7 +66,7 @@ class SidechainCommitmentTree {
     )
   }
 
-  def addCertificate(certificate: WithdrawalEpochCertificate): Boolean = {
+  def addCertificate(certificate: WithdrawalEpochCertificate, version: SidechainCreationVersion): Boolean = {
     val btrList: Seq[BackwardTransfer] = certificate.backwardTransferOutputs.map(btrOutput =>
       new BackwardTransfer(btrOutput.pubKeyHash, btrOutput.amount)
     )
@@ -75,7 +76,7 @@ class SidechainCommitmentTree {
       certificate.epochNumber,
       certificate.quality,
       btrList.toArray,
-      certificate.customFieldsOpt.asJava,
+      certificate.customFieldsOpt(version).asJava,
       certificate.endCumulativeScTxCommitmentTreeRoot,
       certificate.btrFee,
       certificate.ftMinAmount

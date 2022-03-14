@@ -9,8 +9,8 @@ import com.horizen.utils.{ByteArrayWrapper, ForgingStakeMerklePathInfo, MerklePa
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito.MockitoSugar
 
 import java.util.{ArrayList => JArrayList, Optional => JOptional}
 import scala.collection.JavaConverters._

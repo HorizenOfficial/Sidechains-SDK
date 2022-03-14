@@ -13,8 +13,8 @@ import com.horizen.SidechainTypes
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import org.junit.Assert._
 import org.junit._
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito._
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito._
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer

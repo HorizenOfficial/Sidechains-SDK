@@ -6,7 +6,7 @@ import com.horizen.SidechainHistory
 import com.horizen.fixtures.sidechainblock.generation._
 import com.horizen.params.{NetworkParams, TestNetParams}
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
