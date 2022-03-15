@@ -7,9 +7,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
-import com.horizen.block.MainchainBlockReference;
-import com.horizen.block.Ommer;
-import com.horizen.block.SidechainBlock;
+import com.horizen.block.*;
 import com.horizen.box.Box;
 import com.horizen.box.ForgerBox;
 import com.horizen.companion.SidechainSecretsCompanion;
@@ -26,9 +24,8 @@ import com.horizen.secret.*;
 import com.horizen.transaction.SidechainTransaction;
 import com.horizen.transaction.mainchain.SidechainCreation;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
-import com.horizen.utils.BytesUtils;
-import com.horizen.utils.MerklePath;
-import com.horizen.utils.VarInt;
+import com.horizen.utils.*;
+import scala.Enumeration;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -469,6 +466,30 @@ public class CommandProcessor {
             byte[] initialCumulativeCommTreeHash = Arrays.copyOfRange(infoBytes, offset, offset + (int)initialCumulativeCommTreeHashLength.value());
             offset += initialCumulativeCommTreeHashLength.value();
 
+            byte[] rest = Arrays.copyOfRange(infoBytes, offset, infoBytes.length);
+            Integer mcBlockLength = (Integer) MainchainBlockReference.parseMainchainBlockBytes(rest).get()._4();
+            byte[] mcBlockBytes = Arrays.copyOfRange(infoBytes, offset, offset + mcBlockLength);
+            offset += mcBlockLength;
+
+            // For the MC nodes after v3.0.3 genesis info also contains sidechain creation versions for the certificates
+            // in the given MC block to allow us to reconstruct the MainchainBlockReference in a proper way.
+            SidechainsVersionsManager versionsManager = null;
+            if(offset < infoBytes.length) {
+                Map<ByteArrayWrapper, Enumeration.Value> scVersions = new HashMap<>();
+                VarInt scSidechainVersionsLength = BytesUtils.getVarInt(infoBytes, offset);
+                offset += scSidechainVersionsLength.size();
+                for (int i = 0; i < scSidechainVersionsLength.value(); i++) {
+                    byte[] sidechainId = Arrays.copyOfRange(infoBytes, offset, offset + 32);
+                    offset += 32;
+                    byte version = infoBytes[offset];
+                    offset += 1;
+                    scVersions.put(new ByteArrayWrapper(sidechainId), SidechainCreationVersions.getVersion(version));
+                }
+                versionsManager = new NewSidechainsVersionsManager(scVersions);
+            } else {
+                versionsManager = new OldSidechainsVersionsManager();
+            }
+
             String mcNetworkName = getNetworkName(network);
             NetworkParams params = getNetworkParams(network, scId);
             // Uncomment if you want to save mc block hex for some reason
@@ -476,8 +497,7 @@ public class CommandProcessor {
                 out.print(BytesUtils.toHexString(Arrays.copyOfRange(infoBytes, offset, infoBytes.length)));
             }*/
 
-
-            MainchainBlockReference mcRef = MainchainBlockReference.create(Arrays.copyOfRange(infoBytes, offset, infoBytes.length), params).get();
+            MainchainBlockReference mcRef = MainchainBlockReference.create(mcBlockBytes, params, versionsManager).get();
 
             SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>());
 
@@ -504,6 +524,9 @@ public class CommandProcessor {
             long currentTimeSeconds = System.currentTimeMillis() / 1000;
             long timestamp = (params instanceof RegTestParams) ? currentTimeSeconds - regtestBlockTimestampRewind : currentTimeSeconds;
 
+            // no fee payments expected for the genesis block
+            byte[] feePaymentsHash = new byte[32];
+
             SidechainBlock sidechainBlock = SidechainBlock.create(
                     params.sidechainGenesisBlockParentId(),
                     SidechainBlock.BLOCK_VERSION(),
@@ -516,6 +539,7 @@ public class CommandProcessor {
                     forgingStakeInfo,
                     vrfProof,
                     mp,
+                    feePaymentsHash,
                     sidechainTransactionsCompanion,
                     scala.Option.empty()
             ).get();
@@ -577,11 +601,11 @@ public class CommandProcessor {
     private NetworkParams getNetworkParams(byte network, byte[] scId) {
         switch(network) {
             case 0: // mainnet
-                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, 0, null, null, null, null, null, null, null);
+                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, 0, null, null, null, null, null, null, null, false, null, null);
             case 1: // testnet
-                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null, null, null, null, null);
+                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null, null, null, null, null, false, null, null);
             case 2: // regtest
-                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null, null, null, null, null);
+                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null, null, null, null, null, false, null, null);
             default:
                 throw new IllegalStateException("Unexpected network type: " + network);
         }

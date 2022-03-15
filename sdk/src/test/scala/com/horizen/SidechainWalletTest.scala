@@ -224,8 +224,7 @@ class SidechainWalletTest
 
     // Define fee payment boxes to be added during scan persistent:
     // 1 box related to Wallet, 2 boxes - not.
-    val feePaymentBoxes: Seq[SidechainTypes#SCB] = (getZenBoxList(2).asScala += getZenBox(secretList.head.asInstanceOf[PrivateKey25519], 100, 100))
-      .map(_.asInstanceOf[SidechainTypes#SCB])
+    val feePaymentBoxes: Seq[ZenBox] = (getZenBoxList(2).asScala += getZenBox(secretList.head.asInstanceOf[PrivateKey25519], 100, 100))
 
     // Test:
     // Prepare what we expect to receive for WalletBoxStorage.update
@@ -899,7 +898,7 @@ class SidechainWalletTest
 
     val refDataWithFTs: MainchainBlockReferenceData = MainchainBlockReferenceData(null, Some(aggTx), None, None, Seq(), None)
 
-    val commTree = refDataWithFTs.commitmentTree(params.sidechainId)
+    val commTree = refDataWithFTs.commitmentTree(params.sidechainId, params.sidechainCreationVersion)
     val expectedCswData = Seq(
       ftToCswData(walletFt1, 0, commTree),
       ftToCswData(walletFt2, 3, commTree)

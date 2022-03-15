@@ -4,6 +4,8 @@
 # LARGE_WITHDRAWAL_EPOCH_LENGTH = 148
 LARGE_WITHDRAWAL_EPOCH_LENGTH = 900
 
+SC_CREATION_VERSION_0 = 0
+SC_CREATION_VERSION_1 = 1
 """
 All information needed to bootstrap sidechain network within specified mainchain node.
 The JSON representation is only for documentation.
@@ -20,11 +22,13 @@ class SCCreationInfo(object):
 
     # Note: the maximum withdrawal_epoch_length allowed is around 900, otherwise snark keys size check will fail
     # because of too complex circuit from MC perspective.
-    def __init__(self, mc_node, forward_amount=100, withdrawal_epoch_length=LARGE_WITHDRAWAL_EPOCH_LENGTH, btr_data_length=0):
+    def __init__(self, mc_node, forward_amount=100, withdrawal_epoch_length=LARGE_WITHDRAWAL_EPOCH_LENGTH,
+                 btr_data_length=0, sc_creation_version=SC_CREATION_VERSION_1):
         self.mc_node = mc_node
         self.forward_amount = forward_amount
         self.withdrawal_epoch_length = withdrawal_epoch_length
         self.btr_data_length = btr_data_length
+        self.sc_creation_version = sc_creation_version
 
 
 """
@@ -46,6 +50,17 @@ class MCConnectionInfo(object):
         self.connectionTimeout = connectionTimeout
         self.reconnectionDelay = reconnectionDelay
         self.reconnectionMaxAttempts = reconnectionMaxAttempts
+
+"""
+Configration that enables the possibility to restrict the forging phase
+ to a specific list of forgers.
+"""
+class SCForgerConfiguration(object):
+    def __init__(self, restrict_forgers = False, allowed_forgers = []):
+        self.restrict_forgers = restrict_forgers
+        self.allowed_forgers = []
+        for forger in allowed_forgers:
+            self.allowed_forgers.append('{ blockSignProposition = "'+forger[0]+'" NEW_LINE vrfPublicKey = "'+forger[1]+'" }')
 
 
 """
@@ -71,7 +86,8 @@ class SCNodeConfiguration(object):
                  submitter_private_keys_indexes=None,
                  max_connections=100,
                  automatic_fee_computation=True,
-                 certificate_fee=0.0001):
+                 certificate_fee=0.0001,
+                 forger_options = SCForgerConfiguration()):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))
         self.mc_connection_info = mc_connection_info
@@ -81,6 +97,7 @@ class SCNodeConfiguration(object):
         self.max_connections = max_connections
         self.automatic_fee_computation = automatic_fee_computation
         self.certificate_fee = certificate_fee
+        self.forger_options = forger_options
 
 
 """

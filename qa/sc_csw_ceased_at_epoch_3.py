@@ -2,7 +2,7 @@
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration
+    SCNetworkConfiguration, SC_CREATION_VERSION_1, SC_CREATION_VERSION_0
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import fail, assert_equal, assert_true, assert_false, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain
@@ -70,7 +70,7 @@ class SCCswCeasedAtEpoch3(SidechainTestFramework):
             cert_submitter_enabled=True,  # enable submitter
             cert_signing_enabled=True  # enable signer
         )
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length), sc_node_configuration)
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length, sc_creation_version=SC_CREATION_VERSION_1), sc_node_configuration)
         self.sidechain_id = bootstrap_sidechain_nodes(self.options, network).sidechain_id
 
     def sc_setup_nodes(self):

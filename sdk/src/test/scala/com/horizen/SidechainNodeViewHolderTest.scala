@@ -4,11 +4,13 @@ import java.util
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestProbe
 import com.horizen.block.SidechainBlock
+import com.horizen.box.ZenBox
+import com.horizen.chain.FeePaymentsInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus.{ConsensusEpochInfo, FullConsensusEpochInfo, intToConsensusEpochNumber}
 import com.horizen.fixtures._
 import com.horizen.params.{NetworkParams, RegTestParams}
-import com.horizen.utils.{MerkleTree, WithdrawalEpochInfo}
+import com.horizen.utils.{BlockFeeInfo, MerkleTree, WithdrawalEpochInfo}
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.{Before, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -342,7 +344,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
 
     // Mock state fee payments with checks
     var feePaymentsCalculationEvent: Boolean = false
-    Mockito.when(state.getFeePayments(ArgumentMatchers.any[Int]())).thenAnswer(args => {
+    Mockito.when(state.getFeePayments(ArgumentMatchers.any[Int](), ArgumentMatchers.any[Option[BlockFeeInfo]])).thenAnswer(args => {
       feePaymentsCalculationEvent = true
       Seq()
     })
@@ -352,11 +354,11 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(wallet.scanPersistent(
       ArgumentMatchers.any[SidechainBlock],
       ArgumentMatchers.any[Int](),
-      ArgumentMatchers.any[Seq[SidechainTypes#SCB]](),
+      ArgumentMatchers.any[Seq[ZenBox]](),
       ArgumentMatchers.any[Option[UtxoMerkleTreeView]]()))
       .thenAnswer(args => {
         val epochNumber: Int = args.getArgument(1)
-        val feePayments: Seq[SidechainTypes#SCB] = args.getArgument(2)
+        val feePayments: Seq[ZenBox] = args.getArgument(2)
         val utxoView: Option[UtxoMerkleTreeView] = args.getArgument(3)
         assertEquals("Different withdrawal epoch number expected.", withdrawalEpochInfo.epoch, epochNumber)
         assertTrue("No fee payments expected while not in the end of the withdrawal epoch.", feePayments.isEmpty)
@@ -390,6 +392,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer( answer =>
       Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(answer.getArgument(0).asInstanceOf[SidechainBlock]), Seq())))
     Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenReturn(history)
+    Mockito.when(history.updateFeePaymentsInfo(ArgumentMatchers.any[ModifierId],ArgumentMatchers.any[FeePaymentsInfo])).thenReturn(history)
     // Mock state to notify that any incoming block to append will NOT lead to chain switch
     Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[SidechainBlock])).thenReturn(false)
     // Mock state to apply incoming block successfully
@@ -402,8 +405,8 @@ class SidechainNodeViewHolderTest extends JUnitSuite
 
     // Mock state fee payments with checks
     var stateChecksPassed: Boolean = false
-    val expectedFeePayments: Seq[SidechainTypes#SCB] = Seq(getZenBox, getZenBox)
-    Mockito.when(state.getFeePayments(ArgumentMatchers.any[Int]())).thenAnswer(args => {
+    val expectedFeePayments: Seq[ZenBox] = Seq(getZenBox, getZenBox)
+    Mockito.when(state.getFeePayments(ArgumentMatchers.any[Int](), ArgumentMatchers.any[Option[BlockFeeInfo]]())).thenAnswer(args => {
       val epochNumber: Int = args.getArgument(0)
       assertEquals("Different withdrawal epoch number expected.", withdrawalEpochInfo.epoch, epochNumber)
 
@@ -416,11 +419,11 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(wallet.scanPersistent(
       ArgumentMatchers.any[SidechainBlock],
       ArgumentMatchers.any[Int](),
-      ArgumentMatchers.any[Seq[SidechainTypes#SCB]](),
+      ArgumentMatchers.any[Seq[ZenBox]](),
       ArgumentMatchers.any[Option[UtxoMerkleTreeView]]()))
       .thenAnswer(args => {
         val epochNumber: Int = args.getArgument(1)
-        val feePayments: Seq[SidechainTypes#SCB] = args.getArgument(2)
+        val feePayments: Seq[ZenBox] = args.getArgument(2)
         val utxoView: Option[UtxoMerkleTreeView] = args.getArgument(3)
         assertEquals("Different withdrawal epoch number expected.", withdrawalEpochInfo.epoch, epochNumber)
         assertEquals("Different fee payments expected while in the end of the withdrawal epoch.", expectedFeePayments, feePayments)
