@@ -53,8 +53,8 @@ abstract class SidechainCswApiRoute(override val settings: RESTApiSettings,
     } match {
       case Success(res) => res
       case Failure(e) =>
-        log.error("Unable to retrieve is the ceased sidechain withdrawal is enabled.", e)
-        ApiResponseUtil.toResponse(ErrorRetrievingCSWEnabled("Unable to retrieve is the ceased sidechain withdrawal is enabled.", JOptional.of(e)))
+        log.error("Unable to retrieve if the ceased sidechain withdrawal is enabled.", e)
+        ApiResponseUtil.toResponse(ErrorRetrievingCSWEnabled("Unable to retrieve if the ceased sidechain withdrawal is enabled.", JOptional.of(e)))
     }
   }
 

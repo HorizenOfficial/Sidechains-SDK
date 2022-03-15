@@ -255,8 +255,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       }
     }
     else {
-      if (!topQualityCertificate.fieldElementCertificateFields.isEmpty )
-        throw new IllegalArgumentException(s"Top quality certificate should not contain custom fields when ceased sidechain withdrawal is disabled.")
+      if (topQualityCertificate.fieldElementCertificateFields.size != CommonCircuit.customFieldsNumberWithDisabledCSW )
+        throw new IllegalArgumentException(s"Top quality certificate should contain exactly ${CommonCircuit.customFieldsNumberWithDisabledCSW} custom fields when ceased sidechain withdrawal is disabled.")
     }
   }
 

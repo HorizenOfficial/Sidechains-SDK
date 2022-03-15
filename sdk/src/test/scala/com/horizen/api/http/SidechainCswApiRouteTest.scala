@@ -117,7 +117,7 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
       }
       //Testing response in case of internal error
       val mockParams: MainNetParams = mock[MainNetParams]
-      Mockito.when(mockParams.isCSWEnabled).thenReturn(true).thenThrow(new RuntimeException)
+      Mockito.when(mockParams.isCSWEnabled).thenReturn(true).thenThrow(new RuntimeException )
 
       val sidechainCswApiRouteWithError = SidechainCswApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedCswManagerActorRef,mockParams).route
       Post(basePath + "isCSWEnabled") ~> sidechainCswApiRouteWithError ~> check {

@@ -17,6 +17,8 @@ public class CommonCircuit {
     // 2 custom fields that represent UtxoMerkleTreeRoot
     public static final int customFieldsNumber = 2;
 
+    public static final int customFieldsNumberWithDisabledCSW = 0;
+
     public boolean generateCoboundaryMarlinDLogKeys() {
         return ProvingSystem.generateDLogKeys(
                 ProvingSystemType.COBOUNDARY_MARLIN,
