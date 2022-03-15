@@ -5,6 +5,7 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestProbe
 import com.horizen.block.SidechainBlock
 import com.horizen.box.ZenBox
+import com.horizen.chain.FeePaymentsInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus.{ConsensusEpochInfo, FullConsensusEpochInfo, intToConsensusEpochNumber}
 import com.horizen.fixtures._
@@ -391,6 +392,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer( answer =>
       Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(answer.getArgument(0).asInstanceOf[SidechainBlock]), Seq())))
     Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenReturn(history)
+    Mockito.when(history.updateFeePaymentsInfo(ArgumentMatchers.any[ModifierId],ArgumentMatchers.any[FeePaymentsInfo])).thenReturn(history)
     // Mock state to notify that any incoming block to append will NOT lead to chain switch
     Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[SidechainBlock])).thenReturn(false)
     // Mock state to apply incoming block successfully
