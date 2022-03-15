@@ -550,19 +550,29 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
   @Test
   def blockWithCertificateWithCustomFieldAndBitvectorMixedScVersions(): Unit = {
-    // Test: parse MC block with:
-    // SC1: 08dffd98cc9ca80760bcd6b88274e2b24e0f7a4ef0f5ca0b0a2df4f6905109b9 (version=1)
-    //   ---> creation
-    // SC2: 17e563f84d4b00b5bca08ab9bacb43c0743b951a35916352c5f899394cbc8113 (version=0)
-    //   ---> a single certificate with 2 custom fields and 0 bitvector field.
-    // SC3: 1635b4e5db419d9c87baf47574b546056c6ab164bffe6b75012403255ee87efd (version=1)
-    //   ---> a single certificate with 2 custom fields and 0 bitvector field.
 
-    val scIdHex1 = "08dffd98cc9ca80760bcd6b88274e2b24e0f7a4ef0f5ca0b0a2df4f6905109b9"
+    /*
+     * Please, see the MC Python test sc_getscgenesisinfo.py for the generation of the test block and the
+     * sidechains ID involved in it.
+     * See also the analogous MC unit test: TEST(SidechainsField, CommitmentComputationFromSerializedBlock),
+     * which is testing the same data
+     */
+
+    val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_with_certificate_with_custom_fields_mixed_sc_versions").getLines().next()
+    val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
+    val bitVectorSizeInBits = 254*4
+
+    // Test: parse MC block with:
+    // SC1: ---> creation (version=1)
+    val scIdHex1 = "269cdebdefc7fb0c4b198cb476c976af6b95b571d7f482650387070d2c7eb8af"
     val scId1 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex1))) // LE
-    val scIdHex2 = "17e563f84d4b00b5bca08ab9bacb43c0743b951a35916352c5f899394cbc8113"
+
+    // SC2: ---> a single certificate with 2 custom fields and 1 bitvector field. (version=0)
+    val scIdHex2 = "3686f099cb0035a79ca8fe127a96829392de84c6733c0cdd23365eeb7239b0ba"
     val scId2 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex2))) // LE
-    val scIdHex3 = "1635b4e5db419d9c87baf47574b546056c6ab164bffe6b75012403255ee87efd"
+
+    // SC3: ---> a single certificate with 2 custom fields and 1 bitvector field. ((version=1)
+    val scIdHex3 = "2f7d7cfeb42cc789d5278114f216f27b152a4a6b4f680adfb832474580d8e684"
     val scId3 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex3))) // LE
 
     val versionsManager = TestSidechainsVersionsManager(
@@ -574,10 +584,6 @@ class MainchainBlockReferenceTest extends JUnitSuite {
         )
       )
     )
-
-    val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_with_certificate_with_custom_fields_mixed_sc_versions").getLines().next()
-    val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
-    val bitVectorSizeInBits = 254*4
 
     // Test 1: Check for existing sidechain
     val params1 = RegTestParams(
@@ -592,8 +598,8 @@ class MainchainBlockReferenceTest extends JUnitSuite {
 
     assertTrue("Block expected to be semantically valid", mcblock1.semanticValidity(params1).isSuccess)
 
-    assertTrue("Block must not contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isEmpty)
-    assertTrue("Block must contain certificate.", mcblock1.data.topQualityCertificate.isDefined)
+    assertTrue("Block must contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isDefined)
+    assertTrue("Block must not contain certificate.", mcblock1.data.topQualityCertificate.isEmpty)
     assertTrue("Block must contain proof of existence.", mcblock1.data.existenceProof.isDefined)
     assertTrue("Block must not contain proof of absence", mcblock1.data.absenceProof.isEmpty)
 
@@ -601,7 +607,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     val params2 = RegTestParams(
       scId2.data,
       scCreationBitVectorCertificateFieldConfigs = Seq(
-        //new CustomBitvectorElementsConfig(bitVectorSizeInBits, 151)
+        new CustomBitvectorElementsConfig(bitVectorSizeInBits, 151)
       ),
       sidechainCreationVersion = SidechainCreationVersion0
     )
@@ -616,7 +622,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block must not contain transaction.", mcblock2.data.sidechainRelatedAggregatedTransaction.isEmpty)
     assertTrue("Block must contain certificate.", mcblock2.data.topQualityCertificate.isDefined)
     assertEquals("Block must contain certificate with 2 cert field elements.", 2, mcblock2.data.topQualityCertificate.get.fieldElementCertificateFields.length)
-    assertEquals("Block must contain certificate with 0 cert bitvector.", 0, mcblock2.data.topQualityCertificate.get.bitVectorCertificateFields.length)
+    assertEquals("Block must contain certificate with 1 cert bitvector.", 1, mcblock2.data.topQualityCertificate.get.bitVectorCertificateFields.length)
     assertTrue("Block must not-contain lower quality certificate leaves.", mcblock2.data.lowerCertificateLeaves.isEmpty)
     assertTrue("Block must contain proof of existence.", mcblock2.data.existenceProof.isDefined)
     assertTrue("Block must not contain proof of absence", mcblock2.data.absenceProof.isEmpty)
@@ -625,7 +631,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     val params3 = RegTestParams(
       scId3.data,
       scCreationBitVectorCertificateFieldConfigs = Seq(
-        //new CustomBitvectorElementsConfig(bitVectorSizeInBits, 151)
+        new CustomBitvectorElementsConfig(bitVectorSizeInBits, 151)
       ),
       sidechainCreationVersion = SidechainCreationVersion1
     )
@@ -640,7 +646,7 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block must not contain transaction.", mcblock3.data.sidechainRelatedAggregatedTransaction.isEmpty)
     assertTrue("Block must contain certificate.", mcblock3.data.topQualityCertificate.isDefined)
     assertEquals("Block must contain certificate with 2 cert field elements.", 2, mcblock3.data.topQualityCertificate.get.fieldElementCertificateFields.length)
-    assertEquals("Block must contain certificate with 0 cert bitvector.", 0, mcblock3.data.topQualityCertificate.get.bitVectorCertificateFields.length)
+    assertEquals("Block must contain certificate with 1 cert bitvector.", 1, mcblock3.data.topQualityCertificate.get.bitVectorCertificateFields.length)
     assertTrue("Block must not-contain lower quality certificate leaves.", mcblock3.data.lowerCertificateLeaves.isEmpty)
     assertTrue("Block must contain proof of existence.", mcblock3.data.existenceProof.isDefined)
     assertTrue("Block must not contain proof of absence", mcblock3.data.absenceProof.isEmpty)
