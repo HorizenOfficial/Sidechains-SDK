@@ -1,19 +1,18 @@
 package com.horizen.block
 
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
-
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures._
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.proof.Signature25519
 import com.horizen.proposition.VrfPublicKey
 import com.horizen.secret.VrfSecretKey
-import com.horizen.utils.BytesUtils
+import com.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
 import com.horizen.validation.{InconsistentOmmerDataException, InvalidOmmerDataException}
 import com.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertNotEquals, assertTrue, fail => jFail}
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 import scorex.util.ModifierId
 
 import scala.io.Source
@@ -25,10 +24,10 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
   val sidechainBlockSerializer = new SidechainBlockSerializer(sidechainTransactionsCompanion)
 
   val params: NetworkParams = MainNetParams()
-  val mcBlockRef1: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(Source.fromResource("mcblock473173_mainnet").getLines().next()), params).get
-  val mcBlockRef2: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(Source.fromResource("mcblock473174_mainnet").getLines().next()), params).get
-  val mcBlockRef3: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(Source.fromResource("mcblock473175_mainnet").getLines().next()), params).get
-  val mcBlockRef4: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(Source.fromResource("mcblock473176_mainnet").getLines().next()), params).get
+  val mcBlockRef1: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(Source.fromResource("mcblock473173_mainnet").getLines().next()), params, TestSidechainsVersionsManager()).get
+  val mcBlockRef2: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(Source.fromResource("mcblock473174_mainnet").getLines().next()), params, TestSidechainsVersionsManager()).get
+  val mcBlockRef3: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(Source.fromResource("mcblock473175_mainnet").getLines().next()), params, TestSidechainsVersionsManager()).get
+  val mcBlockRef4: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(Source.fromResource("mcblock473176_mainnet").getLines().next()), params, TestSidechainsVersionsManager()).get
 
   val vrfGenerationSeed = 143
   val vrfGenerationPrefix = "OmmerTest"
@@ -88,6 +87,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
       forgerMetadata.forgingStakeInfo,
       vrfProof,
       MerkleTreeFixture.generateRandomMerklePath(seed),
+      new Array[Byte](32),
       sidechainTransactionsCompanion
     ).get
 
@@ -348,6 +348,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
       forgerMetadata.forgingStakeInfo,
       vrfProof,
       MerkleTreeFixture.generateRandomMerklePath(seed),
+      new Array[Byte](32),
       sidechainTransactionsCompanion
     ).get
 
@@ -415,6 +416,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
       forgerMetadata.forgingStakeInfo,
       vrfProof,
       MerkleTreeFixture.generateRandomMerklePath(seed),
+      new Array[Byte](32),
       sidechainTransactionsCompanion
     ).get
 

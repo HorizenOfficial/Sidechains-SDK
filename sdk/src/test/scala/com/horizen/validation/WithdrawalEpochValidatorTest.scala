@@ -1,7 +1,6 @@
 package com.horizen.validation
 
 import java.time.Instant
-
 import com.horizen.SidechainHistory
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.Box
@@ -12,12 +11,12 @@ import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proposition.Proposition
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.transaction.SidechainTransaction
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, TestSidechainsVersionsManager, WithdrawalEpochInfo}
 import org.junit.Assert.assertTrue
 import org.junit.{Before, Ignore, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito.MockitoSugar
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.util.{ModifierId, bytesToId}
 
@@ -58,6 +57,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta1.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
+      new Array[Byte](32),
       sidechainTransactionsCompanion
     ).get
 
@@ -85,6 +85,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta2.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
+      new Array[Byte](32),
       sidechainTransactionsCompanion
     ).get
 
@@ -112,6 +113,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta3.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
+      new Array[Byte](32),
       sidechainTransactionsCompanion
     ).get
 
@@ -127,7 +129,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     val scId = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex)))
     val mcBlockRefRegTestParams = RegTestParams(scId.data)
     val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
-    val mcBlockRef = MainchainBlockReference.create(mcBlockBytes, mcBlockRefRegTestParams).get
+    val mcBlockRef = MainchainBlockReference.create(mcBlockBytes, mcBlockRefRegTestParams, TestSidechainsVersionsManager(mcBlockRefRegTestParams)).get
     mcRefs = Seq(mcBlockRef)
 
     val (forgerBox4, forgerMeta4) = ForgerBoxFixture.generateForgerBox(324)
@@ -143,6 +145,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta4.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
+      new Array[Byte](32),
       sidechainTransactionsCompanion
     ).get
 
@@ -183,6 +186,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta1.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
+      new Array[Byte](32),
       sidechainTransactionsCompanion
     ).get
 
@@ -208,6 +212,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta2.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
+      new Array[Byte](32),
       sidechainTransactionsCompanion
     ).get
 
@@ -252,6 +257,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta5.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
+      new Array[Byte](32),
       sidechainTransactionsCompanion
     ).get
 
@@ -304,6 +310,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta8.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
+      new Array[Byte](32),
       sidechainTransactionsCompanion
     ).get
 
@@ -348,7 +355,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     val scId = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex)))
     val mcBlockRefRegTestParams = RegTestParams(scId.data)
     val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
-    val mcBlockRef = MainchainBlockReference.create(mcBlockBytes, mcBlockRefRegTestParams).get
+    val mcBlockRef = MainchainBlockReference.create(mcBlockBytes, mcBlockRefRegTestParams, TestSidechainsVersionsManager(mcBlockRefRegTestParams)).get
 
     val (forgerBox11, forgerMeta11) = ForgerBoxFixture.generateForgerBox(32114)
     block = SidechainBlock.create(
@@ -363,6 +370,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta11.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
+      new Array[Byte](32),
       sidechainTransactionsCompanion
     ).get
 
@@ -389,6 +397,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta12.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
+      new Array[Byte](32),
       sidechainTransactionsCompanion
     ).get
 
@@ -414,6 +423,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta13.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
+      new Array[Byte](32),
       sidechainTransactionsCompanion
     ).get
 
@@ -439,6 +449,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta14.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
+      new Array[Byte](32),
       sidechainTransactionsCompanion
     ).get
 

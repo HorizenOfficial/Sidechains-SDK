@@ -1,8 +1,10 @@
 package com.horizen.websocket.client
-import com.horizen.block.{MainchainBlockReference, MainchainHeader}
+import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
+import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainCreationVersions, SidechainsVersionsManager}
 import com.horizen.mainchain.api.{SendCertificateRequest, SendCertificateResponse}
 import com.horizen.params.NetworkParams
-import com.horizen.utils.BytesUtils
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
+import com.horizen.websocket.client.MainchainNodeChannelImpl.MAX_SIDECHAINS_REQUEST
 
 import scala.concurrent.{Await, Future}
 import scala.util.{Failure, Success, Try}
@@ -28,14 +30,14 @@ case class SendCertificateRequestPayload(scid: String,
                                          vBitVectorCertificateField: Seq[String] // Seq of compressed bitvectors hex strings
                                         ) extends RequestPayload
 case class TopQualityCertificatePayload(scid: String) extends RequestPayload
-
-
+case class GetSidechainVersionsRequestPayload(sidechainIds: Seq[String]) extends RequestPayload// hex representation of ids
 
 case class BlockResponsePayload(height: Int, hash: String, block: String) extends ResponsePayload
 case class BlocksResponsePayload(height: Int, hashes: Seq[String]) extends ResponsePayload
 case class NewBlocksResponsePayload(height: Int, hashes: Seq[String]) extends ResponsePayload
 case class BlockHeadersResponsePayload(headers: Seq[String]) extends ResponsePayload
 case class CertificateResponsePayload(certificateHash: String) extends ResponsePayload
+case class GetSidechainVersionsResponsePayload(sidechainVersions: Seq[SidechainVersionsInfo]) extends ResponsePayload
 
 case class MempoolTopQualityCertificateInfo(certHash: String, epoch: Int, quality: Long, fee: Double)
 case class ChainTopQualityCertificateInfo(certHash: String, epoch: Int, quality: Long)
@@ -50,8 +52,11 @@ case object GET_NEW_BLOCK_HASHES_REQUEST_TYPE extends RequestType(2)
 case object SEND_CERTIFICATE_REQUEST_TYPE extends RequestType(3)
 case object GET_MULTIPLE_HEADERS_REQUEST_TYPE extends RequestType(4)
 case object GET_TOP_QUALITY_CERTIFICATES_TYPE extends RequestType(5)
+case object GET_SIDECHAIN_VERSIONS_TYPE extends RequestType(6)
 
-class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParams) extends MainchainNodeChannel { // to do: define EC inside?
+class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParams) extends MainchainNodeChannel with SidechainsVersionsManager { // to do: define EC inside?
+  // key - sidechain id, value - version
+  var sidechainsVersionsCache: Map[ByteArrayWrapper, SidechainCreationVersion] = Map()
 
   override def getBlockByHeight(height: Int): Try[MainchainBlockReference] = Try {
     val future: Future[BlockResponsePayload] =
@@ -70,7 +75,7 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
   private def processBlockResponsePayload(future: Future[BlockResponsePayload]): Try[MainchainBlockReference] = Try {
     val response: BlockResponsePayload = Await.result(future, client.requestTimeoutDuration())
     val blockBytes = BytesUtils.fromHexString(response.block)
-    MainchainBlockReference.create(blockBytes, params).get
+    MainchainBlockReference.create(blockBytes, params, this).get
   }
 
   def getBlockHashesAfterHeight(height: Int, limit: Int): Try[Seq[String]] = Try {
@@ -168,4 +173,37 @@ class MainchainNodeChannelImpl(client: CommunicationClient, params: NetworkParam
     val response: TopQualityCertificateResponsePayload = Await.result(future, client.requestTimeoutDuration())
     TopQualityCertificates(response.mempoolTopQualityCert, response.chainTopQualityCert)
   }
+
+  override def getVersion(sidechainId: ByteArrayWrapper): SidechainCreationVersion = {
+    getVersions(Seq(sidechainId)).head._2
+  }
+
+  override def getVersions(sidechainIds: Seq[ByteArrayWrapper]): Map[ByteArrayWrapper, SidechainCreationVersion] = {
+    val unknown = sidechainIds.filterNot(id => sidechainsVersionsCache.contains(id))
+    for(group <- unknown.grouped(MAX_SIDECHAINS_REQUEST)) {
+      // Server expects sidechain ids to be a hex of BigEndian bytes
+      getSidechainVersions(group.map(id => BytesUtils.toHexString(BytesUtils.reverseBytes(id.data())))) match {
+        case Success(res) =>
+          for(info: SidechainVersionsInfo <- res) {
+            // Convert sidechain ids back to LittleEndian bytes
+            sidechainsVersionsCache += new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(info.scId))) -> SidechainCreationVersions.getVersion(info.version)
+          }
+        case Failure(exception) =>
+          throw new RuntimeException("Can't retrieve sidechain versions.", exception)
+      }
+    }
+    sidechainIds.map(id => id -> sidechainsVersionsCache(id)).toMap
+  }
+
+  override def getSidechainVersions(scIds: Seq[String]): Try[Seq[SidechainVersionsInfo]] = Try {
+    val future: Future[GetSidechainVersionsResponsePayload] =
+      client.sendRequest(GET_SIDECHAIN_VERSIONS_TYPE, GetSidechainVersionsRequestPayload(scIds), classOf[GetSidechainVersionsResponsePayload])
+
+    val response: GetSidechainVersionsResponsePayload = Await.result(future, client.requestTimeoutDuration())
+    response.sidechainVersions
+  }
+}
+
+object MainchainNodeChannelImpl {
+  val MAX_SIDECHAINS_REQUEST: Int = 50
 }

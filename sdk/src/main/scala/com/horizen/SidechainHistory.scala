@@ -1,9 +1,8 @@
 package com.horizen
 
 import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
-
 import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlock}
-import com.horizen.chain.{MainchainBlockReferenceDataInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
+import com.horizen.chain.{FeePaymentsInfo, MainchainBlockReferenceDataInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
 import com.horizen.consensus._
 import com.horizen.node.NodeHistory
 import com.horizen.node.util.MainchainBlockReferenceInfo
@@ -423,6 +422,10 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     height
   }
 
+  override def getFeePaymentsInfo(blockId: String): JOptional[FeePaymentsInfo] = {
+    feePaymentsInfo(ModifierId @@ blockId).asJava
+  }
+
   override def getBlockHeight(blockId: String): JOptional[Integer] = {
     storage.blockInfoOptionById(ModifierId(blockId)).map(info => Integer.valueOf(info.height)).asJava
   }
@@ -462,6 +465,15 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     }
 
     transaction
+  }
+
+  def updateFeePaymentsInfo(blockId: ModifierId, feePaymentsInfo: FeePaymentsInfo): SidechainHistory = {
+    val newStorage = storage.updateFeePaymentsInfo(blockId, feePaymentsInfo).get
+    new SidechainHistory(newStorage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
+  }
+
+  def feePaymentsInfo(blockId: ModifierId): Option[FeePaymentsInfo] = {
+    storage.getFeePaymentsInfo(blockId)
   }
 
   /*

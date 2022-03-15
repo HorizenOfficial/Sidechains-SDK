@@ -16,8 +16,8 @@ import com.horizen.utils.Pair
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertTrue}
 import org.junit._
 import org.mockito._
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito._
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito._
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, bytesToId, idToBytes}

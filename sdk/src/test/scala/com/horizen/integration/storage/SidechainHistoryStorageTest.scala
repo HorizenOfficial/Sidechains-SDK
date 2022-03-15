@@ -13,7 +13,7 @@ import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.transaction.TransactionSerializer
 import org.junit.Assert._
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 import scorex.core.consensus.ModifierSemanticValidity
 
 

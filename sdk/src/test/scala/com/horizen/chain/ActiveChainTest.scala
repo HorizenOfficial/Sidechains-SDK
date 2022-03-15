@@ -6,7 +6,7 @@ import com.horizen.fixtures.{SidechainBlockInfoFixture, VrfGenerator, FieldEleme
 import com.horizen.utils.WithdrawalEpochInfo
 import org.junit.Assert.{assertEquals, assertFalse, assertNotEquals, assertTrue}
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.util.ModifierId
 

@@ -6,8 +6,8 @@ import org.junit.{After, Before, Test}
 import org.junit.Assert.{assertEquals, assertFalse, _}
 import org.junit.{Before, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito.MockitoSugar
 
 import scala.concurrent.Await
 import scala.concurrent.duration.{FiniteDuration, _}

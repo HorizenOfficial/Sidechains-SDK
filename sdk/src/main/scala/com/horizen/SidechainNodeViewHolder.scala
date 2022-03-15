@@ -3,9 +3,11 @@ package com.horizen
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen.block.SidechainBlock
+import com.horizen.chain.FeePaymentsInfo
 import com.horizen.consensus._
 import com.horizen.node.SidechainNodeView
 import com.horizen.params.NetworkParams
+import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.utils.BytesUtils
@@ -454,19 +456,26 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
             context.system.eventStream.publish(SemanticallySuccessfulModifier(modToApply))
 
             val stateWithdrawalEpochNumber: Int = stateAfterApply.getWithdrawalEpochInfo.epoch
-            val walletAfterApply: SidechainWallet = if(stateAfterApply.isWithdrawalEpochLastIndex) {
-              newWallet.scanPersistent(modToApply, stateWithdrawalEpochNumber, stateAfterApply.getFeePayments(stateWithdrawalEpochNumber), Some(stateAfterApply))
+            val (historyResult, walletResult) = if (stateAfterApply.isWithdrawalEpochLastIndex) {
+              val feePayments = stateAfterApply.getFeePayments(stateWithdrawalEpochNumber)
+              val historyAfterUpdateFee = newHistory.updateFeePaymentsInfo(modToApply.id, FeePaymentsInfo(feePayments))
+
+              val walletAfterApply: SidechainWallet = newWallet.scanPersistent(modToApply, stateWithdrawalEpochNumber, feePayments, Some(stateAfterApply))
+              //SidechainNodeUpdateInformation(historyAfterUpdateFee, stateAfterApply, walletAfterApply, None, None, updateInfo.suffix :+ modToApply)
+              (historyAfterUpdateFee, walletAfterApply)
             } else {
-              newWallet.scanPersistent(modToApply, stateWithdrawalEpochNumber, Seq(), None)
+              val walletAfterApply: SidechainWallet = newWallet.scanPersistent(modToApply, stateWithdrawalEpochNumber, Seq(), None)
+              //SidechainNodeUpdateInformation(historyAfterApply, stateAfterApply, walletAfterApply, None, None, updateInfo.suffix :+ modToApply)
+              (newHistory, walletAfterApply)
             }
 
             // as a final step update the history (validity and best block info), in this way we can check
             // at the startup the consistency of state and history storage versions and be sure that also intemediate steps
             // are consistent
-            val historyAfterApply = newHistory.reportModifierIsValid(modToApply)
+            val historyAfterApply = historyResult.reportModifierIsValid(modToApply)
             log.debug("success: modifier applied to history, blockInfo " + historyAfterApply.blockInfoById(modToApply.id))
 
-            SidechainNodeUpdateInformation(historyAfterApply, stateAfterApply, walletAfterApply, None, None, updateInfo.suffix :+ modToApply)
+            SidechainNodeUpdateInformation(historyAfterApply, stateAfterApply, walletResult, None, None, updateInfo.suffix :+ modToApply)
           }
           case Failure(e) => {
             log.error(s"Could not apply modifier ${BytesUtils.toHexString(idToBytes(modToApply.id))}, exception:" + e)

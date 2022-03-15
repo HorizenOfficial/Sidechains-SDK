@@ -8,6 +8,7 @@
 #
 
 # Add python-bitcoinrpc to module search path:
+import codecs
 import os
 import sys
 
@@ -22,6 +23,8 @@ import time
 import re
 
 from test_framework.authproxy import AuthServiceProxy
+
+COIN = 100000000 # 1 zen in zatoshis
 
 def p2p_port(n):
     return 11000 + n + os.getpid()%999
@@ -478,11 +481,13 @@ Output: an array of two information:
 
 """
 def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_length, public_key, forward_transfer_amount,
-                                          vrf_public_key, gen_sys_constant, cert_vk, csw_vk, btr_data_length):
-    number_of_blocks_to_enable_sc_logic = 419
+                                          vrf_public_key, gen_sys_constant, cert_vk, csw_vk, btr_data_length,
+                                          sc_creation_version):
+    number_of_blocks_to_enable_sc_logic = 449
     number_of_blocks = mainchain_node.getblockcount()
     diff = number_of_blocks_to_enable_sc_logic - number_of_blocks
     if diff > 1:
+        print("Generating {} blocks for reaching needed mc fork point...".format(diff))
         mainchain_node.generate(diff)
 
     custom_creation_data = vrf_public_key
@@ -492,6 +497,7 @@ def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_lengt
     btr_fee = 0
 
     sc_create_args = {
+        "version": sc_creation_version,
         "withdrawalEpochLength": withdrawal_epoch_length,
         "toaddress": public_key,
         "amount": forward_transfer_amount,
@@ -511,9 +517,11 @@ def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_lengt
     print("Id of the sidechain transaction creation: {0}".format(transaction_id))
     print("Sidechain created with Id: {0}".format(sidechain_id))
 
-    mainchain_node.generate(1)
+    mc_block_hash = mainchain_node.generate(1)[0]
     # For docs update
     tx_json_str = json.dumps(mainchain_node.gettransaction(transaction_id), indent=4, default=str)
+    mc_block_hex = mainchain_node.getblock(mc_block_hash, False)
+    #print(mc_block_hex)
 
     return [mainchain_node.getscgenesisinfo(sidechain_id), mainchain_node.getblockcount(), sidechain_id]
 
@@ -548,3 +556,24 @@ def forward_transfer_to_sidechain(sidechain_id, mainchain_node,
     if generate_block:
         mainchain_node.generate(1)
     return [mainchain_node.getscinfo(sidechain_id), mainchain_node.getblockcount()]
+
+
+def swap_bytes(input_buf):
+    return codecs.encode(codecs.decode(input_buf, 'hex')[::-1], 'hex').decode()
+
+
+def get_spendable(mc_node, min_amount):
+    # get a UTXO in node's wallet with minimal amount
+    utx = False
+    listunspent = mc_node.listunspent()
+    for aUtx in listunspent:
+        if aUtx['amount'] > min_amount:
+            utx = aUtx
+            change = aUtx['amount'] - min_amount
+            break
+
+    if utx == False:
+        print(listunspent)
+
+    assert_equal(utx!=False, True)
+    return utx, change

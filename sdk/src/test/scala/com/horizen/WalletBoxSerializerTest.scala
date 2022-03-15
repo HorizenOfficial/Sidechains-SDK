@@ -10,7 +10,7 @@ import com.horizen.proposition.Proposition
 import com.horizen.utils.BytesUtils
 import org.junit.{Before, Test}
 import org.junit.Assert._
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 import java.util.{HashMap => JHashMap}
 import java.lang.{Byte => JByte}
 

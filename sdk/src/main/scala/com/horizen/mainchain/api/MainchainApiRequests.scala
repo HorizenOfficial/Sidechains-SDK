@@ -6,21 +6,11 @@ import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
 
 import java.math.BigDecimal
-import com.horizen.block.{BitVectorCertificateField, FieldElementCertificateField}
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.utils.BytesUtils
 
 import scala.collection.convert.ImplicitConversions._
 
-@JsonView(Array(classOf[Views.Default]))
-case class SidechainInfoResponse
-  (sidechainId: Array[Byte],
-   balance: String,
-   creatingTxHash: Array[Byte],
-   createdInBlock: Array[Byte],
-   createdAtBlockHeight: Long,
-   withdrawalEpochLength: Long
-  )
 
 @JsonView(Array(classOf[Views.Default]))
 case class BackwardTransferEntry(address: String, amount: String)
@@ -45,13 +35,6 @@ case class SendCertificateRequest
 
 case class SendCertificateResponse
   (certificateId: Array[Byte])
-
-case class GetRawCertificateRequest
-  (certificateId: Array[Byte])
-
-@JsonView(Array(classOf[Views.Default]))
-case class GetRawCertificateResponse
-  (hex: Array[Byte])
 
 object CertificateRequestCreator {
 

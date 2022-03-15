@@ -32,6 +32,7 @@ case class SidechainBlockHeader(
                                  mainchainMerkleRootHash: Array[Byte], // root hash of MainchainBlockReference.dataHash() root hash and MainchainHeaders root hash
                                  ommersMerkleRootHash: Array[Byte], // build on top of Ommer.id()
                                  ommersCumulativeScore: Long, // to be able to calculate the score of the block without having the full SB. For future
+                                 feePaymentsHash: Array[Byte], // hash of the fee payments created during applying this block to the state. zeros by default.
                                  signature: Signature25519
                                ) extends BytesSerializable {
 
@@ -44,8 +45,8 @@ case class SidechainBlockHeader(
 
   lazy val messageToSign: Array[Byte] = {
     Bytes.concat(
-      idToBytes(parentId),
       Array[Byte]{version},
+      idToBytes(parentId),
       Longs.toByteArray(timestamp),
       forgingStakeInfo.hash,
       vrfProof.bytes, // TO DO: is it ok or define vrfProof.id() ?
@@ -53,7 +54,8 @@ case class SidechainBlockHeader(
       sidechainTransactionsMerkleRootHash,
       mainchainMerkleRootHash,
       ommersMerkleRootHash,
-      Longs.toByteArray(ommersCumulativeScore)
+      Longs.toByteArray(ommersCumulativeScore),
+      feePaymentsHash
     )
   }
 
@@ -63,11 +65,13 @@ case class SidechainBlockHeader(
       || mainchainMerkleRootHash.length != 32
       || ommersMerkleRootHash.length != 32
       || ommersCumulativeScore < 0
+      || feePaymentsHash.length != 32
       || timestamp <= 0)
       throw new InvalidSidechainBlockHeaderException(s"SidechainBlockHeader $id contains out of bound fields.")
 
     if(version != SidechainBlock.BLOCK_VERSION)
       throw new InvalidSidechainBlockHeaderException(s"SidechainBlock $id version $version is invalid.")
+
     // check, that signature is valid
     if(!signature.isValid(forgingStakeInfo.blockSignPublicKey, messageToSign))
       throw new InvalidSidechainBlockHeaderException(s"SidechainBlockHeader $id signature is invalid.")
@@ -101,6 +105,8 @@ object SidechainBlockHeaderSerializer extends ScorexSerializer[SidechainBlockHea
 
     w.putLong(obj.ommersCumulativeScore)
 
+    w.putBytes(obj.feePaymentsHash)
+
     Signature25519Serializer.getSerializer.serialize(obj.signature, w)
   }
 
@@ -128,6 +134,8 @@ object SidechainBlockHeaderSerializer extends ScorexSerializer[SidechainBlockHea
 
     val ommersCumulativeScore: Long = r.getLong()
 
+    val feePaymentsHash: Array[Byte] = r.getBytes(NodeViewModifier.ModifierIdSize)
+
     val signature: Signature25519 = Signature25519Serializer.getSerializer.parse(r)
 
     SidechainBlockHeader(
@@ -141,6 +149,7 @@ object SidechainBlockHeaderSerializer extends ScorexSerializer[SidechainBlockHea
       mainchainMerkleRootHash,
       ommersMerkleRootHash,
       ommersCumulativeScore,
+      feePaymentsHash,
       signature)
   }
 }

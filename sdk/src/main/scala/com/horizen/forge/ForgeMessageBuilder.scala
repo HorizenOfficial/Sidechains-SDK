@@ -2,7 +2,7 @@ package com.horizen.forge
 
 import akka.util.Timeout
 import com.horizen.block._
-import com.horizen.box.{ForgerBox, Box}
+import com.horizen.box.Box
 import com.horizen.chain.{MainchainHeaderHash, SidechainBlockInfo}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
@@ -11,13 +11,14 @@ import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, VrfSecretKey}
 import com.horizen.transaction.SidechainTransaction
-import com.horizen.utils.{ForgingStakeMerklePathInfo, ListSerializer, MerkleTree, TimeToEpochUtils}
+import com.horizen.utils.{FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerkleTree, TimeToEpochUtils}
 import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.collection.JavaConverters._
 import com.horizen.vrf.VrfOutput
+import scorex.core.NodeViewModifier
 
 import scala.collection.mutable.ArrayBuffer
 import scala.util.{Failure, Success, Try}
@@ -181,7 +182,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       val newMainchainHeadersNumber = newHeaderHashes.size
 
       if (orphanedMainchainHeadersNumber >= newMainchainHeadersNumber) {
-        ForgeFailed(new Exception("No sense to forge: active branch contains orphaned MainchainHeaders, that number is greater or equal to actual new MainchainHeaders."))
+        throw new Exception("No sense to forge: active branch contains orphaned MainchainHeaders, that number is greater or equal to actual new MainchainHeaders.")
       }
 
       val firstOrphanedHashHeight: Int = bestMainchainCommonPointHeight + 1
@@ -219,6 +220,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       Long.MaxValue,
+      new Array[Byte](NodeViewModifier.ModifierIdSize),
       new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH)) // empty signature
     )
 
@@ -296,9 +298,11 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       }
     })
 
+    val isWithdrawalEpochLastBlock: Boolean = mainchainReferenceData.size == withdrawalEpochMcBlocksLeft
+
     // Collect transactions if possible
     val transactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]] =
-      if (mainchainReferenceData.size == withdrawalEpochMcBlocksLeft) { // SC block is going to become the last block of the withdrawal epoch
+      if (isWithdrawalEpochLastBlock) { // SC block is going to become the last block of the withdrawal epoch
         Seq() // no SC Txs allowed
       } else { // SC block is in the middle of the epoch
         var txsCounter: Int = 0
@@ -314,6 +318,38 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
         }).map(tx => tx.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]).toSeq // TO DO: problems with types
       }
 
+    val feePayments = if(isWithdrawalEpochLastBlock) {
+      // Current block is expect to be the continuation of the current tip, so there are no ommers.
+      require(nodeView.history.bestBlockId == branchPointInfo.branchPointId, "Last block of the withdrawal epoch expect to be a continuation of the tip.")
+      require(ommers.isEmpty, "No Ommers allowed for the last block of the withdrawal epoch.")
+
+      val withdrawalEpochNumber: Int = nodeView.state.getWithdrawalEpochInfo.epoch
+
+      val forgedBlockFeeInfo = SidechainBlock.create(
+        parentBlockId,
+        SidechainBlock.BLOCK_VERSION,
+        timestamp,
+        mainchainReferenceData,
+        transactions,
+        mainchainHeaders,
+        ommers,
+        blockSignPrivateKey,
+        forgingStakeMerklePathInfo.forgingStakeInfo,
+        vrfProof,
+        forgingStakeMerklePathInfo.merklePath,
+        new Array[Byte](32), // dummy feePaymentsHash value
+        companion) match {
+        case Success(blockTemplate) => blockTemplate.feeInfo
+        case Failure(exception) => return ForgeFailed(exception)
+      }
+
+      nodeView.state.getFeePayments(withdrawalEpochNumber, Some(forgedBlockFeeInfo))
+    } else {
+      Seq()
+    }
+
+    val feePaymentsHash: Array[Byte] = FeePaymentsUtils.calculateFeePaymentsHash(feePayments)
+
     val tryBlock = SidechainBlock.create(
       parentBlockId,
       SidechainBlock.BLOCK_VERSION,
@@ -326,6 +362,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       forgingStakeMerklePathInfo.forgingStakeInfo,
       vrfProof,
       forgingStakeMerklePathInfo.merklePath,
+      feePaymentsHash,
       companion)
 
     tryBlock match {

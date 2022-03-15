@@ -9,8 +9,8 @@ import com.horizen.params.NetworkParams
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.mockito.Mockito
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito.MockitoSugar
 import scorex.util.bytesToId
 
 
@@ -38,6 +38,7 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
       forgerMeta1.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
+      new Array[Byte](32),
       sidechainTransactionsCompanion
     ).get
 
@@ -67,6 +68,7 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
       forgerMeta2.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
+      new Array[Byte](32),
       sidechainTransactionsCompanion
     ).get
 
@@ -101,6 +103,7 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
       forgerMeta3.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
+      new Array[Byte](32),
       sidechainTransactionsCompanion
     ).get
 
@@ -134,6 +137,7 @@ class WithdrawalEpochUtilsTest extends JUnitSuite with MockitoSugar with Maincha
       forgerMeta4.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
+      new Array[Byte](32),
       sidechainTransactionsCompanion
     ).get
 

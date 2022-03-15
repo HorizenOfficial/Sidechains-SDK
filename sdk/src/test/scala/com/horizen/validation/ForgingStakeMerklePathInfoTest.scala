@@ -12,7 +12,7 @@ import com.horizen.utils.{BytesUtils, ForgerBoxMerklePathInfoSerializer, Forging
 import com.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertEquals, assertNotEquals, assertTrue}
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 
 class ForgingStakeMerklePathInfoTest extends JUnitSuite with BoxFixture {
   val vrfGenerationSeed = 907

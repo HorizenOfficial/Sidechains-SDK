@@ -6,7 +6,7 @@ import com.horizen.fixtures.BoxFixture
 import com.horizen.utils.BytesUtils
 import org.junit._
 import org.junit.Assert._
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 
 import scala.util.Random
 
