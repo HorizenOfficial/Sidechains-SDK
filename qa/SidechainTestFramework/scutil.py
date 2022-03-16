@@ -747,7 +747,7 @@ network: {
  Output:
  - bootstrap information of the sidechain nodes. An instance of SCBootstrapInfo (see sc_boostrap_info.py)    
 """
-def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration, block_timestamp_rewind=DefaultBlockTimestampRewind):
+def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration, block_timestamp_rewind=DefaultBlockTimestampRewind, restApiTimeout=5):
     log_info = LogInfo(options.logfilelevel, options.logconsolelevel)
     print(options)
     total_number_of_sidechain_nodes = len(network.sc_nodes_configuration)

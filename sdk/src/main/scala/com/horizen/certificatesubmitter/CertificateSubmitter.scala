@@ -66,7 +66,6 @@ class CertificateSubmitter(settings: SidechainSettings,
 
   override def preStart(): Unit = {
     super.preStart()
-    log.error("SUBMITTER STARTED")
     context.system.eventStream.subscribe(self, classOf[SemanticallySuccessfulModifier[SidechainBlock]])
     context.system.eventStream.subscribe(self, SidechainAppEvents.SidechainApplicationStart.getClass)
 

@@ -48,7 +48,6 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
 
   override def preStart: Unit = {
     super.preStart()
-    log.error("SIG MANAGER STARTED")
     // subscribe on Application Start event to be sure that Submitter itself was initialized.
     context.system.eventStream.subscribe(self, SidechainAppEvents.SidechainApplicationStart.getClass)
   }
