@@ -45,6 +45,7 @@ trait SidechainBlockHeaderFixture extends BoxFixture {
       mainchainRootHash,
       ommersRootHash,
       0,
+      new Array[Byte](32),
       new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH))
     )
 

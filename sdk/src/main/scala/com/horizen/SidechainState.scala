@@ -10,11 +10,11 @@ import com.horizen.box.{Box, CoinsBox, ForgerBox, WithdrawalRequestBox, ZenBox}
 import com.horizen.consensus._
 import com.horizen.node.NodeState
 import com.horizen.params.NetworkParams
-import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
+import com.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.ApplicationState
 import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
 import com.horizen.transaction.MC2SCAggregatedTransaction
-import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import scorex.core._
 import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, MinimalState, ModifierValidation, Removal, TransactionValidation}
 import scorex.crypto.hash.Blake2b256
@@ -156,11 +156,13 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     validateBlockTransactionsMutuality(mod)
     mod.transactions.foreach(tx => validate(tx).get)
 
+
+    val currentWithdrawalEpochInfo = stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0))
+    val modWithdrawalEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, currentWithdrawalEpochInfo, params)
+
     // If SC block has reached the certificate submission window end -> check the top quality certificate
     // Note: even if mod contains multiple McBlockRefData entries, we are sure they belongs to the same withdrawal epoch.
-    val currentWithdrawalEpochInfo = stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0))
     if(WithdrawalEpochUtils.hasReachedCertificateSubmissionWindowEnd(mod, currentWithdrawalEpochInfo, params)) {
-      val modWithdrawalEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, currentWithdrawalEpochInfo, params)
       val certReferencedEpochNumber = modWithdrawalEpochInfo.epoch - 1
 
       // Top quality certificate may present in the current SC block or in the previous blocks or can be absent.
@@ -174,10 +176,24 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         case None =>
           log.info(s"In the end of the certificate submission window of epoch ${modWithdrawalEpochInfo.epoch} " +
             s"there are no certificates referenced to the epoch $certReferencedEpochNumber. Sidechain has ceased.")
-
-
       }
+    }
 
+    // If SC block has reached the end of the withdrawal epoch -> fee payments expected to be produced.
+    // Verify that Forger assumed the same fees to be paid as the current node does.
+    // If SC block is in the middle of the withdrawal epoch -> no fee payments hash expected to be defined.
+    val isWithdrawalEpochFinished: Boolean = WithdrawalEpochUtils.isEpochLastIndex(modWithdrawalEpochInfo, params)
+    if(isWithdrawalEpochFinished) {
+      // Note: that current block fee info is still not in the state storage, so consider it during result calculation.
+      val feePayments = getFeePayments(modWithdrawalEpochInfo.epoch, Some(mod.feeInfo))
+      val feePaymentsHash: Array[Byte] = FeePaymentsUtils.calculateFeePaymentsHash(feePayments)
+
+      if(!mod.feePaymentsHash.sameElements(feePaymentsHash))
+        throw new IllegalArgumentException(s"Block ${mod.id} has feePaymentsHash different to expected one: ${BytesUtils.toHexString(feePaymentsHash)}")
+    } else {
+      // No fee payments expected
+      if(!mod.feePaymentsHash.sameElements(FeePaymentsUtils.DEFAULT_FEE_PAYMENTS_HASH))
+        throw new IllegalArgumentException(s"Block ${mod.id} has feePaymentsHash ${BytesUtils.toHexString(mod.feePaymentsHash)} defined when no fee payments expected.")
     }
 
     applicationState.validate(this, mod)
@@ -227,8 +243,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     utxoMerkleTreeRoot(certReferencedEpochNumber) match {
       case Some(expectedMerkleTreeRoot) =>
         val certUtxoMerkleRoot = CryptoLibProvider.sigProofThresholdCircuitFunctions.reconstructUtxoMerkleTreeRoot(
-          topQualityCertificate.fieldElementCertificateFields.head.fieldElementBytes,
-          topQualityCertificate.fieldElementCertificateFields(1).fieldElementBytes
+          topQualityCertificate.fieldElementCertificateFields.head.fieldElementBytes(params.sidechainCreationVersion),
+          topQualityCertificate.fieldElementCertificateFields(1).fieldElementBytes(params.sidechainCreationVersion)
         )
         if(!expectedMerkleTreeRoot.sameElements(certUtxoMerkleRoot))
           throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate utxo merkle tree root " +
@@ -266,13 +282,27 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         }
       }
 
-      newCoinsBoxesAmount = tx.newBoxes().asScala
+      val newBoxes = tx.newBoxes().asScala
+
+      newCoinsBoxesAmount = newBoxes
         .filter(box => box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]] || box.isInstanceOf[WithdrawalRequestBox])
         .map(_.value()).sum
 
       if (closedCoinsBoxesAmount != newCoinsBoxesAmount + tx.fee())
         throw new Exception("Amounts sum of CoinsBoxes is incorrect. " +
           s"ClosedBox amount - $closedCoinsBoxesAmount, NewBoxesAmount - $newCoinsBoxesAmount, Fee - ${tx.fee()}")
+
+      newBoxes
+        .filter(box => box.isInstanceOf[ForgerBox])
+        .foreach(forgerBox => {
+          if (params.restrictForgers) {
+            val vrfPublicKey: VrfPublicKey = forgerBox.vrfPubKey()
+            val blockSignProposition: PublicKey25519Proposition = forgerBox.blockSignProposition()
+            if (!params.allowedForgersList.contains((blockSignProposition, vrfPublicKey))) {
+              throw new Exception("This publicKey is not allowed to forge!")
+            }
+          }
+        })
 
     }
 
@@ -323,8 +353,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     val isWithdrawalEpochFinished: Boolean = WithdrawalEpochUtils.isEpochLastIndex(withdrawalEpochInfo, params)
     if(isWithdrawalEpochFinished) {
       // Calculate and append fee payment boxes to the boxesToAppend
-      // Note: that current block id and fee info are still not in the state storage, so consider them during result calculation.
-      boxesToAppend ++= getFeePayments(withdrawalEpochInfo.epoch, Some((versionToId(newVersion), blockFeeInfo)))
+      // Note: that current block fee info is still not in the state storage, so consider it during result calculation.
+      boxesToAppend ++= getFeePayments(withdrawalEpochInfo.epoch, Some(blockFeeInfo)).map(_.asInstanceOf[SidechainTypes#SCB])
     }
 
     boxesToAppend.foreach(box => {
@@ -430,14 +460,10 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     WithdrawalEpochUtils.isEpochLastIndex(stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)), params)
   }
 
-  def getFeePayments(withdrawalEpochNumber: Int): Seq[SidechainTypes#SCB] = {
-    getFeePayments(withdrawalEpochNumber, None)
-  }
-
-  // Collect Fee payments during the appending of the last withdrawal epoch block, considering that block fee info as well.
-  private def getFeePayments(withdrawalEpochNumber: Int, blockToAppendInfo: Option[(ModifierId, BlockFeeInfo)]): Seq[SidechainTypes#SCB] = {
+  // Collect Fee payments while appending the last withdrawal epoch block (optional), considering that block fee info as well.
+  def getFeePayments(withdrawalEpochNumber: Int, blockToAppendFeeInfo: Option[BlockFeeInfo] = None): Seq[ZenBox] = {
     var blockFeeInfoSeq: Seq[BlockFeeInfo] = stateStorage.getFeePayments(withdrawalEpochNumber)
-    blockToAppendInfo.foreach(info => blockFeeInfoSeq = blockFeeInfoSeq :+ info._2)
+    blockToAppendFeeInfo.foreach(blockFeeInfo => blockFeeInfoSeq = blockFeeInfoSeq :+ blockFeeInfo)
 
     if(blockFeeInfoSeq.isEmpty) {
       return Seq()
@@ -471,20 +497,14 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         (forgerKey, forgerTotalFee)
     }
 
-    val lastBlockId: ModifierId = blockToAppendInfo.flatMap {
-      case (blockId, _) => Some(blockId)
-    }.getOrElse(versionToId(version))
-
-    val lastBlockIdBytes = idToBytes(lastBlockId)
-
     // Create and return Boxes with payments
     // Remove boxes with zero values, that may occur, for example, if all the blocks were without fees.
     res.zipWithIndex.map {
       case (forgerRewardInfo: (PublicKey25519Proposition, Long), index: Int) =>
         val data = new ZenBoxData(forgerRewardInfo._1, forgerRewardInfo._2)
         // Note: must be replaced with the Poseidon hash later.
-        val nonce = SidechainState.calculateFeePaymentBoxNonce(lastBlockIdBytes, index)
-        new ZenBox(data, nonce).asInstanceOf[SidechainTypes#SCB]
+        val nonce = SidechainState.calculateFeePaymentBoxNonce(withdrawalEpochNumber, index)
+        new ZenBox(data, nonce)
     }.filter(box => box.value() > 0)
   }
 }
@@ -541,8 +561,8 @@ object SidechainState
       throw new RuntimeException("State storage is not empty!")
   }
 
-  private[horizen] def calculateFeePaymentBoxNonce(blockIdBytes: Array[Byte], index: Int): Long = {
-    val hash = Blake2b256.hash(Bytes.concat(blockIdBytes, Ints.toByteArray(index)))
+  private[horizen] def calculateFeePaymentBoxNonce(withdrawalEpochNumber: Int, index: Int): Long = {
+    val hash = Blake2b256.hash(Bytes.concat(Ints.toByteArray(withdrawalEpochNumber), Ints.toByteArray(index)))
     BytesUtils.getLong(hash, 0)
   }
 }
