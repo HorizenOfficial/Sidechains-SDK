@@ -5,6 +5,7 @@ from mc_sc_forging_delegation import MCSCForgingDelegation
 from sc_ceased import SCCeased
 from sc_cert_no_coin_record import SCCertNoCoinRecord
 from sc_cert_submission_decentralization import SCCertSubmissionDecentralization
+from sc_cert_submitter_after_sync import ScCertSubmitterAfterSync
 from sc_csw_ceased_at_epoch_1 import SCCswCeasedAtEpoch1
 from sc_csw_ceased_at_epoch_2 import SCCswCeasedAtEpoch2
 from sc_csw_ceased_at_epoch_3 import SCCswCeasedAtEpoch3
@@ -88,6 +89,9 @@ def run_tests(log_file):
 
     result = run_test(SCCertSubmissionDecentralization())
     assert_equal(0, result, "sc_cert_submission_decentralization test failed!")
+
+    result = run_test(ScCertSubmitterAfterSync())
+    assert_equal(0, result, "sc_cert_submitter_after_sync test failed!")
 
     result = run_test(SCCertNoCoinRecord())
     assert_equal(0, result, "sc_cert_no_coin_record test failed!")

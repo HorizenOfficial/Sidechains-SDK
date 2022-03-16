@@ -51,6 +51,8 @@ class SidechainBlock(override val header: SidechainBlockHeader,
 
   override lazy val id: ModifierId = header.id
 
+  override def toString: String = s"SidechainBlock(id = $id)"
+
   // TODO: prettify
   override lazy val transactions: Seq[SidechainTypes#SCBT] = {
     var txs = Seq[SidechainTypes#SCBT]()
