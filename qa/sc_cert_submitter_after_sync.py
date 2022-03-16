@@ -1,27 +1,29 @@
 #!/usr/bin/env python3
-import json
 import time
-import math
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from SidechainTestFramework.sidechainauthproxy import SCAPIException
 from test_framework.util import fail, assert_false, assert_true, start_nodes, \
     websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, generate_next_block, connect_sc_nodes, disconnect_sc_nodes_bi, sync_sc_blocks, LEVEL_OFF, LEVEL_ALL, \
-    LEVEL_ERROR, LEVEL_WARN
+    start_sc_nodes, generate_next_block, connect_sc_nodes, sync_sc_blocks
 from SidechainTestFramework.sc_forging_util import *
 
 """
 Check Certificate submission behaviour for the node after sync from scratch with an existing chain.
 
 Configuration:
-    Start 1 MC node and 2 SC nodes (with default websocket configuration).
+    Start 1 MC node and 2 SC nodes (with default websocket configuration) disconnected.
+    SC nodes 2 is a certificate submitter.
+    SC Nodes altogether have enough keys to produce certificate signatures.
 
 Test:
-    - 
+    - Generate 2000 blocks on SC node 1
+    - Connect SC node 2 to SC node 1 and start syncing
+    - Ensure that node 2 was able to sync
+    - Generate a few more MC and SC blocks to reach the end of
+    - Check that certificate was generated. So Submitter and Signer are alive on SC node 2.
 """
 class ScCertSubmitterAfterSync(SidechainTestFramework):
 
@@ -65,8 +67,7 @@ class ScCertSubmitterAfterSync(SidechainTestFramework):
         sc_node1 = self.sc_nodes[0]
         sc_node2 = self.sc_nodes[1]
 
-
-        # Generate 4000 SC blocks on SC node 1
+        # Generate 2000 SC blocks on SC node 1
         for i in range(2000):
             generate_next_block(sc_node1, "first node")
 
@@ -88,7 +89,7 @@ class ScCertSubmitterAfterSync(SidechainTestFramework):
 
         # Generate MC blocks to switch WE epoch
         print("mc blocks left = " + str(mc_blocks_left_for_we))
-        mc_block_hashes = mc_node.generate(mc_blocks_left_for_we + 1)
+        mc_node.generate(mc_blocks_left_for_we + 1)
 
         # Generate 2 SC blocks on SC node and start them automatic cert creation.
         generate_next_block(sc_node1, "second node")  # 1 MC block to reach the end of WE

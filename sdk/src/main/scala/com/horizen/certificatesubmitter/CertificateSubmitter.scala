@@ -51,7 +51,7 @@ class CertificateSubmitter(settings: SidechainSettings,
 
   type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
 
-  val timeoutDuration: FiniteDuration = 5 seconds//settings.scorexSettings.restApi.timeout
+  val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
 
   private var provingFileAbsolutePath: String = _
