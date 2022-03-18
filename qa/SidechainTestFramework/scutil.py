@@ -916,7 +916,7 @@ def if_csws_were_generated(sc_node, csw_box_ids, allow_absent=False):
 def get_scinfo_data(scid, mc_node):
     ret = mc_node.getscinfo(scid)['items'][0]
     sc_creating_height = ret['createdAtBlockHeight']
-    sc_version = ret['sidechainVersion']
+    sc_version = ret['version']
     sc_constant = ret['constant']
     sc_customData = ret['customData']
     epochLen = ret['withdrawalEpochLength']
