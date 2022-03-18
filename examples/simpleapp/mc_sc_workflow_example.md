@@ -126,11 +126,9 @@ Compile MC sources with SC support code:
 Run zen node for regtest network:  
 `./zend -regtest -websocket`
 
-Generate 420 blocks to enable Sidechain logic (otherwise sidechain can't be created):  
-`./zen-cli -regtest generate 420`
-
-In case of Sidechain version 1, it is necessary to generate at least 450 blocks, so the command should be:  
+Generate 450 blocks to enable Sidechain logic with versions support. Otherwise, sidechain can't be created.
 `./zen-cli -regtest generate 450`
+
 
 As a result id of generated blocks are printed:
 ```
