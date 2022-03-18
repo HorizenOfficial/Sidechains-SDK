@@ -55,7 +55,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
     val verificationFile: File = new File(params.certProvingKeyFilePath)
     if (!verificationFile.canRead) {
-      throw new IllegalStateException(s"Verification key file at path ${verificationFile.getAbsolutePath} is not exist or can't be read")
+      throw new IllegalStateException(s"Verification key file at path ${verificationFile.getAbsolutePath} does not exist or can't be read")
     }
     else {
       log.info(s"Verification key file at location: ${verificationFile.getAbsolutePath}")
