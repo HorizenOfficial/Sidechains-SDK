@@ -173,8 +173,6 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
         log.warn(s"No blocks to remove from current chain, we are just applying: ${toApply.map(b => b.id).mkString(", ")}")
       }
 
-
-
       ProgressInfo[SidechainBlock](rollbackPoint, toRemove, toApply, Seq())
     } else {
       //log.info(s"Orphaned block $block from invalid suffix")

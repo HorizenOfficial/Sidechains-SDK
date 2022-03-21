@@ -103,7 +103,7 @@ class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with Side
     }
   }
 
-  def lastVersionId: Option[ByteArrayWrapper] = {
+  override def lastVersionId: Option[ByteArrayWrapper] = {
     storage.lastVersionID().asScala
   }
 
@@ -125,5 +125,5 @@ class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with Side
 
   def isEmpty: Boolean = storage.isEmpty
 
-  def size : Int = storage.size()
+  def numberOfVersions : Int = storage.numberOfVersions()
 }

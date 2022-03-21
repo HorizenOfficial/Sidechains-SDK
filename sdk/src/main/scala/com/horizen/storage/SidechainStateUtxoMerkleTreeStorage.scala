@@ -121,7 +121,7 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
       Failure(exception)
   }
 
-  def lastVersionId: Option[ByteArrayWrapper] = {
+  override def lastVersionId: Option[ByteArrayWrapper] = {
     storage.lastVersionID().asScala
   }
 

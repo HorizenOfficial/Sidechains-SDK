@@ -104,7 +104,7 @@ public class DbToolCommandProcessor extends CommandProcessor {
     @Override
     protected void printUsageMsg() {
         printer.print("Usage:\n" +
-                "\tFrom command line: <program name> <command name> [<json data>]\n" +
+                "\tFrom command line: <program name> <storages data dir path> <command name> [<json data>]\n" +
                 "\tFor interactive mode: <command name> [<json data>]\n" +
                 "\tRead command arguments from file: <command name> -f <path to file with json data>\n" +
                 "Supported commands:\n" +

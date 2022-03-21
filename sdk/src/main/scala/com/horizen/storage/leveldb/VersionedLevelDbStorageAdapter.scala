@@ -96,5 +96,5 @@ class VersionedLevelDbStorageAdapter(pathToDB: File) extends Storage{
   }
 
   override def isEmpty: Boolean = dataBase.versions.isEmpty
-  override def size: Int = dataBase.versions.size
+  override def numberOfVersions: Int = dataBase.versions.size
 }

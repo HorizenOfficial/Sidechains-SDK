@@ -132,12 +132,19 @@ def launch_bootstrap_tool(command_name, json_parameters):
               .format(command_name, json_param, sc_bootstrap_output.decode()))
         raise Exception("Bootstrap tool error occurred")
 
-def launch_db_tool(cfgFileName, command_name, json_parameters):
+def launch_db_tool(dirName, command_name, json_parameters):
+
+    '''
+    we use "blockchain" postfix for specifying the dataDir (see qa/resources/template.conf:
+        dataDir = "%(DIRECTORY)s/sc_node%(NODE_NUMBER)s/blockchain"
+    '''
+    storagesPath = dirName + "/blockchain"
+
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK",
-                                          "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-0.2.7.jar",
-                                cfgFileName, command_name, json_param], stdout=subprocess.PIPE)
+                                          "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-0.3.0.jar",
+                                storagesPath, command_name, json_param], stdout=subprocess.PIPE)
     db_tool_output = java_ps.communicate()[0]
     try:
         jsone_node = json.loads(db_tool_output)
@@ -489,7 +496,7 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     url = "http://rt:rt@%s:%d" % ('127.0.0.1' or rpchost, sc_rpc_port(i))
     proxy = SidechainAuthServiceProxy(url)
     proxy.url = url  # store URL on proxy for info
-    proxy.cfgFileName = cfgFileName # store the name of the cfg file with path
+    proxy.dataDir = datadir # store the name of the datadir
     return proxy
 
 

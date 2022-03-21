@@ -168,7 +168,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     } catch {
       case e: Exception =>
         log.error("Could not update application wallet and storages: " + e.getMessage)
-        throw  new Exception(e)
+        throw e
     }
 
     this
@@ -366,7 +366,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
         val maxNumberOfVersionToRetrieve = 2
         val rollbackList = forgingBoxesInfoStorage.rollbackVersions(maxNumberOfVersionToRetrieve)
         if (rollbackList.last == versionBaw) {
-          if (forgingBoxesInfoStorage.size == maxNumberOfVersionToRetrieve) {
+          if (forgingBoxesInfoStorage.numberOfVersions == maxNumberOfVersionToRetrieve) {
             // this is ok, we have just the genesis block whose modId is the very first version, and the second
             // is the non-rollback version used when updating the ForgingStakeMerklePathInfo at the startup
             log.debug("All wallet storage versions are consistent")

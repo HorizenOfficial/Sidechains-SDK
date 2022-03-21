@@ -62,7 +62,7 @@ extends SidechainTypes
     this
   }
 
-  def lastVersionId : Option[ByteArrayWrapper] = {
+  override def lastVersionId : Option[ByteArrayWrapper] = {
     storage.lastVersionID().asScala
   }
 

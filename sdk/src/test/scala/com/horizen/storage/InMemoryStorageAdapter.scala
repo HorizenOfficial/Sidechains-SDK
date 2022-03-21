@@ -35,7 +35,7 @@ class InMemoryStorageAdapter(hashMap: mutable.HashMap[ByteArrayWrapper, ByteArra
 
   override def isEmpty: Boolean = hashMap.isEmpty
 
-  override def size(): Int = hashMap.size
+  override def numberOfVersions(): Int = ???
 
   override def close(): Unit = {}
 

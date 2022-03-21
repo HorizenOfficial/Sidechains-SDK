@@ -60,7 +60,7 @@ def checkStoragesVersion(node, storages_list, expectedVersion):
     for name in storages_list:
         # get the last version of the storage
         json_params = {"storage": name}
-        ret = launch_db_tool(node.cfgFileName, "lastVersionID", json_params)
+        ret = launch_db_tool(node.dataDir, "lastVersionID", json_params)
         version = ret['version']
         #print("{} --> {}".format(name, version))
         # check we got the expected version
@@ -71,13 +71,13 @@ def rollbackStorages(node, storages_list, numberOfVersionsToRollback):
     for name in storages_list:
         # get the version list up to the desired number
         json_params = {"storage": name, "numberOfVersionToRetrieve": numberOfVersionsToRollback}
-        versionsList = launch_db_tool(node.cfgFileName, "versionsList", json_params)["versionsList"]
+        versionsList = launch_db_tool(node.dataDir, "versionsList", json_params)["versionsList"]
 
         # get the target version to rollback to
         rollbackVersion = versionsList[-1]
         json_params = {"storage": name, "versionToRollback": rollbackVersion}
         print("...Rollbacking storage \"{}\" to version {}".format(name, rollbackVersion))
-        ret = launch_db_tool(node.cfgFileName, "rollback", json_params)
+        ret = launch_db_tool(node.dataDir, "rollback", json_params)
         #print("{} --> {}".format(name, rollbackVersion))
         # check that we did it correctly
         assert_equal(ret["versionCurrent"], rollbackVersion)
@@ -183,7 +183,7 @@ class DBToolTest(SidechainTestFramework):
         # Check that wallet forging stake has the same block id in the rollback versions and precisely
         # one commit behind
         json_params = {"storage": "walletForgingStake", "numberOfVersionToRetrieve": 2}
-        versionsList = launch_db_tool(sc_node2.cfgFileName, "versionsList", json_params)["versionsList"]
+        versionsList = launch_db_tool(sc_node2.dataDir, "versionsList", json_params)["versionsList"]
         assert_true(genesis_sc_block_id in versionsList)
         assert_equal(genesis_sc_block_id, versionsList[-1])
 
@@ -317,7 +317,7 @@ class DBToolTest(SidechainTestFramework):
         checkStoragesVersion(sc_node2, ["wallet"], rolbackBlockVersionId)
 
         json_params = {"storage": "walletForgingStake", "numberOfVersionToRetrieve": 2}
-        versionsList = launch_db_tool(sc_node2.cfgFileName, "versionsList", json_params)["versionsList"]
+        versionsList = launch_db_tool(sc_node2.dataDir, "versionsList", json_params)["versionsList"]
         assert_true(rolbackBlockVersionId in versionsList)
         # -- wallet forging stake is ahead by one version
         assert_equal(rolbackBlockVersionId, versionsList[-1])

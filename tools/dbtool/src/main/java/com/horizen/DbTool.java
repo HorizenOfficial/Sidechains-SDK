@@ -36,19 +36,14 @@ public class DbTool {
         Logger log = LogManager.getLogger(com.horizen.DbTool.class);
 
         if (args.length == 0) {
-            log.error("Please provide settings file name as first parameter!");
+            log.error("Please provide DB folder path as first parameter!");
             return;
         }
         if (!new File(args[0]).exists()) {
-            log.error("File on path " + args[0] + " doesn't exist");
+            log.error("Path " + args[0] + " doesn't exist");
             return;
         }
-        String settingsFileName = args[0];
-
-        SettingsReader settingsReader= new SettingsReader(settingsFileName, Optional.empty());
-        SidechainSettings sidechainSettings = settingsReader.getSidechainSettings();
-
-        String dataDirAbsolutePath = sidechainSettings.scorexSettings().dataDir().getAbsolutePath();
+        String dataDirAbsolutePath = args[0];
 
         MessagePrinter printer = new ConsolePrinter();
         DbToolCommandProcessor processor = new DbToolCommandProcessor(printer, dataDirAbsolutePath, log);

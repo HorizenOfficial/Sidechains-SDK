@@ -117,7 +117,7 @@ class SidechainWalletCswDataStorage(storage: Storage) extends ScorexLogging with
     this
   }
 
-  def lastVersionId: Option[ByteArrayWrapper] = {
+  override def lastVersionId: Option[ByteArrayWrapper] = {
     storage.lastVersionID().asScala
   }
 

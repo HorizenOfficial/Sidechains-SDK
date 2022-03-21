@@ -44,9 +44,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     with UtxoMerkleTreeView
 {
 
-  // TODO this prevents the restoring of db in case of corruption
-  // checkVersion()
-
   override type NVCT = SidechainState
 
   lazy val verificationKeyFullFilePath: String = {
@@ -410,7 +407,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   override def rollbackTo(to: VersionTag): Try[SidechainState] = Try {
     require(to != null, "Version to rollback to must be NOT NULL.")
-    log.warn(s"rolling back state to version = ${to}")
+    log.debug(s"rolling back state to version = ${to}")
     val version = BytesUtils.fromHexString(to)
 
     val forgerBoxStorageNew = forgerBoxStorage.rollback(new ByteArrayWrapper(version)).get
@@ -487,7 +484,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         case(x,i) => log.warn(s"app storage ${i} version: ${bytesToVersion(x)}")
       }
       // application has internal storages which are not aligned, return a null version tag
-      bytesToVersion(new ByteArrayWrapper(0).data())
+      bytesToVersion(new Array[Byte](0))
     }
   }
 

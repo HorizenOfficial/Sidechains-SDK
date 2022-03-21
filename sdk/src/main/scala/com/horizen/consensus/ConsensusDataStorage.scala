@@ -65,7 +65,7 @@ class ConsensusDataStorage(consensusEpochInfoStorage: Storage)
     log.debug("Consensus data storage updated with version: " + version)
   }
 
-  def lastVersionId: Option[ByteArrayWrapper] = {
+  override def lastVersionId: Option[ByteArrayWrapper] = {
     consensusEpochInfoStorage.lastVersionID().asScala
   }
 }

@@ -130,7 +130,7 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
 
   def isEmpty: Boolean = storage.isEmpty
 
-  def lastVersionId : Option[ByteArrayWrapper] = {
+  override def lastVersionId : Option[ByteArrayWrapper] = {
     storage.lastVersionID().asScala
   }
 }

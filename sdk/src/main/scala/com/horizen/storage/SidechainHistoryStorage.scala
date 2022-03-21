@@ -43,7 +43,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     if (storage.isEmpty) {
       return ActiveChain(params.mainchainCreationBlockHeight)
     }
-    log.info("Loading active chain from a storage with size: " + storage.size)
+    log.info("Loading active chain from history storage")
 
     val activeChainBlocksInfo: ArrayBuffer[(ModifierId, SidechainBlockInfo)] = new ArrayBuffer()
 
@@ -316,10 +316,8 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
   }
 
   def isEmpty: Boolean = storage.isEmpty
-  
-  def size: Int = storage.size
-  
-  def lastVersionId : Option[ByteArrayWrapper] = {
+
+  override def lastVersionId : Option[ByteArrayWrapper] = {
     storage.lastVersionID().asScala
   }
 }

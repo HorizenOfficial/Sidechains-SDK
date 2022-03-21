@@ -71,7 +71,7 @@ class SidechainStateForgerBoxStorage(storage: Storage)
     this
   }
 
-  def lastVersionId: Option[ByteArrayWrapper] = {
+  override def lastVersionId: Option[ByteArrayWrapper] = {
     storage.lastVersionID().asScala
   }
 

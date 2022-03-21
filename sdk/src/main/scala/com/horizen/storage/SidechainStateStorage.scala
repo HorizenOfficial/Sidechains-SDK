@@ -288,7 +288,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     this
   }
 
-  def lastVersionId : Option[ByteArrayWrapper] = {
+  override def lastVersionId : Option[ByteArrayWrapper] = {
     storage.lastVersionID().asScala
   }
 
