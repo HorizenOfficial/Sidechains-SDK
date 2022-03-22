@@ -5,6 +5,9 @@ import com.horizen.SidechainApp;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.io.File;
 
 
@@ -19,12 +22,14 @@ public class SimpleApp {
             System.out.println("File on path " + args[0] + " doesn't exist");
             return;
         }
-
         String settingsFileName = args[0];
 
         Injector injector = Guice.createInjector(new SimpleAppModule(settingsFileName));
         SidechainApp sidechainApp = injector.getInstance(SidechainApp.class);
 
+        Logger logger = LogManager.getLogger(com.horizen.examples.SimpleApp.class);
+        logger.info("...starting application...");
+        
         sidechainApp.run();
         System.out.println("Simple Sidechain application successfully started...");
     }

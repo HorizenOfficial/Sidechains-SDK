@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
-import com.google.inject.AbstractModule;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 
@@ -14,17 +13,13 @@ import com.horizen.SidechainAppModule;
 import com.horizen.SidechainSettings;
 import com.horizen.api.http.ApplicationApiGroup;
 import com.horizen.box.*;
-import com.horizen.box.data.NoncedBoxData;
-import com.horizen.box.data.NoncedBoxDataSerializer;
-import com.horizen.proof.Proof;
-import com.horizen.proof.ProofSerializer;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.Secret;
 import com.horizen.secret.SecretSerializer;
 import com.horizen.settings.SettingsReader;
-import com.horizen.storage.IODBStorageUtil;
 import com.horizen.storage.Storage;
 import com.horizen.state.*;
+import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter;
 import com.horizen.transaction.BoxTransaction;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.wallet.*;
@@ -32,7 +27,7 @@ import com.horizen.utils.Pair;
 
 public class SimpleAppModule extends SidechainAppModule
 {
-    private SettingsReader settingsReader;
+    private final SettingsReader settingsReader;
 
     public SimpleAppModule(String userSettingsFileName) {
         this.settingsReader = new SettingsReader(userSettingsFileName, Optional.empty());
@@ -44,22 +39,23 @@ public class SimpleAppModule extends SidechainAppModule
         SidechainSettings sidechainSettings = this.settingsReader.getSidechainSettings();
 
         HashMap<Byte, BoxSerializer<Box<Proposition>>> customBoxSerializers = new HashMap<>();
-        HashMap<Byte, NoncedBoxDataSerializer<NoncedBoxData<Proposition, NoncedBox<Proposition>>>> customBoxDataSerializers = new HashMap<>();
         HashMap<Byte, SecretSerializer<Secret>> customSecretSerializers = new HashMap<>();
-        HashMap<Byte, ProofSerializer<Proof<Proposition>>> customProofSerializers = new HashMap<>();
         HashMap<Byte, TransactionSerializer<BoxTransaction<Proposition, Box<Proposition>>>> customTransactionSerializers = new HashMap<>();
 
         ApplicationWallet defaultApplicationWallet = new DefaultApplicationWallet();
         ApplicationState defaultApplicationState = new DefaultApplicationState();
 
-        File secretStore = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/secret");
-        File walletBoxStore = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/wallet");
-        File walletTransactionStore = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/walletTransaction");
-        File walletForgingBoxesInfoStorage = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/walletForgingStake");
-        File stateStore = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/state");
-        File stateForgerBoxStore = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/stateForgerBox");
-        File historyStore = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/history");
-        File consensusStore = new File(sidechainSettings.scorexSettings().dataDir().getAbsolutePath() + "/consensusData");
+        String dataDirAbsolutePath = sidechainSettings.scorexSettings().dataDir().getAbsolutePath();
+        File secretStore = new File(dataDirAbsolutePath + "/secret");
+        File walletBoxStore = new File(dataDirAbsolutePath + "/wallet");
+        File walletTransactionStore = new File(dataDirAbsolutePath + "/walletTransaction");
+        File walletForgingBoxesInfoStorage = new File(dataDirAbsolutePath + "/walletForgingStake");
+        File walletCswDataStorage = new File(dataDirAbsolutePath + "/walletCswDataStorage");
+        File stateStore = new File(dataDirAbsolutePath + "/state");
+        File stateForgerBoxStore = new File(dataDirAbsolutePath + "/stateForgerBox");
+        File stateUtxoMerkleTreeStore = new File(dataDirAbsolutePath + "/stateUtxoMerkleTree");
+        File historyStore = new File(dataDirAbsolutePath + "/history");
+        File consensusStore = new File(dataDirAbsolutePath + "/consensusData");
 
 
 
@@ -80,15 +76,9 @@ public class SimpleAppModule extends SidechainAppModule
         bind(new TypeLiteral<HashMap<Byte, BoxSerializer<Box<Proposition>>>>() {})
                 .annotatedWith(Names.named("CustomBoxSerializers"))
                 .toInstance(customBoxSerializers);
-        bind(new TypeLiteral<HashMap<Byte, NoncedBoxDataSerializer<NoncedBoxData<Proposition, NoncedBox<Proposition>>>>>() {})
-                .annotatedWith(Names.named("CustomBoxDataSerializers"))
-                .toInstance(customBoxDataSerializers);
         bind(new TypeLiteral<HashMap<Byte, SecretSerializer<Secret>>>() {})
                 .annotatedWith(Names.named("CustomSecretSerializers"))
                 .toInstance(customSecretSerializers);
-        bind(new TypeLiteral<HashMap<Byte, ProofSerializer<Proof<Proposition>>>>() {})
-                .annotatedWith(Names.named("CustomProofSerializers"))
-                .toInstance(customProofSerializers);
         bind(new TypeLiteral<HashMap<Byte, TransactionSerializer<BoxTransaction<Proposition, Box<Proposition>>>>>() {})
                 .annotatedWith(Names.named("CustomTransactionSerializers"))
                 .toInstance(customTransactionSerializers);
@@ -101,30 +91,37 @@ public class SimpleAppModule extends SidechainAppModule
                 .annotatedWith(Names.named("ApplicationState"))
                 .toInstance(defaultApplicationState);
 
+
         bind(Storage.class)
                 .annotatedWith(Names.named("SecretStorage"))
-                .toInstance(IODBStorageUtil.getStorage(secretStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(secretStore));
         bind(Storage.class)
                 .annotatedWith(Names.named("WalletBoxStorage"))
-                .toInstance(IODBStorageUtil.getStorage(walletBoxStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(walletBoxStore));
         bind(Storage.class)
                 .annotatedWith(Names.named("WalletTransactionStorage"))
-                .toInstance(IODBStorageUtil.getStorage(walletTransactionStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(walletTransactionStore));
         bind(Storage.class)
                 .annotatedWith(Names.named("WalletForgingBoxesInfoStorage"))
-                .toInstance(IODBStorageUtil.getStorage(walletForgingBoxesInfoStorage));
+                .toInstance(new VersionedLevelDbStorageAdapter(walletForgingBoxesInfoStorage));
+        bind(Storage.class)
+                .annotatedWith(Names.named("WalletCswDataStorage"))
+                .toInstance(new VersionedLevelDbStorageAdapter(walletCswDataStorage));
         bind(Storage.class)
                 .annotatedWith(Names.named("StateStorage"))
-                .toInstance(IODBStorageUtil.getStorage(stateStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(stateStore));
         bind(Storage.class)
                 .annotatedWith(Names.named("StateForgerBoxStorage"))
-                .toInstance(IODBStorageUtil.getStorage(stateForgerBoxStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(stateForgerBoxStore));
+        bind(Storage.class)
+                .annotatedWith(Names.named("StateUtxoMerkleTreeStorage"))
+                .toInstance(new VersionedLevelDbStorageAdapter(stateUtxoMerkleTreeStore));
         bind(Storage.class)
                 .annotatedWith(Names.named("HistoryStorage"))
-                .toInstance(IODBStorageUtil.getStorage(historyStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(historyStore));
         bind(Storage.class)
                 .annotatedWith(Names.named("ConsensusStorage"))
-                .toInstance(IODBStorageUtil.getStorage(consensusStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(consensusStore));
 
         bind(new TypeLiteral<List<ApplicationApiGroup>> () {})
                 .annotatedWith(Names.named("CustomApiGroups"))

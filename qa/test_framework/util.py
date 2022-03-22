@@ -8,6 +8,7 @@
 #
 
 # Add python-bitcoinrpc to module search path:
+import codecs
 import os
 import sys
 
@@ -21,7 +22,9 @@ import subprocess
 import time
 import re
 
-from authproxy import AuthServiceProxy
+from test_framework.authproxy import AuthServiceProxy
+
+COIN = 100000000 # 1 zen in zatoshis
 
 def p2p_port(n):
     return 11000 + n + os.getpid()%999
@@ -108,11 +111,11 @@ def initialize_chain(test_dir):
                 args.append("-connect=127.0.0.1:"+str(p2p_port(0)))
             bitcoind_processes[i] = subprocess.Popen(args)
             if os.getenv("PYTHON_DEBUG", ""):
-                print "initialize_chain: bitcoind started, calling bitcoin-cli -rpcwait getblockcount"
+                print("initialize_chain: bitcoind started, calling bitcoin-cli -rpcwait getblockcount")
             subprocess.check_call([ os.getenv("BITCOINCLI", "bitcoin-cli"), "-datadir="+datadir,
                                     "-rpcwait", "getblockcount"], stdout=devnull)
             if os.getenv("PYTHON_DEBUG", ""):
-                print "initialize_chain: bitcoin-cli -rpcwait getblockcount completed"
+                print("initialize_chain: bitcoin-cli -rpcwait getblockcount completed")
         devnull.close()
         rpcs = []
         for i in range(4):
@@ -186,18 +189,21 @@ def start_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=
     """
     datadir = os.path.join(dirname, "node"+str(i))
     if binary is None:
-        binary = os.getenv("BITCOIND", "bitcoind")
-    args = [ binary, "-datadir="+datadir, "-keypool=1", "-discover=0", "-rest", "-websocket"]
+        binary = os.getenv("BITCOIND", "zend")
+    if not os.path.isfile(binary):
+        raise Exception('no such file: ' + binary)
+
+    args = [ binary, "-datadir="+datadir, "-keypool=1", "-discover=0", "-rest", "-websocket", "-logtimemicros"]
     if extra_args is not None: args.extend(extra_args)
     bitcoind_processes[i] = subprocess.Popen(args)
     devnull = open(os.devnull, "w+")
     if os.getenv("PYTHON_DEBUG", ""):
-        print "start_node: bitcoind started, calling bitcoin-cli -rpcwait getblockcount"
+        print("start_node: bitcoind started, calling bitcoin-cli -rpcwait getblockcount")
     subprocess.check_call([ os.getenv("BITCOINCLI", "bitcoin-cli"), "-datadir="+datadir] +
                           _rpchost_to_args(rpchost)  +
                           ["-rpcwait", "getblockcount"], stdout=devnull)
     if os.getenv("PYTHON_DEBUG", ""):
-        print "start_node: calling bitcoin-cli -rpcwait getblockcount returned"
+        print("start_node: calling bitcoin-cli -rpcwait getblockcount returned")
     devnull.close()
     url = "http://rt:rt@%s:%d" % (rpchost or '127.0.0.1', rpc_port(i))
     if timewait is not None:
@@ -410,7 +416,7 @@ def fail(message=""):
 def wait_and_assert_operationid_status_result(node, myopid, in_status='success', in_errormsg=None, timeout=300):
     print('waiting for async operation {}'.format(myopid))
     result = None
-    for _ in xrange(1, timeout):
+    for _ in range(1, timeout):
         results = node.z_getoperationresult([myopid])
         if len(results) > 0:
             result = results[0]
@@ -474,22 +480,49 @@ Output: an array of two information:
  - created sidechain id
 
 """
-def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_length,
-                                          public_key, forward_transfer_amount, vrf_public_key, genSysConstant, verificationKey):
-    number_of_blocks_to_enable_sc_logic = 219
+def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_length, public_key, forward_transfer_amount,
+                                          vrf_public_key, gen_sys_constant, cert_vk, csw_vk, btr_data_length,
+                                          sc_creation_version):
+    number_of_blocks_to_enable_sc_logic = 449
     number_of_blocks = mainchain_node.getblockcount()
     diff = number_of_blocks_to_enable_sc_logic - number_of_blocks
     if diff > 1:
+        print("Generating {} blocks for reaching needed mc fork point...".format(diff))
         mainchain_node.generate(diff)
 
-    custom_data = vrf_public_key
-    sc_create_res = mainchain_node.sc_create(withdrawal_epoch_length, public_key, forward_transfer_amount, verificationKey, custom_data, genSysConstant)
+    custom_creation_data = vrf_public_key
+    fe_certificate_field_configs = [255, 255]
+    bitvector_certificate_field_configs = []  # [[254*8, 254*8]]
+    ft_min_amount = 0
+    btr_fee = 0
+
+    sc_create_args = {
+        "version": sc_creation_version,
+        "withdrawalEpochLength": withdrawal_epoch_length,
+        "toaddress": public_key,
+        "amount": forward_transfer_amount,
+        "wCertVk": cert_vk,
+        "customData": custom_creation_data,
+        "constant": gen_sys_constant,
+        "wCeasedVk": csw_vk,
+        "vFieldElementCertificateFieldConfig": fe_certificate_field_configs,
+        "vBitVectorCertificateFieldConfig": bitvector_certificate_field_configs,
+        "forwardTransferScFee": ft_min_amount,
+        "mainchainBackwardTransferScFee": btr_fee,
+        "mainchainBackwardTransferRequestDataLength": btr_data_length
+    }
+    sc_create_res = mainchain_node.sc_create(sc_create_args)
     transaction_id = sc_create_res["txid"]
     sidechain_id = sc_create_res["scid"]
-    print "Id of the sidechain transaction creation: {0}".format(transaction_id)
-    print "Sidechain created with Id: {0}".format(sidechain_id)
+    print("Id of the sidechain transaction creation: {0}".format(transaction_id))
+    print("Sidechain created with Id: {0}".format(sidechain_id))
 
-    mainchain_node.generate(1)
+    mc_block_hash = mainchain_node.generate(1)[0]
+    # For docs update
+    tx_json_str = json.dumps(mainchain_node.gettransaction(transaction_id), indent=4, default=str)
+    mc_block_hex = mainchain_node.getblock(mc_block_hash, False)
+    #print(mc_block_hex)
+
     return [mainchain_node.getscgenesisinfo(sidechain_id), mainchain_node.getblockcount(), sidechain_id]
 
 
@@ -509,10 +542,38 @@ Output: an array of two information:
 
 
 def forward_transfer_to_sidechain(sidechain_id, mainchain_node,
-                                  public_key, forward_transfer_amount):
+                                  public_key, forward_transfer_amount, mc_return_address, generate_block=True):
 
-    transaction_id = mainchain_node.sc_send(public_key, forward_transfer_amount, sidechain_id)
-    print "Id of the sidechain transaction creation: {0}".format(transaction_id)
+    ft_args = [{
+        "toaddress": public_key,
+        "amount": forward_transfer_amount,
+        "scid": sidechain_id,
+        "mcReturnAddress": mc_return_address
+    }]
+    transaction_id = mainchain_node.sc_send(ft_args)
+    print("FT transaction id: {0}".format(transaction_id))
 
-    mainchain_node.generate(1)
+    if generate_block:
+        mainchain_node.generate(1)
     return [mainchain_node.getscinfo(sidechain_id), mainchain_node.getblockcount()]
+
+
+def swap_bytes(input_buf):
+    return codecs.encode(codecs.decode(input_buf, 'hex')[::-1], 'hex').decode()
+
+
+def get_spendable(mc_node, min_amount):
+    # get a UTXO in node's wallet with minimal amount
+    utx = False
+    listunspent = mc_node.listunspent()
+    for aUtx in listunspent:
+        if aUtx['amount'] > min_amount:
+            utx = aUtx
+            change = aUtx['amount'] - min_amount
+            break
+
+    if utx == False:
+        print(listunspent)
+
+    assert_equal(utx!=False, True)
+    return utx, change

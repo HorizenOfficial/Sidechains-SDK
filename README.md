@@ -1,24 +1,16 @@
-**[DISCLAIMER]**
--------------------
-
-The "Blaze" Sidechain SDK development is in progress, and the release is coming soon!
-
-The version on master is outdated. The most recent version can be found in the "dev" branch, and can be tested by early adopters on our official testnet.
-
-Please note: the current version is experimental and a work in progress. Use at your own risk.
-
-**Sidechains-SDK Beta**
+**Sidechains-SDK Blaze**
 -------------------
 Sidechains are an innovation devised to enable blockchain scalability and extensibility by creating parallel platform and application layers that are bound to the mainchain without imposing a significant burden. Each sidechain implements the desired features and custom business logic, rooted in a protocol that offers a way to transfer coins from and to the original mainchain and each sidechain.
 
 Zendoo is a unique sidechain and scaling solution developed by Horizen. The Zendoo sidechain SDK is a framework that supports the creation of sidechains and their custom business logic, with the Horizen public blockchain as the mainchain. A detailed description of the concept, the protocol, and details about mainchain/sidechain interaction can be found in the [Zendoo Whitepaper](https://www.horizen.global/assets/files/Horizen-Sidechain-Zendoo-A_zk-SNARK-Verifiable-Cross-Chain-Transfer-Protocol.pdf).
 
-**Beta Features**
+**Blaze Features**
 
-* The Cross-Chain Transfer Protocol (CCTP) implementation to support sidechain declaration, forward transfers, backward transfer requests, and withdrawal certificates
-* Basic zk-SNARK threshold signature verification circuit to authenticate withdrawal certificates See [zendoo-sc-cryptolib](https://github.com/HorizenOfficial/zendoo-sc-cryptolib)
+* The Cross-Chain Transfer Protocol (CCTP) implementation to support sidechain declaration, forward transfers, backward transfer requests, withdrawal certificates and ceased sidechain withdrawals
+* Basic zk-SNARK threshold signature verification circuit to authenticate withdrawal certificates. See [zendoo-sc-cryptolib](https://github.com/HorizenOfficial/zendoo-sc-cryptolib)
 * Full implementation of the [Latus Proof-of-Stake consensus protocol](https://www.horizen.global/assets/files/Horizen-Sidechain-Zendoo-A_zk-SNARK-Verifiable-Cross-Chain-Transfer-Protocol.pdf)
 * Built-in transactions enabling transfers of coins within the sidechain
+* Forging right delegation mechanism
 * HTTP API for basic node operations
 * Extensible transactions and boxes allowing the introduction of custom logic and data within the sidechain
 * Extensible node API interface
@@ -34,9 +26,9 @@ For more details see [zendoo-sc-cryptolib](https://github.com/HorizenOfficial/ze
 
 **Requirements**
 
-* Java 8 or newer (Java 11 recommended)
+* Java 11 or newer
 * Scala 2.12.10+
-* Python 2.7
+* Python 3
 * Maven
 
 On some Linux OSs during backward transfers certificates proofs generation a extremely big RAM consumption may happen, that will lead to the process force killing by the OS.
@@ -48,7 +40,7 @@ While we keep monitoring the memory footprint of the proofs generation process, 
  - After the installation, just run `export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1` before starting the sidechain node, or run the sidechain node adding `LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1` at the beginning of the java command line as follows:
 
 ```
-LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1 java -cp ./target/sidechains-sdk-simpleapp-0.2.7.jar:./target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
+LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1 java -cp ./target/sidechains-sdk-simpleapp-0.3.0.jar:./target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
 ```
  - In the folder `ci` you will find the script `run_sc.sh` to automatically check and use jemalloc library while starting the sidechain node. 
 

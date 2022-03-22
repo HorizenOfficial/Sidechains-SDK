@@ -2,23 +2,22 @@ package com.horizen.block
 
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
 import java.util.Random
-
 import com.fasterxml.jackson.databind.JsonNode
-import com.horizen.box.NoncedBox
+import com.horizen.box.Box
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures._
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.proof.{Signature25519, VrfProof}
-import com.horizen.proposition.{Proposition, VrfPublicKey}
-import com.horizen.secret.VrfSecretKey
+import com.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublicKey}
+import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfSecretKey}
 import com.horizen.serialization.ApplicationJsonSerializer
-import com.horizen.transaction.SidechainTransaction
-import com.horizen.utils.BytesUtils
+import com.horizen.transaction.{BoxTransaction, RegularTransaction, SidechainTransaction}
+import com.horizen.utils.{BytesUtils, TestSidechainsVersionsManager}
 import com.horizen.validation._
 import com.horizen.vrf.VrfGeneratedDataProvider
 import org.junit.Assert.{assertEquals, assertTrue, fail => jFail}
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 import scorex.util.{ModifierId, idToBytes}
 
 import scala.io.Source
@@ -37,10 +36,10 @@ class SidechainBlockTest
   val random = new java.util.Random(123L)
 
   val params: NetworkParams = MainNetParams()
-  val mcBlockRef1: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(Source.fromResource("mcblock473173_mainnet").getLines().next()), params).get
-  val mcBlockRef2: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(Source.fromResource("mcblock473174_mainnet").getLines().next()), params).get
-  val mcBlockRef3: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(Source.fromResource("mcblock473175_mainnet").getLines().next()), params).get
-  val mcBlockRef4: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(Source.fromResource("mcblock473176_mainnet").getLines().next()), params).get
+  val mcBlockRef1: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(Source.fromResource("mcblock473173_mainnet").getLines().next()), params, TestSidechainsVersionsManager()).get
+  val mcBlockRef2: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(Source.fromResource("mcblock473174_mainnet").getLines().next()), params, TestSidechainsVersionsManager()).get
+  val mcBlockRef3: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(Source.fromResource("mcblock473175_mainnet").getLines().next()), params, TestSidechainsVersionsManager()).get
+  val mcBlockRef4: MainchainBlockReference = MainchainBlockReference.create(BytesUtils.fromHexString(Source.fromResource("mcblock473176_mainnet").getLines().next()), params, TestSidechainsVersionsManager()).get
 
   val seed: Long = 11L
   val parentId: ModifierId = getRandomBlockId(seed)
@@ -126,6 +125,7 @@ class SidechainBlockTest
 
     val deserializedBlock = deserializedBlockTry.get
     assertEquals("Deserialized Block transactions are different.", block.transactions, deserializedBlock.transactions)
+    assertEquals("Deserialized Block version is different.", block.version, deserializedBlock.version)
     assertEquals("Deserialized Block mainchain reference data seq is different.", block.mainchainBlockReferencesData, deserializedBlock.mainchainBlockReferencesData)
     assertEquals("Deserialized Block mainchain headers are different.", block.mainchainHeaders, deserializedBlock.mainchainHeaders)
     assertEquals("Deserialized Block ommers are different.", block.ommers, deserializedBlock.ommers)
@@ -162,6 +162,7 @@ class SidechainBlockTest
 
     val deserializedBlock = deserializedBlockTry.get
     assertEquals("Deserialized Block transactions are different.", block.transactions, deserializedBlock.transactions)
+    assertEquals("Deserialized Block version is different.", block.version, deserializedBlock.version)
     assertEquals("Deserialized Block mainchain reference data seq is different.", block.mainchainBlockReferencesData, deserializedBlock.mainchainBlockReferencesData)
     assertEquals("Deserialized Block mainchain headers are different.", block.mainchainHeaders, deserializedBlock.mainchainHeaders)
     assertEquals("Deserialized Block ommers are different.", block.ommers, deserializedBlock.ommers)
@@ -353,6 +354,48 @@ class SidechainBlockTest
         assertEquals("Different exception type expected during semanticValidity.",
           classOf[InvalidMainchainHeaderException], e.getClass)
     }
+
+
+    // Test12: SidechainBlock has unsupported version
+    invalidBlock = createBlock(blockVersion = Byte.MaxValue)
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InvalidSidechainBlockDataException], e.getClass)
+    }
+
+
+    // Test 13: Too big SidechainBlock
+    invalidBlock = createBlock(
+      sidechainTransactions = generateExceedingTransactions(SidechainBlock.MAX_BLOCK_SIZE)
+    )
+    invalidBlock.semanticValidity(params) match {
+      case Success(_) =>
+        jFail("SidechainBlock expected to be semantically Invalid.")
+      case Failure(e) =>
+        assertEquals("Different exception type expected during semanticValidity.",
+          classOf[InvalidSidechainBlockDataException], e.getClass)
+    }
+  }
+
+  // Generate Seq of Transaction which total size exceeds the limit specified.
+  private def generateExceedingTransactions(sizeToExceed: Int): Seq[RegularTransaction] = {
+    val inputTransactionsList: Seq[PrivateKey25519] = (1 to 10)
+      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(random.nextLong.toString.getBytes))
+
+    val outputTransactionsList: Seq[PublicKey25519Proposition] = (1 to BoxTransaction.MAX_TRANSACTION_NEW_BOXES)
+      .map(_ => PrivateKey25519Creator.getInstance.generateSecret(random.nextLong.toString.getBytes).publicImage())
+
+    var txsSize: Int = 0
+    var txs: Seq[RegularTransaction] = Seq()
+    while(txsSize < sizeToExceed) {
+      val tx = getRegularTransaction(inputTransactionsList, outputTransactionsList, random, random.nextLong())
+      txsSize += tx.bytes.length
+      txs = tx +: txs
+    }
+    txs
   }
 
   @Test
@@ -803,15 +846,16 @@ class SidechainBlockTest
         val h: Array[Byte] = nextParent // Just a hack for lazy vals
         override lazy val hash: Array[Byte] = h
 
-        override def semanticValidity(params: NetworkParams): Try[Unit] = Success()
+        override def semanticValidity(params: NetworkParams): Try[Unit] = Success(Unit)
       }
     })
   }
 
 
   private def createBlock(parent: ModifierId = parentId,
+                          blockVersion:Byte = SidechainBlock.BLOCK_VERSION,
                           timestamp: Long = 122444L,
-                          sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] = Seq(),
+                          sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]] = Seq(),
                           mainchainBlockReferencesData: Seq[MainchainBlockReferenceData] = Seq(),
                           mainchainHeaders: Seq[MainchainHeader] = Seq(),
                           ommers: Seq[Ommer] = Seq(),
@@ -819,6 +863,7 @@ class SidechainBlockTest
                          ): SidechainBlock = {
     SidechainBlock.create(
       parent,
+      blockVersion,
       timestamp,
       mainchainBlockReferencesData,
       sidechainTransactions,
@@ -828,14 +873,14 @@ class SidechainBlockTest
       forgerMetadata.forgingStakeInfo,
       vrfProof,
       MerkleTreeFixture.generateRandomMerklePath(rnd.nextLong()),
-      sidechainTransactionsCompanion,
-      params
+      new Array[Byte](32),
+      sidechainTransactionsCompanion
     ).get
   }
 
   private def invalidateBlock(block: SidechainBlock,
                               headerOpt: Option[SidechainBlockHeader] = None,
-                              sidechainTransactionsOpt: Option[Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]]] = None,
+                              sidechainTransactionsOpt: Option[Seq[SidechainTransaction[Proposition, Box[Proposition]]]] = None,
                               mainchainBlockReferencesDataOpt: Option[Seq[MainchainBlockReferenceData]] = None,
                               mainchainHeadersOpt: Option[Seq[MainchainHeader]] = None,
                               ommersOpt: Option[Seq[Ommer]] = None): SidechainBlock = {

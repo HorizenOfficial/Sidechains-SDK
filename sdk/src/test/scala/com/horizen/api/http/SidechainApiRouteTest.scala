@@ -4,19 +4,17 @@ import java.net.{InetAddress, InetSocketAddress}
 import java.util
 
 import akka.actor.{ActorRef, ActorSystem}
-import akka.http.javadsl.marshallers.jackson.Jackson
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
-import com.google.inject.{Guice, Injector}
 import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus.ConsensusEpochAndSlot
-import com.horizen.fixtures.{CompanionsFixture, DefaultInjectorStub, SidechainBlockFixture}
+import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
 import com.horizen.forge.Forger
 import com.horizen.forge.Forger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot
 import com.horizen.params.MainNetParams
@@ -26,9 +24,10 @@ import com.horizen.{SidechainSettings, SidechainTypes}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
 import org.mockito.Mockito
-import org.scalatest.junit.JUnitRunner
-import org.scalatest.mockito.MockitoSugar
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatestplus.junit.JUnitRunner
+import org.scalatestplus.mockito.MockitoSugar
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import scorex.core.app.Version
 import scorex.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
 import scorex.core.network.peer.PeerInfo
@@ -41,10 +40,14 @@ import scorex.util.{ModifierId, bytesToId}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
-import akka.http.javadsl.marshallers.jackson.Jackson
+import com.horizen.csw.CswManager.ReceivableMessages.{GenerateCswProof, GetBoxNullifier, GetCeasedStatus, GetCswBoxIds, GetCswInfo}
+import com.horizen.csw.CswManager.Responses.{Absent, CswInfo, CswProofInfo, NoProofData, ProofCreationFinished}
+import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
+
+import scala.language.postfixOps
 
 @RunWith(classOf[JUnitRunner])
-abstract class SidechainApiRouteTest extends WordSpec with Matchers with ScalatestRouteTest with MockitoSugar with SidechainBlockFixture with CompanionsFixture with SidechainTypes {
+abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with ScalatestRouteTest with MockitoSugar with SidechainBlockFixture with CompanionsFixture with SidechainTypes {
 
   implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
 
@@ -62,7 +65,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   val peersInfo: Array[PeerInfo] = Array(
     PeerInfo(PeerSpec("app", Version.initial, "first", Some(inetAddr1), Seq()), System.currentTimeMillis() - 100, Some(Incoming)),
     PeerInfo(PeerSpec("app", Version.initial, "second", Some(inetAddr2), Seq()), System.currentTimeMillis() + 100, Some(Outgoing)),
-    PeerInfo(PeerSpec("app", Version.initial, "second", Some(inetAddr3), Seq()), System.currentTimeMillis() + 200, Some(Outgoing))
+    PeerInfo(PeerSpec("app", Version.initial, "third", Some(inetAddr3), Seq()), System.currentTimeMillis() + 200, Some(Outgoing))
   )
   val peers: Map[InetSocketAddress, PeerInfo] = Map(
     inetAddr1 -> peersInfo(0),
@@ -113,7 +116,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
             sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration), funParameter)
         case LocallyGeneratedSecret(_) =>
           if (sidechainApiMockConfiguration.getShould_nodeViewHolder_LocallyGeneratedSecret_reply())
-            sender ! Success()
+            sender ! Success(Unit)
           else sender ! Failure(new Exception("Secret not added."))
       }
       TestActor.KeepRunning
@@ -121,18 +124,18 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   })
   val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
 
-  val mockedSidechainTransactioActor = TestProbe()
-  mockedSidechainTransactioActor.setAutoPilot(new testkit.TestActor.AutoPilot {
+  val mockedSidechainTransactionActor = TestProbe()
+  mockedSidechainTransactionActor.setAutoPilot(new testkit.TestActor.AutoPilot {
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
         case BroadcastTransaction(t) =>
-          if (sidechainApiMockConfiguration.getShould_transactionActor_BroadcastTransaction_reply()) sender ! Future.successful()
+          if (sidechainApiMockConfiguration.getShould_transactionActor_BroadcastTransaction_reply()) sender ! Future.successful(Unit)
           else sender ! Future.failed(new Exception("Broadcast failed."))
       }
       TestActor.KeepRunning
     }
   })
-  val mockedSidechainTransactioActorRef: ActorRef = mockedSidechainTransactioActor.ref
+  val mockedSidechainTransactionActorRef: ActorRef = mockedSidechainTransactionActor.ref
 
   val mockedPeerManagerActor = TestProbe()
   mockedPeerManagerActor.setAutoPilot(new testkit.TestActor.AutoPilot {
@@ -175,7 +178,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
       msg match {
         case Forger.ReceivableMessages.StopForging => {
           if (sidechainApiMockConfiguration.should_blockActor_StopForging_reply) {
-            sender ! Success()
+            sender ! Success(Unit)
           }
           else {
             sender ! Failure(new IllegalStateException("Stop forging error"))
@@ -183,7 +186,7 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
         }
         case Forger.ReceivableMessages.StartForging => {
           if (sidechainApiMockConfiguration.should_blockActor_StartForging_reply) {
-            sender ! Success()
+            sender ! Success(Unit)
           }
           else {
             sender ! Failure(new IllegalStateException("Start forging error"))
@@ -227,20 +230,64 @@ abstract class SidechainApiRouteTest extends WordSpec with Matchers with Scalate
   })
   val mockedsidechainBlockActorRef: ActorRef = mockedSidechainBlockActor.ref
 
+  val mockedCswManagerActor = TestProbe()
+  mockedCswManagerActor.setAutoPilot(new testkit.TestActor.AutoPilot {
+    override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
+      msg match {
+        case GetCeasedStatus => {
+          sender ! true
+        }
+        case GetCswBoxIds => {
+          sender ! Seq(ByteUtils.fromHexString("1111"), ByteUtils.fromHexString("2222"), ByteUtils.fromHexString("3333"))
+        }
+        case GetCswInfo(boxId) => {
+          val expectedBoxId: Array[Byte] = getRandomBoxId(0)
+          if (boxId.deep != expectedBoxId.deep) {
+            sender ! Failure(new IllegalArgumentException("CSW info was not found for given box id."))
+          } else {
+            sender ! Success(CswInfo("UtxoCswData", // pure class name
+              42,
+              ByteUtils.fromHexString("ABCD"),
+              ByteUtils.fromHexString("FFFF"),
+              CswProofInfo(Absent, Some(ByteUtils.fromHexString("FBFB")), Some("SomeDestination")),
+              Some(ByteUtils.fromHexString("BBBB")),
+              ByteUtils.fromHexString("CCCC")))
+          }
+        }
+        case GetBoxNullifier(boxId) => {
+          val expectedBoxId: Array[Byte] = getRandomBoxId(0)
+          if (boxId.deep != expectedBoxId.deep) {
+            sender ! Failure(new IllegalArgumentException("Box was not found for given box id."))
+          } else {
+            sender ! Success(ByteUtils.fromHexString("FAFA"))
+          }
+        }
+        case GenerateCswProof(boxId, receiverAddress) => {
+          val expectedBoxId: Array[Byte] = getRandomBoxId(0)
+          if (boxId.deep != expectedBoxId.deep) {
+            sender ! NoProofData
+          } else {
+            sender ! ProofCreationFinished
+          }
+        }
+      }
+      TestActor.KeepRunning
+    }
+  })
+  val mockedCswManagerActorRef: ActorRef = mockedCswManagerActor.ref
+
   implicit def default() = RouteTestTimeout(3.second)
 
-  val injector: Injector = Guice.createInjector(new DefaultInjectorStub())
-  val sidechainCoreTransactionFactory = injector.getInstance(classOf[SidechainCoreTransactionFactory])
-
   val params = MainNetParams()
-  val sidechainTransactionApiRoute: Route = SidechainTransactionApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainTransactioActorRef,
-    sidechainTransactionsCompanion, sidechainCoreTransactionFactory, params).route
+  val sidechainTransactionApiRoute: Route = SidechainTransactionApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainTransactionActorRef,
+    sidechainTransactionsCompanion, params).route
   val sidechainWalletApiRoute: Route = SidechainWalletApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val sidechainNodeApiRoute: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, mockedSidechainBlockForgerActorRef).route
   val mainchainBlockApiRoute: Route = MainchainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
-  val applicationApiRoute: Route = ApplicationApiRoute(mockedRESTSettings, new SimpleCustomApi(), mockedSidechainNodeViewHolderRef, sidechainCoreTransactionFactory).route
-  val walletBalanceApiRejected: Route = SidechainRejectionApiRoute("wallet", "balance", mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
+  val applicationApiRoute: Route = ApplicationApiRoute(mockedRESTSettings, new SimpleCustomApi(), mockedSidechainNodeViewHolderRef).route
+  val sidechainCswApiRoute: Route = SidechainCswApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedCswManagerActorRef).route
+  val walletCoinsBalanceApiRejected: Route = SidechainRejectionApiRoute("wallet", "coinsBalance", mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val walletApiRejected: Route = SidechainRejectionApiRoute("wallet", "", mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
 
 

@@ -1,19 +1,19 @@
 package com.horizen.forge
 
-import java.time.Instant
 import java.util.{Timer, TimerTask}
-
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen._
 import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.consensus.{ConsensusEpochAndSlot, ConsensusEpochNumber, ConsensusSlotNumber, TimeToEpochSlotConverter}
+import com.horizen.consensus.{ConsensusEpochAndSlot, ConsensusEpochNumber, ConsensusSlotNumber}
 import com.horizen.forge.Forger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
 import com.horizen.params.NetworkParams
+import com.horizen.utils.TimeToEpochUtils
 import scorex.core.NodeViewHolder.ReceivableMessages
 import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
+import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ScorexLogging
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -25,7 +25,8 @@ class Forger(settings: SidechainSettings,
              viewHolderRef: ActorRef,
              mainchainSynchronizer: MainchainSynchronizer,
              companion: SidechainTransactionsCompanion,
-             val params: NetworkParams) extends Actor with ScorexLogging with TimeToEpochSlotConverter {
+             timeProvider: NetworkTimeProvider,
+             val params: NetworkParams) extends Actor with ScorexLogging {
   val forgeMessageBuilder: ForgeMessageBuilder = new ForgeMessageBuilder(mainchainSynchronizer, companion, params, settings.websocket.allowNoConnectionInRegtest)
   val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
@@ -58,7 +59,16 @@ class Forger(settings: SidechainSettings,
     }
   }
 
+  private def isForgingEnabled: Boolean = {
+    timerOpt.isDefined
+  }
+
+  override def preStart(): Unit = {
+    context.system.eventStream.subscribe(self, SidechainAppEvents.SidechainApplicationStart.getClass)
+  }
+
   override def receive: Receive = {
+    checkForger orElse
     processStartForgingMessage orElse
     processStopForgingMessage orElse
     processTryForgeNextBlockForEpochAndSlotMessage orElse
@@ -67,11 +77,19 @@ class Forger(settings: SidechainSettings,
     }
   }
 
+  protected def checkForger: Receive = {
+    case SidechainAppEvents.SidechainApplicationStart =>
+      if(settings.forger.automaticForging)
+        self ! StartForging
+  }
+
   protected def processStartForgingMessage: Receive = {
     case StartForging => {
       log.info("Receive StartForging message")
       startTimer()
-      sender() ! Success()
+      // Don't send answer to itself.
+      if(sender() != self)
+        sender() ! Success(Unit)
     }
   }
 
@@ -79,23 +97,23 @@ class Forger(settings: SidechainSettings,
     case StopForging => {
       log.info("Receive StopForging message")
       stopTimer()
-      sender() ! Success()
+      sender() ! Success(Unit)
     }
   }
 
   protected def processTryForgeNextBlockForEpochAndSlotMessage: Receive = {
-    case TryForgeNextBlockForEpochAndSlot(epochNumber, slotNumber) => tryToCreateBlockForEpochAndSlot(epochNumber, slotNumber, Some(sender()))
+    case TryForgeNextBlockForEpochAndSlot(epochNumber, slotNumber) => tryToCreateBlockForEpochAndSlot(epochNumber, slotNumber, Some(sender()), timeout)
   }
 
   protected def tryToCreateBlockNow(): Unit = {
-    val currentTime: Long = Instant.now.getEpochSecond
-    val epochAndSlot = timestampToEpochAndSlot(currentTime)
+    val currentTime: Long = timeProvider.time() / 1000
+    val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params, currentTime)
     log.info(s"Send TryForgeNextBlockForEpochAndSlot message with epoch and slot ${epochAndSlot}")
-    tryToCreateBlockForEpochAndSlot(epochAndSlot.epochNumber, epochAndSlot.slotNumber, None)
+    tryToCreateBlockForEpochAndSlot(epochAndSlot.epochNumber, epochAndSlot.slotNumber, None, timeout)
   }
 
-  protected def tryToCreateBlockForEpochAndSlot(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, respondsToOpt: Option[ActorRef]): Unit = {
-    val forgeMessage: ForgeMessageBuilder#ForgeMessageType = forgeMessageBuilder.buildForgeMessageForEpochAndSlot(epochNumber, slot)
+  protected def tryToCreateBlockForEpochAndSlot(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, respondsToOpt: Option[ActorRef], blockCreationTimeout: Timeout): Unit = {
+    val forgeMessage: ForgeMessageBuilder#ForgeMessageType = forgeMessageBuilder.buildForgeMessageForEpochAndSlot(epochNumber, slot, blockCreationTimeout)
     val forgedBlockAsFuture = (viewHolderRef ? forgeMessage).asInstanceOf[Future[ForgeResult]]
     forgedBlockAsFuture.onComplete{
       case Success(ForgeSuccess(block)) => {
@@ -104,9 +122,9 @@ class Forger(settings: SidechainSettings,
         respondsToOpt.map(respondsTo => respondsTo ! Success(block.id))
       }
 
-      case Success(SkipSlot) => {
-        log.info(s"Slot is skipped")
-        respondsToOpt.map(respondsTo => respondsTo ! Failure(new RuntimeException("Slot had been skipped")))
+      case Success(SkipSlot(reason)) => {
+        log.info(s"Slot is skipped with reason: $reason")
+        respondsToOpt.map(respondsTo => respondsTo ! Failure(new RuntimeException(s"Slot had been skipped with reason: $reason")))
       }
 
       case Success(NoOwnedForgingStake) => {
@@ -135,7 +153,7 @@ class Forger(settings: SidechainSettings,
       val epochAndSlotFut = (viewHolderRef ? getInfoMessage).asInstanceOf[Future[ConsensusEpochAndSlot]]
       epochAndSlotFut.onComplete{
         case Success(epochAndSlot: ConsensusEpochAndSlot) => {
-          forgerInfoRequester ! Success(ForgingInfo(params.consensusSecondsInSlot, params.consensusSlotsInEpoch, epochAndSlot))
+          forgerInfoRequester ! Success(ForgingInfo(params.consensusSecondsInSlot, params.consensusSlotsInEpoch, epochAndSlot, isForgingEnabled))
         }
         case failure @ Failure(ex) => {
           forgerInfoRequester ! failure
@@ -146,7 +164,7 @@ class Forger(settings: SidechainSettings,
 
   def getEpochAndSlotForBestBlock(view: View): ConsensusEpochAndSlot = {
     val history = view.history
-    history.timestampToEpochAndSlot(history.bestBlockInfo.timestamp)
+    TimeToEpochUtils.timestampToEpochAndSlot(params, history.bestBlockInfo.timestamp)
   }
 }
 
@@ -165,20 +183,23 @@ object ForgerRef {
             viewHolderRef: ActorRef,
             mainchainSynchronizer: MainchainSynchronizer,
             companion: SidechainTransactionsCompanion,
-            params: NetworkParams): Props = Props(new Forger(settings, viewHolderRef, mainchainSynchronizer, companion, params))
+            timeProvider: NetworkTimeProvider,
+            params: NetworkParams): Props = Props(new Forger(settings, viewHolderRef, mainchainSynchronizer, companion, timeProvider, params))
 
   def apply(settings: SidechainSettings,
             viewHolderRef: ActorRef,
             mainchainSynchronizer: MainchainSynchronizer,
             companion: SidechainTransactionsCompanion,
+            timeProvider: NetworkTimeProvider,
             params: NetworkParams)
-           (implicit system: ActorSystem): ActorRef = system.actorOf(props(settings, viewHolderRef, mainchainSynchronizer, companion, params))
+           (implicit system: ActorSystem): ActorRef = system.actorOf(props(settings, viewHolderRef, mainchainSynchronizer, companion, timeProvider, params))
 
   def apply(name: String,
             settings: SidechainSettings,
             viewHolderRef: ActorRef,
             mainchainSynchronizer: MainchainSynchronizer,
             companion: SidechainTransactionsCompanion,
+            timeProvider: NetworkTimeProvider,
             params: NetworkParams)
-           (implicit system: ActorSystem): ActorRef = system.actorOf(props(settings, viewHolderRef, mainchainSynchronizer, companion, params), name)
+           (implicit system: ActorSystem): ActorRef = system.actorOf(props(settings, viewHolderRef, mainchainSynchronizer, companion, timeProvider, params), name)
 }

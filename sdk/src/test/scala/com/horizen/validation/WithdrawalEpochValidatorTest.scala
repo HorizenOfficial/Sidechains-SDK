@@ -1,10 +1,9 @@
 package com.horizen.validation
 
 import java.time.Instant
-
 import com.horizen.SidechainHistory
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
-import com.horizen.box.NoncedBox
+import com.horizen.box.Box
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.{VrfGenerator, _}
@@ -12,12 +11,12 @@ import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proposition.Proposition
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.transaction.SidechainTransaction
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, TestSidechainsVersionsManager, WithdrawalEpochInfo}
 import org.junit.Assert.assertTrue
 import org.junit.{Before, Ignore, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito.MockitoSugar
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.util.{ModifierId, bytesToId}
 
@@ -31,8 +30,9 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
   val historyStorage: SidechainHistoryStorage = mock[SidechainHistoryStorage]
   val history: SidechainHistory = mock[SidechainHistory]
 
-  // Genesis MC block hex created in regtest from MC branch beta_v1 on 25.05.2020
-  val mcBlockHex: String = "030000001b199ec4516c4b6021363cd73dcadd5382a1281de6291a46d8a0a6b01a4d490529707a00647aac4ba0f00f64b3b46f6f2d496a030cc23b5808ad78d1fa3606d73622107ce90ea52de0b1b5896459f9b41d0b83076920494643229a5d320a78e6c149e35e030f0f202200b5e4f98dd21ec442183f8bc8ec9a2e483da99e3a773c50390302d7570000240140d14c11a99d48f9244edc0f735729897402236d7a82d9b63fb519d04ab512a2bb39b20201000000010000000000000000000000000000000000000000000000000000000000000000ffffffff0502dc000101ffffffff045724b42c000000001976a914a6dcdfc99033d07beb459e5d14fc903296e0cc6e88ac80b2e60e0000000017a914b6863b182a52745bf6d5fb190139a2aa876c08f587405973070000000017a914b6863b182a52745bf6d5fb190139a2aa876c08f587405973070000000017a914b6863b182a52745bf6d5fb190139a2aa876c08f58700000000fcffffff09174cdf38ee44a2d9ea76363c5f121afadc69dfc7d9d0c4ab0e35e6970eb99108000000006a4730440220612dba5d3968c27a9d162863f4a30d0ee597e3d1628da6a854fd3020eef66a67022034a37a3fa5f1fecd587e74a3f5d3d9f86af1e4abece4ed4c24bf106d3b0d1c0b012102f0801da5b557dde40d9bd022362ef99752919517cd4ce5964dcada9175a1e8b5feffffff64a2205070fe9747fb641b1614027b8bf1fa18a95cc808b05cb5206dc27e66ca000000006b48304502210093a89f7818dd71469ba6d2427f6a7cd59a8502d94b4c90f3eba88e722e1e94c302207625ae9a3c1a5ddb7ade8ade70eb89d772743fcb3b4e79af43bb24b9c66d104e012102f0801da5b557dde40d9bd022362ef99752919517cd4ce5964dcada9175a1e8b5feffffffe8ac048bfa7286d87756857d4d3a78291cba719c63a32c070982a5fc2d226e1c000000006a473044022038c5996d46c02269d435db49201ec6dc371e2fe873c258a6fe768bf71ffd00fc02200413e4610c064bbbac529f8d3bb68f118814b00cf6d362af2a866535e149ffc3012102f0801da5b557dde40d9bd022362ef99752919517cd4ce5964dcada9175a1e8b5feffffff9c1192ad64c623a0e30edf4cc38e8122f5b47f0c5ce954555999bbcc6d54cb84000000006b483045022100c61768c9315bc074dc089bb74002e2e63cf92b22b6acf9e6200a43bb755825e8022008570a0e68a2bd4da4fee3686efff28a5e65902924571ace2475e256fa23f15e012102f0801da5b557dde40d9bd022362ef99752919517cd4ce5964dcada9175a1e8b5feffffff04d9f29d257d289b5693a0da5bf9c01e620b4de046b918f92b22ec3ae2c166fd000000006a4730440220156bc610578fb1c5f8da019760a24c0634e3536225ec4b7f6aa89ad8c56a72f602202034a699c347baaaed72fbbe8f9cb453d9d72fa1e44e2623c6e19ddf0a92da6a012102f0801da5b557dde40d9bd022362ef99752919517cd4ce5964dcada9175a1e8b5feffffff97c2f86e46e775b320e22630dbe84e7a04f5103bb1b7f54797bd76ba843ca44e000000006a473044022071b9c641218c8153e855615996803cd0885dc7b0826b1aab3cb4c4c9be638f64022064c3e1a5b22ce38ae566c1f73924666b49876e06c283529a8875d9e74be0300c012102f0801da5b557dde40d9bd022362ef99752919517cd4ce5964dcada9175a1e8b5feffffffd1d57576ba121a45e4ad340975abdebf24d0d0dab85dd17440d78aaf13cc0b38000000006a47304402202fd572e2c941feb8710283a6e95a8d39964f01873cf7506dcdc828d914ac4f4302204d0b6bcf9d05e902e9a05cc96d41c2a19af0bf1055177f8e1111b2a8e2e5de2b012102f0801da5b557dde40d9bd022362ef99752919517cd4ce5964dcada9175a1e8b5feffffffce4e0c6cd8f1c1b2ab2350d72383aaefe8d925128b126d40d7ef346910a6ea8a000000006a47304402205e2bd14ea3787febea21803a135a882b553fff7758fc2370af8055c1694d8ba3022034382608166beaa057324ecdaa0f6747022f2e0f7f2b3539426b5f62440beb67012102f0801da5b557dde40d9bd022362ef99752919517cd4ce5964dcada9175a1e8b5feffffff3d71485da571aacb77f33117e4aa59cf02eec6ad38210c110ca09e9258df1b33000000006b48304502210084dcc8d11fba1b4b2c2b74cca2128b40bdc563ed00a2d725144117b7f3b29c34022074edb63dd8422649237d421e32b6aa3d8db75c0f8bcdf3a809ea1b003621de96012102f0801da5b557dde40d9bd022362ef99752919517cd4ce5964dcada9175a1e8b5feffffff01696b7d01000000003c76a9144129792b8ec0606c8ddb53a8c011f257dd2292e288ac20bb1acf2c1fc1228967a611c7db30632098f0c641855180b5fe23793b72eea50d00b4010a00000000e40b5402000000acb24b2f08e8e56fe1784f1600879c697c7cd90846e076724b090fd72206b1a5c1dd2de641154fd54de4cf60ea3f5b9e7135787ecb9fcce75de5c41f974fd0cbf70af51ba99b1b8d591d237091414051d2953b7d75e16d89be6fe1cf0bfc63a244f6f51159061875ff1922c3d923d365370ac2605c19e03d674bf64af9e91e00003a6fe5d3f1bcddf09faee1866e453f99d4491e68811bc1a7d5695955e4f8f456627f546bdbbbd026c1b6ee35e2f65659cbcd32406026ebb8f602c86d3f42499f8412dc3ebe664ce188c69360f13dddbd577513171f49423d51ff9578b15901000060b866a7695601aa41cb7775ed16208d0f79e8c19376d99b3cbab937f3a271a7347a9eceab34d14ddcd0aa7936869cc620d5f5a8a44c78a0fc621edfc69e2751ad4192fd57a57eb5d8e798bd15773b20a29cd260755b6c5ec7b051ecd4685e01005e7b462cc84ae0faaa5884bd5c4a5a5edf13db210599aeeb4d273c0f5f32967b7071ce2b4d490b9f08f6ce66a8405735c79197cd6773d1c5aeb2a38da1c102df07b05879c77198e5aafa7feed25d4137e86b3d98d9edd9547a460f1615b10000ee9570fbffedd44170477b37500a0a1cb3f94b6361f10f8a68c4075fbc17542d7174b3d95e12ddb8aea5d6b6c53c1df6c8f60010cd2e69902ba5e89e86747569463a23254730fc8d2aabf39648a505df9dcce461443b181ef3eda46074070000550836db2c97820971db6b1421e348d946ed4d3f255295abea46556615e3123de33ec56f784f70302901a4bc10c79c6a8b1e32477aeff9fba75876592981b678fc5a2703ac0b3055e567a6cb1ebab578fc4f9121fd968680250696cb85790000078fcfb60bdfc79aa1e377cb120480538e0236156f23129a88824ca5a1d77e371e5e98a16e6f32087c91aa02a4f5e00e412e515c3b678f6535141203c6886c637b626a2ada4062d037503359a680979091c68941a307db6e4ed8bc49d21b00002f0e6f88fb69309873fdefb015569e5511fb5399295204876543d065d177bf36ab79183a7c5e504b50691bc5b4ed0293324cfe2555d3fc8e39485822a90a91afcd4ef79ec3aefbd4cbe25cbccd802d8334ce1dce238c3f7505330a14615500001f89fbe1922ab3aa31a28fd29e19673714a7e48050dee59859d68345bb7bee7d5e888d8b798a58d7c650f9138304c05a92b668294c6114185ccb2c67ce0bbbb7e1dcbb6d76f5cacd7c9732a33b21d69bd7a28c9cca68b5735d50413862bc0100308bb0dd0bd53f3d1134966702dd3c7cc8b58b270a6996a646493250b0d5f3978d0c971f8fa7a0c958f3efe2fa5269244973fafb701c2eb66dd25901f93d677ab6c538c1ed11f115e52d3f2c7087ea40c3e8cd089376baa38842e9429b5f0000d19a8d874d791f952f13d3c8ecd92e44009c09815e5ae6a8e5def7ea52fe3de4accfb5ba2aa401fbcec14b069cd0dc0f66ab025b45ef9831a26acf58673db7487043654e7980fcb2b6c1bd7593a4dfff810436f653e309121c7ccf2df70b010000732254ec6df184be360cd9ed383ed7c8c236d7761cfc0ce4e7f0cac5a06f4edab9cfc75a7dc1449c0e18ed9564c974c2e1b6847c637f74e5d391cbc80fc6e672ffd66b5ce4fb73bda8359ab8a0ea1e855df1e07d82f93c935c7e1a9a55c5000065efdbb7c3e82291a482b2f24cbd46f4dd02c370cf6dcfe8fb3c00b8b004b5ad51369b1f1b134a824d1f16d72ca6a27ba2d6190150329139cf2c6d9e5a14722f8d39b96b882c1f60a7b230e929819e2abe1cd9d7f3e8c726b1a94d20c8010100732c396eca6ffa1bf851cef449f2f087edd93e4f641b4bd93a482d9f129e675aedb688993d4e2cee824d2803301364ba10fbb66895927adb53bad8aefe8a1caab6f4ccb45883e414a1223ac7f90a89087cd752dfa0c7b3e19bbae000edd5000028d1d23c627d1252d2a2a20a246af2280f50e3fde667873aadd9893ba6833118358398e7428e717128f764714a8d52b090c1f554f58e25ea815338d7bc7326c949567e74f2f2ab3c88f5075fea75594608b8937c9059a42d712ffbd1bd980100000000000250c1a474689e375a309446e5cdd3a0c26cecdcff5c7b8cdc0728868983f1a35a49e3a1bae6f969c3d47356c08d3d169d2c0a2be908d82cd35f41a23d8c2924a9f790ab3a00d53061d440a176670d6a32de2ecd19cf8a9774729c09a6ea4d0100d8838bf55d95521291da12294b302c66042eda0dc2acc79360a1fdd8c9a366fa790c52bf926c2d96b5ba88a3a443487c5235f7c476f350c2101cfbe3bd0361dd291ebc5e42c097a158704b71006886a3662ca6db7d816b4ad12444835d89000000795ce2b34aef921ccb3d9b9695f5d3fe0a03743c955cfcf01f8a1815a7c8b03de85fe15201d4b4b6f401cb334a6988ea5bde8986a468c47c3c6a5ae96a3160ff15e06699ea82bd40c0d5547fe1be77af7817861bbfcca3f4232f05a9cec800006c216565cee4d57b32d2d70bb3cb8d4a967c0eb5d7137b2ec58466f3d4d3b5375e4baa823bcc29c6ad877d9708cd5dc1c31fa3883a80710431110c4aa22e97b67fa639f54e86cfab87187011270139df7873bed12f6fb8cd9ab48f389338010000007500000000"
+  // Genesis MC block hex created in regtest by STF mc_blocks_data.py test on 02.12.2021
+  val mcBlockHex: String = "03000000d21165164bcbde81cd402182536abbb981a7d99bed6368b7eaa44c67d78e7d0c10266cfcf9242e7b2730cc6ff4ebcdeeb2791bdf5fb89b0db5c6088f6607e89e2eced037bb77a5cbb8829f198e8137bf98c6bfffbe695f5a28c6f036e746262d6bd8a861f70e0f201100901d7b54088410abb50bee029b7549de46fa51c63d9b346a9df74804000024011bcf70397f9aeb8a1ee4dcb7230a5cd4e6273f4e5c32b5d97f8e3c4415b0292eee8dd80201000000010000000000000000000000000000000000000000000000000000000000000000ffffffff0502a4010101ffffffff040e24b42c000000001976a914f333985088cfc3da23106792ab995cf5ac653bf588ac80b2e60e0000000017a914ea81ee2d877a25c7530a33fcf5a65c72f681250f87405973070000000017a914e7d25d82be231cf77ab8aecb80b6066923819ffc87405973070000000017a914ca76beb25c5f1c29c305a2b3e71a2de5fe1d2eed8700000000fcffffff0e8de3b0d1128475943c8e1dc52f5cd8e0339f2bc634539382282e2a4df3ad4fe3000000006a4730440220323a754652c43aa97db5c93b99a6eeb6bae4c501d933ea4b348f051ad8a8702602206a37ed3c3e6cff746040d82a4011cbef4921717b25de32b8056e7aba98f6317d012103daaa5a8ffce95f5c2821dea1b93d13f17c4d26831ad6da5f744fdc34587286f4ffffffff7c07c55a111ccb91f63cbeff0a8dcc869bfaf0c51aebdd8a643df326cccd5cbe000000006a473044022079c2d0405b26896720a8bbc6440993c4bb08867dd4578a041b7e6ec24a74ccd902205b2b4519f20479258793bdc5c473305da3a4dc963748542290157143a815609c012103daaa5a8ffce95f5c2821dea1b93d13f17c4d26831ad6da5f744fdc34587286f4ffffffff7c3af7ec13394b332dabdbe35bb6eab22f043add489276da613e414c3acb97cc000000006b483045022100eed46ec67d1cff279409236abb8dc300496c09957d677899ac79d4888309318302202d5bb754ca99258aa57973b601d52b8d3797c3fe003bb96acfb823b749362c49012103daaa5a8ffce95f5c2821dea1b93d13f17c4d26831ad6da5f744fdc34587286f4ffffffff7ce03f0c3f76dda13f2bee75e76a7d9d3b78d0e7fceaf7a9c88afe12f5935807000000006b48304502210093a3a0a386d1d4e3b537adacf23b61102be402b323827483a2692ee53406ce650220084105978f47d516d2fce6c97df17e05a034c3ff916b3057d820db096d8bfe7c012103daaa5a8ffce95f5c2821dea1b93d13f17c4d26831ad6da5f744fdc34587286f4ffffffff7d27a5d6e7e6824c238289816ecb0dcfd9936fabe8821a2730a78fd7f7deb693000000006b483045022100a8890895c85f410c4fef29db36312fe9bba2507d9a764957334045cee6cee2c502205560ae2fd8e926f07cf235b92752c3865ad04cfb9cd8cc9e30ee24418b3517de012103daaa5a8ffce95f5c2821dea1b93d13f17c4d26831ad6da5f744fdc34587286f4ffffffff8266cc4b73f4ca931a15e23b3be30d75dd03921e7a481298eca9d9b1ae2221a1000000006a47304402207b7819b1fc5247693b9f454a516397b82eca8733587a68bf80dde38e3dc577900220041cd681f4d3057ac3194431f617545a08ab667d9a5abf1b6f48cd4c9280ea7f012103daaa5a8ffce95f5c2821dea1b93d13f17c4d26831ad6da5f744fdc34587286f4ffffffff83c44044e04b6c80941f69472aedf5566f748c5ae9fa9ae94b58c271435c2821000000006a47304402203796b0b035a63200614866c34a967ebefd011add0e9ed0d86cc063383bfaa8dd02201f6069ee6dbbdb42eb6a1929560c4be024cb3256dca37416f8bc3e43d0ab7686012103daaa5a8ffce95f5c2821dea1b93d13f17c4d26831ad6da5f744fdc34587286f4ffffffff844b4b7090f1498a360d4cda7bf67b6d1db8a179c173e06ec255bb8e4aa25bfd000000006a47304402200be4d8195f26990fbc9e6655aacc87ca5cce902a23f9fcd4511252e9aa5acd6a022047295ce6f9ba22ebff733cf89e84601f98376530da83cae1c9f1cad67c10b1ee012103daaa5a8ffce95f5c2821dea1b93d13f17c4d26831ad6da5f744fdc34587286f4ffffffff8591397e664092d2d3fe81c8cb2b375a0e03e2613853c93c481a67e8b9747934000000006b483045022100d8954f35e88d1e0aae5771aa226b2527cc57b06295c4e3adda13c99459ffecb0022050e87255c1bb65327e7cdf298afb718d68ec6c8b28f4c7ad76f05426f5dde8e1012103daaa5a8ffce95f5c2821dea1b93d13f17c4d26831ad6da5f744fdc34587286f4ffffffff86a8d6f4df25ea5a8b076f6b0689f65f245dca3dbae4d64e45ba663c93dd198e000000006a4730440220056f7ff6dff2aafec54d60603ac5ae3a2d91744e069388156a66fb295834238b02207be0b0a89955ab4810b41baccaede1524188eeb37a2830c5df8f8daa909c8b02012103daaa5a8ffce95f5c2821dea1b93d13f17c4d26831ad6da5f744fdc34587286f4ffffffff8ae1859562be46cf1a73c512c83f50d94d4347604f1b581b773a80068ec92f54000000006a47304402202b4fd5e7cf130e27f4f6e74fe79ee5a01cb793cc4f7241bb17cc7b5719fb77ac022076bc52efaa3bf854588f3158692d6b4fd9a12055eef355be963659a1a2c008ae012103daaa5a8ffce95f5c2821dea1b93d13f17c4d26831ad6da5f744fdc34587286f4ffffffff7bb727b508c4d4af7323ae204e4287f6e64400b5167053c8b378dd6d7e47d1df000000006b483045022100cecf209232006e3936f8375d14428af772fc2d16f7243bc69d63d946a818fc5702203a65e102998425bd14552d276ac8a63d6526af46314c56e30d2adef51e02de19012103daaa5a8ffce95f5c2821dea1b93d13f17c4d26831ad6da5f744fdc34587286f4ffffffff90cfc8db074cf841dfd0d48674efe3b45c235a88d57a9d07b48b5b9c769e3258000000006b483045022100d4b9119743e45217b9867fa177512d02534a0cff6e776e38bd33efa3f1308999022002aab5e15a5ef6aad3808e1b77ec90874773167248ed752d831c3e2c1aab2098012103daaa5a8ffce95f5c2821dea1b93d13f17c4d26831ad6da5f744fdc34587286f4ffffffff9557e9a22938b56a04899db10c4b50f6ff0c8ac0c604ececb9fb070e275750e6000000006b4830450221008a110fb9a06795c5709874abdcbaf4363ec43b40c3a3921b4a701e9519f847a402203fcd56af41d99c320dcb753c65df57b33f880eb50bac94b664fb68693365163f012103daaa5a8ffce95f5c2821dea1b93d13f17c4d26831ad6da5f744fdc34587286f4ffffffff017258cd1d000000003d76a914f333985088cfc3da23106792ab995cf5ac653bf588ac205cea48c86d1d2ccae56514c2c8cf9b45456e6b0bc56b87e8fe574e39ad34040c0177b40001e803000000e40b5402000000acb24b2f08e8e56fe1784f1600879c697c7cd90846e076724b090fd72206b1a5219ab43ef30775c343b43a291c5ee40c355e102e3fcf4703428948ae3d8252162480012067d15353aafb79aae543884ef931d585c2ce7e4992fc2d3297de274c97229028fdcd0102386700000000000004000000000000003c67000000000000bfbc0100000000000c00000000000000016234e8c194d555b5ff6a082286b8241f7a1bc3d4dd71e8a88e6db8729a3de324000001c8bbcabb872abdd97870980b4020f7d6a69bd8650298c0e8984299f6ddc9eb35800001e0b56d7145dd7b006e0d9b2ea1b5bf65c26dafc33dd36fc7675eeb58ba247613800001101c1881ee4e14ce72f762869875980e3e338ce353efd0469d2d74b6254fcc0c0000015e77dbb1889b9d36cb1f345b4290894b5d27c4fea13c19ff202cbffc54d78123800001cadc641bb884c20af1d99f02c6fdb3bc837e8a436a7710252165ec6880a8d23f8000013b43af52de1e9c5e4eb52414ff12c7ec15bc499b83395dea1351640e778bf228000001c3913d5f157b058abe12eda99febaa5bf8cd3eecd768497a12112f22dc3cdd3e000001bb2e8f15c078157fbdd179843702ff55e432cac0fa60ba7459ed918f2c2df91c000001ebcda0614fa4946d2a109bd5871a10966510b9e7fa4e05d2848a4cbe49c46f1480000191aa89e90907e0c714f7c0d931dc6707d7ff2ab4e85f79769b8392d99bc95d1e000001a0877645bea04a236ec766cc0b2439c22c4c8e0fca9755ed070a1d21c4273414800001fdcd0102d7160000000000000400000000000000db16000000000000a3a40000000000000c0000000000000001240b188009319f7b6d12739001b47917cad72fde9d0ffaa7dabf7836b46bb4300000014f0c379235a1038e5851edd33a6586a8f714c4ec898ddcd066f7ae43b7a0f317800001a5efe5004f93193ec208703cd2b9b97d4a323ba0f7b7c1454ba435a3de51b130000001a98bfe4439a478c0dddf5e75f504e21f7681a022253a19bc9b8801c59e3aef39800001487a4d0201582fe4d8eafa36fc5d8d65dc9620fdfa204f19e63cd3a69962ec3c800001263ca5ab720ee91d4db9b668a8fb3304453ac58fef70587681c567b1b27fa332800001fa0c2b7b756fab8968631267404b93c76baf329f05be068f1397e728c2a5960e80000121483d74799c0d77720e12a913ebae05014d521b0dea4235263ccd1b5c97a50c000001b3c7a90ddf7f74f4f24013a6ab97f5b791da9bb0dd109c079db6ff8511d2233780000175a25117ecd062b6eff590623ad2ad97f71afb4ba7f1951b4ba97cb49f87ae3200000171543933865335ccc19f7162f34eb43cd4554b2a61ab33c011ea66b60d2cfc1a0000013799cf00e1c8194ea1195f047330f55056d713b15448565e9158cf37a644153e800002ffff00000000000000000000000000000000000000000000000000"
+  val scIdHex = "1a6d30d71c7e09bb4f06e8738d8b5d1a41c4edc275296daeb911330137d0d656"
 
   @Before
   def setUp(): Unit = {
@@ -47,6 +47,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     val (forgerBox1, forgerMeta1) = ForgerBoxFixture.generateForgerBox(32)
     var block: SidechainBlock = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       Seq(),
       Seq(),
@@ -56,8 +57,8 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta1.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      null
+      new Array[Byte](32),
+      sidechainTransactionsCompanion
     ).get
 
     Mockito.when(params.sidechainGenesisBlockId).thenReturn(block.id)
@@ -74,6 +75,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       mcRefs.map(_.data),
       Seq(),
@@ -83,8 +85,8 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta2.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      null
+      new Array[Byte](32),
+      sidechainTransactionsCompanion
     ).get
 
     Mockito.when(params.sidechainGenesisBlockId).thenReturn(block.id)
@@ -101,6 +103,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       mcRefs.map(_.data),
       Seq(),
@@ -110,8 +113,8 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta3.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      null
+      new Array[Byte](32),
+      sidechainTransactionsCompanion
     ).get
 
     Mockito.when(params.sidechainGenesisBlockId).thenReturn(block.id)
@@ -123,16 +126,16 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
 
     // Test 4: valid genesis block with 1 MainchainBlockReferenceData with sc creation tx with INVALID withdrawalEpochLength (different to the one specified in params)
-    val scIdHex = "2f7ed2e07ad78e52f43aafb85e242497f5a1da3539ecf37832a0a31ed54072c3"
-    val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
+    val scId = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex)))
     val mcBlockRefRegTestParams = RegTestParams(scId.data)
     val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
-    val mcBlockRef = MainchainBlockReference.create(mcBlockBytes, mcBlockRefRegTestParams).get
+    val mcBlockRef = MainchainBlockReference.create(mcBlockBytes, mcBlockRefRegTestParams, TestSidechainsVersionsManager(mcBlockRefRegTestParams)).get
     mcRefs = Seq(mcBlockRef)
 
     val (forgerBox4, forgerMeta4) = ForgerBoxFixture.generateForgerBox(324)
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       mcRefs.map(_.data),
       Seq(),
@@ -142,8 +145,8 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta4.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      mcBlockRefRegTestParams
+      new Array[Byte](32),
+      sidechainTransactionsCompanion
     ).get
 
     Mockito.when(params.sidechainGenesisBlockId).thenReturn(block.id)
@@ -156,7 +159,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
 
     // Test 5: the same as above but with valid withdrawalEpochLength specified in params / sc creation
-    Mockito.when(params.withdrawalEpochLength).thenReturn(10)
+    Mockito.when(params.withdrawalEpochLength).thenReturn(1000)
     assertTrue("Sidechain genesis block with 1 MainchainBlockReferencesData with sc creation with correct withdrawalEpochLength inside expected to be valid.", validator.validate(block, history).isSuccess)
   }
 
@@ -173,6 +176,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     var block: SidechainBlock = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       Seq(),
       Seq(),
@@ -182,8 +186,8 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta1.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      null
+      new Array[Byte](32),
+      sidechainTransactionsCompanion
     ).get
 
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn(None)
@@ -198,6 +202,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       Seq(),
       Seq(),
@@ -207,8 +212,8 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta2.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      null
+      new Array[Byte](32),
+      sidechainTransactionsCompanion
     ).get
 
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
@@ -242,6 +247,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     var mcRefs: Seq[MainchainBlockReference] = Seq(generateMainchainBlockReference(), generateMainchainBlockReference()) // 2 MC block refs
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       mcRefs.map(_.data), // 2 MainchainBlockReferenceData
       Seq(),
@@ -251,8 +257,8 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta5.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      null
+      new Array[Byte](32),
+      sidechainTransactionsCompanion
     ).get
 
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
@@ -294,17 +300,18 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       mcRefs.map(_.data), // 2 MainchainBlockReferenceData
-      Seq(getRegularTransaction.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]]), // 1 SC Transaction
+      Seq(getRegularTransaction.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]), // 1 SC Transaction
       Seq(),
       Seq(),
       forgerMeta8.blockSignSecret,
       forgerMeta8.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      null
+      new Array[Byte](32),
+      sidechainTransactionsCompanion
     ).get
 
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
@@ -345,15 +352,15 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
 
     // Test 11: invalid block - with 1 MainchainBlockReferenceData with sc creation tx with declared sidechain creation output
-    val scIdHex = "2f7ed2e07ad78e52f43aafb85e242497f5a1da3539ecf37832a0a31ed54072c3"
-    val scId = new ByteArrayWrapper(BytesUtils.fromHexString(scIdHex))
+    val scId = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex)))
     val mcBlockRefRegTestParams = RegTestParams(scId.data)
     val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex)
-    val mcBlockRef = MainchainBlockReference.create(mcBlockBytes, mcBlockRefRegTestParams).get
+    val mcBlockRef = MainchainBlockReference.create(mcBlockBytes, mcBlockRefRegTestParams, TestSidechainsVersionsManager(mcBlockRefRegTestParams)).get
 
     val (forgerBox11, forgerMeta11) = ForgerBoxFixture.generateForgerBox(32114)
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       Seq(mcBlockRef.data),
       Seq(),
@@ -363,8 +370,8 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta11.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      mcBlockRefRegTestParams
+      new Array[Byte](32),
+      sidechainTransactionsCompanion
     ).get
 
     assertTrue("Sidechain non-genesis block with 1 MainchainBlockReferenceData with sc creation inside expected to be invalid.", validator.validate(block, history).isFailure)
@@ -380,6 +387,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       mcRefs.map(_.data),
       Seq(),
@@ -389,8 +397,8 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta12.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      mcBlockRefRegTestParams
+      new Array[Byte](32),
+      sidechainTransactionsCompanion
     ).get
 
     assertTrue("Sidechain non-genesis block with 2 MainchainBlockReferenceData, the second one with sc creation inside expected to be invalid.", validator.validate(block, history).isFailure)
@@ -405,6 +413,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     mcRefs = Seq(generateMainchainBlockReference(blockHash = Some(mcBlockRef.header.hashPrevBlock)), mcBlockRef, generateMainchainBlockReference(parentOpt = Some(new ByteArrayWrapper(mcBlockRef.header.hash))))
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       mcRefs.map(_.data),
       Seq(),
@@ -414,8 +423,8 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta13.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      mcBlockRefRegTestParams
+      new Array[Byte](32),
+      sidechainTransactionsCompanion
     ).get
 
     assertTrue("Sidechain non-genesis block with 3 MainchainBlockReferenceData, the second one with sc creation inside expected to be invalid.", validator.validate(block, history).isFailure)
@@ -430,6 +439,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
     mcRefs = Seq(generateMainchainBlockReference(), generateMainchainBlockReference(), generateMainchainBlockReference(), generateMainchainBlockReference()) // 4 MC block refs
     block = SidechainBlock.create(
       bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
       Instant.now.getEpochSecond - 10000,
       mcRefs.take(2).map(_.data), // 2 MainchainBlockReferenceData
       Seq(),
@@ -439,8 +449,8 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       forgerMeta14.forgingStakeInfo,
       VrfGenerator.generateProof(456L),
       MerkleTreeFixture.generateRandomMerklePath(456L),
-      sidechainTransactionsCompanion,
-      null
+      new Array[Byte](32),
+      sidechainTransactionsCompanion
     ).get
 
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({

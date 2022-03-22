@@ -1,7 +1,6 @@
 package com.horizen
 
 import java.util
-
 import com.horizen.companion.SidechainBoxesCompanion
 import scorex.core.serialization.ScorexSerializer
 import scorex.core.{NodeViewModifier, bytesToId, idToBytes}
@@ -15,7 +14,12 @@ class WalletBox(val box: SidechainTypes#SCB, val transactionId: ModifierId, val 
 {
   require(transactionId.length == NodeViewModifier.ModifierIdSize * 2,
     "Expected transactionId length is %d, actual length is %d".format(NodeViewModifier.ModifierIdSize * 2, transactionId.length))
-  require(createdAt > 0, "Expected createdAt should be positive value, actual value is %d".format(createdAt))
+  require(createdAt >= 0, "Expected createdAt should be non-negative value, actual value is %d".format(createdAt))
+
+  // Create WalletBox without containing transaction information.
+  def this(box: SidechainTypes#SCB, createdAt: Long) {
+    this(box, bytesToId(new Array[Byte](NodeViewModifier.ModifierIdSize)), createdAt)
+  }
 
   override def toString: String = s"WalletBox($box, ${encoder.encode(transactionId)}, $createdAt)"
 

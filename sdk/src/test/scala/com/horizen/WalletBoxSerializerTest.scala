@@ -10,7 +10,7 @@ import com.horizen.proposition.Proposition
 import com.horizen.utils.BytesUtils
 import org.junit.{Before, Test}
 import org.junit.Assert._
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 import java.util.{HashMap => JHashMap}
 import java.lang.{Byte => JByte}
 
@@ -29,14 +29,14 @@ class WalletBoxSerializerTest extends JUnitSuite with BoxFixture {
 
     // Test 1: serialization for core Box
     Random.nextBytes(transactionIdBytes)
-    val walletBoxWithRegularBox = new WalletBox(
-      getRegularBox(getPrivateKey25519("seed1".getBytes), 1, 100),
+    val walletBoxWithZenBox = new WalletBox(
+      getZenBox(getPrivateKey25519("seed1".getBytes), 1, 100),
       bytesToId(transactionIdBytes),
       10000)
-    serializer = walletBoxWithRegularBox.serializer(sidechainBoxesCompanion)
-    bytes = serializer.toBytes(walletBoxWithRegularBox)
-    val parsedWalletBoxWithRegularBox = serializer.parseBytesTry(bytes).get
-    assertEquals("Core WalletBoxes expected to be equal.", walletBoxWithRegularBox, parsedWalletBoxWithRegularBox)
+    serializer = walletBoxWithZenBox.serializer(sidechainBoxesCompanion)
+    bytes = serializer.toBytes(walletBoxWithZenBox)
+    val parsedWalletBoxWithZenBox = serializer.parseBytesTry(bytes).get
+    assertEquals("Core WalletBoxes expected to be equal.", walletBoxWithZenBox, parsedWalletBoxWithZenBox)
 
 
     // Test 2: serialization of custom Box

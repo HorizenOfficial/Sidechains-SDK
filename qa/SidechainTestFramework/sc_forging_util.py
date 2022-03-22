@@ -1,3 +1,4 @@
+from SidechainTestFramework.sc_boostrap_info import Account
 from test_framework.util import assert_equal, fail
 import json
 
@@ -110,3 +111,62 @@ def check_subommer(ommer_scblock_id, subommer_scblock_id, subommer_mcheader_hash
                                                                                              ommer_scblock_id,
                                                                                              scblock_id))
     fail("Ommer id {0} was not found in SC Block {1} ommers.".format(ommer_scblock_id, scblock_id))
+
+
+def mc_make_forward_transfer(mc_node, sc_node, sc_id, ft_zen_amount, mc_return_address):
+    # Do FT of `ft_amount` Zen to SC Node
+    sc_address = sc_node.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
+    sc_account = Account("", sc_address)
+    mc_mempool_size = mc_node.getmempoolinfo()["size"]
+    ft_args = [{
+        "toaddress": sc_address,
+        "amount": ft_zen_amount,
+        "scid": sc_id,
+        "mcReturnAddress": mc_return_address
+    }]
+    mc_tx_id = mc_node.sc_send(ft_args)
+    print("MC Tx with FT created: " + mc_tx_id)
+    assert_equal(mc_mempool_size + 1, mc_node.getmempoolinfo()["size"], "Forward Transfer expected to be added to mempool.")
+    mc_block_hash = mc_node.generate(1)[0]
+    print("MC block with FT generated: " + mc_block_hash)
+    return mc_block_hash
+
+
+def sc_create_forging_stake_mempool(sc_node, stake_zen_amount):
+    # Create forging stake of `stake_amount` Zen
+    sc_address = sc_node.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
+    sc_vrf_address = sc_node.wallet_createVrfSecret()["result"]["proposition"]["publicKey"]
+    forger_stake = {
+        "outputs": [
+            {
+                "publicKey": sc_address,
+                "blockSignPublicKey": sc_address,
+                "vrfPubKey": sc_vrf_address,
+                "value": stake_zen_amount * 100000000  # in Satoshi
+            }
+        ]
+    }
+
+    res = sc_node.transaction_makeForgerStake(json.dumps(forger_stake))
+    if "result" not in res:
+        fail("Forger stake creation failed: " + json.dumps(res))
+    else:
+        print("Forget stake created: " + json.dumps(res))
+
+
+def sc_make_withdrawal_request_mempool(mc_node, sc_node, bt_zen_amount):
+    mc_address = mc_node.getnewaddress()
+
+    withdrawal_request = {
+        "outputs": [
+            {
+                "mainchainAddress": mc_address,
+                "value": bt_zen_amount * 100000000  # in Satoshi
+            }
+        ]
+    }
+    res = sc_node.transaction_withdrawCoins(json.dumps(withdrawal_request))
+    if "result" not in res:
+        fail("Withdraw coins failed: " + json.dumps(res))
+    else:
+        print("Coins withdrawn: " + json.dumps(res))

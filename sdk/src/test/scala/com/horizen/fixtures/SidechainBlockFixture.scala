@@ -6,8 +6,8 @@ import java.util.{HashMap => JHashMap}
 
 import com.horizen.SidechainTypes
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlock}
-import com.horizen.box.{ForgerBox, NoncedBox}
-import com.horizen.chain.SidechainBlockInfo
+import com.horizen.box.{ForgerBox, Box}
+import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderHash, SidechainBlockInfo, mainchainHeaderHashSize}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.customtypes.SemanticallyInvalidTransaction
 import com.horizen.params.NetworkParams
@@ -41,7 +41,7 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
            parentId: Block.BlockId = null,
            timestamp: Block.Timestamp = -1,
            mainchainBlocksReferencesData: Seq[MainchainBlockReferenceData] = null,
-           sidechainTransactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] = null,
+           sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]] = null,
            mainchainHeaders: Seq[MainchainHeader] = null,
            forgerBoxData: (ForgerBox, ForgerBoxGenerationMetadata) = null,
            vrfProof: VrfProof = null,
@@ -57,6 +57,7 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
 
     SidechainBlock.create(
       firstOrSecond(parentId, initialBlock.parentId),
+      SidechainBlock.BLOCK_VERSION,
       Math.max(timestamp, initialBlock.timestamp),
       firstOrSecond(mainchainBlocksReferencesData, initialBlock.mainchainBlockReferencesData),
       firstOrSecond(sidechainTransactions, initialBlock.sidechainTransactions),
@@ -66,8 +67,8 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
       forgerMetadata.forgingStakeInfo,
       firstOrSecond(vrfProof, initialBlock.header.vrfProof),
       firstOrSecond(merklePath, initialBlock.header.forgingStakeMerklePath),
+      initialBlock.header.feePaymentsHash,
       firstOrSecond(companion, sidechainTransactionsCompanion),
-      params,
       signatureOption
     ).get
 
@@ -98,6 +99,7 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
 
     SidechainBlock.create(
       parent,
+      SidechainBlock.BLOCK_VERSION,
       timestamp,
       references.map(_.data),
       Seq(),
@@ -107,28 +109,32 @@ object SidechainBlockFixture extends MainchainBlockReferenceFixture with Compani
       forgerMetadata.forgingStakeInfo,
       vrfProof,
       MerkleTreeFixture.generateRandomMerklePath(basicSeed),
-      companion,
-      params
+      new Array[Byte](32),
+      companion
     ).get
   }
 }
 
 trait SidechainBlockFixture extends MainchainBlockReferenceFixture with SidechainBlockHeaderFixture {
+
   def generateGenesisBlockInfo(genesisMainchainHeaderHash: Option[Array[Byte]] = None,
                                genesisMainchainReferenceDataHeaderHash: Option[Array[Byte]] = None,
                                validity: ModifierSemanticValidity = ModifierSemanticValidity.Unknown,
                                timestamp: Option[Block.Timestamp] = None,
-                               vrfOutput: VrfOutput = VrfGenerator.generateVrfOutput(34)
+                               vrfOutput: VrfOutput = VrfGenerator.generateVrfOutput(34),
+                               initialCumulativeHash: Array[Byte] = FieldElementFixture.generateFieldElement()
                               ): SidechainBlockInfo = {
     val blockId = bytesToId(new Array[Byte](32))
+    val mainchainHeaderHash : MainchainHeaderHash = com.horizen.chain.byteArrayToMainchainHeaderHash(genesisMainchainHeaderHash.getOrElse(new Array[Byte](32)))
+
     SidechainBlockInfo(
       1,
       1,
       bytesToId(new Array[Byte](32)),
       timestamp.getOrElse(Random.nextLong()),
       validity,
-      Seq(com.horizen.chain.byteArrayToMainchainHeaderHash(genesisMainchainHeaderHash.getOrElse(new Array[Byte](32)))),
-      Seq(com.horizen.chain.byteArrayToMainchainHeaderHash(genesisMainchainReferenceDataHeaderHash.getOrElse(new Array[Byte](32)))),
+      Seq(MainchainHeaderBaseInfo(mainchainHeaderHash, initialCumulativeHash)),
+      Seq(mainchainHeaderHash),
       WithdrawalEpochInfo(1, 1),
       Option(vrfOutput),
       blockId
@@ -142,16 +148,18 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture with Sidechai
   def generateBlockInfo(block: SidechainBlock,
                         parentBlockInfo: SidechainBlockInfo,
                         params: NetworkParams,
+                        previousCumulativeHash: Array[Byte],
                         customScore: Option[Long] = None,
                         validity: ModifierSemanticValidity = ModifierSemanticValidity.Unknown,
                         timestamp: Option[Block.Timestamp] = None): SidechainBlockInfo = {
+
     SidechainBlockInfo(
       parentBlockInfo.height + 1,
       customScore.getOrElse(parentBlockInfo.score + (parentBlockInfo.mainchainHeaderHashes.size.toLong << 32) + 1),
       block.parentId,
       block.timestamp,
       validity,
-      SidechainBlockInfo.mainchainHeaderHashesFromBlock(block),
+      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoSeqFromBlock(block, previousCumulativeHash),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
       WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params),
       Option(VrfGenerator.generateVrfOutput(parentBlockInfo.timestamp)),
@@ -213,8 +221,8 @@ trait SidechainBlockFixture extends MainchainBlockReferenceFixture with Sidechai
     SidechainBlockFixture.copy(sidechainBlock,
       parentId = sidechainBlock.id,
       timestamp = sidechainBlock.timestamp + 10,
-      sidechainTransactions = Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]](
-        new SemanticallyInvalidTransaction(sidechainBlock.timestamp - 100).asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]]),
+      sidechainTransactions = Seq[SidechainTransaction[Proposition, Box[Proposition]]](
+        new SemanticallyInvalidTransaction().asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]),
       companion = companion,
       params = params,
       basicSeed = basicSeed)

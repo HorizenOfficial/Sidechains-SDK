@@ -14,18 +14,20 @@ import com.horizen.box.Box
 import com.horizen.proposition.{Proposition, VrfPublicKey}
 import com.horizen.secret.{PrivateKey25519Creator, VrfKeyGenerator}
 import com.horizen.serialization.Views
+import com.horizen.utils.BytesUtils
 import scorex.core.settings.RESTApiSettings
 
 import scala.collection.JavaConverters._
 import scala.concurrent.{Await, ExecutionContext}
 import scala.util.{Failure, Success, Try}
+import java.util.{Optional => JOptional}
 
 case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
                                    sidechainNodeViewHolderRef: ActorRef)(implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute {
 
-  override val route: Route = (pathPrefix("wallet")) {
-    allBoxes ~ balance ~ createPrivateKey25519 ~ createVrfSecret ~ allPublicKeys
+  override val route: Route = pathPrefix("wallet") {
+    allBoxes ~ coinsBalance ~ balanceOfType ~ createPrivateKey25519 ~ createVrfSecret ~ allPublicKeys
   }
 
   /**
@@ -36,7 +38,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
       withNodeView { sidechainNodeView =>
         val optBoxTypeClass = body.boxTypeClass
         val wallet = sidechainNodeView.getNodeWallet
-        val idsOfBoxesToExclude = body.excludeBoxIds.getOrElse(List()).map(strId => strId.getBytes)
+        val idsOfBoxesToExclude = body.excludeBoxIds.getOrElse(List()).map(idHex => BytesUtils.fromHexString(idHex))
         if (optBoxTypeClass.isEmpty) {
           val closedBoxesJson = wallet.allBoxes(idsOfBoxesToExclude.asJava).asScala.toList
           ApiResponseUtil.toResponse(RespAllBoxes(closedBoxesJson))
@@ -50,21 +52,26 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
   }
 
   /**
-    * Returns the balance for given box type, or all types of boxes
+    * Returns the balance of all types of coins boxes
     */
-  def balance: Route = (post & path("balance")) {
+  def coinsBalance: Route = (post & path("coinsBalance")) {
+    withNodeView { sidechainNodeView =>
+      val wallet = sidechainNodeView.getNodeWallet
+      val sumOfBalances: Long = wallet.allCoinsBoxesBalance()
+      ApiResponseUtil.toResponse(RespBalance(sumOfBalances))
+    }
+  }
+
+  /**
+    * Returns the balance for given box type
+    */
+  def balanceOfType: Route = (post & path("balanceOfType")) {
     entity(as[ReqBalance]) { body =>
       withNodeView { sidechainNodeView =>
         val wallet = sidechainNodeView.getNodeWallet
-        val optBoxType = body.boxType
-        if (optBoxType.isEmpty) {
-          val sumOfBalances: Long = wallet.allBoxesBalance()
-          ApiResponseUtil.toResponse(RespBalance(sumOfBalances))
-        } else {
-          val clazz: java.lang.Class[_ <: SidechainTypes#SCB] = getClassByBoxClassName(optBoxType.get)
-          val balance = wallet.boxesBalance(clazz)
-          ApiResponseUtil.toResponse(RespBalance(balance))
-        }
+        val clazz: java.lang.Class[_ <: SidechainTypes#SCB] = getClassByBoxClassName(body.boxType)
+        val balance = wallet.boxesBalance(clazz)
+        ApiResponseUtil.toResponse(RespBalance(balance))
       }
     }
   }
@@ -83,7 +90,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
         case Success(_) =>
           ApiResponseUtil.toResponse(RespCreateVrfSecret(public))
         case Failure(e) =>
-          ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create Vrf key pair.", Some(e)))
+          ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create Vrf key pair.", JOptional.of(e)))
       }
     }
   }
@@ -100,7 +107,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
         case Success(_) =>
           ApiResponseUtil.toResponse(RespCreatePrivateKey25519(secret.publicImage()))
         case Failure(e) =>
-          ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create key pair.", Some(e)))
+          ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create key pair.", JOptional.of(e)))
       }
     }
   }
@@ -147,7 +154,7 @@ object SidechainWalletRestScheme {
   private[api] case class RespAllBoxes(boxes: List[Box[Proposition]]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqBalance(boxType: Option[String])
+  private[api] case class ReqBalance(boxType: String)
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespBalance(balance: Long) extends SuccessResponse
@@ -168,7 +175,7 @@ object SidechainWalletRestScheme {
 
 object SidechainWalletErrorResponse {
 
-  case class ErrorSecretNotAdded(description: String, exception: Option[Throwable]) extends ErrorResponse {
+  case class ErrorSecretNotAdded(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0301"
   }
 

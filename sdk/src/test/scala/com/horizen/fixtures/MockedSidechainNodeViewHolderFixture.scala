@@ -3,7 +3,7 @@ package com.horizen.fixtures
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen._
 import org.mockito.Mockito
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 import scorex.core.settings.{NetworkSettings, ScorexSettings}
 
 class MockedSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
@@ -11,7 +11,7 @@ class MockedSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                     state: SidechainState,
                                     wallet: SidechainWallet,
                                     mempool: SidechainMemoryPool)
-  extends SidechainNodeViewHolder(sidechainSettings, null, null, null, null, null, null, null, null, null, null, null, null, null) {
+  extends SidechainNodeViewHolder(sidechainSettings, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null) {
 
   override def restoreState(): Option[(HIS, MS, VL, MP)] = {
     Some(history, state, wallet, mempool)

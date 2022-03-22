@@ -1,12 +1,16 @@
 package com.horizen.consensus
 
-import java.math.BigInteger
+import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
 
+import java.math.BigInteger
+import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
+import com.horizen.librustsidechains.FieldElement
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.SchnorrProposition
+import com.horizen.utils.TimeToEpochUtils
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 import scorex.core.block.Block
 import scorex.util.{ModifierId, bytesToId}
 
@@ -33,31 +37,28 @@ class TimeToEpochSlotConverterTest extends JUnitSuite {
     override val nPowTargetSpacing: Int = 150 // 2.5 * 60
     override val signersPublicKeys: Seq[SchnorrProposition] = Seq()
     override val signersThreshold: Int = 0
-    override val provingKeyFilePath: String = ""
-    override val verificationKeyFilePath: String = ""
-    override val calculatedSysDataConstant: Array[Byte] = Array()
-  }
-
-  class HistoryStub(sidechainGenesisBlockTimestamp: Block.Timestamp,
-                    consensusSecondsInSlot: Int,
-                    consensusSlotsInEpoch: Int) {
-    val params = StubbedNetParams(sidechainGenesisBlockTimestamp, consensusSecondsInSlot, consensusSlotsInEpoch)
+    override val certProvingKeyFilePath: String = ""
+    override val certVerificationKeyFilePath: String = ""
+    override val calculatedSysDataConstant: Array[Byte] = new Array[Byte](32)
+    override val initialCumulativeCommTreeHash: Array[Byte] = Array()
+    override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig] = Seq()
+    override val cswProvingKeyFilePath: String = ""
+    override val cswVerificationKeyFilePath: String = ""
+    override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1
   }
 
   private def checkSlotAndEpoch(timeStamp: Block.Timestamp,
                                 expectedSlot: Int,
-                                expectedEpoch: Int)(implicit converter: TimeToEpochSlotConverter): Unit = {
-    assertEquals("Epoch shall be as expected", expectedEpoch, converter.timeStampToEpochNumber(timeStamp))
-    assertEquals("Slot shall be as expected", expectedSlot, converter.timeStampToSlotNumber(timeStamp))
+                                expectedEpoch: Int)(implicit params: StubbedNetParams): Unit = {
+    assertEquals("Epoch shall be as expected", expectedEpoch, TimeToEpochUtils.timeStampToEpochNumber(params, timeStamp))
+    assertEquals("Slot shall be as expected", expectedSlot, TimeToEpochUtils.timeStampToSlotNumber(params, timeStamp))
   }
 
   @Test
   def checkSlotAndEpoch(): Unit = {
-    implicit val converter: TimeToEpochSlotConverter =
-      new HistoryStub(sidechainGenesisBlockTimestamp = 1990, consensusSecondsInSlot = 10, consensusSlotsInEpoch = 100)
-        with TimeToEpochSlotConverter
+    implicit val params = StubbedNetParams(sidechainGenesisBlockTimestamp = 1990, consensusSecondsInSlot = 10, consensusSlotsInEpoch = 100)
 
-    assertEquals(" Seconds in epoch shall be as expected", 1000, converter.epochInSeconds)
+    assertEquals(" Seconds in epoch shall be as expected", 1000, TimeToEpochUtils.epochInSeconds(params))
     checkSlotAndEpoch(1990, 100, 1)
 
 
@@ -76,11 +77,9 @@ class TimeToEpochSlotConverterTest extends JUnitSuite {
 
   @Test
   def checkSlotAndEpoch2(): Unit = {
-    implicit val converter2: TimeToEpochSlotConverter =
-      new HistoryStub(sidechainGenesisBlockTimestamp = 61, consensusSecondsInSlot = 3, consensusSlotsInEpoch = 8)
-        with TimeToEpochSlotConverter
+    implicit val params = StubbedNetParams(sidechainGenesisBlockTimestamp = 61, consensusSecondsInSlot = 3, consensusSlotsInEpoch = 8)
 
-    assertEquals(" Seconds in epoch shall be as expected", 24, converter2.epochInSeconds)
+    assertEquals(" Seconds in epoch shall be as expected", 24, TimeToEpochUtils.epochInSeconds(params))
     checkSlotAndEpoch(90, 1, 3)
     checkSlotAndEpoch(91, 2, 3)
     checkSlotAndEpoch(92, 2, 3)
@@ -90,32 +89,28 @@ class TimeToEpochSlotConverterTest extends JUnitSuite {
 
   @Test(expected = classOf[java.lang.IllegalArgumentException])
   def checkIncorrectEpoch(): Unit = {
-    val converter: TimeToEpochSlotConverter =
-      new HistoryStub(sidechainGenesisBlockTimestamp = 2000, consensusSecondsInSlot = 10, consensusSlotsInEpoch = 100)
-        with TimeToEpochSlotConverter
+    val params = StubbedNetParams(sidechainGenesisBlockTimestamp = 2000, consensusSecondsInSlot = 10, consensusSlotsInEpoch = 100)
 
-    converter.timeStampToEpochNumber(1999)
+
+    TimeToEpochUtils.timeStampToEpochNumber(params, 1999)
   }
 
   @Test(expected = classOf[java.lang.IllegalArgumentException])
   def checkIncorrectSlot(): Unit = {
-    val converter: TimeToEpochSlotConverter =
-      new HistoryStub(6000, 10, 100)
-        with TimeToEpochSlotConverter
+    val params = StubbedNetParams(6000, 10, 100)
 
-    converter.timeStampToSlotNumber(-5)
+    TimeToEpochUtils.timeStampToSlotNumber(params, -5)
   }
 
   @Test
   def testTimestampToSlotEpochNumber(): Unit = {
-    val converter = new HistoryStub(sidechainGenesisBlockTimestamp = 61, consensusSecondsInSlot = 3, consensusSlotsInEpoch = 8)
-      with TimeToEpochSlotConverter
+    val params = StubbedNetParams(sidechainGenesisBlockTimestamp = 61, consensusSecondsInSlot = 3, consensusSlotsInEpoch = 8)
 
     val epochNumber = 345
     val slotNumber = 4
-    val timestamp = converter.getTimeStampForEpochAndSlot(intToConsensusEpochNumber(epochNumber), intToConsensusSlotNumber(slotNumber))
+    val timestamp = TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(epochNumber), intToConsensusSlotNumber(slotNumber))
 
-    assertEquals(epochNumber, converter.timeStampToEpochNumber(timestamp))
-    assertEquals(slotNumber, converter.timeStampToSlotNumber(timestamp))
+    assertEquals(epochNumber, TimeToEpochUtils.timeStampToEpochNumber(params, timestamp))
+    assertEquals(slotNumber, TimeToEpochUtils.timeStampToSlotNumber(params, timestamp))
   }
 }

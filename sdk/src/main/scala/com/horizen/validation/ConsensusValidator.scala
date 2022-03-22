@@ -1,17 +1,18 @@
 package com.horizen.validation
-import java.time.Instant
-
 import com.horizen.SidechainHistory
 import com.horizen.block.{OmmersContainer, SidechainBlock, SidechainBlockHeader}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.consensus._
+import com.horizen.params.NetworkParams
+import com.horizen.utils.TimeToEpochUtils
 import com.horizen.vrf.VrfOutput
 import scorex.core.block.Block
-import scorex.util.{ScorexLogging, ModifierId}
+import scorex.core.utils.TimeProvider
+import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.util.Try
 
-class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
+class ConsensusValidator(timeProvider: TimeProvider) extends HistoryBlockValidator with ScorexLogging {
   override def validate(block: SidechainBlock, history: SidechainHistory): Try[Unit] = Try {
     if (history.isGenesisBlock(block.id)) {
       validateGenesisBlock(block, history)
@@ -35,7 +36,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
 
   private def validateNonGenesisBlock(verifiedBlock: SidechainBlock, history: SidechainHistory): Unit = {
     val parentBlockInfo: SidechainBlockInfo = history.blockInfoById(verifiedBlock.parentId)
-    verifyTimestamp(verifiedBlock.timestamp, parentBlockInfo.timestamp, history)
+    verifyTimestamp(verifiedBlock.timestamp, parentBlockInfo.timestamp, history.params)
 
     val currentConsensusEpochInfo: FullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(verifiedBlock.timestamp, verifiedBlock.parentId)
 
@@ -51,15 +52,15 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
     verifyTimestampInFuture(verifiedBlock.timestamp, history)
   }
 
-  private def verifyTimestamp(verifiedBlockTimestamp: Block.Timestamp, parentBlockTimestamp: Block.Timestamp, timeConverter: TimeToEpochSlotConverter): Unit = {
+  private def verifyTimestamp(verifiedBlockTimestamp: Block.Timestamp, parentBlockTimestamp: Block.Timestamp, params: NetworkParams): Unit = {
     if (verifiedBlockTimestamp < parentBlockTimestamp) throw new IllegalArgumentException("Block had been generated before parent block had been generated")
 
-    val absoluteSlotNumberForVerifiedBlock = timeConverter.timeStampToAbsoluteSlotNumber(verifiedBlockTimestamp)
-    val absoluteSlotNumberForParentBlock = timeConverter.timeStampToAbsoluteSlotNumber(parentBlockTimestamp)
+    val absoluteSlotNumberForVerifiedBlock = TimeToEpochUtils.timeStampToAbsoluteSlotNumber(params, verifiedBlockTimestamp)
+    val absoluteSlotNumberForParentBlock = TimeToEpochUtils.timeStampToAbsoluteSlotNumber(params, parentBlockTimestamp)
     if (absoluteSlotNumberForVerifiedBlock <= absoluteSlotNumberForParentBlock) throw new IllegalArgumentException("Block absolute slot number is equal or less than parent block")
 
-    val epochNumberForVerifiedBlock = timeConverter.timeStampToEpochNumber(verifiedBlockTimestamp)
-    val epochNumberForParentBlock = timeConverter.timeStampToEpochNumber(parentBlockTimestamp)
+    val epochNumberForVerifiedBlock = TimeToEpochUtils.timeStampToEpochNumber(params, verifiedBlockTimestamp)
+    val epochNumberForParentBlock = TimeToEpochUtils.timeStampToEpochNumber(params, parentBlockTimestamp)
     if(epochNumberForVerifiedBlock - epochNumberForParentBlock > 1) throw new IllegalStateException("Whole epoch had been skipped") //any additional actions here?
   }
 
@@ -67,7 +68,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
     // According to Ouroboros Praos paper (page 5: "Time and Slots"): Block timestamp is valid,
     // if it belongs to the same or earlier Slot than current time Slot.
     // Check if timestamp is not too far in the future
-    if(history.timeStampToAbsoluteSlotNumber(verifiedBlockTimestamp) > history.timeStampToAbsoluteSlotNumber(Instant.now.getEpochSecond))
+    if(TimeToEpochUtils.timeStampToAbsoluteSlotNumber(history.params, verifiedBlockTimestamp) > TimeToEpochUtils.timeStampToAbsoluteSlotNumber(history.params, timeProvider.time() / 1000))
       throw new SidechainBlockSlotInFutureException("Block had been generated in the future")
   }
 
@@ -101,7 +102,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
     if(ommers.isEmpty)
       return
 
-    val ommersContainerEpochNumber: ConsensusEpochNumber = history.timeStampToEpochNumber(ommersContainer.header.timestamp)
+    val ommersContainerEpochNumber: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(history.params, ommersContainer.header.timestamp)
 
     var accumulator: Seq[(VrfOutput, ConsensusSlotNumber)] = previousEpochOmmersInfoAccumulator
     var previousOmmerEpochNumber: ConsensusEpochNumber = ommersContainerEpochNumber
@@ -109,7 +110,7 @@ class ConsensusValidator extends HistoryBlockValidator with ScorexLogging {
     var ommerPreviousFullConsensusEpochInfoOpt = previousFullConsensusEpochInfoOpt
 
     for(ommer <- ommers) {
-      val ommerEpochAndSlot: ConsensusEpochAndSlot = history.timestampToEpochAndSlot(ommer.header.timestamp)
+      val ommerEpochAndSlot: ConsensusEpochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(history.params, ommer.header.timestamp)
 
       if(ommerEpochAndSlot.epochNumber < previousOmmerEpochNumber) {
         // First ommer is from previous consensus epoch to Ommer Container epoch.

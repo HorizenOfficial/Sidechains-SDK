@@ -7,7 +7,7 @@ It is possible to test a SC node or nodes with or without real MC node connectio
 
 **Requirements**
 
-Install Python 2.7
+Install Python 3
 
 **Additional settings**
 
@@ -18,7 +18,7 @@ Example for Linux environment:
 ```
 BITCOINCLI="/home/user/zen/zen-cli"
 BITCOIND="/home/user/zen/zend"
-SIDECHAIN_SDK="/home/user/Sidechain-SDK"
+SIDECHAIN_SDK="/home/user/Sidechains-SDK"
 ```
 
 **Execution**
@@ -37,12 +37,34 @@ python <test.py>
 
 **Template configuration files**
 
-Template configuration files are located in directory resources. 
+Template configuration files located in resources directory. 
 
-File template.conf is template for tests of SC node(s) is connected to MC node(s).
+File template.conf is the template for testing SC node(s) connected to MC node(s).
 
-File template_predefined_genesis.conf is template for test of SC node(s) in standalone mode(without connection to MC node).
+File template_predefined_genesis.conf is the template for testing SC node(s) standalone mode (without any connections to MC node(s)).
+
+**Debugging**
+
+In order to run a python test for debugging SDK application, the following procedure can be applied:
+
+1) When starting a sc node in the py test, add the option '_-agentlib_' to the _extra_args_ list in the relevant API call, for example:
+   ```
+   start_sc_nodes(1, self.options.tmpdir, extra_args=[['-agentlib']])
+   ```
+    This will cause the simpleApp process to start with the debug agent acting as a server. The process will wait until the debugger has been connected.
 
 
+2) Run the py test.
+
+   If needed, in order to increase the rest API timeout, use the optional argument _--restapitimeout=<timeout_value_in_secs>_, for example:
+   ```
+   python sc_forward_transfer.py --restapitimeout=200
+   ```
+   
+3) Attach the debugger to the simpleApp process.
+
+   For instance, if using IntelliJ:
 
 
+- Press `Ctrl+Alt+F5` or choose **_Run | Attach to Process_** from the main menu.
+- Select the process to attach to from the list of the running local processes. The processes launched with the debug agent are shown under _**Java**_. Those that don't use a debug agent are listed under **_Java Read Only_**.

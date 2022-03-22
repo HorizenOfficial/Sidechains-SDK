@@ -73,7 +73,7 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
           headerWithNoSerialization.solution) {
             val h = hashData
             override lazy val hash: Array[Byte] = h
-            override def semanticValidity(params: NetworkParams): Try[Unit] = Success()
+            override def semanticValidity(params: NetworkParams): Try[Unit] = Success(Unit)
         }
       case None => new MainchainHeader(
         mainchainHeaderToBytes(headerWithNoSerialization),
@@ -85,13 +85,12 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
         headerWithNoSerialization.bits,
         headerWithNoSerialization.nonce,
         headerWithNoSerialization.solution) {
-          override def semanticValidity(params: NetworkParams):  Try[Unit] = Success()
+          override def semanticValidity(params: NetworkParams):  Try[Unit] = Success(Unit)
       }
     }
 
-
-    val newReference = new MainchainBlockReference(header, MainchainBlockReferenceData(header.hash, None, None, (None,None), None)) {
-      override def semanticValidity(params: NetworkParams): Try[Unit] = Success()
+    val newReference = new MainchainBlockReference(header, MainchainBlockReferenceData(header.hash, None, None, None, Seq(), None)) {
+      override def semanticValidity(params: NetworkParams): Try[Unit] = Success(Unit)
     }
 
     addNewReference(newReference)
@@ -104,13 +103,14 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
                                         rnd: Random = new Random(),
                                         timestamp: Int = Instant.now.getEpochSecond.toInt
                                        ): Seq[MainchainBlockReference] = {
-      if (rnd.nextBoolean && generated.size < SidechainBlock.MAX_MC_BLOCKS_NUMBER) {
-        val parentReference = parentOpt.orElse(generated.lastOption.map(lastBlock => byteArrayToWrapper(lastBlock.header.hash)))
-        val nextReference = generateMainchainBlockReference(parentOpt = parentReference, rnd = rnd, timestamp = timestamp)
-        generateMainchainReferences(generated :+ nextReference, rnd = rnd, timestamp = timestamp)
-      }
-      else {
-        generated
-      }
+    val maxMcBlockRefDataPerBlock = 3
+    if (rnd.nextBoolean && generated.size < maxMcBlockRefDataPerBlock) {
+      val parentReference = parentOpt.orElse(generated.lastOption.map(lastBlock => byteArrayToWrapper(lastBlock.header.hash)))
+      val nextReference = generateMainchainBlockReference(parentOpt = parentReference, rnd = rnd, timestamp = timestamp)
+      generateMainchainReferences(generated :+ nextReference, rnd = rnd, timestamp = timestamp)
+    }
+    else {
+      generated
+    }
   }
 }

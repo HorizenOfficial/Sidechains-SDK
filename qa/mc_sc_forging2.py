@@ -1,11 +1,12 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration
+    SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from test_framework.util import assert_equal, initialize_chain_clean, start_nodes, \
     websocket_port_by_mc_node_index, connect_nodes_bi, disconnect_nodes_bi
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks, connect_sc_nodes
+from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks, \
+    connect_sc_nodes
 from SidechainTestFramework.sc_forging_util import *
 
 """
@@ -30,15 +31,15 @@ Test:
     - Make sure that second SC node correctly apply first SC node data
     
     MC blocks on MC node 1 in the end:
-    220     -   221     -   222
+    420     -   421     -   422
                     \
-                        -   222'    -   223'*
+                        -   422'    -   423'*
             
             
     SC Block on SC node in the end: <sc block/slot number>[<mc headers included>; <mc refdata included>; <ommers>]
-    G[220h;220d;] - 0[;;] - 1[221h-222h;221d-222d;]
+    G[420h;420d;] - 0[;;] - 1[421h-422h;421d-422d;]
                           \
-                                -   2[221h,222'h,223'h;;1[...]]
+                                -   2[421h,422'h,423'h;;1[...]]
 """
 
 
@@ -68,9 +69,9 @@ class MCSCForging2(SidechainTestFramework):
         )
         sc_node_2_configuration = SCNodeConfiguration(MCConnectionInfo(), False)
 
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, 1000),
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, LARGE_WITHDRAWAL_EPOCH_LENGTH),
                                          sc_node_1_configuration, sc_node_2_configuration)
-        bootstrap_sidechain_nodes(self.options.tmpdir, network)
+        bootstrap_sidechain_nodes(self.options, network)
 
     def sc_setup_nodes(self):
         # Start 1 SC node

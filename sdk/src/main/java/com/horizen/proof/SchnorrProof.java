@@ -1,6 +1,5 @@
 package com.horizen.proof;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.proposition.SchnorrProposition;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
@@ -8,25 +7,19 @@ import com.horizen.secret.SchnorrSecret;
 import com.horizen.serialization.Views;
 
 import java.util.Arrays;
-import java.util.Objects;
-
-import static com.horizen.proof.CoreProofsIdsEnum.SchnorrSignatureId;
 
 @JsonView(Views.Default.class)
-@JsonIgnoreProperties("typeId")
-public class SchnorrProof implements ProofOfKnowledge<SchnorrSecret, SchnorrProposition>
-{
-    private final byte[] signature;
+public class SchnorrProof implements ProofOfKnowledge<SchnorrSecret, SchnorrProposition> {
+    public static int SIGNATURE_LENGTH = CryptoLibProvider.schnorrFunctions().schnorrSignatureLength();
+
+    final byte[] signature;
 
     public SchnorrProof(byte[] signatureBytes) {
-        Objects.requireNonNull(signatureBytes, "SchnorrProofBytes can't be null");
+        if (signatureBytes.length != SIGNATURE_LENGTH)
+            throw new IllegalArgumentException(String.format("Incorrect signature length, %d expected, %d found", SIGNATURE_LENGTH,
+                    signatureBytes.length));
 
         signature = Arrays.copyOf(signatureBytes, signatureBytes.length);
-    }
-
-    @Override
-    public byte proofTypeId() {
-        return SchnorrSignatureId.id();
     }
 
     @Override
@@ -35,16 +28,7 @@ public class SchnorrProof implements ProofOfKnowledge<SchnorrSecret, SchnorrProp
     }
 
     @Override
-    public byte[] bytes() {
-        return Arrays.copyOf(signature, signature.length);
-    }
-
-    @Override
     public ProofSerializer serializer() {
         return SchnorrSignatureSerializer.getSerializer();
-    }
-
-    public static SchnorrProof parse(byte[] bytes) {
-        return new SchnorrProof(bytes);
     }
 }

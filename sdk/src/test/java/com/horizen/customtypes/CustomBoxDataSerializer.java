@@ -1,10 +1,10 @@
 package com.horizen.customtypes;
 
-import com.horizen.box.data.NoncedBoxDataSerializer;
+import com.horizen.box.data.BoxDataSerializer;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
-public class CustomBoxDataSerializer implements NoncedBoxDataSerializer<CustomBoxData> {
+public class CustomBoxDataSerializer implements BoxDataSerializer<CustomBoxData> {
 
     private static CustomBoxDataSerializer serializer;
 
@@ -22,11 +22,14 @@ public class CustomBoxDataSerializer implements NoncedBoxDataSerializer<CustomBo
 
     @Override
     public void serialize(CustomBoxData boxData, Writer writer) {
-        writer.putBytes(boxData.bytes());
+        boxData.proposition().serializer().serialize(boxData.proposition(), writer);
+        writer.putLong(boxData.value());
     }
 
     @Override
     public CustomBoxData parse(Reader reader) {
-        return CustomBoxData.parseBytes(reader.getBytes(reader.remaining()));
+        CustomPublicKeyProposition proposition = CustomPublicKeyPropositionSerializer.getSerializer().parse(reader);
+        long value = reader.getLong();
+        return new CustomBoxData(proposition, value);
     }
 }

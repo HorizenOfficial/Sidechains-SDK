@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_true, assert_equal
 from SidechainTestFramework.scutil import connect_sc_nodes, sc_p2p_port, initialize_default_sc_chain_clean, start_sc_nodes, wait_for_next_sc_blocks
@@ -6,7 +6,7 @@ import time
 import json
 
 """
-    Setup 3 SC Nodes and connect them togheter. Check that each node is connected to the other and that their initial keys/boxes/balances are
+    Setup 3 SC Nodes and connect them together. Check that each node is connected to the other and that their initial keys/boxes/balances are
     coherent with the default initialization
 """
 
@@ -58,7 +58,7 @@ class SidechainNodesInitializationTest(SidechainTestFramework):
         responce = node.wallet_allBoxes()
         boxes = responce["result"]["boxes"]
 
-        responce = node.wallet_balance()
+        responce = node.wallet_coinsBalance()
         balance = responce["result"]
         assert_equal(expected_keys_count, len(public_keys), "Unexpected number of public keys")
         assert_equal(expected_boxes_count, len(boxes), "Unexpected number of boxes")

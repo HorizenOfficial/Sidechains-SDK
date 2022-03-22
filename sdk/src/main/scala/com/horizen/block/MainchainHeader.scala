@@ -12,14 +12,7 @@ import scorex.util.serialization.{Reader, Writer}
 
 import scala.util.Try
 
-//
 // Representation of MC header
-//
-// hashSCMerkleRootsMap is a merkle root hash of particular SC related crosschain outputs data merkle roots.
-//
-// SCMap is a map of <sidechain Id> : <sidechain merkle root hash>
-// hashSCMerkleRootsMap calculated as a merkle roots of values only of SCMap sorted by key(<sidechain id>)
-//
 @JsonView(Array(classOf[Views.Default]))
 @JsonIgnoreProperties(Array("mainchainHeaderBytes", "hashHex"))
 class MainchainHeader(
@@ -104,7 +97,7 @@ object MainchainHeader {
     val merkleRoot: Array[Byte] = BytesUtils.reverseBytes(headerBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 
-    val hashSCMerkleRootsMap: Array[Byte] = BytesUtils.reverseBytes(headerBytes.slice(currentOffset, currentOffset + 32))
+    val hashScTxsCommitment: Array[Byte] = BytesUtils.reverseBytes(headerBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 
     val time: Int = BytesUtils.getReversedInt(headerBytes, currentOffset)
@@ -123,12 +116,19 @@ object MainchainHeader {
     val solution: Array[Byte] = headerBytes.slice(currentOffset, currentOffset + solutionLength.value().intValue())
     currentOffset += solutionLength.value().intValue()
 
-    new MainchainHeader(headerBytes.slice(offset, currentOffset), version, hashPrevBlock, merkleRoot, hashSCMerkleRootsMap, time, bits, nonce, solution)
+    new MainchainHeader(headerBytes.slice(offset, currentOffset), version, hashPrevBlock, merkleRoot, hashScTxsCommitment, time, bits, nonce, solution)
   }
 }
 
 object MainchainHeaderSerializer extends ScorexSerializer[MainchainHeader] {
-  override def serialize(obj: MainchainHeader, w: Writer): Unit = w.putBytes(obj.mainchainHeaderBytes)
+  override def serialize(obj: MainchainHeader, w: Writer): Unit = {
+    val bytes: Array[Byte] = obj.mainchainHeaderBytes
+    w.putInt(bytes.length)
+    w.putBytes(bytes)
+  }
 
-  override def parse(r: Reader): MainchainHeader = MainchainHeader.create(r.getBytes(r.remaining), 0).get
+  override def parse(r: Reader): MainchainHeader = {
+    val length: Int = r.getInt()
+    MainchainHeader.create(r.getBytes(length), 0).get
+  }
 }

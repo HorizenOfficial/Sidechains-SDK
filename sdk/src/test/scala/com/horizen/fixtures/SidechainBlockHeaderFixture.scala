@@ -15,7 +15,8 @@ trait SidechainBlockHeaderFixture extends BoxFixture {
 
   def createUnsignedBlockHeader(seed: Long = 123134L,
                                 vrfKeysOpt: Option[(VrfSecretKey, VrfPublicKey)] = None,
-                                vrfProofOpt: Option[VrfProof] = None): (SidechainBlockHeader, ForgerBoxGenerationMetadata) = {
+                                vrfProofOpt: Option[VrfProof] = None,
+                                blockVersion:Byte = SidechainBlock.BLOCK_VERSION): (SidechainBlockHeader, ForgerBoxGenerationMetadata) = {
     val random: Random = new Random(seed)
 
     val parentId = new Array[Byte](32)
@@ -34,7 +35,7 @@ trait SidechainBlockHeaderFixture extends BoxFixture {
 
 
     val unsignedHeader = SidechainBlockHeader(
-      SidechainBlock.BLOCK_VERSION,
+      blockVersion,
       bytesToId(parentId),
       random.nextInt(100) + 10000,
       forgerMetadata.forgingStakeInfo,
@@ -44,6 +45,7 @@ trait SidechainBlockHeaderFixture extends BoxFixture {
       mainchainRootHash,
       ommersRootHash,
       0,
+      new Array[Byte](32),
       new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH))
     )
 

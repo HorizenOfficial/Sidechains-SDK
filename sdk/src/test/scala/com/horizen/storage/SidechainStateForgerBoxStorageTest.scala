@@ -2,16 +2,17 @@ package com.horizen.storage
 
 import com.horizen.SidechainTypes
 import com.horizen.box.{ForgerBox, ForgerBoxSerializer}
-import com.horizen.fixtures.{IODBStoreFixture, SecretFixture, TransactionFixture}
+import com.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
+import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.utils.{ByteArrayWrapper, Pair}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito.MockitoSugar
 import scorex.crypto.hash.Blake2b256
-import java.util.{ArrayList => JArrayList, Optional => JOptional}
 
+import java.util.{ArrayList => JArrayList, Optional => JOptional}
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
 import scala.collection.JavaConverters._
@@ -20,11 +21,11 @@ class SidechainStateForgerBoxStorageTest
   extends JUnitSuite
     with SecretFixture
     with TransactionFixture
-    with IODBStoreFixture
+    with StoreFixture
     with MockitoSugar
     with SidechainTypes
 {
-  val mockedPhysicalStorage: Storage = mock[IODBStoreAdapter]
+  val mockedPhysicalStorage: Storage = mock[VersionedLevelDbStorageAdapter]
 
   val boxList = new ListBuffer[ForgerBox]()
   val storedBoxList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()

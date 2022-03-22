@@ -21,7 +21,7 @@ public final class PublicKey25519Proposition
 {
     public static final byte ADDRESS_VERSION = 1;
     public static final int CHECKSUM_LENGTH = 4;
-    public static final int KEY_LENGTH = Ed25519.keyLength();
+    public static final int KEY_LENGTH = Ed25519.publicKeyLength();
     public static final int ADDRESS_LENGTH = 1 + KEY_LENGTH + CHECKSUM_LENGTH;
 
     @JsonProperty("publicKey")
@@ -37,11 +37,6 @@ public final class PublicKey25519Proposition
 
     @Override
     public byte[] pubKeyBytes() {
-        return Arrays.copyOf(_pubKeyBytes, KEY_LENGTH);
-    }
-
-    @Override
-    public byte[] bytes() {
         return Arrays.copyOf(_pubKeyBytes, KEY_LENGTH);
     }
 
@@ -106,10 +101,6 @@ public final class PublicKey25519Proposition
             throw new IllegalArgumentException("Wrong checksum");
         else
             return new PublicKey25519Proposition(Arrays.copyOfRange(bytesWithVersion, 1,bytesWithVersion.length));
-    }
-
-    public static PublicKey25519Proposition parseBytes(byte[] bytes) {
-        return new PublicKey25519Proposition(bytes);
     }
 
     public static int getLength() {

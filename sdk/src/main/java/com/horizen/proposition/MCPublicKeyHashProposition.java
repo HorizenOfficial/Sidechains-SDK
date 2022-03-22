@@ -9,18 +9,18 @@ import com.horizen.utils.BytesUtils;
 
 import java.util.Arrays;
 
-// Note: Horizen address (constructed by `getnewaddress` RPC command) contains public key hash in original LE endianness.
-// But public key hash constructed by `getnewaddress "" true` is in reversed BE endianness.
-// IMPORTANT: inside MCPublicKeyHashProposition we suppose to keep Horizen public key hash bytes in original LE endianness.
+// Note: Horizen taddress (constructed by `getnewaddress` RPC command) contains public key hash in original LE endianness.
+// Inside MCPublicKeyHashProposition we suppose to keep Horizen public key hash bytes only in original LE endianness
+// and reconstruct taddress for JSON view.
 
 @JsonView(Views.Default.class)
 public final class MCPublicKeyHashProposition implements Proposition {
 
     public static final int KEY_LENGTH = 20;
 
-    @JsonProperty("publicKey")
+    @JsonProperty("mainchainAddress")
     @JsonSerialize(using = JsonHorizenPublicKeyHashSerializer.class)
-    private byte[] pubKeyHashBytes;
+    final byte[] pubKeyHashBytes;
 
     public MCPublicKeyHashProposition(byte[] bytes)
     {
@@ -28,11 +28,6 @@ public final class MCPublicKeyHashProposition implements Proposition {
             throw new IllegalArgumentException(String.format("Incorrect pubKeyHash length, %d expected, %d found", KEY_LENGTH, bytes.length));
 
         this.pubKeyHashBytes = Arrays.copyOf(bytes, KEY_LENGTH);
-    }
-
-    @Override
-    public byte[] bytes() {
-        return Arrays.copyOf(this.pubKeyHashBytes, KEY_LENGTH);
     }
 
     @Override
@@ -59,10 +54,6 @@ public final class MCPublicKeyHashProposition implements Proposition {
     @Override
     public String toString() {
         return BytesUtils.toHexString(pubKeyHashBytes);
-    }
-
-    public static MCPublicKeyHashProposition parseBytes(byte[] bytes) {
-        return new MCPublicKeyHashProposition(bytes);
     }
 
     public static int getLength() {

@@ -1,7 +1,6 @@
 package com.horizen.customtypes;
 
 import com.horizen.proposition.PropositionSerializer;
-import scala.util.Try;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
@@ -23,11 +22,11 @@ public class CustomPublicKeyPropositionSerializer implements PropositionSerializ
 
     @Override
     public void serialize(CustomPublicKeyProposition proposition, Writer writer) {
-        writer.putBytes(proposition.bytes());
+        writer.putBytes(proposition.pubKeyBytes());
     }
 
     @Override
     public CustomPublicKeyProposition parse(Reader reader) {
-        return CustomPublicKeyProposition.parseBytes(reader.getBytes(reader.remaining()));
+        return new CustomPublicKeyProposition(reader.getBytes(CustomPublicKeyProposition.PUBLIC_KEY_LENGTH));
     }
 }

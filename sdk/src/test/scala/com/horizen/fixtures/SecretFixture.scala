@@ -52,8 +52,8 @@ trait SecretFixture {
   }
 
   def getCustomPrivateKey: CustomPrivateKey = {
-    val privateBytes = new Array[Byte](CustomPrivateKey.KEY_LENGTH)
-    val publicBytes = new Array[Byte](CustomPrivateKey.KEY_LENGTH)
+    val privateBytes = new Array[Byte](CustomPrivateKey.PRIVATE_KEY_LENGTH)
+    val publicBytes = new Array[Byte](CustomPrivateKey.PUBLIC_KEY_LENGTH)
 
     Random.nextBytes(privateBytes)
     Random.nextBytes(publicBytes)
@@ -62,8 +62,8 @@ trait SecretFixture {
   }
 
   def getCustomPrivateKeyList(count: Int): JList[CustomPrivateKey] = {
-    val privateBytes = new Array[Byte](CustomPrivateKey.KEY_LENGTH)
-    val publicBytes = new Array[Byte](CustomPrivateKey.KEY_LENGTH)
+    val privateBytes = new Array[Byte](CustomPrivateKey.PRIVATE_KEY_LENGTH)
+    val publicBytes = new Array[Byte](CustomPrivateKey.PUBLIC_KEY_LENGTH)
     val keysList: JList[CustomPrivateKey] = new JArrayList()
 
     for (i <- 1 to count) {
@@ -81,6 +81,13 @@ trait SecretFixture {
     Random.nextBytes(keyHashBytes)
 
     new MCPublicKeyHashProposition(keyHashBytes)
+  }
+
+  def getMcReturnAddress: Array[Byte] = {
+    val address = new Array[Byte](MCPublicKeyHashProposition.KEY_LENGTH)
+    Random.nextBytes(address)
+
+    address
   }
 
   def getMCPublicKeyHashPropositionList(count: Int): JList[MCPublicKeyHashProposition] = {

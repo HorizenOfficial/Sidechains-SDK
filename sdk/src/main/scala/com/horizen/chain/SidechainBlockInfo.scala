@@ -9,15 +9,15 @@ import scorex.core.consensus.ModifierSemanticValidity
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 import scorex.util.{ModifierId, bytesToId, idToBytes}
-
 import scala.collection.mutable.ArrayBuffer
+
 
 case class SidechainBlockInfo(height: Int,
                               score: Long,
                               parentId: ModifierId,
                               timestamp: Timestamp,
                               semanticValidity: ModifierSemanticValidity,
-                              mainchainHeaderHashes: Seq[MainchainHeaderHash],
+                              mainchainHeaderBaseInfo: Seq[MainchainHeaderBaseInfo],
                               mainchainReferenceDataHeaderHashes: Seq[MainchainHeaderHash],
                               withdrawalEpochInfo: WithdrawalEpochInfo,
                               vrfOutputOpt: Option[VrfOutput],
@@ -29,7 +29,7 @@ case class SidechainBlockInfo(height: Int,
 
   override lazy val serializer: ScorexSerializer[SidechainBlockInfo] = SidechainBlockInfoSerializer
 
-  override def bytes: Array[Byte] = SidechainBlockInfoSerializer.toBytes(this)
+  lazy val mainchainHeaderHashes: Seq[MainchainHeaderHash] = {mainchainHeaderBaseInfo.map(info => info.hash)}
 }
 
 object SidechainBlockInfo {
@@ -49,8 +49,8 @@ object SidechainBlockInfoSerializer extends ScorexSerializer[SidechainBlockInfo]
     w.putBytes(idToBytes(obj.parentId))
     w.putLong(obj.timestamp)
     w.put(obj.semanticValidity.code)
-    w.putInt(obj.mainchainHeaderHashes.size)
-    obj.mainchainHeaderHashes.foreach(id => w.putBytes(id.data))
+    w.putInt(obj.mainchainHeaderBaseInfo.size)
+    obj.mainchainHeaderBaseInfo.foreach(info => info.serializer.serialize(info, w))
     w.putInt(obj.mainchainReferenceDataHeaderHashes.size)
     obj.mainchainReferenceDataHeaderHashes.foreach(id => w.putBytes(id.data))
     WithdrawalEpochInfoSerializer.serialize(obj.withdrawalEpochInfo, w)
@@ -74,20 +74,30 @@ object SidechainBlockInfoSerializer extends ScorexSerializer[SidechainBlockInfo]
     references
   }
 
+  private def readMainchainHeadersBaseInfo(r: Reader): Seq[MainchainHeaderBaseInfo] = {
+    val references: ArrayBuffer[MainchainHeaderBaseInfo] = ArrayBuffer()
+    val length = r.getInt()
+
+    (0 until length).foreach(_ => {
+      references.append(MainchainHeaderBaseInfoSerializer.parse(r))
+    })
+
+    references
+  }
+
   override def parse(r: Reader): SidechainBlockInfo = {
     val height = r.getInt()
     val score = r.getLong()
     val parentId = bytesToId(r.getBytes(NodeViewModifier.ModifierIdSize))
     val timestamp = r.getLong()
     val semanticValidityCode = r.getByte()
-    val mainchainHeaderHashes = readMainchainHeadersHashes(r)
+    val mainchainHeaderBaseInfos = readMainchainHeadersBaseInfo(r)
     val mainchainReferenceDataHeaderHashes = readMainchainHeadersHashes(r)
     val withdrawalEpochInfo = WithdrawalEpochInfoSerializer.parse(r)
     val vrfOutputOpt = r.getOption(VrfOutputSerializer.getSerializer.parse(r))
-
     val lastBlockInPreviousConsensusEpoch = bytesToId(r.getBytes(NodeViewModifier.ModifierIdSize))
 
     SidechainBlockInfo(height, score, parentId, timestamp, ModifierSemanticValidity.restoreFromCode(semanticValidityCode),
-      mainchainHeaderHashes, mainchainReferenceDataHeaderHashes, withdrawalEpochInfo, vrfOutputOpt, lastBlockInPreviousConsensusEpoch)
+      mainchainHeaderBaseInfos, mainchainReferenceDataHeaderHashes, withdrawalEpochInfo, vrfOutputOpt, lastBlockInPreviousConsensusEpoch)
   }
 }

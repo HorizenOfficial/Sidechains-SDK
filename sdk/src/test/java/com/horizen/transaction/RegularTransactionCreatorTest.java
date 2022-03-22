@@ -1,10 +1,9 @@
 package com.horizen.transaction;
 
 import com.horizen.box.Box;
-import com.horizen.box.NoncedBox;
-import com.horizen.box.RegularBox;
-import com.horizen.box.data.NoncedBoxData;
-import com.horizen.box.data.RegularBoxData;
+import com.horizen.box.ZenBox;
+import com.horizen.box.data.BoxData;
+import com.horizen.box.data.ZenBoxData;
 import com.horizen.box.data.WithdrawalRequestBoxData;
 import com.horizen.fixtures.BoxFixtureClass;
 import com.horizen.fixtures.SecretFixtureClass;
@@ -40,7 +39,7 @@ class TransactionCreatorNodeWallet implements NodeWallet {
     }
 
     @Override
-    public Long allBoxesBalance() {
+    public Long allCoinsBoxesBalance() {
         long sum = 0;
         for(Box b: _boxesOrderedBytCreationTime){
             sum += b.value();
@@ -156,9 +155,9 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
         mcPublicKeyHashProposition = secretFixture.getMCPublicKeyHashProposition();
 
         List<Pair<Box, Long>> boxesWithCreationTime = new ArrayList<>();
-        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk1.publicImage(), 1, 30), 1000L));
-        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk2.publicImage(), 1, 40), 2000L));
-        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk3.publicImage(), 1, 50), 3000L));
+        boxesWithCreationTime.add(new Pair<>(getZenBox(pk1.publicImage(), 1, 30), 1000L));
+        boxesWithCreationTime.add(new Pair<>(getZenBox(pk2.publicImage(), 1, 40), 2000L));
+        boxesWithCreationTime.add(new Pair<>(getZenBox(pk3.publicImage(), 1, 50), 3000L));
 
         List<Secret> secrets = new ArrayList<>();
         secrets.add(pk1);
@@ -170,10 +169,10 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
 
     @Test
     public void RegularTransactionCreator_SuccessCreationTest() {
-        List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to = new ArrayList<>();
+        List<BoxData<? extends Proposition, ? extends Box<? extends Proposition>>> to = new ArrayList<>();
 
-        to.add(new RegularBoxData(pk4.publicImage(), 20L));
-        to.add(new RegularBoxData(pk5.publicImage(), 30L));
+        to.add(new ZenBoxData(pk4.publicImage(), 20L));
+        to.add(new ZenBoxData(pk5.publicImage(), 30L));
 
         to.add(new WithdrawalRequestBoxData(mcPublicKeyHashProposition, 10L));
         RegularTransaction transaction = RegularTransactionCreator.create(defaultWallet, to, pk6.publicImage(), 10, new ArrayList<byte[]>());
@@ -185,9 +184,9 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
     @Test
     public void RegularTransactionCreator_FeeTest() {
         List<Pair<Box, Long>> boxesWithCreationTime = new ArrayList<>();
-        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk1.publicImage(), 1, 10), 1000L));
-        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk2.publicImage(), 1, 20), 2000L));
-        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk3.publicImage(), 1, 30), 3000L));
+        boxesWithCreationTime.add(new Pair<>(getZenBox(pk1.publicImage(), 1, 10), 1000L));
+        boxesWithCreationTime.add(new Pair<>(getZenBox(pk2.publicImage(), 1, 20), 2000L));
+        boxesWithCreationTime.add(new Pair<>(getZenBox(pk3.publicImage(), 1, 30), 3000L));
 
         List<Secret> secrets = new ArrayList<>();
         secrets.add(pk1);
@@ -196,8 +195,8 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
 
         NodeWallet wallet = new TransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
 
-        List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to = new ArrayList<>();
-        to.add(new RegularBoxData(pk4.publicImage(), 10L));
+        List<BoxData<? extends Proposition, ? extends Box<? extends Proposition>>> to = new ArrayList<>();
+        to.add(new ZenBoxData(pk4.publicImage(), 10L));
         to.add(new WithdrawalRequestBoxData(mcPublicKeyHashProposition, 10L));
 
         // Note: total 'from' value is 60, total 'to' value is 10
@@ -241,9 +240,9 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
     @Test
     public void RegularTransactionCreator_ChangeTest() {
         List<Pair<Box, Long>> boxesWithCreationTime = new ArrayList<>();
-        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk1.publicImage(), 1, 10), 1000L));
-        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk2.publicImage(), 1, 20), 2000L));
-        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk3.publicImage(), 1, 30), 3000L));
+        boxesWithCreationTime.add(new Pair<>(getZenBox(pk1.publicImage(), 1, 10), 1000L));
+        boxesWithCreationTime.add(new Pair<>(getZenBox(pk2.publicImage(), 1, 20), 2000L));
+        boxesWithCreationTime.add(new Pair<>(getZenBox(pk3.publicImage(), 1, 30), 3000L));
 
         List<Secret> secrets = new ArrayList<>();
         secrets.add(pk1);
@@ -252,8 +251,8 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
 
         NodeWallet wallet = new TransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
 
-        List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to = new ArrayList<>();
-        to.add(new RegularBoxData(pk4.publicImage(), 10L));
+        List<BoxData<? extends Proposition, ? extends Box<? extends Proposition>>> to = new ArrayList<>();
+        to.add(new ZenBoxData(pk4.publicImage(), 10L));
         to.add(new WithdrawalRequestBoxData(mcPublicKeyHashProposition, 10L));
 
         // Note: total 'from' value is 60, total 'to' value is 10
@@ -265,8 +264,8 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
 
         RegularTransaction transaction = RegularTransactionCreator.create(wallet, to, changeAddress, fee, new ArrayList<byte[]>());
 
-        List<NoncedBox<Proposition>> boxes = transaction.newBoxes();
-        for(NoncedBox box : boxes)
+        List<Box<Proposition>> boxes = transaction.newBoxes();
+        for(Box box : boxes)
             if(box.proposition().equals(changeAddress))
                 occurrenceExpected = true;
 
@@ -279,7 +278,7 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
         transaction = RegularTransactionCreator.create(wallet, to, changeAddress, fee, new ArrayList<byte[]>());
 
         boxes = transaction.newBoxes();
-        for(NoncedBox box : boxes)
+        for(Box box : boxes)
             if(box.proposition().equals(changeAddress)) {
                 occurrenceExpected = true;
                 assertEquals("Test2: Box with change has different value", 10, box.value());
@@ -291,9 +290,9 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
     @Test
     public void RegularTransactionCreator_OutputsTest() {
         List<Pair<Box, Long>> boxesWithCreationTime = new ArrayList<>();
-        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk1.publicImage(), 1, 10), 1000L));
-        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk2.publicImage(), 1, 20), 2000L));
-        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk3.publicImage(), 1, 30), 3000L));
+        boxesWithCreationTime.add(new Pair<>(getZenBox(pk1.publicImage(), 1, 10), 1000L));
+        boxesWithCreationTime.add(new Pair<>(getZenBox(pk2.publicImage(), 1, 20), 2000L));
+        boxesWithCreationTime.add(new Pair<>(getZenBox(pk3.publicImage(), 1, 30), 3000L));
 
         List<Secret> secrets = new ArrayList<>();
         secrets.add(pk1);
@@ -311,9 +310,9 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
 
 
         // Test 2: NOT empty 'to' list
-        List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to = new ArrayList<>();
-        to.add(new RegularBoxData(pk4.publicImage(), 10L));
-        to.add(new RegularBoxData(pk5.publicImage(), 20L));
+        List<BoxData<? extends Proposition, ? extends Box<? extends Proposition>>> to = new ArrayList<>();
+        to.add(new ZenBoxData(pk4.publicImage(), 10L));
+        to.add(new ZenBoxData(pk5.publicImage(), 20L));
         fee = 30L;
         // total 'from' value is 60, total 'to' value is 30
         transaction = RegularTransactionCreator.create(wallet, to, changeAddress, fee, new ArrayList<>());
@@ -323,7 +322,7 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
     @Test
     public void RegularTransactionCreator_BoxIdsToExcludeTest() {
         List<Pair<Box, Long>> boxesWithCreationTime = new ArrayList<>();
-        RegularBox boxToExclude = getRegularBox(pk1.publicImage(), 1, 100);
+        ZenBox boxToExclude = getZenBox(pk1.publicImage(), 1, 100);
         boxesWithCreationTime.add(new Pair<>(boxToExclude, 1000L));
 
         List<Secret> secrets = new ArrayList<>();
@@ -331,8 +330,8 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
 
         NodeWallet wallet = new TransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
 
-        List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to = new ArrayList<>();
-        to.add(new RegularBoxData(pk2.publicImage(), 50L));
+        List<BoxData<? extends Proposition, ? extends Box<? extends Proposition>>> to = new ArrayList<>();
+        to.add(new ZenBoxData(pk2.publicImage(), 50L));
 
         // Note: total 'from' value is 100, total 'to' value is 10
         PublicKey25519Proposition changeAddress = pk5.publicImage();
@@ -355,10 +354,10 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
     @Test
     public void RegularTransactionCreator_InputsOrderTest() {
         List<Pair<Box, Long>> boxesWithCreationTime = new ArrayList<>();
-        RegularBox expectedBox = getRegularBox(pk3.publicImage(), 1, 10);
-        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk1.publicImage(), 1, 10), 3L));
+        ZenBox expectedBox = getZenBox(pk3.publicImage(), 1, 10);
+        boxesWithCreationTime.add(new Pair<>(getZenBox(pk1.publicImage(), 1, 10), 3L));
         boxesWithCreationTime.add(new Pair<>(expectedBox, 1L));
-        boxesWithCreationTime.add(new Pair<>(getRegularBox(pk2.publicImage(), 1, 10), 2L));
+        boxesWithCreationTime.add(new Pair<>(getZenBox(pk2.publicImage(), 1, 10), 2L));
 
         List<Secret> secrets = new ArrayList<>();
         secrets.add(pk1);
@@ -367,8 +366,8 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
 
         NodeWallet wallet = new TransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
 
-        List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to = new ArrayList<>();
-        to.add(new RegularBoxData(pk4.publicImage(), 10L));
+        List<BoxData<? extends Proposition, ? extends Box<? extends Proposition>>> to = new ArrayList<>();
+        to.add(new ZenBoxData(pk4.publicImage(), 10L));
         long fee = 0L;
 
         RegularTransaction transaction = RegularTransactionCreator.create(wallet, to, pk5.publicImage(), fee, new ArrayList<>());
@@ -378,9 +377,9 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
 
     @Test
     public void RegularTransactionCreator_NullArgumentTest() {
-        List<NoncedBoxData<? extends Proposition, ? extends NoncedBox<? extends Proposition>>> to = new ArrayList<>();
-        to.add(new RegularBoxData(pk4.publicImage(), 20L));
-        to.add(new RegularBoxData(pk5.publicImage(), 30L));
+        List<BoxData<? extends Proposition, ? extends Box<? extends Proposition>>> to = new ArrayList<>();
+        to.add(new ZenBoxData(pk4.publicImage(), 20L));
+        to.add(new ZenBoxData(pk5.publicImage(), 30L));
 
 
         // Test 1

@@ -2,11 +2,11 @@ package com.horizen.integration.storage
 
 import com.horizen.SidechainTypes
 import com.horizen.box.ForgerBox
-import com.horizen.fixtures.{BoxFixture, IODBStoreFixture}
-import com.horizen.storage.{IODBStoreAdapter, SidechainStateForgerBoxStorage}
+import com.horizen.fixtures.{BoxFixture, StoreFixture}
+import com.horizen.storage.SidechainStateForgerBoxStorage
 import com.horizen.utils.ByteArrayWrapper
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 import org.junit.Assert._
 
 import scala.collection.JavaConverters._
@@ -14,12 +14,12 @@ import scala.collection.JavaConverters._
 class SidechainStateForgerBoxStorageTest
   extends JUnitSuite
     with BoxFixture
-    with IODBStoreFixture
+    with StoreFixture
     with SidechainTypes {
 
   @Test
   def mainFlowTest(): Unit = {
-    val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(new IODBStoreAdapter(getStore()))
+    val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(getStorage())
 
     // Verify that forger boxes seq is empty
     assertTrue("ForgerBox seq expected to be empty.", sidechainStateForgerBoxStorage.getAllForgerBoxes.isEmpty)
@@ -103,7 +103,7 @@ class SidechainStateForgerBoxStorageTest
 
   @Test
   def testExceptions(): Unit = {
-    val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(new IODBStoreAdapter(getStore()))
+    val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(getStorage())
 
     val forgerBoxesSeq: Seq[ForgerBox] = getForgerBoxList(5).asScala
     val version1 = getVersion

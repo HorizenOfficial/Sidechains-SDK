@@ -6,7 +6,6 @@ import java.util.{HashMap => JHashMap}
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import akka.stream.ActorMaterializer
-import com.google.inject.{Guice, Injector}
 import com.horizen.api.http.{SidechainApiErrorHandler, SidechainTransactionActorRef, SidechainTransactionApiRoute}
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
@@ -17,7 +16,6 @@ import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams, TestNetP
 import com.horizen.secret.{PrivateKey25519Serializer, SecretSerializer}
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
-import com.horizen.transaction.SidechainCoreTransactionFactory
 import com.horizen.utils.BytesUtils
 import com.horizen.wallet.ApplicationWallet
 import com.horizen.{SidechainNodeViewHolderRef, SidechainSettings, SidechainSettingsReader, SidechainTypes}
@@ -27,7 +25,7 @@ import scorex.core.utils.NetworkTimeProvider
 import scala.concurrent.ExecutionContext
 
 trait SidechainNodeViewHolderFixture
-  extends IODBStoreFixture
+  extends StoreFixture
     with CompanionsFixture
 {
 
@@ -58,59 +56,51 @@ trait SidechainNodeViewHolderFixture
 
   val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
     case "regtest" => RegTestParams(
-      sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
+      sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
       sidechainGenesisBlockId = genesisBlock.id,
       genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
       parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
+      initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash)
     )
     case "testnet" => TestNetParams(
-      sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
+      sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
       sidechainGenesisBlockId = genesisBlock.id,
       genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
       parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
+      initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash)
     )
     case "mainnet" => MainNetParams(
-      sidechainId = BytesUtils.fromHexString(sidechainSettings.genesisData.scId),
+      sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
       sidechainGenesisBlockId = genesisBlock.id,
       genesisMainchainBlockHash = genesisBlock.mainchainHeaders.head.hash,
       parentHashOfGenesisMainchainBlock = genesisBlock.mainchainHeaders.head.hashPrevBlock,
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength
+      withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
+      initialCumulativeCommTreeHash = BytesUtils.fromHexString(sidechainSettings.genesisData.initialCumulativeCommTreeHash)
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
   }
 
-  val sidechainSecretStorage = new SidechainSecretStorage(
-    getStorage(),
-    sidechainSecretsCompanion)
-  val sidechainWalletBoxStorage = new SidechainWalletBoxStorage(
-    getStorage(),
-    sidechainBoxesCompanion)
-  val sidechainStateStorage = new SidechainStateStorage(
-    getStorage(),
-    sidechainBoxesCompanion)
-  val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(
-    getStorage())
-  val sidechainHistoryStorage = new SidechainHistoryStorage(
-    getStorage(),
-    sidechainTransactionsCompanion, params)
-  val consensusDataStorage = new ConsensusDataStorage(
-    getStorage())
-  val sidechainWalletTransactionStorage = new SidechainWalletTransactionStorage(
-    getStorage(),
-    sidechainTransactionsCompanion)
-  val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(
-    getStorage())
+  val sidechainSecretStorage = new SidechainSecretStorage(getStorage(), sidechainSecretsCompanion)
+  val sidechainWalletBoxStorage = new SidechainWalletBoxStorage(getStorage(), sidechainBoxesCompanion)
+  val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion)
+  val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(getStorage())
+  val sidechainStateUtxoMerkleTreeStorage = new SidechainStateUtxoMerkleTreeStorage(getStorage())
+  val sidechainHistoryStorage = new SidechainHistoryStorage(getStorage(), sidechainTransactionsCompanion, params)
+  val consensusDataStorage = new ConsensusDataStorage(getStorage())
+  val sidechainWalletTransactionStorage = new SidechainWalletTransactionStorage(getStorage(), sidechainTransactionsCompanion)
+  val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(getStorage())
+  val cswDataStorage = new SidechainWalletCswDataStorage(getStorage())
 
   // Append genesis secrets if we start the node first time
   if(sidechainSecretStorage.isEmpty) {
@@ -124,10 +114,12 @@ trait SidechainNodeViewHolderFixture
     consensusDataStorage,
     sidechainStateStorage,
     sidechainStateForgerBoxStorage,
+    sidechainStateUtxoMerkleTreeStorage,
     sidechainWalletBoxStorage,
     sidechainSecretStorage,
     sidechainWalletTransactionStorage,
     forgingBoxesMerklePathStorage,
+    cswDataStorage,
     params,
     timeProvider,
     defaultApplicationWallet,
@@ -141,10 +133,8 @@ trait SidechainNodeViewHolderFixture
   }
 
   def getSidechainTransactionApiRoute : SidechainTransactionApiRoute = {
-    val injector: Injector = Guice.createInjector(new DefaultInjectorStub())
-    val sidechainCoreTransactionFactory = injector.getInstance(classOf[SidechainCoreTransactionFactory])
-
-    SidechainTransactionApiRoute(sidechainSettings.scorexSettings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, sidechainCoreTransactionFactory, params)
+    SidechainTransactionApiRoute(sidechainSettings.scorexSettings.restApi, nodeViewHolderRef,
+      sidechainTransactionActorRef, sidechainTransactionsCompanion, params)
   }
 
 }

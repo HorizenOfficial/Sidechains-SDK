@@ -45,7 +45,7 @@ class StoragePerformanceRunner(config: StoragePerformanceTestConfig, debug: Bool
       case (size, dataGenerator) =>
         val allMeasures = mutable.Buffer[TimeMeasure]()
         val storagePath = System.getProperty("java.io.tmpdir") + "StorageTest_" + System.currentTimeMillis()
-        val storage: Storage = new VersionedLevelDbStorageAdapter(storagePath, 100000)
+        val storage: Storage = new VersionedLevelDbStorageAdapter(new java.io.File(storagePath))
         var storageDescription: String = ""
 
         try {
@@ -149,7 +149,7 @@ class StoragePerformanceRunner(config: StoragePerformanceTestConfig, debug: Bool
     require(receivedData.isPresent)
     val totalSize = receivedData.get().length
 
-    TimeMeasure(StorageReadOnce, totalTime, toRead.size, totalSize, totalSize, totalSize, storageData.availableKeysSize)
+    TimeMeasure(StorageReadOnce, totalTime, toRead.size().longValue(), totalSize, totalSize, totalSize, storageData.availableKeysSize)
   }
 
   private def readFromStorageBatching(batchingSizeInBytes: Int)(storageData: StorageData): TimeMeasure = {

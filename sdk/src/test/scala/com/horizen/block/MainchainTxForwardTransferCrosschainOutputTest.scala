@@ -6,7 +6,7 @@ import com.horizen.secret.PrivateKey25519Creator
 import com.horizen.utils.{BytesUtils, Utils}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
-import org.scalatest.junit.JUnitSuite
+import org.scalatestplus.junit.JUnitSuite
 
 import scala.util.Random
 import scala.util.Try
@@ -17,11 +17,13 @@ class MainchainTxForwardTransferCrosschainOutputTest extends JUnitSuite with Mai
   def creation(): Unit = {
     val amount: Long = 100L
     val proposition: PublicKey25519Proposition = PrivateKey25519Creator.getInstance().generateSecret("test1".getBytes()).publicImage()
-    var sidechainId: Array[Byte] = new Array[Byte](32)
+    val sidechainId: Array[Byte] = new Array[Byte](32)
     Random.nextBytes(sidechainId)
+    val mcReturnAddress: Array[Byte] = new Array[Byte](20)
+    Random.nextBytes(mcReturnAddress)
 
-    val bytes: Array[Byte] = generateMainchainTxForwardTransferCrosschainOutputBytes(amount, proposition, sidechainId)
-    val hash: String = BytesUtils.toHexString(BytesUtils.reverseBytes(Utils.doubleSHA256Hash(bytes)))
+    val bytes: Array[Byte] = generateMainchainTxForwardTransferCrosschainOutputBytes(amount, proposition, sidechainId, mcReturnAddress)
+    val hash: String = BytesUtils.toHexString(Utils.doubleSHA256Hash(bytes))
 
 
     // Test 1: successful creation

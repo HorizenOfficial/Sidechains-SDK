@@ -9,10 +9,12 @@ public final class Ed25519 {
     private Ed25519() {
     }
 
-    public static int keyLength() {
+    public static int privateKeyLength() {
         return org.bouncycastle.math.ec.rfc8032.Ed25519.SECRET_KEY_SIZE;
     }
-
+    public static int publicKeyLength() {
+        return org.bouncycastle.math.ec.rfc8032.Ed25519.PUBLIC_KEY_SIZE;
+    }
     public static int signatureLength() {
         return org.bouncycastle.math.ec.rfc8032.Ed25519.SIGNATURE_SIZE;
     }

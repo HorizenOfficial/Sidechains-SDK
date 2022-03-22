@@ -10,10 +10,18 @@ public interface SidechainRelatedMainchainOutput<B extends Box<? extends Proposi
 {
     byte[] hash();
 
+    byte[] transactionHash();
+
+    int transactionIndex();
+
+    byte[] sidechainId();
+
     B getBox();
 
     @Override
-    byte[] bytes();
+    default byte[] bytes() {
+        return serializer().toBytes(this);
+    }
 
     @Override
     SidechainRelatedMainchainOutputSerializer serializer();

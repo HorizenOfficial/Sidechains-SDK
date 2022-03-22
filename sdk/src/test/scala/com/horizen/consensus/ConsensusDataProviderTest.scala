@@ -8,7 +8,7 @@ import com.horizen.params.{NetworkParams, NetworkParamsUtils, TestNetParams}
 import com.horizen.proof.VrfProof
 import com.horizen.storage.{InMemoryStorageAdapter, SidechainBlockInfoProvider}
 import com.horizen.utils
-import com.horizen.utils.{BytesUtils, Utils}
+import com.horizen.utils.{BytesUtils, TimeToEpochUtils, Utils}
 import com.horizen.vrf.VrfOutput
 import org.junit.Assert._
 import org.junit.Test
@@ -24,15 +24,17 @@ import scala.collection.mutable.ListBuffer
 class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
                                   val params: NetworkParams)
   extends ConsensusDataProvider
-  with TimeToEpochSlotConverter
   with NetworkParamsUtils
   with ScorexLogging {
 
   require(slotsPresentation.forall(_.size == params.consensusSlotsInEpoch))
   private val dummyWithdrawalEpochInfo = utils.WithdrawalEpochInfo(0, 0)
 
-  private val genesisVrfProof = new VrfProof("genesis".getBytes())
-  private val genesisVrfOutput = new VrfOutput("genesisHash".getBytes())
+  val testVrfProofData: String = "bf4d2892d7562e973ba8a60ef5f9262c088811cc3180c3389b1cef3a66dcfb390d9bb91cebab11bcae871d6a6bd203292264d1002ac70b539f7025a9a813637e1866b2d5c289f28646385549bac7681ef659f2d1d8ca1a21037b036c7925b692e8"
+  val testVrfOutputData: String = "c8fbb101cd3bd0fc7dc22133778529ce49ed94678a2c6532e3d6013efa91933f"
+
+  val genesisVrfProof = new VrfProof(BytesUtils.fromHexString(testVrfProofData))
+  val genesisVrfOutput = new VrfOutput(BytesUtils.fromHexString(testVrfOutputData))
 
   private val vrfData = slotsPresentationToVrfData(slotsPresentation)
   val blockIdAndInfosPerEpoch: Seq[Seq[(ModifierId, SidechainBlockInfo)]] =
@@ -63,7 +65,7 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
 
     vrfData.zipWithIndex.foldLeft(accumulator) { case (acc, (processed, index)) =>
       val previousId: ModifierId = acc.last.last._1
-      val nextTimeStamp = getTimeStampForEpochAndSlot(intToConsensusEpochNumber(index + 2), intToConsensusSlotNumber(1))
+      val nextTimeStamp = TimeToEpochUtils.getTimeStampForEpochAndSlot(params, intToConsensusEpochNumber(index + 2), intToConsensusSlotNumber(1))
       val newData =
         generateBlockIdsAndInfosIter(previousId, params.consensusSecondsInSlot, nextTimeStamp, previousId, ListBuffer[(ModifierId, SidechainBlockInfo)](), processed)
       acc.append(newData)
@@ -102,7 +104,8 @@ class TestedConsensusDataProvider(slotsPresentation: List[List[Int]],
     slotsRepresentations.zipWithIndex.map{case (slotsRepresentationsForEpoch, epochIndex) =>
       slotsRepresentationsForEpoch.zipWithIndex.map{
         case (1, slotIndex) =>
-          Some(new VrfProof(s"${prefix}proof${epochIndex}${slotIndex}".getBytes), new VrfOutput(s"${prefix}vrfOutput${epochIndex}${slotIndex}".getBytes))
+          Some(new VrfProof(BytesUtils.fromHexString(testVrfProofData)),
+            new VrfOutput(BytesUtils.fromHexString(testVrfOutputData)))
         case (0, _) =>
           None
         case _ => throw new IllegalArgumentException

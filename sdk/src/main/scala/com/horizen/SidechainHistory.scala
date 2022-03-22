@@ -1,9 +1,8 @@
 package com.horizen
 
 import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
-
 import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlock}
-import com.horizen.chain.{MainchainBlockReferenceDataInfo, MainchainHeaderHash, MainchainHeaderInfo, SidechainBlockInfo}
+import com.horizen.chain.{FeePaymentsInfo, MainchainBlockReferenceDataInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
 import com.horizen.consensus._
 import com.horizen.node.NodeHistory
 import com.horizen.node.util.MainchainBlockReferenceInfo
@@ -32,7 +31,6 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       SidechainSyncInfo,
       SidechainHistory]
   with NetworkParamsUtils
-  with TimeToEpochSlotConverter
   with ConsensusDataProvider
   with scorex.core.utils.ScorexEncoding
   with NodeHistory
@@ -129,12 +127,15 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
 
   def blockToBlockInfo(block: SidechainBlock): Option[SidechainBlockInfo] = storage.blockInfoOptionById(block.parentId).map(calculateBlockInfo(block, _))
 
-
   // Calculate SidechainBlock info based on passed block and parent info.
   private def calculateBlockInfo(block: SidechainBlock, parentBlockInfo: SidechainBlockInfo): SidechainBlockInfo = {
     val lastBlockInPreviousConsensusEpoch = getLastBlockInPreviousConsensusEpoch(block.timestamp, block.parentId)
     val nonceConsensusEpochInfo = getOrCalculateNonceConsensusEpochInfo(block.header.timestamp, block.header.parentId)
     val vrfOutputOpt = getVrfOutput(block.header, nonceConsensusEpochInfo)
+    val blockMainchainHeaderBaseInfoSeq: Seq[MainchainHeaderBaseInfo] = if(block.mainchainHeaders.isEmpty) Seq() else {
+      val prevBaseInfo:MainchainHeaderBaseInfo = storage.getLastMainchainHeaderBaseInfoInclusion(block.parentId)
+      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoSeqFromBlock(block, prevBaseInfo.cumulativeCommTreeHash)
+    }
 
     SidechainBlockInfo(
       parentBlockInfo.height + 1,
@@ -142,7 +143,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       block.parentId,
       block.timestamp,
       ModifierSemanticValidity.Unknown,
-      SidechainBlockInfo.mainchainHeaderHashesFromBlock(block),
+      blockMainchainHeaderBaseInfoSeq,
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
       WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params),
       vrfOutputOpt, //technically block is not correct from consensus point of view if vrfOutput is None
@@ -249,10 +250,14 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     if (!contains(block.parentId))
       Failure(new RecoverableModifierError("Parent block is not in history yet"))
     else
-      Success()
+      Success(Unit)
   }
 
   override def modifierById(blockId: ModifierId): Option[SidechainBlock] = storage.blockById(blockId)
+
+  def blockIdByHeight(height: Int): Option[String] = {
+    storage.activeChainBlockId(height)
+  }
 
   override def isSemanticallyValid(blockId: ModifierId): ModifierSemanticValidity = {
     storage.semanticValidity(blockId)
@@ -394,8 +399,24 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     }
   }
 
+  override def getBlockHeightById(id: String): JOptional[Integer] = {
+    storage.heightOf(ModifierId(id)) match {
+      case Some(height) => JOptional.of[Integer](height)
+      case None => JOptional.empty()
+    }
+  }
+
+
   override def getCurrentHeight: Int = {
     height
+  }
+
+  override def getFeePaymentsInfo(blockId: String): JOptional[FeePaymentsInfo] = {
+    feePaymentsInfo(ModifierId @@ blockId).asJava
+  }
+
+  override def getBlockHeight(blockId: String): JOptional[Integer] = {
+    storage.blockInfoOptionById(ModifierId(blockId)).map(info => Integer.valueOf(info.height)).asJava
   }
 
   override def searchTransactionInsideSidechainBlock(transactionId: String, blockId: String): JOptional[SidechainTypes#SCBT] = {
@@ -435,6 +456,15 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     transaction
   }
 
+  def updateFeePaymentsInfo(blockId: ModifierId, feePaymentsInfo: FeePaymentsInfo): SidechainHistory = {
+    val newStorage = storage.updateFeePaymentsInfo(blockId, feePaymentsInfo).get
+    new SidechainHistory(newStorage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
+  }
+
+  def feePaymentsInfo(blockId: ModifierId): Option[FeePaymentsInfo] = {
+    storage.getFeePaymentsInfo(blockId)
+  }
+
   /*
     All the methods in SidechainHistory and NodeHistory, that work with MainchainBlockReferences,
     MainchainHeaders, MainchainBlockReferenceData itself or any information about them,
@@ -463,11 +493,15 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     storage.getMainchainHeaderByHash(mainchainHeaderHash).asJava
   }
 
+  override def getMainchainHeaderInfoByHash(mainchainHeaderHash: Array[Byte]): JOptional[MainchainHeaderInfo] = {
+      mainchainHeaderInfoByHash(mainchainHeaderHash).asJava
+  }
+
   def getBestMainchainHeaderInfo: Option[MainchainHeaderInfo] = storage.getBestMainchainHeaderInfo
 
   def getMainchainHeaderInfoByHeight(height: Int): Option[MainchainHeaderInfo] = storage.getMainchainHeaderInfoByHeight(height)
 
-  def getMainchainHeaderInfoByHash(mainchainHeaderHash: Array[Byte]): Option[MainchainHeaderInfo] = storage.getMainchainHeaderInfoByHash(mainchainHeaderHash)
+  def mainchainHeaderInfoByHash(mainchainHeaderHash: Array[Byte]): Option[MainchainHeaderInfo] = storage.getMainchainHeaderInfoByHash(mainchainHeaderHash)
 
   def getBestMainchainBlockReferenceDataInfo: Option[MainchainBlockReferenceDataInfo] = storage.getBestMainchainBlockReferenceDataInfo
 
@@ -557,9 +591,10 @@ object SidechainHistory
       block.parentId,
       block.timestamp,
       ModifierSemanticValidity.Unknown,
-      SidechainBlockInfo.mainchainHeaderHashesFromBlock(block),
+      // First MC header Cumulative CommTree hash is provided by genesis info
+      Seq(MainchainHeaderBaseInfo(byteArrayToMainchainHeaderHash(block.mainchainHeaders.head.hash), params.initialCumulativeCommTreeHash)),
       SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
-      WithdrawalEpochInfo(1, block.mainchainBlockReferencesData.size), // First Withdrawal epoch value. Note: maybe put to params?
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, WithdrawalEpochInfo(0,0), params),
       None,
       block.id,
     )

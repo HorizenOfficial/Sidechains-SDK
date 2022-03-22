@@ -6,6 +6,9 @@ import com.horizen.transaction.BoxTransaction
 
 trait TransactionSubmitProvider {
 
-  def submitTransaction(tx: BoxTransaction[Proposition, Box[Proposition]],
-                        callback:(Boolean, Option[Throwable]) => Unit) : Unit
+  @throws(classOf[IllegalArgumentException])
+  def submitTransaction(tx: BoxTransaction[Proposition, Box[Proposition]]): Unit
+
+  def asyncSubmitTransaction(tx: BoxTransaction[Proposition, Box[Proposition]],
+                        callback:(Boolean, Option[Throwable]) => Unit): Unit
 }

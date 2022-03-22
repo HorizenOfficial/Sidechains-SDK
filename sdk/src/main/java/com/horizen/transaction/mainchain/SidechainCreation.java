@@ -3,19 +3,17 @@ package com.horizen.transaction.mainchain;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.block.MainchainTxSidechainCreationCrosschainOutput;
-import com.horizen.block.MainchainTxSidechainCreationCrosschainOutputData;
 import com.horizen.box.ForgerBox;
 import com.horizen.box.data.ForgerBoxData;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Utils;
 import com.horizen.proposition.VrfPublicKey;
+import scala.compat.java8.OptionConverters;
 import scorex.crypto.hash.Blake2b256;
-
-import java.util.Arrays;
+import java.util.Optional;
 
 public final class SidechainCreation implements SidechainRelatedMainchainOutput<ForgerBox> {
-
     private MainchainTxSidechainCreationCrosschainOutput output;
     private byte[] containingTxHash;
     private int index;
@@ -28,17 +26,28 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
     @Override
     public byte[] hash() {
         return BytesUtils.reverseBytes(Utils.doubleSHA256Hash(Bytes.concat(
-                BytesUtils.reverseBytes(output.hash()),
-                BytesUtils.reverseBytes(containingTxHash),
+                output.hash(),
+                containingTxHash,
                 BytesUtils.reverseBytes(Ints.toByteArray(index))
         )));
     }
 
     @Override
+    public byte[] transactionHash() {
+        return containingTxHash;
+    }
+
+    @Override
+    public byte[] sidechainId() {
+        return output.sidechainId();
+    }
+
+    @Override
     public ForgerBox getBox() {
-        PublicKey25519Proposition proposition = new PublicKey25519Proposition(output.address());
+        // Note: SC output address is stored in original MC LE form, but we in SC we expect BE raw data.
+        PublicKey25519Proposition proposition = new PublicKey25519Proposition(BytesUtils.reverseBytes(output.address()));
         long value = output.amount();
-        VrfPublicKey vrfPublicKey = new VrfPublicKey(output.customData());
+        VrfPublicKey vrfPublicKey = new VrfPublicKey(output.customCreationData());
 
         ForgerBoxData forgerBoxData = new ForgerBoxData(proposition, value, proposition, vrfPublicKey);
 
@@ -49,39 +58,16 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
     }
 
     @Override
-    public byte[] bytes() {
-        return Bytes.concat(
-                Ints.toByteArray(output.size()),
-                output.sidechainCreationOutputBytes(),
-                containingTxHash,
-                Ints.toByteArray(index)
-        );
+    public int transactionIndex() {
+        return index;
     }
 
-    public byte[] getGenSysConstant() {
-        return output.constant();
+    public MainchainTxSidechainCreationCrosschainOutput getScCrOutput() {
+        return output;
     }
 
-    public static SidechainCreation parseBytes(byte[] bytes) {
-
-        int offset = 0;
-
-        int sidechainCreationSize = BytesUtils.getInt(bytes, offset);
-        offset += 4;
-
-        if(bytes.length < 40 + sidechainCreationSize)
-            throw new IllegalArgumentException("Input data corrupted.");
-
-        MainchainTxSidechainCreationCrosschainOutputData output = MainchainTxSidechainCreationCrosschainOutputData.create(bytes, offset).get();
-        offset += sidechainCreationSize;
-
-        byte[] txHash = Arrays.copyOfRange(bytes, offset, offset + 32);
-        offset += 32;
-
-        int index = BytesUtils.getInt(bytes, offset);
-
-        byte[] sidechainId = MainchainTxSidechainCreationCrosschainOutput.calculateSidechainId(txHash, index);
-        return new SidechainCreation(new MainchainTxSidechainCreationCrosschainOutput(sidechainId, output), txHash, index);
+    public Optional<byte[]> getGenSysConstantOpt() {
+        return OptionConverters.toJava(output.constantOpt());
     }
 
     @Override

@@ -1,5 +1,7 @@
 package com.horizen.box;
 
+import com.horizen.box.data.ForgerBoxData;
+import com.horizen.box.data.ForgerBoxDataSerializer;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
@@ -21,11 +23,15 @@ public final class ForgerBoxSerializer implements BoxSerializer<ForgerBox> {
 
     @Override
     public void serialize(ForgerBox box, Writer writer) {
-        writer.putBytes(box.bytes());
+        writer.putLong(box.nonce);
+        box.boxData.serializer().serialize(box.boxData, writer);
     }
 
     @Override
     public ForgerBox parse(Reader reader) {
-        return ForgerBox.parseBytes(reader.getBytes(reader.remaining()));
+        Long nonce = reader.getLong();
+        ForgerBoxData boxData = ForgerBoxDataSerializer.getSerializer().parse(reader);
+
+        return new ForgerBox(boxData, nonce);
     }
 }

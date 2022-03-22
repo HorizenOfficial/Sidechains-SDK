@@ -10,8 +10,8 @@ import com.horizen.fixtures.SidechainBlockInfoFixture
 import com.horizen.validation.{BlockInFutureException, InconsistentDataException, InvalidBlockException, InvalidSidechainBlockHeaderException}
 import org.junit.{After, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito.MockitoSugar
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SyntacticallyFailedModification
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
@@ -22,6 +22,7 @@ import scorex.core.network.NetworkController.ReceivableMessages.{PenalizePeer, R
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Promise}
+import scala.language.postfixOps
 
 class SidechainNodeViewSynchronizerTest extends JUnitSuite
   with MockitoSugar
@@ -45,7 +46,7 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
       val receivedId: ModifierId = answer.getArgument(0)
       assertEquals("Different block id expected.", block.id, receivedId)
       setUnknownExecuted = true
-      promise.success()
+      promise.success(Unit)
     })
 
     nodeViewSynchronizerRef ! SyntacticallyFailedModification(block, blockInFutureException)

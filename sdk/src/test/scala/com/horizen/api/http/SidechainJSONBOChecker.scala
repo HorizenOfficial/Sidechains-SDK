@@ -2,7 +2,7 @@ package com.horizen.api.http
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlock}
-import com.horizen.box.{Box, BoxUnlocker, NoncedBox}
+import com.horizen.box.{Box, BoxUnlocker}
 import com.horizen.transaction.{BoxTransaction, MC2SCAggregatedTransaction}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.junit.Assert._
@@ -10,6 +10,7 @@ import scorex.util.ModifierId
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
+import scala.language.existentials
 
 // TODO: This checker is not sustainable
 class SidechainJSONBOChecker {
@@ -18,7 +19,6 @@ class SidechainJSONBOChecker {
     assertTrue(tNode.isObject)
     assertTrue(tNode.elements().asScala.length >= 6)
     assertTrue(tNode.get("fee").isNumber)
-    assertTrue(tNode.get("timestamp").isNumber)
     assertTrue(tNode.get("id").isTextual)
     assertTrue(tNode.get("modifierTypeId").isNumber)
     assertTrue(tNode.get("unlockers").isArray)
@@ -28,15 +28,16 @@ class SidechainJSONBOChecker {
     unlockersJsonNode.foreach(node => {
       assertTrue(node.get("closedBoxId").isTextual)
       assertTrue(node.get("boxKey").isObject)
-      assertEquals(2, node.get("boxKey").elements().asScala.length)
+      assertEquals(1, node.get("boxKey").elements().asScala.length)
       val sign = node.get("boxKey")
-      assertEquals(2, sign.elements().asScala.length)
+      assertEquals(1, sign.elements().asScala.length)
       assertTrue(sign.get("signature").isTextual)
     })
     newBoxesJsonNode.foreach(node => {
-      assertTrue(node.elements().asScala.length >= 4)
-      assertTrue(node.elements().asScala.length <= 5)
-      assertTrue(node.get("typeId").isInt)
+      assertTrue(node.elements().asScala.length >= 5)
+      assertTrue(node.elements().asScala.length <= 6)
+      assertTrue(node.get("typeName").isTextual)
+      assertTrue(node.get("isCustom").isBoolean)
       assertTrue(node.get("proposition").isObject)
       assertTrue(node.get("value").isNumber)
       assertTrue(node.get("id").isTextual)
@@ -53,8 +54,6 @@ class SidechainJSONBOChecker {
     assertTrue(json.elements().asScala.length >= 6)
     assertTrue(json.get("fee").isNumber)
     assertEquals(transaction.fee(), json.get("fee").asLong())
-    assertTrue(json.get("timestamp").isNumber)
-    assertEquals(transaction.timestamp(), json.get("timestamp").asLong())
     assertTrue(json.get("id").isTextual)
     assertEquals(BytesUtils.toHexString(scorex.util.idToBytes(ModifierId @@ transaction.id)), json.get("id").asText())
     assertTrue(json.get("modifierTypeId").isNumber)
@@ -80,29 +79,31 @@ class SidechainJSONBOChecker {
     assertTrue(json.get("closedBoxId").isTextual)
     assertEquals(BytesUtils.toHexString(boxUnlocker.closedBoxId()), json.get("closedBoxId").asText())
     assertTrue(json.get("boxKey").isObject)
-    assertEquals(2, json.get("boxKey").elements().asScala.length)
+    assertEquals(1, json.get("boxKey").elements().asScala.length)
     val sign = json.get("boxKey")
-    assertEquals(2, sign.elements().asScala.length)
+    assertEquals(1, sign.elements().asScala.length)
     assertTrue(sign.get("signature").isTextual)
   }
 
   def assertsOnBoxJson(json: JsonNode, box: Box[_]): Unit = {
     assertTrue(json.elements().asScala.length >= 4)
-    assertTrue(json.elements().asScala.length <= 7)
-    assertTrue(json.get("typeId").isInt)
+    assertTrue(json.elements().asScala.length <= 9)
+    assertTrue(json.get("typeName").isTextual)
     assertTrue(json.get("proposition").isObject)
     assertTrue(json.get("value").isNumber)
     assertTrue(json.get("id").isTextual)
     assertEquals(BytesUtils.toHexString(box.id()), json.get("id").asText())
     assertEquals(box.value(), json.get("value").asLong())
-    assertEquals(box.boxTypeId().toInt, json.get("typeId").asInt())
+    assertEquals(box.typeName(), json.get("typeName").asText())
     assertEquals(1, json.get("proposition").elements().asScala.length)
     val publicKey = json.get("proposition")
     assertEquals(1, publicKey.elements().asScala.length)
     assertTrue(publicKey.get("publicKey").isTextual)
+    assertTrue(json.get("isCustom").isBoolean)
+    assertEquals(box.isCustom, json.get("isCustom").asBoolean())
     if (json.elements().asScala.length > 4) {
       assertTrue(json.get("nonce").isNumber)
-      assertEquals(box.asInstanceOf[NoncedBox[_]].nonce(), json.get("nonce").asLong())
+      assertEquals(box.asInstanceOf[Box[_]].nonce(), json.get("nonce").asLong())
     }
   }
 
@@ -118,7 +119,7 @@ class SidechainJSONBOChecker {
     assertTrue(json.get("id").isTextual)
 
     val headerJson: JsonNode = json.get("header")
-    assertEquals(12, headerJson.elements().asScala.length)
+    assertEquals(13, headerJson.elements().asScala.length)
     assertTrue(headerJson.get("version").isNumber)
     assertTrue(headerJson.get("parentId").isTextual)
     assertTrue(headerJson.get("timestamp").isNumber)
@@ -130,6 +131,7 @@ class SidechainJSONBOChecker {
     assertTrue(headerJson.get("vrfProof").isObject)
     assertTrue(headerJson.get("forgingStakeMerklePath").isTextual)
     assertTrue(headerJson.get("id").isTextual)
+    assertTrue(headerJson.get("feePaymentsHash").isTextual)
     assertTrue(headerJson.get("signature").isObject)
 
     assertEquals(BytesUtils.toHexString(scorex.util.idToBytes(block.parentId)), json.get("parentId").asText())

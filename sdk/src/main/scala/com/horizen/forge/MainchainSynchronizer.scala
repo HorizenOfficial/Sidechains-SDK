@@ -1,11 +1,11 @@
 package com.horizen.forge
 
 import com.horizen.SidechainHistory
-import com.horizen.block.MainchainBlockReference
+import com.horizen.block.{MainchainBlockReference, MainchainHeader}
 import com.horizen.chain.{MainchainHeaderHash, byteArrayToMainchainHeaderHash}
 import com.horizen.utils.BytesUtils
-import com.horizen.websocket.MainchainNodeChannel
 import com.horizen.utils._
+import com.horizen.websocket.client.MainchainNodeChannel
 
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
@@ -47,20 +47,46 @@ class MainchainSynchronizer(mainchainNodeChannel: MainchainNodeChannel) {
     }
   }
 
-  def getMainchainBlockReferences(history: SidechainHistory, hashes: Seq[MainchainHeaderHash]): Try[Seq[MainchainBlockReference]] = Try {
+  def getMainchainBlockReference(hash: MainchainHeaderHash): Try[MainchainBlockReference] = Try {
+    mainchainNodeChannel.getBlockByHash(BytesUtils.toHexString(hash)) match {
+      case Success(ref) =>
+        ref
+      case Failure(ex) =>
+        throw new IllegalStateException(s"Can't retrieve MainchainBlockReference for hash $hash. Connection error.", ex)
+    }
+  }
+
+  def getMainchainBlockReferences(hashes: Seq[MainchainHeaderHash]): Try[Seq[MainchainBlockReference]] = Try {
     val references = ListBuffer[MainchainBlockReference]()
     for(hash <- hashes) {
       mainchainNodeChannel.getBlockByHash(BytesUtils.toHexString(hash.data)) match {
         case Success(ref) =>
           references.append(ref)
         case Failure(ex) =>
-          throw new IllegalStateException(s"Can't retrieve MainchainBlockReference for hash $hash. Connection error.", ex)
+          throw new IllegalStateException(s"Can't retrieve MainchainBlockReference for hash ${hash.data}. Connection error.", ex)
       }
     }
     references
+  }
+
+  def getMainchainBlockHeaders(hashes: Seq[MainchainHeaderHash]): Try[Seq[MainchainHeader]] = Try {
+    val strHashes: Seq[String] = hashes.map(hash => BytesUtils.toHexString(hash.data))
+    var headers : Seq[MainchainHeader] = ListBuffer()
+
+    for(group <- strHashes.grouped(MainchainSynchronizer.HEADERS_REQUEST_LIMIT)) {
+      mainchainNodeChannel.getBlockHeaders(group) match {
+        case Success(received_headers) => headers ++= received_headers
+        case Failure(ex) => throw new IllegalStateException(s"Can't retrieve group of headers for specified hashes. Reason: ${ex.getMessage()}", ex)
+      }
+    }
+
+    headers
   }
 }
 
 object MainchainSynchronizer {
   val MAX_BLOCKS_REQUEST: Int = 50
+  val HEADERS_REQUEST_LIMIT:Int = 25 // TODO Change this value to 50(as described in doc and implemented in MC) when forger be able to request more than 50 blocks.
+                                     // HEADERS_REQUEST_LIMIT was reduced to 25 in order to keep track of correctness of multiple header requests.
+                                     // At this moment forger doesn't request more than 50 headers.
 }

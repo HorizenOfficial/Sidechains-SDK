@@ -1,30 +1,22 @@
 package com.horizen.customtypes;
 
-import com.google.common.primitives.Longs;
 import com.horizen.box.BoxUnlocker;
-import com.horizen.box.RegularBox;
+import com.horizen.box.ZenBox;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.transaction.SidechainTransaction;
 import com.horizen.transaction.TransactionSerializer;
-import com.horizen.utils.BytesUtils;
-import scala.util.Failure;
-import scala.util.Success;
-import scala.util.Try;
+import com.horizen.transaction.exception.TransactionSemanticValidityException;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public final class SemanticallyInvalidTransaction extends SidechainTransaction<PublicKey25519Proposition, RegularBox> {
-    private long _timestamp;
-
+public final class SemanticallyInvalidTransaction extends SidechainTransaction<PublicKey25519Proposition, ZenBox> {
     public static final byte TRANSACTION_TYPE_ID = 11;
-    public SemanticallyInvalidTransaction(long timestamp) {
-        _timestamp = timestamp;
-    }
+    public SemanticallyInvalidTransaction() {}
 
     @Override
-    public boolean transactionSemanticValidity() {
-        return false;
+    public void transactionSemanticValidity() throws TransactionSemanticValidityException {
+        throw new TransactionSemanticValidityException("invalid tx");
     }
 
     @Override
@@ -33,7 +25,10 @@ public final class SemanticallyInvalidTransaction extends SidechainTransaction<P
     }
 
     @Override
-    public List<RegularBox> newBoxes() {
+    public List<PublicKey25519Proposition> newBoxesPropositions() { return new ArrayList<>(); }
+
+    @Override
+    public List<ZenBox> newBoxes() {
         return new ArrayList<>();
     }
 
@@ -43,13 +38,13 @@ public final class SemanticallyInvalidTransaction extends SidechainTransaction<P
     }
 
     @Override
-    public long timestamp() {
-        return _timestamp;
+    public byte[] customFieldsData() {
+        return new byte[0];
     }
 
     @Override
-    public byte[] bytes() {
-        return Longs.toByteArray(_timestamp);
+    public byte[] customDataMessageToSign() {
+        return new byte[0];
     }
 
     @Override
@@ -57,13 +52,13 @@ public final class SemanticallyInvalidTransaction extends SidechainTransaction<P
         return SemanticallyInvalidTransactionSerializer.getSerializer();
     }
 
-    public static SemanticallyInvalidTransaction parseBytes(byte[] bytes) {
-        return new SemanticallyInvalidTransaction(BytesUtils.getLong(bytes, 0));
-    }
-
     @Override
     public byte transactionTypeId() {
         return TRANSACTION_TYPE_ID;
     }
 
+    @Override
+    public byte version() {
+        return Byte.MAX_VALUE;
+    }
 }

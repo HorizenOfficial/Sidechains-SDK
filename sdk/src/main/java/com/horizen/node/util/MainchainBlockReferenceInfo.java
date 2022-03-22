@@ -2,11 +2,8 @@ package com.horizen.node.util;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.google.common.primitives.Bytes;
-import com.google.common.primitives.Ints;
 import com.horizen.CommonParams;
 import com.horizen.serialization.Views;
-import com.horizen.utils.BytesUtils;
 import scorex.core.serialization.BytesSerializable;
 import scorex.core.serialization.ScorexSerializer;
 
@@ -73,40 +70,9 @@ public final class MainchainBlockReferenceInfo implements BytesSerializable {
         return mainchainReferenceDataSidechainBlockId;
     }
 
-    public static MainchainBlockReferenceInfo parseBytes(byte[] bytes) {
-        int offset = 0;
-
-        byte[] mainchainBlockReferenceHash = Arrays.copyOfRange(bytes, offset, offset + CommonParams.mainchainBlockHashLength());
-        offset += CommonParams.mainchainBlockHashLength();
-
-        byte[] parentMainchainBlockReferenceHash = Arrays.copyOfRange(bytes, offset, offset + CommonParams.mainchainBlockHashLength());
-        offset += CommonParams.mainchainBlockHashLength();
-
-        int mainchainHeight = BytesUtils.getInt(bytes, offset);
-        offset += Integer.BYTES;
-
-        byte[] mainchainHeaderSidechainBlockId = Arrays.copyOfRange(bytes, offset, offset + CommonParams.sidechainIdLength());
-        offset += CommonParams.sidechainIdLength();
-
-        byte[] mainchainReferenceDataSidechainBlockId = Arrays.copyOfRange(bytes, offset, offset + CommonParams.sidechainIdLength());
-        offset += CommonParams.sidechainIdLength();
-
-        return new MainchainBlockReferenceInfo(
-                mainchainBlockReferenceHash,
-                parentMainchainBlockReferenceHash,
-                mainchainHeight,
-                mainchainHeaderSidechainBlockId,
-                mainchainReferenceDataSidechainBlockId);
-    }
-
     @Override
     public byte[] bytes() {
-        return Bytes.concat(
-                mainchainHeaderHash,
-                parentMainchainHeaderHash,
-                Ints.toByteArray(mainchainHeight),
-                mainchainHeaderSidechainBlockId,
-                mainchainReferenceDataSidechainBlockId);
+        return serializer().toBytes(this);
     }
 
     @Override

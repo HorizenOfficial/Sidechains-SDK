@@ -2,7 +2,7 @@ package com.horizen
 
 import java.math.{BigDecimal, BigInteger, MathContext}
 
-import com.google.common.primitives.{Bytes, Ints}
+import com.google.common.primitives.{Bytes, Ints, Longs}
 import com.horizen.vrf.VrfOutput
 import scorex.util.ModifierId
 import supertagged.TaggedType
@@ -10,6 +10,7 @@ import supertagged.TaggedType
 package object consensus {
   val merkleTreeHashLen: Int = 32
   val sha256HashLen: Int = 32
+  val consensusNonceLength: Int = Longs.BYTES
 
   val consensusHardcodedSaltString: Array[Byte] = "TEST".getBytes()
   val forgerStakePercentPrecision: BigDecimal = BigDecimal.valueOf(1000000) // where 1 / forgerStakePercentPrecision -- minimal possible forger stake percentage to be able to forge

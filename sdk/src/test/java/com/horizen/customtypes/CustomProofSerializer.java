@@ -23,11 +23,11 @@ public class CustomProofSerializer implements ProofSerializer<CustomProof> {
 
     @Override
     public void serialize(CustomProof proof, Writer writer) {
-        writer.putBytes(proof.bytes());
+        writer.putInt(proof.number);
     }
 
     @Override
     public CustomProof parse(Reader reader) {
-        return CustomProof.parseBytes(reader.getBytes(reader.remaining()));
+        return new CustomProof(reader.getInt());
     }
 }

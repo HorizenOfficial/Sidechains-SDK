@@ -6,14 +6,15 @@ import com.horizen.fixtures._
 import com.horizen.secret._
 import com.horizen.utils.ByteArrayWrapper
 import com.horizen.utils.Pair
+
 import java.util.{HashMap => JHashMap, List => JList}
 import java.lang.{Byte => JByte}
-
 import com.horizen.SidechainTypes
+import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import org.junit.Assert._
 import org.junit._
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito._
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito._
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
@@ -25,7 +26,7 @@ import scala.util.Try
 class SidechainSecretStorageTest
   extends JUnitSuite
   with SecretFixture
-  with IODBStoreFixture
+  with StoreFixture
   with MockitoSugar
   with SidechainTypes
 {
@@ -42,7 +43,7 @@ class SidechainSecretStorageTest
 
   @Before
   def setUp() : Unit = {
-    mockedStorage = mock[IODBStoreAdapter]
+    mockedStorage = mock[VersionedLevelDbStorageAdapter]
     secretList = new ListBuffer[Secret]()
     storedList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
 

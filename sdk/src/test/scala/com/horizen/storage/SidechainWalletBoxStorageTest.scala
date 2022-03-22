@@ -5,18 +5,18 @@ import com.horizen.box._
 import com.horizen.companion._
 import com.horizen.customtypes._
 import com.horizen.fixtures._
-import com.horizen.proposition._
+import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.utils.ByteArrayWrapper
 import com.horizen.utils.Pair
+
 import java.util.{HashMap => JHashMap, List => JList}
 import java.lang.{Byte => JByte}
-
 import org.junit.Assert._
 
 import scala.collection.mutable.ListBuffer
 import org.junit._
-import org.scalatest.junit.JUnitSuite
-import org.scalatest.mockito._
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito._
 
 import scala.collection.JavaConverters._
 import org.mockito._
@@ -28,12 +28,12 @@ import scala.util.Try
 class SidechainWalletBoxStorageTest
   extends JUnitSuite
   with BoxFixture
-  with IODBStoreFixture
+  with StoreFixture
   with MockitoSugar
   with SidechainTypes
 {
 
-  var mockedStorage: Storage = mock[IODBStoreAdapter]
+  var mockedStorage: Storage = mock[VersionedLevelDbStorageAdapter]
   var boxList = new ListBuffer[WalletBox]()
   var storedList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
 
@@ -44,12 +44,11 @@ class SidechainWalletBoxStorageTest
 
   @Before
   def setUp() : Unit = {
-    mockedStorage= mock[IODBStoreAdapter]
+    mockedStorage= mock[VersionedLevelDbStorageAdapter]
     boxList = new ListBuffer[WalletBox]()
     storedList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
 
-    boxList ++= getWalletBoxList(classOf[RegularBox], 5).asScala ++ getWalletBoxList(classOf[CertifierRightBox], 5).asScala ++
-      getWalletBoxList(classOf[CustomBox], 5).asScala
+    boxList ++= getWalletBoxList(classOf[ZenBox], 5).asScala ++ getWalletBoxList(classOf[CustomBox], 5).asScala
 
     for (b <- boxList) {
       storedList.append({
@@ -101,8 +100,8 @@ class SidechainWalletBoxStorageTest
 
 
     // Test 6: get by type for existing type
-    assertEquals("Storage should contain WalletBoxes of specified type.", boxList.filter(wb => wb.box.isInstanceOf[RegularBox]),
-      walletBoxStorage.getByType(classOf[RegularBox]))
+    assertEquals("Storage should contain WalletBoxes of specified type.", boxList.filter(wb => wb.box.isInstanceOf[ZenBox]),
+      walletBoxStorage.getByType(classOf[ZenBox]))
 
 
     // Test 7: get by type for non-existing type
@@ -145,7 +144,7 @@ class SidechainWalletBoxStorageTest
 
 
     // Test 2: test failed update, when Storage throws an exception
-    val walletBox = getWalletBox(classOf[RegularBox])
+    val walletBox = getWalletBox(classOf[ZenBox])
     tryRes = walletBoxStorage.update(version, List(walletBox), List(boxList(3).box.id()))
     assertTrue("WalletBoxStorage failure expected during update.", tryRes.isFailure)
     assertEquals("WalletBoxStorage different exception expected during update.", expectedException, tryRes.failed.get)

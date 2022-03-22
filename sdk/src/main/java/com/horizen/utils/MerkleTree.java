@@ -8,6 +8,9 @@ import java.util.List;
 
 public final class MerkleTree
 {
+
+    public static int ROOT_HASH_LENGTH = 32;
+
     private int _leavesNumber;
     private List<byte[]> _merkleTree;
     private boolean _isMutated;

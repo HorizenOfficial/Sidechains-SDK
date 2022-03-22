@@ -11,7 +11,6 @@ import scorex.core.serialization.ScorexSerializer
 import scorex.util.serialization.{Reader, Writer}
 import scorex.util.{bytesToId, idToBytes}
 
-import scala.util.Try
 
 // knownBlockIds ordered backward most recent one to oldest
 case class SidechainSyncInfo(knownBlockIds: Seq[ModifierId]) extends SyncInfo {
@@ -39,7 +38,7 @@ object SidechainSyncInfoSerializer extends ScorexSerializer[SidechainSyncInfo] {
 
   override def parse(r: Reader): SidechainSyncInfo = {
     val length = r.getInt()
-    if (r.remaining != length * NodeViewModifier.ModifierIdSize)
+    if (r.remaining < length * NodeViewModifier.ModifierIdSize)
       throw new IllegalArgumentException("Input data corrupted.")
 
     val modifierIds : Seq[ModifierId] = for(b <- 0 until length)

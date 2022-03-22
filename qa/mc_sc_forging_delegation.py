@@ -1,13 +1,14 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration, Account
+    SCNetworkConfiguration, Account, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from test_framework.util import assert_equal, assert_true, initialize_chain_clean, start_nodes, \
     websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, \
-    connect_sc_nodes, check_wallet_balance, check_box_balance, generate_next_block
+    connect_sc_nodes, check_wallet_coins_balance, check_box_balance, generate_next_block
 from SidechainTestFramework.sc_forging_util import *
+
 
 """
 Check Latus forger behavior for:
@@ -53,10 +54,10 @@ class MCSCForgingDelegation(SidechainTestFramework):
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0)))
         )
 
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 100, 1000),
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 100, LARGE_WITHDRAWAL_EPOCH_LENGTH),
                                          sc_node_1_configuration, sc_node_2_configuration)
         # rewind sc genesis block timestamp for 5 consensus epochs
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options.tmpdir, network, 720*120*5)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720*120*5)
 
     def sc_setup_nodes(self):
         # Start 2 SC nodes
@@ -71,7 +72,14 @@ class MCSCForgingDelegation(SidechainTestFramework):
         sc_node1_address = sc_node1.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
         sc_node1_account = Account("", sc_node1_address)
         ft_amount = 500 # Zen
-        mc_node.sc_send(sc_node1_address, ft_amount, self.sc_nodes_bootstrap_info.sidechain_id)
+        mc_return_address = mc_node.getnewaddress()
+        ft_args = [{
+            "toaddress": sc_node1_address,
+            "amount": ft_amount,
+            "scid": self.sc_nodes_bootstrap_info.sidechain_id,
+            "mcReturnAddress": mc_return_address
+        }]
+        mc_node.sc_send(ft_args)
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Forward Transfer expected to be added to mempool.")
 
         # Generate MC block and SC block and check that FT appears in SC node wallet
@@ -80,8 +88,8 @@ class MCSCForgingDelegation(SidechainTestFramework):
         check_mcreference_presence(mcblock_hash1, scblock_id1, sc_node1)
 
         # check all keys/boxes/balances are coherent with the default initialization
-        check_wallet_balance(sc_node1, self.sc_nodes_bootstrap_info.genesis_account_balance + ft_amount)
-        check_box_balance(sc_node1, sc_node1_account, 1, 1, ft_amount)
+        check_wallet_coins_balance(sc_node1, self.sc_nodes_bootstrap_info.genesis_account_balance + ft_amount)
+        check_box_balance(sc_node1, sc_node1_account, "ZenBox", 1, ft_amount)
 
         # Delegate 300 Zen and 200 Zen to SC node 2 - expected stake is 500 Zen
         sc_node2_address = sc_node2.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
@@ -107,7 +115,7 @@ class MCSCForgingDelegation(SidechainTestFramework):
         if "result" not in makeForgerStakeJsonRes:
             fail("make forger stake failed: " + json.dumps(makeForgerStakeJsonRes))
         else:
-            print("Forget stake created: " + json.dumps(makeForgerStakeJsonRes))
+            print("Forger stake created: " + json.dumps(makeForgerStakeJsonRes))
 
         # Generate SC block
         generate_next_block(sc_node1, "first node")
@@ -118,16 +126,18 @@ class MCSCForgingDelegation(SidechainTestFramework):
 
         # Check SC nodes balances
         # SC node 1 owns ForgerBoxes
-        check_wallet_balance(sc_node1, self.sc_nodes_bootstrap_info.genesis_account_balance + ft_amount)
-        check_box_balance(sc_node1, sc_node1_account, 3, 2, ft_amount)  # ForgerBox type = 3
+        check_wallet_coins_balance(sc_node1, self.sc_nodes_bootstrap_info.genesis_account_balance + ft_amount)
+        check_box_balance(sc_node1, sc_node1_account, "ForgerBox", 2, ft_amount)
         # SC node 2 doesn't own ForgerBoxes
-        check_wallet_balance(sc_node2, 0)
+        check_wallet_coins_balance(sc_node2, 0)
 
         # Generate SC block on SC node 1 for the next consensus epoch
         generate_next_block(sc_node1, "first node", force_switch_to_next_epoch=True)
+        self.sc_sync_all()
 
         # Generate SC block on SC node 2 for the next consensus epoch
         scnode2_block_id = generate_next_block(sc_node2, "second node", force_switch_to_next_epoch=True)
+        self.sc_sync_all()
 
         # Check ForgingStake for SC block
         res = sc_node2.block_findById(blockId=scnode2_block_id)
@@ -162,7 +172,7 @@ class MCSCForgingDelegation(SidechainTestFramework):
         if "result" not in tx_hex:
             fail("spend forger stake failed: " + json.dumps(tx_hex))
         else:
-            print("Forget stake was spend: " + json.dumps(tx_hex))
+            print("Forger stake was spend: " + json.dumps(tx_hex))
 
         # Generate one more SC block on SC node 1 to include transaction
         generate_next_block(sc_node1, "first node")
