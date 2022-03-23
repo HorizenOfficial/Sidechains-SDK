@@ -24,8 +24,9 @@ object WithdrawalEpochUtils {
   }
 
   def hasReachedCertificateSubmissionWindowEnd(newEpochInfo: WithdrawalEpochInfo, parentEpochInfo: WithdrawalEpochInfo, params: NetworkParams): Boolean = {
-    inSubmitCertificateWindow(parentEpochInfo, params) && // parent was in the submission window
-      newEpochInfo != parentEpochInfo && // new block should increase epoch index (corner case: parent in the end odf the window)
+    newEpochInfo.epoch > 0 && // no submission window for the fist epoch
+      (parentEpochInfo.lastEpochIndex < certificateSubmissionWindowLength(params) || // parent was in the middle of the submission window
+        isEpochLastIndex(parentEpochInfo, params)) &&  // or parent was in the end of the withdrawal epoch
       newEpochInfo.lastEpochIndex >= certificateSubmissionWindowLength(params) // new block may have multiple ref data so may pass over the window
   }
 
