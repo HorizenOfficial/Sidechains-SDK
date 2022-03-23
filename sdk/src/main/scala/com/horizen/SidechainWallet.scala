@@ -342,19 +342,20 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
   def ensureStorageConsistencyAfterRestore: Try[(SidechainWallet, ByteArrayWrapper)] = {
     // TODO csw capability will be optional, related storage might even be empty
 
-    // It is assumed that when this method is called, all the versions must be consistent among them
+    // It is assumed that when this method is called, all the wallet versions must be consistent among them
     // since history and state are (according to the update procedure sequence: state --> wallet --> history)
     // The only exception can be the forging box info storage, because, it might have been updated upon
     // consensus epoch switch even before the state update.
     // In that case it can be ahead by one version only (except in the genesis phase), and that is checked
     // before applying a rollback
-    val appWalletVersion = getAppWalletVersion(applicationWallet.getStoragesVersionList)
-    val version = bytesToVersion(walletBoxStorage.lastVersionId.get.data())
+    val versionBytes = walletBoxStorage.lastVersionId.get.data()
+    val appWalletStateOk = applicationWallet.checkStoragesVersion(versionBytes)
+    val version = bytesToVersion(versionBytes)
     if (
       // check these storages first, they are updated always together
         version == bytesToVersion(walletTransactionStorage.lastVersionId.get.data()) &&
           version == bytesToVersion(cswDataStorage.lastVersionId.get.data()) &&
-          version == appWalletVersion
+          appWalletStateOk
     ) {
       // check forger box info storage, which is updated before state in case of epoch switch
       if (version == bytesToVersion(forgingBoxesInfoStorage.lastVersionId.get.data())) {

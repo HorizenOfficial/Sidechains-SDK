@@ -65,20 +65,18 @@ public class DefaultApplicationWallet implements ApplicationWallet {
     }
 
     @Override
-    public List<byte[]> getStoragesVersionList() {
-        List<byte[]> list = new ArrayList<>();
+    public boolean checkStoragesVersion(byte[] blockId)
+    {
+        byte[] ver1 = walletStorage1.lastVersionID().orElse(new ByteArrayWrapper(NULL_VERSION)).data();
+        byte[] ver2 = walletStorage2.lastVersionID().orElse(new ByteArrayWrapper(NULL_VERSION)).data();
 
-        ByteArrayWrapper ver1 = walletStorage1.lastVersionID().orElse(new ByteArrayWrapper(NULL_VERSION));
-        list.add(ver1.data());
-
-        ByteArrayWrapper ver2 = walletStorage2.lastVersionID().orElse(new ByteArrayWrapper(NULL_VERSION));
-        list.add(ver2.data());
-
-        logger.debug(String.format("Application wallet current versions: '%s', '%s'",
-                BytesUtils.toHexString(ver1.data()),
-                BytesUtils.toHexString(ver2.data()))
+        logger.debug(String.format("Reference version: '%s', application wallet current versions: '%s', '%s'",
+                BytesUtils.toHexString(blockId),
+                BytesUtils.toHexString(ver1),
+                BytesUtils.toHexString(ver2))
         );
 
-        return list;
+        return Arrays.equals(blockId, ver1) && Arrays.equals(blockId, ver2);
     }
+
 }

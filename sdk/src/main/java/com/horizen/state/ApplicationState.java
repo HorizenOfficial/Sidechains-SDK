@@ -25,7 +25,9 @@ public interface ApplicationState {
 
     Try<ApplicationState> onRollback(byte[] blockId); // return Try[...]
 
-    List<byte[]> getStoragesVersionList();
+    // check that all storages of the application which are update by the sdk core, have the version corresponding to the
+    // blockId given. This is useful when checking the alignment of the storages versions at node restart
+    boolean checkStoragesVersion(byte[] blockId);
 }
 
 

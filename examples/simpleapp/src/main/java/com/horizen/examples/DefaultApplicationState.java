@@ -72,20 +72,18 @@ public class DefaultApplicationState implements ApplicationState {
     }
 
     @Override
-    public List<byte[]> getStoragesVersionList() {
-        List<byte[]> list = new ArrayList<>();
+    public boolean checkStoragesVersion(byte[] blockId)
+    {
+        byte[] ver1 = appStorage1.lastVersionID().orElse(new ByteArrayWrapper(NULL_VERSION)).data();
+        byte[] ver2 = appStorage2.lastVersionID().orElse(new ByteArrayWrapper(NULL_VERSION)).data();
 
-        ByteArrayWrapper ver1 = appStorage1.lastVersionID().orElse(new ByteArrayWrapper(NULL_VERSION));
-        list.add(ver1.data());
+        logger.debug(String.format("Reference version: '%s', application state current versions: '%s', '%s'",
+                BytesUtils.toHexString(blockId),
+                BytesUtils.toHexString(ver1),
+                BytesUtils.toHexString(ver2))
+        );
 
-        ByteArrayWrapper ver2 = appStorage2.lastVersionID().orElse(new ByteArrayWrapper(NULL_VERSION));
-        list.add(ver2.data());
-
-        logger.debug(String.format("Application state current versions: '%s', '%s'",
-                        BytesUtils.toHexString(ver1.data()),
-                        BytesUtils.toHexString(ver2.data()))
-                );
-
-        return list;
+        return Arrays.equals(blockId, ver1) && Arrays.equals(blockId, ver2);
     }
+
 }

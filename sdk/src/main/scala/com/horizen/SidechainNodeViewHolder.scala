@@ -203,8 +203,6 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   }
 
   def dumpStorages : Unit = {
-    val versions = applicationState.getStoragesVersionList
-    versions.asScala.zipWithIndex.foreach{case(x, i) => log.debug(s"Application state ${i}, version        : ${bytesToVersion(x)}")}
 
     try {
       val m = getStorageVersions.map{ case(k, v) => {"%-36s".format(k) + ": " + v}}

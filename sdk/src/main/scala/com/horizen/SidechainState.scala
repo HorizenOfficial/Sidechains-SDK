@@ -471,42 +471,34 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     WithdrawalEpochUtils.isEpochLastIndex(stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)), params)
   }
 
-  def getAppStateVersion(versions: util.List[Array[Byte]]) : VersionTag =
-  {
-    val applicationStateVersionsSet = versions.asScala.map{x=>new ByteArrayWrapper(x)}.toSet
-
-    if (applicationStateVersionsSet.size == 1) {
-      log.debug("All application state storages are consistent, common version: " + BytesUtils.toHexString(applicationStateVersionsSet.head))
-      bytesToVersion(applicationStateVersionsSet.head.data())
-    } else {
-      log.warn("Not all application state storages are consistent")
-      versions.asScala.zipWithIndex.foreach{
-        case(x,i) => log.warn(s"app storage ${i} version: ${bytesToVersion(x)}")
-      }
-      // application has internal storages which are not aligned, return a null version tag
-      bytesToVersion(new Array[Byte](0))
-    }
-  }
-
   // Check that all storages are consistent and in case try some rollbacks.
   // Return the state and common version, throw an exception if some unrecoverable misalignment has been detected
   def ensureStorageConsistencyAfterRestore: Try[(SidechainState, ByteArrayWrapper)] = {
     // updates are in order:
     //      appState--> utxoMerkleTreeStorage --> stateStorage --> forgerBoxStorage
-    val appStateVersion = getAppStateVersion(applicationState.getStoragesVersionList)
-    val versionFb       = bytesToId(forgerBoxStorage.lastVersionId.get.data())
 
-    val result = if (appStateVersion == versionFb) {
+    // get the version of the last updated storage and check that the others have the same
+    // version
+    val versionFbBytes = forgerBoxStorage.lastVersionId.get.data()
+    val appStateVersionOk = applicationState.checkStoragesVersion(versionFbBytes)
+
+    val versionFb       = bytesToId(versionFbBytes)
+
+    if (appStateVersionOk) {
+      // appState is aligned with the last storage version, require that also intermediate storages have the same version
+
       // TODO csw capability will be optional, related utxo mrkl tree storage might even be empty
       if (utxoMerkleTreeStorage.lastVersionId.isDefined) {
         val versionUmt = bytesToId(utxoMerkleTreeStorage.lastVersionId.get.data())
-        require(appStateVersion == versionUmt)
+        require(versionFb == versionUmt)
       }
 
       val versionSt  = bytesToId(stateStorage.lastVersionId.get.data())
-      require(appStateVersion == versionSt)
+      require(versionFb == versionSt)
 
+      require(versionFb == versionToId(version))
       log.debug("All state storages are consistent")
+
       val baw = new ByteArrayWrapper(versionToBytes(version))
       Success(this, baw)
     } else {
@@ -516,11 +508,10 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       if (rolledBackState.isFailure) {
         throw new IllegalStateException("Could not rollback state")
       } else {
-        val baw = new ByteArrayWrapper(idToBytes(versionFb))
+        val baw = new ByteArrayWrapper(versionFbBytes)
         Success(rolledBackState.get, baw)
       }
     }
-    result
   }
 
   // Collect Fee payments while appending the last withdrawal epoch block (optional), considering that block fee info as well.

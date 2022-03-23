@@ -34,7 +34,5 @@ public class DefaultApplicationState implements ApplicationState {
     }
 
     @Override
-    public List<byte[]> getStoragesVersionList() {
-        return Collections.singletonList(new byte[0]);
-    }
+    public boolean checkStoragesVersion(byte[] blockId) { return true; }
 }
