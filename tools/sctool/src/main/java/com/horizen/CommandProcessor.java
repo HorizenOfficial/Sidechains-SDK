@@ -240,7 +240,8 @@ public class CommandProcessor {
         // Generate all keys only if verification key doesn't exist.
         // Note: we are interested only in verification key raw data.
         if(!Files.exists(Paths.get(verificationKeyPath))) {
-            if (!CryptoLibProvider.commonCircuitFunctions().generateCoboundaryMarlinDLogKeys()) {
+
+            if (!ScBootstrappingTool.initDlogKey()) {
                 printer.print("Error occurred during dlog key generation.");
                 return;
             }
@@ -326,7 +327,7 @@ public class CommandProcessor {
         // Generate all keys only if verification key doesn't exist.
         // Note: we are interested only in verification key raw data.
         if(!Files.exists(Paths.get(verificationKeyPath))) {
-            if (!CryptoLibProvider.commonCircuitFunctions().generateCoboundaryMarlinDLogKeys()) {
+            if (!ScBootstrappingTool.initDlogKey()) {
                 printer.print("Error occurred during dlog key generation.");
                 return;
             }

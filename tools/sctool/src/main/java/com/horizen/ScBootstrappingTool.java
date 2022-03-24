@@ -1,10 +1,28 @@
 package com.horizen;
 import java.io.File;
 import java.util.Scanner;
+import java.util.Set;
+import java.util.TreeSet;
+
+import com.horizen.cryptolibprovider.CryptoLibProvider;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class ScBootstrappingTool {
+
+    private static boolean dlogKeyInit = false;
+
+    public static boolean initDlogKey() {
+        if (dlogKeyInit)
+            return true;
+
+        if (!CryptoLibProvider.commonCircuitFunctions().generateCoboundaryMarlinDLogKeys()) {
+            return false;
+        }
+        dlogKeyInit = true;
+        return true;
+    }
+
     public static void main(String args[]) {
 
         // initialize log properties since this app uses log4j from sdk libraries
