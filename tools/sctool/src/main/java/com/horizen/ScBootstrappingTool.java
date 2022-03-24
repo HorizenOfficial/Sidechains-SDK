@@ -10,19 +10,6 @@ import org.apache.logging.log4j.Logger;
 
 public class ScBootstrappingTool {
 
-    private static boolean dlogKeyInit = false;
-
-    public static boolean initDlogKey() {
-        if (dlogKeyInit)
-            return true;
-
-        if (!CryptoLibProvider.commonCircuitFunctions().generateCoboundaryMarlinDLogKeys()) {
-            return false;
-        }
-        dlogKeyInit = true;
-        return true;
-    }
-
     public static void main(String args[]) {
 
         // initialize log properties since this app uses log4j from sdk libraries

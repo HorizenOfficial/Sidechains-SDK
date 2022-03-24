@@ -35,8 +35,24 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class CommandProcessor {
-    private MessagePrinter printer;
 
+    // initialization of dlog key must be done only once by the rust cryptolib. Such data is stored in memory and is
+    // used in both generateCertProofInfo and generateCswProofInfo cmds
+    private static boolean dlogKeyInit = false;
+
+    private static boolean initDlogKey() {
+        if (dlogKeyInit) {
+            return true;
+        }
+        if (!CryptoLibProvider.commonCircuitFunctions().generateCoboundaryMarlinDLogKeys()) {
+            return false;
+        }
+        dlogKeyInit = true;
+        return true;
+    }
+
+    private MessagePrinter printer;
+    
     public CommandProcessor(MessagePrinter printer) {
         this.printer = printer;
     }
@@ -241,7 +257,7 @@ public class CommandProcessor {
         // Note: we are interested only in verification key raw data.
         if(!Files.exists(Paths.get(verificationKeyPath))) {
 
-            if (!ScBootstrappingTool.initDlogKey()) {
+            if (!initDlogKey()) {
                 printer.print("Error occurred during dlog key generation.");
                 return;
             }
@@ -327,7 +343,7 @@ public class CommandProcessor {
         // Generate all keys only if verification key doesn't exist.
         // Note: we are interested only in verification key raw data.
         if(!Files.exists(Paths.get(verificationKeyPath))) {
-            if (!ScBootstrappingTool.initDlogKey()) {
+            if (!initDlogKey()) {
                 printer.print("Error occurred during dlog key generation.");
                 return;
             }
