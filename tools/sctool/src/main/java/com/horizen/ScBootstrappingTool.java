@@ -1,10 +1,6 @@
 package com.horizen;
 import java.io.File;
 import java.util.Scanner;
-import java.util.Set;
-import java.util.TreeSet;
-
-import com.horizen.cryptolibprovider.CryptoLibProvider;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
