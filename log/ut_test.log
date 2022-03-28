@@ -1,2 +1,0 @@
-[ERROR] 2022-03-15 15:58:52:129 +0100 [  SidechainCswApiRoute.scala:56  ] [ScalaTest-run-running-SidechainCswApiRouteTest] com.horizen.api.http.SidechainCswApiRoute$SidechainCswApiRouteImpl - Unable to retrieve if the ceased sidechain withdrawal is enabled.
-com.horizen.api.http.SidechainCswApiRouteTest$$anon$1: null
