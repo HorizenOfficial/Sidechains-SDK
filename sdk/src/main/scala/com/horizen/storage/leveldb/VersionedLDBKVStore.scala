@@ -1,7 +1,7 @@
 package com.horizen.storage.leveldb
 
 import com.horizen.utils.ByteArrayWrapper
-import org.iq80.leveldb.{DB, ReadOptions}
+import org.iq80.leveldb.{DB, DBIterator, ReadOptions}
 
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
@@ -131,6 +131,9 @@ final class VersionedLDBKVStore(protected val db: DB, keepVersions: Int) extends
   def versionIdExists(versionId: VersionId): Boolean =
     versions.exists(new ByteArrayWrapper(_) == new ByteArrayWrapper(versionId))
 
+  def getIterator(): DBIterator = {
+    db.iterator()
+  }
 }
 
 object VersionedLDBKVStore {
