@@ -8,6 +8,7 @@ import com.horizen.box.{WithdrawalRequestBox, WithdrawalRequestBoxSerializer}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
 import com.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
+import org.iq80.leveldb.DBIterator
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
 
@@ -307,4 +308,5 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
   def isEmpty: Boolean = storage.isEmpty
 
+  def getIterator: DBIterator = storage.getIterator
 }

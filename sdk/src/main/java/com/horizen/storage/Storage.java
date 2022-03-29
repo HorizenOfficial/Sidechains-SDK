@@ -4,6 +4,7 @@ import java.util.Optional;
 import java.util.List;
 import com.horizen.utils.Pair;
 import com.horizen.utils.ByteArrayWrapper;
+import org.iq80.leveldb.DBIterator;
 
 public interface Storage extends AutoCloseable {
 
@@ -29,4 +30,6 @@ public interface Storage extends AutoCloseable {
 
     @Override
     void close();
+
+    DBIterator getIterator();
 }

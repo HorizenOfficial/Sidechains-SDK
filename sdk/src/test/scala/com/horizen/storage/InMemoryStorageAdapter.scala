@@ -1,8 +1,8 @@
 package com.horizen.storage
 import java.util
 import java.util.{Optional, List => JList}
-
 import com.horizen.utils.{ByteArrayWrapper, Pair => JPair}
+import org.iq80.leveldb.DBIterator
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -40,4 +40,7 @@ class InMemoryStorageAdapter(hashMap: mutable.HashMap[ByteArrayWrapper, ByteArra
   override def close(): Unit = {}
 
   def copy(): InMemoryStorageAdapter = new InMemoryStorageAdapter(hashMap.clone())
+
+  override def getIterator: DBIterator = ???
+
 }
