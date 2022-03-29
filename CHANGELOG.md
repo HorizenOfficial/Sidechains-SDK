@@ -1,3 +1,7 @@
+**0.3.1**
+1. Withdrawal epoch validator: fix wrongly rejected sidechain block containing McBlockRef with MC2SCAggTx leading to the end of the withdrawal epoch.
+
+
 **Blaze changes (0.3.0)**
 1. New proving system for certificates verification: Coboundary Marlin.
 2. PGD: decentralized certificates signing.
