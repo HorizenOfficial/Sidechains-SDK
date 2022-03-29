@@ -13,6 +13,7 @@ import com.horizen.box.ForgerBox;
 import com.horizen.companion.SidechainSecretsCompanion;
 import com.horizen.companion.SidechainTransactionsCompanion;
 import com.horizen.consensus.ForgingStakeInfo;
+import com.horizen.cryptolibprovider.CommonCircuit;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
 import com.horizen.params.MainNetParams;
 import com.horizen.params.NetworkParams;
@@ -186,8 +187,10 @@ public class CommandProcessor {
         printer.print("Usage:\n" +
                       "\tgenerateCertProofInfo {\"seed\":\"my seed\", \"maxPks\":7, \"threshold\":5, " +
                       "\"provingKeyPath\": \"/tmp/sidechain/snark_proving_key\", " +
-                      "\"verificationKeyPath\": \"/tmp/sidechain/snark_verification_key\" }" +
-                      "\tthreshold parameter should be less or equal to keyCount.");
+                      "\"verificationKeyPath\": \"/tmp/sidechain/snark_verification_key\", "+
+                      "\"isCSWEnabled\": true}" +
+                      "\n\t - threshold parameter should be less or equal to keyCount." +
+                      "\n\t - isCSWEnabled parameter could be true or false."  );
     }
 
     private void processGenerateCertProofInfo(JsonNode json) {
@@ -235,6 +238,12 @@ public class CommandProcessor {
         }
         String verificationKeyPath = json.get("verificationKeyPath").asText();
 
+        if (!json.has("isCSWEnabled") || !json.get("isCSWEnabled").isBoolean()) {
+            printGenerateCertProofInfoUsageMsg("wrong isCSWEnabled value. Boolean value expected.");
+            return;
+        }
+        boolean isCSWEnabled = json.get("isCSWEnabled").asBoolean();
+
         SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
 
         // Generate all keys only if verification key doesn't exist.
@@ -245,7 +254,11 @@ public class CommandProcessor {
                 return;
             }
 
-            if (!CryptoLibProvider.sigProofThresholdCircuitFunctions().generateCoboundaryMarlinSnarkKeys(maxPks, provingKeyPath, verificationKeyPath)) {
+            int numOfCustomFields = CommonCircuit.customFieldsNumberWithDisabledCSW;
+            if (isCSWEnabled){
+                numOfCustomFields = CommonCircuit.customFieldsNumber;
+            }
+            if (!CryptoLibProvider.sigProofThresholdCircuitFunctions().generateCoboundaryMarlinSnarkKeys(maxPks, provingKeyPath, verificationKeyPath, numOfCustomFields)) {
                 printer.print("Error occurred during snark keys generation.");
                 return;
             }
@@ -318,7 +331,7 @@ public class CommandProcessor {
         String provingKeyPath = json.get("provingKeyPath").asText();
 
         if (!json.has("verificationKeyPath") || !json.get("verificationKeyPath").isTextual()) {
-            printGenerateCertProofInfoUsageMsg("wrong verificationKeyPath value. Textual value expected.");
+            printGenerateCswProofInfoUsageMsg("wrong verificationKeyPath value. Textual value expected.");
             return;
         }
         String verificationKeyPath = json.get("verificationKeyPath").asText();

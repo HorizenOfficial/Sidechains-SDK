@@ -1,51 +1,50 @@
 package com.horizen
 
-import java.lang.{Byte => JByte}
-import java.nio.file.{Files, Paths}
-import java.util.{HashMap => JHashMap, List => JList}
 import akka.actor.ActorRef
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
+import com.google.inject.Inject
 import com.google.inject.name.Named
-import com.google.inject.{Inject, _}
-import com.horizen.api.http.{SidechainSubmitterApiRoute, _}
+import com.horizen.api.http._
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.certificatesubmitter.CertificateSubmitterRef
 import com.horizen.certificatesubmitter.network.{CertificateSignaturesManagerRef, CertificateSignaturesSpec, GetCertificateSignaturesSpec}
 import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
-import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.csw.CswManagerRef
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
-import com.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, SecretSubmitProvider, SecretSubmitProviderImpl, TransactionSubmitProvider, TransactionSubmitProviderImpl}
+import com.horizen.helper._
+import com.horizen.network.SidechainNodeViewSynchronizer
 import com.horizen.params._
-import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, SchnorrProposition, SchnorrPropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
+import com.horizen.proposition._
 import com.horizen.secret.SecretSerializer
+import com.horizen.serialization.JsonHorizenPublicKeyHashSerializer
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.transaction._
+import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{BlockUtils, BytesUtils, Pair}
 import com.horizen.wallet.ApplicationWallet
+import com.horizen.websocket.client._
+import com.horizen.websocket.server.WebSocketServerRef
 import scorex.core.api.http.ApiRoute
 import scorex.core.app.Application
-import scorex.core.network.message.MessageSpec
 import scorex.core.network.PeerFeature
+import scorex.core.network.message.MessageSpec
 import scorex.core.serialization.ScorexSerializer
 import scorex.core.settings.ScorexSettings
 import scorex.core.transaction.Transaction
 import scorex.core.{ModifierTypeId, NodeViewModifier}
 import scorex.util.ScorexLogging
 
+import java.lang.{Byte => JByte}
+import java.nio.file.{Files, Paths}
+import java.util.{HashMap => JHashMap, List => JList}
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Map
 import scala.collection.mutable
 import scala.io.{Codec, Source}
-import com.horizen.network.SidechainNodeViewSynchronizer
-import com.horizen.websocket.client.{DefaultWebSocketReconnectionHandler, MainchainNodeChannelImpl, WebSocketChannel, WebSocketCommunicationClient, WebSocketConnector, WebSocketConnectorImpl, WebSocketReconnectionHandler}
-import com.horizen.websocket.server.WebSocketServerRef
-import com.horizen.serialization.JsonHorizenPublicKeyHashSerializer
-import com.horizen.transaction.mainchain.SidechainCreation
-
 import scala.util.{Failure, Success, Try}
 
 
@@ -117,7 +116,7 @@ class SidechainApp @Inject()
     case Success(output) => output
     case Failure(exception) => throw new IllegalArgumentException("Genesis block specified in the configuration file has no Sidechain Creation info.", exception)
   }
-  val isCSWEnabled = sidechainCreationOutput.getScCrOutput.ceasedVkOpt.isDefined
+  val isCSWEnabled: Boolean = sidechainCreationOutput.getScCrOutput.ceasedVkOpt.isDefined
   log.info(s"Ceased Sidechain Withdrawal enabled: $isCSWEnabled")
 
   val forgerList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = sidechainSettings.forger.allowedForgersList.map(el =>
@@ -208,8 +207,8 @@ class SidechainApp @Inject()
   // Generate snark keys only if were not present before.
   if (!Files.exists(Paths.get(params.certVerificationKeyFilePath)) || !Files.exists(Paths.get(params.certProvingKeyFilePath))) {
     log.info("Generating Cert snark keys. It may take some time.")
-    if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(
-        sidechainSettings.withdrawalEpochCertificateSettings.maxPks, params.certProvingKeyFilePath, params.certVerificationKeyFilePath)) {
+    val expectedNumOfCustomFields = if (params.isCSWEnabled) CommonCircuit.customFieldsNumber else CommonCircuit.customFieldsNumberWithDisabledCSW
+    if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(sidechainSettings.withdrawalEpochCertificateSettings.maxPks, params.certProvingKeyFilePath, params.certVerificationKeyFilePath, expectedNumOfCustomFields)) {
       throw new IllegalArgumentException("Can't generate Cert Coboundary Marlin ProvingSystem snark keys.")
     }
   }
@@ -250,7 +249,8 @@ class SidechainApp @Inject()
     registerStorage(stateStorage),
     sidechainBoxesCompanion)
   protected val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(registerStorage(forgerBoxStorage))
-  protected val sidechainStateUtxoMerkleTreeStorage = new SidechainStateUtxoMerkleTreeStorage(registerStorage(utxoMerkleTreeStorage))
+  protected val sidechainStateUtxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider = getSidechainStateUtxoMerkleTreeProvider(registerStorage(utxoMerkleTreeStorage), params)
+
   protected val sidechainHistoryStorage = new SidechainHistoryStorage(
     //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/history")),
     registerStorage(historyStorage),
@@ -259,7 +259,7 @@ class SidechainApp @Inject()
     //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/consensusData")),
     registerStorage(consensusStorage))
   protected val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(registerStorage(walletForgingBoxesInfoStorage))
-  protected val sidechainWalletCswDataStorage = new SidechainWalletCswDataStorage(registerStorage(walletCswDataStorage))
+  protected val sidechainWalletCswDataProvider: SidechainWalletCswDataProvider = getSidechainWalletCswDataProvider(registerStorage(walletCswDataStorage), params)
 
   // Append genesis secrets if we start the node first time
   if(sidechainSecretStorage.isEmpty) {
@@ -276,12 +276,12 @@ class SidechainApp @Inject()
     consensusDataStorage,
     sidechainStateStorage,
     sidechainStateForgerBoxStorage,
-    sidechainStateUtxoMerkleTreeStorage,
+    sidechainStateUtxoMerkleTreeProvider,
     sidechainWalletBoxStorage,
     sidechainSecretStorage,
     sidechainWalletTransactionStorage,
     forgingBoxesMerklePathStorage,
-    sidechainWalletCswDataStorage,
+    sidechainWalletCswDataProvider,
     params,
     timeProvider,
     applicationWallet,
@@ -386,6 +386,24 @@ class SidechainApp @Inject()
   def getNodeViewProvider: NodeViewProvider = nodeViewProvider
 
   def getSecretSubmitProvider: SecretSubmitProvider = secretSubmitProvider
+
+  private def getSidechainStateUtxoMerkleTreeProvider(utxoMerkleTreeStorage: Storage, params: NetworkParams) = {
+    if (params.isCSWEnabled) {
+      SidechainUtxoMerkleTreeProviderImpl(new SidechainStateUtxoMerkleTreeStorage(utxoMerkleTreeStorage))
+    }
+    else
+      SidechainUtxoMerkleTreeProviderCSWDisabled()
+  }
+
+
+  private def getSidechainWalletCswDataProvider(cswDataStorage: Storage, params: NetworkParams) = {
+    if (params.isCSWEnabled) {
+      SidechainWalletCswDataProviderImpl(new SidechainWalletCswDataStorage(cswDataStorage))
+    }
+    else
+      SidechainWalletCswDataProviderCSWDisabled()
+  }
+
 
   actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 }

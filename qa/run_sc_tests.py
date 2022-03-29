@@ -9,10 +9,8 @@ from sc_csw_ceased_at_epoch_1 import SCCswCeasedAtEpoch1
 from sc_csw_ceased_at_epoch_2 import SCCswCeasedAtEpoch2
 from sc_csw_ceased_at_epoch_3 import SCCswCeasedAtEpoch3
 from sc_cum_comm_tree_hash import SCCumCommTreeHash
-from sc_genesisinfo_sc_versions import SCGenesisInfoScVersions
 from sc_multiple_certs import SCMultipleCerts
 from sc_nodes_initialize import SidechainNodesInitializationTest
-from sc_versions_and_mc_certs import SCVersionsAndMCCertificates
 from test_framework.util import assert_equal
 from mc_sc_connected_nodes import MCSCConnectedNodes
 from mc_sc_forging1 import MCSCForging1
@@ -28,9 +26,7 @@ from mc_sc_forging_fee_payments import MCSCForgingFeePayments
 from sc_cert_fee_conf import CertFeeConfiguration
 from sc_bwt_minimum_value import SCBwtMinValue
 from websocket_server_fee_payments import SCWsServerFeePayments
-from sc_closed_forger import SidechainClosedForgerTest
-from sc_csw_enabled_api import CSWApiWithCSWEnabledTest
-from sc_csw_disabled_api import CSWApiWithCSWDisabledTest
+from sc_csw_disabled import SCCswDisabled
 
 
 def run_test(test):
@@ -40,6 +36,7 @@ def run_test(test):
     except SystemExit as e:
         return e.code
     return 0
+
 
 def run_tests(log_file):
     sys.stdout = log_file
@@ -116,12 +113,10 @@ def run_tests(log_file):
     result = run_test(SCCswCeasedAtEpoch3())
     assert_equal(0, result, "sc_csw_ceased_at_epoch_3 test failed!")
 
-    result = run_test(CSWApiWithCSWEnabledTest())
-    assert_equal(0, result, "sc_csw_enabled_api test failed!")
+    result = run_test(SCCswDisabled())
+    assert_equal(0, result, "sc_csw_disabled test failed!")
 
-    result = run_test(CSWApiWithCSWDisabledTest())
-    assert_equal(0, result, "sc_csw_disabled_api test failed!")
 
 if __name__ == "__main__":
-    log_file = open("sc_test.log", "w")
-    run_tests(log_file)
+    my_log_file = open("sc_test.log", "w")
+    run_tests(my_log_file)

@@ -45,7 +45,7 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
       }
 
       Post(basePath + "generateCswProof").withEntity("maybe_a_json") ~> sidechainCswApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "generateCswProof").withEntity("maybe_a_json") ~> Route.seal(sidechainCswApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
@@ -53,7 +53,7 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
       }
 
       Post(basePath + "cswInfo").withEntity("maybe_a_json") ~> sidechainCswApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "cswInfo").withEntity("maybe_a_json") ~> Route.seal(sidechainCswApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
@@ -70,7 +70,7 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
       }
 
       Post(basePath + "nullifier").withEntity("maybe_a_json") ~> sidechainCswApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "nullifier").withEntity("maybe_a_json") ~> Route.seal(sidechainCswApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue

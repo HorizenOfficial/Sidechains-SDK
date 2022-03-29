@@ -214,19 +214,22 @@ Generate withdrawal certificate proof info calling ScBootstrappingTools with com
 Parameters:
  - seed
  - number_of_schnorr_keys: the number of schnorr keys to be generated
- - keys_paths - instance of ProofKeysPaths. Contains paths to load/generate Coboundary Marlin snark keys
+ - threshold: the minimum set of the participants required for a valid proof creation
+ - keys_paths: instance of ProofKeysPaths. Contains paths to load/generate Coboundary Marlin snark keys
+ - isCSWEnabled: if ceased sidechain withdrawal is enabled or not
 
 Output: CertificateProofInfo (see sc_bootstrap_info.py).
 """
 
 
-def generate_certificate_proof_info(seed, number_of_schnorr_keys, threshold, keys_paths):
+def generate_certificate_proof_info(seed, number_of_schnorr_keys, threshold, keys_paths, is_csw_enabled):
     json_parameters = {
         "seed": seed,
         "maxPks": number_of_schnorr_keys,
         "threshold": threshold,
         "provingKeyPath": keys_paths.proving_key_path,
-        "verificationKeyPath": keys_paths.verification_key_path
+        "verificationKeyPath": keys_paths.verification_key_path,
+        "isCSWEnabled": is_csw_enabled
     }
     output = launch_bootstrap_tool("generateCertProofInfo", json_parameters)
 
@@ -755,7 +758,7 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration, block_tim
     ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
     if not os.path.isdir(ps_keys_dir):
         os.makedirs(ps_keys_dir)
-    cert_keys_paths = cert_proof_keys_paths(ps_keys_dir)
+    cert_keys_paths = cert_proof_keys_paths(ps_keys_dir, sc_creation_info.csw_enabled)
     if sc_creation_info.csw_enabled:
         csw_keys_paths = csw_proof_keys_paths(ps_keys_dir, sc_creation_info.withdrawal_epoch_length)
     else:
@@ -789,10 +792,17 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration, block_tim
     return sc_nodes_bootstrap_info
 
 
-def cert_proof_keys_paths(dirname):
+def cert_proof_keys_paths(dirname, isCSWEnabled = True):
     # use replace for Windows OS to be able to parse the path to the keys in the config file
-    return ProofKeysPaths(os.path.join(dirname, "cert_marlin_snark_pk").replace("\\", "/"),
-                          os.path.join(dirname, "cert_marlin_snark_vk").replace("\\", "/"))
+
+    pk = "cert_marlin_snark_pk"
+    vk = "cert_marlin_snark_vk"
+    if isCSWEnabled is False:
+        pk = "cert_marlin_snark_pk_wo_utxo"
+        vk = "cert_marlin_snark_vk_wo_utxo"
+
+    return ProofKeysPaths(os.path.join(dirname, pk).replace("\\", "/"),
+                          os.path.join(dirname, vk).replace("\\", "/"))
 
 
 def csw_proof_keys_paths(dirname, withdrawal_epoch_length):
@@ -818,7 +828,7 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
     vrf_keys = generate_vrf_secrets("seed", 1)
     genesis_account = accounts[0]
     vrf_key = vrf_keys[0]
-    certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, cert_keys_paths)
+    certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, cert_keys_paths, sc_creation_info.csw_enabled)
     if csw_keys_paths is None:
         csw_verification_key = ""
     else:
@@ -834,7 +844,8 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
         certificate_proof_info.verificationKey,
         csw_verification_key,
         sc_creation_info.btr_data_length,
-        sc_creation_info.sc_creation_version)
+        sc_creation_info.sc_creation_version,
+        sc_creation_info.csw_enabled)
 
     genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret, vrf_key.secret,
                                          block_timestamp_rewind)

@@ -2,7 +2,6 @@ package com.horizen.fixtures
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import akka.stream.ActorMaterializer
@@ -18,7 +17,7 @@ import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.utils.BytesUtils
 import com.horizen.wallet.ApplicationWallet
-import com.horizen.{SidechainNodeViewHolderRef, SidechainSettings, SidechainSettingsReader, SidechainTypes}
+import com.horizen.{SidechainNodeViewHolderRef, SidechainSettings, SidechainSettingsReader, SidechainTypes, SidechainUtxoMerkleTreeProviderImpl, SidechainWalletCswDataProvider, SidechainWalletCswDataProviderImpl}
 import scorex.core.api.http.ApiRejectionHandler
 import scorex.core.utils.NetworkTimeProvider
 
@@ -96,11 +95,13 @@ trait SidechainNodeViewHolderFixture
   val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion)
   val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(getStorage())
   val sidechainStateUtxoMerkleTreeStorage = new SidechainStateUtxoMerkleTreeStorage(getStorage())
+  val sidechainStateUtxoMerkleTreeProvider: SidechainUtxoMerkleTreeProviderImpl = SidechainUtxoMerkleTreeProviderImpl(sidechainStateUtxoMerkleTreeStorage)
+
   val sidechainHistoryStorage = new SidechainHistoryStorage(getStorage(), sidechainTransactionsCompanion, params)
   val consensusDataStorage = new ConsensusDataStorage(getStorage())
   val sidechainWalletTransactionStorage = new SidechainWalletTransactionStorage(getStorage(), sidechainTransactionsCompanion)
   val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(getStorage())
-  val cswDataStorage = new SidechainWalletCswDataStorage(getStorage())
+  val cswDataProvider: SidechainWalletCswDataProvider = SidechainWalletCswDataProviderImpl(new SidechainWalletCswDataStorage(getStorage()))
 
   // Append genesis secrets if we start the node first time
   if(sidechainSecretStorage.isEmpty) {
@@ -114,12 +115,12 @@ trait SidechainNodeViewHolderFixture
     consensusDataStorage,
     sidechainStateStorage,
     sidechainStateForgerBoxStorage,
-    sidechainStateUtxoMerkleTreeStorage,
+    sidechainStateUtxoMerkleTreeProvider,
     sidechainWalletBoxStorage,
     sidechainSecretStorage,
     sidechainWalletTransactionStorage,
     forgingBoxesMerklePathStorage,
-    cswDataStorage,
+    cswDataProvider,
     params,
     timeProvider,
     defaultApplicationWallet,

@@ -229,7 +229,7 @@ class SCCswCeasedAtEpoch3(SidechainTestFramework):
 
         epoch_mc_blocks_left = self.sc_withdrawal_epoch_length
 
-        # ******************** EPOCH 1 START ********************
+        # ******************** EPOCH 2 START ********************
 
         # Generate first mc block of the next epoch
         we2_1_mcblock_hash = mc_node.generate(1)[0]
@@ -399,6 +399,10 @@ class SCCswCeasedAtEpoch3(SidechainTestFramework):
         for opened_box_id in opened_box_ids:
             assert_false(any(box["id"] == opened_box_id for box in all_zen_boxes),
                         "Opened box appeared in the wallet: " + opened_box_id)
+
+        # Check CSW is enabled on SC node
+        is_csw_enabled = sc_node.csw_isCSWEnabled()["result"]["cswEnabled"]
+        assert_true(is_csw_enabled, "Ceased Sidechain Withdrawal expected to be enabled.")
 
         # Check CSW available boxes on SC node
         utxo_csw_boxes = [sc_cr_utxo, utxo_box_1, ft_box_2]

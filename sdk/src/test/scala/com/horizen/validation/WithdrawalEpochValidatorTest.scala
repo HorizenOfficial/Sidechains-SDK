@@ -151,6 +151,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     Mockito.when(params.sidechainGenesisBlockId).thenReturn(block.id)
     Mockito.when(params.withdrawalEpochLength).thenReturn(123)
+    Mockito.when(params.isCSWEnabled).thenReturn(true)
     assertTrue("Sidechain genesis block with 1 MainchainBlockReferenceData with sc creation inside with incorrect withdrawalEpochLength expected to be invalid.", validator.validate(block, history).isFailure)
     validator.validate(block, history).failed.get match {
       case _: IllegalArgumentException =>

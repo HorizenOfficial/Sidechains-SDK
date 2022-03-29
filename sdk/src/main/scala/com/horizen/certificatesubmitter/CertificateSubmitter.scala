@@ -234,7 +234,7 @@ class CertificateSubmitter(settings: SidechainSettings,
       val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
       val sidechainId = params.sidechainId
 
-      val utxoMerkleTreeRoot = state.utxoMerkleTreeRoot(referencedWithdrawalEpochNumber).get
+      val utxoMerkleTreeRoot: Optional[Array[Byte]] = getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber, state)
 
       CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(
         withdrawalRequests.asJava,
@@ -247,6 +247,15 @@ class CertificateSubmitter(settings: SidechainSettings,
     }
 
     Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getMessage), timeoutDuration).asInstanceOf[Array[Byte]]
+  }
+
+  private def getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber: Int, state: SidechainState): Optional[Array[Byte]] = {
+    if (params.isCSWEnabled) {
+      state.utxoMerkleTreeRoot(referencedWithdrawalEpochNumber).asJava
+    }
+    else {
+      Optional.empty()
+    }
   }
 
   private def calculateSignatures(messageToSign: Array[Byte]): Seq[CertificateSignatureInfo] = {
@@ -439,7 +448,7 @@ class CertificateSubmitter(settings: SidechainSettings,
                                     endEpochCumCommTreeHash: Array[Byte],
                                     btrFee: Long,
                                     ftMinAmount: Long,
-                                    utxoMerkleTreeRoot: Array[Byte],
+                                    utxoMerkleTreeRoot: Optional[Array[Byte]],
                                     schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])])
 
   private def buildDataForProofGeneration(sidechainNodeView: View, status: SignaturesStatus): DataForProofGeneration = {
@@ -452,7 +461,8 @@ class CertificateSubmitter(settings: SidechainSettings,
     val ftMinAmount: Long = getFtMinAmount(status.referencedEpoch)
     val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, status.referencedEpoch)
     val sidechainId = params.sidechainId
-    val utxoMerkleTreeRoot = state.utxoMerkleTreeRoot(status.referencedEpoch).get
+    val utxoMerkleTreeRoot: Optional[Array[Byte]] = getUtxoMerkleTreeRoot(status.referencedEpoch, state)
+
 
     val signersPublicKeyWithSignatures = params.signersPublicKeys.zipWithIndex.map{
       case (pubKey, pubKeyIndex) =>
@@ -493,7 +503,7 @@ class CertificateSubmitter(settings: SidechainSettings,
       s"with parameters: sidechainId LE = ${BytesUtils.toHexString(dataForProofGeneration.sidechainId)}, " +
       s"withdrawalRequests=${dataForProofGeneration.withdrawalRequests.foreach(_.toString)}, " +
       s"endEpochCumCommTreeHash=${BytesUtils.toHexString(dataForProofGeneration.endEpochCumCommTreeHash)}, " +
-      s"utxoMerkleTreeRoot=${BytesUtils.toHexString(dataForProofGeneration.utxoMerkleTreeRoot)}, " +
+      s"utxoMerkleTreeRoot=${BytesUtils.toHexString(dataForProofGeneration.utxoMerkleTreeRoot.orElse(Array()))}, " +
       s"signersThreshold=${params.signersThreshold}. " +
       s"It can take a while.")
 

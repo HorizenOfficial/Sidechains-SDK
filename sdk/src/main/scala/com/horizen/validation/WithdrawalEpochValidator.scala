@@ -34,12 +34,12 @@ class WithdrawalEpochValidator(params: NetworkParams) extends HistoryBlockValida
 //        "genesis block declares sidechain without CSW support.")
 //    }
 
-    if (params.isCSWEnabled){
+    val expectedNumOfCustomFields = if (params.isCSWEnabled) CommonCircuit.customFieldsNumber else CommonCircuit.customFieldsNumberWithDisabledCSW
       // Check that sidechain declares proper number of custom fields
-      if(sidechainCreation.getScCrOutput.fieldElementCertificateFieldConfigs.size != CommonCircuit.customFieldsNumber) {
+    if(sidechainCreation.getScCrOutput.fieldElementCertificateFieldConfigs.size != expectedNumOfCustomFields) {
         throw new IllegalArgumentException(s"Sidechain block validation failed for ${BytesUtils.toHexString(idToBytes(block.id))}: " +
-          "genesis block declares sidechain with different number of custom field configs.")
-      }
+          "genesis block declares sidechain with different number of custom field configs. " +
+          s"Actual: ${sidechainCreation.getScCrOutput.fieldElementCertificateFieldConfigs.size}, expected $expectedNumOfCustomFields")
     }
 
     // Check that sidechain declares no custom bitvectors

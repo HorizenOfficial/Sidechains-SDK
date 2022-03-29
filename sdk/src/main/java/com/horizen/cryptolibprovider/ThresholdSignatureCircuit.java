@@ -1,7 +1,6 @@
 package com.horizen.cryptolibprovider;
 
 import com.horizen.box.WithdrawalRequestBox;
-import com.horizen.librustsidechains.FieldElement;
 import com.horizen.utils.Pair;
 
 import java.util.List;
@@ -14,7 +13,7 @@ public interface ThresholdSignatureCircuit {
                                      byte[] endCumulativeScTxCommTreeRoot,
                                      long btrFee,
                                      long ftMinAmount,
-                                     byte[] utxoMerkleTreeRoot);
+                                     Optional<byte[]> utxoMerkleTreeRoot);
 
     //None elements for schnorrSignatureBytesList if no secret key available, thus schnorrSignatureBytesList.size() == schnorrPublicKeysBytesList.size()
     //threshold is the same as in generateSysDataConstant
@@ -24,7 +23,7 @@ public interface ThresholdSignatureCircuit {
                                    byte[] endCumulativeScTxCommTreeRoot,
                                    long btrFee,
                                    long ftMinAmount,
-                                   byte[] utxoMerkleTreeRoot,
+                                   Optional<byte[]> utxoMerkleTreeRoot,
                                    List<Optional<byte[]>> schnorrSignatureBytesList,
                                    List<byte[]> schnorrPublicKeysBytesList,
                                    long threshold,
@@ -38,7 +37,7 @@ public interface ThresholdSignatureCircuit {
                         byte[] endCumulativeScTxCommTreeRoot,
                         long btrFee,
                         long ftMinAmount,
-                        byte[] utxoMerkleTreeRoot,
+                        Optional<byte[]> utxoMerkleTreeRoot,
                         byte[] constant,
                         long quality, byte[] proof,
                         boolean checkProof,
@@ -47,9 +46,9 @@ public interface ThresholdSignatureCircuit {
 
     byte[] generateSysDataConstant(List<byte[]> publicKeysList, long threshold);
 
-    boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath);
+    boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath, int customFieldsNum);
 
-    List<byte[]> splitUtxoMerkleTreeRoot(byte[] utxoMerkleTreeRoot);
+    List<byte[]> getCertificateCustomFields(Optional<byte[]> utxoMerkleTreeRoot);
 
     byte[] reconstructUtxoMerkleTreeRoot(byte[] fe1Bytes, byte[] fe2Bytes);
 }

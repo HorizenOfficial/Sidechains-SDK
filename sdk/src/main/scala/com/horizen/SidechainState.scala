@@ -31,7 +31,7 @@ import scala.util.{Failure, Success, Try}
 
 class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
                                        forgerBoxStorage: SidechainStateForgerBoxStorage,
-                                       utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
+                                       utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
                                        val params: NetworkParams,
                                        override val version: VersionTag,
                                        val applicationState: ApplicationState)
@@ -83,12 +83,12 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       s"Specified version is invalid. StateForgerBoxStorage version ${forgerBoxStorage.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != $version")
 
     require({
-      utxoMerkleTreeStorage.lastVersionId match {
+      utxoMerkleTreeProvider.lastVersionId match {
         case Some(storageVersion) => storageVersion.data.sameElements(versionBytes)
         case None => true
       }
     },
-      s"Specified version is invalid. UtxoMerkleTreeStorage version ${utxoMerkleTreeStorage.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != $version")
+      s"Specified version is invalid. UtxoMerkleTreeStorage version ${utxoMerkleTreeProvider.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != $version")
   }
 
   // Note: emit tx.semanticValidity for each tx
@@ -119,7 +119,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   }
 
   override def utxoMerklePath(boxId: Array[Byte]): Option[Array[Byte]] = {
-    utxoMerkleTreeStorage.getMerklePath(boxId)
+    utxoMerkleTreeProvider.getMerklePath(boxId)
   }
 
   def hasCeased: Boolean = stateStorage.hasCeased
@@ -372,17 +372,16 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         otherBoxesToAppend.append(box)
     })
 
-    val coinBoxesToAppend = boxesToAppend.filter(box => box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]])
-
     applicationState.onApplyChanges(this,
       version.data,
       boxesToAppend.asJava,
       changes.toRemove.map(_.boxId.array).asJava) match {
       case Success(appState) =>
         val boxIdsToRemoveSet = changes.toRemove.map(r => new ByteArrayWrapper(r.boxId)).toSet
-        val updatedUtxoMerkleTreeStorage = utxoMerkleTreeStorage.update(version, coinBoxesToAppend, boxIdsToRemoveSet).get
+
+        val updatedUtxoMerkleTreeProvider = utxoMerkleTreeProvider.update(version, boxesToAppend, boxIdsToRemoveSet).get
         val utxoMerkleTreeRootOpt: Option[Array[Byte]] = if(isWithdrawalEpochFinished) {
-          Some(updatedUtxoMerkleTreeStorage.getMerkleTreeRoot)
+          Some(updatedUtxoMerkleTreeProvider.getMerkleTreeRoot)
         } else {
           None
         }
@@ -391,7 +390,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           stateStorage.update(version, withdrawalEpochInfo, otherBoxesToAppend.toSet, boxIdsToRemoveSet,
             withdrawalRequestsToAppend, consensusEpoch, topQualityCertificateOpt, blockFeeInfo, utxoMerkleTreeRootOpt, scHasCeased).get,
           forgerBoxStorage.update(version, forgerBoxesToAppend, boxIdsToRemoveSet).get,
-          updatedUtxoMerkleTreeStorage,
+          updatedUtxoMerkleTreeProvider,
           params,
           newVersion,
           appState
@@ -415,7 +414,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       case Success(appState) => new SidechainState(
         stateStorage.rollback(new ByteArrayWrapper(version)).get,
         forgerBoxStorage.rollback(new ByteArrayWrapper(version)).get,
-        utxoMerkleTreeStorage.rollback(new ByteArrayWrapper(version)).get,
+        utxoMerkleTreeProvider.rollback(new ByteArrayWrapper(version)).get,
         params,
         to,
         appState)
@@ -525,7 +524,7 @@ object SidechainState
         (sr ++ tx.unlockers().asScala.map(_.closedBoxId()), sa ++ tx.newBoxes().asScala, f + tx.fee())
       }
 
-    // calculate list of ID of unlokers' boxes -> toRemove
+    // calculate list of ID of unlockers' boxes -> toRemove
     // calculate list of new boxes -> toAppend
     // calculate the rewards for Miner/Forger -> create another regular tx OR Forger need to add his Reward during block creation
     @SuppressWarnings(Array("org.wartremover.warts.Product","org.wartremover.warts.Serializable"))
@@ -537,33 +536,33 @@ object SidechainState
 
     // Q: Do we need to call some static method of ApplicationState?
     // A: Probably yes. To remove some out of date boxes, like VoretBallotRight box for previous voting epoch.
-    // Note: we need to implement a lot of limitation for changes from ApplicationState (only deletion, only non coin realted boxes, etc.)
+    // Note: we need to implement a lot of limitation for changes from ApplicationState (only deletion, only non coin related boxes, etc.)
   }
 
   private[horizen] def restoreState(stateStorage: SidechainStateStorage,
                                     forgerBoxStorage: SidechainStateForgerBoxStorage,
-                                    utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
+                                    utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
                                     params: NetworkParams,
                                     applicationState: ApplicationState): Option[SidechainState] = {
 
-    if (!stateStorage.isEmpty)
-      Some(new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage,
+    if (!stateStorage.isEmpty) {
+      Some(new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeProvider,
         params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState))
-    else
+    } else
       None
   }
 
   private[horizen] def createGenesisState(stateStorage: SidechainStateStorage,
                                           forgerBoxStorage: SidechainStateForgerBoxStorage,
-                                          utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
+                                          utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
                                           params: NetworkParams,
                                           applicationState: ApplicationState,
                                           genesisBlock: SidechainBlock): Try[SidechainState] = Try {
 
-    if (stateStorage.isEmpty)
-      new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, idToVersion(genesisBlock.parentId), applicationState)
+    if (stateStorage.isEmpty) {
+      new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, params, idToVersion(genesisBlock.parentId), applicationState)
         .applyModifier(genesisBlock).get
-    else
+    } else
       throw new RuntimeException("State storage is not empty!")
   }
 
@@ -571,4 +570,71 @@ object SidechainState
     val hash = Blake2b256.hash(Bytes.concat(Ints.toByteArray(withdrawalEpochNumber), Ints.toByteArray(index)))
     BytesUtils.getLong(hash, 0)
   }
+}
+
+
+trait SidechainStateUtxoMerkleTreeProvider {
+  def rollback(version: ByteArrayWrapper): Try[SidechainStateUtxoMerkleTreeProvider]
+
+  def lastVersionId: Option[ByteArrayWrapper]
+
+  def getMerklePath(boxId: Array[Byte]): Option[Array[Byte]]
+
+  def update(version: ByteArrayWrapper,
+             boxesToAppend: Seq[SidechainTypes#SCB],
+             boxesToRemoveSet: Set[ByteArrayWrapper]): Try[SidechainStateUtxoMerkleTreeProvider]
+
+  def getMerkleTreeRoot: Array[Byte]
+}
+
+case class SidechainUtxoMerkleTreeProviderImpl(private val utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage) extends SidechainStateUtxoMerkleTreeProvider{
+
+  override def rollback(version: ByteArrayWrapper): Try[SidechainStateUtxoMerkleTreeProvider] = Try {
+    require(version != null, "Version to rollback to must be NOT NULL.")
+    SidechainUtxoMerkleTreeProviderImpl(utxoMerkleTreeStorage.rollback(version).get)
+  }
+
+  override def lastVersionId: Option[ByteArrayWrapper] = {
+    utxoMerkleTreeStorage.lastVersionId
+  }
+
+  override def getMerklePath(boxId: Array[Byte]): Option[Array[Byte]] = {
+    utxoMerkleTreeStorage.getMerklePath(boxId)
+  }
+
+  override def update(version: ByteArrayWrapper,
+             boxesToAppend: Seq[SidechainTypes#SCB],
+             boxesToRemoveSet: Set[ByteArrayWrapper]): Try[SidechainStateUtxoMerkleTreeProvider] = Try {
+    require(boxesToAppend != null, "List of boxes to add must be NOT NULL. Use empty List instead.")
+    require(boxesToRemoveSet != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")
+    val coinBoxesToAppend = boxesToAppend.filter(box => box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]])
+
+    SidechainUtxoMerkleTreeProviderImpl(utxoMerkleTreeStorage.update(version, coinBoxesToAppend, boxesToRemoveSet).get)
+  }
+
+  override def getMerkleTreeRoot: Array[Byte] = utxoMerkleTreeStorage.getMerkleTreeRoot
+}
+
+case class SidechainUtxoMerkleTreeProviderCSWDisabled() extends SidechainStateUtxoMerkleTreeProvider{
+
+  override def rollback(version: ByteArrayWrapper): Try[SidechainStateUtxoMerkleTreeProvider] = Try {
+    this
+  }
+
+  override def lastVersionId: Option[ByteArrayWrapper] = {
+    None
+  }
+
+  override def getMerklePath(boxId: Array[Byte]): Option[Array[Byte]] = {
+    None
+  }
+
+  override def update(version: ByteArrayWrapper,
+                      boxesToAppend: Seq[SidechainTypes#SCB],
+                      boxesToRemoveSet: Set[ByteArrayWrapper]): Try[SidechainStateUtxoMerkleTreeProvider] = Try {
+
+    this
+  }
+
+  override def getMerkleTreeRoot: Array[Byte] = Array()
 }

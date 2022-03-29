@@ -207,6 +207,10 @@ class SCCswCeasedAtEpoch1(SidechainTestFramework):
             assert_false(any(box["id"] == opened_box_id for box in all_zen_boxes),
                         "Opened box appeared in the wallet: " + opened_box_id)
 
+        # Check CSW is enabled on SC node
+        is_csw_enabled = sc_node.csw_isCSWEnabled()["result"]["cswEnabled"]
+        assert_true(is_csw_enabled, "Ceased Sidechain Withdrawal expected to be enabled.")
+
         # Check CSW available boxes on SC node
         csw_boxes = [ft_box_1, ft_box_2, ft_box_3, ft_box_4]
         actual_csw_box_ids = sc_node.csw_cswBoxIds()["result"]["cswBoxIds"]

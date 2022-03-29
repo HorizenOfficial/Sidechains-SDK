@@ -2,18 +2,22 @@
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration
-from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import fail, assert_equal, assert_true, assert_false, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, generate_next_blocks, generate_next_block, if_csws_were_generated
+    SCNetworkConfiguration, SC_CREATION_VERSION_1
 from SidechainTestFramework.sc_forging_util import *
-from decimal import Decimal
+from SidechainTestFramework.sc_test_framework import SidechainTestFramework
+from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
+    start_sc_nodes, generate_next_blocks, generate_next_block, stop_sc_node, start_sc_node, \
+    wait_for_sc_node_initialization
+from test_framework.util import assert_equal, assert_true, assert_false, start_nodes, \
+    websocket_port_by_mc_node_index, forward_transfer_to_sidechain
+
+CSW_DISABLED_ERROR_CODE = "0707"
 
 """
-Sidechain has ceased in 2 epochs (one certificate appeared in epoch 1) - no active certificates.
-Sidechain lifetime is full withdrawal epochs 0 and 1 + submission window of epoch 2 
+Tests sidechain with CSW disabled.
+Sidechain works and submits certificates until epoch 2 and then ceases.
+Sidechain has ceased in 3 epochs (certificates appeared in epochs 1 and 2) - active certificate in epoch 1 presents.
+Sidechain lifetime is full withdrawal epochs 0,1,2 + submission window of epoch 3 
 
 Configuration:
     Start 1 MC node and 1 SC node (with default websocket configuration).
@@ -33,18 +37,27 @@ Test:
         - Generate 1 MC and 1 SC block to see FTs in the sidechain. Check FTs and save their box ids.
         - Spend 1 FT sending coins to the SC node 1. Remember the resulting box id.
         - Generate MC and SC blocks to reach the end of the Withdrawal epoch 1.
+        
+        - Wait for certificate submission.
+        - Generate 1 MC and 1 SC block including the certificate.
+        - Send 2 more FTs to SC node 1 on different addresses.
+        - Generate 1 MC and 1 SC block to see FTs in the sidechain. Check FTs and save their box ids.
+        - Spend 1 FT sending coins to the SC node 1. Remember the resulting box id.
+        - Generate MC and SC blocks to reach the end of the Withdrawal epoch 2.
         - Disable certificate submitter.
+        
+        - Stop and restart the sidechain, for verifying that there are no issue when it restarts.
         
         - Send 2 FTs to SC node 1 on different addresses.
         - Generate 1 MC and 1 SC block to see FTs in the sidechain. Check FTs and save their box ids.
         - Spend 1 FT sending coins to the SC node 1. Remember the resulting box id.
-        - Generate MC and SC blocks to reach the end of the submission window of epoch 2.
+        - Generate MC and SC blocks to reach the end of the submission window of epoch 3.
         
         - Check that sc has ceased.
-        - Check the list of CSW on sc side. Should consists of 6 FTs and 0 UTXOs. No active cert.
-        - Create CSW proofs and send CSWs to MC. Check the results.
+        - Tests the CSW Http API
+        - Stop and restart the sidechain, for verifying that there are no issue when it restarts.
 """
-class SCCswCeasedAtEpoch2(SidechainTestFramework):
+class SCCswDisabled(SidechainTestFramework):
 
     sidechain_id = None
     sc_withdrawal_epoch_length = 10
@@ -61,7 +74,7 @@ class SCCswCeasedAtEpoch2(SidechainTestFramework):
             cert_submitter_enabled=True,  # enable submitter
             cert_signing_enabled=True  # enable signer
         )
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length), sc_node_configuration)
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length, sc_creation_version=SC_CREATION_VERSION_1, csw_enabled=False), sc_node_configuration)
         self.sidechain_id = bootstrap_sidechain_nodes(self.options, network).sidechain_id
 
     def sc_setup_nodes(self):
@@ -209,10 +222,6 @@ class SCCswCeasedAtEpoch2(SidechainTestFramework):
         zen_boxes_req = {"boxTypeClass": "ZenBox", "excludeBoxIds": [ft_box_2["id"], utxo_box_1["id"], utxo_box_2["id"]]}
         ft_box_4 = sc_node.wallet_allBoxes(json.dumps(zen_boxes_req))["result"]["boxes"][0]
 
-        # Disable certificate submitter and signer to prevent certificate creation
-        sc_node.submitter_disableCertificateSubmitter()
-        sc_node.submitter_disableCertificateSigner()
-
         # Generate more MC blocks to finish the second withdrawal epoch, then generate 1 more SC block to sync with MC.
         we1_end_mcblock_hash = mc_node.generate(epoch_mc_blocks_left)[-1]
         print("End mc block hash in withdrawal epoch 1 = " + we1_end_mcblock_hash)
@@ -225,6 +234,27 @@ class SCCswCeasedAtEpoch2(SidechainTestFramework):
         epoch_mc_blocks_left = self.sc_withdrawal_epoch_length
 
         # ******************** EPOCH 2 START ********************
+
+        # Generate first mc block of the next epoch
+        we2_1_mcblock_hash = mc_node.generate(1)[0]
+        epoch_mc_blocks_left = self.sc_withdrawal_epoch_length - 1
+        sc_block_id = generate_next_blocks(sc_node, "first node", 1)[0]
+        check_mcreference_presence(we2_1_mcblock_hash, sc_block_id, sc_node)
+
+        # Wait until Certificate will appear in MC node mempool
+        time.sleep(10)
+        while mc_node.getmempoolinfo()["size"] == 0 and sc_node.submitter_isCertGenerationActive()["result"]["state"]:
+            print("Wait for certificate in mc mempool...")
+            time.sleep(2)
+            sc_node.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
+        assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
+
+        # Generate MC and SC blocks with Cert
+        we2_2_mcblock_hash = mc_node.generate(1)[0]
+        epoch_mc_blocks_left -= 1
+        sc_block_id = generate_next_blocks(sc_node, "first node", 1)[0]
+        check_mcreference_presence(we2_2_mcblock_hash, sc_block_id, sc_node)
+
 
         # Create new FT to SC
         sc_address_5 = sc_node.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
@@ -278,6 +308,84 @@ class SCCswCeasedAtEpoch2(SidechainTestFramework):
                          "excludeBoxIds": [ft_box_2["id"], utxo_box_1["id"], ft_box_4["id"], utxo_box_2["id"], utxo_box_3["id"]]}
         ft_box_6 = sc_node.wallet_allBoxes(json.dumps(zen_boxes_req))["result"]["boxes"][0]
 
+        # Disable certificate submitter and signer to prevent certificate creation
+        sc_node.submitter_disableCertificateSubmitter()
+        sc_node.submitter_disableCertificateSigner()
+
+        # Generate more MC blocks to finish the second withdrawal epoch, then generate 1 more SC block to sync with MC.
+        we2_end_mcblock_hash = mc_node.generate(epoch_mc_blocks_left)[-1]
+        print("End mc block hash in withdrawal epoch 2 = " + we2_end_mcblock_hash)
+        we2_end_mcblock_json = mc_node.getblock(we2_end_mcblock_hash)
+        we2_end_epoch_cum_sc_tx_comm_tree_root = we2_end_mcblock_json["scCumTreeHash"]
+        print("End cum sc tx cum comm tree root hash in withdrawal epoch 2 = " + we2_end_epoch_cum_sc_tx_comm_tree_root)
+        sc_block_id = generate_next_block(sc_node, "first node")
+        check_mcreferencedata_presence(we2_end_mcblock_hash, sc_block_id, sc_node)
+
+        epoch_mc_blocks_left = self.sc_withdrawal_epoch_length
+
+
+        # Stop and restart SC
+        print("***** Restarting sidechain *******************")
+        print("Stopping SC")
+        stop_sc_node(sc_node,0)
+        time.sleep(5)
+
+        print("Starting SC")
+        start_sc_node(0, self.options.tmpdir)
+        wait_for_sc_node_initialization(self.sc_nodes)
+        time.sleep(2)
+        print("***** Sidechain restarted *******************")
+
+        # ******************** EPOCH 3 START ********************
+
+        # Create new FT to SC
+        sc_address_7 = sc_node.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
+        ft_amount_7 = 7
+        mc_return_address_7 = mc_node.getnewaddress()
+
+        forward_transfer_to_sidechain(self.sidechain_id, mc_node,
+                                      sc_address_7, ft_amount_7, mc_return_address_7)
+
+        epoch_mc_blocks_left -= 1
+
+        # Generate 1 SC block to include FT.
+        generate_next_blocks(sc_node, "first node", 1)[0]
+
+        # Check new FT box id
+        zen_boxes_req = {"boxTypeClass": "ZenBox", "excludeBoxIds": [ft_box_2["id"], utxo_box_1["id"], ft_box_4["id"], utxo_box_2["id"], ft_box_6["id"], utxo_box_3["id"]]}
+        ft_box_7 = sc_node.wallet_allBoxes(json.dumps(zen_boxes_req))["result"]["boxes"][0]
+
+        # Spend new FT, send it to ourselves.
+        utxo_address_4 = sc_node.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
+        raw_tx_res = sc_node.transaction_createCoreTransaction(json.dumps({
+            "transactionInputs": [{"boxId": ft_box_7["id"]}],
+            "regularOutputs": [{"publicKey": utxo_address_4, "value": ft_box_7["value"]}],
+            "withdrawalRequests": [],
+            "forgerOutputs": []
+        }))["result"]
+
+        res = sc_node.transaction_sendTransaction(json.dumps(raw_tx_res))["result"]
+
+        # Generate 1 SC block to include Tx.
+        generate_next_blocks(sc_node, "first node", 1)[0]
+
+        # Check new UTXO box id
+        zen_boxes_req = {"boxTypeClass": "ZenBox", "excludeBoxIds": [ft_box_2["id"], utxo_box_1["id"], ft_box_4["id"], utxo_box_2["id"], ft_box_6["id"], utxo_box_3["id"]]}
+        utxo_box_4 = sc_node.wallet_allBoxes(json.dumps(zen_boxes_req))["result"]["boxes"][0]
+
+        # Send one more FT to Sidechain
+        sc_address_8 = sc_node.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
+        ft_amount_8 = 8
+        mc_return_address_8 = mc_node.getnewaddress()
+
+        forward_transfer_to_sidechain(self.sidechain_id, mc_node,
+                                      sc_address_8, ft_amount_8, mc_return_address_8)
+        epoch_mc_blocks_left -= 1
+
+        # Generate 1 SC block to include FT and reach the end of the submission window.
+        generate_next_blocks(sc_node, "first node", 1)[0]
+
+
         # Check sidechain status
         # From MC perspective SC has ceased, because it has reached the end of the submission window without any cert.
         sc_info = mc_node.getscinfo(self.sidechain_id)['items'][0]
@@ -286,123 +394,37 @@ class SCCswCeasedAtEpoch2(SidechainTestFramework):
         has_ceased = sc_node.csw_hasCeased()["result"]["state"]
         assert_true(has_ceased, "Sidechain expected to be ceased.")
 
-        # Check SC node owned boxes:
-        # 3 FTs must be spent from wallet perspective
-        closed_box_ids = [ft_box_2["id"], ft_box_4["id"], ft_box_6["id"], utxo_box_1["id"], utxo_box_2["id"], utxo_box_3["id"]]
-        opened_box_ids = [ft_box_1["id"], ft_box_3["id"], ft_box_5["id"]]
-        zen_boxes_req = {"boxTypeClass": "ZenBox"}
-        all_zen_boxes = sc_node.wallet_allBoxes(json.dumps(zen_boxes_req))["result"]["boxes"]
-
-        for closed_box_id in closed_box_ids:
-            assert_true(any(box["id"] == closed_box_id for box in all_zen_boxes),
-                        "Closed box not found in the wallet: " + closed_box_id)
-
-        for opened_box_id in opened_box_ids:
-            assert_false(any(box["id"] == opened_box_id for box in all_zen_boxes),
-                        "Opened box appeared in the wallet: " + opened_box_id)
-
-        # Check CSW is enabled on SC node
+        # Check CSW is disabled
         is_csw_enabled = sc_node.csw_isCSWEnabled()["result"]["cswEnabled"]
-        assert_true(is_csw_enabled, "Ceased Sidechain Withdrawal expected to be enabled.")
+        assert_false(is_csw_enabled, "Ceased Sidechain Withdrawal expected to be disabled.")
 
-        # Check CSW available boxes on SC node
-        csw_boxes = [ft_box_1, ft_box_2, ft_box_3, ft_box_4, ft_box_5, ft_box_6]
-        actual_csw_box_ids = sc_node.csw_cswBoxIds()["result"]["cswBoxIds"]
-        assert_equal(len(csw_boxes), len(actual_csw_box_ids), "Different CSW box ids found.")
+        #Check that CSW API are not accessible
+        error_code = sc_node.csw_cswBoxIds()["error"]["code"]
+        assert_equal(CSW_DISABLED_ERROR_CODE, error_code, "Expected CSW disabled error code for cswBoxIds()")
 
-        for box in csw_boxes:
-            assert_true(box["id"] in actual_csw_box_ids, "CSW box id not found: " + box["id"])
+        error_code = sc_node.csw_cswInfo()["error"]["code"]
+        assert_equal(CSW_DISABLED_ERROR_CODE, error_code, "Expected CSW disabled error code for cswInfo()")
 
-        ceasing_cum_sc_tx_comm_tree = mc_node.getceasingcumsccommtreehash(self.sidechain_id)['ceasingCumScTxCommTree']
+        error_code = sc_node.csw_nullifier()["error"]["code"]
+        assert_equal(CSW_DISABLED_ERROR_CODE, error_code, "Expected CSW disabled error code for nullifier()")
 
-        for box in csw_boxes:
-            # Check CSW nullifiers presence in MC
-            req = json.dumps({"boxId": box["id"]})
-            nullifier = sc_node.csw_nullifier(req)["result"]["nullifier"]
-            is_present = mc_node.checkcswnullifier(self.sidechain_id, nullifier)["data"]
-            assert_equal("false", is_present, "Nullifier must not be present in the MC.")
+        error_code = sc_node.csw_generateCswProof()["error"]["code"]
+        assert_equal(CSW_DISABLED_ERROR_CODE, error_code, "Expected CSW disabled error code for generateCswProof()")
 
-            # Check CSW info
-            csw_info = sc_node.csw_cswInfo(req)["result"]["cswInfo"]
-            assert_equal("ForwardTransferCswData", csw_info["cswType"], "Type is different.")
-            assert_equal(box["value"], csw_info["amount"], "Amount is different.")
-            assert_equal(self.sidechain_id, csw_info["scId"], "Sidechain id is different.")
-            assert_equal(nullifier, csw_info["nullifier"], "Nullifier is different.")
-            assert_false("activeCertData" in csw_info, "ActiveCertData must not exist.")
-            assert_equal(ceasing_cum_sc_tx_comm_tree, csw_info["ceasingCumScTxCommTree"], "CeasingCumScTxCommTree is different.")
-            proof_info = csw_info["proofInfo"]
-            assert_false("scProof" in proof_info, "scProof must not exist.")
-            assert_false("receiverAddress" in proof_info, "receiverAddress must not exist.")
-            assert_equal("Absent", proof_info["status"], "Proof must be absent.")
+       # Stop and restart SC after ceased
+        print("***** Restarting ceased sidechain *******************")
+        print("Stopping SC")
+        stop_sc_node(sc_node,0)
+        time.sleep(5)
 
-        # Generate CSW proofs for all FTs
-        csw_box_ids = list(map(lambda box: box["id"], csw_boxes))
-        assert_true(len(csw_box_ids) > 0, "csw box ids expected to be defined.")
-        for box_id in csw_box_ids:
-            receiver_address = mc_node.getnewaddress()
-            req = json.dumps({"boxId": box_id, "receiverAddress": receiver_address})
-            state = sc_node.csw_generateCswProof(req)["result"]["state"]
-            assert_equal("ProofGenerationStarted", state, "Different proof generation state found")
+        print("Starting SC")
+        start_sc_node(0, self.options.tmpdir)
+        wait_for_sc_node_initialization(self.sc_nodes)
+        time.sleep(2)
+        print("***** Sidechain restarted *******************")
 
-        # Wait for proofs generation completion.
-        attempts = 150
-        while not if_csws_were_generated(sc_node, csw_box_ids, allow_absent=True) and attempts > 0:
-            print("Wait for CSW proofs creation completion...")
-            time.sleep(10)
-            attempts -= 1
 
-        assert_true(if_csws_were_generated(sc_node, csw_box_ids, allow_absent=False),
-                    "Some CSW proof was not generated.")
-
-        # Send CSWs to MC
-        mc_out_addr = mc_node.getnewaddress()
-        csw_txs = 0
-
-        for box_id in csw_box_ids:
-            req = json.dumps({"boxId": box_id})
-            csw_info = sc_node.csw_cswInfo(req)["result"]["cswInfo"]
-
-            csw_amount = Decimal(csw_info["amount"]) / 100000000
-            sc_csws = [{
-                "amount": str(csw_amount),
-                "senderAddress": csw_info["proofInfo"]["receiverAddress"],
-                "scId": csw_info["scId"],
-                "nullifier": csw_info["nullifier"],
-                "activeCertData": "",
-                "ceasingCumScTxCommTree": csw_info["ceasingCumScTxCommTree"],
-                "scProof": csw_info["proofInfo"]["scProof"]
-            }]
-
-            # Recipient MC address
-            sc_csw_tx_outs = {mc_out_addr: str(csw_amount)}
-
-            # Sleep for 1 second to let MC synchronize wallet
-            time.sleep(1)
-            rawtx = mc_node.createrawtransaction([], sc_csw_tx_outs, sc_csws)
-            funded_tx = mc_node.fundrawtransaction(rawtx)
-            sigRawtx = mc_node.signrawtransaction(funded_tx['hex'], None, None, "NONE")
-            finalRawtx = mc_node.sendrawtransaction(sigRawtx['hex'])
-
-            print("sent csw 1 {} retrieving {} coins on MC node".format(finalRawtx, sc_csws[0]['amount']))
-
-            print("Check csw is in mempool...")
-            assert_true(finalRawtx in mc_node.getrawmempool())
-
-            # MC has a limit per number of CSW in the mempool in regtest: ScMaxNumberOfCswInputsInMempool = 5
-            csw_txs += 1
-            if csw_txs % 5 == 0:
-                mc_node.generate(1)
-
-        # Generate mc block to include CSWs into the blockchain
-        mc_node.generate(1)
-
-        # Check CSW nullifiers presence in MC
-        for box_id in csw_box_ids:
-            req = json.dumps({"boxId": box_id})
-            nullifier = sc_node.csw_nullifier(req)["result"]["nullifier"]
-            is_present = mc_node.checkcswnullifier(self.sidechain_id, nullifier)["data"]
-            assert_equal("true", is_present, "Nullifier for box id = " + box_id + " must be present in the MC.")
 
 
 if __name__ == "__main__":
-    SCCswCeasedAtEpoch2().main()
+    SCCswDisabled().main()
