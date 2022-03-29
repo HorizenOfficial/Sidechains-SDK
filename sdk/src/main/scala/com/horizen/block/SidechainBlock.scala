@@ -51,18 +51,9 @@ class SidechainBlock(override val header: SidechainBlockHeader,
 
   override lazy val id: ModifierId = header.id
 
-  // TODO: prettify
   override lazy val transactions: Seq[SidechainTypes#SCBT] = {
-    var txs = Seq[SidechainTypes#SCBT]()
-
-    for(b <- mainchainBlockReferencesData) {
-      if (b.sidechainRelatedAggregatedTransaction.isDefined) {
-        txs = txs :+ b.sidechainRelatedAggregatedTransaction.get
-      }
-    }
-    for(tx <- sidechainTransactions)
-      txs = txs :+ tx.asInstanceOf[SidechainTypes#SCBT]
-    txs
+    mainchainBlockReferencesData.flatMap(_.sidechainRelatedAggregatedTransaction) ++
+      sidechainTransactions
   }
 
   def feePaymentsHash: Array[Byte] = header.feePaymentsHash
