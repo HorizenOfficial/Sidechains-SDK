@@ -57,6 +57,8 @@ Test:
         - Tests the CSW Http API
         - Stop and restart the sidechain, for verifying that there are no issue when it restarts.
 """
+
+
 class SCCswDisabled(SidechainTestFramework):
 
     sidechain_id = None
@@ -85,6 +87,23 @@ class SCCswDisabled(SidechainTestFramework):
         self.sync_all()
         mc_node = self.nodes[0]
         sc_node = self.sc_nodes[0]
+
+        # Checks that in Sidechain creation transaction CSW is disabled
+        mc_block_height = mc_node.getblockcount()
+        mc_block = mc_node.getblock(str(mc_block_height))
+        mc_sc_creation_tx_id = mc_block["tx"][1]
+        mc_sc_creation_tx = mc_node.getrawtransaction(mc_sc_creation_tx_id, 1)
+
+        vsc_ccout_ = mc_sc_creation_tx["vsc_ccout"][0]
+        assert_true(len(vsc_ccout_["vFieldElementCertificateFieldConfig"]) == 0,
+                    "Custom Field Elements Configuration in MC should be empty")
+        assert_false("wCeasedVk" in vsc_ccout_, "CSW verification key should not be present")
+
+        # Checks that Sidechain creation transaction is in SC block
+        mc_block_hash = mc_sc_creation_tx["blockhash"]
+        sc_block_id = sc_node.block_best()["result"]["block"]["id"]
+        check_mcreference_presence(mc_block_hash, sc_block_id, sc_node)
+
 
         # ******************** EPOCH 0 START ********************
         epoch_mc_blocks_left = self.sc_withdrawal_epoch_length - 1
@@ -171,6 +190,26 @@ class SCCswDisabled(SidechainTestFramework):
         sc_block_id = generate_next_blocks(sc_node, "first node", 1)[0]
         check_mcreference_presence(we1_2_mcblock_hash, sc_block_id, sc_node)
 
+        # Checks that in certificate there are no custom field elements
+        mc_block_height = mc_node.getblockcount()
+        mc_block = mc_node.getblock(str(mc_block_height))
+
+        mc_certificate_tx = mc_node.getrawtransaction(mc_block["cert"][0], 1)
+        assert_true(len(mc_certificate_tx["cert"]["vFieldElementCertificateField"]) == 0,
+                    "Custom Field Elements list in certificate should be empty")
+
+        # Checks that MC block with certificate is included in SC block
+        sc_block = sc_node.block_best()["result"]["block"]
+        mc_block_hash = mc_certificate_tx["blockhash"]
+        sc_block_id = sc_block["id"]
+        check_mcreference_presence(mc_block_hash, sc_block_id, sc_node)
+
+        sc_certificate = sc_block["topQualityCertificateOpt"]
+        assert_true(len(sc_certificate["fieldElementCertificateFields"]) == 0,
+                    "Custom Field Elements list should be empty")
+
+        assert_true(mc_block["cert"][0] == sc_certificate["hash"], "Certificate in SC should be the same that in MC")
+
         # create new FT to SC
         sc_address_3 = sc_node.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
         ft_amount_3 = 15
@@ -231,8 +270,6 @@ class SCCswDisabled(SidechainTestFramework):
         sc_block_id = generate_next_block(sc_node, "first node")
         check_mcreferencedata_presence(we1_end_mcblock_hash, sc_block_id, sc_node)
 
-        epoch_mc_blocks_left = self.sc_withdrawal_epoch_length
-
         # ******************** EPOCH 2 START ********************
 
         # Generate first mc block of the next epoch
@@ -254,7 +291,6 @@ class SCCswDisabled(SidechainTestFramework):
         epoch_mc_blocks_left -= 1
         sc_block_id = generate_next_blocks(sc_node, "first node", 1)[0]
         check_mcreference_presence(we2_2_mcblock_hash, sc_block_id, sc_node)
-
 
         # Create new FT to SC
         sc_address_5 = sc_node.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
@@ -323,18 +359,16 @@ class SCCswDisabled(SidechainTestFramework):
 
         epoch_mc_blocks_left = self.sc_withdrawal_epoch_length
 
-
-        # Stop and restart SC
+        # Stop and restart SC, in order to verify there are no failing checks during restart
         print("***** Restarting sidechain *******************")
         print("Stopping SC")
-        stop_sc_node(sc_node,0)
+        stop_sc_node(sc_node, 0)
         time.sleep(5)
 
         print("Starting SC")
         start_sc_node(0, self.options.tmpdir)
         wait_for_sc_node_initialization(self.sc_nodes)
         time.sleep(2)
-        print("***** Sidechain restarted *******************")
 
         # ******************** EPOCH 3 START ********************
 
@@ -369,10 +403,6 @@ class SCCswDisabled(SidechainTestFramework):
         # Generate 1 SC block to include Tx.
         generate_next_blocks(sc_node, "first node", 1)[0]
 
-        # Check new UTXO box id
-        zen_boxes_req = {"boxTypeClass": "ZenBox", "excludeBoxIds": [ft_box_2["id"], utxo_box_1["id"], ft_box_4["id"], utxo_box_2["id"], ft_box_6["id"], utxo_box_3["id"]]}
-        utxo_box_4 = sc_node.wallet_allBoxes(json.dumps(zen_boxes_req))["result"]["boxes"][0]
-
         # Send one more FT to Sidechain
         sc_address_8 = sc_node.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
         ft_amount_8 = 8
@@ -384,7 +414,6 @@ class SCCswDisabled(SidechainTestFramework):
 
         # Generate 1 SC block to include FT and reach the end of the submission window.
         generate_next_blocks(sc_node, "first node", 1)[0]
-
 
         # Check sidechain status
         # From MC perspective SC has ceased, because it has reached the end of the submission window without any cert.
@@ -398,7 +427,7 @@ class SCCswDisabled(SidechainTestFramework):
         is_csw_enabled = sc_node.csw_isCSWEnabled()["result"]["cswEnabled"]
         assert_false(is_csw_enabled, "Ceased Sidechain Withdrawal expected to be disabled.")
 
-        #Check that CSW API are not accessible
+        # Check that CSW API are not accessible
         error_code = sc_node.csw_cswBoxIds()["error"]["code"]
         assert_equal(CSW_DISABLED_ERROR_CODE, error_code, "Expected CSW disabled error code for cswBoxIds()")
 
@@ -410,20 +439,6 @@ class SCCswDisabled(SidechainTestFramework):
 
         error_code = sc_node.csw_generateCswProof()["error"]["code"]
         assert_equal(CSW_DISABLED_ERROR_CODE, error_code, "Expected CSW disabled error code for generateCswProof()")
-
-       # Stop and restart SC after ceased
-        print("***** Restarting ceased sidechain *******************")
-        print("Stopping SC")
-        stop_sc_node(sc_node,0)
-        time.sleep(5)
-
-        print("Starting SC")
-        start_sc_node(0, self.options.tmpdir)
-        wait_for_sc_node_initialization(self.sc_nodes)
-        time.sleep(2)
-        print("***** Sidechain restarted *******************")
-
-
 
 
 if __name__ == "__main__":

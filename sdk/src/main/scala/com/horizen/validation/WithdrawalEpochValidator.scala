@@ -5,7 +5,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.SidechainHistory
 import com.horizen.cryptolibprovider.CommonCircuit
 import com.horizen.transaction.mainchain.SidechainCreation
-import com.horizen.utils.{BytesUtils, WithdrawalEpochUtils}
+import com.horizen.utils.{BlockUtils, BytesUtils, WithdrawalEpochUtils}
 import scorex.util.idToBytes
 
 import scala.util.Try
@@ -24,18 +24,13 @@ class WithdrawalEpochValidator(params: NetworkParams) extends HistoryBlockValida
     if(block.mainchainBlockReferencesData.size != 1)
       throw new IllegalArgumentException("Sidechain block validation failed for %s: genesis block should contain single MC block reference.".format(BytesUtils.toHexString(idToBytes(block.id))))
 
-    val sidechainCreation = block.mainchainBlockReferencesData.head.sidechainRelatedAggregatedTransaction.get.mc2scTransactionsOutputs.get(0).asInstanceOf[SidechainCreation]
+
+    val sidechainCreation = BlockUtils.tryGetSidechainCreation(block).get
     if(sidechainCreation.withdrawalEpochLength() != params.withdrawalEpochLength)
       throw new IllegalArgumentException("Sidechain block validation failed for %s: genesis block contains different withdrawal epoch length than expected in configs.".format(BytesUtils.toHexString(idToBytes(block.id))))
 
-    // Check that sidechain supports CSWs
-//    if(sidechainCreation.getScCrOutput.ceasedVkOpt.isEmpty) {
-//      throw new IllegalArgumentException(s"Sidechain block validation failed for ${BytesUtils.toHexString(idToBytes(block.id))}: " +
-//        "genesis block declares sidechain without CSW support.")
-//    }
-
+    // Check that sidechain declares proper number of custom fields
     val expectedNumOfCustomFields = if (params.isCSWEnabled) CommonCircuit.customFieldsNumber else CommonCircuit.customFieldsNumberWithDisabledCSW
-      // Check that sidechain declares proper number of custom fields
     if(sidechainCreation.getScCrOutput.fieldElementCertificateFieldConfigs.size != expectedNumOfCustomFields) {
         throw new IllegalArgumentException(s"Sidechain block validation failed for ${BytesUtils.toHexString(idToBytes(block.id))}: " +
           "genesis block declares sidechain with different number of custom field configs. " +
