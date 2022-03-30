@@ -21,6 +21,7 @@ import scorex.core.utils.NetworkTimeProvider
 import scorex.core.{bytesToVersion, idToVersion, versionToId}
 import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
 
+import java.lang.Thread.sleep
 import java.util
 import scala.annotation.tailrec
 import scala.collection.JavaConverters.asScalaBufferConverter
@@ -43,7 +44,8 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                               timeProvider: NetworkTimeProvider,
                               applicationWallet: ApplicationWallet,
                               applicationState: ApplicationState,
-                              genesisBlock: SidechainBlock)
+                              genesisBlock: SidechainBlock,
+                              application: SidechainApp)
   extends scorex.core.NodeViewHolder[SidechainTypes#SCBT, SidechainBlock]
   with ScorexLogging
   with SidechainTypes
@@ -222,6 +224,24 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     }).toMap
  }
 
+  override def postStop(): Unit = {
+    log.info("SidechainNodeViewHolder actor is stopping...")
+    super.postStop()
+  }
+
+  protected def processStopNode: Receive = {
+    case SidechainNodeViewHolder.ReceivableMessages.StopNode =>
+      // we are called from an API for stopping the node, no need to answer back.
+      // Moreover, since shortly we will be closing network services, give some time to the API
+      // for the HTTP reply to be transmitted
+      log.info("Sleeping 50 msec...")
+      sleep(50)
+
+      log.info("Calling core application stop...")
+      application.stopAll()
+      log.info("... core application stop returned")
+  }
+
   override protected def genesisState: (HIS, MS, VL, MP) = {
     val result = for {
       state <- SidechainState.createGenesisState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, applicationState, genesisBlock)
@@ -285,6 +305,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       applyBiFunctionOnNodeView orElse
       getCurrentSidechainNodeViewInfo orElse
       processLocallyGeneratedSecret orElse
+      processStopNode orElse
       super.receive
   }
 
@@ -479,6 +500,7 @@ object SidechainNodeViewHolder /*extends ScorexLogging with ScorexEncoding*/ {
     case class ApplyFunctionOnNodeView[HIS, MS, VL, MP, A](f: java.util.function.Function[SidechainNodeView, A])
     case class ApplyBiFunctionOnNodeView[HIS, MS, VL, MP, T, A](f: java.util.function.BiFunction[SidechainNodeView, T, A], functionParameter: T)
     case class LocallyGeneratedSecret[S <: SidechainTypes#SCS](secret: S)
+    case class StopNode()
   }
 }
 
@@ -499,9 +521,10 @@ object SidechainNodeViewHolderRef {
             timeProvider: NetworkTimeProvider,
             applicationWallet: ApplicationWallet,
             applicationState: ApplicationState,
-            genesisBlock: SidechainBlock): Props =
+            genesisBlock: SidechainBlock,
+            application: SidechainApp): Props =
     Props(new SidechainNodeViewHolder(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock))
+      walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock, application))
 
   def apply(sidechainSettings: SidechainSettings,
             historyStorage: SidechainHistoryStorage,
@@ -518,10 +541,11 @@ object SidechainNodeViewHolderRef {
             timeProvider: NetworkTimeProvider,
             applicationWallet: ApplicationWallet,
             applicationState: ApplicationState,
-            genesisBlock: SidechainBlock)
+            genesisBlock: SidechainBlock,
+            application: SidechainApp)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock))
+      walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock, application))
 
   def apply(name: String,
             sidechainSettings: SidechainSettings,
@@ -539,8 +563,9 @@ object SidechainNodeViewHolderRef {
             timeProvider: NetworkTimeProvider,
             applicationWallet: ApplicationWallet,
             applicationState: ApplicationState,
-            genesisBlock: SidechainBlock)
+            genesisBlock: SidechainBlock,
+            application: SidechainApp)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock), name)
+      walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock, application), name)
 }

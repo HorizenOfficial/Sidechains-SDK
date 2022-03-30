@@ -521,17 +521,15 @@ def check_sc_node(i):
     return sidechainclient_processes[i].returncode
 
 
-def stop_sc_node(i):
-    # Must be changed with a sort of .stop() API Call
-    sidechainclient_processes[i].kill()
+def stop_sc_node(node, i):
+    node.node_stop()
     del sidechainclient_processes[i]
 
 
 def stop_sc_nodes(nodes):
-    # Must be changed with a sort of .stop() API call
     global sidechainclient_processes
-    for sc in sidechainclient_processes.values():
-        sc.kill()
+    for idx in range(0, len(nodes)):
+      stop_sc_node(nodes[idx], idx)
     del nodes[:]
 
 

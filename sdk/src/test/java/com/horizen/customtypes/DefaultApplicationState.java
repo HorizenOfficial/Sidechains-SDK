@@ -35,4 +35,7 @@ public class DefaultApplicationState implements ApplicationState {
 
     @Override
     public boolean checkStoragesVersion(byte[] blockId) { return true; }
+
+    @Override
+    public void stopAll() {}
 }

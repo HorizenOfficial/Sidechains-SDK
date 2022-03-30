@@ -270,7 +270,8 @@ class SidechainApp @Inject()
     timeProvider,
     applicationWallet,
     applicationState,
-    genesisBlock
+    genesisBlock,
+    this
     ) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
   def modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =
@@ -356,7 +357,16 @@ class SidechainApp @Inject()
   override val swaggerConfig: String = Source.fromResource("api/sidechainApi.yaml")(Codec.UTF8).getLines.mkString("\n")
 
   override def stopAll(): Unit = {
+    log.debug("Calling scorex stopAll...")
     super.stopAll()
+
+    log.debug("Calling applicationState stopAll...")
+    applicationState.stopAll()
+
+    log.debug("Calling applicationWallet stopAll...")
+    applicationWallet.stopAll()
+
+    log.debug("Closing all data storages...")
     storageList.foreach(_.close())
   }
 

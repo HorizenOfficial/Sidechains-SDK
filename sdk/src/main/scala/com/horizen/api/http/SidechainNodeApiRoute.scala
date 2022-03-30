@@ -1,7 +1,6 @@
 package com.horizen.api.http
 
 import java.net.{InetAddress, InetSocketAddress}
-
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.horizen.api.http.SidechainNodeRestSchema._
@@ -14,8 +13,10 @@ import scorex.core.network.peer.PeerManager.ReceivableMessages.{Blacklisted, Get
 import scorex.core.utils.NetworkTimeProvider
 import JacksonSupport._
 import com.fasterxml.jackson.annotation.JsonView
+import com.horizen.SidechainNodeViewHolder.ReceivableMessages.StopNode
 import com.horizen.api.http.SidechainNodeErrorResponse.ErrorInvalidHost
 import com.horizen.serialization.Views
+
 import java.util.{Optional => JOptional}
 
 case class SidechainNodeApiRoute(peerManager: ActorRef,
@@ -25,7 +26,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
                                 (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
 
   override val route: Route = pathPrefix("node") {
-    connect ~ allPeers ~ connectedPeers ~ blacklistedPeers ~ disconnect
+    connect ~ allPeers ~ connectedPeers ~ blacklistedPeers ~ disconnect ~ stop
   }
 
   private val addressAndPortRegexp = "([\\w\\.]+):(\\d{1,5})".r
@@ -114,6 +115,19 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
     }
   }
 
+  def stop: Route = (post & path("stop")) {
+    try {
+      // we are stopping the node, therefore no 'ask', just a quick 'tell' with no Futures handling.
+      sidechainNodeViewHolderRef ! StopNode
+
+      // Also, we reply immediately to the HTTP request in order not to be prevented by network service stopping
+      // due to the pending stop operation
+      ApiResponseUtil.toResponse(RespStop())
+
+    } catch {
+      case e: Throwable => SidechainApiError(e)
+    }
+  }
 }
 
 object SidechainNodeRestSchema {
@@ -139,7 +153,11 @@ object SidechainNodeRestSchema {
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespDisconnect(disconnectedFrom: String) extends SuccessResponse
 
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqStop()
 
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespStop() extends SuccessResponse
 }
 
 object SidechainNodeErrorResponse {

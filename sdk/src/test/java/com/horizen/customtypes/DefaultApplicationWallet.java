@@ -32,4 +32,7 @@ public class DefaultApplicationWallet implements ApplicationWallet {
 
     @Override
     public boolean checkStoragesVersion(byte[] blockId) { return  true; }
+
+    @Override
+    public void stopAll() {}
 }

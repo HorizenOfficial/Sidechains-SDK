@@ -53,6 +53,12 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
     context.system.eventStream.subscribe(self, SidechainAppEvents.SidechainApplicationStart.getClass)
   }
 
+  override def postStop(): Unit = {
+    log.info("Certificate Signature Manager actor is stopping...")
+    context.system.eventStream.unsubscribe(self, SidechainAppEvents.SidechainApplicationStart.getClass)
+    super.postStop()
+  }
+
   override def receive: Receive = {
     onSidechainApplicationStart orElse
     tryToSendGetCertificateSignatures orElse
