@@ -71,14 +71,14 @@ class WithdrawalEpochValidator(params: NetworkParams) extends HistoryBlockValida
             throw new IllegalArgumentException("Sidechain block %s contains MC Block references, that belong to different withdrawal epochs.".format(BytesUtils.toHexString(idToBytes(block.id))))
 
         } else { // epoch is the same
-          if (blockEpochInfo.lastEpochIndex == params.withdrawalEpochLength && block.transactions.nonEmpty) // Block is the last block of the epoch and contains SC Txs
-            throw new IllegalArgumentException("Sidechain block %s is the last withdrawal epoch block, but contains Sidechain Transactions.".format(BytesUtils.toHexString(idToBytes(block.id))))
+          // Block is the last block of the withdrawal epoch and contains SC2SC Txs.
+          // Note: MC2SCAggTx is allowed, because of being a part of MC block reference data.
+          if (blockEpochInfo.lastEpochIndex == params.withdrawalEpochLength && block.sidechainTransactions.nonEmpty)
+            throw new IllegalArgumentException("Sidechain block %s is the withdrawal epoch last block, but contains Sidechain Transactions.".format(BytesUtils.toHexString(idToBytes(block.id))))
         }
 
       case None =>
         throw new IllegalArgumentException("Sidechain block %s parent block is missed.".format(BytesUtils.toHexString(idToBytes(block.id))))
     }
-
-    val backwardTransferCertificateCount = block.mainchainBlockReferencesData.flatMap(_.topQualityCertificate).size
   }
 }
