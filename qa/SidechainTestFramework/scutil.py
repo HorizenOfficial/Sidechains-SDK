@@ -143,7 +143,7 @@ def launch_db_tool(dirName, command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK",
-                                          "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-0.3.0.jar",
+                                          "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-0.3.1.jar",
                                 storagesPath, command_name, json_param], stdout=subprocess.PIPE)
     db_tool_output = java_ps.communicate()[0]
     try:
