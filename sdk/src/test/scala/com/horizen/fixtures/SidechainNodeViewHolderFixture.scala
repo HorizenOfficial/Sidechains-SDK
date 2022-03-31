@@ -17,7 +17,7 @@ import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.utils.BytesUtils
 import com.horizen.wallet.ApplicationWallet
-import com.horizen.{SidechainApp, SidechainNodeViewHolderRef, SidechainSettings, SidechainSettingsReader, SidechainTypes}
+import com.horizen.{SidechainNodeViewHolderRef, SidechainSettings, SidechainSettingsReader, SidechainTypes}
 import scorex.core.api.http.ApiRejectionHandler
 import scorex.core.utils.NetworkTimeProvider
 
@@ -46,7 +46,6 @@ trait SidechainNodeViewHolderFixture
   val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
   val defaultApplicationWallet: ApplicationWallet = new DefaultApplicationWallet()
   val defaultApplicationState: ApplicationState = new DefaultApplicationState()
-  val defaultApplication: SidechainApp = null // no need to use this in test
 
 
   val genesisBlock: SidechainBlock = new SidechainBlockSerializer(sidechainTransactionsCompanion).parseBytes(
@@ -124,8 +123,7 @@ trait SidechainNodeViewHolderFixture
     timeProvider,
     defaultApplicationWallet,
     defaultApplicationState,
-    genesisBlock,
-    null)
+    genesisBlock)
 
   val sidechainTransactionActorRef : ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
 

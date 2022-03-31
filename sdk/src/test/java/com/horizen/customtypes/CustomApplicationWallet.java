@@ -33,7 +33,4 @@ public class CustomApplicationWallet implements ApplicationWallet {
     public boolean checkStoragesVersion(byte[] blockId) {
         return true;
     }
-
-    @Override
-    public void stopAll() {}
 }

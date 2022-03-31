@@ -68,6 +68,7 @@ class SidechainApp @Inject()
    @Named("ConsensusStorage") val consensusStorage: Storage,
    @Named("CustomApiGroups") val customApiGroups: JList[ApplicationApiGroup],
    @Named("RejectedApiPaths") val rejectedApiPaths : JList[Pair[String, String]],
+   @Named("ApplicationStopper") val applicationStopper : SidechainAppStopper
   )
   extends Application  with ScorexLogging
 {
@@ -270,8 +271,7 @@ class SidechainApp @Inject()
     timeProvider,
     applicationWallet,
     applicationState,
-    genesisBlock,
-    this
+    genesisBlock
     ) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
   def modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =
@@ -336,7 +336,7 @@ class SidechainApp @Inject()
   var coreApiRoutes: Seq[SidechainApiRoute] = Seq[SidechainApiRoute](
     MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
-    SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef),
+    SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef),
@@ -357,16 +357,13 @@ class SidechainApp @Inject()
   override val swaggerConfig: String = Source.fromResource("api/sidechainApi.yaml")(Codec.UTF8).getLines.mkString("\n")
 
   override def stopAll(): Unit = {
-    log.debug("Calling scorex stopAll...")
+    log.info("Calling custom application stopAll...")
+    applicationStopper.stopAll()
+
+    log.info("Calling scorex stopAll...")
     super.stopAll()
 
-    log.debug("Calling applicationState stopAll...")
-    applicationState.stopAll()
-
-    log.debug("Calling applicationWallet stopAll...")
-    applicationWallet.stopAll()
-
-    log.debug("Closing all data storages...")
+    log.info("Closing all data storages...")
     storageList.foreach(_.close())
   }
 

@@ -245,7 +245,6 @@ def set_node_times(nodes, t):
 def wait_bitcoinds():
     # Wait for all bitcoinds to cleanly exit
     for bitcoind in bitcoind_processes.values():
-        time.sleep(.5)
         bitcoind.wait()
     bitcoind_processes.clear()
 

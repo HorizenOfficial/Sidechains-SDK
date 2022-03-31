@@ -13,16 +13,17 @@ import scorex.core.network.peer.PeerManager.ReceivableMessages.{Blacklisted, Get
 import scorex.core.utils.NetworkTimeProvider
 import JacksonSupport._
 import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.SidechainNodeViewHolder.ReceivableMessages.StopNode
+import com.horizen.SidechainApp
 import com.horizen.api.http.SidechainNodeErrorResponse.ErrorInvalidHost
 import com.horizen.serialization.Views
 
+import java.lang.Thread.sleep
 import java.util.{Optional => JOptional}
 
 case class SidechainNodeApiRoute(peerManager: ActorRef,
                                  networkController: ActorRef,
                                  timeProvider: NetworkTimeProvider,
-                                 override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
+                                 override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, app: SidechainApp)
                                 (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
 
   override val route: Route = pathPrefix("node") {
@@ -117,11 +118,18 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
 
   def stop: Route = (post & path("stop")) {
     try {
-      // we are stopping the node, therefore no 'ask', just a quick 'tell' with no Futures handling.
-      sidechainNodeViewHolderRef ! StopNode
+      // we are stopping the node, and since we will shortly be closing network services lets do in a separate thread
+      // and give some time to the HTTP reply to be transmitted immediately in this thread
+      new Thread( new Runnable() {
+        override def run(): Unit = {
+          log.info("Sleeping 50 msec...")
+          sleep(50)
+          log.info("Calling core application stop...")
+          app.stopAll()
+          log.info("... core application stop returned")
+        }
+      } ).start()
 
-      // Also, we reply immediately to the HTTP request in order not to be prevented by network service stopping
-      // due to the pending stop operation
       ApiResponseUtil.toResponse(RespStop())
 
     } catch {

@@ -10,6 +10,7 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 
 import com.horizen.SidechainAppModule;
+import com.horizen.SidechainAppStopper;
 import com.horizen.SidechainSettings;
 import com.horizen.api.http.ApplicationApiGroup;
 import com.horizen.box.*;
@@ -75,7 +76,8 @@ public class SimpleAppModule extends SidechainAppModule
         // For example new Pair("wallet, "allBoxes");
         List<Pair<String, String>> rejectedApiPaths = new ArrayList<>();
 
-
+        // use a custom object which implements the stopAll() method
+        SidechainAppStopper applicationStopper = new SimpleAppStopper();
 
         bind(SidechainSettings.class)
                 .annotatedWith(Names.named("SidechainSettings"))
@@ -138,5 +140,9 @@ public class SimpleAppModule extends SidechainAppModule
         bind(new TypeLiteral<List<Pair<String, String>>> () {})
                 .annotatedWith(Names.named("RejectedApiPaths"))
                 .toInstance(rejectedApiPaths);
+
+        bind(SidechainAppStopper.class)
+                .annotatedWith(Names.named("ApplicationStopper"))
+                .toInstance(applicationStopper);
     }
 }
