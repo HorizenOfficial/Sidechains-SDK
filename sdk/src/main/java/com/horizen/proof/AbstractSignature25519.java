@@ -15,7 +15,7 @@ public abstract class AbstractSignature25519<S extends PrivateKey25519, P extend
         implements ProofOfKnowledge<S, P> {
 
     @JsonProperty("signature")
-    final byte[] signatureBytes;
+    protected final byte[] signatureBytes;
 
     public AbstractSignature25519(byte[] signatureBytes) {
         this.signatureBytes = Arrays.copyOf(signatureBytes, signatureBytes.length);
