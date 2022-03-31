@@ -53,7 +53,7 @@ class SCCswCeasedAtEpoch1(SidechainTestFramework):
             cert_submitter_enabled=False,  # disable submitter
             cert_signing_enabled=False  # disable signer
         )
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length), sc_node_configuration)
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length, csw_enabled=True), sc_node_configuration)
         self.sidechain_id = bootstrap_sidechain_nodes(self.options, network).sidechain_id
 
     def sc_setup_nodes(self):

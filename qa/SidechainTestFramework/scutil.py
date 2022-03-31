@@ -382,7 +382,7 @@ def initialize_default_sc_datadir(dirname, n):
     ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
     if not os.path.isdir(ps_keys_dir):
         os.makedirs(ps_keys_dir)
-    cert_keys_paths = cert_proof_keys_paths(ps_keys_dir)
+    cert_keys_paths = cert_proof_keys_paths(ps_keys_dir, isCSWEnabled = False)
     csw_keys_paths = csw_proof_keys_paths(ps_keys_dir, LARGE_WITHDRAWAL_EPOCH_LENGTH)  # withdrawal epoch length taken from the config file.
 
     with open('./resources/template_predefined_genesis.conf', 'r') as templateFile:
@@ -792,14 +792,14 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration, block_tim
     return sc_nodes_bootstrap_info
 
 
-def cert_proof_keys_paths(dirname, isCSWEnabled = True):
+def cert_proof_keys_paths(dirname, isCSWEnabled = False):
     # use replace for Windows OS to be able to parse the path to the keys in the config file
 
     pk = "cert_marlin_snark_pk"
     vk = "cert_marlin_snark_vk"
     if isCSWEnabled is False:
-        pk = "cert_marlin_snark_pk_wo_utxo"
-        vk = "cert_marlin_snark_vk_wo_utxo"
+        pk = "cert_marlin_snark_pk_csw_disabled"
+        vk = "cert_marlin_snark_vk_csw_disabled"
 
     return ProofKeysPaths(os.path.join(dirname, pk).replace("\\", "/"),
                           os.path.join(dirname, vk).replace("\\", "/"))
