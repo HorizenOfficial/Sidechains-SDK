@@ -226,12 +226,12 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       (_: ModifierId, consensusEpochInfo: ConsensusEpochInfo) <- Success(state.getCurrentConsensusEpochInfo)
       withdrawalEpochNumber: Int <- Success(state.getWithdrawalEpochInfo.epoch)
 
-      history <- SidechainHistory.createGenesisHistory(historyStorage, consensusDataStorage, params, genesisBlock, semanticBlockValidators(params),
-        historyBlockValidators(params), StakeConsensusEpochInfo(consensusEpochInfo.forgingStakeInfoTree.rootHash(), consensusEpochInfo.forgersStake))
-
       wallet <- SidechainWallet.createGenesisWallet(sidechainSettings.wallet.seed.getBytes, walletBoxStorage, secretStorage,
         walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, params, applicationWallet,
         genesisBlock, withdrawalEpochNumber, consensusEpochInfo)
+
+      history <- SidechainHistory.createGenesisHistory(historyStorage, consensusDataStorage, params, genesisBlock, semanticBlockValidators(params),
+        historyBlockValidators(params), StakeConsensusEpochInfo(consensusEpochInfo.forgingStakeInfoTree.rootHash(), consensusEpochInfo.forgersStake))
 
       pool <- Success(SidechainMemoryPool.emptyPool)
     } yield (history, state, wallet, pool)
@@ -348,18 +348,18 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     requestDownloads(progressInfo)
 
     // Do rollback if chain switch needed
-    val (stateToApplyTry: Try[MS], walletToApplyTry: Try[VL], suffixTrimmed: IndexedSeq[SidechainBlock]) = if (progressInfo.chainSwitchingNeeded) {
+    val (walletToApplyTry: Try[VL], stateToApplyTry: Try[MS], suffixTrimmed: IndexedSeq[SidechainBlock]) = if (progressInfo.chainSwitchingNeeded) {
       @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
       val branchingPoint = progressInfo.branchPoint.get //todo: .get
       if (state.version != branchingPoint) {
         log.debug(s"chain reorg needed, rolling back state and wallet to branching point: ${branchingPoint}")
         (
-          state.rollbackTo(idToVersion(branchingPoint)),
           wallet.rollback(idToVersion(branchingPoint)),
+          state.rollbackTo(idToVersion(branchingPoint)),
           trimChainSuffix(suffixApplied, branchingPoint)
         )
-      } else (Success(state), Success(wallet), IndexedSeq())
-    } else (Success(state), Success(wallet), suffixApplied)
+      } else (Success(wallet), Success(state), IndexedSeq())
+    } else (Success(wallet), Success(state), suffixApplied)
 
     (stateToApplyTry, walletToApplyTry) match {
       case (Success(stateToApply), Success(walletToApply)) => {

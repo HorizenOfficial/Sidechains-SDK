@@ -464,13 +464,12 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       // TODO csw capability will be optional, related utxo mrkl tree storage might even be empty
       if (utxoMerkleTreeStorage.lastVersionId.isDefined) {
         val versionUmt = bytesToId(utxoMerkleTreeStorage.lastVersionId.get.data())
-        require(versionFb == versionUmt)
+        require(versionFb == versionUmt, "ForgerBox and Utxo storage versions must be aligned")
       }
 
       val versionSt  = bytesToId(stateStorage.lastVersionId.get.data())
-      require(versionFb == versionSt)
-
-      require(versionFb == versionToId(version))
+      require(versionFb == versionSt, "ForgerBox and State storage versions must be aligned")
+      require(versionFb == versionToId(version), "ForgerBox version and SidechainState version attribute must be aligned")
       log.debug("All state storages are consistent")
 
       Success(this)
