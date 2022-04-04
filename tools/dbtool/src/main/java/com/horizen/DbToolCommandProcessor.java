@@ -183,9 +183,9 @@ public class DbToolCommandProcessor extends CommandProcessor {
             return;
         }
         int numOfVersions = json.get("numberOfVersionToRetrieve").asInt();
-        try {
-            File storageFile = getStorageFile(json);
-            Storage storage = new VersionedLevelDbStorageAdapter(storageFile);
+
+        // storage extends autocloseable
+        try (Storage storage = new VersionedLevelDbStorageAdapter(getStorageFile(json))){
 
             List<ByteArrayWrapper> bawList = storage.rollbackVersions();
             log.info(bawList);
@@ -207,7 +207,6 @@ public class DbToolCommandProcessor extends CommandProcessor {
 
             String res = resJson.toString();
             printer.print(res);
-            storage.close();
 
         } catch (IllegalArgumentException e) {
             printVersionsListUsageMsg("Error in processing the command: " + e);
@@ -224,9 +223,9 @@ public class DbToolCommandProcessor extends CommandProcessor {
 
     private void processLastVersionID(JsonNode json) {
 
-        try {
-            File storageFile = getStorageFile(json);
-            Storage storage = new VersionedLevelDbStorageAdapter(storageFile);
+        // storage extends autocloseable
+        try (Storage storage = new VersionedLevelDbStorageAdapter(getStorageFile(json))){
+
             String storageVersion = BytesUtils.toHexString(storage.lastVersionID().get().data());
             log.info(storageVersion);
 
@@ -236,7 +235,6 @@ public class DbToolCommandProcessor extends CommandProcessor {
 
             String res = resJson.toString();
             printer.print(res);
-            storage.close();
 
         } catch (IllegalArgumentException e) {
             printLastVersionIDUsageMsg("Error in processing the command: " + e);
