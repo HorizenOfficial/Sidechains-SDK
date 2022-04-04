@@ -206,7 +206,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     try {
       val m = getStorageVersions.map{ case(k, v) => {"%-36s".format(k) + ": " + v}}
       m.foreach(x => log.debug(s"${x}"))
-      log.debug(s"    ForgingBoxesInfoStorage vers:    ${forgingBoxesInfoStorage.rollbackVersions.slice(0, 3)}")
+      log.trace(s"    ForgingBoxesInfoStorage vers:    ${forgingBoxesInfoStorage.rollbackVersions.slice(0, 3)}")
     } catch {
       case e: Exception =>
         // can happen during unit test with mocked objects
