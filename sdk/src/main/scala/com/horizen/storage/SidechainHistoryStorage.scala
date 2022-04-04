@@ -12,7 +12,6 @@ import scorex.core.consensus.ModifierSemanticValidity
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
 
-import java.util.{ArrayList => JArrayList, List => JList}
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Random, Success, Try}
@@ -37,13 +36,13 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
 
   private val activeChain: ActiveChain = loadActiveChain()
 
-  log.info("height of active chain: " + activeChain.height)
+  log.debug("height of active chain: " + activeChain.height)
 
   private def loadActiveChain(): ActiveChain = {
     if (storage.isEmpty) {
       return ActiveChain(params.mainchainCreationBlockHeight)
     }
-    log.info("Loading active chain from history storage")
+    log.debug("Loading active chain from history storage")
 
     val activeChainBlocksInfo: ArrayBuffer[(ModifierId, SidechainBlockInfo)] = new ArrayBuffer()
 
@@ -253,12 +252,10 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     // add block
     toUpdate.add(new JPair(new ByteArrayWrapper(idToBytes(block.id)), new ByteArrayWrapper(block.bytes)))
 
-    val version = nextVersion
     storage.update(
-      new ByteArrayWrapper(version),
+      new ByteArrayWrapper(nextVersion),
       toUpdate,
       new JArrayList[ByteArrayWrapper]())
-    log.debug("Sidechain history storage updated with version: " + new ByteArrayWrapper(version))
 
     this
   }
@@ -288,29 +285,24 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     val oldInfo: SidechainBlockInfo = activeChain.blockInfoById(block.id).getOrElse(blockInfoById(block.id))
     val blockInfo = oldInfo.copy(semanticValidity = status)
 
-    val version = nextVersion
     storage.update(
-      new ByteArrayWrapper(version),
+      new ByteArrayWrapper(nextVersion),
       java.util.Arrays.asList(new JPair(new ByteArrayWrapper(blockInfoKey(block.id)), new ByteArrayWrapper(blockInfo.bytes))),
       new JArrayList()
     )
-    log.debug("block updated in history storage with validity " + status + " and with version: " + new ByteArrayWrapper(version))
-
     this
   }
 
   def setAsBestBlock(block: SidechainBlock, blockInfo: SidechainBlockInfo): Try[SidechainHistoryStorage] = Try {
-    val version = nextVersion
     storage.update(
-      new ByteArrayWrapper(version),
+      new ByteArrayWrapper(nextVersion),
       java.util.Arrays.asList(new JPair(bestBlockIdKey, new ByteArrayWrapper(idToBytes(block.id)))),
       new JArrayList()
     )
-    log.debug("best block updated in history storage with version: " + new ByteArrayWrapper(version))
 
     val mainchainParent: Option[MainchainHeaderHash] = block.mainchainHeaders.headOption.map(header => byteArrayToMainchainHeaderHash(header.hashPrevBlock))
     activeChain.setBestBlock(block.id, blockInfo, mainchainParent)
-    log.info("best block info set in active chain: " + blockInfo)
+    log.debug("best block info set in active chain: " + blockInfo)
 
     this
   }

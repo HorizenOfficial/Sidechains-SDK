@@ -60,11 +60,9 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
 
     val value = new ByteArrayWrapper(sidechainSecretsCompanion.toBytes(secret))
 
-    val version = nextVersion
-    storage.update(new ByteArrayWrapper(version),
+    storage.update(new ByteArrayWrapper(nextVersion),
       List(new JPair(key, value)).asJava,
       List[ByteArrayWrapper]().asJava)
-    log.debug("Sidechain secret storage updated with version: " + new ByteArrayWrapper(version))
 
     secrets.put(key, secret)
 
@@ -74,7 +72,6 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
   def add (secretList: List[SidechainTypes#SCS]): Try[SidechainSecretStorage] = Try {
     require(!secretList.contains(null), "Secret must be NOT NULL.")
     val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
-    val version = nextVersion
 
     for (s <- secretList) {
       val key = calculateKey(s.publicImage())
@@ -84,10 +81,9 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
         new ByteArrayWrapper(sidechainSecretsCompanion.toBytes(s))))
     }
 
-    storage.update(new ByteArrayWrapper(version),
+    storage.update(new ByteArrayWrapper(nextVersion),
       updateList,
       List[ByteArrayWrapper]().asJava)
-    log.debug("Sidechain secret storage updated with version: " + new ByteArrayWrapper(version))
 
     this
   }
@@ -97,12 +93,9 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
 
     val key = calculateKey(proposition)
 
-    val version = nextVersion
-
-    storage.update(new ByteArrayWrapper(version),
+    storage.update(new ByteArrayWrapper(nextVersion),
       List[JPair[ByteArrayWrapper,ByteArrayWrapper]]().asJava,
       List(key).asJava)
-    log.debug("Sidechain secret storage updated with version: " + new ByteArrayWrapper(version))
 
     secrets.remove(key)
 
@@ -119,11 +112,9 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
       removeList.add(key)
     }
 
-    val version = nextVersion
-    storage.update(new ByteArrayWrapper(version),
+    storage.update(new ByteArrayWrapper(nextVersion),
       List[JPair[ByteArrayWrapper,ByteArrayWrapper]]().asJava,
       removeList)
-    log.debug("Sidechain secret storage updated with version: " + new ByteArrayWrapper(version))
 
     this
   }

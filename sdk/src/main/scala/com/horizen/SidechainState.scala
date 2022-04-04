@@ -61,36 +61,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     }
   }
 
-  private def checkVersion(): Unit = {
-    val versionBytes = versionToBytes(version)
-
-    log.debug(s"State storage version bytes: ${BytesUtils.toHexString(versionBytes)}")
-
-    require({
-      stateStorage.lastVersionId match {
-        case Some(storageVersion) => storageVersion.data.sameElements(versionBytes)
-        case None => true
-      }
-    },
-      s"Specified version is invalid. StateStorage version ${stateStorage.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != $version")
-
-    require({
-      forgerBoxStorage.lastVersionId match {
-        case Some(storageVersion) => storageVersion.data.sameElements(versionBytes)
-        case None => true
-      }
-    },
-      s"Specified version is invalid. StateForgerBoxStorage version ${forgerBoxStorage.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != $version")
-
-    require({
-      utxoMerkleTreeStorage.lastVersionId match {
-        case Some(storageVersion) => storageVersion.data.sameElements(versionBytes)
-        case None => true
-      }
-    },
-      s"Specified version is invalid. UtxoMerkleTreeStorage version ${utxoMerkleTreeStorage.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != $version")
-  }
-
   // Note: emit tx.semanticValidity for each tx
   def semanticValidity(tx: SidechainTypes#SCBT): Try[Unit] = Try {
     tx.semanticValidity()
@@ -409,10 +379,11 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     require(to != null, "Version to rollback to must be NOT NULL.")
     log.debug(s"rolling back state to version = ${to}")
     val version = BytesUtils.fromHexString(to)
+    val bawVersion = new ByteArrayWrapper(version)
 
-    val forgerBoxStorageNew = forgerBoxStorage.rollback(new ByteArrayWrapper(version)).get
-    val stateStorageNew = stateStorage.rollback(new ByteArrayWrapper(version)).get
-    val utxoMerkleTreeStorageNew = utxoMerkleTreeStorage.rollback(new ByteArrayWrapper(version)).get
+    val forgerBoxStorageNew = forgerBoxStorage.rollback(bawVersion).get
+    val stateStorageNew = stateStorage.rollback(bawVersion).get
+    val utxoMerkleTreeStorageNew = utxoMerkleTreeStorage.rollback(bawVersion).get
 
     applicationState.onRollback(version) match {
       case Success(appState) => {
@@ -473,7 +444,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   // Check that all storages are consistent and in case try some rollbacks.
   // Return the state and common version, throw an exception if some unrecoverable misalignment has been detected
-  def ensureStorageConsistencyAfterRestore: Try[(SidechainState, ByteArrayWrapper)] = {
+  def ensureStorageConsistencyAfterRestore: Try[(SidechainState)] = {
     // updates are in order:
     //      appState--> utxoMerkleTreeStorage --> stateStorage --> forgerBoxStorage
 
@@ -482,7 +453,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     val versionFbBytes = forgerBoxStorage.lastVersionId.get.data()
     val appStateVersionOk = applicationState.checkStoragesVersion(versionFbBytes)
 
-    val versionFb       = bytesToId(versionFbBytes)
+    val versionFb = bytesToId(versionFbBytes)
 
     if (appStateVersionOk) {
       // appState is aligned with the last storage version, require that also intermediate storages have the same version
@@ -499,8 +470,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       require(versionFb == versionToId(version))
       log.debug("All state storages are consistent")
 
-      val baw = new ByteArrayWrapper(versionToBytes(version))
-      Success(this, baw)
+      Success(this)
     } else {
       log.debug("state storages are not consistent")
 
@@ -508,8 +478,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       if (rolledBackState.isFailure) {
         throw new IllegalStateException("Could not rollback state")
       } else {
-        val baw = new ByteArrayWrapper(versionFbBytes)
-        Success(rolledBackState.get, baw)
+        Success(rolledBackState.get)
       }
     }
   }

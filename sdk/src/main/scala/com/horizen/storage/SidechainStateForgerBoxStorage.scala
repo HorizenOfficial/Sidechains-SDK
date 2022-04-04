@@ -66,7 +66,6 @@ class SidechainStateForgerBoxStorage(storage: Storage)
         new ByteArrayWrapper(forgerBoxSerializer.toBytes(box))))
 
     storage.update(version, updateList, removeList)
-    log.debug("Sidechain state forger box storage updated with version: " + version)
 
     this
   }
@@ -82,7 +81,6 @@ class SidechainStateForgerBoxStorage(storage: Storage)
   def rollback(version: ByteArrayWrapper): Try[SidechainStateForgerBoxStorage] = Try {
     require(version != null, "SidechainStateForgerBoxStorage: Version to rollback to must be NOT NULL.")
     storage.rollback(version)
-    log.debug("Forger box state storage rollback to version: " + version)
     this
   }
 

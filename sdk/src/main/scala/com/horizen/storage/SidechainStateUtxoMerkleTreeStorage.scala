@@ -110,7 +110,6 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
     }.asJava
 
     storage.update(version, updateList, removeList)
-    log.debug("Sidechain state utxo merkle tree storage updated with version: " + version)
 
     this
   }.recoverWith {
@@ -136,7 +135,6 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
   def rollback(version: ByteArrayWrapper): Try[SidechainStateUtxoMerkleTreeStorage] = Try {
     require(version != null, "Version to rollback to must be NOT NULL.")
     storage.rollback(version)
-    log.debug("UTXO mkl tree state storage rollback to version: " + version)
     // Reload merkle tree
     merkleTreeWrapper.close()
     merkleTreeWrapper = loadMerkleTree()

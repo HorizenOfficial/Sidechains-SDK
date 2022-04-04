@@ -112,8 +112,6 @@ class SidechainWalletCswDataStorage(storage: Storage) extends ScorexLogging with
     }
 
     storage.update(version, updateList, removeList)
-    log.debug("Wallet CSW data storage updated with version: " + version)
-
     this
   }
 
@@ -128,8 +126,6 @@ class SidechainWalletCswDataStorage(storage: Storage) extends ScorexLogging with
   def rollback(version: ByteArrayWrapper): Try[SidechainWalletCswDataStorage] = Try {
     require(version != null, "Version to rollback to must be NOT NULL.")
     storage.rollback(version)
-    log.debug("Wallet CSW data storage rollback to version: " + version)
-
     this
   }
 

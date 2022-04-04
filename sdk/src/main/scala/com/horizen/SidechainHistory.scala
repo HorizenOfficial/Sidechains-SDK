@@ -257,7 +257,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       Failure(new RecoverableModifierError("Parent block IS NOT in history yet"))
     }
     else {
-      log.debug("Parent " + block.parentId + "IS in history")
+      log.debug("Parent " + block.parentId + " IS in history")
       Success(Unit)
     }
   }
