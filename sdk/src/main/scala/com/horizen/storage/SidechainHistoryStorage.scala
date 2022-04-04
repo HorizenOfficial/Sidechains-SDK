@@ -36,13 +36,10 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
 
   private val activeChain: ActiveChain = loadActiveChain()
 
-  log.debug("height of active chain: " + activeChain.height)
-
   private def loadActiveChain(): ActiveChain = {
     if (storage.isEmpty) {
       return ActiveChain(params.mainchainCreationBlockHeight)
     }
-    log.debug("Loading active chain from history storage")
 
     val activeChainBlocksInfo: ArrayBuffer[(ModifierId, SidechainBlockInfo)] = new ArrayBuffer()
 
@@ -302,8 +299,6 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
 
     val mainchainParent: Option[MainchainHeaderHash] = block.mainchainHeaders.headOption.map(header => byteArrayToMainchainHeaderHash(header.hashPrevBlock))
     activeChain.setBestBlock(block.id, blockInfo, mainchainParent)
-    log.debug("best block info set in active chain: " + blockInfo)
-
     this
   }
 
