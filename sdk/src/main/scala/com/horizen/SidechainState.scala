@@ -361,7 +361,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           appState
         )
       case Failure(exception) => {
-        log.error("call to onApplyChanges() method has failed: " + exception)
+        log.error("call to onApplyChanges() method has failed: ", exception)
         throw exception
       }
     }
@@ -395,7 +395,10 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           to,
           appState)
       }
-      case Failure(exception) => throw exception
+      case Failure(exception) => {
+        log.error("call to applicationState.onRollback() method has failed: ", exception)
+        throw exception
+      }
     }
   }.recoverWith{case exception =>
     log.error("Exception was thrown during rollback.", exception)
