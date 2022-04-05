@@ -52,9 +52,7 @@ class CswManager(settings: SidechainSettings,
   }
 
   override def postStop(): Unit = {
-    log.info("CSW Manager actor is stopping...")
-    context.system.eventStream.unsubscribe(self, SidechainAppEvents.SidechainApplicationStart.getClass)
-    context.system.eventStream.unsubscribe(self, classOf[ChangedState[SidechainState]])
+    log.debug("CSW Manager actor is stopping...")
     super.postStop()
   }
 

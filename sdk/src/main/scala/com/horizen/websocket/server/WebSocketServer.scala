@@ -25,12 +25,8 @@ class WebSocketServer(wsPort: Int)
   }
 
   override def postStop(): Unit = {
-    log.info("WebSocket Server actor is stopping...")
-
+    log.debug("WebSocket Server actor is stopping...")
     websocket.stop()
-    context.system.eventStream.unsubscribe(self, classOf[ChangedMempool[_]])
-    context.system.eventStream.unsubscribe(self, classOf[SemanticallySuccessfulModifier[_]])
-
     super.postStop()
   }
 

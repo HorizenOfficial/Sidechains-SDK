@@ -36,10 +36,7 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyn
   }
 
   override def postStop(): Unit = {
-    log.info("SidechainBlock Actor is stopping...")
-    context.system.eventStream.unsubscribe(self, classOf[SemanticallyFailedModification[PMOD]])
-    context.system.eventStream.unsubscribe(self, classOf[SyntacticallyFailedModification[PMOD]])
-    context.system.eventStream.unsubscribe(self, classOf[ChangedHistory[HR]])
+    log.debug("SidechainBlock Actor is stopping...")
     super.postStop()
   }
 

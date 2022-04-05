@@ -21,10 +21,7 @@ class SidechainTransactionActor[T <: SidechainTypes#SCBT](sidechainNodeViewHolde
   }
 
   override def postStop(): Unit = {
-    log.info("SidechainTransaction actor is stopping...")
-    context.system.eventStream.unsubscribe(self, classOf[SuccessfulTransaction[T]])
-    context.system.eventStream.unsubscribe(self, classOf[FailedTransaction])
-
+    log.debug("SidechainTransaction actor is stopping...")
     super.postStop()
   }
 

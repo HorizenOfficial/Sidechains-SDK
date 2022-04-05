@@ -82,11 +82,7 @@ class CertificateSubmitter(settings: SidechainSettings,
   }
 
   override def postStop(): Unit = {
-    log.info("Certificate Submitter actor is stopping...")
-    context.system.eventStream.unsubscribe(self, classOf[SemanticallySuccessfulModifier[SidechainBlock]])
-    context.system.eventStream.unsubscribe(self, SidechainAppEvents.SidechainApplicationStart.getClass)
-    context.system.eventStream.unsubscribe(self, CertificateSubmissionStarted.getClass)
-    context.system.eventStream.unsubscribe(self, CertificateSubmissionStopped.getClass)
+    log.debug("Certificate Submitter actor is stopping...")
     super.postStop()
   }
 

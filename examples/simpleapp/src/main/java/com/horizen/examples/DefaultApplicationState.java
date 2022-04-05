@@ -86,4 +86,9 @@ public class DefaultApplicationState implements ApplicationState {
         return Arrays.equals(blockId, ver1) && Arrays.equals(blockId, ver2);
     }
 
+    public void closeStorages() {
+        logger.debug("Closing storages");
+        appStorage1.close();
+        appStorage2.close();
+    }
 }

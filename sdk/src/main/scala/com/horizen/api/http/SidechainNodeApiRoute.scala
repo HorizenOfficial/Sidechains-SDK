@@ -122,10 +122,10 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
       // and give some time to the HTTP reply to be transmitted immediately in this thread
       new Thread( new Runnable() {
         override def run(): Unit = {
-          log.info("Sleeping 50 msec...")
-          sleep(50)
+          log.info("Sleeping 500 msec...")
+          sleep(500)
           log.info("Calling core application stop...")
-          app.stopAll()
+          app.sidechainStopAll()
           log.info("... core application stop returned")
         }
       } ).start()

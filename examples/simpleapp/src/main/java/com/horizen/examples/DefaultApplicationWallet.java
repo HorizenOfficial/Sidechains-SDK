@@ -79,4 +79,9 @@ public class DefaultApplicationWallet implements ApplicationWallet {
         return Arrays.equals(blockId, ver1) && Arrays.equals(blockId, ver2);
     }
 
+    public void closeStorages() {
+        logger.debug("Closing storages");
+        walletStorage1.close();
+        walletStorage2.close();
+    }
 }

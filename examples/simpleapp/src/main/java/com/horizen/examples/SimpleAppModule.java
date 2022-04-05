@@ -77,7 +77,8 @@ public class SimpleAppModule extends SidechainAppModule
         List<Pair<String, String>> rejectedApiPaths = new ArrayList<>();
 
         // use a custom object which implements the stopAll() method
-        SidechainAppStopper applicationStopper = new SimpleAppStopper();
+        SidechainAppStopper applicationStopper = new SimpleAppStopper(
+                (DefaultApplicationState) defaultApplicationState, (DefaultApplicationWallet) defaultApplicationWallet);
 
         bind(SidechainSettings.class)
                 .annotatedWith(Names.named("SidechainSettings"))
