@@ -49,6 +49,7 @@ import com.horizen.serialization.JsonHorizenPublicKeyHashSerializer
 import com.horizen.transaction.mainchain.SidechainCreation
 import scorex.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
 
+import java.util.concurrent.atomic.AtomicBoolean
 import scala.util.{Failure, Success, Try}
 
 
@@ -384,6 +385,8 @@ class SidechainApp @Inject()
     Runtime.getRuntime.addShutdownHook(shutdownHookThread)
   }
 
+  val stopAllInProgress : AtomicBoolean = new AtomicBoolean(false)
+
   // this method does not override stopAll(), but it rewrites part of its contents
   def sidechainStopAll(): Unit = synchronized {
 
@@ -405,15 +408,17 @@ class SidechainApp @Inject()
 
     log.info("Stopping actors")
     actorSystem.terminate().onComplete { _ =>
-      log.info("Calling custom application stopAll...")
-      applicationStopper.stopAll()
+      synchronized {
+        log.info("Calling custom application stopAll...")
+        applicationStopper.stopAll()
 
-      log.info("Closing all data storages...")
-      storageList.foreach(_.close())
+        log.info("Closing all data storages...")
+        storageList.foreach(_.close())
 
-      log.info("Exiting from the app...")
-      System.out.println("Calling exit...")
-      System.exit(0)
+        log.info("Exiting from the app...")
+        System.out.println("SidechainApp is calling exit()...")
+        System.exit(0)
+      }
     }
   }
 

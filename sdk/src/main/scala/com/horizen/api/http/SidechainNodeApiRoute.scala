@@ -14,7 +14,7 @@ import scorex.core.utils.NetworkTimeProvider
 import JacksonSupport._
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.SidechainApp
-import com.horizen.api.http.SidechainNodeErrorResponse.ErrorInvalidHost
+import com.horizen.api.http.SidechainNodeErrorResponse.{ErrorInvalidHost, ErrorStopNodeAlreadyInProgress}
 import com.horizen.serialization.Views
 
 import java.lang.Thread.sleep
@@ -117,23 +117,31 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
   }
 
   def stop: Route = (post & path("stop")) {
-    try {
-      // we are stopping the node, and since we will shortly be closing network services lets do in a separate thread
-      // and give some time to the HTTP reply to be transmitted immediately in this thread
-      new Thread( new Runnable() {
-        override def run(): Unit = {
-          log.info("Sleeping 500 msec...")
-          sleep(500)
-          log.info("Calling core application stop...")
-          app.sidechainStopAll()
-          log.info("... core application stop returned")
-        }
-      } ).start()
+    if (app.stopAllInProgress.get() ) {
+      log.warn("Stop node already in progress...")
+      ApiResponseUtil.toResponse(ErrorStopNodeAlreadyInProgress("Stop node procedure already in progress", JOptional.empty()))
+    } else {
 
-      ApiResponseUtil.toResponse(RespStop())
+      try {
+        // we are stopping the node, and since we will shortly be closing network services lets do in a separate thread
+        // and give some time to the HTTP reply to be transmitted immediately in this thread
+        app.stopAllInProgress.set(true)
 
-    } catch {
-      case e: Throwable => SidechainApiError(e)
+        new Thread( new Runnable() {
+          override def run(): Unit = {
+            log.info("Stop command triggered...")
+            sleep(500)
+            log.info("Calling core application stop...")
+            app.sidechainStopAll()
+            log.info("... core application stop returned")
+          }
+        } ).start()
+
+        ApiResponseUtil.toResponse(RespStop())
+
+      } catch {
+        case e: Throwable => SidechainApiError(e)
+      }
     }
   }
 }
@@ -172,6 +180,10 @@ object SidechainNodeErrorResponse {
 
   case class ErrorInvalidHost(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0401"
+  }
+
+  case class ErrorStopNodeAlreadyInProgress(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
+    override val code: String = "0402"
   }
 
 }

@@ -49,11 +49,11 @@ public class SimpleAppModule extends SidechainAppModule
         // misalignment during startup and the recover logic
         File appWalletStorage1 = new File(dataDirAbsolutePath + "/appWallet1");
         File appWalletStorage2 = new File(dataDirAbsolutePath + "/appWallet2");
-        ApplicationWallet defaultApplicationWallet = new DefaultApplicationWallet(appWalletStorage1, appWalletStorage2);
+        DefaultApplicationWallet defaultApplicationWallet = new DefaultApplicationWallet(appWalletStorage1, appWalletStorage2);
 
         File appStateStorage1 = new File(dataDirAbsolutePath + "/appState1");
         File appStateStorage2 = new File(dataDirAbsolutePath + "/appState2");
-        ApplicationState defaultApplicationState = new DefaultApplicationState(appStateStorage1, appStateStorage2);
+        DefaultApplicationState defaultApplicationState = new DefaultApplicationState(appStateStorage1, appStateStorage2);
 
         File secretStore = new File(dataDirAbsolutePath + "/secret");
         File walletBoxStore = new File(dataDirAbsolutePath + "/wallet");
@@ -78,7 +78,7 @@ public class SimpleAppModule extends SidechainAppModule
 
         // use a custom object which implements the stopAll() method
         SidechainAppStopper applicationStopper = new SimpleAppStopper(
-                (DefaultApplicationState) defaultApplicationState, (DefaultApplicationWallet) defaultApplicationWallet);
+                defaultApplicationState, defaultApplicationWallet);
 
         bind(SidechainSettings.class)
                 .annotatedWith(Names.named("SidechainSettings"))
