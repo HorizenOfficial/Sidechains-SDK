@@ -117,16 +117,11 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
   }
 
   def stop: Route = (post & path("stop")) {
-    if (app.stopAllInProgress.get() ) {
-      log.warn("Stop node already in progress...")
-      ApiResponseUtil.toResponse(ErrorStopNodeAlreadyInProgress("Stop node procedure already in progress", JOptional.empty()))
-    } else {
 
+    if (app.stopAllInProgress.compareAndSet(false, true) ) {
       try {
         // we are stopping the node, and since we will shortly be closing network services lets do in a separate thread
         // and give some time to the HTTP reply to be transmitted immediately in this thread
-        app.stopAllInProgress.set(true)
-
         new Thread( new Runnable() {
           override def run(): Unit = {
             log.info("Stop command triggered...")
@@ -142,6 +137,9 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
       } catch {
         case e: Throwable => SidechainApiError(e)
       }
+    } else {
+      log.warn("Stop node already in progress...")
+      ApiResponseUtil.toResponse(ErrorStopNodeAlreadyInProgress("Stop node procedure already in progress", JOptional.empty()))
     }
   }
 }
