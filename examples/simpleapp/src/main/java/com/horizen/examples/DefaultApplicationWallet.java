@@ -1,6 +1,7 @@
 package com.horizen.examples;
 
 import com.horizen.box.Box;
+import com.horizen.companion.SidechainBoxesCompanion;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.Secret;
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter;
@@ -10,6 +11,7 @@ import com.horizen.utils.Pair;
 import com.horizen.wallet.ApplicationWallet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.iq80.leveldb.DBIterator;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -83,5 +85,10 @@ public class DefaultApplicationWallet implements ApplicationWallet {
         logger.debug("Closing storages");
         walletStorage1.close();
         walletStorage2.close();
+    }
+
+    @Override
+    public void onApplicationRestore(SidechainBoxesCompanion sidechainBoxesCompanion, DBIterator i) {
+
     }
 }

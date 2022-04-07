@@ -12,7 +12,7 @@ import com.horizen.node.NodeState
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.ApplicationState
-import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
+import com.horizen.storage.{BackupStorage, SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
 import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import scorex.core._
@@ -22,6 +22,7 @@ import scorex.util.{ModifierId, ScorexLogging, bytesToId}
 
 import java.math.{BigDecimal, MathContext}
 import com.horizen.box.data.ZenBoxData
+import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.cryptolibprovider.CryptoLibProvider
 
 import scala.collection.JavaConverters._
@@ -575,14 +576,25 @@ object SidechainState
   private[horizen] def createGenesisState(stateStorage: SidechainStateStorage,
                                           forgerBoxStorage: SidechainStateForgerBoxStorage,
                                           utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
+                                          backupStorage: BackupStorage,
+                                          sidechainBoxesCompanion: SidechainBoxesCompanion,
                                           params: NetworkParams,
                                           applicationState: ApplicationState,
                                           genesisBlock: SidechainBlock): Try[SidechainState] = Try {
 
-    if (stateStorage.isEmpty)
-      new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, idToVersion(genesisBlock.parentId), applicationState)
+    if (stateStorage.isEmpty) {
+      if (!backupStorage.isEmpty) {
+        stateStorage.restoreBackup(backupStorage.getIterator, versionToBytes(idToVersion(genesisBlock.parentId)))
+      }
+      //This is for testing purpose
+      //stateStorage.readStorage()
+
+      val sidechainState = new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, idToVersion(genesisBlock.parentId), applicationState)
         .applyModifier(genesisBlock).get
-    else
+
+      applicationState.onApplicationRestore(sidechainState, sidechainBoxesCompanion, backupStorage.getIterator)
+      sidechainState
+    } else
       throw new RuntimeException("State storage is not empty!")
   }
 

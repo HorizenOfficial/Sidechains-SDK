@@ -2,6 +2,7 @@ package com.horizen.examples;
 
 import com.horizen.block.SidechainBlock;
 import com.horizen.box.Box;
+import com.horizen.companion.SidechainBoxesCompanion;
 import com.horizen.proposition.Proposition;
 import com.horizen.state.ApplicationState;
 import com.horizen.state.SidechainStateReader;
@@ -12,6 +13,7 @@ import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.iq80.leveldb.DBIterator;
 import scala.util.Success;
 import scala.util.Try;
 
@@ -90,5 +92,9 @@ public class DefaultApplicationState implements ApplicationState {
         logger.debug("Closing storages");
         appStorage1.close();
         appStorage2.close();
+    }
+
+    public Try<ApplicationState> onApplicationRestore(SidechainStateReader stateReader, SidechainBoxesCompanion sidechainBoxesCompanion, DBIterator i) {
+        return new Success<>(this);
     }
 }

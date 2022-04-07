@@ -46,14 +46,12 @@ import com.horizen.network.SidechainNodeViewSynchronizer
 import com.horizen.websocket.client.{DefaultWebSocketReconnectionHandler, MainchainNodeChannelImpl, WebSocketChannel, WebSocketCommunicationClient, WebSocketConnector, WebSocketConnectorImpl, WebSocketReconnectionHandler}
 import com.horizen.websocket.server.WebSocketServerRef
 import com.horizen.serialization.JsonHorizenPublicKeyHashSerializer
-import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.transaction.mainchain.SidechainCreation
 import scorex.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
 
 import java.util.concurrent.atomic.AtomicBoolean
 import org.iq80.leveldb.DBIterator
 
-import java.io.File
 import scala.util.{Failure, Success, Try}
 
 
@@ -74,6 +72,7 @@ class SidechainApp @Inject()
    @Named("WalletForgingBoxesInfoStorage") val walletForgingBoxesInfoStorage: Storage,
    @Named("WalletCswDataStorage") val walletCswDataStorage: Storage,
    @Named("ConsensusStorage") val consensusStorage: Storage,
+   @Named("BackupStorage") val backUpStorage: Storage,
    @Named("CustomApiGroups") val customApiGroups: JList[ApplicationApiGroup],
    @Named("RejectedApiPaths") val rejectedApiPaths : JList[Pair[String, String]],
    @Named("ApplicationStopper") val applicationStopper : SidechainAppStopper,
@@ -264,6 +263,8 @@ class SidechainApp @Inject()
       sidechainSecretStorage.add(sidechainSecretsCompanion.parseBytes(BytesUtils.fromHexString(secretSchnorr)))
   }
 
+  protected val backupStorage = new BackupStorage(registerStorage(backUpStorage), sidechainBoxesCompanion)
+
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(
     sidechainSettings,
     sidechainHistoryStorage,
@@ -276,6 +277,8 @@ class SidechainApp @Inject()
     sidechainWalletTransactionStorage,
     forgingBoxesMerklePathStorage,
     sidechainWalletCswDataStorage,
+    backupStorage,
+    sidechainBoxesCompanion,
     params,
     timeProvider,
     applicationWallet,
@@ -441,18 +444,14 @@ class SidechainApp @Inject()
 
   actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 
-  def createBackup(storagePath: String): Unit = {
-    log.info(s"Starting backup at \n$storagePath")
-
-    //Create the backup storage
-    val backupStore = new File(storagePath)
-    val backupDataStorage = new BackupStorage(registerStorage( new VersionedLevelDbStorageAdapter(backupStore)), sidechainBoxesCompanion)
+  def createBackup(): Unit = {
+    log.info(s"Starting sidechain backup...")
 
     //Take an iterator on the sidechainStateStorage
     val stateIterator: DBIterator = sidechainStateStorage.getIterator
     stateIterator.seekToFirst()
 
     //Perform the backup in the application level
-    backUpper.generateBackUp(stateIterator, backupDataStorage, sidechainBoxesCompanion)
+    backUpper.generateBackUp(stateIterator, backupStorage, sidechainBoxesCompanion)
   }
 }

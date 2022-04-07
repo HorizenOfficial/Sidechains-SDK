@@ -10,6 +10,7 @@ import scorex.crypto.hash.Blake2b256
 package object leveldb {
   object Constants {
     val HashLength: Int = 32
+    val BatchSize: Int = 10000
   }
 
   object Algos extends ScorexEncoding {

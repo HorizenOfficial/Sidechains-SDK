@@ -1,11 +1,12 @@
 package com.horizen.customtypes;
 
 import com.horizen.box.Box;
+import com.horizen.companion.SidechainBoxesCompanion;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.Secret;
 import com.horizen.wallet.ApplicationWallet;
+import org.iq80.leveldb.DBIterator;
 
-import java.util.Collections;
 import java.util.List;
 
 public class DefaultApplicationWallet implements ApplicationWallet {
@@ -32,4 +33,7 @@ public class DefaultApplicationWallet implements ApplicationWallet {
 
     @Override
     public boolean checkStoragesVersion(byte[] blockId) { return  true; }
+
+    public void onApplicationRestore(SidechainBoxesCompanion sidechainBoxesCompanion, DBIterator i) {
+    }
 }

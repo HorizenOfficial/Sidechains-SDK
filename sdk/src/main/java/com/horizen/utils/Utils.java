@@ -1,5 +1,8 @@
 package com.horizen.utils;
 
+import com.google.common.primitives.Longs;
+import scorex.crypto.hash.Blake2b256;
+
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -11,6 +14,8 @@ public final class Utils
     public static final byte[] ZEROS_HASH = new byte[32];
 
     public static final int SHA256_LENGTH = 32;
+
+    private static long latestUniqueVersion = 0;
 
     public static byte[] doubleSHA256Hash(byte[] bytes) {
         try {
@@ -106,4 +111,22 @@ public final class Utils
                 ((bytes[offset + 2] & 0xffl) << 8) |
                 (bytes[offset + 3] & 0xffl);
     }
+
+    /*
+    Generate a uniqueVersion number - simply based to the current time millis
+    */
+    public static synchronized byte[] uniqueVersion() {
+        long uniqueVersion = System.currentTimeMillis();
+        while (latestUniqueVersion == uniqueVersion){
+            try {
+                Utils.uniqueVersion().wait(5);
+                uniqueVersion = System.currentTimeMillis();
+            } catch (InterruptedException e) {
+                //do nothing
+            }
+        }
+        latestUniqueVersion = uniqueVersion;
+        return (byte[]) Blake2b256.hash(Longs.toByteArray(uniqueVersion)); //hashed to be sure has 32bytes length
+    }
+
 }
