@@ -4,9 +4,11 @@ import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import com.horizen.fixtures.BoxFixture
 import com.horizen.params.MainNetParams
+import com.typesafe.scalalogging.Logger
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import org.junit.Assert._
 import org.mockito.Mockito
+import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 
@@ -114,21 +116,6 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
         assertEquals(1, result.elements().asScala.length)
         assertTrue(result.get("cswEnabled").isBoolean)
         assertTrue(result.get("cswEnabled").asBoolean)
-      }
-      //Testing response in case of internal error
-      val mockParams: MainNetParams = mock[MainNetParams]
-      Mockito.when(mockParams.isCSWEnabled).thenReturn(true).thenThrow(new RuntimeException )
-
-      val sidechainCswApiRouteWithError = SidechainCswApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedCswManagerActorRef,mockParams).route
-      Post(basePath + "isCSWEnabled") ~> sidechainCswApiRouteWithError ~> check {
-        status.intValue() shouldBe StatusCodes.OK.intValue
-        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        val result = mapper.readTree(entityAs[String]).get("error")
-        if (result == null)
-          fail("Serialization failed for object ErrorRetrievingCeasingState")
-        assertEquals(3, result.elements().asScala.length)
-        assertTrue(result.get("code").isTextual)
-        assertEquals("0706", result.get("code").asText())
       }
     }
 

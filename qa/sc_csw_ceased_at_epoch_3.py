@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 import time
+from decimal import Decimal
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, SC_CREATION_VERSION_1
+from SidechainTestFramework.sc_forging_util import *
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import fail, assert_equal, assert_true, assert_false, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, generate_next_blocks, generate_next_block, if_csws_were_generated
-from SidechainTestFramework.sc_forging_util import *
-from decimal import Decimal
+from test_framework.util import fail, assert_equal, assert_true, assert_false, start_nodes, \
+    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, certificate_field_config_csw_enabled
 
 """
 Sidechain has ceased in 3 epochs (certificates appeared in epochs 1 and 2) - active certificate in epoch 1 presents.
@@ -81,6 +81,27 @@ class SCCswCeasedAtEpoch3(SidechainTestFramework):
         self.sync_all()
         mc_node = self.nodes[0]
         sc_node = self.sc_nodes[0]
+
+        # Check CSW is enabled on SC node
+        is_csw_enabled = sc_node.csw_isCSWEnabled()["result"]["cswEnabled"]
+        assert_true(is_csw_enabled, "Ceased Sidechain Withdrawal expected to be enabled.")
+
+        # Checks that CSW is enabled in Sidechain creation transaction on Mainchain
+        mc_block_height = mc_node.getblockcount()
+        mc_block = mc_node.getblock(str(mc_block_height))
+        mc_sc_creation_tx_id = mc_block["tx"][1]
+        mc_sc_creation_tx = mc_node.getrawtransaction(mc_sc_creation_tx_id, 1)
+
+        vsc_ccout_ = mc_sc_creation_tx["vsc_ccout"][0]
+        assert_true(vsc_ccout_["vFieldElementCertificateFieldConfig"] == certificate_field_config_csw_enabled,
+                    "Custom Field Elements Configuration in MC are wrong. Expected: " + format(certificate_field_config_csw_enabled) +
+                    ", actual: " + format(vsc_ccout_["vFieldElementCertificateFieldConfig"]))
+        assert_true("wCeasedVk" in vsc_ccout_, "CSW verification key should be present")
+
+        # Checks that Sidechain creation transaction is in SC block
+        mc_block_hash = mc_sc_creation_tx["blockhash"]
+        sc_block_id = sc_node.block_best()["result"]["block"]["id"]
+        check_mcreference_presence(mc_block_hash, sc_block_id, sc_node)
 
         # ******************** EPOCH 0 START ********************
         epoch_mc_blocks_left = self.sc_withdrawal_epoch_length - 1

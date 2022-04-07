@@ -254,9 +254,9 @@ public class CommandProcessor {
                 return;
             }
 
-            int numOfCustomFields = CommonCircuit.customFieldsNumberWithDisabledCSW;
+            int numOfCustomFields = CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW;
             if (isCSWEnabled){
-                numOfCustomFields = CommonCircuit.customFieldsNumber;
+                numOfCustomFields = CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW;
             }
             if (!CryptoLibProvider.sigProofThresholdCircuitFunctions().generateCoboundaryMarlinSnarkKeys(maxPks, provingKeyPath, verificationKeyPath, numOfCustomFields)) {
                 printer.print("Error occurred during snark keys generation.");

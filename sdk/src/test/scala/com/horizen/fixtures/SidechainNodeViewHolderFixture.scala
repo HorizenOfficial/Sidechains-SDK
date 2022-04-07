@@ -17,7 +17,7 @@ import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.utils.BytesUtils
 import com.horizen.wallet.ApplicationWallet
-import com.horizen.{SidechainNodeViewHolderRef, SidechainSettings, SidechainSettingsReader, SidechainTypes, SidechainUtxoMerkleTreeProviderImpl, SidechainWalletCswDataProvider, SidechainWalletCswDataProviderImpl}
+import com.horizen.{SidechainNodeViewHolderRef, SidechainSettings, SidechainSettingsReader, SidechainTypes, SidechainUtxoMerkleTreeProviderCSWEnabled, SidechainWalletCswDataProvider, SidechainWalletCswDataProviderCSWEnabled}
 import scorex.core.api.http.ApiRejectionHandler
 import scorex.core.utils.NetworkTimeProvider
 
@@ -94,14 +94,13 @@ trait SidechainNodeViewHolderFixture
   val sidechainWalletBoxStorage = new SidechainWalletBoxStorage(getStorage(), sidechainBoxesCompanion)
   val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion)
   val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(getStorage())
-  val sidechainStateUtxoMerkleTreeStorage = new SidechainStateUtxoMerkleTreeStorage(getStorage())
-  val sidechainStateUtxoMerkleTreeProvider: SidechainUtxoMerkleTreeProviderImpl = SidechainUtxoMerkleTreeProviderImpl(sidechainStateUtxoMerkleTreeStorage)
+  val sidechainStateUtxoMerkleTreeProvider: SidechainUtxoMerkleTreeProviderCSWEnabled = SidechainUtxoMerkleTreeProviderCSWEnabled(new SidechainStateUtxoMerkleTreeStorage(getStorage()))
 
   val sidechainHistoryStorage = new SidechainHistoryStorage(getStorage(), sidechainTransactionsCompanion, params)
   val consensusDataStorage = new ConsensusDataStorage(getStorage())
   val sidechainWalletTransactionStorage = new SidechainWalletTransactionStorage(getStorage(), sidechainTransactionsCompanion)
   val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(getStorage())
-  val cswDataProvider: SidechainWalletCswDataProvider = SidechainWalletCswDataProviderImpl(new SidechainWalletCswDataStorage(getStorage()))
+  val cswDataProvider: SidechainWalletCswDataProvider = SidechainWalletCswDataProviderCSWEnabled(new SidechainWalletCswDataStorage(getStorage()))
 
   // Append genesis secrets if we start the node first time
   if(sidechainSecretStorage.isEmpty) {

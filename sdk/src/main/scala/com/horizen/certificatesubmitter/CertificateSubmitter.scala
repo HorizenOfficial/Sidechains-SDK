@@ -251,7 +251,12 @@ class CertificateSubmitter(settings: SidechainSettings,
 
   private def getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber: Int, state: SidechainState): Optional[Array[Byte]] = {
     if (params.isCSWEnabled) {
-      state.utxoMerkleTreeRoot(referencedWithdrawalEpochNumber).asJava
+      state.utxoMerkleTreeRoot(referencedWithdrawalEpochNumber) match {
+        case x: Some[Array[Byte]] => x.asJava
+        case None =>
+          log.error("UtxoMerkleTreeRoot is not defined even if CSW is enabled")
+          throw new IllegalStateException("UtxoMerkleTreeRoot is not defined")
+      }
     }
     else {
       Optional.empty()
@@ -449,7 +454,21 @@ class CertificateSubmitter(settings: SidechainSettings,
                                     btrFee: Long,
                                     ftMinAmount: Long,
                                     utxoMerkleTreeRoot: Optional[Array[Byte]],
-                                    schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])])
+                                    schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])]) {
+
+    override def toString: String = {
+    val utxoMerkleTreeRootString =  if (utxoMerkleTreeRoot.isPresent) BytesUtils.toHexString(utxoMerkleTreeRoot.get()) else "None"
+      "DataForProofGeneration(" +
+        s"referencedEpochNumber = $referencedEpochNumber, " +
+        s"sidechainId = $sidechainId, " +
+        s"withdrawalRequests = {${withdrawalRequests.mkString(",")}}, " +
+        s"endEpochCumCommTreeHash = ${BytesUtils.toHexString(endEpochCumCommTreeHash)}, " +
+        s"btrFee = $btrFee, " +
+        s"ftMinAmount = $ftMinAmount, " +
+        s"utxoMerkleTreeRoot = ${utxoMerkleTreeRootString}, " +
+        s"number of schnorrKeyPairs = ${schnorrKeyPairs.size})"
+    }
+  }
 
   private def buildDataForProofGeneration(sidechainNodeView: View, status: SignaturesStatus): DataForProofGeneration = {
     val history = sidechainNodeView.history
@@ -499,12 +518,17 @@ class CertificateSubmitter(settings: SidechainSettings,
     val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
       dataForProofGeneration.schnorrKeyPairs.map{case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)}.unzip
 
+//    log.info(s"Start generating proof for ${dataForProofGeneration.referencedEpochNumber} withdrawal epoch number, " +
+//      s"with parameters: sidechainId LE = ${BytesUtils.toHexString(dataForProofGeneration.sidechainId)}, " +
+//      s"withdrawalRequests=${dataForProofGeneration.withdrawalRequests.foreach(_.toString)}, " +
+//      s"endEpochCumCommTreeHash=${BytesUtils.toHexString(dataForProofGeneration.endEpochCumCommTreeHash)}, " +
+//      s"utxoMerkleTreeRoot=${BytesUtils.toHexString(dataForProofGeneration.utxoMerkleTreeRoot.orElse(Array()))}, " +
+//      s"signersThreshold=${params.signersThreshold}. " +
+//      s"It can take a while.")
+
     log.info(s"Start generating proof for ${dataForProofGeneration.referencedEpochNumber} withdrawal epoch number, " +
-      s"with parameters: sidechainId LE = ${BytesUtils.toHexString(dataForProofGeneration.sidechainId)}, " +
-      s"withdrawalRequests=${dataForProofGeneration.withdrawalRequests.foreach(_.toString)}, " +
-      s"endEpochCumCommTreeHash=${BytesUtils.toHexString(dataForProofGeneration.endEpochCumCommTreeHash)}, " +
-      s"utxoMerkleTreeRoot=${BytesUtils.toHexString(dataForProofGeneration.utxoMerkleTreeRoot.orElse(Array()))}, " +
-      s"signersThreshold=${params.signersThreshold}. " +
+      s"with parameters: dataForProofGeneration = ${dataForProofGeneration}, " +
+      s"signersThreshold = ${params.signersThreshold}. " +
       s"It can take a while.")
 
     //create and return proof with quality

@@ -238,8 +238,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     }
 
     if (params.isCSWEnabled) {
-      if (topQualityCertificate.fieldElementCertificateFields.size != CommonCircuit.customFieldsNumber)
-        throw new IllegalArgumentException(s"Top quality certificate should contain exactly ${CommonCircuit.customFieldsNumber} custom fields.")
+      if (topQualityCertificate.fieldElementCertificateFields.size != CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW)
+        throw new IllegalArgumentException(s"Top quality certificate should contain exactly ${CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW} custom fields.")
 
       utxoMerkleTreeRoot(certReferencedEpochNumber) match {
         case Some(expectedMerkleTreeRoot) =>
@@ -255,8 +255,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       }
     }
     else {
-      if (topQualityCertificate.fieldElementCertificateFields.size != CommonCircuit.customFieldsNumberWithDisabledCSW )
-        throw new IllegalArgumentException(s"Top quality certificate should contain exactly ${CommonCircuit.customFieldsNumberWithDisabledCSW} custom fields when ceased sidechain withdrawal is disabled.")
+      if (topQualityCertificate.fieldElementCertificateFields.size != CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW )
+        throw new IllegalArgumentException(s"Top quality certificate should contain exactly ${CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW} custom fields when ceased sidechain withdrawal is disabled.")
     }
   }
 
@@ -570,71 +570,4 @@ object SidechainState
     val hash = Blake2b256.hash(Bytes.concat(Ints.toByteArray(withdrawalEpochNumber), Ints.toByteArray(index)))
     BytesUtils.getLong(hash, 0)
   }
-}
-
-
-trait SidechainStateUtxoMerkleTreeProvider {
-  def rollback(version: ByteArrayWrapper): Try[SidechainStateUtxoMerkleTreeProvider]
-
-  def lastVersionId: Option[ByteArrayWrapper]
-
-  def getMerklePath(boxId: Array[Byte]): Option[Array[Byte]]
-
-  def update(version: ByteArrayWrapper,
-             boxesToAppend: Seq[SidechainTypes#SCB],
-             boxesToRemoveSet: Set[ByteArrayWrapper]): Try[SidechainStateUtxoMerkleTreeProvider]
-
-  def getMerkleTreeRoot: Array[Byte]
-}
-
-case class SidechainUtxoMerkleTreeProviderImpl(private val utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage) extends SidechainStateUtxoMerkleTreeProvider{
-
-  override def rollback(version: ByteArrayWrapper): Try[SidechainStateUtxoMerkleTreeProvider] = Try {
-    require(version != null, "Version to rollback to must be NOT NULL.")
-    SidechainUtxoMerkleTreeProviderImpl(utxoMerkleTreeStorage.rollback(version).get)
-  }
-
-  override def lastVersionId: Option[ByteArrayWrapper] = {
-    utxoMerkleTreeStorage.lastVersionId
-  }
-
-  override def getMerklePath(boxId: Array[Byte]): Option[Array[Byte]] = {
-    utxoMerkleTreeStorage.getMerklePath(boxId)
-  }
-
-  override def update(version: ByteArrayWrapper,
-             boxesToAppend: Seq[SidechainTypes#SCB],
-             boxesToRemoveSet: Set[ByteArrayWrapper]): Try[SidechainStateUtxoMerkleTreeProvider] = Try {
-    require(boxesToAppend != null, "List of boxes to add must be NOT NULL. Use empty List instead.")
-    require(boxesToRemoveSet != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")
-    val coinBoxesToAppend = boxesToAppend.filter(box => box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]])
-
-    SidechainUtxoMerkleTreeProviderImpl(utxoMerkleTreeStorage.update(version, coinBoxesToAppend, boxesToRemoveSet).get)
-  }
-
-  override def getMerkleTreeRoot: Array[Byte] = utxoMerkleTreeStorage.getMerkleTreeRoot
-}
-
-case class SidechainUtxoMerkleTreeProviderCSWDisabled() extends SidechainStateUtxoMerkleTreeProvider{
-
-  override def rollback(version: ByteArrayWrapper): Try[SidechainStateUtxoMerkleTreeProvider] = Try {
-    this
-  }
-
-  override def lastVersionId: Option[ByteArrayWrapper] = {
-    None
-  }
-
-  override def getMerklePath(boxId: Array[Byte]): Option[Array[Byte]] = {
-    None
-  }
-
-  override def update(version: ByteArrayWrapper,
-                      boxesToAppend: Seq[SidechainTypes#SCB],
-                      boxesToRemoveSet: Set[ByteArrayWrapper]): Try[SidechainStateUtxoMerkleTreeProvider] = Try {
-
-    this
-  }
-
-  override def getMerkleTreeRoot: Array[Byte] = Array()
 }

@@ -11,12 +11,12 @@ All information needed to bootstrap sidechain network within specified mainchain
 The JSON representation is only for documentation.
 
 SCCreationInfo: {
-    "mc_node":
-    "sc_id":
-    "forward_amout":
-    "withdrawal_epoch_length":
+    "mc_node": Mainchain node
+    "forward_amount": first Forward Transfer coin amount
+    "withdrawal_epoch_length": length of Withdrawal Epoch
     "btr_data_length": size of scRequestData array for MBTRs. 0 if MBTRs are not supported at all.
-    "csw_enabled":
+    "sc_creation_version": sidechain version
+    "csw_enabled": true if the Ceased Sidechain Withdrawal should be enabled on the sidechain
 }
 """
 class SCCreationInfo(object):

@@ -13,3 +13,5 @@ examples/simpleapp/dependency-reduced-pom.xml
 qa/tmp
 hs_err*
 log
+project/
+

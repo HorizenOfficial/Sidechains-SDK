@@ -117,7 +117,6 @@ class SidechainApp @Inject()
     case Failure(exception) => throw new IllegalArgumentException("Genesis block specified in the configuration file has no Sidechain Creation info.", exception)
   }
   val isCSWEnabled: Boolean = sidechainCreationOutput.getScCrOutput.ceasedVkOpt.isDefined
-  log.info(s"Ceased Sidechain Withdrawal enabled: $isCSWEnabled")
 
   val forgerList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = sidechainSettings.forger.allowedForgersList.map(el =>
     (PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(el.blockSignProposition)), VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(el.vrfPublicKey))))
@@ -207,12 +206,13 @@ class SidechainApp @Inject()
   // Generate snark keys only if were not present before.
   if (!Files.exists(Paths.get(params.certVerificationKeyFilePath)) || !Files.exists(Paths.get(params.certProvingKeyFilePath))) {
     log.info("Generating Cert snark keys. It may take some time.")
-    val expectedNumOfCustomFields = if (params.isCSWEnabled) CommonCircuit.customFieldsNumber else CommonCircuit.customFieldsNumberWithDisabledCSW
+    val expectedNumOfCustomFields = if (params.isCSWEnabled) CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW else CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW
     if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(sidechainSettings.withdrawalEpochCertificateSettings.maxPks, params.certProvingKeyFilePath, params.certVerificationKeyFilePath, expectedNumOfCustomFields)) {
       throw new IllegalArgumentException("Can't generate Cert Coboundary Marlin ProvingSystem snark keys.")
     }
   }
   if (isCSWEnabled) {
+    log.info("Ceased Sidechain Withdrawal (CSW) is enabled")
     if (Option(params.cswVerificationKeyFilePath).forall(_.trim.isEmpty)){
       log.error("CSW Verification Key file path is not defined.")
       throw new IllegalArgumentException("CSW Verification Key file path is not defined.")
@@ -229,6 +229,9 @@ class SidechainApp @Inject()
         throw new IllegalArgumentException("Can't generate CSW Coboundary Marlin ProvingSystem snark keys.")
       }
     }
+  }
+  else {
+    log.warn("******** Ceased Sidechain Withdrawal (CSW) is DISABLED ***********")
   }
 
   // Init all storages
@@ -389,7 +392,7 @@ class SidechainApp @Inject()
 
   private def getSidechainStateUtxoMerkleTreeProvider(utxoMerkleTreeStorage: Storage, params: NetworkParams) = {
     if (params.isCSWEnabled) {
-      SidechainUtxoMerkleTreeProviderImpl(new SidechainStateUtxoMerkleTreeStorage(utxoMerkleTreeStorage))
+      SidechainUtxoMerkleTreeProviderCSWEnabled(new SidechainStateUtxoMerkleTreeStorage(utxoMerkleTreeStorage))
     }
     else
       SidechainUtxoMerkleTreeProviderCSWDisabled()
@@ -398,7 +401,7 @@ class SidechainApp @Inject()
 
   private def getSidechainWalletCswDataProvider(cswDataStorage: Storage, params: NetworkParams) = {
     if (params.isCSWEnabled) {
-      SidechainWalletCswDataProviderImpl(new SidechainWalletCswDataStorage(cswDataStorage))
+      SidechainWalletCswDataProviderCSWEnabled(new SidechainWalletCswDataStorage(cswDataStorage))
     }
     else
       SidechainWalletCswDataProviderCSWDisabled()

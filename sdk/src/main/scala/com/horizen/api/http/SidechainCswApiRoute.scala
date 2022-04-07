@@ -47,15 +47,7 @@ abstract class SidechainCswApiRoute(override val settings: RESTApiSettings,
    * Return if CSW is enabled in the Sidechain
    */
   def isCeasedSidechainWithdrawalEnabled: Route = (post & path("isCSWEnabled")) {
-
-    Try {
-      ApiResponseUtil.toResponse(RespCswIsEnabled(params.isCSWEnabled))
-    } match {
-      case Success(res) => res
-      case Failure(e) =>
-        log.error("Unable to retrieve if the ceased sidechain withdrawal is enabled.", e)
-        ApiResponseUtil.toResponse(ErrorRetrievingCSWEnabled("Unable to retrieve if the ceased sidechain withdrawal is enabled.", JOptional.of(e)))
-    }
+     ApiResponseUtil.toResponse(RespCswIsEnabled(params.isCSWEnabled))
   }
 
 }
@@ -70,16 +62,16 @@ object SidechainCswApiRoute {
            (implicit context: ActorRefFactory, ec: ExecutionContext): SidechainCswApiRoute = {
     require(params != null, "Network parameters must not be NULL")
    if (params.isCSWEnabled)
-      SidechainCswApiRouteImpl(settings, sidechainNodeViewHolderRef, params, cswManager.get)
+      SidechainCswApiRouteCSWEnabled(settings, sidechainNodeViewHolderRef, params, cswManager.get)
     else
       SidechainCswApiRouteCSWDisabled(settings, sidechainNodeViewHolderRef, params)
   }
 
-  private[SidechainCswApiRoute] case class SidechainCswApiRouteImpl(override val settings: RESTApiSettings,
-                                                                    override val sidechainNodeViewHolderRef: ActorRef,
-                                                                    override val params: NetworkParams,
-                                                                    cswManager: ActorRef)
-                                     (implicit override val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainCswApiRoute(settings, sidechainNodeViewHolderRef, params) {
+  private[SidechainCswApiRoute] case class SidechainCswApiRouteCSWEnabled(override val settings: RESTApiSettings,
+                                                                          override val sidechainNodeViewHolderRef: ActorRef,
+                                                                          override val params: NetworkParams,
+                                                                          cswManager: ActorRef)
+                                                                         (implicit override val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainCswApiRoute(settings, sidechainNodeViewHolderRef, params) {
 
     override val route: Route = pathPrefix("csw") {
       hasCeased ~ generateCswProof ~ cswInfo ~ cswBoxIds ~ nullifier ~ isCeasedSidechainWithdrawalEnabled
@@ -178,11 +170,11 @@ object SidechainCswApiRoute {
     }
   }
 
-    private[SidechainCswApiRoute] case class SidechainCswApiRouteCSWDisabled(override val settings: RESTApiSettings,
+  private[SidechainCswApiRoute] case class SidechainCswApiRouteCSWDisabled(override val settings: RESTApiSettings,
                                                                       override val sidechainNodeViewHolderRef: ActorRef,
                                                                       override val params: NetworkParams)
                                                                      (implicit override val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainCswApiRoute(settings, sidechainNodeViewHolderRef, params) {
-      override val route: Route = pathPrefix("csw") {
+    override val route: Route = pathPrefix("csw") {
       hasCeased ~ isCeasedSidechainWithdrawalEnabled ~ notImplemented
     }
 
@@ -251,10 +243,6 @@ object SidechainCswErrorResponse {
 
   case class ErrorRetrievingNullifier(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0705"
-  }
-
-  case class ErrorRetrievingCSWEnabled(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
-    override val code: String = "0706"
   }
 
   case class ErrorCSWNotEnabled() extends ErrorResponse {

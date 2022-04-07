@@ -34,7 +34,16 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
         return fesBytes;
     }
 
-    private List<FieldElement> splitUtxoMerkleTreeRootToFieldElements(byte[]  utxoMerkleTreeRoot) {
+    private List<FieldElement> prepareCustomFieldElements(Optional<byte[]> utxoMerkleTreeRoot)  {
+        if (utxoMerkleTreeRoot.isPresent())   {
+            return splitUtxoMerkleTreeRootToFieldElements(utxoMerkleTreeRoot.get());
+        }
+        else {
+            return new ArrayList<>();
+        }
+    }
+
+    private List<FieldElement> splitUtxoMerkleTreeRootToFieldElements(byte[] utxoMerkleTreeRoot) {
         FieldElement utxoMerkleTreeRootFe = FieldElement.deserialize(utxoMerkleTreeRoot);
         List<FieldElement> split = utxoMerkleTreeRootFe.splitAt(16);
         utxoMerkleTreeRootFe.freeFieldElement();
@@ -88,15 +97,6 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
         messageToSign.freeFieldElement();
 
         return messageAsBytes;
-    }
-
-    private List<FieldElement> prepareCustomFieldElements(Optional<byte[]> utxoMerkleTreeRoot)  {
-        if (utxoMerkleTreeRoot.isPresent())   {
-            return splitUtxoMerkleTreeRootToFieldElements(utxoMerkleTreeRoot.get());
-        }
-        else {
-            return new ArrayList<>();
-        }
     }
 
     @Override

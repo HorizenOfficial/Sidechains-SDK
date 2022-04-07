@@ -15,7 +15,7 @@ import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
 import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, WithdrawalEpochInfo, Pair => JPair}
-import com.horizen.{SidechainState, SidechainTypes, SidechainStateUtxoMerkleTreeProvider, SidechainUtxoMerkleTreeProviderCSWDisabled, SidechainUtxoMerkleTreeProviderImpl}
+import com.horizen.{SidechainState, SidechainTypes, SidechainStateUtxoMerkleTreeProvider, SidechainUtxoMerkleTreeProviderCSWDisabled, SidechainUtxoMerkleTreeProviderCSWEnabled}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.Mockito
@@ -39,7 +39,6 @@ class SidechainStateIntegrationTest
 
   var stateStorage: SidechainStateStorage = _
   var stateForgerBoxStorage: SidechainStateForgerBoxStorage = _
-  var stateUtxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage = _
   var initialVersion: ByteArrayWrapper = _
   var sidechainUtxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider = _
 
@@ -144,14 +143,14 @@ class SidechainStateIntegrationTest
     val stateUtxoMerkleTree = new JFile(s"${tmpDir.getAbsolutePath}/utxoMerkleTree")
     stateUtxoMerkleTree.mkdirs()
     val utxoMerkleTreeStore = getStorage(stateUtxoMerkleTree)
-    stateUtxoMerkleTreeStorage = new SidechainStateUtxoMerkleTreeStorage(utxoMerkleTreeStore)
+    val stateUtxoMerkleTreeStorage = new SidechainStateUtxoMerkleTreeStorage(utxoMerkleTreeStore)
     stateUtxoMerkleTreeStorage.update(
       initialVersion,
       boxList, // All boxes in the list are coin boxes
       Set()
     )
 
-    sidechainUtxoMerkleTreeProvider =  SidechainUtxoMerkleTreeProviderImpl(stateUtxoMerkleTreeStorage)
+    sidechainUtxoMerkleTreeProvider =  SidechainUtxoMerkleTreeProviderCSWEnabled(stateUtxoMerkleTreeStorage)
 
   }
 
@@ -424,7 +423,7 @@ class SidechainStateIntegrationTest
         sidechainState.closedBox(b).isEmpty)
     }
 
-    // Test that utxo merkle tree root was stored
+    // Test that utxo merkle tree root was not updated when CSW is disabled
     assertTrue("Utxo merkle tree root expected to be an empty array after finishing the epoch: " + initialWithdrawalEpochInfo,
       sidechainState.utxoMerkleTreeRoot(initialWithdrawalEpochInfo.epoch).get.isEmpty)
 

@@ -2,14 +2,14 @@
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration, SC_CREATION_VERSION_1
+    SCNetworkConfiguration
 from SidechainTestFramework.sc_forging_util import *
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, generate_next_blocks, generate_next_block, stop_sc_node, start_sc_node, \
     wait_for_sc_node_initialization
 from test_framework.util import assert_equal, assert_true, assert_false, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain
+    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, certificate_field_config_csw_disabled
 
 CSW_DISABLED_ERROR_CODE = "0707"
 
@@ -95,8 +95,9 @@ class SCCswDisabled(SidechainTestFramework):
         mc_sc_creation_tx = mc_node.getrawtransaction(mc_sc_creation_tx_id, 1)
 
         vsc_ccout_ = mc_sc_creation_tx["vsc_ccout"][0]
-        assert_true(len(vsc_ccout_["vFieldElementCertificateFieldConfig"]) == 0,
-                    "Custom Field Elements Configuration in MC should be empty")
+        assert_true(vsc_ccout_["vFieldElementCertificateFieldConfig"] == certificate_field_config_csw_disabled,
+                    "Custom Field Elements Configuration in MC are wrong. Expected: " + format(certificate_field_config_csw_disabled) +
+                    ", actual: " + format(vsc_ccout_["vFieldElementCertificateFieldConfig"]))
         assert_false("wCeasedVk" in vsc_ccout_, "CSW verification key should not be present")
 
         # Checks that Sidechain creation transaction is in SC block

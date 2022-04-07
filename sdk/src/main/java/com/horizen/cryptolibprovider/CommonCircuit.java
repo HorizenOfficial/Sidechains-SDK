@@ -15,9 +15,9 @@ public class CommonCircuit {
     public static final int maxProofPlusVkSize = 9 * 1024;
 
     // 2 custom fields that represent UtxoMerkleTreeRoot
-    public static final int customFieldsNumber = 2;
+    public static final int CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW = 2;
 
-    public static final int customFieldsNumberWithDisabledCSW = 0;
+    public static final int CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW = 0;
 
     public boolean generateCoboundaryMarlinDLogKeys() {
         return ProvingSystem.generateDLogKeys(

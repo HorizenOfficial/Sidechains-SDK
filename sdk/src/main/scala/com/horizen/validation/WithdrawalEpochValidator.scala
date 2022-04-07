@@ -30,7 +30,7 @@ class WithdrawalEpochValidator(params: NetworkParams) extends HistoryBlockValida
       throw new IllegalArgumentException("Sidechain block validation failed for %s: genesis block contains different withdrawal epoch length than expected in configs.".format(BytesUtils.toHexString(idToBytes(block.id))))
 
     // Check that sidechain declares proper number of custom fields
-    val expectedNumOfCustomFields = if (params.isCSWEnabled) CommonCircuit.customFieldsNumber else CommonCircuit.customFieldsNumberWithDisabledCSW
+    val expectedNumOfCustomFields = if (params.isCSWEnabled) CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW else CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW
     if(sidechainCreation.getScCrOutput.fieldElementCertificateFieldConfigs.size != expectedNumOfCustomFields) {
         throw new IllegalArgumentException(s"Sidechain block validation failed for ${BytesUtils.toHexString(idToBytes(block.id))}: " +
           "genesis block declares sidechain with different number of custom field configs. " +

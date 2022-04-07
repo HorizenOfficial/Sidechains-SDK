@@ -1,27 +1,24 @@
 package com.horizen
 
-import java.lang
-import java.util.{List => JList, Optional => JOptional}
-import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock}
+import com.horizen.block.SidechainBlock
 import com.horizen.box.{Box, CoinsBox, ForgerBox, ZenBox}
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo}
-import com.horizen.wallet.ApplicationWallet
 import com.horizen.node.NodeWallet
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.Secret
-import com.horizen.storage.{SidechainWalletCswDataStorage, _}
+import com.horizen.storage._
 import com.horizen.transaction.Transaction
-import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgingStakeMerklePathInfo}
-import scorex.core.VersionTag
 import com.horizen.utils._
+import com.horizen.wallet.ApplicationWallet
+import scorex.core.VersionTag
 import scorex.util.ModifierId
 
-import scala.util.Try
+import java.lang
+import java.util.{List => JList, Optional => JOptional}
 import scala.collection.JavaConverters._
-import scala.collection.mutable.ListBuffer
 import scala.language.postfixOps
+import scala.util.Try
 
 
 trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.core.PersistentNodeViewModifier, W <: Wallet[S, P, TX, PMOD, W]]
@@ -42,7 +39,6 @@ trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.co
 }
 
 
-//noinspection Annotator
 class SidechainWallet private[horizen](seed: Array[Byte],
                                        walletBoxStorage: SidechainWalletBoxStorage,
                                        secretStorage: SidechainSecretStorage,
@@ -155,59 +151,11 @@ class SidechainWallet private[horizen](seed: Array[Byte],
     // We keep forger boxes separate to manage forging stake delegation
     forgingBoxesInfoStorage.updateForgerBoxes(new ByteArrayWrapper(version), newDelegatedForgerBoxes, boxIdsToRemove).get
 
-    cswDataProvider.update(modifier,new ByteArrayWrapper(version), withdrawalEpoch, this, utxoMerkleTreeViewOpt)
+    cswDataProvider.update(modifier, new ByteArrayWrapper(version), withdrawalEpoch, params, this, utxoMerkleTreeViewOpt)
 
     applicationWallet.onChangeBoxes(version, newBoxes.toList.asJava, boxIdsToRemove.toList.asJava)
 
     this
-  }
-
-  private[horizen] def calculateUtxoCswData(view: UtxoMerkleTreeView): Seq[CswData] = {
-    boxes().withFilter(wb => wb.box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]]).map(wb => {
-      val box = wb.box
-      UtxoCswData(box.id(), box.proposition().bytes, box.value(), box.nonce(),
-        box.customFieldsHash(), view.utxoMerklePath(box.id()).get)
-    })
-  }
-
-  private[horizen] def calculateForwardTransferCswData(mcBlockRefDataSeq: Seq[MainchainBlockReferenceData], pubKeys: Set[SidechainTypes#SCP]): Seq[CswData] = {
-    val ftCswDataList = ListBuffer[CswData]()
-
-    mcBlockRefDataSeq.foreach(mcBlockRefData => {
-      // If MC2SCAggTx is present -> collect wallet related FTs
-      mcBlockRefData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {
-        var ftLeafIdx: Int = -1
-        val walletFTs: Seq[(ForwardTransfer, Int)] = aggTx.mc2scTransactionsOutputs().asScala.flatMap(_ match {
-          case _: SidechainCreation => None// No CSW support for ScCreation outputs as FT
-          case ft: ForwardTransfer =>
-            ftLeafIdx += 1
-            if(pubKeys.contains(ft.getBox.proposition()))
-              Some((ft, ftLeafIdx))
-            else
-              None
-        })
-
-        if(walletFTs.nonEmpty) {
-          val commitmentTree = mcBlockRefData.commitmentTree(params.sidechainId, params.sidechainCreationVersion)
-          val scCommitmentMerklePath = commitmentTree.getSidechainCommitmentMerklePath(params.sidechainId).get
-          val btrCommitment = commitmentTree.getBtrCommitment(params.sidechainId).get
-          val certCommitment = commitmentTree.getCertCommitment(params.sidechainId).get
-          val scCrCommitment = commitmentTree.getScCrCommitment(params.sidechainId).get
-
-          for((ft: ForwardTransfer, leafIdx: Int) <- walletFTs) {
-            val ftMerklePath = commitmentTree.getForwardTransferMerklePath(params.sidechainId, leafIdx).get
-            ftCswDataList.append(
-              ForwardTransferCswData(ft.getBox.id(), ft.getFtOutput.amount, ft.getFtOutput.propositionBytes,
-                ft.getFtOutput.mcReturnAddress, ft.transactionHash(), ft.transactionIndex(), scCommitmentMerklePath,
-                btrCommitment, certCommitment, scCrCommitment, ftMerklePath)
-            )
-          }
-          commitmentTree.free()
-        }
-      })
-    })
-
-    ftCswDataList
   }
 
   // rollback BoxStorage and TransactionsStorage only. SecretStorage must not change.
@@ -346,61 +294,5 @@ object SidechainWallet
     }
     else
       throw new RuntimeException("WalletBox storage is not empty!")
-  }
-}
-
-trait SidechainWalletCswDataProvider {
-
-  def rollback(version: ByteArrayWrapper): Try[SidechainWalletCswDataProvider]
-
-  def update(modifier: SidechainBlock,
-             version: ByteArrayWrapper,
-             withdrawalEpoch: Int,
-             wallet: SidechainWallet,
-             utxoMerkleTreeViewOpt: Option[UtxoMerkleTreeView]): Try[SidechainWalletCswDataProvider]
-
-  def getCswData(withdrawalEpoch: Int): Seq[CswData]
-}
-
-case class SidechainWalletCswDataProviderImpl(private val sidechainWalletCswDataStorage: SidechainWalletCswDataStorage) extends  SidechainWalletCswDataProvider {
-
-  def rollback(version: ByteArrayWrapper): Try[SidechainWalletCswDataProvider] = Try {
-    require(version != null, "Version to rollback to must be NOT NULL.")
-    SidechainWalletCswDataProviderImpl(sidechainWalletCswDataStorage.rollback(version).get)
-  }
-
-  def update(modifier: SidechainBlock,
-             version: ByteArrayWrapper,
-             withdrawalEpoch: Int,
-             wallet: SidechainWallet,
-             utxoMerkleTreeViewOpt: Option[UtxoMerkleTreeView]): Try[SidechainWalletCswDataProvider] = Try {
-    val utxoCswData: Seq[CswData] = utxoMerkleTreeViewOpt.map(view => wallet.calculateUtxoCswData(view)).getOrElse(Seq())
-    val ftCswData = wallet.calculateForwardTransferCswData(modifier.mainchainBlockReferencesData, wallet.publicKeys())
-
-    SidechainWalletCswDataProviderImpl(sidechainWalletCswDataStorage.update(version,withdrawalEpoch,ftCswData ++ utxoCswData).get)
-  }
-
-  def getCswData(withdrawalEpoch: Int): Seq[CswData] = {
-    sidechainWalletCswDataStorage.getCswData(withdrawalEpoch)
-  }
-}
-
-case class SidechainWalletCswDataProviderCSWDisabled() extends  SidechainWalletCswDataProvider {
-
-  def rollback(version: ByteArrayWrapper): Try[SidechainWalletCswDataProvider] = Try {
-    this
-  }
-
-  def update(modifier: SidechainBlock,
-             version: ByteArrayWrapper,
-             withdrawalEpoch: Int,
-             wallet: SidechainWallet,
-             utxoMerkleTreeViewOpt: Option[UtxoMerkleTreeView]): Try[SidechainWalletCswDataProvider] = Try {
-    this
-  }
-
-
-  def getCswData(withdrawalEpoch: Int): Seq[CswData] = {
-    Seq()
   }
 }

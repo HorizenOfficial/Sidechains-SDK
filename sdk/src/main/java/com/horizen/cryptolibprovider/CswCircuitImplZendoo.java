@@ -11,7 +11,6 @@ import com.horizen.cswnative.CswUtxoProverData;
 import com.horizen.fwtnative.ForwardTransferOutput;
 import com.horizen.librustsidechains.Constants;
 import com.horizen.librustsidechains.FieldElement;
-import com.horizen.params.NetworkParams;
 import com.horizen.proposition.Proposition;
 import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.scutxonative.ScUtxoOutput;
@@ -89,7 +88,7 @@ public class CswCircuitImplZendoo implements CswCircuit {
     public boolean generateCoboundaryMarlinSnarkKeys(int withdrawalEpochLength, String provingKeyPath, String verificationKeyPath) {
         int rangeSize = rangeSize(withdrawalEpochLength);
         boolean isConstantPresent = true;
-        return CswProof.setup(ProvingSystemType.COBOUNDARY_MARLIN, rangeSize, CommonCircuit.customFieldsNumber,
+        return CswProof.setup(ProvingSystemType.COBOUNDARY_MARLIN, rangeSize, CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW,
                 isConstantPresent, provingKeyPath, verificationKeyPath, CommonCircuit.maxProofPlusVkSize);
     }
 
@@ -134,7 +133,7 @@ public class CswCircuitImplZendoo implements CswCircuit {
                     privateKey25519ToScalar(pk),
                     MerklePath.deserialize(utxo.utxoMerklePath()));
         ) {
-            return CswProof.createProof(rangeSize(withdrawalEpochLength), CommonCircuit.customFieldsNumber, sysData, scIdFe,
+            return CswProof.createProof(rangeSize(withdrawalEpochLength), CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW, sysData, scIdFe,
                     Optional.of(we), Optional.of(utxoProverData), Optional.empty(), Optional.of(supportedSegmentSize),
                     provingKeyPath, checkProvingKey, zk);
         }
@@ -183,7 +182,7 @@ public class CswCircuitImplZendoo implements CswCircuit {
                         FieldElement.deserialize(ft.certCommitment()),
                         scTxsComHashes.stream().map(FieldElement::deserialize).collect(Collectors.toList()))
         ) {
-            return CswProof.createProof(rangeSize(withdrawalEpochLength), CommonCircuit.customFieldsNumber, sysData, scIdFe,
+            return CswProof.createProof(rangeSize(withdrawalEpochLength), CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW, sysData, scIdFe,
                     weOpt, Optional.empty(), Optional.of(ftProverData), Optional.of(supportedSegmentSize),
                     provingKeyPath, checkProvingKey, zk);
         } finally {
