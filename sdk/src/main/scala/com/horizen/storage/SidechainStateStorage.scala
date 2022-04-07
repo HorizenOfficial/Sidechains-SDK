@@ -5,9 +5,10 @@ import java.util.{ArrayList => JArrayList}
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.SidechainTypes
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
-import com.horizen.box.{WithdrawalRequestBox, WithdrawalRequestBoxSerializer}
+import com.horizen.box.{CoinsBox, WithdrawalRequestBox, WithdrawalRequestBoxSerializer}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
+import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
 import org.iq80.leveldb.DBIterator
 import scorex.crypto.hash.Blake2b256
@@ -305,4 +306,59 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   def isEmpty: Boolean = storage.isEmpty
 
   def getIterator: DBIterator = storage.getIterator
+
+  /**
+   * This function restores the unspent boxes that come from a ceased sidechain by saving
+   * them into the SidechainStateStorage
+   *
+   * @param backupStorage: storage containing the boxes saved from the ceased sidechain
+   */
+  def restoreBackup(backupStorageIterator: DBIterator, lastVersion: Array[Byte]): Unit = {
+    backupStorageIterator.seekToFirst()
+    val removeList = new JArrayList[ByteArrayWrapper]()
+    val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
+
+    while(backupStorageIterator.hasNext) {
+      val entry = backupStorageIterator.next()
+      val box: Try[SCB] = sidechainBoxesCompanion.parseBytesTry(entry.getValue)
+
+      if (box.isSuccess) {
+        val currBox: SCB = box.get
+        if (!currBox.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]]) {
+          updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](calculateKey(currBox.id()),
+            new ByteArrayWrapper(sidechainBoxesCompanion.toBytes(currBox))))
+          log.info("Restore Box id "+currBox.boxTypeId())
+          if (updateList.size() == leveldb.Constants.BatchSize) {
+            if (backupStorageIterator.hasNext)
+              storage.update(new ByteArrayWrapper(Utils.uniqueVersion()),updateList, removeList)
+            else
+              storage.update(new ByteArrayWrapper(lastVersion),updateList, removeList)
+            updateList.clear()
+          }
+        }
+      }
+    }
+    if (updateList.size() != 0)
+      storage.update(new ByteArrayWrapper(lastVersion),updateList, removeList)
+    log.info("SidechainStateStorage restore completed successfully!")
+  }
+
+  /**
+   * Read the box inside the SidechainStateStorage.
+   * It's used only for testing purpose.
+   */
+  def readStorage(): Unit = {
+    System.out.println("READ STATE STORAGE...");
+    val sidechainStateStorageIterator: DBIterator = getIterator
+    sidechainStateStorageIterator.seekToFirst()
+    while(sidechainStateStorageIterator.hasNext) {
+      val entry = sidechainStateStorageIterator.next()
+      val box: Try[SCB] = sidechainBoxesCompanion.parseBytesTry(entry.getValue)
+
+      if(box.isSuccess) {
+        val currBox: SCB = box.get
+        System.out.println("STATE STORAGE BOX: "+currBox.boxTypeId()+" "+BytesUtils.toHexString(currBox.proposition().bytes()))
+      }
+    }
+  }
 }

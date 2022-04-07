@@ -2,10 +2,12 @@ package com.horizen.examples;
 
 import com.horizen.block.SidechainBlock;
 import com.horizen.box.Box;
+import com.horizen.companion.SidechainBoxesCompanion;
 import com.horizen.proposition.Proposition;
 import com.horizen.state.ApplicationState;
 import com.horizen.state.SidechainStateReader;
 import com.horizen.transaction.BoxTransaction;
+import org.iq80.leveldb.DBIterator;
 import scala.util.Success;
 import scala.util.Try;
 
@@ -29,6 +31,11 @@ public class DefaultApplicationState implements ApplicationState {
 
     @Override
     public Try<ApplicationState> onRollback(byte[] blockId) {
+        return new Success<>(this);
+    }
+
+    @Override
+    public Try<ApplicationState> onApplicationRestore(SidechainStateReader stateReader, SidechainBoxesCompanion sidechainBoxesCompanion, DBIterator i) {
         return new Success<>(this);
     }
 }

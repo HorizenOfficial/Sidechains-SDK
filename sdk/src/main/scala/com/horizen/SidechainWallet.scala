@@ -1,9 +1,10 @@
 package com.horizen
 
 import java.lang
-import java.util.{List => JList, Optional => JOptional}
+import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock}
 import com.horizen.box.{Box, CoinsBox, ForgerBox, ZenBox}
+import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.wallet.ApplicationWallet
 import com.horizen.node.NodeWallet
@@ -16,6 +17,7 @@ import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgingStakeMerklePathInfo}
 import scorex.core.VersionTag
 import com.horizen.utils._
+import org.iq80.leveldb.DBIterator
 import scorex.util.ModifierId
 
 import scala.util.Try
@@ -163,6 +165,38 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     applicationWallet.onChangeBoxes(version, newBoxes.toList.asJava, boxIdsToRemove.toList.asJava)
 
     this
+  }
+
+  /***
+   * This function is called at blockchain bootstrap time and preload the SidechainWallletBoxStorage with the boxes taken from the backup storage
+   * @param backupStorageIterator: iterator on the backup storage
+   * @param sidechainBoxesCompanion
+   */
+  def scanBackUp(backupStorageIterator: DBIterator, sidechainBoxesCompanion: SidechainBoxesCompanion): Unit = {
+    val pubKeys = publicKeys()
+    backupStorageIterator.seekToFirst()
+    val walletBoxes = new JArrayList[WalletBox]()
+    val removeList = new JArrayList[Array[Byte]]()
+
+    while(backupStorageIterator.hasNext) {
+      val entry = backupStorageIterator.next()
+      val box: Try[SCB] = sidechainBoxesCompanion.parseBytesTry(entry.getValue)
+      var nBoxes = 0
+
+      if (box.isSuccess) {
+        val currBox: SCB = box.get
+        if (pubKeys.contains(currBox.proposition())) {
+          walletBoxes.add(new WalletBox(currBox, System.currentTimeMillis()))
+          nBoxes += 1
+          if (nBoxes == leveldb.Constants.BatchSize) {
+            walletBoxStorage.update(new ByteArrayWrapper(Utils.uniqueVersion()), walletBoxes.asScala.toList, removeList.asScala.toList).get
+            walletBoxes.clear()
+            nBoxes = 0
+          }
+        }
+      }
+    }
+    walletBoxStorage.update(new ByteArrayWrapper(Utils.uniqueVersion()), walletBoxes.asScala.toList, removeList.asScala.toList).get
   }
 
   private[horizen] def calculateUtxoCswData(view: UtxoMerkleTreeView): Seq[CswData] = {
@@ -335,6 +369,8 @@ object SidechainWallet
                                            walletTransactionStorage: SidechainWalletTransactionStorage,
                                            forgingBoxesInfoStorage: ForgingBoxesInfoStorage,
                                            cswDataStorage: SidechainWalletCswDataStorage,
+                                           backupStorage: BackupStorage,
+                                           sidechainBoxesCompanion: SidechainBoxesCompanion,
                                            params: NetworkParams,
                                            applicationWallet: ApplicationWallet,
                                            genesisBlock: SidechainBlock,
@@ -345,6 +381,8 @@ object SidechainWallet
     if (walletBoxStorage.isEmpty) {
       val genesisWallet = new SidechainWallet(seed, walletBoxStorage, secretStorage, walletTransactionStorage,
         forgingBoxesInfoStorage, cswDataStorage, params, applicationWallet)
+      genesisWallet.scanBackUp(backupStorage.getIterator, sidechainBoxesCompanion)
+      applicationWallet.onApplicationRestore(sidechainBoxesCompanion, backupStorage.getIterator)
       genesisWallet.scanPersistent(genesisBlock, withdrawalEpochNumber, Seq(), None).applyConsensusEpochInfo(consensusEpochInfo)
     }
     else

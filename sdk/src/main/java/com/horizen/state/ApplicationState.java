@@ -2,13 +2,13 @@ package com.horizen.state;
 
 import com.horizen.block.SidechainBlock;
 import com.horizen.box.Box;
+import com.horizen.companion.SidechainBoxesCompanion;
 import com.horizen.proposition.Proposition;
 import com.horizen.transaction.BoxTransaction;
-import com.horizen.transaction.SidechainTransaction;
-import com.horizen.utils.ByteArrayWrapper;
 
 import java.util.List;
 
+import org.iq80.leveldb.DBIterator;
 import scala.util.Try;
 
 // TO DO: provide access to HistoryReader
@@ -26,6 +26,8 @@ public interface ApplicationState {
     Try<ApplicationState> onApplyChanges(SidechainStateReader stateReader, byte[] blockId, List<Box<Proposition>> newBoxes, List<byte[]> boxIdsToRemove);
 
     Try<ApplicationState> onRollback(byte[] blockId); // return Try[...]
+
+    Try<ApplicationState> onApplicationRestore(SidechainStateReader stateReader, SidechainBoxesCompanion sidechainBoxesCompanion, DBIterator i);
 }
 
 

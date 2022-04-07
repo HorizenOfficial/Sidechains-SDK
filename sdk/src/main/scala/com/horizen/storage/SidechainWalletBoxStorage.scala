@@ -1,13 +1,13 @@
 package com.horizen.storage
 
 import java.util.{Optional, ArrayList => JArrayList}
-
 import com.horizen.utils.{Pair => JPair}
 import com.horizen.utils.ByteArrayWrapper
 import com.horizen.{SidechainTypes, WalletBox, WalletBoxSerializer}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.box.Box
 import com.horizen.proposition.Proposition
+import org.iq80.leveldb.DBIterator
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
 
@@ -161,5 +161,7 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
   }
 
   def isEmpty: Boolean = storage.isEmpty
+
+  def getIterator: DBIterator = storage.getIterator
 
 }

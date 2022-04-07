@@ -2,13 +2,15 @@ package com.horizen.storage
 
 import com.google.common.primitives.Ints
 import com.horizen.SidechainTypes
-import com.horizen.box.BoxSerializer
+import com.horizen.box.{BoxSerializer, CoinsBox}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.customtypes.{CustomBox, CustomBoxSerializer}
 import com.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
+import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.utils.{BlockFeeInfo, BlockFeeInfoSerializer, ByteArrayWrapper, Pair, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
+import org.iq80.leveldb.DBIterator
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -21,6 +23,9 @@ import java.util.{ArrayList => JArrayList, HashMap => JHashMap, Optional => JOpt
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
+import org.junit.Rule
+import org.junit.rules.TemporaryFolder
+
 
 class SidechainStateStorageTest
   extends JUnitSuite
@@ -42,6 +47,10 @@ class SidechainStateStorageTest
   val withdrawalEpochInfo = WithdrawalEpochInfo(1, 2)
 
   val consensusEpoch: ConsensusEpochNumber = intToConsensusEpochNumber(1)
+
+  val _temporaryFolder = new TemporaryFolder()
+
+  @Rule  def temporaryFolder = _temporaryFolder
 
   @Before
   def setUp(): Unit = {
@@ -133,6 +142,50 @@ class SidechainStateStorageTest
     assertTrue("Storage should NOT contain Box that was tried to update.", stateStorage.getBox(box.id()).isEmpty)
     assertTrue("Storage should contain Box that was tried to remove.", stateStorage.getBox(boxList(3).id()).isDefined)
     assertEquals("Storage should return existing Box.", boxList(3), stateStorage.getBox(boxList(3).id()).get)
+  }
+
+  @Test
+  def testRestore(): Unit = {
+    //Create temporary SidechainStateStorage
+    val stateStorageFile = temporaryFolder.newFolder("sidechainStateStorage")
+    val stateStorage = new SidechainStateStorage(new VersionedLevelDbStorageAdapter(stateStorageFile), sidechainBoxesCompanion)
+
+    //Create temporary BackupStorage
+    val backupStorageFile = temporaryFolder.newFolder("backupStorage")
+    val backupStorage = new BackupStorage(new VersionedLevelDbStorageAdapter(backupStorageFile), sidechainBoxesCompanion)
+
+    //Fill BackUpStorage with 5 ZenBoxes and 5 CustomBoxes and 1 random element
+    storedBoxList.append(new Pair[ByteArrayWrapper, ByteArrayWrapper](new ByteArrayWrapper("key1".getBytes), new ByteArrayWrapper("value1".getBytes)))
+    backupStorage.update(getVersion, storedBoxList.asJava).get
+
+    //Restore the SidechainStateStorage based on the BackupStorage
+    stateStorage.restoreBackup(backupStorage.getIterator, getVersion.data())
+
+    //Read the SidechainStateStorage
+    val storedBoxes = readStorage(stateStorage)
+
+    //Verify that we did take only the 5 CustomBoxes
+    assertEquals("SidechainStateStorage should contains only the 5 CustomBoxes!",storedBoxes.size(), 5)
+    storedBoxes.forEach(box => {
+      assertTrue("Restored boxes shouldn't be CoinBoxes!",!box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]])
+    })
+  }
+
+  def readStorage(sidechainStateStorage: SidechainStateStorage): JArrayList[SCB] = {
+    val sidechainStateStorageIterator: DBIterator = sidechainStateStorage.getIterator
+    sidechainStateStorageIterator.seekToFirst()
+
+    val storedBoxes = new JArrayList[SCB]()
+    while(sidechainStateStorageIterator.hasNext) {
+      val entry = sidechainStateStorageIterator.next()
+      val box: Try[SCB] = sidechainBoxesCompanion.parseBytesTry(entry.getValue)
+
+      if(box.isSuccess) {
+        val currBox: SCB = box.get
+        storedBoxes.add(currBox)
+      }
+    }
+    storedBoxes
   }
 
   @Test
