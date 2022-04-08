@@ -29,8 +29,6 @@ import org.scalatestplus.mockito._
 import scorex.core.{VersionTag, bytesToId, bytesToVersion}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ModifierId
-import com.horizen.WalletBoxSerializer
-import scorex.core.transaction.wallet.WalletBox
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer

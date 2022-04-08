@@ -7,6 +7,8 @@ import akka.actor.ActorRef
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import akka.stream.ActorMaterializer
+import akka.pattern.ask
+import akka.util.Timeout
 import com.google.inject.name.Named
 import com.google.inject.{Inject, _}
 import com.horizen.api.http.{SidechainSubmitterApiRoute, _}
@@ -26,7 +28,7 @@ import com.horizen.secret.SecretSerializer
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.transaction._
-import com.horizen.utils.{BlockUtils, BytesUtils, Pair}
+import com.horizen.utils.{BlockUtils, ByteArrayWrapper, BytesUtils, Pair}
 import com.horizen.wallet.ApplicationWallet
 import scorex.core.api.http.ApiRoute
 import scorex.core.app.Application
@@ -51,7 +53,11 @@ import scorex.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
 
 import java.util.concurrent.atomic.AtomicBoolean
 import org.iq80.leveldb.DBIterator
+import scorex.core.NodeViewHolder.CurrentView
+import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 
+import scala.concurrent.Future
+import scala.concurrent.duration.FiniteDuration
 import scala.util.{Failure, Success, Try}
 
 
@@ -85,6 +91,7 @@ class SidechainApp @Inject()
   override type TX = SidechainTypes#SCBT
   override type PMOD = SidechainBlock
   override type NVHT = SidechainNodeViewHolder
+  type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
 
   override implicit lazy val settings: ScorexSettings = sidechainSettings.scorexSettings
 
@@ -444,14 +451,49 @@ class SidechainApp @Inject()
 
   actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 
+  val timeoutDuration: FiniteDuration = settings.restApi.timeout
+
+  implicit val timeout: Timeout = Timeout(timeoutDuration)
+
+  /***
+   * Retrieve the SidechainBlockId needed to rollback the SidechainStateStorage for the backup.
+   * It's calculated by the following formula:
+   * Genesis_MC_block_height + (current_epch-2) * withdrawalEpochçength -1
+   * @param view
+   * @return sidechainBlockId to rollback or Exception if it's not found
+   */
+  def getSidechainBlockIdForBackUpRollback(view: View):Array[Byte] = {
+    val currentEpoch = view.state.getWithdrawalEpochInfo.epoch
+    System.out.println("CURRENT EPOCH "+currentEpoch)
+    val genesisMcBlockHeight = view.history.getMainchainCreationBlockHeight
+    val withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength
+    val blockHeightToRollback = genesisMcBlockHeight + (currentEpoch -2) * withdrawalEpochLength - 1
+    val mainchainBlockReferenceInfo = view.history.getMainchainBlockReferenceInfoByMainchainBlockHeight(blockHeightToRollback).get()
+    mainchainBlockReferenceInfo.getMainchainReferenceDataSidechainBlockId
+  }
+
   def createBackup(): Unit = {
     log.info(s"Starting sidechain backup...")
 
-    //Take an iterator on the sidechainStateStorage
-    val stateIterator: DBIterator = sidechainStateStorage.getIterator
-    stateIterator.seekToFirst()
+    val checkAsFuture = (nodeViewHolderRef ? GetDataFromCurrentView(getSidechainBlockIdForBackUpRollback)).asInstanceOf[Future[Try[Array[Byte]]]]
+    checkAsFuture.onComplete{
+      case Success(Success(blockId)) =>
+        log.info(s"Rollback of the SidechainStateStorage to version: ${BytesUtils.toHexString(blockId)}")
+        if (sidechainStateStorage.rollback(new ByteArrayWrapper(blockId)).isSuccess) {
+          log.info(s"Rollback of the SidechainStateStorage completed successfully!")
 
-    //Perform the backup in the application level
-    backUpper.generateBackUp(stateIterator, backupStorage, sidechainBoxesCompanion)
+          //Take an iterator on the sidechainStateStorage
+          val stateIterator: DBIterator = sidechainStateStorage.getIterator
+          stateIterator.seekToFirst()
+
+          //Perform the backup in the application level
+          backUpper.generateBackUp(stateIterator, backupStorage, sidechainBoxesCompanion)
+        }
+        else
+          log.info(s"Rollback of the SidechainStateStorage couldn't end successfully...")
+      case Failure(_) =>
+        log.info("Failed to retrieve the Sidechain block ID fo the SidechainStateStorage rollback! ")
+
+    }
   }
 }
