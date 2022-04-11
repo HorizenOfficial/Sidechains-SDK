@@ -464,7 +464,6 @@ class SidechainApp @Inject()
    */
   def getSidechainBlockIdForBackUpRollback(view: View):Array[Byte] = {
     val currentEpoch = view.state.getWithdrawalEpochInfo.epoch
-    System.out.println("CURRENT EPOCH "+currentEpoch)
     val genesisMcBlockHeight = view.history.getMainchainCreationBlockHeight
     val withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength
     val blockHeightToRollback = genesisMcBlockHeight + (currentEpoch -2) * withdrawalEpochLength - 1
@@ -475,9 +474,9 @@ class SidechainApp @Inject()
   def createBackup(): Unit = {
     log.info(s"Starting sidechain backup...")
 
-    val checkAsFuture = (nodeViewHolderRef ? GetDataFromCurrentView(getSidechainBlockIdForBackUpRollback)).asInstanceOf[Future[Try[Array[Byte]]]]
+    val checkAsFuture = (nodeViewHolderRef ? GetDataFromCurrentView(getSidechainBlockIdForBackUpRollback)).asInstanceOf[Future[Array[Byte]]]
     checkAsFuture.onComplete{
-      case Success(Success(blockId)) =>
+      case Success(blockId) =>
         log.info(s"Rollback of the SidechainStateStorage to version: ${BytesUtils.toHexString(blockId)}")
         if (sidechainStateStorage.rollback(new ByteArrayWrapper(blockId)).isSuccess) {
           log.info(s"Rollback of the SidechainStateStorage completed successfully!")
