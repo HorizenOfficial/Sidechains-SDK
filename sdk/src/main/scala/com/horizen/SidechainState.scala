@@ -586,8 +586,6 @@ object SidechainState
       if (!backupStorage.isEmpty) {
         stateStorage.restoreBackup(backupStorage.getIterator, versionToBytes(idToVersion(genesisBlock.parentId)))
       }
-      //This is for testing purpose
-      //stateStorage.readStorage()
 
       val sidechainState = new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, idToVersion(genesisBlock.parentId), applicationState)
         .applyModifier(genesisBlock).get

@@ -346,23 +346,4 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       storage.update(new ByteArrayWrapper(lastVersion),updateList, removeList)
     log.info("SidechainStateStorage restore completed successfully!")
   }
-
-  /**
-   * Read the box inside the SidechainStateStorage.
-   * It's used only for testing purpose.
-   */
-  def readStorage(): Unit = {
-    System.out.println("READ STATE STORAGE...");
-    val sidechainStateStorageIterator: DBIterator = getIterator
-    sidechainStateStorageIterator.seekToFirst()
-    while(sidechainStateStorageIterator.hasNext) {
-      val entry = sidechainStateStorageIterator.next()
-      val box: Try[SCB] = sidechainBoxesCompanion.parseBytesTry(entry.getValue)
-
-      if(box.isSuccess) {
-        val currBox: SCB = box.get
-        System.out.println("STATE STORAGE BOX: "+currBox.boxTypeId()+" "+BytesUtils.toHexString(currBox.proposition().bytes()))
-      }
-    }
-  }
 }
