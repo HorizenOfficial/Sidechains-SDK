@@ -133,7 +133,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                   }
                 }
                 case Failure(e) => {
-                  log.error("wallet storages are not consistent")
+                  log.error("wallet storages are not consistent", e)
                   None
                 }
               }
@@ -163,11 +163,11 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                       dumpStorages
                       Some((restoredHistory, s, w, restoredMempool))
                     case (Failure(e), _) =>
-                      log.error("State roll back failed: " + e)
+                      log.error("State roll back failed: ", e)
                       context.system.eventStream.publish(RollbackFailed)
                       None
                     case (_, Failure(e)) =>
-                      log.error("Wallet roll back failed: " + e)
+                      log.error("Wallet roll back failed: ", e)
                       context.system.eventStream.publish(RollbackFailed)
                       None
                   }
@@ -180,7 +180,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
             }
           }
           case Failure(ex) => {
-            log.error("state storages are not consistent and could not be recovered")
+            log.error("state storages are not consistent and could not be recovered", ex)
             None
           }
         }

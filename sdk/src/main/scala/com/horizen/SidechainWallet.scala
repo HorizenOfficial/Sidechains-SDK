@@ -325,7 +325,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
 
   // Check that all wallet storages are consistent and in case forging box info storage is not, then try a rollback for it.
   // Return the state and common version or throw an exception if some unrecoverable misalignment has been detected
-  def ensureStorageConsistencyAfterRestore: Try[SidechainWallet] = {
+  def ensureStorageConsistencyAfterRestore: Try[SidechainWallet] = Try {
     // TODO csw capability will be optional, related storage might even be empty
 
     // It is assumed that when this method is called, all the wallet versions must be consistent among them
@@ -346,7 +346,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
       // check forger box info storage, which is updated before state in case of epoch switch
       if (version == bytesToVersion(forgingBoxesInfoStorage.lastVersionId.get.data())) {
         log.debug("All wallet storage versions are consistent")
-        Success(this)
+        this
       } else {
         val versionBaw = new ByteArrayWrapper(versionToBytes(version))
         // the version should be the previous at most
@@ -357,7 +357,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
             // this is ok, we have just the genesis block whose modId is the very first version, and the second
             // is the non-rollback version used when updating the ForgingStakeMerklePathInfo at the startup
             log.debug("All wallet storage versions are consistent")
-            Success(this)
+            this
           } else {
             // it can be the case of process stopped when we had not yet updated the state and we are switching epoch
             log.warn(s"Wallet forger box storage versions is NOT consistent, trying to rollback")
@@ -370,7 +370,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
               log.error("Could not recover wallet forging storages")
               throw new RuntimeException("Could not rollback wallet forging box info storages")
             }
-            Success(this)
+            this
           }
         } else {
           log.error("Forging boxes info storage does not have the expected version in the rollback list")

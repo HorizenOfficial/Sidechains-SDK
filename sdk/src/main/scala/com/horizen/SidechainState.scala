@@ -447,7 +447,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   // Check that all storages are consistent and in case try some rollbacks.
   // Return the state and common version, throw an exception if some unrecoverable misalignment has been detected
-  def ensureStorageConsistencyAfterRestore: Try[(SidechainState)] = {
+  def ensureStorageConsistencyAfterRestore: Try[(SidechainState)] = Try {
     // updates are in order:
     //      appState--> utxoMerkleTreeStorage --> stateStorage --> forgerBoxStorage
 
@@ -472,7 +472,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       require(versionFb == versionToId(version), "ForgerBox version and SidechainState version attribute must be aligned")
       log.debug("All state storages are consistent")
 
-      Success(this)
+      this
     } else {
       log.debug("state storages are not consistent")
 
@@ -480,7 +480,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       if (rolledBackState.isFailure) {
         throw new IllegalStateException("Could not rollback state")
       } else {
-        Success(rolledBackState.get)
+        rolledBackState.get
       }
     }
   }
