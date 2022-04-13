@@ -518,16 +518,7 @@ class CertificateSubmitter(settings: SidechainSettings,
     val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
       dataForProofGeneration.schnorrKeyPairs.map{case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)}.unzip
 
-//    log.info(s"Start generating proof for ${dataForProofGeneration.referencedEpochNumber} withdrawal epoch number, " +
-//      s"with parameters: sidechainId LE = ${BytesUtils.toHexString(dataForProofGeneration.sidechainId)}, " +
-//      s"withdrawalRequests=${dataForProofGeneration.withdrawalRequests.foreach(_.toString)}, " +
-//      s"endEpochCumCommTreeHash=${BytesUtils.toHexString(dataForProofGeneration.endEpochCumCommTreeHash)}, " +
-//      s"utxoMerkleTreeRoot=${BytesUtils.toHexString(dataForProofGeneration.utxoMerkleTreeRoot.orElse(Array()))}, " +
-//      s"signersThreshold=${params.signersThreshold}. " +
-//      s"It can take a while.")
-
-    log.info(s"Start generating proof for ${dataForProofGeneration.referencedEpochNumber} withdrawal epoch number, " +
-      s"with parameters: dataForProofGeneration = ${dataForProofGeneration}, " +
+    log.info(s"Start generating proof with parameters: dataForProofGeneration = ${dataForProofGeneration}, " +
       s"signersThreshold = ${params.signersThreshold}. " +
       s"It can take a while.")
 

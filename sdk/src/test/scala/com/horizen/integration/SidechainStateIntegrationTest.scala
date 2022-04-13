@@ -218,15 +218,11 @@ class SidechainStateIntegrationTest
       Seq(expectedFeePaymentBox), feePayments)
   }
 
-  @Test
-  def applyModifier(): Unit = {
-    var sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, sidechainUtxoMerkleTreeProvider, params, applicationState).get
+  def commonApplyModifierTest(sidechainState: SidechainState, transactionList: ListBuffer[RegularTransaction] ): SidechainState = {
 
     // Test applyModifier with a single RegularTransaction with zen and forger outputs
     val mockedBlock = mock[SidechainBlock]
 
-    val transactionList = new ListBuffer[RegularTransaction]()
-    transactionList.append(getRegularTransaction(2, 1))
     val forgerOutputsAmount = transactionList.head.newBoxes().asScala.filter(_.isInstanceOf[ForgerBox]).foldLeft(0L)(_ + _.value())
 
     val newVersion = getVersion
@@ -254,7 +250,7 @@ class SidechainStateIntegrationTest
     val blockFeeInfo = BlockFeeInfo(307, getPrivateKey25519("mod".getBytes()).publicImage())
     Mockito.when(mockedBlock.feeInfo).thenReturn(blockFeeInfo)
 
-    Mockito.when(mockedBlock.feePaymentsHash).thenAnswer(_ =>{
+    Mockito.when(mockedBlock.feePaymentsHash).thenAnswer(_ => {
       val feePayments = sidechainState.getFeePayments(initialWithdrawalEpochInfo.epoch, Some(blockFeeInfo))
       FeePaymentsUtils.calculateFeePaymentsHash(feePayments)
     })
@@ -270,30 +266,26 @@ class SidechainStateIntegrationTest
     assertTrue("ApplyChanges for block must be successful.",
       applyTry.isSuccess)
 
-    sidechainState = applyTry.get
+    val sidechainStateAfterApplyModifier = applyTry.get
 
     assertEquals(s"State storage version must be updated to $newVersion",
-      bytesToVersion(newVersion.data), sidechainState.version)
+      bytesToVersion(newVersion.data), sidechainStateAfterApplyModifier.version)
 
     assertEquals("Rollback depth must be 2.",
-      2, sidechainState.maxRollbackDepth)
+      2, sidechainStateAfterApplyModifier.maxRollbackDepth)
 
     for (b <- transactionList.head.newBoxes().asScala) {
       assertTrue("Box in state after applyModifier must contain newBoxes from transaction.",
-        sidechainState.closedBox(b.id()).isDefined)
+        sidechainStateAfterApplyModifier.closedBox(b.id()).isDefined)
     }
 
     for (b <- transactionList.head.unlockers().asScala.map(_.closedBoxId())) {
       assertTrue("Box in state after applyModifier must not contain unlocked boxes from transaction.",
-        sidechainState.closedBox(b).isEmpty)
+        sidechainStateAfterApplyModifier.closedBox(b).isEmpty)
     }
 
-    // Test that utxo merkle tree root was stored
-    assertTrue("Utxo merkle tree root expected to be found after finishing the epoch: " + initialWithdrawalEpochInfo,
-      sidechainState.utxoMerkleTreeRoot(initialWithdrawalEpochInfo.epoch).isDefined)
-
     // Test that currentConsensusEpochInfo was changed
-    val(modId, consensusEpochInfo) = sidechainState.getCurrentConsensusEpochInfo
+    val (modId, consensusEpochInfo) = sidechainStateAfterApplyModifier.getCurrentConsensusEpochInfo
     assertEquals("Consensus epoch info modifier id should be different.", bytesToId(newVersion.data), modId)
     assertEquals("Consensus epoch info epoch number should be different.", 2, consensusEpochInfo.epoch)
     assertEquals("Consensus epoch info stake ids merkle tree size should be different.",
@@ -304,14 +296,14 @@ class SidechainStateIntegrationTest
 
     // Test that getFeePayments changed after modifier was applied
     val withdrawalEpochNumber: Int = initialWithdrawalEpochInfo.epoch
-    val feePayments: Seq[ZenBox] = sidechainState.getFeePayments(withdrawalEpochNumber)
+    val feePayments: Seq[ZenBox] = sidechainStateAfterApplyModifier.getFeePayments(withdrawalEpochNumber)
 
     assertEquals(s"Fee payments for epoch $withdrawalEpochNumber size expected to be different.",
       2, feePayments.size)
     assertTrue(s"Fee payments box ${BytesUtils.toHexString(feePayments.head.id())} for epoch $withdrawalEpochNumber expected to be closed.",
-      sidechainState.closedBox(feePayments.head.id()).isDefined)
+      sidechainStateAfterApplyModifier.closedBox(feePayments.head.id()).isDefined)
     assertTrue(s"Fee payments box ${BytesUtils.toHexString(feePayments(1).id())} for epoch $withdrawalEpochNumber expected to be closed.",
-      sidechainState.closedBox(feePayments(1).id()).isDefined)
+      sidechainStateAfterApplyModifier.closedBox(feePayments(1).id()).isDefined)
 
     val poolPayments: Long = Math.ceil((initialBlockFeeInfo.fee + blockFeeInfo.fee) * (1 - params.forgerBlockFeeCoefficient)).longValue()
 
@@ -328,162 +320,87 @@ class SidechainStateIntegrationTest
     assertEquals(s"Fee payments for epoch $withdrawalEpochNumber expected to be different.",
       Seq(expectedFeePaymentBox1, expectedFeePaymentBox2), feePayments)
 
+    sidechainStateAfterApplyModifier
+  }
+
+
+
+  @Test
+  def applyModifierWithCSWEnabled(): Unit = {
+    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage, sidechainUtxoMerkleTreeProvider, params, applicationState).get
+
+    val transactionList = new collection.mutable.ListBuffer[RegularTransaction]()
+    transactionList.append(getRegularTransaction(2, 1))
+    val sidechainStateAfterApplyModifier = commonApplyModifierTest(sidechainState,transactionList)
+
+    // Test that utxo merkle tree root was stored
+    assertTrue("Utxo merkle tree root expected to be found after finishing the epoch: " + initialWithdrawalEpochInfo,
+      sidechainStateAfterApplyModifier.utxoMerkleTreeRoot(initialWithdrawalEpochInfo.epoch).isDefined)
 
     // Test rollback
-    val rollbackTry = sidechainState.rollbackTo(bytesToVersion(initialVersion.data))
+    val rollbackTry = sidechainStateAfterApplyModifier.rollbackTo(bytesToVersion(initialVersion.data))
 
     assertTrue("Rollback must be successful.",
       rollbackTry.isSuccess)
 
+    val sidechainStateAfterRollback = rollbackTry.get
     assertEquals(s"State storage version must be rolled back to $initialVersion",
-      bytesToVersion(initialVersion.data), rollbackTry.get.version)
+      bytesToVersion(initialVersion.data), sidechainStateAfterRollback.version)
 
     assertEquals("Rollback depth must be 1.",
-      1, sidechainState.maxRollbackDepth)
+      1, sidechainStateAfterRollback.maxRollbackDepth)
 
     for (b <- transactionList.head.newBoxes().asScala) {
       assertTrue("Box in state after applyModifier must not contain newBoxes from transaction.",
-        sidechainState.closedBox(b.id()).isEmpty)
+        sidechainStateAfterRollback.closedBox(b.id()).isEmpty)
     }
 
     for (b <- transactionList.head.unlockers().asScala.map(_.closedBoxId())) {
       assertTrue("Box in state after applyModifier must contain unlocked boxes from transaction.",
-        sidechainState.closedBox(b).isDefined)
+        sidechainStateAfterRollback.closedBox(b).isDefined)
     }
+
+    assertTrue("Utxo merkle tree root was not rollback",
+      sidechainStateAfterApplyModifier.utxoMerkleTreeRoot(initialWithdrawalEpochInfo.epoch).isEmpty)
+
   }
 
   @Test
   def applyModifierWithCSWDisabled(): Unit = {
-    var sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage,
+    val sidechainState: SidechainState = SidechainState.restoreState(stateStorage, stateForgerBoxStorage,
                       SidechainUtxoMerkleTreeProviderCSWDisabled(), MainNetParams(isCSWEnabled = false), applicationState).get
 
-    // Test applyModifier with a single RegularTransaction with zen and forger outputs
-    val mockedBlock = mock[SidechainBlock]
-
-    val transactionList = new ListBuffer[RegularTransaction]()
+    val transactionList = new collection.mutable.ListBuffer[RegularTransaction]()
     transactionList.append(getRegularTransaction(2, 1))
-    val forgerOutputsAmount = transactionList.head.newBoxes().asScala.filter(_.isInstanceOf[ForgerBox]).foldLeft(0L)(_ + _.value())
+    val sidechainStateAfterApplyModifier = commonApplyModifierTest(sidechainState,transactionList)
 
-    val newVersion = getVersion
-
-    Mockito.when(mockedBlock.id)
-      .thenReturn(bytesToId(newVersion.data))
-
-    Mockito.when(mockedBlock.timestamp)
-      .thenReturn(params.sidechainGenesisBlockTimestamp + params.consensusSecondsInSlot)
-
-    Mockito.when(mockedBlock.transactions)
-      .thenReturn(transactionList.toList)
-
-    Mockito.when(mockedBlock.parentId)
-      .thenReturn(bytesToId(initialVersion.data))
-
-    // Mock 1 MCBlockRefData entry to simulate the last withdrawal epoch SidechainBlock
-    // to check that fee payment boxes were created and appended to closed boxes.
-    // to check that utxo merkle tree root was stored for the given epoch
-    Mockito.when(mockedBlock.mainchainBlockReferencesData)
-      .thenReturn(Seq[MainchainBlockReferenceData](mock[MainchainBlockReferenceData]))
-
-    Mockito.when(mockedBlock.topQualityCertificateOpt).thenReturn(None)
-
-    val blockFeeInfo = BlockFeeInfo(307, getPrivateKey25519("mod".getBytes()).publicImage())
-    Mockito.when(mockedBlock.feeInfo).thenReturn(blockFeeInfo)
-
-    Mockito.when(mockedBlock.feePaymentsHash).thenAnswer(_ =>{
-      val feePayments = sidechainState.getFeePayments(initialWithdrawalEpochInfo.epoch, Some(blockFeeInfo))
-      FeePaymentsUtils.calculateFeePaymentsHash(feePayments)
-    })
-
-    // Check that there is no record for utxo merkle tree before applying the last block of the withdrawal epoch
-    assertTrue("No utxo merkle tree root expected to be found before finishing the epoch: " + initialWithdrawalEpochInfo,
-      sidechainState.utxoMerkleTreeRoot(initialWithdrawalEpochInfo.epoch).isEmpty)
-
-    // Check that SC is alive
-    assertFalse("SC must be alive", sidechainState.hasCeased)
-
-    val applyTry = sidechainState.applyModifier(mockedBlock)
-    assertTrue("ApplyChanges for block must be successful.",
-      applyTry.isSuccess)
-
-    sidechainState = applyTry.get
-
-    assertEquals(s"State storage version must be updated to $newVersion",
-      bytesToVersion(newVersion.data), sidechainState.version)
-
-    assertEquals("Rollback depth must be 2.",
-      2, sidechainState.maxRollbackDepth)
-
-    for (b <- transactionList.head.newBoxes().asScala) {
-      assertTrue("Box in state after applyModifier must contain newBoxes from transaction.",
-        sidechainState.closedBox(b.id()).isDefined)
-    }
-
-    for (b <- transactionList.head.unlockers().asScala.map(_.closedBoxId())) {
-      assertTrue("Box in state after applyModifier must not contain unlocked boxes from transaction.",
-        sidechainState.closedBox(b).isEmpty)
-    }
-
-    // Test that utxo merkle tree root was not updated when CSW is disabled
+    // Test that utxo merkle tree root was not stored
     assertTrue("Utxo merkle tree root expected to be an empty array after finishing the epoch: " + initialWithdrawalEpochInfo,
-      sidechainState.utxoMerkleTreeRoot(initialWithdrawalEpochInfo.epoch).get.isEmpty)
-
-    // Test that currentConsensusEpochInfo was changed
-    val(modId, consensusEpochInfo) = sidechainState.getCurrentConsensusEpochInfo
-    assertEquals("Consensus epoch info modifier id should be different.", bytesToId(newVersion.data), modId)
-    assertEquals("Consensus epoch info epoch number should be different.", 2, consensusEpochInfo.epoch)
-    assertEquals("Consensus epoch info stake ids merkle tree size should be different.",
-      3, consensusEpochInfo.forgingStakeInfoTree.leavesNumber)
-    assertEquals("Consensus epoch info epoch total stake should be different.",
-      initialForgerBoxes.map(_.value()).sum + forgerOutputsAmount, consensusEpochInfo.forgersStake)
-
-
-    // Test that getFeePayments changed after modifier was applied
-    val withdrawalEpochNumber: Int = initialWithdrawalEpochInfo.epoch
-    val feePayments: Seq[ZenBox] = sidechainState.getFeePayments(withdrawalEpochNumber)
-
-    assertEquals(s"Fee payments for epoch $withdrawalEpochNumber size expected to be different.",
-      2, feePayments.size)
-    assertTrue(s"Fee payments box ${BytesUtils.toHexString(feePayments.head.id())} for epoch $withdrawalEpochNumber expected to be closed.",
-      sidechainState.closedBox(feePayments.head.id()).isDefined)
-    assertTrue(s"Fee payments box ${BytesUtils.toHexString(feePayments(1).id())} for epoch $withdrawalEpochNumber expected to be closed.",
-      sidechainState.closedBox(feePayments(1).id()).isDefined)
-
-    val poolPayments: Long = Math.ceil((initialBlockFeeInfo.fee + blockFeeInfo.fee) * (1 - params.forgerBlockFeeCoefficient)).longValue()
-
-    val nonce1: Long = SidechainState.calculateFeePaymentBoxNonce(withdrawalEpochNumber, 0)
-    // Simplified version of fee computation with lower precision, but is quite enough for the tests.
-    val payment1: Long = (initialBlockFeeInfo.fee * params.forgerBlockFeeCoefficient).longValue() + poolPayments / 2 + poolPayments % 2
-    val expectedFeePaymentBox1: ZenBox = new ZenBox(new ZenBoxData(initialBlockFeeInfo.forgerRewardKey, payment1), nonce1)
-
-    val nonce2: Long = SidechainState.calculateFeePaymentBoxNonce(withdrawalEpochNumber, 1)
-    // Simplified version of fee computation with lower precision, but is quite enough for the tests.
-    val payment2: Long = (blockFeeInfo.fee * params.forgerBlockFeeCoefficient).longValue() + poolPayments / 2
-    val expectedFeePaymentBox2: ZenBox = new ZenBox(new ZenBoxData(blockFeeInfo.forgerRewardKey, payment2), nonce2)
-
-    assertEquals(s"Fee payments for epoch $withdrawalEpochNumber expected to be different.",
-      Seq(expectedFeePaymentBox1, expectedFeePaymentBox2), feePayments)
+      sidechainStateAfterApplyModifier.utxoMerkleTreeRoot(initialWithdrawalEpochInfo.epoch).get.isEmpty)
 
 
     // Test rollback
-    val rollbackTry = sidechainState.rollbackTo(bytesToVersion(initialVersion.data))
+    val rollbackTry = sidechainStateAfterApplyModifier.rollbackTo(bytesToVersion(initialVersion.data))
 
     assertTrue("Rollback must be successful.",
       rollbackTry.isSuccess)
 
+    val sidechainStateAfterRollback = rollbackTry.get
+
     assertEquals(s"State storage version must be rolled back to $initialVersion",
-      bytesToVersion(initialVersion.data), rollbackTry.get.version)
+      bytesToVersion(initialVersion.data), sidechainStateAfterRollback.version)
 
     assertEquals("Rollback depth must be 1.",
-      1, sidechainState.maxRollbackDepth)
+      1, sidechainStateAfterRollback.maxRollbackDepth)
 
     for (b <- transactionList.head.newBoxes().asScala) {
       assertTrue("Box in state after applyModifier must not contain newBoxes from transaction.",
-        sidechainState.closedBox(b.id()).isEmpty)
+        sidechainStateAfterRollback.closedBox(b.id()).isEmpty)
     }
 
     for (b <- transactionList.head.unlockers().asScala.map(_.closedBoxId())) {
       assertTrue("Box in state after applyModifier must contain unlocked boxes from transaction.",
-        sidechainState.closedBox(b).isDefined)
+        sidechainStateAfterRollback.closedBox(b).isDefined)
     }
   }
 
