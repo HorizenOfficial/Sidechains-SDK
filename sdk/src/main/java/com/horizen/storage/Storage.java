@@ -5,7 +5,7 @@ import java.util.List;
 import com.horizen.utils.Pair;
 import com.horizen.utils.ByteArrayWrapper;
 
-public interface Storage {
+public interface Storage extends AutoCloseable {
 
     Optional<ByteArrayWrapper> get(ByteArrayWrapper key);
     ByteArrayWrapper getOrElse(ByteArrayWrapper key, ByteArrayWrapper defaultValue);
@@ -27,5 +27,6 @@ public interface Storage {
 
     int numberOfVersions();
 
+    @Override
     void close();
 }

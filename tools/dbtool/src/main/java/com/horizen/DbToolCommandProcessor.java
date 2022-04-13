@@ -125,7 +125,7 @@ public class DbToolCommandProcessor extends CommandProcessor {
             throw new IllegalArgumentException(storage_to_rollback + " is not a valid storage type.");
         }
         log.info(json.toString());
-        File storageFile = new File(dataDirAbsolutePath + "/" + storage_to_rollback);
+        File storageFile = new File(dataDirAbsolutePath + File.separator + storage_to_rollback);
 
         if (!storageFile.exists()) {
             log.error("File on path[" + storageFile + "] doesn't exist");
@@ -148,9 +148,8 @@ public class DbToolCommandProcessor extends CommandProcessor {
         String versionToRollback = json.get("versionToRollback").asText();
         ByteArrayWrapper version = new ByteArrayWrapper(BytesUtils.fromHexString(versionToRollback));
 
-        try {
-            File storageFile = getStorageFile(json);
-            Storage storage = new VersionedLevelDbStorageAdapter(storageFile);
+        // storage extends autocloseable
+        try (Storage storage = new VersionedLevelDbStorageAdapter(getStorageFile(json))){
 
             String storageVersionPre  = BytesUtils.toHexString(storage.lastVersionID().get().data());
             storage.rollback(version);
@@ -163,7 +162,6 @@ public class DbToolCommandProcessor extends CommandProcessor {
 
             String res = resJson.toString();
             printer.print(res);
-            storage.close();
 
         } catch (IllegalArgumentException e) {
             // for instance when trying to rollback to an not-existing version
@@ -185,9 +183,9 @@ public class DbToolCommandProcessor extends CommandProcessor {
             return;
         }
         int numOfVersions = json.get("numberOfVersionToRetrieve").asInt();
-        try {
-            File storageFile = getStorageFile(json);
-            Storage storage = new VersionedLevelDbStorageAdapter(storageFile);
+
+        // storage extends autocloseable
+        try (Storage storage = new VersionedLevelDbStorageAdapter(getStorageFile(json))){
 
             List<ByteArrayWrapper> bawList = storage.rollbackVersions();
             log.info(bawList);
@@ -209,7 +207,6 @@ public class DbToolCommandProcessor extends CommandProcessor {
 
             String res = resJson.toString();
             printer.print(res);
-            storage.close();
 
         } catch (IllegalArgumentException e) {
             printVersionsListUsageMsg("Error in processing the command: " + e);
@@ -226,9 +223,9 @@ public class DbToolCommandProcessor extends CommandProcessor {
 
     private void processLastVersionID(JsonNode json) {
 
-        try {
-            File storageFile = getStorageFile(json);
-            Storage storage = new VersionedLevelDbStorageAdapter(storageFile);
+        // storage extends autocloseable
+        try (Storage storage = new VersionedLevelDbStorageAdapter(getStorageFile(json))){
+
             String storageVersion = BytesUtils.toHexString(storage.lastVersionID().get().data());
             log.info(storageVersion);
 
@@ -238,7 +235,6 @@ public class DbToolCommandProcessor extends CommandProcessor {
 
             String res = resJson.toString();
             printer.print(res);
-            storage.close();
 
         } catch (IllegalArgumentException e) {
             printLastVersionIDUsageMsg("Error in processing the command: " + e);

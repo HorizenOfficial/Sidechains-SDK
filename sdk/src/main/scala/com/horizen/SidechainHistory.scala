@@ -85,7 +85,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
                   progInfo
                 )
               case Failure(e) => {
-                log.error("New best block found, but it can not be applied: %s".format(e.getMessage))
+                log.error("New best block found, but it can not be applied: %s".format(e.getMessage), e)
                 (
                   storage.update(block, blockInfo),
                   // TO DO: we should somehow prevent growing of such chain (penalize the peer?)
@@ -254,10 +254,11 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
 
   override def applicableTry(block: SidechainBlock): Try[Unit] = {
     if (!contains(block.parentId)) {
+      log.debug("Parent block "  + block.parentId + " IS NOT in history yet")
       Failure(new RecoverableModifierError("Parent block IS NOT in history yet"))
     }
     else {
-      log.debug("Parent " + block.parentId + "IS in history")
+      log.debug("Parent " + block.parentId + " IS in history")
       Success(Unit)
     }
   }
