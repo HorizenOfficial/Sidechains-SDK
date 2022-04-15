@@ -1732,7 +1732,7 @@ paths:
                   result:
                     type: object
                     properties:
-                      state:
+                      cswEnabled:
                         type: boolean
                         description: True or False depending if CSW is enabled
                   error:
