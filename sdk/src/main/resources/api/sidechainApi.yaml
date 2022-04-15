@@ -2197,7 +2197,8 @@ components:
         height:
           type: integer
         score:
-          type: long
+          type: integer
+          format: int64
         parentId:
           type: string
         timestamp:
