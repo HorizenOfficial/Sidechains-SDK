@@ -313,7 +313,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
               throw new Exception("Forger already opened the stake!")
             }
           case None =>
-            throw new Exception("Forger list doesn't find in the Storage")
+            throw new Exception("Forger list was not found in the Storage!")
         }
         stateStorage.getBox(openStakeTransaction.unlockers().get(0).closedBoxId()) match {
           case Some(closedBox) =>
