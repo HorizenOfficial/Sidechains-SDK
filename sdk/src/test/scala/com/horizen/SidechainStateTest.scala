@@ -279,7 +279,9 @@ class SidechainStateTest
       ArgumentMatchers.any[Option[WithdrawalEpochCertificate]](),
       ArgumentMatchers.any[BlockFeeInfo](),
       ArgumentMatchers.any[Option[Array[Byte]]](),
-      ArgumentMatchers.any[Boolean]()))
+      ArgumentMatchers.any[Boolean](),
+      ArgumentMatchers.any[Array[Int]],
+      ArgumentMatchers.any[Int]))
       .thenAnswer( answer => {
         val version = answer.getArgument[ByteArrayWrapper](0)
         val withdrawalEpochInfo = answer.getArgument[WithdrawalEpochInfo](1)

@@ -2,7 +2,6 @@ package com.horizen.api.http
 
 import java.lang
 import java.util.{Collections, ArrayList => JArrayList, List => JList}
-
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
@@ -13,12 +12,12 @@ import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.SidechainTransactionErrorResponse._
 import com.horizen.api.http.SidechainTransactionRestScheme._
-import com.horizen.box.data.{ForgerBoxData, BoxData, WithdrawalRequestBoxData, ZenBoxData}
+import com.horizen.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
 import com.horizen.box.{Box, ZenBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.{NodeWallet, SidechainNodeView}
 import com.horizen.params.NetworkParams
-import com.horizen.proof.Proof
+import com.horizen.proof.{Proof}
 import com.horizen.proposition._
 import com.horizen.serialization.Views
 import com.horizen.transaction._
@@ -42,7 +41,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
   override val route: Route = (pathPrefix("transaction")) {
     allTransactions ~ findById ~ decodeTransactionBytes ~ createCoreTransaction ~ createCoreTransactionSimplified ~
-    sendCoinsToAddress ~ sendTransaction ~ withdrawCoins ~ makeForgerStake ~ spendForgingStake
+    sendCoinsToAddress ~ sendTransaction ~ withdrawCoins ~ makeForgerStake ~ spendForgingStake ~ openStakeTransaction
   }
 
   /**
@@ -537,6 +536,59 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
     new SidechainCoreTransaction(boxIds, outputs, proofs.asJava, fee, SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION)
   }
+
+  def openStakeTransaction: Route = (post & path("openStake")) {
+    entity(as[ReqOpenStake]) { body =>
+      applyOnNodeView { sidechainNodeView =>
+        val wallet = sidechainNodeView.getNodeWallet
+
+        //Collect fee
+        val fee = body.fee.getOrElse(0L)
+        if (fee < 0) {
+          throw new IllegalArgumentException("Fee can't be negative!")
+        }
+
+        //Collect input box
+        val inputBox = wallet.allBoxes().asScala
+          .filter(box => BytesUtils.toHexString(box.id()).equals(body.transactionInput.boxId))
+        if (inputBox.length == 0) {
+          throw new IllegalArgumentException("Unable to find input!")
+        }
+        if (inputBox.length > 1) {
+          throw new IllegalArgumentException("To much inputs found!")
+        }
+        val boxIds = inputBox.map(_.id()).asJava
+
+        //Collect output box
+        val outputs: JList[ZenBoxData] = new JArrayList()
+        outputs.add(new ZenBoxData(
+          PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.regularOutputProposition)),
+          inputBox(0).value() - fee))
+
+        try {
+          // Create unsigned tx
+          // Create a list of fake proofs for further messageToSign calculation
+          val fakeProofs: JList[Proof[Proposition]] = Collections.nCopies(1, null)
+
+          val unsignedTransaction = new OpenStakeTransaction(boxIds, outputs, fakeProofs, body.forgerListIndex, fee, OpenStakeTransaction.OPEN_STAKE_TRANSACTION_VERSION)
+
+          // Create signed tx.
+          val messageToSign = unsignedTransaction.messageToSign()
+          val proofs = inputBox.map(box => {
+            wallet.secretByPublicKey(box.proposition()).get().sign(messageToSign).asInstanceOf[Proof[Proposition]]
+          })
+          val transaction = new OpenStakeTransaction(boxIds, outputs, proofs.asJava, body.forgerListIndex, fee, OpenStakeTransaction.OPEN_STAKE_TRANSACTION_VERSION)
+          if (body.format.getOrElse(false))
+            ApiResponseUtil.toResponse(TransactionDTO(transaction.asInstanceOf[SCBT]))
+          else
+            ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(transaction.asInstanceOf[SCBT]))))
+        } catch {
+          case t: Throwable =>
+            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(t)))
+        }
+      }
+    }
+  }
 }
 
 
@@ -632,6 +684,17 @@ object SidechainTransactionRestScheme {
                                                       format: Option[Boolean]) {
     require(transactionInputs.nonEmpty, "Empty inputs list")
     require(regularOutputs.nonEmpty || forgerOutputs.nonEmpty, "Empty outputs")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqOpenStake(transactionInput: TransactionInput,
+                                       regularOutputProposition: String,
+                                       forgerListIndex: Int,
+                                       fee: Option[Long],
+                                       format: Option[Boolean]) {
+    require(transactionInput != null, "Empty input")
+    require(regularOutputProposition.nonEmpty, "Empty output")
+    require(forgerListIndex >= 0, "Forger list index negative")
   }
 
 }

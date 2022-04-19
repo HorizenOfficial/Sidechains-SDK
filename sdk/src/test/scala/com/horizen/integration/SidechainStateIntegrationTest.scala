@@ -125,7 +125,9 @@ class SidechainStateIntegrationTest
       None,
       initialBlockFeeInfo,
       None,
-      scHasCeased = false
+      scHasCeased = false,
+      new Array[Int](0),
+      0
     )
 
     // Init SidechainStateForgerBoxStorage with forger boxes
