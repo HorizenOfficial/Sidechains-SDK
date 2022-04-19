@@ -100,6 +100,9 @@ class SidechainStateStorageTest
     toUpdate.add(new Pair(stateStorage.consensusEpochKey, new ByteArrayWrapper(Ints.toByteArray(consensusEpoch))))
     val toRemove = java.util.Arrays.asList(storedBoxList(2).getKey)
 
+    //forger list indexes
+    toUpdate.add(new Pair(stateStorage.forgerListIndexKey, new ByteArrayWrapper(Array[Byte](0.toByte))))
+
     Mockito.when(mockedPhysicalStorage.update(
       ArgumentMatchers.any[ByteArrayWrapper](),
       ArgumentMatchers.anyList[Pair[ByteArrayWrapper, ByteArrayWrapper]](),

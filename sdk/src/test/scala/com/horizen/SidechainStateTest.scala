@@ -577,6 +577,8 @@ class SidechainStateTest
         boxList.find(_.id().sameElements(boxId))
       })
 
+    Mockito.when(mockedStateStorage.getForgerListIndexes).thenAnswer(_ => {Option.empty})
+
     Mockito.when(mockedStateForgerBoxStorage.lastVersionId).thenReturn(Some(stateVersion.last))
 
     Mockito.when(mockedStateUtxoMerkleTreeStorage.lastVersionId).thenReturn(Some(stateVersion.last))
