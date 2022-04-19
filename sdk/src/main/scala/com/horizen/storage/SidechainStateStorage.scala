@@ -191,12 +191,15 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
           ForgerListSerializer.parseBytesTry(baw.data)
         } match {
           case Success(Success(forgerIndexes)) => Some(forgerIndexes)
+          case Success(Failure(_)) =>
+            log.error("Error while forger list indexes information parsing.")
+            Option.empty
           case Failure(exception) =>
             log.error("Error while forger list indexes information parsing.", exception)
             Option.empty
         }
       }
-      case _ => Option.empty
+      case None => Option.empty
     }
   }
 
@@ -302,6 +305,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     if(scHasCeased)
       updateList.add(new JPair(ceasingStateKey, new ByteArrayWrapper(Array.emptyByteArray)))
 
+    //Set ForgerList indexes
     val tryForgerListSerialized = getForgerListIndexes
 
     if (tryForgerListSerialized.isDefined) {

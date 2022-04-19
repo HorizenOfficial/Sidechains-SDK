@@ -622,6 +622,8 @@ class SidechainStateTest
       )
     )
 
+    Mockito.when(mockedStateStorage.getForgerListIndexes).thenAnswer(_ => {Option.empty})
+
     Mockito.when(mockedStateForgerBoxStorage.lastVersionId).thenReturn(Some(stateVersion.last))
 
     Mockito.when(mockedStateUtxoMerkleTreeProvider.lastVersionId).thenReturn(Some(stateVersion.last))

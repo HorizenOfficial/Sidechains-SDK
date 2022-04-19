@@ -312,6 +312,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
             if (forgerList.forgerIndexes(openStakeTransaction.getForgerListIndex) == 1) {
               throw new Exception("Forger already opened the stake!")
             }
+          case None =>
+            throw new Exception("Forger list doesn't find in the Storage")
         }
         stateStorage.getBox(openStakeTransaction.unlockers().get(0).closedBoxId()) match {
           case Some(closedBox) =>
@@ -319,6 +321,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
               .equals(params.allowedForgersList.asJava.get(openStakeTransaction.getForgerListIndex)._1)) {
               throw new Exception("OpenStakeTransaction input doesn't match the forgerListIndex!")
             }
+          case None =>
+            throw new Exception("Input box doesn't find!")
         }
       }
 
@@ -373,6 +377,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     stateStorage.getForgerListIndexes match {
       case Some(forgerList: ForgerList) =>
         nOpenForger = forgerList.forgerIndexes.sum
+      case None =>
+        log.error("No forgerList found in the Storage!")
     }
     nOpenForger > params.allowedForgersList.size / 2
   }
@@ -396,12 +402,14 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   //Take the list of transactions inside a block and calculate the forgerList indexes to update
   def getRestrictForgerIndexToUpdate(txs:  Seq[SidechainTransaction[Proposition, Box[Proposition]]]): Array[Int] = {
     val forgerIndexesToUpdate = new JArrayList[Int]()
-    txs.foreach(tx => {
-      if (tx.isInstanceOf[OpenStakeTransaction]) {
-        val openStakeTransaction: OpenStakeTransaction = tx.asInstanceOf[OpenStakeTransaction]
-        forgerIndexesToUpdate.add(openStakeTransaction.getForgerListIndex)
-      }
-    })
+    if (txs != null) {
+      txs.foreach(tx => {
+        if (tx.isInstanceOf[OpenStakeTransaction]) {
+          val openStakeTransaction: OpenStakeTransaction = tx.asInstanceOf[OpenStakeTransaction]
+          forgerIndexesToUpdate.add(openStakeTransaction.getForgerListIndex)
+        }
+      })
+    }
     forgerIndexesToUpdate.asScala.toArray
   }
 
