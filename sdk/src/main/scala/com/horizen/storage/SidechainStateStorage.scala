@@ -8,6 +8,7 @@ import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificate
 import com.horizen.box.{WithdrawalRequestBox, WithdrawalRequestBoxSerializer}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
+import com.horizen.forge.{ForgerList, ForgerListSerializer}
 import com.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
 import scorex.util.ScorexLogging
 
@@ -34,6 +35,8 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   private[horizen] val consensusEpochKey = Utils.calculateKey("consensusEpoch".getBytes)
 
   private[horizen] val ceasingStateKey = Utils.calculateKey("ceasingStateKey".getBytes)
+
+  private[horizen] val forgerListIndexKey = calculateKey("forgerListIndexKey".getBytes)
 
   private val undefinedWithdrawalEpochCounter: Int = -1
   private[horizen] def getWithdrawalEpochCounterKey(withdrawalEpoch: Int): ByteArrayWrapper = {
@@ -181,6 +184,22 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
   }
 
+  def getForgerListIndexes: Option[ForgerList] = {
+    storage.get(forgerListIndexKey).asScala match {
+      case Some(baw) => {
+        Try {
+          ForgerListSerializer.parseBytesTry(baw.data)
+        } match {
+          case Success(Success(forgerIndexes)) => Some(forgerIndexes)
+          case Failure(exception) =>
+            log.error("Error while forger list indexes information parsing.", exception)
+            Option.empty
+        }
+      }
+      case _ => Option.empty
+    }
+  }
+
   def update(version: ByteArrayWrapper,
              withdrawalEpochInfo: WithdrawalEpochInfo,
              boxUpdateList: Set[SidechainTypes#SCB],
@@ -190,7 +209,9 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
              topQualityCertificateOpt: Option[WithdrawalEpochCertificate],
              blockFeeInfo: BlockFeeInfo,
              utxoMerkleTreeRootOpt: Option[Array[Byte]],
-             scHasCeased: Boolean): Try[SidechainStateStorage] = Try {
+             scHasCeased: Boolean,
+             forgerListIndexes: Array[Int],
+             forgerListSize: Int): Try[SidechainStateStorage] = Try {
     require(withdrawalEpochInfo != null, "WithdrawalEpochInfo must be NOT NULL.")
     require(boxUpdateList != null, "List of Boxes to add/update must be NOT NULL. Use empty List instead.")
     require(boxIdsRemoveSet != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")
@@ -280,6 +301,17 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     // If sidechain has ceased set the flag
     if(scHasCeased)
       updateList.add(new JPair(ceasingStateKey, new ByteArrayWrapper(Array.emptyByteArray)))
+
+    val tryForgerListSerialized = getForgerListIndexes
+
+    if (tryForgerListSerialized.isDefined) {
+      val forgerListSerialized = tryForgerListSerialized.get
+      forgerListSerialized.updateIndexes(forgerListIndexes)
+      updateList.add(new JPair(forgerListIndexKey, ForgerListSerializer.toBytes(forgerListSerialized)))
+    } else {
+      val emptyForgerListIndex = ForgerList(new Array[Int](forgerListSize))
+      updateList.add(new JPair(forgerListIndexKey, ForgerListSerializer.toBytes(emptyForgerListIndex)))
+    }
 
     storage.update(version, updateList, removeList)
     this
