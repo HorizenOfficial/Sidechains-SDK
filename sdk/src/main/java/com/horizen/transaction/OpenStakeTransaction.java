@@ -7,7 +7,10 @@ import com.horizen.box.data.ZenBoxData;
 import com.horizen.proof.Proof;
 import com.horizen.proposition.Proposition;
 import com.horizen.proposition.PublicKey25519Proposition;
+import com.horizen.secret.PrivateKey25519;
+import com.horizen.secret.Secret;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
+import com.horizen.utils.Pair;
 import scala.Array;
 
 import java.util.ArrayList;
@@ -145,4 +148,37 @@ public class OpenStakeTransaction extends SidechainNoncedTransaction<PublicKey25
         return new OpenStakeTransactionIncompatibilityChecker();
     }
 
+
+    public static OpenStakeTransaction create(List<Pair<ZenBox, PrivateKey25519>> from,
+                                            List<ZenBoxData> outputs,
+                                            int forgerIndex,
+                                            long fee) throws TransactionSemanticValidityException {
+        if(from == null || outputs == null)
+            throw new IllegalArgumentException("Parameters can't be null.");
+        if(from.size() > MAX_TRANSACTION_UNLOCKERS)
+            throw new IllegalArgumentException("Transaction from number is too large.");
+        if(outputs.size() > MAX_TRANSACTION_NEW_BOXES)
+            throw new IllegalArgumentException("Transaction outputs number is too large.");
+
+        List<byte[]> inputs = new ArrayList<>();
+        List<Proof<Proposition>> fakeSignatures = new ArrayList<>();
+        for(Pair<ZenBox, PrivateKey25519> item : from) {
+            inputs.add(item.getKey().id());
+            fakeSignatures.add(null);
+        }
+
+        OpenStakeTransaction unsignedTransaction = new OpenStakeTransaction(inputs, outputs, fakeSignatures, forgerIndex, fee, OPEN_STAKE_TRANSACTION_VERSION);
+
+        byte[] messageToSign = unsignedTransaction.messageToSign();
+        List<Proof<Proposition>> signatures = new ArrayList<>();
+        for(Pair<ZenBox, PrivateKey25519> item : from) {
+            Secret secret = item.getValue();
+            signatures.add((Proof<Proposition>) secret.sign(messageToSign));
+        }
+
+        OpenStakeTransaction transaction = new OpenStakeTransaction(inputs, outputs, signatures, forgerIndex, fee, OPEN_STAKE_TRANSACTION_VERSION);
+        transaction.transactionSemanticValidity();
+
+        return transaction;
+    }
 }
