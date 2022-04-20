@@ -537,7 +537,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     new SidechainCoreTransaction(boxIds, outputs, proofs.asJava, fee, SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION)
   }
 
-  def openStakeTransaction: Route = (post & path("openStake")) {
+  def openStakeTransaction: Route = (post & path("createOpenStakeTransaction")) {
     entity(as[ReqOpenStake]) { body =>
       applyOnNodeView { sidechainNodeView =>
         val wallet = sidechainNodeView.getNodeWallet
