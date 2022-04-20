@@ -375,6 +375,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
     api_key_hash = ""
     if sc_node_config.api_key != "":
         api_key_hash = calculateApiKeyHash(sc_node_config.api_key)
+    genesis_secrets += sc_node_config.initial_private_keys
+
     config = tmpConfig % {
         'NODE_NUMBER': n,
         'DIRECTORY': dirname,

@@ -27,11 +27,9 @@ object ForgerListSerializer extends ScorexSerializer[ForgerList] {
 
   override def parse(r: Reader): ForgerList = {
     val nElement = r.getInt()
-    System.out.println("nElement "+nElement)
     val indexes: Array[Int] = new Array[Int](nElement)
     for (i <- 0 until nElement) {
       indexes(i) = r.getInt()
-      System.out.println("INDEX di "+i+" = "+indexes(i))
     }
     ForgerList(indexes)
   }

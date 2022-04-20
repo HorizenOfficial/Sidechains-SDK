@@ -101,7 +101,9 @@ class SCNodeConfiguration(object):
                  mempool_max_size = 300,
                  mempool_min_fee_rate = 0,
                  api_key=DEFAULT_API_KEY,
-                 max_fee=10000000):
+                 max_fee=10000000,
+                 forger_options = SCForgerConfiguration(),
+                 initial_private_keys = []):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))
         self.mc_connection_info = mc_connection_info
@@ -116,6 +118,7 @@ class SCNodeConfiguration(object):
         self.max_fee = max_fee
         self.mempool_max_size = mempool_max_size
         self.mempool_min_fee_rate = mempool_min_fee_rate
+        self.initial_private_keys = initial_private_keys
 
 """
 The full network of many sidechain nodes connected to many mainchain nodes.
