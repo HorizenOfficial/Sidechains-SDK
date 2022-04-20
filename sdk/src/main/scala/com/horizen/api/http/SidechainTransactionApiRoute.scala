@@ -41,7 +41,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
   override val route: Route = (pathPrefix("transaction")) {
     allTransactions ~ findById ~ decodeTransactionBytes ~ createCoreTransaction ~ createCoreTransactionSimplified ~
-    sendCoinsToAddress ~ sendTransaction ~ withdrawCoins ~ makeForgerStake ~ spendForgingStake ~ openStakeTransaction
+    sendCoinsToAddress ~ sendTransaction ~ withdrawCoins ~ makeForgerStake ~ spendForgingStake ~ createOpenStakeTransaction ~ sendOpenStakeTransaction
   }
 
   /**
@@ -446,6 +446,75 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     }
   }
 
+  def createOpenStakeTransaction: Route = (post & path("createOpenStakeTransaction")) {
+    entity(as[ReqOpenStake]) { body =>
+      val transaction = createAndSignOpenStakeTransaction(body)
+      if (body.format.getOrElse(false))
+        ApiResponseUtil.toResponse(TransactionDTO(transaction.asInstanceOf[SCBT]))
+      else
+        ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(transaction.asInstanceOf[SCBT]))))
+    }
+  }
+
+  def sendOpenStakeTransaction: Route = (post & path("sendOpenStakeTransaction")) {
+    entity(as[ReqOpenStake]) { body =>
+      val transaction = createAndSignOpenStakeTransaction(body)
+      validateAndSendTransaction(transaction.asInstanceOf[SidechainTypes#SCBT])
+    }
+  }
+
+  /**
+   * Create and sign a openStakeTransaction
+   * @return a signed OpenStakeTransaction or a GenericTransactionError
+   */
+  private def createAndSignOpenStakeTransaction(body: ReqOpenStake): OpenStakeTransaction = {
+    applyOnNodeView { sidechainNodeView =>
+      val wallet = sidechainNodeView.getNodeWallet
+
+      //Collect fee
+      val fee = body.fee.getOrElse(0L)
+      if (fee < 0) {
+        throw new IllegalArgumentException("Fee can't be negative!")
+      }
+
+      //Collect input box
+      val inputBox = wallet.allBoxes().asScala
+        .filter(box => BytesUtils.toHexString(box.id()).equals(body.transactionInput.boxId))
+      if (inputBox.length == 0) {
+        throw new IllegalArgumentException("Unable to find input!")
+      }
+      if (inputBox.length > 1) {
+        throw new IllegalArgumentException("To much inputs found!")
+      }
+      val boxIds = inputBox.map(_.id()).asJava
+
+      //Collect output box
+      val outputs: JList[ZenBoxData] = new JArrayList()
+      outputs.add(new ZenBoxData(
+        PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.regularOutputProposition)),
+        inputBox(0).value() - fee))
+
+      try {
+        // Create unsigned tx
+        // Create a list of fake proofs for further messageToSign calculation
+        val fakeProofs: JList[Proof[Proposition]] = Collections.nCopies(1, null)
+
+        val unsignedTransaction = new OpenStakeTransaction(boxIds, outputs, fakeProofs, body.forgerListIndex, fee, OpenStakeTransaction.OPEN_STAKE_TRANSACTION_VERSION)
+
+        // Create signed tx.
+        val messageToSign = unsignedTransaction.messageToSign()
+        val proofs = inputBox.map(box => {
+          wallet.secretByPublicKey(box.proposition()).get().sign(messageToSign).asInstanceOf[Proof[Proposition]]
+        })
+       new OpenStakeTransaction(boxIds, outputs, proofs.asJava, body.forgerListIndex, fee, OpenStakeTransaction.OPEN_STAKE_TRANSACTION_VERSION)
+      } catch {
+        case t: Throwable =>
+          throw new RuntimeException("Error during the creation of the OpenStakeTransaction!")
+      }
+    }
+
+  }
+
   // try to get the first PublicKey25519Proposition in the wallet
   // None - if not present.
   private def getChangeAddress(wallet: NodeWallet): Option[PublicKey25519Proposition] = {
@@ -537,58 +606,6 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     new SidechainCoreTransaction(boxIds, outputs, proofs.asJava, fee, SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION)
   }
 
-  def openStakeTransaction: Route = (post & path("createOpenStakeTransaction")) {
-    entity(as[ReqOpenStake]) { body =>
-      applyOnNodeView { sidechainNodeView =>
-        val wallet = sidechainNodeView.getNodeWallet
-
-        //Collect fee
-        val fee = body.fee.getOrElse(0L)
-        if (fee < 0) {
-          throw new IllegalArgumentException("Fee can't be negative!")
-        }
-
-        //Collect input box
-        val inputBox = wallet.allBoxes().asScala
-          .filter(box => BytesUtils.toHexString(box.id()).equals(body.transactionInput.boxId))
-        if (inputBox.length == 0) {
-          throw new IllegalArgumentException("Unable to find input!")
-        }
-        if (inputBox.length > 1) {
-          throw new IllegalArgumentException("To much inputs found!")
-        }
-        val boxIds = inputBox.map(_.id()).asJava
-
-        //Collect output box
-        val outputs: JList[ZenBoxData] = new JArrayList()
-        outputs.add(new ZenBoxData(
-          PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.regularOutputProposition)),
-          inputBox(0).value() - fee))
-
-        try {
-          // Create unsigned tx
-          // Create a list of fake proofs for further messageToSign calculation
-          val fakeProofs: JList[Proof[Proposition]] = Collections.nCopies(1, null)
-
-          val unsignedTransaction = new OpenStakeTransaction(boxIds, outputs, fakeProofs, body.forgerListIndex, fee, OpenStakeTransaction.OPEN_STAKE_TRANSACTION_VERSION)
-
-          // Create signed tx.
-          val messageToSign = unsignedTransaction.messageToSign()
-          val proofs = inputBox.map(box => {
-            wallet.secretByPublicKey(box.proposition()).get().sign(messageToSign).asInstanceOf[Proof[Proposition]]
-          })
-          val transaction = new OpenStakeTransaction(boxIds, outputs, proofs.asJava, body.forgerListIndex, fee, OpenStakeTransaction.OPEN_STAKE_TRANSACTION_VERSION)
-          if (body.format.getOrElse(false))
-            ApiResponseUtil.toResponse(TransactionDTO(transaction.asInstanceOf[SCBT]))
-          else
-            ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(transaction.asInstanceOf[SCBT]))))
-        } catch {
-          case t: Throwable =>
-            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(t)))
-        }
-      }
-    }
-  }
 }
 
 
