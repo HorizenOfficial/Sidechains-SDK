@@ -1,6 +1,6 @@
 import json
 #execute a transaction/openStake call
-def openStake(sidechainNode, boxid, address, forger_index, fee, format = False):
+def createOpenStakeTransaction(sidechainNode, boxid, address, forger_index, fee, format = False):
       j = { 
             "transactionInput": 
             { 
@@ -12,5 +12,5 @@ def openStake(sidechainNode, boxid, address, forger_index, fee, format = False):
             "format": format 
       }
       request = json.dumps(j)
-      response = sidechainNode.transaction_openStake(request)
+      response = sidechainNode.transaction_createOpenStakeTransaction(request)
       return response["result"]
