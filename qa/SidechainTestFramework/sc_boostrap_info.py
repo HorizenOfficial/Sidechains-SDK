@@ -87,7 +87,8 @@ class SCNodeConfiguration(object):
                  max_connections=100,
                  automatic_fee_computation=True,
                  certificate_fee=0.0001,
-                 forger_options = SCForgerConfiguration()):
+                 forger_options = SCForgerConfiguration(),
+                 initial_private_keys = []):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))
         self.mc_connection_info = mc_connection_info
@@ -98,6 +99,7 @@ class SCNodeConfiguration(object):
         self.automatic_fee_computation = automatic_fee_computation
         self.certificate_fee = certificate_fee
         self.forger_options = forger_options
+        self.initial_private_keys = initial_private_keys
 
 
 """

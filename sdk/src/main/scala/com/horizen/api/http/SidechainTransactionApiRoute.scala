@@ -690,8 +690,8 @@ object SidechainTransactionRestScheme {
   private[api] case class ReqOpenStake(transactionInput: TransactionInput,
                                        regularOutputProposition: String,
                                        forgerListIndex: Int,
-                                       fee: Option[Long],
-                                       format: Option[Boolean]) {
+                                       format: Option[Boolean],
+                                       @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
     require(transactionInput != null, "Empty input")
     require(regularOutputProposition.nonEmpty, "Empty output")
     require(forgerListIndex >= 0, "Forger list index negative")

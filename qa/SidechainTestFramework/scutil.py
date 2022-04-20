@@ -309,6 +309,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
     all_private_keys = bootstrap_info.certificate_proof_info.schnorr_secrets
     signer_private_keys = [all_private_keys[idx] for idx in sc_node_config.submitter_private_keys_indexes]
 
+    genesis_secrets += sc_node_config.initial_private_keys
+
     config = tmpConfig % {
         'NODE_NUMBER': n,
         'DIRECTORY': dirname,
