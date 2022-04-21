@@ -635,7 +635,6 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
     new SidechainCoreTransaction(boxIds, outputs, proofs.asJava, fee, SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION)
   }
-
 }
 
 
@@ -741,7 +740,7 @@ object SidechainTransactionRestScheme {
                                        automaticSend: Option[Boolean],
                                        @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
     require(transactionInput != null, "Empty input")
-    require(regularOutputProposition.nonEmpty, "Empty output")
+    require(regularOutputProposition.nonEmpty, "Empty regularOutputProposition")
     require(forgerListIndex >= 0, "Forger list index negative")
   }
 
@@ -751,6 +750,7 @@ object SidechainTransactionRestScheme {
                                        format: Option[Boolean],
                                        automaticSend: Option[Boolean],
                                        @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
+    require(forgerProposition.nonEmpty, "Empty forgerProposition")
     require(forgerListIndex >= 0, "Forger list index negative")
   }
 }

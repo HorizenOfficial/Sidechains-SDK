@@ -304,7 +304,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
               throw new Exception("OpenStakeTransaction input doesn't match the forgerListIndex!")
             }
           case None =>
-            throw new Exception("Input box doesn't find!")
+            throw new Exception("Input box not found!")
         }
       }
 
