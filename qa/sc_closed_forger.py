@@ -15,6 +15,8 @@ from SidechainTestFramework.sidechainauthproxy import SCAPIException
 
 """
     Setup 1 SC Node with a closed list of forger. Try to stake money with invalid forger info and verify that we are not allowed to stake.
+    After that open the stake to the world using the openStakeTransaction and verify that a generic proposition (not included in the forger list) 
+    is allowed to forge.
 """
 class SidechainClosedForgerTest(SidechainTestFramework):
     number_of_mc_nodes = 3
