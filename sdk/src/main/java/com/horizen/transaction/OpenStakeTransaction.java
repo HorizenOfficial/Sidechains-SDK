@@ -99,9 +99,9 @@ public class OpenStakeTransaction extends SidechainNoncedTransaction<PublicKey25
                     "unsupported version number.", id()));
         }
 
-        if (inputsIds.isEmpty() || outputsData.isEmpty())
+        if (inputsIds.isEmpty())
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                    "no input and output data present.", id()));
+                    "no input data present.", id()));
 
         if (inputsIds.size() != 1) {
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
