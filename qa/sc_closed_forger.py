@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import assert_false, assert_true, initialize_chain_clean, start_nodes, connect_nodes_bi, websocket_port_by_mc_node_index, forward_transfer_to_sidechain
+from test_framework.util import assert_true, initialize_chain_clean, start_nodes, connect_nodes_bi, websocket_port_by_mc_node_index, forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import generate_secrets, start_sc_nodes, generate_next_blocks, bootstrap_sidechain_nodes, generate_secrets, generate_vrf_secrets
 from httpCalls.wallet.createPrivateKey25519 import http_wallet_createPrivateKey25519
 from httpCalls.transaction.makeForgerStake import makeForgerStake
 from httpCalls.wallet.createVrfSecret import http_wallet_createVrfSecret
 from httpCalls.wallet.allBoxes import http_wallet_allBoxes
 from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress, sendCointsToMultipleAddress
-from httpCalls.transaction.openStake import createOpenStakeTransaction
+from httpCalls.transaction.openStake import createOpenStakeTransaction, createOpenStakeTransactionSimplified
 from httpCalls.transaction.sendTransaction import sendTransaction
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, SCForgerConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
@@ -223,8 +223,8 @@ class SidechainClosedForgerTest(SidechainTestFramework):
         allBoxes = http_wallet_allBoxes(sc_node1)
         forger1_box = self.find_box(allBoxes, self.allowed_forger_propositions[1].publicKey)
         assert_true(forger1_box != {})
-        tx_bytes = createOpenStakeTransaction(sc_node1, forger1_box["id"],new_public_key,1,sc_fee)
-        res = sendTransaction(sc_node1, tx_bytes["transactionBytes"])  
+        #Try with automaticSend = True
+        res = createOpenStakeTransaction(sc_node1, forger1_box["id"],new_public_key,1,sc_fee, True, True)
         assert_true("error" not in res)
         self.sc_sync_all()
         generate_next_blocks(sc_node1, "first node", 1)
@@ -250,7 +250,8 @@ class SidechainClosedForgerTest(SidechainTestFramework):
         allBoxes = http_wallet_allBoxes(sc_node1)
         forger2_box = self.find_box(allBoxes, self.allowed_forger_propositions[2].publicKey)
         assert_true(forger2_box != {})
-        tx_bytes = createOpenStakeTransaction(sc_node1, forger2_box["id"],new_public_key,2,sc_fee)
+        #Try the createOpenStakeTransactionSimplified endpoint
+        tx_bytes = createOpenStakeTransactionSimplified(sc_node1, self.allowed_forger_propositions[2].publicKey,2,sc_fee)
         res = sendTransaction(sc_node1, tx_bytes["transactionBytes"])  
         assert_true("error" not in res)
         self.sc_sync_all()
