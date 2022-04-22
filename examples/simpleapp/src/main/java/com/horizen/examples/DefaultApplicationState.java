@@ -6,8 +6,8 @@ import com.horizen.companion.SidechainBoxesCompanion;
 import com.horizen.proposition.Proposition;
 import com.horizen.state.ApplicationState;
 import com.horizen.state.SidechainStateReader;
+import com.horizen.storage.StorageIterator;
 import com.horizen.transaction.BoxTransaction;
-import org.iq80.leveldb.DBIterator;
 import scala.util.Success;
 import scala.util.Try;
 
@@ -35,7 +35,7 @@ public class DefaultApplicationState implements ApplicationState {
     }
 
     @Override
-    public Try<ApplicationState> onApplicationRestore(SidechainStateReader stateReader, SidechainBoxesCompanion sidechainBoxesCompanion, DBIterator i) {
+    public Try<ApplicationState> onApplicationRestore(SidechainStateReader stateReader, SidechainBoxesCompanion sidechainBoxesCompanion, StorageIterator i) {
         return new Success<>(this);
     }
 }

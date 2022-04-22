@@ -10,7 +10,6 @@ import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
 import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
-import org.iq80.leveldb.DBIterator
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
 
@@ -305,7 +304,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
   def isEmpty: Boolean = storage.isEmpty
 
-  def getIterator: DBIterator = storage.getIterator
+  def getIterator: StorageIterator = storage.getIterator
 
   /**
    * This function restores the unspent boxes that come from a ceased sidechain by saving
@@ -313,7 +312,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
    *
    * @param backupStorage: storage containing the boxes saved from the ceased sidechain
    */
-  def restoreBackup(backupStorageIterator: DBIterator, lastVersion: Array[Byte]): Unit = {
+  def restoreBackup(backupStorageIterator: StorageIterator, lastVersion: Array[Byte]): Unit = {
     backupStorageIterator.seekToFirst()
     val removeList = new JArrayList[ByteArrayWrapper]()
     val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()

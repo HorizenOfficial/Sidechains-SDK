@@ -17,7 +17,6 @@ import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgingStakeMerklePathInfo}
 import scorex.core.VersionTag
 import com.horizen.utils._
-import org.iq80.leveldb.DBIterator
 import scorex.util.ModifierId
 
 import scala.util.Try
@@ -172,7 +171,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
    * @param backupStorageIterator: iterator on the backup storage
    * @param sidechainBoxesCompanion
    */
-  def scanBackUp(backupStorageIterator: DBIterator, sidechainBoxesCompanion: SidechainBoxesCompanion): Unit = {
+  def scanBackUp(backupStorageIterator: StorageIterator, sidechainBoxesCompanion: SidechainBoxesCompanion): Unit = {
     val pubKeys = publicKeys()
     backupStorageIterator.seekToFirst()
     val walletBoxes = new JArrayList[WalletBox]()

@@ -4,7 +4,6 @@ import java.util.Optional;
 import java.util.List;
 import com.horizen.utils.Pair;
 import com.horizen.utils.ByteArrayWrapper;
-import org.iq80.leveldb.DBIterator;
 
 public interface Storage {
 
@@ -26,5 +25,5 @@ public interface Storage {
 
     void close();
 
-    DBIterator getIterator();
+    StorageIterator getIterator();
 }

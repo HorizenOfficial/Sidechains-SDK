@@ -10,7 +10,6 @@ import com.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
 import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.utils.{BlockFeeInfo, BlockFeeInfoSerializer, ByteArrayWrapper, Pair, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
-import org.iq80.leveldb.DBIterator
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -172,7 +171,7 @@ class SidechainStateStorageTest
   }
 
   def readStorage(sidechainStateStorage: SidechainStateStorage): JArrayList[SCB] = {
-    val sidechainStateStorageIterator: DBIterator = sidechainStateStorage.getIterator
+    val sidechainStateStorageIterator: StorageIterator = sidechainStateStorage.getIterator
     sidechainStateStorageIterator.seekToFirst()
 
     val storedBoxes = new JArrayList[SCB]()

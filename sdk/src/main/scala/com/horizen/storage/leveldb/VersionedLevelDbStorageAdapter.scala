@@ -3,10 +3,10 @@ package com.horizen.storage.leveldb
 import java.io.File
 import java.util
 import java.util.{Optional, List => JList}
-import com.horizen.storage.Storage
+import com.horizen.storage.{Storage, StorageIterator}
 import com.horizen.storage.leveldb.LDBFactory.factory
 import com.horizen.utils.{Pair => JPair, _}
-import org.iq80.leveldb.{DBIterator, Options}
+import org.iq80.leveldb.{Options}
 
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
@@ -92,7 +92,7 @@ class VersionedLevelDbStorageAdapter(pathToDB: File) extends Storage{
 
   override def isEmpty: Boolean = dataBase.versions.isEmpty
 
-  override def getIterator(): DBIterator = {
+  override def getIterator(): StorageIterator = {
     dataBase.getIterator()
   }
 }

@@ -47,7 +47,6 @@ import com.horizen.websocket.client.{DefaultWebSocketReconnectionHandler, Mainch
 import com.horizen.websocket.server.WebSocketServerRef
 import com.horizen.serialization.JsonHorizenPublicKeyHashSerializer
 import com.horizen.transaction.mainchain.SidechainCreation
-import org.iq80.leveldb.DBIterator
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 
@@ -419,7 +418,7 @@ class SidechainApp @Inject()
             log.info(s"Rollback of the SidechainStateStorage completed successfully!")
 
             //Take an iterator on the sidechainStateStorage
-            val stateIterator: DBIterator = stateStorage.getIterator
+            val stateIterator: StorageIterator = stateStorage.getIterator
             stateIterator.seekToFirst()
 
             //Perform the backup in the application level

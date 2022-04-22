@@ -19,7 +19,6 @@ import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation, Si
 import com.horizen.transaction.{BoxTransaction, MC2SCAggregatedTransaction, RegularTransaction}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, CswData, ForgingStakeMerklePathInfo, ForwardTransferCswData, MerklePath, MerkleTree, Pair, UtxoCswData}
 import com.horizen.wallet.ApplicationWallet
-import org.iq80.leveldb.DBIterator
 import org.junit.Assert._
 import org.junit._
 import org.junit.rules.TemporaryFolder
@@ -437,7 +436,7 @@ class SidechainWalletTest
   }
 
   def readStorage(walletBoxStorage: SidechainWalletBoxStorage): JArrayList[WalletBox] = {
-    val walletBoxStorageIterator: DBIterator = walletBoxStorage.getIterator
+    val walletBoxStorageIterator: StorageIterator = walletBoxStorage.getIterator
     walletBoxStorageIterator.seekToFirst()
 
     val walletBoxSerializer: WalletBoxSerializer = new WalletBoxSerializer(sidechainBoxesCompanion)

@@ -4,8 +4,8 @@ import com.horizen.box.Box;
 import com.horizen.companion.SidechainBoxesCompanion;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.Secret;
+import com.horizen.storage.StorageIterator;
 import com.horizen.wallet.ApplicationWallet;
-import org.iq80.leveldb.DBIterator;
 
 import java.util.List;
 
@@ -31,7 +31,7 @@ public class CustomApplicationWallet implements ApplicationWallet {
     }
 
     @Override
-    public void onApplicationRestore(SidechainBoxesCompanion sidechainBoxesCompanion, DBIterator i) {
+    public void onApplicationRestore(SidechainBoxesCompanion sidechainBoxesCompanion, StorageIterator i) {
 
     }
 }
