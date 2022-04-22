@@ -563,10 +563,18 @@ object SidechainState
       }
 
       val sidechainState = new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, idToVersion(genesisBlock.parentId), applicationState)
-        .applyModifier(genesisBlock).get
-
-      applicationState.onApplicationRestore(sidechainState, sidechainBoxesCompanion, backupStorage.getIterator)
-      sidechainState
+      if (!backupStorage.isEmpty) {
+        applicationState.onApplicationRestore(sidechainState, sidechainBoxesCompanion, backupStorage.getIterator) match {
+          case Success(updatedState) =>
+            new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, idToVersion(genesisBlock.parentId), updatedState)
+              .applyModifier(genesisBlock).get
+          case Failure(_) =>
+            throw new RuntimeException("State storage is not empty!")
+        }
+      }
+      else {
+        sidechainState.applyModifier(genesisBlock).get
+      }
     } else
       throw new RuntimeException("State storage is not empty!")
   }

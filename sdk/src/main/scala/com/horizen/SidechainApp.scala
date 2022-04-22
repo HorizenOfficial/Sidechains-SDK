@@ -414,20 +414,27 @@ class SidechainApp @Inject()
     checkAsFuture.onComplete{
       case Success(blockId) =>
         log.info(s"Rollback of the SidechainStateStorage to version: ${BytesUtils.toHexString(blockId)}")
-        if (sidechainStateStorage.rollback(new ByteArrayWrapper(blockId)).isSuccess) {
-          log.info(s"Rollback of the SidechainStateStorage completed successfully!")
+        sidechainStateStorage.rollback(new ByteArrayWrapper(blockId)) match {
+          case Success(stateStorage) =>
+            log.info(s"Rollback of the SidechainStateStorage completed successfully!")
 
-          //Take an iterator on the sidechainStateStorage
-          val stateIterator: DBIterator = sidechainStateStorage.getIterator
-          stateIterator.seekToFirst()
+            //Take an iterator on the sidechainStateStorage
+            val stateIterator: DBIterator = stateStorage.getIterator
+            stateIterator.seekToFirst()
 
-          //Perform the backup in the application level
-          backUpper.generateBackUp(stateIterator, backupStorage, sidechainBoxesCompanion)
+            //Perform the backup in the application level
+            try {
+              backUpper.generateBackUp(stateIterator, backupStorage, sidechainBoxesCompanion)
+            } catch {
+              case t: Throwable =>
+                log.error("Error during the Backup generation: ",t.getMessage)
+                throw new RuntimeException("Error during the Backup generation: "+t.getMessage)
+            }
+          case Failure(e) =>
+            log.info(s"Rollback of the SidechainStateStorage couldn't end successfully...")
         }
-        else
-          log.info(s"Rollback of the SidechainStateStorage couldn't end successfully...")
-      case Failure(_) =>
-        log.info("Failed to retrieve the Sidechain block ID fo the SidechainStateStorage rollback! ")
+      case Failure(e) =>
+        log.info("Failed to retrieve the Sidechain block ID fo the SidechainStateStorage rollback! ", e.getMessage)
 
     }
   }

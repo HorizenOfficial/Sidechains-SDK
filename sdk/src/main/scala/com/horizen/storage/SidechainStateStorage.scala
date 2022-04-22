@@ -317,6 +317,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     backupStorageIterator.seekToFirst()
     val removeList = new JArrayList[ByteArrayWrapper]()
     val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
+    val lastVersionWrapper = new ByteArrayWrapper(lastVersion)
 
     while(backupStorageIterator.hasNext) {
       val entry = backupStorageIterator.next()
@@ -332,14 +333,14 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
             if (backupStorageIterator.hasNext)
               storage.update(new ByteArrayWrapper(Utils.uniqueVersion()),updateList, removeList)
             else
-              storage.update(new ByteArrayWrapper(lastVersion),updateList, removeList)
+              storage.update(lastVersionWrapper,updateList, removeList)
             updateList.clear()
           }
         }
       }
     }
     if (updateList.size() != 0)
-      storage.update(new ByteArrayWrapper(lastVersion),updateList, removeList)
+      storage.update(lastVersionWrapper,updateList, removeList)
     log.info("SidechainStateStorage restore completed successfully!")
   }
 }
