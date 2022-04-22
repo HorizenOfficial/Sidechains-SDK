@@ -17,8 +17,9 @@ class BackupStorage (storage : Storage, sidechainBoxesCompanion: SidechainBoxesC
   require(sidechainBoxesCompanion != null, "SidechainBoxesCompanion must be NOT NULL.")
 
   def update (version : ByteArrayWrapper, boxToSaveList : java.util.List[JPair[ByteArrayWrapper,ByteArrayWrapper]]) : Try[BackupStorage] = Try {
-    require(boxToSaveList != null, "List of WalletBoxes to add/update must be NOT NULL. Use empty List instead.")
+    require(boxToSaveList != null, "List of WalletBoxes to add/update must be NOT NULL.")
     require(!boxToSaveList.contains(null), "WalletBox to add/update must be NOT NULL.")
+    require(!boxToSaveList.isEmpty, "List of WalletBoxes to add/update must be NOT EMPTY.")
 
     val removeList = new JArrayList[ByteArrayWrapper]()
 

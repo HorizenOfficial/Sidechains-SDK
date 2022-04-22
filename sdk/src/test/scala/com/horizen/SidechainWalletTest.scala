@@ -427,7 +427,7 @@ class SidechainWalletTest
 
     sidechainWallet.scanBackUp(backupStorage.getIterator, sidechainBoxesCompanion)
 
-    assertTrue("Box stored to the backupStorage should be 7",boxToRestoreList.size == 7)
+    assertTrue("Box stored to the backupStorage should be 7: 5 regular box + 1 new address + 1 fake ",boxToRestoreList.size == 7)
     val storedBoxes = readStorage(walletBoxStorage)
 
     //Verify that we did take only the 5 Boxes
