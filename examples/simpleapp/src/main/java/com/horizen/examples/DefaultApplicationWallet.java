@@ -11,7 +11,7 @@ import com.horizen.utils.Pair;
 import com.horizen.wallet.ApplicationWallet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.iq80.leveldb.DBIterator;
+import com.horizen.storage.StorageIterator;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -88,7 +88,7 @@ public class DefaultApplicationWallet implements ApplicationWallet {
     }
 
     @Override
-    public void onApplicationRestore(SidechainBoxesCompanion sidechainBoxesCompanion, DBIterator i) {
+    public void onApplicationRestore(SidechainBoxesCompanion sidechainBoxesCompanion, StorageIterator i) {
 
     }
 }

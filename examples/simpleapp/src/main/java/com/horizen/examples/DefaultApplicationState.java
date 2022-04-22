@@ -13,7 +13,7 @@ import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.iq80.leveldb.DBIterator;
+import com.horizen.storage.StorageIterator;
 import scala.util.Success;
 import scala.util.Try;
 
@@ -94,7 +94,8 @@ public class DefaultApplicationState implements ApplicationState {
         appStorage2.close();
     }
 
-    public Try<ApplicationState> onApplicationRestore(SidechainStateReader stateReader, SidechainBoxesCompanion sidechainBoxesCompanion, DBIterator i) {
+
+    public Try<ApplicationState> onApplicationRestore(SidechainStateReader stateReader, SidechainBoxesCompanion sidechainBoxesCompanion, StorageIterator i) {
         return new Success<>(this);
     }
 }

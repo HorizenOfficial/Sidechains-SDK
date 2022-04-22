@@ -6,7 +6,7 @@ import com.horizen.companion.SidechainBoxesCompanion;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.Secret;
 import com.horizen.box.Box;
-import org.iq80.leveldb.DBIterator;
+import com.horizen.storage.StorageIterator;
 
 public interface ApplicationWallet {
 
@@ -19,5 +19,5 @@ public interface ApplicationWallet {
     // blockId given. This is useful when checking the alignment of the storages versions at node restart
     boolean checkStoragesVersion(byte[] blockId);
 
-    void onApplicationRestore(SidechainBoxesCompanion sidechainBoxesCompanion, DBIterator i);
+    void onApplicationRestore(SidechainBoxesCompanion sidechainBoxesCompanion, StorageIterator i);
 }

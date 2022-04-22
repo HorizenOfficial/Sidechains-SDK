@@ -2,7 +2,6 @@ package com.horizen.storage
 
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.utils.{ByteArrayWrapper, Pair => JPair}
-import org.iq80.leveldb.DBIterator
 
 import scala.util.Try
 import java.util.{ArrayList => JArrayList}
@@ -34,7 +33,7 @@ class BackupStorage (storage : Storage, sidechainBoxesCompanion: SidechainBoxesC
     new ByteArrayWrapper(Blake2b256.hash(boxId))
   }
 
-  def getIterator: DBIterator = storage.getIterator
+  def getIterator: StorageIterator = storage.getIterator
 
   def isEmpty: Boolean = storage.isEmpty
 
