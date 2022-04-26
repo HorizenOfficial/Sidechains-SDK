@@ -3,11 +3,11 @@ package com.horizen.consensus
 import java.util.{ArrayList => JArrayList}
 import com.horizen.storage.{SidechainStorageInfo, Storage}
 import com.horizen.utils.{ByteArrayWrapper, Pair => JPair}
+import com.horizen.utils.Utils
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
 
 import scala.compat.java8.OptionConverters._
-import scala.util.Random
 
 class ConsensusDataStorage(consensusEpochInfoStorage: Storage)
   extends ScorexLogging
@@ -46,12 +46,6 @@ class ConsensusDataStorage(consensusEpochInfoStorage: Storage)
       .map(byteArray => NonceConsensusEpochInfoSerializer.parseBytes(byteArray.data))
   }
 
-  private def nextVersion: Array[Byte] = {
-    val version = new Array[Byte](32)
-    Random.nextBytes(version)
-    version
-  }
-
   private def stakeEpochInfoKey(epochId: ConsensusEpochId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"stake$epochId"))
 
   private def nonceEpochInfoKey(epochId: ConsensusEpochId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"nonce$epochId"))
@@ -60,7 +54,7 @@ class ConsensusDataStorage(consensusEpochInfoStorage: Storage)
     val listForUpdate = new JArrayList[JPair[ByteArrayWrapper, ByteArrayWrapper]]()
     val addedData = new JPair(key, new ByteArrayWrapper(value))
     listForUpdate.add(addedData)
-    val version = new ByteArrayWrapper(nextVersion)
+    val version = new ByteArrayWrapper(Utils.nextVersion)
     consensusEpochInfoStorage.update(version, listForUpdate, java.util.Collections.emptyList())
     log.debug("Consensus data storage updated with version: " + version)
   }

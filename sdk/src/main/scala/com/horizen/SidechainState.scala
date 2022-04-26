@@ -1,6 +1,7 @@
 package com.horizen
 
 import com.google.common.primitives.{Bytes, Ints}
+import com.horizen.backup.BoxIterator
 
 import java.io.File
 import java.util
@@ -577,7 +578,6 @@ object SidechainState
                                           forgerBoxStorage: SidechainStateForgerBoxStorage,
                                           utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
                                           backupStorage: BackupStorage,
-                                          sidechainBoxesCompanion: SidechainBoxesCompanion,
                                           params: NetworkParams,
                                           applicationState: ApplicationState,
                                           genesisBlock: SidechainBlock): Try[SidechainState] = Try {
@@ -585,20 +585,16 @@ object SidechainState
     if (stateStorage.isEmpty) {
       if (!backupStorage.isEmpty) {
         stateStorage.restoreBackup(backupStorage.getIterator, versionToBytes(idToVersion(genesisBlock.parentId)))
-      }
-
-      val sidechainState = new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, idToVersion(genesisBlock.parentId), applicationState)
-      if (!backupStorage.isEmpty) {
-        applicationState.onApplicationRestore(sidechainState, sidechainBoxesCompanion, backupStorage.getIterator) match {
+        applicationState.onBackupRestore(new BoxIterator(backupStorage.getIterator, backupStorage.sBoxesCompanion)) match {
           case Success(updatedState) =>
             new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, idToVersion(genesisBlock.parentId), updatedState)
               .applyModifier(genesisBlock).get
-          case Failure(_) =>
-            throw new RuntimeException("State storage is not empty!")
+          case Failure(e) =>
+            throw e
         }
-      }
-      else {
-        sidechainState.applyModifier(genesisBlock).get
+      } else{
+        new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, idToVersion(genesisBlock.parentId), applicationState)
+          .applyModifier(genesisBlock).get
       }
     } else
       throw new RuntimeException("State storage is not empty!")

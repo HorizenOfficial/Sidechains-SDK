@@ -121,7 +121,6 @@ trait SidechainNodeViewHolderFixture
     forgingBoxesMerklePathStorage,
     cswDataStorage,
     backupStorage,
-    sidechainBoxesCompanion,
     params,
     timeProvider,
     defaultApplicationWallet,

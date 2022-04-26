@@ -9,7 +9,7 @@ import com.horizen.box.BoxSerializer
 import com.horizen.helper.{NodeViewHelper, NodeViewHelperImpl, SecretSubmitHelper, SecretSubmitHelperImpl, TransactionSubmitHelper, TransactionSubmitHelperImpl}
 import com.horizen.secret.SecretSerializer
 import com.horizen.state.ApplicationState
-import com.horizen.storage.{BackUpperInterface, Storage}
+import com.horizen.storage.{BoxBackupInterface, Storage}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.Pair
 import com.horizen.wallet.ApplicationWallet
@@ -56,9 +56,8 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
           @Named("CustomApiGroups")  customApiGroups: JList[ApplicationApiGroup],
           @Named("RejectedApiPaths")  rejectedApiPaths : JList[Pair[String, String]],
           @Named("ApplicationStopper") applicationStopper : SidechainAppStopper,
-          @Named("BackUpper") backUpper : BackUpperInterface
-
-          ): SidechainApp = {
+          @Named("BackUpper") backUpper : BoxBackupInterface
+  ): SidechainApp = {
     synchronized {
       if (app == null) {
         app = new SidechainApp(
