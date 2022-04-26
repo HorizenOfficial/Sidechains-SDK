@@ -10,6 +10,7 @@ import akka.util.Timeout
 import com.google.inject.name.Named
 import com.google.inject.{Inject, _}
 import com.horizen.api.http.{SidechainSubmitterApiRoute, _}
+import com.horizen.backup.BoxIterator
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.certificatesubmitter.CertificateSubmitterRef
@@ -75,7 +76,7 @@ class SidechainApp @Inject()
    @Named("BackupStorage") val backUpStorage: Storage,
    @Named("CustomApiGroups") val customApiGroups: JList[ApplicationApiGroup],
    @Named("RejectedApiPaths") val rejectedApiPaths : JList[Pair[String, String]],
-   @Named("BackUpper") val backUpper : BackUpperInterface,
+   @Named("BackUpper") val backUpper : BoxBackupInterface,
   )
   extends Application  with ScorexLogging
 {
@@ -278,7 +279,6 @@ class SidechainApp @Inject()
     forgingBoxesMerklePathStorage,
     sidechainWalletCswDataStorage,
     backupStorage,
-    sidechainBoxesCompanion,
     params,
     timeProvider,
     applicationWallet,
@@ -423,14 +423,14 @@ class SidechainApp @Inject()
 
             //Perform the backup in the application level
             try {
-              backUpper.generateBackUp(stateIterator, backupStorage, sidechainBoxesCompanion)
+              backUpper.backup(new BoxIterator(stateIterator, sidechainBoxesCompanion), backupStorage)
             } catch {
               case t: Throwable =>
                 log.error("Error during the Backup generation: ",t.getMessage)
                 throw new RuntimeException("Error during the Backup generation: "+t.getMessage)
             }
           case Failure(e) =>
-            log.info(s"Rollback of the SidechainStateStorage couldn't end successfully...")
+            log.info(s"Rollback of the SidechainStateStorage couldn't end successfully...", e.getMessage)
         }
       case Failure(e) =>
         log.info("Failed to retrieve the Sidechain block ID fo the SidechainStateStorage rollback! ", e.getMessage)

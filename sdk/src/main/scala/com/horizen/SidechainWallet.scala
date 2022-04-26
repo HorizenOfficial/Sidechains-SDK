@@ -1,5 +1,7 @@
 package com.horizen
 
+import com.horizen.backup.BoxIterator
+
 import java.lang
 import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock}
@@ -19,7 +21,7 @@ import scorex.core.VersionTag
 import com.horizen.utils._
 import scorex.util.ModifierId
 
-import scala.util.Try
+import scala.util.{Try}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.language.postfixOps
@@ -188,7 +190,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
           walletBoxes.add(new WalletBox(currBox, System.currentTimeMillis()))
           nBoxes += 1
           if (nBoxes == leveldb.Constants.BatchSize) {
-            walletBoxStorage.update(new ByteArrayWrapper(Utils.uniqueVersion()), walletBoxes.asScala.toList, removeList.asScala.toList).get
+            walletBoxStorage.update(new ByteArrayWrapper(Utils.nextVersion), walletBoxes.asScala.toList, removeList.asScala.toList).get
             walletBoxes.clear()
             nBoxes = 0
           }
@@ -196,7 +198,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
       }
     }
     if (nBoxes > 0) {
-      walletBoxStorage.update(new ByteArrayWrapper(Utils.uniqueVersion()), walletBoxes.asScala.toList, removeList.asScala.toList).get
+      walletBoxStorage.update(new ByteArrayWrapper(Utils.nextVersion), walletBoxes.asScala.toList, removeList.asScala.toList).get
     }
   }
 
@@ -371,7 +373,6 @@ object SidechainWallet
                                            forgingBoxesInfoStorage: ForgingBoxesInfoStorage,
                                            cswDataStorage: SidechainWalletCswDataStorage,
                                            backupStorage: BackupStorage,
-                                           sidechainBoxesCompanion: SidechainBoxesCompanion,
                                            params: NetworkParams,
                                            applicationWallet: ApplicationWallet,
                                            genesisBlock: SidechainBlock,
@@ -380,10 +381,10 @@ object SidechainWallet
                                     ) : Try[SidechainWallet] = Try {
 
     if (walletBoxStorage.isEmpty) {
-      applicationWallet.onApplicationRestore(sidechainBoxesCompanion, backupStorage.getIterator)
+      applicationWallet.onBackupRestore(new BoxIterator(backupStorage.getIterator, backupStorage.sBoxesCompanion))
       val genesisWallet = new SidechainWallet(seed, walletBoxStorage, secretStorage, walletTransactionStorage,
         forgingBoxesInfoStorage, cswDataStorage, params, applicationWallet)
-      genesisWallet.scanBackUp(backupStorage.getIterator, sidechainBoxesCompanion)
+      genesisWallet.scanBackUp(backupStorage.getIterator, backupStorage.sBoxesCompanion)
       genesisWallet.scanPersistent(genesisBlock, withdrawalEpochNumber, Seq(), None).applyConsensusEpochInfo(consensusEpochInfo)
     }
     else

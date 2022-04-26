@@ -1,10 +1,9 @@
 package com.horizen.state;
 
+import com.horizen.backup.BoxIterator;
 import com.horizen.block.SidechainBlock;
 import com.horizen.box.Box;
-import com.horizen.companion.SidechainBoxesCompanion;
 import com.horizen.proposition.Proposition;
-import com.horizen.storage.StorageIterator;
 import com.horizen.transaction.BoxTransaction;
 
 import java.util.List;
@@ -27,7 +26,7 @@ public interface ApplicationState {
 
     Try<ApplicationState> onRollback(byte[] blockId); // return Try[...]
 
-    Try<ApplicationState> onApplicationRestore(SidechainStateReader stateReader, SidechainBoxesCompanion sidechainBoxesCompanion, StorageIterator i);
+    Try<ApplicationState> onBackupRestore(BoxIterator i);
 }
 
 

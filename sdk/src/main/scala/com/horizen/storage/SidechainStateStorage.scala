@@ -330,7 +330,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
           log.info("Restore Box id "+currBox.boxTypeId())
           if (updateList.size() == leveldb.Constants.BatchSize) {
             if (backupStorageIterator.hasNext)
-              storage.update(new ByteArrayWrapper(Utils.uniqueVersion()),updateList, removeList)
+              storage.update(new ByteArrayWrapper(Utils.nextVersion),updateList, removeList)
             else
               storage.update(lastVersionWrapper,updateList, removeList)
             updateList.clear()
