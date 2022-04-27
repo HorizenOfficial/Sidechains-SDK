@@ -5,6 +5,9 @@ import com.horizen.node.SidechainNodeView
 import scorex.core.api.http.{ApiDirectives, ApiRoute}
 import akka.pattern.ask
 import akka.http.scaladsl.server.Route
+import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
+import scorex.core.NodeViewHolder.CurrentView
+import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 
@@ -50,6 +53,15 @@ trait SidechainApiRoute extends ApiRoute with ApiDirectives {
 
     (sidechainNodeViewHolderRef ? GetDataFromCurrentSidechainNodeView(f))
       .mapTo[SidechainNodeView]
+  }
+
+  type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
+
+  def withSidechainNodeView(f: View => Route): Route = onSuccess(sidechainViewAsync())(f)
+
+  protected def sidechainViewAsync(): Future[View] = {
+    def f(v: View) = v
+    (sidechainNodeViewHolderRef ? GetDataFromCurrentView(f)).mapTo[View]
   }
 
 }

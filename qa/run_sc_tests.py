@@ -2,6 +2,7 @@
 import sys
 
 from mc_sc_forging_delegation import MCSCForgingDelegation
+from qa.sc_blockid_to_rollback import SidechainBlockIdToRollbackTest
 from sc_ceased import SCCeased
 from sc_cert_no_coin_record import SCCertNoCoinRecord
 from sc_cert_submission_decentralization import SCCertSubmissionDecentralization
@@ -139,6 +140,8 @@ def run_tests(log_file):
     result = run_test(DBToolTest())
     assert_equal(0, result, "DBToolTest test failed!")
 
+    result = run_test(SidechainBlockIdToRollbackTest())
+    assert_equal(0, result, "sc_blockid_to_rollback test failed!")
 
 if __name__ == "__main__":
     log_file = open("sc_test.log", "w")
