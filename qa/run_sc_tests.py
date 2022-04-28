@@ -2,7 +2,6 @@
 import sys
 
 from mc_sc_forging_delegation import MCSCForgingDelegation
-from qa.sc_blockid_to_rollback import SidechainBlockIdToRollbackTest
 from sc_ceased import SCCeased
 from sc_cert_no_coin_record import SCCertNoCoinRecord
 from sc_cert_submission_decentralization import SCCertSubmissionDecentralization
@@ -31,6 +30,7 @@ from sc_cert_fee_conf import CertFeeConfiguration
 from sc_bwt_minimum_value import SCBwtMinValue
 from websocket_server_fee_payments import SCWsServerFeePayments
 from sc_closed_forger import SidechainClosedForgerTest
+from sc_blockid_to_rollback import SidechainBlockIdToRollbackTest
 
 
 def run_test(test):
