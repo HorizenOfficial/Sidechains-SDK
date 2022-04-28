@@ -10,6 +10,7 @@ import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
 import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
+import org.scalacheck.Prop.Exception
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
 
@@ -335,6 +336,8 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
               storage.update(lastVersionWrapper,updateList, removeList)
             updateList.clear()
           }
+        } else {
+          throw new RuntimeException("Coin boxes are not eligible to be restored!")
         }
       }
     }
