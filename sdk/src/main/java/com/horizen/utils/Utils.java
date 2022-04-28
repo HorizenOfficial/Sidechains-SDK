@@ -13,8 +13,6 @@ public final class Utils
 
     public static final int SHA256_LENGTH = 32;
 
-    private static long latestUniqueVersion = 0;
-
     public static byte[] doubleSHA256Hash(byte[] bytes) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");

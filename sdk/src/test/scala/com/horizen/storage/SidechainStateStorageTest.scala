@@ -38,6 +38,7 @@ class SidechainStateStorageTest
 
   val boxList = new ListBuffer[SidechainTypes#SCB]()
   val storedBoxList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
+  val customStoredBoxList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
 
   val customBoxesSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]] = new JHashMap()
   customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
@@ -64,6 +65,13 @@ class SidechainStateStorageTest
         val value = new ByteArrayWrapper(sidechainBoxesCompanion.toBytes(b))
         new Pair(key,value)
       })
+      if (!b.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]]) {
+        customStoredBoxList.append({
+          val key = new ByteArrayWrapper(Blake2b256.hash(b.id()))
+          val value = new ByteArrayWrapper(sidechainBoxesCompanion.toBytes(b))
+          new Pair(key,value)
+        })
+      }
     }
 
     Mockito.when(mockedPhysicalStorage.get(ArgumentMatchers.any[ByteArrayWrapper]()))
@@ -154,8 +162,8 @@ class SidechainStateStorageTest
     val backupStorage = new BackupStorage(new VersionedLevelDbStorageAdapter(backupStorageFile), sidechainBoxesCompanion)
 
     //Fill BackUpStorage with 5 ZenBoxes and 5 CustomBoxes and 1 random element
-    storedBoxList.append(new Pair[ByteArrayWrapper, ByteArrayWrapper](new ByteArrayWrapper("key1".getBytes), new ByteArrayWrapper("value1".getBytes)))
-    backupStorage.update(getVersion, storedBoxList.asJava).get
+    customStoredBoxList.append(new Pair[ByteArrayWrapper, ByteArrayWrapper](new ByteArrayWrapper("key1".getBytes), new ByteArrayWrapper("value1".getBytes)))
+    backupStorage.update(getVersion, customStoredBoxList.asJava).get
 
     //Restore the SidechainStateStorage based on the BackupStorage
     stateStorage.restoreBackup(backupStorage.getIterator, getVersion.data())
