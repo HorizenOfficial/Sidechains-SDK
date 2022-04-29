@@ -20,6 +20,12 @@ import java.util.Objects;
 
 import static com.horizen.transaction.CoreTransactionsIdsEnum.OpenStakeTransactionId;
 
+/**
+ * OpenStakeTransaction is used to open the forging stake to the world.
+ * It can be used when the flag "restrictForger" is enabled and can be fired only by the allowed forgers inside the "allowedForgers" list.
+ * This transaction has 1 input and 1 output. It contains a custom field "forgerIndex" that identify a specific forger inside the "allowedForgers" list.
+ * The input must be locked by the corresponding proposition indexed by "forgerIndex" inside the "allowedForgers" list.
+ */
 public class OpenStakeTransaction extends SidechainNoncedTransaction<PublicKey25519Proposition, ZenBox, ZenBoxData>{
     public final static byte OPEN_STAKE_TRANSACTION_VERSION = 1;
 
@@ -44,6 +50,10 @@ public class OpenStakeTransaction extends SidechainNoncedTransaction<PublicKey25
         Objects.requireNonNull(inputsIds, "Inputs Ids list can't be null.");
         Objects.requireNonNull(outputsData, "Outputs Data list can't be null.");
         Objects.requireNonNull(proofs, "Proofs list can't be null.");
+
+        if(inputsIds.size() != 1) {
+            throw new IllegalArgumentException("Input Ids list should contains only 1 element!");
+        }
 
         this.inputsIds = inputsIds;
         this.outputsData = outputsData;

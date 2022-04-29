@@ -289,7 +289,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         if (openStakeTransaction.getForgerListIndex >= params.allowedForgersList.size || openStakeTransaction.getForgerListIndex < 0) {
           throw new Exception("ForgerListIndex in OpenStakeTransaction is out of bound!")
         }
-        stateStorage.getForgerListIndexes match {
+        stateStorage.getForgerList match {
           case Some(forgerList) =>
             if (forgerList.forgerIndexes(openStakeTransaction.getForgerListIndex) == 1) {
               throw new Exception("Forger already opened the stake!")
@@ -350,12 +350,12 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   //Check if the majority of the allowed forgers opened the stake to everyone
   def openForger(): Boolean = {
-    var nOpenForger = 0
-    stateStorage.getForgerListIndexes match {
+    val nOpenForger: Int = stateStorage.getForgerList match {
       case Some(forgerList: ForgerList) =>
-        nOpenForger = forgerList.forgerIndexes.sum
+        forgerList.forgerIndexes.sum
       case None =>
         log.error("No forgerList found in the Storage!")
+        0
     }
     nOpenForger > params.allowedForgersList.size / 2
   }

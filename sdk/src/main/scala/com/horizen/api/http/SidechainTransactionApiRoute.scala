@@ -449,33 +449,40 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
   def createOpenStakeTransaction: Route = (post & path("createOpenStakeTransaction")) {
     entity(as[ReqOpenStake]) { body =>
-      val transaction = buildOpenStakeTransaction(body)
-      if (body.automaticSend.getOrElse(true)) {
-        validateAndSendTransaction(transaction.asInstanceOf[SidechainTypes#SCBT])
-      } else {
-        if (body.format.getOrElse(false))
-          ApiResponseUtil.toResponse(TransactionDTO(transaction.asInstanceOf[SCBT]))
-        else
-          ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(transaction.asInstanceOf[SCBT]))))
+      buildOpenStakeTransaction(body) match {
+        case Success(tx) =>
+          if (body.automaticSend.getOrElse(true)) {
+            validateAndSendTransaction(tx.asInstanceOf[SidechainTypes#SCBT])
+          } else {
+            if (body.format.getOrElse(false))
+              ApiResponseUtil.toResponse(TransactionDTO(tx.asInstanceOf[SCBT]))
+            else
+              ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(tx.asInstanceOf[SCBT]))))
+          }
+        case Failure(exception) =>
+          ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exception)))
       }
     }
   }
 
   def createOpenStakeTransactionSimplified: Route = (post & path("createOpenStakeTransactionSimplified")) {
     entity(as[ReqOpenStakeSimplified]) { body =>
-      val transaction = buildOpenStakeTransactionSimplified(body)
-      if (body.automaticSend.getOrElse(true)) {
-        validateAndSendTransaction(transaction.asInstanceOf[SidechainTypes#SCBT])
-      } else {
-        if (body.format.getOrElse(false))
-          ApiResponseUtil.toResponse(TransactionDTO(transaction.asInstanceOf[SCBT]))
-        else
-          ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(transaction.asInstanceOf[SCBT]))))
-      }
+     buildOpenStakeTransactionSimplified(body) match {
+       case Success(tx) =>
+         if (body.automaticSend.getOrElse(true)) {
+           validateAndSendTransaction(tx.asInstanceOf[SidechainTypes#SCBT])
+         } else {
+           if (body.format.getOrElse(false))
+             ApiResponseUtil.toResponse(TransactionDTO(tx.asInstanceOf[SCBT]))
+           else
+             ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(tx.asInstanceOf[SCBT]))))
+         }
+       case Failure(exception) =>
+         ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exception)))     }
     }
   }
 
-  private def buildOpenStakeTransactionSimplified(body: ReqOpenStakeSimplified): OpenStakeTransaction = {
+  private def buildOpenStakeTransactionSimplified(body: ReqOpenStakeSimplified): Try[OpenStakeTransaction] = {
     applyOnNodeView { sidechainNodeView =>
       val wallet = sidechainNodeView.getNodeWallet
 
@@ -492,7 +499,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
    * Create and sign a openStakeTransaction
    * @return a signed OpenStakeTransaction or a GenericTransactionError
    */
-  private def buildOpenStakeTransaction(body: ReqOpenStake): OpenStakeTransaction = {
+  private def buildOpenStakeTransaction(body: ReqOpenStake): Try[OpenStakeTransaction] = {
     applyOnNodeView { sidechainNodeView =>
       val wallet = sidechainNodeView.getNodeWallet
 
@@ -512,11 +519,14 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
 
   private def createAndSignOpenStakeTransaction(wallet: NodeWallet, inputBox: mutable.Buffer[Box[Proposition]], outputProposition: String,
-                                                forgerListIndex: Int, inputFee: Option[Long]): OpenStakeTransaction = {
+                                                forgerListIndex: Int, inputFee: Option[Long]): Try[OpenStakeTransaction] = {
     //Collect fee
     val fee = inputFee.getOrElse(0L)
     if (fee < 0) {
       throw new IllegalArgumentException("Fee can't be negative!")
+    }
+    if (fee > inputBox(0).value) {
+      throw new IllegalArgumentException("Fee can't be greater than the input!")
     }
 
     //Collect output box
@@ -525,7 +535,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
       PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(outputProposition)),
       inputBox(0).value() - fee))
 
-    try {
+    Try {
       val boxIds = inputBox.map(_.id()).asJava
       // Create unsigned tx
       // Create a list of fake proofs for further messageToSign calculation
@@ -539,9 +549,6 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         wallet.secretByPublicKey(box.proposition()).get().sign(messageToSign).asInstanceOf[Proof[Proposition]]
       })
       new OpenStakeTransaction(boxIds, outputs, proofs.asJava, forgerListIndex, fee, OpenStakeTransaction.OPEN_STAKE_TRANSACTION_VERSION)
-    } catch {
-      case t: Throwable =>
-        throw new RuntimeException("Error during the creation of the OpenStakeTransaction!")
     }
   }
 

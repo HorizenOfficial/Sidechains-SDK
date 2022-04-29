@@ -595,7 +595,7 @@ class SidechainStateTest
         boxList.find(_.id().sameElements(boxId))
       })
 
-    Mockito.when(mockedStateStorage.getForgerListIndexes).thenAnswer(_ => {Option.empty})
+    Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {Option.empty})
 
     Mockito.when(mockedStateForgerBoxStorage.lastVersionId).thenReturn(Some(stateVersion.last))
 
@@ -622,7 +622,7 @@ class SidechainStateTest
 
     //Test validate(Transaction) with restrict forger enable and invalid blockSignProposition
     Mockito.when(mockedParams.allowedForgersList).thenReturn(Seq((invalidBlockSignProposition,allowedVrfPublicKey)))
-    Mockito.when(mockedStateStorage.getForgerListIndexes).thenAnswer(_ => {Some(ForgerList(Array[Int](0)))})
+    Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {Some(ForgerList(Array[Int](0)))})
     tryValidate = sidechainState.validate(stakeTransaction)
     assertFalse("Transaction validation must fail.",
       tryValidate.isSuccess)
@@ -642,7 +642,7 @@ class SidechainStateTest
       tryValidate.isSuccess)
 
     //Test validate(Transaction) with restrict forger, invalid forger and not the majority of the allowed forgers opened the stake
-    Mockito.when(mockedStateStorage.getForgerListIndexes).thenAnswer(_ => {Some(ForgerList(Array[Int](1,1,0,0,0)))})
+    Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {Some(ForgerList(Array[Int](1,1,0,0,0)))})
     Mockito.when(mockedParams.allowedForgersList).thenReturn(Seq(
       (invalidBlockSignProposition,invalidVrfPublicKey),
       (invalidBlockSignProposition,invalidVrfPublicKey),
@@ -656,7 +656,7 @@ class SidechainStateTest
     assertTrue(tryValidate.failed.get.getMessage.equals("This publicKey is not allowed to forge!"))
 
     //Test validate(Transaction) with restrict forger, invalid forger and the majority of the allowed forgers opened the stake
-    Mockito.when(mockedStateStorage.getForgerListIndexes).thenAnswer(_ => {Some(ForgerList(Array[Int](1,1,1,0,0)))})
+    Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {Some(ForgerList(Array[Int](1,1,1,0,0)))})
     tryValidate = sidechainState.validate(stakeTransaction)
     assertTrue("Transaction validation must not fail.",
       tryValidate.isSuccess)
@@ -733,7 +733,7 @@ class SidechainStateTest
 
 
     //Test validate(Transaction) with restrict forger enabled and forger list indexes is not present in the storage
-    Mockito.when(mockedStateStorage.getForgerListIndexes).thenAnswer(_ => {None})
+    Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {None})
     openStakeTransaction = getOpenStakeTransaction(
       Seq((boxList.head.asInstanceOf[ZenBox], secretList.head)),
       0
@@ -746,7 +746,7 @@ class SidechainStateTest
 
     //Test validate(Transaction) with restrict forger enabled and try to update an existing forger index
     var forgerListIndexes = ForgerList(Array[Int](1,1,0,0,0))
-    Mockito.when(mockedStateStorage.getForgerListIndexes).thenAnswer(_ => {Some(forgerListIndexes)})
+    Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {Some(forgerListIndexes)})
     openStakeTransaction = getOpenStakeTransaction(
       Seq((boxList.head.asInstanceOf[ZenBox], secretList.head)),
       0
@@ -758,7 +758,7 @@ class SidechainStateTest
 
     //Test validate(Transaction) with restrict forger enabled with an input proposition that doesn't match the forgerListIndex
     forgerListIndexes = ForgerList(Array[Int](0,1,0,0,0))
-    Mockito.when(mockedStateStorage.getForgerListIndexes).thenAnswer(_ => {Some(forgerListIndexes)})
+    Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {Some(forgerListIndexes)})
     openStakeTransaction = getOpenStakeTransaction(
       Seq((boxList.head.asInstanceOf[ZenBox], secretList.head)),
       3
@@ -771,7 +771,7 @@ class SidechainStateTest
     //POSITIVE TESTS
 
     //Test validate(Transaction) with restrict forger enabled and correct index
-    Mockito.when(mockedStateStorage.getForgerListIndexes).thenAnswer(_ => {Some(forgerListIndexes)})
+    Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {Some(forgerListIndexes)})
     openStakeTransaction = getOpenStakeTransaction(
       Seq((boxList.head.asInstanceOf[ZenBox], secretList.head)),
       0

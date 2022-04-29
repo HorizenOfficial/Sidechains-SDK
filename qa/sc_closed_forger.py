@@ -233,7 +233,9 @@ class SidechainClosedForgerTest(SidechainTestFramework):
         self.sc_sync_all()
         print("Ok!")
 
-        # Try to stake with an invalid blockSignProposition and an invalid vrfPublicKey
+        # Try to stake with an invalid blockSignProposition and an invalid vrfPublicKey.
+        # It should be fail because the majority of the allowed forgers didn't opened the stake yet.
+        # (At this time only 2/5 of the allowed forgers opened the stake).
         print("Try to stake to an invalid vrfPublicKey...")
         result = makeForgerStake(self.sc_nodes[0], self.allowed_forger_propositions[0].publicKey, new_public_key, new_vrf_public_key, forger_amount, sc_fee)
         print(result)
