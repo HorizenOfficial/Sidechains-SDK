@@ -7,7 +7,6 @@ import akka.pattern.ask
 import akka.testkit.TestKit
 import akka.util.Timeout
 import com.horizen.SidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView
-import com.horizen.customconfig.CustomAkkaConfiguration
 import com.horizen.fixtures.SidechainNodeViewHolderFixture
 import com.horizen.node.SidechainNodeView
 import org.scalatest.BeforeAndAfterAll
@@ -26,9 +25,7 @@ import scala.language.postfixOps
 class SidechainNodeViewHolderActorTest extends Suites(
   new SidechainNodeViewHolderActorTest1,
   new SidechainNodeViewHolderActorTest2
-) {
-  override protected implicit lazy val actorSystem: ActorSystem = ActorSystem("testsystem", CustomAkkaConfiguration.getCustomConfig())
-}
+) {}
 
 @RunWith(classOf[JUnitRunner])
 class SidechainNodeViewHolderActorTest1

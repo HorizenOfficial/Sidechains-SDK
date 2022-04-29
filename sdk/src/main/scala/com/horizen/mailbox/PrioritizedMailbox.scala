@@ -2,9 +2,9 @@ package com.horizen.mailbox
 
 import akka.actor.ActorSystem.Settings
 import akka.dispatch.{PriorityGenerator, UnboundedStablePriorityMailbox}
-import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, LocallyGeneratedSecret}
+import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, ApplyModifier, LocallyGeneratedSecret}
 import com.typesafe.config.Config
-import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
+import scorex.core.NodeViewHolder.ReceivableMessages.{LocallyGeneratedTransaction, ModifiersFromRemote}
 
 
 class PrioritizedMailbox (settings: Settings, cfg: Config) extends UnboundedStablePriorityMailbox (
@@ -15,6 +15,9 @@ class PrioritizedMailbox (settings: Settings, cfg: Config) extends UnboundedStab
     case ApplyBiFunctionOnNodeView => 1
     case LocallyGeneratedSecret => 1
     case LocallyGeneratedTransaction => 1
+    case ApplyModifier => 2
+    case ModifiersFromRemote => 3
+
     case _ => 100
   }
 

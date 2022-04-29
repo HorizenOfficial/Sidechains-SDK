@@ -248,6 +248,23 @@ def generate_certificate_proof_info(seed, number_of_schnorr_keys, threshold, key
 
 
 """
+return a string like '["127.0.0.1:xxxx","127.0.0.1:xxxx"]' to be set as known Peers in the configuration.
+Based on a index vector [0, 2, 3] where all peers could be [0,1,2,3,4]
+
+Parameters:
+ - known_peers_indexes: indexes of the known peers
+"""
+
+
+def get_known_peers(known_peers_indexes):
+    addresses = []
+    for index in known_peers_indexes:
+        addresses.append("\"" + ("127.0.0.1:" + str(sc_p2p_port(index))) + "\"")
+    peers = "[" + ",".join(addresses) + "]"
+    return peers
+
+
+"""
 Generate ceased sidechain withdrawal proof info calling ScBootstrappingTools with command "generateCswProofInfo"
 Parameters:
  - withdrawalEpochLen

@@ -1,8 +1,10 @@
 package com.horizen
 
 import java.util
+
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestProbe
+import akka.util.Timeout
 import com.horizen.block.SidechainBlock
 import com.horizen.box.ZenBox
 import com.horizen.chain.FeePaymentsInfo
@@ -10,19 +12,22 @@ import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus.{ConsensusEpochInfo, FullConsensusEpochInfo, intToConsensusEpochNumber}
 import com.horizen.fixtures._
 import com.horizen.params.{NetworkParams, RegTestParams}
-import com.horizen.utils.{BlockFeeInfo, MerkleTree, WithdrawalEpochInfo}
+import com.horizen.utils.{BlockFeeInfo, CountDownLatchController, MerkleTree, WithdrawalEpochInfo}
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.{Before, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import scorex.core.NodeViewHolder.DownloadRequest
-import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
+import scorex.core.NodeViewHolder.ReceivableMessages.{LocallyGeneratedModifier, ModifiersFromRemote}
 import scorex.core.consensus.History.ProgressInfo
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
+import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ModifiersProcessingResult, SemanticallySuccessfulModifier}
+import scorex.core.validation.RecoverableModifierError
 import scorex.core.{VersionTag, idToVersion}
 import scorex.util.ModifierId
 
-import scala.util.Success
+import scala.collection.mutable.ListBuffer
+import scala.concurrent.duration.DurationInt
+import scala.util.{Failure, Success}
 
 class SidechainNodeViewHolderTest extends JUnitSuite
   with MockedSidechainNodeViewHolderFixture
@@ -42,6 +47,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
 
   val genesisBlock: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion)
   val params: NetworkParams = RegTestParams(initialCumulativeCommTreeHash = FieldElementFixture.generateFieldElement())
+  implicit lazy val timeout: Timeout = Timeout(100000 milliseconds)
 
   @Before
   def setUp(): Unit = {
@@ -95,6 +101,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
 
     // Send locally generated block to the NodeViewHolder
     val eventListener = TestProbe()
+
     actorSystem.eventStream.subscribe(eventListener.ref, classOf[SemanticallySuccessfulModifier[SidechainBlock]])
     val block = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params)
     mockedNodeViewHolderRef ! LocallyGeneratedModifier(block)
@@ -447,5 +454,292 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     // Verify that all the checks passed
     assertTrue("State feePayments checks failed.", stateChecksPassed)
     assertTrue("Wallet scanPersistent checks failed.", walletChecksPassed)
+  }
+
+  @Test
+  def remoteModifiers(): Unit = {
+    val block1 = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params)
+    val block2 = generateNextSidechainBlock(block1, sidechainTransactionsCompanion, params)
+    val block3 = generateNextSidechainBlock(block2, sidechainTransactionsCompanion, params)
+    val block4 = generateNextSidechainBlock(block3, sidechainTransactionsCompanion, params)
+    val block5 = generateNextSidechainBlock(block4, sidechainTransactionsCompanion, params)
+    val block6 = generateNextSidechainBlock(block5, sidechainTransactionsCompanion, params)
+    val block7 = generateNextSidechainBlock(block6, sidechainTransactionsCompanion, params)
+    val block8 = generateNextSidechainBlock(block7, sidechainTransactionsCompanion, params)
+
+    val blocks = Array(block1, block2, block3, block4, block5, block6, block7, block8)
+    var blockIndex: Int = 0
+
+    // History appending check
+    Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer( answer => {
+      val blockToAppend: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
+      println("BlockID:" + (blockIndex + 1))
+      println(blockToAppend.id + " - " + blockToAppend.parentId)
+      Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq()))
+    })
+
+    Mockito.when(history.applicableTry(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
+      val block: SidechainBlock = answer.getArgument(0)
+      println("BlockID:" + (blockIndex + 1))
+      println(block.id + " - " + block.parentId)
+      println(blocks(blockIndex).id)
+
+      if (block.id == blocks(blockIndex).id) {
+        blockIndex += 1
+        Success(Unit)
+      } else
+        Failure(new RecoverableModifierError("Parent block is not in history yet"))
+    })
+
+    val eventListener = TestProbe()
+    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[(Seq[SidechainBlock], Seq[SidechainBlock])]])
+
+    mockedNodeViewHolderRef ! ModifiersFromRemote(blocks)
+
+    eventListener.fishForMessage(timeout.duration) {
+      case m =>
+        m match {
+          case ModifiersProcessingResult(applied, _) => {
+            assertTrue("Applyed block sequence is differ", applied.toSet.equals(blocks.toSet))
+            true
+          }
+          case _ => {
+            false
+          }
+        }
+    }
+  }
+
+  @Test
+  def remoteModifiersTwoMessages(): Unit = {
+    val block1 = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params)
+    val block2 = generateNextSidechainBlock(block1, sidechainTransactionsCompanion, params)
+    val block3 = generateNextSidechainBlock(block2, sidechainTransactionsCompanion, params)
+    val block4 = generateNextSidechainBlock(block3, sidechainTransactionsCompanion, params)
+    val block5 = generateNextSidechainBlock(block4, sidechainTransactionsCompanion, params)
+    val block6 = generateNextSidechainBlock(block5, sidechainTransactionsCompanion, params)
+
+    val firstRequestBlocks = Seq(block1, block2, block6)
+    val secondRequestBlocks = Seq(block3, block4, block5)
+    val correctSequence = Array(block1, block2, block3, block4, block5, block6)
+    var blockIndex = 0
+
+    // History appending check
+    Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
+      val blockToAppend: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
+      Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq()))
+    })
+
+    Mockito.when(history.applicableTry(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
+      val block: SidechainBlock = answer.getArgument(0)
+      println("BlockID:" + (blockIndex + 1))
+      println(correctSequence(blockIndex).id)
+      println(block.id + " - " + block.parentId)
+
+      if (block.id == correctSequence(blockIndex).id) {
+        blockIndex += 1
+        Success(Unit)
+      } else
+        Failure(new RecoverableModifierError("Parent block is not in history yet"))
+    })
+
+    val eventListener = TestProbe()
+    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[(Seq[SidechainBlock], Seq[SidechainBlock])]])
+
+    mockedNodeViewHolderRef ! ModifiersFromRemote(firstRequestBlocks)
+    mockedNodeViewHolderRef ! ModifiersFromRemote(secondRequestBlocks)
+
+    eventListener.fishForMessage(timeout.duration) {
+      case m =>
+        m match {
+          case ModifiersProcessingResult(applied, _) => {
+            assertTrue("Applyed block sequence is differ", applied.toSet.equals(correctSequence.toSet))
+            true
+          }
+          case _ => false // Log
+        }
+    }
+  }
+
+  @Test
+  def remoteModifiersTwoRequests(): Unit = {
+    val block1 = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params)
+    val block2 = generateNextSidechainBlock(block1, sidechainTransactionsCompanion, params)
+    val block3 = generateNextSidechainBlock(block2, sidechainTransactionsCompanion, params)
+    val block4 = generateNextSidechainBlock(block3, sidechainTransactionsCompanion, params)
+    val block5 = generateNextSidechainBlock(block4, sidechainTransactionsCompanion, params)
+    val block6 = generateNextSidechainBlock(block5, sidechainTransactionsCompanion, params)
+
+    val firstRequestBlocks = Seq(block1, block2, block6)
+    val secondRequestBlocks = Seq(block3, block4, block5)
+    val correctSequence = Array(block1, block2, block3, block4, block5, block6)
+    var blockIndex = 0
+
+    val countDownController1: CountDownLatchController = new CountDownLatchController(1)
+    val countDownController2: CountDownLatchController = new CountDownLatchController(1)
+
+    // History appending check
+    Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
+      val blockToAppend: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
+      Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq()))
+    })
+
+    Mockito.when(history.applicableTry(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
+      val block: SidechainBlock = answer.getArgument(0)
+      println("BlockID:" + (blockIndex + 1))
+      println(correctSequence(blockIndex).id)
+      println(block.id + " - " + block.parentId)
+
+      if (block.id == correctSequence(blockIndex).id) {
+        if (blockIndex == 0) {
+          // Countdown1 countdown on 1st block
+          countDownController1.countDown()
+          // Countdown2 await on 1st block
+          countDownController2.await(1000)
+        }
+
+        blockIndex += 1
+        Success(Unit)
+      } else
+        Failure(new RecoverableModifierError("Parent block is not in history yet"))
+    })
+
+    val eventListener = TestProbe()
+    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[(Seq[SidechainBlock], Seq[SidechainBlock])]])
+
+    mockedNodeViewHolderRef ! ModifiersFromRemote(firstRequestBlocks)
+    // Countdown1 await
+    countDownController1.await(3000)
+    mockedNodeViewHolderRef ! ModifiersFromRemote(secondRequestBlocks)
+    countDownController2.countDown()
+    // Countdown2 countdown
+
+    eventListener.fishForMessage(timeout.duration) {
+      case m =>
+        m match {
+          case ModifiersProcessingResult(applied, _) => {
+            println("Modifiers listener")
+            applied.foreach(block => println(block.id))
+            assertTrue("Applyed block sequence is differ", applied.toSet.equals(correctSequence.toSet))
+            true
+          }
+          case _ => false
+        }
+    }
+  }
+
+  @Test
+  def remoteModifiersTwoSequences(): Unit = {
+    val block1 = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params)
+    val block2 = generateNextSidechainBlock(block1, sidechainTransactionsCompanion, params)
+    val block3 = generateNextSidechainBlock(block2, sidechainTransactionsCompanion, params)
+    val block4 = generateNextSidechainBlock(block3, sidechainTransactionsCompanion, params)
+    val block5 = generateNextSidechainBlock(block4, sidechainTransactionsCompanion, params)
+    val block6 = generateNextSidechainBlock(block5, sidechainTransactionsCompanion, params)
+
+    val firstRequestBlocks = Seq(block1, block2, block6)
+    val secondRequestBlocks = Seq(block3, block4, block5)
+    val correctSequence = Array(block1, block2, block3, block4, block5, block6)
+    var blockIndex = 0
+
+    val countDownController: CountDownLatchController = new CountDownLatchController(1)
+    val countDownController2: CountDownLatchController = new CountDownLatchController(1)
+
+    // History appending check
+    Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
+      val blockToAppend: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
+      Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq()))
+    })
+
+    Mockito.when(history.applicableTry(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
+      val block: SidechainBlock = answer.getArgument(0)
+      println("BlockID:" + (blockIndex + 1))
+      println(correctSequence(blockIndex).id)
+      println(block.id + " - " + block.parentId)
+
+      if (block.id == correctSequence(blockIndex).id) {
+        if (blockIndex == 1) {
+          countDownController.countDown()
+        }
+
+        blockIndex += 1
+        Success(Unit)
+      } else
+        Failure(new RecoverableModifierError("Parent block is not in history yet"))
+    })
+
+    val eventListener = TestProbe()
+    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[(Seq[SidechainBlock], Seq[SidechainBlock])]])
+
+    mockedNodeViewHolderRef ! ModifiersFromRemote(firstRequestBlocks)
+    countDownController.await(3000)
+    Thread.sleep(1000)
+    mockedNodeViewHolderRef ! ModifiersFromRemote(secondRequestBlocks)
+
+    eventListener.fishForMessage(timeout.duration) {
+      case m =>
+        m match {
+          case ModifiersProcessingResult(applied, _) => {
+            println("Modifiers listener")
+            applied.foreach(block => println(block.id))
+            assertTrue("Applyed block sequence is differ", applied.toSet.equals(Set(block1, block2)))
+            true
+          }
+          case _ => false
+        }
+    }
+
+    eventListener.fishForMessage(timeout.duration) {
+      case m =>
+        m match {
+          case ModifiersProcessingResult(applied, _) => {
+            println("Modifiers listener")
+            applied.foreach(block => println(block.id))
+            assertTrue("Applyed block sequence is differ", applied.toSet.equals(Set(block3, block4, block5, block6)))
+            true
+          }
+          case _ => false
+        }
+    }
+  }
+
+  @Test
+  def remoteModifiersCacheClean(): Unit = {
+    val blocksNumber = 520
+    val blocks = generateSidechainBlockSeq(blocksNumber, sidechainTransactionsCompanion, params, Some(genesisBlock.id))
+    var blockIndex = 0
+    val blockToApply = 3
+
+    // History appending check
+    Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
+       Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq()))
+    })
+
+    Mockito.when(history.applicableTry(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
+      val block: SidechainBlock = answer.getArgument(0)
+
+      if (block.id == blocks(blockIndex).id && blockIndex < blockToApply) {
+        blockIndex += 1
+        Success(Unit)
+      } else
+        Failure(new RecoverableModifierError("Parent block is not in history yet"))
+    })
+
+    val eventListener = TestProbe()
+    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[(Seq[SidechainBlock], Seq[SidechainBlock])]])
+
+    mockedNodeViewHolderRef ! ModifiersFromRemote(blocks)
+
+    eventListener.fishForMessage(timeout.duration) {
+      case m =>
+        m match {
+          case ModifiersProcessingResult(applied, cleared) => {
+            assertEquals("Different number of applied blocks", blockToApply, applied.length)
+            assertEquals("Different number of cleared blocks from cached", (blocksNumber - blockToApply - maxModifiersCacheSize), cleared.length)
+            true
+          }
+          case _ => false
+        }
+    }
   }
 }

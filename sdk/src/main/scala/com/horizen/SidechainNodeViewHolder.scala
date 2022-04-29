@@ -2,14 +2,15 @@ package com.horizen
 
 
 import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.util.Timeout
 import com.horizen.block.SidechainBlock
 import com.horizen.chain.FeePaymentsInfo
 import com.horizen.consensus._
 import com.horizen.node.SidechainNodeView
 import com.horizen.params.NetworkParams
-import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
+import com.horizen.utils.SDKModifiersCache
 import com.horizen.validation._
 import com.horizen.wallet.ApplicationWallet
 import scorex.core.NodeViewHolder.DownloadRequest
@@ -21,6 +22,7 @@ import scorex.core.utils.NetworkTimeProvider
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.annotation.tailrec
+import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success, Try}
 
 class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
@@ -57,6 +59,8 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                             suffix: IndexedSeq[SidechainBlock])
 
   override val scorexSettings: ScorexSettings = sidechainSettings.scorexSettings
+  implicit lazy val timeout: Timeout = Timeout(300 seconds)
+  private var applyingBlock: Boolean = false
 
   private def semanticBlockValidators(params: NetworkParams): Seq[SemanticBlockValidator] = Seq(new SidechainBlockSemanticValidator(params))
   private def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator] = Seq(
@@ -65,6 +69,12 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     new MainchainBlockReferenceValidator(params),
     new ConsensusValidator(timeProvider)
   )
+
+  /**
+   * Cache for modifiers. If modifiers are coming out-of-order, they are to be stored in this cache.
+   */
+  protected override lazy val modifiersCache: SDKModifiersCache[SidechainBlock, HIS] =
+    new SDKModifiersCache[SidechainBlock, HIS](scorexSettings.network.maxModifiersCacheSize)
 
   override def restoreState(): Option[(HIS, MS, VL, MP)] = for {
     history <- SidechainHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
@@ -137,7 +147,43 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       applyBiFunctionOnNodeView orElse
       getCurrentSidechainNodeViewInfo orElse
       processLocallyGeneratedSecret orElse
+      processRemoteModifiers orElse
+      applyModifier orElse
       super.receive
+  }
+
+  /**
+   * Process new modifiers from remote.
+   * Put all candidates to modifiersCache and then try to apply as much modifiers from cache as possible.
+   * Clear cache if it's size exceeds size limit.
+   * Publish `ModifiersProcessingResult` message with all just applied and removed from cache modifiers.
+   */
+  override protected def processRemoteModifiers: Receive = {
+    case scorex.core.NodeViewHolder.ReceivableMessages.ModifiersFromRemote(mods: Seq[SidechainBlock]) =>
+      mods.foreach(m => modifiersCache.put(m.id, m))
+
+      log.debug(s"Cache size before: ${modifiersCache.size}")
+
+      if (!applyingBlock) {
+        applyingBlock = true
+        self ! SidechainNodeViewHolder.ReceivableMessages.ApplyModifier(Seq())
+      }
+  }
+
+  def applyModifier: Receive = {
+    case SidechainNodeViewHolder.ReceivableMessages.ApplyModifier(applied: Seq[SidechainBlock]) => {
+      modifiersCache.popCandidate(history()) match {
+        case Some(mod) =>
+          pmodModify(mod)
+          self ! SidechainNodeViewHolder.ReceivableMessages.ApplyModifier(mod +: applied)
+        case None => {
+          val cleared = modifiersCache.cleanOverfull()
+          context.system.eventStream.publish(ModifiersProcessingResult(applied, cleared))
+          applyingBlock = false
+          log.debug(s"Cache size after: ${modifiersCache.size}")
+        }
+      }
+    }
   }
 
   // This method is actually a copy-paste of parent NodeViewHolder.pmodModify method.
@@ -302,6 +348,7 @@ object SidechainNodeViewHolder /*extends ScorexLogging with ScorexEncoding*/ {
     case class ApplyFunctionOnNodeView[HIS, MS, VL, MP, A](f: java.util.function.Function[SidechainNodeView, A])
     case class ApplyBiFunctionOnNodeView[HIS, MS, VL, MP, T, A](f: java.util.function.BiFunction[SidechainNodeView, T, A], functionParameter: T)
     case class LocallyGeneratedSecret[S <: SidechainTypes#SCS](secret: S)
+    case class ApplyModifier(applied: Seq[SidechainBlock])
   }
 }
 

@@ -29,6 +29,7 @@ from sc_cert_fee_conf import CertFeeConfiguration
 from sc_bwt_minimum_value import SCBwtMinValue
 from websocket_server_fee_payments import SCWsServerFeePayments
 from sc_closed_forger import SidechainClosedForgerTest
+from sc_node_response_along_sync import SCNodeResponseAlongSync
 
 
 def run_test(test):
@@ -122,6 +123,9 @@ def run_tests(log_file):
 
     result = run_test(SidechainClosedForgerTest())
     assert_equal(0, result, "sc_closed_forger test failed!")
+
+    result = run_test(SCNodeResponseAlongSync())
+    assert_equal(0, result, "sc_node_response_along_sync test failed!")
 
 
 if __name__ == "__main__":

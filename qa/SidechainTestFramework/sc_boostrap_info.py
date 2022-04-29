@@ -119,6 +119,12 @@ class SCNetworkConfiguration(object):
         self.sc_creation_info = sc_creation_info
         self.sc_nodes_configuration = sc_nodes_configuration
 
+class SCMultiNetworkConfiguration(SCNetworkConfiguration):
+
+    def __init__(self, sc_creation_info, sc_nodes_configuration):
+        self.sc_creation_info = sc_creation_info
+        self.sc_nodes_configuration = sc_nodes_configuration
+
 
 """
 An account.

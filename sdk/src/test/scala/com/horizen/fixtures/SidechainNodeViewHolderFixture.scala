@@ -11,6 +11,7 @@ import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSer
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
 import com.horizen.consensus.ConsensusDataStorage
+import com.horizen.customconfig.CustomAkkaConfiguration
 import com.horizen.customtypes.{DefaultApplicationState, DefaultApplicationWallet}
 import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams, TestNetParams}
 import com.horizen.secret.{PrivateKey25519Serializer, SecretSerializer}
@@ -36,7 +37,7 @@ trait SidechainNodeViewHolderFixture
   implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
   implicit def rejectionHandler: RejectionHandler = ApiRejectionHandler.rejectionHandler
 
-  implicit val actorSystem: ActorSystem = ActorSystem(sidechainSettings.scorexSettings.network.agentName)
+  implicit val actorSystem: ActorSystem = ActorSystem(sidechainSettings.scorexSettings.network.agentName, CustomAkkaConfiguration.getCustomConfig())
   implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("scorex.executionContext")
   implicit val materializer: ActorMaterializer = ActorMaterializer()
 
