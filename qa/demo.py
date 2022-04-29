@@ -7,7 +7,7 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
     MCConnectionInfo, SCBootstrapInfo
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, assert_true, start_nodes, \
-    websocket_port_by_mc_node_index, initialize_chain_clean, connect_nodes_bi
+    websocket_port_by_mc_node_index, initialize_chain_clean, connect_nodes_bi, COIN
 from SidechainTestFramework.scutil import start_sc_nodes, \
     generate_secrets, generate_vrf_secrets, generate_certificate_proof_info, \
     bootstrap_sidechain_node, generate_next_blocks, launch_bootstrap_tool, cert_proof_keys_paths, \
@@ -25,6 +25,11 @@ Test:
     - Do sidechain internal transaction
     - Do BT
 """
+
+# set this constant to False for not having an interactive behaviour
+INTERACTIVE = True
+
+
 class Demo(SidechainTestFramework):
 
     def setup_chain(self):
@@ -49,7 +54,6 @@ class Demo(SidechainTestFramework):
         return
 
     def run_test(self):
-        coin = 100000000
         # Activate Sidechains fork
         mc_node = self.nodes[0]
         mc_node_miner = self.nodes[1]
@@ -89,19 +93,24 @@ class Demo(SidechainTestFramework):
         csw_vr_key = generate_csw_proof_info(withdrawal_epoch_length, csw_keys_paths)
 
         custom_data = vrf_key.publicKey
+        fe_certificate_field_configs = [255, 255]
+
         cmdInput = {
+            "version": 0,
             "withdrawalEpochLength": withdrawal_epoch_length,
             "toaddress": genesis_account.publicKey,
             "amount": sc_creation_info.forward_amount,
             "wCertVk": certificate_proof_info.verificationKey,
             "customData": custom_data,
-            "constant": certificate_proof_info.genSysConstant
+            "constant": certificate_proof_info.genSysConstant,
+            "wCeasedVk": csw_vr_key,
+            "vFieldElementCertificateFieldConfig": fe_certificate_field_configs
         }
         print("Running sc_create RPC call on MC node:\n" +
               'sc_create {} '.format(json.dumps(cmdInput, indent=4, sort_keys=True)))
         print(
             "where arguments are:\nwithdrawal epoch length - {}\nfirst Forward Transfer receiver address in the Sidechain - {}\nfirst Forward Transfer amount - {} ({} Zen)\nwithdrawal certificate verification key - {}\nfirst ForgerBox VRF publick key - {}\nwithdrawal certificate Snark proof public input - {}\n".format(
-                withdrawal_epoch_length, genesis_account.publicKey, sc_creation_info.forward_amount * coin,  sc_creation_info.forward_amount,
+                withdrawal_epoch_length, genesis_account.publicKey, sc_creation_info.forward_amount * COIN,  sc_creation_info.forward_amount,
                 certificate_proof_info.verificationKey, custom_data, certificate_proof_info.genSysConstant))
 
         self.pause()
@@ -162,7 +171,7 @@ class Demo(SidechainTestFramework):
 
         # Start SC info
         print("\nStarting Sidechain node...")
-        self.sc_nodes = start_sc_nodes(1, self.options.tmpdir, print_output_to_file=True)
+        self.sc_nodes = start_sc_nodes(1, self.options.tmpdir)
 
         sc_node = self.sc_nodes[0]
 
@@ -185,7 +194,7 @@ class Demo(SidechainTestFramework):
         mc_return_address = mc_node.getnewaddress()
         cmdInput = [{'toaddress': sc_address, 'amount': ft_amount, "scid": sc_bootstrap_info.sidechain_id,
                      "mcReturnAddress": mc_return_address}]
-        print("\nCreating Forward Transfer with {} satoshi ({} Zen) to Sidechain:\n".format(ft_amount * coin, ft_amount) +
+        print("\nCreating Forward Transfer with {} satoshi ({} Zen) to Sidechain:\n".format(ft_amount * COIN, ft_amount) +
               'sc_send {}'.format(json.dumps(cmdInput, indent=4, sort_keys=True)))
 
         self.pause()
@@ -223,10 +232,10 @@ class Demo(SidechainTestFramework):
 
         # Do inchain coins send
         sc_send_amount = 1  # Zen
-        print("\nSending {} satoshi ({} Zen) inside sidechain...".format(sc_send_amount * coin, sc_send_amount))
+        print("\nSending {} satoshi ({} Zen) inside sidechain...".format(sc_send_amount * COIN, sc_send_amount))
         sc_address = sc_node.wallet_allPublicKeys()["result"]["propositions"][-1]["publicKey"]
         print(sc_address)
-        self.send_coins(sc_node, sc_address, sc_send_amount * coin, 100)
+        self.send_coins(sc_node, sc_address, sc_send_amount * COIN, 100)
 
         print("Generating SC Block with send coins transaction...")
         scblock_id2 = generate_next_blocks(sc_node, "first node", 1)[0]
@@ -248,11 +257,11 @@ class Demo(SidechainTestFramework):
         bt_amount = 2  # Zen
         withdrawal_request = {"outputs": [
             {"mainchainAddress": mc_address,
-             "value": bt_amount * coin}
+             "value": bt_amount * COIN}
         ]
         }
 
-        print("\nCreating Backward Transfer request to withdraw {} satoshi ({} Zen) to the Mainchain...".format(bt_amount * coin, bt_amount))
+        print("\nCreating Backward Transfer request to withdraw {} satoshi ({} Zen) to the Mainchain...".format(bt_amount * COIN, bt_amount))
         sc_node.transaction_withdrawCoins(json.dumps(withdrawal_request))
 
         print("Generating SC Block with Backward Transfer request transaction...")
@@ -310,7 +319,9 @@ class Demo(SidechainTestFramework):
         self.pause()
 
     def pause(self):
-        input("Press the <ENTER> key to continue...")
+        if INTERACTIVE == True:
+            input("Press the <ENTER> key to continue...")
+        pass
 
     def send_coins(self, sc_node, receiver, amount, fee):
         j = {"outputs": [ {

@@ -86,7 +86,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
       .put("wrong_key", 1)
 
     session.getBasicRemote.sendText(wrongRequest.toString)
-    assertTrue("No message received.", countDownController.await(3000))
+    assertTrue("No message received.", countDownController.await(5000))
 
     var json = mapper.readTree(endpoint.receivedMessage.get(0))
 
@@ -109,7 +109,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
     countDownController.reset(1)
     session.getBasicRemote.sendText(badMsgTypeRequest.toString)
 
-    assertTrue("No message received.", countDownController.await(3000))
+    assertTrue("No message received.", countDownController.await(5000))
 
     json = mapper.readTree(endpoint.receivedMessage.get(1))
     assertTrue(checkStaticResponseFields(json, ERROR_MESSAGE.code, 0, GET_RAW_MEMPOOL.code))
@@ -140,7 +140,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
       .put("requestType", GET_RAW_MEMPOOL.code)
       .put("requestPayload", "{}")
     session.getBasicRemote.sendText(rawMempoolRequest.toString)
-    assertTrue("No message received.", countDownController.await(3000))
+    assertTrue("No message received.", countDownController.await(5000))
 
     // Check response
     val json = mapper.readTree(endpoint.receivedMessage.get(0))
@@ -184,7 +184,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
       .add(mempoolTxs.head.id())
 
     session.getBasicRemote.sendText(rawMempoolRequest.toString)
-    assertTrue("No message received.", countDownController.await(3000))
+    assertTrue("No message received.", countDownController.await(5000))
 
     val json = mapper.readTree(endpoint.receivedMessage.get(0))
 
@@ -222,7 +222,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
     blockByHashtRequest.putObject("requestPayload").put("hash", utilMocks.genesisBlock.id)
 
     session.getBasicRemote.sendText(blockByHashtRequest.toString)
-    assertTrue("No message received.", countDownController.await(3000))
+    assertTrue("No message received.", countDownController.await(5000))
 
     var json = mapper.readTree(endpoint.receivedMessage.get(0))
 
@@ -246,7 +246,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
 
     countDownController.reset(1)
     session.getBasicRemote.sendText(blockByHeightRequest.toString)
-    assertTrue("No message received.", countDownController.await(3000))
+    assertTrue("No message received.", countDownController.await(5000))
 
     json = mapper.readTree(endpoint.receivedMessage.get(1))
 
@@ -280,7 +280,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
     blockByHashtRequest.putObject("requestPayload").put("hash", utilMocks.feePaymentsBlockId)
 
     session.getBasicRemote.sendText(blockByHashtRequest.toString)
-    assertTrue("No message received.", countDownController.await(3000))
+    assertTrue("No message received.", countDownController.await(5000))
 
     var json = mapper.readTree(endpoint.receivedMessage.get(0))
 
@@ -321,7 +321,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
     newBlockHashesRequest.findParent("locatorHashes").put("limit", 5)
 
     session.getBasicRemote.sendText(newBlockHashesRequest.toString)
-    assertTrue("No message received.", countDownController.await(3000))
+    assertTrue("No message received.", countDownController.await(5000))
 
     var json = mapper.readTree(endpoint.receivedMessage.get(0))
 
@@ -337,7 +337,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
     newBlockHashesRequest.findParent("locatorHashes").put("limit", 100)
     countDownController.reset(1)
     session.getBasicRemote.sendText(newBlockHashesRequest.toString)
-    assertTrue("No message received.", countDownController.await(3000))
+    assertTrue("No message received.", countDownController.await(5000))
     json = mapper.readTree(endpoint.receivedMessage.get(1))
 
     assertTrue(checkStaticResponseFields(json, ERROR_MESSAGE.code, 0, GET_NEW_BLOCK_HASHES_REQUEST_TYPE.code))
@@ -465,15 +465,15 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
       .put("requestPayload", "{}")
 
     session2.getBasicRemote.sendText(rawMempoolRequest.toString)
-    assertTrue("No message received.", countDownController2.await(3000))
+    assertTrue("No message received.", countDownController2.await(5000))
 
     // Send events
     countDownController.reset(2)
     countDownController2.reset(2)
     publishAllEvents()
 
-    assertTrue("No event messages received.", countDownController.await(3000))
-    assertTrue("No event messages received.", countDownController2.await(3000))
+    assertTrue("No event messages received.", countDownController.await(5000))
+    assertTrue("No event messages received.", countDownController2.await(5000))
 
     //Both client1 and client2 have 3 message (1 request and 2 events)
     assertEquals(3, endpoint.receivedMessage.size())
@@ -503,7 +503,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
     // Resend event only on client 1
     countDownController.reset(2)
     publishAllEvents()
-    assertTrue("No event messages received.", countDownController.await(3000))
+    assertTrue("No event messages received.", countDownController.await(5000))
 
     assertEquals(3, endpoint2.receivedMessage.size())
     assertEquals(5, endpoint.receivedMessage.size())

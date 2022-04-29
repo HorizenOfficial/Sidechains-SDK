@@ -12,6 +12,7 @@ examples/simpleapp/dependency-reduced-pom.xml
 .vscode/
 qa/tmp
 hs_err*
-
+log
 /examples/entrypoint.sh
 /examples/Dockerfile
+
