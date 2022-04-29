@@ -108,7 +108,7 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
         }
       } match {
         case Success(_) =>
-        case Failure(exception) => log.error("Unexpected behavior on TryToSendGetCertificateSignatures.", exception)
+        case Failure(exception) => log.warn("Unexpected behavior on TryToSendGetCertificateSignatures.", exception)
       }
   }
 
@@ -132,7 +132,7 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
         }
       } match {
         case Success(_) =>
-        case Failure(exception) => log.error("Unexpected behavior while processing get certificate signatures.", exception)
+        case Failure(exception) => log.warn("Unexpected behavior while processing get certificate signatures.", exception)
       }
   }
 
@@ -159,7 +159,7 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
             }
           } match {
             case Success(_) =>
-            case Failure(exception) => log.error("Unexpected behavior while processing signatures from remote.", exception)
+            case Failure(exception) => log.warn("Unexpected behavior while processing signatures from remote.", exception)
           }
         }
       }

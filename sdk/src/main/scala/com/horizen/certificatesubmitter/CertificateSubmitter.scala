@@ -209,12 +209,12 @@ class CertificateSubmitter(settings: SidechainSettings,
                             self ! LocallyGeneratedSignature(sigInfo)
                           })
                         case Failure(exception) =>
-                          log.error(s"Unexpected behavior on SemanticallySuccessfulModifier($block) while calculating signatures.", exception)
+                          log.warn(s"Unexpected behavior on SemanticallySuccessfulModifier($block) while calculating signatures.", exception)
                           signaturesStatus = None // keep signaturesStatus undefined as before
                       }
                     }
                   case Failure(exception) =>
-                    log.error(s"Unexpected behavior on SemanticallySuccessfulModifier($block) while calculating message to sign.", exception)
+                    log.warn(s"Unexpected behavior on SemanticallySuccessfulModifier($block) while calculating message to sign.", exception)
                     signaturesStatus = None // keep signaturesStatus undefined as before
                 }
             }
@@ -228,7 +228,7 @@ class CertificateSubmitter(settings: SidechainSettings,
           }
 
         case Failure(exception) =>
-          log.error(s"Unexpected behavior on SemanticallySuccessfulModifier($block) while calculating SubmissionWindowStatus.", exception)
+          log.warn(s"Unexpected behavior on SemanticallySuccessfulModifier($block) while calculating SubmissionWindowStatus.", exception)
       }
   }
 
