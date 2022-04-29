@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.horizen</groupId>
   <artifactId>sidechains-sdk</artifactId>
-  <version>0.3.0</version>
+  <version>0.3.1</version>
   <name>${project.groupId}:${project.artifactId}</name>
   <description>Zendoo is a unique sidechain and scaling solution developed by Horizen. The Zendoo ${project.artifactId} is a framework that supports the creation of sidechains and their custom business logic, with the Horizen public blockchain as the mainchain.</description>
   <url>https://github.com/${project.github.organization}/${project.artifactId}</url>
@@ -84,7 +84,7 @@
         </exclusion>
       </exclusions>
     </dependency>
-    <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-simple -->
+    <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-slf4j-impl -->
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-slf4j-impl</artifactId>
@@ -351,7 +351,7 @@
           <include>new_mc_blocks/mc_block_with_2_certificates</include>
           <!-- generated on regtest on 31.05.2021 using MC qa/sc_cert_customfields.py -->
           <include>new_mc_blocks/mc_block_with_certificate_with_custom_fields</include>
-          <!-- generated on regtest on 11.03.2022 using qa/sc_versions_and_mc_certs.py -->
+          <!-- generated on regtest on 15.03.2022 using MC sc_getscgenesisinfo.py -->
           <include>new_mc_blocks/mc_block_with_certificate_with_custom_fields_mixed_sc_versions</include>
           <include>backward_transfer_certificate_empty</include>
           <include>backward_transfer_certificate_non_empty</include>

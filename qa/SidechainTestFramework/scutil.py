@@ -121,7 +121,7 @@ def launch_bootstrap_tool(command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK",
-                                          "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.3.0.jar",
+                                          "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.3.1.jar",
                                 command_name, json_param], stdout=subprocess.PIPE)
     sc_bootstrap_output = java_ps.communicate()[0]
     try:
@@ -448,7 +448,7 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
         lib_separator = ";"
 
     if binary is None:
-        binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.3.0.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+        binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.3.1.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
     #        else if platform.system() == 'Linux':
     '''
     In order to effectively attach a debugger (e.g IntelliJ) to the simpleapp, it is necessary to start the process
@@ -916,7 +916,7 @@ def if_csws_were_generated(sc_node, csw_box_ids, allow_absent=False):
 def get_scinfo_data(scid, mc_node):
     ret = mc_node.getscinfo(scid)['items'][0]
     sc_creating_height = ret['createdAtBlockHeight']
-    sc_version = ret['sidechainVersion']
+    sc_version = ret['version']
     sc_constant = ret['constant']
     sc_customData = ret['customData']
     epochLen = ret['withdrawalEpochLength']
