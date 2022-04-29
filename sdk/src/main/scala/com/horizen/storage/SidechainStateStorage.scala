@@ -184,7 +184,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
   }
 
-  def getForgerListIndexes: Option[ForgerList] = {
+  def getForgerList: Option[ForgerList] = {
     storage.get(forgerListIndexKey).asScala match {
       case Some(baw) => {
         Try {
@@ -306,15 +306,13 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       updateList.add(new JPair(ceasingStateKey, new ByteArrayWrapper(Array.emptyByteArray)))
 
     //Set ForgerList indexes
-    val tryForgerListSerialized = getForgerListIndexes
-
-    if (tryForgerListSerialized.isDefined) {
-      val forgerListSerialized = tryForgerListSerialized.get
-      forgerListSerialized.updateIndexes(forgerListIndexes)
-      updateList.add(new JPair(forgerListIndexKey, ForgerListSerializer.toBytes(forgerListSerialized)))
-    } else {
-      val emptyForgerListIndex = ForgerList(new Array[Int](forgerListSize))
-      updateList.add(new JPair(forgerListIndexKey, ForgerListSerializer.toBytes(emptyForgerListIndex)))
+    getForgerList match {
+      case Some(forgerList) =>
+        forgerList.updateIndexes(forgerListIndexes)
+        updateList.add(new JPair(forgerListIndexKey, ForgerListSerializer.toBytes(forgerList)))
+      case None =>
+        val emptyForgerListIndex = ForgerList(new Array[Int](forgerListSize))
+        updateList.add(new JPair(forgerListIndexKey, ForgerListSerializer.toBytes(emptyForgerListIndex)))
     }
 
     storage.update(version, updateList, removeList)
