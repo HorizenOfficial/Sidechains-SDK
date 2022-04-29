@@ -473,16 +473,11 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     // History appending check
     Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer( answer => {
       val blockToAppend: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
-      println("BlockID:" + (blockIndex + 1))
-      println(blockToAppend.id + " - " + blockToAppend.parentId)
       Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq()))
     })
 
     Mockito.when(history.applicableTry(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
       val block: SidechainBlock = answer.getArgument(0)
-      println("BlockID:" + (blockIndex + 1))
-      println(block.id + " - " + block.parentId)
-      println(blocks(blockIndex).id)
 
       if (block.id == blocks(blockIndex).id) {
         blockIndex += 1
@@ -510,6 +505,15 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     }
   }
 
+  /*
+   * This test check correctness of applying two remoteModifiers messages
+   * Second remoteModifiers arrives during applying first block.
+   * Steps:
+   *  - creates 6 blocks
+   *  - send remoteModifiers with 1st, 2nd and 6th blocks
+   *  - send remoteModifiers with 3rd, 4th and 5th blocks during applying first block
+   *  - check that ModifiersProcessingResult message contain 6 applied blocks
+   */
   @Test
   def remoteModifiersTwoMessages(): Unit = {
     val block1 = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params)
@@ -526,15 +530,11 @@ class SidechainNodeViewHolderTest extends JUnitSuite
 
     // History appending check
     Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
-      val blockToAppend: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
       Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq()))
     })
 
     Mockito.when(history.applicableTry(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
       val block: SidechainBlock = answer.getArgument(0)
-      println("BlockID:" + (blockIndex + 1))
-      println(correctSequence(blockIndex).id)
-      println(block.id + " - " + block.parentId)
 
       if (block.id == correctSequence(blockIndex).id) {
         blockIndex += 1
@@ -561,73 +561,16 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     }
   }
 
-  @Test
-  def remoteModifiersTwoRequests(): Unit = {
-    val block1 = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params)
-    val block2 = generateNextSidechainBlock(block1, sidechainTransactionsCompanion, params)
-    val block3 = generateNextSidechainBlock(block2, sidechainTransactionsCompanion, params)
-    val block4 = generateNextSidechainBlock(block3, sidechainTransactionsCompanion, params)
-    val block5 = generateNextSidechainBlock(block4, sidechainTransactionsCompanion, params)
-    val block6 = generateNextSidechainBlock(block5, sidechainTransactionsCompanion, params)
-
-    val firstRequestBlocks = Seq(block1, block2, block6)
-    val secondRequestBlocks = Seq(block3, block4, block5)
-    val correctSequence = Array(block1, block2, block3, block4, block5, block6)
-    var blockIndex = 0
-
-    val countDownController1: CountDownLatchController = new CountDownLatchController(1)
-    val countDownController2: CountDownLatchController = new CountDownLatchController(1)
-
-    // History appending check
-    Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
-      val blockToAppend: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
-      Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq()))
-    })
-
-    Mockito.when(history.applicableTry(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
-      val block: SidechainBlock = answer.getArgument(0)
-      println("BlockID:" + (blockIndex + 1))
-      println(correctSequence(blockIndex).id)
-      println(block.id + " - " + block.parentId)
-
-      if (block.id == correctSequence(blockIndex).id) {
-        if (blockIndex == 0) {
-          // Countdown1 countdown on 1st block
-          countDownController1.countDown()
-          // Countdown2 await on 1st block
-          countDownController2.await(1000)
-        }
-
-        blockIndex += 1
-        Success(Unit)
-      } else
-        Failure(new RecoverableModifierError("Parent block is not in history yet"))
-    })
-
-    val eventListener = TestProbe()
-    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[(Seq[SidechainBlock], Seq[SidechainBlock])]])
-
-    mockedNodeViewHolderRef ! ModifiersFromRemote(firstRequestBlocks)
-    // Countdown1 await
-    countDownController1.await(3000)
-    mockedNodeViewHolderRef ! ModifiersFromRemote(secondRequestBlocks)
-    countDownController2.countDown()
-    // Countdown2 countdown
-
-    eventListener.fishForMessage(timeout.duration) {
-      case m =>
-        m match {
-          case ModifiersProcessingResult(applied, _) => {
-            println("Modifiers listener")
-            applied.foreach(block => println(block.id))
-            assertTrue("Applyed block sequence is differ", applied.toSet.equals(correctSequence.toSet))
-            true
-          }
-          case _ => false
-        }
-    }
-  }
-
+  /*
+   * This test check correctness of applying two remoteModifiers messages
+   * Second remoteModifiers arrives during applying first block.
+   * Steps:
+   *  - creates 6 blocks
+   *  - send remoteModifiers with 1st, 2nd and 6th blocks
+   *  - send remoteModifiers with 3rd, 4th and 5th blocks after applying second block
+   *  - check that first ModifiersProcessingResult message contain 2 applied blocks(1st, 2nd)
+   *  - check that second ModifiersProcessingResult message contain 4 applied blocks(3rd, 4th, 5th, 6th)
+   */
   @Test
   def remoteModifiersTwoSequences(): Unit = {
     val block1 = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params)
@@ -643,19 +586,14 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     var blockIndex = 0
 
     val countDownController: CountDownLatchController = new CountDownLatchController(1)
-    val countDownController2: CountDownLatchController = new CountDownLatchController(1)
 
     // History appending check
     Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
-      val blockToAppend: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
       Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq()))
     })
 
     Mockito.when(history.applicableTry(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
       val block: SidechainBlock = answer.getArgument(0)
-      println("BlockID:" + (blockIndex + 1))
-      println(correctSequence(blockIndex).id)
-      println(block.id + " - " + block.parentId)
 
       if (block.id == correctSequence(blockIndex).id) {
         if (blockIndex == 1) {
@@ -680,8 +618,6 @@ class SidechainNodeViewHolderTest extends JUnitSuite
       case m =>
         m match {
           case ModifiersProcessingResult(applied, _) => {
-            println("Modifiers listener")
-            applied.foreach(block => println(block.id))
             assertTrue("Applyed block sequence is differ", applied.toSet.equals(Set(block1, block2)))
             true
           }
@@ -693,8 +629,6 @@ class SidechainNodeViewHolderTest extends JUnitSuite
       case m =>
         m match {
           case ModifiersProcessingResult(applied, _) => {
-            println("Modifiers listener")
-            applied.foreach(block => println(block.id))
             assertTrue("Applyed block sequence is differ", applied.toSet.equals(Set(block3, block4, block5, block6)))
             true
           }
