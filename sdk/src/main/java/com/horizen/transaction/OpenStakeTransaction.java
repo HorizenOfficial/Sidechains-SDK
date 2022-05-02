@@ -13,10 +13,7 @@ import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.Pair;
 import scala.Array;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 import static com.horizen.transaction.CoreTransactionsIdsEnum.OpenStakeTransactionId;
 
@@ -29,9 +26,9 @@ import static com.horizen.transaction.CoreTransactionsIdsEnum.OpenStakeTransacti
 public class OpenStakeTransaction extends SidechainNoncedTransaction<PublicKey25519Proposition, ZenBox, ZenBoxData>{
     public final static byte OPEN_STAKE_TRANSACTION_VERSION = 1;
 
-    final List<byte[]> inputsIds;
-    private final List<ZenBoxData> outputsData;
-    final List<Proof<Proposition>> proofs;
+    final byte[] inputsIds;
+    private final Optional<ZenBoxData> outputsData;
+    final Proof<Proposition> proofs;
 
     private final long fee;
 
@@ -39,26 +36,20 @@ public class OpenStakeTransaction extends SidechainNoncedTransaction<PublicKey25
 
     private List<BoxUnlocker<PublicKey25519Proposition>> unlockers;
 
-    private final int forgerListIndex;
+    private final int forgerIndex;
 
-    public OpenStakeTransaction(List<byte[]> inputsIds,
-                                List<ZenBoxData> outputsData,
-                                List<Proof<Proposition>> proofs,
-                                int forgerListIndex,
+    public OpenStakeTransaction(byte[] inputsIds,
+                                Optional<ZenBoxData> outputsData,
+                                Proof<Proposition> proofs,
+                                int forgerIndex,
                                 long fee,
                                 byte version) {
-        Objects.requireNonNull(inputsIds, "Inputs Ids list can't be null.");
-        Objects.requireNonNull(outputsData, "Outputs Data list can't be null.");
-        Objects.requireNonNull(proofs, "Proofs list can't be null.");
-
-        if(inputsIds.size() != 1) {
-            throw new IllegalArgumentException("Input Ids list should contains only 1 element!");
-        }
+        Objects.requireNonNull(inputsIds, "Inputs Ids can't be null.");
 
         this.inputsIds = inputsIds;
         this.outputsData = outputsData;
         this.proofs = proofs;
-        this.forgerListIndex = forgerListIndex;
+        this.forgerIndex = forgerIndex;
         this.fee = fee;
         this.version = version;
     }
@@ -72,21 +63,18 @@ public class OpenStakeTransaction extends SidechainNoncedTransaction<PublicKey25
     public synchronized List<BoxUnlocker<PublicKey25519Proposition>> unlockers() {
         if(unlockers == null) {
             unlockers = new ArrayList<>();
-            for (int i = 0; i < inputsIds.size() && i < proofs.size(); i++) {
-                int finalI = i;
-                BoxUnlocker<PublicKey25519Proposition> unlocker = new BoxUnlocker() {
-                    @Override
-                    public byte[] closedBoxId() {
-                        return inputsIds.get(finalI);
-                    }
+            BoxUnlocker<PublicKey25519Proposition> unlocker = new BoxUnlocker() {
+                @Override
+                public byte[] closedBoxId() {
+                    return inputsIds;
+                }
 
-                    @Override
-                    public Proof boxKey() {
-                        return proofs.get(finalI);
-                    }
-                };
-                unlockers.add(unlocker);
-            }
+                @Override
+                public Proof boxKey() {
+                    return proofs;
+                }
+            };
+            unlockers.add(unlocker);
         }
 
         return Collections.unmodifiableList(unlockers);
@@ -94,7 +82,9 @@ public class OpenStakeTransaction extends SidechainNoncedTransaction<PublicKey25
 
     @Override
     protected List<ZenBoxData> getOutputData(){
-        return outputsData;
+        ArrayList<ZenBoxData> output = new ArrayList();
+        outputsData.ifPresent(output::add);
+        return output;
     }
 
     @Override
@@ -109,21 +99,15 @@ public class OpenStakeTransaction extends SidechainNoncedTransaction<PublicKey25
                     "unsupported version number.", id()));
         }
 
-        if (inputsIds.isEmpty())
+        if (inputsIds == null)
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "no input data present.", id()));
 
-        if (inputsIds.size() != 1) {
+        if (proofs == null)
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                    "input size != 1.", id()));
-        }
+                    "no proof data present.", id()));
 
-        // check that we have enough proofs and try to open each box only once.
-        if (inputsIds.size() != proofs.size() || inputsIds.size() != boxIdsToOpen().size())
-            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                    "inputs number is not consistent to proofs number.", id()));
-
-        if (forgerListIndex < 0) {
+        if (forgerIndex < 0) {
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "forgerList index negative.", id()));
         }
@@ -149,44 +133,29 @@ public class OpenStakeTransaction extends SidechainNoncedTransaction<PublicKey25
 
     @Override
     public byte[] customDataMessageToSign() {
-        return Ints.toByteArray(this.forgerListIndex);
+        return Ints.toByteArray(this.forgerIndex);
     }
 
-    public int getForgerListIndex() { return this.forgerListIndex; }
+    public int getForgerIndex() { return this.forgerIndex; }
 
     public TransactionIncompatibilityChecker incompatibilityChecker() {
         return new OpenStakeTransactionIncompatibilityChecker();
     }
 
 
-    public static OpenStakeTransaction create(List<Pair<ZenBox, PrivateKey25519>> from,
-                                            List<ZenBoxData> outputs,
+    public static OpenStakeTransaction create(Pair<ZenBox, PrivateKey25519> from,
+                                            Optional<ZenBoxData> outputs,
                                             int forgerIndex,
                                             long fee) throws TransactionSemanticValidityException {
-        if(from == null || outputs == null)
+        if(from == null || outputs.isEmpty())
             throw new IllegalArgumentException("Parameters can't be null.");
-        if(from.size() > MAX_TRANSACTION_UNLOCKERS)
-            throw new IllegalArgumentException("Transaction from number is too large.");
-        if(outputs.size() > MAX_TRANSACTION_NEW_BOXES)
-            throw new IllegalArgumentException("Transaction outputs number is too large.");
 
-        List<byte[]> inputs = new ArrayList<>();
-        List<Proof<Proposition>> fakeSignatures = new ArrayList<>();
-        for(Pair<ZenBox, PrivateKey25519> item : from) {
-            inputs.add(item.getKey().id());
-            fakeSignatures.add(null);
-        }
-
-        OpenStakeTransaction unsignedTransaction = new OpenStakeTransaction(inputs, outputs, fakeSignatures, forgerIndex, fee, OPEN_STAKE_TRANSACTION_VERSION);
+        OpenStakeTransaction unsignedTransaction = new OpenStakeTransaction(from.getKey().id(), outputs, null, forgerIndex, fee, OPEN_STAKE_TRANSACTION_VERSION);
 
         byte[] messageToSign = unsignedTransaction.messageToSign();
-        List<Proof<Proposition>> signatures = new ArrayList<>();
-        for(Pair<ZenBox, PrivateKey25519> item : from) {
-            Secret secret = item.getValue();
-            signatures.add((Proof<Proposition>) secret.sign(messageToSign));
-        }
+        Secret secret = from.getValue();
 
-        OpenStakeTransaction transaction = new OpenStakeTransaction(inputs, outputs, signatures, forgerIndex, fee, OPEN_STAKE_TRANSACTION_VERSION);
+        OpenStakeTransaction transaction = new OpenStakeTransaction(from.getKey().id(), outputs, (Proof<Proposition>) secret.sign(messageToSign), forgerIndex, fee, OPEN_STAKE_TRANSACTION_VERSION);
         transaction.transactionSemanticValidity();
 
         return transaction;

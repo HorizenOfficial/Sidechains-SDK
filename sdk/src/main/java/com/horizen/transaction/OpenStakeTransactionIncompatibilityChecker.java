@@ -11,7 +11,7 @@ public class OpenStakeTransactionIncompatibilityChecker extends DefaultTransacti
             OpenStakeTransaction openStakeTransaction = (OpenStakeTransaction) newTx;
             for (T mempoolTx: currentTxs) {
                 if (mempoolTx instanceof OpenStakeTransaction) {
-                    if (openStakeTransaction.getForgerListIndex() == ((OpenStakeTransaction) mempoolTx).getForgerListIndex()) {
+                    if (openStakeTransaction.getForgerIndex() == ((OpenStakeTransaction) mempoolTx).getForgerIndex()) {
                         return false;
                     }
                 }

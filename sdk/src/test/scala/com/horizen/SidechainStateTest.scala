@@ -1,6 +1,6 @@
 package com.horizen
 
-import java.util.{ArrayList => JArrayList, List => JList}
+import java.util.{Optional => JOptional, ArrayList => JArrayList, List => JList}
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, WithdrawalEpochCertificate}
 import com.horizen.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
 import com.horizen.box._
@@ -105,18 +105,12 @@ class SidechainStateTest
     RegularTransaction.create(from, to, fee)
   }
 
-  def getOpenStakeTransaction(boxesWithSecretToOpen: Seq[(ZenBox,PrivateKey25519)], forgerListIndex: Int): OpenStakeTransaction = {
-    val from: JList[JPair[ZenBox,PrivateKey25519]] = new JArrayList[JPair[ZenBox,PrivateKey25519]]()
-    from.addAll(boxesWithSecretToOpen.map{case (box, secret) => new JPair[ZenBox,PrivateKey25519](box, secret)}.asJava)
-    val to: JList[ZenBoxData] = new JArrayList()
-    val totalFrom = boxesWithSecretToOpen.map{case (box, _) => box.value()}.sum
+  def getOpenStakeTransaction(boxesWithSecretToOpen: (ZenBox,PrivateKey25519), forgerListIndex: Int): OpenStakeTransaction = {
+    val from: JPair[ZenBox,PrivateKey25519] =  new JPair[ZenBox,PrivateKey25519](boxesWithSecretToOpen._1, boxesWithSecretToOpen._2)
 
     val minimumFee = 5L
-    val maxTo = totalFrom - minimumFee
-
-    for(s <- getPrivateKey25519List(1).asScala) {
-      to.add(new ZenBoxData(s.publicImage(), maxTo))
-    }
+    val maxTo = boxesWithSecretToOpen._1.value() - minimumFee
+    val to: JOptional[ZenBoxData] = JOptional.of(new ZenBoxData(getPrivateKey25519List(1).get(0).publicImage(), maxTo))
 
     OpenStakeTransaction.create(from, to, forgerListIndex, minimumFee)
   }
@@ -758,7 +752,7 @@ class SidechainStateTest
     Mockito.when(mockedParams.restrictForgers).thenReturn(false)
     Mockito.when(mockedParams.allowedForgersList).thenReturn(Seq())
     var openStakeTransaction = getOpenStakeTransaction(
-      Seq((boxList.head.asInstanceOf[ZenBox], secretList.head)),
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
       0
     )
     var tryValidate = sidechainState.validate(openStakeTransaction.asInstanceOf[SidechainTypes#SCBT])
@@ -770,7 +764,7 @@ class SidechainStateTest
     Mockito.when(mockedParams.restrictForgers).thenReturn(true)
     Mockito.when(mockedParams.allowedForgersList).thenReturn(forgerList)
     openStakeTransaction = getOpenStakeTransaction(
-      Seq((boxList.head.asInstanceOf[ZenBox], secretList.head)),
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
       10
     )
     tryValidate = sidechainState.validate(openStakeTransaction.asInstanceOf[SidechainTypes#SCBT])
@@ -782,7 +776,7 @@ class SidechainStateTest
     //Test validate(Transaction) with restrict forger enabled and forger list indexes is not present in the storage
     Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {None})
     openStakeTransaction = getOpenStakeTransaction(
-      Seq((boxList.head.asInstanceOf[ZenBox], secretList.head)),
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
       0
     )
     tryValidate = sidechainState.validate(openStakeTransaction.asInstanceOf[SidechainTypes#SCBT])
@@ -795,7 +789,7 @@ class SidechainStateTest
     var forgerListIndexes = ForgerList(Array[Int](1,1,0,0,0))
     Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {Some(forgerListIndexes)})
     openStakeTransaction = getOpenStakeTransaction(
-      Seq((boxList.head.asInstanceOf[ZenBox], secretList.head)),
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
       0
     )
     tryValidate = sidechainState.validate(openStakeTransaction.asInstanceOf[SidechainTypes#SCBT])
@@ -807,7 +801,7 @@ class SidechainStateTest
     forgerListIndexes = ForgerList(Array[Int](0,1,0,0,0))
     Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {Some(forgerListIndexes)})
     openStakeTransaction = getOpenStakeTransaction(
-      Seq((boxList.head.asInstanceOf[ZenBox], secretList.head)),
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
       3
     )
     tryValidate = sidechainState.validate(openStakeTransaction.asInstanceOf[SidechainTypes#SCBT])
@@ -820,7 +814,7 @@ class SidechainStateTest
     //Test validate(Transaction) with restrict forger enabled and correct index
     Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {Some(forgerListIndexes)})
     openStakeTransaction = getOpenStakeTransaction(
-      Seq((boxList.head.asInstanceOf[ZenBox], secretList.head)),
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
       0
     )
     tryValidate = sidechainState.validate(openStakeTransaction.asInstanceOf[SidechainTypes#SCBT])
