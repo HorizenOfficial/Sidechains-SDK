@@ -14,18 +14,18 @@ import scala.util.Try;
 // TO DO: provide access to HistoryReader
 public interface ApplicationState {
 
-    boolean validate(SidechainStateReader stateReader, SidechainBlock block);
+    void validate(SidechainStateReader stateReader, SidechainBlock block) throws IllegalArgumentException;
 
-    boolean validate(SidechainStateReader stateReader, BoxTransaction<Proposition, Box<Proposition>> transaction);
+    void validate(SidechainStateReader stateReader, BoxTransaction<Proposition, Box<Proposition>> transaction) throws IllegalArgumentException;
 
     // We should take in consideration to add a method that scans received block and eventually return a list
     // of outdated boxes (not coins boxes because coins cannot be destroyed/made them unusable arbitrarily!) to be removed
     // also if not yet opened.
     // For example this list can contains Ballots that happened in a past epoch or some other box that cannot be used anymore
 
-    Try<ApplicationState> onApplyChanges(SidechainStateReader stateReader, byte[] version, List<Box<Proposition>> newBoxes, List<byte[]> boxIdsToRemove);
+    Try<ApplicationState> onApplyChanges(SidechainStateReader stateReader, byte[] blockId, List<Box<Proposition>> newBoxes, List<byte[]> boxIdsToRemove);
 
-    Try<ApplicationState> onRollback(byte[] version); // return Try[...]
+    Try<ApplicationState> onRollback(byte[] blockId); // return Try[...]
 }
 
 

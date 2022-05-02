@@ -8,24 +8,29 @@ import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import scorex.core.settings.{ScorexSettings, SettingsReaders}
-import scorex.util.ScorexLogging
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.compat.java8.OptionConverters.toScala
 
 
 object SidechainSettingsReader
-  extends ScorexLogging
+  extends LazyLogging
     with SettingsReaders
 {
   protected val sidechainSettingsName = "sidechain-sdk-settings.conf"
 
   def fromConfig(config: Config): SidechainSettings = {
-    val webSocketConnectorConfiguration = config.as[WebSocketSettings]("scorex.websocket")
+    val webSocketConnectorConfigurationSettings = config.as[WebSocketSettings]("scorex.websocket")
     val scorexSettings = config.as[ScorexSettings]("scorex")
-    val genesisSetting = config.as[GenesisDataSettings]("scorex.genesis")
-    val backwardTransfer = config.as[withdrawalEpochCertificateSettings]("scorex.withdrawalEpochCertificate")
-    val walletSetting = config.as[WalletSettings]("scorex.wallet")
-    SidechainSettings(scorexSettings, genesisSetting, webSocketConnectorConfiguration, backwardTransfer, walletSetting)
+    val genesisSettings = config.as[GenesisDataSettings]("scorex.genesis")
+    val certificateSettings = config.as[WithdrawalEpochCertificateSettings]("scorex.withdrawalEpochCertificate")
+    val walletSettings = config.as[WalletSettings]("scorex.wallet")
+    val forgerSettings = config.as[ForgerSettings]("scorex.forger")
+    val cswSettings = config.as[CeasedSidechainWithdrawalSettings]("scorex.csw")
+    val logInfoSettings = config.as[LogInfoSettings]("scorex.logInfo")
+
+    SidechainSettings(scorexSettings, genesisSettings, webSocketConnectorConfigurationSettings, certificateSettings,
+      walletSettings, forgerSettings, cswSettings, logInfoSettings)
   }
 
   def readConfigFromPath(userConfigPath: String, applicationConfigPath: Option[String]): Config = {

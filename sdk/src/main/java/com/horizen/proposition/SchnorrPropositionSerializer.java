@@ -21,12 +21,11 @@ public class SchnorrPropositionSerializer implements PropositionSerializer<Schno
 
     @Override
     public void serialize(SchnorrProposition proposition, Writer writer) {
-        byte [] propositionBytes = proposition.bytes();
-        writer.putBytes(propositionBytes);
+        writer.putBytes(proposition.pubKeyBytes());
     }
 
     @Override
     public SchnorrProposition parse(Reader reader) {
-        return SchnorrProposition.parseBytes(reader.getBytes(CryptoLibProvider.schnorrFunctions().schnorrPublicKeyLength()));
+        return new SchnorrProposition(reader.getBytes(SchnorrProposition.KEY_LENGTH));
     }
 }

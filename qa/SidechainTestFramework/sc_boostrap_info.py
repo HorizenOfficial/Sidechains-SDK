@@ -1,3 +1,11 @@
+# default value for a large withdrawal epoch length; such value has impacts on RAM and HD usage
+# Note: the maximum withdrawal_epoch_length allowed is around 900, otherwise snark keys size check will fail
+# because of too complex circuit from MC perspective.
+# LARGE_WITHDRAWAL_EPOCH_LENGTH = 148
+LARGE_WITHDRAWAL_EPOCH_LENGTH = 900
+
+SC_CREATION_VERSION_0 = 0
+SC_CREATION_VERSION_1 = 1
 """
 All information needed to bootstrap sidechain network within specified mainchain node.
 The JSON representation is only for documentation.
@@ -7,14 +15,20 @@ SCCreationInfo: {
     "sc_id":
     "forward_amout":
     "withdrawal_epoch_length":
+    "btr_data_length": size of scRequestData array for MBTRs. 0 if MBTRs are not supported at all.
 }
 """
 class SCCreationInfo(object):
 
-    def __init__(self, mc_node, forward_amount=100, withdrawal_epoch_length=1000):
+    # Note: the maximum withdrawal_epoch_length allowed is around 900, otherwise snark keys size check will fail
+    # because of too complex circuit from MC perspective.
+    def __init__(self, mc_node, forward_amount=100, withdrawal_epoch_length=LARGE_WITHDRAWAL_EPOCH_LENGTH,
+                 btr_data_length=0, sc_creation_version=SC_CREATION_VERSION_1):
         self.mc_node = mc_node
         self.forward_amount = forward_amount
         self.withdrawal_epoch_length = withdrawal_epoch_length
+        self.btr_data_length = btr_data_length
+        self.sc_creation_version = sc_creation_version
 
 
 """
@@ -37,6 +51,17 @@ class MCConnectionInfo(object):
         self.reconnectionDelay = reconnectionDelay
         self.reconnectionMaxAttempts = reconnectionMaxAttempts
 
+"""
+Configration that enables the possibility to restrict the forging phase
+ to a specific list of forgers.
+"""
+class SCForgerConfiguration(object):
+    def __init__(self, restrict_forgers = False, allowed_forgers = []):
+        self.restrict_forgers = restrict_forgers
+        self.allowed_forgers = []
+        for forger in allowed_forgers:
+            self.allowed_forgers.append('{ blockSignProposition = "'+forger[0]+'" NEW_LINE vrfPublicKey = "'+forger[1]+'" }')
+
 
 """
 Information needed to start a sidechain node connected to specific mainchain node.
@@ -53,8 +78,26 @@ SCNodeConfiguration: {
 """
 class SCNodeConfiguration(object):
 
-    def __init__(self, mc_connection_info=MCConnectionInfo()):
+    # Currently we have Cert Signature threshold snark proof with the max PK number = 7
+    def __init__(self,
+                 mc_connection_info=MCConnectionInfo(),
+                 cert_submitter_enabled=True,
+                 cert_signing_enabled=True,
+                 submitter_private_keys_indexes=None,
+                 max_connections=100,
+                 automatic_fee_computation=True,
+                 certificate_fee=0.0001,
+                 forger_options = SCForgerConfiguration()):
+        if submitter_private_keys_indexes is None:
+            submitter_private_keys_indexes = list(range(7))
         self.mc_connection_info = mc_connection_info
+        self.cert_submitter_enabled = cert_submitter_enabled
+        self.cert_signing_enabled = cert_signing_enabled
+        self.submitter_private_keys_indexes = submitter_private_keys_indexes
+        self.max_connections = max_connections
+        self.automatic_fee_computation = automatic_fee_computation
+        self.certificate_fee = certificate_fee
+        self.forger_options = forger_options
 
 
 """
@@ -108,10 +151,10 @@ class VrfAccount(object):
         self.publicKey = publicKey
 
 """
-Withdrawal certificate related data .
+Withdrawal certificate proof info  data .
 The JSON representation is only for documentation.
 
-WithdrawalCertificateData : {
+CertificateProofInfo : {
     "threshold":
     "genSysConstant":"5e7b..0000"
     "verificationKey":"caa..000"
@@ -119,7 +162,7 @@ WithdrawalCertificateData : {
     "schnorr_public_keys": public key in byte hex representation
 }
 """
-class WithdrawalCertificateData(object):
+class CertificateProofInfo(object):
 
     def __init__(self, threshold, genSysConstant, verificationKey, schnorr_secrets = [], schnorr_public_keys = []):
         self.threshold = threshold
@@ -141,13 +184,17 @@ SCBootstrapInfo: {
     "network":
     "withdrawal_epoch_length":
     "genesis_vrf_account": an instance of VrfAccount
-    "withdrawal_certificate_data": an instance of WithdrawalCertificateData
+    "certificate_proof_info": an instance of CertificateProofInfo
+    "initial_cumulative_comm_tree_hash": CommTreeHash data for the genesis MC block
+    "cert_keys_paths": an instance of ProofKeysPaths for certificate
+    "csw_keys_paths": an instance of ProofKeysPaths for ceased sidechain withdrawal
 }
 """
 class SCBootstrapInfo(object):
 
     def __init__(self, sidechain_id, genesis_account, genesis_account_balance, mainchain_block_height,
-                 sidechain_genesis_block_hex, pow_data, network, withdrawal_epoch_length, genesis_vrf_account, withdrawal_certificate_data):
+                 sidechain_genesis_block_hex, pow_data, network, withdrawal_epoch_length, genesis_vrf_account,
+                 certificate_proof_info, initial_cumulative_comm_tree_hash, cert_keys_paths, csw_keys_paths):
         self.sidechain_id = sidechain_id
         self.genesis_account = genesis_account
         self.genesis_account_balance = genesis_account_balance
@@ -157,4 +204,15 @@ class SCBootstrapInfo(object):
         self.network = network
         self.withdrawal_epoch_length = withdrawal_epoch_length
         self.genesis_vrf_account = genesis_vrf_account
-        self.withdrawal_certificate_data = withdrawal_certificate_data
+        self.certificate_proof_info = certificate_proof_info
+        self.initial_cumulative_comm_tree_hash = initial_cumulative_comm_tree_hash
+        self.cert_keys_paths = cert_keys_paths
+        self.csw_keys_paths = csw_keys_paths
+
+
+class ProofKeysPaths(object):
+
+    def __init__(self, proving_key_path, verification_key_path):
+        self.proving_key_path = proving_key_path
+        self.verification_key_path = verification_key_path
+

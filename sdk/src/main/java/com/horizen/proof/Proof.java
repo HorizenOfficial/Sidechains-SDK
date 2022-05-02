@@ -19,12 +19,12 @@ public interface Proof<P extends Proposition>
 {
     boolean isValid(P proposition, byte[] message);
 
-    byte[] bytes();
+    @Override
+    default byte[] bytes() {
+        return serializer().toBytes(this);
+    }
 
     @Override
     ProofSerializer serializer();
-
-    @JsonProperty("typeId")
-    byte proofTypeId();
 }
 

@@ -59,12 +59,9 @@ class SidechainAuthServiceProxy(object):
             # Callables re-use the connection of the original proxy
             self.__conn = connection
         elif self.__url.scheme == 'https':
-            self.__conn = httplib.HTTPSConnection(self.__url.hostname, port,
-                                                  None, None, False,
-                                                  timeout)
+            self.__conn = httplib.HTTPSConnection(self.__url.hostname, port, None, None, timeout)
         else:
-            self.__conn = httplib.HTTPConnection(self.__url.hostname, port,
-                                                 False, timeout)
+            self.__conn = httplib.HTTPConnection(self.__url.hostname, port, timeout)
 
     def __getattr__(self, name):
         if name.startswith('__') and name.endswith('__'):
@@ -93,7 +90,8 @@ class SidechainAuthServiceProxy(object):
             # ConnectionResetError happens on FreeBSD with Python 3.4.
             # These classes don't exist in Python 2.x, so we can't refer to them directly.
             if ((isinstance(e, httplib.BadStatusLine) and e.line == "''")
-                or e.__class__.__name__ in ('BrokenPipeError', 'ConnectionResetError')):
+                or e.__class__.__name__ in ('BrokenPipeError', 'ConnectionResetError')
+                or (e.__class__.__name__ == "error" and (e.errno == 10053 or e.errno == 10054))):
                 self.__conn.close()
                 self.__conn.request(method, path, postdata, headers)
                 return self._get_response()
@@ -124,7 +122,7 @@ class SidechainAuthServiceProxy(object):
         if http_response is None:
             raise SCAPIException("missing HTTP response from server")
         responsedata = http_response.read().decode('utf8')
-        if http_response.status is not 200: #For the moment we check for errors in this way
+        if http_response.status != 200:  # For the moment we check for errors in this way
             raise SCAPIException(responsedata)
         response = json.loads(responsedata, parse_float=decimal.Decimal)
         return response

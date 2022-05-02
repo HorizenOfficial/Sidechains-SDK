@@ -2,17 +2,17 @@ package com.horizen.storage
 
 
 import java.util.{ArrayList => JArrayList}
-
-import com.google.common.primitives.{Bytes, Ints, Longs}
+import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.SidechainTypes
-import com.horizen.block.WithdrawalEpochCertificate
+import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
 import com.horizen.box.{WithdrawalRequestBox, WithdrawalRequestBoxSerializer}
 import com.horizen.companion.SidechainBoxesCompanion
-import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo, ForgingStakeInfoSerializer, _}
+import com.horizen.consensus._
 import com.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
 
+import java.util
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters._
@@ -32,9 +32,8 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   private val withdrawalRequestSerializer = new ListSerializer[WithdrawalRequestBox](WithdrawalRequestBoxSerializer.getSerializer)
 
   private[horizen] val consensusEpochKey = calculateKey("consensusEpoch".getBytes)
-  private[horizen] val forgingStakesAmountKey = calculateKey("forgingStakesAmount".getBytes)
-  private[horizen] val forgingStakesInfoKey = calculateKey("forgingStakes".getBytes)
-  private val forgingStakeInfoSerializer = new ListSerializer[ForgingStakeInfo](ForgingStakeInfoSerializer)
+
+  private[horizen] val ceasingStateKey = calculateKey("ceasingStateKey".getBytes)
 
   private val undefinedWithdrawalEpochCounter: Int = -1
   private[horizen] def getWithdrawalEpochCounterKey(withdrawalEpoch: Int): ByteArrayWrapper = {
@@ -45,12 +44,21 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     calculateKey(Bytes.concat("withdrawalRequests".getBytes, Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
   }
 
-  private[horizen] def getWithdrawalBlockKey(epoch: Int): ByteArrayWrapper = {
-    calculateKey(("Withdrawal block - " + epoch).getBytes)
+  private[horizen] def getTopQualityCertificateKey(referencedWithdrawalEpoch: Int): ByteArrayWrapper = {
+    calculateKey(Bytes.concat("topQualityCertificate".getBytes, Ints.toByteArray(referencedWithdrawalEpoch)))
   }
 
-  private val lastWithdrawalCertificatePreviousMcBlockHashKey: ByteArrayWrapper = {
-    calculateKey("Previous MC block hash Key".getBytes)
+  private val undefinedBlockFeeInfoCounter: Int = -1
+  private[horizen] def getBlockFeeInfoCounterKey(withdrawalEpochNumber: Int): ByteArrayWrapper = {
+    calculateKey(Bytes.concat("blockFeeInfoCounter".getBytes, Ints.toByteArray(withdrawalEpochNumber)))
+  }
+
+  private[horizen] def getBlockFeeInfoKey(withdrawalEpochNumber: Int, counter: Int): ByteArrayWrapper = {
+    calculateKey(Bytes.concat("blockFeeInfo".getBytes, Ints.toByteArray(withdrawalEpochNumber), Ints.toByteArray(counter)))
+  }
+
+  private[horizen] def getUtxoMerkleTreeRootKey(withdrawalEpochNumber: Int): ByteArrayWrapper = {
+    calculateKey(Bytes.concat("utxoMerkleTreeRoot".getBytes, Ints.toByteArray(withdrawalEpochNumber)))
   }
 
   def calculateKey(boxId : Array[Byte]) : ByteArrayWrapper = {
@@ -93,12 +101,38 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
   }
 
-  def getWithdrawalRequests(epoch: Int): Seq[WithdrawalRequestBox] = {
+  private def getBlockFeeInfoCounter(withdrawalEpochNumber: Int): Int = {
+    storage.get(getBlockFeeInfoCounterKey(withdrawalEpochNumber)).asScala match {
+      case Some(baw) =>
+        Try {
+          Ints.fromByteArray(baw.data)
+        }.toOption.getOrElse(undefinedBlockFeeInfoCounter)
+      case _ => undefinedBlockFeeInfoCounter
+    }
+  }
+
+  def getFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo] = {
+    val blockFees: ListBuffer[BlockFeeInfo] = ListBuffer()
+    val lastCounter = getBlockFeeInfoCounter(withdrawalEpochNumber)
+    for(counter <- 0 to lastCounter) {
+      storage.get(getBlockFeeInfoKey(withdrawalEpochNumber, counter)).asScala match {
+        case Some(baw) => BlockFeeInfoSerializer.parseBytesTry(baw.data) match {
+          case Success(info) => blockFees.append(info)
+          case Failure(exception) => throw new IllegalStateException("Error while fee payment parsing.", exception)
+        }
+        case None => throw new IllegalStateException("Error while fee payments retrieving: record expected to exist.")
+      }
+    }
+
+    blockFees
+  }
+
+  def getWithdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequestBox] = {
     // Aggregate withdrawal requests until reaching the counter, where the key is not present in the storage.
     val withdrawalRequests: ListBuffer[WithdrawalRequestBox] = ListBuffer()
-    val lastCounter: Int = getWithdrawalEpochCounter(epoch)
+    val lastCounter: Int = getWithdrawalEpochCounter(withdrawalEpoch)
     for(counter <- 0 to lastCounter) {
-      storage.get(getWithdrawalRequestsKey(epoch, counter)).asScala match {
+      storage.get(getWithdrawalRequestsKey(withdrawalEpoch, counter)).asScala match {
         case Some(baw) =>
           withdrawalRequestSerializer.parseBytesTry(baw.data) match {
             case Success(wr) =>
@@ -113,11 +147,25 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     withdrawalRequests
   }
 
-  def getUnprocessedWithdrawalRequests(epoch: Int) : Option[Seq[WithdrawalRequestBox]] = {
-    storage.get(getWithdrawalBlockKey(epoch)) match {
-      case v if v.isPresent => None
-      case _ => Some(getWithdrawalRequests(epoch))
+  def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
+    storage.get(getTopQualityCertificateKey(referencedWithdrawalEpoch)).asScala match {
+      case Some(baw) =>
+        WithdrawalEpochCertificateSerializer.parseBytesTry(baw.data) match {
+          case Success(certificate) => Option(certificate)
+          case Failure(exception) =>
+            log.error("Error while withdrawal epoch certificate information parsing.", exception)
+            Option.empty
+        }
+      case _ => Option.empty
     }
+  }
+
+  def getUtxoMerkleTreeRoot(withdrawalEpoch: Int): Option[Array[Byte]] = {
+    storage.get(getUtxoMerkleTreeRootKey(withdrawalEpoch)).asScala.map(_.data)
+  }
+
+  def hasCeased: Boolean = {
+    storage.get(ceasingStateKey).isPresent
   }
 
   def getConsensusEpochNumber: Option[ConsensusEpochNumber] = {
@@ -135,44 +183,16 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
   }
 
-  def getForgingStakesAmount: Option[Long] = {
-    storage.get(forgingStakesAmountKey).asScala match {
-      case Some(baw) =>
-        Try {
-          Longs.fromByteArray(baw.data)
-        } match {
-          case Success(epoch) => Some(epoch)
-          case Failure(exception) =>
-            log.error("Error while forging stakes amount parsing.", exception)
-            Option.empty
-        }
-      case _ => Option.empty
-    }
-  }
-
-  def getForgingStakesInfo: Option[Seq[ForgingStakeInfo]] = {
-    storage.get(forgingStakesInfoKey).asScala match {
-      case Some(baw) =>
-        forgingStakeInfoSerializer.parseBytesTry(baw.data) match {
-          case Success(stakesInfo) => Some(stakesInfo.asScala)
-          case Failure(exception) =>
-            log.error("Error while forging stakes parsing.", exception)
-            Option.empty
-        }
-      case _ => Option.empty
-    }
-  }
-
-  def getLastCertificateEndEpochMcBlockHashOpt: Option[Array[Byte]] = storage.get(lastWithdrawalCertificatePreviousMcBlockHashKey).asScala.map(_.data)
-
   def update(version: ByteArrayWrapper,
              withdrawalEpochInfo: WithdrawalEpochInfo,
              boxUpdateList: Set[SidechainTypes#SCB],
              boxIdsRemoveSet: Set[ByteArrayWrapper],
              withdrawalRequestAppendSeq: Seq[WithdrawalRequestBox],
-             forgingStakesToAppendSeq: Seq[ForgingStakeInfo],
              consensusEpoch: ConsensusEpochNumber,
-             withdrawalEpochCertificateOpt: Option[WithdrawalEpochCertificate]): Try[SidechainStateStorage] = Try {
+             topQualityCertificateOpt: Option[WithdrawalEpochCertificate],
+             blockFeeInfo: BlockFeeInfo,
+             utxoMerkleTreeRootOpt: Option[Array[Byte]],
+             scHasCeased: Boolean): Try[SidechainStateStorage] = Try {
     require(withdrawalEpochInfo != null, "WithdrawalEpochInfo must be NOT NULL.")
     require(boxUpdateList != null, "List of Boxes to add/update must be NOT NULL. Use empty List instead.")
     require(boxIdsRemoveSet != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")
@@ -180,8 +200,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     require(!boxIdsRemoveSet.contains(null), "BoxId to remove must be NOT NULL.")
     require(withdrawalRequestAppendSeq != null, "Seq of WithdrawalRequests to append must be NOT NULL. Use empty Seq instead.")
     require(!withdrawalRequestAppendSeq.contains(null), "WithdrawalRequest to append must be NOT NULL.")
-    require(forgingStakesToAppendSeq != null, "Seq of ForgerStakes to append must be NOT NULL. Use empty Seq instead.")
-    require(!forgingStakesToAppendSeq.contains(null), "ForgerStake to append must be NOT NULL.")
+    require(blockFeeInfo != null, "BlockFeeInfo must be NOT NULL.")
 
     val removeList = new JArrayList[ByteArrayWrapper]()
     val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
@@ -209,58 +228,64 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
         new ByteArrayWrapper(withdrawalRequestSerializer.toBytes(withdrawalRequestAppendSeq.asJava))))
     }
 
-    // If withdrawal epoch switched to the next one, then remove outdated withdrawal related records and counters (2 epochs before).
+    // Store utxo tree merkle root if present
+    utxoMerkleTreeRootOpt.foreach(merkleRoot => {
+      updateList.add(new JPair(getUtxoMerkleTreeRootKey(withdrawalEpochInfo.epoch), new ByteArrayWrapper(merkleRoot)))
+    })
+
+    // If withdrawal epoch switched to the next one, then:
+    // 1) remove outdated withdrawal related records and counters (2 epochs before);
+    // 2) remove outdated topQualityCertificate retrieved 3 epochs before and referenced to the 4 epochs before.
+    //    Note: we should keep last 2 epoch certificates, so in case SC has ceased we have an access to the last active cert.
+    // 3) remove outdated utxo merkle tree root record (4 epochs before).
+    // 4) remove outdated BlockFeeInfo records
     val isWithdrawalEpochSwitched: Boolean = getWithdrawalEpochInfo match {
       case Some(storedEpochInfo) => storedEpochInfo.epoch != withdrawalEpochInfo.epoch
       case _ => false
     }
     if (isWithdrawalEpochSwitched) {
-      val withdrawalEpochNumberToRemove: Int = withdrawalEpochInfo.epoch - 2
-      for (counter <- 0 to getWithdrawalEpochCounter(withdrawalEpochNumberToRemove)) {
-        removeList.add(getWithdrawalRequestsKey(withdrawalEpochInfo.epoch - 2, counter))
+      val wrEpochNumberToRemove: Int = withdrawalEpochInfo.epoch - 2
+      for (counter <- 0 to getWithdrawalEpochCounter(wrEpochNumberToRemove)) {
+        removeList.add(getWithdrawalRequestsKey(wrEpochNumberToRemove, counter))
       }
-      removeList.add(getWithdrawalEpochCounterKey(withdrawalEpochNumberToRemove))
+      removeList.add(getWithdrawalEpochCounterKey(wrEpochNumberToRemove))
+
+      val certEpochNumberToRemove: Int = withdrawalEpochInfo.epoch - 4
+      removeList.add(getTopQualityCertificateKey(certEpochNumberToRemove))
+      removeList.add(getUtxoMerkleTreeRootKey(certEpochNumberToRemove))
+
+      val blockFeeInfoEpochToRemove: Int = withdrawalEpochInfo.epoch - 1
+      for (counter <- 0 to getBlockFeeInfoCounter(blockFeeInfoEpochToRemove)) {
+        removeList.add(getBlockFeeInfoKey(blockFeeInfoEpochToRemove, counter))
+      }
+      removeList.add(getBlockFeeInfoCounterKey(blockFeeInfoEpochToRemove))
     }
 
-    // Update Certificate related data
-    withdrawalEpochCertificateOpt.map { withdrawalEpochCertificate =>
-      updateList.add(new JPair(getWithdrawalBlockKey(withdrawalEpochInfo.epoch - 1), version))
-      updateList.add(new JPair(lastWithdrawalCertificatePreviousMcBlockHashKey, withdrawalEpochCertificate.endEpochBlockHash))
-    }
+    // Store the top quality cert for epoch if present
+    topQualityCertificateOpt.foreach(certificate =>
+      updateList.add(new JPair(getTopQualityCertificateKey(certificate.epochNumber),
+        WithdrawalEpochCertificateSerializer.toBytes(certificate)))
+    )
+
+    // Update BlockFeeInfo data
+    val nextBlockFeeInfoCounter: Int = getBlockFeeInfoCounter(withdrawalEpochInfo.epoch) + 1
+    updateList.add(new JPair(getBlockFeeInfoCounterKey(withdrawalEpochInfo.epoch),
+      new ByteArrayWrapper(Ints.toByteArray(nextBlockFeeInfoCounter))))
+    updateList.add(new JPair(getBlockFeeInfoKey(withdrawalEpochInfo.epoch, nextBlockFeeInfoCounter),
+      new ByteArrayWrapper(BlockFeeInfoSerializer.toBytes(blockFeeInfo))))
 
     // Update Consensus related data
     if(getConsensusEpochNumber.getOrElse(intToConsensusEpochNumber(0)) != consensusEpoch) {
       updateList.add(new JPair(consensusEpochKey, new ByteArrayWrapper(Ints.toByteArray(consensusEpoch))))
     }
 
-    val (forgingStakesInfoSeq, forgingStakesAmount) = applyForgingStakesChanges(boxIdsRemoveSet, forgingStakesToAppendSeq)
-    updateList.add(new JPair(
-      forgingStakesInfoKey,
-      new ByteArrayWrapper(forgingStakeInfoSerializer.toBytes(forgingStakesInfoSeq.asJava))
-    ))
-    updateList.add(new JPair(
-      forgingStakesAmountKey,
-      new ByteArrayWrapper(Longs.toByteArray(forgingStakesAmount))
-    ))
+    // If sidechain has ceased set the flag
+    if(scHasCeased)
+      updateList.add(new JPair(ceasingStateKey, new ByteArrayWrapper(Array.emptyByteArray)))
 
     storage.update(version, updateList, removeList)
 
     this
-  }
-
-  private def applyForgingStakesChanges(boxIdsToRemove: Set[ByteArrayWrapper], forgingStakesToAppendSeq: Seq[ForgingStakeInfo]): (Seq[ForgingStakeInfo], Long) = {
-    getForgingStakesInfo match {
-      case Some(currentStakesInfoSeq) =>
-        // Separate removedStakes from current stakes
-        val (removedStakes, existentStakes) = currentStakesInfoSeq.partition(stakeInfo => boxIdsToRemove.contains(new ByteArrayWrapper(stakeInfo.boxId)))
-
-        // Update current stakes amount
-        val stakesAmount = getForgingStakesAmount.getOrElse(0L) - removedStakes.map(_.value).sum + forgingStakesToAppendSeq.map(_.value).sum
-
-        (existentStakes ++ forgingStakesToAppendSeq, stakesAmount)
-      case None =>
-        (forgingStakesToAppendSeq, forgingStakesToAppendSeq.map(_.value).sum)
-    }
   }
 
   def lastVersionId : Option[ByteArrayWrapper] = {

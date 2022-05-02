@@ -21,12 +21,11 @@ public class VrfPublicKeySerializer implements PropositionSerializer<VrfPublicKe
 
     @Override
     public void serialize(VrfPublicKey proposition, Writer writer) {
-        byte [] propositionBytes = proposition.bytes();
-        writer.putBytes(propositionBytes);
+        writer.putBytes(proposition.pubKeyBytes());
     }
 
     @Override
     public VrfPublicKey parse(Reader reader) {
-        return VrfPublicKey.parseBytes(reader.getBytes(CryptoLibProvider.vrfFunctions().vrfPublicKeyLen()));
+        return new VrfPublicKey(reader.getBytes(VrfPublicKey.KEY_LENGTH));
     }
 }

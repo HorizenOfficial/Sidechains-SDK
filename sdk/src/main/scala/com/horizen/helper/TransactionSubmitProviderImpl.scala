@@ -6,18 +6,29 @@ import com.horizen.transaction.BoxTransaction
 import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
+import scorex.util.ModifierId
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 import scala.util.{Failure, Success}
+import scala.language.postfixOps
 
-class TransactionSubmitProviderImpl(var transactionActor: ActorRef) extends TransactionSubmitProvider {
+class TransactionSubmitProviderImpl(transactionActor: ActorRef) extends TransactionSubmitProvider {
 
-  implicit val duration: Timeout = 20 seconds
+  implicit val timeout: Timeout = 20 seconds
 
-  override def submitTransaction(tx: BoxTransaction[Proposition, Box[Proposition]], callback:(Boolean, Option[Throwable]) => Unit): Unit = {
+  @throws(classOf[IllegalArgumentException])
+  override def submitTransaction(tx: BoxTransaction[Proposition, Box[Proposition]]): Unit = {
+    val resFuture = Await.result(transactionActor ? BroadcastTransaction(tx), timeout.duration).asInstanceOf[Future[ModifierId]]
+    Await.ready(resFuture, timeout.duration).value.get match {
+      case Success(_) =>
+      case Failure(exp) => throw new IllegalArgumentException(exp)
+    }
+  }
+
+  override def asyncSubmitTransaction(tx: BoxTransaction[Proposition, Box[Proposition]], callback:(Boolean, Option[Throwable]) => Unit): Unit = {
     val barrier : Future[Unit] = Await.result(
-      transactionActor ? BroadcastTransaction(tx), 20 seconds).asInstanceOf[Future[Unit]]
+      transactionActor ? BroadcastTransaction(tx), timeout.duration).asInstanceOf[Future[Unit]]
       barrier onComplete{
         case Success(_) =>
           callback(true, None)

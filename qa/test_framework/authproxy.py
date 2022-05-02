@@ -61,7 +61,7 @@ class JSONRPCException(Exception):
 
 def EncodeDecimal(o):
     if isinstance(o, decimal.Decimal):
-        return round(o, 8)
+        return float(o)
     raise TypeError(repr(o) + " is not JSON serializable")
 
 class AuthServiceProxy(object):
@@ -93,12 +93,9 @@ class AuthServiceProxy(object):
             # Callables re-use the connection of the original proxy
             self.__conn = connection
         elif self.__url.scheme == 'https':
-            self.__conn = httplib.HTTPSConnection(self.__url.hostname, port,
-                                                  None, None, False,
-                                                  timeout)
+            self.__conn = httplib.HTTPSConnection(self.__url.hostname, port, None, None, timeout)
         else:
-            self.__conn = httplib.HTTPConnection(self.__url.hostname, port,
-                                                 False, timeout)
+            self.__conn = httplib.HTTPConnection(self.__url.hostname, port, timeout)
 
     def __getattr__(self, name):
         if name.startswith('__') and name.endswith('__'):
@@ -128,7 +125,8 @@ class AuthServiceProxy(object):
             # These classes don't exist in Python 2.x, so we can't refer to them directly.
             if ((isinstance(e, httplib.BadStatusLine)
                     and e.line in ("''", "No status line received - the server has closed the connection"))
-                or e.__class__.__name__ in ('BrokenPipeError', 'ConnectionResetError')):
+                or e.__class__.__name__ in ('BrokenPipeError', 'ConnectionResetError')
+                or (e.__class__.__name__ == "error" and (e.errno == 10053 or e.errno == 10054))):
                 self.__conn.close()
                 self.__conn.request(method, path, postdata, headers)
                 return self._get_response()

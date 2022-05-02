@@ -1,5 +1,6 @@
 package com.horizen.box;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.proposition.Proposition;
@@ -22,6 +23,7 @@ import com.horizen.serialization.Views;
  */
 
 @JsonView(Views.Default.class)
+@JsonIgnoreProperties({"customFieldsHash", "boxTypeId"})
 public interface Box<P extends Proposition>
     extends scorex.core.transaction.box.Box<P>
 {
@@ -37,12 +39,24 @@ public interface Box<P extends Proposition>
     @Override
     byte[] id();
 
+    @JsonProperty("nonce")
+    long nonce();
+
+    byte[] customFieldsHash();
+
     @Override
-    byte[] bytes();
+    default byte[] bytes() {
+        return serializer().toBytes(this);
+    }
 
     @Override
     BoxSerializer serializer();
 
-    @JsonProperty("typeId")
     byte boxTypeId();
+
+    @JsonProperty("typeName")
+    String typeName();
+
+    @JsonProperty("isCustom")
+    Boolean isCustom();
 }

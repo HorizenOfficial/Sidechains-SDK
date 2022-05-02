@@ -1,6 +1,6 @@
 package com.horizen.storage.leveldb
 
-import io.iohk.iodb.ByteArrayWrapper
+import com.horizen.utils.ByteArrayWrapper
 import org.iq80.leveldb.{DB, ReadOptions}
 
 import scala.collection.mutable
@@ -80,7 +80,7 @@ final class VersionedLDBKVStore(protected val db: DB, keepVersions: Int) extends
         try {
           val versionsToRollBack = bytes
             .grouped(Constants.HashLength)
-            .takeWhile(ByteArrayWrapper(_) != ByteArrayWrapper(versionId))
+            .takeWhile(new ByteArrayWrapper(_) != new ByteArrayWrapper(versionId))
 
           versionsToRollBack
             .foldLeft(Seq.empty[(Array[Byte], ChangeSet)]) { case (acc, verId) =>
@@ -101,10 +101,10 @@ final class VersionedLDBKVStore(protected val db: DB, keepVersions: Int) extends
               batch.delete(verId)
             }
 
-          val wrappedVersionId = ByteArrayWrapper(versionId)
+          val wrappedVersionId = new ByteArrayWrapper(versionId)
           val updatedVersions = bytes
             .grouped(Constants.HashLength)
-            .map(ByteArrayWrapper.apply)
+            .map(new ByteArrayWrapper(_))
             .dropWhile(_ != wrappedVersionId)
             .foldLeft(Array.empty[Byte]) { case (acc, arr) =>
               acc ++ arr.data
@@ -129,7 +129,7 @@ final class VersionedLDBKVStore(protected val db: DB, keepVersions: Int) extends
     .flatMap(_.grouped(Constants.HashLength))
 
   def versionIdExists(versionId: VersionId): Boolean =
-    versions.exists(ByteArrayWrapper(_) == ByteArrayWrapper(versionId))
+    versions.exists(new ByteArrayWrapper(_) == new ByteArrayWrapper(versionId))
 
 }
 

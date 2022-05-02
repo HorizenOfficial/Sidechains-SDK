@@ -7,7 +7,6 @@ import java.util.Optional;
 import java.util.function.BiConsumer;
 
 public interface TransactionSubmitHelper {
-
-    public void submitTransaction(BoxTransaction<Proposition, Box<Proposition>> tx, BiConsumer<Boolean, Optional<Throwable>> callback);
-
+    void submitTransaction(BoxTransaction<Proposition, Box<Proposition>> tx) throws IllegalArgumentException;
+    void asyncSubmitTransaction(BoxTransaction<Proposition, Box<Proposition>> tx, BiConsumer<Boolean, Optional<Throwable>> callback);
 }

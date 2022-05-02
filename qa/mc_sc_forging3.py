@@ -1,8 +1,8 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration
+    SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from test_framework.util import initialize_chain_clean, start_nodes, \
     websocket_port_by_mc_node_index, connect_nodes_bi, disconnect_nodes_bi
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks
@@ -28,17 +28,17 @@ Test:
     - Forge SC block, verify MC data inclusion and ommers/subommers inclusion.
     
     MC blocks on MC node 1 in the end:
-    220     -   221     -   222     -   223*
+    420     -   421     -   422     -   423*
         \
-            -   221'    -   222'
+            -   421'    -   422'
             
             
     SC Block on SC node in the end: <sc block/slot number>[<mc headers included>; <mc refdata included>; <ommers>]
-    G[220h;220d;] - 0[;;] - 1[221h;221d;]
+    G[420h;420d;] - 0[;;] - 1[421h;421d;]
                           \
-                                - 2[221'h,222'h;;1[...]]
+                                - 2[421'h,422'h;;1[...]]
                             \
-                                    -   3[221h,222h,223h;;2[...;1]]
+                                    -   3[421h,422h,423h;;2[...;1]]
 """
 
 
@@ -68,9 +68,9 @@ class MCSCForging3(SidechainTestFramework):
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0)))
         )
 
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, 1000),
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, LARGE_WITHDRAWAL_EPOCH_LENGTH),
                                          sc_node_1_configuration)
-        bootstrap_sidechain_nodes(self.options.tmpdir, network)
+        bootstrap_sidechain_nodes(self.options, network)
 
     def sc_setup_nodes(self):
         # Start 1 SC node

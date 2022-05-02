@@ -1,22 +1,25 @@
 package com.horizen.block
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.horizen.serialization.{JsonMerklePathOptionSerializer, Views}
+import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
+import com.horizen.cryptolibprovider.FieldElementUtils
+import com.horizen.serialization.Views
+import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
-import com.horizen.utils.MerklePath
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
+
+import scala.collection.JavaConverters._
 
 @JsonView(Array(classOf[Views.Default]))
 @JsonIgnoreProperties(Array("hash"))
 case class MainchainBlockReferenceData(
                                         headerHash: Array[Byte],
                                         sidechainRelatedAggregatedTransaction: Option[MC2SCAggregatedTransaction],
-                                        @JsonSerialize(using = classOf[JsonMerklePathOptionSerializer])
-                                        mProof: Option[MerklePath],
-                                        proofOfNoData: (Option[SidechainCommitmentEntryProof], Option[SidechainCommitmentEntryProof]),
-                                        withdrawalEpochCertificate: Option[WithdrawalEpochCertificate]) extends BytesSerializable {
+                                        existenceProof: Option[Array[Byte]],
+                                        absenceProof: Option[Array[Byte]],
+                                        lowerCertificateLeaves: Seq[Array[Byte]],
+                                        topQualityCertificate: Option[WithdrawalEpochCertificate]) extends BytesSerializable {
   override type M = MainchainBlockReferenceData
 
   override def serializer: ScorexSerializer[MainchainBlockReferenceData] = MainchainBlockReferenceDataSerializer
@@ -29,6 +32,20 @@ case class MainchainBlockReferenceData(
       case _ => false
     }
   }
+
+  def commitmentTree(sidechainId: Array[Byte], version: SidechainCreationVersion): SidechainCommitmentTree = {
+    val commitmentTree = new SidechainCommitmentTree()
+
+    sidechainRelatedAggregatedTransaction.foreach(_.mc2scTransactionsOutputs().asScala.foreach {
+      case sc: SidechainCreation => commitmentTree.addSidechainCreation(sc)
+      case ft: ForwardTransfer => commitmentTree.addForwardTransfer(ft)
+    })
+
+    lowerCertificateLeaves.foreach(leaf => commitmentTree.addCertLeaf(sidechainId, leaf))
+    topQualityCertificate.foreach(cert => commitmentTree.addCertificate(cert, version))
+
+    commitmentTree
+  }
 }
 
 
@@ -38,43 +55,32 @@ object MainchainBlockReferenceDataSerializer extends ScorexSerializer[MainchainB
   override def serialize(obj: MainchainBlockReferenceData, w: Writer): Unit = {
     w.putBytes(obj.headerHash)
 
-    obj.sidechainRelatedAggregatedTransaction match {
-      case Some(tx) =>
-        w.putInt(tx.bytes().length)
-        w.putBytes(tx.bytes())
-      case _ =>
-        w.putInt(0)
+    w.putOption(obj.sidechainRelatedAggregatedTransaction) {case (writer: Writer, aggregatedTransaction: MC2SCAggregatedTransaction) =>
+      MC2SCAggregatedTransactionSerializer.getSerializer.serialize(aggregatedTransaction, writer)
     }
 
-    obj.mProof match {
-      case Some(mp) =>
-        w.putInt(mp.bytes().length)
-        w.putBytes(mp.bytes())
+    obj.existenceProof match {
+      case Some(proofBytes) =>
+        w.putInt(proofBytes.length)
+        w.putBytes(proofBytes)
       case None =>
         w.putInt(0)
     }
 
-    obj.proofOfNoData._1 match {
-      case Some(p) =>
-        val pb = SidechainCommitmentEntryProofSerializer.toBytes(p)
-        w.putInt(pb.length)
-        w.putBytes(pb)
+    obj.absenceProof match {
+      case Some(proofBytes) =>
+        w.putInt(proofBytes.length)
+        w.putBytes(proofBytes)
       case None =>
         w.putInt(0)
     }
 
-    obj.proofOfNoData._2 match {
-      case Some(p) =>
-        val pb = SidechainCommitmentEntryProofSerializer.toBytes(p)
-        w.putInt(pb.length)
-        w.putBytes(pb)
-      case None =>
-        w.putInt(0)
-    }
+    w.putInt(obj.lowerCertificateLeaves.size)
+    obj.lowerCertificateLeaves.foreach(leaf => w.putBytes(leaf))
 
-    obj.withdrawalEpochCertificate match {
+    obj.topQualityCertificate match {
       case Some(certificate) =>
-        val cb = MainchainBackwardTransferCertificateSerializer.toBytes(certificate)
+        val cb = WithdrawalEpochCertificateSerializer.toBytes(certificate)
         w.putInt(cb.length)
         w.putBytes(cb)
       case _ => w.putInt(0)
@@ -85,52 +91,37 @@ object MainchainBlockReferenceDataSerializer extends ScorexSerializer[MainchainB
   override def parse(r: Reader): MainchainBlockReferenceData = {
     val headerHash: Array[Byte] = r.getBytes(HASH_BYTES_LENGTH)
 
-    val mc2scAggregatedTransactionSize: Int = r.getInt()
+    val mc2scTx: Option[MC2SCAggregatedTransaction] = r.getOption(MC2SCAggregatedTransactionSerializer.getSerializer.parse(r))
 
-    val mc2scTx: Option[MC2SCAggregatedTransaction] = {
-      if (mc2scAggregatedTransactionSize > 0)
-        Some(MC2SCAggregatedTransactionSerializer.getSerializer.parseBytes(r.getBytes(mc2scAggregatedTransactionSize)))
+    val existenceProofSize: Int = r.getInt()
+
+    val existenceProof: Option[Array[Byte]] = {
+      if (existenceProofSize > 0)
+        Some(r.getBytes(existenceProofSize))
       else
         None
     }
 
-    val mproofSize: Int = r.getInt()
+    val absenceProofSize: Int = r.getInt()
 
-    val mproof: Option[MerklePath] = {
-      if (mproofSize > 0)
-        Some(MerklePath.parseBytes(r.getBytes(mproofSize)))
+    val absenceProof: Option[Array[Byte]] = {
+      if (absenceProofSize > 0)
+        Some(r.getBytes(absenceProofSize))
       else
         None
     }
 
-    val leftNeighbourSize: Int = r.getInt()
+    val lowerCertificateLeavesSize: Int = r.getInt()
+    val lowerCertificateLeaves: Seq[Array[Byte]] = (0 until lowerCertificateLeavesSize).map(_ => r.getBytes(FieldElementUtils.fieldElementLength()))
 
-    val leftNeighbour: Option[SidechainCommitmentEntryProof] = {
-      if (leftNeighbourSize > 0)
-        Some(SidechainCommitmentEntryProofSerializer.parseBytes(r.getBytes(leftNeighbourSize)))
+    val topQualityCertificateSize: Int = r.getInt()
+    val topQualityCertificate: Option[WithdrawalEpochCertificate] = {
+      if (topQualityCertificateSize > 0)
+        Some(WithdrawalEpochCertificateSerializer.parseBytes(r.getBytes(topQualityCertificateSize)))
       else
         None
     }
 
-    val rightNeighbourSize: Int = r.getInt()
-
-    val rightNeighbour: Option[SidechainCommitmentEntryProof] = {
-      if (rightNeighbourSize > 0)
-        Some(SidechainCommitmentEntryProofSerializer.parseBytes(r.getBytes(rightNeighbourSize)))
-      else
-        None
-    }
-
-    val certificateSize: Int = r.getInt()
-
-    val certificate: Option[WithdrawalEpochCertificate] = {
-      if (certificateSize > 0)
-        Some(MainchainBackwardTransferCertificateSerializer.parseBytes(r.getBytes(certificateSize)))
-      else
-        None
-    }
-
-
-    MainchainBlockReferenceData(headerHash, mc2scTx, mproof, (leftNeighbour, rightNeighbour), certificate)
+    MainchainBlockReferenceData(headerHash, mc2scTx, existenceProof, absenceProof, lowerCertificateLeaves, topQualityCertificate)
   }
 }

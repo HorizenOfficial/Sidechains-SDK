@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.module.scala.DefaultScalaModule;
+import com.horizen.utils.ByteArrayWrapper;
 
 public class ApplicationJsonSerializer {
 
@@ -56,6 +57,7 @@ public class ApplicationJsonSerializer {
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_ABSENT);
         SimpleModule module = new SimpleModule();
         module.addSerializer(byte[].class, new ByteUtilsSerializer());
+        module.addSerializer(ByteArrayWrapper.class, new ByteArrayWrapperSerializer());
         objectMapper.registerModule(module);
     }
 

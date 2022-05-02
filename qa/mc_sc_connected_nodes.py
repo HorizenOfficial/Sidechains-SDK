@@ -1,13 +1,13 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 import json
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration
+    SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, initialize_chain_clean, start_nodes, \
     websocket_port_by_mc_node_index, connect_nodes_bi, assert_true, assert_false
 from SidechainTestFramework.scutil import check_box_balance, connect_sc_nodes, \
     bootstrap_sidechain_nodes, start_sc_nodes, is_mainchain_block_included_in_sc_block, generate_next_blocks, \
-    check_mainchain_block_reference_info, check_wallet_balance
+    check_mainchain_block_reference_info, check_wallet_coins_balance
 
 """
 Check the websocket connection between sidechain and mainchain nodes.
@@ -47,9 +47,9 @@ class MCSCConnectedNodes(SidechainTestFramework):
         sc_node_2_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_2.hostname, websocket_port_by_mc_node_index(1)))
         )
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, 1000),
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, LARGE_WITHDRAWAL_EPOCH_LENGTH),
                                          sc_node_1_configuration, sc_node_2_configuration)
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options.tmpdir, network)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
 
     def sc_setup_nodes(self):
         return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
@@ -57,8 +57,8 @@ class MCSCConnectedNodes(SidechainTestFramework):
     def run_test(self):
         mc_nodes = self.nodes
         sc_nodes = self.sc_nodes
-        print "Number of started mc nodes: {0}".format(len(mc_nodes), "The number of MC nodes is not {0}.".format(self.number_of_mc_nodes))
-        print "Number of started sc nodes: {0}".format(len(sc_nodes), "The number of SC nodes is not {0}.".format(self.number_of_sidechain_nodes))
+        print("Number of started mc nodes: {0}".format(len(mc_nodes), "The number of MC nodes is not {0}.".format(self.number_of_mc_nodes)))
+        print("Number of started sc nodes: {0}".format(len(sc_nodes), "The number of SC nodes is not {0}.".format(self.number_of_sidechain_nodes)))
 
         first_mainchain_node = mc_nodes[0]
         second_mainchain_node = mc_nodes[1]
@@ -97,8 +97,8 @@ class MCSCConnectedNodes(SidechainTestFramework):
                 second_sc_mc_best_block_ref_info, first_mainchain_node_block),
             "The mainchain block is not included inside SC block reference info.")
 
-        check_box_balance(first_sidechain_node, genesis_account, 3, 1, wallet_balance)
-        check_wallet_balance(first_sidechain_node, wallet_balance)
+        check_box_balance(first_sidechain_node, genesis_account, "ForgerBox", 1, wallet_balance)
+        check_wallet_coins_balance(first_sidechain_node, wallet_balance)
 
         # MC 1 mine a new block
         block_hash = first_mainchain_node.generate(1)[0]

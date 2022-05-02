@@ -3,22 +3,16 @@ package com.horizen.transaction;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.google.common.primitives.Bytes;
-import com.google.common.primitives.Ints;
-import com.google.common.primitives.Longs;
 import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
 import com.horizen.serialization.Views;
-import com.horizen.transaction.mainchain.ForwardTransferSerializer;
-import com.horizen.transaction.mainchain.SidechainCreationSerializer;
-import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
+import com.horizen.transaction.exception.TransactionSemanticValidityException;
+import com.horizen.transaction.mainchain.*;
 import com.horizen.utils.*;
-import scorex.core.serialization.ScorexSerializer;
+import scala.Array;
 import scorex.util.encode.Base16;
-
 import java.util.*;
-
 import static com.horizen.transaction.CoreTransactionsIdsEnum.MC2SCAggregatedTransactionId;
 
 @JsonView(Views.Default.class)
@@ -28,26 +22,18 @@ public final class MC2SCAggregatedTransaction
 
     private byte[] mc2scTransactionsMerkleRootHash;
     private List<SidechainRelatedMainchainOutput> mc2scTransactionsOutputs;
-    private long timestamp;
 
     private List<Box<Proposition>> newBoxes;
 
-    // Serializers definition
-    private static ListSerializer<SidechainRelatedMainchainOutput> mc2scTransactionsSerializer = new ListSerializer<>(
-            new DynamicTypedSerializer<>(
-                new HashMap<Byte, ScorexSerializer<SidechainRelatedMainchainOutput>>() {{
-                    put((byte)1, (ScorexSerializer)ForwardTransferSerializer.getSerializer());
-                    put((byte)3, (ScorexSerializer)SidechainCreationSerializer.getSerializer());
-                }}, new HashMap<>()
-            ));
+    private final byte version;
 
-    public MC2SCAggregatedTransaction(List<SidechainRelatedMainchainOutput> mc2scTransactionsOutputs, long timestamp) {
+    public final static byte MC2SC_AGGREGATED_TRANSACTION_VERSION = 1;
+
+    public MC2SCAggregatedTransaction(List<SidechainRelatedMainchainOutput> mc2scTransactionsOutputs, byte version) {
         if(mc2scTransactionsOutputs.isEmpty())
             throw new IllegalArgumentException("Empty sidechain related mainchain outputs passed.");
-        if(timestamp < 0)
-            throw new IllegalArgumentException("Negative timestamp passed.");
         this.mc2scTransactionsOutputs = mc2scTransactionsOutputs;
-        this.timestamp = timestamp;
+        this.version = version;
     }
 
     @Override
@@ -55,11 +41,14 @@ public final class MC2SCAggregatedTransaction
         return MC2SCAggregatedTransactionSerializer.getSerializer();
     }
 
-    // no checker exists for current transaction type
-    // keep check in mempool against this
     @Override
     public TransactionIncompatibilityChecker incompatibilityChecker() {
-        return null;
+        return MempoolIncompatibleTransactionIncompatibilityChecker.getChecker();
+    }
+
+    @Override
+    public byte[] customDataMessageToSign() {
+        return Array.emptyByteArray();
     }
 
     @Override
@@ -84,19 +73,20 @@ public final class MC2SCAggregatedTransaction
     }
 
     @Override
-    public long timestamp() {
-        return timestamp;
-    }
-
-    @Override
     public byte transactionTypeId() {
         return MC2SCAggregatedTransactionId.id();
     }
 
     @Override
+    public byte version() { return version; }
+
+    @Override
     public String id() {
         return Base16.encode(mc2scMerkleRootHash());
     }
+
+    @Override
+    public Boolean isCustom() { return false; }
 
     @Override
     public byte[] messageToSign() {
@@ -118,37 +108,19 @@ public final class MC2SCAggregatedTransaction
         return Collections.unmodifiableList(mc2scTransactionsOutputs);
     }
 
-    public boolean semanticValidity() {
-        return true;
-    }
+    public void semanticValidity() throws TransactionSemanticValidityException {
+        if (version != MC2SC_AGGREGATED_TRANSACTION_VERSION) {
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "unsupported version number.", id()));
+        }
 
+        if (bytes().length > MAX_TRANSACTION_SIZE) {
+            throw new TransactionSemanticValidityException("Transaction is too large.");
+        }
+    }
 
     @Override
-    public byte[] bytes() {
-        byte[] transactions = mc2scTransactionsSerializer.toBytes(mc2scTransactionsOutputs);
-        return Bytes.concat(                                        // minimum MC2SCAggregatedTransaction length is 12 bytes
-                Longs.toByteArray(timestamp()),                     // 8 bytes
-                Ints.toByteArray(transactions.length),              // 4 bytes
-                transactions                                        // depends on previous value (>=4 bytes)
-        );
-    }
-
-    public static MC2SCAggregatedTransaction parseBytes(byte[] bytes) {
-        if (bytes.length < 12)
-            throw new IllegalArgumentException("Input data corrupted.");
-
-        if (bytes.length > MAX_TRANSACTION_SIZE)
-            throw new IllegalArgumentException("Input data length is too large.");
-
-        int offset = 0;
-
-        long timestamp = BytesUtils.getLong(bytes, offset);
-        offset += 8;
-
-        int batchSize = BytesUtils.getInt(bytes, offset);
-        offset += 4;
-        List<SidechainRelatedMainchainOutput> mc2scTransactions = mc2scTransactionsSerializer.parseBytes(Arrays.copyOfRange(bytes, offset, offset + batchSize));
-
-        return new MC2SCAggregatedTransaction(mc2scTransactions, timestamp);
+    public byte[] customFieldsData() {
+        return Array.emptyByteArray();
     }
 }

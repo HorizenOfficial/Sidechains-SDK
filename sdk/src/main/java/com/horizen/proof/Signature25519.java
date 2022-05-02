@@ -5,10 +5,6 @@ import com.horizen.secret.PrivateKey25519;
 import com.horizen.utils.Ed25519;
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils;
 
-import java.util.Arrays;
-
-import static com.horizen.proof.CoreProofsIdsEnum.Signature25519Id;
-
 
 public final class Signature25519 extends AbstractSignature25519<PrivateKey25519, PublicKey25519Proposition>
 {
@@ -22,22 +18,8 @@ public final class Signature25519 extends AbstractSignature25519<PrivateKey25519
     }
 
     @Override
-    public byte proofTypeId() {
-        return Signature25519Id.id();
-    }
-
-    @Override
-    public byte[] bytes() {
-        return Arrays.copyOf(signatureBytes, SIGNATURE_LENGTH);
-    }
-
-    @Override
     public ProofSerializer serializer() {
         return Signature25519Serializer.getSerializer();
-    }
-
-    public static Signature25519 parseBytes(byte[] bytes) {
-        return new Signature25519(bytes);
     }
 
     @Override

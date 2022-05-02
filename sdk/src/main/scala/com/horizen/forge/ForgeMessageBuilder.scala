@@ -1,34 +1,38 @@
 package com.horizen.forge
 
+import akka.util.Timeout
 import com.horizen.block._
-import com.horizen.box.{ForgerBox, NoncedBox}
+import com.horizen.box.Box
 import com.horizen.chain.{MainchainHeaderHash, SidechainBlockInfo}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
 import com.horizen.params.{NetworkParams, RegTestParams}
-import com.horizen.proof.VrfProof
+import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, VrfSecretKey}
 import com.horizen.transaction.SidechainTransaction
-import com.horizen.utils.MerklePath
+import com.horizen.utils.{FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerkleTree, TimeToEpochUtils}
 import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.util.{ModifierId, ScorexLogging}
-import com.horizen.chain._
-import com.horizen.vrf.VrfOutput
 
+import scala.collection.JavaConverters._
+import com.horizen.vrf.VrfOutput
+import scorex.core.NodeViewModifier
+
+import scala.collection.mutable.ArrayBuffer
 import scala.util.{Failure, Success, Try}
 
 class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                           companion: SidechainTransactionsCompanion,
                           val params: NetworkParams,
-                          allowNoWebsocketConnectionInRegtest: Boolean) extends ScorexLogging with TimeToEpochSlotConverter {
+                          allowNoWebsocketConnectionInRegtest: Boolean) extends ScorexLogging {
   type ForgeMessageType = GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, ForgeResult]
 
   case class BranchPointInfo(branchPointId: ModifierId, referenceDataToInclude: Seq[MainchainHeaderHash], headersToInclude: Seq[MainchainHeaderHash])
 
-  def buildForgeMessageForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber): ForgeMessageType = {
-      val forgingFunctionForEpochAndSlot: View => ForgeResult = tryToForgeNextBlock(consensusEpochNumber, consensusSlotNumber)
+  def buildForgeMessageForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber, timeout: Timeout): ForgeMessageType = {
+      val forgingFunctionForEpochAndSlot: View => ForgeResult = tryToForgeNextBlock(consensusEpochNumber, consensusSlotNumber, timeout)
 
       val forgeMessage: ForgeMessageType =
         GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, ForgeResult](forgingFunctionForEpochAndSlot)
@@ -36,7 +40,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       forgeMessage
   }
 
-  protected def tryToForgeNextBlock(nextConsensusEpochNumber: ConsensusEpochNumber, nextConsensusSlotNumber: ConsensusSlotNumber)(nodeView: View): ForgeResult = Try {
+  protected def tryToForgeNextBlock(nextConsensusEpochNumber: ConsensusEpochNumber, nextConsensusSlotNumber: ConsensusSlotNumber, timeout: Timeout)(nodeView: View): ForgeResult = Try {
     log.info(s"Try to forge block for epoch $nextConsensusEpochNumber with slot $nextConsensusSlotNumber")
 
     val branchPointInfo: BranchPointInfo = getBranchPointInfo(nodeView.history) match {
@@ -47,79 +51,98 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val parentBlockId: ModifierId = branchPointInfo.branchPointId
     val parentBlockInfo = nodeView.history.blockInfoById(parentBlockId)
 
-    checkNextEpochAndSlot(parentBlockInfo.timestamp, nodeView.history.bestBlockInfo.timestamp, nextConsensusEpochNumber, nextConsensusSlotNumber)
+    checkNextEpochAndSlot(parentBlockInfo.timestamp,nodeView.history.bestBlockInfo.timestamp,
+        nextConsensusEpochNumber, nextConsensusSlotNumber) match {
+      case Some(forgeFailure) => return forgeFailure
+      case _ => // checks passed
+    }
 
-    val nextBlockTimestamp = getTimeStampForEpochAndSlot(nextConsensusEpochNumber, nextConsensusSlotNumber)
+    val nextBlockTimestamp = TimeToEpochUtils.getTimeStampForEpochAndSlot(params, nextConsensusEpochNumber, nextConsensusSlotNumber)
     val consensusInfo: FullConsensusEpochInfo = nodeView.history.getFullConsensusEpochInfoForBlock(nextBlockTimestamp, parentBlockId)
     val totalStake = consensusInfo.stakeConsensusEpochInfo.totalStake
     val vrfMessage = buildVrfMessage(nextConsensusSlotNumber, consensusInfo.nonceConsensusEpochInfo)
 
     val sidechainWallet = nodeView.vault
 
-    // Get ForgerBoxes and MerklePaths from wallet and order them by stake decreasing.
-    val forgerBoxMerklePathInfoSeq: Seq[(ForgerBox, MerklePath)]
-    = sidechainWallet.getForgerBoxMerklePathInfoOpt(nextConsensusEpochNumber).getOrElse(Seq())
-      .sortWith(_.forgerBox.value() > _.forgerBox.value())
-      .map(d => (d.forgerBox, d.merklePath))
+    // Get ForgingStakeMerklePathInfo from wallet and order them by stake decreasing.
+    val forgingStakeMerklePathInfoSeq: Seq[ForgingStakeMerklePathInfo] =
+      sidechainWallet.getForgingStakeMerklePathInfoOpt(nextConsensusEpochNumber).getOrElse(Seq())
+        .sortWith(_.forgingStakeInfo.stakeAmount > _.forgingStakeInfo.stakeAmount)
 
-    val ownedForgingDataView: Seq[(ForgerBox, MerklePath, PrivateKey25519, VrfProof, VrfOutput)]
-    = forgerBoxMerklePathInfoSeq.view.flatMap{case (forgerBox, merklePath) => getSecretsAndProof(sidechainWallet, vrfMessage, forgerBox, merklePath)}
+    if (forgingStakeMerklePathInfoSeq.isEmpty) {
+      NoOwnedForgingStake
+    } else {
+      val ownedForgingDataView: Seq[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof, VrfOutput)]
+      = forgingStakeMerklePathInfoSeq.view.flatMap(forgingStakeMerklePathInfo => getSecretsAndProof(sidechainWallet, vrfMessage, forgingStakeMerklePathInfo))
 
-    val eligibleForgingDataView: Seq[(ForgerBox, MerklePath, PrivateKey25519, VrfProof, VrfOutput)] =
-      ownedForgingDataView.filter{case(forgerBox, merklePath, privateKey25519, vrfProof, vrfOutput) => vrfProofCheckAgainstStake(vrfOutput, forgerBox.value(), totalStake)}
+      val eligibleForgingDataView: Seq[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof, VrfOutput)]
+      = ownedForgingDataView.filter { case (forgingStakeMerklePathInfo, _, _, vrfOutput) =>
+        vrfProofCheckAgainstStake(vrfOutput, forgingStakeMerklePathInfo.forgingStakeInfo.stakeAmount, totalStake)
+      }
 
-    val eligibleForgerOpt = eligibleForgingDataView.headOption //force all forging related calculations
 
-    val forgingResult = eligibleForgerOpt
-      .map{case (forgerBox, merklePath, privateKey25519, vrfProof, vrfOutput) =>
-        forgeBlock(nodeView, nextBlockTimestamp, branchPointInfo, forgerBox, merklePath, privateKey25519, vrfProof)}
-      .getOrElse(SkipSlot)
+      val eligibleForgerOpt = eligibleForgingDataView.headOption //force all forging related calculations
 
-    log.info(s"Forge result is: $forgingResult")
-    forgingResult
+      val forgingResult = eligibleForgerOpt
+        .map { case (forgingStakeMerklePathInfo, privateKey25519, vrfProof, _) =>
+          forgeBlock(nodeView, nextBlockTimestamp, branchPointInfo, forgingStakeMerklePathInfo, privateKey25519, vrfProof, timeout)
+        }
+        .getOrElse(SkipSlot("No eligible forging stake found."))
+      forgingResult
     }
-    match {
-      case Success(result) => result
+  } match {
+      case Success(result) => {
+        log.info(s"Forge result is: $result")
+        result
+      }
       case Failure(ex) => {
         log.error(s"Failed to forge block for ${nextConsensusEpochNumber} epoch ${nextConsensusSlotNumber} slot due:" , ex)
         ForgeFailed(ex)
     }
   }
 
-  private def getSecretsAndProof(wallet: SidechainWallet, vrfMessage: VrfMessage, forgerBox: ForgerBox, merklePath: MerklePath): Option[(ForgerBox, MerklePath, PrivateKey25519, VrfProof, VrfOutput)] = {
+  private def getSecretsAndProof(wallet: SidechainWallet,
+                                 vrfMessage: VrfMessage,
+                                 forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo): Option[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof, VrfOutput)] = {
     for {
-      rewardPrivateKey <- wallet.secret(forgerBox.blockSignProposition()).asInstanceOf[Option[PrivateKey25519]]
-      vrfSecret <- wallet.secret(forgerBox.vrfPubKey()).asInstanceOf[Option[VrfSecretKey]]
+      blockSignPrivateKey <- wallet.secret(forgingStakeMerklePathInfo.forgingStakeInfo.blockSignPublicKey).asInstanceOf[Option[PrivateKey25519]]
+      vrfSecret <- wallet.secret(forgingStakeMerklePathInfo.forgingStakeInfo.vrfPublicKey).asInstanceOf[Option[VrfSecretKey]]
       vrfProofAndHash <- Some(vrfSecret.prove(vrfMessage))
     } yield {
       val vrfProof = vrfProofAndHash.getKey
       val vrfOutput = vrfProofAndHash.getValue
-      (forgerBox, merklePath, rewardPrivateKey, vrfProof, vrfOutput)
+      (forgingStakeMerklePathInfo, blockSignPrivateKey, vrfProof, vrfOutput)
     }
   }
 
   private def checkNextEpochAndSlot(parentBlockTimestamp: Long,
                                     currentTipBlockTimestamp: Long,
                                     nextEpochNumber: ConsensusEpochNumber,
-                                    nextSlotNumber: ConsensusSlotNumber): Unit = {
+                                    nextSlotNumber: ConsensusSlotNumber): Option[ForgeFailure] = {
     // Parent block and current tip block can be the same in case of extension the Active chain.
     // But can be different in case of sidechain fork caused by mainchain fork.
     // In this case parent block is before the tip, and tip block will be the last Ommer included into the next block.
-    val parentBlockEpochAndSlot: ConsensusEpochAndSlot = timestampToEpochAndSlot(parentBlockTimestamp)
-    val currentTipBlockEpochAndSlot: ConsensusEpochAndSlot = timestampToEpochAndSlot(currentTipBlockTimestamp)
+    val parentBlockEpochAndSlot: ConsensusEpochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params, parentBlockTimestamp)
+    val currentTipBlockEpochAndSlot: ConsensusEpochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params, currentTipBlockTimestamp)
     val nextBlockEpochAndSlot: ConsensusEpochAndSlot = ConsensusEpochAndSlot(nextEpochNumber, nextSlotNumber)
 
-    if(parentBlockEpochAndSlot >= nextBlockEpochAndSlot) {
-      throw new IllegalArgumentException (s"Try to forge block with incorrect epochAndSlot $nextBlockEpochAndSlot which are equal or less than parent block epochAndSlot: $parentBlockEpochAndSlot")
+    if(parentBlockEpochAndSlot > nextBlockEpochAndSlot) {
+      return Some(ForgeFailed(new IllegalArgumentException (s"Try to forge block with incorrect epochAndSlot $nextBlockEpochAndSlot which are equal or less than parent block epochAndSlot: $parentBlockEpochAndSlot")))
+    }
+
+    if(parentBlockEpochAndSlot == nextBlockEpochAndSlot) {
+      return Some(SkipSlot(s"Chain tip with $nextBlockEpochAndSlot has been generated already."))
     }
 
     if ((nextEpochNumber - parentBlockEpochAndSlot.epochNumber) > 1) {
-      throw new IllegalArgumentException (s"Forging is not possible, because of whole consensus epoch is missed: current epoch = $nextEpochNumber, parent epoch = ${parentBlockEpochAndSlot.epochNumber}")
+      return Some(ForgeFailed(new IllegalArgumentException (s"Forging is not possible, because of whole consensus epoch is missed: current epoch = $nextEpochNumber, parent epoch = ${parentBlockEpochAndSlot.epochNumber}")))
     }
 
     if(currentTipBlockEpochAndSlot >= nextBlockEpochAndSlot) {
-      throw new IllegalArgumentException (s"Try to forge block with incorrect epochAndSlot $nextBlockEpochAndSlot which are equal or less than last ommer epochAndSlot: $currentTipBlockEpochAndSlot")
+      return Some(ForgeFailed(new IllegalArgumentException (s"Try to forge block with incorrect epochAndSlot $nextBlockEpochAndSlot which are equal or less than last ommer epochAndSlot: $currentTipBlockEpochAndSlot")))
     }
+
+    None
   }
 
   private def getBranchPointInfo(history: SidechainHistory): Try[BranchPointInfo] = Try {
@@ -144,7 +167,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
         withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength
 
       // to not to include mcblock references data from different withdrawal epochs
-      val maxReferenceDataNumber: Int = Math.min(SidechainBlock.MAX_MC_BLOCKS_NUMBER, withdrawalEpochMcBlocksLeft)
+      val maxReferenceDataNumber: Int = withdrawalEpochMcBlocksLeft
 
       val missedMainchainReferenceDataHeaderHashes: Seq[MainchainHeaderHash] = history.missedMainchainReferenceDataHeaderHashes
       val nextMainchainReferenceDataHeaderHashes: Seq[MainchainHeaderHash] = missedMainchainReferenceDataHeaderHashes ++ newHeaderHashes
@@ -159,7 +182,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       val newMainchainHeadersNumber = newHeaderHashes.size
 
       if (orphanedMainchainHeadersNumber >= newMainchainHeadersNumber) {
-        ForgeFailed(new Exception("No sense to forge: active branch contains orphaned MainchainHeaders, that number is greater or equal to actual new MainchainHeaders."))
+        throw new Exception("No sense to forge: active branch contains orphaned MainchainHeaders, that number is greater or equal to actual new MainchainHeaders.")
       }
 
       val firstOrphanedHashHeight: Int = bestMainchainCommonPointHeight + 1
@@ -180,48 +203,61 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     }
   }
 
+  private def precalculateBlockHeaderSize(parentId: ModifierId,
+                                          timestamp: Long,
+                                          forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo,
+                                          vrfProof: VrfProof): Int = {
+    // Create block header template, setting dummy values where it is possible.
+    // Note: SidechainBlockHeader length is not constant because of the forgingStakeMerklePathInfo.merklePath.
+    val header = SidechainBlockHeader(
+      SidechainBlock.BLOCK_VERSION,
+      parentId,
+      timestamp,
+      forgingStakeMerklePathInfo.forgingStakeInfo,
+      forgingStakeMerklePathInfo.merklePath,
+      vrfProof,
+      new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
+      new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
+      new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
+      Long.MaxValue,
+      new Array[Byte](NodeViewModifier.ModifierIdSize),
+      new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH)) // empty signature
+    )
+
+    header.bytes.length
+  }
+  
   private def forgeBlock(nodeView: View,
                          timestamp: Long,
                          branchPointInfo: BranchPointInfo,
-                         forgerBox: ForgerBox,
-                         forgerBoxMerklePath: MerklePath,
+                         forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo,
                          blockSignPrivateKey: PrivateKey25519,
-                         vrfProof: VrfProof): ForgeResult = {
+                         vrfProof: VrfProof,
+                         timeout: Timeout): ForgeResult = {
     val parentBlockId: ModifierId = branchPointInfo.branchPointId
     val parentBlockInfo: SidechainBlockInfo = nodeView.history.blockInfoById(branchPointInfo.branchPointId)
     var withdrawalEpochMcBlocksLeft: Int = params.withdrawalEpochLength - parentBlockInfo.withdrawalEpochInfo.lastEpochIndex
     if (withdrawalEpochMcBlocksLeft == 0) // parent block is the last block of the epoch
       withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength
 
-    // Get all needed MainchainBlockReferences from MC Node
-    val mainchainHashesToRetrieve: Seq[MainchainHeaderHash] = (branchPointInfo.referenceDataToInclude ++ branchPointInfo.headersToInclude).distinct
-    val mainchainBlockReferences: Seq[MainchainBlockReference] =
-      mainchainSynchronizer.getMainchainBlockReferences(nodeView.history, mainchainHashesToRetrieve) match {
-        case Success(references) => references
-        case Failure(ex) => return ForgeFailed(ex)
-      }
+    var blockSize: Int = precalculateBlockHeaderSize(branchPointInfo.branchPointId, timestamp, forgingStakeMerklePathInfo, vrfProof)
+    blockSize += 4 + 4 // placeholder for the MainchainReferenceData and Transactions sequences size values
 
-    // Extract proper MainchainReferenceData
-    val mainchainReferenceData: Seq[MainchainBlockReferenceData] =
-      mainchainBlockReferences.withFilter(ref => branchPointInfo.referenceDataToInclude.contains(byteArrayToMainchainHeaderHash(ref.header.hash)))
-      .map(_.data)
+    // Get all needed MainchainBlockHeaders from MC Node
+    val mainchainHeaderHashesToRetrieve: Seq[MainchainHeaderHash] = branchPointInfo.headersToInclude
 
     // Extract proper MainchainHeaders
     val mainchainHeaders: Seq[MainchainHeader] =
-      mainchainBlockReferences.withFilter(ref => branchPointInfo.headersToInclude.contains(byteArrayToMainchainHeaderHash(ref.header.hash)))
-        .map(_.header)
-
-    // Get transactions if possible
-    val transactions: Seq[SidechainTransaction[Proposition, NoncedBox[Proposition]]] =
-      if (branchPointInfo.referenceDataToInclude.size == withdrawalEpochMcBlocksLeft) { // SC block is going to become the last block of the withdrawal epoch
-        Seq() // no SC Txs allowed
-      } else { // SC block is in the middle of the epoch
-        nodeView.pool.take(SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER) // TO DO: problems with types
-          .map(t => t.asInstanceOf[SidechainTransaction[Proposition, NoncedBox[Proposition]]])
-          .toSeq
+      mainchainSynchronizer.getMainchainBlockHeaders(mainchainHeaderHashesToRetrieve) match {
+        case Success(headers) => headers
+        case Failure(ex) => return ForgeFailed(ex)
       }
 
-    // Get ommers in case if branch point is not current best block
+    // Update block size with MC Headers
+    val mcHeadersSerializer = new ListSerializer[MainchainHeader](MainchainHeaderSerializer)
+    blockSize += mcHeadersSerializer.toBytes(mainchainHeaders.asJava).length
+
+    // Get Ommers in case the branch point is not the current best block
     var ommers: Seq[Ommer] = Seq()
     var blockId = nodeView.history.bestBlockId
     while (blockId != branchPointInfo.branchPointId) {
@@ -230,19 +266,104 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       ommers = Ommer.toOmmer(block) +: ommers
     }
 
+    // Update block size with Ommers
+    val ommersSerializer = new ListSerializer[Ommer](OmmerSerializer)
+    blockSize += ommersSerializer.toBytes(ommers.asJava).length
+
+    // Get all needed MainchainBlockReferences from the MC Node
+    // Extract MainchainReferenceData and collect as much as the block can fit
+    val mainchainBlockReferenceDataToRetrieve: Seq[MainchainHeaderHash] = branchPointInfo.referenceDataToInclude
+
+    val mainchainReferenceData: ArrayBuffer[MainchainBlockReferenceData] = ArrayBuffer()
+    // Collect MainchainRefData considering the actor message processing timeout
+    // Note: We may do a lot of websocket `getMainchainBlockReference` operations that are a bit slow,
+    // because they are processed one by one, so we limit requests in time.
+    val startTime: Long = System.currentTimeMillis()
+    mainchainBlockReferenceDataToRetrieve.takeWhile(hash => {
+      mainchainSynchronizer.getMainchainBlockReference(hash) match {
+        case Success(ref) => {
+          val refDataSize = ref.data.bytes.length + 4 // placeholder for MainchainReferenceData length
+          if(blockSize + refDataSize > SidechainBlock.MAX_BLOCK_SIZE)
+            false // stop data collection
+          else {
+            mainchainReferenceData.append(ref.data)
+            blockSize += refDataSize
+            // Note: temporary solution because of the delays on MC Websocket server part.
+            // Can be after MC Websocket performance optimization.
+            val isTimeout: Boolean = System.currentTimeMillis() - startTime >= timeout.duration.toMillis / 2
+            !isTimeout // continue data collection
+          }
+        }
+        case Failure(ex) => return ForgeFailed(ex)
+      }
+    })
+
+    val isWithdrawalEpochLastBlock: Boolean = mainchainReferenceData.size == withdrawalEpochMcBlocksLeft
+
+    // Collect transactions if possible
+    val transactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]] =
+      if (isWithdrawalEpochLastBlock) { // SC block is going to become the last block of the withdrawal epoch
+        Seq() // no SC Txs allowed
+      } else { // SC block is in the middle of the epoch
+        var txsCounter: Int = 0
+        nodeView.pool.take(nodeView.pool.size).filter(tx => {
+          val txSize = tx.bytes.length + 4 // placeholder for Tx length
+          txsCounter += 1
+          if(txsCounter > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER || blockSize + txSize > SidechainBlock.MAX_BLOCK_SIZE)
+            false // stop data collection
+          else {
+            blockSize += txSize
+            true // continue data collection
+          }
+        }).map(tx => tx.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]).toSeq // TO DO: problems with types
+      }
+
+    val feePayments = if(isWithdrawalEpochLastBlock) {
+      // Current block is expect to be the continuation of the current tip, so there are no ommers.
+      require(nodeView.history.bestBlockId == branchPointInfo.branchPointId, "Last block of the withdrawal epoch expect to be a continuation of the tip.")
+      require(ommers.isEmpty, "No Ommers allowed for the last block of the withdrawal epoch.")
+
+      val withdrawalEpochNumber: Int = nodeView.state.getWithdrawalEpochInfo.epoch
+
+      val forgedBlockFeeInfo = SidechainBlock.create(
+        parentBlockId,
+        SidechainBlock.BLOCK_VERSION,
+        timestamp,
+        mainchainReferenceData,
+        transactions,
+        mainchainHeaders,
+        ommers,
+        blockSignPrivateKey,
+        forgingStakeMerklePathInfo.forgingStakeInfo,
+        vrfProof,
+        forgingStakeMerklePathInfo.merklePath,
+        new Array[Byte](32), // dummy feePaymentsHash value
+        companion) match {
+        case Success(blockTemplate) => blockTemplate.feeInfo
+        case Failure(exception) => return ForgeFailed(exception)
+      }
+
+      nodeView.state.getFeePayments(withdrawalEpochNumber, Some(forgedBlockFeeInfo))
+    } else {
+      Seq()
+    }
+
+    val feePaymentsHash: Array[Byte] = FeePaymentsUtils.calculateFeePaymentsHash(feePayments)
+
     val tryBlock = SidechainBlock.create(
       parentBlockId,
+      SidechainBlock.BLOCK_VERSION,
       timestamp,
       mainchainReferenceData,
       transactions,
       mainchainHeaders,
       ommers,
       blockSignPrivateKey,
-      forgerBox,
+      forgingStakeMerklePathInfo.forgingStakeInfo,
       vrfProof,
-      forgerBoxMerklePath,
-      companion,
-      params)
+      forgingStakeMerklePathInfo.merklePath,
+      feePaymentsHash,
+      companion)
 
     tryBlock match {
       case Success(block) => ForgeSuccess(block)

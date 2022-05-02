@@ -1,7 +1,10 @@
 package com.horizen.params
-import java.math.BigInteger
 
-import com.horizen.proposition.SchnorrProposition
+import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion1}
+import java.math.BigInteger
+import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
+import com.horizen.cryptolibprovider.CumulativeHashFunctions
+import com.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
 import scorex.core.block.Block
 import scorex.util.ModifierId
 import scorex.util.bytesToId
@@ -19,10 +22,17 @@ case class RegTestParams(
                           override val consensusSlotsInEpoch: Int = 720,
                           override val signersPublicKeys: Seq[SchnorrProposition] = Seq(),
                           override val signersThreshold: Int = 0,
-                          override val provingKeyFilePath: String = "",
-                          override val verificationKeyFilePath: String = "",
-                          override val calculatedSysDataConstant: Array[Byte] = Array()
-) extends NetworkParams {
+                          override val certProvingKeyFilePath: String = "",
+                          override val certVerificationKeyFilePath: String = "",
+                          override val calculatedSysDataConstant: Array[Byte] = new Array[Byte](32),
+                          override val initialCumulativeCommTreeHash: Array[Byte] = new Array[Byte](CumulativeHashFunctions.hashLength()),
+                          override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig] = Seq(),
+                          override val cswProvingKeyFilePath: String = "",
+                          override val cswVerificationKeyFilePath: String = "",
+                          override val restrictForgers: Boolean = false,
+                          override val allowedForgersList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = Seq(),
+                          override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1
+                        ) extends NetworkParams {
   override val EquihashN: Int = 48
   override val EquihashK: Int = 5
   override val EquihashVarIntLength: Int = 1

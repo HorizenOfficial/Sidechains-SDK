@@ -1,6 +1,8 @@
 os: linux
 dist: bionic
 language: generic
+vm:
+  size: large
 addons:
   apt:
     packages:

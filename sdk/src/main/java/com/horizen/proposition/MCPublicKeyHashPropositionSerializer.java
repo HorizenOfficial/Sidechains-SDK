@@ -20,11 +20,11 @@ public final class MCPublicKeyHashPropositionSerializer implements PropositionSe
 
     @Override
     public void serialize(MCPublicKeyHashProposition proposition, Writer writer) {
-        writer.putBytes(proposition.bytes());
+        writer.putBytes(proposition.pubKeyHashBytes);
     }
 
     @Override
     public MCPublicKeyHashProposition parse(Reader reader) {
-        return MCPublicKeyHashProposition.parseBytes(reader.getBytes(reader.remaining()));
+        return new MCPublicKeyHashProposition(reader.getBytes(MCPublicKeyHashProposition.KEY_LENGTH));
     }
 }

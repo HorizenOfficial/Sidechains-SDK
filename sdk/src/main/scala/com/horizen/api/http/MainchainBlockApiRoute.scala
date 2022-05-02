@@ -7,6 +7,7 @@ import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.MainchainErrorResponse._
 import com.horizen.api.http.MainchainRestSchema._
 import com.horizen.block.MainchainBlockReference
+import com.horizen.chain.MainchainHeaderInfo
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
@@ -15,17 +16,19 @@ import scorex.core.utils.ScorexEncoding
 
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.ExecutionContext
+import java.util.{Optional => JOptional}
 
 case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
                                  (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute
     with ScorexEncoding {
 
-  override val route: Route = (pathPrefix("mainchain")) {
-    bestBlockReferenceInfo ~
+  override val route: Route = pathPrefix("mainchain") {
+      bestBlockReferenceInfo ~
       genesisBlockReferenceInfo ~
       blockReferenceInfoBy ~
-      blockReferenceByHash
+      blockReferenceByHash ~
+      mainchainHeaderInfoByHash
   }
 
   /**
@@ -40,7 +43,7 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
         .getBestMainchainBlockReferenceInfo.asScala match {
         case Some(mcBlockRef) =>
           ApiResponseUtil.toResponse(MainchainBlockReferenceInfoResponse(mcBlockRef))
-        case None => ApiResponseUtil.toResponse(ErrorMainchainBlockNotFound("No best block are present in the mainchain", None))
+        case None => ApiResponseUtil.toResponse(ErrorMainchainBlockNotFound("No best block are present in the mainchain", JOptional.empty()))
       }
     }
   }
@@ -52,7 +55,7 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
       sidechainNodeView.getNodeHistory
         .getMainchainBlockReferenceInfoByMainchainBlockHeight(mainchainCreationBlockHeight).asScala match {
         case Some(mcBlockRef) => ApiResponseUtil.toResponse(MainchainBlockReferenceInfoResponse(mcBlockRef))
-        case None => ApiResponseUtil.toResponse(ErrorMainchainBlockNotFound("No genesis mainchain block is present", None))
+        case None => ApiResponseUtil.toResponse(ErrorMainchainBlockNotFound("No genesis mainchain block is present", JOptional.empty()))
       }
     }
   }
@@ -68,7 +71,7 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
                 if (body.format)
                   ApiResponseUtil.toResponse(MainchainBlockReferenceInfoResponse(mcBlockRef))
                 else ApiResponseUtil.toResponse(MainchainBlockHexResponse(BytesUtils.toHexString(mcBlockRef.bytes())))
-              case None => ApiResponseUtil.toResponse(ErrorMainchainBlockReferenceNotFound("No reference info had been found for given hash", None))
+              case None => ApiResponseUtil.toResponse(ErrorMainchainBlockReferenceNotFound("No reference info had been found for given hash", JOptional.empty()))
             }
           case None =>
             body.height match {
@@ -78,9 +81,9 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
                     if (body.format)
                       ApiResponseUtil.toResponse(MainchainBlockReferenceInfoResponse(mcBlockRef))
                     else ApiResponseUtil.toResponse(MainchainBlockHexResponse(BytesUtils.toHexString(mcBlockRef.bytes())))
-                  case None => ApiResponseUtil.toResponse(ErrorMainchainBlockReferenceNotFound("No reference info had been found for given height", None))
+                  case None => ApiResponseUtil.toResponse(ErrorMainchainBlockReferenceNotFound("No reference info had been found for given height", JOptional.empty()))
                 }
-              case None => ApiResponseUtil.toResponse(ErrorMainchainInvalidParameter("Provide parameters either hash or height.", None))
+              case None => ApiResponseUtil.toResponse(ErrorMainchainInvalidParameter("Provide parameters either hash or height.", JOptional.empty()))
             }
         }
       }
@@ -101,7 +104,18 @@ case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidech
             if (body.format)
               ApiResponseUtil.toResponse(MainchainBlockResponse(mcBlockRef))
             else ApiResponseUtil.toResponse(MainchainBlockHexResponse(BytesUtils.toHexString(mcBlockRef.bytes)))
-          case None => ApiResponseUtil.toResponse(ErrorMainchainBlockNotFound("No Mainchain reference had been found for given hash", None))
+          case None => ApiResponseUtil.toResponse(ErrorMainchainBlockNotFound("No Mainchain reference had been found for given hash", JOptional.empty()))
+        }
+      }
+    }
+  }
+
+  def mainchainHeaderInfoByHash: Route = (post & path("mainchainHeaderInfoByHash")) {
+    entity(as[ReqMainchainHeaderInfoBy]) { body =>
+      withNodeView { sidechainNodeView =>
+        sidechainNodeView.getNodeHistory.getMainchainHeaderInfoByHash(BytesUtils.fromHexString(body.hash)).asScala match {
+          case Some(mcHeaderInfo) => ApiResponseUtil.toResponse(MainchainHeaderInfoResponse(mcHeaderInfo))
+          case None => ApiResponseUtil.toResponse(ErrorMainchainBlockHeaderNotFound("No Mainchain Header had been found for given hash", JOptional.empty()))
         }
       }
     }
@@ -117,6 +131,9 @@ object MainchainRestSchema {
   private[api] case class MainchainBlockReferenceInfoResponse(blockReferenceInfo: MainchainBlockReferenceInfo) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
+  private[api] case class MainchainHeaderInfoResponse(mainchainHeaderInfo: MainchainHeaderInfo) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
   private[api] case class MainchainBlockHexResponse(blockHex: String) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
@@ -125,20 +142,27 @@ object MainchainRestSchema {
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqBlockBy(hash: String, format: Boolean = false)
 
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqMainchainHeaderInfoBy(hash: String)
+
 }
 
 object MainchainErrorResponse {
 
-  case class ErrorMainchainBlockNotFound(description: String, exception: Option[Throwable]) extends ErrorResponse {
+  case class ErrorMainchainBlockNotFound(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0501"
   }
 
-  case class ErrorMainchainBlockReferenceNotFound(description: String, exception: Option[Throwable]) extends ErrorResponse {
+  case class ErrorMainchainBlockReferenceNotFound(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0502"
   }
 
-  case class ErrorMainchainInvalidParameter(description: String, exception: Option[Throwable]) extends ErrorResponse {
+  case class ErrorMainchainInvalidParameter(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0503"
+  }
+
+  case class ErrorMainchainBlockHeaderNotFound(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
+    override val code: String = "0504"
   }
 
 }

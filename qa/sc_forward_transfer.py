@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 import json
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -8,7 +8,7 @@ from test_framework.util import assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, is_mainchain_block_included_in_sc_block, check_box_balance, \
-    check_mainchain_block_reference_info, check_wallet_balance, generate_next_blocks
+    check_mainchain_block_reference_info, check_wallet_coins_balance, generate_next_blocks
 
 """
 Check the bootstrap feature.
@@ -39,7 +39,7 @@ class SCForwardTransfer(SidechainTestFramework):
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, 5), sc_node_configuration)
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options.tmpdir, network)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
 
     def sc_setup_nodes(self):
         return start_sc_nodes(1, self.options.tmpdir)
@@ -61,16 +61,18 @@ class SCForwardTransfer(SidechainTestFramework):
             "The mainchain block is not included inside SC block reference info.")
 
         # check all keys/boxes/balances are coherent with the default initialization
-        check_wallet_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance)
-        check_box_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account, 3, 1,
+        check_wallet_coins_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance)
+        check_box_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account, "ForgerBox", 1,
                                  self.sc_nodes_bootstrap_info.genesis_account_balance)
 
         boot_info = self.sc_nodes_bootstrap_info
+        mc_return_address = self.nodes[0].getnewaddress()
 
         (sc_info, mc_block_count) = forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
                                                                   self.nodes[0],
                                                                   self.sc_nodes_bootstrap_info.genesis_account.publicKey,
-                                                                  self.sc_nodes_bootstrap_info.genesis_account_balance)
+                                                                  self.sc_nodes_bootstrap_info.genesis_account_balance,
+                                                                  mc_return_address)
 
         generate_next_blocks(sc_node, "first node", 1)
 
@@ -89,8 +91,8 @@ class SCForwardTransfer(SidechainTestFramework):
             "The mainchain block is not included inside SC block reference info.")
 
         # check all keys/boxes/balances are coherent with the default initialization
-        check_wallet_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance*2)
-        check_box_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account, 0, 2,
+        check_wallet_coins_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance * 2)
+        check_box_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account, None, 2,
                                  self.sc_nodes_bootstrap_info.genesis_account_balance*2)
 
 

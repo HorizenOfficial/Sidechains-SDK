@@ -2,8 +2,8 @@ package com.horizen.storage
 
 import java.util.{ArrayList => JArrayList, List => JList}
 
-import com.horizen.block._
-import com.horizen.chain.{MainchainBlockReferenceDataInfo, _}
+import com.horizen.block.{SidechainBlockSerializer, _}
+import com.horizen.chain.{FeePaymentsInfo, MainchainBlockReferenceDataInfo, _}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.NetworkParams
@@ -31,21 +31,22 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
   require(sidechainTransactionsCompanion != null, "SidechainTransactionsCompanion must be NOT NULL.")
   require(params != null, "params must be NOT NULL.")
 
+  private val sidechainBlockSerializer = new SidechainBlockSerializer(sidechainTransactionsCompanion)
   private val bestBlockIdKey: ByteArrayWrapper = new ByteArrayWrapper(Array.fill(32)(-1: Byte))
 
   private val activeChain: ActiveChain = loadActiveChain()
 
   private def loadActiveChain(): ActiveChain = {
-    if (height == 0) {
+    if (storage.isEmpty) {
       return ActiveChain(params.mainchainCreationBlockHeight)
     }
 
-    val activeChainBlocksInfo: ArrayBuffer[(ModifierId, SidechainBlockInfo)] = new ArrayBuffer(height)
+    val activeChainBlocksInfo: ArrayBuffer[(ModifierId, SidechainBlockInfo)] = new ArrayBuffer()
 
-    activeChainBlocksInfo.append((bestBlockId, blockInfoById(bestBlockId)))
+    activeChainBlocksInfo.append((bestBlockId, blockInfoByIdFromStorage(bestBlockId)))
     while (activeChainBlocksInfo.last._2.height > 1) {
       val id = activeChainBlocksInfo.last._2.parentId
-      activeChainBlocksInfo.append((id, blockInfoById(id)))
+      activeChainBlocksInfo.append((id, blockInfoByIdFromStorage(id)))
     }
 
     val orderedChainBlocks = activeChainBlocksInfo.reverse
@@ -59,9 +60,9 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     ActiveChain(orderedChainBlocks, mainchainBlockParent.getOrElse(throw new IllegalStateException("Loaded active chain miss mainchain parent")), params.mainchainCreationBlockHeight)
   }
 
-  private def validityKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"validity$blockId"))
-
   private def blockInfoKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"blockInfo$blockId"))
+
+  private def feePaymentsInfoKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"feePaymentsInfo$blockId"))
 
   private def nextVersion: Array[Byte] = {
     val version = new Array[Byte](32)
@@ -69,7 +70,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     version
   }
 
-  def height: Int = heightOf(bestBlockId).getOrElse(0)
+  def height: Int = activeChain.height
 
   def heightOf(blockId: ModifierId): Option[Int] = {
     blockInfoOptionById(blockId).map(_.height)
@@ -88,13 +89,21 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
   }
 
   def blockById(blockId: ModifierId): Option[SidechainBlock] = {
-    storage.get(new ByteArrayWrapper(idToBytes(blockId))).asScala.flatMap { baw =>
-      val tryBlock = new SidechainBlockSerializer(sidechainTransactionsCompanion).parseBytesTry(baw.data)
-      tryBlock match {
-        case Failure(e) => log.warn("SidechainHistoryStorage: Failed to parse block bytes from storage.", e)
-        case _ =>
+    val blockIdBytes = new ByteArrayWrapper(idToBytes(blockId))
+    val baw = storage.get(blockIdBytes).asScala
+    baw match {
+      case Some(value) => {
+        sidechainBlockSerializer.parseBytesTry(value) match {
+          case Success(block) => Option(block)
+          case Failure(exception) =>
+            log.error("Error while sidechain block parsing.", exception)
+            Option.empty
+        }
       }
-      tryBlock.toOption
+      case None => {
+        log.info("SidechainHistoryStorage:blockById: byte array is empty")
+        None
+      }
     }
   }
 
@@ -103,20 +112,25 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     blockInfoOptionById(blockId).getOrElse(throw new IllegalStateException(s"No block info for block ${blockId}"))
   }
 
-  //@TODO rework to return Try() or Either() for getting error description
   def blockInfoOptionById(blockId: ModifierId): Option[SidechainBlockInfo] = {
-    if (activeChain != null && activeChain.contains(blockId))
-      return activeChain.blockInfoById(blockId)
+    activeChain.blockInfoById(blockId).orElse(blockInfoOptionByIdFromStorage(blockId))
+  }
 
-    storage.get(blockInfoKey(blockId)).asScala match {
-      case Some(baw) => SidechainBlockInfoSerializer.parseBytesTry(baw.data) match {
-        case Failure(e) =>
-          log.warn("SidechainHistoryStorage: Failed to parse block info bytes from storage.", e)
-          None
-        case Success(blockInfo) => Some(blockInfo)
-      }
-      case None => None
+  private def blockInfoOptionByIdFromStorage(blockId: ModifierId): Option[SidechainBlockInfo] = {
+    storage.get(blockInfoKey(blockId)).asScala.flatMap(baw => SidechainBlockInfoSerializer.parseBytesTry(baw.data).toOption)
+  }
+
+  private def blockInfoByIdFromStorage(blockId: ModifierId): SidechainBlockInfo = {
+    blockInfoOptionByIdFromStorage(blockId).getOrElse(throw new IllegalArgumentException(s"No blockInfo in storage for blockId ${blockId}"))
+  }
+
+  def getLastMainchainHeaderBaseInfoInclusion(blockId: ModifierId): MainchainHeaderBaseInfo = {
+    var sidechainBlockInfo: SidechainBlockInfo = this.blockInfoById(blockId)
+    while(sidechainBlockInfo.mainchainHeaderBaseInfo.isEmpty) {
+      sidechainBlockInfo = this.blockInfoById(sidechainBlockInfo.parentId)
     }
+
+    sidechainBlockInfo.mainchainHeaderBaseInfo.last
   }
 
   def parentBlockId(blockId: ModifierId): Option[ModifierId] = blockInfoOptionById(blockId).map(_.parentId)
@@ -200,7 +214,9 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
       mcHeight <- activeChain.mcHeadersHeightByMcHash(mcHash)
       sidechainBlockId <- activeChain.idByMcHeader(mcHash)
       mcMetadata <- activeChain.mcHeaderMetadataByMcHash(mcHash)
-    } yield MainchainHeaderInfo(mcHash, mcMetadata.getParentId, mcHeight, sidechainBlockId)
+      blockInfo <- activeChain.blockInfoById(sidechainBlockId)
+      mainchainBaseInfo <- blockInfo.mainchainHeaderBaseInfo.find(info => info.hash.equals(mcHash))
+    } yield MainchainHeaderInfo(mcHash, mcMetadata.getParentId, mcHeight, sidechainBlockId, mainchainBaseInfo.cumulativeCommTreeHash)
   }
 
   def getBestMainchainBlockReferenceDataInfo: Option[MainchainBlockReferenceDataInfo] = {
@@ -241,6 +257,19 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     this
   }
 
+  def updateFeePaymentsInfo(blockId: ModifierId, feePaymentsInfo: FeePaymentsInfo): Try[SidechainHistoryStorage] = Try {
+    storage.update(
+      nextVersion,
+      java.util.Arrays.asList(new JPair(new ByteArrayWrapper(feePaymentsInfoKey(blockId)), new ByteArrayWrapper(feePaymentsInfo.bytes))),
+      new JArrayList[ByteArrayWrapper]()
+    )
+    this
+  }
+
+  def getFeePaymentsInfo(blockId: ModifierId): Option[FeePaymentsInfo] = {
+    storage.get(feePaymentsInfoKey(blockId)).asScala.flatMap(baw => FeePaymentsInfoSerializer.parseBytesTry(baw.data).toOption)
+  }
+
   def semanticValidity(blockId: ModifierId): ModifierSemanticValidity = {
     blockInfoOptionById(blockId) match {
       case Some(info) => info.semanticValidity
@@ -258,7 +287,6 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
       java.util.Arrays.asList(new JPair(new ByteArrayWrapper(blockInfoKey(block.id)), new ByteArrayWrapper(blockInfo.bytes))),
       new JArrayList()
     )
-    //activeChain.updateSemanticValidity(block.id, status)
     this
   }
 

@@ -2,6 +2,7 @@ package com.horizen.cryptolibprovider;
 
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.vrfnative.*;
+import com.horizen.librustsidechains.Constants;
 
 import java.util.EnumMap;
 import java.util.Optional;
@@ -71,6 +72,16 @@ public class VrfFunctionsImplZendoo implements VrfFunctions {
         VRFProof vrfProof = VRFProof.deserialize(proofBytes);
         FieldElement messageAsFieldElement = FieldElementUtils.messageToFieldElement(message);
 
+        if(publicKey == null || vrfProof == null || messageAsFieldElement == null) {
+            if(publicKey != null)
+                publicKey.freePublicKey();
+            if(vrfProof != null)
+                vrfProof.freeProof();
+            if(messageAsFieldElement != null)
+                messageAsFieldElement.freeFieldElement();
+            return Optional.empty();
+        }
+
         FieldElement vrfOutput = publicKey.proofToHash(vrfProof, messageAsFieldElement);
 
         Optional<byte[]> output;
@@ -91,21 +102,21 @@ public class VrfFunctionsImplZendoo implements VrfFunctions {
 
     @Override
     public int vrfSecretKeyLength() {
-        return VRFSecretKey.SECRET_KEY_LENGTH;
+        return Constants.VRF_SK_LENGTH();
     }
 
     @Override
     public int vrfPublicKeyLen() {
-        return VRFPublicKey.PUBLIC_KEY_LENGTH;
+        return Constants.VRF_PK_LENGTH();
     }
 
     @Override
     public int vrfProofLen() {
-        return VRFProof.PROOF_LENGTH;
+        return Constants.VRF_PROOF_LENGTH();
     }
 
     @Override
     public int vrfOutputLen() {
-        return FieldElement.FIELD_ELEMENT_LENGTH;
+        return Constants.FIELD_ELEMENT_LENGTH();
     }
 }

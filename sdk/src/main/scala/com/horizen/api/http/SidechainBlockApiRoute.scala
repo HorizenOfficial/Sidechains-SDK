@@ -8,6 +8,7 @@ import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainBlockErrorResponse._
 import com.horizen.api.http.SidechainBlockRestSchema._
 import com.horizen.block.SidechainBlock
+import com.horizen.box.ZenBox
 import com.horizen.consensus.{intToConsensusEpochNumber, intToConsensusSlotNumber}
 import com.horizen.forge.Forger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
 import com.horizen.forge.ForgingInfo
@@ -17,15 +18,17 @@ import scorex.core.settings.RESTApiSettings
 import scorex.util.ModifierId
 
 import scala.collection.JavaConverters._
+import scala.compat.java8.OptionConverters._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
+import java.util.{Optional => JOptional}
 
 case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, sidechainBlockActorRef: ActorRef, forgerRef: ActorRef)
                                  (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute {
 
   override val route: Route = pathPrefix("block") {
-    findById ~ findLastIds ~ findIdByHeight ~ getBestBlockInfo ~ startForging ~ stopForging ~ generateBlockForEpochNumberAndSlot ~ getForgingInfo
+    findById ~ findLastIds ~ findIdByHeight ~ getBestBlockInfo ~ getFeePayments ~ startForging ~ stopForging ~ generateBlockForEpochNumberAndSlot ~ getForgingInfo
   }
 
   /**
@@ -42,7 +45,7 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
           ApiResponseUtil.toResponse(RespFindById(BytesUtils.toHexString(sblock_serialized), sblock))
         }
         else
-          ApiResponseUtil.toResponse(ErrorInvalidBlockId(s"Invalid id: ${body.blockId}", None))
+          ApiResponseUtil.toResponse(ErrorInvalidBlockId(s"Invalid id: ${body.blockId}", JOptional.empty()))
       }
     }
   }
@@ -71,7 +74,7 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
         if (blockIdOptional.isPresent)
           ApiResponseUtil.toResponse(RespFindIdByHeight(blockIdOptional.get()))
         else
-          ApiResponseUtil.toResponse(ErrorInvalidBlockHeight(s"Invalid height: ${body.height}", None))
+          ApiResponseUtil.toResponse(ErrorInvalidBlockHeight(s"Invalid height: ${body.height}", JOptional.empty()))
       }
     }
   }
@@ -80,14 +83,28 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
     * Return here best sidechain block id and height in active chain
     */
   def getBestBlockInfo: Route = (post & path("best")) {
-    withNodeView {
+    applyOnNodeView {
       sidechainNodeView =>
         val sidechainHistory = sidechainNodeView.getNodeHistory
         val height = sidechainHistory.getCurrentHeight
         if (height > 0)
           ApiResponseUtil.toResponse(RespBest(sidechainHistory.getBestBlock, height))
         else
-          ApiResponseUtil.toResponse(ErrorInvalidBlockHeight(s"Invalid height: ${height}", None))
+          ApiResponseUtil.toResponse(ErrorInvalidBlockHeight(s"Invalid height: ${height}", JOptional.empty()))
+    }
+  }
+
+  /**
+   * Return the list of forgers fee payments paid after the given block was applied.
+   * Return empty list in case no fee payments were paid.
+   */
+    def getFeePayments: Route = (post & path("getFeePayments")) {
+    entity(as[ReqFeePayments]) { body =>
+      applyOnNodeView { sidechainNodeView =>
+        val sidechainHistory = sidechainNodeView.getNodeHistory
+        val feePayments = sidechainHistory.getFeePaymentsInfo(body.blockId).asScala.map(_.transaction.newBoxes().asScala).getOrElse(Seq())
+        ApiResponseUtil.toResponse(RespFeePayments(feePayments))
+      }
     }
   }
 
@@ -98,7 +115,7 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
       case Success(_) =>
         ApiResponseUtil.toResponse(RespStartForging)
       case Failure(e) =>
-        ApiResponseUtil.toResponse(ErrorStartForging(s"Failed to start forging: ${e.getMessage}", None))
+        ApiResponseUtil.toResponse(ErrorStartForging(s"Failed to start forging: ${e.getMessage}", JOptional.empty()))
     }
   }
 
@@ -109,7 +126,7 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
       case Success(_) =>
         ApiResponseUtil.toResponse(RespStopForging)
       case Failure(e) =>
-        ApiResponseUtil.toResponse(ErrorStopForging(s"Failed to stop forging: ${e.getMessage}", None))
+        ApiResponseUtil.toResponse(ErrorStopForging(s"Failed to stop forging: ${e.getMessage}", JOptional.empty()))
     }
   }
 
@@ -121,7 +138,7 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
         case Success(id) =>
           ApiResponseUtil.toResponse(RespGenerate(id.asInstanceOf[String]))
         case Failure(e) =>
-          ApiResponseUtil.toResponse(ErrorBlockNotCreated(s"Block was not created: ${e.getMessage}", None))
+          ApiResponseUtil.toResponse(ErrorBlockNotCreated(s"Block was not created: ${e.getMessage}", JOptional.empty()))
       }
     }
   }
@@ -130,8 +147,16 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
     val future = forgerRef ? GetForgingInfo
     val result = Await.result(future, timeout.duration).asInstanceOf[Try[ForgingInfo]]
     result match {
-      case Success(forgingInfo) => ApiResponseUtil.toResponse(RespForgingInfo(forgingInfo.consensusSecondsInSlot, forgingInfo.consensusSlotsInEpoch, forgingInfo.currentBestEpochAndSlot.epochNumber, forgingInfo.currentBestEpochAndSlot.slotNumber))
-      case Failure(ex) => ApiResponseUtil.toResponse(ErrorGetForgingInfo(s"Failed to get forging info: ${ex.getMessage}", None))
+      case Success(forgingInfo) => ApiResponseUtil.toResponse(
+        RespForgingInfo(
+          forgingInfo.consensusSecondsInSlot,
+          forgingInfo.consensusSlotsInEpoch,
+          forgingInfo.currentBestEpochAndSlot.epochNumber,
+          forgingInfo.currentBestEpochAndSlot.slotNumber,
+          forgingInfo.forgingEnabled
+        )
+      )
+      case Failure(ex) => ApiResponseUtil.toResponse(ErrorGetForgingInfo(s"Failed to get forging info: ${ex.getMessage}", JOptional.empty()))
     }
   }
 
@@ -162,6 +187,14 @@ object SidechainBlockRestSchema {
   }
 
   @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqFeePayments(blockId: String) {
+    require(blockId.length == 64, s"Invalid id $blockId. Id length must be 64")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespFeePayments(feePayments: Seq[ZenBox]) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqGenerateByEpochAndSlot(epochNumber: Int, slotNumber: Int)
 
   @JsonView(Array(classOf[Views.Default]))
@@ -177,7 +210,11 @@ object SidechainBlockRestSchema {
   private[api] object RespStopForging extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespForgingInfo(consensusSecondsInSlot: Int, consensusSlotsInEpoch: Int, bestEpochNumber: Int, bestSlotNumber: Int) extends SuccessResponse
+  private[api] case class RespForgingInfo(consensusSecondsInSlot: Int,
+                                          consensusSlotsInEpoch: Int,
+                                          bestEpochNumber: Int,
+                                          bestSlotNumber: Int,
+                                          forgingEnabled: Boolean) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqSubmit(blockHex: String) {
@@ -204,35 +241,35 @@ object SidechainBlockRestSchema {
 
 object SidechainBlockErrorResponse {
 
-  case class ErrorInvalidBlockId(description: String, exception: Option[Throwable]) extends ErrorResponse {
+  case class ErrorInvalidBlockId(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0101"
   }
 
-  case class ErrorInvalidBlockHeight(description: String, exception: Option[Throwable]) extends ErrorResponse {
+  case class ErrorInvalidBlockHeight(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0102"
   }
 
-  case class ErrorBlockTemplate(description: String, exception: Option[Throwable]) extends ErrorResponse {
+  case class ErrorBlockTemplate(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0103"
   }
 
-  case class ErrorBlockNotAccepted(description: String, exception: Option[Throwable]) extends ErrorResponse {
+  case class ErrorBlockNotAccepted(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0104"
   }
 
-  case class ErrorBlockNotCreated(description: String, exception: Option[Throwable]) extends ErrorResponse {
+  case class ErrorBlockNotCreated(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0105"
   }
 
-  case class ErrorStartForging(description: String, exception: Option[Throwable]) extends ErrorResponse {
+  case class ErrorStartForging(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0106"
   }
 
-  case class ErrorStopForging(description: String, exception: Option[Throwable]) extends ErrorResponse {
+  case class ErrorStopForging(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0107"
   }
 
-  case class ErrorGetForgingInfo(description: String, exception: Option[Throwable]) extends ErrorResponse {
+  case class ErrorGetForgingInfo(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0108"
   }
 }

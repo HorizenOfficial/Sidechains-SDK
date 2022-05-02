@@ -1,8 +1,10 @@
 package com.horizen.params
 
-import java.math.BigInteger
 
-import com.horizen.proposition.SchnorrProposition
+import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
+import java.math.BigInteger
+import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
+import com.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
 import scorex.core.block.Block
 import scorex.util.{ModifierId, bytesToId}
 
@@ -27,17 +29,23 @@ trait NetworkParams {
 
   // Sidechain params:
   val zeroHashBytes: Array[Byte] = new Array[Byte](32)
-  val sidechainId: Array[Byte]
+  val sidechainId: Array[Byte] // Note: we expect to have sidechain id in LittleEndian as in the MC
   val sidechainGenesisBlockId: ModifierId
   val sidechainGenesisBlockParentId: ModifierId = bytesToId(new Array[Byte](32))
   val signersPublicKeys: Seq[SchnorrProposition]
   val signersThreshold: Int
-  val provingKeyFilePath: String
-  val verificationKeyFilePath: String
+  val certProvingKeyFilePath: String
+  val certVerificationKeyFilePath: String
   val calculatedSysDataConstant: Array[Byte]
+  val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig]
+  val cswProvingKeyFilePath: String
+  val cswVerificationKeyFilePath: String
+  val sidechainCreationVersion: SidechainCreationVersion
 
   val maxHistoryRewritingLength: Int = 100
 
+  // Fee payment params:
+  final val forgerBlockFeeCoefficient: Double = 0.7 // forger portion of fees for the submitted Block
 
   // Sidechain genesis params:
   val genesisMainchainBlockHash: Array[Byte] // hash of the block which include SidechainCreationTx for current SC
@@ -48,4 +56,9 @@ trait NetworkParams {
   val withdrawalEpochLength: Int
   val consensusSecondsInSlot: Int
   val consensusSlotsInEpoch: Int
+  val initialCumulativeCommTreeHash: Array[Byte] // CumulativeCommTreeHash value before genesis block
+
+  // Sidechain forger restriction
+  val restrictForgers: Boolean = false
+  val allowedForgersList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = Seq()
 }

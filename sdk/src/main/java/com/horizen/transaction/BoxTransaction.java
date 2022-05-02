@@ -9,6 +9,7 @@ import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
 import com.horizen.serialization.Views;
+import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.ByteArrayWrapper;
 import com.horizen.utils.BytesUtils;
 import scorex.crypto.hash.Blake2b256;
@@ -20,7 +21,7 @@ import java.util.List;
 import java.util.Set;
 
 @JsonView(Views.Default.class)
-@JsonIgnoreProperties({"signatures", "encoder"})
+@JsonIgnoreProperties({"signatures", "encoder", "customFieldsData", "customDataMessageToSign", "transactionTypeId"})
 public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> extends Transaction
 {
     private HashSet<ByteArrayWrapper> _boxIdsToOpen;
@@ -39,15 +40,34 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
     @JsonProperty("fee")
     public abstract long fee();
 
-    @JsonProperty("timestamp")
-    public abstract long timestamp();
-
-    @JsonProperty("typeId")
+    @Override
     public abstract byte transactionTypeId();
 
-    public abstract boolean semanticValidity();
+    @JsonProperty("version")
+    @Override
+    public abstract byte version();
 
-    // Transaction Id must depend on the whole transaction content including proof
+    @Override
+    public byte[] bytes() {
+        return serializer().toBytes(this);
+    }
+
+    @JsonProperty("typeName")
+    public String typeName() {
+        return this.getClass().getSimpleName();
+    }
+
+    @JsonProperty("isCustom")
+    public Boolean isCustom() { return true; } // All transactions presume customs until it not defined otherwise
+
+    public abstract void semanticValidity() throws TransactionSemanticValidityException;
+
+    // Transactions custom data to be considered during Transaction id calculation.
+    // Note: in case custom field must be protected by the box unlocker proof,
+    // it must be used in `customDataMessageToSign` only, so will be considered during id calculation.
+    public abstract byte[] customFieldsData();
+
+    // Transaction Id must depend on the whole transaction content including proof and custom data outside the Boxes.
     // Note: In future inside snarks id calculation will be different
     @JsonProperty("id")
     @Override
@@ -60,7 +80,8 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
 
         return BytesUtils.toHexString(Blake2b256.hash(Bytes.concat(
                 messageToSign(),
-                proofsStream.toByteArray()
+                proofsStream.toByteArray(),
+                customFieldsData()
         )));
     }
 
@@ -76,7 +97,11 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
     public TransactionIncompatibilityChecker incompatibilityChecker() {
         return new DefaultTransactionIncompatibilityChecker();
     }
-    
+
+    // Transactions custom data hash to be included into messageToSign.
+    // Note: there can be data which has no impact on message to sign, but only on id(). For example, custom non-box signature.
+    public abstract byte[] customDataMessageToSign();
+
     @Override
     public byte[] messageToSign() {
         ByteArrayOutputStream unlockersStream = new ByteArrayOutputStream();
@@ -91,6 +116,11 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
             newBoxesStream.write(boxBytes, 0, boxBytes.length);
         }
 
-        return Bytes.concat(unlockersStream.toByteArray(), newBoxesStream.toByteArray(), Longs.toByteArray(timestamp()), Longs.toByteArray(fee()));
+        return Bytes.concat(
+                new byte[]{version()},
+                unlockersStream.toByteArray(),
+                newBoxesStream.toByteArray(),
+                Longs.toByteArray(fee()),
+                customDataMessageToSign());
     }
 }
