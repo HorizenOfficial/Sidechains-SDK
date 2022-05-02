@@ -216,10 +216,13 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     val forgerListIndexes = new JArrayList[Int]()
     mod.transactions.foreach(tx => {
       if (tx.isInstanceOf[OpenStakeTransaction]) {
+        if (!params.restrictForgers) {
+          throw new IllegalArgumentException("OpenStakeTransactions are not allowed with restrictForgers=false!")
+        }
         val openStakeTransaction = tx.asInstanceOf[OpenStakeTransaction]
-        if (forgerListIndexes.contains(openStakeTransaction.getForgerListIndex))
+        if (forgerListIndexes.contains(openStakeTransaction.getForgerIndex))
           throw new IllegalArgumentException(s"Block ${mod.id} contains OpenStakeTransactions with duplicated forgerListIndex")
-        forgerListIndexes.add(openStakeTransaction.getForgerListIndex)
+        forgerListIndexes.add(openStakeTransaction.getForgerIndex)
       }
     })
   }
@@ -286,12 +289,12 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         if (!params.restrictForgers)
           throw new Exception("OpenStakeTransactions are not allowed with restrictForgers=false!")
         val openStakeTransaction = tx.asInstanceOf[OpenStakeTransaction]
-        if (openStakeTransaction.getForgerListIndex >= params.allowedForgersList.size || openStakeTransaction.getForgerListIndex < 0) {
+        if (openStakeTransaction.getForgerIndex >= params.allowedForgersList.size || openStakeTransaction.getForgerIndex < 0) {
           throw new Exception("ForgerListIndex in OpenStakeTransaction is out of bound!")
         }
         stateStorage.getForgerList match {
           case Some(forgerList) =>
-            if (forgerList.forgerIndexes(openStakeTransaction.getForgerListIndex) == 1) {
+            if (forgerList.forgerIndexes(openStakeTransaction.getForgerIndex) == 1) {
               throw new Exception("Forger already opened the stake!")
             }
           case None =>
@@ -300,7 +303,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         stateStorage.getBox(openStakeTransaction.unlockers().get(0).closedBoxId()) match {
           case Some(closedBox) =>
             if (!closedBox.proposition().asInstanceOf[PublicKey25519Proposition]
-              .equals(params.allowedForgersList.asJava.get(openStakeTransaction.getForgerListIndex)._1)) {
+              .equals(params.allowedForgersList.asJava.get(openStakeTransaction.getForgerIndex)._1)) {
               throw new Exception("OpenStakeTransaction input doesn't match the forgerListIndex!")
             }
           case None =>
@@ -378,16 +381,19 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   //Take the list of transactions inside a block and calculate the forgerList indexes to update
   def getRestrictForgerIndexToUpdate(txs:  Seq[SidechainTransaction[Proposition, Box[Proposition]]]): Array[Int] = {
-    val forgerIndexesToUpdate = new JArrayList[Int]()
     if (txs != null) {
-      txs.foreach(tx => {
+      txs.flatMap(tx => {
         if (tx.isInstanceOf[OpenStakeTransaction]) {
           val openStakeTransaction: OpenStakeTransaction = tx.asInstanceOf[OpenStakeTransaction]
-          forgerIndexesToUpdate.add(openStakeTransaction.getForgerListIndex)
+          Some(openStakeTransaction.getForgerIndex)
+        } else {
+          None
         }
-      })
+      }).toArray
     }
-    forgerIndexesToUpdate.asScala.toArray
+    else {
+      Array[Int]()
+    }
   }
 
   // apply global changes and delegate SDK unknown part to Sidechain.applyChanges(...)

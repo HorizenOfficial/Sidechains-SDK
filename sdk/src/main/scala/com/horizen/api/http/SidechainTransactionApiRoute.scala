@@ -30,7 +30,6 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.control.Breaks._
 import scala.util.{Failure, Success, Try}
 import java.util.{Optional => JOptional}
-import scala.collection.mutable
 
 case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                                         sidechainNodeViewHolderRef: ActorRef,
@@ -491,7 +490,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         .filter(box => box.proposition().equals(PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.forgerProposition))))
       if (inputBox.isEmpty)
         throw new IllegalArgumentException("Unable to find input for Proposition "+body.forgerProposition)
-      createAndSignOpenStakeTransaction(wallet, inputBox, body.forgerProposition, body.forgerListIndex, body.fee)
+      createAndSignOpenStakeTransaction(wallet, inputBox.head, body.forgerProposition, body.forgerListIndex, body.fee)
     }
   }
 
@@ -506,49 +505,45 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
       //Collect input box
       val inputBox = wallet.allBoxes().asScala
         .filter(box => BytesUtils.toHexString(box.id()).equals(body.transactionInput.boxId))
-      if (inputBox.length == 0) {
+      if (inputBox.isEmpty) {
         throw new IllegalArgumentException("Unable to find input!")
       }
       if (inputBox.length > 1) {
         throw new IllegalArgumentException("To much inputs found!")
       }
 
-      createAndSignOpenStakeTransaction(wallet, inputBox, body.regularOutputProposition, body.forgerListIndex, body.fee)
+      createAndSignOpenStakeTransaction(wallet, inputBox.head, body.regularOutputProposition, body.forgerListIndex, body.fee)
     }
   }
 
 
-  private def createAndSignOpenStakeTransaction(wallet: NodeWallet, inputBox: mutable.Buffer[Box[Proposition]], outputProposition: String,
+  private def createAndSignOpenStakeTransaction(wallet: NodeWallet, inputBox: Box[Proposition], outputProposition: String,
                                                 forgerListIndex: Int, inputFee: Option[Long]): Try[OpenStakeTransaction] = {
     //Collect fee
     val fee = inputFee.getOrElse(0L)
     if (fee < 0) {
       throw new IllegalArgumentException("Fee can't be negative!")
     }
-    if (fee > inputBox(0).value) {
+    if (fee > inputBox.value) {
       throw new IllegalArgumentException("Fee can't be greater than the input!")
     }
 
     //Collect output box
-    val outputs: JList[ZenBoxData] = new JArrayList()
-    outputs.add(new ZenBoxData(
-      PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(outputProposition)),
-      inputBox(0).value() - fee))
+    var output:JOptional[ZenBoxData] = JOptional.empty()
+    if (fee < inputBox.value()) {
+      output = JOptional.of(new ZenBoxData(
+        PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(outputProposition)),
+        inputBox.value() - fee))
+    }
 
     Try {
-      val boxIds = inputBox.map(_.id()).asJava
       // Create unsigned tx
-      // Create a list of fake proofs for further messageToSign calculation
-      val fakeProofs: JList[Proof[Proposition]] = Collections.nCopies(1, null)
-
-      val unsignedTransaction = new OpenStakeTransaction(boxIds, outputs, fakeProofs, forgerListIndex, fee, OpenStakeTransaction.OPEN_STAKE_TRANSACTION_VERSION)
+      val unsignedTransaction = new OpenStakeTransaction(inputBox.id(), output, null, forgerListIndex, fee, OpenStakeTransaction.OPEN_STAKE_TRANSACTION_VERSION)
 
       // Create signed tx.
       val messageToSign = unsignedTransaction.messageToSign()
-      val proofs = inputBox.map(box => {
-        wallet.secretByPublicKey(box.proposition()).get().sign(messageToSign).asInstanceOf[Proof[Proposition]]
-      })
-      new OpenStakeTransaction(boxIds, outputs, proofs.asJava, forgerListIndex, fee, OpenStakeTransaction.OPEN_STAKE_TRANSACTION_VERSION)
+      val proof = wallet.secretByPublicKey(inputBox.proposition()).get().sign(messageToSign).asInstanceOf[Proof[Proposition]]
+      new OpenStakeTransaction(inputBox.id(), output, proof, forgerListIndex, fee, OpenStakeTransaction.OPEN_STAKE_TRANSACTION_VERSION)
     }
   }
 

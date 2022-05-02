@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import assert_true, initialize_chain_clean, start_nodes, connect_nodes_bi, websocket_port_by_mc_node_index, forward_transfer_to_sidechain
+from test_framework.util import assert_true, assert_equal, initialize_chain_clean, start_nodes, connect_nodes_bi, websocket_port_by_mc_node_index, forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import generate_secrets, start_sc_nodes, generate_next_blocks, bootstrap_sidechain_nodes, generate_secrets, generate_vrf_secrets
 from httpCalls.wallet.createPrivateKey25519 import http_wallet_createPrivateKey25519
 from httpCalls.transaction.makeForgerStake import makeForgerStake
@@ -9,6 +9,7 @@ from httpCalls.wallet.allBoxes import http_wallet_allBoxes
 from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress, sendCointsToMultipleAddress
 from httpCalls.transaction.openStake import createOpenStakeTransaction, createOpenStakeTransactionSimplified
 from httpCalls.transaction.sendTransaction import sendTransaction
+from httpCalls.block.best import http_block_best
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, SCForgerConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
@@ -190,7 +191,7 @@ class SidechainClosedForgerTest(SidechainTestFramework):
 
         #Forger 0 opens the stake
         print("Forger 0 opens the stake")
-        tx_bytes = createOpenStakeTransaction(sc_node1, forger0_box["id"],new_public_key,0,sc_fee)
+        tx_bytes = createOpenStakeTransaction(sc_node1, forger0_box["id"],new_public_key,0,forger0_box["value"])
         res = sendTransaction(sc_node1, tx_bytes["transactionBytes"])  
         assert_true("error" not in res)
         self.sc_sync_all()
@@ -208,6 +209,12 @@ class SidechainClosedForgerTest(SidechainTestFramework):
 
         generate_next_blocks(sc_node1, "first node", 1)
         self.sc_sync_all()
+
+        #Verify that if we use fee = inputBox.value we don't generate new boxes.
+        print("Verify that if we use fee = inputBox.value we don't generate new boxes.")
+        bestBlock = http_block_best(sc_node1)
+        assert_equal(bestBlock["sidechainTransactions"][0]["newBoxes"], [])
+        print("Ok!")
 
         #Try to send an openStakeTransaction with the same forgerIndex of the previous one
         print("Try to send an openStakeTransaction with the same forgerIndex of the previous one")

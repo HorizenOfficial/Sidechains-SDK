@@ -3,6 +3,7 @@ package com.horizen.transaction;
 import com.horizen.box.data.ZenBoxData;
 import com.horizen.box.data.ZenBoxDataSerializer;
 import com.horizen.proof.Proof;
+import com.horizen.proof.ProofSerializer;
 import com.horizen.proof.Signature25519Serializer;
 import com.horizen.proposition.Proposition;
 import com.horizen.utils.ListSerializer;
@@ -10,10 +11,9 @@ import scorex.core.NodeViewModifier$;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
-import static com.horizen.transaction.BoxTransaction.MAX_TRANSACTION_UNLOCKERS;
 import static com.horizen.transaction.OpenStakeTransaction.OPEN_STAKE_TRANSACTION_VERSION;
 
 public class OpenStakeTransactionSerializer implements TransactionSerializer<OpenStakeTransaction>
@@ -22,7 +22,7 @@ public class OpenStakeTransactionSerializer implements TransactionSerializer<Ope
 
     private static ListSerializer<ZenBoxData> outputsSerializer = new ListSerializer(ZenBoxDataSerializer.getSerializer());
 
-    private final static ListSerializer<Proof<Proposition>> proofsSerializer = new ListSerializer(Signature25519Serializer.getSerializer(), MAX_TRANSACTION_UNLOCKERS);
+    private final static ProofSerializer proofsSerializer =  Signature25519Serializer.getSerializer();
 
     static {
         serializer = new OpenStakeTransactionSerializer();
@@ -40,13 +40,10 @@ public class OpenStakeTransactionSerializer implements TransactionSerializer<Ope
     public void serialize(OpenStakeTransaction transaction, Writer writer) {
         writer.put(transaction.version());
         writer.putLong(transaction.fee());
-        writer.putInt(transaction.inputsIds.size());
-        for (byte[] id: transaction.inputsIds) {
-            writer.putBytes(id);
-        }
+        writer.putBytes(transaction.inputsIds);
         outputsSerializer.serialize(transaction.getOutputData(), writer);
         proofsSerializer.serialize(transaction.proofs, writer);
-        writer.putInt(transaction.getForgerListIndex());
+        writer.putInt(transaction.getForgerIndex());
     }
 
     @Override
@@ -57,17 +54,18 @@ public class OpenStakeTransactionSerializer implements TransactionSerializer<Ope
         }
 
         long fee = reader.getLong();
-        int inputsNum = reader.getInt();
 
-        ArrayList<byte[]> inputsIds = new ArrayList<>();
-        for(int i = 0; i < inputsNum; i++) {
-            inputsIds.add(reader.getBytes(NodeViewModifier$.MODULE$.ModifierIdSize()));
-        }
+        byte[] inputsId = reader.getBytes(NodeViewModifier$.MODULE$.ModifierIdSize());
 
         List<ZenBoxData> outputsData = outputsSerializer.parse(reader);
-        List<Proof<Proposition>> proofs = proofsSerializer.parse(reader);
+        java.util.Optional<ZenBoxData> output = Optional.empty();
+        if (outputsData.size() > 0) {
+            output = Optional.of(outputsData.get(0));
+        }
+
+        Proof<Proposition> proof = proofsSerializer.parse(reader);
         int forgerListIndex = reader.getInt();
 
-        return new OpenStakeTransaction(inputsIds, outputsData, proofs, forgerListIndex, fee, version);
+        return new OpenStakeTransaction(inputsId, output, proof, forgerListIndex, fee, version);
     }
 }
