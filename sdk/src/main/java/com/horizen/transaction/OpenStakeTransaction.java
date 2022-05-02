@@ -20,7 +20,7 @@ import static com.horizen.transaction.CoreTransactionsIdsEnum.OpenStakeTransacti
 /**
  * OpenStakeTransaction is used to open the forging stake to the world.
  * It can be used when the flag "restrictForger" is enabled and can be fired only by the allowed forgers inside the "allowedForgers" list.
- * This transaction has 1 input and 1 output. It contains a custom field "forgerIndex" that identify a specific forger inside the "allowedForgers" list.
+ * This transaction has 1 input and 0 or 1 output. It contains a custom field "forgerIndex" that identify a specific forger inside the "allowedForgers" list.
  * The input must be locked by the corresponding proposition indexed by "forgerIndex" inside the "allowedForgers" list.
  */
 public class OpenStakeTransaction extends SidechainNoncedTransaction<PublicKey25519Proposition, ZenBox, ZenBoxData>{
