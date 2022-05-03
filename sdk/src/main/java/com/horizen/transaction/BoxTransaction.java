@@ -123,4 +123,9 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
                 Longs.toByteArray(fee()),
                 customDataMessageToSign());
     }
+
+    @Override
+    public String toString() {
+        return String.format("Transaction(id = %s)", id());
+    }
 }
