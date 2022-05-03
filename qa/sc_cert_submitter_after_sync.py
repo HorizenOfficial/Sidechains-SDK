@@ -22,7 +22,7 @@ Test:
     - Generate 2000 blocks on SC node 1
     - Connect SC node 2 to SC node 1 and start syncing
     - Ensure that node 2 was able to sync
-    - Generate a few more MC and SC blocks to reach the end of
+    - Generate a few more MC and SC blocks to reach the end of the withdrawal epoch.
     - Check that certificate was generated. So Submitter and Signer are alive on SC node 2.
 """
 class ScCertSubmitterAfterSync(SidechainTestFramework):
