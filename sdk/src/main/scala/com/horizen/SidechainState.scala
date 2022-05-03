@@ -294,6 +294,9 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         }
         stateStorage.getForgerList match {
           case Some(forgerList) =>
+            if (openStakeTransaction.getForgerIndex >= forgerList.forgerIndexes.length) {
+              throw new Exception("OpenStakeTransaction forgerIndex out of bound!")
+            }
             if (forgerList.forgerIndexes(openStakeTransaction.getForgerIndex) == 1) {
               throw new Exception("Forger already opened the stake!")
             }
