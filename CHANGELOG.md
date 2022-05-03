@@ -1,3 +1,6 @@
+**0.3.2**
+1. CertificateSubmitter and CertificateSignaturesManager actors restart strategy and failures processing improvement. 
+
 **0.3.1**
 1. Withdrawal epoch validator: fix wrongly rejected sidechain block containing McBlockRef with MC2SCAggTx leading to the end of the withdrawal epoch.
 
