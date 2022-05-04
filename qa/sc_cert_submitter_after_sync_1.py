@@ -12,6 +12,7 @@ from SidechainTestFramework.sc_forging_util import *
 
 """
 Check Certificate submission behaviour for the node after sync from scratch with an existing chain.
+Note: All the sc blocks belongs to the same withdrawal epoch.
 
 Configuration:
     Start 1 MC node and 2 SC nodes (with default websocket configuration) disconnected.
@@ -25,7 +26,7 @@ Test:
     - Generate a few more MC and SC blocks to reach the end of the withdrawal epoch.
     - Check that certificate was generated. So Submitter and Signer are alive on SC node 2.
 """
-class ScCertSubmitterAfterSync(SidechainTestFramework):
+class ScCertSubmitterAfterSync1(SidechainTestFramework):
 
     number_of_mc_nodes = 1
     number_of_sidechain_nodes = 2
@@ -111,4 +112,4 @@ class ScCertSubmitterAfterSync(SidechainTestFramework):
 
 
 if __name__ == "__main__":
-    ScCertSubmitterAfterSync().main()
+    ScCertSubmitterAfterSync1().main()
