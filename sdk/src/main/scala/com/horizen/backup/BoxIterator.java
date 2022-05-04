@@ -10,9 +10,7 @@ import scala.util.Try;
 import scorex.util.serialization.VLQByteBufferReader;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 public class BoxIterator {
     private final StorageIterator iterator;
@@ -21,12 +19,17 @@ public class BoxIterator {
     public BoxIterator(StorageIterator iterator, SidechainBoxesCompanion sidechainBoxesCompanion) {
         this.iterator = iterator;
         this.sidechainBoxesCompanion = sidechainBoxesCompanion;
-        this.iterator.seekToFirst();
+        this.seekToFirst();
+    }
+
+    public void seekIterator(byte[] key) {
+        iterator.seek(key);
     }
 
     public void seekToFirst() {
-        this.iterator.seekToFirst();
+        iterator.seekToFirst();
     }
+
 
     public Optional<BackupBox> nextBox(boolean ignoreCoinBox) throws RuntimeException {
         while (iterator.hasNext()) {
@@ -52,6 +55,24 @@ public class BoxIterator {
 
     public Optional<BackupBox> nextBox() throws RuntimeException {
         return nextBox(false);
+    }
+
+    public List<Box<Proposition>> getNextBoxes(int nElement, Optional<byte []> keyToSeek) {
+        if (keyToSeek.isPresent()) {
+            nElement += 1;
+            this.seekIterator(Utils.calculateKey(keyToSeek.get()).data());
+        } else {
+            this.seekToFirst();
+        }
+        List<Box<Proposition>> boxes = new ArrayList<>();
+        Optional<BackupBox> nextBox = this.nextBox();
+        while(boxes.size() < nElement && nextBox.isPresent()) {
+            boxes.add(nextBox.get().getBox());
+            nextBox = this.nextBox();
+        }
+        if (keyToSeek.isPresent())
+            boxes.remove(0);
+        return boxes;
     }
 
     private boolean verifyBox(byte[] recordId, byte[] boxId) {
