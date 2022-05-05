@@ -1,10 +1,10 @@
 package com.horizen.storage.performance
 
 import java.io.{PrintWriter, StringWriter}
-
 import com.horizen.storage.Storage
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.storage.performance.Measure._
+import com.horizen.storage.rocksdb.VersionedRocksDbStorageAdapter
 import com.horizen.utils.{Pair => JPair, _}
 
 import scala.collection.JavaConverters._
@@ -45,7 +45,8 @@ class StoragePerformanceRunner(config: StoragePerformanceTestConfig, debug: Bool
       case (size, dataGenerator) =>
         val allMeasures = mutable.Buffer[TimeMeasure]()
         val storagePath = System.getProperty("java.io.tmpdir") + "StorageTest_" + System.currentTimeMillis()
-        val storage: Storage = new VersionedLevelDbStorageAdapter(new java.io.File(storagePath))
+//        val storage: Storage = new VersionedLevelDbStorageAdapter(new java.io.File(storagePath))
+        val storage: Storage = new VersionedRocksDbStorageAdapter(new java.io.File(storagePath))
         var storageDescription: String = ""
 
         try {

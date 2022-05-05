@@ -2,6 +2,7 @@ package com.horizen.fixtures
 
 import com.horizen.storage.Storage
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
+import com.horizen.storage.rocksdb.VersionedRocksDbStorageAdapter
 import com.horizen.utils.{ByteArrayWrapper, Pair}
 
 import java.io.File
@@ -45,12 +46,12 @@ trait StoreFixture {
     dir.delete()
   }
 
-  def getStorage(): VersionedLevelDbStorageAdapter = {
+  def getStorage(): VersionedRocksDbStorageAdapter = {
     getStorage(tempFile())
   }
 
-  def getStorage(pathToDB: File): VersionedLevelDbStorageAdapter = {
-    val storage = new VersionedLevelDbStorageAdapter(pathToDB)
+  def getStorage(pathToDB: File): VersionedRocksDbStorageAdapter = {
+    val storage = new VersionedRocksDbStorageAdapter(pathToDB)
     storages.append(storage)
     storage
   }
