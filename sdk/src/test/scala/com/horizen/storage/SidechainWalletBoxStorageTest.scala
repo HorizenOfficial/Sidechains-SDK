@@ -5,7 +5,7 @@ import com.horizen.box._
 import com.horizen.companion._
 import com.horizen.customtypes._
 import com.horizen.fixtures._
-import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
+import com.horizen.storage.rocksdb.VersionedRocksDbStorageAdapter
 import com.horizen.utils.ByteArrayWrapper
 import com.horizen.utils.Pair
 
@@ -33,7 +33,7 @@ class SidechainWalletBoxStorageTest
   with SidechainTypes
 {
 
-  var mockedStorage: Storage = mock[VersionedLevelDbStorageAdapter]
+  var mockedStorage: Storage = mock[VersionedRocksDbStorageAdapter]
   var boxList = new ListBuffer[WalletBox]()
   var storedList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
 
@@ -44,7 +44,7 @@ class SidechainWalletBoxStorageTest
 
   @Before
   def setUp() : Unit = {
-    mockedStorage= mock[VersionedLevelDbStorageAdapter]
+    mockedStorage= mock[VersionedRocksDbStorageAdapter]
     boxList = new ListBuffer[WalletBox]()
     storedList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
 

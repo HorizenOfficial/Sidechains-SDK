@@ -4,6 +4,7 @@ import akka.japi.Option.scala2JavaOption
 import com.horizen.storage.Storage
 import com.horizen.storageVersioned.StorageVersioned
 import com.horizen.utils.{Pair => JPair, _}
+import scorex.util.ScorexLogging
 
 import java.io.File
 import java.util
@@ -16,7 +17,7 @@ import scala.compat.java8.OptionConverters.RichOptionForJava8
 
 /*
 * */
-class VersionedRocksDbStorageAdapter(pathToDB: File) extends Storage{
+class VersionedRocksDbStorageAdapter(pathToDB: File) extends Storage with ScorexLogging {
   private val versionsToKeep: Int = 720 * 2 + 1; //How many version could be saved at all, currently hardcoded to two consensus epochs length + 1
   private val dataBase: VersionedRDBKVStore = createDb(pathToDB)
 //  private val versionsKey: ByteArrayWrapper = new ByteArrayWrapper(dataBase.VersionsKey)
@@ -34,31 +35,30 @@ class VersionedRocksDbStorageAdapter(pathToDB: File) extends Storage{
    }
 
   override def getAll: JList[JPair[ByteArrayWrapper, ByteArrayWrapper]] = {
-  //TODO  val excludedKeys: Set[ByteArrayWrapper] = (versionsKey +: dataBase.versions.map(byteArrayToWrapper)).toSet
 
     dataBase.getAll
         .view
         .map{case (key, value) => (byteArrayToWrapper(key), byteArrayToWrapper(value))}
-  //TODO      .filterNot{case (key, value) => excludedKeys.contains(key)}
         .map{case (key, value) => new JPair(byteArrayToWrapper(key), byteArrayToWrapper(value))}
         .asJava
   }
 
-  override def lastVersionID(): Optional[ByteArrayWrapper] = dataBase.versions.headOption.map(byteArrayToWrapper).asJava
+  override def lastVersionID(): Optional[ByteArrayWrapper] = dataBase.versions.lastOption.map(byteArrayToWrapper).asJava
 
   override def update(version: ByteArrayWrapper, toUpdate: JList[JPair[ByteArrayWrapper, ByteArrayWrapper]], toRemove: util.List[ByteArrayWrapper]): Unit = {
 
     val toUpdateAsScala = toUpdate.asScala.toList
     val toRemoveAsScala = toRemove.asScala.toList
 
-    //key for storing version shall not be used as key in any key-value pair in VersionedLDBKVStore
+    // TODO is this still valid for RocksDb?
+    // key for storing version shall not be used as key in any key-value pair in VersionedLDBKVStore
     require(!toUpdateAsScala.exists(pair => pair.getKey == version) && !toRemoveAsScala.contains(version))
 
     //@TODO added for compatibility with LSMStore, probably interface shall be changed to work with map collection for toUpdate/toremove
     require(toUpdateAsScala.map(_.getKey).toSet.size == toUpdateAsScala.size, "duplicate key in `toUpdate`")
     require(toRemoveAsScala.toSet.size == toRemoveAsScala.size, "duplicate key in `toRemove`")
 
-    require(!isVersionExist(version), "Version is already exist in storage")
+    require(!isVersionExist(version), s"Version ${BytesUtils.toHexString(version)} already exists in storage")
 
     val convertedToUpdate = toUpdateAsScala.map(pair => (pair.getKey.data, pair.getValue.data))
     val convertedToRemove = toRemoveAsScala.map(_.data)

@@ -4,7 +4,7 @@ import com.horizen.SidechainTypes
 import com.horizen.box.ForgerBox
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.fixtures.{BoxFixture, StoreFixture}
-import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
+import com.horizen.storage.rocksdb.VersionedRocksDbStorageAdapter
 import com.horizen.utils.{ByteArrayWrapper, ForgingStakeMerklePathInfo, MerklePath, Pair}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
@@ -24,7 +24,7 @@ class ForgingBoxesInfoStorageTest extends JUnitSuite
 
   @Test
   def updateForgerBoxes(): Unit = {
-    val mockedStorage: Storage = mock[VersionedLevelDbStorageAdapter]
+    val mockedStorage: Storage = mock[VersionedRocksDbStorageAdapter]
     val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(mockedStorage)
 
     val version = getVersion
@@ -89,7 +89,7 @@ class ForgingBoxesInfoStorageTest extends JUnitSuite
 
   @Test
   def updateForgerBoxMerklePathInfo(): Unit = {
-    val mockedStorage: Storage = mock[VersionedLevelDbStorageAdapter]
+    val mockedStorage: Storage = mock[VersionedRocksDbStorageAdapter]
     val forgingBoxesInfoStorage = new ForgingBoxesInfoStorage(mockedStorage)
 
     // Prepare data to update.

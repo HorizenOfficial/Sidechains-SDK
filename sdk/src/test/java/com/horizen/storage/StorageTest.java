@@ -100,7 +100,7 @@ public class StorageTest {
             fail("The same value in remove shall thrown exception");
         }
         catch (Exception ex) {
-            assertEquals("Storage must have specified version.", version2, s.lastVersionID().get());
+            assertEquals("Storage should not allow removing using duplicate records.", version2, s.lastVersionID().get());
         }
 
         try {
@@ -112,16 +112,25 @@ public class StorageTest {
             fail("The same value in update shall thrown exception");
         }
         catch (Exception ex) {
-            assertEquals("Storage must have specified version.", version2, s.lastVersionID().get());
+            assertEquals("Storage should not allow updating with duplicate records.", version2, s.lastVersionID().get());
         }
 
-        //Try to update with already exist version
+        //Try to update with latest version
         try {
             s.update(version2, u2, new ArrayList<>());
             fail("already exist version in update shall thrown exception");
         }
         catch (Exception ex) {
-            assertEquals("Storage must have specified version.", version2, s.lastVersionID().get());
+            assertEquals("Storage should not allow updating with an already contained version.", version2, s.lastVersionID().get());
+        }
+
+        //Try to update with a version already stored previously (not latest)
+        try {
+            s.update(version1, u2, new ArrayList<>());
+            fail("already exist version in update shall thrown exception");
+        }
+        catch (Exception ex) {
+            assertTrue("Storage already has the specified version.", s.rollbackVersions().contains(version1));
         }
 
         //Try to update to non exist version
@@ -133,12 +142,16 @@ public class StorageTest {
             assertEquals("Storage must have specified version.", version2, s.lastVersionID().get());
         }
 
+        //Try to remove non-exist values, it is allowed
+        List<ByteArrayWrapper> randomValues = storageFixture.getValueList(5);
 
-
-        //Try to remove non-exist values
-        List<Pair<ByteArrayWrapper,ByteArrayWrapper>> nonExistValues = storageFixture.getKeyValueList(5);
         ByteArrayWrapper nonExistValuesVersion = storageFixture.getVersion();
-        s.update(nonExistValuesVersion, new ArrayList<>(), Collections.singletonList(storageFixture.getKeyValue().getKey()));
+        try {
+            s.update(nonExistValuesVersion, new ArrayList<>(), randomValues);
+        }
+        catch (Exception ex) {
+            fail("It should be possible to update by removing not-existing values: " + ex.getMessage());
+        }
         assertEquals("Storage must have specified version.", nonExistValuesVersion, s.lastVersionID().get());
     }
 
