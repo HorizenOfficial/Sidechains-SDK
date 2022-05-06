@@ -243,6 +243,9 @@ class SidechainStateIntegrationTest
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
 
+    Mockito.when(mockedBlock.sidechainTransactions)
+      .thenReturn(Seq())
+
     Mockito.when(mockedBlock.parentId)
       .thenReturn(bytesToId(initialVersion.data))
 

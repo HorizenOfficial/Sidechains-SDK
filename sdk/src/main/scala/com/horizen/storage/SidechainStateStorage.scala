@@ -308,8 +308,10 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     //Set ForgerList indexes
     getForgerList match {
       case Some(forgerList) =>
-        forgerList.updateIndexes(forgerListIndexes)
-        updateList.add(new JPair(forgerListIndexKey, ForgerListSerializer.toBytes(forgerList)))
+        if (forgerListIndexes.length != 0) {
+          val updatedForgerList = forgerList.updateIndexes(forgerListIndexes)
+          updateList.add(new JPair(forgerListIndexKey, ForgerListSerializer.toBytes(updatedForgerList)))
+        }
       case None =>
         val emptyForgerListIndex = ForgerList(new Array[Int](forgerListSize))
         updateList.add(new JPair(forgerListIndexKey, ForgerListSerializer.toBytes(emptyForgerListIndex)))
