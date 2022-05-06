@@ -32,15 +32,18 @@ final class VersionedRDBKVStore(protected val db: StorageVersioned, keepVersions
     * @param toRemove - keys to be removed
     */
   def update(toInsert: Seq[(K, V)], toRemove: Seq[K])(version: VersionId): Unit = {
-    try {
-      val versionIdOpt: Optional[String] = Optional.empty()
+    val versionIdOpt: Optional[String] = Optional.empty()
+    val transaction: TransactionVersioned = db.createTransaction(versionIdOpt).asScala.getOrElse(throw new Exception("Could not create a transaction"))
 
-      val transaction: TransactionVersioned = db.createTransaction(versionIdOpt).asScala.getOrElse(throw new Exception("Could not create a transaction"))
+    // update and commit may throw exceptions (create does not)
+    try {
       transaction.update(toInsert.toMap.asJava, toRemove.toSet.asJava)
       transaction.commit(Optional.of(BytesUtils.toHexString(version)))
 
     } catch {
       case e: Throwable => log.error(s"Could not update RocksDB with version ${version}", e)
+    } finally {
+      transaction.close()
     }
   }
 
