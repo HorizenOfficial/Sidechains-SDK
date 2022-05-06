@@ -142,10 +142,5 @@ class VersionedRocksDbStorageAdapter(pathToDB: File) extends Storage with Scorex
 
   override def close(): Unit = dataBase.close()
 
-  private def createDb(path: File): VersionedRDBKVStore= {
-    val db = StorageVersioned.open(path.getAbsolutePath, true, versionsToKeep)
-    new VersionedRDBKVStore(db, versionsToKeep)
-  }
-
   override def isEmpty: Boolean = dataBase.rollbackVersions().isEmpty
 }
