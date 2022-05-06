@@ -93,14 +93,9 @@ class SidechainStateTest
     RegularTransaction.create(from, to, fee)
   }
 
-  def getOpenStakeTransaction(boxesWithSecretToOpen: (ZenBox,PrivateKey25519), forgerListIndex: Int): OpenStakeTransaction = {
+  def getOpenStakeTransaction(boxesWithSecretToOpen: (ZenBox,PrivateKey25519), forgerIndex: Int, fee: JOptional[Long]): OpenStakeTransaction = {
     val from: JPair[ZenBox,PrivateKey25519] =  new JPair[ZenBox,PrivateKey25519](boxesWithSecretToOpen._1, boxesWithSecretToOpen._2)
-
-    val minimumFee = 5L
-    val maxTo = boxesWithSecretToOpen._1.value() - minimumFee
-    val to: JOptional[ZenBoxData] = JOptional.of(new ZenBoxData(getPrivateKey25519List(1).get(0).publicImage(), maxTo))
-
-    OpenStakeTransaction.create(from, to, forgerListIndex, minimumFee)
+    OpenStakeTransaction.create(from, JOptional.of(getPrivateKey25519List(1).get(0).publicImage()), forgerIndex, fee.orElseGet(() => 5L))
   }
 
   @Test
@@ -379,6 +374,9 @@ class SidechainStateTest
 
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
+
+    Mockito.when(mockedBlock.sidechainTransactions)
+      .thenReturn(Seq())
 
     Mockito.when(mockedBlock.parentId)
       .thenReturn(bytesToId(stateVersion.last.data))
@@ -698,7 +696,7 @@ class SidechainStateTest
       (secretList(3).publicImage(), vrfList(3)),
       (secretList(4).publicImage(), vrfList(4)),
     )
-
+    var forgerListIndexes = ForgerList(Array[Int](1,1,0,0,0))
     // NEGATIVE TESTS
 
     //Test validate(Transaction) with restrict forger disabled
@@ -706,7 +704,8 @@ class SidechainStateTest
     Mockito.when(mockedParams.allowedForgersList).thenReturn(Seq())
     var openStakeTransaction = getOpenStakeTransaction(
       (boxList.head.asInstanceOf[ZenBox], secretList.head),
-      0
+      0,
+      JOptional.empty()
     )
     var tryValidate = sidechainState.validate(openStakeTransaction.asInstanceOf[SidechainTypes#SCBT])
     assertFalse("Transaction validation must fail.",
@@ -716,21 +715,24 @@ class SidechainStateTest
     //Test validate(Transaction) with restrict forger enabled and forgerListIndex out of bound
     Mockito.when(mockedParams.restrictForgers).thenReturn(true)
     Mockito.when(mockedParams.allowedForgersList).thenReturn(forgerList)
+    Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {Some(forgerListIndexes)})
     openStakeTransaction = getOpenStakeTransaction(
       (boxList.head.asInstanceOf[ZenBox], secretList.head),
-      10
+      10,
+      JOptional.empty()
     )
     tryValidate = sidechainState.validate(openStakeTransaction.asInstanceOf[SidechainTypes#SCBT])
     assertFalse("Transaction validation must fail.",
       tryValidate.isSuccess)
-    assertTrue(tryValidate.failed.get.getMessage.equals("ForgerListIndex in OpenStakeTransaction is out of bound!"))
+    assertTrue(tryValidate.failed.get.getMessage.equals("ForgerIndex in OpenStakeTransaction is out of bound!"))
 
 
     //Test validate(Transaction) with restrict forger enabled and forger list indexes is not present in the storage
     Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {None})
     openStakeTransaction = getOpenStakeTransaction(
       (boxList.head.asInstanceOf[ZenBox], secretList.head),
-      0
+      0,
+      JOptional.empty()
     )
     tryValidate = sidechainState.validate(openStakeTransaction.asInstanceOf[SidechainTypes#SCBT])
     assertFalse("Transaction validation must fail.",
@@ -739,11 +741,11 @@ class SidechainStateTest
 
 
     //Test validate(Transaction) with restrict forger enabled and try to update an existing forger index
-    var forgerListIndexes = ForgerList(Array[Int](1,1,0,0,0))
     Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {Some(forgerListIndexes)})
     openStakeTransaction = getOpenStakeTransaction(
       (boxList.head.asInstanceOf[ZenBox], secretList.head),
-      0
+      0,
+      JOptional.empty()
     )
     tryValidate = sidechainState.validate(openStakeTransaction.asInstanceOf[SidechainTypes#SCBT])
     assertFalse("Transaction validation must fail.",
@@ -755,20 +757,36 @@ class SidechainStateTest
     Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {Some(forgerListIndexes)})
     openStakeTransaction = getOpenStakeTransaction(
       (boxList.head.asInstanceOf[ZenBox], secretList.head),
-      3
+      3,
+      JOptional.empty()
     )
     tryValidate = sidechainState.validate(openStakeTransaction.asInstanceOf[SidechainTypes#SCBT])
     assertFalse("Transaction validation must fail.",
       tryValidate.isSuccess)
-    assertTrue(tryValidate.failed.get.getMessage.equals("OpenStakeTransaction input doesn't match the forgerListIndex!"))
+    assertTrue(tryValidate.failed.get.getMessage.equals("OpenStakeTransaction input doesn't match the forgerIndex!"))
+
+    //Test validate(Transaction) with the forge operation already opened.
+    forgerListIndexes = ForgerList(Array[Int](1,1,1,0,0))
+    Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {Some(forgerListIndexes)})
+    openStakeTransaction = getOpenStakeTransaction(
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
+      3,
+      JOptional.empty()
+    )
+    tryValidate = sidechainState.validate(openStakeTransaction.asInstanceOf[SidechainTypes#SCBT])
+    assertFalse("Transaction validation must fail.",
+      tryValidate.isSuccess)
+    assertTrue(tryValidate.failed.get.getMessage.equals("OpenStakeTransactions are not allowed because the forger operation has already been opened!"))
 
     //POSITIVE TESTS
 
     //Test validate(Transaction) with restrict forger enabled and correct index
+    forgerListIndexes = ForgerList(Array[Int](0,1,0,0,0))
     Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {Some(forgerListIndexes)})
     openStakeTransaction = getOpenStakeTransaction(
       (boxList.head.asInstanceOf[ZenBox], secretList.head),
-      0
+      0,
+      JOptional.empty()
     )
     tryValidate = sidechainState.validate(openStakeTransaction.asInstanceOf[SidechainTypes#SCBT])
     assertTrue("Transaction validation must not fail.",

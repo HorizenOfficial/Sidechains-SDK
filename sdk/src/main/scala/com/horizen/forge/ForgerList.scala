@@ -6,12 +6,15 @@ import scorex.util.serialization.{Reader, Writer}
 case class ForgerList(forgerIndexes: Array[Int]) extends BytesSerializable {
   override type M = ForgerList
 
-  def updateIndexes(indexToUpdate: Array[Int]): Unit = {
+  def updateIndexes(indexToUpdate: Array[Int]): ForgerList = {
     indexToUpdate.foreach(toUpdate => {
       if (toUpdate < forgerIndexes.length) {
         forgerIndexes(toUpdate) = 1
+      } else {
+        throw new IndexOutOfBoundsException("Forger index to update is out of bound!")
       }
     })
+    ForgerList(forgerIndexes)
   }
 
   override def serializer: ScorexSerializer[ForgerList] = ForgerListSerializer

@@ -20,7 +20,7 @@ from SidechainTestFramework.sidechainauthproxy import SCAPIException
     is allowed to forge.
 """
 class SidechainClosedForgerTest(SidechainTestFramework):
-    number_of_mc_nodes = 3
+    number_of_mc_nodes = 1
     number_of_sidechain_nodes = 1
     number_of_forgers = 5
     allowed_forger_propositions = generate_secrets("seed", number_of_forgers)
@@ -32,8 +32,6 @@ class SidechainClosedForgerTest(SidechainTestFramework):
     def setup_network(self, split = False):
         # Setup nodes and connect them
         self.nodes = self.setup_nodes()
-        connect_nodes_bi(self.nodes, 0, 1)
-        connect_nodes_bi(self.nodes, 0, 2)
         self.sync_all()
 
     def setup_nodes(self):
@@ -61,11 +59,10 @@ class SidechainClosedForgerTest(SidechainTestFramework):
         return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
 
     def find_box(self, boxes, proposition):
-        found_box = {}
         for box in boxes:
             if (box["typeName"]=="ZenBox" and box["proposition"]["publicKey"] == proposition):
-                found_box = box
-        return found_box
+                return box
+        return {}
 
     def run_test(self):
         self.sync_all()
@@ -148,7 +145,7 @@ class SidechainClosedForgerTest(SidechainTestFramework):
         except SCAPIException as e:
             print("Expected SCAPIException: " + e.error)
             error_occur = True
-        assert_true(error_occur, "Try to send an openStake transaction with negative forgerListIndex")
+        assert_true(error_occur, "Try to send an openStake transaction with negative forgerIndex")
         print("Ok!")
 
         #Try to send an openStake transaction with empty output proposition
@@ -177,7 +174,7 @@ class SidechainClosedForgerTest(SidechainTestFramework):
         print("Try to send an openStake transaction with forgerIndex out of bounds")
         tx_bytes = createOpenStakeTransaction(sc_node1, new_public_key_box["id"],new_public_key,self.number_of_forgers,sc_fee)
         res = sendTransaction(sc_node1, tx_bytes["transactionBytes"])
-        assert_true("ForgerListIndex in OpenStakeTransaction is out of bound" in res["error"]["detail"])
+        assert_true("ForgerIndex in OpenStakeTransaction is out of bound" in res["error"]["detail"])
         print("Ok!")
 
         #Try to send openStake transaction with forgerIndex doesn't match the input proposition
@@ -186,7 +183,7 @@ class SidechainClosedForgerTest(SidechainTestFramework):
         assert_true(forger0_box != {})
         tx_bytes = createOpenStakeTransaction(sc_node1, forger0_box["id"],new_public_key,2,sc_fee)
         res = sendTransaction(sc_node1, tx_bytes["transactionBytes"])
-        assert_true("OpenStakeTransaction input doesn't match the forgerListIndex" in res["error"]["detail"])
+        assert_true("OpenStakeTransaction input doesn't match the forgerIndex" in res["error"]["detail"])
         print("Ok!")
 
         #Forger 0 opens the stake
@@ -260,14 +257,20 @@ class SidechainClosedForgerTest(SidechainTestFramework):
 
         allBoxes = http_wallet_allBoxes(sc_node1)
         forger2_box = self.find_box(allBoxes, self.allowed_forger_propositions[2].publicKey)
-        assert_true(forger2_box != {})
+        assert_true(forger2_box != {})         
         #Try the createOpenStakeTransactionSimplified endpoint
-        tx_bytes = createOpenStakeTransactionSimplified(sc_node1, self.allowed_forger_propositions[2].publicKey,2,sc_fee)
-        res = sendTransaction(sc_node1, tx_bytes["transactionBytes"])  
+        tx_bytes = createOpenStakeTransactionSimplified(sc_node1, self.allowed_forger_propositions[2].publicKey,2,forger2_box["value"])
+        res = sendTransaction(sc_node1, tx_bytes["transactionBytes"])
         assert_true("error" not in res)
+        print("Ok!")
         self.sc_sync_all()
-        generate_next_blocks(sc_node1, "first node", 1)
+        generate_next_blocks(sc_node1, "first node", 1)[0]
         self.sc_sync_all()
+     
+        #Verify that we have created an openStakeTransaction with fee = inputBox.value. We should have newBoxes empty.
+        print("Verify that we have created an openStakeTransaction with fee = inputBox.value. We should have newBoxes empty.")
+        block = http_block_best(sc_node1)
+        assert_equal(block["sidechainTransactions"][0]["newBoxes"], [])
         print("Ok!")
 
         # Now the majority of the allowed forgers opened the stake (3/5) and we should be able to stake to a new forger
@@ -276,6 +279,23 @@ class SidechainClosedForgerTest(SidechainTestFramework):
         print(result) 
         assert_true('result' in result)
         assert_true('transactionId' in result['result'])
+        print("Ok!")
+
+        self.sc_sync_all()
+        generate_next_blocks(sc_node1, "first node", 1)
+        self.sc_sync_all()
+
+        # Try to create an openStake transaction with the forge operation already opened. The transaction should be rejected.
+        print("Try to create an openStake transaction with the forge operation already opened. The transaction should be rejected.")
+        sendCoinsToAddress(sc_node1, self.allowed_forger_propositions[3].publicKey, 1500, 0)
+        self.sc_sync_all()
+        generate_next_blocks(sc_node1, "first node", 1)
+        self.sc_sync_all()
+
+        tx_bytes = createOpenStakeTransactionSimplified(sc_node1, self.allowed_forger_propositions[3].publicKey,3,sc_fee)
+        res = sendTransaction(sc_node1, tx_bytes["transactionBytes"])  
+        assert_true('error' in res)
+        assert_true('OpenStakeTransactions are not allowed because the forger operation has already been opened' in res['error']['detail'])
         print("Ok!")
 
 if __name__ == "__main__":

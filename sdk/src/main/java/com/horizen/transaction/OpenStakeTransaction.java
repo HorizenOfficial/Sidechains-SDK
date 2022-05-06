@@ -5,7 +5,7 @@ import com.horizen.box.BoxUnlocker;
 import com.horizen.box.ZenBox;
 import com.horizen.box.data.ZenBoxData;
 import com.horizen.proof.Proof;
-import com.horizen.proposition.Proposition;
+import com.horizen.proof.Signature25519;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.Secret;
@@ -26,9 +26,9 @@ import static com.horizen.transaction.CoreTransactionsIdsEnum.OpenStakeTransacti
 public class OpenStakeTransaction extends SidechainNoncedTransaction<PublicKey25519Proposition, ZenBox, ZenBoxData>{
     public final static byte OPEN_STAKE_TRANSACTION_VERSION = 1;
 
-    final byte[] inputsIds;
-    private final Optional<ZenBoxData> outputsData;
-    final Proof<Proposition> proofs;
+    final byte[] inputId;
+    private final Optional<ZenBoxData> outputData;
+    final Signature25519 proof;
 
     private final long fee;
 
@@ -38,17 +38,16 @@ public class OpenStakeTransaction extends SidechainNoncedTransaction<PublicKey25
 
     private final int forgerIndex;
 
-    public OpenStakeTransaction(byte[] inputsIds,
-                                Optional<ZenBoxData> outputsData,
-                                Proof<Proposition> proofs,
+    public OpenStakeTransaction(byte[] inputId,
+                                Optional<ZenBoxData> outputData,
+                                Signature25519 proof,
                                 int forgerIndex,
                                 long fee,
                                 byte version) {
-        Objects.requireNonNull(inputsIds, "Inputs Ids can't be null.");
 
-        this.inputsIds = inputsIds;
-        this.outputsData = outputsData;
-        this.proofs = proofs;
+        this.inputId = inputId;
+        this.outputData = outputData;
+        this.proof = proof;
         this.forgerIndex = forgerIndex;
         this.fee = fee;
         this.version = version;
@@ -66,12 +65,12 @@ public class OpenStakeTransaction extends SidechainNoncedTransaction<PublicKey25
             BoxUnlocker<PublicKey25519Proposition> unlocker = new BoxUnlocker() {
                 @Override
                 public byte[] closedBoxId() {
-                    return inputsIds;
+                    return inputId;
                 }
 
                 @Override
                 public Proof boxKey() {
-                    return proofs;
+                    return proof;
                 }
             };
             unlockers.add(unlocker);
@@ -83,7 +82,7 @@ public class OpenStakeTransaction extends SidechainNoncedTransaction<PublicKey25
     @Override
     protected List<ZenBoxData> getOutputData(){
         ArrayList<ZenBoxData> output = new ArrayList();
-        outputsData.ifPresent(output::add);
+        outputData.ifPresent(output::add);
         return output;
     }
 
@@ -99,11 +98,11 @@ public class OpenStakeTransaction extends SidechainNoncedTransaction<PublicKey25
                     "unsupported version number.", id()));
         }
 
-        if (inputsIds == null)
+        if (inputId == null)
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "no input data present.", id()));
 
-        if (proofs == null)
+        if (proof == null)
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "no proof data present.", id()));
 
@@ -138,24 +137,36 @@ public class OpenStakeTransaction extends SidechainNoncedTransaction<PublicKey25
 
     public int getForgerIndex() { return this.forgerIndex; }
 
+    public byte[] getInputId() { return this.inputId; }
+
+    public Optional<ZenBoxData> getOutputBox() {
+        return this.outputData;
+    }
+
     public TransactionIncompatibilityChecker incompatibilityChecker() {
         return new OpenStakeTransactionIncompatibilityChecker();
     }
 
 
     public static OpenStakeTransaction create(Pair<ZenBox, PrivateKey25519> from,
-                                            Optional<ZenBoxData> outputs,
-                                            int forgerIndex,
-                                            long fee) throws TransactionSemanticValidityException {
-        if(from == null || outputs.isEmpty())
+                                              Optional<PublicKey25519Proposition> changeAddress,
+                                              int forgerIndex,
+                                              long fee) throws TransactionSemanticValidityException {
+        if(from == null)
             throw new IllegalArgumentException("Parameters can't be null.");
+        if(from.getKey().value() < fee )
+            throw new IllegalArgumentException("Fee can't be greater than the input!");
 
-        OpenStakeTransaction unsignedTransaction = new OpenStakeTransaction(from.getKey().id(), outputs, null, forgerIndex, fee, OPEN_STAKE_TRANSACTION_VERSION);
+        Optional<ZenBoxData> output = Optional.empty();
+        if(changeAddress.isPresent() && from.getKey().value() > fee) {
+            output = Optional.of(new ZenBoxData(changeAddress.get(), from.getKey().value() - fee));
+        }
+        OpenStakeTransaction unsignedTransaction = new OpenStakeTransaction(from.getKey().id(), output, null, forgerIndex, fee, OPEN_STAKE_TRANSACTION_VERSION);
 
         byte[] messageToSign = unsignedTransaction.messageToSign();
         Secret secret = from.getValue();
 
-        OpenStakeTransaction transaction = new OpenStakeTransaction(from.getKey().id(), outputs, (Proof<Proposition>) secret.sign(messageToSign), forgerIndex, fee, OPEN_STAKE_TRANSACTION_VERSION);
+        OpenStakeTransaction transaction = new OpenStakeTransaction(from.getKey().id(), output, (Signature25519) secret.sign(messageToSign), forgerIndex, fee, OPEN_STAKE_TRANSACTION_VERSION);
         transaction.transactionSemanticValidity();
 
         return transaction;
