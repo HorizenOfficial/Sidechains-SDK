@@ -113,7 +113,7 @@ object MainchainTransaction {
     // check if it's a transaction with JoinSplits and parse them if need
     // Note: actually joinsplit data is not important for us. So we will just parse it for knowing its size
     if (version >= PHGR_TX_VERSION || version == GROTH_TX_VERSION) {
-      val joinSplitsNumber: VarInt = BytesUtils.getVarInt(transactionBytes, currentOffset)
+      val joinSplitsNumber: VarInt = BytesUtils.getReversedVarInt(transactionBytes, currentOffset)
       currentOffset += joinSplitsNumber.size()
       if(joinSplitsNumber.value().intValue() != 0) {
         var joinSplitsOffset: Int = 8 + // int64_t vpub_old

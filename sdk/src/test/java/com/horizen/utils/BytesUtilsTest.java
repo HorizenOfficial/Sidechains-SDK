@@ -157,6 +157,7 @@ public class BytesUtilsTest {
     }
 
     @Test
+    @Deprecated
     public void BytesUtilsTest_getVarInt() {
         byte[] bytes = {4, (byte)253, 1, 2, (byte)254, 1, 0, 0, 2, (byte)255, 1, 0, 0, 0, 0, 1, 0, 1};
 

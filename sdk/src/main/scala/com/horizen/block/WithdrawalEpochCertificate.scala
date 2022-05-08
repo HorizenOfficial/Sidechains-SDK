@@ -142,7 +142,7 @@ object WithdrawalEpochCertificate {
     val btrFee: Long = BytesUtils.getReversedLong(certificateBytes, currentOffset)
     currentOffset += 8
 
-    val transactionInputCount: VarInt = BytesUtils.getVarInt(certificateBytes, currentOffset)
+    val transactionInputCount: VarInt = BytesUtils.getReversedVarInt(certificateBytes, currentOffset)
     currentOffset += transactionInputCount.size()
 
     var transactionInputs: Seq[MainchainTransactionInput] = Seq[MainchainTransactionInput]()
@@ -153,7 +153,7 @@ object WithdrawalEpochCertificate {
       currentOffset += input.size
     }
 
-    val transactionOutputCount: VarInt = BytesUtils.getVarInt(certificateBytes, currentOffset)
+    val transactionOutputCount: VarInt = BytesUtils.getReversedVarInt(certificateBytes, currentOffset)
     currentOffset += transactionOutputCount.size()
 
     var transactionOutputs: Seq[MainchainTransactionOutput] = Seq[MainchainTransactionOutput]()
@@ -164,7 +164,7 @@ object WithdrawalEpochCertificate {
       currentOffset += o.size
     }
 
-    val backwardTransferOutputsCount: VarInt = BytesUtils.getVarInt(certificateBytes, currentOffset)
+    val backwardTransferOutputsCount: VarInt = BytesUtils.getReversedVarInt(certificateBytes, currentOffset)
     currentOffset += backwardTransferOutputsCount.size()
 
     var backwardTransferOutputs: Seq[MainchainBackwardTransferCertificateOutput] = Seq[MainchainBackwardTransferCertificateOutput]()

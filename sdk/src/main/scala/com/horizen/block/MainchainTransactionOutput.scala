@@ -14,7 +14,7 @@ object MainchainTransactionOutput {
     val value: Long = BytesUtils.getReversedLong(outputBytes, currentOffset)
     currentOffset += 8
 
-    val scriptLength: VarInt = BytesUtils.getVarInt(outputBytes, currentOffset)
+    val scriptLength: VarInt = BytesUtils.getReversedVarInt(outputBytes, currentOffset)
     currentOffset += scriptLength.size()
 
     val script: Array[Byte] = outputBytes.slice(currentOffset, currentOffset + scriptLength.value().intValue())

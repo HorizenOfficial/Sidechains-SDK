@@ -87,6 +87,7 @@ public final class BytesUtils {
     }
 
     // get Bitcoin VarInt value, which length is from 1 to 9 bytes, starting from an offset position without copying an array.
+    @Deprecated
     public static VarInt getVarInt(byte[] bytes, int offset) {
         if(offset < 0 || bytes.length < offset + 1)
             throw new IllegalArgumentException("Value is out of array bounds");
@@ -109,6 +110,7 @@ public final class BytesUtils {
 
     // get Reversed Bitcoin VarInt value, which length is from 1 to 9 bytes, starting from an offset position without copying an array.
     // Note: ReversedVarInt is stored like VarInt, but "value" part is in little endian (reversed)
+    // Used in std::vectors serialization to store the length
     public static VarInt getReversedVarInt(byte[] bytes, int offset) {
         if(offset < 0 || bytes.length < offset + 1)
             throw new IllegalArgumentException("Value is out of array bounds");
