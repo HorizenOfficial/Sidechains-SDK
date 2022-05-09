@@ -1,5 +1,5 @@
 **0.3.3**
-1. Mainchain block deserialization fix: VarInt usage issue.
+1. Mainchain block deserialization fix: CompactSize usage issue.
 2. Bootstrapping tool improvement: scgenesisinfo data parsing.
 
 **0.3.2**
