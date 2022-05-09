@@ -216,9 +216,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     val forgerListIndexes = new JArrayList[Int]()
     mod.transactions.foreach(tx => {
       if (tx.isInstanceOf[OpenStakeTransaction]) {
-        if (!params.restrictForgers) {
-          throw new IllegalArgumentException("OpenStakeTransactions are not allowed with restrictForgers=false!")
-        }
         val openStakeTransaction = tx.asInstanceOf[OpenStakeTransaction]
         if (forgerListIndexes.contains(openStakeTransaction.getForgerIndex))
           throw new IllegalArgumentException(s"Block ${mod.id} contains OpenStakeTransactions with duplicated forgerIndex")
@@ -288,7 +285,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       if (tx.isInstanceOf[OpenStakeTransaction]) {
         if (!params.restrictForgers)
           throw new Exception("OpenStakeTransactions are not allowed with restrictForgers=false!")
-        if (openForger())
+        if (isForgingOpen())
           throw new Exception("OpenStakeTransactions are not allowed because the forger operation has already been opened!")
         val openStakeTransaction = tx.asInstanceOf[OpenStakeTransaction]
         if (openStakeTransaction.getForgerIndex >= params.allowedForgersList.size || openStakeTransaction.getForgerIndex < 0) {
@@ -339,10 +336,11 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         throw new Exception("Amounts sum of CoinsBoxes is incorrect. " +
           s"ClosedBox amount - $closedCoinsBoxesAmount, NewBoxesAmount - $newCoinsBoxesAmount, Fee - ${tx.fee()}")
 
+      lazy val isForgerOpen = isForgingOpen()
       newBoxes
         .filter(box => box.isInstanceOf[ForgerBox])
         .foreach(forgerBox => {
-          if (params.restrictForgers && !openForger()) {
+          if (params.restrictForgers && !isForgerOpen) {
             val vrfPublicKey: VrfPublicKey = forgerBox.vrfPubKey()
             val blockSignProposition: PublicKey25519Proposition = forgerBox.blockSignProposition()
             if (!params.allowedForgersList.contains((blockSignProposition, vrfPublicKey))) {
@@ -357,15 +355,19 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   }
 
   //Check if the majority of the allowed forgers opened the stake to everyone
-  def openForger(): Boolean = {
-    val nOpenForger: Int = stateStorage.getForgerList match {
-      case Some(forgerList: ForgerList) =>
-        forgerList.forgerIndexes.sum
-      case None =>
-        log.error("No forgerList found in the Storage!")
-        0
+  def isForgingOpen(): Boolean = {
+    if (!params.restrictForgers)
+      true
+    else {
+      val nOpenForger: Int = stateStorage.getForgerList match {
+        case Some(forgerList: ForgerList) =>
+          forgerList.forgerIndexes.sum
+        case None =>
+          log.error("No forgerList found in the Storage!")
+          0
+      }
+      nOpenForger > params.allowedForgersList.size / 2
     }
-    nOpenForger > params.allowedForgersList.size / 2
   }
 
   override def applyModifier(mod: SidechainBlock): Try[SidechainState] = {
