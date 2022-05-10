@@ -54,7 +54,7 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
           @Named("ConsensusStorage")  consensusStorage: Storage,
           @Named("BackupStorage")  backUpStorage: Storage,
           @Named("CustomApiGroups")  customApiGroups: JList[ApplicationApiGroup],
-          @Named("RejectedApiPaths")  rejectedApiPaths : JList[Pair[String, String]],
+          @Named("RejectedApiPaths")  rejectedApiPaths : JList[Pair[String, String]]
   ): SidechainApp = {
     synchronized {
       if (app == null) {
@@ -77,7 +77,7 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
           consensusStorage,
           backUpStorage,
           customApiGroups,
-          rejectedApiPaths,
+          rejectedApiPaths
         )
       }
     }

@@ -134,10 +134,5 @@ public class SimpleAppModule extends SidechainAppModule
         bind(new TypeLiteral<List<Pair<String, String>>> () {})
                 .annotatedWith(Names.named("RejectedApiPaths"))
                 .toInstance(rejectedApiPaths);
-
-        BoxBackup backUpper = new BoxBackup();
-        bind(BoxBackupInterface.class)
-                .annotatedWith(Names.named("BackUpper"))
-                .toInstance(backUpper);
     }
 }

@@ -5,9 +5,8 @@ import com.horizen.box.CoinsBox;
 import com.horizen.companion.SidechainBoxesCompanion;
 import com.horizen.proposition.Proposition;
 import com.horizen.storage.StorageIterator;
-import com.horizen.utils.ByteArrayWrapper;
+import com.horizen.utils.Utils;
 import scala.util.Try;
-import scorex.crypto.hash.Blake2b256;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -23,16 +22,25 @@ public class BoxIterator {
         this.iterator.seekToFirst();
     }
 
-    public Optional<BackupBox> nextBox() {
+    public void seekToFirst() {
+        this.iterator.seekToFirst();
+    }
+
+    public Optional<BackupBox> nextBox() throws RuntimeException {
         while (iterator.hasNext()) {
             Map.Entry<byte[], byte[]> entry = iterator.next();
             Try<Box<Proposition>> box = sidechainBoxesCompanion.parseBytesTry(entry.getValue());
             if (box.isSuccess()) {
                 Box<Proposition> currBox = box.get();
-                if (verifyBox(entry.getKey(), currBox.id()) &&
-                        (!(currBox instanceof CoinsBox))
-                ) {
-                    return Optional.of(new BackupBox(currBox, entry.getKey(), entry.getValue()));
+                if (verifyBox(entry.getKey(), currBox.id())) {
+                    if (!(currBox instanceof CoinsBox)) {
+                        return Optional.of(new BackupBox(currBox, entry.getKey(), entry.getValue()));
+                    }
+                    else {
+                        throw new RuntimeException("Coin boxes are not eligible to be restored!");
+                    }
+                } else {
+                    throw new RuntimeException("Unable to reconstruct the same box id to restore!");
                 }
             }
         }
@@ -40,10 +48,7 @@ public class BoxIterator {
     }
 
     private boolean verifyBox(byte[] recordId, byte[] boxId) {
-        return Arrays.equals(recordId, calculateKey(boxId).data());
+        return Arrays.equals(recordId, Utils.calculateKey(boxId).data());
     }
 
-    private ByteArrayWrapper calculateKey(byte[] boxId) {
-        return new ByteArrayWrapper((byte[]) Blake2b256.hash(boxId));
-    }
 }
