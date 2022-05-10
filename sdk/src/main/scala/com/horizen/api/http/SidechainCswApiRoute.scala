@@ -138,11 +138,11 @@ case class SidechainCswApiRoute(override val settings: RESTApiSettings,
   /***
    * Retrieve the SidechainBlockId needed to rollback the SidechainStateStorage for the backup.
    * It's calculated by the following formula:
-   * Genesis_MC_block_height + (current_epch-2) * withdrawalEpochçength -1
+   * Genesis_MC_block_height + (current_epch-2) * withdrawalEpochLength -1
    */
 
   def getSidechainBlockIdToRollback: Route = (post & path("getSidechainBlockIdToRollback")) {
-    withSidechainNodeView { nodeView =>
+    getNodeView { nodeView =>
       try {
         val withdrawalEpochLength = nodeView.state.params.withdrawalEpochLength
         val currentEpoch = nodeView.state.getWithdrawalEpochInfo.epoch

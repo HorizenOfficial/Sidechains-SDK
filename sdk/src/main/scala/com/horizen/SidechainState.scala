@@ -534,6 +534,17 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         new ZenBox(data, nonce)
     }.filter(box => box.value() > 0)
   }
+
+  def restoreBackup(backupStorageBoxIterator: BoxIterator, lastVersion: Array[Byte]): Try[SidechainState] = Try {
+    stateStorage.restoreBackup(backupStorageBoxIterator, lastVersion)
+    backupStorageBoxIterator.seekToFirst()
+    applicationState.onBackupRestore(backupStorageBoxIterator) match {
+      case Success(_) =>
+        this
+      case Failure(e) =>
+        throw e
+    }
+  }
 }
 
 object SidechainState
@@ -583,19 +594,11 @@ object SidechainState
                                           genesisBlock: SidechainBlock): Try[SidechainState] = Try {
 
     if (stateStorage.isEmpty) {
+      var state = new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, idToVersion(genesisBlock.parentId), applicationState)
       if (!backupStorage.isEmpty) {
-        stateStorage.restoreBackup(backupStorage.getIterator, versionToBytes(idToVersion(genesisBlock.parentId)))
-        applicationState.onBackupRestore(new BoxIterator(backupStorage.getIterator, backupStorage.sBoxesCompanion)) match {
-          case Success(updatedState) =>
-            new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, idToVersion(genesisBlock.parentId), updatedState)
-              .applyModifier(genesisBlock).get
-          case Failure(e) =>
-            throw e
-        }
-      } else{
-        new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, idToVersion(genesisBlock.parentId), applicationState)
-          .applyModifier(genesisBlock).get
+        state = state.restoreBackup(backupStorage.getBoxIterator, versionToBytes(idToVersion(genesisBlock.parentId))).get
       }
+      state.applyModifier(genesisBlock).get
     } else
       throw new RuntimeException("State storage is not empty!")
   }

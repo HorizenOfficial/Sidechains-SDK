@@ -14,6 +14,7 @@ import java.io._
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
 import scala.util.{Failure, Success}
+import java.util.{Optional => JOptional}
 
 class SidechainBackup @Inject()
   (@Named("CustomBoxSerializers") val customBoxSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]],
@@ -29,17 +30,23 @@ class SidechainBackup @Inject()
     protected val backupStorage = new BackupStorage(backUpStorage, sidechainBoxesCompanion)
 
 
-    def createBackup(sidechainBlockIdToRollback: String, copyStateStorage: Boolean, dataDirPath: String): Unit = {
+    def createBackup(sidechainBlockIdToRollback: String, copyStateStorage: Boolean, optionalStateStoragePath: JOptional[String]): Unit = {
       if (copyStateStorage) {
-        val stateStorage: File = new File(dataDirPath+ "/state")
-        val stateStorageBackup: File = new File(dataDirPath+ "/state_backup")
+        if (optionalStateStoragePath.isEmpty) {
+          log.error("Error during the copy of the StateStorage: no stateStorage path provided!")
+          throw new RuntimeException("Error during the copy of the StateStorage: no stateStorage path provided!")
+        } else {
+          val stateStoragePath = optionalStateStoragePath.get()
+          val stateStorage: File = new File(stateStoragePath)
+          val stateStorageBackup: File = new File(stateStoragePath+"_backup")
 
-        try {
-          FileUtils.copyDirectory(stateStorage, stateStorageBackup)
-        } catch {
-          case t: Throwable =>
-            log.error("Error during the copy of the StateStorage: ",t.getMessage)
-            throw new RuntimeException("Error during the copy of the StateStorage: "+t.getMessage)
+          try {
+            FileUtils.copyDirectory(stateStorage, stateStorageBackup)
+          } catch {
+            case t: Throwable =>
+              log.error("Error during the copy of the StateStorage: ",t.getMessage)
+              throw new RuntimeException("Error during the copy of the StateStorage: "+t.getMessage)
+          }
         }
       }
 

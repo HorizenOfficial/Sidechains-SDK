@@ -3,11 +3,11 @@ package com.horizen.storage
 import com.horizen.SidechainTypes
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.utils.{ByteArrayWrapper, Pair => JPair}
-import scorex.crypto.hash.Blake2b256
-import scorex.util.{ModifierId, ScorexLogging, idToBytes}
-
 import java.util.{ArrayList => JArrayList}
+import com.horizen.utils.Utils
+
 import scala.collection.JavaConverters._
+import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
 import scala.util.{Failure, Success, Try}
 
@@ -23,12 +23,9 @@ extends SidechainTypes
   require(storage != null, "Storage must be NOT NULL.")
   require(sidechainTransactionsCompanion != null, "SidechainTransactionsCompanion must be NOT NULL.")
 
-  def calculateKey(transactionId : Array[Byte]) : ByteArrayWrapper = {
-    new ByteArrayWrapper(Blake2b256.hash(transactionId))
-  }
 
   def get (transactionId : Array[Byte]) : Option[SidechainTypes#SCBT] = {
-    storage.get(calculateKey(transactionId)) match {
+    storage.get(Utils.calculateKey(transactionId)) match {
       case v if v.isPresent => {
         sidechainTransactionsCompanion.parseBytesTry(v.get().data) match {
           case Success(transaction) => Option(transaction.asInstanceOf[SidechainTypes#SCBT])
@@ -50,7 +47,7 @@ extends SidechainTypes
     val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
 
     for (tx <- transactionUpdateList)
-      updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](calculateKey(idToBytes(ModifierId @@ tx.id)),
+      updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](Utils.calculateKey(idToBytes(ModifierId @@ tx.id)),
         new ByteArrayWrapper(sidechainTransactionsCompanion.toBytes(tx))))
 
     storage.update(version,

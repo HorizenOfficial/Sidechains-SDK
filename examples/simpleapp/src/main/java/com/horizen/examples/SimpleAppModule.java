@@ -18,7 +18,6 @@ import com.horizen.proposition.Proposition;
 import com.horizen.secret.Secret;
 import com.horizen.secret.SecretSerializer;
 import com.horizen.settings.SettingsReader;
-import com.horizen.storage.BoxBackupInterface;
 import com.horizen.storage.Storage;
 import com.horizen.state.*;
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter;
@@ -150,9 +149,5 @@ public class SimpleAppModule extends SidechainAppModule
                 .annotatedWith(Names.named("ApplicationStopper"))
                 .toInstance(applicationStopper);
 
-        BoxBackup backUpper = new BoxBackup();
-        bind(BoxBackupInterface.class)
-                .annotatedWith(Names.named("BackUpper"))
-                .toInstance(backUpper);
     }
 }

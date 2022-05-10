@@ -6,10 +6,8 @@ import java.util.{ArrayList => JArrayList}
 
 import com.horizen.backup.BoxIterator
 
-import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock}
 import com.horizen.box.{Box, CoinsBox, ForgerBox, ZenBox}
-import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.wallet.ApplicationWallet
 import com.horizen.node.NodeWallet
@@ -26,6 +24,10 @@ import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.util.{Failure, Success, Try}
 import scala.util.{Try}
+import scorex.core.block.Block.Timestamp
+import scorex.util.ModifierId
+
+import scala.util.Try
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.language.postfixOps
@@ -186,33 +188,33 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
    * @param backupStorageIterator: iterator on the backup storage
    * @param sidechainBoxesCompanion
    */
-  def scanBackUp(backupStorageIterator: StorageIterator, sidechainBoxesCompanion: SidechainBoxesCompanion): Unit = {
+  def scanBackUp(backupStorageBoxIterator: BoxIterator, genesisBlockTimestamp: Timestamp): Try[SidechainWallet] = Try{
     val pubKeys = publicKeys()
-    backupStorageIterator.seekToFirst()
     val walletBoxes = new JArrayList[WalletBox]()
     val removeList = new JArrayList[Array[Byte]]()
     var nBoxes = 0
 
-    while(backupStorageIterator.hasNext) {
-      val entry = backupStorageIterator.next()
-      val box: Try[SCB] = sidechainBoxesCompanion.parseBytesTry(entry.getValue)
-
-      if (box.isSuccess) {
-        val currBox: SCB = box.get
-        if (pubKeys.contains(currBox.proposition())) {
-          walletBoxes.add(new WalletBox(currBox, System.currentTimeMillis()))
-          nBoxes += 1
-          if (nBoxes == leveldb.Constants.BatchSize) {
-            walletBoxStorage.update(new ByteArrayWrapper(Utils.nextVersion), walletBoxes.asScala.toList, removeList.asScala.toList).get
-            walletBoxes.clear()
-            nBoxes = 0
-          }
+    var optionalBox = backupStorageBoxIterator.nextBox
+    while(optionalBox.isPresent) {
+      val box: SCB = optionalBox.get.getBox
+      if (pubKeys.contains(box.proposition())) {
+        walletBoxes.add(new WalletBox(box, genesisBlockTimestamp))
+        nBoxes += 1
+        if (nBoxes == leveldb.Constants.BatchSize) {
+          walletBoxStorage.update(new ByteArrayWrapper(Utils.nextVersion), walletBoxes.asScala.toList, removeList.asScala.toList).get
+          walletBoxes.clear()
+          nBoxes = 0
         }
       }
+      optionalBox = backupStorageBoxIterator.nextBox
     }
     if (nBoxes > 0) {
       walletBoxStorage.update(new ByteArrayWrapper(Utils.nextVersion), walletBoxes.asScala.toList, removeList.asScala.toList).get
     }
+    backupStorageBoxIterator.seekToFirst
+    applicationWallet.onBackupRestore(backupStorageBoxIterator)
+
+    this
   }
 
   private[horizen] def calculateUtxoCswData(view: UtxoMerkleTreeView): Seq[CswData] = {
@@ -461,7 +463,7 @@ object SidechainWallet
     if (walletBoxStorage.isEmpty) {
       val genesisWallet = new SidechainWallet(seed, walletBoxStorage, secretStorage, walletTransactionStorage,
         forgingBoxesInfoStorage, cswDataStorage, params, applicationWallet)
-      genesisWallet.scanBackUp(backupStorage.getIterator, backupStorage.sBoxesCompanion)
+      genesisWallet.scanBackUp(backupStorage.getBoxIterator, genesisBlock.timestamp).get
       genesisWallet.scanPersistent(genesisBlock, withdrawalEpochNumber, Seq(), None).applyConsensusEpochInfo(consensusEpochInfo)
     }
     else
