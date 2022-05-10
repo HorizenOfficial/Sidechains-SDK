@@ -1,7 +1,7 @@
 package com.horizen.storage;
 
 import com.horizen.fixtures.StoreFixtureClass;
-import com.horizen.storage.rocksdb.VersionedRocksDbStorageAdapter;
+import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter;
 import com.horizen.utils.ByteArrayWrapper;
 
 import java.io.File;
@@ -18,7 +18,7 @@ public class StorageTest {
 
     @Test
     public void testStorage() {
-        VersionedRocksDbStorageAdapter s = storageFixture.getStorage();
+        VersionedLevelDbStorageAdapter s = storageFixture.getStorage();
 
         //Test empty storage
         assertTrue("Storage expected to be empty.", s.isEmpty());
@@ -158,7 +158,7 @@ public class StorageTest {
     @Test
     public void reopenStorage() {
         File storagePath = storageFixture.tempFile();
-        VersionedRocksDbStorageAdapter s = storageFixture.getStorage(storagePath);
+        VersionedLevelDbStorageAdapter s = storageFixture.getStorage(storagePath);
         assertTrue("Storage expected to be empty.", s.isEmpty());
 
         assertFalse("Version of empty storage shall be none", s.lastVersionID().isPresent());
@@ -185,7 +185,7 @@ public class StorageTest {
 
         s.close();
 
-        VersionedRocksDbStorageAdapter s2 = storageFixture.getStorage(storagePath);
+        VersionedLevelDbStorageAdapter s2 = storageFixture.getStorage(storagePath);
         assertFalse("Storage expected to be not empty.", s2.isEmpty());
         assertEquals("Storage must contain 3 items.", firstUpdateSize, s2.getAll().size());
         assertEquals("Storage must contain value for key - " + u1.get(0).getKey(), u1.get(0).getValue(), s2.get(u1.get(0).getKey()).get());

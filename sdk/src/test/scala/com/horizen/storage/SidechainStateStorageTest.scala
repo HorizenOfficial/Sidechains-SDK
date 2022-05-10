@@ -7,7 +7,7 @@ import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.customtypes.{CustomBox, CustomBoxSerializer}
 import com.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
-import com.horizen.storage.rocksdb.VersionedRocksDbStorageAdapter
+import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.utils.{BlockFeeInfo, BlockFeeInfoSerializer, ByteArrayWrapper, Pair, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
 import org.junit.Assert._
 import org.junit._
@@ -30,7 +30,7 @@ class SidechainStateStorageTest
     with MockitoSugar
     with SidechainTypes
 {
-  val mockedPhysicalStorage: Storage = mock[VersionedRocksDbStorageAdapter]
+  val mockedPhysicalStorage: Storage = mock[VersionedLevelDbStorageAdapter]
 
   val boxList = new ListBuffer[SidechainTypes#SCB]()
   val storedBoxList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()

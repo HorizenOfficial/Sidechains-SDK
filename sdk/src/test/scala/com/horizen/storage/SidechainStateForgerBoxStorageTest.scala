@@ -3,7 +3,7 @@ package com.horizen.storage
 import com.horizen.SidechainTypes
 import com.horizen.box.{ForgerBox, ForgerBoxSerializer}
 import com.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
-import com.horizen.storage.rocksdb.VersionedRocksDbStorageAdapter
+import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.utils.{ByteArrayWrapper, Pair}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.{Before, Test}
@@ -25,7 +25,7 @@ class SidechainStateForgerBoxStorageTest
     with MockitoSugar
     with SidechainTypes
 {
-  val mockedPhysicalStorage: Storage = mock[VersionedRocksDbStorageAdapter]
+  val mockedPhysicalStorage: Storage = mock[VersionedLevelDbStorageAdapter]
 
   val boxList = new ListBuffer[ForgerBox]()
   val storedBoxList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()

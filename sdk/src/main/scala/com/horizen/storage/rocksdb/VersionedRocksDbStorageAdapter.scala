@@ -1,6 +1,5 @@
 package com.horizen.storage.rocksdb
 
-import akka.japi.Option.scala2JavaOption
 import com.horizen.common.interfaces.DefaultReader
 import com.horizen.storage.Storage
 import com.horizen.storageVersioned.{StorageVersioned, TransactionVersioned}
@@ -9,10 +8,8 @@ import scorex.util.ScorexLogging
 
 import java.io.File
 import java.util
-import java.util.stream.Collectors
 import java.util.{Optional, List => JList}
 import scala.collection.JavaConverters._
-import scala.collection.mutable
 import scala.compat.java8.OptionConverters.{RichOptionForJava8, RichOptionalGeneric}
 
 
@@ -94,16 +91,14 @@ class VersionedRocksDbStorageAdapter(pathToDB: File) extends Storage with Scorex
       // TODO is this still valid for RocksDb?
       // key for storing version shall not be used as key in any key-value pair in VersionedLDBKVStore
       require(y.getKey !=  version)
-      // we are inserting into a map, should we throw an except if there are duplicate key?
+      // TODO we are inserting into a map, should we throw an except if there are duplicate key?
       toInsert.put(y.getKey.data(), y.getValue.data())
     }
 
     for (y <- toRemove.asScala) {
-      // we are inserting into a set, should we throw an except if there are duplicate key?
+      // TODO we are inserting into a set, should we throw an except if there are duplicate key?
       toDelete.add(y.data())
     }
-
-
 
     val versionIdOpt: Optional[String] = Optional.empty()
     val transaction: TransactionVersioned = dataBase.createTransaction(versionIdOpt).asScala.getOrElse(throw new Exception("Could not create a transaction"))
