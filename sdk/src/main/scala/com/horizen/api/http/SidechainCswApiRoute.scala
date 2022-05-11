@@ -134,7 +134,6 @@ case class SidechainCswApiRoute(override val settings: RESTApiSettings,
       }
     }
   }
-
 }
 
 object SidechainCswRestScheme {
@@ -167,7 +166,6 @@ object SidechainCswRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespNullifier(nullifier: String) extends SuccessResponse
-
 }
 
 object SidechainCswErrorResponse {
@@ -190,5 +188,4 @@ object SidechainCswErrorResponse {
   case class ErrorRetrievingNullifier(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0705"
   }
-
 }
