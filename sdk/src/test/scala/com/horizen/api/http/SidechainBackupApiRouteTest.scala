@@ -29,22 +29,17 @@ class SidechainBackupApiRouteTest extends SidechainApiRouteTest{
   }
   "reply at /getInitialBoxes" in {
     //Test with invalid "lastBoxId".
-    Post(basePath + "getInitialBoxes").withEntity(SerializationUtil.serialize(ReqGetInitialBoxes(3, Some("invalid_hex")))) ~> sidechainBackupApiRoute ~> check {
+    Post(basePath + "getInitialBoxes").withEntity(SerializationUtil.serialize(ReqGetInitialBoxes(7, Some("invalid_json")))) ~> sidechainBackupApiRoute ~> check {
       status.intValue() shouldBe StatusCodes.OK.intValue
       responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-      val result = mapper.readTree(entityAs[String]).get("result")
+      val result = mapper.readTree(entityAs[String]).get("error")
       if (result == null)
         fail("Serialization failed for object SidechainApiResponseBody")
-      assertEquals(1, result.findValues("error").size())
 
-      val error = result.get("error")
-      if (error == null)
-        fail("Result serialization failed")
-
-      val errorCode = error.get("code")
+      val errorCode = result.get("code")
       if (errorCode == null)
         fail("Result serialization failed")
-      assertEquals(errorCode.asText(), "0204")
+      assertEquals(errorCode.asText(), "0802")
     }
     //Test with no "lastBoxId". It should return all mocked boxes
     Post(basePath + "getInitialBoxes").withEntity(SerializationUtil.serialize(ReqGetInitialBoxes(3, None))) ~> sidechainBackupApiRoute ~> check {
