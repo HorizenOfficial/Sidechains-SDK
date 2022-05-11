@@ -3,12 +3,12 @@ package com.horizen.api.http
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.api.http.SidechainCswRestScheme.{ReqCswInfo, ReqGenerationCswState, ReqNullifier, RespCswBoxIds, RespCswHasCeasedState, RespCswInfo, RespGenerationCswState, RespNullifier, RespSidechainBlockIdToRollback}
+import com.horizen.api.http.SidechainCswRestScheme.{ReqCswInfo, ReqGenerationCswState, ReqNullifier, RespCswBoxIds, RespCswHasCeasedState, RespCswInfo, RespGenerationCswState, RespNullifier}
 import com.horizen.serialization.Views
 
 import java.util.{Optional => JOptional}
 import akka.pattern.ask
-import com.horizen.api.http.SidechainCswErrorResponse.{ErrorCswGenerationState, ErrorRetrievingCeasingState, ErrorRetrievingCswBoxIds, ErrorRetrievingCswInfo, ErrorRetrievingNullifier, ErrorRetrievingSidechainBlockIdToRollback}
+import com.horizen.api.http.SidechainCswErrorResponse.{ErrorCswGenerationState, ErrorRetrievingCeasingState, ErrorRetrievingCswBoxIds, ErrorRetrievingCswInfo, ErrorRetrievingNullifier}
 import com.horizen.csw.CswManager.ReceivableMessages.{GenerateCswProof, GetBoxNullifier, GetCeasedStatus, GetCswBoxIds, GetCswInfo}
 import com.horizen.csw.CswManager.Responses.{CswInfo, GenerateCswProofStatus, InvalidAddress, NoProofData, ProofCreationFinished, ProofGenerationInProcess, ProofGenerationStarted, SidechainIsAlive}
 import com.horizen.api.http.JacksonSupport._
@@ -24,7 +24,7 @@ case class SidechainCswApiRoute(override val settings: RESTApiSettings,
                                (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
 
   override val route: Route = pathPrefix("csw") {
-    hasCeased ~ generateCswProof ~ cswInfo ~ cswBoxIds ~ nullifier ~ getSidechainBlockIdToRollback
+    hasCeased ~ generateCswProof ~ cswInfo ~ cswBoxIds ~ nullifier
   }
 
   /**
@@ -135,28 +135,6 @@ case class SidechainCswApiRoute(override val settings: RESTApiSettings,
     }
   }
 
-  /***
-   * Retrieve the SidechainBlockId needed to rollback the SidechainStateStorage for the backup.
-   * It's calculated by the following formula:
-   * Genesis_MC_block_height + (current_epch-2) * withdrawalEpochLength -1
-   */
-
-  def getSidechainBlockIdToRollback: Route = (post & path("getSidechainBlockIdToRollback")) {
-    getNodeView { nodeView =>
-      try {
-        val withdrawalEpochLength = nodeView.state.params.withdrawalEpochLength
-        val currentEpoch = nodeView.state.getWithdrawalEpochInfo.epoch
-        val genesisMcBlockHeight = nodeView.history.getMainchainCreationBlockHeight
-        val blockHeightToRollback = genesisMcBlockHeight + (currentEpoch -2) * withdrawalEpochLength - 1
-        val mainchainBlockReferenceInfo = nodeView.history.getMainchainBlockReferenceInfoByMainchainBlockHeight(blockHeightToRollback).get()
-        ApiResponseUtil.toResponse(RespSidechainBlockIdToRollback(BytesUtils.toHexString(mainchainBlockReferenceInfo.getMainchainReferenceDataSidechainBlockId)))
-      } catch {
-        case t: Throwable =>
-          log.error("Failed to retrieve SidechainBlockIdToRollback.", t.getMessage)
-          ApiResponseUtil.toResponse(ErrorRetrievingSidechainBlockIdToRollback("Unexpected error during retrieving the sidechain block id to rollback.", JOptional.of(t)))
-      }
-    }
-  }
 }
 
 object SidechainCswRestScheme {
@@ -190,8 +168,6 @@ object SidechainCswRestScheme {
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespNullifier(nullifier: String) extends SuccessResponse
 
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespSidechainBlockIdToRollback(blockId: String) extends SuccessResponse
 }
 
 object SidechainCswErrorResponse {
@@ -215,7 +191,4 @@ object SidechainCswErrorResponse {
     override val code: String = "0705"
   }
 
-  case class ErrorRetrievingSidechainBlockIdToRollback(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
-    override val code: String = "0706"
-  }
 }
