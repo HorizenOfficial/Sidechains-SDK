@@ -1,7 +1,7 @@
 package com.horizen.storage.rocksdb
 
 import com.horizen.common.interfaces.DefaultReader
-import com.horizen.storage.StorageNew
+import com.horizen.storage.{StorageNew, StorageVersionedView}
 import com.horizen.storageVersioned.{StorageVersioned, TransactionVersioned}
 import com.horizen.utils.{Pair => JPair, _}
 import scorex.util.ScorexLogging
@@ -19,12 +19,32 @@ class VersionedRocksDbStorageNewAdapter(pathToDB: File) extends StorageNew with 
   private val versionsToKeep: Int = 720 * 2 + 1; //How many version could be saved at all, currently hardcoded to two consensus epochs length + 1
   private val dataBase: StorageVersioned = StorageVersioned.open(pathToDB.getAbsolutePath, true, versionsToKeep)
 
-  def get(key: Array[Byte]): java.util.Optional[Array[Byte]] = dataBase.get(key)
+  def createTransaction(versionIdOpt: Optional[String]) : TransactionVersioned = {
+    dataBase.createTransaction(versionIdOpt).asScala.getOrElse(throw new Exception("Could not create a transaction"))
+  }
+
+  def get(key: Array[Byte]): Array[Byte] = {
+    dataBase.get(key).asScala match {
+      case None => new Array[Byte](0)
+      case Some(arr) => arr
+    }
+  }
 
   def getOrElse(key: Array[Byte], defaultValue: Array[Byte]): Array[Byte] = dataBase.getOrElse(key, defaultValue)
 
-  override def get(keySet: util.Set[Array[Byte]]): util.Map[Array[Byte], Optional[Array[Byte]]] = {
-    dataBase.get(keySet)
+  override def get(keyList: util.List[Array[Byte]]): util.List[Array[Byte]] = {
+    // TODO: until rocksdb wrapper implements it, use this one by one approach
+    //  dataBase.get(keyList)
+    keyList.asScala.map(x => get(x)).toList.asJava
+  }
+
+  override def getView: StorageVersionedView = new VersionedRocksDbViewAdapter(this, Optional.empty())
+
+  override def getView(version: ByteArrayWrapper): Optional[StorageVersionedView] = {
+    isVersionExist(version) match {
+      case true => Optional.of(new VersionedRocksDbViewAdapter(this, Optional.of(version)))
+      case false => Optional.empty()
+    }
   }
 
   // TODO check if the library has a method we can use without resorting to iterators
@@ -62,29 +82,14 @@ class VersionedRocksDbStorageNewAdapter(pathToDB: File) extends StorageNew with 
       }
   }
 
-  override def update(version: ByteArrayWrapper,
-                      toUpdate: util.Map[Array[Byte], Array[Byte]],
-                      toRemove: util.Set[Array[Byte]]): Unit = {
-    require(!isVersionExist(version), s"Version ${BytesUtils.toHexString(version)} already exists in storage")
-
-    // TODO is this still valid for RocksDb? Probably not
-    // key for storing version shall not be used as key in any key-value pair in VersionedLDBKVStore
-    // require(!toUpdate.containsKey(version.data()))
-
-    val versionIdOpt: Optional[String] = Optional.empty()
-    val transaction: TransactionVersioned = dataBase.createTransaction(versionIdOpt).asScala.getOrElse(throw new Exception("Could not create a transaction"))
-
-    // update and commit may throw exceptions (create does not)
-    try {
-      transaction.update(toUpdate, toRemove)
-      transaction.commit(Optional.of(BytesUtils.toHexString(version)))
-
-    } catch {
-      case e: Throwable => log.error(s"Could not update RocksDB with version ${version}", e)
-    } finally {
-      transaction.close()
+  def lastVersionString(): String = {
+    dataBase.lastVersion().asScala match {
+      case None => throw new Exception("A versioned db should have at least one version")
+      case Some(verString) => verString
     }
   }
+
+
 
   private def isVersionExist(versionForSearch: ByteArrayWrapper): Boolean = {
     val verString = BytesUtils.toHexString(versionForSearch.data())
