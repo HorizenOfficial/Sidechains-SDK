@@ -549,7 +549,7 @@ class SidechainWalletTest
     var actualSecret = sidechainWallet.secret(secret1.publicImage()).get
     assertEquals("SidechainWallet failed to retrieve a proper Secret.", secret1, actualSecret)
 
-    actualSecret = sidechainWallet.secretByPublicKey(secret1.publicImage()).get
+    actualSecret = sidechainWallet.secretByPublicKey25519Proposition(secret1.publicImage()).get
     assertEquals("SidechainWallet failed to retrieve a proper Secret.", secret1, actualSecret)
 
 

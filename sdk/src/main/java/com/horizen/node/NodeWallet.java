@@ -1,9 +1,11 @@
 package com.horizen.node;
 
 import com.horizen.box.Box;
-import com.horizen.proposition.Proposition;
-import com.horizen.proposition.ProofOfKnowledgeProposition;
+import com.horizen.proposition.*;
+import com.horizen.secret.PrivateKey25519;
+import com.horizen.secret.SchnorrSecret;
 import com.horizen.secret.Secret;
+import com.horizen.secret.VrfSecretKey;
 
 import java.util.*;
 
@@ -23,7 +25,13 @@ public interface NodeWallet {
 
     Long allCoinsBoxesBalance();
 
-    Optional<Secret> secretByPublicKey(Proposition publicKey);
+    Optional<PrivateKey25519> secretByPublicKey25519Proposition(PublicKey25519Proposition proposition);
+
+    Optional<SchnorrSecret> secretBySchnorrProposition(SchnorrProposition proposition);
+
+    Optional<VrfSecretKey> secretByVrfPublicKey(VrfPublicKey proposition);
+
+    <S extends Secret> List<S> secretsByProposition(ProofOfKnowledgeProposition<S> proposition);
 
     List<Secret> allSecrets();
 

@@ -449,7 +449,7 @@ class CswManager(settings: SidechainSettings,
     }
 
     def getOwner(sidechainNodeView: View): Option[PrivateKey25519] = {
-      sidechainNodeView.vault.secretByPublicKey(publicKey25519Proposition).asScala.map(_.asInstanceOf[PrivateKey25519])
+      sidechainNodeView.vault.secretByPublicKey25519Proposition(publicKey25519Proposition).asScala.map(_.asInstanceOf[PrivateKey25519])
     }
 
     Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getOwner), timeoutDuration).asInstanceOf[Option[PrivateKey25519]]
