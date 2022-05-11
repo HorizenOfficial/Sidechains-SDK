@@ -543,14 +543,19 @@ class SidechainWalletTest
     val secret2 = getPrivateKey25519("testSeed2".getBytes())
 
 
-    // Test 1: test secret(proposition) and secretByPublicKey(proposition)
+    // Test 1: test secret(proposition) and secretByPublicKey25519Proposition(proposition)
     Mockito.when(mockedSecretStorage1.get(secret1.publicImage())).thenReturn(Some(secret1))
+    Mockito.when(mockedSecretStorage1.getAll).thenReturn(List(secret1, secret2))
 
     var actualSecret = sidechainWallet.secret(secret1.publicImage()).get
     assertEquals("SidechainWallet failed to retrieve a proper Secret.", secret1, actualSecret)
 
     actualSecret = sidechainWallet.secretByPublicKey25519Proposition(secret1.publicImage()).get
     assertEquals("SidechainWallet failed to retrieve a proper Secret.", secret1, actualSecret)
+
+    val retList =  sidechainWallet.secretsByProposition(secret1.publicImage())
+    assertEquals("SidechainWallet failed to retrieve a proper Secret.", 1, retList.size())
+    assertEquals("SidechainWallet failed to retrieve a proper Secret.", secret1, retList.get(0))
 
 
     // Test 2: test secrets(), publicKeys(), allSecrets(), secretsOfType(type)
