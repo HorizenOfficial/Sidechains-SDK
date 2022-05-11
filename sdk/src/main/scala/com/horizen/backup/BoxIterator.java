@@ -7,7 +7,9 @@ import com.horizen.proposition.Proposition;
 import com.horizen.storage.StorageIterator;
 import com.horizen.utils.Utils;
 import scala.util.Try;
+import scorex.util.serialization.VLQByteBufferReader;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
@@ -26,25 +28,30 @@ public class BoxIterator {
         this.iterator.seekToFirst();
     }
 
-    public Optional<BackupBox> nextBox() throws RuntimeException {
+    public Optional<BackupBox> nextBox(boolean ignoreCoinBox) throws RuntimeException {
         while (iterator.hasNext()) {
             Map.Entry<byte[], byte[]> entry = iterator.next();
-            Try<Box<Proposition>> box = sidechainBoxesCompanion.parseBytesTry(entry.getValue());
-            if (box.isSuccess()) {
-                Box<Proposition> currBox = box.get();
+            VLQByteBufferReader reader = new VLQByteBufferReader(ByteBuffer.wrap(entry.getValue()));
+            Try<Box<Proposition>> tryBox = sidechainBoxesCompanion.parseTry(reader);
+
+            if (tryBox.isSuccess() && reader.remaining() == 0) {
+                Box<Proposition> currBox = tryBox.get();
                 if (verifyBox(entry.getKey(), currBox.id())) {
                     if (!(currBox instanceof CoinsBox)) {
                         return Optional.of(new BackupBox(currBox, entry.getKey(), entry.getValue()));
                     }
                     else {
-                        throw new RuntimeException("Coin boxes are not eligible to be restored!");
+                        if (!ignoreCoinBox)
+                            throw new RuntimeException("Coin boxes are not eligible to be restored!");
                     }
-                } else {
-                    throw new RuntimeException("Unable to reconstruct the same box id to restore!");
                 }
             }
         }
         return Optional.empty();
+    }
+
+    public Optional<BackupBox> nextBox() throws RuntimeException {
+        return nextBox(false);
     }
 
     private boolean verifyBox(byte[] recordId, byte[] boxId) {

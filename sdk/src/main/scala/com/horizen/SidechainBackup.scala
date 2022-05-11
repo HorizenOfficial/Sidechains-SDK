@@ -6,6 +6,7 @@ import com.horizen.backup.BoxIterator
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.storage._
+import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.apache.commons.io.FileUtils
 import scorex.util.ScorexLogging
@@ -24,7 +25,7 @@ class SidechainBackup @Inject()
   ) extends ScorexLogging
   {
     protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers)
-    protected val sidechainStateStorage = new SidechainStateStorage(
+    protected var sidechainStateStorage: SidechainStateStorage = new SidechainStateStorage(
       stateStorage,
       sidechainBoxesCompanion)
     protected val backupStorage = new BackupStorage(backUpStorage, sidechainBoxesCompanion)
@@ -38,10 +39,13 @@ class SidechainBackup @Inject()
         } else {
           val stateStoragePath = optionalStateStoragePath.get()
           val stateStorage: File = new File(stateStoragePath)
-          val stateStorageBackup: File = new File(stateStoragePath+"_backup")
+          val stateStorageBackup: File = new File(stateStoragePath+"_copy_for_backup")
 
           try {
             FileUtils.copyDirectory(stateStorage, stateStorageBackup)
+            sidechainStateStorage = new SidechainStateStorage(
+              new VersionedLevelDbStorageAdapter(stateStorageBackup),
+              sidechainBoxesCompanion)
           } catch {
             case t: Throwable =>
               log.error("Error during the copy of the StateStorage: ",t.getMessage)

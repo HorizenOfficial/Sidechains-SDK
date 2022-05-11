@@ -57,7 +57,7 @@ trait SidechainApiRoute extends ApiRoute with ApiDirectives {
 
   type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
 
-  def getNodeView(f: View => Route): Route = onSuccess(sidechainViewAsync())(f)
+  def withView(f: View => Route): Route = onSuccess(sidechainViewAsync())(f)
 
   protected def sidechainViewAsync(): Future[View] = {
     def f(v: View) = v

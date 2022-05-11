@@ -5,7 +5,7 @@ from SidechainTestFramework.scutil import start_sc_nodes, generate_next_blocks, 
 from httpCalls.wallet.createPrivateKey25519 import http_wallet_createPrivateKey25519
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
-from httpCalls.csw.blockIdToRollback import getBlockIdToRollback
+from httpCalls.backup.blockIdForBackup import getBlockIdForBackup
 import time
 from httpCalls.block.best import http_block_best
 """
@@ -13,7 +13,7 @@ from httpCalls.block.best import http_block_best
     This endpoint should return the sidechain block id containing the mainchain block reference of the MC block with 
     height =  Genesis_MC_block_height + (current_epoch-2) * withdrawalEpochçength -1
 """
-class SidechainBlockIdToRollbackTest(SidechainTestFramework):
+class SidechainBlockIdForBackupTest(SidechainTestFramework):
     number_of_mc_nodes = 3
     number_of_sidechain_nodes = 1
     withdrawalEpochLength=10
@@ -80,11 +80,11 @@ class SidechainBlockIdToRollbackTest(SidechainTestFramework):
         sc_creation_block = mc_node1.getblock(str(sc_creation_block_height),2)
         assert_true(len(sc_creation_block["tx"][1]["vsc_ccout"]) == 1)
 
-        #Call the csw/getSidechainBlockIdToRollback endpoint and verify it returns an error (we still not have 2 epoch)
-        print("Call the csw/getSidechainBlockIdToRollback endpoint and verify it returns an error (we still not have 2 epoch)")
-        res = getBlockIdToRollback(sc_node1)
+        #Call the backup/getSidechainBlockIdForBackup endpoint and verify it returns an error (we still not have 2 epoch)
+        print("Call the backup/getSidechainBlockIdForBackup endpoint and verify it returns an error (we still not have 2 epoch)")
+        res = getBlockIdForBackup(sc_node1)
         assert_true("error" in res)
-        assert_equal(res["error"]["code"], "0706")
+        assert_equal(res["error"]["code"], "0801")
 
         #Generate some MC blocks
         mc_node1.generate(self.withdrawalEpochLength-2)
@@ -93,7 +93,7 @@ class SidechainBlockIdToRollbackTest(SidechainTestFramework):
         generate_next_blocks(sc_node1, "first node", 1)
         
         #This block contains the reference to the MC block 459 that will be the first block available to retrieve with the
-        # /csw/getSidechainBlockIdToRollback endpoint.
+        # backup/getSidechainBlockIdForBackup endpoint.
         blockIdToRollback = http_block_best(sc_node1)["id"]
 
         # Generate first mc block of the next epoch
@@ -113,11 +113,11 @@ class SidechainBlockIdToRollbackTest(SidechainTestFramework):
         assert_equal(mc_node1.getscinfo(self.sc_nodes_bootstrap_info.sidechain_id)["items"][0]["state"], "ALIVE")
         assert_equal(mc_node1.getscinfo(self.sc_nodes_bootstrap_info.sidechain_id)["items"][0]["epoch"], 1)
 
-        #Call the csw/getSidechainBlockIdToRollback endpoint and verify it returns an error (we still not have 2 epoch)
-        print("Call the csw/getSidechainBlockIdToRollback endpoint and verify it returns an error (we still not have 2 epoch)")
-        res = getBlockIdToRollback(sc_node1)
+        #Call the backup/getSidechainBlockIdForBackup endpoint and verify it returns an error (we still not have 2 epoch)
+        print("Call the backup/getSidechainBlockIdForBackup endpoint and verify it returns an error (we still not have 2 epoch)")
+        res = getBlockIdForBackup(sc_node1)
         assert_true("error" in res)
-        assert_equal(res["error"]["code"], "0706")
+        assert_equal(res["error"]["code"], "0801")
 
         #Generate some MC blocks
         mc_node1.generate(self.withdrawalEpochLength -1)
@@ -141,10 +141,10 @@ class SidechainBlockIdToRollbackTest(SidechainTestFramework):
         assert_equal(mc_node1.getscinfo(self.sc_nodes_bootstrap_info.sidechain_id)["items"][0]["state"], "ALIVE")
         assert_equal(mc_node1.getscinfo(self.sc_nodes_bootstrap_info.sidechain_id)["items"][0]["epoch"], 2)
         
-        #Call the csw/getSidechainBlockIdToRollback endpoint and verify it returns an error (we are asking for the MC height 449)
-        res = getBlockIdToRollback(sc_node1)
+        #Call the backup/getSidechainBlockIdForBackup endpoint and verify it returns an error (we are asking for the MC height 449)
+        res = getBlockIdForBackup(sc_node1)
         assert_true("error" in res)
-        assert_equal(res["error"]["code"], "0706")
+        assert_equal(res["error"]["code"], "0801")
 
         #Generate some MC blocks
         mc_node1.generate(self.withdrawalEpochLength -1)
@@ -166,11 +166,11 @@ class SidechainBlockIdToRollbackTest(SidechainTestFramework):
         ####################### EPOCH 3 ####################
         print("####################### EPOCH 3 ####################")
 
-        #Call the csw/getSidechainBlockIdToRollback endpoint and verify it returns the blockIdToRollback
-        print("Call the csw/getSidechainBlockIdToRollback endpoint and verify it returns the blockIdToRollback")
-        res = getBlockIdToRollback(sc_node1)
+        #Call the backup/getSidechainBlockIdForBackup endpoint and verify it returns the blockIdToRollback
+        print("Call the backup/getSidechainBlockIdForBackup endpoint and verify it returns the blockIdToRollback")
+        res = getBlockIdForBackup(sc_node1)
         print(res)
         assert_equal(res["result"]["blockId"], blockIdToRollback)
 
 if __name__ == "__main__":
-    SidechainBlockIdToRollbackTest().main()
+    SidechainBlockIdForBackupTest().main()
