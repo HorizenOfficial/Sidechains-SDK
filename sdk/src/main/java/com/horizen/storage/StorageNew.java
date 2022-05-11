@@ -1,6 +1,7 @@
 package com.horizen.storage;
 
 import com.horizen.utils.ByteArrayWrapper;
+import com.horizen.utils.Pair;
 
 import java.util.List;
 import java.util.Map;
@@ -14,7 +15,7 @@ public interface StorageNew extends VersionedReader {
     byte[] getOrElse(byte[] key, byte[] defaultValue);
 
     // return all the contents of the storage (huge return value)
-    java.util.Map<byte[], byte[]> getAll();
+    List<Pair<byte[], byte[]>> getAll();
 
     // return the last stored version
     Optional<ByteArrayWrapper> lastVersionID();

@@ -48,8 +48,9 @@ class VersionedRocksDbStorageNewAdapter(pathToDB: File) extends StorageNew with 
   }
 
   // TODO check if the library has a method we can use without resorting to iterators
-  override def getAll: util.Map[Array[Byte], Array[Byte]] = {
-    val toWrite = new java.util.HashMap[Array[Byte], Array[Byte]]()
+  override def getAll: JList[JPair[Array[Byte], Array[Byte]]] = {
+    val toWrite = new java.util.ArrayList[JPair[Array[Byte], Array[Byte]]]()
+
     if (dataBase.isEmpty())
       return toWrite
 
@@ -57,13 +58,14 @@ class VersionedRocksDbStorageNewAdapter(pathToDB: File) extends StorageNew with 
     val iter = dataBase.asInstanceOf[DefaultReader].getIter()
 
     try {
+
       var hasNext = true
       while (hasNext) {
         val next = iter.next()
         if (next.isPresent) {
           val key = next.get().getKey
           val value = next.get().getValue
-          toWrite.put(key, value)
+          toWrite.add(new JPair[Array[Byte], Array[Byte]](key, value))
         }
         else
           hasNext = false
@@ -72,7 +74,6 @@ class VersionedRocksDbStorageNewAdapter(pathToDB: File) extends StorageNew with 
     } finally {
       iter.close()
     }
-
   }
 
   override def lastVersionID(): Optional[ByteArrayWrapper] = {

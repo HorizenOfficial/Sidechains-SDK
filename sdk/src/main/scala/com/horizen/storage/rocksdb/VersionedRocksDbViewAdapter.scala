@@ -2,16 +2,13 @@ package com.horizen.storage.rocksdb
 
 import com.horizen.storage.{StorageNew, StorageVersionedView}
 import com.horizen.storageVersioned.TransactionVersioned
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, byteArrayToWrapper}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, Pair, byteArrayToWrapper}
 import scorex.util.ScorexLogging
 
 import java.util
-import java.util.Optional
-import javax.swing.JList
+import java.util.{List, Optional}
 import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsScalaMapConverter, seqAsJavaListConverter}
-import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
-import scala.util.control.Breaks.{break, breakable}
 
 class VersionedRocksDbViewAdapter(storage: VersionedRocksDbStorageNewAdapter, version: Optional[ByteArrayWrapper])
   extends StorageVersionedView with ScorexLogging {
@@ -29,11 +26,28 @@ class VersionedRocksDbViewAdapter(storage: VersionedRocksDbStorageNewAdapter, ve
 
   override def getVersion: Optional[String] = _version
 
-  override def update(toUpdate: util.Map[Array[Byte], Array[Byte]],
-                      toRemove: util.Set[Array[Byte]]): Unit = {
+  override def update(toUpdate: util.List[Pair[Array[Byte], Array[Byte]]], toRemove: util.List[Array[Byte]]): Unit = {
+    // TODO: until rocksdb wrapper implements it, use this list->map/set
+    val toInsert = new java.util.HashMap[Array[Byte], Array[Byte]]()
+    val toDelete = new java.util.HashSet[Array[Byte]]()
+
+    val toUpdateKeysAsScala = toUpdate.asScala.map(x => byteArrayToWrapper(x.getKey))
+    val toRemoveKeysAsScala = toRemove.asScala.map(x => byteArrayToWrapper(x))
+
+    // check we have no repetition in both inputs
+    require(toUpdateKeysAsScala.toSet.size == toUpdateKeysAsScala.size, "duplicate key in `toUpdate`")
+    require(toRemoveKeysAsScala.toSet.size == toRemoveKeysAsScala.size, "duplicate key in `toRemove`")
+
+    for (y <- toUpdate.asScala) {
+      toInsert.put(y.getKey, y.getValue)
+    }
+
+    for (y <- toRemove.asScala) {
+      toDelete.add(y.data())
+    }
 
     try {
-      transaction.update(toUpdate, toRemove)
+      transaction.update(toInsert, toDelete)
     } catch {
       case e: Throwable =>
         log.error(s"Could not update RocksDB view on version ${_storage.lastVersionID()}", e)

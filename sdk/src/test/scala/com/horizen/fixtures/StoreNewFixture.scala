@@ -2,11 +2,12 @@ package com.horizen.fixtures
 
 import com.horizen.storage.StorageNew
 import com.horizen.storage.rocksdb.{VersionedRocksDbStorageAdapter, VersionedRocksDbStorageNewAdapter}
-import com.horizen.utils.{ByteArrayWrapper, Pair}
+import com.horizen.utils.{ByteArrayWrapper, Pair, byteArrayToWrapper}
 
+import java.util.{ArrayList => JArrayList, List => JList}
 import java.io.File
 import java.{lang, util}
-import scala.collection.JavaConverters.asScalaSetConverter
+import scala.collection.JavaConverters.{asScalaBufferConverter, asScalaSetConverter}
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
@@ -62,31 +63,29 @@ trait StoreNewFixture {
     value
   }
 
-  def getKeyValue : (Array[Byte], Array[Byte]) = {
+  def getKeyValue : Pair[Array[Byte], Array[Byte]] = {
     val key = new Array[Byte](keySize)
 
     Random.nextBytes(key)
 
-    (key, getValue)
+    new Pair(key, getValue)
   }
 
-  def getKeyValueList (count : Int) : java.util.Map[Array[Byte], Array[Byte]] = {
-    val dum = new util.HashMap[Array[Byte], Array[Byte]]()
-
-    for (i <- 1 to count) {
-      val entry = getKeyValue
-      dum.put(entry._1, entry._2)
-    }
-
-    dum
-  }
-
-  def getValueList (count : Int) : java.util.Set[Array[Byte]] = {
-    val dum = new java.util.HashSet[Array[Byte]]()
+  def getKeyValueList (count : Int) : JList[Pair[Array[Byte], Array[Byte]]] = {
+    val list = new JArrayList[Pair[Array[Byte], Array[Byte]]]()
 
     for (i <- 1 to count)
-      dum.add(getValue)
-    dum
+      list.add(getKeyValue)
+
+    list
+  }
+
+  def getValueList (count : Int) : JList[Array[Byte]] = {
+    val list = new JArrayList[Array[Byte]]()
+
+    for (i <- 1 to count)
+      list.add(getValue)
+    list
   }
 
   def getVersion : ByteArrayWrapper = {
@@ -97,31 +96,16 @@ trait StoreNewFixture {
     new ByteArrayWrapper(version)
   }
 
-  def compareMaps(from : java.util.Map[Array[Byte], Array[Byte]], to : java.util.Map[Array[Byte], Array[Byte]]) : Boolean = {
-    val bawU2 = new util.ArrayList[Pair[ByteArrayWrapper, ByteArrayWrapper]]
-    for (entry <- from.entrySet().asScala) {
-      bawU2.add(new Pair[ByteArrayWrapper, ByteArrayWrapper](new ByteArrayWrapper(entry.getKey), new ByteArrayWrapper(entry.getValue)))
-    }
-
-    val bawS = new util.ArrayList[Pair[ByteArrayWrapper, ByteArrayWrapper]]
-    for (entry <- to.entrySet().asScala) {
-      bawS.add(new Pair[ByteArrayWrapper, ByteArrayWrapper](new ByteArrayWrapper(entry.getKey), new ByteArrayWrapper(entry.getValue)))
-    }
-    bawS.containsAll(bawU2)
+  def listContainment(big : java.util.List[Pair[Array[Byte], Array[Byte]]], small : java.util.List[Pair[Array[Byte], Array[Byte]]]) : Boolean = {
+    val bigAsScala = big.asScala.map( x => (byteArrayToWrapper(x.getKey), byteArrayToWrapper(x.getValue)))
+    val smallAsScala = small.asScala.map( x => (byteArrayToWrapper(x.getKey), byteArrayToWrapper(x.getValue)))
+    smallAsScala.forall(bigAsScala.contains)
   }
 
   def compareValues(from: Array[Byte], to: Array[Byte]) : Boolean = {
     new ByteArrayWrapper(from) == new ByteArrayWrapper(to)
   }
 
-  def mapContainsKey(inMap: java.util.Map[Array[Byte], Array[Byte]], inKey : Array[Byte]) : Boolean = {
-    for (entry <- inMap.keySet().asScala) {
-      if (new ByteArrayWrapper(entry) == new ByteArrayWrapper(inKey)) {
-        return true
-      }
-    }
-    false
-  }
 }
 
 class StoreNewFixtureClass extends StoreNewFixture
