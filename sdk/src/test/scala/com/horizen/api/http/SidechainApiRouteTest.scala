@@ -24,7 +24,7 @@ import com.horizen.transaction._
 import com.horizen.{SidechainSettings, SidechainTypes}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
-import org.mockito.{ArgumentMatchers, Mockito}
+import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitRunner
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatest.matchers.should.Matchers
@@ -45,9 +45,8 @@ import com.horizen.csw.CswManager.ReceivableMessages.{GenerateCswProof, GetBoxNu
 import com.horizen.csw.CswManager.Responses.{Absent, CswInfo, CswProofInfo, NoProofData, ProofCreationFinished}
 import com.horizen.customtypes.{CustomBox, CustomBoxSerializer}
 import com.horizen.storage.StorageIterator
-import com.horizen.utils.{ByteArrayWrapper, Pair}
+import com.horizen.utils.{ByteArrayWrapper}
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
-import org.scalatest.Entry
 import scorex.crypto.hash.Blake2b256
 
 import java.lang.{Byte => JByte}

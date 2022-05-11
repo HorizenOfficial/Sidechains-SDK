@@ -4,7 +4,6 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.api.http.SidechainBackupRestScheme.{ReqGetInitialBoxes, RespGetInitialBoxes}
-import com.horizen.api.http.SidechainTransactionErrorResponse.GenericTransactionError
 import com.horizen.box.Box
 import com.horizen.proposition.Proposition
 
@@ -12,7 +11,7 @@ import scala.util.{Failure, Success, Try}
 import com.horizen.api.http.SidechainBackupRestScheme.RespSidechainBlockIdForBackup
 import com.horizen.serialization.Views
 import scorex.core.settings.RESTApiSettings
-import com.horizen.api.http.SidechainBackupErrorResponse.ErrorRetrievingSidechainBlockIdForBackup
+import com.horizen.api.http.SidechainBackupErrorResponse.{ErrorRetrievingSidechainBlockIdForBackup, GenericBackupApiError}
 import com.horizen.utils.BytesUtils
 
 import java.util.{Optional => JOptional}
@@ -27,7 +26,7 @@ case class SidechainBackupApiRoute(override val settings: RESTApiSettings,
                                 boxIterator: BoxIterator)
                                (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
   override val route: Route = pathPrefix("backup") {
-    getSidechainBlockIdForBackup
+    getSidechainBlockIdForBackup ~ getInitialBoxes
   }
 
   /** *
@@ -74,7 +73,7 @@ case class SidechainBackupApiRoute(override val settings: RESTApiSettings,
         case Success(boxes) =>
           ApiResponseUtil.toResponse(RespGetInitialBoxes(boxes.asScala.toList, body.lastBoxId))
         case Failure(e) =>
-          ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(e)))
+          ApiResponseUtil.toResponse(GenericBackupApiError("GenericBackupApiError", JOptional.of(e)))
       }
     }
   }
@@ -84,6 +83,7 @@ object SidechainBackupRestScheme {
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespSidechainBlockIdForBackup(blockId: String) extends SuccessResponse
 
+  @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqGetInitialBoxes(numberOfElements: Int, lastBoxId: Option[String]) {
     require(numberOfElements > 0, s"Invalid numberOfElements $numberOfElements. It should be > 0")
   }
@@ -94,5 +94,8 @@ object SidechainBackupRestScheme {
 object SidechainBackupErrorResponse {
   case class ErrorRetrievingSidechainBlockIdForBackup(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0801"
+  }
+  case class GenericBackupApiError(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
+    override val code: String = "0802"
   }
 }
