@@ -14,12 +14,14 @@ import com.horizen.params.MainNetParams
 import com.horizen.proposition._
 import com.horizen.secret.{PrivateKey25519, Secret, SecretSerializer}
 import com.horizen.storage._
+import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
 import com.horizen.transaction.{BoxTransaction, MC2SCAggregatedTransaction, RegularTransaction}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, CswData, ForgingStakeMerklePathInfo, ForwardTransferCswData, MerklePath, MerkleTree, Pair, UtxoCswData}
 import com.horizen.wallet.ApplicationWallet
 import org.junit.Assert._
 import org.junit._
+import org.junit.rules.TemporaryFolder
 import org.mockito._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
@@ -48,8 +50,10 @@ class SidechainWalletTest
   val boxList = new ListBuffer[WalletBox]()
   val storedBoxList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
   val boxVersions = new ListBuffer[ByteArrayWrapper]()
+  val boxToRestoreList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
 
   val secretList = new ListBuffer[Secret]()
+  val customSecretList = new ListBuffer[Secret]()
   val storedSecretList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
   val secretVersions = new ListBuffer[ByteArrayWrapper]()
 
@@ -69,6 +73,10 @@ class SidechainWalletTest
 
   val params = MainNetParams()
 
+  val _temporaryFolder = new TemporaryFolder()
+
+  @Rule  def temporaryFolder = _temporaryFolder
+
   def boxIdToMerklePath(boxId: Array[Byte]): Array[Byte] = BytesUtils.reverseBytes(boxId)
 
   @Before
@@ -76,6 +84,8 @@ class SidechainWalletTest
 
     // Set base Secrets data
     secretList ++= getPrivateKey25519List(5).asScala
+    customSecretList ++= getCustomPrivateKeyList(5).asScala
+
     secretVersions += getVersion
 
     for (s <- secretList) {
@@ -123,6 +133,10 @@ class SidechainWalletTest
     boxList ++= getWalletBoxList(getZenBoxList(secretList.map(_.asInstanceOf[PrivateKey25519]).asJava)).asScala
     boxList += getWalletBox(getForgerBox(secretList.head.asInstanceOf[PrivateKey25519].publicImage()))
 
+    val customBoxList = new ListBuffer[SidechainTypes#SCB]()
+    customBoxList ++= getCustomBoxListWithPrivateKeys(customSecretList.map(_.asInstanceOf[CustomPrivateKey]).asJava).asScala.map(_.asInstanceOf[SidechainTypes#SCB])
+    customBoxList += getCustomBox.asInstanceOf[SidechainTypes#SCB] //This box shouldn't be included in the 'scanBackup' test result
+
     boxVersions += getVersion
 
     for (b <- boxList) {
@@ -134,6 +148,13 @@ class SidechainWalletTest
       })
     }
 
+    for (b <- customBoxList) {
+      boxToRestoreList.append({
+        val key = new ByteArrayWrapper(Blake2b256.hash(b.id()))
+        val value = new ByteArrayWrapper(sidechainBoxesCompanion.toBytes(b))
+        new Pair(key,value)
+      })
+    }
 
     // Mock get and update methods of BoxStorage
     Mockito.when(mockedBoxStorage.getAll).thenReturn(storedBoxList.asJava)
@@ -373,6 +394,114 @@ class SidechainWalletTest
       })
 
     sidechainWallet.scanPersistent(mockedBlock, withdrawalEpochNumber, feePaymentBoxes, Some(utxoMerkleTreeView))
+  }
+
+  @Test
+  def testScanBackUpNonCoinBoxes(): Unit = {
+    val mockedSecretStorage: SidechainSecretStorage = mock[SidechainSecretStorage]
+    val mockedWalletTransactionStorage: SidechainWalletTransactionStorage = mock[SidechainWalletTransactionStorage]
+    val mockedForgingBoxesInfoStorage: ForgingBoxesInfoStorage = mock[ForgingBoxesInfoStorage]
+    val mockedCswDataStorage: SidechainWalletCswDataStorage = mock[SidechainWalletCswDataStorage]
+    val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
+    Mockito.when(mockedSecretStorage.getAll).thenAnswer(_=>customSecretList.toList)
+
+    //Create temporary WalletBoxStorage
+    val walletBoxStorageFile = temporaryFolder.newFolder("walletBoxStorage")
+    val walletBoxStorage = new SidechainWalletBoxStorage(new VersionedLevelDbStorageAdapter(walletBoxStorageFile), sidechainBoxesCompanion)
+
+    //Create temporary BackupStorage
+    val backupStorageFile = temporaryFolder.newFolder("backupStorage")
+    val backupStorage = new BackupStorage(new VersionedLevelDbStorageAdapter(backupStorageFile), sidechainBoxesCompanion)
+
+    boxToRestoreList.append(new Pair[ByteArrayWrapper, ByteArrayWrapper](new ByteArrayWrapper("key1".getBytes), new ByteArrayWrapper("value1".getBytes)))
+    backupStorage.update(getVersion, boxToRestoreList.asJava).get
+
+    val sidechainWallet = new SidechainWallet("seed".getBytes,
+      walletBoxStorage,
+      mockedSecretStorage,
+      mockedWalletTransactionStorage,
+      mockedForgingBoxesInfoStorage,
+      mockedCswDataStorage,
+      params,
+      mockedApplicationWallet)
+
+    // Mock get and update methods of SecretStorage
+    sidechainWallet.scanBackUp(backupStorage.getBoxIterator, System.currentTimeMillis())
+
+    assertTrue("Box stored to the backupStorage should be 7: 5 regular box + 1 new address + 1 fake ",boxToRestoreList.size == 7)
+    val storedBoxes = readStorage(walletBoxStorage)
+
+    //Verify that we did take only the 5 Boxes
+    assertEquals("SidechainWalletBoxStorage should contains only the 5 CustomBoxes!",5, storedBoxes.size())
+    val publicKeys = customSecretList.map(_.asInstanceOf[CustomPrivateKey].publicImage()).asJava
+    storedBoxes.forEach(box => {
+      assertTrue("Restored Boxes propositions should be inside our wallet!", publicKeys.contains(box.box.proposition()))
+    })
+  }
+
+  @Test
+  def testScanBackUpCoinBoxes(): Unit = {
+    val mockedSecretStorage: SidechainSecretStorage = mock[SidechainSecretStorage]
+    val mockedWalletTransactionStorage: SidechainWalletTransactionStorage = mock[SidechainWalletTransactionStorage]
+    val mockedForgingBoxesInfoStorage: ForgingBoxesInfoStorage = mock[ForgingBoxesInfoStorage]
+    val mockedCswDataStorage: SidechainWalletCswDataStorage = mock[SidechainWalletCswDataStorage]
+    val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
+    Mockito.when(mockedSecretStorage.getAll).thenAnswer(_=>secretList.toList)
+
+    //Create temporary WalletBoxStorage
+    val walletBoxStorageFile = temporaryFolder.newFolder("walletBoxStorage")
+    val walletBoxStorage = new SidechainWalletBoxStorage(new VersionedLevelDbStorageAdapter(walletBoxStorageFile), sidechainBoxesCompanion)
+
+    //Create temporary BackupStorage
+    val backupStorageFile = temporaryFolder.newFolder("backupStorage")
+    val backupStorage = new BackupStorage(new VersionedLevelDbStorageAdapter(backupStorageFile), sidechainBoxesCompanion)
+
+    //Serialize ZenBoxes
+    val zenBoxSerializedList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
+    for (b <- boxList) {
+      zenBoxSerializedList.append({
+        val key = new ByteArrayWrapper(Blake2b256.hash(b.box.id()))
+        val value = new ByteArrayWrapper(sidechainBoxesCompanion.toBytes(b.box))
+        new Pair(key,value)
+      })
+    }
+    backupStorage.update(getVersion, zenBoxSerializedList.asJava).get
+
+    val sidechainWallet = new SidechainWallet("seed".getBytes,
+      walletBoxStorage,
+      mockedSecretStorage,
+      mockedWalletTransactionStorage,
+      mockedForgingBoxesInfoStorage,
+      mockedCswDataStorage,
+      params,
+      mockedApplicationWallet)
+
+    var exceptionThrown = false
+    sidechainWallet.scanBackUp(backupStorage.getBoxIterator, System.currentTimeMillis()) match {
+      case Failure(_) =>
+        exceptionThrown = true
+      case Success(_) =>
+        fail()
+    }
+    assertTrue("CoinBoxes should not be restored!",exceptionThrown)
+  }
+
+  def readStorage(walletBoxStorage: SidechainWalletBoxStorage): JArrayList[WalletBox] = {
+    val walletBoxStorageIterator: StorageIterator = walletBoxStorage.getIterator
+    walletBoxStorageIterator.seekToFirst()
+
+    val walletBoxSerializer: WalletBoxSerializer = new WalletBoxSerializer(sidechainBoxesCompanion)
+    val storedBoxes = new JArrayList[WalletBox]()
+    while(walletBoxStorageIterator.hasNext) {
+      val entry = walletBoxStorageIterator.next()
+      val box: Try[WalletBox] = walletBoxSerializer.parseBytesTry(entry.getValue)
+
+      if(box.isSuccess) {
+        val currBox: WalletBox = box.get
+        storedBoxes.add(currBox)
+      }
+    }
+    storedBoxes
   }
 
   @Test

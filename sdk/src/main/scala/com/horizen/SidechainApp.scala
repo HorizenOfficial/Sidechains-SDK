@@ -8,6 +8,7 @@ import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import com.google.inject.name.Named
 import com.google.inject.{Inject, _}
 import com.horizen.api.http.{SidechainSubmitterApiRoute, _}
+import com.horizen.backup.BoxIterator
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.certificatesubmitter.CertificateSubmitterRef
@@ -66,6 +67,7 @@ class SidechainApp @Inject()
    @Named("WalletForgingBoxesInfoStorage") val walletForgingBoxesInfoStorage: Storage,
    @Named("WalletCswDataStorage") val walletCswDataStorage: Storage,
    @Named("ConsensusStorage") val consensusStorage: Storage,
+   @Named("BackupStorage") val backUpStorage: Storage,
    @Named("CustomApiGroups") val customApiGroups: JList[ApplicationApiGroup],
    @Named("RejectedApiPaths") val rejectedApiPaths : JList[Pair[String, String]],
   )
@@ -254,6 +256,8 @@ class SidechainApp @Inject()
       sidechainSecretStorage.add(sidechainSecretsCompanion.parseBytes(BytesUtils.fromHexString(secretSchnorr)))
   }
 
+  protected val backupStorage = new BackupStorage(registerStorage(backUpStorage), sidechainBoxesCompanion)
+
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(
     sidechainSettings,
     sidechainHistoryStorage,
@@ -266,6 +270,7 @@ class SidechainApp @Inject()
     sidechainWalletTransactionStorage,
     forgingBoxesMerklePathStorage,
     sidechainWalletCswDataStorage,
+    backupStorage,
     params,
     timeProvider,
     applicationWallet,
@@ -332,6 +337,7 @@ class SidechainApp @Inject()
   var applicationApiRoutes : Seq[ApplicationApiRoute] = Seq[ApplicationApiRoute]()
   customApiGroups.asScala.foreach(apiRoute => applicationApiRoutes = applicationApiRoutes :+ ApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
 
+  val boxIterator = backupStorage.getBoxIterator
   var coreApiRoutes: Seq[SidechainApiRoute] = Seq[SidechainApiRoute](
     MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
@@ -339,7 +345,8 @@ class SidechainApp @Inject()
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef),
-    SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager)
+    SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager),
+    SidechainBackupApiRoute(settings.restApi, nodeViewHolderRef, boxIterator)
   )
 
   val transactionSubmitProvider : TransactionSubmitProvider = new TransactionSubmitProviderImpl(sidechainTransactionActorRef)
@@ -372,4 +379,5 @@ class SidechainApp @Inject()
   def getSecretSubmitProvider: SecretSubmitProvider = secretSubmitProvider
 
   actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
+
 }

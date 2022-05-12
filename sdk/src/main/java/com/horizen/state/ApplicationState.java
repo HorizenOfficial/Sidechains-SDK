@@ -1,11 +1,10 @@
 package com.horizen.state;
 
+import com.horizen.backup.BoxIterator;
 import com.horizen.block.SidechainBlock;
 import com.horizen.box.Box;
 import com.horizen.proposition.Proposition;
 import com.horizen.transaction.BoxTransaction;
-import com.horizen.transaction.SidechainTransaction;
-import com.horizen.utils.ByteArrayWrapper;
 
 import java.util.List;
 
@@ -26,6 +25,8 @@ public interface ApplicationState {
     Try<ApplicationState> onApplyChanges(SidechainStateReader stateReader, byte[] blockId, List<Box<Proposition>> newBoxes, List<byte[]> boxIdsToRemove);
 
     Try<ApplicationState> onRollback(byte[] blockId); // return Try[...]
+
+    Try<ApplicationState> onBackupRestore(BoxIterator i);
 }
 
 

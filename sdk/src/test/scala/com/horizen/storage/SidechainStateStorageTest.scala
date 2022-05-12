@@ -2,13 +2,15 @@ package com.horizen.storage
 
 import com.google.common.primitives.Ints
 import com.horizen.SidechainTypes
-import com.horizen.box.BoxSerializer
+import com.horizen.backup.{BackupBox, BoxIterator}
+import com.horizen.box.{BoxSerializer, CoinsBox}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.customtypes.{CustomBox, CustomBoxSerializer}
 import com.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
+import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
-import com.horizen.utils.{BlockFeeInfo, BlockFeeInfoSerializer, ByteArrayWrapper, Pair, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
+import com.horizen.utils.{BlockFeeInfo, BlockFeeInfoSerializer, ByteArrayWrapper, BytesUtils, Pair, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -21,6 +23,9 @@ import java.util.{ArrayList => JArrayList, HashMap => JHashMap, Optional => JOpt
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
+import org.junit.Rule
+import org.junit.rules.TemporaryFolder
+
 
 class SidechainStateStorageTest
   extends JUnitSuite
@@ -34,6 +39,7 @@ class SidechainStateStorageTest
 
   val boxList = new ListBuffer[SidechainTypes#SCB]()
   val storedBoxList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
+  val customStoredBoxList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
 
   val customBoxesSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]] = new JHashMap()
   customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
@@ -42,6 +48,10 @@ class SidechainStateStorageTest
   val withdrawalEpochInfo = WithdrawalEpochInfo(1, 2)
 
   val consensusEpoch: ConsensusEpochNumber = intToConsensusEpochNumber(1)
+
+  val _temporaryFolder = new TemporaryFolder()
+
+  @Rule  def temporaryFolder = _temporaryFolder
 
   @Before
   def setUp(): Unit = {
@@ -56,6 +66,13 @@ class SidechainStateStorageTest
         val value = new ByteArrayWrapper(sidechainBoxesCompanion.toBytes(b))
         new Pair(key,value)
       })
+      if (!b.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]]) {
+        customStoredBoxList.append({
+          val key = new ByteArrayWrapper(Blake2b256.hash(b.id()))
+          val value = new ByteArrayWrapper(sidechainBoxesCompanion.toBytes(b))
+          new Pair(key,value)
+        })
+      }
     }
 
     Mockito.when(mockedPhysicalStorage.get(ArgumentMatchers.any[ByteArrayWrapper]()))
@@ -136,6 +153,69 @@ class SidechainStateStorageTest
     assertTrue("Storage should NOT contain Box that was tried to update.", stateStorage.getBox(box.id()).isEmpty)
     assertTrue("Storage should contain Box that was tried to remove.", stateStorage.getBox(boxList(3).id()).isDefined)
     assertEquals("Storage should return existing Box.", boxList(3), stateStorage.getBox(boxList(3).id()).get)
+  }
+
+  @Test
+  def testRestoreNonCoinBoxes(): Unit = {
+    //Create temporary SidechainStateStorage
+    val stateStorageFile = temporaryFolder.newFolder("sidechainStateStorage")
+    val stateStorage = new SidechainStateStorage(new VersionedLevelDbStorageAdapter(stateStorageFile), sidechainBoxesCompanion)
+
+    //Create temporary BackupStorage
+    val backupStorageFile = temporaryFolder.newFolder("backupStorage")
+    val backupStorage = new BackupStorage(new VersionedLevelDbStorageAdapter(backupStorageFile), sidechainBoxesCompanion)
+
+    //Fill BackUpStorage with 5 CustomBoxes and 1 random element
+    customStoredBoxList.append(new Pair[ByteArrayWrapper, ByteArrayWrapper](new ByteArrayWrapper("key1".getBytes), new ByteArrayWrapper("value1".getBytes)))
+    backupStorage.update(getVersion, customStoredBoxList.asJava).get
+
+    //Restore the SidechainStateStorage based on the BackupStorage
+    stateStorage.restoreBackup(backupStorage.getBoxIterator, getVersion.data())
+
+    //Read the SidechainStateStorage
+    val storedBoxes = readStorage(new BoxIterator(stateStorage.getIterator, sidechainBoxesCompanion))
+
+    //Verify that we did take only the 5 CustomBoxes
+    assertEquals("SidechainStateStorage should contains only the 5 CustomBoxes!",storedBoxes.size(), 5)
+    storedBoxes.forEach(box => {
+      val storageElement = new Pair[ByteArrayWrapper, ByteArrayWrapper](new ByteArrayWrapper(box.getBoxKey), new ByteArrayWrapper(sidechainBoxesCompanion.toBytes(box.getBox)))
+      assertTrue("Restored boxes should be inside customStoredBoxList",customStoredBoxList.contains(storageElement))
+      assertTrue("Restored boxes shouldn't be CoinBoxes!",!box.getBox.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]])
+    })
+  }
+
+  @Test
+  def testRestoreCoinBoxes(): Unit = {
+    //Create temporary SidechainStateStorage
+    val stateStorageFile = temporaryFolder.newFolder("sidechainStateStorage")
+    val stateStorage = new SidechainStateStorage(new VersionedLevelDbStorageAdapter(stateStorageFile), sidechainBoxesCompanion)
+
+    //Create temporary BackupStorage
+    val backupStorageFile = temporaryFolder.newFolder("backupStorage")
+    val backupStorage = new BackupStorage(new VersionedLevelDbStorageAdapter(backupStorageFile), sidechainBoxesCompanion)
+
+    //Fill BackUpStorage with 5 ZenBoxes and 1 random element
+    storedBoxList.append(new Pair[ByteArrayWrapper, ByteArrayWrapper](new ByteArrayWrapper("key1".getBytes), new ByteArrayWrapper("value1".getBytes)))
+    backupStorage.update(getVersion, storedBoxList.asJava).get
+    var exceptionThrown = false
+    try {
+      //Restore the SidechainStateStorage based on the BackupStorage
+      stateStorage.restoreBackup(backupStorage.getBoxIterator, getVersion.data())
+    } catch {
+      case _:RuntimeException => exceptionThrown = true
+    }
+    assertTrue("CoinBoxes should not be restored!",exceptionThrown)
+  }
+
+  def readStorage(sidechainStateStorageBoxIterator: BoxIterator): JArrayList[BackupBox] = {
+    val storedBoxes = new JArrayList[BackupBox]()
+
+    var optionalBox = sidechainStateStorageBoxIterator.nextBox
+    while(optionalBox.isPresent) {
+      storedBoxes.add(optionalBox.get)
+      optionalBox = sidechainStateStorageBoxIterator.nextBox
+    }
+    storedBoxes
   }
 
   @Test

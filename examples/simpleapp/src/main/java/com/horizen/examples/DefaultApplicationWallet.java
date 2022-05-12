@@ -1,5 +1,6 @@
 package com.horizen.examples;
 
+import com.horizen.backup.BoxIterator;
 import com.horizen.box.Box;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.Secret;
@@ -26,6 +27,11 @@ public class DefaultApplicationWallet implements ApplicationWallet {
 
     @Override
     public void onRollback(byte[] blockId) {
+
+    }
+
+    @Override
+    public void onBackupRestore(BoxIterator i) {
 
     }
 }

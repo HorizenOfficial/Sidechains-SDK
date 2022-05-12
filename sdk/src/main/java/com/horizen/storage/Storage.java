@@ -24,4 +24,6 @@ public interface Storage {
     boolean isEmpty();
 
     void close();
+
+    StorageIterator getIterator();
 }

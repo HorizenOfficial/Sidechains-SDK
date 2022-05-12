@@ -1,10 +1,9 @@
 package com.horizen.storage
 
 import java.util.{ArrayList => JArrayList}
-
 import com.horizen.SidechainTypes
 import com.horizen.companion.SidechainSecretsCompanion
-import com.horizen.utils.{ByteArrayWrapper, Pair => JPair}
+import com.horizen.utils.{ByteArrayWrapper, Utils, Pair => JPair}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
 
@@ -26,7 +25,7 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
 
   loadSecrets()
 
-  def calculateKey(proposition: SidechainTypes#SCP): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256.hash(proposition.bytes))
+  def calculateKey(proposition: SidechainTypes#SCP): ByteArrayWrapper = Utils.calculateKey(proposition.bytes)
 
   private def loadSecrets(): Unit = {
     secrets.clear()
