@@ -10,6 +10,7 @@ import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Pair;
 import org.junit.Test;
 
+import java.io.File;
 import java.util.*;
 
 import static org.junit.Assert.*;
@@ -212,46 +213,42 @@ public class StorageNewTest {
 
     @Test
     public void reopenStorage() {
-        /*
+
         File storagePath = storageFixture.tempFile();
         VersionedRocksDbStorageNewAdapter s = storageFixture.getStorage(storagePath);
         assertTrue("Storage expected to be empty.", s.isEmpty());
-
         assertFalse("Version of empty storage shall be none", s.lastVersionID().isPresent());
-
-        ByteArrayWrapper version0 = storageFixture.getVersion();
-        HashMap<byte[], byte[]> u0 = new HashMap<>();
-        s.update(version0, u0, new java.util.HashSet<>());
-
-        java.util.Map<byte[], byte[]> keysAfterFirstUpdate = s.getAll();
-        assertEquals("No keys are expected after update with empty values", 0, keysAfterFirstUpdate.size());
-        assertEquals("last version shall be as expected after empty update", version0, s.lastVersionID().get());
 
         int firstUpdateSize = 3;
         ByteArrayWrapper version1 = storageFixture.getVersion();
-        Map<byte[], byte[]> u1 = storageFixture.getKeyValueList(firstUpdateSize);
-        java.util.Map.Entry<byte[], byte[]> firstEntryU1 = u1.entrySet().iterator().next();
-        s.update(version1, u1, new java.util.HashSet<>());
+        java.util.List<Pair<byte[], byte[]>> u1 = storageFixture.getKeyValueList(firstUpdateSize);
+        Pair<byte[], byte[]> firstEntryU1 = u1.get(0);
+
+        StorageVersionedView view1 = s.getView();
+        view1.update(u1, new java.util.ArrayList<>());
+        view1.commit(version1);
 
         assertFalse("Storage expected to be not empty.", s.isEmpty());
         assertEquals("Storage must contain 3 items.", firstUpdateSize, s.getAll().size());
         assertEquals("Storage must contain value for key - " + BytesUtils.toHexString(firstEntryU1.getKey()),
-                BytesUtils.toHexString(firstEntryU1.getValue()), BytesUtils.toHexString(s.get(firstEntryU1.getKey()).get()));
-        assertTrue("Storage must contain same elements as sample.", storageFixture.compareMaps(u1, s.getAll()));
+                BytesUtils.toHexString(firstEntryU1.getValue()), BytesUtils.toHexString(s.get(firstEntryU1.getKey())));
+
+        assertTrue("Storage must contain same elements as sample.", storageFixture.listContainment(u1, s.getAll()));
+
         assertEquals("Storage must have specified last version.", version1, s.lastVersionID().get());
-        assertEquals("Storage must have two versions", 2, s.rollbackVersions().size());
-        assertTrue("Storage must have specified versions", s.rollbackVersions().containsAll(Arrays.asList(version0, version1)));
+        assertEquals("Storage must have 1 versions", 1, s.rollbackVersions().size());
+
 
         s.close(); // it frees resources too
 
         VersionedRocksDbStorageNewAdapter s2 = storageFixture.getStorage(storagePath);
         assertEquals("Storage must contain 3 items.", firstUpdateSize, s2.getAll().size());
         assertEquals("Storage must contain value for key - " + BytesUtils.toHexString(firstEntryU1.getKey()),
-                BytesUtils.toHexString(firstEntryU1.getValue()), BytesUtils.toHexString(s2.get(firstEntryU1.getKey()).get()));
-        assertTrue("Storage must contain same elements as sample.", storageFixture.compareMaps(u1, s2.getAll()));
-        assertEquals("Storage must have specified last version.", version1, s2.lastVersionID().get());
-        assertEquals("Storage must have two versions", 2, s2.rollbackVersions().size());
-        assertTrue("Storage must have specified versions", s2.rollbackVersions().containsAll(Arrays.asList(version0, version1)));
-    */
+                BytesUtils.toHexString(firstEntryU1.getValue()), BytesUtils.toHexString(s2.get(firstEntryU1.getKey())));
+        assertTrue("Storage must contain same elements as sample.", storageFixture.listContainment(u1, s2.getAll()));
+        assertEquals("Storage must have specified version.", version1, s2.lastVersionID().get());
+        assertEquals("Storage must have 1 versions.", 1, s2.rollbackVersions().size());
+        assertTrue("Storage must have specified versions", s2.rollbackVersions().containsAll(Arrays.asList(version1)));
+
     }
 }

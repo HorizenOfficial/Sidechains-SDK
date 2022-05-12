@@ -105,6 +105,9 @@ class VersionedRocksDbViewAdapter(storage: VersionedRocksDbStorageNewAdapter, ve
   */
   }
 
+  override def getOrElse(key: Array[Byte], defaultValue: Array[Byte]): Array[Byte] =
+    transaction.getOrElse(key, defaultValue)
 
+  override def getAll: util.List[Pair[Array[Byte], Array[Byte]]] = ???
 
 }
