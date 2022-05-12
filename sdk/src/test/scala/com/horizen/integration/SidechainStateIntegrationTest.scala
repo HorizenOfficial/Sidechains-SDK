@@ -125,7 +125,9 @@ class SidechainStateIntegrationTest
       None,
       initialBlockFeeInfo,
       None,
-      scHasCeased = false
+      scHasCeased = false,
+      new Array[Int](0),
+      0
     )
 
     // Init SidechainStateForgerBoxStorage with forger boxes
@@ -237,6 +239,9 @@ class SidechainStateIntegrationTest
 
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
+
+    Mockito.when(mockedBlock.sidechainTransactions)
+      .thenReturn(Seq())
 
     Mockito.when(mockedBlock.parentId)
       .thenReturn(bytesToId(initialVersion.data))

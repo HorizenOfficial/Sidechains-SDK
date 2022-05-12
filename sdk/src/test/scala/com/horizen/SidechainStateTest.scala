@@ -1,20 +1,21 @@
 package com.horizen
 
-import java.util.{ArrayList => JArrayList, List => JList}
+import java.util.{Optional => JOptional, ArrayList => JArrayList, List => JList}
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, WithdrawalEpochCertificate}
 import com.horizen.box.data.{BoxData, ForgerBoxData, ZenBoxData}
 import com.horizen.box._
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
+import com.horizen.forge.ForgerList
 import com.horizen.params.MainNetParams
-import com.horizen.proposition.Proposition
+import com.horizen.proposition.{Proposition, VrfPublicKey}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
 import com.horizen.state.{ApplicationState, SidechainStateReader}
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, WithdrawalEpochInfo, Pair => JPair}
-import com.horizen.transaction.{BoxTransaction, RegularTransaction}
+import com.horizen.transaction.{BoxTransaction, OpenStakeTransaction, RegularTransaction}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -48,6 +49,7 @@ class SidechainStateTest
   val transactionList = new ListBuffer[RegularTransaction]()
 
   val secretList = new ListBuffer[PrivateKey25519]()
+  val vrfList = new ListBuffer[VrfPublicKey]()
 
   val params = MainNetParams()
   
@@ -89,6 +91,11 @@ class SidechainStateTest
     val fee = totalFrom - totalTo
 
     RegularTransaction.create(from, to, fee)
+  }
+
+  def getOpenStakeTransaction(boxesWithSecretToOpen: (ZenBox,PrivateKey25519), forgerIndex: Int, fee: JOptional[Long]): OpenStakeTransaction = {
+    val from: JPair[ZenBox,PrivateKey25519] =  new JPair[ZenBox,PrivateKey25519](boxesWithSecretToOpen._1, boxesWithSecretToOpen._2)
+    OpenStakeTransaction.create(from, JOptional.of(getPrivateKey25519List(1).get(0).publicImage()), forgerIndex, fee.orElseGet(() => 5L))
   }
 
   @Test
@@ -279,7 +286,9 @@ class SidechainStateTest
       ArgumentMatchers.any[Option[WithdrawalEpochCertificate]](),
       ArgumentMatchers.any[BlockFeeInfo](),
       ArgumentMatchers.any[Option[Array[Byte]]](),
-      ArgumentMatchers.any[Boolean]()))
+      ArgumentMatchers.any[Boolean](),
+      ArgumentMatchers.any[Array[Int]],
+      ArgumentMatchers.any[Int]))
       .thenAnswer( answer => {
         val version = answer.getArgument[ByteArrayWrapper](0)
         val withdrawalEpochInfo = answer.getArgument[WithdrawalEpochInfo](1)
@@ -365,6 +374,9 @@ class SidechainStateTest
 
     Mockito.when(mockedBlock.transactions)
       .thenReturn(transactionList.toList)
+
+    Mockito.when(mockedBlock.sidechainTransactions)
+      .thenReturn(Seq())
 
     Mockito.when(mockedBlock.parentId)
       .thenReturn(bytesToId(stateVersion.last.data))
@@ -575,6 +587,8 @@ class SidechainStateTest
         boxList.find(_.id().sameElements(boxId))
       })
 
+    Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {Option.empty})
+
     Mockito.when(mockedStateForgerBoxStorage.lastVersionId).thenReturn(Some(stateVersion.last))
 
     Mockito.when(mockedStateUtxoMerkleTreeStorage.lastVersionId).thenReturn(Some(stateVersion.last))
@@ -600,6 +614,7 @@ class SidechainStateTest
 
     //Test validate(Transaction) with restrict forger enable and invalid blockSignProposition
     Mockito.when(mockedParams.allowedForgersList).thenReturn(Seq((invalidBlockSignProposition,allowedVrfPublicKey)))
+    Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {Some(ForgerList(Array[Int](0)))})
     tryValidate = sidechainState.validate(stakeTransaction)
     assertFalse("Transaction validation must fail.",
       tryValidate.isSuccess)
@@ -615,7 +630,166 @@ class SidechainStateTest
     //Test validate(Transaction) with restrict forger enable and valid blockSignProposition and vrfPublicKey
     Mockito.when(mockedParams.allowedForgersList).thenReturn(Seq((allowedBlockSignProposition,allowedVrfPublicKey)))
     tryValidate = sidechainState.validate(stakeTransaction)
-    assertTrue("Transaction validation must fail.",
+    assertTrue("Transaction validation must not fail.",
+      tryValidate.isSuccess)
+
+    //Test validate(Transaction) with restrict forger, invalid forger and not the majority of the allowed forgers opened the stake
+    Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {Some(ForgerList(Array[Int](1,1,0,0,0)))})
+    Mockito.when(mockedParams.allowedForgersList).thenReturn(Seq(
+      (invalidBlockSignProposition,invalidVrfPublicKey),
+      (invalidBlockSignProposition,invalidVrfPublicKey),
+      (invalidBlockSignProposition,invalidVrfPublicKey),
+      (invalidBlockSignProposition,invalidVrfPublicKey),
+      (invalidBlockSignProposition,invalidVrfPublicKey),
+    ))
+    tryValidate = sidechainState.validate(stakeTransaction)
+    assertFalse("Transaction validation must fail.",
+      tryValidate.isSuccess)
+    assertTrue(tryValidate.failed.get.getMessage.equals("This publicKey is not allowed to forge!"))
+
+    //Test validate(Transaction) with restrict forger, invalid forger and the majority of the allowed forgers opened the stake
+    Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {Some(ForgerList(Array[Int](1,1,1,0,0)))})
+    tryValidate = sidechainState.validate(stakeTransaction)
+    assertTrue("Transaction validation must not fail.",
+      tryValidate.isSuccess)
+  }
+
+  @Test
+  def openForgerTest(): Unit = {
+    // Set base Secrets data
+    secretList.clear()
+    secretList ++= getPrivateKey25519List(5).asScala
+    //Set vrf public key list
+    vrfList.clear()
+    for (i <-0 until 5)
+      vrfList += getVRFPublicKey
+    // Set base Box data
+    boxList.clear()
+    boxList ++= getZenBoxList(secretList.asJava).asScala.toList
+    stateVersion.clear()
+    stateVersion += getVersion
+    transactionList.clear()
+    transactionList += getRegularTransaction(1, 1, Seq(), 5)
+
+    Mockito.when(mockedStateStorage.lastVersionId).thenReturn(Some(stateVersion.last))
+
+    Mockito.when(mockedStateStorage.getBox(ArgumentMatchers.any[Array[Byte]]()))
+      .thenAnswer(answer => {
+        val boxId = answer.getArgument(0).asInstanceOf[Array[Byte]]
+        boxList.find(_.id().sameElements(boxId))
+      })
+
+    Mockito.when(mockedStateForgerBoxStorage.lastVersionId).thenReturn(Some(stateVersion.last))
+
+    Mockito.when(mockedStateUtxoMerkleTreeStorage.lastVersionId).thenReturn(Some(stateVersion.last))
+
+    val mockedParams = mock[MainNetParams]
+    Mockito.when(mockedParams.restrictForgers).thenReturn(true)
+
+    val sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeStorage,
+      mockedParams, bytesToVersion(stateVersion.last.data), mockedApplicationState)
+
+    val forgerList = Seq(
+      (secretList(0).publicImage(), vrfList(0)),
+      (secretList(1).publicImage(), vrfList(1)),
+      (secretList(2).publicImage(), vrfList(2)),
+      (secretList(3).publicImage(), vrfList(3)),
+      (secretList(4).publicImage(), vrfList(4)),
+    )
+    var forgerListIndexes = ForgerList(Array[Int](1,1,0,0,0))
+    // NEGATIVE TESTS
+
+    //Test validate(Transaction) with restrict forger disabled
+    Mockito.when(mockedParams.restrictForgers).thenReturn(false)
+    Mockito.when(mockedParams.allowedForgersList).thenReturn(Seq())
+    var openStakeTransaction = getOpenStakeTransaction(
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
+      0,
+      JOptional.empty()
+    )
+    var tryValidate = sidechainState.validate(openStakeTransaction.asInstanceOf[SidechainTypes#SCBT])
+    assertFalse("Transaction validation must fail.",
+      tryValidate.isSuccess)
+    assertTrue(tryValidate.failed.get.getMessage.equals("OpenStakeTransactions are not allowed with restrictForgers=false!"))
+
+    //Test validate(Transaction) with restrict forger enabled and forgerListIndex out of bound
+    Mockito.when(mockedParams.restrictForgers).thenReturn(true)
+    Mockito.when(mockedParams.allowedForgersList).thenReturn(forgerList)
+    Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {Some(forgerListIndexes)})
+    openStakeTransaction = getOpenStakeTransaction(
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
+      10,
+      JOptional.empty()
+    )
+    tryValidate = sidechainState.validate(openStakeTransaction.asInstanceOf[SidechainTypes#SCBT])
+    assertFalse("Transaction validation must fail.",
+      tryValidate.isSuccess)
+    assertTrue(tryValidate.failed.get.getMessage.equals("ForgerIndex in OpenStakeTransaction is out of bound!"))
+
+
+    //Test validate(Transaction) with restrict forger enabled and forger list indexes is not present in the storage
+    Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {None})
+    openStakeTransaction = getOpenStakeTransaction(
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
+      0,
+      JOptional.empty()
+    )
+    tryValidate = sidechainState.validate(openStakeTransaction.asInstanceOf[SidechainTypes#SCBT])
+    assertFalse("Transaction validation must fail.",
+      tryValidate.isSuccess)
+    assertTrue(tryValidate.failed.get.getMessage.equals("Forger list was not found in the Storage!"))
+
+
+    //Test validate(Transaction) with restrict forger enabled and try to update an existing forger index
+    Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {Some(forgerListIndexes)})
+    openStakeTransaction = getOpenStakeTransaction(
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
+      0,
+      JOptional.empty()
+    )
+    tryValidate = sidechainState.validate(openStakeTransaction.asInstanceOf[SidechainTypes#SCBT])
+    assertFalse("Transaction validation must fail.",
+      tryValidate.isSuccess)
+    assertTrue(tryValidate.failed.get.getMessage.equals("Forger already opened the stake!"))
+
+    //Test validate(Transaction) with restrict forger enabled with an input proposition that doesn't match the forgerListIndex
+    forgerListIndexes = ForgerList(Array[Int](0,1,0,0,0))
+    Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {Some(forgerListIndexes)})
+    openStakeTransaction = getOpenStakeTransaction(
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
+      3,
+      JOptional.empty()
+    )
+    tryValidate = sidechainState.validate(openStakeTransaction.asInstanceOf[SidechainTypes#SCBT])
+    assertFalse("Transaction validation must fail.",
+      tryValidate.isSuccess)
+    assertTrue(tryValidate.failed.get.getMessage.equals("OpenStakeTransaction input doesn't match the forgerIndex!"))
+
+    //Test validate(Transaction) with the forge operation already opened.
+    forgerListIndexes = ForgerList(Array[Int](1,1,1,0,0))
+    Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {Some(forgerListIndexes)})
+    openStakeTransaction = getOpenStakeTransaction(
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
+      3,
+      JOptional.empty()
+    )
+    tryValidate = sidechainState.validate(openStakeTransaction.asInstanceOf[SidechainTypes#SCBT])
+    assertFalse("Transaction validation must fail.",
+      tryValidate.isSuccess)
+    assertTrue(tryValidate.failed.get.getMessage.equals("OpenStakeTransactions are not allowed because the forger operation has already been opened!"))
+
+    //POSITIVE TESTS
+
+    //Test validate(Transaction) with restrict forger enabled and correct index
+    forgerListIndexes = ForgerList(Array[Int](0,1,0,0,0))
+    Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {Some(forgerListIndexes)})
+    openStakeTransaction = getOpenStakeTransaction(
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
+      0,
+      JOptional.empty()
+    )
+    tryValidate = sidechainState.validate(openStakeTransaction.asInstanceOf[SidechainTypes#SCBT])
+    assertTrue("Transaction validation must not fail.",
       tryValidate.isSuccess)
   }
 }
