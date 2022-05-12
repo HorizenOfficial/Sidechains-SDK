@@ -8,9 +8,10 @@ import com.horizen.SidechainNodeViewHolder.ReceivableMessages
 import com.horizen.SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret
 import com.horizen.SidechainTypes
 import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.SidechainWalletErrorResponse.ErrorSecretNotAdded
-import com.horizen.api.http.SidechainWalletRestScheme._
+import com.horizen.api.http.SidechainWalletErrorResponse.{ErrorSecretAlreadyPresent, ErrorSecretNotAdded}
+import com.horizen.api.http.SidechainWalletRestScheme.{ReqImportPrivateKeys, _}
 import com.horizen.box.Box
+import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.proposition.{Proposition, VrfPublicKey}
 import com.horizen.secret.{PrivateKey25519Creator, VrfKeyGenerator}
 import com.horizen.serialization.Views
@@ -23,7 +24,8 @@ import scala.util.{Failure, Success, Try}
 import java.util.{Optional => JOptional}
 
 case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
-                                   sidechainNodeViewHolderRef: ActorRef)(implicit val context: ActorRefFactory, override val ec: ExecutionContext)
+                                   sidechainNodeViewHolderRef: ActorRef,
+                                   sidechainSecretsCompanion: SidechainSecretsCompanion)(implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute {
 
   override val route: Route = pathPrefix("wallet") {
@@ -134,6 +136,22 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
     }
   }
 
+  /**
+   * Import a private key.
+   * @return
+   */
+  def importPrivateKey: Route = (post & path("importPrivateKey")) {
+    entity(as[ReqImportPrivateKeys]) { body =>
+      val secret = sidechainSecretsCompanion.parseBytes(BytesUtils.fromHexString(body.privKey))
+      val future = sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)
+      Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
+        case Success(_) =>
+          ApiResponseUtil.toResponse(RespCreatePrivateKey25519(secret.publicImage()))
+        case Failure(e) =>
+          ApiResponseUtil.toResponse(ErrorSecretAlreadyPresent("Failed to add the key.", JOptional.of(e)))
+      }    }
+  }
+
   def getClassBySecretClassName(className: String): java.lang.Class[_ <: SidechainTypes#SCS] = {
     Try{Class.forName(className).asSubclass(classOf[SidechainTypes#SCS])}.
       getOrElse(Class.forName("com.horizen.secret." + className).asSubclass(classOf[SidechainTypes#SCS]))
@@ -171,6 +189,10 @@ object SidechainWalletRestScheme {
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespAllPublicKeys(propositions: Seq[Proposition]) extends SuccessResponse
 
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqImportPrivateKeys(privKey: String) {
+    require(privKey.nonEmpty, "Private key cannot be empty!")
+  }
 }
 
 object SidechainWalletErrorResponse {
@@ -179,4 +201,7 @@ object SidechainWalletErrorResponse {
     override val code: String = "0301"
   }
 
+  case class ErrorSecretAlreadyPresent(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
+    override val code: String = "0302"
+  }
 }
