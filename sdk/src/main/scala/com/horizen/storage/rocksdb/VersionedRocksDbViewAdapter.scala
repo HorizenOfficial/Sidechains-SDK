@@ -1,5 +1,6 @@
 package com.horizen.storage.rocksdb
 
+import com.horizen.common.ColumnFamily
 import com.horizen.storage.{StorageNew, StorageVersionedView}
 import com.horizen.storageVersioned.TransactionVersioned
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, Pair, byteArrayToWrapper}
@@ -13,8 +14,6 @@ import scala.compat.java8.OptionConverters.RichOptionalGeneric
 class VersionedRocksDbViewAdapter(storage: VersionedRocksDbStorageAdapter, version: Optional[ByteArrayWrapper])
   extends StorageVersionedView with ScorexLogging {
 
-  private val _storage : StorageNew = storage
-
   private val _version : Optional[String] = version.asScala match {
     case None => Optional.empty()
     case Some(ver) => Optional.of(BytesUtils.toHexString(ver.data()))
@@ -27,6 +26,11 @@ class VersionedRocksDbViewAdapter(storage: VersionedRocksDbStorageAdapter, versi
   override def getVersion: Optional[String] = _version
 
   override def update(toUpdate: util.List[Pair[Array[Byte], Array[Byte]]], toRemove: util.List[Array[Byte]]): Unit = {
+    update_internal(storage.getDefaultCf(), toUpdate, toRemove)
+  }
+
+  private def update_internal(cf: ColumnFamily, toUpdate: util.List[Pair[Array[Byte], Array[Byte]]], toRemove: util.List[Array[Byte]]): Unit = {
+
     // TODO: until rocksdb wrapper implements it, use this list->map/set
     val toInsert = new java.util.HashMap[Array[Byte], Array[Byte]]()
     val toDelete = new java.util.HashSet[Array[Byte]]()
@@ -47,13 +51,17 @@ class VersionedRocksDbViewAdapter(storage: VersionedRocksDbStorageAdapter, versi
     }
 
     try {
-      transaction.update(toInsert, toDelete)
+      transaction.update(cf, toInsert, toDelete)
     } catch {
       case e: Throwable =>
-        log.error(s"Could not update RocksDB view on version ${_storage.lastVersionID()}", e)
+        log.error(s"Could not update RocksDB view on version ${storage.lastVersionID()}", e)
         transaction.close()
         throw e
     }
+  }
+
+  override def update(schemaName: String, toUpdate: util.List[Pair[Array[Byte], Array[Byte]]], toRemove: util.List[Array[Byte]]): Unit = {
+    update_internal(storage.getLogicalPartition(schemaName).get(), toUpdate, toRemove)
   }
 
   override def commit(version: ByteArrayWrapper): Unit = {
@@ -74,6 +82,15 @@ class VersionedRocksDbViewAdapter(storage: VersionedRocksDbStorageAdapter, versi
       case Some(arr) => arr
     }
    }
+
+  override def get(partitionName: String, key: Array[Byte]): Array[Byte] = {
+    transaction.get(storage.getLogicalPartition(partitionName).get(), key).asScala match {
+      case None => new Array[Byte](0)
+      case Some(arr) => arr
+    }
+  }
+
+
 
   override def get(keyList: java.util.List[Array[Byte]]): java.util.List[Array[Byte]] = {
     // TODO: until rocksdb wrapper implements it, use this one by one approach
@@ -110,4 +127,11 @@ class VersionedRocksDbViewAdapter(storage: VersionedRocksDbStorageAdapter, versi
 
   override def getAll: util.List[Pair[Array[Byte], Array[Byte]]] = ???
 
+  override def getOrElse(partitionName: String, key: Array[Byte], defaultValue: Array[Byte]): Array[Byte] = {
+    transaction.getOrElse(storage.getLogicalPartition(partitionName).get(), key, defaultValue)
+  }
+
+  override def get(partitionName: String, keys: util.List[Array[Byte]]): util.List[Array[Byte]] = ???
+
+  override def getAll(partitionName: String): util.List[Pair[Array[Byte], Array[Byte]]] = ???
 }

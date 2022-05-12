@@ -1,5 +1,6 @@
 package com.horizen.storage.rocksdb
 
+import com.horizen.common.ColumnFamily
 import com.horizen.common.interfaces.DefaultReader
 import com.horizen.storage.{StorageNew, StorageVersionedView}
 import com.horizen.storageVersioned.{StorageVersioned, TransactionVersioned}
@@ -19,6 +20,18 @@ class VersionedRocksDbStorageAdapter(pathToDB: File) extends StorageNew with Sco
   private val versionsToKeep: Int = 720 * 2 + 1; //How many version could be saved at all, currently hardcoded to two consensus epochs length + 1
   private val dataBase: StorageVersioned = StorageVersioned.open(pathToDB.getAbsolutePath, true, versionsToKeep)
 
+  override def addLogicalPartition(name : String) = {
+    // this may throw exceptions
+    dataBase.setColumnFamily(name)
+  }
+
+  def getDefaultCf(): ColumnFamily =
+    dataBase.defaultCf()
+
+  def getLogicalPartition(name: String): Optional[ColumnFamily] = {
+    dataBase.getColumnFamily(name)
+  }
+
   def createTransaction(versionIdOpt: Optional[String]) : TransactionVersioned = {
     dataBase.createTransaction(versionIdOpt).asScala.getOrElse(throw new Exception("Could not create a transaction"))
   }
@@ -30,7 +43,20 @@ class VersionedRocksDbStorageAdapter(pathToDB: File) extends StorageNew with Sco
     }
   }
 
-  def getOrElse(key: Array[Byte], defaultValue: Array[Byte]): Array[Byte] = dataBase.getOrElse(key, defaultValue)
+  override def get(partitionName: String, key: Array[Byte]): Array[Byte] = {
+    dataBase.get(getLogicalPartition(partitionName).get(), key).asScala match {
+      case None => new Array[Byte](0)
+      case Some(arr) => arr
+    }
+  }
+
+  def getOrElse(key: Array[Byte], defaultValue: Array[Byte]): Array[Byte] = {
+    dataBase.getOrElse(key, defaultValue)
+  }
+
+  def getOrElse(partitionName: String, key: Array[Byte], defaultValue: Array[Byte]): Array[Byte] = {
+    dataBase.getOrElse(getLogicalPartition(partitionName).get(), key, defaultValue)
+  }
 
   override def get(keyList: util.List[Array[Byte]]): util.List[Array[Byte]] = {
     // TODO: until rocksdb wrapper implements it, use this one by one approach
@@ -90,8 +116,6 @@ class VersionedRocksDbStorageAdapter(pathToDB: File) extends StorageNew with Sco
     }
   }
 
-
-
   private def isVersionExist(versionForSearch: ByteArrayWrapper): Boolean = {
     val verString = BytesUtils.toHexString(versionForSearch.data())
     val versions : JList[String] = dataBase.rollbackVersions()
@@ -115,4 +139,8 @@ class VersionedRocksDbStorageAdapter(pathToDB: File) extends StorageNew with Sco
   override def close(): Unit = dataBase.close()
 
   override def isEmpty: Boolean = dataBase.rollbackVersions().isEmpty
+
+  override def get(partitionName: String, keys: JList[Array[Byte]]): JList[Array[Byte]] = ???
+
+  override def getAll(partitionName: String): JList[JPair[Array[Byte], Array[Byte]]] = ???
 }

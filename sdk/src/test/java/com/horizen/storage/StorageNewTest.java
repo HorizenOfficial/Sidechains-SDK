@@ -62,14 +62,14 @@ public class StorageNewTest {
         ByteArrayWrapper version2 = storageFixture.getVersion();
         java.util.ArrayList<Pair<byte[], byte[]>> u2 = new ArrayList<>();
 
-        for (Pair<byte[], byte[]> entry: u1)
+        for (Pair<byte[], byte[]> entry : u1)
             u2.add(new Pair<>(entry.getKey(), storageFixture.getValue()));
 
         StorageVersionedView view2 = s.getView();
         view2.update(u2, new java.util.ArrayList<>());
         view2.commit(version2);
 
-        Pair<byte[], byte[]>  firstEntryU2 = u2.get(0);
+        Pair<byte[], byte[]> firstEntryU2 = u2.get(0);
 
         assertEquals("Storage must contain 3 items.", 3, s.getAll().size());
         assertTrue("Storage must contain value for key - " + BytesUtils.toHexString(firstEntryU2.getKey()),
@@ -83,7 +83,7 @@ public class StorageNewTest {
         ByteArrayWrapper version3 = storageFixture.getVersion();
         List<byte[]> removedElements = new ArrayList<>();
 
-        for (Pair<byte[], byte[]> i : u2.subList(1,3))
+        for (Pair<byte[], byte[]> i : u2.subList(1, 3))
             removedElements.add(i.getKey());
 
         StorageVersionedView view3 = s.getView();
@@ -119,9 +119,8 @@ public class StorageNewTest {
 
         try {
             view2_1.get().commit(version2_1);
-            fail("already exist version in update shall thrown exception");
-        }
-        catch (java.lang.Exception ex) {
+            fail("Transaction for a previous version of a StorageVersioned can't be committed");
+        } catch (java.lang.Exception ex) {
             assertEquals("Transaction for a previous version of a StorageVersioned can't be committed", version2, s.lastVersionID().get());
         }
 
@@ -139,8 +138,7 @@ public class StorageNewTest {
         try {
             view4.update(u4, new java.util.ArrayList<>());
             fail("updating with duplicated keys shall thrown exception");
-        }
-        catch (java.lang.Exception ex) {
+        } catch (java.lang.Exception ex) {
             assertTrue("view update with duplicate key should not be possible", ex.getMessage().contains("duplicate key"));
         }
 
@@ -156,8 +154,7 @@ public class StorageNewTest {
         try {
             view5.commit(version4);
             fail("already exist version in view commit shall thrown exception");
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             assertEquals("Storage should not allow updating with an already contained version.", version4, s.lastVersionID().get());
         }
 
@@ -165,8 +162,7 @@ public class StorageNewTest {
         try {
             view5.commit(version3);
             fail("already exist version in view commit shall thrown exception");
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             assertEquals("Storage should not allow updating with an already contained version.", version4, s.lastVersionID().get());
         }
 
@@ -174,8 +170,7 @@ public class StorageNewTest {
         try {
             s.rollback(storageFixture.getVersion());
             fail("Non exist version in rollback shall thrown exception");
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             assertEquals("Storage must have specified version.", version4, s.lastVersionID().get());
         }
 
@@ -186,8 +181,7 @@ public class StorageNewTest {
         StorageVersionedView view6 = s.getView();
         try {
             view6.update(new java.util.ArrayList<>(), randomValues);
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             fail("It should be possible to update by removing not-existing values: " + ex.getMessage());
         }
         view6.commit(nonExistValuesVersion);
@@ -247,6 +241,45 @@ public class StorageNewTest {
         assertEquals("Storage must have specified version.", version1, s2.lastVersionID().get());
         assertEquals("Storage must have 1 versions.", 1, s2.rollbackVersions().size());
         assertTrue("Storage must have specified versions", s2.rollbackVersions().containsAll(Arrays.asList(version1)));
+
+    }
+
+    @Test
+    public void testColumns() {
+        StorageNew s = storageFixture.getStorage();
+        try {
+            s.addLogicalPartition("part1");
+            s.addLogicalPartition("part2");
+        } catch (Exception ex) {
+            fail("It should be possible to add a column family: " + ex.getMessage());
+        }
+
+        // try adding an existing partition, it is ok if already exists
+        try {
+            s.addLogicalPartition("part2");
+        } catch (Exception ex) {
+            fail("It should not throw an exception when adding an existing column family");
+        }
+
+        ByteArrayWrapper version1 = storageFixture.getVersion();
+        java.util.List<Pair<byte[], byte[]>> u1 = storageFixture.getKeyValueList(10);
+        java.util.List<Pair<byte[], byte[]>> u2 = storageFixture.getKeyValueList(20);
+
+        StorageVersionedView view1 = s.getView();
+        view1.update("part1", u1, new java.util.ArrayList<>());
+        view1.update("part2", u2, new java.util.ArrayList<>());
+        view1.commit(version1);
+
+        assertTrue("Storage partiton must contain element.",
+                storageFixture.compareValues(u2.get(2).getValue(), s.get("part2", u2.get(2).getKey())));
+        assertFalse("Storage partiton must not contain element.",
+                storageFixture.compareValues(u2.get(2).getValue(), s.get("part1", u2.get(2).getKey())));
+
+        assertTrue("Storage partiton must contain element.",
+                storageFixture.compareValues(u1.get(8).getValue(), s.get("part1", u1.get(8).getKey())));
+        assertFalse("Storage partiton must not contain element.",
+                storageFixture.compareValues(u1.get(0).getValue(), s.get("part2", u1.get(2).getKey())));
+
 
     }
 }

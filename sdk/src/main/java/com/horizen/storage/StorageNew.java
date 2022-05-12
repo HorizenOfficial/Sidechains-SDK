@@ -1,12 +1,8 @@
 package com.horizen.storage;
 
 import com.horizen.utils.ByteArrayWrapper;
-import com.horizen.utils.Pair;
-
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 
 public interface StorageNew extends VersionedReader {
@@ -29,4 +25,7 @@ public interface StorageNew extends VersionedReader {
 
     // Try to get a view targeting the version in the past if it exists.
     Optional<StorageVersionedView> getView(ByteArrayWrapper version);
+
+    // add a logical partition
+    void addLogicalPartition(String name);
 }
