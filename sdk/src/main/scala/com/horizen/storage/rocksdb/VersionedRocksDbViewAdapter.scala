@@ -10,7 +10,7 @@ import java.util.{List, Optional}
 import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsScalaMapConverter, seqAsJavaListConverter}
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
 
-class VersionedRocksDbViewAdapter(storage: VersionedRocksDbStorageNewAdapter, version: Optional[ByteArrayWrapper])
+class VersionedRocksDbViewAdapter(storage: VersionedRocksDbStorageAdapter, version: Optional[ByteArrayWrapper])
   extends StorageVersionedView with ScorexLogging {
 
   private val _storage : StorageNew = storage

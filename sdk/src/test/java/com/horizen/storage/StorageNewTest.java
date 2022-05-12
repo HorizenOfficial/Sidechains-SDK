@@ -1,9 +1,7 @@
 package com.horizen.storage;
 
 import com.horizen.fixtures.StoreNewFixtureClass;
-import com.horizen.fixtures.StoreNewFixture;
 import com.horizen.storage.rocksdb.VersionedRocksDbStorageAdapter;
-import com.horizen.storage.rocksdb.VersionedRocksDbStorageNewAdapter;
 import com.horizen.storage.rocksdb.VersionedRocksDbViewAdapter;
 import com.horizen.utils.ByteArrayWrapper;
 import com.horizen.utils.BytesUtils;
@@ -21,7 +19,7 @@ public class StorageNewTest {
 
     @Test
     public void testStorage() {
-        VersionedRocksDbStorageNewAdapter s = storageFixture.getStorage();
+        VersionedRocksDbStorageAdapter s = storageFixture.getStorage();
 
         //Test empty storage
         assertTrue("Storage expected to be empty.", s.isEmpty());
@@ -215,7 +213,7 @@ public class StorageNewTest {
     public void reopenStorage() {
 
         File storagePath = storageFixture.tempFile();
-        VersionedRocksDbStorageNewAdapter s = storageFixture.getStorage(storagePath);
+        VersionedRocksDbStorageAdapter s = storageFixture.getStorage(storagePath);
         assertTrue("Storage expected to be empty.", s.isEmpty());
         assertFalse("Version of empty storage shall be none", s.lastVersionID().isPresent());
 
@@ -241,7 +239,7 @@ public class StorageNewTest {
 
         s.close(); // it frees resources too
 
-        VersionedRocksDbStorageNewAdapter s2 = storageFixture.getStorage(storagePath);
+        VersionedRocksDbStorageAdapter s2 = storageFixture.getStorage(storagePath);
         assertEquals("Storage must contain 3 items.", firstUpdateSize, s2.getAll().size());
         assertEquals("Storage must contain value for key - " + BytesUtils.toHexString(firstEntryU1.getKey()),
                 BytesUtils.toHexString(firstEntryU1.getValue()), BytesUtils.toHexString(s2.get(firstEntryU1.getKey())));

@@ -19,7 +19,7 @@ import com.horizen.secret.SecretSerializer;
 import com.horizen.settings.SettingsReader;
 import com.horizen.storage.Storage;
 import com.horizen.state.*;
-import com.horizen.storage.rocksdb.VersionedRocksDbStorageAdapter;
+import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter;
 import com.horizen.transaction.BoxTransaction;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.wallet.*;
@@ -94,34 +94,34 @@ public class SimpleAppModule extends SidechainAppModule
 
         bind(Storage.class)
                 .annotatedWith(Names.named("SecretStorage"))
-                .toInstance(new VersionedRocksDbStorageAdapter(secretStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(secretStore));
         bind(Storage.class)
                 .annotatedWith(Names.named("WalletBoxStorage"))
-                .toInstance(new VersionedRocksDbStorageAdapter(walletBoxStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(walletBoxStore));
         bind(Storage.class)
                 .annotatedWith(Names.named("WalletTransactionStorage"))
-                .toInstance(new VersionedRocksDbStorageAdapter(walletTransactionStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(walletTransactionStore));
         bind(Storage.class)
                 .annotatedWith(Names.named("WalletForgingBoxesInfoStorage"))
-                .toInstance(new VersionedRocksDbStorageAdapter(walletForgingBoxesInfoStorage));
+                .toInstance(new VersionedLevelDbStorageAdapter(walletForgingBoxesInfoStorage));
         bind(Storage.class)
                 .annotatedWith(Names.named("WalletCswDataStorage"))
-                .toInstance(new VersionedRocksDbStorageAdapter(walletCswDataStorage));
+                .toInstance(new VersionedLevelDbStorageAdapter(walletCswDataStorage));
         bind(Storage.class)
                 .annotatedWith(Names.named("StateStorage"))
-                .toInstance(new VersionedRocksDbStorageAdapter(stateStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(stateStore));
         bind(Storage.class)
                 .annotatedWith(Names.named("StateForgerBoxStorage"))
-                .toInstance(new VersionedRocksDbStorageAdapter(stateForgerBoxStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(stateForgerBoxStore));
         bind(Storage.class)
                 .annotatedWith(Names.named("StateUtxoMerkleTreeStorage"))
-                .toInstance(new VersionedRocksDbStorageAdapter(stateUtxoMerkleTreeStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(stateUtxoMerkleTreeStore));
         bind(Storage.class)
                 .annotatedWith(Names.named("HistoryStorage"))
-                .toInstance(new VersionedRocksDbStorageAdapter(historyStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(historyStore));
         bind(Storage.class)
                 .annotatedWith(Names.named("ConsensusStorage"))
-                .toInstance(new VersionedRocksDbStorageAdapter(consensusStore));
+                .toInstance(new VersionedLevelDbStorageAdapter(consensusStore));
 
         bind(new TypeLiteral<List<ApplicationApiGroup>> () {})
                 .annotatedWith(Names.named("CustomApiGroups"))

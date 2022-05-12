@@ -1,12 +1,12 @@
 package com.horizen.fixtures
 
 import com.horizen.storage.StorageNew
-import com.horizen.storage.rocksdb.{VersionedRocksDbStorageAdapter, VersionedRocksDbStorageNewAdapter}
+import com.horizen.storage.rocksdb.VersionedRocksDbStorageAdapter
 import com.horizen.utils.{ByteArrayWrapper, Pair, byteArrayToWrapper}
 
 import java.util.{ArrayList => JArrayList, List => JList}
 import java.io.File
-import java.{lang, util}
+
 import scala.collection.JavaConverters.{asScalaBufferConverter, asScalaSetConverter}
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
@@ -47,12 +47,12 @@ trait StoreNewFixture {
     dir.delete()
   }
 
-  def getStorage(): VersionedRocksDbStorageNewAdapter = {
+  def getStorage(): VersionedRocksDbStorageAdapter = {
     getStorage(tempFile())
   }
 
-  def getStorage(pathToDB: File): VersionedRocksDbStorageNewAdapter = {
-    val storage = new VersionedRocksDbStorageNewAdapter(pathToDB)
+  def getStorage(pathToDB: File): VersionedRocksDbStorageAdapter = {
+    val storage = new VersionedRocksDbStorageAdapter(pathToDB)
     storages.append(storage)
     storage
   }
