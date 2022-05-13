@@ -1,16 +1,17 @@
 package com.horizen.storage.rocksdb
 
-import com.horizen.common.ColumnFamily
-import com.horizen.common.interfaces.DefaultReader
-import com.horizen.storage.{VersionedStoragePartitionView, VersionedStorage, VersionedStorageView}
+import com.horizen.common.{ColumnFamily, DBIterator}
+import com.horizen.common.interfaces.{DefaultReader, Reader}
+import com.horizen.storage.{VersionedStorage, VersionedStoragePartitionView, VersionedStorageView}
 import com.horizen.storageVersioned.{StorageVersioned, TransactionVersioned}
 import com.horizen.utils.{Pair => JPair, _}
 import scorex.util.ScorexLogging
 
 import java.io.File
 import java.util
-import java.util.{Map, Optional, List => JList}
+import java.util.{Optional, List => JList}
 import scala.collection.JavaConverters._
+import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
 
 
@@ -73,30 +74,35 @@ class VersionedRocksDbStorageAdapter(pathToDB: File) extends VersionedStorage wi
     }
   }
 
-  // TODO check if the library has a method we can use without resorting to iterators
-  override def getAll: JList[JPair[Array[Byte], Array[Byte]]] = {
+  def get_all_internal(iter: DBIterator): java.util.ArrayList[JPair[Array[Byte], Array[Byte]]] = {
+
     val toWrite = new java.util.ArrayList[JPair[Array[Byte], Array[Byte]]]()
 
+    var hasNext = true
+    while (hasNext) {
+      val next = iter.next()
+      if (next.isPresent) {
+        val key = next.get().getKey
+        val value = next.get().getValue
+        toWrite.add(new JPair[Array[Byte], Array[Byte]](key, value))
+      }
+      else
+        hasNext = false
+    }
+    toWrite
+  }
+
+  // TODO check if the library has a method we can use without resorting to iterators
+  override def getAll: JList[JPair[Array[Byte], Array[Byte]]] = {
+
     if (dataBase.isEmpty())
-      return toWrite
+      return new java.util.ArrayList[JPair[Array[Byte], Array[Byte]]]()
 
     // TODO this might throw as well
     val iter = dataBase.asInstanceOf[DefaultReader].getIter()
 
     try {
-
-      var hasNext = true
-      while (hasNext) {
-        val next = iter.next()
-        if (next.isPresent) {
-          val key = next.get().getKey
-          val value = next.get().getValue
-          toWrite.add(new JPair[Array[Byte], Array[Byte]](key, value))
-        }
-        else
-          hasNext = false
-      }
-      toWrite
+      get_all_internal(iter)
     } finally {
       iter.close()
     }
@@ -140,11 +146,45 @@ class VersionedRocksDbStorageAdapter(pathToDB: File) extends VersionedStorage wi
 
   override def isEmpty: Boolean = dataBase.rollbackVersions().isEmpty
 
-  override def get(partitionName: String, keys: JList[Array[Byte]]): JList[Array[Byte]] = ???
+  override def get(partitionName: String, keys: JList[Array[Byte]]): JList[Array[Byte]] =
+    getPartitionView(partitionName).asScala match {
+      case None =>  new java.util.ArrayList[Array[Byte]] ()
+      case Some(v) => v.get(keys)
+    }
 
-  override def getAll(partitionName: String): JList[JPair[Array[Byte], Array[Byte]]] = ???
+  override def getAll(partitionName: String): JList[JPair[Array[Byte], Array[Byte]]] = {
+    val toWrite = new java.util.ArrayList[JPair[Array[Byte], Array[Byte]]]()
 
-  override def getPartitionView(logicalPartitionName: String): VersionedStoragePartitionView = {
+    if (getLogicalPartition(partitionName).isEmpty)
+      throw new Exception("Nosuch partition")
+
+    val cf = getLogicalPartition(partitionName).get()
+
+    if (dataBase.isEmpty(cf))
+      return toWrite
+
+    // TODO this might throw as well
+    val iter = dataBase.asInstanceOf[Reader].getIter(cf)
+
+    try {
+      get_all_internal(iter)
+    } finally {
+      iter.close()
+    }
+  }
+
+  override def getPartitionView(logicalPartitionName: String): Optional[VersionedStoragePartitionView] = {
     getView.getPartitionView(logicalPartitionName)
+  }
+
+  override def getPartitionView(logicalPartitionName: String, version: ByteArrayWrapper): Optional[VersionedStoragePartitionView] = {
+    getView(version).asScala match {
+      case None => Optional.empty()
+      case Some(pv) =>
+        pv.getPartitionView(logicalPartitionName).asScala match {
+          case None => Optional.empty()
+          case Some(p) => Optional.of(p)
+        }
+    }
   }
 }

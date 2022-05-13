@@ -29,6 +29,7 @@ public interface VersionedStorage extends VersionedStorageReader {
     // add a logical partition
     void addLogicalPartition(String name);
 
-    VersionedStoragePartitionView getPartitionView(String logicalPartitionName);
+    Optional<VersionedStoragePartitionView> getPartitionView(String logicalPartitionName);
+    Optional<VersionedStoragePartitionView> getPartitionView(String logicalPartitionName, ByteArrayWrapper version);
 
 }

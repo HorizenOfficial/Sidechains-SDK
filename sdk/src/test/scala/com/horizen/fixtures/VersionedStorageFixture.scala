@@ -10,7 +10,7 @@ import scala.collection.JavaConverters.{asScalaBufferConverter, asScalaSetConver
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
-trait StoreNewFixture {
+trait VersionedStorageFixture {
 
   val keySize = 32
   val valueSize = 256
@@ -107,4 +107,4 @@ trait StoreNewFixture {
 
 }
 
-class StoreNewFixtureClass extends StoreNewFixture
+class VersionedStorageFixtureClass extends VersionedStorageFixture

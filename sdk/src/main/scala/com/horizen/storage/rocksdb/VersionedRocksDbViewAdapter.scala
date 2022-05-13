@@ -55,13 +55,19 @@ class VersionedRocksDbViewAdapter(storage: VersionedRocksDbStorageAdapter, versi
     } catch {
       case e: Throwable =>
         log.error(s"Could not update RocksDB view on version ${storage.lastVersionID()}", e)
-        transaction.close()
+        // TODO Should we close this transaction? The exception might be caused by a different transactions contending the same key.
+        //  we might retry later as soon as the other transaction
+        //  has complete the commit
+        //  transaction.close()
         throw e
     }
   }
 
-  override def update(schemaName: String, toUpdate: util.List[Pair[Array[Byte], Array[Byte]]], toRemove: util.List[Array[Byte]]): Unit = {
-    update_internal(storage.getLogicalPartition(schemaName).get(), toUpdate, toRemove)
+  override def update(partitionName: String, toUpdate: util.List[Pair[Array[Byte], Array[Byte]]], toRemove: util.List[Array[Byte]]): Unit = {
+    storage.getLogicalPartition(partitionName).asScala match {
+      case None => throw new Exception(s"No such partition: ${partitionName}")
+      case Some(cf) => update_internal(cf, toUpdate, toRemove)
+    }
   }
 
   override def commit(version: ByteArrayWrapper): Unit = {
@@ -145,5 +151,13 @@ class VersionedRocksDbViewAdapter(storage: VersionedRocksDbStorageAdapter, versi
 
   override def getAll(partitionName: String): util.List[Pair[Array[Byte], Array[Byte]]] = ???
 
-  override def getPartitionView(logicalPartitionName: String): VersionedStoragePartitionView = new VersionedRocksDbPartitionViewAdapter(this, logicalPartitionName)
+  override def getPartitionView(partitionName: String): Optional[VersionedStoragePartitionView] = {
+    // TODO should we prevent having more than one view on the same partition? If we must, we should
+    // store the 'singleton' obj and return it, or we might raise an exception if someone is doing it
+    // After all what is the use of having a view just for read? One could use the storage directly
+    storage.getLogicalPartition(partitionName).asScala match {
+      case None => Optional.empty()
+      case Some(x) => Optional.of(new VersionedRocksDbPartitionViewAdapter(this, partitionName))
+    }
+  }
 }

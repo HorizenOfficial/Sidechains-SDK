@@ -1,7 +1,6 @@
 package com.horizen.storage;
 
 import com.horizen.utils.Pair;
-
 import java.util.List;
 
 public interface VersionedStorageReader extends VersionedStoragePartitionReader {

@@ -1,6 +1,6 @@
 package com.horizen.storage;
 
-import com.horizen.fixtures.StoreNewFixtureClass;
+import com.horizen.fixtures.VersionedStorageFixtureClass;
 import com.horizen.storage.rocksdb.VersionedRocksDbStorageAdapter;
 import com.horizen.storage.rocksdb.VersionedRocksDbViewAdapter;
 import com.horizen.utils.ByteArrayWrapper;
@@ -15,7 +15,7 @@ import static org.junit.Assert.*;
 
 public class VersionedStorageTest {
 
-    StoreNewFixtureClass storageFixture = new StoreNewFixtureClass();
+    VersionedStorageFixtureClass storageFixture = new VersionedStorageFixtureClass();
 
     @Test
     public void testStorage() {
@@ -245,7 +245,7 @@ public class VersionedStorageTest {
     }
 
     @Test
-    public void testColumns() {
+    public void testVersionedStoragePartitions() {
         VersionedStorage s = storageFixture.getStorage();
         try {
             s.addLogicalPartition("part1");
@@ -261,6 +261,7 @@ public class VersionedStorageTest {
             fail("It should not throw an exception when adding an existing column family");
         }
 
+        // add data to partitions by accessing storage view
         ByteArrayWrapper version1 = storageFixture.getVersion();
         java.util.List<Pair<byte[], byte[]>> u1_1 = storageFixture.getKeyValueList(10);
         java.util.List<Pair<byte[], byte[]>> u1_2 = storageFixture.getKeyValueList(20);
@@ -268,6 +269,14 @@ public class VersionedStorageTest {
         VersionedStorageView view1 = s.getView();
         view1.update("part1", u1_1, new java.util.ArrayList<>());
         view1.update("part2", u1_2, new java.util.ArrayList<>());
+
+        // verify we can not update not-existing partitions
+        try {
+            view1.update("part123", u1_2, new java.util.ArrayList<>());
+            fail("It should not update on partition that does not exist");
+        } catch (Exception ex) {
+            assertTrue(ex.getMessage().contains("No such partition"));
+        }
         view1.commit(version1);
 
         assertTrue("Storage partiton must contain element.",
@@ -280,12 +289,17 @@ public class VersionedStorageTest {
         assertFalse("Storage partiton must not contain element.",
                 storageFixture.compareValues(u1_1.get(0).getValue(), s.get("part2", u1_1.get(2).getKey())));
 
+
         // additional usages with PartitionView interface
         java.util.List<Pair<byte[], byte[]>> u2 = storageFixture.getKeyValueList(7);
         VersionedStorageView view2 = s.getView();
         ByteArrayWrapper version2 = storageFixture.getVersion();
 
-        VersionedStoragePartitionView partitionView2 = view2.getPartitionView("part1");
+        // verify we can not have partition views of not existing partitions
+        Optional<VersionedStoragePartitionView> partitionViewNA = view2.getPartitionView("part123");
+        assertTrue(partitionViewNA.isEmpty());
+
+        VersionedStoragePartitionView partitionView2 = view2.getPartitionView("part1").get();
         partitionView2.update(u2, new java.util.ArrayList<>());
         partitionView2.commit(version2);
 
@@ -296,7 +310,10 @@ public class VersionedStorageTest {
         java.util.List<Pair<byte[], byte[]>> u3 = storageFixture.getKeyValueList(13);
         ByteArrayWrapper version3 = storageFixture.getVersion();
 
-        VersionedStoragePartitionView partitionView3 = s.getPartitionView("part2");
+        Optional<VersionedStoragePartitionView> partitionViewNA2 = s.getPartitionView("part123");
+        assertTrue(partitionViewNA2.isEmpty());
+
+        VersionedStoragePartitionView partitionView3 = s.getPartitionView("part2").get();
         partitionView3.update(u3, new java.util.ArrayList<>());
 
         assertFalse("Storage partiton view must contain element set in a previous version.",
@@ -309,6 +326,93 @@ public class VersionedStorageTest {
 
         assertFalse("Storage partiton must not contain element set on different partition.",
                 storageFixture.compareValues(u3.get(6).getValue(), s.get("part1", u3.get(6).getKey())));
+
+        // try accessing a non existing partition of the storage
+        Optional<VersionedStoragePartitionView> partitionViewNA3 = s.getPartitionView("part123");
+        assertTrue(partitionViewNA3.isEmpty());
+
+        // get two different view of the same partition and do separate update/commit with different k/v list
+        VersionedStoragePartitionView partitionView_11 = s.getPartitionView("part1").get();
+        VersionedStoragePartitionView partitionView_12 = s.getPartitionView("part1").get();
+
+        java.util.List<Pair<byte[], byte[]>> u4_1 = storageFixture.getKeyValueList(13);
+        java.util.List<Pair<byte[], byte[]>> u4_2 = storageFixture.getKeyValueList(13);
+        ByteArrayWrapper version4_1 = storageFixture.getVersion();
+        ByteArrayWrapper version4_2 = storageFixture.getVersion();
+
+        partitionView_11.update(u4_1, new java.util.ArrayList<>());
+        partitionView_12.update(u4_2, new java.util.ArrayList<>());
+
+        assertTrue("Storage partiton view must contain element just set.",
+                storageFixture.compareValues(u4_1.get(6).getValue(), partitionView_11.get(u4_1.get(6).getKey())));
+
+        assertFalse("Storage partiton view must not contain element set on different view.",
+                storageFixture.compareValues(u4_1.get(6).getValue(), partitionView_12.get(u4_1.get(6).getKey())));
+
+        partitionView_11.commit(version4_1);
+
+        assertEquals("Storage must have 4 versions.", 4, s.rollbackVersions().size());
+
+        assertTrue("Storage partiton must contain element just committed.",
+                storageFixture.compareValues(u4_1.get(6).getValue(), s.get("part1", u4_1.get(6).getKey())));
+
+        assertFalse("Storage partiton must not contain element set on different view.",
+                storageFixture.compareValues(u4_2.get(6).getValue(), s.get(u4_2.get(6).getKey())));
+
+        int sz11 = s.getAll("part1").size();
+        System.out.println("Size11 = " + sz11);
+        partitionView_12.commit(version4_2);
+
+        assertTrue("Storage partiton must contain element committed previously.",
+                storageFixture.compareValues(u4_1.get(6).getValue(), s.get("part1", u4_1.get(6).getKey())));
+
+        assertTrue("Storage partiton must contain element just committed.",
+                storageFixture.compareValues(u4_2.get(6).getValue(), s.get("part1", u4_2.get(6).getKey())));
+
+        assertEquals("Storage must have 5 versions.", 5, s.rollbackVersions().size());
+
+        int sz12 = s.getAll("part1").size();
+        System.out.println("Size12 = " + sz12);
+
+        // get two different view of the same partition and do separate update/commit with with 1 entry with same k and different values
+        VersionedStoragePartitionView partitionView_21 = s.getPartitionView("part1").get();
+        VersionedStoragePartitionView partitionView_22 = s.getPartitionView("part1").get();
+
+        java.util.List<Pair<byte[], byte[]>> u5_1 =  new java.util.ArrayList<>();
+        java.util.List<Pair<byte[], byte[]>> u5_2 =  new java.util.ArrayList<>();
+        u5_1.add(storageFixture.getKeyValue());
+        byte[] key5_12 = u5_1.get(0).getKey();
+        byte[] value5_1 = u5_1.get(0).getValue();
+
+        u5_2.add(new Pair<>(key5_12, storageFixture.getValue()));
+        byte[] value5_2 = u5_2.get(0).getValue();
+
+        assertFalse(storageFixture.compareValues(value5_1, value5_2));
+
+        ByteArrayWrapper version5_1 = storageFixture.getVersion();
+        ByteArrayWrapper version5_2 = storageFixture.getVersion();
+
+        partitionView_21.update(u5_1, new java.util.ArrayList<>());
+
+        try {
+            partitionView_22.update(u5_2, new java.util.ArrayList<>());
+            fail("It should not update the same key on different views of the same partition");
+        } catch (Exception ex) {
+            assertTrue(ex.getMessage().contains("Timeout waiting to lock key"));
+        }
+
+        partitionView_21.commit(version5_1);
+
+        assertTrue("Storage partition has same value for the key just committed.",
+                storageFixture.compareValues(s.get("part1", key5_12), value5_1));
+
+        partitionView_22.update(u5_2, new java.util.ArrayList<>());
+        partitionView_22.commit(version5_2);
+
+        assertTrue("Storage partition has same value for the key just committed.",
+                storageFixture.compareValues(s.get("part1", key5_12), value5_2));
+
+
 
     }
 }
