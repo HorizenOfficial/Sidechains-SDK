@@ -5,8 +5,6 @@ import com.horizen.transaction.CoreTransactionsIdsEnum._
 import java.util.{HashMap => JHashMap}
 import java.lang.{Byte => JByte}
 
-import com.google.inject.Inject
-import com.google.inject.name.Named
 import com.horizen.SidechainTypes
 import com.horizen.utils.DynamicTypedSerializer
 

@@ -12,6 +12,7 @@ import com.horizen.transaction.BoxTransaction
 import scala.compat.java8.OptionConverters.RichOptionForJava8
 
 class TransactionSubmitHelperImpl @Inject()(val appProvider: Provider[SidechainApp]) extends TransactionSubmitHelper {
+
   @throws(classOf[IllegalArgumentException])
   override def submitTransaction(tx: BoxTransaction[Proposition, Box[Proposition]]): Unit = {
     appProvider.get().getTransactionSubmitProvider.submitTransaction(tx)
