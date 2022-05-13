@@ -2,7 +2,7 @@ package com.horizen.storage.rocksdb
 
 import com.horizen.common.ColumnFamily
 import com.horizen.common.interfaces.DefaultReader
-import com.horizen.storage.{StorageNew, StorageVersionedView}
+import com.horizen.storage.{VersionedStoragePartitionView, VersionedStorage, VersionedStorageView}
 import com.horizen.storageVersioned.{StorageVersioned, TransactionVersioned}
 import com.horizen.utils.{Pair => JPair, _}
 import scorex.util.ScorexLogging
@@ -16,7 +16,7 @@ import scala.compat.java8.OptionConverters.RichOptionalGeneric
 
 /*
 * */
-class VersionedRocksDbStorageAdapter(pathToDB: File) extends StorageNew with ScorexLogging {
+class VersionedRocksDbStorageAdapter(pathToDB: File) extends VersionedStorage with ScorexLogging {
   private val versionsToKeep: Int = 720 * 2 + 1; //How many version could be saved at all, currently hardcoded to two consensus epochs length + 1
   private val dataBase: StorageVersioned = StorageVersioned.open(pathToDB.getAbsolutePath, true, versionsToKeep)
 
@@ -64,9 +64,9 @@ class VersionedRocksDbStorageAdapter(pathToDB: File) extends StorageNew with Sco
     keyList.asScala.map(x => get(x)).toList.asJava
   }
 
-  override def getView: StorageVersionedView = new VersionedRocksDbViewAdapter(this, Optional.empty())
+  override def getView: VersionedStorageView = new VersionedRocksDbViewAdapter(this, Optional.empty())
 
-  override def getView(version: ByteArrayWrapper): Optional[StorageVersionedView] = {
+  override def getView(version: ByteArrayWrapper): Optional[VersionedStorageView] = {
     isVersionExist(version) match {
       case true => Optional.of(new VersionedRocksDbViewAdapter(this, Optional.of(version)))
       case false => Optional.empty()
@@ -143,4 +143,8 @@ class VersionedRocksDbStorageAdapter(pathToDB: File) extends StorageNew with Sco
   override def get(partitionName: String, keys: JList[Array[Byte]]): JList[Array[Byte]] = ???
 
   override def getAll(partitionName: String): JList[JPair[Array[Byte], Array[Byte]]] = ???
+
+  override def getPartitionView(logicalPartitionName: String): VersionedStoragePartitionView = {
+    getView.getPartitionView(logicalPartitionName)
+  }
 }

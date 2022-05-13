@@ -1,7 +1,7 @@
 package com.horizen.storage.rocksdb
 
 import com.horizen.common.ColumnFamily
-import com.horizen.storage.{StorageNew, StorageVersionedView}
+import com.horizen.storage.{VersionedStoragePartitionView, VersionedStorage, VersionedStorageView}
 import com.horizen.storageVersioned.TransactionVersioned
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, Pair, byteArrayToWrapper}
 import scorex.util.ScorexLogging
@@ -12,7 +12,7 @@ import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsScalaMapCon
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
 
 class VersionedRocksDbViewAdapter(storage: VersionedRocksDbStorageAdapter, version: Optional[ByteArrayWrapper])
-  extends StorageVersionedView with ScorexLogging {
+  extends VersionedStorageView with ScorexLogging {
 
   private val _version : Optional[String] = version.asScala match {
     case None => Optional.empty()
@@ -131,7 +131,19 @@ class VersionedRocksDbViewAdapter(storage: VersionedRocksDbStorageAdapter, versi
     transaction.getOrElse(storage.getLogicalPartition(partitionName).get(), key, defaultValue)
   }
 
-  override def get(partitionName: String, keys: util.List[Array[Byte]]): util.List[Array[Byte]] = ???
+  override def get(partitionName: String, keys: util.List[Array[Byte]]): util.List[Array[Byte]] =
+  {
+
+    keys.asScala.map(x => {
+      transaction.get(storage.getLogicalPartition(partitionName).get(), x).asScala match {
+        case None => new Array[Byte](0)
+        case Some(arr) => arr
+      }
+    }
+    ).toList.asJava
+  }
 
   override def getAll(partitionName: String): util.List[Pair[Array[Byte], Array[Byte]]] = ???
+
+  override def getPartitionView(logicalPartitionName: String): VersionedStoragePartitionView = new VersionedRocksDbPartitionViewAdapter(this, logicalPartitionName)
 }

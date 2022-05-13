@@ -13,7 +13,7 @@ import java.util.*;
 
 import static org.junit.Assert.*;
 
-public class StorageNewTest {
+public class VersionedStorageTest {
 
     StoreNewFixtureClass storageFixture = new StoreNewFixtureClass();
 
@@ -43,7 +43,7 @@ public class StorageNewTest {
         java.util.List<Pair<byte[], byte[]>> u1 = storageFixture.getKeyValueList(firstUpdateSize);
         Pair<byte[], byte[]> firstEntryU1 = u1.get(0);
 
-        StorageVersionedView view1 = s.getView();
+        VersionedStorageView view1 = s.getView();
         view1.update(u1, new java.util.ArrayList<>());
         view1.commit(version1);
 
@@ -65,7 +65,7 @@ public class StorageNewTest {
         for (Pair<byte[], byte[]> entry : u1)
             u2.add(new Pair<>(entry.getKey(), storageFixture.getValue()));
 
-        StorageVersionedView view2 = s.getView();
+        VersionedStorageView view2 = s.getView();
         view2.update(u2, new java.util.ArrayList<>());
         view2.commit(version2);
 
@@ -86,7 +86,7 @@ public class StorageNewTest {
         for (Pair<byte[], byte[]> i : u2.subList(1, 3))
             removedElements.add(i.getKey());
 
-        StorageVersionedView view3 = s.getView();
+        VersionedStorageView view3 = s.getView();
         view3.update(new ArrayList<>(), removedElements);
         view3.commit(version3);
 
@@ -113,7 +113,7 @@ public class StorageNewTest {
 
         // try to get a view on an older version, it is ok but commit is not possible
         ByteArrayWrapper version2_1 = storageFixture.getVersion();
-        Optional<StorageVersionedView> view2_1 = s.getView(version1);
+        Optional<VersionedStorageView> view2_1 = s.getView(version1);
         assertFalse("View on version should not be empty", view2_1.isEmpty());
         view2_1.get().update(new ArrayList<>(), removedElements);
 
@@ -133,7 +133,7 @@ public class StorageNewTest {
         u4.add(new Pair(baw2.data(), storageFixture.getValue()));
 
         ByteArrayWrapper version4 = storageFixture.getVersion();
-        StorageVersionedView view4 = s.getView();
+        VersionedStorageView view4 = s.getView();
 
         try {
             view4.update(u4, new java.util.ArrayList<>());
@@ -149,7 +149,7 @@ public class StorageNewTest {
 
 
         //Try to update with latest version
-        StorageVersionedView view5 = s.getView();
+        VersionedStorageView view5 = s.getView();
         view5.update(u2, new java.util.ArrayList<>());
         try {
             view5.commit(version4);
@@ -178,7 +178,7 @@ public class StorageNewTest {
         java.util.List<byte[]> randomValues = storageFixture.getValueList(5);
 
         ByteArrayWrapper nonExistValuesVersion = storageFixture.getVersion();
-        StorageVersionedView view6 = s.getView();
+        VersionedStorageView view6 = s.getView();
         try {
             view6.update(new java.util.ArrayList<>(), randomValues);
         } catch (Exception ex) {
@@ -193,7 +193,7 @@ public class StorageNewTest {
         java.util.List<Pair<byte[], byte[]>> uc = storageFixture.getKeyValueList(8);
 
         ByteArrayWrapper version7 = storageFixture.getVersion();
-        StorageVersionedView view7 = s.getView();
+        VersionedStorageView view7 = s.getView();
         view7.update(ua, new java.util.ArrayList<>());
         view7.update(ub, new java.util.ArrayList<>());
         view7.update(uc, new java.util.ArrayList<>());
@@ -216,7 +216,7 @@ public class StorageNewTest {
         java.util.List<Pair<byte[], byte[]>> u1 = storageFixture.getKeyValueList(firstUpdateSize);
         Pair<byte[], byte[]> firstEntryU1 = u1.get(0);
 
-        StorageVersionedView view1 = s.getView();
+        VersionedStorageView view1 = s.getView();
         view1.update(u1, new java.util.ArrayList<>());
         view1.commit(version1);
 
@@ -246,7 +246,7 @@ public class StorageNewTest {
 
     @Test
     public void testColumns() {
-        StorageNew s = storageFixture.getStorage();
+        VersionedStorage s = storageFixture.getStorage();
         try {
             s.addLogicalPartition("part1");
             s.addLogicalPartition("part2");
@@ -262,24 +262,53 @@ public class StorageNewTest {
         }
 
         ByteArrayWrapper version1 = storageFixture.getVersion();
-        java.util.List<Pair<byte[], byte[]>> u1 = storageFixture.getKeyValueList(10);
-        java.util.List<Pair<byte[], byte[]>> u2 = storageFixture.getKeyValueList(20);
+        java.util.List<Pair<byte[], byte[]>> u1_1 = storageFixture.getKeyValueList(10);
+        java.util.List<Pair<byte[], byte[]>> u1_2 = storageFixture.getKeyValueList(20);
 
-        StorageVersionedView view1 = s.getView();
-        view1.update("part1", u1, new java.util.ArrayList<>());
-        view1.update("part2", u2, new java.util.ArrayList<>());
+        VersionedStorageView view1 = s.getView();
+        view1.update("part1", u1_1, new java.util.ArrayList<>());
+        view1.update("part2", u1_2, new java.util.ArrayList<>());
         view1.commit(version1);
 
         assertTrue("Storage partiton must contain element.",
-                storageFixture.compareValues(u2.get(2).getValue(), s.get("part2", u2.get(2).getKey())));
+                storageFixture.compareValues(u1_2.get(2).getValue(), s.get("part2", u1_2.get(2).getKey())));
         assertFalse("Storage partiton must not contain element.",
-                storageFixture.compareValues(u2.get(2).getValue(), s.get("part1", u2.get(2).getKey())));
+                storageFixture.compareValues(u1_2.get(2).getValue(), s.get("part1", u1_2.get(2).getKey())));
 
         assertTrue("Storage partiton must contain element.",
-                storageFixture.compareValues(u1.get(8).getValue(), s.get("part1", u1.get(8).getKey())));
+                storageFixture.compareValues(u1_1.get(8).getValue(), s.get("part1", u1_1.get(8).getKey())));
         assertFalse("Storage partiton must not contain element.",
-                storageFixture.compareValues(u1.get(0).getValue(), s.get("part2", u1.get(2).getKey())));
+                storageFixture.compareValues(u1_1.get(0).getValue(), s.get("part2", u1_1.get(2).getKey())));
 
+        // additional usages with PartitionView interface
+        java.util.List<Pair<byte[], byte[]>> u2 = storageFixture.getKeyValueList(7);
+        VersionedStorageView view2 = s.getView();
+        ByteArrayWrapper version2 = storageFixture.getVersion();
+
+        VersionedStoragePartitionView partitionView2 = view2.getPartitionView("part1");
+        partitionView2.update(u2, new java.util.ArrayList<>());
+        partitionView2.commit(version2);
+
+        assertTrue("Storage partiton must contain element.",
+                storageFixture.compareValues(u2.get(5).getValue(), s.get("part1", u2.get(5).getKey())));
+
+        // additional usages with PartitionView interface
+        java.util.List<Pair<byte[], byte[]>> u3 = storageFixture.getKeyValueList(13);
+        ByteArrayWrapper version3 = storageFixture.getVersion();
+
+        VersionedStoragePartitionView partitionView3 = s.getPartitionView("part2");
+        partitionView3.update(u3, new java.util.ArrayList<>());
+
+        assertFalse("Storage partiton view must contain element set in a previous version.",
+                storageFixture.compareValues(u2.get(4).getValue(), partitionView3.get(u2.get(4).getKey())));
+
+        partitionView3.commit(version3);
+
+        assertTrue("Storage partiton must contain element just set.",
+                storageFixture.compareValues(u3.get(6).getValue(), s.get("part2", u3.get(6).getKey())));
+
+        assertFalse("Storage partiton must not contain element set on different partition.",
+                storageFixture.compareValues(u3.get(6).getValue(), s.get("part1", u3.get(6).getKey())));
 
     }
 }

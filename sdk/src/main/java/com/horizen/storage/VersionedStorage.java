@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 
-public interface StorageNew extends VersionedReader {
+public interface VersionedStorage extends VersionedStorageReader {
 
     // return the last stored version
     Optional<ByteArrayWrapper> lastVersionID();
@@ -21,11 +21,14 @@ public interface StorageNew extends VersionedReader {
     void close();
 
     // Get a view targeting the current version.
-    StorageVersionedView getView();
+    VersionedStorageView getView();
 
     // Try to get a view targeting the version in the past if it exists.
-    Optional<StorageVersionedView> getView(ByteArrayWrapper version);
+    Optional<VersionedStorageView> getView(ByteArrayWrapper version);
 
     // add a logical partition
     void addLogicalPartition(String name);
+
+    VersionedStoragePartitionView getPartitionView(String logicalPartitionName);
+
 }

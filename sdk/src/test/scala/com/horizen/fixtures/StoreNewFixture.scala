@@ -1,12 +1,11 @@
 package com.horizen.fixtures
 
-import com.horizen.storage.StorageNew
+import com.horizen.storage.VersionedStorage
 import com.horizen.storage.rocksdb.VersionedRocksDbStorageAdapter
 import com.horizen.utils.{ByteArrayWrapper, Pair, byteArrayToWrapper}
 
 import java.util.{ArrayList => JArrayList, List => JList}
 import java.io.File
-
 import scala.collection.JavaConverters.{asScalaBufferConverter, asScalaSetConverter}
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
@@ -16,7 +15,7 @@ trait StoreNewFixture {
   val keySize = 32
   val valueSize = 256
   val versionSize = 32
-  val storages: ListBuffer[StorageNew] = new ListBuffer()
+  val storages: ListBuffer[VersionedStorage] = new ListBuffer()
   val tempFiles: ListBuffer[File] = new ListBuffer()
 
   Runtime.getRuntime.addShutdownHook(new Thread() {
