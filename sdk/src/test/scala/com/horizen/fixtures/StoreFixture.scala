@@ -71,18 +71,12 @@ trait StoreFixture {
 
   def getKeyValueList (count : Int) : JList[Pair[ByteArrayWrapper,ByteArrayWrapper]] = {
     val list = new JArrayList[Pair[ByteArrayWrapper,ByteArrayWrapper]]()
+    var key = new Array[Byte](keySize)
+    var value = new Array[Byte](valueSize)
 
     for (i <- 1 to count)
       list.add(getKeyValue)
 
-    list
-  }
-
-  def getValueList (count : Int) : JList[ByteArrayWrapper] = {
-    val list = new JArrayList[ByteArrayWrapper]()
-
-    for (i <- 1 to count)
-      list.add(getValue)
     list
   }
 
