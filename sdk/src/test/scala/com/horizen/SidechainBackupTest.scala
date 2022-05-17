@@ -91,7 +91,7 @@ class SidechainBackupTest
   def testCreateBackupWithNoCopy(): Unit = {
     //Create temporary SidechainStateStorage
     val stateStorageFile = temporaryFolder.newFolder("sidechainStateStorage")
-    val stateStorage = new VersionedLevelDbStorageAdapter(stateStorageFile)
+    var stateStorage = new VersionedLevelDbStorageAdapter(stateStorageFile)
 
     //Create temporary BackupStorage
     val backupStorageFile = temporaryFolder.newFolder("backupStorage")
@@ -101,10 +101,11 @@ class SidechainBackupTest
     stateStorage.update(firstModifier, storedBoxListFirstModifier.asJava, new JArrayList[ByteArrayWrapper]())
     //Update a second time the SidechainStateStorage with some custom and zen boxes
     stateStorage.update(secondModifier, storedBoxListSecondModifier.asJava, new JArrayList[ByteArrayWrapper]())
+    stateStorage.close()
 
     //Instantiate a SidechainBackup class and call createBackup with no Copy option
-    val sidechainBakcup = new SidechainBackup(customBoxSerializers = customBoxesSerializers, stateStorage = stateStorage, backUpStorage = backupStorage, backUpper = backupper);
-    sidechainBakcup.createBackup(BytesUtils.toHexString(firstModifier.data()), false, JOptional.empty())
+    val sidechainBakcup = new SidechainBackup(customBoxSerializers = customBoxesSerializers, backUpStorage = backupStorage, backUpper = backupper);
+    sidechainBakcup.createBackup(stateStorageFile.getPath, BytesUtils.toHexString(firstModifier.data()), false)
 
     //Read the backup storage created and verify that contains only firstModifierBoxLength elements. (We did a rollback to the first modifier)
     val storedBoxes = readStorage(new BoxIterator(backupStorage.getIterator(), sidechainBoxesCompanion))
@@ -117,6 +118,7 @@ class SidechainBackupTest
       assertTrue("Restored boxes shouldn't be CoinBoxes!",!box.getBox.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]])
     })
 
+    stateStorage = new VersionedLevelDbStorageAdapter(stateStorageFile)
     //Verify that the lastVersion of the StateStorage now is the firstModifier
     assertEquals(stateStorage.lastVersionID().get().data().deep, firstModifier.data().deep)
   }
@@ -125,7 +127,7 @@ class SidechainBackupTest
   def testCreateBackupWithCopy(): Unit = {
     //Create temporary SidechainStateStorage
     val stateStorageFile = temporaryFolder.newFolder("sidechainStateStorage")
-    val stateStorage = new VersionedLevelDbStorageAdapter(stateStorageFile)
+    var stateStorage = new VersionedLevelDbStorageAdapter(stateStorageFile)
 
     //Create temporary BackupStorage
     val backupStorageFile = temporaryFolder.newFolder("backupStorage")
@@ -137,10 +139,11 @@ class SidechainBackupTest
     //Update a second time the SidechainStateStorage with some custom and zen boxes
     val secondModifier = getVersion;
     stateStorage.update(secondModifier, storedBoxListSecondModifier.asJava, new JArrayList[ByteArrayWrapper]())
+    stateStorage.close()
 
     //Instantiate a SidechainBackup class and call createBackup
-    val sidechainBakcup = new SidechainBackup(customBoxSerializers = customBoxesSerializers, stateStorage = stateStorage, backUpStorage = backupStorage, backUpper = backupper);
-    sidechainBakcup.createBackup(BytesUtils.toHexString(firstModifier.data()), true, JOptional.of(stateStorageFile.getPath))
+    val sidechainBakcup = new SidechainBackup(customBoxSerializers = customBoxesSerializers, backUpStorage = backupStorage, backUpper = backupper);
+    sidechainBakcup.createBackup(stateStorageFile.getPath, BytesUtils.toHexString(firstModifier.data()), true)
 
     //Read the backup storage created and verify that contains only firstModifierBoxLength elements. (We did a rollback to the first modifier)
     val storedBoxes = readStorage(new BoxIterator(backupStorage.getIterator(), sidechainBoxesCompanion))
@@ -153,6 +156,7 @@ class SidechainBackupTest
       assertTrue("Restored boxes shouldn't be CoinBoxes!",!box.getBox.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]])
     })
 
+    stateStorage = new VersionedLevelDbStorageAdapter(stateStorageFile)
     //Verify that the lastVersion of the StateStorage now is the firstModifier
     assertEquals(stateStorage.lastVersionID().get().data().deep, secondModifier.data().deep)
   }
