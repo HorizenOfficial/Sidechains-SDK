@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 import json
 import time
 import math
@@ -12,7 +12,7 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import fail, assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, check_box_balance, check_wallet_balance, generate_next_blocks, get_sc_node_pids
+    start_sc_nodes, check_box_balance, check_wallet_coins_balance, generate_next_blocks, get_sc_node_pids
 from SidechainTestFramework.sc_forging_util import *
 
 
@@ -51,7 +51,7 @@ class SCBackwardTransfer(SidechainTestFramework):
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length), sc_node_configuration)
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options.tmpdir, network)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
 
     def sc_setup_nodes(self):
         return start_sc_nodes(1, self.options.tmpdir)
@@ -81,15 +81,16 @@ class SCBackwardTransfer(SidechainTestFramework):
         assert_equal(sc_creation_mc_block_height, self.sc_nodes_bootstrap_info.mainchain_block_height,
                      "Genesis info expected to have the same genesis mc block height as in MC node.")
 
+
         # check all keys/boxes/balances are coherent with the default initialization
-        check_wallet_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance)
-        check_box_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account, 3, 1,
-                                 self.sc_nodes_bootstrap_info.genesis_account_balance)
+        check_wallet_coins_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance)
+        # check_box_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account, 3, 1,
+        #                          self.sc_nodes_bootstrap_info.genesis_account_balance)
 
         # generate 1 additional mc_block
         mc_node.generate(1)[0]
 
-        num_certificates = 2
+        num_certificates = 10
 
         print ("Print processes")
         process_id = get_sc_node_pids()
@@ -105,8 +106,10 @@ class SCBackwardTransfer(SidechainTestFramework):
 
             # Generate 8 more MC block to finish the withdrawal epoch, then generate 3 more SC block to sync with MC.
             we0_end_mcblock_hash = mc_node.generate(8)[7]
-            scblock_id2 = generate_next_blocks(sc_node, "first node", 3)[2]
+            scblock_id2 = generate_next_blocks(sc_node, "first node", 1)[0]
             check_mcreferencedata_presence(we0_end_mcblock_hash, scblock_id2, sc_node)
+            we0_end_mcblock_json = mc_node.getblock(we0_end_mcblock_hash)
+            we0_end_epoch_cum_sc_tx_comm_tree_root = we0_end_mcblock_json["scCumTreeHash"]
 
             # Generate first mc block of the next epoch
             we1_1_mcblock_hash = mc_node.generate(1)[0]
@@ -134,9 +137,9 @@ class SCBackwardTransfer(SidechainTestFramework):
             # Get Certificate for Withdrawal epoch 0 and verify it
             we0_certHash = mc_node.getrawmempool()[0]
             print("Withdrawal epoch " + str(iter) + " certificate hash = " + we0_certHash)
-            we0_cert = mc_node.getrawcertificate(we0_certHash, 1)
+            we0_cert = mc_node.getrawtransaction(we0_certHash, 1)
             assert_equal(self.sc_nodes_bootstrap_info.sidechain_id, we0_cert["cert"]["scid"], "Sidechain Id in certificate is wrong.")
-            assert_equal(we0_end_mcblock_hash, we0_cert["cert"]["endEpochBlockHash"], "Sidechain endEpochBlockHash in certificate is wrong.")
+            assert_equal(we0_end_epoch_cum_sc_tx_comm_tree_root, we0_cert["cert"]["endEpochCumScTxCommTreeRoot"], "Sidechain endEpochCumScTxCommTreeRoot in certificate is wrong.")
             assert_equal(0, we0_cert["cert"]["totalAmount"], "Sidechain total amount in certificate is wrong.")
 
             # Generate MC block and verify that certificate is present
