@@ -17,7 +17,7 @@ import scorex.crypto.hash.Blake2b256
 import scorex.util.ModifierId
 import scorex.util.serialization.{Reader, Writer}
 
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 @JsonView(Array(classOf[Views.Default]))
 @JsonIgnoreProperties(Array("messageToSign", "serializer"))
@@ -60,21 +60,19 @@ case class SidechainBlockHeader(
   }
 
   override def semanticValidity(params: NetworkParams): Try[Unit] = Try {
-    if(parentId.length != 64
-      || sidechainTransactionsMerkleRootHash.length != 32
-      || mainchainMerkleRootHash.length != 32
-      || ommersMerkleRootHash.length != 32
-      || ommersCumulativeScore < 0
-      || feePaymentsHash.length != 32
-      || timestamp <= 0)
-      throw new InvalidSidechainBlockHeaderException(s"SidechainBlockHeader $id contains out of bound fields.")
+    super.semanticValidity(params) match {
+      case Success(_) =>
 
-    if(version != SidechainBlock.BLOCK_VERSION)
-      throw new InvalidSidechainBlockHeaderException(s"SidechainBlock $id version $version is invalid.")
+        if (version != SidechainBlock.BLOCK_VERSION)
+          throw new InvalidSidechainBlockHeaderException(s"SidechainBlock $id version $version is invalid.")
 
-    // check, that signature is valid
-    if(!signature.isValid(forgingStakeInfo.blockSignPublicKey, messageToSign))
-      throw new InvalidSidechainBlockHeaderException(s"SidechainBlockHeader $id signature is invalid.")
+        // check, that signature is valid
+        if (!signature.isValid(forgingStakeInfo.blockSignPublicKey, messageToSign))
+          throw new InvalidSidechainBlockHeaderException(s"SidechainBlockHeader $id signature is invalid.")
+
+      case Failure(exception) =>
+        throw exception
+    }
   }
 
 

@@ -26,12 +26,12 @@ import scala.util.{Failure, Success, Try}
 @JsonView(Array(classOf[Views.Default]))
 @JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder", "companion", "feeInfo"))
 class SidechainAccountBlock(override val header: SidechainBlockHeaderBase,
-                      val sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]],
+                      val sidechainTransactions: Seq[SidechainTypes#SCAT],
                       val mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
                       override val mainchainHeaders: Seq[MainchainHeader],
                       override val ommers: Seq[Ommer],
                       companion: SidechainTransactionsCompanion)
-  extends OmmersContainer with Block[SidechainTypes#SCBT]
+  extends OmmersContainer with Block[SidechainTypes#SCAT]
 {
   def forgerPublicKey: PublicKey25519Proposition = header.forgingStakeInfo.blockSignPublicKey
 
@@ -53,14 +53,15 @@ class SidechainAccountBlock(override val header: SidechainBlockHeaderBase,
   
   override def toString: String = s"SidechainAccountBlock(id = $id)"
 
-  override lazy val transactions: Seq[SidechainTypes#SCBT] = {
-    mainchainBlockReferencesData.flatMap(_.sidechainRelatedAggregatedTransaction) ++
+  override lazy val transactions: Seq[SidechainTypes#SCAT] = {
+    // TODO
+    //mainchainBlockReferencesData.flatMap(_.sidechainRelatedAggregatedTransaction) ++
       sidechainTransactions
   }
 
   def feePaymentsHash: Array[Byte] = header.feePaymentsHash
 
-  lazy val feeInfo: BlockFeeInfo = BlockFeeInfo(transactions.map(_.fee()).sum, header.forgingStakeInfo.blockSignPublicKey)
+  lazy val feeInfo: BlockFeeInfo = ??? // BlockFeeInfo(transactions.map(_.fee()).sum, header.forgingStakeInfo.blockSignPublicKey)
 
   // Check that Sidechain Block data is consistent to SidechainAccountBlockHeader
   protected def verifyDataConsistency(params: NetworkParams): Try[Unit] = Try {
@@ -174,7 +175,8 @@ class SidechainAccountBlock(override val header: SidechainBlockHeaderBase,
     }
 
     // Check that SidechainTransactions are valid.
-    for(tx <- sidechainTransactions) {
+    for(tx <- sidechainTransactions) { // TODO
+      /*
       Try {
         tx.semanticValidity()
       } match {
@@ -182,6 +184,7 @@ class SidechainAccountBlock(override val header: SidechainBlockHeaderBase,
         case Failure(e) => throw new InvalidSidechainBlockDataException(
           s"SidechainAccountBlock $id Transaction ${tx.id()} is semantically invalid: ${e.getMessage}.")
       }
+      */
     }
 
     // Check that MainchainHeaders are valid.
@@ -213,7 +216,7 @@ object SidechainAccountBlock extends ScorexEncoding {
              blockVersion: Block.Version,
              timestamp: Block.Timestamp,
              mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-             sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]],
+             sidechainTransactions: Seq[SidechainTypes#SCAT],
              mainchainHeaders: Seq[MainchainHeader],
              ommers: Seq[Ommer],
              ownerPrivateKey: PrivateKey25519,
@@ -236,11 +239,12 @@ object SidechainAccountBlock extends ScorexEncoding {
     require(ownerPrivateKey.publicImage() == forgingStakeInfo.blockSignPublicKey)
 
     // Calculate merkle root hashes for SidechainAccountBlockHeader
-    val sidechainTransactionsMerkleRootHash: Array[Byte] = calculateTransactionsMerkleRootHash(sidechainTransactions)
+    val sidechainTransactionsMerkleRootHash: Array[Byte] = ??? // calculateTransactionsMerkleRootHash(sidechainTransactions)
     val mainchainMerkleRootHash: Array[Byte] = calculateMainchainMerkleRootHash(mainchainBlockReferencesData, mainchainHeaders)
     val ommersMerkleRootHash: Array[Byte] = calculateOmmersMerkleRootHash(ommers)
     val stateRoot: Array[Byte] = ???
     val receiptsRoot: Array[Byte] = ???
+    val forgerAddress: Array[Byte] = ???
 
     val signature = signatureOption match {
       case Some(sig) => sig
@@ -256,6 +260,7 @@ object SidechainAccountBlock extends ScorexEncoding {
           mainchainMerkleRootHash,
           stateRoot,
           receiptsRoot,
+          forgerAddress,
           ommersMerkleRootHash,
           ommers.map(_.score).sum,
           feePaymentsHash,
@@ -277,6 +282,7 @@ object SidechainAccountBlock extends ScorexEncoding {
       mainchainMerkleRootHash,
       stateRoot,
       receiptsRoot,
+      forgerAddress,
       ommersMerkleRootHash,
       ommers.map(_.score).sum,
       feePaymentsHash,
@@ -341,10 +347,11 @@ class SidechainAccountBlockSerializer(companion: SidechainTransactionsCompanion)
     MainchainBlockReferenceDataSerializer
   )
 
-  private val sidechainTransactionsSerializer: ListSerializer[SidechainTypes#SCBT] = new ListSerializer[SidechainTypes#SCBT](
-    companion,
-    SidechainAccountBlock.MAX_SIDECHAIN_TXS_NUMBER
-  )
+  private val sidechainTransactionsSerializer: ListSerializer[SidechainTypes#SCAT] = ??? // TODO make a companion class for SCAT
+  // new ListSerializer[SidechainTypes#SCAT](
+  //  companion,
+  // SidechainAccountBlock.MAX_SIDECHAIN_TXS_NUMBER
+  //)
 
   private val mainchainHeadersSerializer: ListSerializer[MainchainHeader] = new ListSerializer[MainchainHeader](MainchainHeaderSerializer)
 
@@ -363,7 +370,7 @@ class SidechainAccountBlockSerializer(companion: SidechainTransactionsCompanion)
 
     val SidechainAccountBlockHeader: SidechainAccountBlockHeader = SidechainAccountBlockHeaderSerializer.parse(r)
     val sidechainTransactions = sidechainTransactionsSerializer.parse(r)
-      .asScala.map(t => t.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]])
+      .asScala.map(t => t.asInstanceOf[SidechainTypes#SCAT])
     val mainchainBlockReferencesData = mcBlocksDataSerializer.parse(r).asScala
     val mainchainHeaders = mainchainHeadersSerializer.parse(r).asScala
     val ommers = ommersSerializer.parse(r).asScala

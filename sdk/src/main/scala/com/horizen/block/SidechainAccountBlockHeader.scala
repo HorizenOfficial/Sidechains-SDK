@@ -8,7 +8,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof, VrfProofSerializer}
 import com.horizen.serialization.{MerklePathJsonSerializer, ScorexModifierIdSerializer, Views}
 import com.horizen.utils.{MerklePath, MerklePathSerializer}
-import com.horizen.validation.{InvalidSidechainBlockHeaderException}
+import com.horizen.validation.InvalidSidechainBlockHeaderException
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import scorex.core.block.Block
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
@@ -17,7 +17,7 @@ import scorex.crypto.hash.Blake2b256
 import scorex.util.ModifierId
 import scorex.util.serialization.{Reader, Writer}
 
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 @JsonView(Array(classOf[Views.Default]))
 @JsonIgnoreProperties(Array("messageToSign", "serializer"))
@@ -32,6 +32,7 @@ case class SidechainAccountBlockHeader(
                                         override val mainchainMerkleRootHash: Array[Byte], // root hash of MainchainBlockReference.dataHash() root hash and MainchainHeaders root hash
                                         stateRoot: Array[Byte],
                                         receiptsRoot: Array[Byte],
+                                        forgerAddress: Array[Byte],
                                         override val ommersMerkleRootHash: Array[Byte], // build on top of Ommer.id()
                                         override val ommersCumulativeScore: Long, // to be able to calculate the score of the block without having the full SB. For future
                                         override val feePaymentsHash: Array[Byte], // hash of the fee payments created during applying this block to the state. zeros by default.
@@ -57,6 +58,7 @@ case class SidechainAccountBlockHeader(
       mainchainMerkleRootHash,
       stateRoot,
       receiptsRoot,
+      forgerAddress,
       ommersMerkleRootHash,
       Longs.toByteArray(ommersCumulativeScore),
       feePaymentsHash
@@ -64,30 +66,31 @@ case class SidechainAccountBlockHeader(
   }
 
   override def semanticValidity(params: NetworkParams): Try[Unit] = Try {
-    if(parentId.length != 64
-      || sidechainTransactionsMerkleRootHash.length != 32
-      || mainchainMerkleRootHash.length != 32
-      || stateRoot.length != 32
-      || receiptsRoot.length != 32
-      || ommersMerkleRootHash.length != 32
-      || ommersCumulativeScore < 0
-      || feePaymentsHash.length != 32
-      || timestamp <= 0)
-      throw new InvalidSidechainBlockHeaderException(s"SidechainAccountBlockHeader $id contains out of bound fields.")
+    super.semanticValidity(params) match {
+      case Success(_) =>
 
-    if(version != SidechainAccountBlock.BLOCK_VERSION)
-      throw new InvalidSidechainBlockHeaderException(s"SidechainAccountBlock $id version $version is invalid.")
+        if (stateRoot.length != 32
+          || receiptsRoot.length != 32
+          || forgerAddress.length != 20 )
+          throw new InvalidSidechainBlockHeaderException(s"SidechainAccountBlockHeader $id contains out of bound fields.")
 
-    // check, that signature is valid
-    if(!signature.isValid(forgingStakeInfo.blockSignPublicKey, messageToSign))
-      throw new InvalidSidechainBlockHeaderException(s"SidechainAccountBlockHeader $id signature is invalid.")
+        if (version != SidechainAccountBlock.BLOCK_VERSION)
+          throw new InvalidSidechainBlockHeaderException(s"SidechainAccountBlock $id version $version is invalid.")
+
+        // check, that signature is valid
+        if (!signature.isValid(forgingStakeInfo.blockSignPublicKey, messageToSign))
+          throw new InvalidSidechainBlockHeaderException(s"SidechainBlockHeader $id signature is invalid.")
+
+      case Failure(exception) =>
+        throw exception
+    }
   }
 
 
   override def toString =
     s"SidechainAccountBlockHeader($id, $version, $timestamp, $forgingStakeInfo, $vrfProof, " +
       s"${ByteUtils.toHexString(sidechainTransactionsMerkleRootHash)}, ${ByteUtils.toHexString(mainchainMerkleRootHash)}, " +
-      s"${ByteUtils.toHexString(stateRoot)}, ${ByteUtils.toHexString(receiptsRoot)}" +
+      s"${ByteUtils.toHexString(stateRoot)}, ${ByteUtils.toHexString(receiptsRoot)}, ${ByteUtils.toHexString(forgerAddress)}" +
       s"${ByteUtils.toHexString(ommersMerkleRootHash)}, $ommersCumulativeScore, $signature)"
 }
 
@@ -113,6 +116,8 @@ object SidechainAccountBlockHeaderSerializer extends ScorexSerializer[SidechainA
     w.putBytes(obj.stateRoot)
 
     w.putBytes(obj.receiptsRoot)
+
+    w.putBytes(obj.forgerAddress)
 
     w.putBytes(obj.ommersMerkleRootHash)
 
@@ -143,9 +148,11 @@ object SidechainAccountBlockHeaderSerializer extends ScorexSerializer[SidechainA
 
     val mainchainMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
 
-    val stateRoot = r.getBytes(NodeViewModifier.ModifierIdSize)
+    val stateRoot = r.getBytes(32) // TODO add a constant
 
-    val receiptsRoot = r.getBytes(NodeViewModifier.ModifierIdSize)
+    val receiptsRoot = r.getBytes(32) // TODO add a constant
+
+    val forgerAddress = r.getBytes(20) // TODO add a constant
 
     val ommersMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
 
@@ -166,6 +173,7 @@ object SidechainAccountBlockHeaderSerializer extends ScorexSerializer[SidechainA
       mainchainMerkleRootHash,
       stateRoot,
       receiptsRoot,
+      forgerAddress,
       ommersMerkleRootHash,
       ommersCumulativeScore,
       feePaymentsHash,
