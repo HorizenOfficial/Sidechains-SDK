@@ -1,5 +1,7 @@
 package com.horizen
 
+import com.horizen.account.transaction.AccountTransaction
+
 import language.implicitConversions
 import java.util.{List => JList}
 import com.horizen.box._
@@ -7,7 +9,6 @@ import com.horizen.box.data.BoxData
 import com.horizen.proof.Proof
 import com.horizen.proposition.Proposition
 import com.horizen.secret.Secret
-import com.horizen.state.{Account, AccountTransaction}
 import com.horizen.transaction.{BoxTransaction, SidechainTransaction}
 
 trait SidechainTypes {
@@ -21,9 +22,8 @@ trait SidechainTypes {
   type SCBD = BoxData[SCP, SCB]
   type SCBT = BoxTransaction[SCP, SCB]
 
-  // Account types (TODO use real type as soon as it is available)
-  type SCAT = AccountTransaction
-
+  // Account types
+  type SCAT = AccountTransaction[SCP, SCPR]
 
   //implicit def ponpToSCP(p : ProofOfKnowledgeProposition[_ <: Secret]) : SCP = p.asInstanceOf[SCP]
 
