@@ -23,7 +23,6 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.language.postfixOps
 
-
 trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.core.PersistentNodeViewModifier, W <: Wallet[S, P, TX, PMOD, W]]
   extends scorex.core.transaction.wallet.Vault[TX, PMOD, W] {
   self: W =>
@@ -36,9 +35,14 @@ trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.co
 
   def secrets(): Set[S]
 
-  def boxes(): Seq[WalletBox]
-
   def publicKeys(): Set[P]
+}
+
+trait BoxWallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.core.PersistentNodeViewModifier, W <: BoxWallet[S, P, TX, PMOD, W]]
+  extends Wallet[S, P, TX, PMOD, W] {
+  self: W =>
+
+  def boxes(): Seq[WalletBox]
 }
 
 
@@ -50,7 +54,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
                                         cswDataStorage: SidechainWalletCswDataStorage,
                                         params: NetworkParams,
                                         val applicationWallet: ApplicationWallet)
-  extends Wallet[SidechainTypes#SCS,
+  extends BoxWallet[SidechainTypes#SCS,
                  SidechainTypes#SCP,
                  SidechainTypes#SCBT,
                  SidechainBlock,
