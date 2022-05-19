@@ -19,7 +19,7 @@ public final class Evm {
             libExtension = "so";
         }
         String lib = "libevm." + libExtension;
-        Instance = Native.loadLibrary(lib, EvmLib.class);
+        Instance = Native.load(lib, EvmLib.class);
     }
 
     private Evm() {
