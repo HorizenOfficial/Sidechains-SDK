@@ -35,8 +35,8 @@ trait StateMetadataStorageReader {
   def getAccountStateRoot: Option[Array[Byte]] // 32 bytes, kessack hash
 }
 
-abstract class StateMetadataStorage(storage: Storage) extends StateMetadataStorageReader with ScorexLogging {
-  def getView(): StateMetadataStorageView
+class StateMetadataStorage(storage: Storage) extends StateMetadataStorageReader with ScorexLogging {
+  def getView: StateMetadataStorageView = new StateMetadataStorageView(storage)
 
   def lastVersionId: Option[ByteArrayWrapper] = {
     storage.lastVersionID().asScala
@@ -54,6 +54,19 @@ abstract class StateMetadataStorage(storage: Storage) extends StateMetadataStora
 
   def isEmpty: Boolean = storage.isEmpty
 
+  override def getWithdrawalEpochInfo: Option[WithdrawalEpochInfo] = getView.getWithdrawalEpochInfo
+
+  override def getFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo] = getView.getFeePayments(withdrawalEpochNumber)
+
+  override def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = getView.getTopQualityCertificate(referencedWithdrawalEpoch)
+
+  override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = getView.getConsensusEpochNumber
+
+  override def hasCeased: Boolean = getView.hasCeased
+
+  override def getHeight: Int = getView.getHeight
+
+  override def getAccountStateRoot: Option[Array[Byte]] = getView.getAccountStateRoot
 }
 
 class StateMetadataStorageView(storage: Storage) extends StateMetadataStorageReader with ScorexLogging {
@@ -150,7 +163,7 @@ class StateMetadataStorageView(storage: Storage) extends StateMetadataStorageRea
 
   override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = {
     consensusEpochOpt match {
-      case Some(-) => consensusEpochOpt
+      case Some(_) => consensusEpochOpt
       case _ => getConsensusEpochNumberFromStorage
     }
 
@@ -179,7 +192,7 @@ class StateMetadataStorageView(storage: Storage) extends StateMetadataStorageRea
     storage.get(heightKey).asScala.map(baw => Ints.fromByteArray(baw.data)).getOrElse(0)
   }
 
-  private[horizen] def getAccountStateRootFromStorage(): Option[Array[Byte]] = {
+  private[horizen] def getAccountStateRootFromStorage: Option[Array[Byte]] = {
     storage.get(accountStateRootKey).asScala.map(_.data)
   }
 
@@ -192,10 +205,10 @@ class StateMetadataStorageView(storage: Storage) extends StateMetadataStorageRea
 
 
   // put in memory cache and mark the entry as "dirty"
-  def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo) =
+  def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo): Unit =
     withdrawalEpochInfoOpt = Some(withdrawalEpochInfo)
 
-  def updateTopQualityCertificate(topQualityCertificate: WithdrawalEpochCertificate) =
+  def updateTopQualityCertificate(topQualityCertificate: WithdrawalEpochCertificate): Unit =
     topQualityCertificateOpt = Some(topQualityCertificate)
 
   def addFeePayment(blockFeeInfo: BlockFeeInfo): Unit = {
@@ -203,15 +216,15 @@ class StateMetadataStorageView(storage: Storage) extends StateMetadataStorageRea
     blockFeeInfoOpt = Some(blockFeeInfo)
   }
 
-  def updateConsensusEpochNumber(consensusEpochNum: ConsensusEpochNumber) = {
+  def updateConsensusEpochNumber(consensusEpochNum: ConsensusEpochNumber): Unit = {
     consensusEpochOpt = Some(consensusEpochNum)
   }
 
-  def updateAccountStateRoot(accountStateRoot: Array[Byte]) = {
+  def updateAccountStateRoot(accountStateRoot: Array[Byte]): Unit = {
     accountStateRootOpt = Some(accountStateRoot)
   }
 
-  def setCeased: Unit = hasCeasedOpt = Some(true)
+  def setCeased(): Unit = hasCeasedOpt = Some(true)
 
   // update the database with "dirty" records new values
   // also increment the height value directly
@@ -219,15 +232,15 @@ class StateMetadataStorageView(storage: Storage) extends StateMetadataStorageRea
     val result = Try {
       saveToStorage(versionToBytes(version))
     }
-    cleanUpCache
+    cleanUpCache()
     result match {
       case Failure(exception) =>
         log.error(s"Error while committing metadata for version $version. The modifications won't be saved", exception)
-      case Success(value) =>
+      case Success(_) =>
     }
   }
 
-  private[horizen] def cleanUpCache = {
+  private[horizen] def cleanUpCache(): Unit = {
     hasCeasedOpt = None
     withdrawalEpochInfoOpt = None
     topQualityCertificateOpt = None
@@ -236,7 +249,7 @@ class StateMetadataStorageView(storage: Storage) extends StateMetadataStorageRea
     accountStateRootOpt = None
   }
 
-  private[horizen] def saveToStorage(version: ByteArrayWrapper) = {
+  private[horizen] def saveToStorage(version: ByteArrayWrapper): Unit = {
     require(withdrawalEpochInfoOpt.nonEmpty, "WithdrawalEpochInfo must be NOT NULL.")
     require(blockFeeInfoOpt.nonEmpty, "BlockFeeInfo must be NOT NULL.")
     require(accountStateRootOpt.nonEmpty, "Account State Root must be NOT NULL.")
