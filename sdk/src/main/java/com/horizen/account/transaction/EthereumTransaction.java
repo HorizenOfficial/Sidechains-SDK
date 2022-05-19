@@ -9,6 +9,8 @@ import com.horizen.transaction.TransactionSerializer;
 import org.web3j.crypto.RawTransaction;
 import org.web3j.utils.Numeric;
 
+import java.util.Objects;
+
 
 @JsonView(Views.Default.class)
 public class EthereumTransaction extends Transaction {
@@ -22,6 +24,8 @@ public class EthereumTransaction extends Transaction {
 
     public EthereumTransaction(RawTransaction transaction,
                                SignatureSecp256k1 signature){
+        Objects.requireNonNull(transaction, "Raw Transaction can't be null.");
+        Objects.requireNonNull(signature, "Signature can't be null.");
         this.transaction = transaction;
         this.signature = signature;
     }
