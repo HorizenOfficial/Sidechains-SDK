@@ -8,7 +8,6 @@ import com.horizen.transaction.Transaction;
 import com.horizen.transaction.TransactionSerializer;
 import org.web3j.crypto.RawTransaction;
 import org.web3j.utils.Numeric;
-import scorex.core.transaction.Transaction;
 
 
 @JsonView(Views.Default.class)
