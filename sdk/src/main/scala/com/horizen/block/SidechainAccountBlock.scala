@@ -44,7 +44,7 @@ class SidechainAccountBlock(override val header: SidechainAccountBlockHeader,
 
   override lazy val parentId: ModifierId = header.parentId
 
-  override val modifierTypeId: ModifierTypeId = SidechainAccountBlock.ModifierTypeId
+  override val modifierTypeId: ModifierTypeId = SidechainBlockBase.ModifierTypeId
 
   override lazy val id: ModifierId = header.id
   
@@ -142,12 +142,7 @@ class SidechainAccountBlock(override val header: SidechainAccountBlockHeader,
 
 
 object SidechainAccountBlock extends ScorexEncoding {
-  // SC Max block size is enough to include at least 2 MC block ref data full of SC outputs + Top quality cert -> ~2.3MB each
-  // Also it is more than enough to process Ommers for very long MC forks (2000+)
-  val MAX_BLOCK_SIZE: Int = 5000000
-  val MAX_SIDECHAIN_TXS_NUMBER: Int = 1000
-  val ModifierTypeId: ModifierTypeId = scorex.core.ModifierTypeId @@ 3.toByte
-
+  
   val BLOCK_VERSION: Block.Version = 2: Byte
 
   def create(parentId: Block.BlockId,
@@ -289,7 +284,7 @@ class SidechainAccountBlockSerializer(companion: SidechainAccountTransactionsCom
   private val sidechainTransactionsSerializer: ListSerializer[SidechainTypes#SCAT] =
     new ListSerializer[SidechainTypes#SCAT](
       companion,
-     SidechainAccountBlock.MAX_SIDECHAIN_TXS_NUMBER
+     SidechainBlockBase.MAX_SIDECHAIN_TXS_NUMBER
     )
 
   private val mainchainHeadersSerializer: ListSerializer[MainchainHeader] = new ListSerializer[MainchainHeader](MainchainHeaderSerializer)
@@ -305,7 +300,7 @@ class SidechainAccountBlockSerializer(companion: SidechainAccountTransactionsCom
   }
 
   override def parse(r: Reader): SidechainAccountBlock = {
-    require(r.remaining <= SidechainAccountBlock.MAX_BLOCK_SIZE)
+    require(r.remaining <= SidechainBlockBase.MAX_BLOCK_SIZE)
 
     val SidechainAccountBlockHeader: SidechainAccountBlockHeader = SidechainAccountBlockHeaderSerializer.parse(r)
     val sidechainTransactions = sidechainTransactionsSerializer.parse(r)
