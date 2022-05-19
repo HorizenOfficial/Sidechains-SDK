@@ -1,7 +1,7 @@
-package com.horizen
+package com.horizen.proof
 
 import java.io.{BufferedReader, File, FileReader}
-import java.{lang, util}
+import java.util
 import java.util.Optional
 
 import com.google.common.io.Files
@@ -10,15 +10,19 @@ import com.horizen.box.data.WithdrawalRequestBoxData
 import com.horizen.cryptolibprovider.{CryptoLibProvider, SchnorrFunctionsImplZendoo}
 import com.horizen.fixtures.FieldElementFixture
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
+import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.schnorrnative.SchnorrSecretKey
 import com.horizen.utils.BytesUtils
-import com.horizen.params.{NetworkParams, RegTestParams}
-import org.junit.Assert.{assertEquals, assertTrue, fail}
+import org.junit.Assert.{assertEquals, fail}
 import org.junit.{Ignore, Test}
 
 import scala.collection.JavaConverters._
 import scala.util.Random
+
+/**
+ * This test was create for profiling of JVM memory use during proof generation.
+ */
 
 class ProofThreadTest {
   private val classLoader: ClassLoader = getClass.getClassLoader
@@ -132,7 +136,7 @@ class ProofThreadTest {
     )
   }
 
-  //@Ignore
+  @Ignore
   @Test
   def simpleCheck(): Unit = {
     // Setup proving system keys

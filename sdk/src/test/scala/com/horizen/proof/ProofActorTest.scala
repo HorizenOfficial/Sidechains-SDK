@@ -1,36 +1,40 @@
-package com.horizen
+package com.horizen.proof
 
 import java.io.{BufferedReader, File, FileReader}
-import java.{lang, util}
+import java.util
 import java.util.Optional
 
 import akka.actor.{Actor, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.google.common.io.Files
-
-import scala.concurrent.duration._
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.box.data.WithdrawalRequestBoxData
 import com.horizen.cryptolibprovider.{CryptoLibProvider, SchnorrFunctionsImplZendoo}
 import com.horizen.fixtures.FieldElementFixture
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
+import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.schnorrnative.SchnorrSecretKey
 import com.horizen.utils.BytesUtils
-import com.horizen.params.{NetworkParams, RegTestParams}
 import org.junit.Assert.{assertEquals, assertTrue, fail}
 import org.junit.{Before, Ignore, Test}
 
-import scala.util.Random
 import scala.collection.JavaConverters._
 import scala.concurrent.Await
+import scala.concurrent.duration._
+import scala.util.Random
 
-private class ProofThreadActorReceiver
+case object ProofMessage
+
+/**
+ * This test was create for profiling of JVM memory use during proof generation.
+ */
+
+class ProofActorReceiver
   extends Actor {
   private val classLoader: ClassLoader = getClass.getClassLoader
   private val schnorrFunctions: SchnorrFunctionsImplZendoo = new SchnorrFunctionsImplZendoo()
-    var proofWithQuality:com.horizen.utils.Pair[Array[Byte], java.lang.Long] = null
 
   private def buildSchnorrPrivateKey(index: Int): SchnorrSecretKey = {
     var bytes: Array[Byte] = null
@@ -63,20 +67,10 @@ private class ProofThreadActorReceiver
     }
   }
 
-  class MyThread(val dataForProofGeneration:DataForProofGeneration) extends Thread
-  {
-    override def run()
-    {
-      proofWithQuality = generateProof(dataForProofGeneration)
-    }
-  }
-
   protected def tryGenerateProof = {
-    val params = new RegTestParams
-    val dataForProofGeneration:DataForProofGeneration = buildDataForProofGeneration(params)
-    val th = new MyThread(dataForProofGeneration)
-    th.start()
-    th.join()
+    val params = RegTestParams(initialCumulativeCommTreeHash = FieldElementFixture.generateFieldElement())
+    val dataForProofGeneration: DataForProofGeneration = buildDataForProofGeneration(params)
+    val proofWithQuality = generateProof(dataForProofGeneration)
 
     val certificateRequest: SendCertificateRequest = CertificateRequestCreator.create(
       params.sidechainId,
@@ -94,12 +88,11 @@ private class ProofThreadActorReceiver
   }
 
   private def buildDataForProofGeneration(params: NetworkParams): DataForProofGeneration = {
-    val keyPairsLen = 7
     val threshold = 5 //hardcoded value
 
     val sidechainId = params.sidechainId
     val epochNumber = 1
-    val keyPairs = (0 until keyPairsLen).view.map(buildSchnorrPrivateKey).map(secret => (secret, secret.getPublicKey))
+    val keyPairs = (0 until ProofActorReceiver.keyPairsLen).view.map(buildSchnorrPrivateKey).map(secret => (secret, secret.getPublicKey))
     val publicKeysBytes: util.List[Array[Byte]] = keyPairs.map(_._2.serializePublicKey()).toList.asJava
     val endCummulativeTransactionCommTreeHash = FieldElementFixture.generateFieldElement()
     val merkelTreeRoot = FieldElementFixture.generateFieldElement()
@@ -107,7 +100,7 @@ private class ProofThreadActorReceiver
     val wb: Seq[WithdrawalRequestBox] = Seq(new WithdrawalRequestBox(new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte)), 2345), 42))
 
     val message = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(wb.asJava, sidechainId, epochNumber, endCummulativeTransactionCommTreeHash, 0, 0, merkelTreeRoot)
-    val emptySigs = List.fill[Optional[Array[Byte]]](keyPairsLen - threshold)(Optional.empty[Array[Byte]]())
+    val emptySigs = List.fill[Optional[Array[Byte]]](7 - threshold)(Optional.empty[Array[Byte]]())
 
     val signatures: util.List[Optional[Array[Byte]]] = (keyPairs
       .map{case (secret, public) => schnorrFunctions.sign(secret.serializeSecretKey(), public.serializePublicKey(), message)}
@@ -131,21 +124,21 @@ private class ProofThreadActorReceiver
       dataForProofGeneration.signatures, // List<Optional<byte[]>> schnorrSignatureBytesList
       dataForProofGeneration.publicKeysBytes, // List<byte[]> schnorrPublicKeysBytesList
       dataForProofGeneration.threshold, //long threshold
-      ProofThreadActorReceiver.provingKeyPath, // String provingKeyPath
+      ProofActorReceiver.provingKeyPath, // String provingKeyPath
       true, //boolean checkProvingKey
       true //boolean zk
-    )
+     )
   }
 }
 
-object ProofThreadActorReceiver {
-  val tmpDir: File = Files.createTempDir
+object ProofActorReceiver {
+  private val tmpDir: File = Files.createTempDir
   val provingKeyPath: String = tmpDir.getAbsolutePath + "/snark_pk"
   val verificationKeyPath: String = tmpDir.getAbsolutePath + "/snark_vk"
   val keyPairsLen = 7
 }
 
-class ProofActorThreadTest {
+class ProofActorTest {
   @Before
   def setUp(): Unit = {
     // Setup proving system keys
@@ -154,18 +147,17 @@ class ProofActorThreadTest {
       fail("Error occurred during dlog key generation.")
     }
 
-    println(s"Generating Marlin snark keys. Path: pk=$ProofThreadActorReceiver.provingKeyPath, vk=$ProofThreadActorReceiver.verificationKeyPath")
-    if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(ProofThreadActorReceiver.keyPairsLen, ProofThreadActorReceiver.provingKeyPath, ProofThreadActorReceiver.verificationKeyPath)) {
+    println(s"Generating Marlin snark keys. Path: pk=$ProofActorReceiver.provingKeyPath, vk=$ProofActorReceiver.verificationKeyPath")
+    if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(ProofActorReceiver.keyPairsLen, ProofActorReceiver.provingKeyPath, ProofActorReceiver.verificationKeyPath)) {
       fail("Error occurred during snark keys generation.")
     }
   }
 
-  //@Ignore
+  @Ignore
   @Test
   def simpleCheck(): Unit = {
-
     val system = ActorSystem("ProofGeneration")
-    val receiverInst = system.actorOf(Props(new ProofThreadActorReceiver), name = "proof")
+    val receiverInst = system.actorOf(Props(new ProofActorReceiver), name = "proof")
 
     for (i <- 1 to 15) {
       println("Proof generation # " + i)
