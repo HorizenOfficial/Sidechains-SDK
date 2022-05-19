@@ -1,7 +1,7 @@
 package com.horizen
 
 import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
-import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlock}
+import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlock, SidechainBlockBase}
 import com.horizen.chain.{FeePaymentsInfo, MainchainBlockReferenceDataInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
 import com.horizen.consensus._
 import com.horizen.node.NodeHistory
@@ -274,7 +274,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
   override def continuationIds(info: SidechainSyncInfo, size: Int): ModifierIds = {
     info.knownBlockIds.find(id => storage.isInActiveChain(id)) match {
       case Some(commonBlockId) =>
-        storage.activeChainAfter(commonBlockId).tail.take(size).map(id => (SidechainBlock.ModifierTypeId, id))
+        storage.activeChainAfter(commonBlockId).tail.take(size).map(id => (SidechainBlockBase.ModifierTypeId, id))
       case None =>
         //log.warn("Found chain without common block ids from remote")
         Seq()

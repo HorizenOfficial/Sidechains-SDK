@@ -8,7 +8,7 @@ import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import com.google.inject.name.Named
 import com.google.inject.{Inject, _}
 import com.horizen.api.http.{SidechainSubmitterApiRoute, _}
-import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
+import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockBase, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.certificatesubmitter.CertificateSubmitterRef
 import com.horizen.certificatesubmitter.network.{CertificateSignaturesManagerRef, CertificateSignaturesSpec, GetCertificateSignaturesSpec}
@@ -274,7 +274,7 @@ class SidechainApp @Inject()
     ) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
   def modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =
-    Map(SidechainBlock.ModifierTypeId -> new SidechainBlockSerializer(sidechainTransactionsCompanion),
+    Map(SidechainBlockBase.ModifierTypeId -> new SidechainBlockSerializer(sidechainTransactionsCompanion),
       Transaction.ModifierTypeId -> sidechainTransactionsCompanion)
 
   override val nodeViewSynchronizer: ActorRef =
