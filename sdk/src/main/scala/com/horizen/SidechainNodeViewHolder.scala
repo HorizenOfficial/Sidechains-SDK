@@ -41,7 +41,6 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                               genesisBlock: SidechainBlock)
   extends AbstractSidechainNodeViewHolder[SidechainTypes#SCBT, SidechainBlock](sidechainSettings, params, timeProvider)
 {
-  override type SI = SidechainSyncInfo
   override type HIS = SidechainHistory
   override type MS = SidechainState
   override type VL = SidechainWallet

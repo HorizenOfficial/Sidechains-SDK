@@ -22,6 +22,7 @@ abstract class AbstractSidechainNodeViewHolder[TX <: Transaction, PMOD <: Persis
   extends scorex.core.NodeViewHolder[TX, PMOD]
     with SidechainTypes
 {
+  override type SI = SidechainSyncInfo
   override type VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PMOD, VL]
 
   case class SidechainNodeUpdateInformation(history: HIS,
