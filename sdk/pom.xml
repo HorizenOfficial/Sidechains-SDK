@@ -252,6 +252,16 @@
       <artifactId>core</artifactId>
       <version>5.0.0</version>
     </dependency>
+    <dependency>
+      <groupId>net.java.dev.jna</groupId>
+      <artifactId>jna</artifactId>
+      <version>4.5.2</version>
+    </dependency>
+    <dependency>
+      <groupId>net.java.dev.jna</groupId>
+      <artifactId>jna-platform</artifactId>
+      <version>4.5.2</version>
+    </dependency>
   </dependencies>
   <repositories>
     <repository>
@@ -261,6 +271,14 @@
     </repository>
   </repositories>
   <build>
+    <resources>
+      <resource>
+        <directory>${basedir}/../libevm/bin</directory>
+        <excludes>
+          <exclude>**/.goBuildCache/**/*</exclude>
+        </excludes>
+      </resource>
+    </resources>
     <testResources>
       <testResource>
         <directory>${basedir}/src/test/resources</directory>
