@@ -247,6 +247,11 @@
       <version>1.18.3</version>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>org.web3j</groupId>
+      <artifactId>core</artifactId>
+      <version>5.0.0</version>
+    </dependency>
   </dependencies>
   <repositories>
     <repository>
