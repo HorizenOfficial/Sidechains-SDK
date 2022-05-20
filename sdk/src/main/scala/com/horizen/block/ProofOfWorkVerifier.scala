@@ -1,8 +1,8 @@
 package com.horizen.block
 
 import java.math.BigInteger
-
 import com.google.common.primitives.UnsignedInts
+import com.horizen.SidechainTypes
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.utils.{BytesUtils, Utils}
@@ -30,7 +30,7 @@ object ProofOfWorkVerifier {
 
   // Check that PoW target (bits) is correct for all MainchainHeaders and Ommers' MainchainHeaders (recursively) included into SidechainBlock.
   // The order of MainchainHeaders in Block (both active and orphaned) verified in block semantic validity method
-  def checkNextWorkRequired(block: SidechainBlock, sidechainHistoryStorage: SidechainHistoryStorage, params: NetworkParams): Boolean = {
+  def checkNextWorkRequired(block: SidechainBlockBase[SidechainTypes#SCBT], sidechainHistoryStorage: SidechainHistoryStorage, params: NetworkParams): Boolean = {
     if(block.mainchainHeaders.isEmpty)
       return true
 
@@ -39,7 +39,7 @@ object ProofOfWorkVerifier {
     var timeBitsData = List[Tuple2[Int, Int]]()
     // Take firt MC Ref header if exists, else get first nextMCHeader
     var currentHeader = block.mainchainHeaders.head
-    var currentBlock: SidechainBlock = block
+    var currentBlock: SidechainBlockBase[SidechainTypes#SCBT] = block
     breakable {
       while (true) {
         if (currentHeader.hash.sameElements(params.genesisMainchainBlockHash)) {

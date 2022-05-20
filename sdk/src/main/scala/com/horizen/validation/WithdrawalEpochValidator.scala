@@ -1,8 +1,8 @@
 package com.horizen.validation
 
-import com.horizen.block.SidechainBlock
+import com.horizen.block.{SidechainBlock, SidechainBlockBase}
 import com.horizen.params.NetworkParams
-import com.horizen.SidechainHistory
+import com.horizen.{SidechainHistory, SidechainTypes}
 import com.horizen.cryptolibprovider.CommonCircuit
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{BytesUtils, WithdrawalEpochUtils}
@@ -11,7 +11,7 @@ import scorex.util.idToBytes
 import scala.util.Try
 
 class WithdrawalEpochValidator(params: NetworkParams) extends HistoryBlockValidator {
-  override def validate(block: SidechainBlock, history: SidechainHistory): Try[Unit] = Try {
+  override def validate(block: SidechainBlockBase[SidechainTypes#SCBT], history: SidechainHistory): Try[Unit] = Try {
     if (block.id.equals(params.sidechainGenesisBlockId))
       validateGenesisBlock(block).get
     else
@@ -19,7 +19,7 @@ class WithdrawalEpochValidator(params: NetworkParams) extends HistoryBlockValida
   }
 
 
-  private def validateGenesisBlock(block: SidechainBlock): Try[Unit] = Try {
+  private def validateGenesisBlock(block: SidechainBlockBase[SidechainTypes#SCBT]): Try[Unit] = Try {
     // Verify that block contains only 1 MC block reference data with a valid Sidechain Creation info
     if(block.mainchainBlockReferencesData.size != 1)
       throw new IllegalArgumentException("Sidechain block validation failed for %s: genesis block should contain single MC block reference.".format(BytesUtils.toHexString(idToBytes(block.id))))
@@ -53,7 +53,7 @@ class WithdrawalEpochValidator(params: NetworkParams) extends HistoryBlockValida
     }
   }
 
-  private def validateBlock(block: SidechainBlock, history: SidechainHistory): Try[Unit] = Try {
+  private def validateBlock(block: SidechainBlockBase[SidechainTypes#SCBT], history: SidechainHistory): Try[Unit] = Try {
     for(data <- block.mainchainBlockReferencesData) {
       data.sidechainRelatedAggregatedTransaction match {
         case Some(aggTx) =>

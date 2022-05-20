@@ -1,18 +1,19 @@
-package com.horizen.block
+package com.horizen.account.block
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
+import com.horizen.block._
 import com.horizen.box.Box
 import com.horizen.companion.SidechainAccountTransactionsCompanion
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
-import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
+import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.{BlockFeeInfo, ListSerializer, MerklePath, MerkleTree, Utils}
-import com.horizen.validation.{InconsistentSidechainBlockDataException, InvalidSidechainBlockDataException}
-import com.horizen.{ScorexEncoding, SidechainTypes}
+import com.horizen.validation.InconsistentSidechainBlockDataException
+import com.horizen.{ScorexEncoding, SidechainTypes, account}
 import scorex.core.block.Block
 import scorex.core.block.Block.Timestamp
 import scorex.core.serialization.ScorexSerializer
@@ -183,7 +184,7 @@ object SidechainAccountBlock extends ScorexEncoding {
     val signature = signatureOption match {
       case Some(sig) => sig
       case None =>
-        val unsignedBlockHeader: SidechainAccountBlockHeader = SidechainAccountBlockHeader(
+        val unsignedBlockHeader: SidechainAccountBlockHeader = account.block.SidechainAccountBlockHeader(
           blockVersion,
           parentId,
           timestamp,
@@ -205,7 +206,7 @@ object SidechainAccountBlock extends ScorexEncoding {
     }
 
 
-    val signedBlockHeader: SidechainAccountBlockHeader = SidechainAccountBlockHeader(
+    val signedBlockHeader: SidechainAccountBlockHeader = account.block.SidechainAccountBlockHeader(
       blockVersion,
       parentId,
       timestamp,

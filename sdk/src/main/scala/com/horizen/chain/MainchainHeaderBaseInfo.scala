@@ -1,9 +1,10 @@
 package com.horizen.chain
 
-import com.horizen.block.SidechainBlock
+import com.horizen.block.{SidechainBlock, SidechainBlockBase}
 import com.horizen.cryptolibprovider.CumulativeHashFunctions
 import com.horizen.utils.BytesUtils
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
+import scorex.core.transaction.Transaction
 import scorex.util.serialization.{Reader, Writer}
 
 import scala.collection.mutable.ArrayBuffer
@@ -25,7 +26,7 @@ case class MainchainHeaderBaseInfo (hash: MainchainHeaderHash,
 }
 
 object MainchainHeaderBaseInfo {
-  def getMainchainHeaderBaseInfoSeqFromBlock(sidechainBlock: SidechainBlock, initialCumulativeHash: Array[Byte]): Seq[MainchainHeaderBaseInfo] = {
+  def getMainchainHeaderBaseInfoSeqFromBlock[TX <: Transaction](sidechainBlock: SidechainBlockBase[TX], initialCumulativeHash: Array[Byte]): Seq[MainchainHeaderBaseInfo] = {
     val mcHeaderBaseInfoList: ArrayBuffer[MainchainHeaderBaseInfo] = ArrayBuffer()
     var prevCumulativeHash: Array[Byte] = initialCumulativeHash
 

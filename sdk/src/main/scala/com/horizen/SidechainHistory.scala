@@ -21,12 +21,13 @@ import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
 
-class SidechainHistory private (val storage: SidechainHistoryStorage,
-                                val consensusDataStorage: ConsensusDataStorage,
-                                val params: NetworkParams,
+class SidechainHistory private (storage: SidechainHistoryStorage,
+                                consensusDataStorage: ConsensusDataStorage,
+                                params: NetworkParams,
                                 semanticBlockValidators: Seq[SemanticBlockValidator],
                                 historyBlockValidators: Seq[HistoryBlockValidator])
-  extends com.horizen.AbstractHistory[SidechainTypes#SCBT, SidechainBlock, SidechainHistory]
+  extends com.horizen.AbstractHistory[SidechainTypes#SCBT, SidechainBlock, SidechainHistory](
+    storage, consensusDataStorage, params, semanticBlockValidators)
   with NetworkParamsUtils
   with ConsensusDataProvider
   with scorex.core.utils.ScorexEncoding
@@ -38,10 +39,30 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
 
   require(NodeViewModifier.ModifierIdSize == 32, "32 bytes ids assumed")
 
-  def height: Int = storage.height
-  def bestBlockId: ModifierId = storage.bestBlockId
+  override def height: Int = storage.height
+  override def bestBlockId: ModifierId = storage.bestBlockId
   def bestBlock: SidechainBlock = storage.bestBlock
   def bestBlockInfo: SidechainBlockInfo = storage.bestBlockInfo
+
+  /*
+  override def calculateGenesisBlockInfo(block: SidechainBlock, params: NetworkParams): SidechainBlockInfo = {
+    require(block.id == params.sidechainGenesisBlockId, "Passed block is not a genesis block.")
+
+    SidechainBlockInfo(
+      1,
+      block.score,
+      block.parentId,
+      block.timestamp,
+      ModifierSemanticValidity.Unknown,
+      // First MC header Cumulative CommTree hash is provided by genesis info
+      Seq(MainchainHeaderBaseInfo(byteArrayToMainchainHeaderHash(block.mainchainHeaders.head.hash), params.initialCumulativeCommTreeHash)),
+      SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, WithdrawalEpochInfo(0,0), params),
+      None,
+      block.id,
+    )
+  }
+  */
 
   // Note: if block already exists in History it will be declined inside NodeViewHolder before appending.
   override def append(block: SidechainBlock): Try[(SidechainHistory, ProgressInfo[SidechainBlock])] = Try {
@@ -59,7 +80,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     val (newStorage: Try[SidechainHistoryStorage], progressInfo: ProgressInfo[SidechainBlock]) = {
       if(isGenesisBlock(block.id)) {
         (
-          storage.update(block, SidechainHistory.calculateGenesisBlockInfo(block, params)),
+          storage.update(block, calculateGenesisBlockInfo(block, params)),
           ProgressInfo(None, Seq(), Seq(block), Seq())
         )
       }
@@ -103,7 +124,8 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     new SidechainHistory(newStorage.get, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators) -> progressInfo
   }
 
-  def isBestBlock(block: SidechainBlock, parentBlockInfo: SidechainBlockInfo): Boolean = {
+  /*
+  override def isBestBlock(block: SidechainBlock, parentBlockInfo: SidechainBlockInfo): Boolean = {
     val currentScore = storage.chainScoreFor(bestBlockId).get
     val newScore = calculateChainScore(block, parentBlockInfo.score)
     if (newScore == currentScore) {
@@ -112,20 +134,21 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       newScore > currentScore
     }
   }
+     */
 
   // score is a long value
   // parentScore is a sum of the length of the chain till parent block and amount of ommers inside the chain
   // So we should increase chain length by 1 and ommers amount with current block ommers number.
-  private def calculateChainScore(block: SidechainBlock, parentScore: Long): Long = {
-    parentScore + block.score
-  }
+  //override def calculateChainScore(block: SidechainBlock, parentScore: Long): Long = {
+  //  parentScore + block.score
+  //}
 
   def blockInfoById(blockId: ModifierId): SidechainBlockInfo = storage.blockInfoById(blockId)
 
   def blockToBlockInfo(block: SidechainBlock): Option[SidechainBlockInfo] = storage.blockInfoOptionById(block.parentId).map(calculateBlockInfo(block, _))
 
   // Calculate SidechainBlock info based on passed block and parent info.
-  private def calculateBlockInfo(block: SidechainBlock, parentBlockInfo: SidechainBlockInfo): SidechainBlockInfo = {
+/*  private def calculateBlockInfo(block: SidechainBlock, parentBlockInfo: SidechainBlockInfo): SidechainBlockInfo = {
     val lastBlockInPreviousConsensusEpoch = getLastBlockInPreviousConsensusEpoch(block.timestamp, block.parentId)
     val nonceConsensusEpochInfo = getOrCalculateNonceConsensusEpochInfo(block.header.timestamp, block.header.parentId)
     val vrfOutputOpt = getVrfOutput(block.header, nonceConsensusEpochInfo)
@@ -147,6 +170,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       lastBlockInPreviousConsensusEpoch
     )
   }
+
 
   def bestForkChanges(block: SidechainBlock): Try[ProgressInfo[SidechainBlock]] = Try {
     val (newChainSuffix, currentChainSuffix) = commonBlockSuffixes(modifierById(block.parentId).get)
@@ -211,7 +235,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     }
     Some(acc)
   }
-
+   */
   override def reportModifierIsValid(block: SidechainBlock): SidechainHistory = {
       var newStorage = storage.updateSemanticValidity(block, ModifierSemanticValidity.Valid).get
       newStorage = newStorage.setAsBestBlock(block, storage.blockInfoById(block.id)).get
@@ -239,6 +263,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     newHistory -> newProgressInfo
   }
 
+  /*
   override def isEmpty: Boolean = height <= 0
 
   override def contains(id: ModifierId): Boolean = storage.blockInfoOptionById(id).isDefined
@@ -249,16 +274,20 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     else
       Success(Unit)
   }
+*/
 
   override def modifierById(blockId: ModifierId): Option[SidechainBlock] = storage.blockById(blockId)
 
+  /*
   def blockIdByHeight(height: Int): Option[String] = {
     storage.activeChainBlockId(height)
   }
 
+
   override def isSemanticallyValid(blockId: ModifierId): ModifierSemanticValidity = {
     storage.semanticValidity(blockId)
   }
+
 
   override def openSurfaceIds(): Seq[ModifierId] = {
     if(isEmpty)
@@ -364,11 +393,13 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
           Younger
     }
   }
+  */
 
   override def getBlockById(blockId: String): JOptional[SidechainBlock] = {
     storage.blockById(ModifierId(blockId)).asJava
   }
 
+  /*
   override def getLastBlockIds(count: Int): JList[String] = {
     val blockList = new JArrayList[String]()
     if(isEmpty)
@@ -384,11 +415,11 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       blockList
     }
   }
-
+*/
   override def getBestBlock: SidechainBlock = {
     bestBlock
   }
-
+/*
   override def getBlockIdByHeight(height: Int): JOptional[String] = {
     storage.activeChainBlockId(height) match {
       case Some(blockId) => JOptional.of[String](blockId)
@@ -407,15 +438,16 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
   override def getCurrentHeight: Int = {
     height
   }
-
+*/
   override def getFeePaymentsInfo(blockId: String): JOptional[FeePaymentsInfo] = {
     feePaymentsInfo(ModifierId @@ blockId).asJava
   }
 
+  /*
   override def getBlockHeight(blockId: String): JOptional[Integer] = {
     storage.blockInfoOptionById(ModifierId(blockId)).map(info => Integer.valueOf(info.height)).asJava
   }
-
+*/
   override def searchTransactionInsideSidechainBlock(transactionId: String, blockId: String): JOptional[SidechainTypes#SCBT] = {
     storage.blockById(ModifierId(blockId)) match {
       case Some(scBlock) => findTransactionInsideBlock(transactionId, scBlock)
@@ -453,15 +485,19 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     transaction
   }
 
+
   def updateFeePaymentsInfo(blockId: ModifierId, feePaymentsInfo: FeePaymentsInfo): SidechainHistory = {
     val newStorage = storage.updateFeePaymentsInfo(blockId, feePaymentsInfo).get
     new SidechainHistory(newStorage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
   }
-
+  /*
   def feePaymentsInfo(blockId: ModifierId): Option[FeePaymentsInfo] = {
     storage.getFeePaymentsInfo(blockId)
   }
 
+   */
+
+  /*
   /*
     All the methods in SidechainHistory and NodeHistory, that work with MainchainBlockReferences,
     MainchainHeaders, MainchainBlockReferenceData itself or any information about them,
@@ -556,6 +592,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       storage.getMainchainHashesForIndexes(missedDataIndexes)
     }
   }
+  */
 
   def applyFullConsensusInfo(lastBlockInEpoch: ModifierId, fullConsensusEpochInfo: FullConsensusEpochInfo): SidechainHistory = {
     consensusDataStorage.addStakeConsensusEpochInfo(blockIdToEpochId(lastBlockInEpoch), fullConsensusEpochInfo.stakeConsensusEpochInfo)
@@ -579,23 +616,7 @@ object SidechainHistory
       None
   }
 
-  def calculateGenesisBlockInfo(block: SidechainBlock, params: NetworkParams): SidechainBlockInfo = {
-    require(block.id == params.sidechainGenesisBlockId, "Passed block is not a genesis block.")
 
-    SidechainBlockInfo(
-      1,
-      block.score,
-      block.parentId,
-      block.timestamp,
-      ModifierSemanticValidity.Unknown,
-      // First MC header Cumulative CommTree hash is provided by genesis info
-      Seq(MainchainHeaderBaseInfo(byteArrayToMainchainHeaderHash(block.mainchainHeaders.head.hash), params.initialCumulativeCommTreeHash)),
-      SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, WithdrawalEpochInfo(0,0), params),
-      None,
-      block.id,
-    )
-  }
 
   private[horizen] def createGenesisHistory(historyStorage: SidechainHistoryStorage,
                                       consensusDataStorage: ConsensusDataStorage,

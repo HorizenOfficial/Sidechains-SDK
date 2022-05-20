@@ -2,7 +2,6 @@ package com.horizen.integration
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
-
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
@@ -14,7 +13,7 @@ import com.horizen.storage.{InMemoryStorageAdapter, SidechainHistoryStorage, Sto
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils._
 import com.horizen.validation.{InvalidSidechainBlockDataException, SidechainBlockSemanticValidator}
-import com.horizen.{SidechainHistory, SidechainSettings, SidechainSyncInfo, SidechainTypes}
+import com.horizen.{AbstractHistory, SidechainHistory, SidechainSettings, SidechainSyncInfo, SidechainTypes}
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.{Before, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
@@ -53,7 +52,7 @@ class SidechainHistoryTest extends JUnitSuite
     // declare real genesis block id
     params = MainNetParams(new Array[Byte](32), genesisBlock.id, sidechainGenesisBlockTimestamp = 720 * 120)
 
-    genesisBlockInfo = SidechainHistory.calculateGenesisBlockInfo(genesisBlock, params).copy(semanticValidity = ModifierSemanticValidity.Valid)
+    genesisBlockInfo = AbstractHistory.calculateGenesisBlockInfo(genesisBlock, params).copy(semanticValidity = ModifierSemanticValidity.Valid)
     Mockito.when(sidechainSettings.scorexSettings)
       .thenAnswer(answer => {
         scorexSettings

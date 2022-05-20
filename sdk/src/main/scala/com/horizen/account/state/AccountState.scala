@@ -1,7 +1,8 @@
 package com.horizen.account.state
 
 import com.horizen.SidechainTypes
-import com.horizen.block.{MainchainBlockReferenceData, SidechainAccountBlock, WithdrawalEpochCertificate}
+import com.horizen.account.block.SidechainAccountBlock
+import com.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
 import com.horizen.box.{ForgerBox, WithdrawalRequestBox}
 import com.horizen.params.NetworkParams
 import com.horizen.state.State

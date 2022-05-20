@@ -1,9 +1,9 @@
 package com.horizen.account
 
+import com.horizen.account.block.SidechainAccountBlock
 import com.horizen.account.mempool.SidechainAccountMemoryPool
 import com.horizen.account.state.AccountState
 import com.horizen.account.wallet.AccountWallet
-import com.horizen.block.SidechainAccountBlock
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
 import com.horizen.params.NetworkParams
 import scorex.core.utils.NetworkTimeProvider

@@ -1,7 +1,6 @@
 package com.horizen.storage
 
 import java.util.{ArrayList => JArrayList, List => JList}
-
 import com.horizen.block.{SidechainBlockSerializer, _}
 import com.horizen.chain.{FeePaymentsInfo, MainchainBlockReferenceDataInfo, _}
 import com.horizen.companion.SidechainTransactionsCompanion
@@ -10,6 +9,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.utils._
 import com.horizen.utils.{Pair => JPair}
 import scorex.core.consensus.ModifierSemanticValidity
+import scorex.core.transaction.Transaction
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
 
@@ -237,7 +237,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     } yield MainchainBlockReferenceDataInfo(mcHash, mcHeight, sidechainBlockId)
   }
 
-  def update(block: SidechainBlock, blockInfo: SidechainBlockInfo): Try[SidechainHistoryStorage] = Try {
+  def update[TX <: Transaction](block: SidechainBlockBase[TX], blockInfo: SidechainBlockInfo): Try[SidechainHistoryStorage] = Try {
     require(block != null, "SidechainBlock must be NOT NULL.")
     require(block.parentId == blockInfo.parentId, "Passed BlockInfo data conflicts to passed Block.")
 

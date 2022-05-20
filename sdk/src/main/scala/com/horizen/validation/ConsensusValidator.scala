@@ -1,6 +1,6 @@
 package com.horizen.validation
-import com.horizen.SidechainHistory
-import com.horizen.block.{OmmersContainer, SidechainBlock, SidechainBlockHeader}
+import com.horizen.{SidechainHistory, SidechainTypes}
+import com.horizen.block.{OmmersContainer, SidechainBlock, SidechainBlockBase, SidechainBlockHeader, SidechainBlockHeaderBase}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.consensus._
 import com.horizen.params.NetworkParams
@@ -13,7 +13,7 @@ import scorex.util.{ModifierId, ScorexLogging}
 import scala.util.Try
 
 class ConsensusValidator(timeProvider: TimeProvider) extends HistoryBlockValidator with ScorexLogging {
-  override def validate(block: SidechainBlock, history: SidechainHistory): Try[Unit] = Try {
+  override def validate(block: SidechainBlockBase[SidechainTypes#SCBT], history: SidechainHistory): Try[Unit] = Try {
     if (history.isGenesisBlock(block.id)) {
       validateGenesisBlock(block, history)
     }
@@ -22,7 +22,7 @@ class ConsensusValidator(timeProvider: TimeProvider) extends HistoryBlockValidat
     }
   }
 
-  private def validateGenesisBlock(block: SidechainBlock, history: SidechainHistory): Unit = {
+  private def validateGenesisBlock(block: SidechainBlockBase[SidechainTypes#SCBT], history: SidechainHistory): Unit = {
     if (block.timestamp != history.params.sidechainGenesisBlockTimestamp) {
       throw new IllegalArgumentException(s"Genesis block timestamp ${block.timestamp} is differ than expected timestamp from configuration ${history.params.sidechainGenesisBlockTimestamp}")
     }
@@ -34,7 +34,7 @@ class ConsensusValidator(timeProvider: TimeProvider) extends HistoryBlockValidat
   }
 
 
-  private def validateNonGenesisBlock(verifiedBlock: SidechainBlock, history: SidechainHistory): Unit = {
+  private def validateNonGenesisBlock(verifiedBlock: SidechainBlockBase[SidechainTypes#SCBT], history: SidechainHistory): Unit = {
     val parentBlockInfo: SidechainBlockInfo = history.blockInfoById(verifiedBlock.parentId)
     verifyTimestamp(verifiedBlock.timestamp, parentBlockInfo.timestamp, history.params)
 
@@ -145,7 +145,7 @@ class ConsensusValidator(timeProvider: TimeProvider) extends HistoryBlockValidat
   }
 
   //Verify that forging stake info in block is correct (including stake), exist in history and had enough stake to be forger
-  private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
+  private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeaderBase, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
     log.debug(s"Verify Forger box against root hash: ${stakeConsensusEpochInfo.rootHash} by merkle path ${header.forgingStakeMerklePath.bytes().deep.mkString}")
 
     val forgingStakeIsCorrect = stakeConsensusEpochInfo.rootHash.sameElements(header.forgingStakeMerklePath.apply(header.forgingStakeInfo.hash))

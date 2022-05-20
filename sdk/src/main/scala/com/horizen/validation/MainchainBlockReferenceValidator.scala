@@ -1,21 +1,22 @@
 package com.horizen.validation
-import com.horizen.SidechainHistory
-import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlock}
+import com.horizen.{SidechainHistory, SidechainTypes}
+import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlock, SidechainBlockBase}
 import com.horizen.chain.{MainchainHeaderHash, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
 import com.horizen.params.NetworkParams
 import scorex.util.ModifierId
+
 import scala.util.{Failure, Success, Try}
 import scala.util.control.Breaks._
 
 class MainchainBlockReferenceValidator(params: NetworkParams) extends HistoryBlockValidator {
-  override def validate(block: SidechainBlock, history: SidechainHistory): Try[Unit] = Try {
+  override def validate(block: SidechainBlockBase[SidechainTypes#SCBT], history: SidechainHistory): Try[Unit] = Try {
     if (block.id.equals(params.sidechainGenesisBlockId))
       validateGenesisBlock(block)
     else
       validateBlock(block, history)
   }
 
-  private def validateGenesisBlock(verifiedBlock: SidechainBlock): Unit = {
+  private def validateGenesisBlock(verifiedBlock: SidechainBlockBase[SidechainTypes#SCBT]): Unit = {
     if(verifiedBlock.mainchainHeaders.size != 1)
       throw new InvalidMainchainDataException(s"Genesis block expect to contain only 1 MainchainHeader, instead contains ${verifiedBlock.mainchainHeaders.size}.")
 
@@ -34,7 +35,7 @@ class MainchainBlockReferenceValidator(params: NetworkParams) extends HistoryBlo
   // SC block:    100     101     102       103       104
   // McHeaders:   10      11,12   13,14,15  -         16
   // McData:      10      -       11        12,13     14
-  private def validateBlock(verifiedBlock: SidechainBlock, history: SidechainHistory): Unit = {
+  private def validateBlock(verifiedBlock: SidechainBlockBase[SidechainTypes#SCBT], history: SidechainHistory): Unit = {
     if(verifiedBlock.mainchainBlockReferencesData.isEmpty)
       return
 
@@ -81,7 +82,7 @@ class MainchainBlockReferenceValidator(params: NetworkParams) extends HistoryBlo
         if(!referenceData.headerHash.sameElements(mainchainHeaderHash.data))
           throw new InvalidMainchainDataException("MainchainBlockReferenceData header hash and MainchainHeader hash are different.")
 
-        val blockWithMainchainHeader: SidechainBlock = containingBlockId match {
+        val blockWithMainchainHeader: SidechainBlockBase[SidechainTypes#SCBT] = containingBlockId match {
           case lastRetrievedBlock.id => lastRetrievedBlock  // not to extract from Storage full SidechainBlock again
           case verifiedBlock.id => verifiedBlock // it means that both header and data are present inside verified block
           case id => history.getBlockById(id).get

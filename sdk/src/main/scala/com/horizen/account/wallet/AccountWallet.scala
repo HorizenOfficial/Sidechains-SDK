@@ -1,6 +1,6 @@
 package com.horizen.account.wallet
 
-import com.horizen.block.SidechainAccountBlock
+import com.horizen.account.block.SidechainAccountBlock
 import com.horizen.{SidechainTypes, Wallet}
 import scorex.core.VersionTag
 
