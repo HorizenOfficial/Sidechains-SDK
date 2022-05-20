@@ -1,6 +1,5 @@
-package com.horizen.account.evm;
+package com.horizen.evm;
 
-import com.horizen.utils.BytesUtils;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -39,7 +38,7 @@ public class EvmTest {
         System.out.println("ContractCreate");
         var createParams = new Evm.ContractCreateParams();
         createParams.origin = origin;
-        createParams.input = BytesUtils.fromHexString(contractCode + initialValue);
+        createParams.input = EvmUtils.fromHexString(contractCode + initialValue);
         createParams.gasLimit = 100000;
         var createResult = Evm.Instance.ContractCreate(createParams);
         System.out.println("ContractCreate result " + createResult);
@@ -55,7 +54,7 @@ public class EvmTest {
         var callStoreParams = new Evm.ContractCallParams();
         callStoreParams.address = createResult.address;
         callStoreParams.origin = origin;
-        callStoreParams.input = BytesUtils.fromHexString("6057361d" + secondValue);
+        callStoreParams.input = EvmUtils.fromHexString("6057361d" + secondValue);
         callStoreParams.gasLimit = 100000;
         callStoreParams.value = "1";
         var callStoreResult = Evm.Instance.ContractCall(callStoreParams);
@@ -65,7 +64,7 @@ public class EvmTest {
         var callRetrieveParams = new Evm.ContractCallParams();
         callRetrieveParams.address = createResult.address;
         callRetrieveParams.origin = origin;
-        callRetrieveParams.input = BytesUtils.fromHexString("2e64cec1");
+        callRetrieveParams.input = EvmUtils.fromHexString("2e64cec1");
         callRetrieveParams.gasLimit = 1000;
         var callRetrieveResult = Evm.Instance.ContractCall(callRetrieveParams);
         System.out.println("ContractCall result " + callRetrieveResult);

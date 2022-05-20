@@ -1,6 +1,5 @@
-package com.horizen.account.evm;
+package com.horizen.evm;
 
-import com.horizen.utils.BytesUtils;
 import com.sun.jna.Native;
 
 import java.util.Map;
@@ -116,7 +115,7 @@ public final class Evm {
             return String.format(
                 "%s ret %s leftOverGas %d balanceChanges %s",
                 super.toString(),
-                ret == null ? "null" : String.format("0x%s", BytesUtils.toHexString(ret)),
+                ret == null ? "null" : String.format("0x%s", EvmUtils.toHexString(ret)),
                 leftOverGas,
                 balanceChanges
             );

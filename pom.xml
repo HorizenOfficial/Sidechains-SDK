@@ -16,6 +16,7 @@
 	<modules>
 		<module>sdk</module>
 		<module>libevm</module>
+		<module>evm</module>
 		<module>examples/simpleapp</module>
 		<module>tools/sctool</module>
 	</modules>

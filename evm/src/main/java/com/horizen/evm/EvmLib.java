@@ -1,4 +1,4 @@
-package com.horizen.account.evm;
+package com.horizen.evm;
 
 import com.sun.jna.Library;
 import com.sun.jna.Pointer;
