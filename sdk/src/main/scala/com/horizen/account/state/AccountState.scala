@@ -1,11 +1,10 @@
 package com.horizen.account.state
 
 import com.horizen.SidechainTypes
-import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, WithdrawalEpochCertificate}
+import com.horizen.block.{MainchainBlockReferenceData, SidechainAccountBlock, WithdrawalEpochCertificate}
 import com.horizen.box.{ForgerBox, WithdrawalRequestBox}
-import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.params.NetworkParams
-import com.horizen.state.{State, StateReader, StateView}
+import com.horizen.state.State
 import com.horizen.utils.{BlockFeeInfo, BytesUtils, FeePaymentsUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import scorex.core.{VersionTag, idToBytes, idToVersion, versionToBytes}
 import scorex.util.ScorexLogging
@@ -13,13 +12,14 @@ import scorex.util.ScorexLogging
 import java.util
 import scala.util.{Failure, Success, Try}
 
-class AccountState(val params: NetworkParams) extends State[SidechainTypes#SCAT, AccountStateView, AccountState]
+class AccountState(val params: NetworkParams) extends State[SidechainTypes#SCAT, SidechainAccountBlock, AccountStateView, AccountState]
   with AccountStateReader
   with ScorexLogging {
-   self: AccountState =>
+
+  override type NVCT = AccountState
 
   // Modifiers:
-  override def applyModifier(mod: SidechainBlock): Try[AccountState] = Try {
+  override def applyModifier(mod: SidechainAccountBlock): Try[AccountState] = Try {
     require(versionToBytes(version).sameElements(idToBytes(mod.parentId)),
       s"Incorrect state version!: ${mod.parentId} found, " + s"$version expected")
 
@@ -37,11 +37,11 @@ class AccountState(val params: NetworkParams) extends State[SidechainTypes#SCAT,
     // Reject block if it refers to the chain that conflicts with the top quality certificate content
     // Mark sidechain as ceased in case there is no certificate appeared within the submission window.
     val currentWithdrawalEpochInfo = stateView.getWithdrawalEpochInfo
-    val modWithdrawalEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, currentWithdrawalEpochInfo, params)
+    val modWithdrawalEpochInfo: WithdrawalEpochInfo = null//WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, currentWithdrawalEpochInfo, params)
 
     // If SC block has reached the certificate submission window end -> check the top quality certificate
     // Note: even if mod contains multiple McBlockRefData entries, we are sure they belongs to the same withdrawal epoch.
-    if(WithdrawalEpochUtils.hasReachedCertificateSubmissionWindowEnd(mod, currentWithdrawalEpochInfo, params)) {
+    if(false) {//WithdrawalEpochUtils.hasReachedCertificateSubmissionWindowEnd(mod, currentWithdrawalEpochInfo, params)) {
       val certReferencedEpochNumber = modWithdrawalEpochInfo.epoch - 1
 
       // Top quality certificate may present in the current SC block or in the previous blocks or can be absent.

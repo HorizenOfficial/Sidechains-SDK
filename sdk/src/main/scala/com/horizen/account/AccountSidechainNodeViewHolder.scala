@@ -1,6 +1,7 @@
 package com.horizen.account
 
 import com.horizen.account.mempool.SidechainAccountMemoryPool
+import com.horizen.account.state.AccountState
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block.SidechainAccountBlock
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
@@ -14,7 +15,7 @@ abstract class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettin
 
   override type VL = AccountWallet
   // TODO: override type HIS = SidechainHistory // define history
-  // TODO: override type MS = AccountState
+  override type MS = AccountState
   override type MP = SidechainAccountMemoryPool
 
   override def restoreState(): Option[(HIS, MS, VL, MP)] = ???
