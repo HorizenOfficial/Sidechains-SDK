@@ -19,44 +19,6 @@ import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters._
 import scala.util._
 
-// expect this `storage` to be passed by the app during SidechainApp initialization
-trait StateMetadataStorageReader {
-  def getWithdrawalEpochInfo: Option[WithdrawalEpochInfo]
-
-  def getFeePayments(withdrawalEpochNumber: Int)
-
-  def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate]
-
-  def getConsensusEpochNumber: Option[ConsensusEpochNumber]
-
-  def hasCeased: Boolean
-
-  // tip height
-  def getHeight: Int
-
-  // None only when the state is empty
-  def getAccountStateRoot: Option[Array[Byte]] // 32 bytes, kessack hash
-}
-
-abstract class StateMetadataStorage(storage: Storage) extends StateMetadataStorageReader {
-  def getView(): StateMetadataStorageView
-}
-
-abstract class StateMetadataStorageView extends StateMetadataStorageReader {
-  // all getters same as in StateMetadataStorage, but looking first in the cached/dirty entries in memory
-
-  // put in memory cache and mark the entry as "dirty"
-  def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo)
-
-  def addFeePayment(/*...*/)
-
-  // etc.
-
-  // update the database with "dirty" records new values
-  // also increment the height value directly
-  def commit(version: VersionTag)
-}
-
 class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: SidechainBoxesCompanion)
   extends ScorexLogging
   with SidechainTypes

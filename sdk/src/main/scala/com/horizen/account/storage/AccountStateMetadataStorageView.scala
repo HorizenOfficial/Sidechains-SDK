@@ -15,61 +15,8 @@ import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
-// expect this storage to be passed by the app during SidechainApp initialization
-trait StateMetadataStorageReader {
 
-  def getWithdrawalEpochInfo: Option[WithdrawalEpochInfo]
-
-  def getFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo]
-
-  def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate]
-
-  def getConsensusEpochNumber: Option[ConsensusEpochNumber]
-
-  def hasCeased: Boolean
-
-  // tip height
-  def getHeight: Int
-
-  // None only when the state is empty
-  def getAccountStateRoot: Option[Array[Byte]] // 32 bytes, kessack hash
-}
-
-class StateMetadataStorage(storage: Storage) extends StateMetadataStorageReader with ScorexLogging {
-  def getView: StateMetadataStorageView = new StateMetadataStorageView(storage)
-
-  def lastVersionId: Option[ByteArrayWrapper] = {
-    storage.lastVersionID().asScala
-  }
-
-  def rollbackVersions: Seq[ByteArrayWrapper] = {
-    storage.rollbackVersions().asScala.toList
-  }
-
-  def rollback(version: ByteArrayWrapper): Try[StateMetadataStorage] = Try {
-    require(version != null, "Version to rollback to must be NOT NULL.")
-    storage.rollback(version)
-    this
-  }
-
-  def isEmpty: Boolean = storage.isEmpty
-
-  override def getWithdrawalEpochInfo: Option[WithdrawalEpochInfo] = getView.getWithdrawalEpochInfo
-
-  override def getFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo] = getView.getFeePayments(withdrawalEpochNumber)
-
-  override def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = getView.getTopQualityCertificate(referencedWithdrawalEpoch)
-
-  override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = getView.getConsensusEpochNumber
-
-  override def hasCeased: Boolean = getView.hasCeased
-
-  override def getHeight: Int = getView.getHeight
-
-  override def getAccountStateRoot: Option[Array[Byte]] = getView.getAccountStateRoot
-}
-
-class StateMetadataStorageView(storage: Storage) extends StateMetadataStorageReader with ScorexLogging {
+class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMetadataStorageReader with ScorexLogging {
 
   require(storage != null, "Storage must be NOT NULL.")
 
@@ -295,7 +242,7 @@ class StateMetadataStorageView(storage: Storage) extends StateMetadataStorageRea
     //    Note: we should keep last 2 epoch certificates, so in case SC has ceased we have an access to the last active cert.
     // 1) remove outdated BlockFeeInfo records
 
-    val isWithdrawalEpochSwitched: Boolean = getWithdrawalEpochInfo match {
+    val isWithdrawalEpochSwitched: Boolean = getWithdrawalEpochInfoFromStorage match {
       case Some(storedEpochInfo) => storedEpochInfo.epoch != withdrawalEpochInfoOpt.get.epoch
       case _ => false
     }
