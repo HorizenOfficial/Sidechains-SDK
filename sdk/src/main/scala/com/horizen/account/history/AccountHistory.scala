@@ -125,9 +125,7 @@ class AccountHistory private(storage: SidechainHistoryStorage,
       require(toRemove.nonEmpty)
       require(toApply.nonEmpty)
 
-      // TODO
-      // ProgressInfo[AccountBlock](rollbackPoint, toRemove, toApply, Seq())
-      ProgressInfo[AccountBlock](None, Seq(), Seq(), Seq())
+      ProgressInfo[AccountBlock](rollbackPoint, toRemove, toApply, Seq())
 
     } else {
       //log.info(s"Orphaned block $block from invalid suffix")
