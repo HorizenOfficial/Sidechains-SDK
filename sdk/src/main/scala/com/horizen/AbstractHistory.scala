@@ -10,10 +10,7 @@ import scala.util.Try
 
 
 abstract class AbstractHistory[TX <: Transaction, PM <: SidechainBlockBase[TX], HT <: AbstractHistory[TX, PM, HT]]
-  extends scorex.core.consensus.History[
-  PM,
-  SidechainSyncInfo,
-  AbstractHistory[TX, PM, HT]]{
+  extends scorex.core.consensus.History[PM, SidechainSyncInfo, HT]{
 
   override def append(block: PM): Try[(HT, ProgressInfo[PM])] = {
     // just for test, remove it
