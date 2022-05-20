@@ -29,7 +29,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
   extends SidechainApiRoute {
 
   override val route: Route = pathPrefix("wallet") {
-    allBoxes ~ coinsBalance ~ balanceOfType ~ createPrivateKey25519 ~ createVrfSecret ~ allPublicKeys
+    allBoxes ~ coinsBalance ~ balanceOfType ~ createPrivateKey25519 ~ createVrfSecret ~ allPublicKeys ~ importPrivateKey
   }
 
   /**
