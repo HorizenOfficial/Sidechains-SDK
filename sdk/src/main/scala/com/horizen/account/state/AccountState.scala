@@ -30,7 +30,7 @@ class AccountState(val params: NetworkParams) extends State[SidechainTypes#SCAT,
     }
 
     // Check Txs semantic validity first
-    for(tx <- mod.sidechainTransactions) // TODO: replace with Account Txs
+    for(tx <- mod.sidechainTransactions)
       tx.semanticValidity()
 
     // Validate top quality certificate in the end of the submission window:
@@ -85,9 +85,8 @@ class AccountState(val params: NetworkParams) extends State[SidechainTypes#SCAT,
       stateView = stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
     }
 
-    // to do: mod.accountTransactions()
-    for(accountTx <- Seq()) {
-      stateView = stateView.applyTransaction(accountTx).get
+    for(tx <- mod.sidechainTransactions) {
+      stateView = stateView.applyTransaction(tx).get
     }
 
     stateView.commit(idToVersion(mod.id)).get
