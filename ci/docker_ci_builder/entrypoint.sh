@@ -30,7 +30,7 @@ export HOME=/home/zenbuilder
 
 # Get Java $CONTAINER_JAVA_VER
 apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y "$CONTAINER_JAVA_VER" maven
+DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y "$CONTAINER_JAVA_VER" maven solc
 apt-get -y clean
 apt-get -y autoclean
 rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb
