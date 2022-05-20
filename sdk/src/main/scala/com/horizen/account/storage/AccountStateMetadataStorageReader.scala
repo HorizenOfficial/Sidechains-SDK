@@ -1,8 +1,8 @@
 package com.horizen.account.storage
 
-import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
-import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
-import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
+import com.horizen.block.WithdrawalEpochCertificate
+import com.horizen.consensus.ConsensusEpochNumber
+import com.horizen.utils.{BlockFeeInfo, WithdrawalEpochInfo}
 
 // expect this storage to be passed by the app during SidechainApp initialization
 trait AccountStateMetadataStorageReader {

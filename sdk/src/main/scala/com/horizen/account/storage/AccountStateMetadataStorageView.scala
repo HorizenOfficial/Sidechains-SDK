@@ -10,7 +10,6 @@ import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
 
 import java.util.{ArrayList => JArrayList}
-import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
