@@ -12,7 +12,7 @@ trait NetworkParams {
   // Mainchain ProofOfWork parameters:
   val EquihashN: Int
   val EquihashK: Int
-  val EquihashVarIntLength: Int // VarInt value length for Equihash solution bytes
+  val EquihashCompactSizeLength: Int // CompactSize value length for Equihash solution bytes
   val EquihashSolutionLength: Int // solution bytes length
 
   val powLimit: BigInteger

@@ -117,7 +117,6 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
   }
 
   def stop: Route = (post & path("stop")) {
-
     if (app.stopAllInProgress.compareAndSet(false, true) ) {
       try {
         // we are stopping the node, and since we will shortly be closing network services lets do in a separate thread

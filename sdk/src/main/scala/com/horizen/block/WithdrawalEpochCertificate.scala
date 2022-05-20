@@ -6,7 +6,7 @@ import com.google.common.primitives.Bytes
 import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion0, SidechainCreationVersion1}
 import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.serialization.{ReverseBytesSerializer, Views}
-import com.horizen.utils.{BytesUtils, Utils, VarInt}
+import com.horizen.utils.{BytesUtils, Utils, CompactSize}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 import com.horizen.librustsidechains.{Utils => ScCryptoUtils}
@@ -96,7 +96,7 @@ object WithdrawalEpochCertificate {
     val quality: Long = BytesUtils.getReversedLong(certificateBytes, currentOffset)
     currentOffset += 8
 
-    val endCumulativeScTxCommitmentTreeRootSize: VarInt = BytesUtils.getReversedVarInt(certificateBytes, currentOffset)
+    val endCumulativeScTxCommitmentTreeRootSize: CompactSize = BytesUtils.getCompactSize(certificateBytes, currentOffset)
     currentOffset += endCumulativeScTxCommitmentTreeRootSize.size()
     if(endCumulativeScTxCommitmentTreeRootSize.value() != FieldElementUtils.fieldElementLength())
       throw new IllegalArgumentException(s"Input data corrupted: endCumulativeScTxCommitmentTreeRoot size ${endCumulativeScTxCommitmentTreeRootSize.value()} " +
@@ -106,17 +106,17 @@ object WithdrawalEpochCertificate {
       currentOffset, currentOffset + endCumulativeScTxCommitmentTreeRootSize.value().intValue())
     currentOffset += endCumulativeScTxCommitmentTreeRootSize.value().intValue()
 
-    val scProofSize: VarInt = BytesUtils.getReversedVarInt(certificateBytes, currentOffset)
+    val scProofSize: CompactSize = BytesUtils.getCompactSize(certificateBytes, currentOffset)
     currentOffset += scProofSize.size()
     val scProof: Array[Byte] = certificateBytes.slice(currentOffset, currentOffset + scProofSize.value().intValue())
     currentOffset += scProofSize.value().intValue()
 
-    val fieldElementCertificateFieldsLength: VarInt = BytesUtils.getReversedVarInt(certificateBytes, currentOffset)
+    val fieldElementCertificateFieldsLength: CompactSize = BytesUtils.getCompactSize(certificateBytes, currentOffset)
     currentOffset += fieldElementCertificateFieldsLength.size()
 
     val fieldElementCertificateFields: Seq[FieldElementCertificateField] =
       (1 to fieldElementCertificateFieldsLength.value().intValue()).map ( _ => {
-        val certFieldSize: VarInt = BytesUtils.getReversedVarInt(certificateBytes, currentOffset)
+        val certFieldSize: CompactSize = BytesUtils.getCompactSize(certificateBytes, currentOffset)
         currentOffset += certFieldSize.size()
         val rawData: Array[Byte] = certificateBytes.slice(currentOffset, currentOffset + certFieldSize.value().intValue())
         currentOffset += certFieldSize.value().intValue()
@@ -124,12 +124,12 @@ object WithdrawalEpochCertificate {
         FieldElementCertificateField(rawData)
       })
 
-    val bitVectorCertificateFieldsLength: VarInt = BytesUtils.getReversedVarInt(certificateBytes, currentOffset)
+    val bitVectorCertificateFieldsLength: CompactSize = BytesUtils.getCompactSize(certificateBytes, currentOffset)
     currentOffset += bitVectorCertificateFieldsLength.size()
 
     val bitVectorCertificateFields: Seq[BitVectorCertificateField] =
       (1 to bitVectorCertificateFieldsLength.value().intValue()).map ( _ => {
-        val certBitVectorSize: VarInt = BytesUtils.getReversedVarInt(certificateBytes, currentOffset)
+        val certBitVectorSize: CompactSize = BytesUtils.getCompactSize(certificateBytes, currentOffset)
         currentOffset += certBitVectorSize.size()
         val rawData: Array[Byte] = certificateBytes.slice(currentOffset, currentOffset + certBitVectorSize.value().intValue())
         currentOffset += certBitVectorSize.value().intValue()
@@ -142,7 +142,7 @@ object WithdrawalEpochCertificate {
     val btrFee: Long = BytesUtils.getReversedLong(certificateBytes, currentOffset)
     currentOffset += 8
 
-    val transactionInputCount: VarInt = BytesUtils.getVarInt(certificateBytes, currentOffset)
+    val transactionInputCount: CompactSize = BytesUtils.getCompactSize(certificateBytes, currentOffset)
     currentOffset += transactionInputCount.size()
 
     var transactionInputs: Seq[MainchainTransactionInput] = Seq[MainchainTransactionInput]()
@@ -153,7 +153,7 @@ object WithdrawalEpochCertificate {
       currentOffset += input.size
     }
 
-    val transactionOutputCount: VarInt = BytesUtils.getVarInt(certificateBytes, currentOffset)
+    val transactionOutputCount: CompactSize = BytesUtils.getCompactSize(certificateBytes, currentOffset)
     currentOffset += transactionOutputCount.size()
 
     var transactionOutputs: Seq[MainchainTransactionOutput] = Seq[MainchainTransactionOutput]()
@@ -164,7 +164,7 @@ object WithdrawalEpochCertificate {
       currentOffset += o.size
     }
 
-    val backwardTransferOutputsCount: VarInt = BytesUtils.getVarInt(certificateBytes, currentOffset)
+    val backwardTransferOutputsCount: CompactSize = BytesUtils.getCompactSize(certificateBytes, currentOffset)
     currentOffset += backwardTransferOutputsCount.size()
 
     var backwardTransferOutputs: Seq[MainchainBackwardTransferCertificateOutput] = Seq[MainchainBackwardTransferCertificateOutput]()

@@ -1,6 +1,6 @@
 package com.horizen.block
 
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, Utils, VarInt, _}
+import com.horizen.utils._
 
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
@@ -47,7 +47,7 @@ object MainchainTransaction {
     currentOffset += 4
 
     // parse inputs
-    val inputsNumber: VarInt = BytesUtils.getReversedVarInt(transactionBytes, currentOffset)
+    val inputsNumber: CompactSize = BytesUtils.getCompactSize(transactionBytes, currentOffset)
     currentOffset += inputsNumber.size()
 
     for (_ <- 1 to inputsNumber.value().intValue()) {
@@ -55,7 +55,7 @@ object MainchainTransaction {
     }
 
     // parse outputs
-    val outputsNumber: VarInt = BytesUtils.getReversedVarInt(transactionBytes, currentOffset)
+    val outputsNumber: CompactSize = BytesUtils.getCompactSize(transactionBytes, currentOffset)
     currentOffset += outputsNumber.size()
 
     for (_ <- 1 to outputsNumber.value().intValue()) {
@@ -69,7 +69,7 @@ object MainchainTransaction {
 
     if(version == SC_TX_VERSION) {
       // parse Ceased Sidechain Withdrawal inputs
-      val cswInputsNumber: VarInt = BytesUtils.getReversedVarInt(transactionBytes, currentOffset)
+      val cswInputsNumber: CompactSize = BytesUtils.getCompactSize(transactionBytes, currentOffset)
       currentOffset += cswInputsNumber.size()
       for (_ <- 1 to cswInputsNumber.value().intValue()) {
         val input = MainchainTxCswCrosschainInput.create(transactionBytes, currentOffset).get
@@ -78,7 +78,7 @@ object MainchainTransaction {
       }
 
       // parse SidechainCreation outputs
-      val creationOutputsNumber: VarInt = BytesUtils.getReversedVarInt(transactionBytes, currentOffset)
+      val creationOutputsNumber: CompactSize = BytesUtils.getCompactSize(transactionBytes, currentOffset)
       currentOffset += creationOutputsNumber.size()
       for (_ <- 1 to creationOutputsNumber.value().intValue()) {
         val output = MainchainTxSidechainCreationCrosschainOutputData.create(transactionBytes, currentOffset).get
@@ -87,7 +87,7 @@ object MainchainTransaction {
       }
 
       // parse Forward Transfer outputs
-      val forwardTransferOutputsNumber: VarInt = BytesUtils.getReversedVarInt(transactionBytes, currentOffset)
+      val forwardTransferOutputsNumber: CompactSize = BytesUtils.getCompactSize(transactionBytes, currentOffset)
       currentOffset += forwardTransferOutputsNumber.size()
       for (_ <- 1 to forwardTransferOutputsNumber.value().intValue()) {
         val output = MainchainTxForwardTransferCrosschainOutput.create(transactionBytes, currentOffset).get
@@ -96,7 +96,7 @@ object MainchainTransaction {
       }
 
       // parse Backward Transfer Request outputs
-      val bwtRequestOutputsNumber: VarInt = BytesUtils.getReversedVarInt(transactionBytes, currentOffset)
+      val bwtRequestOutputsNumber: CompactSize = BytesUtils.getCompactSize(transactionBytes, currentOffset)
       currentOffset += bwtRequestOutputsNumber.size()
       for (_ <- 1 to bwtRequestOutputsNumber.value().intValue()) {
         val output = MainchainTxBwtRequestCrosschainOutput.create(transactionBytes, currentOffset).get
@@ -113,7 +113,7 @@ object MainchainTransaction {
     // check if it's a transaction with JoinSplits and parse them if need
     // Note: actually joinsplit data is not important for us. So we will just parse it for knowing its size
     if (version >= PHGR_TX_VERSION || version == GROTH_TX_VERSION) {
-      val joinSplitsNumber: VarInt = BytesUtils.getVarInt(transactionBytes, currentOffset)
+      val joinSplitsNumber: CompactSize = BytesUtils.getCompactSize(transactionBytes, currentOffset)
       currentOffset += joinSplitsNumber.size()
       if(joinSplitsNumber.value().intValue() != 0) {
         var joinSplitsOffset: Int = 8 + // int64_t vpub_old

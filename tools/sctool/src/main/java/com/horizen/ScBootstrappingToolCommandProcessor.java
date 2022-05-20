@@ -451,7 +451,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             byte[] scId = Arrays.copyOfRange(infoBytes, offset, offset + 32);
             offset += 32;
 
-            VarInt powDataLength = BytesUtils.getVarInt(infoBytes, offset);
+            CompactSize powDataLength = BytesUtils.getCompactSize(infoBytes, offset);
             offset += powDataLength.size();
 
             String powData = BytesUtils.toHexString(Arrays.copyOfRange(infoBytes, offset, offset + ((int)powDataLength.value() * 8)));
@@ -460,7 +460,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             int mcBlockHeight = BytesUtils.getReversedInt(infoBytes, offset);
             offset += 4;
 
-            VarInt initialCumulativeCommTreeHashLength = BytesUtils.getReversedVarInt(infoBytes, offset);
+            CompactSize initialCumulativeCommTreeHashLength = BytesUtils.getCompactSize(infoBytes, offset);
             offset += initialCumulativeCommTreeHashLength.size();
 
             // Note: we keep this value in Little endian as expected by sc-cryptolib
@@ -477,7 +477,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             SidechainsVersionsManager versionsManager = null;
             if(offset < infoBytes.length) {
                 Map<ByteArrayWrapper, Enumeration.Value> scVersions = new HashMap<>();
-                VarInt scSidechainVersionsLength = BytesUtils.getVarInt(infoBytes, offset);
+                CompactSize scSidechainVersionsLength = BytesUtils.getCompactSize(infoBytes, offset);
                 offset += scSidechainVersionsLength.size();
                 for (int i = 0; i < scSidechainVersionsLength.value(); i++) {
                     byte[] sidechainId = Arrays.copyOfRange(infoBytes, offset, offset + 32);
