@@ -40,7 +40,8 @@ class AccountHistory private(storage: SidechainHistoryStorage,
 
   override def height: Int = storage.height
   override def bestBlockId: ModifierId = storage.bestBlockId
-  def bestBlock: AccountBlock = storage.bestBlock.asInstanceOf[AccountBlock]
+
+  def bestBlock: AccountBlock = storage.accountBestBlock
   def bestBlockInfo: SidechainBlockInfo = storage.bestBlockInfo
 
   // Note: if block already exists in History it will be declined inside NodeViewHolder before appending.
@@ -117,9 +118,9 @@ class AccountHistory private(storage: SidechainHistoryStorage,
 
     if(newChainSuffixValidity) {
       val rollbackPoint = newChainSuffix.headOption
-      val toRemove = currentChainSuffix.tail.map(id => storage.blockById(id).get)
+      val toRemove = currentChainSuffix.tail.map(id => storage.accountBlockById(id).get)
 
-      val toApply = newChainSuffix.tail.map(id => storage.blockById(id).get) ++ Seq(block)
+      val toApply = newChainSuffix.tail.map(id => storage.accountBlockById(id).get) ++ Seq(block)
 
       require(toRemove.nonEmpty)
       require(toApply.nonEmpty)

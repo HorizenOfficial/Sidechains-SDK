@@ -21,6 +21,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with SidechainBlockFixture 
 
   val customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]] = new JHashMap()
   val sidechainTransactionsCompanion = getDefaultTransactionsCompanion
+  val sidechainAccountTransactionsCompanion = getDefaultAccountTransactionsCompanion
   val genesisBlock: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion)
   val genesisBlockInfo: SidechainBlockInfo = generateGenesisBlockInfo(
     Some(genesisBlock.mainchainHeaders.head.hash),
@@ -32,7 +33,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with SidechainBlockFixture 
 
   @Test
   def mainWorkflow() : Unit = {
-    val historyStorage = new SidechainHistoryStorage(getStorage(), sidechainTransactionsCompanion, params)
+    val historyStorage = new SidechainHistoryStorage(getStorage(), sidechainTransactionsCompanion, sidechainAccountTransactionsCompanion, params)
 
     // Check that historyStorage is empty
     assertEquals("HistoryStorage expected to be empty", 0, historyStorage.height)

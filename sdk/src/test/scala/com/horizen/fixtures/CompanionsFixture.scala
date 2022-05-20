@@ -2,9 +2,8 @@ package com.horizen.fixtures
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
-
 import com.horizen.SidechainTypes
-import com.horizen.companion.{SidechainSecretsCompanion, SidechainTransactionsCompanion}
+import com.horizen.companion.{SidechainAccountTransactionsCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
 import com.horizen.secret.SecretSerializer
 import com.horizen.transaction.{RegularTransactionSerializer, TransactionSerializer}
 
@@ -17,8 +16,19 @@ trait CompanionsFixture
     }})
   }
 
+  def getDefaultAccountTransactionsCompanion: SidechainAccountTransactionsCompanion = {
+
+    SidechainAccountTransactionsCompanion(new JHashMap[JByte, TransactionSerializer[SidechainTypes#SCAT]](){{
+      put(111.byteValue(), RegularTransactionSerializer.getSerializer.asInstanceOf[TransactionSerializer[SidechainTypes#SCAT]])
+    }})
+  }
+
   def getTransactionsCompanionWithCustomTransactions(customSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]]): SidechainTransactionsCompanion = {
     SidechainTransactionsCompanion(customSerializers)
+  }
+
+  def getAccountTransactionsCompanionWithCustomTransactions(customSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCAT]]): SidechainAccountTransactionsCompanion = {
+    SidechainAccountTransactionsCompanion(customSerializers)
   }
 
   def getDefaultSecretCompanion: SidechainSecretsCompanion = {

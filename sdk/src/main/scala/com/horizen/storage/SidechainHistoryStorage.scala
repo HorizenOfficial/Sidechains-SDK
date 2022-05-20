@@ -1,9 +1,11 @@
 package com.horizen.storage
 
+import com.horizen.account.block.{AccountBlock, SidechainAccountBlockSerializer}
+
 import java.util.{ArrayList => JArrayList, List => JList}
 import com.horizen.block.{SidechainBlockSerializer, _}
 import com.horizen.chain.{FeePaymentsInfo, MainchainBlockReferenceDataInfo, _}
-import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.companion.{SidechainAccountTransactionsCompanion, SidechainTransactionsCompanion}
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.NetworkParams
 import com.horizen.utils._
@@ -22,7 +24,11 @@ trait SidechainBlockInfoProvider {
   def blockInfoById(blockId: ModifierId): SidechainBlockInfo
 }
 
-class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: SidechainTransactionsCompanion, params: NetworkParams)
+class SidechainHistoryStorage(
+                               storage: Storage,
+                               sidechainTransactionsCompanion: SidechainTransactionsCompanion,
+                               sidechainAccountTransactionsCompanion: SidechainAccountTransactionsCompanion,
+                               params: NetworkParams)
   extends SidechainBlockInfoProvider
   with ScorexLogging {
   // Version - RandomBytes(32)
@@ -32,6 +38,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
   require(params != null, "params must be NOT NULL.")
 
   private val sidechainBlockSerializer = new SidechainBlockSerializer(sidechainTransactionsCompanion)
+  private val sidechainAccountBlockSerializer = new SidechainAccountBlockSerializer(sidechainAccountTransactionsCompanion)
   private val bestBlockIdKey: ByteArrayWrapper = new ByteArrayWrapper(Array.fill(32)(-1: Byte))
 
   private val activeChain: ActiveChain = loadActiveChain()
@@ -83,6 +90,11 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     blockById(bestBlockId).get
   }
 
+  def accountBestBlock: AccountBlock = {
+    require(height > 0, "SidechainHistoryStorage is empty. Cannot retrieve best block.")
+    accountBlockById(bestBlockId).get
+  }
+
   def bestBlockInfo: SidechainBlockInfo = {
     require(height > 0, "SidechainHistoryStorage is empty. Cannot retrieve best block.")
     blockInfoById(bestBlockId)
@@ -94,6 +106,25 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     baw match {
       case Some(value) => {
         sidechainBlockSerializer.parseBytesTry(value) match {
+          case Success(block) => Option(block)
+          case Failure(exception) =>
+            log.error("Error while sidechain block parsing.", exception)
+            Option.empty
+        }
+      }
+      case None => {
+        log.info("SidechainHistoryStorage:blockById: byte array is empty")
+        None
+      }
+    }
+  }
+
+  def accountBlockById(blockId: ModifierId): Option[AccountBlock] = {
+    val blockIdBytes = new ByteArrayWrapper(idToBytes(blockId))
+    val baw = storage.get(blockIdBytes).asScala
+    baw match {
+      case Some(value) => {
+        sidechainAccountBlockSerializer.parseBytesTry(value) match {
           case Success(block) => Option(block)
           case Failure(exception) =>
             log.error("Error while sidechain block parsing.", exception)

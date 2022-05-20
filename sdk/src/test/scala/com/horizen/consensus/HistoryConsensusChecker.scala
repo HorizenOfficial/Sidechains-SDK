@@ -3,7 +3,7 @@ package com.horizen.consensus
 import java.util.Random
 import com.horizen.SidechainHistory
 import com.horizen.block.SidechainBlock
-import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.companion.{SidechainAccountTransactionsCompanion, SidechainTransactionsCompanion}
 import com.horizen.fixtures.CompanionsFixture
 import com.horizen.fixtures.sidechainblock.generation.{FinishedEpochInfo, GenerationRules, SidechainBlocksGenerator}
 import com.horizen.params.NetworkParams
@@ -19,9 +19,10 @@ import scala.util.{Failure, Success}
 
 trait HistoryConsensusChecker extends CompanionsFixture with TimeProviderFixture {
   def createHistory(params: NetworkParams, genesisBlock: SidechainBlock, finishedEpochInfo: FinishedEpochInfo): SidechainHistory = {
-    val companion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
+    val boxCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
+    val accountCompanion: SidechainAccountTransactionsCompanion = getDefaultAccountTransactionsCompanion
 
-    val sidechainHistoryStorage: SidechainHistoryStorage = new SidechainHistoryStorage(new InMemoryStorageAdapter(), companion, params)
+    val sidechainHistoryStorage: SidechainHistoryStorage = new SidechainHistoryStorage(new InMemoryStorageAdapter(), boxCompanion, accountCompanion, params)
     SidechainHistory
       .createGenesisHistory(
         sidechainHistoryStorage,

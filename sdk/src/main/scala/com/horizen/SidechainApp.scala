@@ -54,6 +54,7 @@ class SidechainApp @Inject()
    @Named("CustomBoxSerializers") val customBoxSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]],
    @Named("CustomSecretSerializers") val customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
    @Named("CustomTransactionSerializers") val customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]],
+   @Named("CustomTransactionSerializers") val customAccountTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCAT]],
    @Named("ApplicationWallet") val applicationWallet: ApplicationWallet,
    @Named("ApplicationState") val applicationState: ApplicationState,
    @Named("SecretStorage") val secretStorage: Storage,
@@ -97,6 +98,7 @@ class SidechainApp @Inject()
   )
 
   protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
+  protected val sidechainAccountTransactionsCompanion: SidechainAccountTransactionsCompanion = SidechainAccountTransactionsCompanion(customAccountTransactionSerializers)
   protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers)
   protected val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
 
@@ -236,9 +238,9 @@ class SidechainApp @Inject()
   protected val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(registerStorage(forgerBoxStorage))
   protected val sidechainStateUtxoMerkleTreeStorage = new SidechainStateUtxoMerkleTreeStorage(registerStorage(utxoMerkleTreeStorage))
   protected val sidechainHistoryStorage = new SidechainHistoryStorage(
-    //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/history")),
     registerStorage(historyStorage),
-    sidechainTransactionsCompanion, params)
+    sidechainTransactionsCompanion,
+    sidechainAccountTransactionsCompanion, params)
   protected val consensusDataStorage = new ConsensusDataStorage(
     //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/consensusData")),
     registerStorage(consensusStorage))

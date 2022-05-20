@@ -31,6 +31,8 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
   val mockedStorage: Storage = mock[VersionedLevelDbStorageAdapter]
   val customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]] = new JHashMap()
   val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
+  val sidechainAccountTransactionsCompanion = getDefaultAccountTransactionsCompanion
+
   var params: NetworkParams = _
 
   val height = 10
@@ -225,7 +227,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
 
   @Test
   def testGet(): Unit = {
-    val historyStorage = new SidechainHistoryStorage(mockedStorage, sidechainTransactionsCompanion, params)
+    val historyStorage = new SidechainHistoryStorage(mockedStorage, sidechainTransactionsCompanion, sidechainAccountTransactionsCompanion, params)
 
     // Test 0: check mainchain headers, references and data
     (0 until height).foreach{ index => checkMainchainContent(historyStorage, activeChainBlockList, index) }
@@ -371,7 +373,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
 
   @Test
   def testUpdates(): Unit = {
-    val historyStorage = new SidechainHistoryStorage(mockedStorage, sidechainTransactionsCompanion, params)
+    val historyStorage = new SidechainHistoryStorage(mockedStorage, sidechainTransactionsCompanion, sidechainAccountTransactionsCompanion, params)
     var tryRes: Try[SidechainHistoryStorage] = null
     val expectedException = new IllegalArgumentException("on update exception")
 
@@ -429,7 +431,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
 
   @Test
   def testUpdateSemanticValidity(): Unit = {
-    val historyStorage = new SidechainHistoryStorage(mockedStorage, sidechainTransactionsCompanion, params)
+    val historyStorage = new SidechainHistoryStorage(mockedStorage, sidechainTransactionsCompanion, sidechainAccountTransactionsCompanion, params)
     var tryRes: Try[SidechainHistoryStorage] = null
     val expectedException = new IllegalArgumentException("on update semantic validity exception")
 
@@ -514,7 +516,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
 
   @Test
   def testUpdateBestBlock(): Unit = {
-    val historyStorage = new SidechainHistoryStorage(mockedStorage, sidechainTransactionsCompanion, params)
+    val historyStorage = new SidechainHistoryStorage(mockedStorage, sidechainTransactionsCompanion, sidechainAccountTransactionsCompanion, params)
     var tryRes: Try[SidechainHistoryStorage] = null
     val expectedException = new IllegalArgumentException("on update best block exception")
 
@@ -569,7 +571,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
     var exceptionThrown = false
 
     try {
-      val stateStorage = new SidechainHistoryStorage(null, sidechainTransactionsCompanion, params)
+      val stateStorage = new SidechainHistoryStorage(null, sidechainTransactionsCompanion, sidechainAccountTransactionsCompanion, params)
     } catch {
       case e : IllegalArgumentException => exceptionThrown = true
       case e : Throwable => System.out.print(e.getMessage)
@@ -580,7 +582,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
 
     exceptionThrown = false
     try {
-      val stateStorage = new SidechainHistoryStorage(mockedStorage, null, params)
+      val histStorage = new SidechainHistoryStorage(mockedStorage, null, null, params)
     } catch {
       case e : IllegalArgumentException => exceptionThrown = true
     }
@@ -590,7 +592,7 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
 
     exceptionThrown = false
     try {
-      val stateStorage = new SidechainHistoryStorage(mockedStorage, sidechainTransactionsCompanion, null)
+      val histStorage = new SidechainHistoryStorage(mockedStorage, sidechainTransactionsCompanion, sidechainAccountTransactionsCompanion, null)
     } catch {
       case e : IllegalArgumentException => exceptionThrown = true
     }
