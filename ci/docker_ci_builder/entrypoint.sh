@@ -33,7 +33,7 @@ apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y "$CONTAINER_JAVA_VER" maven software-properties-common
 add-apt-repository -y ppa:ethereum/ethereum
 apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y solc
+DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y gcc libc6-dev solc
 apt-get -y clean
 apt-get -y autoclean
 rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb
