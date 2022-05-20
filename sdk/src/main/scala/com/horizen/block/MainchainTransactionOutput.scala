@@ -1,6 +1,6 @@
 package com.horizen.block
 
-import com.horizen.utils.{BytesUtils, VarInt}
+import com.horizen.utils.{BytesUtils, CompactSize}
 
 case class MainchainTransactionOutput(outputBytes: Array[Byte], value: Long, script: Array[Byte]) {
   def size: Int = outputBytes.length
@@ -14,7 +14,7 @@ object MainchainTransactionOutput {
     val value: Long = BytesUtils.getReversedLong(outputBytes, currentOffset)
     currentOffset += 8
 
-    val scriptLength: VarInt = BytesUtils.getVarInt(outputBytes, currentOffset)
+    val scriptLength: CompactSize = BytesUtils.getCompactSize(outputBytes, currentOffset)
     currentOffset += scriptLength.size()
 
     val script: Array[Byte] = outputBytes.slice(currentOffset, currentOffset + scriptLength.value().intValue())

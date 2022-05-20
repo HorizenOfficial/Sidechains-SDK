@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.librustsidechains.FieldElement
 import com.horizen.serialization.ReverseBytesSerializer
-import com.horizen.utils.{BytesUtils, Utils, VarInt}
+import com.horizen.utils.{BytesUtils, Utils, CompactSize}
 
 import scala.util.Try
 
@@ -38,7 +38,7 @@ object MainchainTxCswCrosschainInput {
     val sidechainId: Array[Byte] = cswInputBytes.slice(currentOffset, currentOffset + 32)
     currentOffset += 32
 
-    val nullifierSize: VarInt = BytesUtils.getReversedVarInt(cswInputBytes, currentOffset)
+    val nullifierSize: CompactSize = BytesUtils.getCompactSize(cswInputBytes, currentOffset)
     currentOffset += nullifierSize.size()
     if(nullifierSize.value() != FieldElementUtils.fieldElementLength())
       throw new IllegalArgumentException(s"Input data corrupted: nullifier size ${nullifierSize.value()} " +
@@ -49,13 +49,13 @@ object MainchainTxCswCrosschainInput {
     val mcPubKeyHash: Array[Byte] = cswInputBytes.slice(currentOffset, currentOffset + 20)
     currentOffset += 20
 
-    val scProofSize: VarInt = BytesUtils.getReversedVarInt(cswInputBytes, currentOffset)
+    val scProofSize: CompactSize = BytesUtils.getCompactSize(cswInputBytes, currentOffset)
     currentOffset += scProofSize.size()
 
     val scProof: Array[Byte] = cswInputBytes.slice(currentOffset, currentOffset + scProofSize.value().intValue())
     currentOffset += scProofSize.value().intValue()
 
-    val actCertDataHashSize: VarInt = BytesUtils.getReversedVarInt(cswInputBytes, currentOffset)
+    val actCertDataHashSize: CompactSize = BytesUtils.getCompactSize(cswInputBytes, currentOffset)
     currentOffset += actCertDataHashSize.size()
 
     // Note: There are two valid cases for actCertDataHash: to be null or to have a FE size
@@ -73,7 +73,7 @@ object MainchainTxCswCrosschainInput {
       Some(actCertDataHash)
     }
 
-    val ceasingCumulativeScTxCommitmentTreeRootSize: VarInt = BytesUtils.getReversedVarInt(cswInputBytes, currentOffset)
+    val ceasingCumulativeScTxCommitmentTreeRootSize: CompactSize = BytesUtils.getCompactSize(cswInputBytes, currentOffset)
     currentOffset += ceasingCumulativeScTxCommitmentTreeRootSize.size()
 
     if(ceasingCumulativeScTxCommitmentTreeRootSize.value() != FieldElementUtils.fieldElementLength())
@@ -82,7 +82,7 @@ object MainchainTxCswCrosschainInput {
     val ceasingCumulativeScTxCommitmentTreeRoot: Array[Byte] = cswInputBytes.slice(currentOffset, currentOffset + ceasingCumulativeScTxCommitmentTreeRootSize.value().intValue())
     currentOffset += ceasingCumulativeScTxCommitmentTreeRootSize.value().intValue()
 
-    val scriptLength: VarInt = BytesUtils.getReversedVarInt(cswInputBytes, currentOffset)
+    val scriptLength: CompactSize = BytesUtils.getCompactSize(cswInputBytes, currentOffset)
     currentOffset += scriptLength.size()
 
     val redeemScript: Array[Byte] = cswInputBytes.slice(currentOffset, currentOffset + scriptLength.value().intValue())

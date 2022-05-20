@@ -42,6 +42,18 @@ class McTxsData(SidechainTestFramework):
         mc_node.generate(200)
 
 
+        # Generate Tx with version -4 with many regular outputs (301) for the CompactSize deserialization check
+        outputs = {}
+        for i in range(0, 300):
+            mc_address = mc_node.getnewaddress()
+            outputs[mc_address] = 1
+        tx_id = mc_node.sendmany("", outputs)
+        tx_hex = mc_node.getrawtransaction(tx_id)
+
+        print("MC Transaction with version -4 with many regular outputs(301): \nHash = {0}\nSize = {1}\nHex = {2}\n"
+              .format(str(tx_id), len(tx_hex)/2, str(tx_hex)))
+
+
         # Generate Tx with version -4 with no SC related outputs
         mc_address = mc_node.getnewaddress()
         tx_id = mc_node.sendtoaddress(mc_address, 10)
