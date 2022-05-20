@@ -1,5 +1,6 @@
 package com.horizen.validation
 
+import com.horizen.account.history.AccountHistory
 import com.horizen.{AbstractHistory, SidechainHistory, SidechainTypes}
 import com.horizen.block.{SidechainBlock, SidechainBlockBase}
 import scorex.core.consensus.{History, SyncInfo}
@@ -14,4 +15,10 @@ trait HistoryBlockValidatorBase[TX <: Transaction, PM <: SidechainBlockBase[TX],
 trait HistoryBlockValidator
 {
   def validate(block: SidechainBlockBase[SidechainTypes#SCBT], history: SidechainHistory): Try[Unit]
+}
+
+
+trait HistoryAccountBlockValidator
+{
+  def validate(block: SidechainBlockBase[SidechainTypes#SCAT], history: AccountHistory): Try[Unit]
 }

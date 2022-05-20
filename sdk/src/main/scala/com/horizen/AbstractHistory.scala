@@ -3,7 +3,7 @@ package com.horizen
 import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlock, SidechainBlockBase}
 import com.horizen.chain.{FeePaymentsInfo, MainchainBlockReferenceDataInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
 import com.horizen.consensus.{ConsensusDataProvider, ConsensusDataStorage}
-import com.horizen.node.NodeHistory
+import com.horizen.node.{NodeHistory, NodeHistoryBase}
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.storage.leveldb.Algos.encoder
@@ -30,7 +30,7 @@ abstract class AbstractHistory[TX <: Transaction, PM <: SidechainBlockBase[TX], 
   ) extends scorex.core.consensus.History[PM, SidechainSyncInfo, HT]
   with NetworkParamsUtils
   with ConsensusDataProvider
-  with NodeHistory
+  with NodeHistoryBase
   with ScorexLogging
 {
 
@@ -48,9 +48,6 @@ abstract class AbstractHistory[TX <: Transaction, PM <: SidechainBlockBase[TX], 
     else
       Success(Unit)
   }
-
-// TODO
-  //  override def modifierById(blockId: ModifierId): Option[PM] = storage.blockById(blockId)
 
   def blockIdByHeight(height: Int): Option[String] = {
     storage.activeChainBlockId(height)
@@ -204,13 +201,6 @@ abstract class AbstractHistory[TX <: Transaction, PM <: SidechainBlockBase[TX], 
     storage.blockInfoOptionById(ModifierId(blockId)).map(info => Integer.valueOf(info.height)).asJava
   }
 
-  /*
-  def updateFeePaymentsInfo(blockId: ModifierId, feePaymentsInfo: FeePaymentsInfo): SidechainHistory = {
-    val newStorage = storage.updateFeePaymentsInfo(blockId, feePaymentsInfo).get
-    new SidechainHistory(newStorage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
-  }
-  */
-
   def feePaymentsInfo(blockId: ModifierId): Option[FeePaymentsInfo] = {
     storage.getFeePaymentsInfo(blockId)
   }
@@ -258,6 +248,7 @@ abstract class AbstractHistory[TX <: Transaction, PM <: SidechainBlockBase[TX], 
   def getMainchainBlockReferenceDataInfoByHeight(height: Int): Option[MainchainBlockReferenceDataInfo] = storage.getMainchainBlockReferenceDataInfoByHeight(height)
 
   def getMainchainBlockReferenceDataInfoByHash(mainchainHeaderHash: Array[Byte]): Option[MainchainBlockReferenceDataInfo] = storage.getMainchainBlockReferenceDataInfoByHash(mainchainHeaderHash)
+
   // Create MC Locator sequence from most recent Mainchain Header to MC Creation Block
   // Locator in Bitcoin style
   def getMainchainHashesLocator: Seq[MainchainHeaderHash] = {
@@ -334,7 +325,7 @@ abstract class AbstractHistory[TX <: Transaction, PM <: SidechainBlockBase[TX], 
 
   // Find common suffixes for two chains - starting from forkBlock and from bestBlock.
   // Returns last common block and then variant blocks for two chains.
-  private def commonBlockSuffixes(forkBlock: PM): (Seq[ModifierId], Seq[ModifierId]) = {
+  protected def commonBlockSuffixes(forkBlock: PM): (Seq[ModifierId], Seq[ModifierId]) = {
     chainBack(forkBlock.id, storage.isInActiveChain, Int.MaxValue) match {
       case Some(newBestChain) =>
         val commonBlockHeight = storage.blockInfoById(newBestChain.head).height
@@ -351,31 +342,7 @@ abstract class AbstractHistory[TX <: Transaction, PM <: SidechainBlockBase[TX], 
     (res._1.isEmpty && res._2.isEmpty) || res._1.head == res._2.head
   }
 
-  def bestForkChanges(block: PM): Try[ProgressInfo[PM]] = Try {
-    val (newChainSuffix, currentChainSuffix) = commonBlockSuffixes(modifierById(block.parentId).get)
-    if(newChainSuffix.isEmpty && currentChainSuffix.isEmpty)
-      throw new IllegalArgumentException("Cannot retrieve fork changes. Fork length is more than params.maxHistoryRewritingLength")
-
-    val newChainSuffixValidity: Boolean = !newChainSuffix.tail.map(isSemanticallyValid)
-      .contains(ModifierSemanticValidity.Invalid)
-
-    if(newChainSuffixValidity) {
-      val rollbackPoint = newChainSuffix.headOption
-      val toRemove = currentChainSuffix.tail.map(id => storage.blockById(id).get)
-      val toApply = newChainSuffix.tail.map(id => storage.blockById(id).get) ++ Seq(block)
-
-      require(toRemove.nonEmpty)
-      require(toApply.nonEmpty)
-
-      // TODO
-      //ProgressInfo[PM](rollbackPoint, toRemove, toApply, Seq())
-      ProgressInfo[PM](None, Seq(), Seq(), Seq())
-
-    } else {
-      //log.info(s"Orphaned block $block from invalid suffix")
-      ProgressInfo[PM](None, Seq(), Seq(), Seq())
-    }
-  }
+  def bestForkChanges(block: PM): Try[ProgressInfo[PM]]
 
   def isBestBlock(block: PM, parentBlockInfo: SidechainBlockInfo): Boolean = {
     val currentScore = storage.chainScoreFor(bestBlockId).get
@@ -433,7 +400,10 @@ abstract class AbstractHistory[TX <: Transaction, PM <: SidechainBlockBase[TX], 
     )
   }
 
-    override def append(block: PM): Try[(HT, ProgressInfo[PM])] = {
+  // TODO WORK IN PROGRESS
+  override def append(block: PM): Try[(HT, ProgressInfo[PM])] = {
+
+
     for(validator <- semanticBlockValidators)
       validator.validate(block).get
 
