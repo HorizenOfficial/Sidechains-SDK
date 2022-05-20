@@ -33,6 +33,7 @@ case class SidechainBlockInfo(height: Int,
 }
 
 object SidechainBlockInfo {
+  // clone these methods
   def mainchainHeaderHashesFromBlock(sidechainBlock: SidechainBlock): Seq[MainchainHeaderHash] = {
     sidechainBlock.mainchainHeaders.map(header => byteArrayToMainchainHeaderHash(header.hash))
   }

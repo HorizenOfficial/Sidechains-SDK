@@ -26,10 +26,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
                                 val params: NetworkParams,
                                 semanticBlockValidators: Seq[SemanticBlockValidator],
                                 historyBlockValidators: Seq[HistoryBlockValidator])
-  extends scorex.core.consensus.History[
-      SidechainBlock,
-      SidechainSyncInfo,
-      SidechainHistory]
+  extends com.horizen.AbstractHistory[SidechainTypes#SCBT, SidechainBlock, SidechainHistory]
   with NetworkParamsUtils
   with ConsensusDataProvider
   with scorex.core.utils.ScorexEncoding
