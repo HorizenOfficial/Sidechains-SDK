@@ -81,6 +81,11 @@ class CertificateSubmitter(settings: SidechainSettings,
     super.aroundPostStop()
   }
 
+  override def postStop(): Unit = {
+    log.debug("Certificate Submitter actor is stopping...")
+    super.postStop()
+  }
+
   override def receive: Receive = reportStrangeInput
 
   private def reportStrangeInput: Receive = {

@@ -1,4 +1,3 @@
-import binascii
 import os
 import sys
 
@@ -521,17 +520,19 @@ def check_sc_node(i):
     return sidechainclient_processes[i].returncode
 
 
-def stop_sc_node(i):
-    # Must be changed with a sort of .stop() API Call
-    sidechainclient_processes[i].kill()
-    del sidechainclient_processes[i]
+def stop_sc_node(node, i):
+    node.node_stop()
+    if i in sidechainclient_processes:
+        sc_proc = sidechainclient_processes[i]
+        sc_proc.wait()
+        del sidechainclient_processes[i]
 
 
 def stop_sc_nodes(nodes):
-    # Must be changed with a sort of .stop() API call
     global sidechainclient_processes
-    for sc in sidechainclient_processes.values():
-        sc.kill()
+    for idx in range(0, len(nodes)):
+        if idx in sidechainclient_processes:
+            stop_sc_node(nodes[idx], idx)
     del nodes[:]
 
 

@@ -146,7 +146,7 @@ class DBToolTest(SidechainTestFramework):
 
         assert_equal(self.sc_nodes[0].block_best()["result"], self.sc_nodes[1].block_best()["result"])
         print("Stopping SC2")
-        stop_sc_node(1)
+        stop_sc_node(self.sc_nodes[1], 1)
         time.sleep(1)
 
         # Check that all storages versioned with blockid are consistent with chainTip in SC node 2
@@ -164,7 +164,7 @@ class DBToolTest(SidechainTestFramework):
         self.sync_all()
 
         print("Stopping SC2")
-        stop_sc_node(1)
+        stop_sc_node(sc_node2, 1)
 
         genesis_sc_block_id = str(sc_node1.block_best()["result"]["block"]["id"])
 
@@ -191,7 +191,7 @@ class DBToolTest(SidechainTestFramework):
 
         assert_equal(sc_node1.block_best()["result"], sc_node2.block_best()["result"])
         print("Stopping SC2")
-        stop_sc_node(1)
+        stop_sc_node(sc_node2, 1)
 
         print("Test 10 ######")
         storages_list = ["history"]
@@ -296,7 +296,7 @@ class DBToolTest(SidechainTestFramework):
         self.sc_sync_all()
 
         assert_equal(sc_node1.block_best()["result"], sc_node2.block_best()["result"])
-        stop_sc_node(1)
+        stop_sc_node(sc_node2, 1)
 
         print("Test end consensus epoch ######")
         # -----------------------------------------------------------------------------------------
@@ -346,8 +346,8 @@ class DBToolTest(SidechainTestFramework):
         except Exception as e:
             print("Expected exception caught during negative testing: " + str(e))
             print("Stopping SC2")
-            stop_sc_node(1)
+            stop_sc_node(sc_node2, 1)
 
- 
+
 if __name__ == "__main__":
     DBToolTest().main()

@@ -67,6 +67,11 @@ class Forger(settings: SidechainSettings,
     context.system.eventStream.subscribe(self, SidechainAppEvents.SidechainApplicationStart.getClass)
   }
 
+  override def postStop(): Unit = {
+    log.debug("Forger actor is stopping...")
+    super.postStop()
+  }
+
   override def receive: Receive = {
     checkForger orElse
     processStartForgingMessage orElse
