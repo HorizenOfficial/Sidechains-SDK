@@ -84,13 +84,14 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
                   storage.update(block, blockInfo),
                   progInfo
                 )
-              case Failure(e) =>
-                //log.error("New best block found, but it can not be applied: %s".format(e.getMessage))
+              case Failure(e) => {
+                log.error("New best block found, but it can not be applied: %s".format(e.getMessage), e)
                 (
                   storage.update(block, blockInfo),
                   // TO DO: we should somehow prevent growing of such chain (penalize the peer?)
                   ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq())
                 )
+              }
 
             }
           } else {
@@ -105,6 +106,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     }
     new SidechainHistory(newStorage.get, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators) -> progressInfo
   }
+
 
   def isBestBlock(block: SidechainBlock, parentBlockInfo: SidechainBlockInfo): Boolean = {
     val currentScore = storage.chainScoreFor(bestBlockId).get
@@ -164,8 +166,12 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       val toRemove = currentChainSuffix.tail.map(id => storage.blockById(id).get)
       val toApply = newChainSuffix.tail.map(id => storage.blockById(id).get) ++ Seq(block)
 
-      require(toRemove.nonEmpty)
       require(toApply.nonEmpty)
+      if(toRemove.isEmpty) {
+        // usually it should not be empty, but there is the case when we are just applying a valid block whose id
+        // had been rollbacked from state, for instance after an ungraceful node shutdown during storage update 
+        log.warn(s"No blocks to remove from current chain, we are just applying: ${toApply.map(b => b.id).mkString(", ")}")
+      }
 
       ProgressInfo[SidechainBlock](rollbackPoint, toRemove, toApply, Seq())
     } else {
@@ -196,7 +202,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
   // Go back though chain and get block ids until condition 'until' or reaching the limit
   // None if parent block is not in chain
   // Note: work faster for active chain back (looks inside memory) and slower for fork chain (looks inside disk)
-  private def chainBack(blockId: ModifierId,
+  def chainBack(blockId: ModifierId,
                         until: ModifierId => Boolean,
                         limit: Int): Option[Seq[ModifierId]] = { // to do
     var acc: Seq[ModifierId] = Seq(blockId)
@@ -247,10 +253,14 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
   override def contains(id: ModifierId): Boolean = storage.blockInfoOptionById(id).isDefined
 
   override def applicableTry(block: SidechainBlock): Try[Unit] = {
-    if (!contains(block.parentId))
-      Failure(new RecoverableModifierError("Parent block is not in history yet"))
-    else
+    if (!contains(block.parentId)) {
+      log.debug("Parent block "  + block.parentId + " IS NOT in history yet")
+      Failure(new RecoverableModifierError("Parent block IS NOT in history yet"))
+    }
+    else {
+      log.debug("Parent " + block.parentId + " IS in history")
       Success(Unit)
+    }
   }
 
   override def modifierById(blockId: ModifierId): Option[SidechainBlock] = storage.blockById(blockId)

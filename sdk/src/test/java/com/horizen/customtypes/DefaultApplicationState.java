@@ -9,6 +9,7 @@ import com.horizen.transaction.BoxTransaction;
 import scala.util.Success;
 import scala.util.Try;
 
+import java.util.Collections;
 import java.util.List;
 
 public class DefaultApplicationState implements ApplicationState {
@@ -31,4 +32,7 @@ public class DefaultApplicationState implements ApplicationState {
     public Try<ApplicationState> onRollback(byte[] blockId) {
         return new Success<>(this);
     }
+
+    @Override
+    public boolean checkStoragesVersion(byte[] blockId) { return true; }
 }

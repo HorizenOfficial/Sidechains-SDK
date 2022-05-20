@@ -20,6 +20,11 @@ class SidechainTransactionActor[T <: SidechainTypes#SCBT](sidechainNodeViewHolde
     context.system.eventStream.subscribe(self, classOf[FailedTransaction])
   }
 
+  override def postStop(): Unit = {
+    log.debug("SidechainTransaction actor is stopping...")
+    super.postStop()
+  }
+
   protected def broadcastTransaction: Receive = {
     case BroadcastTransaction(transaction) =>
       val promise = Promise[ModifierId]

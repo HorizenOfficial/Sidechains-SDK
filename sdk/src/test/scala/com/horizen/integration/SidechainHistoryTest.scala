@@ -387,12 +387,20 @@ class SidechainHistoryTest extends JUnitSuite
 
     // Test 4: fork changes for block after last one
     // wrong situation
-    val blockH11 = generateNextSidechainBlock(blockSeq.last, sidechainTransactionsCompanion, params, basicSeed = 5545454L)
-    history.bestForkChanges(blockH11) match {
-      case Success(progressInfo) =>
-        assertTrue("Exception expected during bestForkChanges calculation", false)
-      case Failure(_) =>
-    }
+    /*
+     * There is the case when we are just applying a valid block whose id
+     * had been rollbacked from state, for instance after an ungraceful node shutdown while updating the storage
+     * In that case the recovery procedure at node startup hits this situation and we have a valid progressInfo with no blocks to remove
+     */
+      val blockH11 = generateNextSidechainBlock(blockSeq.last, sidechainTransactionsCompanion, params, basicSeed = 5545454L)
+      history.bestForkChanges(blockH11) match {
+        case Success(progressInfo) =>
+          assertTrue("No blocks to remove expected after bestForkChanges calculation", progressInfo.toRemove.isEmpty)
+          assertTrue("Some blocks to be applied expected after bestForkChanges calculation", progressInfo.toApply.nonEmpty)
+        case Failure(_) =>
+          assertTrue("Exception not expected during bestForkChanges calculation", false)
+      }
+
 
 
     // Test 5: fork changes for block, which parent doesn't exist

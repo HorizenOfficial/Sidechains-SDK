@@ -2,7 +2,7 @@ package com.horizen.fixtures
 
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.block.MainchainHeader
-import com.horizen.utils.{BytesUtils, VarInt}
+import com.horizen.utils.{BytesUtils, CompactSize}
 
 // Just for PoW verification testing
 case class MainchainHeaderForPoWTest(override val bits: Int, precalculatedHash: Array[Byte], override val hashPrevBlock: Array[Byte] = null, override val time: Int = 0
@@ -23,7 +23,7 @@ trait MainchainHeaderFixture {
       BytesUtils.reverseBytes(Ints.toByteArray(obj.time)),
       BytesUtils.reverseBytes(Ints.toByteArray(obj.bits)),
       BytesUtils.reverseBytes(obj.nonce),
-      BytesUtils.fromVarInt(new VarInt(obj.solution.length, VarInt.getVarIntSize(obj.solution.length))),
+      BytesUtils.toCompactSizeBytes(new CompactSize(obj.solution.length, CompactSize.getSize(obj.solution.length))),
       obj.solution
     )
   }
@@ -91,7 +91,7 @@ trait MainchainHeaderFixture {
     res
   }
 
-  // Note: newSolution is just a solution bytes without VarIntLength bytes
+  // Note: newSolution is just a solution bytes without CompactSize length bytes
   def changeSolution(headerBytes: Array[Byte], newSolution: Array[Byte], isHeaderWithSCMap: Boolean = false): Array[Byte] = {
     var toPos = 140
     if(isHeaderWithSCMap)
@@ -103,7 +103,7 @@ trait MainchainHeaderFixture {
 
     Bytes.concat(
       headerWithoutEquihashSolution,
-      BytesUtils.fromVarInt(new VarInt(VarInt.getVarIntSize(lengthLE), lengthLE)), // reversed VarInt for newSolution
+      BytesUtils.toCompactSizeBytes(new CompactSize(CompactSize.getSize(lengthLE), lengthLE)), // CompactSize form for newSolution
       newSolution
     )
   }

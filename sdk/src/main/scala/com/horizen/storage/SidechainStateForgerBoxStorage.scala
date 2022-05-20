@@ -15,7 +15,8 @@ import scala.util.{Failure, Success, Try}
 
 class SidechainStateForgerBoxStorage(storage: Storage)
     extends ScorexLogging
-    with SidechainTypes
+      with SidechainStorageInfo
+      with SidechainTypes
 {
   // Version - block Id
   // Key - byte array box Id
@@ -69,7 +70,7 @@ class SidechainStateForgerBoxStorage(storage: Storage)
     this
   }
 
-  def lastVersionId: Option[ByteArrayWrapper] = {
+  override def lastVersionId: Option[ByteArrayWrapper] = {
     storage.lastVersionID().asScala
   }
 

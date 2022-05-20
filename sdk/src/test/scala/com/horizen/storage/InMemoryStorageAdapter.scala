@@ -31,7 +31,11 @@ class InMemoryStorageAdapter(hashMap: mutable.HashMap[ByteArrayWrapper, ByteArra
 
   override def rollbackVersions(): util.List[ByteArrayWrapper] = ???
 
+  override def rollbackVersions(maxNumberOfItems: Int): util.List[ByteArrayWrapper] = ???
+
   override def isEmpty: Boolean = hashMap.isEmpty
+
+  override def numberOfVersions(): Int = ???
 
   override def close(): Unit = {}
 

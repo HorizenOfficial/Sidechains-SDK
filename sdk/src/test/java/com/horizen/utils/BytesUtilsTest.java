@@ -1,6 +1,9 @@
 package com.horizen.utils;
 
+import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
+import com.google.common.primitives.Shorts;
 import com.horizen.params.MainNetParams;
 import com.horizen.params.NetworkParams;
 import com.horizen.params.TestNetParams;
@@ -157,89 +160,59 @@ public class BytesUtilsTest {
     }
 
     @Test
-    public void BytesUtilsTest_getVarInt() {
-        byte[] bytes = {4, (byte)253, 1, 2, (byte)254, 1, 0, 0, 2, (byte)255, 1, 0, 0, 0, 0, 1, 0, 1};
+    public void BytesUtilsTest_getCompactSize() {
+        // Test 1: Try to parse CompactSize with size 1 - single byte
+        for(long i = 0; i <= 252; i++) {
+            CompactSize vi = BytesUtils.getCompactSize(new byte[]{ (byte)i }, 0);
+            assertEquals("Value expected to have size 1", 1, vi.size());
+            assertEquals("Values expected to by equal", i, vi.value());
+        }
 
-        // Test 1: Try to parse VarInt with size 1 - single byte
-        VarInt vi = BytesUtils.getVarInt(bytes, 0);
-        assertEquals("Value expected to have size 1", 1, vi.size());
-        assertEquals("Values expected to by equal", 4L, vi.value());
+        // Test 2: Try to parse CompactSize with size 3 - short
+        byte[] shortPrefix = new byte[]{(byte)253};
+        for(long i = 253; i <= 65535; i = i<<1) {
+            byte[] bv = Bytes.concat(shortPrefix, BytesUtils.reverseBytes(Shorts.toByteArray((short)i)));
+            CompactSize vi = BytesUtils.getCompactSize(bv, 0);
+            assertEquals("Value expected to have size 3", 3, vi.size());
+            assertEquals("Values expected to by equal", i, vi.value());
+        }
 
-        // Test 2: Try to parse VarInt with size 3 - short
-        vi = BytesUtils.getVarInt(bytes, 1);
-        assertEquals("Value expected to have size 3", 3, vi.size());
-        assertEquals("Values expected to by equal", 258L, vi.value());
+        // Test 3: Try to parse CompactSize with size 5 - int
+        byte[] intPrefix = new byte[]{(byte)254};
+        for(long i = 65536; i <= CompactSize.MAX_SERIALIZED_COMPACT_SIZE ; i = i<<1) {
+            byte[] bv = Bytes.concat(intPrefix, BytesUtils.reverseBytes(Ints.toByteArray((int) i)));
+            CompactSize vi = BytesUtils.getCompactSize(bv, 0);
+            assertEquals("Value expected to have size 5", 5, vi.size());
+            assertEquals("Values expected to by equal", i, vi.value());
+        }
 
-        // Test 3: Try to parse VarInt with size 5 - int
-        vi = BytesUtils.getVarInt(bytes, 4);
-        assertEquals("Value expected to have size 5", 5, vi.size());
-        assertEquals("Values expected to by equal", 16777218L, vi.value());
+//        // Test 4: Try to parse CompactSize with size 9 - long
+//        // Note: java long is "signed", but bitcoin use "unsigned long" type.
+//        byte[] longPrefix = new byte[]{(byte)255};
+//        for(long i = 4294967296L; i > 0; i = i<<1) {
+//            byte[] bv = Bytes.concat(longPrefix,BytesUtils.reverseBytes(Longs.toByteArray(i)));
+//            CompactSize vi = BytesUtils.getCompactSize(bv, 0);
+//            assertEquals("Value expected to have size 9", 9, vi.size());
+//            assertEquals("Values expected to by equal", i, vi.value());
+//        }
 
-        // Test 4: Try to parse VarInt with size 9 - long
-        vi = BytesUtils.getVarInt(bytes, 9);
-        assertEquals("Value expected to have size 9", 9, vi.size());
-        assertEquals("Values expected to by equal", 72057594037993473L, vi.value());
-
-
+        byte[] bytes = { 42 };
         // Test 5: out of bound offset
         boolean exceptionOccurred = false;
         try {
-            BytesUtils.getVarInt(bytes, 20);
+            BytesUtils.getCompactSize(bytes, bytes.length);
         } catch (Exception e) {
             exceptionOccurred = true;
         }
-        assertEquals("Offset is out of bound exception expected", true, exceptionOccurred);
+        assertTrue("Offset is out of bound exception expected", exceptionOccurred);
 
         exceptionOccurred = false;
         try {
-            BytesUtils.getVarInt(bytes, -1);
+            BytesUtils.getCompactSize(bytes, -1);
         } catch (Exception e) {
             exceptionOccurred = true;
         }
-        assertEquals("Offset is out of bound exception expected", true, exceptionOccurred);
-    }
-
-    @Test
-    public void BytesUtilsTest_getReversedVarInt() {
-        byte[] bytes = {4, (byte)253, 1, 2, (byte)254, 1, 0, 0, 2, (byte)255, 1, 0, 0, 0, 0, 1, 0, 1};
-
-        // Test 1: Try to parse Reversed VarInt with size 1 - single byte
-        VarInt vi = BytesUtils.getReversedVarInt(bytes, 0);
-        assertEquals("Value expected to have size 1", 1, vi.size());
-        assertEquals("Values expected to by equal", 4L, vi.value());
-
-        // Test 2: Try to parse VarInt with size 3 - short
-        vi = BytesUtils.getReversedVarInt(bytes, 1);
-        assertEquals("Value expected to have size 3", 3, vi.size());
-        assertEquals("Values expected to by equal", 513L, vi.value());
-
-        // Test 3: Try to parse VarInt with size 5 - int
-        vi = BytesUtils.getReversedVarInt(bytes, 4);
-        assertEquals("Value expected to have size 5", 5, vi.size());
-        assertEquals("Values expected to by equal", 33554433L, vi.value());
-
-        // Test 4: Try to parse VarInt with size 9 - long
-        vi = BytesUtils.getReversedVarInt(bytes, 9);
-        assertEquals("Value expected to have size 9", 9, vi.size());
-        assertEquals("Values expected to by equal", 72058693549555713L, vi.value());
-
-
-        // Test 5: out of bound offset
-        boolean exceptionOccurred = false;
-        try {
-            BytesUtils.getReversedVarInt(bytes, 20);
-        } catch (Exception e) {
-            exceptionOccurred = true;
-        }
-        assertEquals("Offset is out of bound exception expected", true, exceptionOccurred);
-
-        exceptionOccurred = false;
-        try {
-            BytesUtils.getReversedVarInt(bytes, -1);
-        } catch (Exception e) {
-            exceptionOccurred = true;
-        }
-        assertEquals("Offset is out of bound exception expected", true, exceptionOccurred);
+        assertTrue("Offset is out of bound exception expected", exceptionOccurred);
     }
 
     @Test

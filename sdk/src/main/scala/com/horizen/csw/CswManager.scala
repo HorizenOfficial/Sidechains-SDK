@@ -51,6 +51,11 @@ class CswManager(settings: SidechainSettings,
     context.become(initialization)
   }
 
+  override def postStop(): Unit = {
+    log.debug("CSW Manager actor is stopping...")
+    super.postStop()
+  }
+
   override def receive: Receive = {
     reportStrangeInput
   }

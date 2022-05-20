@@ -1,21 +1,19 @@
 package com.horizen.storage
 
 import com.horizen.SidechainTypes
-import com.horizen.box.Box
 import com.horizen.cryptolibprovider.{CryptoLibProvider, InMemorySparseMerkleTreeWrapper}
 import com.horizen.librustsidechains.FieldElement
-import com.horizen.utils.{ByteArrayWrapper, UtxoMerkleTreeLeafInfo, UtxoMerkleTreeLeafInfoSerializer}
+import com.horizen.utils.{ByteArrayWrapper, UtxoMerkleTreeLeafInfo, UtxoMerkleTreeLeafInfoSerializer, Pair => JPair}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
 
-import scala.util.{Failure, Success, Try}
+import java.util.{List => JList}
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
-import java.util.{List => JList}
-import com.horizen.utils.{Pair => JPair}
+import scala.util.{Failure, Success, Try}
 
 class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
-  extends ScorexLogging with SidechainTypes {
+  extends ScorexLogging with SidechainStorageInfo with SidechainTypes {
 
   var merkleTreeWrapper: InMemorySparseMerkleTreeWrapper = loadMerkleTree()
 
@@ -122,12 +120,16 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
       Failure(exception)
   }
 
-  def lastVersionId: Option[ByteArrayWrapper] = {
+  override def lastVersionId: Option[ByteArrayWrapper] = {
     storage.lastVersionID().asScala
   }
 
-  def rollbackVersions: Seq[ByteArrayWrapper] = {
+  def rollbackVersions(): Seq[ByteArrayWrapper] = {
     storage.rollbackVersions().asScala.toList
+  }
+
+  def rollbackVersions(maxNumberOfVersions: Int): List[ByteArrayWrapper] = {
+    storage.rollbackVersions(maxNumberOfVersions).asScala.toList
   }
 
   def rollback(version: ByteArrayWrapper): Try[SidechainStateUtxoMerkleTreeStorage] = Try {
