@@ -1,12 +1,12 @@
 package com.horizen.account.wallet
 
-import com.horizen.account.block.SidechainAccountBlock
+import com.horizen.account.block.AccountBlock
 import com.horizen.{SidechainTypes, Wallet}
 import scorex.core.VersionTag
 
 import scala.util.Try
 
-class AccountWallet extends Wallet[SidechainTypes#SCS, SidechainTypes#SCP, SidechainTypes#SCAT, SidechainAccountBlock, AccountWallet] {
+class AccountWallet extends Wallet[SidechainTypes#SCS, SidechainTypes#SCP, SidechainTypes#SCAT, AccountBlock, AccountWallet] {
   override type NVCT = this.type
 
   override def addSecret(secret: SidechainTypes#SCS): Try[AccountWallet] = ???
@@ -23,7 +23,7 @@ class AccountWallet extends Wallet[SidechainTypes#SCS, SidechainTypes#SCP, Sidec
 
   override def scanOffchain(txs: Seq[SidechainTypes#SCAT]): AccountWallet = ???
 
-  override def scanPersistent(modifier: SidechainAccountBlock): AccountWallet = ???
+  override def scanPersistent(modifier: AccountBlock): AccountWallet = ???
 
   override def rollback(to: VersionTag): Try[AccountWallet] = ???
 }

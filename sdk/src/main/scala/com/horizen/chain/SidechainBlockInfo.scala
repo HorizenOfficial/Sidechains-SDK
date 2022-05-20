@@ -1,6 +1,6 @@
 package com.horizen.chain
 
-import com.horizen.account.block.SidechainAccountBlock
+import com.horizen.account.block.AccountBlock
 import com.horizen.block.{SidechainBlock, SidechainBlockBase}
 import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
 import com.horizen.vrf.{VrfOutput, VrfOutputSerializer}
@@ -49,7 +49,7 @@ object SidechainBlockInfo {
   def mainchainReferenceDataHeaderHashesFromBlock(sidechainBlock: SidechainBlock): Seq[MainchainHeaderHash] = {
     sidechainBlock.mainchainBlockReferencesData.map(data => byteArrayToMainchainHeaderHash(data.headerHash))
   }
-  def mainchainReferenceDataHeaderHashesFromBlock(sidechainBlock: SidechainAccountBlock): Seq[MainchainHeaderHash] = {
+  def mainchainReferenceDataHeaderHashesFromBlock(sidechainBlock: AccountBlock): Seq[MainchainHeaderHash] = {
     sidechainBlock.mainchainBlockReferencesData.map(data => byteArrayToMainchainHeaderHash(data.headerHash))
   }
 }

@@ -26,16 +26,16 @@ import scala.util.{Failure, Success, Try}
 
 @JsonView(Array(classOf[Views.Default]))
 @JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder", "companion", "feeInfo"))
-class SidechainAccountBlock(override val header: SidechainAccountBlockHeader,
-                      val sidechainTransactions: Seq[SidechainTypes#SCAT],
-                      val mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-                      override val mainchainHeaders: Seq[MainchainHeader],
-                      override val ommers: Seq[Ommer],
-                      companion: SidechainAccountTransactionsCompanion)
+class AccountBlock(override val header: AccountBlockHeader,
+                   val sidechainTransactions: Seq[SidechainTypes#SCAT],
+                   val mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
+                   override val mainchainHeaders: Seq[MainchainHeader],
+                   override val ommers: Seq[Ommer],
+                   companion: SidechainAccountTransactionsCompanion)
   extends SidechainBlockBase[SidechainTypes#SCAT]
 {
 
-  override type M = SidechainAccountBlock
+  override type M = AccountBlock
 
   override lazy val serializer = new SidechainAccountBlockSerializer(companion)
 
@@ -48,7 +48,7 @@ class SidechainAccountBlock(override val header: SidechainAccountBlockHeader,
   override val modifierTypeId: ModifierTypeId = SidechainBlockBase.ModifierTypeId
 
   override lazy val id: ModifierId = header.id
-  
+
   override def toString: String = s"SidechainAccountBlock(id = $id)"
 
   override lazy val transactions: Seq[SidechainTypes#SCAT] = ???
@@ -135,15 +135,15 @@ class SidechainAccountBlock(override val header: SidechainAccountBlockHeader,
   }
 
   override def versionIsValid(): Boolean =
-    version == SidechainAccountBlock.BLOCK_VERSION
+    version == AccountBlock.BLOCK_VERSION
 
   override def transactionsAreValid(): Try[Unit] = ???
 
 }
 
 
-object SidechainAccountBlock extends ScorexEncoding {
-  
+object AccountBlock extends ScorexEncoding {
+
   val BLOCK_VERSION: Block.Version = 2: Byte
 
   def create(parentId: Block.BlockId,
@@ -160,7 +160,7 @@ object SidechainAccountBlock extends ScorexEncoding {
              feePaymentsHash: Array[Byte],
              companion: SidechainAccountTransactionsCompanion,
              signatureOption: Option[Signature25519] = None // TO DO: later we should think about different unsigned/signed blocks creation methods
-            ): Try[SidechainAccountBlock] = Try {
+            ): Try[AccountBlock] = Try {
     require(mainchainBlockReferencesData != null)
     require(sidechainTransactions != null)
     require(mainchainHeaders != null)
@@ -184,7 +184,7 @@ object SidechainAccountBlock extends ScorexEncoding {
     val signature = signatureOption match {
       case Some(sig) => sig
       case None =>
-        val unsignedBlockHeader: SidechainAccountBlockHeader = account.block.SidechainAccountBlockHeader(
+        val unsignedBlockHeader: AccountBlockHeader = account.block.AccountBlockHeader(
           blockVersion,
           parentId,
           timestamp,
@@ -206,7 +206,7 @@ object SidechainAccountBlock extends ScorexEncoding {
     }
 
 
-    val signedBlockHeader: SidechainAccountBlockHeader = account.block.SidechainAccountBlockHeader(
+    val signedBlockHeader: AccountBlockHeader = account.block.AccountBlockHeader(
       blockVersion,
       parentId,
       timestamp,
@@ -224,7 +224,7 @@ object SidechainAccountBlock extends ScorexEncoding {
       signature
     )
 
-    val block: SidechainAccountBlock = new SidechainAccountBlock(
+    val block: AccountBlock = new AccountBlock(
       signedBlockHeader,
       sidechainTransactions,
       mainchainBlockReferencesData,
@@ -277,7 +277,7 @@ object SidechainAccountBlock extends ScorexEncoding {
 
 
 // TODO complete the impl of companion class for SCAT
-class SidechainAccountBlockSerializer(companion: SidechainAccountTransactionsCompanion) extends ScorexSerializer[SidechainAccountBlock] with SidechainTypes {
+class SidechainAccountBlockSerializer(companion: SidechainAccountTransactionsCompanion) extends ScorexSerializer[AccountBlock] with SidechainTypes {
   private val mcBlocksDataSerializer: ListSerializer[MainchainBlockReferenceData] = new ListSerializer[MainchainBlockReferenceData](
     MainchainBlockReferenceDataSerializer
   )
@@ -292,25 +292,25 @@ class SidechainAccountBlockSerializer(companion: SidechainAccountTransactionsCom
 
   private val ommersSerializer: ListSerializer[Ommer] = new ListSerializer[Ommer](OmmerSerializer)
 
-  override def serialize(obj: SidechainAccountBlock, w: Writer): Unit = {
-    SidechainAccountBlockHeaderSerializer.serialize(obj.header.asInstanceOf[SidechainAccountBlockHeader], w)
+  override def serialize(obj: AccountBlock, w: Writer): Unit = {
+    AccountBlockHeaderSerializer.serialize(obj.header.asInstanceOf[AccountBlockHeader], w)
     sidechainTransactionsSerializer.serialize(obj.sidechainTransactions.asJava, w)
     mcBlocksDataSerializer.serialize(obj.mainchainBlockReferencesData.asJava, w)
     mainchainHeadersSerializer.serialize(obj.mainchainHeaders.asJava, w)
     ommersSerializer.serialize(obj.ommers.asJava, w)
   }
 
-  override def parse(r: Reader): SidechainAccountBlock = {
+  override def parse(r: Reader): AccountBlock = {
     require(r.remaining <= SidechainBlockBase.MAX_BLOCK_SIZE)
 
-    val SidechainAccountBlockHeader: SidechainAccountBlockHeader = SidechainAccountBlockHeaderSerializer.parse(r)
+    val SidechainAccountBlockHeader: AccountBlockHeader = AccountBlockHeaderSerializer.parse(r)
     val sidechainTransactions = sidechainTransactionsSerializer.parse(r)
       .asScala.map(t => t.asInstanceOf[SidechainTypes#SCAT])
     val mainchainBlockReferencesData = mcBlocksDataSerializer.parse(r).asScala
     val mainchainHeaders = mainchainHeadersSerializer.parse(r).asScala
     val ommers = ommersSerializer.parse(r).asScala
 
-    new SidechainAccountBlock(
+    new AccountBlock(
       SidechainAccountBlockHeader,
       sidechainTransactions,
       mainchainBlockReferencesData,

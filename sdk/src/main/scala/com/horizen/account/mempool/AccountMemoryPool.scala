@@ -12,12 +12,12 @@ import scala.collection.JavaConverters._
 import scala.collection.concurrent.TrieMap
 import scala.util.{Failure, Success, Try}
 
-class SidechainAccountMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#SCAT])
-  extends scorex.core.transaction.MemoryPool[SidechainTypes#SCAT, SidechainAccountMemoryPool]
+class AccountMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#SCAT])
+  extends scorex.core.transaction.MemoryPool[SidechainTypes#SCAT, AccountMemoryPool]
   with SidechainTypes
   with NodeAccountMemoryPool
 {
-  override type NVCT = SidechainAccountMemoryPool
+  override type NVCT = AccountMemoryPool
 
   // Getters:
   override def modifierById(modifierId: ModifierId): Option[SidechainTypes#SCAT] = {
@@ -46,11 +46,11 @@ class SidechainAccountMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#SCA
     unconfirmed.values.toSeq.sortWith(sortFunc).take(limit)
   }
 
-  override def filter(txs: Seq[SidechainTypes#SCAT]): SidechainAccountMemoryPool = {
+  override def filter(txs: Seq[SidechainTypes#SCAT]): AccountMemoryPool = {
     filter(t => !txs.exists(_.id == t.id))
   }
 
-  override def filter(condition: SidechainTypes#SCAT => Boolean): SidechainAccountMemoryPool = {
+  override def filter(condition: SidechainTypes#SCAT => Boolean): AccountMemoryPool = {
     unconfirmed.retain { (k, v) =>
       condition(v)
     }
@@ -76,17 +76,17 @@ class SidechainAccountMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#SCA
   }
 
   // Setters:
-  override def put(tx: SidechainTypes#SCAT): Try[SidechainAccountMemoryPool] = {
+  override def put(tx: SidechainTypes#SCAT): Try[AccountMemoryPool] = {
     // check if tx is not colliding with unconfirmed
     if (!isTransactionCompatible(tx, unconfirmed.values.toList)) {
       Failure(new IllegalArgumentException("Transaction is incompatible - " + tx))
     } else {
       unconfirmed.put(tx.id, tx)
-      Success[SidechainAccountMemoryPool](this)
+      Success[AccountMemoryPool](this)
     }
   }
 
-  override def put(txs: Iterable[SidechainTypes#SCAT]): Try[SidechainAccountMemoryPool] = {
+  override def put(txs: Iterable[SidechainTypes#SCAT]): Try[AccountMemoryPool] = {
     // for each tx in txs check compatibility with the trailers elements
     for (tx <- txs.tails) {
       if (tx != Nil) {
@@ -101,12 +101,12 @@ class SidechainAccountMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#SCA
       put(t)
     }
 
-    new Success[SidechainAccountMemoryPool](this)
+    new Success[AccountMemoryPool](this)
   }
 
   // TO DO: check usage in Scorex core
   // Probably, we need to do a Global check inside for both new and existing transactions.
-  override def putWithoutCheck(txs: Iterable[SidechainTypes#SCAT]): SidechainAccountMemoryPool = {
+  override def putWithoutCheck(txs: Iterable[SidechainTypes#SCAT]): AccountMemoryPool = {
     for (t <- txs.tails) {
       if (t != Nil && !isTransactionCompatible(t.head, t.tail.toList))
         return this
@@ -123,7 +123,7 @@ class SidechainAccountMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#SCA
     this
   }
 
-  override def remove(tx: SidechainTypes#SCAT): SidechainAccountMemoryPool = {
+  override def remove(tx: SidechainTypes#SCAT): AccountMemoryPool = {
     unconfirmed.remove(tx.id)
     this
   }
@@ -145,8 +145,8 @@ class SidechainAccountMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#SCA
   }
 }
 
-object SidechainAccountMemoryPool
+object AccountMemoryPool
 {
-  lazy val emptyPool : SidechainAccountMemoryPool = new SidechainAccountMemoryPool(TrieMap())
+  lazy val emptyPool : AccountMemoryPool = new AccountMemoryPool(TrieMap())
 }
 

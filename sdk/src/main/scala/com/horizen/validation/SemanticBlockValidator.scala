@@ -1,7 +1,7 @@
 package com.horizen.validation
 
 import com.horizen.SidechainTypes
-import com.horizen.account.block.SidechainAccountBlock
+import com.horizen.account.block.AccountBlock
 import com.horizen.block.{SidechainBlock, SidechainBlockBase}
 import scorex.core.transaction.Transaction
 

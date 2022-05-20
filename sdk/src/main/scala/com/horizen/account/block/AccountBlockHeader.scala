@@ -22,7 +22,7 @@ import scala.util.{Failure, Success, Try}
 
 @JsonView(Array(classOf[Views.Default]))
 @JsonIgnoreProperties(Array("messageToSign", "serializer"))
-case class SidechainAccountBlockHeader(
+case class AccountBlockHeader(
                                         override val version: Block.Version,
                                         @JsonSerialize(using = classOf[ScorexModifierIdSerializer])override val parentId: ModifierId,
                                         override val timestamp: Block.Timestamp,
@@ -40,9 +40,9 @@ case class SidechainAccountBlockHeader(
                                         override val signature: Signature25519
                                ) extends SidechainBlockHeaderBase with BytesSerializable {
 
-  override type M = SidechainAccountBlockHeader
+  override type M = AccountBlockHeader
 
-  override def serializer: ScorexSerializer[SidechainAccountBlockHeader] = SidechainAccountBlockHeaderSerializer
+  override def serializer: ScorexSerializer[AccountBlockHeader] = AccountBlockHeaderSerializer
 
   @JsonSerialize(using = classOf[ScorexModifierIdSerializer])
   override lazy val id: ModifierId = bytesToId(Blake2b256(Bytes.concat(messageToSign, signature.bytes)))
@@ -75,7 +75,7 @@ case class SidechainAccountBlockHeader(
           || forgerAddress.length != 20 )
           throw new InvalidSidechainBlockHeaderException(s"SidechainAccountBlockHeader $id contains out of bound fields.")
 
-        if (version != SidechainAccountBlock.BLOCK_VERSION)
+        if (version != AccountBlock.BLOCK_VERSION)
           throw new InvalidSidechainBlockHeaderException(s"SidechainAccountBlock $id version $version is invalid.")
 
         // check, that signature is valid
@@ -89,15 +89,15 @@ case class SidechainAccountBlockHeader(
 
 
   override def toString =
-    s"SidechainAccountBlockHeader($id, $version, $timestamp, $forgingStakeInfo, $vrfProof, " +
+    s"AccountBlockHeader($id, $version, $timestamp, $forgingStakeInfo, $vrfProof, " +
       s"${ByteUtils.toHexString(sidechainTransactionsMerkleRootHash)}, ${ByteUtils.toHexString(mainchainMerkleRootHash)}, " +
       s"${ByteUtils.toHexString(stateRoot)}, ${ByteUtils.toHexString(receiptsRoot)}, ${ByteUtils.toHexString(forgerAddress)}" +
       s"${ByteUtils.toHexString(ommersMerkleRootHash)}, $ommersCumulativeScore, $signature)"
 }
 
 
-object SidechainAccountBlockHeaderSerializer extends ScorexSerializer[SidechainAccountBlockHeader] {
-  override def serialize(obj: SidechainAccountBlockHeader, w: Writer): Unit = {
+object AccountBlockHeaderSerializer extends ScorexSerializer[AccountBlockHeader] {
+  override def serialize(obj: AccountBlockHeader, w: Writer): Unit = {
     w.put(obj.version)
 
     w.putBytes(idToBytes(obj.parentId))
@@ -129,10 +129,10 @@ object SidechainAccountBlockHeaderSerializer extends ScorexSerializer[SidechainA
     Signature25519Serializer.getSerializer.serialize(obj.signature, w)
   }
 
-  override def parse(r: Reader): SidechainAccountBlockHeader = {
+  override def parse(r: Reader): AccountBlockHeader = {
     val version: Block.Version = r.getByte()
 
-    if(version != SidechainAccountBlock.BLOCK_VERSION)
+    if(version != AccountBlock.BLOCK_VERSION)
       throw new InvalidSidechainBlockHeaderException(s"SidechainAccountBlock version $version is invalid.")
 
     val parentId: ModifierId = bytesToId(r.getBytes(NodeViewModifier.ModifierIdSize))
@@ -163,7 +163,7 @@ object SidechainAccountBlockHeaderSerializer extends ScorexSerializer[SidechainA
 
     val signature: Signature25519 = Signature25519Serializer.getSerializer.parse(r)
 
-    SidechainAccountBlockHeader(
+    AccountBlockHeader(
       version,
       parentId,
       timestamp,

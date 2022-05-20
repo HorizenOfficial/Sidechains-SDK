@@ -1,7 +1,7 @@
 package com.horizen.account.state
 
 import com.horizen.SidechainTypes
-import com.horizen.account.block.SidechainAccountBlock
+import com.horizen.account.block.AccountBlock
 import com.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
 import com.horizen.box.{ForgerBox, WithdrawalRequestBox}
 import com.horizen.params.NetworkParams
@@ -13,14 +13,14 @@ import scorex.util.ScorexLogging
 import java.util
 import scala.util.{Failure, Success, Try}
 
-class AccountState(val params: NetworkParams) extends State[SidechainTypes#SCAT, SidechainAccountBlock, AccountStateView, AccountState]
+class AccountState(val params: NetworkParams) extends State[SidechainTypes#SCAT, AccountBlock, AccountStateView, AccountState]
   with AccountStateReader
   with ScorexLogging {
 
   override type NVCT = AccountState
 
   // Modifiers:
-  override def applyModifier(mod: SidechainAccountBlock): Try[AccountState] = Try {
+  override def applyModifier(mod: AccountBlock): Try[AccountState] = Try {
     require(versionToBytes(version).sameElements(idToBytes(mod.parentId)),
       s"Incorrect state version!: ${mod.parentId} found, " + s"$version expected")
 
