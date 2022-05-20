@@ -37,11 +37,11 @@ class AccountState(val params: NetworkParams) extends State[SidechainTypes#SCAT,
     // Reject block if it refers to the chain that conflicts with the top quality certificate content
     // Mark sidechain as ceased in case there is no certificate appeared within the submission window.
     val currentWithdrawalEpochInfo = stateView.getWithdrawalEpochInfo
-    val modWithdrawalEpochInfo: WithdrawalEpochInfo = null//WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, currentWithdrawalEpochInfo, params)
+    val modWithdrawalEpochInfo: WithdrawalEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, currentWithdrawalEpochInfo, params)
 
     // If SC block has reached the certificate submission window end -> check the top quality certificate
     // Note: even if mod contains multiple McBlockRefData entries, we are sure they belongs to the same withdrawal epoch.
-    if(false) {//WithdrawalEpochUtils.hasReachedCertificateSubmissionWindowEnd(mod, currentWithdrawalEpochInfo, params)) {
+    if(WithdrawalEpochUtils.hasReachedCertificateSubmissionWindowEnd(mod, currentWithdrawalEpochInfo, params)) {
       val certReferencedEpochNumber = modWithdrawalEpochInfo.epoch - 1
 
       // Top quality certificate may present in the current SC block or in the previous blocks or can be absent.
