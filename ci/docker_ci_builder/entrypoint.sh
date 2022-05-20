@@ -29,6 +29,7 @@ echo "Starting with UID/GID: $LOCAL_UID:$LOCAL_GID"
 export HOME=/home/zenbuilder
 
 # Get Java $CONTAINER_JAVA_VER
+add-apt-repository -y ppa:ethereum/ethereum
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y "$CONTAINER_JAVA_VER" maven solc
 apt-get -y clean
