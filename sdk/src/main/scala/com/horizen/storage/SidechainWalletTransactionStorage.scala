@@ -1,22 +1,20 @@
 package com.horizen.storage
 
-import java.util.Optional
-import java.util.{ArrayList => JArrayList, List => JList}
-
-import com.horizen.utils.{Pair => JPair}
-
-import scala.collection.JavaConverters._
 import com.horizen.SidechainTypes
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.utils.ByteArrayWrapper
+import com.horizen.utils.{ByteArrayWrapper, Pair => JPair}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 
+import java.util.{ArrayList => JArrayList}
+import scala.collection.JavaConverters._
+import scala.compat.java8.OptionConverters.RichOptionalGeneric
 import scala.util.{Failure, Success, Try}
 
 class SidechainWalletTransactionStorage (storage : Storage, sidechainTransactionsCompanion: SidechainTransactionsCompanion)
 extends SidechainTypes
-with ScorexLogging
+  with SidechainStorageInfo
+  with ScorexLogging
 {
   // Version - block Id
   // Key - byte array transaction Id
@@ -62,8 +60,8 @@ with ScorexLogging
     this
   }
 
-  def lastVersionId : Optional[ByteArrayWrapper] = {
-    storage.lastVersionID()
+  override def lastVersionId : Option[ByteArrayWrapper] = {
+    storage.lastVersionID().asScala
   }
 
   def rollbackVersions : List[ByteArrayWrapper] = {

@@ -5,6 +5,7 @@ import com.horizen.proposition.Proposition;
 import com.horizen.secret.Secret;
 import com.horizen.wallet.ApplicationWallet;
 
+import java.util.Collections;
 import java.util.List;
 
 public class DefaultApplicationWallet implements ApplicationWallet {
@@ -28,4 +29,7 @@ public class DefaultApplicationWallet implements ApplicationWallet {
     public void onRollback(byte[] blockId) {
 
     }
+
+    @Override
+    public boolean checkStoragesVersion(byte[] blockId) { return  true; }
 }

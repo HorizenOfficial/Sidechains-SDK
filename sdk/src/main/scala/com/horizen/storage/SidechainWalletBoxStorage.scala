@@ -1,23 +1,23 @@
 package com.horizen.storage
 
-import java.util.{Optional, ArrayList => JArrayList}
-
-import com.horizen.utils.{Pair => JPair}
-import com.horizen.utils.ByteArrayWrapper
-import com.horizen.{SidechainTypes, WalletBox, WalletBoxSerializer}
-import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.box.Box
+import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.proposition.Proposition
+import com.horizen.utils.{ByteArrayWrapper, Pair => JPair}
+import com.horizen.{SidechainTypes, WalletBox, WalletBoxSerializer}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
 
+import java.util.{ArrayList => JArrayList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable
+import scala.compat.java8.OptionConverters.RichOptionalGeneric
 import scala.util.Try
 
 class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: SidechainBoxesCompanion)
   extends SidechainTypes
-  with ScorexLogging
+    with SidechainStorageInfo
+    with ScorexLogging
 {
   // Version - block Id
   // Key - byte array box Id
@@ -145,8 +145,8 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
     this
   }
 
-  def lastVersionId : Optional[ByteArrayWrapper] = {
-    storage.lastVersionID()
+  override def lastVersionId : Option[ByteArrayWrapper] = {
+    storage.lastVersionID().asScala
   }
 
   def rollbackVersions : List[ByteArrayWrapper] = {

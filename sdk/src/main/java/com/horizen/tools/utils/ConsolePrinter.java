@@ -1,6 +1,4 @@
-package com.horizen;
-
-import java.security.MessageDigest;
+package com.horizen.tools.utils;
 
 public class ConsolePrinter implements MessagePrinter {
     @Override

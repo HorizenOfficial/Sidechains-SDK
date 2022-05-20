@@ -1,14 +1,13 @@
 package com.horizen.storage
 
+import com.horizen.block._
+import com.horizen.chain._
 import java.util.{ArrayList => JArrayList, List => JList}
 
-import com.horizen.block.{SidechainBlockSerializer, _}
-import com.horizen.chain.{FeePaymentsInfo, MainchainBlockReferenceDataInfo, _}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.NetworkParams
-import com.horizen.utils._
-import com.horizen.utils.{Pair => JPair}
+import com.horizen.utils.{Pair => JPair, _}
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
@@ -24,7 +23,8 @@ trait SidechainBlockInfoProvider {
 
 class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: SidechainTransactionsCompanion, params: NetworkParams)
   extends SidechainBlockInfoProvider
-  with ScorexLogging {
+    with SidechainStorageInfo
+    with ScorexLogging {
   // Version - RandomBytes(32)
 
   require(storage != null, "Storage must be NOT NULL.")
@@ -303,4 +303,8 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
   }
 
   def isEmpty: Boolean = storage.isEmpty
+
+  override def lastVersionId : Option[ByteArrayWrapper] = {
+    storage.lastVersionID().asScala
+  }
 }

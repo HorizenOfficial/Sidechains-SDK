@@ -84,6 +84,7 @@ class CertificateSubmitter(settings: SidechainSettings,
   }
 
   override def postStop(): Unit = {
+    log.debug("Certificate Submitter actor is stopping...")
     super.postStop()
     if(timers.isTimerActive(CertificateGenerationTimer)) {
       context.system.eventStream.publish(CertificateSubmissionStopped)

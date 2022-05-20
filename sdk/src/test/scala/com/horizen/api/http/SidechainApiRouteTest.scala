@@ -2,7 +2,6 @@ package com.horizen.api.http
 
 import java.net.{InetAddress, InetSocketAddress}
 import java.util
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
@@ -20,7 +19,7 @@ import com.horizen.forge.Forger.ReceivableMessages.TryForgeNextBlockForEpochAndS
 import com.horizen.params.MainNetParams
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.transaction._
-import com.horizen.{SidechainSettings, SidechainTypes}
+import com.horizen.{SidechainApp, SidechainSettings, SidechainTypes}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
 import org.mockito.Mockito
@@ -282,7 +281,10 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   val sidechainTransactionApiRoute: Route = SidechainTransactionApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainTransactionActorRef,
     sidechainTransactionsCompanion, params).route
   val sidechainWalletApiRoute: Route = SidechainWalletApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
-  val sidechainNodeApiRoute: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
+
+  val mockedSidechainApp: SidechainApp = mock[SidechainApp]
+
+  val sidechainNodeApiRoute: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainApp).route
   val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, mockedSidechainBlockForgerActorRef).route
   val mainchainBlockApiRoute: Route = MainchainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val applicationApiRoute: Route = ApplicationApiRoute(mockedRESTSettings, new SimpleCustomApi(), mockedSidechainNodeViewHolderRef).route

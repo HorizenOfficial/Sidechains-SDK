@@ -4,8 +4,6 @@ import com.horizen.block.SidechainBlock;
 import com.horizen.box.Box;
 import com.horizen.proposition.Proposition;
 import com.horizen.transaction.BoxTransaction;
-import com.horizen.transaction.SidechainTransaction;
-import com.horizen.utils.ByteArrayWrapper;
 
 import java.util.List;
 
@@ -26,6 +24,10 @@ public interface ApplicationState {
     Try<ApplicationState> onApplyChanges(SidechainStateReader stateReader, byte[] blockId, List<Box<Proposition>> newBoxes, List<byte[]> boxIdsToRemove);
 
     Try<ApplicationState> onRollback(byte[] blockId); // return Try[...]
+
+    // check that all storages of the application which are update by the sdk core, have the version corresponding to the
+    // blockId given. This is useful when checking the alignment of the storages versions at node restart
+    boolean checkStoragesVersion(byte[] blockId);
 }
 
 
