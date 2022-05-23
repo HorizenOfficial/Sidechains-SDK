@@ -18,6 +18,12 @@
 
   <dependencies>
     <dependency>
+      <groupId>com.horizen</groupId>
+      <artifactId>libevm</artifactId>
+      <version>0.3.2</version>
+      <type>pom</type>
+    </dependency>
+    <dependency>
       <groupId>net.java.dev.jna</groupId>
       <artifactId>jna</artifactId>
       <version>5.11.0</version>
