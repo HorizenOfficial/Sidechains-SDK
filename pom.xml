@@ -18,6 +18,7 @@
 		<module>evm</module>
 		<module>sdk</module>
 		<module>examples/simpleapp</module>
+		<module>examples/evmsimpleapp</module>
 		<module>tools/sctool</module>
 	</modules>
 </project>
