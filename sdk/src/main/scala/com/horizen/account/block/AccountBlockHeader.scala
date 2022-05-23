@@ -3,6 +3,7 @@ package com.horizen.account.block
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Longs}
+import com.horizen.account.proposition.{PublicKeySecp256k1Proposition, PublicKeySecp256k1PropositionSerializer}
 import com.horizen.block.SidechainBlockHeaderBase
 import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import com.horizen.params.NetworkParams
@@ -23,21 +24,21 @@ import scala.util.{Failure, Success, Try}
 @JsonView(Array(classOf[Views.Default]))
 @JsonIgnoreProperties(Array("messageToSign", "serializer"))
 case class AccountBlockHeader(
-                                        override val version: Block.Version,
-                                        @JsonSerialize(using = classOf[ScorexModifierIdSerializer])override val parentId: ModifierId,
-                                        override val timestamp: Block.Timestamp,
-                                        override val forgingStakeInfo: ForgingStakeInfo,
-                                        @JsonSerialize(using = classOf[MerklePathJsonSerializer])override val forgingStakeMerklePath: MerklePath,
-                                        override val vrfProof: VrfProof,
-                                        override val sidechainTransactionsMerkleRootHash: Array[Byte], // don't need to care about MC2SCAggTxs here
-                                        override val mainchainMerkleRootHash: Array[Byte], // root hash of MainchainBlockReference.dataHash() root hash and MainchainHeaders root hash
-                                        stateRoot: Array[Byte],
-                                        receiptsRoot: Array[Byte],
-                                        forgerAddress: Array[Byte],
-                                        override val ommersMerkleRootHash: Array[Byte], // build on top of Ommer.id()
-                                        override val ommersCumulativeScore: Long, // to be able to calculate the score of the block without having the full SB. For future
-                                        override val feePaymentsHash: Array[Byte], // hash of the fee payments created during applying this block to the state. zeros by default.
-                                        override val signature: Signature25519
+                               override val version: Block.Version,
+                               @JsonSerialize(using = classOf[ScorexModifierIdSerializer])override val parentId: ModifierId,
+                               override val timestamp: Block.Timestamp,
+                               override val forgingStakeInfo: ForgingStakeInfo,
+                               @JsonSerialize(using = classOf[MerklePathJsonSerializer])override val forgingStakeMerklePath: MerklePath,
+                               override val vrfProof: VrfProof,
+                               override val sidechainTransactionsMerkleRootHash: Array[Byte], // don't need to care about MC2SCAggTxs here
+                               override val mainchainMerkleRootHash: Array[Byte], // root hash of MainchainBlockReference.dataHash() root hash and MainchainHeaders root hash
+                               stateRoot: Array[Byte],
+                               receiptsRoot: Array[Byte],
+                               forgerAddress: PublicKeySecp256k1Proposition,
+                               override val ommersMerkleRootHash: Array[Byte], // build on top of Ommer.id()
+                               override val ommersCumulativeScore: Long, // to be able to calculate the score of the block without having the full SB. For future
+                               override val feePaymentsHash: Array[Byte], // hash of the fee payments created during applying this block to the state. zeros by default.
+                               override val signature: Signature25519
                                ) extends SidechainBlockHeaderBase with BytesSerializable {
 
   override type M = AccountBlockHeader
@@ -59,7 +60,7 @@ case class AccountBlockHeader(
       mainchainMerkleRootHash,
       stateRoot,
       receiptsRoot,
-      forgerAddress,
+      forgerAddress.bytes(),
       ommersMerkleRootHash,
       Longs.toByteArray(ommersCumulativeScore),
       feePaymentsHash
@@ -71,8 +72,7 @@ case class AccountBlockHeader(
       case Success(_) =>
 
         if (stateRoot.length != 32
-          || receiptsRoot.length != 32
-          || forgerAddress.length != 20 )
+          || receiptsRoot.length != 32)
           throw new InvalidSidechainBlockHeaderException(s"SidechainAccountBlockHeader $id contains out of bound fields.")
 
         if (version != AccountBlock.BLOCK_VERSION)
@@ -91,7 +91,7 @@ case class AccountBlockHeader(
   override def toString =
     s"AccountBlockHeader($id, $version, $timestamp, $forgingStakeInfo, $vrfProof, " +
       s"${ByteUtils.toHexString(sidechainTransactionsMerkleRootHash)}, ${ByteUtils.toHexString(mainchainMerkleRootHash)}, " +
-      s"${ByteUtils.toHexString(stateRoot)}, ${ByteUtils.toHexString(receiptsRoot)}, ${ByteUtils.toHexString(forgerAddress)}" +
+      s"${ByteUtils.toHexString(stateRoot)}, ${ByteUtils.toHexString(receiptsRoot)}, $forgerAddress" +
       s"${ByteUtils.toHexString(ommersMerkleRootHash)}, $ommersCumulativeScore, $signature)"
 }
 
@@ -118,7 +118,7 @@ object AccountBlockHeaderSerializer extends ScorexSerializer[AccountBlockHeader]
 
     w.putBytes(obj.receiptsRoot)
 
-    w.putBytes(obj.forgerAddress)
+    PublicKeySecp256k1PropositionSerializer.getSerializer.serialize(obj.forgerAddress, w)
 
     w.putBytes(obj.ommersMerkleRootHash)
 
@@ -153,7 +153,7 @@ object AccountBlockHeaderSerializer extends ScorexSerializer[AccountBlockHeader]
 
     val receiptsRoot = r.getBytes(32) // TODO add a constant
 
-    val forgerAddress = r.getBytes(20) // TODO add a constant
+    val forgerAddress = PublicKeySecp256k1PropositionSerializer.getSerializer.parse(r)
 
     val ommersMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
 

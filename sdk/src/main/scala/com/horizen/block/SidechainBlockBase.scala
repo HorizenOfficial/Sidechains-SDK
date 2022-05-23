@@ -2,9 +2,7 @@ package com.horizen.block
 
 
 import com.horizen.params.NetworkParams
-import com.horizen.proposition.PublicKey25519Proposition
-
-import com.horizen.utils.BlockFeeInfo
+import com.horizen.utils.{MerkleTree, Utils}
 import com.horizen.validation.InvalidSidechainBlockDataException
 import scorex.core.block.Block
 import scorex.core.block.Block.Timestamp
@@ -13,6 +11,7 @@ import scorex.core.ModifierTypeId
 import scorex.util.ModifierId
 
 import scala.util.{Failure, Success, Try}
+import scala.collection.JavaConverters._
 
 
 abstract class SidechainBlockBase[TX <: Transaction] ()
@@ -25,7 +24,6 @@ abstract class SidechainBlockBase[TX <: Transaction] ()
   val mainchainBlockReferencesData: Seq[MainchainBlockReferenceData]
 
   val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = mainchainBlockReferencesData.flatMap(_.topQualityCertificate).lastOption
-  def forgerPublicKey: PublicKey25519Proposition = header.forgingStakeInfo.blockSignPublicKey
 
   //override type M = SidechainBlockBase[TX]
 
@@ -42,8 +40,6 @@ abstract class SidechainBlockBase[TX <: Transaction] ()
   override def toString: String = s"SidechainBlock(id = $id)"
 
   def feePaymentsHash: Array[Byte] = header.feePaymentsHash
-
-  val feeInfo: BlockFeeInfo
 
   // Check that Sidechain Block data is consistent to SidechainBlockHeader
   protected def verifyDataConsistency(params: NetworkParams): Try[Unit]
@@ -84,7 +80,7 @@ abstract class SidechainBlockBase[TX <: Transaction] ()
         throw new InvalidSidechainBlockDataException(s"SidechainBlock $id MainchainHeader ${mainchainHeaders(i).hashHex} is not a parent of MainchainHeader ${mainchainHeaders(i+1)}.")
     }
 
-    // Check that SidechainTransactions are valid, this method must be implemented by sybclasses, depending on generic TX logic
+    // Check that SidechainTransactions are valid, this method must be implemented by subclasses, depending on generic TX logic
     transactionsAreValid() match {
       case Success(_) => // ok
       case Failure(e) => throw e
@@ -113,4 +109,35 @@ object SidechainBlockBase {
   val MAX_BLOCK_SIZE: Int = 5000000
   val MAX_SIDECHAIN_TXS_NUMBER: Int = 1000
   val ModifierTypeId: ModifierTypeId = scorex.core.ModifierTypeId @@ 3.toByte
+
+  def calculateMainchainMerkleRootHash(mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
+                                       mainchainHeaders: Seq[MainchainHeader]): Array[Byte] = {
+    if(mainchainBlockReferencesData.isEmpty && mainchainHeaders.isEmpty)
+      Utils.ZEROS_HASH
+    else {
+      // Calculate Merkle root hashes of mainchainBlockReferences Data
+      val mainchainReferencesDataMerkleRootHash = if(mainchainBlockReferencesData.isEmpty)
+        Utils.ZEROS_HASH
+      else
+        MerkleTree.createMerkleTree(mainchainBlockReferencesData.map(_.headerHash).asJava).rootHash()
+
+      // Calculate Merkle root hash of MainchainHeaders
+      val mainchainHeadersMerkleRootHash = if(mainchainHeaders.isEmpty)
+        Utils.ZEROS_HASH
+      else
+        MerkleTree.createMerkleTree(mainchainHeaders.map(_.hash).asJava).rootHash()
+
+      // Calculate final root hash, that takes as leaves two previously calculated root hashes.
+      MerkleTree.createMerkleTree(
+        Seq(mainchainReferencesDataMerkleRootHash, mainchainHeadersMerkleRootHash).asJava
+      ).rootHash()
+    }
+  }
+
+  def calculateOmmersMerkleRootHash(ommers: Seq[Ommer]): Array[Byte] = {
+    if(ommers.nonEmpty)
+      MerkleTree.createMerkleTree(ommers.map(_.id).asJava).rootHash()
+    else
+      Utils.ZEROS_HASH
+  }
 }

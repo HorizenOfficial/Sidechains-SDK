@@ -7,21 +7,13 @@ import com.horizen.chain.FeePaymentsInfo
 import com.horizen.consensus._
 import com.horizen.node.SidechainNodeView
 import com.horizen.params.NetworkParams
-import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
-import com.horizen.validation._
 import com.horizen.wallet.ApplicationWallet
-import scorex.core.NodeViewHolder.DownloadRequest
-import scorex.core.consensus.History.ProgressInfo
-import scorex.core.idToVersion
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages._
-import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
-import scorex.util.{ModifierId, ScorexLogging}
+import scorex.util.ModifierId
 
-import scala.annotation.tailrec
-import scala.util.{Failure, Success, Try}
+import scala.util.Success
 
 class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                               historyStorage: SidechainHistoryStorage,

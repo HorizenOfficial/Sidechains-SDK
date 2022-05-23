@@ -2,13 +2,14 @@ package com.horizen.account.state
 
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
-import com.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
+import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, WithdrawalEpochCertificate}
 import com.horizen.box.{ForgerBox, WithdrawalRequestBox}
+import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
-import com.horizen.utils.{BlockFeeInfo, BytesUtils, FeePaymentsUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.utils.{BlockFeeInfo, BytesUtils, FeePaymentsUtils, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import scorex.core.{VersionTag, idToBytes, idToVersion, versionToBytes}
-import scorex.util.ScorexLogging
+import scorex.util.{ModifierId, ScorexLogging}
 
 import java.util
 import scala.util.{Failure, Success, Try}
@@ -62,7 +63,6 @@ class AccountState(val params: NetworkParams) extends State[SidechainTypes#SCAT,
 
     // Update view with the block info
     stateView.updateWithdrawalEpochInfo(modWithdrawalEpochInfo).get
-    stateView.addFeeInfo(mod.feeInfo)
 
     // If SC block has reached the end of the withdrawal epoch -> fee payments expected to be produced.
     // Verify that Forger assumed the same fees to be paid as the current node does.
@@ -89,6 +89,9 @@ class AccountState(val params: NetworkParams) extends State[SidechainTypes#SCAT,
     for(tx <- mod.sidechainTransactions) {
       stateView = stateView.applyTransaction(tx).get
     }
+
+    // TODO: calculate and update fee info.
+    // stateView.addFeeInfo(mod.feeInfo)
 
     stateView.commit(idToVersion(mod.id)).get
 
@@ -139,6 +142,17 @@ class AccountState(val params: NetworkParams) extends State[SidechainTypes#SCAT,
     }*/
   }
 
+  // default intToConsensusEpochNumber(0)
+  def getConsensusEpochNumber: ConsensusEpochNumber = ???
+
+  // Note: Equal to SidechainState.isSwitchingConsensusEpoch
+  def isSwitchingConsensusEpoch(mod: AccountBlock): Boolean = {
+    val blockConsensusEpoch: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)
+    val currentConsensusEpoch: ConsensusEpochNumber = getConsensusEpochNumber
+
+    blockConsensusEpoch != currentConsensusEpoch
+  }
+
   override def rollbackTo(version: VersionTag): Try[AccountState] = ???
 
   // versions part
@@ -160,12 +174,15 @@ class AccountState(val params: NetworkParams) extends State[SidechainTypes#SCAT,
 
   override def hasCeased: Boolean = ???
 
+  override def getConsensusEpochInfo: (ModifierId, ConsensusEpochInfo) = ???
+
   override def getBlockFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo] = ???
 
   // Account specific getters
   override def getAccount(address: Array[Byte]): Account = ???
 
   override def getBalance(address: Array[Byte]): Long = ???
+
 }
 
 

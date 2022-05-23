@@ -1,6 +1,7 @@
 package com.horizen.account.block
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
+import com.horizen.account.proposition.PublicKeySecp256k1Proposition
 import com.horizen.block._
 import com.horizen.box.Box
 import com.horizen.companion.SidechainAccountTransactionsCompanion
@@ -39,21 +40,11 @@ class AccountBlock(override val header: AccountBlockHeader,
 
   override lazy val serializer = new SidechainAccountBlockSerializer(companion)
 
-  override lazy val version: Block.Version = header.version
-
-  override lazy val timestamp: Timestamp = header.timestamp
-
-  override lazy val parentId: ModifierId = header.parentId
-
-  override val modifierTypeId: ModifierTypeId = SidechainBlockBase.ModifierTypeId
-
-  override lazy val id: ModifierId = header.id
-
   override def toString: String = s"SidechainAccountBlock(id = $id)"
 
   override lazy val transactions: Seq[SidechainTypes#SCAT] = ???
 
-  lazy val feeInfo: BlockFeeInfo = ??? // BlockFeeInfo(transactions.map(_.fee()).sum, header.forgingStakeInfo.blockSignPublicKey)
+  def forgerPublicKey: PublicKeySecp256k1Proposition = header.forgerAddress
 
   // Check that Sidechain Block data is consistent to SidechainAccountBlockHeader
   override protected def verifyDataConsistency(params: NetworkParams): Try[Unit] = Try {
@@ -174,12 +165,12 @@ object AccountBlock extends ScorexEncoding {
 
     // Calculate merkle root hashes for SidechainAccountBlockHeader
     val sidechainTransactionsMerkleRootHash: Array[Byte] = ??? // calculateTransactionsMerkleRootHash(sidechainTransactions)
-    val mainchainMerkleRootHash: Array[Byte] = calculateMainchainMerkleRootHash(mainchainBlockReferencesData, mainchainHeaders)
-    val ommersMerkleRootHash: Array[Byte] = calculateOmmersMerkleRootHash(ommers)
+    val mainchainMerkleRootHash: Array[Byte] = SidechainBlockBase.calculateMainchainMerkleRootHash(mainchainBlockReferencesData, mainchainHeaders)
+    val ommersMerkleRootHash: Array[Byte] = SidechainBlockBase.calculateOmmersMerkleRootHash(ommers)
 
     val stateRoot: Array[Byte] = ???
     val receiptsRoot: Array[Byte] = ???
-    val forgerAddress: Array[Byte] = ???
+    val forgerAddress: PublicKeySecp256k1Proposition = ???
 
     val signature = signatureOption match {
       case Some(sig) => sig
@@ -239,37 +230,6 @@ object AccountBlock extends ScorexEncoding {
   def calculateTransactionsMerkleRootHash(sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]]): Array[Byte] = {
     if(sidechainTransactions.nonEmpty)
       MerkleTree.createMerkleTree(sidechainTransactions.map(tx => idToBytes(ModifierId @@ tx.id)).asJava).rootHash()
-    else
-      Utils.ZEROS_HASH
-  }
-
-  def calculateMainchainMerkleRootHash(mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-                                       mainchainHeaders: Seq[MainchainHeader]): Array[Byte] = {
-    if(mainchainBlockReferencesData.isEmpty && mainchainHeaders.isEmpty)
-      Utils.ZEROS_HASH
-    else {
-      // Calculate Merkle root hashes of mainchainBlockReferences Data
-      val mainchainReferencesDataMerkleRootHash = if(mainchainBlockReferencesData.isEmpty)
-        Utils.ZEROS_HASH
-      else
-        MerkleTree.createMerkleTree(mainchainBlockReferencesData.map(_.headerHash).asJava).rootHash()
-
-      // Calculate Merkle root hash of MainchainHeaders
-      val mainchainHeadersMerkleRootHash = if(mainchainHeaders.isEmpty)
-        Utils.ZEROS_HASH
-      else
-        MerkleTree.createMerkleTree(mainchainHeaders.map(_.hash).asJava).rootHash()
-
-      // Calculate final root hash, that takes as leaves two previously calculated root hashes.
-      MerkleTree.createMerkleTree(
-        Seq(mainchainReferencesDataMerkleRootHash, mainchainHeadersMerkleRootHash).asJava
-      ).rootHash()
-    }
-  }
-
-  def calculateOmmersMerkleRootHash(ommers: Seq[Ommer]): Array[Byte] = {
-    if(ommers.nonEmpty)
-      MerkleTree.createMerkleTree(ommers.map(_.id).asJava).rootHash()
     else
       Utils.ZEROS_HASH
   }

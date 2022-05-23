@@ -3,9 +3,11 @@ package com.horizen.account.state
 import com.horizen.SidechainTypes
 import com.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
 import com.horizen.box.{ForgerBox, WithdrawalRequestBox}
+import com.horizen.consensus.ConsensusEpochInfo
 import com.horizen.state.StateView
 import com.horizen.utils.{BlockFeeInfo, WithdrawalEpochInfo}
 import scorex.core.VersionTag
+import scorex.util.ModifierId
 
 import scala.util.Try
 
@@ -37,7 +39,6 @@ class AccountStateView extends StateView[SidechainTypes#SCAT, AccountStateView] 
 
   override def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo): Try[AccountStateView] = ???
 
-
   override def setCeased(): Try[AccountStateView] = ???
 
   // view controls
@@ -63,6 +64,8 @@ class AccountStateView extends StateView[SidechainTypes#SCAT, AccountStateView] 
   override def getWithdrawalEpochInfo: WithdrawalEpochInfo = ???
 
   override def hasCeased: Boolean = ???
+
+  override def getConsensusEpochInfo: (ModifierId, ConsensusEpochInfo) = ???
 
   override def getBlockFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo] = ???
 
