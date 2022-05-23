@@ -308,7 +308,7 @@ class SidechainHistoryStorage(
     }
   }
 
-  def updateSemanticValidity(block: SidechainBlock, status: ModifierSemanticValidity): Try[SidechainHistoryStorage] = Try {
+  def updateSemanticValidity[TX <: Transaction](block: SidechainBlockBase[TX], status: ModifierSemanticValidity): Try[SidechainHistoryStorage] = Try {
     // if it's not a part of active chain, retrieve previous info from disk storage
     val oldInfo: SidechainBlockInfo = activeChain.blockInfoById(block.id).getOrElse(blockInfoById(block.id))
     val blockInfo = oldInfo.copy(semanticValidity = status)
@@ -321,7 +321,7 @@ class SidechainHistoryStorage(
     this
   }
 
-  def setAsBestBlock(block: SidechainBlock, blockInfo: SidechainBlockInfo): Try[SidechainHistoryStorage] = Try {
+  def setAsBestBlock[TX <: Transaction](block: SidechainBlockBase[TX], blockInfo: SidechainBlockInfo): Try[SidechainHistoryStorage] = Try {
     storage.update(
       new ByteArrayWrapper(nextVersion),
       java.util.Arrays.asList(new JPair(bestBlockIdKey, new ByteArrayWrapper(idToBytes(block.id)))),

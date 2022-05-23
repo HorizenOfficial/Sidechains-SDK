@@ -1,24 +1,28 @@
 package com.horizen.validation
 
 import com.horizen.account.history.AccountHistory
-import com.horizen.{AbstractHistory, SidechainHistory, SidechainTypes}
-import com.horizen.block.{SidechainBlock, SidechainBlockBase}
-import scorex.core.consensus.{History, SyncInfo}
+import com.horizen.{SidechainHistory, SidechainTypes}
+import com.horizen.block.SidechainBlockBase
 import scorex.core.transaction.Transaction
 
 import scala.util.Try
 
-trait HistoryBlockValidatorBase[TX <: Transaction, PM <: SidechainBlockBase[TX], SI <: SyncInfo, H <: History[PM, SI, H]]  {
-  def validate(block: SidechainBlockBase[TX], history: H): Try[Unit]
+trait HistoryBlockValidatorBase[TX <: Transaction, PM <: SidechainBlockBase[TX], HT]  {
+  def validate(block: SidechainBlockBase[TX], history: HT): Try[Unit]
 }
 
-trait HistoryBlockValidator
+trait HistoryBlockValidator extends HistoryBlockValidatorBase[
+  SidechainTypes#SCBT,
+  SidechainBlockBase[SidechainTypes#SCBT],
+  SidechainHistory]
 {
   def validate(block: SidechainBlockBase[SidechainTypes#SCBT], history: SidechainHistory): Try[Unit]
 }
 
-
-trait HistoryAccountBlockValidator
+trait HistoryAccountBlockValidator extends HistoryBlockValidatorBase[
+  SidechainTypes#SCAT,
+  SidechainBlockBase[SidechainTypes#SCAT],
+  AccountHistory]
 {
   def validate(block: SidechainBlockBase[SidechainTypes#SCAT], history: AccountHistory): Try[Unit]
 }

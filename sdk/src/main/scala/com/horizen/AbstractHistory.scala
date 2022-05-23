@@ -1,20 +1,20 @@
 package com.horizen
 
-import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlock, SidechainBlockBase}
+import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlockBase}
 import com.horizen.chain.{FeePaymentsInfo, MainchainBlockReferenceDataInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
-import com.horizen.consensus.{ConsensusDataProvider, ConsensusDataStorage}
-import com.horizen.node.{NodeHistory, NodeHistoryBase}
+import com.horizen.consensus.{ConsensusDataProvider, ConsensusDataStorage, FullConsensusEpochInfo, blockIdToEpochId}
+import com.horizen.node.NodeHistoryBase
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.storage.leveldb.Algos.encoder
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import com.horizen.validation.{SemanticBlockValidator, SemanticBlockValidatorBase}
 import scorex.core.consensus.History.{Equal, Fork, ModifierIds, Nonsense, Older, ProgressInfo, Younger}
 import scorex.core.consensus.{History, ModifierSemanticValidity}
 import scorex.core.transaction.Transaction
 import scorex.core.validation.RecoverableModifierError
 import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 import com.horizen.node.util.MainchainBlockReferenceInfo
+import scorex.core.NodeViewModifier
 
 import java.util.Optional
 import scala.collection.mutable.ListBuffer
@@ -25,18 +25,214 @@ import scala.util.{Failure, Success, Try}
 abstract class AbstractHistory[TX <: Transaction, PM <: SidechainBlockBase[TX], HT <: AbstractHistory[TX, PM, HT]](
       val storage: SidechainHistoryStorage,
       val consensusDataStorage: ConsensusDataStorage,
-      val params: NetworkParams,
-      semanticBlockValidators: Seq[SemanticBlockValidatorBase[TX]]
-  ) extends scorex.core.consensus.History[PM, SidechainSyncInfo, HT]
+      val params: NetworkParams)
+  extends scorex.core.consensus.History[
+    PM, SidechainSyncInfo, HT]
   with NetworkParamsUtils
   with ConsensusDataProvider
   with NodeHistoryBase
   with ScorexLogging
 {
+  require(NodeViewModifier.ModifierIdSize == 32, "32 bytes ids assumed")
 
   def height: Int = storage.height
   def bestBlockId: ModifierId = storage.bestBlockId
 
+  def bestBlock: PM
+
+  def bestBlockInfo: SidechainBlockInfo = storage.bestBlockInfo
+
+  override def append(block: PM): Try[(HT, ProgressInfo[PM])] = Try {
+
+    validateBlockSemantic(block)
+
+    // Non-genesis blocks mast have a parent already present in History
+    val parentBlockInfoOption: Option[SidechainBlockInfo] = storage.blockInfoOptionById(block.parentId)
+    if(!isGenesisBlock(block.id) && parentBlockInfoOption.isEmpty)
+      throw new IllegalArgumentException("Sidechain block %s appending failed: parent block is missed.".format(BytesUtils.toHexString(idToBytes(block.id))))
+
+    validateHistoryBlock(block)
+
+    val (newStorage: Try[SidechainHistoryStorage], progressInfo: ProgressInfo[PM]) = {
+      if(isGenesisBlock(block.id)) {
+        (
+          storage.update(block, AbstractHistory.calculateGenesisBlockInfo(block, params)),
+          ProgressInfo(None, Seq(), Seq(block), Seq())
+        )
+      }
+      else {
+        val parentBlockInfo = parentBlockInfoOption.get
+        val blockInfo: SidechainBlockInfo = calculateBlockInfo(block, parentBlockInfo)
+        // Check if we retrieved the next block of best chain
+        if (block.parentId.equals(bestBlockId)) {
+          (
+            storage.update(block, blockInfo),
+            ProgressInfo(None, Seq(), Seq(block), Seq())
+          )
+        } else {
+          // Check if retrieved block is the best one, but from another chain
+          if (isBestBlock(block, parentBlockInfo)) {
+            bestForkChanges(block) match { // get info to switch to another chain
+              case Success(progInfo) =>
+                (
+                  storage.update(block, blockInfo),
+                  progInfo
+                )
+              case Failure(e) =>
+                //log.error("New best block found, but it can not be applied: %s".format(e.getMessage))
+                (
+                  storage.update(block, blockInfo),
+                  // TO DO: we should somehow prevent growing of such chain (penalize the peer?)
+                  ProgressInfo[PM](None, Seq(), Seq(), Seq())
+                )
+
+            }
+          } else {
+            // We retrieved block from another chain that is not the best one
+            (
+              storage.update(block, blockInfo),
+              ProgressInfo[PM](None, Seq(), Seq(), Seq())
+            )
+          }
+        }
+      }
+    }
+    makeNewHistory(newStorage.get, consensusDataStorage) -> progressInfo
+  }
+
+  def isBestBlock(block: PM, parentBlockInfo: SidechainBlockInfo): Boolean = {
+    val currentScore = storage.chainScoreFor(bestBlockId).get
+    val newScore = calculateChainScore(block, parentBlockInfo.score)
+    if (newScore == currentScore) {
+      (parentBlockInfo.height + 1) > height
+    } else {
+      newScore > currentScore
+    }
+  }
+
+  // score is a long value
+  // parentScore is a sum of the length of the chain till parent block and amount of ommers inside the chain
+  // So we should increase chain length by 1 and ommers amount with current block ommers number.
+  def calculateChainScore(block: PM, parentScore: Long): Long = {
+    parentScore + block.score
+  }
+
+  def blockInfoById(blockId: ModifierId): SidechainBlockInfo = storage.blockInfoById(blockId)
+  def blockToBlockInfo(block: PM): Option[SidechainBlockInfo] = storage.blockInfoOptionById(block.parentId).map(calculateBlockInfo(block, _))
+
+  protected def calculateBlockInfo(block: PM, parentBlockInfo: SidechainBlockInfo): SidechainBlockInfo = {
+    val lastBlockInPreviousConsensusEpoch = getLastBlockInPreviousConsensusEpoch(block.timestamp, block.parentId)
+    val nonceConsensusEpochInfo = getOrCalculateNonceConsensusEpochInfo(block.header.timestamp, block.header.parentId)
+    val vrfOutputOpt = getVrfOutput(block.header, nonceConsensusEpochInfo)
+    val blockMainchainHeaderBaseInfoSeq: Seq[MainchainHeaderBaseInfo] = if(block.mainchainHeaders.isEmpty) Seq() else {
+      val prevBaseInfo:MainchainHeaderBaseInfo = storage.getLastMainchainHeaderBaseInfoInclusion(block.parentId)
+      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoSeqFromBlock(block, prevBaseInfo.cumulativeCommTreeHash)
+    }
+
+    SidechainBlockInfo(
+      parentBlockInfo.height + 1,
+      calculateChainScore(block, parentBlockInfo.score),
+      block.parentId,
+      block.timestamp,
+      ModifierSemanticValidity.Unknown,
+      blockMainchainHeaderBaseInfoSeq,
+      SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
+      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params),
+      vrfOutputOpt, //technically block is not correct from consensus point of view if vrfOutput is None
+      lastBlockInPreviousConsensusEpoch
+    )
+  }
+
+  def bestForkChanges(block: PM): Try[ProgressInfo[PM]] = Try {
+    val (newChainSuffix, currentChainSuffix) = commonBlockSuffixes(modifierById(block.parentId).get)
+    if(newChainSuffix.isEmpty && currentChainSuffix.isEmpty)
+      throw new IllegalArgumentException("Cannot retrieve fork changes. Fork length is more than params.maxHistoryRewritingLength")
+
+    val newChainSuffixValidity: Boolean = !newChainSuffix.tail.map(isSemanticallyValid)
+      .contains(ModifierSemanticValidity.Invalid)
+
+    if(newChainSuffixValidity) {
+      val rollbackPoint = newChainSuffix.headOption
+      val toRemove = currentChainSuffix.tail.map(id => getStorageBlockById(id).get)
+      val toApply = newChainSuffix.tail.map(id => getStorageBlockById(id).get) ++ Seq(block)
+
+      require(toRemove.nonEmpty)
+      require(toApply.nonEmpty)
+
+      ProgressInfo[PM](rollbackPoint, toRemove, toApply, Seq())
+    } else {
+      //log.info(s"Orphaned block $block from invalid suffix")
+      ProgressInfo[PM](None, Seq(), Seq(), Seq())
+    }
+  }
+
+  // Find common suffixes for two chains - starting from forkBlock and from bestBlock.
+  // Returns last common block and then variant blocks for two chains.
+  protected def commonBlockSuffixes(forkBlock: PM): (Seq[ModifierId], Seq[ModifierId]) = {
+    chainBack(forkBlock.id, storage.isInActiveChain, Int.MaxValue) match {
+      case Some(newBestChain) =>
+        val commonBlockHeight = storage.blockInfoById(newBestChain.head).height
+        if(height - commonBlockHeight > params.maxHistoryRewritingLength)
+        // fork length is more than params.maxHistoryRewritingLength
+          (Seq[ModifierId](), Seq[ModifierId]())
+        else
+          (newBestChain, storage.activeChainAfter(newBestChain.head))
+
+      case None => (Seq[ModifierId](), Seq[ModifierId]())
+    }
+  } ensuring { res =>
+    // verify, that both sequences starts from common block
+    (res._1.isEmpty && res._2.isEmpty) || res._1.head == res._2.head
+  }
+
+  // Go back though chain and get block ids until condition 'until' or reaching the limit
+  // None if parent block is not in chain
+  // Note: work faster for active chain back (looks inside memory) and slower for fork chain (looks inside disk)
+  private def chainBack(blockId: ModifierId,
+                        until: ModifierId => Boolean,
+                        limit: Int): Option[Seq[ModifierId]] = { // to do
+    var acc: Seq[ModifierId] = Seq(blockId)
+    var id = blockId
+
+    while(acc.size < limit && !until(id)) {
+      storage.parentBlockId(id) match {
+        case Some(parentId) =>
+          acc = parentId +: acc
+          id = parentId
+        case _ =>
+          //log.warn(s"Parent block for ${encoder.encode(block.id)} not found ")
+          return None
+      }
+    }
+    Some(acc)
+  }
+
+  def reportModifierIsValid(block: PM): HT = {
+    var newStorage = storage.updateSemanticValidity(block, ModifierSemanticValidity.Valid).get
+    newStorage = newStorage.setAsBestBlock(block, storage.blockInfoById(block.id)).get
+    makeNewHistory(newStorage, consensusDataStorage)
+  }
+
+  override def reportModifierIsInvalid(modifier: PM, progressInfo: History.ProgressInfo[PM]): (HT, History.ProgressInfo[PM]) = { // to do
+    val newHistory: HT = Try {
+      val newStorage = storage.updateSemanticValidity(modifier, ModifierSemanticValidity.Invalid).get
+      makeNewHistory(newStorage, consensusDataStorage)
+    } match {
+      case Success(history) => history
+      case Failure(e) =>
+        //log.error(s"Failed to update validity for block ${encoder.encode(block.id)} with error ${e.getMessage}.")
+        makeNewHistory(storage, consensusDataStorage)
+    }
+
+    // In case when we try to apply some fork, which contains at least one invalid block, we should return to the State and History to the "state" before fork.
+    // Calculate new ProgressInfo:
+    // Set branch point as previous one
+    // Remove blocks, that were applied before current invalid one
+    // Apply blocks, that were part of ActiveChain
+    // skip blocks to Download, that are part of wrong chain we tried to apply.
+    val newProgressInfo = ProgressInfo(progressInfo.branchPoint, progressInfo.toApply.takeWhile(block => !block.id.equals(modifier.id)), progressInfo.toRemove, Seq())
+    newHistory -> newProgressInfo
+  }
 
   override def isEmpty: Boolean = height <= 0
 
@@ -162,6 +358,10 @@ abstract class AbstractHistory[TX <: Transaction, PM <: SidechainBlockBase[TX], 
     }
   }
 
+  def getBlockById(blockId: String): java.util.Optional[PM] = {
+    getStorageBlockById(ModifierId(blockId)).asJava
+  }
+
   override def getLastBlockIds(count: Int): java.util.List[String] = {
     val blockList = new java.util.ArrayList[String]()
     if(isEmpty)
@@ -177,6 +377,8 @@ abstract class AbstractHistory[TX <: Transaction, PM <: SidechainBlockBase[TX], 
       blockList
     }
   }
+
+  def getBestBlock : PM
 
   override def getBlockIdByHeight(height: Int): java.util.Optional[String] = {
     storage.activeChainBlockId(height) match {
@@ -197,8 +399,17 @@ abstract class AbstractHistory[TX <: Transaction, PM <: SidechainBlockBase[TX], 
     height
   }
 
+  def getFeePaymentsInfo(blockId: String): java.util.Optional[FeePaymentsInfo] = {
+    feePaymentsInfo(ModifierId @@ blockId).asJava
+  }
+
   override def getBlockHeight(blockId: String): java.util.Optional[Integer] = {
     storage.blockInfoOptionById(ModifierId(blockId)).map(info => Integer.valueOf(info.height)).asJava
+  }
+
+  def updateFeePaymentsInfo(blockId: ModifierId, feePaymentsInfo: FeePaymentsInfo): HT = {
+    val newStorage = storage.updateFeePaymentsInfo(blockId, feePaymentsInfo).get
+    makeNewHistory(newStorage, consensusDataStorage)
   }
 
   def feePaymentsInfo(blockId: ModifierId): Option[FeePaymentsInfo] = {
@@ -300,172 +511,18 @@ abstract class AbstractHistory[TX <: Transaction, PM <: SidechainBlockBase[TX], 
     }
   }
 
-  
-  // Go back though chain and get block ids until condition 'until' or reaching the limit
-  // None if parent block is not in chain
-  // Note: work faster for active chain back (looks inside memory) and slower for fork chain (looks inside disk)
-  private def chainBack(blockId: ModifierId,
-                        until: ModifierId => Boolean,
-                        limit: Int): Option[Seq[ModifierId]] = { // to do
-    var acc: Seq[ModifierId] = Seq(blockId)
-    var id = blockId
+  def getStorageBlockById(blockId: ModifierId): Option[PM]
 
-    while(acc.size < limit && !until(id)) {
-      storage.parentBlockId(id) match {
-        case Some(parentId) =>
-          acc = parentId +: acc
-          id = parentId
-        case _ =>
-          //log.warn(s"Parent block for ${encoder.encode(block.id)} not found ")
-          return None
-      }
-    }
-    Some(acc)
-  }
+  def modifierById(blockId: ModifierId): Option[PM] = getStorageBlockById(blockId)
 
-  // Find common suffixes for two chains - starting from forkBlock and from bestBlock.
-  // Returns last common block and then variant blocks for two chains.
-  protected def commonBlockSuffixes(forkBlock: PM): (Seq[ModifierId], Seq[ModifierId]) = {
-    chainBack(forkBlock.id, storage.isInActiveChain, Int.MaxValue) match {
-      case Some(newBestChain) =>
-        val commonBlockHeight = storage.blockInfoById(newBestChain.head).height
-        if(height - commonBlockHeight > params.maxHistoryRewritingLength)
-        // fork length is more than params.maxHistoryRewritingLength
-          (Seq[ModifierId](), Seq[ModifierId]())
-        else
-          (newBestChain, storage.activeChainAfter(newBestChain.head))
+  def validateBlockSemantic(block: PM) : Unit
+  def validateHistoryBlock(block: PM) : Unit
+  def makeNewHistory(storage: SidechainHistoryStorage, consensusDataStorage: ConsensusDataStorage) : HT
 
-      case None => (Seq[ModifierId](), Seq[ModifierId]())
-    }
-  } ensuring { res =>
-    // verify, that both sequences starts from common block
-    (res._1.isEmpty && res._2.isEmpty) || res._1.head == res._2.head
-  }
-
-  def bestForkChanges(block: PM): Try[ProgressInfo[PM]]
-
-  def isBestBlock(block: PM, parentBlockInfo: SidechainBlockInfo): Boolean = {
-    val currentScore = storage.chainScoreFor(bestBlockId).get
-    val newScore = calculateChainScore(block, parentBlockInfo.score)
-    if (newScore == currentScore) {
-      (parentBlockInfo.height + 1) > height
-    } else {
-      newScore > currentScore
-    }
-  }
-
-  def calculateGenesisBlockInfo(block: PM, params: NetworkParams): SidechainBlockInfo = {
-    require(block.id == params.sidechainGenesisBlockId, "Passed block is not a genesis block.")
-
-    SidechainBlockInfo(
-      1,
-      block.score,
-      block.parentId,
-      block.timestamp,
-      ModifierSemanticValidity.Unknown,
-      // First MC header Cumulative CommTree hash is provided by genesis info
-      Seq(MainchainHeaderBaseInfo(byteArrayToMainchainHeaderHash(block.mainchainHeaders.head.hash), params.initialCumulativeCommTreeHash)),
-      SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock[TX](block),
-      // TODO check this
-      WithdrawalEpochUtils.getWithdrawalEpochInfo[TX](block, WithdrawalEpochInfo(0,0), params),
-      None,
-      block.id,
-    )
-  }
-
-  def calculateChainScore(block: PM, parentScore: Long): Long = {
-    parentScore + block.score
-  }
-
-  protected def calculateBlockInfo(block: PM, parentBlockInfo: SidechainBlockInfo): SidechainBlockInfo = {
-    val lastBlockInPreviousConsensusEpoch = getLastBlockInPreviousConsensusEpoch(block.timestamp, block.parentId)
-    val nonceConsensusEpochInfo = getOrCalculateNonceConsensusEpochInfo(block.header.timestamp, block.header.parentId)
-    val vrfOutputOpt = getVrfOutput(block.header, nonceConsensusEpochInfo)
-    val blockMainchainHeaderBaseInfoSeq: Seq[MainchainHeaderBaseInfo] = if(block.mainchainHeaders.isEmpty) Seq() else {
-      val prevBaseInfo:MainchainHeaderBaseInfo = storage.getLastMainchainHeaderBaseInfoInclusion(block.parentId)
-      MainchainHeaderBaseInfo.getMainchainHeaderBaseInfoSeqFromBlock(block, prevBaseInfo.cumulativeCommTreeHash)
-    }
-
-    SidechainBlockInfo(
-      parentBlockInfo.height + 1,
-      calculateChainScore(block, parentBlockInfo.score),
-      block.parentId,
-      block.timestamp,
-      ModifierSemanticValidity.Unknown,
-      blockMainchainHeaderBaseInfoSeq,
-      SidechainBlockInfo.mainchainReferenceDataHeaderHashesFromBlock(block),
-      WithdrawalEpochUtils.getWithdrawalEpochInfo(block, parentBlockInfo.withdrawalEpochInfo, params),
-      vrfOutputOpt, //technically block is not correct from consensus point of view if vrfOutput is None
-      lastBlockInPreviousConsensusEpoch
-    )
-  }
-
-  // TODO WORK IN PROGRESS
-  override def append(block: PM): Try[(HT, ProgressInfo[PM])] = {
-
-
-    for(validator <- semanticBlockValidators)
-      validator.validate(block).get
-
-    // Non-genesis blocks mast have a parent already present in History
-    val parentBlockInfoOption: Option[SidechainBlockInfo] = storage.blockInfoOptionById(block.parentId)
-    if(!isGenesisBlock(block.id) && parentBlockInfoOption.isEmpty)
-      throw new IllegalArgumentException("Sidechain block %s appending failed: parent block is missed.".format(BytesUtils.toHexString(idToBytes(block.id))))
-
-    // TODO
-//    for(validator <- historyBlockValidators)
-//      validator.validate(block, this).get
-
-    val (newStorage: Try[SidechainHistoryStorage], progressInfo: ProgressInfo[PM]) = {
-      if(isGenesisBlock(block.id)) {
-        (
-          storage.update(block, calculateGenesisBlockInfo(block, params)),
-          ProgressInfo(None, Seq(), Seq(block), Seq())
-        )
-      }
-      else {
-        val parentBlockInfo = parentBlockInfoOption.get
-        val blockInfo: SidechainBlockInfo = calculateBlockInfo(block, parentBlockInfo)
-        // Check if we retrieved the next block of best chain
-        if (block.parentId.equals(bestBlockId)) {
-          (
-            storage.update(block, blockInfo),
-            ProgressInfo(None, Seq(), Seq(block), Seq())
-          )
-        } else {
-          // Check if retrieved block is the best one, but from another chain
-          if (isBestBlock(block, parentBlockInfo)) {
-            bestForkChanges(block) match { // get info to switch to another chain
-              case Success(progInfo) =>
-                (
-                  storage.update(block, blockInfo),
-                  progInfo
-                )
-              case Failure(e) =>
-                //log.error("New best block found, but it can not be applied: %s".format(e.getMessage))
-                (
-                  storage.update(block, blockInfo),
-                  // TO DO: we should somehow prevent growing of such chain (penalize the peer?)
-                  ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq())
-                )
-
-            }
-          } else {
-            // We retrieved block from another chain that is not the best one
-            (
-              storage.update(block, blockInfo),
-              ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq())
-            )
-          }
-        }
-      }
-    }
-    // TODO
-      // new SidechainHistory(newStorage.get, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators) -> progressInfo
-
-
-    // just for test, remove it
-    throw new IllegalArgumentException("parent block %s.".format(BytesUtils.toHexString(idToBytes(block.parentId))))
+  def applyFullConsensusInfo(lastBlockInEpoch: ModifierId, fullConsensusEpochInfo: FullConsensusEpochInfo): HT = {
+    consensusDataStorage.addStakeConsensusEpochInfo(blockIdToEpochId(lastBlockInEpoch), fullConsensusEpochInfo.stakeConsensusEpochInfo)
+    consensusDataStorage.addNonceConsensusEpochInfo(blockIdToEpochId(lastBlockInEpoch), fullConsensusEpochInfo.nonceConsensusEpochInfo)
+    makeNewHistory(storage, consensusDataStorage)
   }
 }
 

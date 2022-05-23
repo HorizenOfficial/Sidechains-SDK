@@ -95,9 +95,9 @@ class MainchainHeaderTest extends JUnitSuite with MainchainHeaderFixture {
     }
 
 
-    // Test 3: change time to one 2 hours and 1 second far in future
+    // Test 3: change time to 2 hours and 2 seconds far in future (1 sec can be too short if we are on the boundary of the epoch-second change)
     invalidHeader = new MainchainHeader(header.mainchainHeaderBytes, header.version, header.hashPrevBlock, header.hashMerkleRoot,
-      header.hashScTxsCommitment, (Instant.now.getEpochSecond + 2 * 60 * 60 + 1).toInt, header.bits, header.nonce, header.solution)
+      header.hashScTxsCommitment, (Instant.now.getEpochSecond + 2 * 60 * 60 + 2).toInt, header.bits, header.nonce, header.solution)
     invalidHeader.semanticValidity(params) match {
       case Success(_) =>
         jFail("Header expected to be semantically Invalid.")
