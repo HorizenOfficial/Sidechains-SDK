@@ -16,15 +16,15 @@
 
   <profiles>
     <profile>
-      <id>if-apfel-system</id>
+      <id>build-windows</id>
       <activation>
         <os>
-          <name>Mac OS X</name>
+          <family>windows</family>
         </os>
       </activation>
       <properties>
-        <os.system>darwin</os.system>
-        <final.extension>.dylib</final.extension>
+        <os.system>windows64</os.system>
+        <final.extension>.dll</final.extension>
       </properties>
     </profile>
   </profiles>
