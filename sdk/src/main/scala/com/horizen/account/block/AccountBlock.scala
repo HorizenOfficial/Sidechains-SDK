@@ -1,10 +1,10 @@
 package com.horizen.account.block
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
+import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.proposition.PublicKeySecp256k1Proposition
 import com.horizen.block._
 import com.horizen.box.Box
-import com.horizen.companion.SidechainAccountTransactionsCompanion
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}

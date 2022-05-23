@@ -7,6 +7,7 @@ import akka.actor.ActorRef
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import com.google.inject.name.Named
 import com.google.inject.{Inject, _}
+import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.api.http.{SidechainSubmitterApiRoute, _}
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockBase, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer

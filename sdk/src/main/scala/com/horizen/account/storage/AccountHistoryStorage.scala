@@ -1,7 +1,7 @@
 package com.horizen.account.storage
 
 import com.horizen.account.block.{AccountBlock, AccountBlockSerializer}
-import com.horizen.companion.SidechainAccountTransactionsCompanion
+import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.params.NetworkParams
 import com.horizen.storage.{AbstractHistoryStorage, Storage}
 

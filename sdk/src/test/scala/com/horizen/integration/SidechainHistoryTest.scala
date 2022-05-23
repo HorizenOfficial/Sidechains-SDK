@@ -1,10 +1,11 @@
 package com.horizen.integration
 
+import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.chain.SidechainBlockInfo
-import com.horizen.companion.{SidechainAccountTransactionsCompanion, SidechainTransactionsCompanion}
+import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus.{ConsensusDataStorage, NonceConsensusEpochInfo, StakeConsensusEpochInfo}
 import com.horizen.customtypes.SemanticallyInvalidTransactionSerializer
 import com.horizen.fixtures._
