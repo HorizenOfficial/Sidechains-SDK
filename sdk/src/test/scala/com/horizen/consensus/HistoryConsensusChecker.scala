@@ -2,8 +2,9 @@ package com.horizen.consensus
 
 import java.util.Random
 import com.horizen.SidechainHistory
+import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.block.SidechainBlock
-import com.horizen.companion.{SidechainAccountTransactionsCompanion, SidechainTransactionsCompanion}
+import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.CompanionsFixture
 import com.horizen.fixtures.sidechainblock.generation.{FinishedEpochInfo, GenerationRules, SidechainBlocksGenerator}
 import com.horizen.params.NetworkParams
