@@ -53,4 +53,15 @@
     </dependency>
   </dependencies>
 
+  <build>
+    <resources>
+      <resource>
+        <directory>${basedir}/../libevm/bin</directory>
+        <excludes>
+          <exclude>**/.goBuildCache/**/*</exclude>
+        </excludes>
+      </resource>
+    </resources>
+  </build>
+
 </project>

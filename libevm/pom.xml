@@ -58,33 +58,6 @@
           <buildMode>c-shared</buildMode>
         </configuration>
       </plugin>
-      <plugin>
-        <artifactId>maven-resources-plugin</artifactId>
-        <version>3.1.0</version>
-        <executions>
-          <execution>
-            <id>copy-resources</id>
-            <!-- here the phase you need -->
-            <phase>package</phase>
-            <goals>
-              <goal>resources</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>
-                ${basedir}${file.separator}..${file.separator}evm${file.separator}src${file.separator}main${file.separator}resources
-              </outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${basedir}${file.separator}bin</directory>
-                  <excludes>
-                    <exclude>**/.goBuildCache/**</exclude>
-                  </excludes>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
     </plugins>
   </build>
 
