@@ -8,7 +8,7 @@ import akka.stream.ActorMaterializer
 import com.horizen.api.http.{SidechainApiErrorHandler, SidechainTransactionActorRef, SidechainTransactionApiRoute}
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
-import com.horizen.companion.{SidechainAccountTransactionsCompanion, SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
+import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.customtypes.{DefaultApplicationState, DefaultApplicationWallet}
 import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams, TestNetParams}
@@ -44,7 +44,6 @@ trait SidechainNodeViewHolderFixture
   val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(new JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]]())
   val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(new JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]]())
   val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
-  val sidechainAccountTransactionsCompanion: SidechainAccountTransactionsCompanion = getDefaultAccountTransactionsCompanion
   val defaultApplicationWallet: ApplicationWallet = new DefaultApplicationWallet()
   val defaultApplicationState: ApplicationState = new DefaultApplicationState()
 
@@ -96,7 +95,7 @@ trait SidechainNodeViewHolderFixture
   val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion)
   val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(getStorage())
   val sidechainStateUtxoMerkleTreeStorage = new SidechainStateUtxoMerkleTreeStorage(getStorage())
-  val sidechainHistoryStorage = new SidechainHistoryStorage(getStorage(), sidechainTransactionsCompanion, sidechainAccountTransactionsCompanion, params)
+  val sidechainHistoryStorage = new SidechainHistoryStorage(getStorage(), sidechainTransactionsCompanion, params)
   val consensusDataStorage = new ConsensusDataStorage(getStorage())
   val sidechainWalletTransactionStorage = new SidechainWalletTransactionStorage(getStorage(), sidechainTransactionsCompanion)
   val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(getStorage())

@@ -4,6 +4,7 @@ import java.util.{Optional => JOptional}
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountHistory
+import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.consensus._
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
 import com.horizen.storage.SidechainHistoryStorage
@@ -14,12 +15,12 @@ import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.util.Try
 
 
-class AccountHistory private(storage: SidechainHistoryStorage,
+class AccountHistory private(storage: AccountHistoryStorage,
                              consensusDataStorage: ConsensusDataStorage,
                              params: NetworkParams,
                              semanticBlockValidators: Seq[SemanticAccountBlockValidator],
                              historyBlockValidators: Seq[HistoryAccountBlockValidator])
-extends com.horizen.AbstractHistory[SidechainTypes#SCAT, AccountBlock, AccountHistory](
+extends com.horizen.AbstractHistory[SidechainTypes#SCAT, AccountBlock, AccountHistoryStorage, AccountHistory](
     storage, consensusDataStorage, params)
   with NetworkParamsUtils
   with ConsensusDataProvider
@@ -30,8 +31,6 @@ extends com.horizen.AbstractHistory[SidechainTypes#SCAT, AccountBlock, AccountHi
 
   override type NVCT = AccountHistory
 
-  def bestBlock: AccountBlock = storage.accountBestBlock
-
   override def validateBlockSemantic(block: AccountBlock): Unit =
     for(validator <- semanticBlockValidators)
       validator.validate(block).get
@@ -41,26 +40,21 @@ extends com.horizen.AbstractHistory[SidechainTypes#SCAT, AccountBlock, AccountHi
         validator.validate(block, this).get
   }
 
-  override def makeNewHistory(storage: SidechainHistoryStorage, consensusDataStorage: ConsensusDataStorage): AccountHistory =     {
-    new AccountHistory(storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
-  }
-
-  override def getStorageBlockById(blockId: ModifierId): Option[AccountBlock] =
-    storage.accountBlockById(blockId)
-
-  override def getBestBlock: AccountBlock = bestBlock
-
   override def searchTransactionInsideSidechainBlock(transactionId: String, blockId: String): JOptional[SidechainTypes#SCAT] = ???
 
   private def findTransactionInsideBlock(transactionId : String, block : AccountBlock) : JOptional[SidechainTypes#SCAT] = ???
 
   override def searchTransactionInsideBlockchain(transactionId: String): JOptional[SidechainTypes#SCAT] = ???
 
+  override def makeNewHistory(storage: AccountHistoryStorage, consensusDataStorage: ConsensusDataStorage): AccountHistory =     {
+    new AccountHistory(storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
+  }
+
 }
 
 object AccountHistory
 {
-  private[horizen] def restoreHistory(historyStorage: SidechainHistoryStorage,
+  private[horizen] def restoreHistory(historyStorage: AccountHistoryStorage,
                                       consensusDataStorage: ConsensusDataStorage,
                                       params: NetworkParams,
                                       semanticBlockValidators: Seq[SemanticAccountBlockValidator],
@@ -74,7 +68,7 @@ object AccountHistory
 
 
 
-  private[horizen] def createGenesisHistory(historyStorage: SidechainHistoryStorage,
+  private[horizen] def createGenesisHistory(historyStorage: AccountHistoryStorage,
                                             consensusDataStorage: ConsensusDataStorage,
                                             params: NetworkParams,
                                             genesisBlock: AccountBlock,

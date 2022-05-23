@@ -5,7 +5,7 @@ import com.horizen.chain.{FeePaymentsInfo, MainchainBlockReferenceDataInfo, Main
 import com.horizen.consensus.{ConsensusDataProvider, ConsensusDataStorage, FullConsensusEpochInfo, blockIdToEpochId}
 import com.horizen.node.NodeHistoryBase
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
-import com.horizen.storage.SidechainHistoryStorage
+import com.horizen.storage.{AbstractHistoryStorage, SidechainHistoryStorage}
 import com.horizen.storage.leveldb.Algos.encoder
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import scorex.core.consensus.History.{Equal, Fork, ModifierIds, Nonsense, Older, ProgressInfo, Younger}
@@ -22,23 +22,29 @@ import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.util.{Failure, Success, Try}
 
 
-abstract class AbstractHistory[TX <: Transaction, PM <: SidechainBlockBase[TX], HT <: AbstractHistory[TX, PM, HT]](
-      val storage: SidechainHistoryStorage,
-      val consensusDataStorage: ConsensusDataStorage,
-      val params: NetworkParams)
-  extends scorex.core.consensus.History[
-    PM, SidechainSyncInfo, HT]
-  with NetworkParamsUtils
-  with ConsensusDataProvider
-  with NodeHistoryBase
-  with ScorexLogging
+abstract class AbstractHistory[
+  TX <: Transaction,
+  PM <: SidechainBlockBase[TX],
+  HSTOR <: AbstractHistoryStorage[PM, HSTOR],
+  HT <: AbstractHistory[TX, PM, HSTOR, HT]
+] (
+    val storage: HSTOR,
+    val consensusDataStorage: ConsensusDataStorage,
+    val params: NetworkParams
+  )
+    extends scorex.core.consensus.History[PM, SidechainSyncInfo, HT]
+      with NetworkParamsUtils
+      with ConsensusDataProvider
+      with NodeHistoryBase
+      with ScorexLogging
 {
   require(NodeViewModifier.ModifierIdSize == 32, "32 bytes ids assumed")
 
   def height: Int = storage.height
+
   def bestBlockId: ModifierId = storage.bestBlockId
 
-  def bestBlock: PM
+  def bestBlock: PM = storage.bestBlock
 
   def bestBlockInfo: SidechainBlockInfo = storage.bestBlockInfo
 
@@ -53,7 +59,7 @@ abstract class AbstractHistory[TX <: Transaction, PM <: SidechainBlockBase[TX], 
 
     validateHistoryBlock(block)
 
-    val (newStorage: Try[SidechainHistoryStorage], progressInfo: ProgressInfo[PM]) = {
+    val (newStorage: Try[HSTOR], progressInfo: ProgressInfo[PM]) = {
       if(isGenesisBlock(block.id)) {
         (
           storage.update(block, AbstractHistory.calculateGenesisBlockInfo(block, params)),
@@ -118,6 +124,7 @@ abstract class AbstractHistory[TX <: Transaction, PM <: SidechainBlockBase[TX], 
   }
 
   def blockInfoById(blockId: ModifierId): SidechainBlockInfo = storage.blockInfoById(blockId)
+
   def blockToBlockInfo(block: PM): Option[SidechainBlockInfo] = storage.blockInfoOptionById(block.parentId).map(calculateBlockInfo(block, _))
 
   protected def calculateBlockInfo(block: PM, parentBlockInfo: SidechainBlockInfo): SidechainBlockInfo = {
@@ -378,7 +385,7 @@ abstract class AbstractHistory[TX <: Transaction, PM <: SidechainBlockBase[TX], 
     }
   }
 
-  def getBestBlock : PM
+  def getBestBlock : PM = bestBlock
 
   override def getBlockIdByHeight(height: Int): java.util.Optional[String] = {
     storage.activeChainBlockId(height) match {
@@ -511,19 +518,21 @@ abstract class AbstractHistory[TX <: Transaction, PM <: SidechainBlockBase[TX], 
     }
   }
 
-  def getStorageBlockById(blockId: ModifierId): Option[PM]
+  def getStorageBlockById(blockId: ModifierId): Option[PM] = storage.blockById(blockId)
 
   def modifierById(blockId: ModifierId): Option[PM] = getStorageBlockById(blockId)
 
   def validateBlockSemantic(block: PM) : Unit
+
   def validateHistoryBlock(block: PM) : Unit
-  def makeNewHistory(storage: SidechainHistoryStorage, consensusDataStorage: ConsensusDataStorage) : HT
 
   def applyFullConsensusInfo(lastBlockInEpoch: ModifierId, fullConsensusEpochInfo: FullConsensusEpochInfo): HT = {
     consensusDataStorage.addStakeConsensusEpochInfo(blockIdToEpochId(lastBlockInEpoch), fullConsensusEpochInfo.stakeConsensusEpochInfo)
     consensusDataStorage.addNonceConsensusEpochInfo(blockIdToEpochId(lastBlockInEpoch), fullConsensusEpochInfo.nonceConsensusEpochInfo)
     makeNewHistory(storage, consensusDataStorage)
   }
+
+  def makeNewHistory(storage: HSTOR, consensusDataStorage: ConsensusDataStorage) : HT
 }
 
 object AbstractHistory {

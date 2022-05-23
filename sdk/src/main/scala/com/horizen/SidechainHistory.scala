@@ -8,7 +8,6 @@ import com.horizen.params.{NetworkParams, NetworkParamsUtils}
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import scorex.util.{ModifierId, ScorexLogging}
-import scala.compat.java8.OptionConverters._
 import scala.util.Try
 
 
@@ -17,7 +16,7 @@ class SidechainHistory private (storage: SidechainHistoryStorage,
                                 params: NetworkParams,
                                 semanticBlockValidators: Seq[SemanticBlockValidator],
                                 historyBlockValidators: Seq[HistoryBlockValidator])
-  extends com.horizen.AbstractHistory[SidechainTypes#SCBT, SidechainBlock, SidechainHistory](
+  extends com.horizen.AbstractHistory[SidechainTypes#SCBT, SidechainBlock, SidechainHistoryStorage, SidechainHistory](
     storage, consensusDataStorage, params)
   with NetworkParamsUtils
   with ConsensusDataProvider
@@ -27,8 +26,6 @@ class SidechainHistory private (storage: SidechainHistoryStorage,
 {
 
   override type NVCT = SidechainHistory
-
-  def bestBlock: SidechainBlock = storage.bestBlock
 
   override def validateBlockSemantic(block: SidechainBlock) : Unit =
     for(validator <- semanticBlockValidators)
@@ -41,10 +38,6 @@ class SidechainHistory private (storage: SidechainHistoryStorage,
   override def makeNewHistory(storage: SidechainHistoryStorage, consensusDataStorage: ConsensusDataStorage) : SidechainHistory =
       new SidechainHistory(storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
 
-  override def getStorageBlockById(blockId: ModifierId): Option[SidechainBlock] =
-    storage.blockById(blockId)
-
-  override def getBestBlock: SidechainBlock = bestBlock
 
   override def searchTransactionInsideSidechainBlock(transactionId: String, blockId: String): JOptional[SidechainTypes#SCBT] = {
     storage.blockById(ModifierId(blockId)) match {

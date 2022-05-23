@@ -249,6 +249,7 @@ object SidechainBlock extends ScorexEncoding {
 
 
 class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extends ScorexSerializer[SidechainBlock] with SidechainTypes {
+  require(companion != null, "SidechainTransactionsCompanion must be NOT NULL.")
   private val mcBlocksDataSerializer: ListSerializer[MainchainBlockReferenceData] = new ListSerializer[MainchainBlockReferenceData](
     MainchainBlockReferenceDataSerializer
   )

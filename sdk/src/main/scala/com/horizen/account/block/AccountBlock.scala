@@ -38,7 +38,7 @@ class AccountBlock(override val header: AccountBlockHeader,
 
   override type M = AccountBlock
 
-  override lazy val serializer = new SidechainAccountBlockSerializer(companion)
+  override lazy val serializer = new AccountBlockSerializer(companion)
 
   override def toString: String = s"SidechainAccountBlock(id = $id)"
 
@@ -237,7 +237,9 @@ object AccountBlock extends ScorexEncoding {
 
 
 // TODO complete the impl of companion class for SCAT
-class SidechainAccountBlockSerializer(companion: SidechainAccountTransactionsCompanion) extends ScorexSerializer[AccountBlock] with SidechainTypes {
+class AccountBlockSerializer(companion: SidechainAccountTransactionsCompanion) extends ScorexSerializer[AccountBlock] with SidechainTypes {
+  require(companion != null, "SidechainAccountTransactionsCompanion must be NOT NULL.")
+
   private val mcBlocksDataSerializer: ListSerializer[MainchainBlockReferenceData] = new ListSerializer[MainchainBlockReferenceData](
     MainchainBlockReferenceDataSerializer
   )

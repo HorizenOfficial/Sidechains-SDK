@@ -20,9 +20,8 @@ import scala.util.{Failure, Success}
 trait HistoryConsensusChecker extends CompanionsFixture with TimeProviderFixture {
   def createHistory(params: NetworkParams, genesisBlock: SidechainBlock, finishedEpochInfo: FinishedEpochInfo): SidechainHistory = {
     val boxCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
-    val accountCompanion: SidechainAccountTransactionsCompanion = getDefaultAccountTransactionsCompanion
 
-    val sidechainHistoryStorage: SidechainHistoryStorage = new SidechainHistoryStorage(new InMemoryStorageAdapter(), boxCompanion, accountCompanion, params)
+    val sidechainHistoryStorage: SidechainHistoryStorage = new SidechainHistoryStorage(new InMemoryStorageAdapter(), boxCompanion, params)
     SidechainHistory
       .createGenesisHistory(
         sidechainHistoryStorage,

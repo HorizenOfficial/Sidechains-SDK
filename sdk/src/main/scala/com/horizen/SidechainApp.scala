@@ -240,7 +240,7 @@ class SidechainApp @Inject()
   protected val sidechainHistoryStorage = new SidechainHistoryStorage(
     registerStorage(historyStorage),
     sidechainTransactionsCompanion,
-    sidechainAccountTransactionsCompanion, params)
+    params)
   protected val consensusDataStorage = new ConsensusDataStorage(
     //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/consensusData")),
     registerStorage(consensusStorage))
