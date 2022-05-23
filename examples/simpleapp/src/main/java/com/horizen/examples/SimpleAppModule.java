@@ -11,8 +11,10 @@ import com.google.inject.name.Names;
 
 import com.horizen.SidechainAppModule;
 import com.horizen.SidechainSettings;
+import com.horizen.account.transaction.AccountTransaction;
 import com.horizen.api.http.ApplicationApiGroup;
 import com.horizen.box.*;
+import com.horizen.proof.Proof;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.Secret;
 import com.horizen.secret.SecretSerializer;
@@ -41,6 +43,7 @@ public class SimpleAppModule extends SidechainAppModule
         HashMap<Byte, BoxSerializer<Box<Proposition>>> customBoxSerializers = new HashMap<>();
         HashMap<Byte, SecretSerializer<Secret>> customSecretSerializers = new HashMap<>();
         HashMap<Byte, TransactionSerializer<BoxTransaction<Proposition, Box<Proposition>>>> customTransactionSerializers = new HashMap<>();
+        HashMap<Byte, TransactionSerializer<AccountTransaction<Proposition, Proof<Proposition>>>> customAccountTransactionSerializers = new HashMap<>();
 
         ApplicationWallet defaultApplicationWallet = new DefaultApplicationWallet();
         ApplicationState defaultApplicationState = new DefaultApplicationState();
@@ -82,6 +85,9 @@ public class SimpleAppModule extends SidechainAppModule
         bind(new TypeLiteral<HashMap<Byte, TransactionSerializer<BoxTransaction<Proposition, Box<Proposition>>>>>() {})
                 .annotatedWith(Names.named("CustomTransactionSerializers"))
                 .toInstance(customTransactionSerializers);
+        bind(new TypeLiteral<HashMap<Byte, TransactionSerializer<AccountTransaction<Proposition, Proof<Proposition>>>>>() {})
+                .annotatedWith(Names.named("CustomAccountTransactionSerializers"))
+                .toInstance(customAccountTransactionSerializers);
 
         bind(ApplicationWallet.class)
                 .annotatedWith(Names.named("ApplicationWallet"))
