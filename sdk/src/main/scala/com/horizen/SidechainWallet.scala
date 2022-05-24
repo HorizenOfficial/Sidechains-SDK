@@ -1,46 +1,27 @@
 package com.horizen
 
-import java.lang
-import java.util.{List => JList, Optional => JOptional}
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock}
 import com.horizen.box.{Box, CoinsBox, ForgerBox, ZenBox}
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo}
-import com.horizen.wallet.ApplicationWallet
 import com.horizen.node.NodeWallet
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.Secret
 import com.horizen.storage._
-import com.horizen.transaction.Transaction
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgingStakeMerklePathInfo}
-import scorex.core.VersionTag
 import com.horizen.utils._
+import com.horizen.wallet.ApplicationWallet
+import scorex.core.VersionTag
 import scorex.util.ModifierId
 
-import scala.util.Try
+import java.lang
+import java.util.{List => JList, Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.language.postfixOps
+import scala.util.Try
 
-trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.core.PersistentNodeViewModifier, W <: Wallet[S, P, TX, PMOD, W]]
-  extends scorex.core.transaction.wallet.Vault[TX, PMOD, W] {
-  self: W =>
-
-  def addSecret(secret: S): Try[W]
-
-  def removeSecret(publicImage: P): Try[W]
-
-  def secret(publicImage: P): Option[S]
-
-  def secrets(): Set[S]
-
-  def publicKeys(): Set[P]
-}
-
-trait BoxWallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.core.PersistentNodeViewModifier, W <: BoxWallet[S, P, TX, PMOD, W]]
-  extends Wallet[S, P, TX, PMOD, W] {
-  self: W =>
+trait BoxWallet{
 
   def boxes(): Seq[WalletBox]
 }
@@ -54,13 +35,13 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
                                         cswDataStorage: SidechainWalletCswDataStorage,
                                         params: NetworkParams,
                                         val applicationWallet: ApplicationWallet)
-  extends BoxWallet[SidechainTypes#SCS,
-                 SidechainTypes#SCP,
+  extends AbstractWallet[
                  SidechainTypes#SCBT,
                  SidechainBlock,
-                 SidechainWallet]
+                 SidechainWallet](seed, secretStorage)
   with SidechainTypes
   with NodeWallet
+  with BoxWallet
 {
   override type NVCT = SidechainWallet
 
@@ -69,8 +50,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
   // 1) check for existence
   // 2) try to store in SecretStore using SidechainSecretsCompanion
   override def addSecret(secret: SidechainTypes#SCS): Try[SidechainWallet] = Try {
-    require(secret != null, "Secret must be NOT NULL.")
-    secretStorage.add(secret).get
+    super.addSecret(secret).get
     applicationWallet.onAddSecret(secret)
     this
   }
@@ -78,37 +58,13 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
   // 1) check for existence
   // 2) remove from SecretStore (note: provide a unique version to SecretStore)
   override def removeSecret(publicImage: SidechainTypes#SCP): Try[SidechainWallet] = Try {
-    require(publicImage != null, "PublicImage must be NOT NULL.")
-    secretStorage.remove(publicImage).get
+    super.removeSecret(publicImage).get
     applicationWallet.onRemoveSecret(publicImage)
     this
   }
 
-  override def secret(publicImage: SidechainTypes#SCP): Option[SidechainTypes#SCS] = {
-    secretStorage.get(publicImage)
-  }
-
-  override def secrets(): Set[SidechainTypes#SCS] = {
-    secretStorage.getAll.toSet
-  }
-
   override def boxes(): Seq[WalletBox] = {
     walletBoxStorage.getAll
-  }
-
-  override def publicKeys(): Set[SidechainTypes#SCP] = {
-    secretStorage.getAll.map(_.publicImage()).toSet
-  }
-
-  // just do nothing, we don't need to care about offchain objects inside the wallet
-  override def scanOffchain(tx: SidechainTypes#SCBT): SidechainWallet = this
-
-  // just do nothing, we don't need to care about offchain objects inside the wallet
-  override def scanOffchain(txs: Seq[SidechainTypes#SCBT]): SidechainWallet = this
-
-  @Deprecated
-  override def scanPersistent(modifier: SidechainBlock): SidechainWallet = {
-    throw new UnsupportedOperationException()
   }
 
   // Scan the modifier and:

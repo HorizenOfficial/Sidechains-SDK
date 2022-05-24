@@ -7,7 +7,7 @@ import com.horizen.secret.Secret;
 
 import java.util.*;
 
-public interface NodeWallet {
+public interface NodeWallet extends NodeWalletBase {
 
     // boxes are sorted by creation time in wallet from oldest to newest
     List<Box<Proposition>> allBoxes();
@@ -23,11 +23,4 @@ public interface NodeWallet {
 
     Long allCoinsBoxesBalance();
 
-    Optional<Secret> secretByPublicKey(Proposition publicKey);
-
-    List<Secret> allSecrets();
-
-    List<Secret> secretsOfType(Class<? extends Secret> type);
-
-    byte[] walletSeed();
 }
