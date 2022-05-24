@@ -1,12 +1,14 @@
 package com.horizen.account.transaction;
 
 import com.horizen.account.proof.SignatureSecp256k1;
+import com.horizen.account.proposition.PublicKeySecp256k1Proposition;
 import org.junit.Before;
 import org.junit.Test;
 import org.web3j.crypto.ECKeyPair;
 import org.web3j.crypto.Keys;
 import org.web3j.crypto.RawTransaction;
 import org.web3j.crypto.Sign;
+import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -20,6 +22,7 @@ public class EthereumTransactionTest {
     EthereumTransaction ethereumTransaction;
     RawTransaction rawTX;
     SignatureSecp256k1 txSignature;
+    PublicKeySecp256k1Proposition txProposition;
 
     @Before
     public void BeforeEachTest() throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException {
@@ -34,6 +37,7 @@ public class EthereumTransactionTest {
         ECKeyPair pair = Keys.createEcKeyPair();
         var msgSignature = Sign.signMessage(message, pair, true);
         txSignature = new SignatureSecp256k1(msgSignature);
+        txProposition = new PublicKeySecp256k1Proposition(Numeric.hexStringToByteArray(Keys.getAddress(pair)));
     }
 
     @Test
@@ -41,7 +45,7 @@ public class EthereumTransactionTest {
         // Test 1: everything is correct
         boolean exceptionOccurred = false;
         try {
-            new EthereumTransaction(rawTX, txSignature);
+            new EthereumTransaction(rawTX, txSignature, txProposition);
         }
         catch (NullPointerException e) {
             exceptionOccurred = true;
@@ -51,7 +55,7 @@ public class EthereumTransactionTest {
         // Test 2: raw transaction is null
         exceptionOccurred = false;
         try {
-            new EthereumTransaction(null, txSignature);
+            new EthereumTransaction(null, txSignature, txProposition);
         }
         catch (NullPointerException e) {
             exceptionOccurred = true;
@@ -61,36 +65,46 @@ public class EthereumTransactionTest {
         // Test 3: signature is null
         exceptionOccurred = false;
         try {
-            new EthereumTransaction(rawTX, null);
+            new EthereumTransaction(rawTX, null, txProposition);
         }
         catch (NullPointerException e) {
             exceptionOccurred = true;
         }
         assertTrue("Test3: Exception during EthereumTransaction creation expected.", exceptionOccurred);
 
-        // Test 4: toString function returns correctly
-        ethereumTransaction = new EthereumTransaction(rawTX, txSignature);
+        // Test 4: proposition is null
+        exceptionOccurred = false;
+        try {
+            new EthereumTransaction(rawTX, txSignature, null);
+        }
+        catch (NullPointerException e) {
+            exceptionOccurred = true;
+        }
+        assertTrue("Test4: Exception during EthereumTransaction creation expected.", exceptionOccurred);
+
+        // Test 5: toString function returns correctly
+        ethereumTransaction = new EthereumTransaction(rawTX, txSignature, txProposition);
         assertEquals("Ethereum Transaction to String expected to be equal", ethereumTransaction.toString(),
                 "EthereumTransaction{nonce=0x1, gasPrice=0x1, gasLimit=0x1, to=0x, data=, " +
                         "Signature="+txSignature.toString()+"}");
 
-        // Test 5: ethereum transaction object returns transaction type id correctly
+        // Test 6: ethereum transaction object returns transaction type id correctly
         assertEquals(ethereumTransaction.transactionTypeId(), (byte)2);
 
-        // Test 6: ethereum transaction object returns version correctly
+        // Test 7: ethereum transaction object returns version correctly
         assertEquals(ethereumTransaction.version(), 1);
 
-        // Test 7: ethereum transaction instance returns messageToSign correctly
+        // Test 8: ethereum transaction instance returns messageToSign correctly
         // currently not that interesting
         assertNotNull(ethereumTransaction.messageToSign());
 
-        // Test 8: ethereum transaction instance returns passed RawTransaction correctly
+        // Test 9: ethereum transaction instance returns passed RawTransaction correctly
         assertEquals(ethereumTransaction.getTransaction(), rawTX);
 
-        // Test 9: ethereum transaction instance returns passed Signature correctly
+        // Test 10: ethereum transaction instance returns passed Signature correctly
         assertEquals(ethereumTransaction.getSignature(), txSignature);
 
-        // Test 10: ethereum transaction instance returns transaction serializer correctly
+        // Test 11: ethereum transaction instance returns transaction serializer correctly
         assertEquals(ethereumTransaction.serializer(), EthereumTransactionSerializer.getSerializer());
     }
 }
