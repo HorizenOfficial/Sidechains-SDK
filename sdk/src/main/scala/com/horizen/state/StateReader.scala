@@ -3,6 +3,7 @@ package com.horizen.state
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.consensus.ConsensusEpochInfo
+import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.utils.{BlockFeeInfo, WithdrawalEpochInfo}
 import scorex.util.ModifierId
 
@@ -18,6 +19,7 @@ trait StateReader extends scorex.core.transaction.state.StateReader {
   // Returns lastBlockInEpoch and ConsensusEpochInfo for that epoch
   // Identical to the SidechainState.getCurrentConsensusEpochInfo method
   def getConsensusEpochInfo: (ModifierId, ConsensusEpochInfo)
+  def getConsensusEpochNumber: Option[ConsensusEpochNumber]
 
   // todo: fee payments related part
   def getBlockFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo]
