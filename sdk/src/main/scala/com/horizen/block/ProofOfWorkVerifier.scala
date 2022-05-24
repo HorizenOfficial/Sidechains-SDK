@@ -2,9 +2,9 @@ package com.horizen.block
 
 import java.math.BigInteger
 import com.google.common.primitives.UnsignedInts
-import com.horizen.SidechainTypes
 import com.horizen.params.NetworkParams
-import com.horizen.storage.SidechainHistoryStorage
+import com.horizen.storage.AbstractHistoryStorage
+import com.horizen.transaction.Transaction
 import com.horizen.utils.{BytesUtils, Utils}
 
 import scala.util.control.Breaks._
@@ -30,7 +30,11 @@ object ProofOfWorkVerifier {
 
   // Check that PoW target (bits) is correct for all MainchainHeaders and Ommers' MainchainHeaders (recursively) included into SidechainBlock.
   // The order of MainchainHeaders in Block (both active and orphaned) verified in block semantic validity method
-  def checkNextWorkRequired(block: SidechainBlockBase[SidechainTypes#SCBT], sidechainHistoryStorage: SidechainHistoryStorage, params: NetworkParams): Boolean = {
+  def checkNextWorkRequired[TX <: Transaction,
+    PMOD <: SidechainBlockBase[TX],
+    HSTOR <: AbstractHistoryStorage[PMOD, HSTOR]](block: PMOD,
+                                                  historyStorage: HSTOR,
+                                                  params: NetworkParams): Boolean = {
     if(block.mainchainHeaders.isEmpty)
       return true
 
@@ -39,7 +43,7 @@ object ProofOfWorkVerifier {
     var timeBitsData = List[Tuple2[Int, Int]]()
     // Take firt MC Ref header if exists, else get first nextMCHeader
     var currentHeader = block.mainchainHeaders.head
-    var currentBlock: SidechainBlockBase[SidechainTypes#SCBT] = block
+    var currentBlock: PMOD = block
     breakable {
       while (true) {
         if (currentHeader.hash.sameElements(params.genesisMainchainBlockHash)) {
@@ -53,8 +57,8 @@ object ProofOfWorkVerifier {
         }
 
         // get previous block
-        currentBlock = sidechainHistoryStorage.blockById(currentBlock.parentId) match {
-          case b: Some[SidechainBlock] => b.get
+        currentBlock = historyStorage.blockById(currentBlock.parentId) match {
+          case b: Some[PMOD] => b.get
           case _ => return false
         }
 

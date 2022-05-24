@@ -2,6 +2,7 @@ package com.horizen
 
 import com.horizen.block.SidechainBlockBase
 import com.horizen.params.NetworkParams
+import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
 import com.horizen.validation.{ConsensusValidator, HistoryBlockValidator, MainchainBlockReferenceValidator, MainchainPoWValidator, SemanticBlockValidator, SidechainBlockSemanticValidator, WithdrawalEpochValidator}
 import scorex.core.NodeViewHolder.DownloadRequest
@@ -24,6 +25,9 @@ abstract class AbstractSidechainNodeViewHolder[TX <: Transaction, PMOD <: Sidech
     with SidechainTypes
 {
   override type SI = SidechainSyncInfo
+  type HSTOR <: AbstractHistoryStorage[PMOD, HSTOR]
+
+  override type HIS <: AbstractHistory[TX, PMOD, HSTOR, HIS]
   override type VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PMOD, VL]
 
   case class SidechainNodeUpdateInformation(history: HIS,
@@ -37,7 +41,7 @@ abstract class AbstractSidechainNodeViewHolder[TX <: Transaction, PMOD <: Sidech
 
   protected def semanticBlockValidators(params: NetworkParams): Seq[SemanticBlockValidator[PMOD]] = Seq(new SidechainBlockSemanticValidator[TX, PMOD](params))
 
-  protected def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator] = Seq(
+  protected def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator[TX, PMOD, HSTOR, HIS]] = Seq(
     new WithdrawalEpochValidator(params),
     new MainchainPoWValidator(params),
     new MainchainBlockReferenceValidator(params),

@@ -4,6 +4,7 @@ import com.horizen.account.block.AccountBlock
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.state.AccountState
+import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.consensus.{ConsensusEpochInfo, FullConsensusEpochInfo, StakeConsensusEpochInfo, blockIdToEpochId}
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
@@ -16,6 +17,7 @@ abstract class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettin
                                      timeProvider: NetworkTimeProvider)
   extends AbstractSidechainNodeViewHolder[SidechainTypes#SCAT, AccountBlock](sidechainSettings, params, timeProvider) {
 
+  override type HSTOR = AccountHistoryStorage
   override type VL = AccountWallet
   override type HIS = AccountHistory
   override type MS = AccountState
