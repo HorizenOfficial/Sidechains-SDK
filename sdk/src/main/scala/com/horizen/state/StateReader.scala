@@ -2,6 +2,7 @@ package com.horizen.state
 
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.box.WithdrawalRequestBox
+import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.utils.{BlockFeeInfo, WithdrawalEpochInfo}
 
 trait StateReader extends scorex.core.transaction.state.StateReader {
@@ -14,6 +15,7 @@ trait StateReader extends scorex.core.transaction.state.StateReader {
   def hasCeased: Boolean
 
   // todo: consensus related part
+  def getConsensusEpochNumber: Option[ConsensusEpochNumber]
 
   // todo: fee payments related part
   def getBlockFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo]

@@ -1,19 +1,20 @@
 package com.horizen.account.state
 
 import com.horizen.SidechainTypes
-import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, WithdrawalEpochCertificate}
-import com.horizen.box.{ForgerBox, WithdrawalRequestBox}
-import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.account.storage.AccountStateMetadataStorage
+import com.horizen.block.{SidechainBlock, WithdrawalEpochCertificate}
+import com.horizen.box.WithdrawalRequestBox
+import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.params.NetworkParams
-import com.horizen.state.{State, StateReader, StateView}
-import com.horizen.utils.{BlockFeeInfo, BytesUtils, FeePaymentsUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.state.State
+import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import scorex.core.{VersionTag, idToBytes, idToVersion, versionToBytes}
 import scorex.util.ScorexLogging
 
 import java.util
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Try}
 
-class AccountState(val params: NetworkParams) extends State[SidechainTypes#SCAT, AccountStateView, AccountState]
+class AccountState(val params: NetworkParams, stateMetadataStorage: AccountStateMetadataStorage) extends State[SidechainTypes#SCAT, AccountStateView, AccountState]
   with AccountStateReader
   with ScorexLogging {
    self: AccountState =>
@@ -62,6 +63,9 @@ class AccountState(val params: NetworkParams) extends State[SidechainTypes#SCAT,
     // Update view with the block info
     stateView.updateWithdrawalEpochInfo(modWithdrawalEpochInfo).get
     stateView.addFeeInfo(mod.feeInfo)
+
+    val consensusEpochNum: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)
+    stateView.updateConsensusEpochNumber(consensusEpochNum)
 
     // If SC block has reached the end of the withdrawal epoch -> fee payments expected to be produced.
     // Verify that Forger assumed the same fees to be paid as the current node does.
@@ -139,33 +143,50 @@ class AccountState(val params: NetworkParams) extends State[SidechainTypes#SCAT,
     }*/
   }
 
-  override def rollbackTo(version: VersionTag): Try[AccountState] = ???
+  override def rollbackTo(version: VersionTag): Try[AccountState] = {
+    Try {
+      require(version != null, "Version to rollback to must be NOT NULL.")
+      new AccountState(params,stateMetadataStorage.rollback(new ByteArrayWrapper(versionToBytes(version))).get)
+    }.recoverWith({
+      case exception =>
+        log.error("Exception was thrown during rollback.", exception)
+        Failure(exception)
+    })
+  }
 
   // versions part
   override def version: VersionTag = ???
 
-  override def maxRollbackDepth: Int = ???
+  override def maxRollbackDepth: Int = stateMetadataStorage.rollbackVersions.size
 
   // View
-  override def getView: AccountStateView = ???
+  override def getView: AccountStateView = {
+    new AccountStateView(stateMetadataStorage.getView)
+  }
 
   // getters:
   override def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequestBox] = ???
 
-  override def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = ???
+  override def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
+    getView.certificate(referencedWithdrawalEpoch)
+  }
 
-  override def certificateTopQuality(referencedWithdrawalEpoch: Int): Long = ???
+  override def certificateTopQuality(referencedWithdrawalEpoch: Int): Long = getView.certificateTopQuality(referencedWithdrawalEpoch)
 
-  override def getWithdrawalEpochInfo: WithdrawalEpochInfo = ???
+  override def getWithdrawalEpochInfo: WithdrawalEpochInfo = getView.getWithdrawalEpochInfo
 
-  override def hasCeased: Boolean = ???
+  override def hasCeased: Boolean = getView.hasCeased
 
-  override def getBlockFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo] = ???
+  override def getBlockFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo] = getView.getBlockFeePayments(withdrawalEpochNumber)
 
   // Account specific getters
   override def getAccount(address: Array[Byte]): Account = ???
 
   override def getBalance(address: Array[Byte]): Long = ???
+
+  override def getAccountStateRoot: Option[Array[Byte]] = getView.getAccountStateRoot
+
+  override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = getView.getConsensusEpochNumber
 }
 
 
