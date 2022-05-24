@@ -4,7 +4,7 @@ import com.horizen.block.{SidechainBlock, SidechainBlockBase}
 import com.horizen.cryptolibprovider.CumulativeHashFunctions
 import com.horizen.utils.BytesUtils
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
-import scorex.core.transaction.Transaction
+import com.horizen.transaction.Transaction
 import scorex.util.serialization.{Reader, Writer}
 
 import scala.collection.mutable.ArrayBuffer

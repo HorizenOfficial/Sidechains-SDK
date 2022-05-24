@@ -3,7 +3,7 @@ package com.horizen.validation
 import com.horizen.account.history.AccountHistory
 import com.horizen.{SidechainHistory, SidechainTypes}
 import com.horizen.block.SidechainBlockBase
-import scorex.core.transaction.Transaction
+import com.horizen.transaction.Transaction
 
 import scala.util.Try
 

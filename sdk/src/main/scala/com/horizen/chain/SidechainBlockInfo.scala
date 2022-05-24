@@ -8,7 +8,7 @@ import scorex.core.NodeViewModifier
 import scorex.core.block.Block.Timestamp
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
-import scorex.core.transaction.Transaction
+import com.horizen.transaction.Transaction
 import scorex.util.serialization.{Reader, Writer}
 import scorex.util.{ModifierId, bytesToId, idToBytes}
 

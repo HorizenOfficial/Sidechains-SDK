@@ -7,18 +7,16 @@ import com.horizen.account.node.NodeAccountHistory
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.consensus._
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
-import com.horizen.storage.SidechainHistoryStorage
-import com.horizen.validation.{HistoryAccountBlockValidator, SemanticAccountBlockValidator}
-import scorex.util.{ModifierId, ScorexLogging}
+import com.horizen.validation.{HistoryAccountBlockValidator, SemanticBlockValidator}
+import scorex.util.ScorexLogging
 
-import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.util.Try
 
 
 class AccountHistory private(storage: AccountHistoryStorage,
                              consensusDataStorage: ConsensusDataStorage,
                              params: NetworkParams,
-                             semanticBlockValidators: Seq[SemanticAccountBlockValidator],
+                             semanticBlockValidators: Seq[SemanticBlockValidator[AccountBlock]],
                              historyBlockValidators: Seq[HistoryAccountBlockValidator])
 extends com.horizen.AbstractHistory[SidechainTypes#SCAT, AccountBlock, AccountHistoryStorage, AccountHistory](
     storage, consensusDataStorage, params)
@@ -57,7 +55,7 @@ object AccountHistory
   private[horizen] def restoreHistory(historyStorage: AccountHistoryStorage,
                                       consensusDataStorage: ConsensusDataStorage,
                                       params: NetworkParams,
-                                      semanticBlockValidators: Seq[SemanticAccountBlockValidator],
+                                      semanticBlockValidators: Seq[SemanticBlockValidator[AccountBlock]],
                                       historyBlockValidators: Seq[HistoryAccountBlockValidator]): Option[AccountHistory] = {
 
     if (!historyStorage.isEmpty)
@@ -72,7 +70,7 @@ object AccountHistory
                                             consensusDataStorage: ConsensusDataStorage,
                                             params: NetworkParams,
                                             genesisBlock: AccountBlock,
-                                            semanticBlockValidators: Seq[SemanticAccountBlockValidator],
+                                            semanticBlockValidators: Seq[SemanticBlockValidator[AccountBlock]],
                                             historyBlockValidators: Seq[HistoryAccountBlockValidator],
                                             stakeEpochInfo: StakeConsensusEpochInfo) : Try[AccountHistory] = Try {
 

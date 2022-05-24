@@ -7,7 +7,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.utils.ByteArrayWrapper
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.core.serialization.ScorexSerializer
-import scorex.core.transaction.Transaction
+import com.horizen.transaction.Transaction
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
 

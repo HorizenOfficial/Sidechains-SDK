@@ -1,13 +1,11 @@
 package com.horizen.validation
 
-import com.horizen.SidechainTypes
-import com.horizen.block.{SidechainBlock, SidechainBlockBase}
+import com.horizen.block.SidechainBlockBase
 import com.horizen.params.NetworkParams
-import com.horizen.utils.BytesUtils
-import scorex.util.idToBytes
+import com.horizen.transaction.Transaction
 
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
-class SidechainBlockSemanticValidator(params: NetworkParams) extends SemanticBlockValidator {
-  override def validate(block: SidechainBlockBase[SidechainTypes#SCBT]): Try[Unit] = block.semanticValidity(params)
+class SidechainBlockSemanticValidator[TX <: Transaction, PMOD <: SidechainBlockBase[TX]](params: NetworkParams) extends SemanticBlockValidator[PMOD] {
+  override def validate(block: PMOD): Try[Unit] = block.semanticValidity(params)
 }

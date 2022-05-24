@@ -10,10 +10,10 @@ import com.horizen.storage.leveldb.Algos.encoder
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import scorex.core.consensus.History.{Equal, Fork, ModifierIds, Nonsense, Older, ProgressInfo, Younger}
 import scorex.core.consensus.{History, ModifierSemanticValidity}
-import scorex.core.transaction.Transaction
 import scorex.core.validation.RecoverableModifierError
 import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 import com.horizen.node.util.MainchainBlockReferenceInfo
+import com.horizen.transaction.Transaction
 import scorex.core.NodeViewModifier
 
 import java.util.Optional

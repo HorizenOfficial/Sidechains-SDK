@@ -6,7 +6,7 @@ import com.horizen.utils.{MerkleTree, Utils}
 import com.horizen.validation.InvalidSidechainBlockDataException
 import scorex.core.block.Block
 import scorex.core.block.Block.Timestamp
-import scorex.core.transaction.Transaction
+import com.horizen.transaction.Transaction
 import scorex.core.ModifierTypeId
 import scorex.util.ModifierId
 

@@ -14,7 +14,7 @@ import scala.util.Try
 class SidechainHistory private (storage: SidechainHistoryStorage,
                                 consensusDataStorage: ConsensusDataStorage,
                                 params: NetworkParams,
-                                semanticBlockValidators: Seq[SemanticBlockValidator],
+                                semanticBlockValidators: Seq[SemanticBlockValidator[SidechainBlock]],
                                 historyBlockValidators: Seq[HistoryBlockValidator])
   extends com.horizen.AbstractHistory[SidechainTypes#SCBT, SidechainBlock, SidechainHistoryStorage, SidechainHistory](
     storage, consensusDataStorage, params)
@@ -83,7 +83,7 @@ object SidechainHistory
   private[horizen] def restoreHistory(historyStorage: SidechainHistoryStorage,
                                       consensusDataStorage: ConsensusDataStorage,
                                       params: NetworkParams,
-                                      semanticBlockValidators: Seq[SemanticBlockValidator],
+                                      semanticBlockValidators: Seq[SemanticBlockValidator[SidechainBlock]],
                                       historyBlockValidators: Seq[HistoryBlockValidator]): Option[SidechainHistory] = {
 
     if (!historyStorage.isEmpty)
@@ -98,7 +98,7 @@ object SidechainHistory
                                       consensusDataStorage: ConsensusDataStorage,
                                       params: NetworkParams,
                                       genesisBlock: SidechainBlock,
-                                      semanticBlockValidators: Seq[SemanticBlockValidator],
+                                      semanticBlockValidators: Seq[SemanticBlockValidator[SidechainBlock]],
                                       historyBlockValidators: Seq[HistoryBlockValidator],
                                       stakeEpochInfo: StakeConsensusEpochInfo) : Try[SidechainHistory] = Try {
 

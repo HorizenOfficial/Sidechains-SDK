@@ -2,7 +2,7 @@ package com.horizen.utils
 
 import com.horizen.block.{SidechainBlock, SidechainBlockBase}
 import com.horizen.params.NetworkParams
-import scorex.core.transaction.Transaction
+import com.horizen.transaction.Transaction
 
 object WithdrawalEpochUtils {
 

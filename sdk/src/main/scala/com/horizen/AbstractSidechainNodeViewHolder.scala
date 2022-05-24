@@ -1,10 +1,11 @@
 package com.horizen
 
+import com.horizen.block.SidechainBlockBase
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.Transaction
 import com.horizen.validation.{ConsensusValidator, HistoryBlockValidator, MainchainBlockReferenceValidator, MainchainPoWValidator, SemanticBlockValidator, SidechainBlockSemanticValidator, WithdrawalEpochValidator}
 import scorex.core.NodeViewHolder.DownloadRequest
-import scorex.core.{PersistentNodeViewModifier, idToVersion}
+import scorex.core.idToVersion
 import scorex.core.consensus.History.ProgressInfo
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{NewOpenSurface, RollbackFailed, SemanticallyFailedModification, SemanticallySuccessfulModifier, StartingPersistentModifierApplication, SyntacticallyFailedModification, SyntacticallySuccessfulModifier}
 import scorex.core.settings.ScorexSettings
@@ -13,7 +14,7 @@ import scorex.core.utils.NetworkTimeProvider
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 
-abstract class AbstractSidechainNodeViewHolder[TX <: Transaction, PMOD <: PersistentNodeViewModifier]
+abstract class AbstractSidechainNodeViewHolder[TX <: Transaction, PMOD <: SidechainBlockBase[TX]]
 (
   sidechainSettings: SidechainSettings,
   params: NetworkParams,
@@ -34,7 +35,7 @@ abstract class AbstractSidechainNodeViewHolder[TX <: Transaction, PMOD <: Persis
 
   override val scorexSettings: ScorexSettings = sidechainSettings.scorexSettings
 
-  protected def semanticBlockValidators(params: NetworkParams): Seq[SemanticBlockValidator] = Seq(new SidechainBlockSemanticValidator(params))
+  protected def semanticBlockValidators(params: NetworkParams): Seq[SemanticBlockValidator[PMOD]] = Seq(new SidechainBlockSemanticValidator[TX, PMOD](params))
 
   protected def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator] = Seq(
     new WithdrawalEpochValidator(params),
