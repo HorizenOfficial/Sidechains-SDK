@@ -166,11 +166,6 @@ class AccountSidechainApp @Inject()
     storageList.foreach(_.close())
   }
 
-  private def registerStorage(storage: Storage) : Storage = {
-    storageList += storage
-    storage
-  }
-
   def getTransactionSubmitProvider: AccountTransactionSubmitProvider = transactionSubmitProvider
 
   actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
