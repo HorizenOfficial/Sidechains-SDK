@@ -6,6 +6,7 @@ import com.horizen.account.secret.PrivateKeySecp256k1;
 import com.horizen.account.utils.Secp256k1;
 import com.horizen.proof.ProofOfKnowledge;
 import com.horizen.proof.ProofSerializer;
+import org.bouncycastle.util.Strings;
 import org.web3j.crypto.Keys;
 import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
@@ -50,7 +51,7 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
             // verify signature validity for the given message
             final var signingAddress = Keys.getAddress(Sign.signedMessageToKey(message, signature));
             // verify that the signature was created with the expected address
-            return Objects.equals(signingAddress, Numeric.toHexStringNoPrefix(proposition.address()));
+            return Objects.equals(signingAddress, Strings.fromByteArray(proposition.address()));
         } catch (SignatureException e) {
             return false;
         }

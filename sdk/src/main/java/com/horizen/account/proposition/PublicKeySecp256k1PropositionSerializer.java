@@ -1,6 +1,5 @@
 package com.horizen.account.proposition;
 
-import com.horizen.account.utils.Secp256k1;
 import com.horizen.proposition.PropositionSerializer;
 import org.web3j.crypto.Keys;
 import scorex.util.serialization.Reader;
@@ -29,7 +28,7 @@ public final class PublicKeySecp256k1PropositionSerializer
 
     @Override
     public PublicKeySecp256k1Proposition parse(Reader reader) {
-        byte[] address = reader.getBytes(Keys.ADDRESS_LENGTH_IN_HEX/2);
+        byte[] address = reader.getBytes(Keys.ADDRESS_LENGTH_IN_HEX+2);
         return new PublicKeySecp256k1Proposition(address);
     }
 }
