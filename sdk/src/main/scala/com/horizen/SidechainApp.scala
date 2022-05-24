@@ -210,11 +210,6 @@ class SidechainApp @Inject()
     storageList.foreach(_.close())
   }
 
-  private def registerStorage(storage: Storage) : Storage = {
-    storageList += storage
-    storage
-  }
-
   def getTransactionSubmitProvider: TransactionSubmitProvider = transactionSubmitProvider
   def getNodeViewProvider: NodeViewProvider = nodeViewProvider
   def getSecretSubmitProvider: SecretSubmitProvider = secretSubmitProvider

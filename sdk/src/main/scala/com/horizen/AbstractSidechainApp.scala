@@ -176,17 +176,12 @@ abstract class AbstractSidechainApp
     }
   }
 
-  //Websocket server for the Explorer
-  if(sidechainSettings.websocket.wsServer) {
-    val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocket.wsServerPort)
-  }
-
   // Retrieve information for using a web socket connector
-  val communicationClient: WebSocketCommunicationClient = new WebSocketCommunicationClient()
-  val webSocketReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(sidechainSettings.websocket)
+  lazy val communicationClient: WebSocketCommunicationClient = new WebSocketCommunicationClient()
+  lazy val webSocketReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(sidechainSettings.websocket)
 
   // Create the web socket connector and configure it
-  val webSocketConnector : WebSocketConnector with WebSocketChannel = new WebSocketConnectorImpl(
+  lazy val webSocketConnector : WebSocketConnector with WebSocketChannel = new WebSocketConnectorImpl(
     sidechainSettings.websocket.address,
     sidechainSettings.websocket.connectionTimeout,
     communicationClient,
@@ -213,7 +208,7 @@ abstract class AbstractSidechainApp
 
   //Websocket server for the Explorer
   if(sidechainSettings.websocket.wsServer) {
-    val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocket.wsServerPort)
+    lazy val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocket.wsServerPort)
   }
 
   // Init API
@@ -232,11 +227,10 @@ abstract class AbstractSidechainApp
     storageList.foreach(_.close())
   }
 
-  private def registerStorage(storage: Storage) : Storage = {
+  protected def registerStorage(storage: Storage) : Storage = {
     storageList += storage
     storage
   }
-
 
   actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 }
