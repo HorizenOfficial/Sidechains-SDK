@@ -1,28 +1,30 @@
 package com.horizen.account.transaction;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonView;
+import com.fasterxml.jackson.annotation.*;
+import com.google.common.primitives.Bytes;
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.PublicKeySecp256k1Proposition;
-import com.horizen.account.utils.Secp256k1;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
+import org.bouncycastle.util.Strings;
 import org.web3j.crypto.Keys;
 import org.web3j.crypto.RawTransaction;
-import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
-
+@JsonPropertyOrder({"from", "gasPrice", "nonce", "to", "value", "signature"})
+@JsonIgnoreProperties({"transaction", "gasLimit"})
 @JsonView(Views.Default.class)
 public class EthereumTransaction extends AccountTransaction<PublicKeySecp256k1Proposition, SignatureSecp256k1> {
 
-    @JsonIgnoreProperties({"legacyTransaction", "eip1559Transaction"})
     private final RawTransaction transaction;
+    @JsonUnwrapped
     private final PublicKeySecp256k1Proposition from;
+    @JsonUnwrapped
     private final SignatureSecp256k1 signature;
     private final int version = 1;
 
@@ -58,7 +60,18 @@ public class EthereumTransaction extends AccountTransaction<PublicKeySecp256k1Pr
 
     @Override
     public void semanticValidity() throws TransactionSemanticValidityException {
-
+        if (transaction.getValue().signum() <= 0) {
+            throw new TransactionSemanticValidityException("Cannot create transaction with zero value");
+        }
+        else if (transaction.getGasLimit().signum() <= 0) {
+            throw new TransactionSemanticValidityException("Cannot create transaction with zero gas limit");
+        }
+        else if (from.address().length <= Keys.ADDRESS_LENGTH_IN_HEX+2) {
+            throw new TransactionSemanticValidityException("Cannot create transaction without valid from address");
+        }
+        else if (!signature.isValid(from, "test".getBytes(StandardCharsets.UTF_8))){
+            throw new TransactionSemanticValidityException("Cannot create transaction with invalid signature");
+        }
     }
 
     @Override
@@ -83,7 +96,10 @@ public class EthereumTransaction extends AccountTransaction<PublicKeySecp256k1Pr
 
     @Override
     public PublicKeySecp256k1Proposition getTo() {
-        return new PublicKeySecp256k1Proposition(Numeric.hexStringToByteArray(transaction.getTo()));
+        if (transaction.getTo().length() != Keys.ADDRESS_LENGTH_IN_HEX+2)
+            return null;
+        else
+            return new PublicKeySecp256k1Proposition(Strings.toByteArray(transaction.getTo()));
     }
 
     @Override
@@ -97,13 +113,14 @@ public class EthereumTransaction extends AccountTransaction<PublicKeySecp256k1Pr
     }
 
     public SignatureSecp256k1 getSignature() {
-        return this.signature;
+        return signature;
     }
 
     @Override
     public String toString() {
         return String.format(
-                "EthereumTransaction{nonce=%s, gasPrice=%s, gasLimit=%s, to=%s, data=%s, Signature=%s}",
+                "EthereumTransaction{from=%s, nonce=%s, gasPrice=%s, gasLimit=%s, to=%s, data=%s, Signature=%s}",
+                Strings.fromByteArray(from.address()),
                 Numeric.toHexStringWithPrefix(transaction.getNonce()),
                 Numeric.toHexStringWithPrefix(transaction.getGasPrice()),
                 Numeric.toHexStringWithPrefix(transaction.getGasLimit()),
@@ -115,6 +132,11 @@ public class EthereumTransaction extends AccountTransaction<PublicKeySecp256k1Pr
 
     @Override
     public byte[] messageToSign() {
-        return new byte[0];
+            return Bytes.concat(getNonce().toByteArray(),
+                    getGasPrice().toByteArray(),
+                    getGasLimit().toByteArray(),
+                    transaction.getTo().getBytes(StandardCharsets.UTF_8),
+                    getValue().toByteArray(),
+                    getData().getBytes(StandardCharsets.UTF_8));
     }
 }
