@@ -6,7 +6,6 @@ import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingS
 import com.horizen.node.NodeWallet
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
-import com.horizen.secret.Secret
 import com.horizen.storage._
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils._
@@ -15,14 +14,13 @@ import scorex.core.VersionTag
 import scorex.util.ModifierId
 
 import java.lang
-import java.util.{List => JList, Optional => JOptional}
+import java.util.{List => JList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.language.postfixOps
 import scala.util.Try
 
-trait BoxWallet{
-
+trait BoxWallet {
   def boxes(): Seq[WalletBox]
 }
 
@@ -214,26 +212,9 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     walletBoxStorage.getBoxesBalance(boxType)
   }
 
-  override def secretByPublicKey(publicKey: Proposition): JOptional[Secret] = {
-    secretStorage.get(publicKey) match {
-      case Some(secret) => JOptional.of(secret)
-      case None => JOptional.empty()
-    }
-  }
-
-  override def allSecrets(): JList[Secret] = {
-    secretStorage.getAll.asJava
-  }
-
-  override def secretsOfType(secretType: Class[_ <: Secret]): JList[Secret] = {
-    secretStorage.getAll.filter(_.getClass.equals(secretType)).asJava
-  }
-
   override def allCoinsBoxesBalance(): lang.Long = {
     walletBoxStorage.getAll.withFilter(_.box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]]).map(_.box.value()).sum
   }
-
-  override def walletSeed(): Array[Byte] = seed
 
   def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo): SidechainWallet = {
     val merkleTreeLeaves = epochInfo.forgingStakeInfoTree.leaves().asScala.map(leaf => new ByteArrayWrapper(leaf))
