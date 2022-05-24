@@ -1,5 +1,6 @@
-package com.horizen.evm;
+package com.horizen.evm.library;
 
+import com.horizen.evm.utils.Converter;
 import com.sun.jna.Native;
 
 import java.util.Map;
@@ -8,7 +9,7 @@ public final class Evm {
     public static EvmLib Instance;
 
     static {
-        String os = System.getProperty("os.name").toLowerCase();
+        var os = System.getProperty("os.name").toLowerCase();
         String libExtension;
         if (os.contains("mac os")) {
             libExtension = "dylib";
@@ -17,7 +18,7 @@ public final class Evm {
         } else {
             libExtension = "so";
         }
-        String lib = "libevm." + libExtension;
+        var lib = "libevm." + libExtension;
         Instance = Native.load(lib, EvmLib.class);
     }
 
@@ -32,6 +33,15 @@ public final class Evm {
         @Override
         public String toString() {
             return String.format("code %d message %s", code, message.isEmpty() ? "none" : message);
+        }
+    }
+
+    public static class HandleResult extends InteropResult {
+        public int handle;
+
+        @Override
+        public String toString() {
+            return String.format("%s handle %d", super.toString(), handle);
         }
     }
 
@@ -115,7 +125,7 @@ public final class Evm {
             return String.format(
                 "%s ret %s leftOverGas %d balanceChanges %s",
                 super.toString(),
-                ret == null ? "null" : String.format("0x%s", EvmUtils.toHexString(ret)),
+                ret == null ? "null" : String.format("0x%s", Converter.toHexString(ret)),
                 leftOverGas,
                 balanceChanges
             );

@@ -1,4 +1,4 @@
-package com.horizen.evm;
+package com.horizen.evm.library;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -15,12 +15,12 @@ public class JsonPointer implements NativeMapped {
         if (nativeValue == null) {
             return null;
         } else {
-            Pointer ptr = (Pointer) nativeValue;
+            var ptr = (Pointer) nativeValue;
             try {
                 // copy json string from native memory
-                String json = ptr.getString(0);
+                var json = ptr.getString(0);
                 // parse json into object
-                ObjectMapper objectMapper = new ObjectMapper();
+                var objectMapper = new ObjectMapper();
                 return objectMapper.readValue(json, this.getClass());
 //            } catch (JsonMappingException e) {
 //                throw new IllegalArgumentException("JSON mapping error " + this.getClass());
@@ -39,7 +39,7 @@ public class JsonPointer implements NativeMapped {
     public Object toNative() {
         try {
             // serialize object to json
-            ObjectMapper mapper = new ObjectMapper();
+            var mapper = new ObjectMapper();
             // do not serialize null or empty values
             mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
             mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);

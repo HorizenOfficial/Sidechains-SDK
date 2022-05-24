@@ -1,4 +1,4 @@
-package com.horizen.evm;
+package com.horizen.evm.library;
 
 import com.sun.jna.Library;
 import com.sun.jna.Pointer;
@@ -8,9 +8,11 @@ public interface EvmLib extends Library {
 
     Evm.InteropResult Initialize(String path);
 
-    Evm.InteropResult SetStateRoot(String stateRoot);
+    Evm.HandleResult OpenState(String stateRootHex);
 
-    Evm.StateRootResult GetIntermediateStateRoot();
+    Evm.InteropResult CloseState(int handle);
+
+    Evm.StateRootResult GetIntermediateStateRoot(int handle);
 
     Evm.StateRootResult CommitState();
 

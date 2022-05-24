@@ -7,40 +7,14 @@ package main
 import "C"
 import (
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/vm/runtime"
 	"libevm/evm"
-	"libevm/helper"
-	"math/big"
+	"libevm/types"
 	"unsafe"
 )
 
-// SerializableConfig mirrors configurable parts of the runtime.Config
-type SerializableConfig struct {
-	Difficulty  helper.BigInt  `json:"difficulty"`
-	Origin      common.Address `json:"origin"`
-	Coinbase    common.Address `json:"coinbase"`
-	BlockNumber helper.BigInt  `json:"blockNumber"`
-	Time        helper.BigInt  `json:"time"`
-	GasLimit    uint64         `json:"gasLimit"`
-	GasPrice    helper.BigInt  `json:"gasPrice"`
-	Value       helper.BigInt  `json:"value"`
-	BaseFee     helper.BigInt  `json:"baseFee"`
-}
-
-// Map SerializableConfig to runtime.Config
-func (c *SerializableConfig) getConfig() *runtime.Config {
-	return &runtime.Config{
-		ChainConfig: nil,
-		Difficulty:  c.Difficulty.Int,
-		Origin:      c.Origin,
-		Coinbase:    c.Coinbase,
-		BlockNumber: c.BlockNumber.Int,
-		Time:        c.Time.Int,
-		GasLimit:    c.GasLimit,
-		GasPrice:    c.GasPrice.Int,
-		Value:       c.Value.Int,
-		BaseFee:     c.BaseFee.Int,
-	}
+type HandleResult struct {
+	InteropResult
+	Handle int `json:"handle"`
 }
 
 type StateRootResult struct {
@@ -49,7 +23,7 @@ type StateRootResult struct {
 }
 
 type CreateParams struct {
-	SerializableConfig
+	types.SerializableConfig
 	Input        []byte `json:"input"`
 	DiscardState bool   `json:"discardState"`
 }
@@ -61,7 +35,7 @@ type CreateResult struct {
 }
 
 type CallParams struct {
-	SerializableConfig
+	types.SerializableConfig
 	Address      common.Address `json:"address"`
 	Input        []byte         `json:"input"`
 	DiscardState bool           `json:"discardState"`
@@ -75,7 +49,7 @@ type CallResult struct {
 
 type BalanceParams struct {
 	Address common.Address `json:"address"`
-	Value   *helper.BigInt `json:"value"`
+	Value   *types.BigInt  `json:"value"`
 }
 
 // instance holds a local EvmService
@@ -92,95 +66,111 @@ func Initialize(path *C.char) *C.char {
 		_ = instance.Close()
 		instance = nil
 	}
-	newInstance, err := evm.InitWithLevelDB(C.GoString(path), "zen/evm/db/", 0, 0)
+	newInstance, err := evm.InitWithLevelDB(C.GoString(path))
 	if err == nil {
 		instance = newInstance
 	}
 	return toJava(Result(err))
 }
 
-//export SetStateRoot
-func SetStateRoot(stateRootHex *C.char) *C.char {
-	stateRoot := common.HexToHash(C.GoString(stateRootHex))
-	err := instance.SetStateRoot(stateRoot)
-	return toJava(Result(err))
-}
-
-//export GetIntermediateStateRoot
-func GetIntermediateStateRoot() *C.char {
-	result := StateRootResult{
-		StateRoot: instance.IntermediateRoot(),
+//export OpenState
+func OpenState(stateRootHex *C.char) *C.char {
+	root := common.HexToHash(C.GoString(stateRootHex))
+	handle, err := instance.OpenState(root)
+	if err != nil {
+		return toJava(Fail(err))
+	}
+	result := HandleResult{
+		Handle: handle,
 	}
 	return toJava(&result)
 }
 
-//export CommitState
-func CommitState() *C.char {
-	stateRoot, err := instance.Commit()
-	if err != nil {
-		return toJava(Fail(err))
-	}
-	result := StateRootResult{StateRoot: stateRoot}
-	return toJava(&result)
-}
-
-//export ContractCreate
-func ContractCreate(args *C.char) *C.char {
-	var params CreateParams
-	err := fromJava(args, &params)
-	if err != nil {
-		return toJava(Fail(err))
-	}
-	_, addr, leftOverGas, err := instance.Create(params.Input, params.getConfig(), params.DiscardState)
-	if err != nil {
-		return toJava(Fail(err))
-	}
-	result := CreateResult{
-		Address:     addr,
-		LeftOverGas: leftOverGas,
-	}
-	return toJava(&result)
-}
-
-//export ContractCall
-func ContractCall(args *C.char) *C.char {
-	var params CallParams
-	err := fromJava(args, &params)
-	if err != nil {
-		return toJava(Fail(err))
-	}
-	ret, leftOverGas, err := instance.Call(params.Address, params.Input, params.getConfig(), params.DiscardState)
-	if err != nil {
-		return toJava(Fail(err))
-	}
-	result := CallResult{
-		Ret:         ret,
-		LeftOverGas: leftOverGas,
-	}
-	return toJava(&result)
-}
-
-func updateBalance(args *C.char, f func(common.Address, *big.Int)) *C.char {
-	var params BalanceParams
-	err := fromJava(args, &params)
-	if err != nil {
-		return toJava(Fail(err))
-	}
-	f(params.Address, params.Value.Int)
+//export CloseState
+func CloseState(handle int) *C.char {
+	instance.CloseState(handle)
 	return toJava(Success())
 }
 
-//export SetBalance
-func SetBalance(args *C.char) *C.char {
-	return updateBalance(args, instance.SetBalance)
+//export GetIntermediateStateRoot
+func GetIntermediateStateRoot(handle int) *C.char {
+	statedb, err := instance.GetState(handle)
+	if err != nil {
+		return toJava(Fail(err))
+	}
+	result := StateRootResult{
+		StateRoot: statedb.IntermediateRoot(true),
+	}
+	return toJava(&result)
 }
 
-//export AddBalance
-func AddBalance(args *C.char) *C.char {
-	return updateBalance(args, instance.AddBalance)
-}
-
-//export SubBalance
-func SubBalance(args *C.char) *C.char {
-	return updateBalance(args, instance.SubBalance)
-}
+////export CommitState
+//func CommitState() *C.char {
+//	stateRoot, err := instance.Commit()
+//	if err != nil {
+//		return toJava(Fail(err))
+//	}
+//	result := StateRootResult{StateRoot: stateRoot}
+//	return toJava(&result)
+//}
+//
+////export ContractCreate
+//func ContractCreate(args *C.char) *C.char {
+//	var params CreateParams
+//	err := fromJava(args, &params)
+//	if err != nil {
+//		return toJava(Fail(err))
+//	}
+//	_, addr, leftOverGas, err := instance.Create(params.Input, params.getConfig(), params.DiscardState)
+//	if err != nil {
+//		return toJava(Fail(err))
+//	}
+//	result := CreateResult{
+//		Address:     addr,
+//		LeftOverGas: leftOverGas,
+//	}
+//	return toJava(&result)
+//}
+//
+////export ContractCall
+//func ContractCall(args *C.char) *C.char {
+//	var params CallParams
+//	err := fromJava(args, &params)
+//	if err != nil {
+//		return toJava(Fail(err))
+//	}
+//	ret, leftOverGas, err := instance.Call(params.Address, params.Input, params.getConfig(), params.DiscardState)
+//	if err != nil {
+//		return toJava(Fail(err))
+//	}
+//	result := CallResult{
+//		Ret:         ret,
+//		LeftOverGas: leftOverGas,
+//	}
+//	return toJava(&result)
+//}
+//
+//func updateBalance(args *C.char, f func(common.Address, *big.Int)) *C.char {
+//	var params BalanceParams
+//	err := fromJava(args, &params)
+//	if err != nil {
+//		return toJava(Fail(err))
+//	}
+//	f(params.Address, params.Value.Int)
+//	return toJava(Success())
+//}
+//
+////export SetBalance
+//func SetBalance(args *C.char) *C.char {
+//	return updateBalance(args, instance.SetBalance)
+//}
+//
+////export AddBalance
+//func AddBalance(args *C.char) *C.char {
+//	return updateBalance(args, instance.AddBalance)
+//}
+//
+////export SubBalance
+//func SubBalance(args *C.char) *C.char {
+//	return updateBalance(args, instance.SubBalance)
+//}

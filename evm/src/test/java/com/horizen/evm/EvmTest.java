@@ -1,5 +1,7 @@
 package com.horizen.evm;
 
+import com.horizen.evm.library.Evm;
+import com.horizen.evm.utils.Converter;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -27,52 +29,52 @@ public class EvmTest {
         var initResult = Evm.Instance.Initialize(databaseFolder.getAbsolutePath());
         System.out.println("Initialize result " + initResult);
 
-        System.out.println("SetRootHash");
-        var setStateRootResult = Evm.Instance.SetStateRoot(initialStateRoot);
-        System.out.println("SetRootHash result " + setStateRootResult);
-
-        System.out.println("GetIntermediateStateRoot");
-        var getStateRootResult = Evm.Instance.GetIntermediateStateRoot();
-        System.out.println("GetIntermediateStateRoot result " + getStateRootResult);
-
-        System.out.println("ContractCreate");
-        var createParams = new Evm.ContractCreateParams();
-        createParams.origin = origin;
-        createParams.input = EvmUtils.fromHexString(contractCode + initialValue);
-        createParams.gasLimit = 100000;
-        var createResult = Evm.Instance.ContractCreate(createParams);
-        System.out.println("ContractCreate result " + createResult);
-
-        System.out.println("AddBalance(1)");
-        var balanceParams = new Evm.BalanceParams();
-        balanceParams.address = origin;
-        balanceParams.value = "1";
-        var balanceResult = Evm.Instance.AddBalance(balanceParams);
-        System.out.println("AddBalance result " + balanceResult);
-
-        System.out.println("ContractCall Store(5555) and transfer 1");
-        var callStoreParams = new Evm.ContractCallParams();
-        callStoreParams.address = createResult.address;
-        callStoreParams.origin = origin;
-        callStoreParams.input = EvmUtils.fromHexString("6057361d" + secondValue);
-        callStoreParams.gasLimit = 100000;
-        callStoreParams.value = "1";
-        var callStoreResult = Evm.Instance.ContractCall(callStoreParams);
-        System.out.println("ContractCall result " + callStoreResult);
-
-        System.out.println("ContractCall Retrieve()");
-        var callRetrieveParams = new Evm.ContractCallParams();
-        callRetrieveParams.address = createResult.address;
-        callRetrieveParams.origin = origin;
-        callRetrieveParams.input = EvmUtils.fromHexString("2e64cec1");
-        callRetrieveParams.gasLimit = 1000;
-        var callRetrieveResult = Evm.Instance.ContractCall(callRetrieveParams);
-        System.out.println("ContractCall result " + callRetrieveResult);
-        var retrievedNumber = new BigInteger(callRetrieveResult.ret);
-        System.out.println("ContractCall result parsed " + retrievedNumber);
-
-        System.out.println("Commit");
-        var commitResult = Evm.Instance.CommitState();
-        System.out.println("Commit result " + commitResult);
+//        System.out.println("SetRootHash");
+//        var setStateRootResult = Evm.Instance.SetStateRoot(initialStateRoot);
+//        System.out.println("SetRootHash result " + setStateRootResult);
+//
+//        System.out.println("GetIntermediateStateRoot");
+//        var getStateRootResult = Evm.Instance.GetIntermediateStateRoot();
+//        System.out.println("GetIntermediateStateRoot result " + getStateRootResult);
+//
+//        System.out.println("ContractCreate");
+//        var createParams = new Evm.ContractCreateParams();
+//        createParams.origin = origin;
+//        createParams.input = Converter.fromHexString(contractCode + initialValue);
+//        createParams.gasLimit = 100000;
+//        var createResult = Evm.Instance.ContractCreate(createParams);
+//        System.out.println("ContractCreate result " + createResult);
+//
+//        System.out.println("AddBalance(1)");
+//        var balanceParams = new Evm.BalanceParams();
+//        balanceParams.address = origin;
+//        balanceParams.value = "1";
+//        var balanceResult = Evm.Instance.AddBalance(balanceParams);
+//        System.out.println("AddBalance result " + balanceResult);
+//
+//        System.out.println("ContractCall Store(5555) and transfer 1");
+//        var callStoreParams = new Evm.ContractCallParams();
+//        callStoreParams.address = createResult.address;
+//        callStoreParams.origin = origin;
+//        callStoreParams.input = Converter.fromHexString("6057361d" + secondValue);
+//        callStoreParams.gasLimit = 100000;
+//        callStoreParams.value = "1";
+//        var callStoreResult = Evm.Instance.ContractCall(callStoreParams);
+//        System.out.println("ContractCall result " + callStoreResult);
+//
+//        System.out.println("ContractCall Retrieve()");
+//        var callRetrieveParams = new Evm.ContractCallParams();
+//        callRetrieveParams.address = createResult.address;
+//        callRetrieveParams.origin = origin;
+//        callRetrieveParams.input = Converter.fromHexString("2e64cec1");
+//        callRetrieveParams.gasLimit = 1000;
+//        var callRetrieveResult = Evm.Instance.ContractCall(callRetrieveParams);
+//        System.out.println("ContractCall result " + callRetrieveResult);
+//        var retrievedNumber = new BigInteger(callRetrieveResult.ret);
+//        System.out.println("ContractCall result parsed " + retrievedNumber);
+//
+//        System.out.println("Commit");
+//        var commitResult = Evm.Instance.CommitState();
+//        System.out.println("Commit result " + commitResult);
     }
 }
