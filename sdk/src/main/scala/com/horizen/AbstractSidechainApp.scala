@@ -34,7 +34,6 @@ import scorex.core.network.PeerFeature
 import scorex.core.network.message.MessageSpec
 import scorex.core.serialization.ScorexSerializer
 import scorex.core.settings.ScorexSettings
-import scorex.core.transaction.Transaction
 import scorex.core.{ModifierTypeId, NodeViewModifier}
 import scorex.util.ScorexLogging
 
@@ -58,7 +57,7 @@ abstract class AbstractSidechainApp
   )
   extends Application with ScorexLogging
 {
-
+  override type TX <: Transaction
 
   override implicit lazy val settings: ScorexSettings = sidechainSettings.scorexSettings
 
