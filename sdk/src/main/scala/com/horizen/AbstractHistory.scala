@@ -45,6 +45,8 @@ abstract class AbstractHistory[
 
   require(NodeViewModifier.ModifierIdSize == 32, "32 bytes ids assumed")
 
+  def makeNewHistory(storage: HSTOR, consensusDataStorage: ConsensusDataStorage): HT
+
   def height: Int = storage.height
 
   def bestBlockId: ModifierId = storage.bestBlockId
@@ -54,7 +56,6 @@ abstract class AbstractHistory[
   def bestBlockInfo: SidechainBlockInfo = storage.bestBlockInfo
 
   override def append(block: PM): Try[(HT, ProgressInfo[PM])] = Try {
-
     for(validator <- semanticBlockValidators)
       validator.validate(block).get
 
@@ -534,8 +535,6 @@ abstract class AbstractHistory[
     consensusDataStorage.addNonceConsensusEpochInfo(blockIdToEpochId(lastBlockInEpoch), fullConsensusEpochInfo.nonceConsensusEpochInfo)
     makeNewHistory(storage, consensusDataStorage)
   }
-
-  def makeNewHistory(storage: HSTOR, consensusDataStorage: ConsensusDataStorage): HT
 }
 
 object AbstractHistory {

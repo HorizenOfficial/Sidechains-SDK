@@ -10,7 +10,7 @@ import com.horizen.state.State
 import com.horizen.utils.{BlockFeeInfo, BytesUtils, FeePaymentsUtils, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.utils.ByteArrayWrapper
-import scorex.core.{VersionTag, idToBytes, idToVersion, versionToBytes}
+import scorex.core.{VersionTag, bytesToVersion, idToBytes, idToVersion, versionToBytes}
 import scorex.util.{ModifierId, ScorexLogging}
 
 import java.util
@@ -205,50 +205,23 @@ class AccountState(val params: NetworkParams, stateMetadataStorage: AccountState
 }
 
 
+object AccountState {
+  private[horizen] def restoreState(stateMetadataStorage: AccountStateMetadataStorage,
+                                    params: NetworkParams): Option[AccountState] = {
 
-// Types tests:
+    if (!stateMetadataStorage.isEmpty)
+      Some(new AccountState(params, stateMetadataStorage))
+    else
+      None
+  }
 
-/*trait FinalAccountStateReader extends AccountStateReader {
-  def getSomething: Int = 42
-}
+  private[horizen] def createGenesisState(stateMetadataStorage: AccountStateMetadataStorage,
+                                          params: NetworkParams,
+                                          genesisBlock: AccountBlock): Try[AccountState] = Try {
 
-class FinalAccountView(stateStorageView: SidechainStateStorageView, stateDb: StateDB) extends AccountStateView[FinalAccountView] with FinalAccountStateReader {
-  override def commit(version: VersionTag): Try[Unit] = {
-    stateStorageView.commit(version)
-    stateDb.commit(stateRoot)
+    if (stateMetadataStorage.isEmpty)
+      new AccountState(params, stateMetadataStorage).applyModifier(genesisBlock).get
+    else
+      throw new RuntimeException("State metadata storage is not empty!")
   }
 }
-
-class FinalState(stateStorage: SidechainStateStorage) extends AccountState[FinalAccountView, FinalState] with FinalAccountStateReader {
-  override def getReader: FinalAccountStateReader = this
-
-  override def getView: FinalAccountView = {
-    new FinalAccountView(stateStorage.getView(), ....)
-  }
-
-}
-
-
-object Main extends App {
-  val state: FinalState = new FinalState
-  test2()
-
-  def test1(): Unit = {
-    val view: FinalAccountView = state.getView
-    view.savepoint()
-    view.applyMainchainBlockReferenceData(null) match {
-      case Success(v) =>
-        val newVersion: String = "v1"
-        v.commit(VersionTag @@ newVersion)
-      case Failure(exception) =>
-        view.rollbackToSavepoint()
-    }
-  }
-
-  def test2(): Unit = {
-    val reader: FinalAccountStateReader = state.getReader
-    val res: Int = reader.getSomething
-    System.out.println(res)
-  }
-
-}*/
