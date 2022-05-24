@@ -4,10 +4,11 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{TestActor, TestProbe}
 import akka.pattern.ask
 import akka.util.Timeout
+import com.horizen.SidechainTypes
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.fixtures.{SidechainTypesTestsExtension, TransactionFixture}
 import com.horizen.transaction.RegularTransaction
-import org.junit.Assert.{assertEquals, assertTrue, assertFalse}
+import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
@@ -29,10 +30,11 @@ class TransactionSubmitProviderImplTest extends JUnitSuite with MockitoSugar wit
     mockedSidechainTransactionActor.setAutoPilot((sender: ActorRef, msg: Any) => {
       msg match {
         case BroadcastTransaction(tx) =>
+          val boxTx = tx.asInstanceOf[SidechainTypes#SCBT]
           val promise = Promise[ModifierId]
           val future = promise.future
           sender ! future
-          promise.success(ModifierId @@ tx.id())
+          promise.success(ModifierId @@ boxTx.id())
       }
       TestActor.KeepRunning
     })
@@ -87,10 +89,11 @@ class TransactionSubmitProviderImplTest extends JUnitSuite with MockitoSugar wit
     mockedSidechainTransactionActor.setAutoPilot((sender: ActorRef, msg: Any) => {
       msg match {
         case BroadcastTransaction(tx) =>
+          val boxTx = tx.asInstanceOf[SidechainTypes#SCBT]
           val promise = Promise[ModifierId]
           val future = promise.future
           sender ! future
-          promise.success(ModifierId @@ tx.id())
+          promise.success(ModifierId @@ boxTx.id())
       }
       TestActor.KeepRunning
     })

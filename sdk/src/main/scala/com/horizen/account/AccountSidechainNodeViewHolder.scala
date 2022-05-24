@@ -1,5 +1,6 @@
 package com.horizen.account
 
+import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
@@ -81,4 +82,36 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override protected def scanBlockWithFeePayments(history: HIS, state: MS, wallet: VL, modToApply: AccountBlock): (HIS, VL) = {
     (history, wallet.scanPersistent(modToApply))
   }
+}
+
+object AccountNodeViewHolderRef {
+  def props(sidechainSettings: SidechainSettings,
+            historyStorage: AccountHistoryStorage,
+            consensusDataStorage: ConsensusDataStorage,
+            stateMetadataStorage: AccountStateMetadataStorage,
+            secretStorage: SidechainSecretStorage,
+            params: NetworkParams,
+            timeProvider: NetworkTimeProvider,
+            genesisBlock: AccountBlock): Props = ???
+
+  def apply(sidechainSettings: SidechainSettings,
+            historyStorage: AccountHistoryStorage,
+            consensusDataStorage: ConsensusDataStorage,
+            stateMetadataStorage: AccountStateMetadataStorage,
+            secretStorage: SidechainSecretStorage,
+            params: NetworkParams,
+            timeProvider: NetworkTimeProvider,
+            genesisBlock: AccountBlock)
+           (implicit system: ActorSystem): ActorRef = ???
+
+  def apply(name: String,
+            sidechainSettings: SidechainSettings,
+            historyStorage: AccountHistoryStorage,
+            consensusDataStorage: ConsensusDataStorage,
+            stateMetadataStorage: AccountStateMetadataStorage,
+            secretStorage: SidechainSecretStorage,
+            params: NetworkParams,
+            timeProvider: NetworkTimeProvider,
+            genesisBlock: AccountBlock)
+           (implicit system: ActorSystem): ActorRef = ???
 }

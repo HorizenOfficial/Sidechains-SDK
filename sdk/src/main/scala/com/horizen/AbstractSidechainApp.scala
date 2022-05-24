@@ -10,31 +10,24 @@ import com.horizen.box.BoxSerializer
 import com.horizen.certificatesubmitter.CertificateSubmitterRef
 import com.horizen.certificatesubmitter.network.{CertificateSignaturesManagerRef, CertificateSignaturesSpec, GetCertificateSignaturesSpec}
 import com.horizen.companion._
-import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.csw.CswManagerRef
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
 import com.horizen.helper._
-import com.horizen.network.SidechainNodeViewSynchronizer
 import com.horizen.params._
 import com.horizen.proposition._
 import com.horizen.secret.SecretSerializer
 import com.horizen.serialization.JsonHorizenPublicKeyHashSerializer
-import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.transaction._
 import com.horizen.transaction.mainchain.SidechainCreation
-import com.horizen.utils.{BlockUtils, BytesUtils, Pair}
-import com.horizen.wallet.ApplicationWallet
+import com.horizen.utils.{BytesUtils, Pair}
 import com.horizen.websocket.client._
 import com.horizen.websocket.server.WebSocketServerRef
-import scorex.core.api.http.ApiRoute
 import scorex.core.app.Application
 import scorex.core.network.PeerFeature
 import scorex.core.network.message.MessageSpec
-import scorex.core.serialization.ScorexSerializer
 import scorex.core.settings.ScorexSettings
-import scorex.core.{ModifierTypeId, NodeViewModifier}
 import scorex.util.ScorexLogging
 
 import java.lang.{Byte => JByte}
@@ -50,14 +43,13 @@ import scala.util.{Failure, Success, Try}
 abstract class AbstractSidechainApp
   (val sidechainSettings: SidechainSettings,
    val customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
-   val applicationWallet: ApplicationWallet,
-   val applicationState: ApplicationState,
    val customApiGroups: JList[ApplicationApiGroup],
    val rejectedApiPaths : JList[Pair[String, String]],
   )
   extends Application with ScorexLogging
 {
   override type TX <: Transaction
+  override type PMOD <: SidechainBlockBase[TX]
 
   override implicit lazy val settings: ScorexSettings = sidechainSettings.scorexSettings
 
@@ -81,7 +73,7 @@ abstract class AbstractSidechainApp
   protected val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
 
   // Deserialize genesis block bytes
-  val genesisBlock: SidechainBlockBase[TX]
+  val genesisBlock: PMOD
 
   val genesisPowData: Seq[(Int, Int)] = ProofOfWorkVerifier.parsePowData(sidechainSettings.genesisData.powData)
 
@@ -183,14 +175,11 @@ abstract class AbstractSidechainApp
       throw new IllegalArgumentException("Can't generate Cert Coboundary Marlin ProvingSystem snark keys.")
     }
   }
-  if (!Files.exists(Paths.get(params.cswVerificationKeyFilePath)) || !Files.exists(Paths.get(params.cswProvingKeyFilePath))) {
-    log.info("Generating CSW snark keys. It may take some time.")
-    if (!CryptoLibProvider.cswCircuitFunctions.generateCoboundaryMarlinSnarkKeys(
-      params.withdrawalEpochLength, params.cswProvingKeyFilePath, params.cswVerificationKeyFilePath)) {
-      throw new IllegalArgumentException("Can't generate CSW Coboundary Marlin ProvingSystem snark keys.")
-    }
-  }
 
+  //Websocket server for the Explorer
+  if(sidechainSettings.websocket.wsServer) {
+    val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocket.wsServerPort)
+  }
 
   // Retrieve information for using a web socket connector
   val communicationClient: WebSocketCommunicationClient = new WebSocketCommunicationClient()
@@ -219,11 +208,8 @@ abstract class AbstractSidechainApp
 
 
   // Init Certificate Submitter
-  val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
-  val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.scorexSettings.network)
-
-  // Init CSW manager
-  val cswManager: ActorRef = CswManagerRef(sidechainSettings, params, nodeViewHolderRef)
+  lazy val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
+  lazy val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.scorexSettings.network)
 
   //Websocket server for the Explorer
   if(sidechainSettings.websocket.wsServer) {
@@ -239,9 +225,6 @@ abstract class AbstractSidechainApp
   var applicationApiRoutes : Seq[ApplicationApiRoute] = Seq[ApplicationApiRoute]()
   customApiGroups.asScala.foreach(apiRoute => applicationApiRoutes = applicationApiRoutes :+ ApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
 
-  val nodeViewProvider : NodeViewProvider = new NodeViewProviderImpl(nodeViewHolderRef)
-  val secretSubmitProvider: SecretSubmitProvider = new SecretSubmitProviderImpl(nodeViewHolderRef)
-
   override val swaggerConfig: String = Source.fromResource("api/sidechainApi.yaml")(Codec.UTF8).getLines.mkString("\n")
 
   override def stopAll(): Unit = {
@@ -254,9 +237,6 @@ abstract class AbstractSidechainApp
     storage
   }
 
-  def getNodeViewProvider: NodeViewProvider = nodeViewProvider
-
-  def getSecretSubmitProvider: SecretSubmitProvider = secretSubmitProvider
 
   actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 }
