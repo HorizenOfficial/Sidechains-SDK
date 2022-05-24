@@ -6,6 +6,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.web3j.crypto.ECKeyPair;
 import org.web3j.crypto.Keys;
+import org.web3j.utils.Numeric;
 import scala.util.Try;
 
 import java.security.InvalidAlgorithmParameterException;
@@ -23,8 +24,8 @@ public class PublicKeySecp256k1PropositionSerializerTest {
     public void BeforeEachTest() throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException {
         // Create a key pair and create proposition
         ECKeyPair pair = Keys.createEcKeyPair();
-        byte[] publicKey = Arrays.copyOf(pair.getPublicKey().toByteArray(), Secp256k1.PUBLIC_KEY_SIZE);
-        publicKeySecp256k1Proposition = new PublicKeySecp256k1Proposition(publicKey);
+        byte[] address = Arrays.copyOf(Numeric.hexStringToByteArray(Keys.getAddress(pair)), Keys.ADDRESS_LENGTH_IN_HEX/2);
+        publicKeySecp256k1Proposition = new PublicKeySecp256k1Proposition(address);
     }
 
     @Test
