@@ -1,17 +1,16 @@
 package com.horizen.examples;
 
-import com.horizen.SidechainApp;
-
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 
+import com.horizen.account.AccountSidechainApp;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 
 
-public class EvmSimpleApp {
+public class EvmApp {
     public static void main(String[] args) {
         if (args.length == 0) {
             System.out.println("Please provide settings file name as first parameter!");
@@ -24,10 +23,10 @@ public class EvmSimpleApp {
         }
         String settingsFileName = args[0];
 
-        Injector injector = Guice.createInjector(new EvmSimpleAppModule(settingsFileName));
-        SidechainApp sidechainApp = injector.getInstance(SidechainApp.class);
+        Injector injector = Guice.createInjector(new EvmAppModule(settingsFileName));
+        AccountSidechainApp sidechainApp = injector.getInstance(AccountSidechainApp.class);
 
-        Logger logger = LogManager.getLogger(EvmSimpleApp.class);
+        Logger logger = LogManager.getLogger(EvmApp.class);
         logger.info("...starting application...");
         
         sidechainApp.run();

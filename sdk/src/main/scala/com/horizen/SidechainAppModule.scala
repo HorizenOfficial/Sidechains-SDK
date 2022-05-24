@@ -41,7 +41,6 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
           @Named("CustomBoxSerializers") customBoxSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]],
           @Named("CustomSecretSerializers")  customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
           @Named("CustomTransactionSerializers")  customTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCBT]],
-          @Named("CustomAccountTransactionSerializers")  customAccountTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCAT]],
           @Named("ApplicationWallet")  applicationWallet: ApplicationWallet,
           @Named("ApplicationState")  applicationState: ApplicationState,
           @Named("SecretStorage")  secretStorage: Storage,

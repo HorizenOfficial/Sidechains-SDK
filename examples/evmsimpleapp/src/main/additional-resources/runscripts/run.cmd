@@ -1,1 +1,0 @@
-java -jar com.horizen.examples.EvmSimpleApp sc_settings.conf

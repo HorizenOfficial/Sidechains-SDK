@@ -7,7 +7,6 @@ import akka.actor.ActorRef
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import com.google.inject.name.Named
 import com.google.inject.{Inject, _}
-import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.api.http.{SidechainSubmitterApiRoute, _}
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockBase, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
@@ -73,8 +72,6 @@ class SidechainApp @Inject()
   extends AbstractSidechainApp(
     sidechainSettings,
     customSecretSerializers,
-    applicationWallet,
-    applicationState,
     customApiGroups,
     rejectedApiPaths
   )
@@ -90,8 +87,8 @@ class SidechainApp @Inject()
 
   log.info(s"Starting application with settings \n$sidechainSettings")
 
-  protected val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
-  protected val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers)
+  protected lazy val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
+  protected lazy val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(customBoxSerializers)
 
   // Deserialize genesis block bytes
   lazy val genesisBlock: SidechainBlock = new SidechainBlockSerializer(sidechainTransactionsCompanion).parseBytes(
@@ -102,6 +99,17 @@ class SidechainApp @Inject()
     case Success(output) => output
     case Failure(exception) => throw new IllegalArgumentException("Genesis block specified in the configuration file has no Sidechain Creation info.", exception)
   }
+
+  if (!Files.exists(Paths.get(params.cswVerificationKeyFilePath)) || !Files.exists(Paths.get(params.cswProvingKeyFilePath))) {
+    log.info("Generating CSW snark keys. It may take some time.")
+    if (!CryptoLibProvider.cswCircuitFunctions.generateCoboundaryMarlinSnarkKeys(
+      params.withdrawalEpochLength, params.cswProvingKeyFilePath, params.cswVerificationKeyFilePath)) {
+      throw new IllegalArgumentException("Can't generate CSW Coboundary Marlin ProvingSystem snark keys.")
+    }
+  }
+
+  // Init CSW manager
+  lazy val cswManager: ActorRef = CswManagerRef(sidechainSettings, params, nodeViewHolderRef)
 
   // Init all storages
   protected val sidechainSecretStorage = new SidechainSecretStorage(
@@ -124,8 +132,7 @@ class SidechainApp @Inject()
   protected val sidechainStateUtxoMerkleTreeStorage = new SidechainStateUtxoMerkleTreeStorage(registerStorage(utxoMerkleTreeStorage))
   protected val sidechainHistoryStorage = new SidechainHistoryStorage(
     registerStorage(historyStorage),
-    sidechainTransactionsCompanion,
-    params)
+    sidechainTransactionsCompanion, params)
   protected val consensusDataStorage = new ConsensusDataStorage(
     //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/consensusData")),
     registerStorage(consensusStorage))
@@ -168,23 +175,12 @@ class SidechainApp @Inject()
     actorSystem.actorOf(SidechainNodeViewSynchronizer.props(networkControllerRef, nodeViewHolderRef,
         SidechainSyncInfoMessageSpec, settings.network, timeProvider, modifierSerializers))
 
-  // If the web socket connector can be started, maybe we would to associate a client to the web socket channel created by the connector
-  if(connectorStarted.isSuccess)
-    communicationClient.setWebSocketChannel(webSocketConnector)
-  else if (sidechainSettings.withdrawalEpochCertificateSettings.submitterIsEnabled)
-    throw new RuntimeException("Unable to connect to websocket. Certificate submitter needs connection to Mainchain.")
-
   // Init Forger with a proper web socket client
   val sidechainBlockForgerActorRef: ActorRef = ForgerRef("Forger", sidechainSettings, nodeViewHolderRef,  mainchainSynchronizer, sidechainTransactionsCompanion, timeProvider, params)
 
   // Init Transactions and Block actors for Api routes classes
   val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
   val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef("SidechainBlock", sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
-
-  //Websocket server for the Explorer
-  if(sidechainSettings.websocket.wsServer) {
-    val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocket.wsServerPort)
-  }
 
   var coreApiRoutes: Seq[SidechainApiRoute] = Seq[SidechainApiRoute](
     MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
@@ -196,6 +192,8 @@ class SidechainApp @Inject()
     SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager)
   )
 
+  val nodeViewProvider : NodeViewProvider = new NodeViewProviderImpl(nodeViewHolderRef)
+  val secretSubmitProvider: SecretSubmitProvider = new SecretSubmitProviderImpl(nodeViewHolderRef)
   val transactionSubmitProvider : TransactionSubmitProvider = new TransactionSubmitProviderImpl(sidechainTransactionActorRef)
 
   // In order to provide the feature to override core api and exclude some other apis,
@@ -212,12 +210,9 @@ class SidechainApp @Inject()
     storageList.foreach(_.close())
   }
 
-  private def registerStorage(storage: Storage) : Storage = {
-    storageList += storage
-    storage
-  }
-
   def getTransactionSubmitProvider: TransactionSubmitProvider = transactionSubmitProvider
+  def getNodeViewProvider: NodeViewProvider = nodeViewProvider
+  def getSecretSubmitProvider: SecretSubmitProvider = secretSubmitProvider
 
   actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 }
