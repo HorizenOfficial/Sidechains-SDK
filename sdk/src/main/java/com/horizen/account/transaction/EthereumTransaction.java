@@ -62,14 +62,11 @@ public class EthereumTransaction extends AccountTransaction<PublicKeySecp256k1Pr
     public void semanticValidity() throws TransactionSemanticValidityException {
         if (transaction.getValue().signum() <= 0) {
             throw new TransactionSemanticValidityException("Cannot create transaction with zero value");
-        }
-        else if (transaction.getGasLimit().signum() <= 0) {
+        } else if (transaction.getGasLimit().signum() <= 0) {
             throw new TransactionSemanticValidityException("Cannot create transaction with zero gas limit");
-        }
-        else if (from.address().length <= Keys.ADDRESS_LENGTH_IN_HEX+2) {
+        } else if (from.address().length <= Keys.ADDRESS_LENGTH_IN_HEX + 2) {
             throw new TransactionSemanticValidityException("Cannot create transaction without valid from address");
-        }
-        else if (!signature.isValid(from, "test".getBytes(StandardCharsets.UTF_8))){
+        } else if (!signature.isValid(from, "test".getBytes(StandardCharsets.UTF_8))) {
             throw new TransactionSemanticValidityException("Cannot create transaction with invalid signature");
         }
     }
@@ -96,7 +93,7 @@ public class EthereumTransaction extends AccountTransaction<PublicKeySecp256k1Pr
 
     @Override
     public PublicKeySecp256k1Proposition getTo() {
-        if (transaction.getTo().length() != Keys.ADDRESS_LENGTH_IN_HEX+2)
+        if (transaction.getTo().length() != Keys.ADDRESS_LENGTH_IN_HEX + 2)
             return null;
         else
             return new PublicKeySecp256k1Proposition(Strings.toByteArray(transaction.getTo()));
@@ -132,11 +129,11 @@ public class EthereumTransaction extends AccountTransaction<PublicKeySecp256k1Pr
 
     @Override
     public byte[] messageToSign() {
-            return Bytes.concat(getNonce().toByteArray(),
-                    getGasPrice().toByteArray(),
-                    getGasLimit().toByteArray(),
-                    transaction.getTo().getBytes(StandardCharsets.UTF_8),
-                    getValue().toByteArray(),
-                    getData().getBytes(StandardCharsets.UTF_8));
+        return Bytes.concat(getNonce().toByteArray(),
+                getGasPrice().toByteArray(),
+                getGasLimit().toByteArray(),
+                transaction.getTo().getBytes(StandardCharsets.UTF_8),
+                getValue().toByteArray(),
+                getData().getBytes(StandardCharsets.UTF_8));
     }
 }

@@ -23,7 +23,7 @@ public class PublicKeySecp256k1PropositionSerializerTest {
     public void BeforeEachTest() throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException {
         // Create a key pair and create proposition
         ECKeyPair pair = Keys.createEcKeyPair();
-        byte[] address = Arrays.copyOf(Strings.toByteArray("0x"+Keys.getAddress(pair)), Keys.ADDRESS_LENGTH_IN_HEX+2);
+        byte[] address = Arrays.copyOf(Strings.toByteArray("0x" + Keys.getAddress(pair)), Keys.ADDRESS_LENGTH_IN_HEX + 2);
         publicKeySecp256k1Proposition = new PublicKeySecp256k1Proposition(address);
     }
 

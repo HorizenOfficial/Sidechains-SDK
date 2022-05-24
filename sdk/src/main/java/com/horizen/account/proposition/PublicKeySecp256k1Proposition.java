@@ -15,26 +15,26 @@ import java.util.Arrays;
 
 @JsonView(Views.Default.class)
 public final class PublicKeySecp256k1Proposition extends ScorexEncoding
-    implements ProofOfKnowledgeProposition<PrivateKeySecp256k1> {
+        implements ProofOfKnowledgeProposition<PrivateKeySecp256k1> {
 
     @JsonProperty("from")
     private final byte[] address;
 
     public PublicKeySecp256k1Proposition(byte[] address) {
-        if (address.length != Keys.ADDRESS_LENGTH_IN_HEX+2) {
+        if (address.length != Keys.ADDRESS_LENGTH_IN_HEX + 2) {
             throw new IllegalArgumentException(String.format(
-                "Incorrect address length, %d expected, %d found",
-                Keys.ADDRESS_LENGTH_IN_HEX+2,
-                address.length
+                    "Incorrect address length, %d expected, %d found",
+                    Keys.ADDRESS_LENGTH_IN_HEX + 2,
+                    address.length
             ));
         }
 
-        this.address = Arrays.copyOf(address, Keys.ADDRESS_LENGTH_IN_HEX+2);
+        this.address = Arrays.copyOf(address, Keys.ADDRESS_LENGTH_IN_HEX + 2);
     }
 
     @Override
     public byte[] pubKeyBytes() {
-        return Arrays.copyOf(address, Keys.ADDRESS_LENGTH_IN_HEX+2);
+        return Arrays.copyOf(address, Keys.ADDRESS_LENGTH_IN_HEX + 2);
     }
 
     @Override

@@ -6,7 +6,7 @@ import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
 public final class PublicKeySecp256k1PropositionSerializer
-    implements PropositionSerializer<PublicKeySecp256k1Proposition> {
+        implements PropositionSerializer<PublicKeySecp256k1Proposition> {
     private static final PublicKeySecp256k1PropositionSerializer serializer;
 
     static {
@@ -28,7 +28,7 @@ public final class PublicKeySecp256k1PropositionSerializer
 
     @Override
     public PublicKeySecp256k1Proposition parse(Reader reader) {
-        byte[] address = reader.getBytes(Keys.ADDRESS_LENGTH_IN_HEX+2);
+        byte[] address = reader.getBytes(Keys.ADDRESS_LENGTH_IN_HEX + 2);
         return new PublicKeySecp256k1Proposition(address);
     }
 }

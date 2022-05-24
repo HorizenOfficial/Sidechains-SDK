@@ -22,9 +22,9 @@ public final class PrivateKeySecp256k1 implements Secret {
     public PrivateKeySecp256k1(byte[] privateKey) {
         if (privateKey.length != Secp256k1.PRIVATE_KEY_SIZE) {
             throw new IllegalArgumentException(String.format(
-                "Incorrect private key length, %d expected, %d found",
-                Secp256k1.PRIVATE_KEY_SIZE,
-                privateKey.length
+                    "Incorrect private key length, %d expected, %d found",
+                    Secp256k1.PRIVATE_KEY_SIZE,
+                    privateKey.length
             ));
         }
         this.privateKey = Arrays.copyOf(privateKey, Secp256k1.PRIVATE_KEY_SIZE);

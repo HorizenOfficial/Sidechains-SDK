@@ -37,7 +37,7 @@ public class EthereumTransactionSerializerTest {
         ECKeyPair pair = Keys.createEcKeyPair();
         var msgSignature = Sign.signMessage(message, pair, true);
         var txSignature = new SignatureSecp256k1(msgSignature);
-        var txProposition = new PublicKeySecp256k1Proposition(Strings.toByteArray("0x"+Keys.getAddress(pair)));
+        var txProposition = new PublicKeySecp256k1Proposition(Strings.toByteArray("0x" + Keys.getAddress(pair)));
         ethereumTransaction = new EthereumTransaction(rawTX, txSignature, txProposition);
     }
 
