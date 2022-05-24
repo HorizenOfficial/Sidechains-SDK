@@ -33,38 +33,41 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView) ext
   protected def updateAccountStorageRoot(address: Array[Byte], root: Array[Byte]): Try[AccountStateView] = ???
 
   // out-of-the-box helpers
-  override def addCertificate(cert: WithdrawalEpochCertificate): Try[AccountStateView] = {
-    Try {
-      metadataStorageView.updateTopQualityCertificate(cert)
-      new AccountStateView(metadataStorageView)
-    }
+  override protected def addCertificate(cert: WithdrawalEpochCertificate): Try[AccountStateView] = Try {
+    metadataStorageView.updateTopQualityCertificate(cert)
+    new AccountStateView(metadataStorageView)
   }
 
-  override def addWithdrawalRequest(wrb: WithdrawalRequestBox): Try[AccountStateView] = ???
+  override protected def addWithdrawalRequest(wrb: WithdrawalRequestBox): Try[AccountStateView] = ???
 
-  override def delegateStake(fb: ForgerBox): Try[AccountStateView] = ???
+  override protected def delegateStake(fb: ForgerBox): Try[AccountStateView] = ???
 
-  override def spendStake(fb: ForgerBox): Try[AccountStateView] = ???
+  override protected def spendStake(fb: ForgerBox): Try[AccountStateView] = ???
 
-  override def addFeeInfo(info: BlockFeeInfo): Try[AccountStateView] = {
-    Try {
-      metadataStorageView.addFeePayment(info)
-      new AccountStateView(metadataStorageView)
-    }
+  // note: probably must be "set" than "add". Because we allow it only once per "commit".
+  override protected def addFeeInfo(info: BlockFeeInfo): Try[AccountStateView] = Try {
+    metadataStorageView.addFeePayment(info)
+    new AccountStateView(metadataStorageView)
   }
 
-  override def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo): Try[AccountStateView] = {
-    Try {
-      metadataStorageView.updateWithdrawalEpochInfo(withdrawalEpochInfo)
-      new AccountStateView(metadataStorageView)
-    }
+  override protected def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo): Try[AccountStateView] = Try {
+    metadataStorageView.updateWithdrawalEpochInfo(withdrawalEpochInfo)
+    new AccountStateView(metadataStorageView)
   }
 
-  override def setCeased(): Try[AccountStateView] = {
-    Try {
-      metadataStorageView.setCeased()
-      new AccountStateView(metadataStorageView)
-    }
+  override protected def updateConsensusEpochNumber(consensusEpochNum: ConsensusEpochNumber): Try[AccountStateView] = Try {
+    metadataStorageView.updateConsensusEpochNumber(consensusEpochNum)
+    new AccountStateView(metadataStorageView)
+  }
+
+  protected def updateAccountStateRoot(accountStateRoot: Array[Byte]): Try[AccountStateView] = Try {
+    metadataStorageView.updateAccountStateRoot(accountStateRoot)
+    new AccountStateView(metadataStorageView)
+  }
+
+  override protected def setCeased(): Try[AccountStateView] = Try {
+    metadataStorageView.setCeased()
+    new AccountStateView(metadataStorageView)
   }
 
   // view controls
@@ -72,10 +75,9 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView) ext
 
   override def rollbackToSavepoint(): Try[AccountStateView] = ???
 
-  override def commit(version: VersionTag): Try[Unit] = {
-    Try {
-      metadataStorageView.commit(version)
-    }
+  override def commit(version: VersionTag): Try[Unit] = Try {
+    // Update StateDB without version, then commit metadataStorageView
+    metadataStorageView.commit(version)
   }
 
   // versions part
@@ -106,6 +108,8 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView) ext
 
   override def getConsensusEpochInfo: (ModifierId, ConsensusEpochInfo) = ???
 
+  override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = metadataStorageView.getConsensusEpochNumber
+
   override def getBlockFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo] = {
     metadataStorageView.getFeePayments(withdrawalEpochNumber)
   }
@@ -116,22 +120,5 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView) ext
   override def getBalance(address: Array[Byte]): Long = ???
 
   override def getAccountStateRoot: Option[Array[Byte]] = metadataStorageView.getAccountStateRoot
-
-  override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = metadataStorageView.getConsensusEpochNumber
-
-  def updateConsensusEpochNumber(consensusEpochNum: ConsensusEpochNumber): Try[AccountStateView] = {
-    Try {
-      metadataStorageView.updateConsensusEpochNumber(consensusEpochNum)
-      new AccountStateView(metadataStorageView)
-    }
-
-  }
-
-  def updateAccountStateRoot(accountStateRoot: Array[Byte]): Try[AccountStateView] = {
-    Try {
-      metadataStorageView.updateAccountStateRoot(accountStateRoot)
-      new AccountStateView(metadataStorageView)
-    }
-  }
 
 }

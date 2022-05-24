@@ -1,7 +1,9 @@
 package com.horizen.state
 
+import com.horizen.account.state.AccountStateView
 import com.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
 import com.horizen.box.{ForgerBox, WithdrawalRequestBox}
+import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.transaction.Transaction
 import com.horizen.utils.{BlockFeeInfo, WithdrawalEpochInfo}
 import scorex.core.VersionTag
@@ -14,13 +16,14 @@ trait StateView[TX <: Transaction, SV <: StateView[TX, SV]] extends StateReader 
   def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[SV]
   def applyTransaction(tx: TX): Try[SV]
 
-  def addCertificate(cert: WithdrawalEpochCertificate): Try[SV]
-  def addWithdrawalRequest(wrb: WithdrawalRequestBox): Try[SV]
-  def delegateStake(fb: ForgerBox): Try[SV] // todo
-  def spendStake(fb: ForgerBox): Try[SV] // todo
-  def addFeeInfo(info: BlockFeeInfo): Try[SV]
-  def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo): Try[SV]
-  def setCeased(): Try[SV]
+  protected def addCertificate(cert: WithdrawalEpochCertificate): Try[SV]
+  protected def addWithdrawalRequest(wrb: WithdrawalRequestBox): Try[SV]
+  protected def delegateStake(fb: ForgerBox): Try[SV] // todo
+  protected def spendStake(fb: ForgerBox): Try[SV] // todo
+  protected def addFeeInfo(info: BlockFeeInfo): Try[SV]
+  protected def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo): Try[SV]
+  protected def updateConsensusEpochNumber(consensusEpochNum: ConsensusEpochNumber): Try[SV]
+  protected def setCeased(): Try[SV]
 
   def savepoint(): Unit
   def rollbackToSavepoint(): Try[SV]
