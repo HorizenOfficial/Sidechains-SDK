@@ -5,40 +5,8 @@ package main
 import "C"
 import (
 	"encoding/json"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/vm/runtime"
 	"github.com/ethereum/go-ethereum/log"
-	"libevm/helper"
 )
-
-// SerializableConfig mirrors configurable parts of the runtime.Config
-type SerializableConfig struct {
-	Difficulty  helper.BigInt  `json:"difficulty"`
-	Origin      common.Address `json:"origin"`
-	Coinbase    common.Address `json:"coinbase"`
-	BlockNumber helper.BigInt  `json:"blockNumber"`
-	Time        helper.BigInt  `json:"time"`
-	GasLimit    uint64         `json:"gasLimit"`
-	GasPrice    helper.BigInt  `json:"gasPrice"`
-	Value       helper.BigInt  `json:"value"`
-	BaseFee     helper.BigInt  `json:"baseFee"`
-}
-
-// Map SerializableConfig to runtime.Config
-func (c *SerializableConfig) getConfig() *runtime.Config {
-	return &runtime.Config{
-		ChainConfig: nil,
-		Difficulty:  c.Difficulty.Int,
-		Origin:      c.Origin,
-		Coinbase:    c.Coinbase,
-		BlockNumber: c.BlockNumber.Int,
-		Time:        c.Time.Int,
-		GasLimit:    c.GasLimit,
-		GasPrice:    c.GasPrice.Int,
-		Value:       c.Value.Int,
-		BaseFee:     c.BaseFee.Int,
-	}
-}
 
 type InteropResult struct {
 	Code    uint8  `json:"code"`

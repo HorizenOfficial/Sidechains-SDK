@@ -7,12 +7,41 @@ package main
 import "C"
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/vm/runtime"
 	"libevm/evm"
 	"libevm/helper"
-	"libevm/overrides"
 	"math/big"
 	"unsafe"
 )
+
+// SerializableConfig mirrors configurable parts of the runtime.Config
+type SerializableConfig struct {
+	Difficulty  helper.BigInt  `json:"difficulty"`
+	Origin      common.Address `json:"origin"`
+	Coinbase    common.Address `json:"coinbase"`
+	BlockNumber helper.BigInt  `json:"blockNumber"`
+	Time        helper.BigInt  `json:"time"`
+	GasLimit    uint64         `json:"gasLimit"`
+	GasPrice    helper.BigInt  `json:"gasPrice"`
+	Value       helper.BigInt  `json:"value"`
+	BaseFee     helper.BigInt  `json:"baseFee"`
+}
+
+// Map SerializableConfig to runtime.Config
+func (c *SerializableConfig) getConfig() *runtime.Config {
+	return &runtime.Config{
+		ChainConfig: nil,
+		Difficulty:  c.Difficulty.Int,
+		Origin:      c.Origin,
+		Coinbase:    c.Coinbase,
+		BlockNumber: c.BlockNumber.Int,
+		Time:        c.Time.Int,
+		GasLimit:    c.GasLimit,
+		GasPrice:    c.GasPrice.Int,
+		Value:       c.Value.Int,
+		BaseFee:     c.BaseFee.Int,
+	}
+}
 
 type StateRootResult struct {
 	InteropResult
@@ -27,9 +56,8 @@ type CreateParams struct {
 
 type CreateResult struct {
 	InteropResult
-	Address        common.Address       `json:"address"`
-	LeftOverGas    uint64               `json:"leftOverGas"`
-	BalanceChanges overrides.BalanceLog `json:"balanceChanges"`
+	Address     common.Address `json:"address"`
+	LeftOverGas uint64         `json:"leftOverGas"`
 }
 
 type CallParams struct {
@@ -41,9 +69,8 @@ type CallParams struct {
 
 type CallResult struct {
 	InteropResult
-	Ret            []byte               `json:"ret"`
-	LeftOverGas    uint64               `json:"leftOverGas"`
-	BalanceChanges overrides.BalanceLog `json:"balanceChanges"`
+	Ret         []byte `json:"ret"`
+	LeftOverGas uint64 `json:"leftOverGas"`
 }
 
 type BalanceParams struct {
@@ -104,17 +131,14 @@ func ContractCreate(args *C.char) *C.char {
 	if err != nil {
 		return toJava(Fail(err))
 	}
-	instance.ResetBalanceChanges()
 	_, addr, leftOverGas, err := instance.Create(params.Input, params.getConfig(), params.DiscardState)
 	if err != nil {
 		return toJava(Fail(err))
 	}
 	result := CreateResult{
-		Address:        addr,
-		LeftOverGas:    leftOverGas,
-		BalanceChanges: instance.GetBalanceChanges(),
+		Address:     addr,
+		LeftOverGas: leftOverGas,
 	}
-	instance.ResetBalanceChanges()
 	return toJava(&result)
 }
 
@@ -125,17 +149,14 @@ func ContractCall(args *C.char) *C.char {
 	if err != nil {
 		return toJava(Fail(err))
 	}
-	instance.ResetBalanceChanges()
 	ret, leftOverGas, err := instance.Call(params.Address, params.Input, params.getConfig(), params.DiscardState)
 	if err != nil {
 		return toJava(Fail(err))
 	}
 	result := CallResult{
-		Ret:            ret,
-		LeftOverGas:    leftOverGas,
-		BalanceChanges: instance.GetBalanceChanges(),
+		Ret:         ret,
+		LeftOverGas: leftOverGas,
 	}
-	instance.ResetBalanceChanges()
 	return toJava(&result)
 }
 

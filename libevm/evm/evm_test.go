@@ -101,7 +101,6 @@ func TestEvmTransactions(t *testing.T) {
 		t.Error("deploy of contract call", err)
 	} else {
 		t.Log("call result", "leftOverGas", leftOverGas, "function", "store()", "value", value)
-		t.Log("balanceChanges", instance.GetBalanceChanges())
 	}
 
 	config.Value = big.NewInt(0)

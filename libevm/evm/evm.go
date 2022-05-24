@@ -10,12 +10,11 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm/runtime"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
-	"libevm/overrides"
 	"math/big"
 )
 
 type Instance struct {
-	state     *overrides.ZenStateDB
+	state     *state.StateDB
 	storage   ethdb.Database
 	database  state.Database
 	stateRoot common.Hash
@@ -62,7 +61,7 @@ func (e *Instance) SetStateRoot(stateRoot common.Hash) error {
 	if e.database == nil {
 		return errors.New("database not initialized")
 	}
-	newState, err := overrides.New(stateRoot, e.database, nil)
+	newState, err := state.New(stateRoot, e.database, nil)
 	if err != nil {
 		log.Error("failed to open state", "rootHash", stateRoot, "error", err)
 		return err
@@ -80,29 +79,23 @@ func (e *Instance) Close() error {
 	return err
 }
 
-func (e *Instance) configureState(cfg *runtime.Config, discardState bool) *overrides.ZenConfig {
+func (e *Instance) configureState(cfg *runtime.Config, discardState bool) *runtime.Config {
 	if discardState {
 		// create a new temporary state which is used only once and should not be committed
-		// TODO: we could also just force a Snapshop + Revert, is that a better option?
-		tmpdb, _ := overrides.New(e.stateRoot, state.NewDatabase(e.storage), nil)
-		return &overrides.ZenConfig{
-			Config: cfg,
-			State:  tmpdb,
-		}
+		tmpdb, _ := state.New(e.stateRoot, state.NewDatabase(e.storage), nil)
+		cfg.State = tmpdb
 	} else {
-		return &overrides.ZenConfig{
-			Config: cfg,
-			State:  e.state,
-		}
+		cfg.State = e.state
 	}
+	return cfg
 }
 
 func (e *Instance) Create(input []byte, cfg *runtime.Config, discardState bool) ([]byte, common.Address, uint64, error) {
-	return overrides.Create(input, e.configureState(cfg, discardState))
+	return runtime.Create(input, e.configureState(cfg, discardState))
 }
 
 func (e *Instance) Call(address common.Address, input []byte, cfg *runtime.Config, discardState bool) ([]byte, uint64, error) {
-	return overrides.Call(address, input, e.configureState(cfg, discardState))
+	return runtime.Call(address, input, e.configureState(cfg, discardState))
 }
 
 // IntermediateRoot retrieves the current state root hash without actually commiting any pending changes.
@@ -123,24 +116,16 @@ func (e *Instance) Commit() (common.Hash, error) {
 	return stateRoot, err
 }
 
-func (e *Instance) ResetBalanceChanges() {
-	e.state.BalanceChanges = make(overrides.BalanceLog)
-}
-
-func (e *Instance) GetBalanceChanges() overrides.BalanceLog {
-	return e.state.BalanceChanges
-}
-
 func (e *Instance) SetBalance(addr common.Address, amount *big.Int) {
-	e.state.StateDB.SetBalance(addr, amount)
+	e.state.SetBalance(addr, amount)
 }
 
 func (e *Instance) AddBalance(addr common.Address, amount *big.Int) {
 	// bypass our overriden functions in ZenStateDB
-	e.state.StateDB.AddBalance(addr, amount)
+	e.state.AddBalance(addr, amount)
 }
 
 func (e *Instance) SubBalance(addr common.Address, amount *big.Int) {
 	// bypass our overriden functions in ZenStateDB
-	e.state.StateDB.SubBalance(addr, amount)
+	e.state.SubBalance(addr, amount)
 }
