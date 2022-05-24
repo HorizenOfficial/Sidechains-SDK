@@ -33,20 +33,13 @@ object AccountWallet {
   private[horizen] def restoreWallet(seed: Array[Byte],
                                      secretStorage: SidechainSecretStorage): Option[AccountWallet] = {
 
-    if (!secretStorage.isEmpty) {
-      Some(new AccountWallet(seed, secretStorage))
-    } else
-      None
+    Some(new AccountWallet(seed, secretStorage))
   }
 
   private[horizen] def createGenesisWallet(seed: Array[Byte],
                                            secretStorage: SidechainSecretStorage
                                           ): Try[AccountWallet] = Try {
 
-    if (secretStorage.isEmpty) {
-      new AccountWallet(seed, secretStorage)
-    }
-    else
-      throw new RuntimeException("Secret storage is not empty!")
+    new AccountWallet(seed, secretStorage)
   }
 }
