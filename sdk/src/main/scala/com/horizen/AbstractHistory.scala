@@ -14,6 +14,7 @@ import scorex.core.validation.RecoverableModifierError
 import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.transaction.Transaction
+import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import scorex.core.NodeViewModifier
 
 import java.util.Optional
@@ -27,10 +28,12 @@ abstract class AbstractHistory[
   PM <: SidechainBlockBase[TX],
   HSTOR <: AbstractHistoryStorage[PM, HSTOR],
   HT <: AbstractHistory[TX, PM, HSTOR, HT]
-] (
+] protected (
     val storage: HSTOR,
     val consensusDataStorage: ConsensusDataStorage,
-    val params: NetworkParams
+    val params: NetworkParams,
+    val semanticBlockValidators: Seq[SemanticBlockValidator[PM]],
+    val historyBlockValidators: Seq[HistoryBlockValidator[TX, PM, HSTOR, HT]]
   )
     extends scorex.core.consensus.History[PM, SidechainSyncInfo, HT]
       with NetworkParamsUtils
@@ -38,7 +41,11 @@ abstract class AbstractHistory[
       with NodeHistoryBase
       with ScorexLogging
 {
+  self: HT =>
+
   require(NodeViewModifier.ModifierIdSize == 32, "32 bytes ids assumed")
+
+  def makeNewHistory(storage: HSTOR, consensusDataStorage: ConsensusDataStorage): HT
 
   def height: Int = storage.height
 
@@ -49,15 +56,16 @@ abstract class AbstractHistory[
   def bestBlockInfo: SidechainBlockInfo = storage.bestBlockInfo
 
   override def append(block: PM): Try[(HT, ProgressInfo[PM])] = Try {
-
-    validateBlockSemantic(block)
+    for(validator <- semanticBlockValidators)
+      validator.validate(block).get
 
     // Non-genesis blocks mast have a parent already present in History
     val parentBlockInfoOption: Option[SidechainBlockInfo] = storage.blockInfoOptionById(block.parentId)
     if(!isGenesisBlock(block.id) && parentBlockInfoOption.isEmpty)
       throw new IllegalArgumentException("Sidechain block %s appending failed: parent block is missed.".format(BytesUtils.toHexString(idToBytes(block.id))))
 
-    validateHistoryBlock(block)
+    for (validator <- historyBlockValidators)
+      validator.validate(block, this).get
 
     val (newStorage: Try[HSTOR], progressInfo: ProgressInfo[PM]) = {
       if(isGenesisBlock(block.id)) {
@@ -522,17 +530,11 @@ abstract class AbstractHistory[
 
   def modifierById(blockId: ModifierId): Option[PM] = getStorageBlockById(blockId)
 
-  def validateBlockSemantic(block: PM) : Unit
-
-  def validateHistoryBlock(block: PM) : Unit
-
   def applyFullConsensusInfo(lastBlockInEpoch: ModifierId, fullConsensusEpochInfo: FullConsensusEpochInfo): HT = {
     consensusDataStorage.addStakeConsensusEpochInfo(blockIdToEpochId(lastBlockInEpoch), fullConsensusEpochInfo.stakeConsensusEpochInfo)
     consensusDataStorage.addNonceConsensusEpochInfo(blockIdToEpochId(lastBlockInEpoch), fullConsensusEpochInfo.nonceConsensusEpochInfo)
     makeNewHistory(storage, consensusDataStorage)
   }
-
-  def makeNewHistory(storage: HSTOR, consensusDataStorage: ConsensusDataStorage) : HT
 }
 
 object AbstractHistory {

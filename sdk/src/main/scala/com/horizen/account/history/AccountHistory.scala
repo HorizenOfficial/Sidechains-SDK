@@ -7,7 +7,7 @@ import com.horizen.account.node.NodeAccountHistory
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.consensus._
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
-import com.horizen.validation.{HistoryAccountBlockValidator, SemanticBlockValidator}
+import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import scorex.util.ScorexLogging
 
 import scala.util.Try
@@ -17,9 +17,9 @@ class AccountHistory private(storage: AccountHistoryStorage,
                              consensusDataStorage: ConsensusDataStorage,
                              params: NetworkParams,
                              semanticBlockValidators: Seq[SemanticBlockValidator[AccountBlock]],
-                             historyBlockValidators: Seq[HistoryAccountBlockValidator])
+                             historyBlockValidators: Seq[HistoryBlockValidator[SidechainTypes#SCAT, AccountBlock, AccountHistoryStorage, AccountHistory]])
 extends com.horizen.AbstractHistory[SidechainTypes#SCAT, AccountBlock, AccountHistoryStorage, AccountHistory](
-    storage, consensusDataStorage, params)
+    storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
   with NetworkParamsUtils
   with ConsensusDataProvider
   with scorex.core.utils.ScorexEncoding
@@ -29,24 +29,14 @@ extends com.horizen.AbstractHistory[SidechainTypes#SCAT, AccountBlock, AccountHi
 
   override type NVCT = AccountHistory
 
-  override def validateBlockSemantic(block: AccountBlock): Unit =
-    for(validator <- semanticBlockValidators)
-      validator.validate(block).get
-
-  override def validateHistoryBlock(block: AccountBlock) : Unit = {
-      for (validator <- historyBlockValidators)
-        validator.validate(block, this).get
-  }
-
   override def searchTransactionInsideSidechainBlock(transactionId: String, blockId: String): JOptional[SidechainTypes#SCAT] = ???
 
   private def findTransactionInsideBlock(transactionId : String, block : AccountBlock) : JOptional[SidechainTypes#SCAT] = ???
 
   override def searchTransactionInsideBlockchain(transactionId: String): JOptional[SidechainTypes#SCAT] = ???
 
-  override def makeNewHistory(storage: AccountHistoryStorage, consensusDataStorage: ConsensusDataStorage): AccountHistory =     {
+  override def makeNewHistory(storage: AccountHistoryStorage, consensusDataStorage: ConsensusDataStorage): AccountHistory =
     new AccountHistory(storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
-  }
 
 }
 
@@ -56,7 +46,7 @@ object AccountHistory
                                       consensusDataStorage: ConsensusDataStorage,
                                       params: NetworkParams,
                                       semanticBlockValidators: Seq[SemanticBlockValidator[AccountBlock]],
-                                      historyBlockValidators: Seq[HistoryAccountBlockValidator]): Option[AccountHistory] = {
+                                      historyBlockValidators: Seq[HistoryBlockValidator[SidechainTypes#SCAT, AccountBlock, AccountHistoryStorage, AccountHistory]]): Option[AccountHistory] = {
 
     if (!historyStorage.isEmpty)
       Some(new AccountHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators))
@@ -71,7 +61,7 @@ object AccountHistory
                                             params: NetworkParams,
                                             genesisBlock: AccountBlock,
                                             semanticBlockValidators: Seq[SemanticBlockValidator[AccountBlock]],
-                                            historyBlockValidators: Seq[HistoryAccountBlockValidator],
+                                            historyBlockValidators: Seq[HistoryBlockValidator[SidechainTypes#SCAT, AccountBlock, AccountHistoryStorage, AccountHistory]],
                                             stakeEpochInfo: StakeConsensusEpochInfo) : Try[AccountHistory] = Try {
 
     if (historyStorage.isEmpty) {

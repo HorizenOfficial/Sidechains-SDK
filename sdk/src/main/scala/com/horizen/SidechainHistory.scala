@@ -15,9 +15,9 @@ class SidechainHistory private (storage: SidechainHistoryStorage,
                                 consensusDataStorage: ConsensusDataStorage,
                                 params: NetworkParams,
                                 semanticBlockValidators: Seq[SemanticBlockValidator[SidechainBlock]],
-                                historyBlockValidators: Seq[HistoryBlockValidator])
+                                historyBlockValidators: Seq[HistoryBlockValidator[SidechainTypes#SCBT, SidechainBlock, SidechainHistoryStorage, SidechainHistory]])
   extends com.horizen.AbstractHistory[SidechainTypes#SCBT, SidechainBlock, SidechainHistoryStorage, SidechainHistory](
-    storage, consensusDataStorage, params)
+    storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
   with NetworkParamsUtils
   with ConsensusDataProvider
   with scorex.core.utils.ScorexEncoding
@@ -27,15 +27,7 @@ class SidechainHistory private (storage: SidechainHistoryStorage,
 
   override type NVCT = SidechainHistory
 
-  override def validateBlockSemantic(block: SidechainBlock) : Unit =
-    for(validator <- semanticBlockValidators)
-      validator.validate(block).get
-
-  override def validateHistoryBlock(block: SidechainBlock) : Unit =
-      for (validator <- historyBlockValidators)
-        validator.validate(block, this).get
-
-  override def makeNewHistory(storage: SidechainHistoryStorage, consensusDataStorage: ConsensusDataStorage) : SidechainHistory =
+  override def makeNewHistory(storage: SidechainHistoryStorage, consensusDataStorage: ConsensusDataStorage): SidechainHistory =
       new SidechainHistory(storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
 
 
@@ -84,7 +76,7 @@ object SidechainHistory
                                       consensusDataStorage: ConsensusDataStorage,
                                       params: NetworkParams,
                                       semanticBlockValidators: Seq[SemanticBlockValidator[SidechainBlock]],
-                                      historyBlockValidators: Seq[HistoryBlockValidator]): Option[SidechainHistory] = {
+                                      historyBlockValidators: Seq[HistoryBlockValidator[SidechainTypes#SCBT, SidechainBlock, SidechainHistoryStorage, SidechainHistory]]): Option[SidechainHistory] = {
 
     if (!historyStorage.isEmpty)
       Some(new SidechainHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators))
@@ -99,7 +91,7 @@ object SidechainHistory
                                       params: NetworkParams,
                                       genesisBlock: SidechainBlock,
                                       semanticBlockValidators: Seq[SemanticBlockValidator[SidechainBlock]],
-                                      historyBlockValidators: Seq[HistoryBlockValidator],
+                                      historyBlockValidators: Seq[HistoryBlockValidator[SidechainTypes#SCBT, SidechainBlock, SidechainHistoryStorage, SidechainHistory]],
                                       stakeEpochInfo: StakeConsensusEpochInfo) : Try[SidechainHistory] = Try {
 
     if (historyStorage.isEmpty) {

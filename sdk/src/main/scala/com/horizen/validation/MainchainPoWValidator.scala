@@ -1,16 +1,28 @@
 package com.horizen.validation
 
-import com.horizen.{SidechainHistory, SidechainTypes}
-import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockBase}
+import com.horizen.AbstractHistory
+import com.horizen.block.{ProofOfWorkVerifier, SidechainBlockBase}
 import com.horizen.params.NetworkParams
+import com.horizen.storage.AbstractHistoryStorage
+import com.horizen.transaction.Transaction
 import com.horizen.utils.BytesUtils
 import scorex.util.idToBytes
 
 import scala.util.{Failure, Success, Try}
 
-class MainchainPoWValidator(params: NetworkParams) extends HistoryBlockValidator {
-  override def validate(block: SidechainBlockBase[SidechainTypes#SCBT], history: SidechainHistory): Try[Unit] = {
-    if(ProofOfWorkVerifier.checkNextWorkRequired(block, history.storage, params)) {
+class MainchainPoWValidator[
+  TX <: Transaction,
+  PMOD <: SidechainBlockBase[TX],
+  HSTOR <: AbstractHistoryStorage[PMOD, HSTOR],
+  HT <: AbstractHistory[TX, PMOD, HSTOR, HT]
+]
+(
+  params: NetworkParams
+)
+  extends HistoryBlockValidator[TX, PMOD, HSTOR, HT] {
+
+  override def validate(block: PMOD, history: HT): Try[Unit] = {
+    if(ProofOfWorkVerifier.checkNextWorkRequired[TX, PMOD, HSTOR](block, history.storage, params)) {
       Success(Unit)
     }
     else {
