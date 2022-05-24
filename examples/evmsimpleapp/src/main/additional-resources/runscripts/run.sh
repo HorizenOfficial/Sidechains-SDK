@@ -1,0 +1,1 @@
+java -jar com.horizen.examples.SimpleApp sc_settings.conf

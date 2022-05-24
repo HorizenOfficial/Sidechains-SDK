@@ -64,7 +64,6 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
           customBoxSerializers,
           customSecretSerializers,
           customTransactionSerializers,
-          customAccountTransactionSerializers,
           applicationWallet,
           applicationState,
           secretStorage,
