@@ -14,7 +14,7 @@ import com.horizen.box.BoxSerializer
 import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.forge.ForgerRef
-import com.horizen.helper.{AccountTransactionSubmitProvider, AccountTransactionSubmitProviderImpl, TransactionSubmitProvider, TransactionSubmitProviderImpl}
+import com.horizen.helper.{AccountTransactionSubmitProvider, TransactionSubmitProvider, TransactionSubmitProviderImpl}
 import com.horizen.network.SidechainNodeViewSynchronizer
 import com.horizen.secret.SecretSerializer
 import com.horizen.state.ApplicationState
@@ -127,12 +127,6 @@ class AccountSidechainApp @Inject()
     actorSystem.actorOf(SidechainNodeViewSynchronizer.props(networkControllerRef, nodeViewHolderRef,
         SidechainSyncInfoMessageSpec, settings.network, timeProvider, modifierSerializers))
 
-  // If the web socket connector can be started, maybe we would to associate a client to the web socket channel created by the connector
-  if(connectorStarted.isSuccess)
-    communicationClient.setWebSocketChannel(webSocketConnector)
-  else if (sidechainSettings.withdrawalEpochCertificateSettings.submitterIsEnabled)
-    throw new RuntimeException("Unable to connect to websocket. Certificate submitter needs connection to Mainchain.")
-
   // Init Forger with a proper web socket client
   val sidechainBlockForgerActorRef: ActorRef = ??? //ForgerRef("Forger", sidechainSettings, nodeViewHolderRef,  mainchainSynchronizer,
   //  sidechainAccountTransactionsCompanion, timeProvider, params)
@@ -150,8 +144,6 @@ class AccountSidechainApp @Inject()
     SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef),
   )
 
-  val transactionSubmitProvider : AccountTransactionSubmitProvider = new AccountTransactionSubmitProviderImpl(sidechainTransactionActorRef)
-
   // In order to provide the feature to override core api and exclude some other apis,
   // first we create custom reject routes (otherwise we cannot know which route has to be excluded), second we bind custom apis and then core apis
   override val apiRoutes: Seq[ApiRoute] = Seq[SidechainApiRoute]()
@@ -165,8 +157,6 @@ class AccountSidechainApp @Inject()
     super.stopAll()
     storageList.foreach(_.close())
   }
-
-  def getTransactionSubmitProvider: AccountTransactionSubmitProvider = transactionSubmitProvider
 
   actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 }
