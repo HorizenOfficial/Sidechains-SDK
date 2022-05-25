@@ -201,13 +201,13 @@ abstract class AbstractSidechainApp
   val mainchainNodeChannel = new MainchainNodeChannelImpl(communicationClient, params)
   val mainchainSynchronizer = new MainchainSynchronizer(mainchainNodeChannel)
 
-
+  /*
+   * TODO this should be common code but nodeViewHolderRef here is still null, and lazy initialization does not always apply
+   *  One possible approach could be to add some init() function in this base class and call it from concrete instances.
+   *
   // Init Certificate Submitter
   lazy val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
   lazy val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.scorexSettings.network)
-
-  /*
-   * TODO this should be common code but nodeViewHolderRef here is still null, and lazy initialization does not apply
 
    * Moreover, for the time being we decide not to use ws server for accounts
   //Websocket server for the Explorer

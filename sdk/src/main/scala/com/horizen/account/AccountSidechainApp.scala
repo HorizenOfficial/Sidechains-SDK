@@ -11,6 +11,8 @@ import com.horizen.{AbstractSidechainApp, SidechainAppEvents, SidechainNodeViewH
 import com.horizen.api.http._
 import com.horizen.block.{SidechainBlockBase, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
+import com.horizen.certificatesubmitter.CertificateSubmitterRef
+import com.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
 import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.forge.ForgerRef
@@ -135,6 +137,10 @@ class AccountSidechainApp @Inject()
   // Init Transactions and Block actors for Api routes classes
   val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
   val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef("AccountBlock", sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
+
+  // Init Certificate Submitter
+  val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
+  val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.scorexSettings.network)
 
   // Init API
   var rejectedApiRoutes : Seq[SidechainRejectionApiRoute] = Seq[SidechainRejectionApiRoute]()
