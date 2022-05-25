@@ -1,13 +1,11 @@
 package com.horizen.evm;
 
-import com.horizen.evm.library.Evm;
-import com.horizen.evm.utils.Converter;
+import com.horizen.evm.library.LibEvm;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
-import java.math.BigInteger;
 
 public class EvmTest {
     @Rule
@@ -26,7 +24,7 @@ public class EvmTest {
         String secondValue = "00000000000000000000000000000000000000000000000000000000000015B3";
 
         System.out.println("Initialize");
-        var initResult = Evm.Instance.Initialize(databaseFolder.getAbsolutePath());
+        var initResult = LibEvm.Instance.Initialize(databaseFolder.getAbsolutePath());
         System.out.println("Initialize result " + initResult);
 
 //        System.out.println("SetRootHash");

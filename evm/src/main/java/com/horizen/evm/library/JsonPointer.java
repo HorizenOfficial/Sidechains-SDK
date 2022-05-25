@@ -1,7 +1,9 @@
 package com.horizen.evm.library;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.jna.FromNativeContext;
 import com.sun.jna.NativeMapped;
@@ -22,15 +24,15 @@ public class JsonPointer implements NativeMapped {
                 // parse json into object
                 var objectMapper = new ObjectMapper();
                 return objectMapper.readValue(json, this.getClass());
-//            } catch (JsonMappingException e) {
-//                throw new IllegalArgumentException("JSON mapping error " + this.getClass());
-//            } catch (JsonParseException e) {
-//                throw new IllegalArgumentException("JSON parse error " + this.getClass());
+            } catch (JsonMappingException e) {
+                throw new IllegalArgumentException("JSON mapping error " + this.getClass());
+            } catch (JsonParseException e) {
+                throw new IllegalArgumentException("JSON parse error " + this.getClass());
             } catch (IOException e) {
                 throw new IllegalArgumentException(e);
             } finally {
                 // free the string pointer on the native end
-                Evm.Instance.Free(ptr);
+                LibEvm.Instance.Free(ptr);
             }
         }
     }

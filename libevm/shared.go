@@ -6,54 +6,33 @@ package main
 // #include <stdlib.h>
 import "C"
 import (
-	"github.com/ethereum/go-ethereum/common"
-	"libevm/evm"
-	"libevm/types"
+	"encoding/json"
+	"errors"
+	"github.com/ethereum/go-ethereum/log"
+	"libevm/lib"
+	"reflect"
 	"unsafe"
 )
 
-type HandleResult struct {
-	InteropResult
-	Handle int `json:"handle"`
-}
+// instance holds the initialized library
+var instance *lib.Instance
 
-type StateRootResult struct {
-	InteropResult
-	StateRoot common.Hash `json:"stateRoot"`
+func ret(err error, result interface{}) *C.char {
+	var response InteropResult
+	if err != nil {
+		response.Error = err.Error()
+	} else {
+		response.Result = result
+	}
+	jsonBytes, err := json.Marshal(response)
+	if err != nil {
+		log.Error("unable to marshal response", "error", err)
+		return nil
+	}
+	jsonString := string(jsonBytes)
+	log.Debug("<<", "json", jsonString)
+	return C.CString(jsonString)
 }
-
-type CreateParams struct {
-	types.SerializableConfig
-	Input        []byte `json:"input"`
-	DiscardState bool   `json:"discardState"`
-}
-
-type CreateResult struct {
-	InteropResult
-	Address     common.Address `json:"address"`
-	LeftOverGas uint64         `json:"leftOverGas"`
-}
-
-type CallParams struct {
-	types.SerializableConfig
-	Address      common.Address `json:"address"`
-	Input        []byte         `json:"input"`
-	DiscardState bool           `json:"discardState"`
-}
-
-type CallResult struct {
-	InteropResult
-	Ret         []byte `json:"ret"`
-	LeftOverGas uint64 `json:"leftOverGas"`
-}
-
-type BalanceParams struct {
-	Address common.Address `json:"address"`
-	Value   *types.BigInt  `json:"value"`
-}
-
-// instance holds a local EvmService
-var instance *evm.Instance
 
 //export Free
 func Free(ptr unsafe.Pointer) {
@@ -62,47 +41,92 @@ func Free(ptr unsafe.Pointer) {
 
 //export Initialize
 func Initialize(path *C.char) *C.char {
+	return ret(initialize(C.GoString(path)), nil)
+}
+
+// TODO: refactor to also use invoke() for initialization
+func initialize(path string) error {
 	if instance != nil {
 		_ = instance.Close()
 		instance = nil
 	}
-	newInstance, err := evm.InitWithLevelDB(C.GoString(path))
+	newInstance, err := lib.InitWithLevelDB(path)
 	if err == nil {
 		instance = newInstance
 	}
-	return toJava(Result(err))
+	return err
 }
 
-//export OpenState
-func OpenState(stateRootHex *C.char) *C.char {
-	root := common.HexToHash(C.GoString(stateRootHex))
-	handle, err := instance.OpenState(root)
-	if err != nil {
-		return toJava(Fail(err))
-	}
-	result := HandleResult{
-		Handle: handle,
-	}
-	return toJava(&result)
+//export Invoke
+func Invoke(method *C.char, args *C.char) *C.char {
+	return ret(invoke(C.GoString(method), C.GoString(args)))
 }
 
-//export CloseState
-func CloseState(handle int) *C.char {
-	instance.CloseState(handle)
-	return toJava(Success())
+func invoke(method string, args string) (error, interface{}) {
+	if instance == nil {
+		return errors.New("not initialized"), nil
+	}
+	// find the target function
+	log.Info(">>", "method", method, "args", args)
+	f := reflect.ValueOf(instance).MethodByName(method)
+	if f.IsZero() {
+		return errors.New("method not found"), nil
+	}
+	// unmarshal args struct
+	var inputs []reflect.Value
+	if f.Type().NumIn() > 0 {
+		v := reflect.New(f.Type().In(0))
+		err := json.Unmarshal([]byte(args), &v)
+		if err != nil {
+			return err, nil
+		}
+		inputs = append(inputs, v.Elem())
+	}
+	// call method
+	results := f.Call(inputs)
+	// check if the first return value is an error
+	errorInterface := reflect.TypeOf((*error)(nil)).Elem()
+	canError := f.Type().NumOut() > 0 && f.Type().Out(0).Implements(errorInterface)
+	if canError && !results[0].IsNil() {
+		return results[0].Interface().(error), nil
+	}
+	// return results if any
+	if f.Type().NumOut() > 1 && results[1].CanInterface() {
+		return nil, results[1].Interface()
+	}
+	return nil, nil
 }
 
-//export GetIntermediateStateRoot
-func GetIntermediateStateRoot(handle int) *C.char {
-	statedb, err := instance.GetState(handle)
-	if err != nil {
-		return toJava(Fail(err))
-	}
-	result := StateRootResult{
-		StateRoot: statedb.IntermediateRoot(true),
-	}
-	return toJava(&result)
-}
+////export OpenState
+//func OpenState(stateRootHex *C.char) *C.char {
+//	root := common.HexToHash(C.GoString(stateRootHex))
+//	handle, err := instance.OpenState(root)
+//	if err != nil {
+//		return toJava(Fail(err))
+//	}
+//	result := HandleResult{
+//		Handle: handle,
+//	}
+//	return toJava(&result)
+//}
+//
+////export CloseState
+//func CloseState(handle int) *C.char {
+//	instance.CloseState(handle)
+//	return toJava(Success())
+//}
+//
+////export GetIntermediateStateRoot
+//func GetIntermediateStateRoot(handle int) *C.char {
+//	statedb, err := instance.GetState(handle)
+//	if err != nil {
+//		return toJava(Fail(err))
+//	}
+//	result := StateRootResult{
+//		StateRoot: statedb.IntermediateRoot(true),
+//	}
+//	return toJava(&result)
+//}
 
 ////export CommitState
 //func CommitState() *C.char {

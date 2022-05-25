@@ -9,34 +9,18 @@ import (
 )
 
 type InteropResult struct {
-	Code    uint8  `json:"code"`
-	Message string `json:"message"`
+	Error  string
+	Result interface{}
 }
 
-func Success() *InteropResult {
-	return &InteropResult{
-		Code:    0,
-		Message: "",
-	}
-}
-
-func Fail(err error) *InteropResult {
-	return &InteropResult{
-		Code:    1,
-		Message: err.Error(),
-	}
-}
-
-func Result(err error) *InteropResult {
-	if err == nil {
-		return Success()
+func toJava(err error, result interface{}) *C.char {
+	var response InteropResult
+	if err != nil {
+		response.Error = err.Error()
 	} else {
-		return Fail(err)
+		response.Result = result
 	}
-}
-
-func toJava(obj interface{}) *C.char {
-	ret, err := json.Marshal(obj)
+	ret, err := json.Marshal(response)
 	if err != nil {
 		log.Error("unable to marshal response", "error", err)
 		return nil
