@@ -57,6 +57,12 @@ public final class LibEvm {
         return LibEvm.Invoke("StateIntermediateRoot", params);
     }
 
+    public static String StateCommit(int handle) throws Exception {
+        var params = new HandleParams();
+        params.Handle = handle;
+        return LibEvm.Invoke("StateCommit", params);
+    }
+
     public static class InteropResult<R> extends JsonPointer {
         public String Error;
         public R Result;

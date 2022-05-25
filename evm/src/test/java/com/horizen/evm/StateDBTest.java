@@ -28,10 +28,14 @@ public class StateDBTest {
         System.out.println("OpenState result " + statedb);
 
         System.out.println("GetIntermediateStateRoot");
-        var root = statedb.GetIntermediateRoot();
-        System.out.println("GetIntermediateStateRoot result " + root);
+        var intermediateRoot = statedb.GetIntermediateRoot();
+        System.out.println("GetIntermediateStateRoot result " + intermediateRoot);
+        assertEquals("empty state should give the hash of an empty string as the root hash", intermediateRoot, hashEmpty);
 
-        assertEquals("empty state should give the hash of an empty string as the root hash", root, hashEmpty);
+        System.out.println("Commit");
+        var committedRoot = statedb.Commit();
+        System.out.println("Commit result " + committedRoot);
+        assertEquals("committed root should equal intermediate root", committedRoot, intermediateRoot);
 
         System.out.println("CloseState");
         statedb.close();

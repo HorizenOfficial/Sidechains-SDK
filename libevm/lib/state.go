@@ -55,3 +55,15 @@ func (s *Service) StateIntermediateRoot(params HandleParams) (error, common.Hash
 	}
 	return nil, statedb.IntermediateRoot(true)
 }
+
+func (s *Service) StateCommit(params HandleParams) (error, common.Hash) {
+	err, statedb := s.getState(params.Handle)
+	if err != nil {
+		return err, common.Hash{}
+	}
+	hash, err := statedb.Commit(true)
+	if err != nil {
+		return err, common.Hash{}
+	}
+	return nil, hash
+}

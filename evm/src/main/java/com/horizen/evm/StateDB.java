@@ -18,6 +18,10 @@ public class StateDB implements AutoCloseable {
         return LibEvm.StateIntermediateRoot(handle);
     }
 
+    public String Commit() throws Exception {
+        return LibEvm.StateCommit(handle);
+    }
+
     @Override
     public String toString() {
         return String.format("StateDB{handle=%d}", handle);
