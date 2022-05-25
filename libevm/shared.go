@@ -15,7 +15,7 @@ import (
 )
 
 // instance holds the initialized library
-var instance *lib.Instance
+var instance *lib.Service
 
 func ret(err error, result interface{}) *C.char {
 	var response InteropResult

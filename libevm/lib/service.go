@@ -9,15 +9,15 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
-type Instance struct {
+type Service struct {
 	storage  ethdb.Database
 	database state.Database
 	statedbs map[int]*state.StateDB
 	counter  int
 }
 
-func New(storage ethdb.Database) *Instance {
-	return &Instance{
+func New(storage ethdb.Database) *Service {
+	return &Service{
 		storage: storage,
 		// TODO: enable caching
 		//database: state.NewDatabaseWithConfig(storage, &trie.Config{Cache: 16})
@@ -26,7 +26,7 @@ func New(storage ethdb.Database) *Instance {
 	}
 }
 
-func InitWithLevelDB(path string) (*Instance, error) {
+func InitWithLevelDB(path string) (*Service, error) {
 	log.Info("initializing leveldb", "path", path)
 	storage, err := rawdb.NewLevelDBDatabase(path, 0, 0, "zen/db/data/", false)
 	if err != nil {
@@ -36,14 +36,14 @@ func InitWithLevelDB(path string) (*Instance, error) {
 	return New(storage), nil
 }
 
-func InitWithMemoryDB() (*Instance, error) {
+func InitWithMemoryDB() (*Service, error) {
 	log.Info("initializing memorydb")
 	storage := rawdb.NewMemoryDatabase()
 	return New(storage), nil
 }
 
-func (e *Instance) Close() error {
-	err := e.storage.Close()
+func (s *Service) Close() error {
+	err := s.storage.Close()
 	if err != nil {
 		log.Error("failed to close storage", "error", err)
 	}

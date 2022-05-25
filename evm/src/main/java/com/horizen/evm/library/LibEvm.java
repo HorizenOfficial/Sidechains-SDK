@@ -1,5 +1,6 @@
 package com.horizen.evm.library;
 
+import com.horizen.evm.utils.Converter;
 import com.sun.jna.Native;
 
 public final class LibEvm {
@@ -23,15 +24,19 @@ public final class LibEvm {
         // prevent instantiation of this class
     }
 
-    public static <A extends JsonPointer, R> R Invoke(String method, A args) throws Exception {
-        var response = LibEvm.Instance.<A, R>Invoke(method, args);
+    public static class InvokeParams extends JsonPointer {
+
+    }
+
+    public static <R> R Invoke(String method, InvokeParams args) throws Exception {
+        var response = LibEvm.Instance.<R>Invoke(method, args);
         if (response.isError()) {
             throw new Exception(response.Error);
         }
         return response.Result;
     }
 
-    public static class OpenStateParams extends JsonPointer {
+    public static class OpenStateParams extends InvokeParams {
         public String Root;
     }
 
@@ -41,9 +46,9 @@ public final class LibEvm {
         return LibEvm.Invoke("OpenState", params);
     }
 
-    public static class InteropResult<T> extends JsonPointer {
+    public static class InteropResult<R> extends JsonPointer {
         public String Error;
-        public T Result;
+        public R Result;
 
         public boolean isError() {
             return !Error.isEmpty();
