@@ -14,10 +14,15 @@ import (
 	"unsafe"
 )
 
-// instance holds the initialized library
+// instance holds the initialized lib.Service
 var instance *lib.Service
 
-func ret(err error, result interface{}) *C.char {
+type InteropResult struct {
+	Error  string
+	Result interface{}
+}
+
+func response(err error, result interface{}) *C.char {
 	var response InteropResult
 	if err != nil {
 		response.Error = err.Error()
@@ -41,7 +46,7 @@ func Free(ptr unsafe.Pointer) {
 
 //export Initialize
 func Initialize(path *C.char) *C.char {
-	return ret(initialize(C.GoString(path)), nil)
+	return response(initialize(C.GoString(path)), nil)
 }
 
 // TODO: refactor to also use invoke() for initialization
@@ -59,7 +64,7 @@ func initialize(path string) error {
 
 //export Invoke
 func Invoke(method *C.char, args *C.char) *C.char {
-	return ret(invoke(C.GoString(method), C.GoString(args)))
+	return response(invoke(C.GoString(method), C.GoString(args)))
 }
 
 func invoke(method string, args string) (error, interface{}) {
@@ -69,14 +74,14 @@ func invoke(method string, args string) (error, interface{}) {
 	// find the target function
 	log.Info(">>", "method", method, "args", args)
 	f := reflect.ValueOf(instance).MethodByName(method)
-	if f.IsZero() {
+	if !f.IsValid() {
 		return errors.New("method not found"), nil
 	}
 	// unmarshal args struct
 	var inputs []reflect.Value
 	if f.Type().NumIn() > 0 {
 		v := reflect.New(f.Type().In(0))
-		err := json.Unmarshal([]byte(args), &v)
+		err := json.Unmarshal([]byte(args), v.Interface())
 		if err != nil {
 			return err, nil
 		}
@@ -97,10 +102,10 @@ func invoke(method string, args string) (error, interface{}) {
 	return nil, nil
 }
 
-////export OpenState
-//func OpenState(stateRootHex *C.char) *C.char {
+////export StateOpen
+//func StateOpen(stateRootHex *C.char) *C.char {
 //	root := common.HexToHash(C.GoString(stateRootHex))
-//	handle, err := instance.OpenState(root)
+//	handle, err := instance.StateOpen(root)
 //	if err != nil {
 //		return toJava(Fail(err))
 //	}
@@ -110,9 +115,9 @@ func invoke(method string, args string) (error, interface{}) {
 //	return toJava(&result)
 //}
 //
-////export CloseState
-//func CloseState(handle int) *C.char {
-//	instance.CloseState(handle)
+////export StateClose
+//func StateClose(handle int) *C.char {
+//	instance.StateClose(handle)
 //	return toJava(Success())
 //}
 //

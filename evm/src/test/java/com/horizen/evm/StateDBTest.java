@@ -27,11 +27,11 @@ public class StateDBTest {
         var statedb = new StateDB(hashNull);
         System.out.println("OpenState result " + statedb);
 
-//        System.out.println("GetIntermediateStateRoot");
-//        var root = statedb.GetIntermediateStateRoot();
-//        System.out.println("GetIntermediateStateRoot result " + root);
+        System.out.println("GetIntermediateStateRoot");
+        var root = statedb.GetIntermediateRoot();
+        System.out.println("GetIntermediateStateRoot result " + root);
 
-//        assertEquals("empty state should give the hash of an empty string as the root hash", root, hashEmpty);
+        assertEquals("empty state should give the hash of an empty string as the root hash", root, hashEmpty);
 
         System.out.println("CloseState");
         statedb.close();

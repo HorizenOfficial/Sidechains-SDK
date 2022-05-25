@@ -1,7 +1,5 @@
 package lib
 
-// #cgo CFLAGS: -g -Wall -O3 -fpic -Werror
-import "C"
 import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"

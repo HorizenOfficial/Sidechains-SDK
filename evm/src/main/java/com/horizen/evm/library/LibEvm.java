@@ -1,6 +1,5 @@
 package com.horizen.evm.library;
 
-import com.horizen.evm.utils.Converter;
 import com.sun.jna.Native;
 
 public final class LibEvm {
@@ -24,11 +23,7 @@ public final class LibEvm {
         // prevent instantiation of this class
     }
 
-    public static class InvokeParams extends JsonPointer {
-
-    }
-
-    public static <R> R Invoke(String method, InvokeParams args) throws Exception {
+    public static <R> R Invoke(String method, JsonPointer args) throws Exception {
         var response = LibEvm.Instance.<R>Invoke(method, args);
         if (response.isError()) {
             throw new Exception(response.Error);
@@ -36,14 +31,30 @@ public final class LibEvm {
         return response.Result;
     }
 
-    public static class OpenStateParams extends InvokeParams {
+    public static class OpenStateParams extends JsonPointer {
         public String Root;
     }
 
-    public static int OpenState(String stateRootHex) throws Exception {
+    public static class HandleParams extends JsonPointer {
+        public int Handle;
+    }
+
+    public static int StateOpen(String stateRootHex) throws Exception {
         var params = new OpenStateParams();
         params.Root = stateRootHex;
-        return LibEvm.Invoke("OpenState", params);
+        return LibEvm.Invoke("StateOpen", params);
+    }
+
+    public static void StateClose(int handle) throws Exception {
+        var params = new HandleParams();
+        params.Handle = handle;
+        LibEvm.Invoke("StateClose", params);
+    }
+
+    public static String StateIntermediateRoot(int handle) throws Exception {
+        var params = new HandleParams();
+        params.Handle = handle;
+        return LibEvm.Invoke("StateIntermediateRoot", params);
     }
 
     public static class InteropResult<R> extends JsonPointer {

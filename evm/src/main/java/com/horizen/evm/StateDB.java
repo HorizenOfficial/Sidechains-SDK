@@ -6,17 +6,16 @@ public class StateDB implements AutoCloseable {
     private final int handle;
 
     public StateDB(String stateRootHex) throws Exception {
-        handle = LibEvm.OpenState(stateRootHex);
+        handle = LibEvm.StateOpen(stateRootHex);
     }
-
-//    public String GetIntermediateStateRoot() throws Exception {
-//        return check(Evm.Instance.GetIntermediateStateRoot(handle)).stateRoot;
-//    }
 
     @Override
     public void close() throws Exception {
-//        handle = Evm.Instance.<OpenStateParams, Evm.HandleResult>Invoke("OpenState", params).handle;
-//        check(Evm.Instance.CloseState(handle));
+        LibEvm.StateClose(handle);
+    }
+
+    public String GetIntermediateRoot() throws Exception {
+        return LibEvm.StateIntermediateRoot(handle);
     }
 
     @Override
