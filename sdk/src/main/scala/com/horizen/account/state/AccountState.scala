@@ -68,7 +68,7 @@ class AccountState(val params: NetworkParams, stateMetadataStorage: AccountState
     stateView.updateWithdrawalEpochInfo(modWithdrawalEpochInfo).get
 
     val consensusEpochNum: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)
-    stateView.updateConsensusEpochNumber(consensusEpochNum)
+   stateView.updateConsensusEpochNumber(consensusEpochNum)
 
     // If SC block has reached the end of the withdrawal epoch -> fee payments expected to be produced.
     // Verify that Forger assumed the same fees to be paid as the current node does.

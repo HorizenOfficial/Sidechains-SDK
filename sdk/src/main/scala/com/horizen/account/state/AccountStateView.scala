@@ -50,12 +50,12 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView) ext
     new AccountStateView(metadataStorageView)
   }
 
-  override protected def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo): Try[AccountStateView] = Try {
+  override def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo): Try[AccountStateView] = Try {
     metadataStorageView.updateWithdrawalEpochInfo(withdrawalEpochInfo)
     new AccountStateView(metadataStorageView)
   }
 
-  override protected def updateConsensusEpochNumber(consensusEpochNum: ConsensusEpochNumber): Try[AccountStateView] = Try {
+  override def updateConsensusEpochNumber(consensusEpochNum: ConsensusEpochNumber): Try[AccountStateView] = Try {
     metadataStorageView.updateConsensusEpochNumber(consensusEpochNum)
     new AccountStateView(metadataStorageView)
   }
@@ -65,7 +65,7 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView) ext
     new AccountStateView(metadataStorageView)
   }
 
-  override protected def setCeased(): Try[AccountStateView] = Try {
+  override def setCeased(): Try[AccountStateView] = Try {
     metadataStorageView.setCeased()
     new AccountStateView(metadataStorageView)
   }
