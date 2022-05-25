@@ -18,6 +18,7 @@ public class StateDBTest {
 
         String hashNull = "0x0000000000000000000000000000000000000000000000000000000000000000";
         String hashEmpty = "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421";
+        String origin = "0xbafe3b6f2a19658df3cb5efca158c93272ff5c0b";
 
         System.out.println("Initialize");
         var initResult = LibEvm.Instance.Initialize(databaseFolder.getAbsolutePath());
@@ -36,6 +37,10 @@ public class StateDBTest {
         var committedRoot = statedb.Commit();
         System.out.println("Commit result " + committedRoot);
         assertEquals("committed root should equal intermediate root", committedRoot, intermediateRoot);
+
+        System.out.println("StateGetAccountBalance");
+        var balance = statedb.GetAccountBalance(origin);
+        System.out.println("StateGetAccountBalance result " + balance);
 
         System.out.println("CloseState");
         statedb.close();

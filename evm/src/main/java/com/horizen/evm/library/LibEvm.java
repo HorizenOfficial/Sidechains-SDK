@@ -39,6 +39,10 @@ public final class LibEvm {
         public int Handle;
     }
 
+    public static class AccountParams extends HandleParams {
+        public String Address;
+    }
+
     public static int StateOpen(String stateRootHex) throws Exception {
         var params = new OpenStateParams();
         params.Root = stateRootHex;
@@ -61,6 +65,13 @@ public final class LibEvm {
         var params = new HandleParams();
         params.Handle = handle;
         return LibEvm.Invoke("StateCommit", params);
+    }
+
+    public static String StateGetAccountBalance(int handle, String address) throws Exception {
+        var params = new AccountParams();
+        params.Handle = handle;
+        params.Address = address;
+        return LibEvm.Invoke("StateGetAccountBalance", params);
     }
 
     public static class InteropResult<R> extends JsonPointer {

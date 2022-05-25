@@ -6,6 +6,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/log"
+	"libevm/types"
+	"math/big"
 )
 
 type StateRootParams struct {
@@ -14,6 +16,11 @@ type StateRootParams struct {
 
 type HandleParams struct {
 	Handle int
+}
+
+type AccounteParams struct {
+	HandleParams
+	Address common.Address
 }
 
 // StateOpen will create a new state at the given root hash.
@@ -66,4 +73,16 @@ func (s *Service) StateCommit(params HandleParams) (error, common.Hash) {
 		return err, common.Hash{}
 	}
 	return nil, hash
+}
+
+func (s *Service) StateGetAccountBalance(params AccounteParams) (error, *types.BigInt) {
+	err, statedb := s.getState(params.Handle)
+	if err != nil {
+		return err, nil
+	}
+	stateObject := statedb.GetOrNewStateObject(params.Address)
+	stateObject.AddBalance(big.NewInt(1234))
+	balance := stateObject.Balance()
+	log.Debug("account balance", "address", params.Address, "balance", balance)
+	return nil, types.NewBigInt(balance)
 }

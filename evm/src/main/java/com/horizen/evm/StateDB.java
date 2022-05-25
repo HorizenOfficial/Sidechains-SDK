@@ -22,6 +22,10 @@ public class StateDB implements AutoCloseable {
         return LibEvm.StateCommit(handle);
     }
 
+    public String GetAccountBalance(String address) throws Exception {
+        return LibEvm.StateGetAccountBalance(handle, address);
+    }
+
     @Override
     public String toString() {
         return String.format("StateDB{handle=%d}", handle);
