@@ -6,6 +6,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 
 public class StateDBTest {
     @Rule
@@ -25,24 +26,31 @@ public class StateDBTest {
         System.out.println("Initialize result " + initResult);
 
         System.out.println("OpenState");
-        var statedb = new StateDB(hashNull);
-        System.out.println("OpenState result " + statedb);
+        try (var statedb = new StateDB(hashNull)) {
+            System.out.println("OpenState result " + statedb);
 
-        System.out.println("GetIntermediateStateRoot");
-        var intermediateRoot = statedb.GetIntermediateRoot();
-        System.out.println("GetIntermediateStateRoot result " + intermediateRoot);
-        assertEquals("empty state should give the hash of an empty string as the root hash", intermediateRoot, hashEmpty);
+            System.out.println("GetIntermediateStateRoot");
+            var intermediateRoot = statedb.GetIntermediateRoot();
+            System.out.println("GetIntermediateStateRoot result " + intermediateRoot);
+            assertEquals(
+                "empty state should give the hash of an empty string as the root hash",
+                intermediateRoot,
+                hashEmpty
+            );
 
-        System.out.println("Commit");
-        var committedRoot = statedb.Commit();
-        System.out.println("Commit result " + committedRoot);
-        assertEquals("committed root should equal intermediate root", committedRoot, intermediateRoot);
+            System.out.println("Commit");
+            var committedRoot = statedb.Commit();
+            System.out.println("Commit result " + committedRoot);
+            assertEquals("committed root should equal intermediate root", committedRoot, intermediateRoot);
 
-        System.out.println("StateGetAccountBalance");
-        var balance = statedb.GetAccountBalance(origin);
-        System.out.println("StateGetAccountBalance result " + balance);
+            System.out.println("StateGetAccountBalance");
+            var balance = statedb.GetAccountBalance(origin);
+            System.out.println("StateGetAccountBalance result " + balance);
 
-        System.out.println("CloseState");
-        statedb.close();
+            System.out.println("CloseState");
+        }
+        // verify that automatic resource management worked and StateDB.close() was called,
+        // if it did the handle is invalid now and this should throw
+        assertThrows(Exception.class, () -> LibEvm.StateIntermediateRoot(1));
     }
 }
