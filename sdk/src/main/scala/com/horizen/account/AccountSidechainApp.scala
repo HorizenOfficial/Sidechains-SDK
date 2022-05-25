@@ -34,6 +34,7 @@ import scorex.core.{ModifierTypeId, NodeViewModifier}
 import java.io.File
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}
+import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.collection.immutable.Map
 import scala.collection.mutable
 import scala.io.{Codec, Source}
@@ -134,6 +135,15 @@ class AccountSidechainApp @Inject()
   // Init Transactions and Block actors for Api routes classes
   val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
   val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef("AccountBlock", sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
+
+  // Init API
+  var rejectedApiRoutes : Seq[SidechainRejectionApiRoute] = Seq[SidechainRejectionApiRoute]()
+  rejectedApiPaths.asScala.foreach(path => rejectedApiRoutes = rejectedApiRoutes :+ SidechainRejectionApiRoute(path.getKey, path.getValue, settings.restApi, nodeViewHolderRef))
+
+  // Once received developer's custom api, we need to create, for each of them, a SidechainApiRoute.
+  // For do this, we use an instance of ApplicationApiRoute. This is an entry point between SidechainApiRoute and external java api.
+  var applicationApiRoutes : Seq[ApplicationApiRoute] = Seq[ApplicationApiRoute]()
+  customApiGroups.asScala.foreach(apiRoute => applicationApiRoutes = applicationApiRoutes :+ ApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
 
   var coreApiRoutes: Seq[SidechainApiRoute] = Seq[SidechainApiRoute](
     MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),

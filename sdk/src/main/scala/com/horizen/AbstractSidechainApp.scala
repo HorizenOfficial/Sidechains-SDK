@@ -110,7 +110,7 @@ abstract class AbstractSidechainApp
       restrictForgers = sidechainSettings.forger.restrictForgers,
       allowedForgersList = forgerList,
       sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version
-  )
+    )
 
     case "testnet" => TestNetParams(
       sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
@@ -206,9 +206,13 @@ abstract class AbstractSidechainApp
   lazy val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
   lazy val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.scorexSettings.network)
 
+  /*
+   * TODO this should be common code but nodeViewHolderRef here is still null, and lazy initialization does not apply
+
+   * Moreover, for the time being we decide not to use ws server for accounts
   //Websocket server for the Explorer
   if(sidechainSettings.websocket.wsServer) {
-    lazy val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocket.wsServerPort)
+    val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocket.wsServerPort)
   }
 
   // Init API
@@ -219,6 +223,7 @@ abstract class AbstractSidechainApp
   // For do this, we use an instance of ApplicationApiRoute. This is an entry point between SidechainApiRoute and external java api.
   var applicationApiRoutes : Seq[ApplicationApiRoute] = Seq[ApplicationApiRoute]()
   customApiGroups.asScala.foreach(apiRoute => applicationApiRoutes = applicationApiRoutes :+ ApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
+  */
 
   override val swaggerConfig: String = Source.fromResource("api/sidechainApi.yaml")(Codec.UTF8).getLines.mkString("\n")
 
