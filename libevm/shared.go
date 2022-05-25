@@ -102,47 +102,6 @@ func invoke(method string, args string) (error, interface{}) {
 	return nil, nil
 }
 
-////export StateOpen
-//func StateOpen(stateRootHex *C.char) *C.char {
-//	root := common.HexToHash(C.GoString(stateRootHex))
-//	handle, err := instance.StateOpen(root)
-//	if err != nil {
-//		return toJava(Fail(err))
-//	}
-//	result := HandleResult{
-//		Handle: handle,
-//	}
-//	return toJava(&result)
-//}
-//
-////export StateClose
-//func StateClose(handle int) *C.char {
-//	instance.StateClose(handle)
-//	return toJava(Success())
-//}
-//
-////export GetIntermediateStateRoot
-//func GetIntermediateStateRoot(handle int) *C.char {
-//	statedb, err := instance.GetState(handle)
-//	if err != nil {
-//		return toJava(Fail(err))
-//	}
-//	result := StateRootResult{
-//		StateRoot: statedb.IntermediateRoot(true),
-//	}
-//	return toJava(&result)
-//}
-
-////export CommitState
-//func CommitState() *C.char {
-//	stateRoot, err := instance.Commit()
-//	if err != nil {
-//		return toJava(Fail(err))
-//	}
-//	result := StateRootResult{StateRoot: stateRoot}
-//	return toJava(&result)
-//}
-//
 ////export ContractCreate
 //func ContractCreate(args *C.char) *C.char {
 //	var params CreateParams

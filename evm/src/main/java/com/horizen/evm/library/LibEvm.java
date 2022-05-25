@@ -94,34 +94,6 @@ public final class LibEvm {
         }
     }
 
-//    public static class InteropResult extends JsonPointer {
-//        public int code;
-//        public String message;
-//
-//        @Override
-//        public String toString() {
-//            return String.format("code %d message %s", code, message.isEmpty() ? "none" : message);
-//        }
-//    }
-//
-//    public static class HandleResult extends InteropResult {
-//        public int handle;
-//
-//        @Override
-//        public String toString() {
-//            return String.format("%s handle %d", super.toString(), handle);
-//        }
-//    }
-//
-//    public static class StateRootResult extends InteropResult {
-//        public String stateRoot;
-//
-//        @Override
-//        public String toString() {
-//            return String.format("%s stateRoot %s", super.toString(), stateRoot);
-//        }
-//    }
-//
 //    public static class ContractParams extends JsonPointer {
 //        public String difficulty; // uint256
 //        public String origin; // address
@@ -197,16 +169,6 @@ public final class LibEvm {
 //                leftOverGas,
 //                balanceChanges
 //            );
-//        }
-//    }
-//
-//    public static class BalanceParams extends JsonPointer {
-//        public String address;
-//        public String value;
-//
-//        @Override
-//        public String toString() {
-//            return String.format("address %s value %s", address, value);
 //        }
 //    }
 }
