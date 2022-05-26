@@ -58,6 +58,7 @@ class SidechainBackup @Inject()
             storage.close()
           } catch {
             case t: Throwable =>
+              storage.close()
               log.error("Error during the Backup generation: ",t.getMessage)
               throw new RuntimeException("Error during the Backup generation: "+t.getMessage)
           }

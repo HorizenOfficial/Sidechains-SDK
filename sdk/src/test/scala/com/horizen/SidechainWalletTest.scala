@@ -405,6 +405,8 @@ class SidechainWalletTest
     val mockedForgingBoxesInfoStorage: ForgingBoxesInfoStorage = mock[ForgingBoxesInfoStorage]
     val mockedCswDataStorage: SidechainWalletCswDataStorage = mock[SidechainWalletCswDataStorage]
     val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
+    val mockedVersion: VersionTag = bytesToVersion(Array[Byte](32))
+
     Mockito.when(mockedSecretStorage.getAll).thenAnswer(_=>customSecretList.toList)
 
     //Create temporary WalletBoxStorage
@@ -425,6 +427,7 @@ class SidechainWalletTest
       mockedForgingBoxesInfoStorage,
       mockedCswDataStorage,
       params,
+      mockedVersion,
       mockedApplicationWallet)
 
     // Mock get and update methods of SecretStorage
@@ -448,6 +451,7 @@ class SidechainWalletTest
     val mockedForgingBoxesInfoStorage: ForgingBoxesInfoStorage = mock[ForgingBoxesInfoStorage]
     val mockedCswDataStorage: SidechainWalletCswDataStorage = mock[SidechainWalletCswDataStorage]
     val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
+    val mockedVersion: VersionTag = bytesToVersion(Array[Byte](32))
     Mockito.when(mockedSecretStorage.getAll).thenAnswer(_=>secretList.toList)
 
     //Create temporary WalletBoxStorage
@@ -476,6 +480,7 @@ class SidechainWalletTest
       mockedForgingBoxesInfoStorage,
       mockedCswDataStorage,
       params,
+      mockedVersion,
       mockedApplicationWallet)
 
     var exceptionThrown = false

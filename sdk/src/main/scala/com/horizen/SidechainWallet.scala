@@ -462,7 +462,7 @@ object SidechainWallet
 
     if (walletBoxStorage.isEmpty) {
       var genesisWallet = new SidechainWallet(seed, walletBoxStorage, secretStorage, walletTransactionStorage,
-        forgingBoxesInfoStorage, cswDataStorage, params, applicationWallet)
+        forgingBoxesInfoStorage, cswDataStorage, params, idToVersion(genesisBlock.parentId), applicationWallet)
       genesisWallet = genesisWallet.scanBackUp(backupStorage.getBoxIterator, genesisBlock.timestamp).get
       genesisWallet.scanPersistent(genesisBlock, withdrawalEpochNumber, Seq(), None).applyConsensusEpochInfo(consensusEpochInfo)
     }

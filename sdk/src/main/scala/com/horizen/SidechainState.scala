@@ -542,6 +542,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       case Success(_) =>
         this
       case Failure(e) =>
+        log.error("Error during the backup restore inside the SidechainState", e)
         throw e
     }
   }
