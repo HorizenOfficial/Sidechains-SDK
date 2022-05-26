@@ -26,7 +26,7 @@ case class SidechainBackupApiRoute(override val settings: RESTApiSettings,
                                 boxIterator: BoxIterator)
                                (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
   override val route: Route = pathPrefix("backup") {
-    getSidechainBlockIdForBackup ~ getInitialBoxes
+    getSidechainBlockIdForBackup ~ getRestoredBoxes
   }
 
   /***
@@ -55,7 +55,7 @@ case class SidechainBackupApiRoute(override val settings: RESTApiSettings,
   /**
    * Return the initial boxes restored in a paginated way.
    */
-  def getInitialBoxes: Route = (post & path("getInitialBoxes")) {
+  def getRestoredBoxes: Route = (post & path("getRestoredBoxes")) {
     entity(as[ReqGetInitialBoxes]) { body =>
       def getBoxId: JOptional[Array[Byte]] = body.lastBoxId match {
         case Some(boxId) =>
