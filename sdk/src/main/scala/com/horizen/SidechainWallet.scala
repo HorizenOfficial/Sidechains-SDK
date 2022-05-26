@@ -461,9 +461,9 @@ object SidechainWallet
                                     ) : Try[SidechainWallet] = Try {
 
     if (walletBoxStorage.isEmpty) {
-      val genesisWallet = new SidechainWallet(seed, walletBoxStorage, secretStorage, walletTransactionStorage,
+      var genesisWallet = new SidechainWallet(seed, walletBoxStorage, secretStorage, walletTransactionStorage,
         forgingBoxesInfoStorage, cswDataStorage, params, applicationWallet)
-      genesisWallet.scanBackUp(backupStorage.getBoxIterator, genesisBlock.timestamp).get
+      genesisWallet = genesisWallet.scanBackUp(backupStorage.getBoxIterator, genesisBlock.timestamp).get
       genesisWallet.scanPersistent(genesisBlock, withdrawalEpochNumber, Seq(), None).applyConsensusEpochInfo(consensusEpochInfo)
     }
     else
