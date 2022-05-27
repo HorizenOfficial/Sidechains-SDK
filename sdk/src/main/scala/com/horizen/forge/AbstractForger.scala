@@ -5,9 +5,11 @@ import akka.actor.{Actor, ActorRef}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen._
+import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.consensus.{ConsensusEpochNumber, ConsensusSlotNumber}
 import com.horizen.forge.Forger.ReceivableMessages.{StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
 import com.horizen.params.NetworkParams
+import com.horizen.transaction.Transaction
 import com.horizen.utils.TimeToEpochUtils
 import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
 import scorex.core.utils.NetworkTimeProvider
@@ -18,9 +20,9 @@ import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import scala.util.{Failure, Success}
 
-abstract class AbstractForger(settings: SidechainSettings,
+abstract class AbstractForger[TX <: Transaction, H <: SidechainBlockHeaderBase, PM <: SidechainBlockBase[TX, H]](settings: SidechainSettings,
              viewHolderRef: ActorRef,
-             forgeMessageBuilder: ForgeMessageBuilder,
+             forgeMessageBuilder: AbstractForgeMessageBuilder[TX, H, PM],
              timeProvider: NetworkTimeProvider,
              val params: NetworkParams) extends Actor with ScorexLogging {
 
@@ -108,9 +110,12 @@ abstract class AbstractForger(settings: SidechainSettings,
     tryToCreateBlockForEpochAndSlot(epochAndSlot.epochNumber, epochAndSlot.slotNumber, None, timeout)
   }
 
+  def getForgedBlockAsFuture(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, blockCreationTimeout: Timeout) : Future[ForgeResult]
+
   protected def tryToCreateBlockForEpochAndSlot(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, respondsToOpt: Option[ActorRef], blockCreationTimeout: Timeout): Unit = {
-    val forgeMessage: ForgeMessageBuilder#ForgeMessageType = forgeMessageBuilder.buildForgeMessageForEpochAndSlot(epochNumber, slot, blockCreationTimeout)
-    val forgedBlockAsFuture = (viewHolderRef ? forgeMessage).asInstanceOf[Future[ForgeResult]]
+
+    val forgedBlockAsFuture = getForgedBlockAsFuture(epochNumber, slot, blockCreationTimeout)
+
     forgedBlockAsFuture.onComplete{
       case Success(ForgeSuccess(block)) => {
         log.info(s"Got successfully forged block with id ${block.id}")

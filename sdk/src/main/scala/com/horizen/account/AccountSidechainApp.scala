@@ -6,27 +6,21 @@ import com.google.inject.name.Named
 import com.horizen.account.api.http.AccountTransactionApiRoute
 import com.horizen.account.block.{AccountBlock, AccountBlockSerializer}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
+import com.horizen.account.forger.AccountForgerRef
 import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
-import com.horizen.{AbstractSidechainApp, SidechainAppEvents, SidechainNodeViewHolderRef, SidechainSettings, SidechainSyncInfoMessageSpec, SidechainTypes}
+import com.horizen.{AbstractSidechainApp, SidechainAppEvents, SidechainSettings, SidechainSyncInfoMessageSpec, SidechainTypes}
 import com.horizen.api.http._
-import com.horizen.block.{SidechainBlockBase, SidechainBlockSerializer}
-import com.horizen.box.BoxSerializer
+import com.horizen.block.SidechainBlockBase
 import com.horizen.certificatesubmitter.CertificateSubmitterRef
 import com.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
-import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
-import com.horizen.forge.ForgerRef
-import com.horizen.helper.{AccountTransactionSubmitProvider, TransactionSubmitProvider, TransactionSubmitProviderImpl}
 import com.horizen.network.SidechainNodeViewSynchronizer
 import com.horizen.secret.SecretSerializer
-import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.transaction._
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{BlockUtils, BytesUtils, Pair}
-import com.horizen.wallet.ApplicationWallet
-import com.horizen.websocket.server.WebSocketServerRef
 import scorex.core.api.http.ApiRoute
 import scorex.core.serialization.ScorexSerializer
 import scorex.core.settings.ScorexSettings
@@ -131,8 +125,8 @@ class AccountSidechainApp @Inject()
         SidechainSyncInfoMessageSpec, settings.network, timeProvider, modifierSerializers))
 
   // Init Forger with a proper web socket client
-  val sidechainBlockForgerActorRef: ActorRef = null //ForgerRef("Forger", sidechainSettings, nodeViewHolderRef,  mainchainSynchronizer,
-  //  sidechainAccountTransactionsCompanion, timeProvider, params)
+  val sidechainBlockForgerActorRef: ActorRef = AccountForgerRef("AccountForger", sidechainSettings, nodeViewHolderRef,  mainchainSynchronizer,
+     sidechainAccountTransactionsCompanion, timeProvider, params)
 
   // Init Transactions and Block actors for Api routes classes
   val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
