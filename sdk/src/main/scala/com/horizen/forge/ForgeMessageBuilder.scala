@@ -141,33 +141,6 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     header.bytes.length
   }
 
-  override def createNewBlock(
-                               parentId: BlockId, timestamp: Timestamp, mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-                               sidechainTransactions: Seq[Transaction], mainchainHeaders: Seq[MainchainHeader],
-                               ommers: Seq[Ommer[SidechainBlockHeader]], ownerPrivateKey: PrivateKey25519, forgingStakeInfo: ForgingStakeInfo,
-                               vrfProof: VrfProof, forgingStakeInfoMerklePath: MerklePath, feePaymentsHash: Array[Byte],
-                               companion: DynamicTypedSerializer[SidechainTypes#SCBT, TransactionSerializer[SidechainTypes#SCBT]],
-                               signatureOption: Option[Signature25519]): Try[SidechainBlockBase[SidechainTypes#SCBT, SidechainBlockHeader]] = {
-    SidechainBlock.create(
-      parentId,
-      SidechainBlock.BLOCK_VERSION,
-      timestamp,
-      mainchainBlockReferencesData,
-      // TODO check, why this works?
-      //  sidechainTransactions.map(asInstanceOf),
-      sidechainTransactions.map(x => x.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]),
-      mainchainHeaders,
-      ommers,
-      ownerPrivateKey,
-      forgingStakeInfo,
-      vrfProof,
-      forgingStakeInfoMerklePath,
-      feePaymentsHash,
-      // TODO check, why this works?
-      //companion.asInstanceOf)
-      companion.asInstanceOf[SidechainTransactionsCompanion])
-  }
-
   override def collectTransactionsFromMemPool(nodeView: View, isWithdrawalEpochLastBlock: Boolean, blockSizeIn: Int): Seq[SidechainTypes#SCBT] = {
 
     var blockSize: Int = blockSizeIn
@@ -193,120 +166,55 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     ommersSerializer.toBytes(ommers.asJava).length
   }
 
-  override def forgeBlock(nodeView: View,
-                         timestamp: Long,
-                         branchPointInfo: BranchPointInfo,
-                         forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo,
-                         blockSignPrivateKey: PrivateKey25519,
-                         vrfProof: VrfProof,
-                         timeout: Timeout): ForgeResult = {
-    val parentBlockId: ModifierId = branchPointInfo.branchPointId
-    val parentBlockInfo: SidechainBlockInfo = nodeView.history.blockInfoById(branchPointInfo.branchPointId)
-    var withdrawalEpochMcBlocksLeft: Int = params.withdrawalEpochLength - parentBlockInfo.withdrawalEpochInfo.lastEpochIndex
-    if (withdrawalEpochMcBlocksLeft == 0) // parent block is the last block of the epoch
-      withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength
+  override def getWithdrawalEpochNumber(nodeView: View) : Int =
+    nodeView.state.getWithdrawalEpochInfo.epoch
 
-    var blockSize: Int = precalculateBlockHeaderSize(branchPointInfo.branchPointId, timestamp, forgingStakeMerklePathInfo, vrfProof)
-    blockSize += 4 + 4 // placeholder for the MainchainReferenceData and Transactions sequences size values
-
-    // Get all needed MainchainBlockHeaders from MC Node
-    val mainchainHeaderHashesToRetrieve: Seq[MainchainHeaderHash] = branchPointInfo.headersToInclude
-
-    // Extract proper MainchainHeaders
-    val mainchainHeaders: Seq[MainchainHeader] =
-      mainchainSynchronizer.getMainchainBlockHeaders(mainchainHeaderHashesToRetrieve) match {
-        case Success(headers) => headers
-        case Failure(ex) => return ForgeFailed(ex)
-      }
-
-    // Update block size with MC Headers
-    val mcHeadersSerializer = new ListSerializer[MainchainHeader](MainchainHeaderSerializer)
-    blockSize += mcHeadersSerializer.toBytes(mainchainHeaders.asJava).length
-
-    // Get Ommers in case the branch point is not the current best block
-    var ommers: Seq[Ommer[SidechainBlockHeader]] = Seq()
-    var blockId = nodeView.history.bestBlockId
-    while (blockId != branchPointInfo.branchPointId) {
-      val block = nodeView.history.getBlockById(blockId).get() // TODO: replace with method blockById with no Option
-      blockId = block.parentId
-      ommers = Ommer.toOmmer(block) +: ommers
-    }
-
-    // Update block size with Ommers
-    val ommersSerializer = new ListSerializer[Ommer[SidechainBlockHeader]](OmmerSerializer)
-    blockSize += ommersSerializer.toBytes(ommers.asJava).length
-
-    // Get all needed MainchainBlockReferences from the MC Node
-    // Extract MainchainReferenceData and collect as much as the block can fit
-    val mainchainBlockReferenceDataToRetrieve: Seq[MainchainHeaderHash] = branchPointInfo.referenceDataToInclude
-
-    val mainchainReferenceData: ArrayBuffer[MainchainBlockReferenceData] = ArrayBuffer()
-    // Collect MainchainRefData considering the actor message processing timeout
-    // Note: We may do a lot of websocket `getMainchainBlockReference` operations that are a bit slow,
-    // because they are processed one by one, so we limit requests in time.
-    val startTime: Long = System.currentTimeMillis()
-    mainchainBlockReferenceDataToRetrieve.takeWhile(hash => {
-      mainchainSynchronizer.getMainchainBlockReference(hash) match {
-        case Success(ref) => {
-          val refDataSize = ref.data.bytes.length + 4 // placeholder for MainchainReferenceData length
-          if(blockSize + refDataSize > SidechainBlockBase.MAX_BLOCK_SIZE)
-            false // stop data collection
-          else {
-            mainchainReferenceData.append(ref.data)
-            blockSize += refDataSize
-            // Note: temporary solution because of the delays on MC Websocket server part.
-            // Can be after MC Websocket performance optimization.
-            val isTimeout: Boolean = System.currentTimeMillis() - startTime >= timeout.duration.toMillis / 2
-            !isTimeout // continue data collection
-          }
-        }
-        case Failure(ex) => return ForgeFailed(ex)
-      }
-    })
-
-    val isWithdrawalEpochLastBlock: Boolean = mainchainReferenceData.size == withdrawalEpochMcBlocksLeft
-
-    // Collect transactions if possible
-    val transactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]] =
-      if (isWithdrawalEpochLastBlock) { // SC block is going to become the last block of the withdrawal epoch
-        Seq() // no SC Txs allowed
-      } else { // SC block is in the middle of the epoch
-        var txsCounter: Int = 0
-        nodeView.pool.take(nodeView.pool.size).filter(tx => {
-          val txSize = tx.bytes.length + 4 // placeholder for Tx length
-          txsCounter += 1
-          if(txsCounter > SidechainBlockBase.MAX_SIDECHAIN_TXS_NUMBER || blockSize + txSize > SidechainBlockBase.MAX_BLOCK_SIZE)
-            false // stop data collection
-          else {
-            blockSize += txSize
-            true // continue data collection
-          }
-        }).map(tx => tx.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]).toSeq // TO DO: problems with types
-      }
-
+  override def TryForgeNewBlock(
+        nodeView: View,
+        branchPointInfo: BranchPointInfo,
+        isWithdrawalEpochLastBlock: Boolean,
+        parentId: BlockId,
+        timestamp: Timestamp,
+        mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
+        sidechainTransactions: Seq[Transaction],
+        mainchainHeaders: Seq[MainchainHeader],
+        ommers: Seq[Ommer[SidechainBlockHeader]],
+        ownerPrivateKey: PrivateKey25519,
+        forgingStakeInfo: ForgingStakeInfo,
+        vrfProof: VrfProof,
+        forgingStakeInfoMerklePath: MerklePath,
+        companion: DynamicTypedSerializer[SidechainTypes#SCBT, TransactionSerializer[SidechainTypes#SCBT]],
+        signatureOption: Option[Signature25519]) : Try[SidechainBlockBase[SidechainTypes#SCBT, SidechainBlockHeader]] =
+  {
     val feePayments = if(isWithdrawalEpochLastBlock) {
       // Current block is expect to be the continuation of the current tip, so there are no ommers.
       require(nodeView.history.bestBlockId == branchPointInfo.branchPointId, "Last block of the withdrawal epoch expect to be a continuation of the tip.")
       require(ommers.isEmpty, "No Ommers allowed for the last block of the withdrawal epoch.")
 
-      val withdrawalEpochNumber: Int = nodeView.state.getWithdrawalEpochInfo.epoch
+      val withdrawalEpochNumber: Int = getWithdrawalEpochNumber(nodeView)
 
       val forgedBlockFeeInfo = SidechainBlock.create(
-        parentBlockId,
+        parentId,
         SidechainBlock.BLOCK_VERSION,
         timestamp,
-        mainchainReferenceData,
-        transactions,
+        mainchainBlockReferencesData,
+        // TODO check, why this works?
+        //  sidechainTransactions.map(asInstanceOf),
+        sidechainTransactions.map(x => x.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]),
         mainchainHeaders,
         ommers,
-        blockSignPrivateKey,
-        forgingStakeMerklePathInfo.forgingStakeInfo,
+        ownerPrivateKey,
+        forgingStakeInfo,
         vrfProof,
-        forgingStakeMerklePathInfo.merklePath,
+        forgingStakeInfoMerklePath,
         new Array[Byte](32), // dummy feePaymentsHash value
-        companion) match {
+        // TODO check, why this works?
+        //companion.asInstanceOf)
+        companion.asInstanceOf[SidechainTransactionsCompanion]
+      ) match {
         case Success(blockTemplate) => blockTemplate.feeInfo
-        case Failure(exception) => return ForgeFailed(exception)
+        case Failure(exception) =>
+          throw exception
       }
 
       nodeView.state.getFeePayments(withdrawalEpochNumber, Some(forgedBlockFeeInfo))
@@ -314,29 +222,27 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       Seq()
     }
 
-    val feePaymentsHash: Array[Byte] = FeePaymentsUtils.calculateFeePaymentsHash(feePayments)
+    val feePaymentsHash = FeePaymentsUtils.calculateFeePaymentsHash(feePayments)
 
-    val tryBlock = SidechainBlock.create(
-      parentBlockId,
+    SidechainBlock.create(
+      parentId,
       SidechainBlock.BLOCK_VERSION,
       timestamp,
-      mainchainReferenceData,
-      transactions,
+      mainchainBlockReferencesData,
+      // TODO check, why this works?
+      //  sidechainTransactions.map(asInstanceOf),
+      sidechainTransactions.map(x => x.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]),
       mainchainHeaders,
       ommers,
-      blockSignPrivateKey,
-      forgingStakeMerklePathInfo.forgingStakeInfo,
+      ownerPrivateKey,
+      forgingStakeInfo,
       vrfProof,
-      forgingStakeMerklePathInfo.merklePath,
+      forgingStakeInfoMerklePath,
       feePaymentsHash,
-      companion)
-
-    tryBlock match {
-      case Success(block) => ForgeSuccess(block)
-      case Failure(exception) => ForgeFailed(exception)
-    }
+      // TODO check, why this works?
+      //companion.asInstanceOf)
+      companion.asInstanceOf[SidechainTransactionsCompanion])
   }
-
 }
 
 

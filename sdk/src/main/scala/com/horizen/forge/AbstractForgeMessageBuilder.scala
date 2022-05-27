@@ -148,13 +148,6 @@ abstract class AbstractForgeMessageBuilder[
     }
   }
 
-  protected def precalculateBlockHeaderSize(parentId: ModifierId,
-                                          timestamp: Long,
-                                          forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo,
-                                          vrfProof: VrfProof): Int
-
-
-  def getOmmersSize(ommers: Seq[Ommer[H]]) : Int
 
   protected def forgeBlock(nodeView: View,
                            timestamp: Long,
@@ -162,45 +155,131 @@ abstract class AbstractForgeMessageBuilder[
                            forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo,
                            blockSignPrivateKey: PrivateKey25519,
                            vrfProof: VrfProof,
-                           timeout: Timeout): ForgeResult
+                           timeout: Timeout): ForgeResult = {
+    val parentBlockId: ModifierId = branchPointInfo.branchPointId
+    val parentBlockInfo: SidechainBlockInfo = nodeView.history.blockInfoById(branchPointInfo.branchPointId)
+    var withdrawalEpochMcBlocksLeft: Int = params.withdrawalEpochLength - parentBlockInfo.withdrawalEpochInfo.lastEpochIndex
+    if (withdrawalEpochMcBlocksLeft == 0) // parent block is the last block of the epoch
+      withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength
 
- def createNewBlock( parentId: Block.BlockId,
-  timestamp: Block.Timestamp,
-  mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-  sidechainTransactions: Seq[Transaction],
-  mainchainHeaders: Seq[MainchainHeader],
-  ommers: Seq[Ommer[H]],
-  ownerPrivateKey: PrivateKey25519,
-  forgingStakeInfo: ForgingStakeInfo,
-  vrfProof: VrfProof,
-  forgingStakeInfoMerklePath: MerklePath,
-  feePaymentsHash: Array[Byte],
-  companion: DynamicTypedSerializer[TX,  TransactionSerializer[TX]],
-  signatureOption: Option[Signature25519] = None
-  ): Try[SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase]]
+    var blockSize: Int = precalculateBlockHeaderSize(branchPointInfo.branchPointId, timestamp, forgingStakeMerklePathInfo, vrfProof)
+    blockSize += 4 + 4 // placeholder for the MainchainReferenceData and Transactions sequences size values
 
-  def collectTransactionsFromMemPool(nodeView: View, isWithdrawalEpochLastBlock: Boolean, blockSize: Int) : Seq[TX]
+    // Get all needed MainchainBlockHeaders from MC Node
+    val mainchainHeaderHashesToRetrieve: Seq[MainchainHeaderHash] = branchPointInfo.headersToInclude
 
-  def getWithdrawalEpochNumber(nodeView: View) : Int = ???
+    // Extract proper MainchainHeaders
+    val mainchainHeaders: Seq[MainchainHeader] =
+      mainchainSynchronizer.getMainchainBlockHeaders(mainchainHeaderHashesToRetrieve) match {
+        case Success(headers) => headers
+        case Failure(ex) => return ForgeFailed(ex)
+      }
 
-  def getFeePaymentsHash(
-    nodeView: View,
-    branchPointInfo: BranchPointInfo,
-    parentId: Block.BlockId,
-    isWithdrawalEpochLastBlock: Boolean,
-    timestamp: Block.Timestamp,
-    mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-    sidechainTransactions: Seq[Transaction],
-    mainchainHeaders: Seq[MainchainHeader],
-    ommers: Seq[Ommer[H]],
-    ownerPrivateKey: PrivateKey25519,
-    forgingStakeInfo: ForgingStakeInfo,
-    vrfProof: VrfProof,
-    forgingStakeInfoMerklePath: MerklePath,
-    feePaymentsHash: Array[Byte],
-    companion: DynamicTypedSerializer[TX,  TransactionSerializer[TX]]
-  ) : Array[Byte] = ???
+    // Update block size with MC Headers
+    val mcHeadersSerializer = new ListSerializer[MainchainHeader](MainchainHeaderSerializer)
+    blockSize += mcHeadersSerializer.toBytes(mainchainHeaders.asJava).length
 
+    // Get Ommers in case the branch point is not the current best block
+    var ommers: Seq[Ommer[H]] = Seq()
+    var blockId = nodeView.history.bestBlockId
+    while (blockId != branchPointInfo.branchPointId) {
+      val block = nodeView.history.getBlockById(blockId).get() // TODO: replace with method blockById with no Option
+      blockId = block.parentId
+      ommers = Ommer.toOmmer(block) +: ommers
+    }
+
+    // Update block size with Ommers
+    //val ommersSerializer = new ListSerializer[Ommer[H]](OmmerSerializer)
+    //blockSize += ommersSerializer.toBytes(ommers.asJava).length
+    blockSize += getOmmersSize(ommers)
+
+    // Get all needed MainchainBlockReferences from the MC Node
+    // Extract MainchainReferenceData and collect as much as the block can fit
+    val mainchainBlockReferenceDataToRetrieve: Seq[MainchainHeaderHash] = branchPointInfo.referenceDataToInclude
+
+    val mainchainReferenceData: ArrayBuffer[MainchainBlockReferenceData] = ArrayBuffer()
+    // Collect MainchainRefData considering the actor message processing timeout
+    // Note: We may do a lot of websocket `getMainchainBlockReference` operations that are a bit slow,
+    // because they are processed one by one, so we limit requests in time.
+    val startTime: Long = System.currentTimeMillis()
+    mainchainBlockReferenceDataToRetrieve.takeWhile(hash => {
+      mainchainSynchronizer.getMainchainBlockReference(hash) match {
+        case Success(ref) => {
+          val refDataSize = ref.data.bytes.length + 4 // placeholder for MainchainReferenceData length
+          if(blockSize + refDataSize > SidechainBlockBase.MAX_BLOCK_SIZE)
+            false // stop data collection
+          else {
+            mainchainReferenceData.append(ref.data)
+            blockSize += refDataSize
+            // Note: temporary solution because of the delays on MC Websocket server part.
+            // Can be after MC Websocket performance optimization.
+            val isTimeout: Boolean = System.currentTimeMillis() - startTime >= timeout.duration.toMillis / 2
+            !isTimeout // continue data collection
+          }
+        }
+        case Failure(ex) => return ForgeFailed(ex)
+      }
+    })
+
+    val isWithdrawalEpochLastBlock: Boolean = mainchainReferenceData.size == withdrawalEpochMcBlocksLeft
+
+    // Collect transactions if possible
+    val transactions: Seq[TX] = collectTransactionsFromMemPool(nodeView, isWithdrawalEpochLastBlock, blockSize)
+
+    val tryBlock = TryForgeNewBlock(
+      nodeView,
+      branchPointInfo,
+      isWithdrawalEpochLastBlock,
+      parentBlockId,
+      timestamp,
+      mainchainReferenceData,
+      transactions,
+      mainchainHeaders,
+      ommers,
+      blockSignPrivateKey,
+      forgingStakeMerklePathInfo.forgingStakeInfo,
+      vrfProof,
+      forgingStakeMerklePathInfo.merklePath,
+      companion)
+
+    tryBlock match {
+      case Success(block) => ForgeSuccess(block)
+      case Failure(exception) => ForgeFailed(exception)
+    }
+  }
+
+  def TryForgeNewBlock(
+                     nodeView: View,
+                     branchPointInfo: BranchPointInfo,
+                     isWithdrawalEpochLastBlock: Boolean,
+                     parentId: Block.BlockId,
+                     timestamp: Block.Timestamp,
+                     mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
+                     sidechainTransactions: Seq[Transaction],
+                     mainchainHeaders: Seq[MainchainHeader],
+                     ommers: Seq[Ommer[H]],
+                     ownerPrivateKey: PrivateKey25519,
+                     forgingStakeInfo: ForgingStakeInfo,
+                     vrfProof: VrfProof,
+                     forgingStakeInfoMerklePath: MerklePath,
+                     companion: DynamicTypedSerializer[TX,  TransactionSerializer[TX]],
+                     signatureOption: Option[Signature25519] = None
+                    ): Try[SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase]]
+
+  def collectTransactionsFromMemPool(
+                      nodeView: View,
+                      isWithdrawalEpochLastBlock: Boolean,
+                      blockSize: Int) : Seq[TX]
+
+  def getWithdrawalEpochNumber(nodeView: View) : Int
+
+  def precalculateBlockHeaderSize(
+                      parentId: ModifierId,
+                      timestamp: Long,
+                      forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo,
+                      vrfProof: VrfProof): Int
+
+  def getOmmersSize(ommers: Seq[Ommer[H]]) : Int
 }
 
 
