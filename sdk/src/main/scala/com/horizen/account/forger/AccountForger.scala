@@ -5,10 +5,13 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen._
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
-import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
-import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.account.history.AccountHistory
+import com.horizen.account.mempool.AccountMemoryPool
+import com.horizen.account.state.AccountState
+import com.horizen.account.wallet.AccountWallet
+
 import com.horizen.consensus.{ConsensusEpochAndSlot, ConsensusEpochNumber, ConsensusSlotNumber}
-import com.horizen.forge.{AbstractForger, ForgeMessageBuilder, ForgeResult, ForgingInfo, MainchainSynchronizer}
+import com.horizen.forge.{AbstractForger, ForgeResult, ForgingInfo, MainchainSynchronizer}
 import com.horizen.forge.Forger.ReceivableMessages.GetForgingInfo
 import com.horizen.params.NetworkParams
 import com.horizen.utils.TimeToEpochUtils
@@ -27,14 +30,14 @@ class AccountForger(settings: SidechainSettings,
              params: NetworkParams) extends AbstractForger(
   settings, viewHolderRef, forgeMessageBuilder, timeProvider, params
 ) {
-  type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
+  type View = CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]
 
   protected def processGetForgeInfo: Receive = {
     case GetForgingInfo =>
       val forgerInfoRequester = sender()
 
       val getInfoMessage
-      = ReceivableMessages.GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, ConsensusEpochAndSlot](getEpochAndSlotForBestBlock)
+      = ReceivableMessages.GetDataFromCurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool, ConsensusEpochAndSlot](getEpochAndSlotForBestBlock)
       val epochAndSlotFut = (viewHolderRef ? getInfoMessage).asInstanceOf[Future[ConsensusEpochAndSlot]]
       epochAndSlotFut.onComplete {
         case Success(epochAndSlot: ConsensusEpochAndSlot) =>

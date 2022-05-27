@@ -8,18 +8,18 @@ import com.horizen.box.Box
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Proof, Signature25519, VrfProof}
-import com.horizen.proposition.Proposition
+import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
 import com.horizen.transaction.SidechainTransaction
-import com.horizen.utils.{BlockFeeInfo, ListSerializer, MerklePath, MerkleTree, Utils}
+import com.horizen.utils.{BlockFeeInfo, Ed25519, ListSerializer, MerklePath, MerkleTree, Utils}
 import com.horizen.validation.InconsistentSidechainBlockDataException
 import com.horizen.{ScorexEncoding, SidechainTypes, account}
 import scorex.core.block.Block
 import scorex.core.block.Block.Timestamp
 import scorex.core.serialization.ScorexSerializer
 import scorex.core.{ModifierTypeId, idToBytes}
-import scorex.util.ModifierId
+import scorex.util.{ModifierId, ScorexLogging}
 import scorex.util.serialization.{Reader, Writer}
 
 import scala.collection.JavaConverters._
@@ -33,7 +33,7 @@ class AccountBlock(override val header: AccountBlockHeader,
                    override val mainchainHeaders: Seq[MainchainHeader],
                    override val ommers: Seq[Ommer[AccountBlockHeader]],
                    companion: SidechainAccountTransactionsCompanion)
-  extends SidechainBlockBase[SidechainTypes#SCAT, AccountBlockHeader]
+  extends SidechainBlockBase[SidechainTypes#SCAT, AccountBlockHeader] with ScorexLogging
 {
 
   override type M = AccountBlock
@@ -129,9 +129,14 @@ class AccountBlock(override val header: AccountBlockHeader,
 
   override def transactionsAreValid(): Try[Unit] = Try {
     // TODO:
+    log.error("versionIsValid() method should be properly implemented")
   }
 
-  override val feeInfo: BlockFeeInfo = ???
+  override val feeInfo: BlockFeeInfo = {
+    // TODO :
+    log.error("feeInfo method should be properly implemented")
+    BlockFeeInfo(0, new PublicKey25519Proposition(new Array[Byte](Ed25519.publicKeyLength)))
+  }
 }
 
 

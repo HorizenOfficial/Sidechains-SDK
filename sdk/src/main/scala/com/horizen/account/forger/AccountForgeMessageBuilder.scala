@@ -2,16 +2,12 @@ package com.horizen.account.forger
 
 import akka.util.Timeout
 import com.horizen.block._
-import com.horizen.box.Box
-import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
-import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
-import com.horizen.storage.SidechainHistoryStorage
-import com.horizen.transaction.{SidechainTransaction, Transaction, TransactionSerializer}
-import com.horizen.utils.{DynamicTypedSerializer, FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree}
+import com.horizen.transaction.{Transaction, TransactionSerializer}
+import com.horizen.utils.{DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree}
 import com.horizen._
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
@@ -29,7 +25,7 @@ import scorex.core.block.Block.{BlockId, Timestamp}
 import scorex.util.ModifierId
 
 import scala.collection.JavaConverters._
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                                  companion: SidechainAccountTransactionsCompanion,
