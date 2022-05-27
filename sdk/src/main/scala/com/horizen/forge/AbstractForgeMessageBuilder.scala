@@ -1,7 +1,6 @@
 package com.horizen.forge
 
 import akka.util.Timeout
-import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.block._
 import com.horizen.chain.{MainchainHeaderHash, SidechainBlockInfo}
 import com.horizen.consensus._
@@ -10,14 +9,14 @@ import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.{PrivateKey25519, VrfSecretKey}
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.{Transaction, TransactionSerializer}
-import com.horizen.utils.{BlockFeeInfo, DynamicTypedSerializer, FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils}
+import com.horizen.utils.{DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, TimeToEpochUtils}
 import com.horizen.vrf.VrfOutput
-import com.horizen.{AbstractHistory, AbstractWallet}
+import com.horizen.{AbstractHistory, AbstractWallet, consensus}
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.block.Block
 import scorex.core.transaction.MemoryPool
 import scorex.core.transaction.state.MinimalState
-import scorex.util.{ModifierId, ScorexLogging, idToBytes}
+import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
@@ -31,9 +30,8 @@ abstract class AbstractForgeMessageBuilder[
     mainchainSynchronizer: MainchainSynchronizer,
     companion: DynamicTypedSerializer[TX, TransactionSerializer[TX]],
     val params: NetworkParams,
-    allowNoWebsocketConnectionInRegtest: Boolean) extends ScorexLogging {
-
-
+    allowNoWebsocketConnectionInRegtest: Boolean) extends ScorexLogging
+{
   type HSTOR <: AbstractHistoryStorage[PM, HSTOR]
   type VL <: AbstractWallet[TX, PM, VL]
   type HIS <: AbstractHistory[TX, H, PM, HSTOR, HIS]
@@ -41,14 +39,71 @@ abstract class AbstractForgeMessageBuilder[
   type MP <: MemoryPool[TX, MP]
   type View = CurrentView[HIS, MS, VL, MP]
 
-
-
   case class BranchPointInfo(branchPointId: ModifierId, referenceDataToInclude: Seq[MainchainHeaderHash], headersToInclude: Seq[MainchainHeaderHash])
 
+  protected def tryToForgeNextBlock(nextConsensusEpochNumber: ConsensusEpochNumber, nextConsensusSlotNumber: ConsensusSlotNumber, timeout: Timeout)(nodeView: View): ForgeResult = Try {
+    log.info(s"Try to forge block for epoch $nextConsensusEpochNumber with slot $nextConsensusSlotNumber")
 
-  protected def getSecretsAndProof(wallet: AbstractWallet[TX, PM, VL],
-                                 vrfMessage: VrfMessage,
-                                 forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo): Option[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof, VrfOutput)] = {
+    val branchPointInfo: BranchPointInfo = getBranchPointInfo(nodeView.history) match {
+      case Success(info) => info
+      case Failure(ex) => return ForgeFailed(ex)
+    }
+
+    val parentBlockId: ModifierId = branchPointInfo.branchPointId
+    val parentBlockInfo = nodeView.history.blockInfoById(parentBlockId)
+
+    checkNextEpochAndSlot(parentBlockInfo.timestamp, nodeView.history.bestBlockInfo.timestamp,
+      nextConsensusEpochNumber, nextConsensusSlotNumber) match {
+      case Some(forgeFailure) => return forgeFailure
+      case _ => // checks passed
+    }
+
+    val nextBlockTimestamp = TimeToEpochUtils.getTimeStampForEpochAndSlot(params, nextConsensusEpochNumber, nextConsensusSlotNumber)
+    val consensusInfo: FullConsensusEpochInfo = nodeView.history.getFullConsensusEpochInfoForBlock(nextBlockTimestamp, parentBlockId)
+    val totalStake = consensusInfo.stakeConsensusEpochInfo.totalStake
+    val vrfMessage = buildVrfMessage(nextConsensusSlotNumber, consensusInfo.nonceConsensusEpochInfo)
+
+    // Get ForgingStakeMerklePathInfo from wallet and order them by stake decreasing.
+    val forgingStakeMerklePathInfoSeq: Seq[ForgingStakeMerklePathInfo] = getForgingStakeMerklePathInfo(nextConsensusEpochNumber, nodeView.vault)
+
+
+    if (forgingStakeMerklePathInfoSeq.isEmpty) {
+      NoOwnedForgingStake
+    } else {
+      val ownedForgingDataView: Seq[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof, VrfOutput)]
+      = forgingStakeMerklePathInfoSeq.view.flatMap(forgingStakeMerklePathInfo => getSecretsAndProof(nodeView.vault, vrfMessage, forgingStakeMerklePathInfo))
+
+      val eligibleForgingDataView: Seq[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof, VrfOutput)]
+      = ownedForgingDataView.filter { case (forgingStakeMerklePathInfo, _, _, vrfOutput) =>
+        vrfProofCheckAgainstStake(vrfOutput, forgingStakeMerklePathInfo.forgingStakeInfo.stakeAmount, totalStake)
+      }
+
+
+      val eligibleForgerOpt = eligibleForgingDataView.headOption //force all forging related calculations
+
+      val forgingResult = eligibleForgerOpt
+        .map { case (forgingStakeMerklePathInfo, privateKey25519, vrfProof, _) =>
+          forgeBlock(nodeView, nextBlockTimestamp, branchPointInfo, forgingStakeMerklePathInfo, privateKey25519, vrfProof, timeout)
+        }
+        .getOrElse(SkipSlot("No eligible forging stake found."))
+      forgingResult
+    }
+  } match {
+    case Success(result) => {
+      log.info(s"Forge result is: $result")
+      result
+    }
+    case Failure(ex) => {
+      log.error(s"Failed to forge block for ${nextConsensusEpochNumber} epoch ${nextConsensusSlotNumber} slot due:", ex)
+      ForgeFailed(ex)
+    }
+  }
+
+  protected def getSecretsAndProof(
+                     wallet: AbstractWallet[TX, PM, VL],
+                     vrfMessage: VrfMessage,
+                     forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo): Option[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof, VrfOutput)] =
+  {
     for {
       blockSignPrivateKey <- wallet.secret(forgingStakeMerklePathInfo.forgingStakeInfo.blockSignPublicKey).asInstanceOf[Option[PrivateKey25519]]
       vrfSecret <- wallet.secret(forgingStakeMerklePathInfo.forgingStakeInfo.vrfPublicKey).asInstanceOf[Option[VrfSecretKey]]
@@ -148,7 +203,6 @@ abstract class AbstractForgeMessageBuilder[
     }
   }
 
-
   protected def forgeBlock(nodeView: View,
                            timestamp: Long,
                            branchPointInfo: BranchPointInfo,
@@ -226,7 +280,7 @@ abstract class AbstractForgeMessageBuilder[
     // Collect transactions if possible
     val transactions: Seq[TX] = collectTransactionsFromMemPool(nodeView, isWithdrawalEpochLastBlock, blockSize)
 
-    val tryBlock = TryForgeNewBlock(
+    val tryBlock = createNewBlock(
       nodeView,
       branchPointInfo,
       isWithdrawalEpochLastBlock,
@@ -248,17 +302,17 @@ abstract class AbstractForgeMessageBuilder[
     }
   }
 
-  def TryForgeNewBlock(
+  def createNewBlock(
                      nodeView: View,
                      branchPointInfo: BranchPointInfo,
                      isWithdrawalEpochLastBlock: Boolean,
-                     parentId: Block.BlockId,
+                     parentBlockId: Block.BlockId,
                      timestamp: Block.Timestamp,
-                     mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
+                     mainchainReferenceData: Seq[MainchainBlockReferenceData],
                      sidechainTransactions: Seq[Transaction],
                      mainchainHeaders: Seq[MainchainHeader],
                      ommers: Seq[Ommer[H]],
-                     ownerPrivateKey: PrivateKey25519,
+                     blockSignPrivateKey: PrivateKey25519,
                      forgingStakeInfo: ForgingStakeInfo,
                      vrfProof: VrfProof,
                      forgingStakeInfoMerklePath: MerklePath,
@@ -266,12 +320,6 @@ abstract class AbstractForgeMessageBuilder[
                      signatureOption: Option[Signature25519] = None
                     ): Try[SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase]]
 
-  def collectTransactionsFromMemPool(
-                      nodeView: View,
-                      isWithdrawalEpochLastBlock: Boolean,
-                      blockSize: Int) : Seq[TX]
-
-  def getWithdrawalEpochNumber(nodeView: View) : Int
 
   def precalculateBlockHeaderSize(
                       parentId: ModifierId,
@@ -279,7 +327,15 @@ abstract class AbstractForgeMessageBuilder[
                       forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo,
                       vrfProof: VrfProof): Int
 
+  def collectTransactionsFromMemPool(
+                      nodeView: View,
+                      isWithdrawalEpochLastBlock: Boolean,
+                      blockSize: Int) : Seq[TX]
+
+
   def getOmmersSize(ommers: Seq[Ommer[H]]) : Int
+
+  def getForgingStakeMerklePathInfo(nextConsensusEpochNumber: consensus.ConsensusEpochNumber, wallet: VL) : Seq[ForgingStakeMerklePathInfo]
 }
 
 
