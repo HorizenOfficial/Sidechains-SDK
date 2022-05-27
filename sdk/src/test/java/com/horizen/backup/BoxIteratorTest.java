@@ -68,7 +68,7 @@ public class BoxIteratorTest extends BoxFixtureClass {
         //Add an additional random element to customBoxToSave list.
         customBoxToSave.add(new Pair(new ByteArrayWrapper("key1".getBytes()), new ByteArrayWrapper("value1".getBytes())));
 
-        //Popoulate the BackupStorage
+        //Populate the BackupStorage
         backupStorage.update(new ByteArrayWrapper(Utils.nextVersion()), customBoxToSave).get();
 
         //Create a BoxIterator
@@ -105,7 +105,7 @@ public class BoxIteratorTest extends BoxFixtureClass {
         File stateStorageFile = temporaryFolder.newFolder("stateStorage");
         BackupStorage backupStorage = new BackupStorage(new VersionedLevelDbStorageAdapter(stateStorageFile), sidechainBoxesCompanion);
 
-        //Popoulate the BackupStorage
+        //Populate the BackupStorage
         backupStorage.update(new ByteArrayWrapper(Utils.nextVersion()), zenBoxToSave).get();
 
         //Create a BoxIterator
@@ -128,7 +128,10 @@ public class BoxIteratorTest extends BoxFixtureClass {
         File stateStorageFile = temporaryFolder.newFolder("stateStorage");
         BackupStorage backupStorage = new BackupStorage(new VersionedLevelDbStorageAdapter(stateStorageFile), sidechainBoxesCompanion);
 
-        //Popoulate the BackupStorage
+        //Add an additional random element to customBoxToSave list.
+        customBoxToSave.add(new Pair(new ByteArrayWrapper("key1".getBytes()), new ByteArrayWrapper("value1".getBytes())));
+
+        //Populate the BackupStorage
         backupStorage.update(new ByteArrayWrapper(Utils.nextVersion()), customBoxToSave).get();
 
         //Create a BoxIterator
@@ -183,10 +186,6 @@ public class BoxIteratorTest extends BoxFixtureClass {
         foundBoxes = boxIterator.getNextBoxes(nBoxes,Optional.of(boxStoredOrder.get(boxStoredOrder.size()-1).id()));
         assert(foundBoxes.size() == 0);
 
-        //Test nextBoxes with nElement = nBoxes and keyToSeek=unknown box
-        boxIterator.seekToFirst();
-        foundBoxes = boxIterator.getNextBoxes(nBoxes,Optional.of(zenBoxes.get(0).id()));
-        assert(foundBoxes.size() == 0);
     }
 
 
