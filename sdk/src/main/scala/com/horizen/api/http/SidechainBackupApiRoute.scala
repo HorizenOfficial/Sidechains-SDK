@@ -6,18 +6,27 @@ import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.api.http.SidechainBackupRestScheme.RespSidechainBlockIdForBackup
 import com.horizen.serialization.Views
 import scorex.core.settings.RESTApiSettings
-import com.horizen.api.http.SidechainBackupErrorResponse.ErrorRetrievingSidechainBlockIdForBackup
+import com.horizen.api.http.SidechainBackupErrorResponse.{ErrorRetrievingSidechainBlockIdForBackup, GenericBackupApiError}
 import com.horizen.utils.BytesUtils
 
 import java.util.{Optional => JOptional}
 import scala.concurrent.ExecutionContext
 
+import com.horizen.api.http.SidechainBackupRestScheme.{ReqGetInitialBoxes, RespGetInitialBoxes}
+import com.horizen.box.Box
+import com.horizen.proposition.Proposition
+
+import scala.util.{Failure, Success, Try}
+import com.horizen.api.http.JacksonSupport._
+import com.horizen.backup.BoxIterator
+import scala.collection.JavaConverters._
 
 case class SidechainBackupApiRoute(override val settings: RESTApiSettings,
-                                sidechainNodeViewHolderRef: ActorRef)
+                                sidechainNodeViewHolderRef: ActorRef,
+                                boxIterator: BoxIterator)
                                (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
   override val route: Route = pathPrefix("backup") {
-    getSidechainBlockIdForBackup
+    getSidechainBlockIdForBackup ~ getRestoredBoxes
   }
 
   /***
@@ -42,15 +51,56 @@ case class SidechainBackupApiRoute(override val settings: RESTApiSettings,
     }
   }
 
+
+  /**
+   * Return the initial boxes restored in a paginated way.
+   */
+  def getRestoredBoxes: Route = (post & path("getRestoredBoxes")) {
+    entity(as[ReqGetInitialBoxes]) { body =>
+      def getBoxId: JOptional[Array[Byte]] = body.lastBoxId match {
+        case Some(boxId) =>
+          if (boxId.equals("")) {
+            JOptional.empty()
+          } else {
+            JOptional.of(BytesUtils.fromHexString(boxId))
+          }
+        case None =>
+          JOptional.empty()
+      }
+
+      Try {
+        boxIterator.getNextBoxes(body.numberOfElements, getBoxId)
+      } match {
+        case Success(boxes) =>
+          ApiResponseUtil.toResponse(RespGetInitialBoxes(boxes.asScala.toList))
+        case Failure(e) =>
+          ApiResponseUtil.toResponse(GenericBackupApiError("GenericBackupApiError", JOptional.of(e)))
+      }
+    }
+  }
+
 }
 
 object SidechainBackupRestScheme {
+  final val MAX_NUMBER_OF_BOX_REQUEST = 100
+
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespSidechainBlockIdForBackup(blockId: String) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqGetInitialBoxes(numberOfElements: Int, lastBoxId: Option[String]) {
+    require(numberOfElements > 0, s"Invalid numberOfElements $numberOfElements. It should be > 0")
+    require(numberOfElements <= MAX_NUMBER_OF_BOX_REQUEST, s"Invalid numberOfElements $numberOfElements. It should be <= $MAX_NUMBER_OF_BOX_REQUEST")
+  }
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespGetInitialBoxes(boxes: List[Box[Proposition]]) extends SuccessResponse
 }
 
 object SidechainBackupErrorResponse {
   case class ErrorRetrievingSidechainBlockIdForBackup(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0801"
+  }
+  case class GenericBackupApiError(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
+    override val code: String = "0802"
   }
 }

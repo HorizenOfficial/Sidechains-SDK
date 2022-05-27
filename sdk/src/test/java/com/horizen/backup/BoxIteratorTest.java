@@ -68,7 +68,7 @@ public class BoxIteratorTest extends BoxFixtureClass {
         //Add an additional random element to customBoxToSave list.
         customBoxToSave.add(new Pair(new ByteArrayWrapper("key1".getBytes()), new ByteArrayWrapper("value1".getBytes())));
 
-        //Popoulate the BackupStorage
+        //Populate the BackupStorage
         backupStorage.update(new ByteArrayWrapper(Utils.nextVersion()), customBoxToSave).get();
 
         //Create a BoxIterator
@@ -105,7 +105,7 @@ public class BoxIteratorTest extends BoxFixtureClass {
         File stateStorageFile = temporaryFolder.newFolder("stateStorage");
         BackupStorage backupStorage = new BackupStorage(new VersionedLevelDbStorageAdapter(stateStorageFile), sidechainBoxesCompanion);
 
-        //Popoulate the BackupStorage
+        //Populate the BackupStorage
         backupStorage.update(new ByteArrayWrapper(Utils.nextVersion()), zenBoxToSave).get();
 
         //Create a BoxIterator
@@ -119,6 +119,72 @@ public class BoxIteratorTest extends BoxFixtureClass {
             System.out.println(e.getMessage());
             assert(e.getMessage().equals("Coin boxes are not eligible to be restored!"));
         }
+
+    }
+
+    @Test
+    public void BoxIteratorNextBoxesTest() throws IOException {
+        //Create temporary BackupStorage
+        File stateStorageFile = temporaryFolder.newFolder("stateStorage");
+        BackupStorage backupStorage = new BackupStorage(new VersionedLevelDbStorageAdapter(stateStorageFile), sidechainBoxesCompanion);
+
+        //Add an additional random element to customBoxToSave list.
+        customBoxToSave.add(new Pair(new ByteArrayWrapper("key1".getBytes()), new ByteArrayWrapper("value1".getBytes())));
+
+        //Populate the BackupStorage
+        backupStorage.update(new ByteArrayWrapper(Utils.nextVersion()), customBoxToSave).get();
+
+        //Create a BoxIterator
+        BoxIterator boxIterator = backupStorage.getBoxIterator();
+
+        //Test nextBoxes with nElement = 0 and empty key to seek
+        List<Box<Proposition>> foundBoxes = boxIterator.getNextBoxes(0,Optional.empty());
+        assert(foundBoxes.isEmpty());
+
+        //Test nextBoxes with nElement < 0 and empty key to seek
+        foundBoxes = boxIterator.getNextBoxes(-1,Optional.empty());
+        boxIterator.seekToFirst();
+        assert(foundBoxes.isEmpty());
+
+        //Test nextBoxes with nElement = nBoxes and empty key to seek
+        boxIterator.seekToFirst();
+        foundBoxes = boxIterator.getNextBoxes(nBoxes,Optional.empty());
+        assert(foundBoxes.size() == nBoxes);
+        //Test the content of the boxes.
+        for (Box<Proposition> box : foundBoxes) {
+            ByteArrayWrapper newKey = Utils.calculateKey(box.id());
+            ByteArrayWrapper newValue = new ByteArrayWrapper(sidechainBoxesCompanion.toBytes((Box) box));
+            assert(customBoxToSave.contains(new Pair(newKey, newValue)));
+        }
+
+        //Test nextBoxes with nElement > nBoxes and empty key to seek
+        boxIterator.seekToFirst();
+        foundBoxes = boxIterator.getNextBoxes(nBoxes+10,Optional.empty());
+        assert(foundBoxes.size() == nBoxes);
+        //Test the content of the boxes.
+        for (Box<Proposition> box : foundBoxes) {
+            ByteArrayWrapper newKey = Utils.calculateKey(box.id());
+            ByteArrayWrapper newValue = new ByteArrayWrapper(sidechainBoxesCompanion.toBytes((Box) box));
+            assert(customBoxToSave.contains(new Pair(newKey, newValue)));
+        }
+
+        //Test nextBoxes with nElement = nBoxes and keyToSeek=1st box saved
+        boxIterator.seekToFirst();
+        List<Box<Proposition>> boxStoredOrder = foundBoxes;
+        foundBoxes = boxIterator.getNextBoxes(nBoxes,Optional.of(boxStoredOrder.get(0).id()));
+        assert(foundBoxes.size() == nBoxes-1);
+        assert(!foundBoxes.contains(boxStoredOrder.get(0)));
+        //Test the content of the boxes.
+        for (Box<Proposition> box : foundBoxes) {
+            ByteArrayWrapper newKey = Utils.calculateKey(box.id());
+            ByteArrayWrapper newValue = new ByteArrayWrapper(sidechainBoxesCompanion.toBytes((Box) box));
+            assert(customBoxToSave.contains(new Pair(newKey, newValue)));
+        }
+
+        //Test nextBoxes with nElement = nBoxes and keyToSeek=last box saved
+        boxIterator.seekToFirst();
+        foundBoxes = boxIterator.getNextBoxes(nBoxes,Optional.of(boxStoredOrder.get(boxStoredOrder.size()-1).id()));
+        assert(foundBoxes.size() == 0);
 
     }
 
