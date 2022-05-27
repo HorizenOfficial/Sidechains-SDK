@@ -29,4 +29,6 @@ public interface Storage extends AutoCloseable {
 
     @Override
     void close();
+
+    StorageIterator getIterator();
 }

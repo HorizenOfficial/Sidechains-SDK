@@ -1,11 +1,11 @@
 package com.horizen.customtypes;
 
+import com.horizen.backup.BoxIterator;
 import com.horizen.box.Box;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.Secret;
 import com.horizen.wallet.ApplicationWallet;
 
-import java.util.Collections;
 import java.util.List;
 
 public class DefaultApplicationWallet implements ApplicationWallet {
@@ -32,4 +32,9 @@ public class DefaultApplicationWallet implements ApplicationWallet {
 
     @Override
     public boolean checkStoragesVersion(byte[] blockId) { return  true; }
+
+    @Override
+    public void onBackupRestore(BoxIterator i) {
+
+    }
 }
