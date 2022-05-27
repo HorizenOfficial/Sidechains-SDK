@@ -24,19 +24,15 @@ import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
 @JsonView(Array(classOf[Views.Default]))
-@JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder", "companion", "feeInfo"))
+@JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder", "companion", "feeInfo", "forgerPublicKey"))
 class SidechainBlock(override val header: SidechainBlockHeader,
-                      val sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]],
-                      val mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-                      override val mainchainHeaders: Seq[MainchainHeader],
-                      override val ommers: Seq[Ommer],
-                      companion: SidechainTransactionsCompanion)
-  extends OmmersContainer with Block[SidechainTypes#SCBT]
+                     override val sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]],
+                     override val mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
+                     override val mainchainHeaders: Seq[MainchainHeader],
+                     override val ommers: Seq[Ommer],
+                     companion: SidechainTransactionsCompanion)
+  extends SidechainBlockBase[SidechainTypes#SCBT]
 {
-  def forgerPublicKey: PublicKey25519Proposition = header.forgingStakeInfo.blockSignPublicKey
-
-  lazy val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = mainchainBlockReferencesData.flatMap(_.topQualityCertificate).lastOption
-
   override type M = SidechainBlock
 
   override lazy val serializer = new SidechainBlockSerializer(companion)
@@ -47,7 +43,7 @@ class SidechainBlock(override val header: SidechainBlockHeader,
 
   override lazy val parentId: ModifierId = header.parentId
 
-  override val modifierTypeId: ModifierTypeId = SidechainBlock.ModifierTypeId
+  override val modifierTypeId: ModifierTypeId = SidechainBlockBase.ModifierTypeId
 
   override lazy val id: ModifierId = header.id
   
@@ -58,12 +54,12 @@ class SidechainBlock(override val header: SidechainBlockHeader,
       sidechainTransactions
   }
 
-  def feePaymentsHash: Array[Byte] = header.feePaymentsHash
-
   lazy val feeInfo: BlockFeeInfo = BlockFeeInfo(transactions.map(_.fee()).sum, header.forgingStakeInfo.blockSignPublicKey)
 
+  def forgerPublicKey: PublicKey25519Proposition = header.forgingStakeInfo.blockSignPublicKey
+
   // Check that Sidechain Block data is consistent to SidechainBlockHeader
-  protected def verifyDataConsistency(params: NetworkParams): Try[Unit] = Try {
+  override protected def verifyDataConsistency(params: NetworkParams): Try[Unit] = Try {
     // Verify that included sidechainTransactions are consistent to header.sidechainTransactionsMerkleRootHash.
     if(sidechainTransactions.isEmpty) {
       if(!header.sidechainTransactionsMerkleRootHash.sameElements(Utils.ZEROS_HASH))
@@ -141,39 +137,10 @@ class SidechainBlock(override val header: SidechainBlockHeader,
     }
   }
 
+  override def versionIsValid(): Boolean =
+    version == SidechainBlock.BLOCK_VERSION
 
-  def semanticValidity(params: NetworkParams): Try[Unit] = Try {
-    if(version != SidechainBlock.BLOCK_VERSION)
-      throw new InvalidSidechainBlockDataException(s"SidechainBlock $id version $version is invalid.")
-
-    // Check that header is valid.
-    header.semanticValidity(params) match {
-      case Success(_) =>
-      case Failure(e) => throw e
-    }
-
-    // Check that body is consistent to header.
-    verifyDataConsistency(params) match {
-      case Success(_) =>
-      case Failure(e) => throw e
-    }
-
-    if(sidechainTransactions.size > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER)
-      throw new InvalidSidechainBlockDataException(s"SidechainBlock $id sidechain transactions amount exceeds the limit.")
-
-    // Check Block size
-    val blockSize: Int = bytes.length
-    if(blockSize > SidechainBlock.MAX_BLOCK_SIZE)
-      throw new InvalidSidechainBlockDataException(s"SidechainBlock $id size exceeds the limit.")
-
-
-    // Check MainchainHeaders order in current block.
-    for(i <- 0 until mainchainHeaders.size - 1) {
-      if(!mainchainHeaders(i).isParentOf(mainchainHeaders(i+1)))
-        throw new InvalidSidechainBlockDataException(s"SidechainBlock $id MainchainHeader ${mainchainHeaders(i).hashHex} is not a parent of MainchainHeader ${mainchainHeaders(i+1)}.")
-    }
-
-    // Check that SidechainTransactions are valid.
+  override def transactionsAreValid(): Try[Unit] =  Try {
     for(tx <- sidechainTransactions) {
       Try {
         tx.semanticValidity()
@@ -183,30 +150,12 @@ class SidechainBlock(override val header: SidechainBlockHeader,
           s"SidechainBlock $id Transaction ${tx.id()} is semantically invalid: ${e.getMessage}.")
       }
     }
-
-    // Check that MainchainHeaders are valid.
-    for(mainchainHeader <- mainchainHeaders) {
-      mainchainHeader.semanticValidity(params) match {
-        case Success(_) =>
-        case Failure(e) => throw e
-      }
-    }
-
-    // Check Ommers
-    verifyOmmersSeqData(params) match {
-      case Success(_) =>
-      case Failure(e) => throw e
-    }
   }
 }
 
 
 object SidechainBlock extends ScorexEncoding {
-  // SC Max block size is enough to include at least 2 MC block ref data full of SC outputs + Top quality cert -> ~2.3MB each
-  // Also it is more than enough to process Ommers for very long MC forks (2000+)
-  val MAX_BLOCK_SIZE: Int = 5000000
-  val MAX_SIDECHAIN_TXS_NUMBER: Int = 1000
-  val ModifierTypeId: ModifierTypeId = scorex.core.ModifierTypeId @@ 3.toByte
+
   val BLOCK_VERSION: Block.Version = 1: Byte
 
   def create(parentId: Block.BlockId,
@@ -237,8 +186,8 @@ object SidechainBlock extends ScorexEncoding {
 
     // Calculate merkle root hashes for SidechainBlockHeader
     val sidechainTransactionsMerkleRootHash: Array[Byte] = calculateTransactionsMerkleRootHash(sidechainTransactions)
-    val mainchainMerkleRootHash: Array[Byte] = calculateMainchainMerkleRootHash(mainchainBlockReferencesData, mainchainHeaders)
-    val ommersMerkleRootHash: Array[Byte] = calculateOmmersMerkleRootHash(ommers)
+    val mainchainMerkleRootHash: Array[Byte] = SidechainBlockBase.calculateMainchainMerkleRootHash(mainchainBlockReferencesData, mainchainHeaders)
+    val ommersMerkleRootHash: Array[Byte] = SidechainBlockBase.calculateOmmersMerkleRootHash(ommers)
 
     val signature = signatureOption match {
       case Some(sig) => sig
@@ -295,49 +244,19 @@ object SidechainBlock extends ScorexEncoding {
     else
       Utils.ZEROS_HASH
   }
-
-  def calculateMainchainMerkleRootHash(mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-                                       mainchainHeaders: Seq[MainchainHeader]): Array[Byte] = {
-    if(mainchainBlockReferencesData.isEmpty && mainchainHeaders.isEmpty)
-      Utils.ZEROS_HASH
-    else {
-      // Calculate Merkle root hashes of mainchainBlockReferences Data
-      val mainchainReferencesDataMerkleRootHash = if(mainchainBlockReferencesData.isEmpty)
-        Utils.ZEROS_HASH
-      else
-        MerkleTree.createMerkleTree(mainchainBlockReferencesData.map(_.headerHash).asJava).rootHash()
-
-      // Calculate Merkle root hash of MainchainHeaders
-      val mainchainHeadersMerkleRootHash = if(mainchainHeaders.isEmpty)
-        Utils.ZEROS_HASH
-      else
-        MerkleTree.createMerkleTree(mainchainHeaders.map(_.hash).asJava).rootHash()
-
-      // Calculate final root hash, that takes as leaves two previously calculated root hashes.
-      MerkleTree.createMerkleTree(
-        Seq(mainchainReferencesDataMerkleRootHash, mainchainHeadersMerkleRootHash).asJava
-      ).rootHash()
-    }
-  }
-
-  def calculateOmmersMerkleRootHash(ommers: Seq[Ommer]): Array[Byte] = {
-    if(ommers.nonEmpty)
-      MerkleTree.createMerkleTree(ommers.map(_.id).asJava).rootHash()
-    else
-      Utils.ZEROS_HASH
-  }
 }
 
 
 
 class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extends ScorexSerializer[SidechainBlock] with SidechainTypes {
+  require(companion != null, "SidechainTransactionsCompanion must be NOT NULL.")
   private val mcBlocksDataSerializer: ListSerializer[MainchainBlockReferenceData] = new ListSerializer[MainchainBlockReferenceData](
     MainchainBlockReferenceDataSerializer
   )
 
   private val sidechainTransactionsSerializer: ListSerializer[SidechainTypes#SCBT] = new ListSerializer[SidechainTypes#SCBT](
     companion,
-    SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER
+    SidechainBlockBase.MAX_SIDECHAIN_TXS_NUMBER
   )
 
   private val mainchainHeadersSerializer: ListSerializer[MainchainHeader] = new ListSerializer[MainchainHeader](MainchainHeaderSerializer)
@@ -353,7 +272,7 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
   }
 
   override def parse(r: Reader): SidechainBlock = {
-    require(r.remaining <= SidechainBlock.MAX_BLOCK_SIZE)
+    require(r.remaining <= SidechainBlockBase.MAX_BLOCK_SIZE)
 
     val sidechainBlockHeader: SidechainBlockHeader = SidechainBlockHeaderSerializer.parse(r)
     val sidechainTransactions = sidechainTransactionsSerializer.parse(r)

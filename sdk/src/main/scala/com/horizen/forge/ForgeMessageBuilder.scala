@@ -283,7 +283,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       mainchainSynchronizer.getMainchainBlockReference(hash) match {
         case Success(ref) => {
           val refDataSize = ref.data.bytes.length + 4 // placeholder for MainchainReferenceData length
-          if(blockSize + refDataSize > SidechainBlock.MAX_BLOCK_SIZE)
+          if(blockSize + refDataSize > SidechainBlockBase.MAX_BLOCK_SIZE)
             false // stop data collection
           else {
             mainchainReferenceData.append(ref.data)
@@ -309,7 +309,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
         nodeView.pool.take(nodeView.pool.size).filter(tx => {
           val txSize = tx.bytes.length + 4 // placeholder for Tx length
           txsCounter += 1
-          if(txsCounter > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER || blockSize + txSize > SidechainBlock.MAX_BLOCK_SIZE)
+          if(txsCounter > SidechainBlockBase.MAX_SIDECHAIN_TXS_NUMBER || blockSize + txSize > SidechainBlockBase.MAX_BLOCK_SIZE)
             false // stop data collection
           else {
             blockSize += txSize

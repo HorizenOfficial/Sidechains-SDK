@@ -10,3 +10,4 @@ public interface TransactionSubmitHelper {
     void submitTransaction(BoxTransaction<Proposition, Box<Proposition>> tx) throws IllegalArgumentException;
     void asyncSubmitTransaction(BoxTransaction<Proposition, Box<Proposition>> tx, BiConsumer<Boolean, Optional<Throwable>> callback);
 }
+

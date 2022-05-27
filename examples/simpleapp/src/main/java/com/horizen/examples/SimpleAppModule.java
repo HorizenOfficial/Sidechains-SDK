@@ -11,8 +11,10 @@ import com.google.inject.name.Names;
 
 import com.horizen.SidechainAppModule;
 import com.horizen.SidechainSettings;
+import com.horizen.account.transaction.AccountTransaction;
 import com.horizen.api.http.ApplicationApiGroup;
 import com.horizen.box.*;
+import com.horizen.proof.Proof;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.Secret;
 import com.horizen.secret.SecretSerializer;

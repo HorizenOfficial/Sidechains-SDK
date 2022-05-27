@@ -10,7 +10,7 @@ import scala.util.{Failure, Success, Try}
 
 @JsonView(Array(classOf[Views.Default]))
 trait OmmersContainer {
-  val header: SidechainBlockHeader
+  val header: SidechainBlockHeaderBase
   val mainchainHeaders: Seq[MainchainHeader]
   val ommers: Seq[Ommer]
 

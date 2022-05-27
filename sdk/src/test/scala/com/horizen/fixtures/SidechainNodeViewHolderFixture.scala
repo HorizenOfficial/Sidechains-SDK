@@ -2,7 +2,6 @@ package com.horizen.fixtures
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import akka.stream.ActorMaterializer

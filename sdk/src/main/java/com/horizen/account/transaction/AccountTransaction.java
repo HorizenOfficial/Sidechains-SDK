@@ -7,4 +7,8 @@ import com.horizen.transaction.exception.TransactionSemanticValidityException;
 
 public abstract class AccountTransaction<P extends Proposition, PR extends Proof<P>> extends Transaction {
     public abstract void semanticValidity() throws TransactionSemanticValidityException;
+
+    public abstract byte[] getNonce();
+    public abstract P getFrom();
+
 }

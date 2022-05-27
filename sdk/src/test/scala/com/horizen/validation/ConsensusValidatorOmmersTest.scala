@@ -1,13 +1,13 @@
 package com.horizen.validation
 
 import java.util.Random
-
-import com.horizen.SidechainHistory
-import com.horizen.block.{Ommer, SidechainBlock, SidechainBlockHeader}
+import com.horizen.{SidechainHistory, SidechainTypes}
+import com.horizen.block.{Ommer, SidechainBlock, SidechainBlockHeader, SidechainBlockHeaderBase}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.consensus.{ConsensusEpochNumber, _}
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture, TransactionFixture}
 import com.horizen.params.{MainNetParams, NetworkParams}
+import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.utils.TimeToEpochUtils
 import com.horizen.vrf.VrfOutput
 import org.junit.Assert.{assertEquals, fail => jFail}
@@ -27,9 +27,11 @@ class ConsensusValidatorOmmersTest
     with SidechainBlockFixture
     with TimeProviderFixture {
 
-  val consensusValidator: ConsensusValidator = new ConsensusValidator(timeProvider) {
+  type BoxConsensusValidator = ConsensusValidator[SidechainTypes#SCBT, SidechainBlock, SidechainHistoryStorage, SidechainHistory]
+
+  val consensusValidator: BoxConsensusValidator = new BoxConsensusValidator(timeProvider) {
     // always successful
-    override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {}
+    override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeaderBase, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {}
   }
 
 
@@ -89,8 +91,8 @@ class ConsensusValidatorOmmersTest
     Mockito.when(verifiedBlock.header).thenReturn(header)
     Mockito.when(verifiedBlock.ommers).thenReturn(ommers)
 
-    val currentEpochConsensusValidator = new ConsensusValidator(timeProvider) {
-      override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
+    val currentEpochConsensusValidator = new BoxConsensusValidator(timeProvider) {
+      override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeaderBase, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
         assertEquals("Different stakeConsensusEpochInfo expected", currentFullConsensusEpochInfo.stakeConsensusEpochInfo, stakeConsensusEpochInfo)
         assertEquals("Different vrfOutput expected", generateDummyVrfOutput(header), vrfOutput)
       }
@@ -106,9 +108,9 @@ class ConsensusValidatorOmmersTest
 
     // Test 2: Same as above, but Ommers contains invalid forging stake info data
     val fsException = new Exception("ForgingStakeException")
-    val forgingStakeFailConsensusValidator = new ConsensusValidator(timeProvider) {
+    val forgingStakeFailConsensusValidator = new BoxConsensusValidator(timeProvider) {
       // always fail
-      override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = throw fsException
+      override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeaderBase, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = throw fsException
     }
 
     Try {
@@ -170,8 +172,8 @@ class ConsensusValidatorOmmersTest
     Mockito.when(verifiedBlock.header).thenReturn(header)
     Mockito.when(verifiedBlock.ommers).thenReturn(ommers)
 
-    val previousEpochConsensusValidator = new ConsensusValidator(timeProvider) {
-      override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
+    val previousEpochConsensusValidator = new BoxConsensusValidator(timeProvider) {
+      override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeaderBase, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
         assertEquals("Different stakeConsensusEpochInfo expected", previousFullConsensusEpochInfo.stakeConsensusEpochInfo, stakeConsensusEpochInfo)
         assertEquals("Different vrfOutput expected", generateDummyVrfOutput(header), vrfOutput)
       }
@@ -279,8 +281,8 @@ class ConsensusValidatorOmmersTest
       currentFullConsensusEpochInfo.nonceConsensusEpochInfo
     })
 
-    var switchedEpochConsensusValidator = new ConsensusValidator(timeProvider) {
-      override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
+    var switchedEpochConsensusValidator = new BoxConsensusValidator(timeProvider) {
+      override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeaderBase, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
         val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(history.params, header.timestamp)
         epochAndSlot.epochNumber match {
           case `previousEpochNumber` => assertEquals("Different stakeConsensusEpochInfo expected", previousFullConsensusEpochInfo.stakeConsensusEpochInfo, stakeConsensusEpochInfo)
@@ -341,8 +343,8 @@ class ConsensusValidatorOmmersTest
       switchedOmmersFullConsensusEpochInfo.nonceConsensusEpochInfo
     })
 
-    switchedEpochConsensusValidator = new ConsensusValidator(timeProvider) {
-      override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
+    switchedEpochConsensusValidator = new BoxConsensusValidator(timeProvider) {
+      override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeaderBase, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
         val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(history.params, header.timestamp)
         epochAndSlot.epochNumber match {
           case `previousEpochNumber` => assertEquals("Different stakeConsensusEpochInfo expected", previousFullConsensusEpochInfo.stakeConsensusEpochInfo, stakeConsensusEpochInfo)
@@ -456,8 +458,8 @@ class ConsensusValidatorOmmersTest
       switchedOmmersFullConsensusEpochInfo.nonceConsensusEpochInfo
     })
 
-    val switchedEpochConsensusValidator = new ConsensusValidator(timeProvider) {
-      override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
+    val switchedEpochConsensusValidator = new BoxConsensusValidator(timeProvider) {
+      override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeaderBase, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
         val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(history.params, header.timestamp)
         epochAndSlot.epochNumber match {
           case `previousEpochNumber` => assertEquals("Different stakeConsensusEpochInfo expected", previousFullConsensusEpochInfo.stakeConsensusEpochInfo, stakeConsensusEpochInfo)
@@ -484,7 +486,7 @@ class ConsensusValidatorOmmersTest
     Ommer(header, None, Seq(), subOmmers)
   }
 
-  private def generateDummyVrfOutput(ommerBlockHeader: SidechainBlockHeader): VrfOutput = {
+  private def generateDummyVrfOutput(ommerBlockHeader: SidechainBlockHeaderBase): VrfOutput = {
     val outputBytes = new Array[Byte](VrfOutput.OUTPUT_LENGTH)
     val rnd = new Random(ommerBlockHeader.timestamp)
     rnd.nextBytes(outputBytes)
