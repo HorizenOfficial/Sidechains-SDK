@@ -58,8 +58,8 @@ public class BoxIterator {
 
     public List<Box<Proposition>> getNextBoxes(int nElement, Optional<byte []> keyToSeek) {
         if (keyToSeek.isPresent()) {
-            nElement += 1;
             this.seekIterator(Utils.calculateKey(keyToSeek.get()).data());
+            this.nextBox();
         } else {
             this.seekToFirst();
         }
@@ -69,8 +69,6 @@ public class BoxIterator {
             boxes.add(nextBox.get().getBox());
             nextBox = this.nextBox();
         }
-        if (keyToSeek.isPresent())
-            boxes.remove(0);
         return boxes;
     }
 
