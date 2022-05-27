@@ -26,20 +26,22 @@ import scala.util.{Failure, Success, Try}
 abstract class AbstractForgeMessageBuilder[
   TX <: Transaction,
   H <: SidechainBlockHeaderBase,
-  PM <: SidechainBlockBase[TX, H],
-  HSTOR <: AbstractHistoryStorage[PM, HSTOR],
-  VL <: AbstractWallet[TX, PM, VL],
-  HIS <: AbstractHistory[TX, H, PM, HSTOR, HIS]] (
+  PM <: SidechainBlockBase[TX, H]
+  ] (
     mainchainSynchronizer: MainchainSynchronizer,
-    companion: DynamicTypedSerializer[TX,  TransactionSerializer[TX]],
+    companion: DynamicTypedSerializer[TX, TransactionSerializer[TX]],
     val params: NetworkParams,
     allowNoWebsocketConnectionInRegtest: Boolean) extends ScorexLogging {
 
-  /*
+
+  type HSTOR <: AbstractHistoryStorage[PM, HSTOR]
+  type VL <: AbstractWallet[TX, PM, VL]
+  type HIS <: AbstractHistory[TX, H, PM, HSTOR, HIS]
   type MS <: MinimalState[PM, MS]
   type MP <: MemoryPool[TX, MP]
   type View = CurrentView[HIS, MS, VL, MP]
-   */
+
+
 
   case class BranchPointInfo(branchPointId: ModifierId, referenceDataToInclude: Seq[MainchainHeaderHash], headersToInclude: Seq[MainchainHeaderHash])
 

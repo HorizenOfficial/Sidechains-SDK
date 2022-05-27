@@ -10,10 +10,10 @@ import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, VrfSecretKey}
-import com.horizen.storage.SidechainHistoryStorage
+import com.horizen.storage.{AbstractHistoryStorage, SidechainHistoryStorage}
 import com.horizen.transaction.{SidechainTransaction, Transaction, TransactionSerializer}
 import com.horizen.utils.{DynamicTypedSerializer, FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils}
-import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainTypes, SidechainWallet}
+import com.horizen.{AbstractHistory, AbstractWallet, SidechainHistory, SidechainMemoryPool, SidechainState, SidechainTypes, SidechainWallet}
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.util.{ModifierId, ScorexLogging}
 
@@ -23,6 +23,8 @@ import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewModifier
 import scorex.core.block.Block
 import scorex.core.block.Block.{BlockId, Timestamp}
+import scorex.core.transaction.MemoryPool
+import scorex.core.transaction.state.MinimalState
 
 import scala.collection.mutable.ArrayBuffer
 import scala.util.{Failure, Success, Try}
@@ -34,13 +36,14 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   extends AbstractForgeMessageBuilder[
     SidechainTypes#SCBT,
     SidechainBlockHeader,
-    SidechainBlock,
-    SidechainHistoryStorage,
-    SidechainWallet,
-    SidechainHistory](
+    SidechainBlock](
   mainchainSynchronizer, companion, params, allowNoWebsocketConnectionInRegtest
 ) {
-  //override type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
+  type HSTOR = SidechainHistoryStorage
+  type VL = SidechainWallet
+  type HIS = SidechainHistory
+  type MS = SidechainState
+  type MP = SidechainMemoryPool
 
   type ForgeMessageType = GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, ForgeResult]
 
