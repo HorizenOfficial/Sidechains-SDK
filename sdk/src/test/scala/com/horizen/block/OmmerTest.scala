@@ -308,8 +308,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
       includeReference = false
     )
     var ommer: Ommer[SidechainBlockHeader] = Ommer.toOmmer(block)
-    var bytes = OmmerSerializer.toBytes(ommer)
-    //var bytes = ommer.bytes
+    var bytes = ommer.bytes
 
     var serializedOmmerTry = OmmerSerializer.parseBytesTry(bytes)
     assertTrue("Ommer expected to by parsed.", serializedOmmerTry.isSuccess)
@@ -354,7 +353,7 @@ class OmmerTest extends JUnitSuite with CompanionsFixture with SidechainBlockFix
     ).get
 
     ommer = Ommer.toOmmer(block)
-    bytes = OmmerSerializer.toBytes(ommer)
+    bytes = ommer.bytes
 
     // Set to true to regenerate regression data
     if(false) {

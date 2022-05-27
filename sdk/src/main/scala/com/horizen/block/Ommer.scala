@@ -24,10 +24,11 @@ case class Ommer[H <: SidechainBlockHeaderBase](
                 ) extends OmmersContainer[H] with BytesSerializable {
   override type M = Ommer[H]
 
-  override def serializer: ScorexSerializer[Ommer[H]] = ??? // TODO how to set it???
-  //def serializer2: ScorexSerializer[Ommer[SidechainBlockHeader]] = OmmerSerializer
-  //def serializer3: ScorexSerializer[Ommer[AccountBlockHeader]] = AccountOmmerSerializer
-
+  override def serializer: ScorexSerializer[Ommer[H]] = header match {
+    case h: SidechainBlockHeader => OmmerSerializer.asInstanceOf[ScorexSerializer[Ommer[H]]]
+    case h: AccountBlockHeader => AccountOmmerSerializer.asInstanceOf[ScorexSerializer[Ommer[H]]]
+    case other => throw new UnsupportedOperationException(s"No Ommer serializer found with header type ${other.getClass.toString}")
+  }
 
   lazy val id: Array[Byte] = idToBytes(header.id)
 

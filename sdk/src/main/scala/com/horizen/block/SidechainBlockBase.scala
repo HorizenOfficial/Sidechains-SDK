@@ -134,6 +134,4 @@ object SidechainBlockBase {
       ).rootHash()
     }
   }
-
-
 }
