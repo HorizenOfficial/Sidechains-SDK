@@ -1,6 +1,7 @@
 package com.horizen.account
 
 import akka.actor.{ActorRef, ActorSystem, Props}
+import com.horizen.SidechainNodeViewHolderRef.props
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
@@ -92,7 +93,9 @@ object AccountNodeViewHolderRef {
             secretStorage: SidechainSecretStorage,
             params: NetworkParams,
             timeProvider: NetworkTimeProvider,
-            genesisBlock: AccountBlock): Props = ???
+            genesisBlock: AccountBlock): Props =
+    Props(new AccountSidechainNodeViewHolder(sidechainSettings, params, timeProvider, historyStorage,
+      consensusDataStorage, stateMetadataStorage, secretStorage, genesisBlock))
 
   def apply(sidechainSettings: SidechainSettings,
             historyStorage: AccountHistoryStorage,
@@ -102,7 +105,9 @@ object AccountNodeViewHolderRef {
             params: NetworkParams,
             timeProvider: NetworkTimeProvider,
             genesisBlock: AccountBlock)
-           (implicit system: ActorSystem): ActorRef = ???
+           (implicit system: ActorSystem): ActorRef =
+    system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateMetadataStorage,
+      secretStorage, params, timeProvider, genesisBlock))
 
   def apply(name: String,
             sidechainSettings: SidechainSettings,
@@ -113,5 +118,8 @@ object AccountNodeViewHolderRef {
             params: NetworkParams,
             timeProvider: NetworkTimeProvider,
             genesisBlock: AccountBlock)
-           (implicit system: ActorSystem): ActorRef = ???
+           (implicit system: ActorSystem): ActorRef =
+    system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateMetadataStorage,
+      secretStorage, params, timeProvider, genesisBlock), name)
+
 }
