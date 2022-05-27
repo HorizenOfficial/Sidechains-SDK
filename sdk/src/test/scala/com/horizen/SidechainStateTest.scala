@@ -107,7 +107,7 @@ class SidechainStateTest
 
   def getOpenStakeTransaction(boxesWithSecretToOpen: (ZenBox,PrivateKey25519), forgerIndex: Int, fee: JOptional[Long]): OpenStakeTransaction = {
     val from: JPair[ZenBox,PrivateKey25519] =  new JPair[ZenBox,PrivateKey25519](boxesWithSecretToOpen._1, boxesWithSecretToOpen._2)
-    OpenStakeTransaction.create(from, JOptional.of(getPrivateKey25519List(1).get(0).publicImage()), forgerIndex, fee.orElseGet(() => 5L))
+    OpenStakeTransaction.create(from, getPrivateKey25519List(1).get(0).publicImage(), forgerIndex, fee.orElseGet(() => 5L))
   }
 
   @Test
@@ -757,7 +757,7 @@ class SidechainStateTest
     var tryValidate = sidechainState.validate(openStakeTransaction.asInstanceOf[SidechainTypes#SCBT])
     assertFalse("Transaction validation must fail.",
       tryValidate.isSuccess)
-    assertTrue(tryValidate.failed.get.getMessage.equals("OpenStakeTransactions are not allowed with restrictForgers=false!"))
+    assertTrue(tryValidate.failed.get.getMessage.equals("OpenStakeTransactions are not allowed because the forger operation has already been opened!"))
 
     //Test validate(Transaction) with restrict forger enabled and forgerListIndex out of bound
     Mockito.when(mockedParams.restrictForgers).thenReturn(true)

@@ -561,18 +561,10 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
       throw new IllegalArgumentException("Fee can't be greater than the input!")
     }
 
-    //Collect output box
-    var output:JOptional[ZenBoxData] = JOptional.empty()
-    if (fee < inputBox.value()) {
-      output = JOptional.of(new ZenBoxData(
-        PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(outputProposition)),
-        inputBox.value() - fee))
-    }
-
     Try {
       //Create the openStakeTransaction
       OpenStakeTransaction.create(new JPair[ZenBox,PrivateKey25519](inputBox.asInstanceOf[ZenBox],inputPrivateKey),
-        JOptional.of(PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(outputProposition))),
+        PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(outputProposition)),
         forgerIndex,
         fee
       )

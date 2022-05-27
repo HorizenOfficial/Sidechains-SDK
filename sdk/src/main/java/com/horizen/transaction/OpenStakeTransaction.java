@@ -149,7 +149,7 @@ public class OpenStakeTransaction extends SidechainNoncedTransaction<PublicKey25
 
 
     public static OpenStakeTransaction create(Pair<ZenBox, PrivateKey25519> from,
-                                              Optional<PublicKey25519Proposition> changeAddress,
+                                              PublicKey25519Proposition changeAddress,
                                               int forgerIndex,
                                               long fee) throws TransactionSemanticValidityException {
         if(from == null)
@@ -158,8 +158,8 @@ public class OpenStakeTransaction extends SidechainNoncedTransaction<PublicKey25
             throw new IllegalArgumentException("Fee can't be greater than the input!");
 
         Optional<ZenBoxData> output = Optional.empty();
-        if(changeAddress.isPresent() && from.getKey().value() > fee) {
-            output = Optional.of(new ZenBoxData(changeAddress.get(), from.getKey().value() - fee));
+        if(from.getKey().value() > fee) {
+            output = Optional.of(new ZenBoxData(changeAddress, from.getKey().value() - fee));
         }
         OpenStakeTransaction unsignedTransaction = new OpenStakeTransaction(from.getKey().id(), output, null, forgerIndex, fee, OPEN_STAKE_TRANSACTION_VERSION);
 
