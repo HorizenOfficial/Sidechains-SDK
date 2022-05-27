@@ -23,11 +23,10 @@ import scala.util.{Failure, Success}
 
 class Forger(settings: SidechainSettings,
              viewHolderRef: ActorRef,
-             mainchainSynchronizer: MainchainSynchronizer,
-             companion: SidechainTransactionsCompanion,
+             forgeMessageBuilder: ForgeMessageBuilder,
              timeProvider: NetworkTimeProvider,
              val params: NetworkParams) extends Actor with ScorexLogging {
-  val forgeMessageBuilder: ForgeMessageBuilder = new ForgeMessageBuilder(mainchainSynchronizer, companion, params, settings.websocket.allowNoConnectionInRegtest)
+  //val forgeMessageBuilder: ForgeMessageBuilder = new ForgeMessageBuilder(mainchainSynchronizer, companion, params, settings.websocket.allowNoConnectionInRegtest)
   val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
 
@@ -184,7 +183,11 @@ object ForgerRef {
             mainchainSynchronizer: MainchainSynchronizer,
             companion: SidechainTransactionsCompanion,
             timeProvider: NetworkTimeProvider,
-            params: NetworkParams): Props = Props(new Forger(settings, viewHolderRef, mainchainSynchronizer, companion, timeProvider, params))
+            params: NetworkParams): Props = {
+    val forgeMessageBuilder: ForgeMessageBuilder = new ForgeMessageBuilder(mainchainSynchronizer, companion, params, settings.websocket.allowNoConnectionInRegtest)
+
+    Props(new Forger(settings, viewHolderRef, forgeMessageBuilder, timeProvider, params))
+  }
 
   def apply(settings: SidechainSettings,
             viewHolderRef: ActorRef,
