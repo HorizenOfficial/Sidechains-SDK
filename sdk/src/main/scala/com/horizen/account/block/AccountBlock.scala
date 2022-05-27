@@ -125,10 +125,11 @@ class AccountBlock(override val header: AccountBlockHeader,
     }
   }
 
-  override def versionIsValid(): Boolean =
-    version == AccountBlock.BLOCK_VERSION
+  override def versionIsValid(): Boolean = version == AccountBlock.BLOCK_VERSION
 
-  override def transactionsAreValid(): Try[Unit] = ???
+  override def transactionsAreValid(): Try[Unit] = Try {
+    // TODO:
+  }
 
   override val feeInfo: BlockFeeInfo = ???
 }
