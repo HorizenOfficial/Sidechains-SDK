@@ -1,7 +1,7 @@
 package com.horizen.account
 
 import akka.actor.{ActorRef, ActorSystem, Props}
-import com.horizen.account.block.AccountBlock
+import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.state.AccountState
@@ -24,7 +24,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                      stateMetadataStorage: AccountStateMetadataStorage,
                                      secretStorage: SidechainSecretStorage,
                                      genesisBlock: AccountBlock)
-  extends AbstractSidechainNodeViewHolder[SidechainTypes#SCAT, AccountBlock](sidechainSettings, params, timeProvider) {
+  extends AbstractSidechainNodeViewHolder[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock](sidechainSettings, params, timeProvider) {
 
   override type HSTOR = AccountHistoryStorage
   override type VL = AccountWallet

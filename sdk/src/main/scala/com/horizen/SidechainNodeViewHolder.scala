@@ -2,7 +2,7 @@ package com.horizen
 
 
 import akka.actor.{ActorRef, ActorSystem, Props}
-import com.horizen.block.SidechainBlock
+import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.chain.FeePaymentsInfo
 import com.horizen.consensus._
 import com.horizen.node.SidechainNodeView
@@ -31,7 +31,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                               applicationWallet: ApplicationWallet,
                               applicationState: ApplicationState,
                               genesisBlock: SidechainBlock)
-  extends AbstractSidechainNodeViewHolder[SidechainTypes#SCBT, SidechainBlock](sidechainSettings, params, timeProvider)
+  extends AbstractSidechainNodeViewHolder[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock](sidechainSettings, params, timeProvider)
 {
   override type HSTOR = SidechainHistoryStorage
   override type HIS = SidechainHistory

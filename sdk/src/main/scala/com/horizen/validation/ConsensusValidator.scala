@@ -16,14 +16,15 @@ import scala.util.Try
 
 class ConsensusValidator[
   TX <: Transaction,
-  PMOD <: SidechainBlockBase[TX],
+  H <: SidechainBlockHeaderBase,
+  PMOD <: SidechainBlockBase[TX, H],
   HSTOR <: AbstractHistoryStorage[PMOD, HSTOR],
-  HT <: AbstractHistory[TX, PMOD, HSTOR, HT]
+  HT <: AbstractHistory[TX, H, PMOD, HSTOR, HT]
 ]
 (
   timeProvider: TimeProvider
 )
-  extends HistoryBlockValidator[TX, PMOD, HSTOR, HT]
+  extends HistoryBlockValidator[TX, H, PMOD, HSTOR, HT]
     with ScorexLogging {
 
   override def validate(block: PMOD, history: HT): Try[Unit] = Try {
@@ -103,7 +104,7 @@ class ConsensusValidator[
       It should be taken in consideration during Ommers VRF calculation,
       so proper Nonce info should be used for such an Ommer with all sub-ommers recursively.
    */
-  private[horizen] def verifyOmmers(ommersContainer: OmmersContainer,
+  private[horizen] def verifyOmmers(ommersContainer: OmmersContainer[H],
                                     currentFullConsensusEpochInfo: FullConsensusEpochInfo,
                                     previousFullConsensusEpochInfoOpt: Option[FullConsensusEpochInfo],
                                     bestKnownParentId: ModifierId,

@@ -7,7 +7,7 @@ import com.horizen.block._
 import com.horizen.box.Box
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.params.NetworkParams
-import com.horizen.proof.{Signature25519, VrfProof}
+import com.horizen.proof.{Proof, Signature25519, VrfProof}
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
@@ -31,9 +31,9 @@ class AccountBlock(override val header: AccountBlockHeader,
                    val sidechainTransactions: Seq[SidechainTypes#SCAT],
                    val mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
                    override val mainchainHeaders: Seq[MainchainHeader],
-                   override val ommers: Seq[Ommer],
+                   override val ommers: Seq[Ommer[AccountBlockHeader]],
                    companion: SidechainAccountTransactionsCompanion)
-  extends SidechainBlockBase[SidechainTypes#SCAT]
+  extends SidechainBlockBase[SidechainTypes#SCAT, AccountBlockHeader]
 {
 
   override type M = AccountBlock
@@ -130,6 +130,7 @@ class AccountBlock(override val header: AccountBlockHeader,
 
   override def transactionsAreValid(): Try[Unit] = ???
 
+  override val feeInfo: BlockFeeInfo = ???
 }
 
 
@@ -143,7 +144,7 @@ object AccountBlock extends ScorexEncoding {
              mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
              sidechainTransactions: Seq[SidechainTypes#SCAT],
              mainchainHeaders: Seq[MainchainHeader],
-             ommers: Seq[Ommer],
+             ommers: Seq[Ommer[AccountBlockHeader]],
              ownerPrivateKey: PrivateKey25519,
              forgingStakeInfo: ForgingStakeInfo,
              vrfProof: VrfProof,
@@ -166,7 +167,7 @@ object AccountBlock extends ScorexEncoding {
     // Calculate merkle root hashes for SidechainAccountBlockHeader
     val sidechainTransactionsMerkleRootHash: Array[Byte] = ??? // calculateTransactionsMerkleRootHash(sidechainTransactions)
     val mainchainMerkleRootHash: Array[Byte] = SidechainBlockBase.calculateMainchainMerkleRootHash(mainchainBlockReferencesData, mainchainHeaders)
-    val ommersMerkleRootHash: Array[Byte] = SidechainBlockBase.calculateOmmersMerkleRootHash(ommers)
+    val ommersMerkleRootHash: Array[Byte] = AccountBlock.calculateOmmersMerkleRootHash(ommers)
 
     val stateRoot: Array[Byte] = ???
     val receiptsRoot: Array[Byte] = ???
@@ -227,9 +228,16 @@ object AccountBlock extends ScorexEncoding {
     block
   }
 
-  def calculateTransactionsMerkleRootHash(sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]]): Array[Byte] = {
+  def calculateTransactionsMerkleRootHash(sidechainTransactions: Seq[SidechainTypes#SCAT]): Array[Byte] = {
     if(sidechainTransactions.nonEmpty)
       MerkleTree.createMerkleTree(sidechainTransactions.map(tx => idToBytes(ModifierId @@ tx.id)).asJava).rootHash()
+    else
+      Utils.ZEROS_HASH
+  }
+
+  def calculateOmmersMerkleRootHash(ommers: Seq[Ommer[AccountBlockHeader]]): Array[Byte] = {
+    if(ommers.nonEmpty)
+      MerkleTree.createMerkleTree(ommers.map(_.id).asJava).rootHash()
     else
       Utils.ZEROS_HASH
   }
@@ -252,7 +260,7 @@ class AccountBlockSerializer(companion: SidechainAccountTransactionsCompanion) e
 
   private val mainchainHeadersSerializer: ListSerializer[MainchainHeader] = new ListSerializer[MainchainHeader](MainchainHeaderSerializer)
 
-  private val ommersSerializer: ListSerializer[Ommer] = new ListSerializer[Ommer](OmmerSerializer)
+  private val ommersSerializer: ListSerializer[Ommer[AccountBlockHeader]] = new ListSerializer[Ommer[AccountBlockHeader]](AccountOmmerSerializer)
 
   override def serialize(obj: AccountBlock, w: Writer): Unit = {
     AccountBlockHeaderSerializer.serialize(obj.header.asInstanceOf[AccountBlockHeader], w)

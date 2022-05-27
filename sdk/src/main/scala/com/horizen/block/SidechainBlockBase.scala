@@ -2,7 +2,7 @@ package com.horizen.block
 
 
 import com.horizen.params.NetworkParams
-import com.horizen.utils.{MerkleTree, Utils}
+import com.horizen.utils.{BlockFeeInfo, MerkleTree, Utils}
 import com.horizen.validation.InvalidSidechainBlockDataException
 import scorex.core.block.Block
 import scorex.core.block.Block.Timestamp
@@ -14,12 +14,12 @@ import scala.util.{Failure, Success, Try}
 import scala.collection.JavaConverters._
 
 
-abstract class SidechainBlockBase[TX <: Transaction] ()
-  extends OmmersContainer with Block[TX]
+abstract class SidechainBlockBase[TX <: Transaction, H <: SidechainBlockHeaderBase] ()
+  extends OmmersContainer[H] with Block[TX]
 {
   override val mainchainHeaders: Seq[MainchainHeader]
-  override val ommers: Seq[Ommer]
-  val header: SidechainBlockHeaderBase
+  override val ommers: Seq[Ommer[H]]
+  val header: H
   val sidechainTransactions: Seq[TX]
   val mainchainBlockReferencesData: Seq[MainchainBlockReferenceData]
 
@@ -40,6 +40,7 @@ abstract class SidechainBlockBase[TX <: Transaction] ()
   override def toString: String = s"SidechainBlock(id = $id)"
 
   def feePaymentsHash: Array[Byte] = header.feePaymentsHash
+  val feeInfo: BlockFeeInfo
 
   // Check that Sidechain Block data is consistent to SidechainBlockHeader
   protected def verifyDataConsistency(params: NetworkParams): Try[Unit]
@@ -134,10 +135,5 @@ object SidechainBlockBase {
     }
   }
 
-  def calculateOmmersMerkleRootHash(ommers: Seq[Ommer]): Array[Byte] = {
-    if(ommers.nonEmpty)
-      MerkleTree.createMerkleTree(ommers.map(_.id).asJava).rootHash()
-    else
-      Utils.ZEROS_HASH
-  }
+
 }

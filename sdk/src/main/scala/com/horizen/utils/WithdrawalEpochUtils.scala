@@ -1,12 +1,12 @@
 package com.horizen.utils
 
-import com.horizen.block.{SidechainBlock, SidechainBlockBase}
+import com.horizen.block.{SidechainBlock, SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.Transaction
 
 object WithdrawalEpochUtils {
 
-  def getWithdrawalEpochInfo[TX <: Transaction](block: SidechainBlockBase[TX], parentEpochInfo: WithdrawalEpochInfo, params: NetworkParams): WithdrawalEpochInfo = {
+  def getWithdrawalEpochInfo[TX <: Transaction](block: SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase], parentEpochInfo: WithdrawalEpochInfo, params: NetworkParams): WithdrawalEpochInfo = {
     val withdrawalEpoch: Int =
       if(parentEpochInfo.lastEpochIndex == params.withdrawalEpochLength) // Parent block is the last SC Block of withdrawal epoch.
         parentEpochInfo.epoch + 1
@@ -31,7 +31,7 @@ object WithdrawalEpochUtils {
       newEpochInfo.lastEpochIndex >= certificateSubmissionWindowLength(params) // new block may have multiple ref data so may pass over the window
   }
 
-  def hasReachedCertificateSubmissionWindowEnd[TX <: Transaction](block: SidechainBlockBase[TX], parentEpochInfo: WithdrawalEpochInfo, params: NetworkParams): Boolean = {
+  def hasReachedCertificateSubmissionWindowEnd[TX <: Transaction](block: SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase], parentEpochInfo: WithdrawalEpochInfo, params: NetworkParams): Boolean = {
     val newEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo[TX](block, parentEpochInfo, params)
     hasReachedCertificateSubmissionWindowEnd(newEpochInfo, parentEpochInfo, params)
   }

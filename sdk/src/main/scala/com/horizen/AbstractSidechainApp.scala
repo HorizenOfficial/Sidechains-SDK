@@ -5,7 +5,7 @@ import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.horizen.api.http._
-import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockBase, SidechainBlockSerializer}
+import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockBase, SidechainBlockHeaderBase, SidechainBlockSerializer}
 import com.horizen.box.BoxSerializer
 import com.horizen.certificatesubmitter.CertificateSubmitterRef
 import com.horizen.certificatesubmitter.network.{CertificateSignaturesManagerRef, CertificateSignaturesSpec, GetCertificateSignaturesSpec}
@@ -49,7 +49,7 @@ abstract class AbstractSidechainApp
   extends Application with ScorexLogging
 {
   override type TX <: Transaction
-  override type PMOD <: SidechainBlockBase[TX]
+  override type PMOD <: SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase]
 
   override implicit lazy val settings: ScorexSettings = sidechainSettings.scorexSettings
 

@@ -1,6 +1,6 @@
 package com.horizen
 
-import com.horizen.block.SidechainBlockBase
+import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.params.NetworkParams
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
@@ -15,7 +15,8 @@ import scorex.core.utils.NetworkTimeProvider
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 
-abstract class AbstractSidechainNodeViewHolder[TX <: Transaction, PMOD <: SidechainBlockBase[TX]]
+abstract class AbstractSidechainNodeViewHolder[
+  TX <: Transaction, H <: SidechainBlockHeaderBase, PMOD <: SidechainBlockBase[TX, H]]
 (
   sidechainSettings: SidechainSettings,
   params: NetworkParams,
@@ -27,7 +28,7 @@ abstract class AbstractSidechainNodeViewHolder[TX <: Transaction, PMOD <: Sidech
   override type SI = SidechainSyncInfo
   type HSTOR <: AbstractHistoryStorage[PMOD, HSTOR]
 
-  override type HIS <: AbstractHistory[TX, PMOD, HSTOR, HIS]
+  override type HIS <: AbstractHistory[TX, H, PMOD, HSTOR, HIS]
   override type VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PMOD, VL]
 
   case class SidechainNodeUpdateInformation(history: HIS,
@@ -41,7 +42,7 @@ abstract class AbstractSidechainNodeViewHolder[TX <: Transaction, PMOD <: Sidech
 
   protected def semanticBlockValidators(params: NetworkParams): Seq[SemanticBlockValidator[PMOD]] = Seq(new SidechainBlockSemanticValidator[TX, PMOD](params))
 
-  protected def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator[TX, PMOD, HSTOR, HIS]] = Seq(
+  protected def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator[TX, H, PMOD, HSTOR, HIS]] = Seq(
     new WithdrawalEpochValidator(params),
     new MainchainPoWValidator(params),
     new MainchainBlockReferenceValidator(params),

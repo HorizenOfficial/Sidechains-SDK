@@ -403,7 +403,7 @@ class SidechainBlockTest
     // In this test verifyOmmersSeqData() method of OmmersContainer is tested
     // The same check both for Block and Ommer classes
 
-    val ommers: Seq[Ommer] = generateOmmersSeq(parentId, 122444L,
+    val ommers: Seq[Ommer[SidechainBlockHeader]] = generateOmmersSeq(parentId, 122444L,
       Seq(
         (Seq(mcBlockRef1.data), Seq(mcBlockRef1.header, mcBlockRef2.header)),
         (Seq(), Seq()),
@@ -590,7 +590,7 @@ class SidechainBlockTest
 
     // Test 6: SidechainBlock with not consistent Ommers mc headers chain -> must be invalid
     // First Ommer is invalid, it has no mc headers at all
-    var invalidOmmers: Seq[Ommer] = generateOmmersSeq(parentId, 122444L,
+    var invalidOmmers: Seq[Ommer[SidechainBlockHeader]] = generateOmmersSeq(parentId, 122444L,
       Seq(
         (Seq(), Seq()),
         (Seq(mcBlockRef1.data), Seq()),
@@ -770,13 +770,13 @@ class SidechainBlockTest
     }
 
     // Test 13: SidechainBlock contains Ommers that are not properly ordered in epochs&slots
-    val slotOmmer1: Ommer = generateOmmersSeq(parentId, 122444L,
+    val slotOmmer1: Ommer[SidechainBlockHeader] = generateOmmersSeq(parentId, 122444L,
       Seq(
         (Seq(mcBlockRef1.data), Seq(mcBlockRef2.header))
       )
     ).head
 
-    val slotOmmer2: Ommer = generateOmmersSeq(slotOmmer1.header.id, 121444L, // Ommer Slot is before previous Ommer Slot
+    val slotOmmer2: Ommer[SidechainBlockHeader] = generateOmmersSeq(slotOmmer1.header.id, 121444L, // Ommer Slot is before previous Ommer Slot
       Seq(
         (Seq(), Seq(mcBlockRef2.header))
       )
@@ -858,7 +858,7 @@ class SidechainBlockTest
                           sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]] = Seq(),
                           mainchainBlockReferencesData: Seq[MainchainBlockReferenceData] = Seq(),
                           mainchainHeaders: Seq[MainchainHeader] = Seq(),
-                          ommers: Seq[Ommer] = Seq(),
+                          ommers: Seq[Ommer[SidechainBlockHeader]] = Seq(),
                           rnd: Random = new Random()
                          ): SidechainBlock = {
     SidechainBlock.create(
@@ -883,7 +883,7 @@ class SidechainBlockTest
                               sidechainTransactionsOpt: Option[Seq[SidechainTransaction[Proposition, Box[Proposition]]]] = None,
                               mainchainBlockReferencesDataOpt: Option[Seq[MainchainBlockReferenceData]] = None,
                               mainchainHeadersOpt: Option[Seq[MainchainHeader]] = None,
-                              ommersOpt: Option[Seq[Ommer]] = None): SidechainBlock = {
+                              ommersOpt: Option[Seq[Ommer[SidechainBlockHeader]]] = None): SidechainBlock = {
     new SidechainBlock(
       headerOpt.getOrElse(block.header),
       sidechainTransactionsOpt.getOrElse(block.sidechainTransactions),
@@ -895,7 +895,7 @@ class SidechainBlockTest
   }
 
 
-  private def generateOmmersSeq(parent: ModifierId, firstTimestamp: Long, ommersData: Seq[(Seq[MainchainBlockReferenceData], Seq[MainchainHeader])], rnd: Random = new Random()): Seq[Ommer] = {
+  private def generateOmmersSeq(parent: ModifierId, firstTimestamp: Long, ommersData: Seq[(Seq[MainchainBlockReferenceData], Seq[MainchainHeader])], rnd: Random = new Random()): Seq[Ommer[SidechainBlockHeader]] = {
     var blockSeq: Seq[SidechainBlock] = Seq()
     var currentTimestamp = firstTimestamp
     var currentParent = parent

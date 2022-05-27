@@ -1,17 +1,20 @@
 package com.horizen.block
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.google.common.primitives.{Bytes}
-import com.horizen.consensus.{ForgingStakeInfo}
+import com.google.common.primitives.Bytes
+import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import com.horizen.params.NetworkParams
-import com.horizen.proof.{Signature25519, VrfProof}
-import com.horizen.serialization.{ScorexModifierIdSerializer}
-import com.horizen.utils.{MerklePath}
+import com.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof, VrfProofSerializer}
+import com.horizen.serialization.ScorexModifierIdSerializer
+import com.horizen.utils.{MerklePath, MerklePathSerializer}
 import com.horizen.validation.InvalidSidechainBlockHeaderException
 import scorex.core.block.Block
-import scorex.core.{bytesToId}
+import scorex.core.block.Block.{Timestamp, Version}
+import scorex.core.bytesToId
+import scorex.core.serialization.ScorexSerializer
 import scorex.crypto.hash.Blake2b256
-import scorex.util.ModifierId
+import scorex.util.{ModifierId, idToBytes}
+import scorex.util.serialization.{Reader, Writer}
 
 import scala.util.Try
 
@@ -49,5 +52,3 @@ abstract class SidechainBlockHeaderBase() {
 
   }
 }
-
-

@@ -118,7 +118,7 @@ class Forger(settings: SidechainSettings,
     forgedBlockAsFuture.onComplete{
       case Success(ForgeSuccess(block)) => {
         log.info(s"Got successfully forged block with id ${block.id}")
-        viewHolderRef ! LocallyGeneratedModifier[SidechainBlock](block)
+        viewHolderRef ! LocallyGeneratedModifier(block)
         respondsToOpt.map(respondsTo => respondsTo ! Success(block.id))
       }
 
