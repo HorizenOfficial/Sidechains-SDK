@@ -131,7 +131,7 @@ class AccountSidechainApp @Inject()
         SidechainSyncInfoMessageSpec, settings.network, timeProvider, modifierSerializers))
 
   // Init Forger with a proper web socket client
-  val sidechainBlockForgerActorRef: ActorRef = ??? //ForgerRef("Forger", sidechainSettings, nodeViewHolderRef,  mainchainSynchronizer,
+  val sidechainBlockForgerActorRef: ActorRef = null //ForgerRef("Forger", sidechainSettings, nodeViewHolderRef,  mainchainSynchronizer,
   //  sidechainAccountTransactionsCompanion, timeProvider, params)
 
   // Init Transactions and Block actors for Api routes classes

@@ -7,16 +7,17 @@ import com.horizen.box.WithdrawalRequestBox
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
-import com.horizen.utils.{BlockFeeInfo, BytesUtils, FeePaymentsUtils, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.account.storage.AccountStateMetadataStorage
-import com.horizen.utils.ByteArrayWrapper
-import scorex.core.{VersionTag, bytesToVersion, idToBytes, idToVersion, versionToBytes}
-import scorex.util.{ModifierId, ScorexLogging}
+import scorex.core.{VersionTag, bytesToVersion, idToBytes, idToVersion, versionToBytes, versionToId}
+import scorex.util.{ModifierId, ScorexLogging, bytesToId}
 
 import java.util
 import scala.util.{Failure, Try}
 
-class AccountState(val params: NetworkParams, stateMetadataStorage: AccountStateMetadataStorage)
+class AccountState(val params: NetworkParams,
+                   override val version: VersionTag,
+                   stateMetadataStorage: AccountStateMetadataStorage)
   extends State[SidechainTypes#SCAT, AccountBlock, AccountStateView, AccountState]
     with AccountStateReader
     with ScorexLogging {
@@ -97,7 +98,11 @@ class AccountState(val params: NetworkParams, stateMetadataStorage: AccountState
     }
 
     // TODO: calculate and update fee info.
-    // stateView.addFeeInfo(mod.feeInfo)
+    // Note: we should save the total gas paid and the forgerAddress
+    stateView.addFeeInfo(BlockFeeInfo(0L, mod.header.forgingStakeInfo.blockSignPublicKey)).get
+
+    //TODO:
+    stateView.updateAccountStateRoot(new Array[Byte](32))
 
     stateView.commit(idToVersion(mod.id)).get
 
@@ -159,7 +164,7 @@ class AccountState(val params: NetworkParams, stateMetadataStorage: AccountState
   override def rollbackTo(version: VersionTag): Try[AccountState] = {
     Try {
       require(version != null, "Version to rollback to must be NOT NULL.")
-      new AccountState(params,stateMetadataStorage.rollback(new ByteArrayWrapper(versionToBytes(version))).get)
+      new AccountState(params, version, stateMetadataStorage.rollback(new ByteArrayWrapper(versionToBytes(version))).get)
     }.recoverWith({
       case exception =>
         log.error("Exception was thrown during rollback.", exception)
@@ -168,8 +173,6 @@ class AccountState(val params: NetworkParams, stateMetadataStorage: AccountState
   }
 
   // versions part
-  override def version: VersionTag = ???
-
   override def maxRollbackDepth: Int = stateMetadataStorage.rollbackVersions.size
 
   // View
@@ -192,7 +195,14 @@ class AccountState(val params: NetworkParams, stateMetadataStorage: AccountState
 
   override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = getView.getConsensusEpochNumber
 
-  override def getConsensusEpochInfo: (ModifierId, ConsensusEpochInfo) = ???
+  // Returns lastBlockInEpoch and ConsensusEpochInfo for that epoch
+  // Identical to the SidechainState.getCurrentConsensusEpochInfo method
+  def getConsensusEpochInfo: (ModifierId, ConsensusEpochInfo) = {
+    //TODO:
+    val tmpList = new java.util.ArrayList[Array[Byte]]()
+    tmpList.add(new Array[Byte](32))
+    (versionToId(version), ConsensusEpochInfo(ConsensusEpochNumber @@ 0, MerkleTree.createMerkleTree(tmpList), 0L))
+  }
 
   override def getBlockFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo] = getView.getBlockFeePayments(withdrawalEpochNumber)
 
@@ -210,7 +220,7 @@ object AccountState {
                                     params: NetworkParams): Option[AccountState] = {
 
     if (!stateMetadataStorage.isEmpty)
-      Some(new AccountState(params, stateMetadataStorage))
+      Some(new AccountState(params, bytesToVersion(stateMetadataStorage.lastVersionId.get.data), stateMetadataStorage))
     else
       None
   }
@@ -220,7 +230,7 @@ object AccountState {
                                           genesisBlock: AccountBlock): Try[AccountState] = Try {
 
     if (stateMetadataStorage.isEmpty)
-      new AccountState(params, stateMetadataStorage).applyModifier(genesisBlock).get
+      new AccountState(params, idToVersion(genesisBlock.parentId), stateMetadataStorage).applyModifier(genesisBlock).get
     else
       throw new RuntimeException("State metadata storage is not empty!")
   }

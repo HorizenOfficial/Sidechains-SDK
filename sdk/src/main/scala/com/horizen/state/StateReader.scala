@@ -16,9 +16,6 @@ trait StateReader extends scorex.core.transaction.state.StateReader {
 
   def hasCeased: Boolean
 
-  // Returns lastBlockInEpoch and ConsensusEpochInfo for that epoch
-  // Identical to the SidechainState.getCurrentConsensusEpochInfo method
-  def getConsensusEpochInfo: (ModifierId, ConsensusEpochInfo)
   def getConsensusEpochNumber: Option[ConsensusEpochNumber]
 
   // todo: fee payments related part
