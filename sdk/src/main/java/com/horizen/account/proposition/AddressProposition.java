@@ -1,45 +1,46 @@
 package com.horizen.account.proposition;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.ScorexEncoding;
 import com.horizen.account.secret.PrivateKeySecp256k1;
+import com.horizen.account.utils.Account;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.proposition.PropositionSerializer;
 import com.horizen.serialization.Views;
-import org.bouncycastle.util.Strings;
+import com.horizen.utils.BytesUtils;
 import org.web3j.crypto.Keys;
+import org.web3j.utils.Numeric;
 
 import java.util.Arrays;
 
 @JsonView(Views.Default.class)
-public final class PublicKeySecp256k1Proposition extends ScorexEncoding
+public final class AddressProposition extends ScorexEncoding
         implements ProofOfKnowledgeProposition<PrivateKeySecp256k1> {
 
-    @JsonProperty("from")
+    @JsonProperty("address")
     private final byte[] address;
 
-    public PublicKeySecp256k1Proposition(byte[] address) {
-        if (address.length != Keys.ADDRESS_LENGTH_IN_HEX + 2) {
+    public AddressProposition(byte[] address) {
+        if (address.length != Account.ADDRESS_SIZE) {
             throw new IllegalArgumentException(String.format(
                     "Incorrect address length, %d expected, %d found",
-                    Keys.ADDRESS_LENGTH_IN_HEX + 2,
+                    Account.ADDRESS_SIZE,
                     address.length
             ));
         }
 
-        this.address = Arrays.copyOf(address, Keys.ADDRESS_LENGTH_IN_HEX + 2);
+        this.address = Arrays.copyOf(address, Account.ADDRESS_SIZE);
     }
 
     @Override
     public byte[] pubKeyBytes() {
-        return Arrays.copyOf(address, Keys.ADDRESS_LENGTH_IN_HEX + 2);
+        return Arrays.copyOf(address, Account.ADDRESS_SIZE);
     }
 
     @Override
     public PropositionSerializer serializer() {
-        return PublicKeySecp256k1PropositionSerializer.getSerializer();
+        return AddressPropositionSerializer.getSerializer();
     }
 
     @Override
@@ -50,9 +51,9 @@ public final class PublicKeySecp256k1Proposition extends ScorexEncoding
     @Override
     public boolean equals(Object obj) {
         if (obj == null) return false;
-        if (!(obj instanceof PublicKeySecp256k1Proposition)) return false;
+        if (!(obj instanceof AddressProposition)) return false;
         if (obj == this) return true;
-        var other = (PublicKeySecp256k1Proposition) obj;
+        var other = (AddressProposition) obj;
         return Arrays.equals(address, other.address);
     }
 
@@ -61,12 +62,12 @@ public final class PublicKeySecp256k1Proposition extends ScorexEncoding
     }
 
     public String checksumAddress() {
-        return Keys.toChecksumAddress(Strings.fromByteArray(address()));
+        return Keys.toChecksumAddress(Numeric.toHexString(address()));
     }
 
     @Override
     public String toString() {
-        return String.format("PublicKeySecp256k1Proposition{address=%s}", Strings.fromByteArray(address));
+        return String.format("AddressProposition{address=%s}", BytesUtils.toHexString(address));
     }
 }
 

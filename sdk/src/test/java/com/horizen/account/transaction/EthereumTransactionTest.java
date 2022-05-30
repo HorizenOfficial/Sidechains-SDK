@@ -1,8 +1,9 @@
 package com.horizen.account.transaction;
 
 import com.horizen.account.proof.SignatureSecp256k1;
-import com.horizen.account.proposition.PublicKeySecp256k1Proposition;
+import com.horizen.account.proposition.AddressProposition;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
+import com.horizen.utils.BytesUtils;
 import org.bouncycastle.util.Strings;
 import org.junit.Before;
 import org.junit.Test;
@@ -24,7 +25,7 @@ public class EthereumTransactionTest {
     EthereumTransaction ethereumTransaction;
     RawTransaction rawTX;
     SignatureSecp256k1 txSignature;
-    PublicKeySecp256k1Proposition txProposition;
+    AddressProposition txProposition;
     final BigInteger someValue = BigInteger.ONE;
 
     @Before
@@ -39,7 +40,7 @@ public class EthereumTransactionTest {
         ECKeyPair pair = Keys.createEcKeyPair();
         var msgSignature = Sign.signMessage(message, pair, true);
         txSignature = new SignatureSecp256k1(msgSignature);
-        txProposition = new PublicKeySecp256k1Proposition(Strings.toByteArray("0x" + Keys.getAddress(pair)));
+        txProposition = new AddressProposition(BytesUtils.fromHexString(Keys.getAddress(pair)));
     }
 
     @Test
@@ -112,10 +113,10 @@ public class EthereumTransactionTest {
 
         // Test 13: ethereum transaction instance returns to proposition address correctly
         RawTransaction toTx = RawTransaction.createTransaction(someValue,
-                someValue, someValue, "0x00112233445566778899AABBCCDDEEFF01020304", someValue, "");
+                someValue, someValue, "00112233445566778899AABBCCDDEEFF01020304", someValue, "");
         EthereumTransaction toEthereumTransaction = new EthereumTransaction(toTx, txSignature, txProposition);
-        PublicKeySecp256k1Proposition toProposition = new PublicKeySecp256k1Proposition(Strings.toByteArray("0x00112233445566778899AABBCCDDEEFF01020304"));
-        assertEquals(Strings.fromByteArray(toEthereumTransaction.getTo().address()), Strings.fromByteArray(toProposition.address()));
+        AddressProposition toProposition = new AddressProposition(BytesUtils.fromHexString("00112233445566778899AABBCCDDEEFF01020304"));
+        assert (Arrays.equals(toEthereumTransaction.getTo().address(), toProposition.address()));
     }
 
     /** TODO: We need a test case - later, because of missing information - for whole ethereum transaction data

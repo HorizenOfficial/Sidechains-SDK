@@ -3,12 +3,12 @@ package com.horizen.account.transaction;
 import com.fasterxml.jackson.annotation.*;
 import com.google.common.primitives.Bytes;
 import com.horizen.account.proof.SignatureSecp256k1;
-import com.horizen.account.proposition.PublicKeySecp256k1Proposition;
+import com.horizen.account.proposition.AddressProposition;
+import com.horizen.account.utils.Account;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import org.bouncycastle.util.Strings;
-import org.web3j.crypto.Keys;
 import org.web3j.crypto.RawTransaction;
 import org.web3j.utils.Numeric;
 
@@ -19,18 +19,18 @@ import java.util.Objects;
 @JsonPropertyOrder({"from", "gasPrice", "nonce", "to", "value", "signature"})
 @JsonIgnoreProperties({"transaction", "gasLimit"})
 @JsonView(Views.Default.class)
-public class EthereumTransaction extends AccountTransaction<PublicKeySecp256k1Proposition, SignatureSecp256k1> {
+public class EthereumTransaction extends AccountTransaction<AddressProposition, SignatureSecp256k1> {
 
     private final RawTransaction transaction;
     @JsonUnwrapped
-    private final PublicKeySecp256k1Proposition from;
+    private final AddressProposition from;
     @JsonUnwrapped
     private final SignatureSecp256k1 signature;
     private final int version = 1;
 
     public EthereumTransaction(RawTransaction transaction,
                                SignatureSecp256k1 signature,
-                               PublicKeySecp256k1Proposition from) {
+                               AddressProposition from) {
         Objects.requireNonNull(transaction, "Raw Transaction can't be null.");
         Objects.requireNonNull(signature, "Signature can't be null.");
         Objects.requireNonNull(from, "From address can't be null");
@@ -64,7 +64,7 @@ public class EthereumTransaction extends AccountTransaction<PublicKeySecp256k1Pr
             throw new TransactionSemanticValidityException("Cannot create transaction with zero value");
         } else if (transaction.getGasLimit().signum() <= 0) {
             throw new TransactionSemanticValidityException("Cannot create transaction with zero gas limit");
-        } else if (from.address().length <= Keys.ADDRESS_LENGTH_IN_HEX + 2) {
+        } else if (from.address().length <= Account.ADDRESS_SIZE) {
             throw new TransactionSemanticValidityException("Cannot create transaction without valid from address");
         } else if (!signature.isValid(from, "test".getBytes(StandardCharsets.UTF_8))) {
             throw new TransactionSemanticValidityException("Cannot create transaction with invalid signature");
@@ -87,16 +87,17 @@ public class EthereumTransaction extends AccountTransaction<PublicKeySecp256k1Pr
     }
 
     @Override
-    public PublicKeySecp256k1Proposition getFrom() {
+    public AddressProposition getFrom() {
         return from;
     }
 
     @Override
-    public PublicKeySecp256k1Proposition getTo() {
-        if (transaction.getTo().length() != Keys.ADDRESS_LENGTH_IN_HEX + 2)
+    public AddressProposition getTo() {
+        var to = Numeric.hexStringToByteArray(transaction.getTo());
+        if (to.length != Account.ADDRESS_SIZE)
             return null;
         else
-            return new PublicKeySecp256k1Proposition(Strings.toByteArray(transaction.getTo()));
+            return new AddressProposition(to);
     }
 
     @Override

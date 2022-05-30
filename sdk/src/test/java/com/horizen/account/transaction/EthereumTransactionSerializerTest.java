@@ -1,9 +1,9 @@
 package com.horizen.account.transaction;
 
 import com.horizen.account.proof.SignatureSecp256k1;
-import com.horizen.account.proposition.PublicKeySecp256k1Proposition;
+import com.horizen.account.proposition.AddressProposition;
 import com.horizen.transaction.TransactionSerializer;
-import org.bouncycastle.util.Strings;
+import com.horizen.utils.BytesUtils;
 import org.junit.Before;
 import org.junit.Test;
 import org.web3j.crypto.ECKeyPair;
@@ -37,7 +37,7 @@ public class EthereumTransactionSerializerTest {
         ECKeyPair pair = Keys.createEcKeyPair();
         var msgSignature = Sign.signMessage(message, pair, true);
         var txSignature = new SignatureSecp256k1(msgSignature);
-        var txProposition = new PublicKeySecp256k1Proposition(Strings.toByteArray("0x" + Keys.getAddress(pair)));
+        var txProposition = new AddressProposition(BytesUtils.fromHexString(Keys.getAddress(pair)));
         ethereumTransaction = new EthereumTransaction(rawTX, txSignature, txProposition);
     }
 

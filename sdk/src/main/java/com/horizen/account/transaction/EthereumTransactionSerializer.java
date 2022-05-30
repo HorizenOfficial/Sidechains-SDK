@@ -1,11 +1,11 @@
 package com.horizen.account.transaction;
 
 import com.horizen.account.proof.SignatureSecp256k1Serializer;
-import com.horizen.account.proposition.PublicKeySecp256k1PropositionSerializer;
+import com.horizen.account.proposition.AddressPropositionSerializer;
 import com.horizen.transaction.TransactionSerializer;
+import com.horizen.utils.BytesUtils;
 import org.web3j.crypto.TransactionDecoder;
 import org.web3j.crypto.TransactionEncoder;
-import org.web3j.utils.Numeric;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
@@ -14,12 +14,12 @@ public class EthereumTransactionSerializer implements TransactionSerializer<Ethe
 
     private static final EthereumTransactionSerializer serializer;
     private static final SignatureSecp256k1Serializer signatureSerializer;
-    private static final PublicKeySecp256k1PropositionSerializer propositionSerializer;
+    private static final AddressPropositionSerializer propositionSerializer;
 
     static {
         serializer = new EthereumTransactionSerializer();
         signatureSerializer = SignatureSecp256k1Serializer.getSerializer();
-        propositionSerializer = PublicKeySecp256k1PropositionSerializer.getSerializer();
+        propositionSerializer = AddressPropositionSerializer.getSerializer();
     }
 
     private EthereumTransactionSerializer() {
@@ -42,7 +42,7 @@ public class EthereumTransactionSerializer implements TransactionSerializer<Ethe
     @Override
     public EthereumTransaction parse(Reader reader) {
         var messageLength = reader.getInt();
-        var hexMessage = Numeric.toHexString(reader.getBytes(messageLength));
+        var hexMessage = BytesUtils.toHexString(reader.getBytes(messageLength));
         var signature = signatureSerializer.parse(reader);
         var proposition = propositionSerializer.parse(reader);
         return new EthereumTransaction(TransactionDecoder.decode(hexMessage), signature, proposition);

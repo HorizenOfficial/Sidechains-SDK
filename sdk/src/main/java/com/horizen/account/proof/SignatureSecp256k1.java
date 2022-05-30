@@ -1,12 +1,11 @@
 package com.horizen.account.proof;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.horizen.account.proposition.PublicKeySecp256k1Proposition;
+import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.secret.PrivateKeySecp256k1;
 import com.horizen.account.utils.Secp256k1;
 import com.horizen.proof.ProofOfKnowledge;
 import com.horizen.proof.ProofSerializer;
-import org.bouncycastle.util.Strings;
 import org.web3j.crypto.Keys;
 import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
@@ -14,7 +13,7 @@ import org.web3j.utils.Numeric;
 import java.security.SignatureException;
 import java.util.Objects;
 
-public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp256k1, PublicKeySecp256k1Proposition> {
+public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp256k1, AddressProposition> {
 
     @JsonProperty("v")
     private final byte[] v;
@@ -45,13 +44,13 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
     }
 
     @Override
-    public boolean isValid(PublicKeySecp256k1Proposition proposition, byte[] message) {
+    public boolean isValid(AddressProposition proposition, byte[] message) {
         try {
             final var signature = new Sign.SignatureData(v, r, s);
             // verify signature validity for the given message
             final var signingAddress = Keys.getAddress(Sign.signedMessageToKey(message, signature));
             // verify that the signature was created with the expected address
-            return Objects.equals(signingAddress, Strings.fromByteArray(proposition.address()));
+            return Objects.equals(Numeric.hexStringToByteArray(signingAddress), proposition.address());
         } catch (SignatureException e) {
             return false;
         }
