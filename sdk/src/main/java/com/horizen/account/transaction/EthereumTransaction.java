@@ -8,12 +8,13 @@ import com.horizen.account.utils.Account;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
-import org.bouncycastle.util.Strings;
 import org.web3j.crypto.RawTransaction;
+import org.web3j.crypto.SignedRawTransaction;
 import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.security.SignatureException;
 import java.util.Objects;
 
 @JsonPropertyOrder({"from", "gasPrice", "nonce", "to", "value", "signature"})
@@ -22,21 +23,23 @@ import java.util.Objects;
 public class EthereumTransaction extends AccountTransaction<AddressProposition, SignatureSecp256k1> {
 
     private final RawTransaction transaction;
-    @JsonUnwrapped
-    private final AddressProposition from;
+    private final int version = 1;
     @JsonUnwrapped
     private final SignatureSecp256k1 signature;
-    private final int version = 1;
 
-    public EthereumTransaction(RawTransaction transaction,
-                               SignatureSecp256k1 signature,
-                               AddressProposition from) {
+    public EthereumTransaction(SignedRawTransaction transaction) {
         Objects.requireNonNull(transaction, "Raw Transaction can't be null.");
-        Objects.requireNonNull(signature, "Signature can't be null.");
-        Objects.requireNonNull(from, "From address can't be null");
+
         this.transaction = transaction;
-        this.signature = signature;
-        this.from = from;
+
+        signature = new SignatureSecp256k1(transaction.getSignatureData().getV(),
+                transaction.getSignatureData().getR(), transaction.getSignatureData().getS());
+    }
+
+    public EthereumTransaction(RawTransaction transaction) {
+        Objects.requireNonNull(transaction, "Raw Transaction can't be null.");
+        this.transaction = transaction;
+        signature = null;
     }
 
     @Override
@@ -64,10 +67,16 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             throw new TransactionSemanticValidityException("Cannot create transaction with zero value");
         } else if (transaction.getGasLimit().signum() <= 0) {
             throw new TransactionSemanticValidityException("Cannot create transaction with zero gas limit");
-        } else if (from.address().length <= Account.ADDRESS_SIZE) {
-            throw new TransactionSemanticValidityException("Cannot create transaction without valid from address");
-        } else if (!signature.isValid(from, "test".getBytes(StandardCharsets.UTF_8))) {
-            throw new TransactionSemanticValidityException("Cannot create transaction with invalid signature");
+        } else {
+            try {
+                if (signature != null && this.getFrom().address().length <= Account.ADDRESS_SIZE) {
+                    throw new TransactionSemanticValidityException("Cannot create signed transaction without valid from address");
+                } else if (!signature.isValid(getFrom(), "test".getBytes(StandardCharsets.UTF_8))) {
+                    throw new TransactionSemanticValidityException("Cannot create transaction with invalid signature");
+                }
+            } catch (TransactionSemanticValidityException e) {
+                throw new TransactionSemanticValidityException(e);
+            }
         }
     }
 
@@ -87,17 +96,23 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     @Override
+    @JsonUnwrapped
     public AddressProposition getFrom() {
-        return from;
+        if (signature != null) {
+            SignedRawTransaction tx = (SignedRawTransaction) transaction;
+            try {
+                return new AddressProposition(Numeric.hexStringToByteArray(tx.getFrom()));
+            } catch (SignatureException e) { /*we return null if signature is empty or invalid*/ }
+        }
+        return null;
     }
 
     @Override
     public AddressProposition getTo() {
         var to = Numeric.hexStringToByteArray(transaction.getTo());
-        if (to.length != Account.ADDRESS_SIZE)
-            return null;
-        else
+        if (to.length == Account.ADDRESS_SIZE)
             return new AddressProposition(to);
+        return null;
     }
 
     @Override
@@ -110,21 +125,24 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return transaction.getData();
     }
 
+    @Override
     public SignatureSecp256k1 getSignature() {
         return signature;
     }
 
     @Override
     public String toString() {
+        String address = "";
+        if (this.getFrom() != null){ address = Numeric.toHexString(this.getFrom().address()); }
         return String.format(
                 "EthereumTransaction{from=%s, nonce=%s, gasPrice=%s, gasLimit=%s, to=%s, data=%s, Signature=%s}",
-                Strings.fromByteArray(from.address()),
+                address,
                 Numeric.toHexStringWithPrefix(transaction.getNonce()),
                 Numeric.toHexStringWithPrefix(transaction.getGasPrice()),
                 Numeric.toHexStringWithPrefix(transaction.getGasLimit()),
                 transaction.getTo(),
                 transaction.getData(),
-                signature.toString()
+                signature != null ? signature.toString() : ""
         );
     }
 

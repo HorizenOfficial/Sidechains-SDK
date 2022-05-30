@@ -30,7 +30,7 @@ public class EthereumTransactionSerializerTest {
         String payload = "This is string to sign";
         var message = payload.getBytes(StandardCharsets.UTF_8);
         var someValue = BigInteger.ONE;
-        var rawTX = RawTransaction.createTransaction(someValue,
+        var rawTransaction = RawTransaction.createTransaction(someValue,
                 someValue, someValue, "0x", someValue, "");
 
         // Create a key pair, create tx signature and create ethereum Transaction
@@ -38,7 +38,7 @@ public class EthereumTransactionSerializerTest {
         var msgSignature = Sign.signMessage(message, pair, true);
         var txSignature = new SignatureSecp256k1(msgSignature);
         var txProposition = new AddressProposition(BytesUtils.fromHexString(Keys.getAddress(pair)));
-        ethereumTransaction = new EthereumTransaction(rawTX, txSignature, txProposition);
+        ethereumTransaction = new EthereumTransaction(rawTransaction);
     }
 
     @Test
