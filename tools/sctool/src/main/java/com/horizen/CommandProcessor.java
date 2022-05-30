@@ -7,6 +7,12 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
+import com.horizen.account.block.AccountBlock;
+import com.horizen.account.block.AccountBlockHeader;
+import com.horizen.account.companion.SidechainAccountTransactionsCompanion;
+import com.horizen.account.proposition.PublicKeySecp256k1Proposition;
+import com.horizen.account.transaction.AccountTransaction;
+import com.horizen.account.utils.Secp256k1;
 import com.horizen.block.*;
 import com.horizen.box.Box;
 import com.horizen.box.ForgerBox;
@@ -18,10 +24,12 @@ import com.horizen.params.MainNetParams;
 import com.horizen.params.NetworkParams;
 import com.horizen.params.RegTestParams;
 import com.horizen.params.TestNetParams;
+import com.horizen.proof.Proof;
 import com.horizen.proof.VrfProof;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.*;
 import com.horizen.transaction.SidechainTransaction;
+import com.horizen.transaction.Transaction;
 import com.horizen.transaction.mainchain.SidechainCreation;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
 import com.horizen.utils.*;
@@ -380,6 +388,8 @@ public class CommandProcessor {
             return;
         }
 
+        boolean isAccountBlock = json.has("accountmodel") && json.get("accountmodel").asBoolean();
+
         SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
 
         String infoHex = json.get("info").asText();
@@ -499,7 +509,6 @@ public class CommandProcessor {
 
             MainchainBlockReference mcRef = MainchainBlockReference.create(mcBlockBytes, params, versionsManager).get();
 
-            SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>());
 
             //Find Sidechain creation information
             SidechainCreation sidechainCreation = null;
@@ -527,34 +536,86 @@ public class CommandProcessor {
             // no fee payments expected for the genesis block
             byte[] feePaymentsHash = new byte[32];
 
-            SidechainBlock sidechainBlock = SidechainBlock.create(
-                    params.sidechainGenesisBlockParentId(),
-                    SidechainBlock.BLOCK_VERSION(),
-                    timestamp,
-                    scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.data())).asScala().toSeq(),
-                    scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, Box<Proposition>>>()).asScala().toSeq(),
-                    scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.header())).asScala().toSeq(),
-                    scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer<SidechainBlockHeader>>()).asScala().toSeq(),
-                    key,
-                    forgingStakeInfo,
-                    vrfProof,
-                    mp,
-                    feePaymentsHash,
-                    sidechainTransactionsCompanion,
-                    scala.Option.empty()
-            ).get();
+            // are we building a utxo or account model based block?
 
-            int withdrawalEpochLength;
-            try {
-                SidechainCreation creationOutput = (SidechainCreation) sidechainBlock.mainchainBlockReferencesData().head().sidechainRelatedAggregatedTransaction().get().mc2scTransactionsOutputs().get(0);
-                withdrawalEpochLength = creationOutput.withdrawalEpochLength();
-            }
-            catch (Exception e) {
-                printGenesisInfoUsageMsg("'info' data is corrupted: MainchainBlock expected to contain a valid Transaction with a Sidechain Creation output.");
-                return;
+            int withdrawalEpochLength = -1;
+            String sidechainBlockHex = "";
+
+            if (isAccountBlock){
+                byte block_version = AccountBlock.ACCOUNT_BLOCK_VERSION();
+
+                byte[] stateRoot = new byte[MerkleTree.ROOT_HASH_LENGTH];
+                byte[] receiptsRoot = new byte[MerkleTree.ROOT_HASH_LENGTH];
+                PublicKeySecp256k1Proposition forgerAddress = new PublicKeySecp256k1Proposition(new byte[Secp256k1.PUBLIC_KEY_SIZE]);
+
+                SidechainAccountTransactionsCompanion sidechainTransactionsCompanion = new SidechainAccountTransactionsCompanion(new HashMap<>());
+
+                AccountBlock accountBlock = AccountBlock.create(
+                        params.sidechainGenesisBlockParentId(),
+                        block_version,
+                        timestamp,
+                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.data())).asScala().toSeq(),
+                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<AccountTransaction<Proposition, Proof<Proposition>>>()).asScala().toSeq(),
+                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.header())).asScala().toSeq(),
+                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer<AccountBlockHeader>>()).asScala().toSeq(),
+                        key,
+                        forgingStakeInfo,
+                        vrfProof,
+                        mp,
+                        feePaymentsHash,
+                        stateRoot,
+                        receiptsRoot,
+                        forgerAddress,
+                        sidechainTransactionsCompanion,
+                        scala.Option.empty()
+                ).get();
+
+
+                try {
+                    SidechainCreation creationOutput = (SidechainCreation) accountBlock.mainchainBlockReferencesData().head().sidechainRelatedAggregatedTransaction().get().mc2scTransactionsOutputs().get(0);
+                    withdrawalEpochLength = creationOutput.withdrawalEpochLength();
+                }
+                catch (Exception e) {
+                    printGenesisInfoUsageMsg("'info' data is corrupted: MainchainBlock expected to contain a valid Transaction with a Sidechain Creation output.");
+                    return;
+                }
+
+                sidechainBlockHex = BytesUtils.toHexString(accountBlock.bytes());
+            } else
+            {
+                byte block_version = SidechainBlock.BLOCK_VERSION();
+                SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>());
+
+                SidechainBlock sidechainBlock = SidechainBlock.create(
+                        params.sidechainGenesisBlockParentId(),
+                        block_version,
+                        timestamp,
+                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.data())).asScala().toSeq(),
+                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, Box<Proposition>>>()).asScala().toSeq(),
+                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.header())).asScala().toSeq(),
+                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer<SidechainBlockHeader>>()).asScala().toSeq(),
+                        key,
+                        forgingStakeInfo,
+                        vrfProof,
+                        mp,
+                        feePaymentsHash,
+                        sidechainTransactionsCompanion,
+                        scala.Option.empty()
+                ).get();
+
+                try {
+                    SidechainCreation creationOutput = (SidechainCreation) sidechainBlock.mainchainBlockReferencesData().head().sidechainRelatedAggregatedTransaction().get().mc2scTransactionsOutputs().get(0);
+                    withdrawalEpochLength = creationOutput.withdrawalEpochLength();
+                }
+                catch (Exception e) {
+                    printGenesisInfoUsageMsg("'info' data is corrupted: MainchainBlock expected to contain a valid Transaction with a Sidechain Creation output.");
+                    return;
+                }
+
+                sidechainBlockHex = BytesUtils.toHexString(sidechainBlock.bytes());
             }
 
-            String sidechainBlockHex = BytesUtils.toHexString(sidechainBlock.bytes());
+
 
 
             ObjectNode resJson = new ObjectMapper().createObjectNode();

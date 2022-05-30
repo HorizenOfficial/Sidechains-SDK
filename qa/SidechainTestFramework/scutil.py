@@ -121,7 +121,8 @@ def launch_bootstrap_tool(command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK",
-                                          "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.3.2.jar",
+                                          "..")  +
+                                "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.3.2.jar",
                                 command_name, json_param], stdout=subprocess.PIPE)
     sc_bootstrap_output = java_ps.communicate()[0]
     try:
@@ -155,7 +156,8 @@ Output: a JSON object to be included in the settings file of the sidechain node 
 
 
 def generate_genesis_data(genesis_info, genesis_secret, vrf_secret, block_timestamp_rewind):
-    jsonParameters = {"secret": genesis_secret, "vrfSecret": vrf_secret, "info": genesis_info,
+    jsonParameters = {"accountmodel": True, #TODO pass it from outside
+                      "secret": genesis_secret, "vrfSecret": vrf_secret, "info": genesis_info,
                       "regtestBlockTimestampRewind": block_timestamp_rewind}
     jsonNode = launch_bootstrap_tool("genesisinfo", jsonParameters)
     return jsonNode
@@ -448,7 +450,8 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
         lib_separator = ";"
 
     if binary is None:
-        binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.3.2.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+        binary = "../examples/evmapp/target/sidechains-sdk-evmapp-0.3.2.jar" + lib_separator + "../examples/evmapp/target/lib/* com.horizen.examples.EvmApp"
+        #binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.3.2.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
     #        else if platform.system() == 'Linux':
     '''
     In order to effectively attach a debugger (e.g IntelliJ) to the simpleapp, it is necessary to start the process
