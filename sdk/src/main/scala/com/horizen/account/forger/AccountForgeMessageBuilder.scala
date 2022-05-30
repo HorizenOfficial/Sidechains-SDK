@@ -74,9 +74,13 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     val feePaymentsHash = ???
 
+    val stateRoot: Array[Byte] = ???
+    val receiptsRoot: Array[Byte] = ???
+    val forgerAddress: PublicKeySecp256k1Proposition = ???
+
      AccountBlock.create(
       parentId,
-       AccountBlock.BLOCK_VERSION,
+      AccountBlock.ACCOUNT_BLOCK_VERSION,
       timestamp,
       mainchainBlockReferencesData,
       // TODO check, why this works?
@@ -89,6 +93,9 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       vrfProof,
       forgingStakeInfoMerklePath,
       feePaymentsHash,
+      stateRoot,
+      receiptsRoot,
+      forgerAddress,
       // TODO check, why this works?
       //companion.asInstanceOf)
       companion.asInstanceOf[SidechainAccountTransactionsCompanion])
@@ -101,7 +108,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     // Create block header template, setting dummy values where it is possible.
     // Note:  AccountBlockHeader length is not constant because of the forgingStakeMerklePathInfo.merklePath.
     val header =  AccountBlockHeader(
-      AccountBlock.BLOCK_VERSION,
+      AccountBlock.ACCOUNT_BLOCK_VERSION,
       parentId,
       timestamp,
       forgingStakeMerklePathInfo.forgingStakeInfo,

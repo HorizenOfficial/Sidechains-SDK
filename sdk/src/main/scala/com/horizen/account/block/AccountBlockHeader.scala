@@ -75,7 +75,7 @@ case class AccountBlockHeader(
           || receiptsRoot.length != MerkleTree.ROOT_HASH_LENGTH)
           throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id contains out of bound fields.")
 
-        if (version != AccountBlock.BLOCK_VERSION)
+        if (version != AccountBlock.ACCOUNT_BLOCK_VERSION)
           throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id version $version is invalid.")
 
         // check, that signature is valid
@@ -88,7 +88,7 @@ case class AccountBlockHeader(
   }
 
 
-  override def toString =
+  override def toString: String =
     s"AccountBlockHeader($id, $version, $timestamp, $forgingStakeInfo, $vrfProof, " +
       s"${ByteUtils.toHexString(sidechainTransactionsMerkleRootHash)}, ${ByteUtils.toHexString(mainchainMerkleRootHash)}, " +
       s"${ByteUtils.toHexString(stateRoot)}, ${ByteUtils.toHexString(receiptsRoot)}, $forgerAddress" +
@@ -132,7 +132,7 @@ object AccountBlockHeaderSerializer extends ScorexSerializer[AccountBlockHeader]
   override def parse(r: Reader): AccountBlockHeader = {
     val version: Block.Version = r.getByte()
 
-    if(version != AccountBlock.BLOCK_VERSION)
+    if(version != AccountBlock.ACCOUNT_BLOCK_VERSION)
       throw new InvalidSidechainBlockHeaderException(s"SidechainAccountBlock version $version is invalid.")
 
     val parentId: ModifierId = bytesToId(r.getBytes(NodeViewModifier.ModifierIdSize))
@@ -149,9 +149,9 @@ object AccountBlockHeaderSerializer extends ScorexSerializer[AccountBlockHeader]
 
     val mainchainMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
 
-    val stateRoot = r.getBytes(MerkleTree.ROOT_HASH_LENGTH) // TODO add a constant
+    val stateRoot = r.getBytes(MerkleTree.ROOT_HASH_LENGTH) // TODO add a constant from EthMerkleTree impl in libevm
 
-    val receiptsRoot = r.getBytes(MerkleTree.ROOT_HASH_LENGTH) // TODO add a constant
+    val receiptsRoot = r.getBytes(MerkleTree.ROOT_HASH_LENGTH) // TODO add a constant from EthMerkleTree impl in libevm
 
     val forgerAddress = PublicKeySecp256k1PropositionSerializer.getSerializer.parse(r)
 
