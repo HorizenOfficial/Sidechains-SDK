@@ -6,6 +6,7 @@ import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.Transaction;
 import com.horizen.transaction.TransactionSerializer;
+import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import org.web3j.crypto.RawTransaction;
 import org.web3j.utils.Numeric;
 
@@ -38,6 +39,11 @@ public class EthereumTransaction extends Transaction {
     @Override
     public byte version() {
         return version;
+    }
+
+    @Override
+    public void semanticValidity() throws TransactionSemanticValidityException {
+        // TODO
     }
 
     @Override
