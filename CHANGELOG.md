@@ -1,5 +1,5 @@
 **0.3.4**
-1. Added possibility to perform backup and restore non-coin boxes to bootstrap a new sidechain with a history of non-coin data taken from other sidechain.
+1. Added the possibility to perform a backup of a sidechain non coin-boxes and restore these boxes into a new bootstrapped sidechain of the same type.
 2. log4j version updated.
 
 **0.3.3**
