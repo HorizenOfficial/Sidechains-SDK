@@ -1,19 +1,28 @@
 package com.horizen
 
 import com.horizen.block.SidechainBlockBase
+import com.horizen.node.{NodeHistoryBase, NodeMemoryPool, NodeState, NodeWalletBase}
 import com.horizen.params.NetworkParams
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
-import com.horizen.validation.{ConsensusValidator, HistoryBlockValidator, MainchainBlockReferenceValidator, MainchainPoWValidator, SemanticBlockValidator, SidechainBlockSemanticValidator, WithdrawalEpochValidator}
+import com.horizen.validation._
 import scorex.core.NodeViewHolder.DownloadRequest
-import scorex.core.idToVersion
 import scorex.core.consensus.History.ProgressInfo
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{NewOpenSurface, RollbackFailed, SemanticallyFailedModification, SemanticallySuccessfulModifier, StartingPersistentModifierApplication, SyntacticallyFailedModification, SyntacticallySuccessfulModifier}
+import scorex.core.idToVersion
+import scorex.core.network.NodeViewSynchronizer.ReceivableMessages._
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
 
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
+
+trait NodeViewTypes {
+  type H <: NodeHistoryBase
+  type S <: NodeState
+  type W <: NodeWalletBase
+  type P <: NodeMemoryPool
+
+}
 
 abstract class AbstractSidechainNodeViewHolder[TX <: Transaction, PMOD <: SidechainBlockBase[TX]]
 (
@@ -22,13 +31,26 @@ abstract class AbstractSidechainNodeViewHolder[TX <: Transaction, PMOD <: Sidech
   timeProvider: NetworkTimeProvider
 )
   extends scorex.core.NodeViewHolder[TX, PMOD]
-    with SidechainTypes
-{
+    with SidechainTypes {
   override type SI = SidechainSyncInfo
   type HSTOR <: AbstractHistoryStorage[PMOD, HSTOR]
 
   override type HIS <: AbstractHistory[TX, PMOD, HSTOR, HIS]
   override type VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PMOD, VL]
+  type H <: NodeHistoryBase
+  type S <: NodeState
+  type W <: NodeWalletBase
+  type P <: NodeMemoryPool
+
+
+  protected def nodeHistory(): H
+
+  protected def nodeState(): S
+
+  protected def nodeWallet(): W
+
+  protected def nodeMemoryPool(): P
+
 
   case class SidechainNodeUpdateInformation(history: HIS,
                                             state: MS,
@@ -49,11 +71,15 @@ abstract class AbstractSidechainNodeViewHolder[TX <: Transaction, PMOD <: Sidech
   )
 
   override def receive: Receive = {
-    processLocallyGeneratedSecret orElse super.receive
+    processLocallyGeneratedSecret orElse
+      getCurrentBaseSidechainNodeViewInfo orElse super.receive
   }
 
+  protected def getCurrentBaseSidechainNodeViewInfo: Receive
+
+
   protected def processLocallyGeneratedSecret: Receive = {
-    case SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret(secret) =>
+    case AbstractSidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret(secret) =>
       vault().addSecret(secret) match {
         case Success(newVault) =>
           updateNodeView(updatedVault = Some(newVault))
@@ -62,6 +88,7 @@ abstract class AbstractSidechainNodeViewHolder[TX <: Transaction, PMOD <: Sidech
           sender() ! Failure(ex)
       }
   }
+
 
   // This method is actually a copy-paste of parent NodeViewHolder.pmodModify method.
   // The difference is that modifiers are applied to the State and Wallet simultaneously.
@@ -184,7 +211,7 @@ abstract class AbstractSidechainNodeViewHolder[TX <: Transaction, PMOD <: Sidech
             val historyAfterApply = newHistory.reportModifierIsValid(modToApply)
             context.system.eventStream.publish(SemanticallySuccessfulModifier(modToApply))
 
-            val (historyAfterUpdateFee , walletAfterApply) = scanBlockWithFeePayments(historyAfterApply, stateAfterApply, newWallet, modToApply)
+            val (historyAfterUpdateFee, walletAfterApply) = scanBlockWithFeePayments(historyAfterApply, stateAfterApply, newWallet, modToApply)
             SidechainNodeUpdateInformation(historyAfterUpdateFee, stateAfterApply, walletAfterApply, None, None, updateInfo.suffix :+ modToApply)
 
           case Failure(e) =>
@@ -203,4 +230,27 @@ abstract class AbstractSidechainNodeViewHolder[TX <: Transaction, PMOD <: Sidech
   // Check is the modifier ends the withdrawal epoch, so notify History and Wallet about fees to be payed.
   // Scan modifier by the Wallet considering the forger fee payments.
   protected def scanBlockWithFeePayments(history: HIS, state: MS, wallet: VL, modToApply: PMOD): (HIS, VL)
+
+
+}
+
+object AbstractSidechainNodeViewHolder /*extends ScorexLogging with ScorexEncoding*/ {
+  object ReceivableMessages {
+    case class GetDataFromCurrentNodeView[H <: NodeHistoryBase, S <: NodeState, W <: NodeWalletBase, P <: NodeMemoryPool, A](f: SidechainNodeViewBase[H, S, W, P] => A)
+
+    case class LocallyGeneratedSecret[S <: SidechainTypes#SCS](secret: S)
+  }
+
+
+}
+
+trait SidechainNodeViewBase[H <: NodeHistoryBase, S <: NodeState, W <: NodeWalletBase, P <: NodeMemoryPool] {
+  def getNodeHistory: H
+
+  def getNodeState: S
+
+  def getNodeMemoryPool: P
+
+  def getNodeWallet: W
+
 }

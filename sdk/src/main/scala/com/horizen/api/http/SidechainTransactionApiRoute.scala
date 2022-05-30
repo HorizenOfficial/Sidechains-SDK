@@ -2,21 +2,20 @@ package com.horizen.api.http
 
 import java.lang
 import java.util.{Collections, ArrayList => JArrayList, List => JList}
-
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.horizen.SidechainTypes
+import com.horizen.{SidechainHistory, SidechainTypes}
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.SidechainTransactionErrorResponse._
 import com.horizen.api.http.SidechainTransactionRestScheme._
-import com.horizen.box.data.{ForgerBoxData, BoxData, WithdrawalRequestBoxData, ZenBoxData}
+import com.horizen.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
 import com.horizen.box.{Box, ZenBox}
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.node.{NodeWallet, SidechainNodeView}
+import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.Proof
 import com.horizen.proposition._
@@ -38,7 +37,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                                         companion: SidechainTransactionsCompanion,
                                         params: NetworkParams)
                                        (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
-  extends SidechainApiRoute with SidechainTypes {
+  extends SidechainBaseApiRoute[NodeHistory,NodeState,NodeWallet,NodeMemoryPool, SidechainNodeView] with SidechainTypes {
 
   override val route: Route = (pathPrefix("transaction")) {
     allTransactions ~ findById ~ decodeTransactionBytes ~ createCoreTransaction ~ createCoreTransactionSimplified ~

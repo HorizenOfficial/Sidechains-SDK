@@ -2,6 +2,7 @@ package com.horizen.node;
 
 import com.horizen.block.MainchainBlockReference;
 import com.horizen.block.MainchainHeader;
+import com.horizen.block.SidechainBlock;
 import com.horizen.chain.FeePaymentsInfo;
 import com.horizen.chain.MainchainHeaderInfo;
 import com.horizen.node.util.MainchainBlockReferenceInfo;

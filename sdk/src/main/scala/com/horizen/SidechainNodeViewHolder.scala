@@ -2,10 +2,11 @@ package com.horizen
 
 
 import akka.actor.{ActorRef, ActorSystem, Props}
+import com.horizen.AbstractSidechainNodeViewHolder.SidechainNodeViewBase
 import com.horizen.block.SidechainBlock
 import com.horizen.chain.FeePaymentsInfo
 import com.horizen.consensus._
-import com.horizen.node.SidechainNodeView
+import com.horizen.node._
 import com.horizen.params.NetworkParams
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
@@ -83,6 +84,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     }
   }
 
+
   protected def applyFunctionOnNodeView: Receive = {
     case SidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView(function) => try {
       sender() ! function(new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), minimalState().applicationState, vault().applicationWallet))
@@ -134,14 +136,40 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       (history, walletAfterApply)
     }
   }
+
+  override type H = NodeHistory
+  override type S = NodeState
+  override type W = NodeWallet
+  override type P = NodeMemoryPool
+
+  override protected def nodeHistory(): H = history().asInstanceOf[H]
+
+  override protected def nodeState(): S = minimalState().asInstanceOf[S]
+
+  override protected def nodeWallet(): W = vault().asInstanceOf[W]
+
+  override protected def nodeMemoryPool(): P = memoryPool().asInstanceOf[P]
+
+  override protected def getCurrentBaseSidechainNodeViewInfo: Receive = {
+    case AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView(f) => try {
+      val l : SidechainNodeViewBase[Any,Any,Any,Any] = new SidechainNodeView(nodeHistory(), nodeState(), nodeWallet(), nodeMemoryPool(),applicationState,applicationWallet)
+   //   val l1 :  SidechainNodeViewBase[H,S,W,P] = new SidechainNodeView(nodeHistory(), nodeState(), nodeWallet(), nodeMemoryPool(), applicationState,applicationWallet)
+      sender() ! f(l)
+   //   sender() ! f(new SidechainNodeView(nodeHistory(), nodeState(), nodeWallet(), nodeMemoryPool(),applicationState,applicationWallet))
+ //     sender() ! f(SidechainNodeViewBase(nodeHistory(), nodeState(), nodeWallet(), nodeMemoryPool()))
+    }
+    catch {
+      case e: Exception => sender() ! akka.actor.Status.Failure(e)
+    }
+  }
+
 }
 
 object SidechainNodeViewHolder /*extends ScorexLogging with ScorexEncoding*/ {
   object ReceivableMessages{
-    case class GetDataFromCurrentSidechainNodeView[HIS, MS, VL, MP, A](f: SidechainNodeView => A)
-    case class ApplyFunctionOnNodeView[HIS, MS, VL, MP, A](f: java.util.function.Function[SidechainNodeView, A])
-    case class ApplyBiFunctionOnNodeView[HIS, MS, VL, MP, T, A](f: java.util.function.BiFunction[SidechainNodeView, T, A], functionParameter: T)
-    case class LocallyGeneratedSecret[S <: SidechainTypes#SCS](secret: S)
+    case class GetDataFromCurrentSidechainNodeView[H,S,W,P,A](f: SidechainNodeView[H,S,W,P] => A)
+    case class ApplyFunctionOnNodeView[H,S,W,P,A](f: java.util.function.Function[SidechainNodeView[H,S,W,P], A])
+    case class ApplyBiFunctionOnNodeView[H,S,W,P,T, A](f: java.util.function.BiFunction[SidechainNodeView[H,S,W,P], T, A], functionParameter: T)
   }
 }
 

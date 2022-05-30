@@ -1,45 +1,41 @@
 package com.horizen.node;
 
+import com.horizen.AbstractSidechainNodeViewHolder;
+import com.horizen.SidechainNodeViewBase;
 import com.horizen.state.ApplicationState;
 import com.horizen.wallet.ApplicationWallet;
 
-public class SidechainNodeView {
-    private NodeWallet nodeWallet;
-    private NodeHistory nodeHistory;
-    private NodeState nodeState;
-    private NodeMemoryPool nodeMemoryPool;
+public class SidechainNodeView extends SidechainNodeViewBase<NodeHistory,NodeState,NodeWallet,NodeMemoryPool> {
     private ApplicationState applicationState;
     private ApplicationWallet applicationWallet;
 
-    public SidechainNodeView(NodeHistory nodeHistory,
-                             NodeState nodeState,
-                             NodeWallet nodeWallet,
-                             NodeMemoryPool nodeMemoryPool,
+
+    public SidechainNodeView(H nodeHistory,
+                             S nodeState,
+                             W nodeWallet,
+                             P nodeMemoryPool,
                              ApplicationState applicationState,
                              ApplicationWallet applicationWallet) {
-        this.nodeWallet = nodeWallet;
-        this.nodeHistory = nodeHistory;
-        this.nodeState = nodeState;
-        this.nodeMemoryPool = nodeMemoryPool;
+        super(nodeHistory,nodeState,nodeWallet,nodeMemoryPool);
         this.applicationState = applicationState;
         this.applicationWallet = applicationWallet;
-    }
+     }
 
-    public NodeWallet getNodeWallet() {
-        return nodeWallet;
-    }
-
-    public NodeHistory getNodeHistory() {
-        return nodeHistory;
-    }
-
-    public NodeState getNodeState() {
-        return nodeState;
-    }
-
-    public NodeMemoryPool getNodeMemoryPool() {
-        return nodeMemoryPool;
-    }
+//    public H getNodeHistory() {
+//        return nodeHistory();
+//    }
+//
+//    public S getNodeState() {
+//        return nodeState();
+//    }
+//
+//    public P getNodeMemoryPool() {
+//        return nodeMemoryPool();
+//    }
+//
+//    public W getNodeWallet() {
+//        return this.nodeWallet();
+//    }
 
     public ApplicationState getApplicationState() {
         return applicationState;
