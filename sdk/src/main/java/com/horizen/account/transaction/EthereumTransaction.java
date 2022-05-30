@@ -29,9 +29,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     public EthereumTransaction(SignedRawTransaction transaction) {
         Objects.requireNonNull(transaction, "Raw Transaction can't be null.");
-
         this.transaction = transaction;
-
         signature = new SignatureSecp256k1(transaction.getSignatureData().getV(),
                 transaction.getSignatureData().getR(), transaction.getSignatureData().getS());
     }
@@ -95,15 +93,22 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return transaction.getGasLimit();
     }
 
-    @Override
-    @JsonUnwrapped
-    public AddressProposition getFrom() {
+    @JsonProperty("from")
+    private String getAddress() {
         if (signature != null) {
             SignedRawTransaction tx = (SignedRawTransaction) transaction;
             try {
-                return new AddressProposition(Numeric.hexStringToByteArray(tx.getFrom()));
-            } catch (SignatureException e) { /*we return null if signature is empty or invalid*/ }
+                return tx.getFrom();
+            } catch (SignatureException e) { /*we return an empty string if signature is empty or invalid*/ }
         }
+        return "";
+    }
+
+    @Override
+    @JsonIgnore
+    public AddressProposition getFrom() {
+        if (signature != null)
+            return new AddressProposition(Numeric.hexStringToByteArray(getAddress()));
         return null;
     }
 
@@ -132,11 +137,9 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public String toString() {
-        String address = "";
-        if (this.getFrom() != null){ address = Numeric.toHexString(this.getFrom().address()); }
         return String.format(
                 "EthereumTransaction{from=%s, nonce=%s, gasPrice=%s, gasLimit=%s, to=%s, data=%s, Signature=%s}",
-                address,
+                getAddress(),
                 Numeric.toHexStringWithPrefix(transaction.getNonce()),
                 Numeric.toHexStringWithPrefix(transaction.getGasPrice()),
                 Numeric.toHexStringWithPrefix(transaction.getGasLimit()),
@@ -146,12 +149,20 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         );
     }
 
+    /*
+     * from: "0xEB014f8c8B418Db6b45774c326A0E64C78914dC0",
+     * gasPrice: "20000000000",
+     * gas: "21000",
+     * to: '0x3535353535353535353535353535353535353535',
+     * value: "1000000000000000000",
+     * data: ""
+     */
     @Override
     public byte[] messageToSign() {
-        return Bytes.concat(getNonce().toByteArray(),
+        return Bytes.concat(getAddress().getBytes(StandardCharsets.UTF_8),
                 getGasPrice().toByteArray(),
                 getGasLimit().toByteArray(),
-                transaction.getTo().getBytes(StandardCharsets.UTF_8),
+                getAddress().getBytes(StandardCharsets.UTF_8),
                 getValue().toByteArray(),
                 getData().getBytes(StandardCharsets.UTF_8));
     }
