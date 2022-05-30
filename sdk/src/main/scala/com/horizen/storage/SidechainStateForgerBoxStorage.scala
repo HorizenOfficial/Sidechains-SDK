@@ -1,13 +1,10 @@
 package com.horizen.storage
 
 import com.horizen.SidechainTypes
-import com.horizen.utils.ByteArrayWrapper
-import scorex.crypto.hash.Blake2b256
+import com.horizen.utils.{ByteArrayWrapper, Utils, Pair => JPair}
 import scorex.util.ScorexLogging
 import java.util.{ArrayList => JArrayList}
-
 import com.horizen.box.{ForgerBox, ForgerBoxSerializer}
-import com.horizen.utils.{Pair => JPair}
 
 import scala.compat.java8.OptionConverters._
 import scala.collection.JavaConverters._
@@ -25,12 +22,9 @@ class SidechainStateForgerBoxStorage(storage: Storage)
 
   private val forgerBoxSerializer: ForgerBoxSerializer = ForgerBoxSerializer.getSerializer
 
-  def calculateKey(boxId: Array[Byte]): ByteArrayWrapper = {
-    new ByteArrayWrapper(Blake2b256.hash(boxId))
-  }
 
   def getForgerBox(boxId: Array[Byte]): Option[ForgerBox] = {
-    storage.get(calculateKey(boxId)).asScala match {
+    storage.get(Utils.calculateKey(boxId)).asScala match {
       case Some(baw) =>
         forgerBoxSerializer.parseBytesTry(baw.data) match {
           case Success(box) => Option(box)
@@ -59,10 +53,10 @@ class SidechainStateForgerBoxStorage(storage: Storage)
 
     // Update boxes data
     for (id <- boxIdsRemoveSet)
-      removeList.add(calculateKey(id.data))
+      removeList.add(Utils.calculateKey(id.data))
 
     for (box <- forgerBoxUpdateSeq)
-      updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](calculateKey(box.id()),
+      updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](Utils.calculateKey(box.id()),
         new ByteArrayWrapper(forgerBoxSerializer.toBytes(box))))
 
     storage.update(version, updateList, removeList)

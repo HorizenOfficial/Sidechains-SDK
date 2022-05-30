@@ -1,5 +1,6 @@
 package com.horizen.examples;
 
+import com.horizen.backup.BoxIterator;
 import com.horizen.box.Box;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.Secret;
@@ -83,5 +84,10 @@ public class DefaultApplicationWallet implements ApplicationWallet {
         logger.debug("Closing storages");
         walletStorage1.close();
         walletStorage2.close();
+    }
+
+    @Override
+    public void onBackupRestore(BoxIterator i) {
+
     }
 }

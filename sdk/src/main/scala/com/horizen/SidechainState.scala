@@ -1,6 +1,7 @@
 package com.horizen
 
 import com.google.common.primitives.{Bytes, Ints}
+import com.horizen.backup.BoxIterator
 
 import java.io.File
 import java.util
@@ -12,7 +13,7 @@ import com.horizen.node.NodeState
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.ApplicationState
-import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
+import com.horizen.storage.{BackupStorage, SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
 import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import scorex.core._
@@ -22,6 +23,7 @@ import scorex.util.{ModifierId, ScorexLogging, bytesToId}
 
 import java.math.{BigDecimal, MathContext}
 import com.horizen.box.data.ZenBoxData
+import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.cryptolibprovider.CryptoLibProvider
 
 import scala.collection.JavaConverters._
@@ -532,6 +534,18 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         new ZenBox(data, nonce)
     }.filter(box => box.value() > 0)
   }
+
+  def restoreBackup(backupStorageBoxIterator: BoxIterator, lastVersion: Array[Byte]): Try[SidechainState] = Try {
+    stateStorage.restoreBackup(backupStorageBoxIterator, lastVersion)
+    backupStorageBoxIterator.seekToFirst()
+    applicationState.onBackupRestore(backupStorageBoxIterator) match {
+      case Success(_) =>
+        this
+      case Failure(e) =>
+        log.error("Error during the backup restore inside the SidechainState", e)
+        throw e
+    }
+  }
 }
 
 object SidechainState
@@ -575,14 +589,18 @@ object SidechainState
   private[horizen] def createGenesisState(stateStorage: SidechainStateStorage,
                                           forgerBoxStorage: SidechainStateForgerBoxStorage,
                                           utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
+                                          backupStorage: BackupStorage,
                                           params: NetworkParams,
                                           applicationState: ApplicationState,
                                           genesisBlock: SidechainBlock): Try[SidechainState] = Try {
 
-    if (stateStorage.isEmpty)
-      new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, idToVersion(genesisBlock.parentId), applicationState)
-        .applyModifier(genesisBlock).get
-    else
+    if (stateStorage.isEmpty) {
+      var state = new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, idToVersion(genesisBlock.parentId), applicationState)
+      if (!backupStorage.isEmpty) {
+        state = state.restoreBackup(backupStorage.getBoxIterator, versionToBytes(idToVersion(genesisBlock.parentId))).get
+      }
+      state.applyModifier(genesisBlock).get
+    } else
       throw new RuntimeException("State storage is not empty!")
   }
 

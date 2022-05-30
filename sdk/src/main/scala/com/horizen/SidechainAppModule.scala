@@ -2,7 +2,6 @@ package com.horizen
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}
-
 import com.google.inject.name.Named
 import com.google.inject.Provides
 import com.horizen.api.http.ApplicationApiGroup
@@ -10,7 +9,7 @@ import com.horizen.box.BoxSerializer
 import com.horizen.helper.{NodeViewHelper, NodeViewHelperImpl, SecretSubmitHelper, SecretSubmitHelperImpl, TransactionSubmitHelper, TransactionSubmitHelperImpl}
 import com.horizen.secret.SecretSerializer
 import com.horizen.state.ApplicationState
-import com.horizen.storage.Storage
+import com.horizen.storage.{Storage}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.Pair
 import com.horizen.wallet.ApplicationWallet
@@ -53,11 +52,11 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
           @Named("WalletForgingBoxesInfoStorage")  walletForgingBoxesInfoStorage: Storage,
           @Named("WalletCswDataStorage") walletCswDataStorage: Storage,
           @Named("ConsensusStorage")  consensusStorage: Storage,
+          @Named("BackupStorage")  backUpStorage: Storage,
           @Named("CustomApiGroups")  customApiGroups: JList[ApplicationApiGroup],
           @Named("RejectedApiPaths")  rejectedApiPaths : JList[Pair[String, String]],
           @Named("ApplicationStopper") applicationStopper : SidechainAppStopper
-
-         ): SidechainApp = {
+  ): SidechainApp = {
     synchronized {
       if (app == null) {
         app = new SidechainApp(
@@ -77,6 +76,7 @@ abstract class SidechainAppModule extends com.google.inject.AbstractModule {
           walletForgingBoxesInfoStorage,
           walletCswDataStorage,
           consensusStorage,
+          backUpStorage,
           customApiGroups,
           rejectedApiPaths,
           applicationStopper

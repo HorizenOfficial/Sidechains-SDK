@@ -1,5 +1,6 @@
 package com.horizen.examples;
 
+import com.horizen.backup.BoxIterator;
 import com.horizen.block.SidechainBlock;
 import com.horizen.box.Box;
 import com.horizen.proposition.Proposition;
@@ -90,5 +91,10 @@ public class DefaultApplicationState implements ApplicationState {
         logger.debug("Closing storages");
         appStorage1.close();
         appStorage2.close();
+    }
+
+
+    public Try<ApplicationState> onBackupRestore(BoxIterator i) {
+        return new Success<>(this);
     }
 }

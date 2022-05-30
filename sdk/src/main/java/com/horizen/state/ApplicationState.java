@@ -1,5 +1,6 @@
 package com.horizen.state;
 
+import com.horizen.backup.BoxIterator;
 import com.horizen.block.SidechainBlock;
 import com.horizen.box.Box;
 import com.horizen.proposition.Proposition;
@@ -28,6 +29,8 @@ public interface ApplicationState {
     // check that all storages of the application which are update by the sdk core, have the version corresponding to the
     // blockId given. This is useful when checking the alignment of the storages versions at node restart
     boolean checkStoragesVersion(byte[] blockId);
+
+    Try<ApplicationState> onBackupRestore(BoxIterator i);
 }
 
 

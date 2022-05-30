@@ -1,14 +1,18 @@
 package com.horizen.storage
 
-import com.horizen.box.Box
-import com.horizen.companion.SidechainBoxesCompanion
-import com.horizen.proposition.Proposition
-import com.horizen.utils.{ByteArrayWrapper, Pair => JPair}
+
+import java.util.{ArrayList => JArrayList}
+import com.horizen.utils.{Pair => JPair}
+import com.horizen.utils.ByteArrayWrapper
+import java.util.{Optional, ArrayList => JArrayList}
+import com.horizen.utils.{ByteArrayWrapper, Utils, Pair => JPair}
 import com.horizen.{SidechainTypes, WalletBox, WalletBoxSerializer}
+import com.horizen.companion.SidechainBoxesCompanion
+import com.horizen.box.Box
+import com.horizen.proposition.Proposition
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
 
-import java.util.{ArrayList => JArrayList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
@@ -33,10 +37,6 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
 
   loadWalletBoxes()
 
-  def calculateKey(boxId : Array[Byte]) : ByteArrayWrapper = {
-    new ByteArrayWrapper(Blake2b256.hash(boxId))
-  }
-
   private def calculateBoxesBalances() : Unit = {
     for (bc <-_walletBoxesByType.keys)
       _walletBoxesBalances.put(bc, _walletBoxesByType(bc).map(_._2.box.value()).sum)
@@ -55,7 +55,7 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
 
   private def addWalletBoxByType(walletBox : WalletBox) : Unit = {
     val bc = walletBox.box.getClass
-    val key = calculateKey(walletBox.box.id())
+    val key = Utils.calculateKey(walletBox.box.id())
     val t = _walletBoxesByType.get(bc)
     if (t.isEmpty) {
       val m = new mutable.LinkedHashMap[ByteArrayWrapper, WalletBox]()
@@ -76,7 +76,7 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
     for (wb <- storage.getAll.asScala){
       val walletBox = _walletBoxSerializer.parseBytesTry(wb.getValue.data)
       if (walletBox.isSuccess) {
-        _walletBoxes.put(calculateKey(walletBox.get.box.id()), walletBox.get)
+        _walletBoxes.put(Utils.calculateKey(walletBox.get.box.id()), walletBox.get)
         addWalletBoxByType(walletBox.get)
       } else
         log.error("Error while WalletBox parsing.", walletBox)
@@ -85,11 +85,11 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
   }
 
   def get (boxId : Array[Byte]) : Option[WalletBox] = {
-    _walletBoxes.get(calculateKey(boxId))
+    _walletBoxes.get(Utils.calculateKey(boxId))
   }
 
   def get (boxIds : List[Array[Byte]]) : List[WalletBox] = {
-    for (id <- boxIds.map(calculateKey) if _walletBoxes.get(id).isDefined) yield _walletBoxes(id)
+    for (id <- boxIds.map(Utils.calculateKey) if _walletBoxes.get(id).isDefined) yield _walletBoxes(id)
   }
 
   def getAll : List[WalletBox] = {
@@ -117,10 +117,10 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
     val removeList = new JArrayList[ByteArrayWrapper]()
     val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
 
-    removeList.addAll(boxIdsRemoveList.map(calculateKey(_)).asJavaCollection)
+    removeList.addAll(boxIdsRemoveList.map(Utils.calculateKey(_)).asJavaCollection)
 
     for (wb <- walletBoxUpdateList)
-      updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](calculateKey(wb.box.id()),
+      updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](Utils.calculateKey(wb.box.id()),
         new ByteArrayWrapper(_walletBoxSerializer.toBytes(wb))))
 
     storage.update(version,
@@ -135,7 +135,7 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
     }
 
     for (wba <- walletBoxUpdateList) {
-      val key = calculateKey(wba.box.id())
+      val key = Utils.calculateKey(wba.box.id())
       val bta = _walletBoxes.put(key, wba)
       addWalletBoxByType(wba)
       if (bta.isEmpty)
@@ -161,5 +161,7 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
   }
 
   def isEmpty: Boolean = storage.isEmpty
+
+  def getIterator: StorageIterator = storage.getIterator
 
 }

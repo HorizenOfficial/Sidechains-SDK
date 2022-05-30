@@ -6,7 +6,7 @@ import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.fixtures.{BoxFixture, StoreFixture}
 import com.horizen.librustsidechains.FieldElement
 import com.horizen.proposition.Proposition
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, UtxoMerkleTreeLeafInfo, Pair => JPair}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, Utils, UtxoMerkleTreeLeafInfo, Pair => JPair}
 import org.junit.Test
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
@@ -74,7 +74,7 @@ class SidechainStateUtxoMerkleTreeStorageTest
     Mockito.when(mockedPhysicalStorage.get(ArgumentMatchers.any[ByteArrayWrapper]())).thenAnswer(answer => {
       val key: ByteArrayWrapper = answer.getArgument(0)
       utxoLeafInfoSeq
-        .find(entry => key.equals(utxoStorage.calculateKey(entry._1.id())))
+        .find(entry => key.equals(Utils.calculateKey(entry._1.id())))
         .map(entry => new ByteArrayWrapper(entry._2.bytes))
         .asJava
     })
@@ -128,10 +128,10 @@ class SidechainStateUtxoMerkleTreeStorageTest
             val leafFE = utxoStorage.calculateLeaf(box)
             val leafInfo = UtxoMerkleTreeLeafInfo(leafFE.serializeFieldElement(), idx)
             leafFE.freeFieldElement()
-            new JPair(new ByteArrayWrapper(utxoStorage.calculateKey(box.id())), new ByteArrayWrapper(leafInfo.bytes))
+            new JPair(new ByteArrayWrapper(Utils.calculateKey(box.id())), new ByteArrayWrapper(leafInfo.bytes))
         }.asJava
 
-        val expectedToRemove = boxesToRemove.toSeq.map(id => utxoStorage.calculateKey(id.data)).asJava
+        val expectedToRemove = boxesToRemove.toSeq.map(id => Utils.calculateKey(id.data)).asJava
 
         assertEquals("Version is different.", version, actVersion)
         assertEquals("Update list is different.", expectedToUpdate, actToUpdate)
@@ -164,7 +164,7 @@ class SidechainStateUtxoMerkleTreeStorageTest
     Mockito.when(mockedPhysicalStorage.get(ArgumentMatchers.any[ByteArrayWrapper]())).thenAnswer(answer => {
       val key: ByteArrayWrapper = answer.getArgument(0)
       utxoLeafInfoSeq
-        .find(entry => key.equals(utxoStorage.calculateKey(entry._1.id())))
+        .find(entry => key.equals(Utils.calculateKey(entry._1.id())))
         .map(entry => new ByteArrayWrapper(entry._2.bytes))
         .asJava
     })
@@ -200,10 +200,10 @@ class SidechainStateUtxoMerkleTreeStorageTest
             val leafFE = utxoStorage.calculateLeaf(box)
             val leafInfo = UtxoMerkleTreeLeafInfo(leafFE.serializeFieldElement(), pos)
             leafFE.freeFieldElement()
-            new JPair(new ByteArrayWrapper(utxoStorage.calculateKey(box.id())), new ByteArrayWrapper(leafInfo.bytes))
+            new JPair(new ByteArrayWrapper(Utils.calculateKey(box.id())), new ByteArrayWrapper(leafInfo.bytes))
         }.asJava
 
-        val expectedToRemove = boxesToRemove.toSeq.map(id => utxoStorage.calculateKey(id.data)).asJava
+        val expectedToRemove = boxesToRemove.toSeq.map(id => Utils.calculateKey(id.data)).asJava
 
         assertEquals("Version is different.", version, actVersion)
         assertEquals("Update list is different.", expectedToUpdate, actToUpdate)

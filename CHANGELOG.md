@@ -1,3 +1,7 @@
+**0.3.4**
+1. Added the possibility to perform a backup of a sidechain non coin-boxes and restore these boxes into a new bootstrapped sidechain of the same type.
+2. log4j version updated.
+
 **0.3.3**
 1. Mainchain block deserialization fix: CompactSize usage issue.
 2. Bootstrapping tool improvement: scgenesisinfo data parsing.

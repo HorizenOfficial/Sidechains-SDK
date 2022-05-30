@@ -65,7 +65,7 @@ public class SimpleAppModule extends SidechainAppModule
         File stateUtxoMerkleTreeStore = new File(dataDirAbsolutePath + "/stateUtxoMerkleTree");
         File historyStore = new File(dataDirAbsolutePath + "/history");
         File consensusStore = new File(dataDirAbsolutePath + "/consensusData");
-
+        File backupStore = new File(dataDirAbsolutePath + "/backupStorage");
 
 
         // Here I can add my custom rest api and/or override existing one
@@ -133,6 +133,9 @@ public class SimpleAppModule extends SidechainAppModule
         bind(Storage.class)
                 .annotatedWith(Names.named("ConsensusStorage"))
                 .toInstance(new VersionedLevelDbStorageAdapter(consensusStore));
+        bind(Storage.class)
+                .annotatedWith(Names.named("BackupStorage"))
+                .toInstance(new VersionedLevelDbStorageAdapter(backupStore));
 
         bind(new TypeLiteral<List<ApplicationApiGroup>> () {})
                 .annotatedWith(Names.named("CustomApiGroups"))
@@ -145,5 +148,6 @@ public class SimpleAppModule extends SidechainAppModule
         bind(SidechainAppStopper.class)
                 .annotatedWith(Names.named("ApplicationStopper"))
                 .toInstance(applicationStopper);
+
     }
 }
