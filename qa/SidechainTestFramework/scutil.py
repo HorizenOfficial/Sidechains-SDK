@@ -120,7 +120,7 @@ def launch_bootstrap_tool(command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK",
-                                          "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.3.3.jar",
+                                          "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.3.4.jar",
                                 command_name, json_param], stdout=subprocess.PIPE)
     sc_bootstrap_output = java_ps.communicate()[0]
     try:
@@ -142,7 +142,7 @@ def launch_db_tool(dirName, command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK",
-                                          "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-0.3.3.jar",
+                                          "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-0.3.4.jar",
                                 storagesPath, command_name, json_param], stdout=subprocess.PIPE)
     db_tool_output = java_ps.communicate()[0]
     try:
@@ -468,7 +468,7 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
         lib_separator = ";"
 
     if binary is None:
-        binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.3.3.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+        binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.3.4.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
     #        else if platform.system() == 'Linux':
     '''
     In order to effectively attach a debugger (e.g IntelliJ) to the simpleapp, it is necessary to start the process
