@@ -1,25 +1,31 @@
 package com.horizen.account.state
 
 import com.horizen.SidechainTypes
-import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, WithdrawalEpochCertificate}
-import com.horizen.box.{ForgerBox, WithdrawalRequestBox}
-import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.account.block.AccountBlock
+import com.horizen.block.WithdrawalEpochCertificate
+import com.horizen.box.WithdrawalRequestBox
+import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.params.NetworkParams
-import com.horizen.state.{State, StateReader, StateView}
-import com.horizen.utils.{BlockFeeInfo, BytesUtils, FeePaymentsUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import scorex.core.{VersionTag, idToBytes, idToVersion, versionToBytes}
-import scorex.util.ScorexLogging
+import com.horizen.state.State
+import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.account.storage.AccountStateMetadataStorage
+import scorex.core.{VersionTag, bytesToVersion, idToBytes, idToVersion, versionToBytes, versionToId}
+import scorex.util.{ModifierId, ScorexLogging, bytesToId}
 
 import java.util
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Try}
 
-class AccountState(val params: NetworkParams) extends State[SidechainTypes#SCAT, AccountStateView, AccountState]
-  with AccountStateReader
-  with ScorexLogging {
-   self: AccountState =>
+class AccountState(val params: NetworkParams,
+                   override val version: VersionTag,
+                   stateMetadataStorage: AccountStateMetadataStorage)
+  extends State[SidechainTypes#SCAT, AccountBlock, AccountStateView, AccountState]
+    with AccountStateReader
+    with ScorexLogging {
+
+  override type NVCT = AccountState
 
   // Modifiers:
-  override def applyModifier(mod: SidechainBlock): Try[AccountState] = Try {
+  override def applyModifier(mod: AccountBlock): Try[AccountState] = Try {
     require(versionToBytes(version).sameElements(idToBytes(mod.parentId)),
       s"Incorrect state version!: ${mod.parentId} found, " + s"$version expected")
 
@@ -30,14 +36,14 @@ class AccountState(val params: NetworkParams) extends State[SidechainTypes#SCAT,
     }
 
     // Check Txs semantic validity first
-    for(tx <- mod.sidechainTransactions) // TODO: replace with Account Txs
+    for(tx <- mod.sidechainTransactions)
       tx.semanticValidity()
 
     // Validate top quality certificate in the end of the submission window:
     // Reject block if it refers to the chain that conflicts with the top quality certificate content
     // Mark sidechain as ceased in case there is no certificate appeared within the submission window.
     val currentWithdrawalEpochInfo = stateView.getWithdrawalEpochInfo
-    val modWithdrawalEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, currentWithdrawalEpochInfo, params)
+    val modWithdrawalEpochInfo: WithdrawalEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, currentWithdrawalEpochInfo, params)
 
     // If SC block has reached the certificate submission window end -> check the top quality certificate
     // Note: even if mod contains multiple McBlockRefData entries, we are sure they belongs to the same withdrawal epoch.
@@ -61,7 +67,9 @@ class AccountState(val params: NetworkParams) extends State[SidechainTypes#SCAT,
 
     // Update view with the block info
     stateView.updateWithdrawalEpochInfo(modWithdrawalEpochInfo).get
-    stateView.addFeeInfo(mod.feeInfo)
+
+    val consensusEpochNum: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)
+   stateView.updateConsensusEpochNumber(consensusEpochNum)
 
     // If SC block has reached the end of the withdrawal epoch -> fee payments expected to be produced.
     // Verify that Forger assumed the same fees to be paid as the current node does.
@@ -85,10 +93,16 @@ class AccountState(val params: NetworkParams) extends State[SidechainTypes#SCAT,
       stateView = stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
     }
 
-    // to do: mod.accountTransactions()
-    for(accountTx <- Seq()) {
-      stateView = stateView.applyTransaction(accountTx).get
+    for(tx <- mod.sidechainTransactions) {
+      stateView = stateView.applyTransaction(tx).get
     }
+
+    // TODO: calculate and update fee info.
+    // Note: we should save the total gas paid and the forgerAddress
+    stateView.addFeeInfo(BlockFeeInfo(0L, mod.header.forgingStakeInfo.blockSignPublicKey)).get
+
+    //TODO:
+    stateView.updateAccountStateRoot(new Array[Byte](32))
 
     stateView.commit(idToVersion(mod.id)).get
 
@@ -139,80 +153,85 @@ class AccountState(val params: NetworkParams) extends State[SidechainTypes#SCAT,
     }*/
   }
 
-  override def rollbackTo(version: VersionTag): Try[AccountState] = ???
+  // Note: Equal to SidechainState.isSwitchingConsensusEpoch
+  def isSwitchingConsensusEpoch(mod: AccountBlock): Boolean = {
+    val blockConsensusEpoch: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)
+    val currentConsensusEpoch: ConsensusEpochNumber = getConsensusEpochNumber.getOrElse(intToConsensusEpochNumber(0))
+
+    blockConsensusEpoch != currentConsensusEpoch
+  }
+
+  override def rollbackTo(version: VersionTag): Try[AccountState] = {
+    Try {
+      require(version != null, "Version to rollback to must be NOT NULL.")
+      new AccountState(params, version, stateMetadataStorage.rollback(new ByteArrayWrapper(versionToBytes(version))).get)
+    }.recoverWith({
+      case exception =>
+        log.error("Exception was thrown during rollback.", exception)
+        Failure(exception)
+    })
+  }
 
   // versions part
-  override def version: VersionTag = ???
-
-  override def maxRollbackDepth: Int = ???
+  override def maxRollbackDepth: Int = stateMetadataStorage.rollbackVersions.size
 
   // View
-  override def getView: AccountStateView = ???
+  override def getView: AccountStateView = {
+    new AccountStateView(stateMetadataStorage.getView)
+  }
 
   // getters:
   override def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequestBox] = ???
 
-  override def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = ???
+  override def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
+    getView.certificate(referencedWithdrawalEpoch)
+  }
 
-  override def certificateTopQuality(referencedWithdrawalEpoch: Int): Long = ???
+  override def certificateTopQuality(referencedWithdrawalEpoch: Int): Long = getView.certificateTopQuality(referencedWithdrawalEpoch)
 
-  override def getWithdrawalEpochInfo: WithdrawalEpochInfo = ???
+  override def getWithdrawalEpochInfo: WithdrawalEpochInfo = getView.getWithdrawalEpochInfo
 
-  override def hasCeased: Boolean = ???
+  override def hasCeased: Boolean = getView.hasCeased
 
-  override def getBlockFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo] = ???
+  override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = getView.getConsensusEpochNumber
+
+  // Returns lastBlockInEpoch and ConsensusEpochInfo for that epoch
+  // Identical to the SidechainState.getCurrentConsensusEpochInfo method
+  def getConsensusEpochInfo: (ModifierId, ConsensusEpochInfo) = {
+    //TODO:
+    val tmpList = new java.util.ArrayList[Array[Byte]]()
+    tmpList.add(new Array[Byte](32))
+    (versionToId(version), ConsensusEpochInfo(ConsensusEpochNumber @@ 0, MerkleTree.createMerkleTree(tmpList), 0L))
+  }
+
+  override def getBlockFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo] = getView.getBlockFeePayments(withdrawalEpochNumber)
 
   // Account specific getters
   override def getAccount(address: Array[Byte]): Account = ???
 
   override def getBalance(address: Array[Byte]): Long = ???
+
+  override def getAccountStateRoot: Option[Array[Byte]] = getView.getAccountStateRoot
 }
 
 
+object AccountState {
+  private[horizen] def restoreState(stateMetadataStorage: AccountStateMetadataStorage,
+                                    params: NetworkParams): Option[AccountState] = {
 
-// Types tests:
+    if (!stateMetadataStorage.isEmpty)
+      Some(new AccountState(params, bytesToVersion(stateMetadataStorage.lastVersionId.get.data), stateMetadataStorage))
+    else
+      None
+  }
 
-/*trait FinalAccountStateReader extends AccountStateReader {
-  def getSomething: Int = 42
-}
+  private[horizen] def createGenesisState(stateMetadataStorage: AccountStateMetadataStorage,
+                                          params: NetworkParams,
+                                          genesisBlock: AccountBlock): Try[AccountState] = Try {
 
-class FinalAccountView(stateStorageView: SidechainStateStorageView, stateDb: StateDB) extends AccountStateView[FinalAccountView] with FinalAccountStateReader {
-  override def commit(version: VersionTag): Try[Unit] = {
-    stateStorageView.commit(version)
-    stateDb.commit(stateRoot)
+    if (stateMetadataStorage.isEmpty)
+      new AccountState(params, idToVersion(genesisBlock.parentId), stateMetadataStorage).applyModifier(genesisBlock).get
+    else
+      throw new RuntimeException("State metadata storage is not empty!")
   }
 }
-
-class FinalState(stateStorage: SidechainStateStorage) extends AccountState[FinalAccountView, FinalState] with FinalAccountStateReader {
-  override def getReader: FinalAccountStateReader = this
-
-  override def getView: FinalAccountView = {
-    new FinalAccountView(stateStorage.getView(), ....)
-  }
-
-}
-
-
-object Main extends App {
-  val state: FinalState = new FinalState
-  test2()
-
-  def test1(): Unit = {
-    val view: FinalAccountView = state.getView
-    view.savepoint()
-    view.applyMainchainBlockReferenceData(null) match {
-      case Success(v) =>
-        val newVersion: String = "v1"
-        v.commit(VersionTag @@ newVersion)
-      case Failure(exception) =>
-        view.rollbackToSavepoint()
-    }
-  }
-
-  def test2(): Unit = {
-    val reader: FinalAccountStateReader = state.getReader
-    val res: Int = reader.getSomething
-    System.out.println(res)
-  }
-
-}*/

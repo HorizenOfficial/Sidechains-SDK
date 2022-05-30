@@ -14,8 +14,11 @@
 	<packaging>pom</packaging>
 
 	<modules>
+		<module>libevm</module>
+		<module>evm</module>
 		<module>sdk</module>
 		<module>examples/simpleapp</module>
+		<module>examples/evmapp</module>
 		<module>tools/sctool</module>
 	</modules>
 </project>
