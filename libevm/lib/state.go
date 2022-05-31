@@ -81,6 +81,10 @@ func (s *Service) StateCommit(params HandleParams) (error, common.Hash) {
 	if err != nil {
 		return err, common.Hash{}
 	}
+	err = statedb.Database().TrieDB().Commit(hash, false, nil)
+	if err != nil {
+		return err, common.Hash{}
+	}
 	return nil, hash
 }
 
