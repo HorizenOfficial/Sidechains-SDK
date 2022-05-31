@@ -30,7 +30,7 @@ public class JsonString implements NativeMapped {
                 return new JsonString(ptr.getString(0));
             } finally {
                 // free the string pointer on the native end
-                LibEvm.Instance.Free(ptr);
+                LibEvm.Free(ptr);
             }
         }
     }

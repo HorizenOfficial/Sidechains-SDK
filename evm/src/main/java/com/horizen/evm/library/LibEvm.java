@@ -3,9 +3,10 @@ package com.horizen.evm.library;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.horizen.evm.StateAccount;
 import com.sun.jna.Native;
+import com.sun.jna.Pointer;
 
 public final class LibEvm {
-    public static LibEvmInterface Instance;
+    private static final LibEvmInterface instance;
 
     static {
         var os = System.getProperty("os.name").toLowerCase();
@@ -18,19 +19,36 @@ public final class LibEvm {
             libExtension = "so";
         }
         var lib = "libevm." + libExtension;
-        Instance = Native.load(lib, LibEvmInterface.class);
+        instance = Native.load(lib, LibEvmInterface.class);
     }
 
     private LibEvm() {
         // prevent instantiation of this class
     }
 
-    public static void Invoke(String method, JsonPointer args) throws Exception {
-        Invoke(method, args, Void.class);
+    static void Free(Pointer ptr) {
+        instance.Free(ptr);
     }
 
-    public static <R> R Invoke(String method, JsonPointer args, Class<R> responseType) throws Exception {
-        var json = Instance.Invoke(method, args);
+    private static class InteropResult<R> {
+        public String error;
+        public R result;
+
+        public boolean isError() {
+            return !error.isEmpty();
+        }
+
+        @Override
+        public String toString() {
+            if (!error.isEmpty()) {
+                return String.format("error: %s", error);
+            }
+            return "success";
+        }
+    }
+
+    private static <R> R Invoke(String method, JsonPointer args, Class<R> responseType) throws Exception {
+        var json = instance.Invoke(method, args);
         // build type information to deserialize to generic type InteropResult<R>
         var type = TypeFactory.defaultInstance().constructParametricType(InteropResult.class, responseType);
         InteropResult<R> response = json.deserialize(type);
@@ -40,19 +58,23 @@ public final class LibEvm {
         return response.result;
     }
 
-    public static class InitializeParams extends JsonPointer {
+    private static void Invoke(String method, JsonPointer args) throws Exception {
+        Invoke(method, args, Void.class);
+    }
+
+    private static class InitializeParams extends JsonPointer {
         public String path;
     }
 
-    public static class OpenStateParams extends JsonPointer {
+    private static class OpenStateParams extends JsonPointer {
         public String root;
     }
 
-    public static class HandleParams extends JsonPointer {
+    private static class HandleParams extends JsonPointer {
         public int handle;
     }
 
-    public static class AccountParams extends HandleParams {
+    private static class AccountParams extends HandleParams {
         public String address;
     }
 
@@ -98,23 +120,6 @@ public final class LibEvm {
         params.handle = handle;
         params.address = address;
         return Invoke("StateGetAccount", params, StateAccount.class);
-    }
-
-    public static class InteropResult<R> {
-        public String error;
-        public R result;
-
-        public boolean isError() {
-            return !error.isEmpty();
-        }
-
-        @Override
-        public String toString() {
-            if (!error.isEmpty()) {
-                return String.format("error: %s", error);
-            }
-            return "success";
-        }
     }
 
 //    public static class ContractParams extends JsonPointer {
