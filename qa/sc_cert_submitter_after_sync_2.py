@@ -108,9 +108,7 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
         connect_sc_nodes(sc_node1, 1)  # Connect SC nodes
 
         print("Starting synchronization...")
-        time.sleep(100)
-        # TODO: use sync blocks instead of timeout above as soon as an api calls on sync will work.
-        #sync_sc_blocks(self.sc_nodes, 100)
+        sync_sc_blocks(self.sc_nodes, 200, True)
         print("Synchronization finished.")
 
         # Disable sc node 1 submitter

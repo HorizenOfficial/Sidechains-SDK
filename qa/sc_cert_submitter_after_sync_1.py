@@ -57,8 +57,7 @@ class ScCertSubmitterAfterSync1(SidechainTestFramework):
             sc_node_2_configuration)
 
         # rewind sc genesis block timestamp for 10 consensus epochs
-        self.options.restapitimeout = 100 # TODO: remove when NVH actor message pool fix is applied
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720*120*10) # TODO: need to have regular 5 sec timeout to crash Submitter while getSubmissionWindowStatus exception
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720*120*10)
 
     def sc_setup_nodes(self):
         return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
@@ -75,7 +74,7 @@ class ScCertSubmitterAfterSync1(SidechainTestFramework):
         connect_sc_nodes(sc_node1, 1)  # Connect SC nodes
 
         print("Starting synchronization...")
-        sync_sc_blocks(self.sc_nodes, 100)
+        sync_sc_blocks(self.sc_nodes, 100, True)
         print("Synchronization finished.")
 
         mc_blocks_left_for_we = self.sc_withdrawal_epoch_length - 1  # minus genesis block
