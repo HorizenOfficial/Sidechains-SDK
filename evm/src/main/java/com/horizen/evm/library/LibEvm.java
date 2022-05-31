@@ -1,7 +1,6 @@
 package com.horizen.evm.library;
 
 import com.fasterxml.jackson.databind.type.TypeFactory;
-import com.horizen.evm.StateAccount;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 
@@ -62,64 +61,117 @@ public final class LibEvm {
         Invoke(method, args, Void.class);
     }
 
-    private static class InitializeParams extends JsonPointer {
+    public static class InitializeParams extends JsonPointer {
         public String path;
+
+        public InitializeParams() {
+        }
+
+        public InitializeParams(String path) {
+            this.path = path;
+        }
     }
 
-    private static class OpenStateParams extends JsonPointer {
+    public static class OpenStateParams extends JsonPointer {
         public String root;
+
+        public OpenStateParams() {
+        }
+
+        public OpenStateParams(String root) {
+            this.root = root;
+        }
     }
 
-    private static class HandleParams extends JsonPointer {
+    public static class HandleParams extends JsonPointer {
         public int handle;
+
+        public HandleParams() {
+        }
+
+        public HandleParams(int handle) {
+            this.handle = handle;
+        }
     }
 
-    private static class AccountParams extends HandleParams {
+    public static class AccountParams extends HandleParams {
         public String address;
+
+        public AccountParams() {
+        }
+
+        public AccountParams(int handle, String address) {
+            super(handle);
+            this.address = address;
+        }
+    }
+
+    public static class BalanceParams extends AccountParams {
+        public String amount;
+
+        public BalanceParams() {
+        }
+
+        public BalanceParams(int handle, String address, String amount) {
+            super(handle, address);
+            this.amount = amount;
+        }
+    }
+
+    public static class NonceParams extends AccountParams {
+        public long nonce;
+
+        public NonceParams() {
+        }
+
+        public NonceParams(int handle, String address, long nonce) {
+            super(handle, address);
+            this.nonce = nonce;
+        }
     }
 
     public static void Initialize(String path) throws Exception {
-        var params = new InitializeParams();
-        params.path = path;
-        Invoke("Initialize", params);
+        Invoke("Initialize", new InitializeParams(path));
     }
 
     public static int StateOpen(String stateRootHex) throws Exception {
-        var params = new OpenStateParams();
-        params.root = stateRootHex;
-        return Invoke("StateOpen", params, int.class);
+        return Invoke("StateOpen", new OpenStateParams(stateRootHex), int.class);
     }
 
     public static void StateClose(int handle) throws Exception {
-        var params = new HandleParams();
-        params.handle = handle;
-        Invoke("StateClose", params);
+        Invoke("StateClose", new HandleParams(handle));
     }
 
     public static String StateIntermediateRoot(int handle) throws Exception {
-        var params = new HandleParams();
-        params.handle = handle;
-        return Invoke("StateIntermediateRoot", params, String.class);
+        return Invoke("StateIntermediateRoot", new HandleParams(handle), String.class);
     }
 
     public static String StateCommit(int handle) throws Exception {
-        var params = new HandleParams();
-        params.handle = handle;
-        return Invoke("StateCommit", params, String.class);
+        return Invoke("StateCommit", new HandleParams(handle), String.class);
     }
 
-    public static String StateGetAccountBalance(int handle, String address) throws Exception {
-        var params = new AccountParams();
-        params.handle = handle;
-        params.address = address;
-        return Invoke("StateGetAccountBalance", params, String.class);
+    public static String StateGetBalance(int handle, String address) throws Exception {
+        return Invoke("StateGetBalance", new AccountParams(handle, address), String.class);
     }
 
-    public static StateAccount StateGetAccount(int handle, String address) throws Exception {
-        var params = new AccountParams();
-        params.handle = handle;
-        params.address = address;
-        return Invoke("StateGetAccount", params, StateAccount.class);
+    public static void StateAddBalance(int handle, String address, String amount) throws Exception {
+        Invoke("StateAddBalance", new BalanceParams(handle, address, amount));
+    }
+
+    public static void StateSubBalance(int handle, String address, String amount) throws Exception {
+        Invoke("StateSubBalance", new BalanceParams(handle, address, amount));
+    }
+
+    public static void StateSetBalance(int handle, String address, String amount) throws Exception {
+        Invoke("StateSetBalance", new BalanceParams(handle, address, amount));
+    }
+
+    public static long StateGetNonce(int handle, String address) throws Exception {
+        return Invoke("StateGetNonce", new AccountParams(handle, address), long.class);
+    }
+
+    public static void StateSetNonce(int handle, String address, long nonce) throws Exception {
+        Invoke("StateSetNonce", new NonceParams(handle, address, nonce));
     }
 
 //    public static class ContractParams extends JsonPointer {

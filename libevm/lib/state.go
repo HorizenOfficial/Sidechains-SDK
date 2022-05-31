@@ -22,9 +22,14 @@ type AccountParams struct {
 	Address common.Address `json:"address"`
 }
 
-type StateAccount struct {
-	Nonce   uint64        `json:"nonce"`
-	Balance *types.BigInt `json:"balance"`
+type BalanceParams struct {
+	AccountParams
+	Amount *types.BigInt `json:"amount"`
+}
+
+type NonceParams struct {
+	AccountParams
+	Nonce uint64 `json:"nonce"`
 }
 
 // StateOpen will create a new state at the given root hash.
@@ -54,7 +59,7 @@ func (s *Service) StateClose(params HandleParams) {
 func (s *Service) getState(handle int) (error, *state.StateDB) {
 	statedb := s.statedbs[handle]
 	if statedb == nil {
-		return errors.New(fmt.Sprintf("invalid state Handle: %d", handle)), nil
+		return errors.New(fmt.Sprintf("invalid state handle: %d", handle)), nil
 	}
 	return nil, s.statedbs[handle]
 }
@@ -79,7 +84,7 @@ func (s *Service) StateCommit(params HandleParams) (error, common.Hash) {
 	return nil, hash
 }
 
-func (s *Service) StateGetAccountBalance(params AccountParams) (error, *types.BigInt) {
+func (s *Service) StateGetBalance(params AccountParams) (error, *types.BigInt) {
 	err, statedb := s.getState(params.Handle)
 	if err != nil {
 		return err, nil
@@ -90,16 +95,46 @@ func (s *Service) StateGetAccountBalance(params AccountParams) (error, *types.Bi
 	return nil, types.NewBigInt(balance)
 }
 
-func (s *Service) StateGetAccount(params AccountParams) (error, *StateAccount) {
+func (s *Service) StateAddBalance(params BalanceParams) error {
 	err, statedb := s.getState(params.Handle)
 	if err != nil {
-		return err, nil
+		return err
 	}
-	stateObject := statedb.GetOrNewStateObject(params.Address)
-	account := &StateAccount{
-		Nonce:   stateObject.Nonce(),
-		Balance: types.NewBigInt(stateObject.Balance()),
+	statedb.AddBalance(params.Address, params.Amount.Int)
+	return nil
+}
+
+func (s *Service) StateSubBalance(params BalanceParams) error {
+	err, statedb := s.getState(params.Handle)
+	if err != nil {
+		return err
 	}
-	log.Debug("account", "address", params.Address, "account", account)
-	return nil, account
+	statedb.SubBalance(params.Address, params.Amount.Int)
+	return nil
+}
+
+func (s *Service) StateSetBalance(params BalanceParams) error {
+	err, statedb := s.getState(params.Handle)
+	if err != nil {
+		return err
+	}
+	statedb.SetBalance(params.Address, params.Amount.Int)
+	return nil
+}
+
+func (s *Service) StateGetNonce(params AccountParams) (error, uint64) {
+	err, statedb := s.getState(params.Handle)
+	if err != nil {
+		return err, 0
+	}
+	return nil, statedb.GetNonce(params.Address)
+}
+
+func (s *Service) StateSetNonce(params NonceParams) error {
+	err, statedb := s.getState(params.Handle)
+	if err != nil {
+		return err
+	}
+	statedb.SetNonce(params.Address, params.Nonce)
+	return nil
 }

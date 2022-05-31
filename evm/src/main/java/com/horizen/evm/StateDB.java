@@ -22,12 +22,28 @@ public class StateDB implements AutoCloseable {
         return LibEvm.StateCommit(handle);
     }
 
-    public String GetAccountBalance(String address) throws Exception {
-        return LibEvm.StateGetAccountBalance(handle, address);
+    public String GetBalance(String address) throws Exception {
+        return LibEvm.StateGetBalance(handle, address);
     }
 
-    public StateAccount GetStateAccount(String address) throws Exception {
-        return LibEvm.StateGetAccount(handle, address);
+    public void AddBalance(String address, String amount) throws Exception {
+        LibEvm.StateAddBalance(handle, address, amount);
+    }
+
+    public void SubBalance(String address, String amount) throws Exception {
+        LibEvm.StateSubBalance(handle, address, amount);
+    }
+
+    public void SetBalance(String address, String amount) throws Exception {
+        LibEvm.StateSetBalance(handle, address, amount);
+    }
+
+    public long GetNonce(String address) throws Exception {
+        return LibEvm.StateGetNonce(handle, address);
+    }
+
+    public void SetNonce(String address, long nonce) throws Exception {
+        LibEvm.StateSetNonce(handle, address, nonce);
     }
 
     @Override

@@ -39,19 +39,19 @@ func initialize(params InitializeParams) error {
 }
 
 func response(err error, result interface{}) *C.char {
+	log.Debug("<< response", "err", err, "result", result)
 	var response InteropResult
 	if err != nil {
 		response.Error = err.Error()
 	} else {
 		response.Result = result
 	}
-	jsonBytes, err := json.Marshal(response)
-	if err != nil {
-		log.Error("unable to marshal response", "error", err)
+	jsonBytes, marshalErr := json.Marshal(response)
+	if marshalErr != nil {
+		log.Error("unable to marshal response", "error", marshalErr)
 		return nil
 	}
 	jsonString := string(jsonBytes)
-	log.Debug("<<", "json", jsonString)
 	return C.CString(jsonString)
 }
 
@@ -66,7 +66,7 @@ func Invoke(method *C.char, args *C.char) *C.char {
 }
 
 func invoke(method string, args string) (error, interface{}) {
-	log.Info(">>", "method", method, "args", args)
+	log.Debug(">> invoke", "method", method, "args", args)
 	var f reflect.Value
 	if method == "Initialize" {
 		// initialize is special as it is not a member function of lib.Service
