@@ -310,16 +310,16 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
       if (!applyingBlock) {
         applyingBlock = true
-        self ! SidechainNodeViewHolder.ReceivableMessages.ApplyModifier(Seq())
+        self ! SidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(Seq())
       }
   }
 
   def applyModifier: Receive = {
-    case SidechainNodeViewHolder.ReceivableMessages.ApplyModifier(applied: Seq[SidechainBlock]) => {
+    case SidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(applied: Seq[SidechainBlock]) => {
       modifiersCache.popCandidate(history()) match {
         case Some(mod) =>
           pmodModify(mod)
-          self ! SidechainNodeViewHolder.ReceivableMessages.ApplyModifier(mod +: applied)
+          self ! SidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(mod +: applied)
         case None => {
           val cleared = modifiersCache.cleanOverfull()
           context.system.eventStream.publish(ModifiersProcessingResult(applied, cleared))
@@ -517,6 +517,9 @@ object SidechainNodeViewHolder /*extends ScorexLogging with ScorexEncoding*/ {
     case class ApplyFunctionOnNodeView[HIS, MS, VL, MP, A](f: java.util.function.Function[SidechainNodeView, A])
     case class ApplyBiFunctionOnNodeView[HIS, MS, VL, MP, T, A](f: java.util.function.BiFunction[SidechainNodeView, T, A], functionParameter: T)
     case class LocallyGeneratedSecret[S <: SidechainTypes#SCS](secret: S)
+  }
+
+  private[horizen] object InternalReceivableMessages {
     case class ApplyModifier(applied: Seq[SidechainBlock])
   }
 }

@@ -2,7 +2,8 @@ package com.horizen.mailbox
 
 import akka.actor.ActorSystem.Settings
 import akka.dispatch.{PriorityGenerator, UnboundedStablePriorityMailbox}
-import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, ApplyModifier, LocallyGeneratedSecret}
+import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, LocallyGeneratedSecret}
+import com.horizen.SidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier
 import com.typesafe.config.Config
 import scorex.core.NodeViewHolder.ReceivableMessages.{LocallyGeneratedTransaction, ModifiersFromRemote}
 
