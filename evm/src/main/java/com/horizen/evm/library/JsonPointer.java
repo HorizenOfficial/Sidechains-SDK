@@ -24,10 +24,10 @@ public class JsonPointer implements NativeMapped {
                 // parse json into object
                 var objectMapper = new ObjectMapper();
                 return objectMapper.readValue(json, this.getClass());
-            } catch (JsonMappingException e) {
-                throw new IllegalArgumentException("JSON mapping error " + this.getClass());
-            } catch (JsonParseException e) {
-                throw new IllegalArgumentException("JSON parse error " + this.getClass());
+//            } catch (JsonMappingException e) {
+//                throw new IllegalArgumentException("JSON mapping error " + this.getClass());
+//            } catch (JsonParseException e) {
+//                throw new IllegalArgumentException("JSON parse error " + this.getClass());
             } catch (IOException e) {
                 throw new IllegalArgumentException(e);
             } finally {

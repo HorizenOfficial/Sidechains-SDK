@@ -100,7 +100,7 @@ public final class LibEvm {
         return Invoke("StateGetAccount", params, StateAccount.class);
     }
 
-    public static class InteropResult<R> extends JsonPointer {
+    public static class InteropResult<R> {
         public String error;
         public R result;
 
