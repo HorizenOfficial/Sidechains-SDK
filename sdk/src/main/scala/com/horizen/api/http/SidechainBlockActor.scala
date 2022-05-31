@@ -4,7 +4,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen.block.SidechainBlock
-import com.horizen.forge.Forger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot
+import com.horizen.forge.AbstractForger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot
 import com.horizen.{SidechainHistory, SidechainSettings, SidechainSyncInfo}
 import scorex.core.PersistentNodeViewModifier
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedHistory, SemanticallyFailedModification, SyntacticallyFailedModification}

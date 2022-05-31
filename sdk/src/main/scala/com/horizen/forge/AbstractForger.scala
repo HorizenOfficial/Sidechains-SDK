@@ -7,7 +7,7 @@ import akka.util.Timeout
 import com.horizen.{Wallet, _}
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.consensus.{ConsensusEpochAndSlot, ConsensusEpochNumber, ConsensusSlotNumber}
-import com.horizen.forge.Forger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
+import com.horizen.forge.AbstractForger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
 import com.horizen.params.NetworkParams
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
@@ -185,4 +185,13 @@ abstract class AbstractForger[
     TimeToEpochUtils.timestampToEpochAndSlot(params, history.bestBlockInfo.timestamp)
   }
 
+}
+
+object AbstractForger extends ScorexLogging {
+  object ReceivableMessages {
+    case object StartForging
+    case object StopForging
+    case class  TryForgeNextBlockForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber)
+    case object GetForgingInfo
+  }
 }

@@ -32,16 +32,6 @@ class Forger(settings: SidechainSettings,
     val forgedBlockAsFuture = (viewHolderRef ? forgeMessage).asInstanceOf[Future[ForgeResult]]
     forgedBlockAsFuture
   }
-
-}
-
-object Forger extends ScorexLogging {
-  object ReceivableMessages {
-    case object StartForging
-    case object StopForging
-    case class  TryForgeNextBlockForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber)
-    case object GetForgingInfo
-  }
 }
 
 object ForgerRef {

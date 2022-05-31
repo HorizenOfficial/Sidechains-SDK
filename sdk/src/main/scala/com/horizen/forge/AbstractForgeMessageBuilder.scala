@@ -100,7 +100,7 @@ abstract class AbstractForgeMessageBuilder[
   }
 
   protected def getSecretsAndProof(
-                     wallet: AbstractWallet[TX, PM, VL],
+                     wallet: VL,
                      vrfMessage: VrfMessage,
                      forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo): Option[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof, VrfOutput)] =
   {

@@ -2,7 +2,6 @@ package com.horizen.api.http
 
 import java.net.{InetAddress, InetSocketAddress}
 import java.util
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
@@ -15,8 +14,6 @@ import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.Broadca
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus.ConsensusEpochAndSlot
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
-import com.horizen.forge.Forger
-import com.horizen.forge.Forger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot
 import com.horizen.params.MainNetParams
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.transaction._
@@ -42,6 +39,7 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 import com.horizen.csw.CswManager.ReceivableMessages.{GenerateCswProof, GetBoxNullifier, GetCeasedStatus, GetCswBoxIds, GetCswInfo}
 import com.horizen.csw.CswManager.Responses.{Absent, CswInfo, CswProofInfo, NoProofData, ProofCreationFinished}
+import com.horizen.forge.AbstractForger
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 
 import scala.language.postfixOps
@@ -176,7 +174,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   mockedSidechainBlockForgerActor.setAutoPilot(new testkit.TestActor.AutoPilot {
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
-        case Forger.ReceivableMessages.StopForging => {
+        case AbstractForger.ReceivableMessages.StopForging => {
           if (sidechainApiMockConfiguration.should_blockActor_StopForging_reply) {
             sender ! Success(Unit)
           }
@@ -184,7 +182,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
             sender ! Failure(new IllegalStateException("Stop forging error"))
           }
         }
-        case Forger.ReceivableMessages.StartForging => {
+        case AbstractForger.ReceivableMessages.StartForging => {
           if (sidechainApiMockConfiguration.should_blockActor_StartForging_reply) {
             sender ! Success(Unit)
           }
@@ -193,7 +191,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
           }
         }
 
-        case Forger.ReceivableMessages.GetForgingInfo => {
+        case AbstractForger.ReceivableMessages.GetForgingInfo => {
           sender ! sidechainApiMockConfiguration.should_blockActor_ForgingInfo_reply
         }
       }
@@ -206,7 +204,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   mockedSidechainBlockActor.setAutoPilot(new testkit.TestActor.AutoPilot {
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
-        case TryForgeNextBlockForEpochAndSlot(epoch, slot) => {
+        case AbstractForger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot(epoch, slot) => {
           sidechainApiMockConfiguration.blockActor_ForgingEpochAndSlot_reply.get(ConsensusEpochAndSlot(epoch, slot)) match {
             case Some(blockIdTry) => sender ! Future[Try[ModifierId]]{blockIdTry}
             case None => sender ! Failure(new RuntimeException("Forge is failed"))

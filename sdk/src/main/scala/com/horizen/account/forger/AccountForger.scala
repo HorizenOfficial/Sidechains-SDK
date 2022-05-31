@@ -39,15 +39,6 @@ class AccountForger(settings: SidechainSettings,
   }
 }
 
-object AccountForger extends ScorexLogging {
-  object ReceivableMessages {
-    case object StartForging
-    case object StopForging
-    case class  TryForgeNextBlockForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber)
-    case object GetForgingInfo
-  }
-}
-
 object AccountForgerRef {
   def props(settings: SidechainSettings,
             viewHolderRef: ActorRef,
