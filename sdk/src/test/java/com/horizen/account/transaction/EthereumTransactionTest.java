@@ -150,7 +150,7 @@ public class EthereumTransactionTest {
 
         // Test 6: ethereum transaction instance returns messageToSign correctly
         EthereumTransaction ethereumTransactionDeserialize = EthereumTransactionSerializer.getSerializer().parseBytes(ethereumTransaction.bytes());
-        assertEquals(3, ethereumTransactionDeserialize.messageToSign().length);
+        assertEquals(45, ethereumTransactionDeserialize.messageToSign().length);
 
         // Test 7: ethereum transaction instance returns passed RawTransaction correctly
         assertEquals(signedRawTransaction, ethereumTransaction.getTransaction());
