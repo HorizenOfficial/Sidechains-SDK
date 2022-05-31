@@ -1,7 +1,8 @@
 package com.horizen.account.proposition;
 
-import com.horizen.account.utils.Secp256k1;
+import com.horizen.account.utils.Account;
 import com.horizen.proposition.PropositionSerializer;
+import com.horizen.utils.BytesUtils;
 import org.junit.Before;
 import org.junit.Test;
 import org.web3j.crypto.ECKeyPair;
@@ -16,27 +17,27 @@ import java.util.Arrays;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class PublicKeySecp256k1PropositionSerializerTest {
-    PublicKeySecp256k1Proposition publicKeySecp256k1Proposition;
+public class AddressPropositionSerializerTest {
+    AddressProposition addressProposition;
 
     @Before
     public void BeforeEachTest() throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException {
         // Create a key pair and create proposition
         ECKeyPair pair = Keys.createEcKeyPair();
-        byte[] publicKey = Arrays.copyOf(pair.getPublicKey().toByteArray(), Secp256k1.PUBLIC_KEY_SIZE);
-        publicKeySecp256k1Proposition = new PublicKeySecp256k1Proposition(publicKey);
+        byte[] address = Arrays.copyOf(BytesUtils.fromHexString(Keys.getAddress(pair)), Account.ADDRESS_SIZE);
+        addressProposition = new AddressProposition(address);
     }
 
     @Test
     public void signatureSecp256k1SerializeTest() {
         // Get proposition serializer and serialize
-        PropositionSerializer serializer = publicKeySecp256k1Proposition.serializer();
-        byte[] bytes = serializer.toBytes(publicKeySecp256k1Proposition);
+        PropositionSerializer serializer = addressProposition.serializer();
+        byte[] bytes = serializer.toBytes(addressProposition);
 
         // Test 1: Correct bytes deserialization
-        Try<PublicKeySecp256k1Proposition> t = serializer.parseBytesTry(bytes);
+        Try<AddressProposition> t = serializer.parseBytesTry(bytes);
         assertTrue("Proposition serialization failed.", t.isSuccess());
-        assertEquals("Deserialized proposition expected to be equal", publicKeySecp256k1Proposition.toString(), t.get().toString());
+        assertEquals("Deserialized proposition expected to be equal", addressProposition.toString(), t.get().toString());
 
         // Test 2: try to parse broken bytes
         boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();
