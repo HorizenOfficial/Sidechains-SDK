@@ -12,7 +12,7 @@ public class EvmTest {
     public TemporaryFolder tempFolder = new TemporaryFolder();
 
     @Test
-    public void TestInterop() throws IOException {
+    public void TestInterop() throws Exception {
         var databaseFolder = tempFolder.newFolder("evm-db");
         System.out.println("temporary database folder: " + databaseFolder.getAbsolutePath());
 
@@ -24,8 +24,7 @@ public class EvmTest {
         String secondValue = "00000000000000000000000000000000000000000000000000000000000015B3";
 
         System.out.println("Initialize");
-        var initResult = LibEvm.Instance.Initialize(databaseFolder.getAbsolutePath());
-        System.out.println("Initialize result " + initResult);
+        LibEvm.Initialize(databaseFolder.getAbsolutePath());
 
 //        System.out.println("SetRootHash");
 //        var setStateRootResult = Evm.Instance.SetStateRoot(initialStateRoot);

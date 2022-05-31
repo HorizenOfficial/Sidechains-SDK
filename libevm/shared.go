@@ -17,9 +17,25 @@ import (
 // instance holds the initialized lib.Service
 var instance *lib.Service
 
+type InitializeParams struct {
+	Path string `json:"path"`
+}
+
 type InteropResult struct {
 	Error  string      `json:"error"`
 	Result interface{} `json:"result"`
+}
+
+func initialize(params InitializeParams) error {
+	if instance != nil {
+		_ = instance.Close()
+		instance = nil
+	}
+	err, newInstance := lib.InitWithLevelDB(params.Path)
+	if err == nil {
+		instance = newInstance
+	}
+	return err
 }
 
 func response(err error, result interface{}) *C.char {
@@ -44,36 +60,24 @@ func Free(ptr unsafe.Pointer) {
 	C.free(ptr)
 }
 
-//export Initialize
-func Initialize(path *C.char) *C.char {
-	return response(initialize(C.GoString(path)), nil)
-}
-
-// TODO: refactor to also use invoke() for initialization
-func initialize(path string) error {
-	if instance != nil {
-		_ = instance.Close()
-		instance = nil
-	}
-	newInstance, err := lib.InitWithLevelDB(path)
-	if err == nil {
-		instance = newInstance
-	}
-	return err
-}
-
 //export Invoke
 func Invoke(method *C.char, args *C.char) *C.char {
 	return response(invoke(C.GoString(method), C.GoString(args)))
 }
 
 func invoke(method string, args string) (error, interface{}) {
-	if instance == nil {
-		return errors.New("not initialized"), nil
-	}
-	// find the target function
 	log.Info(">>", "method", method, "args", args)
-	f := reflect.ValueOf(instance).MethodByName(method)
+	var f reflect.Value
+	if method == "Initialize" {
+		// initialize is special as it is not a member function of lib.Service
+		f = reflect.ValueOf(initialize)
+	} else {
+		if instance == nil {
+			return errors.New("not initialized"), nil
+		}
+		// find the target function
+		f = reflect.ValueOf(instance).MethodByName(method)
+	}
 	if !f.IsValid() {
 		return errors.New("method not found"), nil
 	}

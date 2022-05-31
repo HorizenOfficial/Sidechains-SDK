@@ -30,7 +30,7 @@ public final class LibEvm {
     }
 
     public static <R> R Invoke(String method, JsonPointer args, Class<R> responseType) throws Exception {
-        var json = LibEvm.Instance.Invoke(method, args);
+        var json = Instance.Invoke(method, args);
         // build type information to deserialize to generic type InteropResult<R>
         var type = TypeFactory.defaultInstance().constructParametricType(InteropResult.class, responseType);
         InteropResult<R> response = json.deserialize(type);
@@ -38,6 +38,10 @@ public final class LibEvm {
             throw new Exception(response.error);
         }
         return response.result;
+    }
+
+    public static class InitializeParams extends JsonPointer {
+        public String path;
     }
 
     public static class OpenStateParams extends JsonPointer {
@@ -52,42 +56,48 @@ public final class LibEvm {
         public String address;
     }
 
+    public static void Initialize(String path) throws Exception {
+        var params = new InitializeParams();
+        params.path = path;
+        Invoke("Initialize", params);
+    }
+
     public static int StateOpen(String stateRootHex) throws Exception {
         var params = new OpenStateParams();
         params.root = stateRootHex;
-        return LibEvm.Invoke("StateOpen", params, int.class);
+        return Invoke("StateOpen", params, int.class);
     }
 
     public static void StateClose(int handle) throws Exception {
         var params = new HandleParams();
         params.handle = handle;
-        LibEvm.Invoke("StateClose", params);
+        Invoke("StateClose", params);
     }
 
     public static String StateIntermediateRoot(int handle) throws Exception {
         var params = new HandleParams();
         params.handle = handle;
-        return LibEvm.Invoke("StateIntermediateRoot", params, String.class);
+        return Invoke("StateIntermediateRoot", params, String.class);
     }
 
     public static String StateCommit(int handle) throws Exception {
         var params = new HandleParams();
         params.handle = handle;
-        return LibEvm.Invoke("StateCommit", params, String.class);
+        return Invoke("StateCommit", params, String.class);
     }
 
     public static String StateGetAccountBalance(int handle, String address) throws Exception {
         var params = new AccountParams();
         params.handle = handle;
         params.address = address;
-        return LibEvm.Invoke("StateGetAccountBalance", params, String.class);
+        return Invoke("StateGetAccountBalance", params, String.class);
     }
 
     public static StateAccount StateGetAccount(int handle, String address) throws Exception {
         var params = new AccountParams();
         params.handle = handle;
         params.address = address;
-        return LibEvm.Invoke("StateGetAccount", params, StateAccount.class);
+        return Invoke("StateGetAccount", params, StateAccount.class);
     }
 
     public static class InteropResult<R> extends JsonPointer {

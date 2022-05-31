@@ -24,20 +24,20 @@ func New(storage ethdb.Database) *Service {
 	}
 }
 
-func InitWithLevelDB(path string) (*Service, error) {
+func InitWithLevelDB(path string) (error, *Service) {
 	log.Info("initializing leveldb", "path", path)
 	storage, err := rawdb.NewLevelDBDatabase(path, 0, 0, "zen/db/data/", false)
 	if err != nil {
 		log.Error("failed to initialize database", "error", err)
-		return nil, err
+		return err, nil
 	}
-	return New(storage), nil
+	return nil, New(storage)
 }
 
-func InitWithMemoryDB() (*Service, error) {
+func InitWithMemoryDB() (error, *Service) {
 	log.Info("initializing memorydb")
 	storage := rawdb.NewMemoryDatabase()
-	return New(storage), nil
+	return nil, New(storage)
 }
 
 func (s *Service) Close() error {

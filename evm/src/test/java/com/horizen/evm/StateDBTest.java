@@ -22,8 +22,7 @@ public class StateDBTest {
         String origin = "0xbafe3b6f2a19658df3cb5efca158c93272ff5c0b";
 
         System.out.println("Initialize");
-        var initResult = LibEvm.Instance.Initialize(databaseFolder.getAbsolutePath());
-        System.out.println("Initialize result " + initResult);
+        LibEvm.Initialize(databaseFolder.getAbsolutePath());
 
         System.out.println("OpenState");
         try (var statedb = new StateDB(hashNull)) {
