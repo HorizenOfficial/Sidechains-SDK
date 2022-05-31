@@ -162,7 +162,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return Bytes.concat(getAddress().getBytes(StandardCharsets.UTF_8),
                 getGasPrice().toByteArray(),
                 getGasLimit().toByteArray(),
-                getAddress().getBytes(StandardCharsets.UTF_8),
+                getTo().address(),
                 getValue().toByteArray(),
                 getData().getBytes(StandardCharsets.UTF_8));
     }

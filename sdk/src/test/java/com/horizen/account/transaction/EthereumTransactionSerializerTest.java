@@ -6,10 +6,7 @@ import com.horizen.transaction.TransactionSerializer;
 import com.horizen.utils.BytesUtils;
 import org.junit.Before;
 import org.junit.Test;
-import org.web3j.crypto.ECKeyPair;
-import org.web3j.crypto.Keys;
-import org.web3j.crypto.RawTransaction;
-import org.web3j.crypto.Sign;
+import org.web3j.crypto.*;
 import scala.util.Try;
 
 import java.math.BigInteger;
@@ -23,6 +20,7 @@ import static org.junit.Assert.assertTrue;
 
 public class EthereumTransactionSerializerTest {
     EthereumTransaction ethereumTransaction;
+    EthereumTransaction signedEthereumTransaction;
 
     @Before
     public void BeforeEachTest() throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException {
@@ -38,7 +36,11 @@ public class EthereumTransactionSerializerTest {
         var msgSignature = Sign.signMessage(message, pair, true);
         var txSignature = new SignatureSecp256k1(msgSignature);
         var txProposition = new AddressProposition(BytesUtils.fromHexString(Keys.getAddress(pair)));
+        var signedRawTransaction = new SignedRawTransaction(someValue,
+                someValue, someValue, "0x", someValue, "",
+                msgSignature);
         ethereumTransaction = new EthereumTransaction(rawTransaction);
+        signedEthereumTransaction = new EthereumTransaction(signedRawTransaction);
     }
 
     @Test
@@ -54,6 +56,23 @@ public class EthereumTransactionSerializerTest {
 
         assertEquals("Deserialized transactions expected to be equal", ethereumTransaction.toString(), t.get().toString());
 
+        // Test 2: try to parse broken bytes
+        boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();
+        assertTrue("Failure during parsing expected", failureExpected);
+    }
+
+    @Test
+    public void ethereumTransactionSerializeSignedTest() {
+        // Get transaction serializer and serialize
+        TransactionSerializer serializer = signedEthereumTransaction.serializer();
+        byte[] bytes = serializer.toBytes(signedEthereumTransaction);
+
+        // Test 1: Correct bytes deserialization
+        Try<EthereumTransaction> t = serializer.parseBytesTry(bytes);
+
+        assertTrue("Transaction serialization failed.", t.isSuccess());
+
+        assertEquals("Deserialized transactions expected to be equal", signedEthereumTransaction.toString(), t.get().toString());
 
         // Test 2: try to parse broken bytes
         boolean failureExpected = serializer.parseBytesTry("broken bytes".getBytes()).isFailure();

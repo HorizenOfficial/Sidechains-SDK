@@ -1,12 +1,11 @@
 package com.horizen.account.transaction;
 
 import com.horizen.transaction.TransactionSerializer;
-import com.horizen.utils.BytesUtils;
-import org.web3j.crypto.TransactionDecoder;
-import org.web3j.crypto.TransactionEncoder;
+import org.web3j.crypto.*;
+import org.web3j.rlp.*;
+import org.web3j.utils.Numeric;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
-
 
 public class EthereumTransactionSerializer implements TransactionSerializer<EthereumTransaction> {
 
@@ -28,15 +27,29 @@ public class EthereumTransactionSerializer implements TransactionSerializer<Ethe
     // because of here used message length integer needed for decoding
     @Override
     public void serialize(EthereumTransaction transaction, Writer writer) {
-        var encodedMessage = TransactionEncoder.encode(transaction.getTransaction());
+        byte[] encodedMessage;
+
+        if (transaction.getSignature() != null) {
+            Sign.SignatureData signatureData = new Sign.SignatureData(transaction.getSignature().getV(), transaction.getSignature().getR(), transaction.getSignature().getS());
+            var rlpValues = TransactionEncoder.asRlpValues(transaction.getTransaction(), signatureData);
+            RlpList rlpList = new RlpList(rlpValues);
+            encodedMessage = RlpEncoder.encode(rlpList);
+        } else {
+            encodedMessage = TransactionEncoder.encode(transaction.getTransaction());
+        }
+
         writer.putInt(encodedMessage.length);
         writer.putBytes(encodedMessage);
     }
 
     @Override
     public EthereumTransaction parse(Reader reader) {
-        var messageLength = reader.getInt();
-        var hexMessage = BytesUtils.toHexString(reader.getBytes(messageLength));
-        return new EthereumTransaction(TransactionDecoder.decode(hexMessage));
+        var length = reader.getInt();
+        var encodedMessage = reader.getBytes(length);
+        var transaction = TransactionDecoder.decode(Numeric.toHexString(encodedMessage));
+
+        if (transaction instanceof SignedRawTransaction)
+            return new EthereumTransaction((SignedRawTransaction) transaction);
+        return new EthereumTransaction(transaction);
     }
 }
