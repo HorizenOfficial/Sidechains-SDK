@@ -37,7 +37,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                                         companion: SidechainTransactionsCompanion,
                                         params: NetworkParams)
                                        (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
-  extends SidechainBaseApiRoute[NodeHistory,NodeState,NodeWallet,NodeMemoryPool, SidechainNodeView] with SidechainTypes {
+  extends SidechainApiRoute with SidechainTypes {
 
   override val route: Route = (pathPrefix("transaction")) {
     allTransactions ~ findById ~ decodeTransactionBytes ~ createCoreTransaction ~ createCoreTransactionSimplified ~

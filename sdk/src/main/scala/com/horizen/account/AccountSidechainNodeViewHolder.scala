@@ -1,16 +1,21 @@
 package com.horizen.account
 
 import akka.actor.{ActorRef, ActorSystem, Props}
-import com.horizen.account.block.AccountBlock
+import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
+import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool}
 import com.horizen.account.state.AccountState
 import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
+import com.horizen.account.transaction.AccountTransaction
 import com.horizen.account.wallet.AccountWallet
-import com.horizen.consensus.{ConsensusDataStorage, ConsensusEpochInfo, FullConsensusEpochInfo, StakeConsensusEpochInfo, blockIdToEpochId}
-import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
+import com.horizen.consensus._
+import com.horizen.node.{NodeState, NodeWalletBase}
 import com.horizen.params.NetworkParams
+import com.horizen.proof.Proof
+import com.horizen.proposition.Proposition
 import com.horizen.storage.SidechainSecretStorage
+import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ModifierId
 
@@ -24,12 +29,12 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                      stateMetadataStorage: AccountStateMetadataStorage,
                                      secretStorage: SidechainSecretStorage,
                                      genesisBlock: AccountBlock)
-  extends AbstractSidechainNodeViewHolder[SidechainTypes#SCAT, AccountBlock](sidechainSettings, params, timeProvider) {
+  extends AbstractSidechainNodeViewHolder[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock](sidechainSettings, params, timeProvider) {
 
   override type HSTOR = AccountHistoryStorage
-  override type VL = AccountWallet
   override type HIS = AccountHistory
   override type MS = AccountState
+  override type VL = AccountWallet
   override type MP = AccountMemoryPool
 
   override def restoreState(): Option[(HIS, MS, VL, MP)] = for {
@@ -82,6 +87,42 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override protected def scanBlockWithFeePayments(history: HIS, state: MS, wallet: VL, modToApply: AccountBlock): (HIS, VL) = {
     (history, wallet.scanPersistent(modToApply))
   }
+
+  override type NH = NodeAccountHistory
+  override type NS = NodeState
+  override type NW = NodeWalletBase
+  override type NP = NodeAccountMemoryPool
+
+  override protected def nodeHistory(): NH = history().asInstanceOf[NH]
+
+  override protected def nodeState(): NS = minimalState().asInstanceOf[NS]
+
+  override protected def nodeWallet(): NW = vault().asInstanceOf[NW]
+
+  override protected def nodeMemoryPool(): NP = memoryPool().asInstanceOf[NP]
+
+  override protected def getCurrentBaseSidechainNodeViewInfo: Receive = {
+    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView[
+      AccountTransaction[Proposition, Proof[Proposition]],
+      AccountBlockHeader,
+      AccountBlock,
+      NH,
+      NS,
+      NW,
+      NP,
+      AccountNodeView,
+      _] =>
+      msg match {
+        case AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView(f) => try {
+          val l: AccountNodeView = new AccountNodeView(nodeHistory(), nodeState(), nodeWallet(), nodeMemoryPool())
+          sender() ! f(l)
+        }
+        catch {
+          case e: Exception => sender() ! akka.actor.Status.Failure(e)
+        }
+
+      }
+  }
 }
 
 object AccountNodeViewHolderRef {
@@ -92,7 +133,9 @@ object AccountNodeViewHolderRef {
             secretStorage: SidechainSecretStorage,
             params: NetworkParams,
             timeProvider: NetworkTimeProvider,
-            genesisBlock: AccountBlock): Props = ???
+            genesisBlock: AccountBlock): Props =
+    Props(new AccountSidechainNodeViewHolder(sidechainSettings, params, timeProvider, historyStorage,
+      consensusDataStorage, stateMetadataStorage, secretStorage, genesisBlock))
 
   def apply(sidechainSettings: SidechainSettings,
             historyStorage: AccountHistoryStorage,
@@ -102,7 +145,9 @@ object AccountNodeViewHolderRef {
             params: NetworkParams,
             timeProvider: NetworkTimeProvider,
             genesisBlock: AccountBlock)
-           (implicit system: ActorSystem): ActorRef = ???
+           (implicit system: ActorSystem): ActorRef =
+    system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateMetadataStorage,
+      secretStorage, params, timeProvider, genesisBlock))
 
   def apply(name: String,
             sidechainSettings: SidechainSettings,
@@ -113,5 +158,8 @@ object AccountNodeViewHolderRef {
             params: NetworkParams,
             timeProvider: NetworkTimeProvider,
             genesisBlock: AccountBlock)
-           (implicit system: ActorSystem): ActorRef = ???
+           (implicit system: ActorSystem): ActorRef =
+    system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateMetadataStorage,
+      secretStorage, params, timeProvider, genesisBlock), name)
+
 }

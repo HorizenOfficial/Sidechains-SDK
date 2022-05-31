@@ -1,7 +1,7 @@
 package com.horizen
 
-import com.horizen.block.SidechainBlockBase
-import com.horizen.node.{NodeHistoryBase, NodeMemoryPool, NodeState, NodeWalletBase}
+import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.node._
 import com.horizen.params.NetworkParams
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
@@ -16,15 +16,8 @@ import scorex.core.utils.NetworkTimeProvider
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 
-trait NodeViewTypes {
-  type H <: NodeHistoryBase
-  type S <: NodeState
-  type W <: NodeWalletBase
-  type P <: NodeMemoryPool
-
-}
-
-abstract class AbstractSidechainNodeViewHolder[TX <: Transaction, PMOD <: SidechainBlockBase[TX]]
+abstract class AbstractSidechainNodeViewHolder[
+  TX <: Transaction, H <: SidechainBlockHeaderBase, PMOD <: SidechainBlockBase[TX, H]]
 (
   sidechainSettings: SidechainSettings,
   params: NetworkParams,
@@ -35,21 +28,23 @@ abstract class AbstractSidechainNodeViewHolder[TX <: Transaction, PMOD <: Sidech
   override type SI = SidechainSyncInfo
   type HSTOR <: AbstractHistoryStorage[PMOD, HSTOR]
 
-  override type HIS <: AbstractHistory[TX, PMOD, HSTOR, HIS]
+  override type HIS <: AbstractHistory[TX, H, PMOD, HSTOR, HIS]
   override type VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PMOD, VL]
-  type H <: NodeHistoryBase
-  type S <: NodeState
-  type W <: NodeWalletBase
-  type P <: NodeMemoryPool
+
+  //TODO ST
+  type NH <: NodeHistoryBase[TX, H, PMOD]
+  type NS <: NodeState
+  type NW <: NodeWalletBase
+  type NP <: NodeMemoryPoolBase[TX]
 
 
-  protected def nodeHistory(): H
+  protected def nodeHistory(): NH
 
-  protected def nodeState(): S
+  protected def nodeState(): NS
 
-  protected def nodeWallet(): W
+  protected def nodeWallet(): NW
 
-  protected def nodeMemoryPool(): P
+  protected def nodeMemoryPool(): NP
 
 
   case class SidechainNodeUpdateInformation(history: HIS,
@@ -63,7 +58,7 @@ abstract class AbstractSidechainNodeViewHolder[TX <: Transaction, PMOD <: Sidech
 
   protected def semanticBlockValidators(params: NetworkParams): Seq[SemanticBlockValidator[PMOD]] = Seq(new SidechainBlockSemanticValidator[TX, PMOD](params))
 
-  protected def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator[TX, PMOD, HSTOR, HIS]] = Seq(
+  protected def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator[TX, H, PMOD, HSTOR, HIS]] = Seq(
     new WithdrawalEpochValidator(params),
     new MainchainPoWValidator(params),
     new MainchainBlockReferenceValidator(params),
@@ -88,7 +83,6 @@ abstract class AbstractSidechainNodeViewHolder[TX <: Transaction, PMOD <: Sidech
           sender() ! Failure(ex)
       }
   }
-
 
   // This method is actually a copy-paste of parent NodeViewHolder.pmodModify method.
   // The difference is that modifiers are applied to the State and Wallet simultaneously.
@@ -234,9 +228,18 @@ abstract class AbstractSidechainNodeViewHolder[TX <: Transaction, PMOD <: Sidech
 
 }
 
-object AbstractSidechainNodeViewHolder /*extends ScorexLogging with ScorexEncoding*/ {
+object AbstractSidechainNodeViewHolder {
   object ReceivableMessages {
-    case class GetDataFromCurrentNodeView[H <: NodeHistoryBase, S <: NodeState, W <: NodeWalletBase, P <: NodeMemoryPool, A](f: SidechainNodeViewBase[H, S, W, P] => A)
+    // case class GetDataFromCurrentNodeView[NH <: NodeHistoryBase, NS <: NodeState, NW <: NodeWalletBase, NP <: NodeMemoryPool, A](f: SidechainNodeViewBase[NH, NS, NW, NP] => A)
+    case class GetDataFromCurrentNodeView[TX <: Transaction,
+      H <: SidechainBlockHeaderBase,
+      PMOD <: SidechainBlockBase[TX, H],
+      NH <: NodeHistoryBase[TX, H, PMOD],
+      NS <: NodeState,
+      NW <: NodeWalletBase,
+      NP <: NodeMemoryPoolBase[TX],
+      NV <: SidechainNodeViewBase[TX, H, PMOD, NH, NS, NW, NP],
+      A](f: NV => A)
 
     case class LocallyGeneratedSecret[S <: SidechainTypes#SCS](secret: S)
   }
@@ -244,13 +247,4 @@ object AbstractSidechainNodeViewHolder /*extends ScorexLogging with ScorexEncodi
 
 }
 
-trait SidechainNodeViewBase[H <: NodeHistoryBase, S <: NodeState, W <: NodeWalletBase, P <: NodeMemoryPool] {
-  def getNodeHistory: H
 
-  def getNodeState: S
-
-  def getNodeMemoryPool: P
-
-  def getNodeWallet: W
-
-}

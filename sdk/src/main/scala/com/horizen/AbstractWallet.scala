@@ -1,6 +1,6 @@
 package com.horizen
 
-import com.horizen.block.SidechainBlockBase
+import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.node.NodeWalletBase
 import com.horizen.proposition.Proposition
 import com.horizen.secret.Secret
@@ -31,7 +31,7 @@ trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.co
 
 abstract class AbstractWallet[
   TX <: Transaction,
-  PM <: SidechainBlockBase[TX],
+  PM <: SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase],
   W <: AbstractWallet[TX, PM, W]] private[horizen]
 (
   seed: Array[Byte],

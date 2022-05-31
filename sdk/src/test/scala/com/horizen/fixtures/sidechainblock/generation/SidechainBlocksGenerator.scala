@@ -197,11 +197,11 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
       SidechainBlocksGenerator.txGen.generateRegularTransaction(rnd = rnd, transactionBaseTimeStamp = timestamp, inputTransactionsSize = 1, outputTransactionsSize = 1)
     )
 
-    val ommers: Seq[Ommer] = Seq()
+    val ommers: Seq[Ommer[SidechainBlockHeader]] = Seq()
 
     val sidechainTransactionsMerkleRootHash: Array[Byte] = SidechainBlock.calculateTransactionsMerkleRootHash(sidechainTransactions)
     val mainchainMerkleRootHash: Array[Byte] = SidechainBlockBase.calculateMainchainMerkleRootHash(mainchainBlockReferencesData, mainchainHeaders)
-    val ommersMerkleRootHash: Array[Byte] = SidechainBlockBase.calculateOmmersMerkleRootHash(ommers)
+    val ommersMerkleRootHash: Array[Byte] = SidechainBlock.calculateOmmersMerkleRootHash(ommers)
 
     val unsignedBlockHeader = SidechainBlockHeader(
       SidechainBlock.BLOCK_VERSION,
@@ -444,7 +444,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
 
     val sidechainTransactionsMerkleRootHash: Array[Byte] = SidechainBlock.calculateTransactionsMerkleRootHash(Seq())
     val mainchainMerkleRootHash: Array[Byte] = SidechainBlockBase.calculateMainchainMerkleRootHash(mainchainBlockReferencesData, mainchainHeaders)
-    val ommersMerkleRootHash: Array[Byte] = SidechainBlockBase.calculateOmmersMerkleRootHash(Seq())
+    val ommersMerkleRootHash: Array[Byte] = SidechainBlock.calculateOmmersMerkleRootHash(Seq())
 
     val owner: PrivateKey25519 = forgingData.key
     val forgingStake = forgingData.forgingStakeInfo

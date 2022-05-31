@@ -29,9 +29,9 @@ class SidechainBlock(override val header: SidechainBlockHeader,
                      override val sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]],
                      override val mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
                      override val mainchainHeaders: Seq[MainchainHeader],
-                     override val ommers: Seq[Ommer],
+                     override val ommers: Seq[Ommer[SidechainBlockHeader]],
                      companion: SidechainTransactionsCompanion)
-  extends SidechainBlockBase[SidechainTypes#SCBT]
+  extends SidechainBlockBase[SidechainTypes#SCBT, SidechainBlockHeader]
 {
   override type M = SidechainBlock
 
@@ -164,7 +164,7 @@ object SidechainBlock extends ScorexEncoding {
              mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
              sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]],
              mainchainHeaders: Seq[MainchainHeader],
-             ommers: Seq[Ommer],
+             ommers: Seq[Ommer[SidechainBlockHeader]],
              ownerPrivateKey: PrivateKey25519,
              forgingStakeInfo: ForgingStakeInfo,
              vrfProof: VrfProof,
@@ -187,7 +187,7 @@ object SidechainBlock extends ScorexEncoding {
     // Calculate merkle root hashes for SidechainBlockHeader
     val sidechainTransactionsMerkleRootHash: Array[Byte] = calculateTransactionsMerkleRootHash(sidechainTransactions)
     val mainchainMerkleRootHash: Array[Byte] = SidechainBlockBase.calculateMainchainMerkleRootHash(mainchainBlockReferencesData, mainchainHeaders)
-    val ommersMerkleRootHash: Array[Byte] = SidechainBlockBase.calculateOmmersMerkleRootHash(ommers)
+    val ommersMerkleRootHash: Array[Byte] = SidechainBlock.calculateOmmersMerkleRootHash(ommers)
 
     val signature = signatureOption match {
       case Some(sig) => sig
@@ -238,6 +238,13 @@ object SidechainBlock extends ScorexEncoding {
     block
   }
 
+  def calculateOmmersMerkleRootHash(ommers: Seq[Ommer[SidechainBlockHeader]]): Array[Byte] = {
+    if(ommers.nonEmpty)
+      MerkleTree.createMerkleTree(ommers.map(_.id).asJava).rootHash()
+    else
+      Utils.ZEROS_HASH
+  }
+
   def calculateTransactionsMerkleRootHash(sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]]): Array[Byte] = {
     if(sidechainTransactions.nonEmpty)
       MerkleTree.createMerkleTree(sidechainTransactions.map(tx => idToBytes(ModifierId @@ tx.id)).asJava).rootHash()
@@ -261,7 +268,7 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
 
   private val mainchainHeadersSerializer: ListSerializer[MainchainHeader] = new ListSerializer[MainchainHeader](MainchainHeaderSerializer)
 
-  private val ommersSerializer: ListSerializer[Ommer] = new ListSerializer[Ommer](OmmerSerializer)
+  private val ommersSerializer: ListSerializer[Ommer[SidechainBlockHeader]] = new ListSerializer[Ommer[SidechainBlockHeader]](OmmerSerializer)
 
   override def serialize(obj: SidechainBlock, w: Writer): Unit = {
     SidechainBlockHeaderSerializer.serialize(obj.header, w)

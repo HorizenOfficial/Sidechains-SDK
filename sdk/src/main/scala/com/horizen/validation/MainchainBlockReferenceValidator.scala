@@ -1,6 +1,6 @@
 package com.horizen.validation
 import com.horizen.AbstractHistory
-import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlockBase}
+import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain.{MainchainHeaderHash, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
 import com.horizen.params.NetworkParams
 import com.horizen.storage.AbstractHistoryStorage
@@ -12,14 +12,15 @@ import scala.util.control.Breaks._
 
 class MainchainBlockReferenceValidator[
   TX <: Transaction,
-  PMOD <: SidechainBlockBase[TX],
+  H <: SidechainBlockHeaderBase,
+  PMOD <: SidechainBlockBase[TX, H],
   HSTOR <: AbstractHistoryStorage[PMOD, HSTOR],
-  HT <: AbstractHistory[TX, PMOD, HSTOR, HT]
+  HT <: AbstractHistory[TX, H, PMOD, HSTOR, HT]
 ]
 (
   params: NetworkParams
 )
-  extends HistoryBlockValidator[TX, PMOD, HSTOR, HT] {
+  extends HistoryBlockValidator[TX, H, PMOD, HSTOR, HT] {
 
   override def validate(block: PMOD, history: HT): Try[Unit] = Try {
     if (block.id.equals(params.sidechainGenesisBlockId))

@@ -1,16 +1,19 @@
 package com.horizen.node;
 
-import com.horizen.block.MainchainBlockReference;
-import com.horizen.block.MainchainHeader;
-import com.horizen.block.SidechainBlock;
+import com.horizen.block.*;
 import com.horizen.chain.FeePaymentsInfo;
 import com.horizen.chain.MainchainHeaderInfo;
 import com.horizen.node.util.MainchainBlockReferenceInfo;
+import com.horizen.transaction.Transaction;
 
 import java.util.List;
 import java.util.Optional;
 
-public interface NodeHistoryBase {
+public interface NodeHistoryBase<TX extends Transaction, H extends SidechainBlockHeaderBase, PM extends SidechainBlockBase<TX,H>>  {
+
+    Optional<? extends PM> getBlockById(String blockId);
+
+    PM getBestBlock();
 
     List<String> getLastBlockIds(int count);
 

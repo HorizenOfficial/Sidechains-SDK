@@ -4,12 +4,11 @@ import com.horizen.SidechainTypes
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
 import com.horizen.box.{ForgerBox, WithdrawalRequestBox}
-import com.horizen.consensus.ConsensusEpochInfo
-import com.horizen.consensus.ConsensusEpochNumber
+import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber}
 import com.horizen.state.StateView
-import com.horizen.utils.{BlockFeeInfo, WithdrawalEpochInfo}
+import com.horizen.utils.{BlockFeeInfo, MerkleTree, WithdrawalEpochInfo}
 import scorex.core.VersionTag
-import scorex.util.ModifierId
+import scorex.util.{ModifierId, bytesToId}
 
 import scala.util.Try
 
@@ -19,9 +18,15 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView) ext
   override type NVCT = this.type
 
   // modifiers
-  override def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[AccountStateView] = ???
+  override def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[AccountStateView] = Try {
+    // TODO
+    this
+  }
 
-  override def applyTransaction(tx: SidechainTypes#SCAT): Try[AccountStateView] = ???
+  override def applyTransaction(tx: SidechainTypes#SCAT): Try[AccountStateView] = Try {
+    // TODO
+    this
+  }
 
   // account modifiers:
   protected def addAccount(address: Array[Byte], account: Account): Try[AccountStateView] = ???
@@ -45,7 +50,7 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView) ext
   override protected def spendStake(fb: ForgerBox): Try[AccountStateView] = ???
 
   // note: probably must be "set" than "add". Because we allow it only once per "commit".
-  override protected def addFeeInfo(info: BlockFeeInfo): Try[AccountStateView] = Try {
+  override def addFeeInfo(info: BlockFeeInfo): Try[AccountStateView] = Try {
     metadataStorageView.addFeePayment(info)
     new AccountStateView(metadataStorageView)
   }
@@ -60,7 +65,7 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView) ext
     new AccountStateView(metadataStorageView)
   }
 
-  protected def updateAccountStateRoot(accountStateRoot: Array[Byte]): Try[AccountStateView] = Try {
+  def updateAccountStateRoot(accountStateRoot: Array[Byte]): Try[AccountStateView] = Try {
     metadataStorageView.updateAccountStateRoot(accountStateRoot)
     new AccountStateView(metadataStorageView)
   }
@@ -105,8 +110,6 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView) ext
   }
 
   override def hasCeased: Boolean = metadataStorageView.hasCeased
-
-  override def getConsensusEpochInfo: (ModifierId, ConsensusEpochInfo) = ???
 
   override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = metadataStorageView.getConsensusEpochNumber
 

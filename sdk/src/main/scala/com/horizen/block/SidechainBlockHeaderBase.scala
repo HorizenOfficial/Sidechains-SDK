@@ -1,23 +1,22 @@
 package com.horizen.block
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.google.common.primitives.{Bytes}
-import com.horizen.consensus.{ForgingStakeInfo}
+import com.google.common.primitives.Bytes
+import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
-import com.horizen.serialization.{ScorexModifierIdSerializer}
-import com.horizen.utils.{MerklePath}
+import com.horizen.serialization.ScorexModifierIdSerializer
+import com.horizen.utils.MerklePath
 import com.horizen.validation.InvalidSidechainBlockHeaderException
 import scorex.core.block.Block
-import scorex.core.{bytesToId}
+import scorex.core.bytesToId
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ModifierId
 
 import scala.util.Try
 
 
-abstract class SidechainBlockHeaderBase() {
-
+trait SidechainBlockHeaderBase {
   val version: Block.Version
   val parentId: ModifierId
   val timestamp: Block.Timestamp
@@ -46,8 +45,5 @@ abstract class SidechainBlockHeaderBase() {
       || feePaymentsHash.length != 32
       || timestamp <= 0)
       throw new InvalidSidechainBlockHeaderException(s"SidechainBlockHeaderBase $id contains out of bound fields.")
-
   }
 }
-
-

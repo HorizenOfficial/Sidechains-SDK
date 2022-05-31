@@ -1,21 +1,21 @@
 package com.horizen
 
-import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlockBase}
-import com.horizen.chain.{FeePaymentsInfo, MainchainBlockReferenceDataInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
+import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.chain._
 import com.horizen.consensus.{ConsensusDataProvider, ConsensusDataStorage, FullConsensusEpochInfo, blockIdToEpochId}
 import com.horizen.node.NodeHistoryBase
+import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
-import com.horizen.storage.{AbstractHistoryStorage, SidechainHistoryStorage}
+import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.storage.leveldb.Algos.encoder
+import com.horizen.transaction.Transaction
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import scorex.core.consensus.History.{Equal, Fork, ModifierIds, Nonsense, Older, ProgressInfo, Younger}
+import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
+import scorex.core.NodeViewModifier
+import scorex.core.consensus.History._
 import scorex.core.consensus.{History, ModifierSemanticValidity}
 import scorex.core.validation.RecoverableModifierError
 import scorex.util.{ModifierId, ScorexLogging, idToBytes}
-import com.horizen.node.util.MainchainBlockReferenceInfo
-import com.horizen.transaction.Transaction
-import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
-import scorex.core.NodeViewModifier
 
 import java.util.Optional
 import scala.collection.mutable.ListBuffer
@@ -25,20 +25,21 @@ import scala.util.{Failure, Success, Try}
 
 abstract class AbstractHistory[
   TX <: Transaction,
-  PM <: SidechainBlockBase[TX],
+  H <: SidechainBlockHeaderBase,
+  PM <: SidechainBlockBase[TX, H],
   HSTOR <: AbstractHistoryStorage[PM, HSTOR],
-  HT <: AbstractHistory[TX, PM, HSTOR, HT]
+  HT <: AbstractHistory[TX, H, PM, HSTOR, HT]
 ] protected (
     val storage: HSTOR,
     val consensusDataStorage: ConsensusDataStorage,
     val params: NetworkParams,
     val semanticBlockValidators: Seq[SemanticBlockValidator[PM]],
-    val historyBlockValidators: Seq[HistoryBlockValidator[TX, PM, HSTOR, HT]]
+    val historyBlockValidators: Seq[HistoryBlockValidator[TX, H, PM, HSTOR, HT]]
   )
     extends scorex.core.consensus.History[PM, SidechainSyncInfo, HT]
       with NetworkParamsUtils
       with ConsensusDataProvider
-      with NodeHistoryBase
+      with NodeHistoryBase[TX, H, PM]
       with ScorexLogging
 {
   self: HT =>
@@ -373,7 +374,7 @@ abstract class AbstractHistory[
     }
   }
 
-  def getBlockById(blockId: String): java.util.Optional[PM] = {
+  override def getBlockById(blockId: String): Optional[PM] = {
     getStorageBlockById(ModifierId(blockId)).asJava
   }
 
@@ -393,7 +394,7 @@ abstract class AbstractHistory[
     }
   }
 
-  def getBestBlock : PM = bestBlock
+  override def getBestBlock : PM = bestBlock
 
   override def getBlockIdByHeight(height: Int): java.util.Optional[String] = {
     storage.activeChainBlockId(height) match {
@@ -538,7 +539,7 @@ abstract class AbstractHistory[
 }
 
 object AbstractHistory {
-  def calculateGenesisBlockInfo[TX <: Transaction](block: SidechainBlockBase[TX], params: NetworkParams): SidechainBlockInfo = {
+  def calculateGenesisBlockInfo[TX <: Transaction](block: SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase], params: NetworkParams): SidechainBlockInfo = {
     require(block.id == params.sidechainGenesisBlockId, "Passed block is not a genesis block.")
 
     SidechainBlockInfo(
@@ -553,7 +554,7 @@ object AbstractHistory {
       // TODO check this
       WithdrawalEpochUtils.getWithdrawalEpochInfo[TX](block, WithdrawalEpochInfo(0,0), params),
       None,
-      block.id,
+      block.id
     )
   }
 }
