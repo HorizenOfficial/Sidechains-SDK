@@ -3,7 +3,7 @@ package com.horizen.account.block
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Longs}
-import com.horizen.account.proposition.{PublicKeySecp256k1Proposition, PublicKeySecp256k1PropositionSerializer}
+import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
 import com.horizen.block.SidechainBlockHeaderBase
 import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import com.horizen.params.NetworkParams
@@ -34,7 +34,7 @@ case class AccountBlockHeader(
                                override val mainchainMerkleRootHash: Array[Byte], // root hash of MainchainBlockReference.dataHash() root hash and MainchainHeaders root hash
                                stateRoot: Array[Byte],
                                receiptsRoot: Array[Byte],
-                               forgerAddress: PublicKeySecp256k1Proposition,
+                               forgerAddress: AddressProposition,
                                override val ommersMerkleRootHash: Array[Byte], // build on top of Ommer.id()
                                override val ommersCumulativeScore: Long, // to be able to calculate the score of the block without having the full SB. For future
                                override val feePaymentsHash: Array[Byte], // hash of the fee payments created during applying this block to the state. zeros by default.
@@ -118,7 +118,7 @@ object AccountBlockHeaderSerializer extends ScorexSerializer[AccountBlockHeader]
 
     w.putBytes(obj.receiptsRoot)
 
-    PublicKeySecp256k1PropositionSerializer.getSerializer.serialize(obj.forgerAddress, w)
+    AddressPropositionSerializer.getSerializer.serialize(obj.forgerAddress, w)
 
     w.putBytes(obj.ommersMerkleRootHash)
 
@@ -153,7 +153,7 @@ object AccountBlockHeaderSerializer extends ScorexSerializer[AccountBlockHeader]
 
     val receiptsRoot = r.getBytes(32) // TODO add a constant
 
-    val forgerAddress = PublicKeySecp256k1PropositionSerializer.getSerializer.parse(r)
+    val forgerAddress = AddressPropositionSerializer.getSerializer.parse(r)
 
     val ommersMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
 
