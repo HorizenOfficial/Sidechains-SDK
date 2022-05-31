@@ -18,8 +18,8 @@ import (
 var instance *lib.Service
 
 type InteropResult struct {
-	Error  string
-	Result interface{}
+	Error  string      `json:"error"`
+	Result interface{} `json:"result"`
 }
 
 func response(err error, result interface{}) *C.char {

@@ -47,6 +47,10 @@ public class StateDBTest {
             var balance = statedb.GetAccountBalance(origin);
             System.out.println("StateGetAccountBalance result " + balance);
 
+            System.out.println("StateGetAccount");
+            var account = statedb.GetStateAccount(origin);
+            System.out.println("StateGetAccount result " + account);
+
             System.out.println("CloseState");
         }
         // verify that automatic resource management worked and StateDB.close() was called,

@@ -7,20 +7,24 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/log"
 	"libevm/types"
-	"math/big"
 )
 
 type StateRootParams struct {
-	Root common.Hash
+	Root common.Hash `json:"root"`
 }
 
 type HandleParams struct {
-	Handle int
+	Handle int `json:"handle"`
 }
 
-type AccounteParams struct {
+type AccountParams struct {
 	HandleParams
-	Address common.Address
+	Address common.Address `json:"address"`
+}
+
+type StateAccount struct {
+	Nonce   uint64        `json:"nonce"`
+	Balance *types.BigInt `json:"balance"`
 }
 
 // StateOpen will create a new state at the given root hash.
@@ -75,14 +79,27 @@ func (s *Service) StateCommit(params HandleParams) (error, common.Hash) {
 	return nil, hash
 }
 
-func (s *Service) StateGetAccountBalance(params AccounteParams) (error, *types.BigInt) {
+func (s *Service) StateGetAccountBalance(params AccountParams) (error, *types.BigInt) {
 	err, statedb := s.getState(params.Handle)
 	if err != nil {
 		return err, nil
 	}
 	stateObject := statedb.GetOrNewStateObject(params.Address)
-	stateObject.AddBalance(big.NewInt(1234))
 	balance := stateObject.Balance()
 	log.Debug("account balance", "address", params.Address, "balance", balance)
 	return nil, types.NewBigInt(balance)
+}
+
+func (s *Service) StateGetAccount(params AccountParams) (error, *StateAccount) {
+	err, statedb := s.getState(params.Handle)
+	if err != nil {
+		return err, nil
+	}
+	stateObject := statedb.GetOrNewStateObject(params.Address)
+	account := &StateAccount{
+		Nonce:   stateObject.Nonce(),
+		Balance: types.NewBigInt(stateObject.Balance()),
+	}
+	log.Debug("account", "address", params.Address, "account", account)
+	return nil, account
 }

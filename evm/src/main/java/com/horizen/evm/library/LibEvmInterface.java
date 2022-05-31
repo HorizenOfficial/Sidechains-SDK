@@ -8,7 +8,7 @@ public interface LibEvmInterface extends Library {
 
     LibEvm.InteropResult Initialize(String path);
 
-    <R> LibEvm.InteropResult<R> Invoke(String method, JsonPointer args);
+    JsonString Invoke(String method, JsonPointer args);
 
 //    Evm.HandleResult OpenState(String stateRootHex);
 //

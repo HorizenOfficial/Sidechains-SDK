@@ -1,5 +1,7 @@
 package com.horizen.evm.library;
 
+import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.horizen.evm.StateAccount;
 import com.sun.jna.Native;
 
 public final class LibEvm {
@@ -23,74 +25,85 @@ public final class LibEvm {
         // prevent instantiation of this class
     }
 
-    public static <R> R Invoke(String method, JsonPointer args) throws Exception {
-        var response = LibEvm.Instance.<R>Invoke(method, args);
+    public static void Invoke(String method, JsonPointer args) throws Exception {
+        Invoke(method, args, Void.class);
+    }
+
+    public static <R> R Invoke(String method, JsonPointer args, Class<R> responseType) throws Exception {
+        var json = LibEvm.Instance.Invoke(method, args);
+        // build type information to deserialize to generic type InteropResult<R>
+        var type = TypeFactory.defaultInstance().constructParametricType(InteropResult.class, responseType);
+        InteropResult<R> response = json.deserialize(type);
         if (response.isError()) {
-            throw new Exception(response.Error);
+            throw new Exception(response.error);
         }
-        return response.Result;
+        return response.result;
     }
 
     public static class OpenStateParams extends JsonPointer {
-        public String Root;
+        public String root;
     }
 
     public static class HandleParams extends JsonPointer {
-        public int Handle;
+        public int handle;
     }
 
     public static class AccountParams extends HandleParams {
-        public String Address;
+        public String address;
     }
 
     public static int StateOpen(String stateRootHex) throws Exception {
         var params = new OpenStateParams();
-        params.Root = stateRootHex;
-        return LibEvm.Invoke("StateOpen", params);
+        params.root = stateRootHex;
+        return LibEvm.Invoke("StateOpen", params, int.class);
     }
 
     public static void StateClose(int handle) throws Exception {
         var params = new HandleParams();
-        params.Handle = handle;
+        params.handle = handle;
         LibEvm.Invoke("StateClose", params);
     }
 
     public static String StateIntermediateRoot(int handle) throws Exception {
         var params = new HandleParams();
-        params.Handle = handle;
-        return LibEvm.Invoke("StateIntermediateRoot", params);
+        params.handle = handle;
+        return LibEvm.Invoke("StateIntermediateRoot", params, String.class);
     }
 
     public static String StateCommit(int handle) throws Exception {
         var params = new HandleParams();
-        params.Handle = handle;
-        return LibEvm.Invoke("StateCommit", params);
+        params.handle = handle;
+        return LibEvm.Invoke("StateCommit", params, String.class);
     }
 
     public static String StateGetAccountBalance(int handle, String address) throws Exception {
         var params = new AccountParams();
-        params.Handle = handle;
-        params.Address = address;
-        return LibEvm.Invoke("StateGetAccountBalance", params);
+        params.handle = handle;
+        params.address = address;
+        return LibEvm.Invoke("StateGetAccountBalance", params, String.class);
+    }
+
+    public static StateAccount StateGetAccount(int handle, String address) throws Exception {
+        var params = new AccountParams();
+        params.handle = handle;
+        params.address = address;
+        return LibEvm.Invoke("StateGetAccount", params, StateAccount.class);
     }
 
     public static class InteropResult<R> extends JsonPointer {
-        public String Error;
-        public R Result;
+        public String error;
+        public R result;
 
         public boolean isError() {
-            return !Error.isEmpty();
+            return !error.isEmpty();
         }
 
         @Override
         public String toString() {
-            if (!Error.isEmpty()) {
-                return String.format("error: %s", Error);
+            if (!error.isEmpty()) {
+                return String.format("error: %s", error);
             }
-            if (Result == null) {
-                return "success";
-            }
-            return String.format("result: %s", Result);
+            return "success";
         }
     }
 
