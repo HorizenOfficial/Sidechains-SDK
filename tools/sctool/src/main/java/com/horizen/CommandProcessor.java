@@ -372,10 +372,12 @@ public class CommandProcessor {
                       "\t\t\"updateconfig\": boolean - Optional. Default false. If true, put the results in a copy of source config.\n" +
                       "\t\t\"sourceconfig\": <path to in config file> - expected if 'updateconfig' = true.\n" +
                       "\t\t\"resultconfig\": <path to out config file> - expected if 'updateconfig' = true.\n" +
-                      "\t}"
+                      "\t\t\"blockversion\": int - Optional, default = 1. UTXO model block version=1, Account model block version=2.\n" +
+                "\t}"
         );
         printer.print("Examples:\n" +
                       "\tgenesisinfo {\"secret\":\"78fa...e818\", \"info\":\"0001....ad11\"}\n\n" +
+                      "\tgenesisinfo {\"secret\":\"78fa...e818\", \"info\":\"0001....ad11\", \"blockversion\":2}\n\n" +
                       "\tgenesisinfo {\"secret\":\"78fa...e818\", \"info\":\"0001....ad11\", \n" +
                       "\t\"updateconfig\": true, \"sourceconfig\":\"./template.conf\", \"resultconfig\":\"./result.conf\"}");
     }
@@ -388,7 +390,19 @@ public class CommandProcessor {
             return;
         }
 
-        boolean isAccountBlock = json.has("accountmodel") && json.get("accountmodel").asBoolean();
+        byte block_version;
+        if (json.has("blockversion"))
+        {
+            block_version = (byte)json.get("blockversion").asInt();
+            if ( block_version != SidechainBlock.BLOCK_VERSION() &&
+                 block_version != AccountBlock.ACCOUNT_BLOCK_VERSION())
+            {
+                printGenesisInfoUsageMsg(String.format("Optional 'blockversion' integer field expected to be %d or %d.", SidechainBlock.BLOCK_VERSION(), AccountBlock.ACCOUNT_BLOCK_VERSION()));
+                return;
+            }
+        } else {
+            block_version = SidechainBlock.BLOCK_VERSION();
+        }
 
         SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
 
@@ -509,7 +523,6 @@ public class CommandProcessor {
 
             MainchainBlockReference mcRef = MainchainBlockReference.create(mcBlockBytes, params, versionsManager).get();
 
-
             //Find Sidechain creation information
             SidechainCreation sidechainCreation = null;
             if (mcRef.data().sidechainRelatedAggregatedTransaction().isEmpty())
@@ -536,13 +549,11 @@ public class CommandProcessor {
             // no fee payments expected for the genesis block
             byte[] feePaymentsHash = new byte[32];
 
+            int withdrawalEpochLength;
+            String sidechainBlockHex;
+
             // are we building a utxo or account model based block?
-
-            int withdrawalEpochLength = -1;
-            String sidechainBlockHex = "";
-
-            if (isAccountBlock){
-                byte block_version = AccountBlock.ACCOUNT_BLOCK_VERSION();
+            if (block_version == AccountBlock.ACCOUNT_BLOCK_VERSION()){
 
                 byte[] stateRoot = new byte[MerkleTree.ROOT_HASH_LENGTH];
                 byte[] receiptsRoot = new byte[MerkleTree.ROOT_HASH_LENGTH];
@@ -570,7 +581,6 @@ public class CommandProcessor {
                         scala.Option.empty()
                 ).get();
 
-
                 try {
                     SidechainCreation creationOutput = (SidechainCreation) accountBlock.mainchainBlockReferencesData().head().sidechainRelatedAggregatedTransaction().get().mc2scTransactionsOutputs().get(0);
                     withdrawalEpochLength = creationOutput.withdrawalEpochLength();
@@ -581,9 +591,7 @@ public class CommandProcessor {
                 }
 
                 sidechainBlockHex = BytesUtils.toHexString(accountBlock.bytes());
-            } else
-            {
-                byte block_version = SidechainBlock.BLOCK_VERSION();
+            } else {
                 SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>());
 
                 SidechainBlock sidechainBlock = SidechainBlock.create(
@@ -614,9 +622,6 @@ public class CommandProcessor {
 
                 sidechainBlockHex = BytesUtils.toHexString(sidechainBlock.bytes());
             }
-
-
-
 
             ObjectNode resJson = new ObjectMapper().createObjectNode();
             resJson.put("scId", BytesUtils.toHexString(BytesUtils.reverseBytes(scId))); // scId output expected to be in BE

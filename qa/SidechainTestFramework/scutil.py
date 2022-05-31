@@ -121,8 +121,7 @@ def launch_bootstrap_tool(command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK",
-                                          "..")  +
-                                "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.3.2.jar",
+                                          "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.3.2.jar",
                                 command_name, json_param], stdout=subprocess.PIPE)
     sc_bootstrap_output = java_ps.communicate()[0]
     try:
@@ -155,8 +154,8 @@ Output: a JSON object to be included in the settings file of the sidechain node 
 """
 
 
-def generate_genesis_data(genesis_info, genesis_secret, vrf_secret, block_timestamp_rewind):
-    jsonParameters = {"accountmodel": True, #TODO pass it from outside
+def generate_genesis_data(genesis_info, genesis_secret, vrf_secret, block_timestamp_rewind, blockversion):
+    jsonParameters = {"blockversion": blockversion,
                       "secret": genesis_secret, "vrfSecret": vrf_secret, "info": genesis_info,
                       "regtestBlockTimestampRewind": block_timestamp_rewind}
     jsonNode = launch_bootstrap_tool("genesisinfo", jsonParameters)
@@ -438,6 +437,15 @@ def initialize_sc_chain_clean(test_dir, num_nodes, genesis_secrets, genesis_info
 def get_websocket_configuration(index, array_of_MCConnectionInfo):
     return array_of_MCConnectionInfo[index] if index < len(array_of_MCConnectionInfo) else MCConnectionInfo()
 
+def get_lib_separator():
+    lib_separator = ":"
+    if sys.platform.startswith('win'):
+        lib_separator = ";"
+    return lib_separator
+
+SIMPLE_APP_BINARY = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.3.2.jar" + get_lib_separator() + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+EVM_APP_BINARY =    "../examples/evmapp/target/sidechains-sdk-evmapp-0.3.2.jar" + get_lib_separator() + "../examples/evmapp/target/lib/* com.horizen.examples.EvmApp"
+
 
 def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None, print_output_to_file=False):
     """
@@ -445,13 +453,9 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     """
     # Will we have  extra args for SC too ?
     datadir = os.path.join(dirname, "sc_node" + str(i))
-    lib_separator = ":"
-    if sys.platform.startswith('win'):
-        lib_separator = ";"
 
     if binary is None:
-        binary = "../examples/evmapp/target/sidechains-sdk-evmapp-0.3.2.jar" + lib_separator + "../examples/evmapp/target/lib/* com.horizen.examples.EvmApp"
-        #binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.3.2.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+        binary = SIMPLE_APP_BINARY
     #        else if platform.system() == 'Linux':
     '''
     In order to effectively attach a debugger (e.g IntelliJ) to the simpleapp, it is necessary to start the process
@@ -701,6 +705,12 @@ def check_box_balance(sc_node, account, box_class_name, expected_boxes_count, ex
 # without receiving "block in future" error. By default we rewind half of the consensus epoch.
 DefaultBlockTimestampRewind = 720 * 120 / 2
 
+# UTXO vs Account model block versions
+UtxoModelBlockVersion = 1
+AccountModelBlockVersion = 2
+DefaultBlockVersion = UtxoModelBlockVersion
+
+
 """
 Bootstrap a network of sidechain nodes.
 
@@ -750,7 +760,8 @@ network: {
  Output:
  - bootstrap information of the sidechain nodes. An instance of SCBootstrapInfo (see sc_boostrap_info.py)    
 """
-def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration, block_timestamp_rewind=DefaultBlockTimestampRewind):
+def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
+                              block_timestamp_rewind=DefaultBlockTimestampRewind, blockversion = DefaultBlockVersion):
     log_info = LogInfo(options.logfilelevel, options.logconsolelevel)
     print(options)
     total_number_of_sidechain_nodes = len(network.sc_nodes_configuration)
@@ -763,7 +774,8 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration, block_tim
     sc_nodes_bootstrap_info = create_sidechain(sc_creation_info,
                                                block_timestamp_rewind,
                                                cert_keys_paths,
-                                               csw_keys_paths)
+                                               csw_keys_paths,
+                                               blockversion)
     sc_nodes_bootstrap_info_empty_account = SCBootstrapInfo(sc_nodes_bootstrap_info.sidechain_id,
                                                             None,
                                                             sc_nodes_bootstrap_info.genesis_account_balance,
@@ -812,7 +824,7 @@ Parameters:
 """
 
 
-def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, csw_keys_paths):
+def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, csw_keys_paths, blockversion=DefaultBlockVersion):
     accounts = generate_secrets("seed", 1)
     vrf_keys = generate_vrf_secrets("seed", 1)
     genesis_account = accounts[0]
@@ -832,7 +844,7 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
         sc_creation_info.sc_creation_version)
 
     genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret, vrf_key.secret,
-                                         block_timestamp_rewind)
+                                         block_timestamp_rewind, blockversion)
     sidechain_id = genesis_info[2]
 
     return SCBootstrapInfo(sidechain_id, genesis_account, sc_creation_info.forward_amount, genesis_info[1],
