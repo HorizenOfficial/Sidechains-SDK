@@ -8,20 +8,16 @@ import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.state.AccountState
+import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.wallet.AccountWallet
-
-import com.horizen.consensus.{ConsensusEpochAndSlot, ConsensusEpochNumber, ConsensusSlotNumber}
-import com.horizen.forge.{AbstractForger, ForgeResult, ForgingInfo, MainchainSynchronizer}
-import com.horizen.forge.Forger.ReceivableMessages.GetForgingInfo
+import com.horizen.consensus.{ConsensusEpochNumber, ConsensusSlotNumber}
+import com.horizen.forge.{AbstractForger, ForgeResult, MainchainSynchronizer}
 import com.horizen.params.NetworkParams
-import com.horizen.utils.TimeToEpochUtils
-import scorex.core.NodeViewHolder.{CurrentView, ReceivableMessages}
+
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ScorexLogging
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.util.{Failure, Success}
 
 class AccountForger(settings: SidechainSettings,
              viewHolderRef: ActorRef,
@@ -30,29 +26,11 @@ class AccountForger(settings: SidechainSettings,
              params: NetworkParams) extends AbstractForger(
   settings, viewHolderRef, forgeMessageBuilder, timeProvider, params
 ) {
-  type View = CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]
-
-  protected def processGetForgeInfo: Receive = {
-    case GetForgingInfo =>
-      val forgerInfoRequester = sender()
-
-      val getInfoMessage
-      = ReceivableMessages.GetDataFromCurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool, ConsensusEpochAndSlot](getEpochAndSlotForBestBlock)
-      val epochAndSlotFut = (viewHolderRef ? getInfoMessage).asInstanceOf[Future[ConsensusEpochAndSlot]]
-      epochAndSlotFut.onComplete {
-        case Success(epochAndSlot: ConsensusEpochAndSlot) =>
-          forgerInfoRequester ! Success(ForgingInfo(params.consensusSecondsInSlot, params.consensusSlotsInEpoch, epochAndSlot, isForgingEnabled))
-
-        case failure@Failure(ex) =>
-          forgerInfoRequester ! failure
-
-      }
-  }
-
-  def getEpochAndSlotForBestBlock(view: View): ConsensusEpochAndSlot = {
-    val history = view.history
-    TimeToEpochUtils.timestampToEpochAndSlot(params, history.bestBlockInfo.timestamp)
-  }
+  override type HSTOR = AccountHistoryStorage
+  override type HIS = AccountHistory
+  override type MS = AccountState
+  override type VL = AccountWallet
+  override type MP = AccountMemoryPool
 
   override def getForgedBlockAsFuture(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, blockCreationTimeout: Timeout) : Future[ForgeResult] = {
     val forgeMessage: AccountForgeMessageBuilder#ForgeMessageType = forgeMessageBuilder.buildForgeMessageForEpochAndSlot(epochNumber, slot, blockCreationTimeout)
