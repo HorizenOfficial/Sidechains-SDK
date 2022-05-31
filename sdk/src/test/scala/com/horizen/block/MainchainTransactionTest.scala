@@ -245,4 +245,20 @@ class MainchainTransactionTest extends JUnitSuite {
       "e5898923c5501dbecd48456555cf9225aa44bf3a4e84bc20ec069b4a4dcf972a",
       BytesUtils.toHexString(sc_id_bytes))
   }
+
+  @Test
+  def tx_vminus4_with_many_tx_outputs(): Unit = {
+    // Transaction with many outputs(301)
+    // Check that we are able to parse the outputs vector length properly as reversed var int.
+    val hex : String = Source.fromResource("mctx_v-4_with_many_tx_outputs").getLines().next()
+    val bytes: Array[Byte] = BytesUtils.fromHexString(hex)
+
+    val tx: MainchainTransaction = MainchainTransaction.create(bytes, 0).get
+
+    val expectedTxHash: String = "7228f8acfec947a6d7fc740e685c75b60cd841b0d784d4a353b2e1395ddc7600"
+    val expectedTxSize: Int = 24762
+
+    assertEquals("Tx Hash is different.", expectedTxHash, tx.hashBigEndianHex)
+    assertEquals("Tx Size is different.", expectedTxSize, tx.size)
+  }
 }

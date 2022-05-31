@@ -11,7 +11,9 @@ class MockedSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                     state: SidechainState,
                                     wallet: SidechainWallet,
                                     mempool: SidechainMemoryPool)
-  extends SidechainNodeViewHolder(sidechainSettings, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null) {
+  extends SidechainNodeViewHolder(sidechainSettings, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ) {
+
+  override def dumpStorages: Unit = {}
 
   override def restoreState(): Option[(HIS, MS, VL, MP)] = {
     Some(history, state, wallet, mempool)

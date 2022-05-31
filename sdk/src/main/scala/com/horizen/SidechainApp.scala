@@ -4,7 +4,9 @@ import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
 import java.util.{HashMap => JHashMap, List => JList}
 import akka.actor.{ActorRef, ActorSystem}
+import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
+import akka.stream.ActorMaterializer
 import com.google.inject.name.Named
 import com.google.inject.{Inject, _}
 import com.horizen.api.http.{SidechainSubmitterApiRoute, _}
@@ -36,7 +38,6 @@ import scorex.core.settings.ScorexSettings
 import scorex.core.transaction.Transaction
 import scorex.core.{ModifierTypeId, NodeViewModifier}
 import scorex.util.ScorexLogging
-import com.typesafe.config.Config
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Map
@@ -47,6 +48,9 @@ import com.horizen.websocket.client.{DefaultWebSocketReconnectionHandler, Mainch
 import com.horizen.websocket.server.WebSocketServerRef
 import com.horizen.serialization.JsonHorizenPublicKeyHashSerializer
 import com.horizen.transaction.mainchain.SidechainCreation
+import scorex.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
+
+import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.util.{Failure, Success, Try}
 
@@ -68,8 +72,10 @@ class SidechainApp @Inject()
    @Named("WalletForgingBoxesInfoStorage") val walletForgingBoxesInfoStorage: Storage,
    @Named("WalletCswDataStorage") val walletCswDataStorage: Storage,
    @Named("ConsensusStorage") val consensusStorage: Storage,
+   @Named("BackupStorage") val backUpStorage: Storage,
    @Named("CustomApiGroups") val customApiGroups: JList[ApplicationApiGroup],
    @Named("RejectedApiPaths") val rejectedApiPaths : JList[Pair[String, String]],
+   @Named("ApplicationStopper") val applicationStopper : SidechainAppStopper
   )
   extends Application  with ScorexLogging
 {
@@ -258,6 +264,8 @@ class SidechainApp @Inject()
       sidechainSecretStorage.add(sidechainSecretsCompanion.parseBytes(BytesUtils.fromHexString(secretSchnorr)))
   }
 
+  protected val backupStorage = new BackupStorage(registerStorage(backUpStorage), sidechainBoxesCompanion)
+
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(
     sidechainSettings,
     sidechainHistoryStorage,
@@ -270,6 +278,7 @@ class SidechainApp @Inject()
     sidechainWalletTransactionStorage,
     forgingBoxesMerklePathStorage,
     sidechainWalletCswDataStorage,
+    backupStorage,
     params,
     timeProvider,
     applicationWallet,
@@ -336,14 +345,16 @@ class SidechainApp @Inject()
   var applicationApiRoutes : Seq[ApplicationApiRoute] = Seq[ApplicationApiRoute]()
   customApiGroups.asScala.foreach(apiRoute => applicationApiRoutes = applicationApiRoutes :+ ApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
 
+  val boxIterator = backupStorage.getBoxIterator
   var coreApiRoutes: Seq[SidechainApiRoute] = Seq[SidechainApiRoute](
     MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
-    SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef),
+    SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef),
-    SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager)
+    SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager),
+    SidechainBackupApiRoute(settings.restApi, nodeViewHolderRef, boxIterator)
   )
 
   val transactionSubmitProvider : TransactionSubmitProvider = new TransactionSubmitProviderImpl(sidechainTransactionActorRef)
@@ -359,10 +370,68 @@ class SidechainApp @Inject()
 
   override val swaggerConfig: String = Source.fromResource("api/sidechainApi.yaml")(Codec.UTF8).getLines.mkString("\n")
 
-  override def stopAll(): Unit = {
-    super.stopAll()
-    storageList.foreach(_.close())
+  val shutdownHookThread = new Thread() {
+    override def run(): Unit = {
+      log.error("Unexpected shutdown")
+      sidechainStopAll()
+    }
   }
+
+  // we rewrite (by overriding) the base class run() method, just to customizing the shutdown hook thread
+  // not to call the stopAll() method
+  override def run(): Unit = {
+    require(settings.network.agentName.length <= Application.ApplicationNameLimit)
+
+    log.debug(s"Available processors: ${Runtime.getRuntime.availableProcessors}")
+    log.debug(s"Max memory available: ${Runtime.getRuntime.maxMemory}")
+    log.debug(s"RPC is allowed at ${settings.restApi.bindAddress.toString}")
+
+    implicit val materializer: ActorMaterializer = ActorMaterializer()
+    val bindAddress = settings.restApi.bindAddress
+
+    Http().bindAndHandle(combinedRoute, bindAddress.getAddress.getHostAddress, bindAddress.getPort)
+
+    //on unexpected shutdown
+    Runtime.getRuntime.addShutdownHook(shutdownHookThread)
+  }
+
+  val stopAllInProgress : AtomicBoolean = new AtomicBoolean(false)
+
+  // this method does not override stopAll(), but it rewrites part of its contents
+  def sidechainStopAll(): Unit = synchronized {
+
+    val currentThreadId     = Thread.currentThread().getId()
+    val shutdownHookThreadId = shutdownHookThread.getId()
+
+    // remove the shutdown hook for avoiding being called twice when we eventually call System.exit()
+    // (unless we are executing the hook thread itself)
+    if (currentThreadId != shutdownHookThreadId)
+      Runtime.getRuntime.removeShutdownHook(shutdownHookThread)
+
+    // We are doing this because it is the only way for accessing the private 'upnpGateway' parent data member, and we
+    // need to rewrite the implementation of the stopAll() base method, which we do not call from here
+    val upnpGateway = scorexContext.upnpGateway
+
+    log.info("Stopping network services")
+    upnpGateway.foreach(_.deletePort(settings.network.bindAddress.getPort))
+    networkControllerRef ! ShutdownNetwork
+
+    log.info("Stopping actors")
+    actorSystem.terminate().onComplete { _ =>
+      synchronized {
+        log.info("Calling custom application stopAll...")
+        applicationStopper.stopAll()
+
+        log.info("Closing all data storages...")
+        storageList.foreach(_.close())
+
+        log.info("Exiting from the app...")
+        System.out.println("SidechainApp is calling exit()...")
+        System.exit(0)
+      }
+    }
+  }
+
 
   private def registerStorage(storage: Storage) : Storage = {
     storageList += storage
@@ -376,4 +445,5 @@ class SidechainApp @Inject()
   def getSecretSubmitProvider: SecretSubmitProvider = secretSubmitProvider
 
   actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
+
 }

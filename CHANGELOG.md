@@ -1,3 +1,13 @@
+**0.3.3**
+1. Mainchain block deserialization fix: CompactSize usage issue.
+2. Bootstrapping tool improvement: scgenesisinfo data parsing.
+3. Added logic for checking storages consistency at node startup, and trying to recover the situation for instance if a crash happened during update procedure.
+4. CertificateSubmitter on active sync improvement in `getMessageToSign` method.
+5. Added HTTP API for stopping the SC node and a hook for calling custom application stop procedure.
+
+**0.3.2**
+1. CertificateSubmitter and CertificateSignaturesManager actors restart strategy and failures processing improvement. 
+
 **0.3.1**
 1. Withdrawal epoch validator: fix wrongly rejected sidechain block containing McBlockRef with MC2SCAggTx leading to the end of the withdrawal epoch.
 

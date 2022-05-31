@@ -15,6 +15,10 @@ import scorex.core.consensus.HistoryReader
 
 class SDKModifiersCache[PMOD <: PersistentNodeViewModifier, H <: HistoryReader[PMOD, _]] (override val maxSize: Int)
   extends DefaultModifiersCache[PMOD, H] (maxSize) {
+  /**
+   * This method overrides function from scorex ModifiersCache. Original implementation of ModefiersCache had a cache cleaning problem.
+   * onPut() cannot clean evictionCache from elements that weren't in cache. Moving call onPut() after adding element to cache fix this problem.
+   */
   @Override
   override def put(key: K, value: V): Unit = {
     if (!contains(key)) {

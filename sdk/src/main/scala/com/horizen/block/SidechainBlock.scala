@@ -50,6 +50,8 @@ class SidechainBlock(override val header: SidechainBlockHeader,
   override val modifierTypeId: ModifierTypeId = SidechainBlock.ModifierTypeId
 
   override lazy val id: ModifierId = header.id
+  
+  override def toString: String = s"SidechainBlock(id = $id)"
 
   override lazy val transactions: Seq[SidechainTypes#SCBT] = {
     mainchainBlockReferencesData.flatMap(_.sidechainRelatedAggregatedTransaction) ++

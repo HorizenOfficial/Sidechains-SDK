@@ -3,7 +3,7 @@ import json
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH, SCMultiNetworkConfiguration
+    SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, initialize_chain_clean, start_nodes, \
     websocket_port_by_mc_node_index, assert_not_equal
@@ -24,21 +24,6 @@ Test:
         - node responses to API call block/bestBlock
 """
 
-
-def print_peers_addresses(node):
-    for peer in node.node_connectedPeers()["result"]["peers"]:
-        print(peer['address'] + " - " + peer['connectionType'])
-
-
-def print_peers_connections(sc_nodes):
-    print("\n")
-    for i in range(len(sc_nodes)):
-        print("Peer #" + str(i))
-        print("node " + "127.0.0.1:" + str(sc_p2p_port(i)) + " peers:")
-        print_peers_addresses(sc_nodes[i])
-    return ""
-
-
 def sc_create_multiple_not_connected_nodes_network(mc_node_1, num_of_nodes_to_start, mc_node_index):
     nodes_config = []
     for i in range(num_of_nodes_to_start):
@@ -48,7 +33,7 @@ def sc_create_multiple_not_connected_nodes_network(mc_node_1, num_of_nodes_to_st
         )
         nodes_config.append(a_config)
     nodes_tuple = tuple(nodes_config)
-    network = SCMultiNetworkConfiguration(SCCreationInfo(mc_node_1, 600, LARGE_WITHDRAWAL_EPOCH_LENGTH), nodes_tuple)
+    network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, LARGE_WITHDRAWAL_EPOCH_LENGTH), *nodes_tuple)
     return network
 
 
@@ -109,21 +94,17 @@ class SCNodeResponseAlongSync(SidechainTestFramework):
         time.sleep(5)
 
         best2_1 = (sc_node2.block_best()['result']['block']['id'])
-        print("MIDDLE CHECK")
+        print("Middle check")
         print("best 1: " + best1)
         print("best 2_0: " + best2_0)
         print("best 2_1: " + best2_1)
         assert_not_equal(best2_1, best2_0, "Sync has not started")
         assert_not_equal(best2_1, best1, " Too fast to synchronize, they are already sync")  # try to add more block??
+        print("Middle check passed")
 
-        print("middle check passed")
-
-        print("PEERS CONNECTIONS")
-        print_peers_connections(sc_nodes)
         sync_sc_blocks(self.sc_nodes, 200, True)
-
         best2_2 = (sc_node2.block_best()['result']['block']['id'])
-        print("FINAL CHECK")
+        print("Final check")
         print("best 1" + best1)
         print("best 1_1:" + sc_node1.block_best()['result']['block']['id'])
         print("best 2_2:" + best2_2)

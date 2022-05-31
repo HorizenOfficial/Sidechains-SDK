@@ -47,7 +47,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
 
   val genesisBlock: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion)
   val params: NetworkParams = RegTestParams(initialCumulativeCommTreeHash = FieldElementFixture.generateFieldElement())
-  implicit lazy val timeout: Timeout = Timeout(100000 milliseconds)
+  implicit lazy val timeout: Timeout = Timeout(10000 milliseconds)
 
   @Before
   def setUp(): Unit = {
@@ -494,8 +494,9 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     eventListener.fishForMessage(timeout.duration) {
       case m =>
         m match {
-          case ModifiersProcessingResult(applied, _) => {
-            assertTrue("Applyed block sequence is differ", applied.toSet.equals(blocks.toSet))
+          case ModifiersProcessingResult(applied, cleared) => {
+            assertTrue("Applied block sequence is differ", applied.toSet.equals(blocks.toSet))
+            assertTrue("Cleared block sequence is not empty.", cleared.isEmpty)
             true
           }
           case _ => {
@@ -552,8 +553,9 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     eventListener.fishForMessage(timeout.duration) {
       case m =>
         m match {
-          case ModifiersProcessingResult(applied, _) => {
-            assertTrue("Applyed block sequence is differ", applied.toSet.equals(correctSequence.toSet))
+          case ModifiersProcessingResult(applied, cleared) => {
+            assertTrue("Applied block sequence is differ", applied.toSet.equals(correctSequence.toSet))
+            assertTrue("Cleared block sequence is not empty.", cleared.isEmpty)
             true
           }
           case _ => false // Log
@@ -617,8 +619,9 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     eventListener.fishForMessage(timeout.duration) {
       case m =>
         m match {
-          case ModifiersProcessingResult(applied, _) => {
-            assertTrue("Applyed block sequence is differ", applied.toSet.equals(Set(block1, block2)))
+          case ModifiersProcessingResult(applied, cleared) => {
+            assertTrue("Applied block sequence is differ", applied.toSet.equals(Set(block1, block2)))
+            assertTrue("Cleared block sequence is not empty.", cleared.isEmpty)
             true
           }
           case _ => false
@@ -629,7 +632,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
       case m =>
         m match {
           case ModifiersProcessingResult(applied, _) => {
-            assertTrue("Applyed block sequence is differ", applied.toSet.equals(Set(block3, block4, block5, block6)))
+            assertTrue("Applied block sequence is differ", applied.toSet.equals(Set(block3, block4, block5, block6)))
             true
           }
           case _ => false
@@ -637,6 +640,15 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     }
   }
 
+  /*
+   * This test check cache cleaning in case the number of rejected blocks overwhelms cache size.
+   * Steps:
+   *  - create 520 blocks
+   *  - apply first 3 blocks
+   *  - reject all other blocks
+   *  - check that 3 blocks were applied
+   *  - check that number of cleared blocks(520 - numberOfAppliedBlock - cacheSize)
+   */
   @Test
   def remoteModifiersCacheClean(): Unit = {
     val blocksNumber = 520

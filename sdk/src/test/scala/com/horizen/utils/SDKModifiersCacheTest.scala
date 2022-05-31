@@ -41,12 +41,12 @@ class SDKModifiersCacheTest extends JUnitSuite
     var blocks = generateSidechainBlockSeq(blocksNumber, sidechainTransactionsCompanion, params, Some(genesisBlock.id))
 
     blocks.foreach(block => modifiersCache.put(block.id, block))
-    var expectedChacheSize = 200
+    var expectedChacheSize = blocksNumber
     assertEquals("Cache size is differ", expectedChacheSize, modifiersCache.size)
 
     blocks = generateSidechainBlockSeq(blocksNumber, sidechainTransactionsCompanion, params, Some(blocks.last.id))
-    blocks.takeRight(200).foreach(block => modifiersCache.put(block.id, block))
-    expectedChacheSize += 200
+    blocks.foreach(block => modifiersCache.put(block.id, block))
+    expectedChacheSize += blocksNumber
     assertEquals("Cache size is differ", expectedChacheSize, modifiersCache.size)
 
     blocks.take(10).foreach(block => modifiersCache.remove(block.id))
