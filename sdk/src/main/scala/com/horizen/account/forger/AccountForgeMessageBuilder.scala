@@ -37,22 +37,11 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
      AccountBlock](
   mainchainSynchronizer, companion, params, allowNoWebsocketConnectionInRegtest
 ) {
-  type HSTOR =  AccountHistoryStorage
-  type VL =  AccountWallet
-  type HIS =  AccountHistory
-  type MS =  AccountState
-  type MP =  AccountMemoryPool
-
-  type ForgeMessageType = GetDataFromCurrentView[ AccountHistory,  AccountState,  AccountWallet,  AccountMemoryPool, ForgeResult]
-
-  def buildForgeMessageForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber, timeout: Timeout): ForgeMessageType = {
-    val forgingFunctionForEpochAndSlot: View => ForgeResult = tryToForgeNextBlock(consensusEpochNumber, consensusSlotNumber, timeout)
-
-    val forgeMessage: ForgeMessageType =
-      GetDataFromCurrentView[ AccountHistory,  AccountState,  AccountWallet,  AccountMemoryPool, ForgeResult](forgingFunctionForEpochAndSlot)
-
-    forgeMessage
-  }
+  type HSTOR = AccountHistoryStorage
+  type VL = AccountWallet
+  type HIS = AccountHistory
+  type MS = AccountState
+  type MP = AccountMemoryPool
 
   override def createNewBlock(
                  nodeView: View,

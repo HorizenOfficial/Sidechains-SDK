@@ -13,6 +13,7 @@ import com.horizen.utils.{DynamicTypedSerializer, ForgingStakeMerklePathInfo, Li
 import com.horizen.vrf.VrfOutput
 import com.horizen.{AbstractHistory, AbstractWallet, consensus}
 import scorex.core.NodeViewHolder.CurrentView
+import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.block.Block
 import scorex.core.transaction.MemoryPool
 import scorex.core.transaction.state.MinimalState
@@ -37,7 +38,19 @@ abstract class AbstractForgeMessageBuilder[
   type HIS <: AbstractHistory[TX, H, PM, HSTOR, HIS]
   type MS <: MinimalState[PM, MS]
   type MP <: MemoryPool[TX, MP]
+
   type View = CurrentView[HIS, MS, VL, MP]
+
+  type ForgeMessageType = GetDataFromCurrentView[ HIS,  MS,  VL,  MP, ForgeResult]
+
+  def buildForgeMessageForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber, timeout: Timeout): ForgeMessageType = {
+    val forgingFunctionForEpochAndSlot: View => ForgeResult = tryToForgeNextBlock(consensusEpochNumber, consensusSlotNumber, timeout)
+
+    val forgeMessage: ForgeMessageType =
+      GetDataFromCurrentView[ HIS,  MS,  VL,  MP, ForgeResult](forgingFunctionForEpochAndSlot)
+
+    forgeMessage
+  }
 
   case class BranchPointInfo(branchPointId: ModifierId, referenceDataToInclude: Seq[MainchainHeaderHash], headersToInclude: Seq[MainchainHeaderHash])
 

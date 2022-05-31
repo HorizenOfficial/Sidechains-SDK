@@ -1,8 +1,6 @@
 package com.horizen.account.forger
 
 import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.pattern.ask
-import akka.util.Timeout
 import com.horizen._
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.history.AccountHistory
@@ -10,14 +8,11 @@ import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.state.AccountState
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.wallet.AccountWallet
-import com.horizen.consensus.{ConsensusEpochNumber, ConsensusSlotNumber}
-import com.horizen.forge.{AbstractForger, ForgeResult, MainchainSynchronizer}
+import com.horizen.forge.{AbstractForger, MainchainSynchronizer}
 import com.horizen.params.NetworkParams
 
 import scorex.core.utils.NetworkTimeProvider
-import scorex.util.ScorexLogging
 
-import scala.concurrent.Future
 
 class AccountForger(settings: SidechainSettings,
              viewHolderRef: ActorRef,
@@ -31,12 +26,6 @@ class AccountForger(settings: SidechainSettings,
   override type MS = AccountState
   override type VL = AccountWallet
   override type MP = AccountMemoryPool
-
-  override def getForgedBlockAsFuture(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, blockCreationTimeout: Timeout) : Future[ForgeResult] = {
-    val forgeMessage: AccountForgeMessageBuilder#ForgeMessageType = forgeMessageBuilder.buildForgeMessageForEpochAndSlot(epochNumber, slot, blockCreationTimeout)
-    val forgedBlockAsFuture = (viewHolderRef ? forgeMessage).asInstanceOf[Future[ForgeResult]]
-    forgedBlockAsFuture
-  }
 }
 
 object AccountForgerRef {

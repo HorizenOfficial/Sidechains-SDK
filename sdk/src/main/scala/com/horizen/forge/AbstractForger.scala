@@ -32,8 +32,8 @@ abstract class AbstractForger[
              viewHolderRef: ActorRef,
              forgeMessageBuilder: AbstractForgeMessageBuilder[TX, H, PM],
              timeProvider: NetworkTimeProvider,
-             val params: NetworkParams) extends Actor with ScorexLogging {
-
+             val params: NetworkParams) extends Actor with ScorexLogging
+{
   type HSTOR <: AbstractHistoryStorage[PM, HSTOR]
   type HIS <: AbstractHistory[TX, H, PM, HSTOR, HIS]
   type MS <: MinimalState[PM, MS]
@@ -42,10 +42,8 @@ abstract class AbstractForger[
 
   type View = CurrentView[HIS, MS, VL, MP]
 
-
   val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
-
 
   private val consensusMillisecondsInSlot: Int = params.consensusSecondsInSlot * 1000
   private def forgingInitiatorTimerTask: TimerTask = new TimerTask {override def run(): Unit = tryToCreateBlockNow()}
@@ -127,7 +125,11 @@ abstract class AbstractForger[
     tryToCreateBlockForEpochAndSlot(epochAndSlot.epochNumber, epochAndSlot.slotNumber, None, timeout)
   }
 
-  def getForgedBlockAsFuture(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, blockCreationTimeout: Timeout) : Future[ForgeResult]
+  def getForgedBlockAsFuture(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, blockCreationTimeout: Timeout) : Future[ForgeResult] = {
+    val forgeMessage: AbstractForgeMessageBuilder[TX, H, PM]#ForgeMessageType = forgeMessageBuilder.buildForgeMessageForEpochAndSlot(epochNumber, slot, blockCreationTimeout)
+    val forgedBlockAsFuture = (viewHolderRef ? forgeMessage).asInstanceOf[Future[ForgeResult]]
+    forgedBlockAsFuture
+  }
 
   protected def tryToCreateBlockForEpochAndSlot(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, respondsToOpt: Option[ActorRef], blockCreationTimeout: Timeout): Unit = {
 
@@ -184,7 +186,6 @@ abstract class AbstractForger[
     val history = view.history
     TimeToEpochUtils.timestampToEpochAndSlot(params, history.bestBlockInfo.timestamp)
   }
-
 }
 
 object AbstractForger extends ScorexLogging {

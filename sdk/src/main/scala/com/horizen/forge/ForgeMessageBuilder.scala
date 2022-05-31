@@ -38,17 +38,6 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   type MS = SidechainState
   type MP = SidechainMemoryPool
 
-  type ForgeMessageType = GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, ForgeResult]
-
-  def buildForgeMessageForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber, timeout: Timeout): ForgeMessageType = {
-    val forgingFunctionForEpochAndSlot: View => ForgeResult = tryToForgeNextBlock(consensusEpochNumber, consensusSlotNumber, timeout)
-
-    val forgeMessage: ForgeMessageType =
-      GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, ForgeResult](forgingFunctionForEpochAndSlot)
-
-    forgeMessage
-  }
-
   override def createNewBlock(
                  nodeView: View,
                  branchPointInfo: BranchPointInfo,
