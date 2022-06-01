@@ -2,6 +2,7 @@ package com.horizen.forge
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen._
+import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainHistoryStorage
@@ -11,7 +12,8 @@ class Forger(settings: SidechainSettings,
              viewHolderRef: ActorRef,
              forgeMessageBuilder: ForgeMessageBuilder,
              timeProvider: NetworkTimeProvider,
-             params: NetworkParams) extends AbstractForger(
+             params: NetworkParams)
+  extends AbstractForger[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock](
   settings, viewHolderRef, forgeMessageBuilder, timeProvider, params
 ) {
   override type HSTOR = SidechainHistoryStorage

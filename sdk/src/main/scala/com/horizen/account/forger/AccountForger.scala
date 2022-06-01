@@ -2,6 +2,7 @@ package com.horizen.account.forger
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen._
+import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
@@ -10,7 +11,6 @@ import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.forge.{AbstractForger, MainchainSynchronizer}
 import com.horizen.params.NetworkParams
-
 import scorex.core.utils.NetworkTimeProvider
 
 
@@ -18,7 +18,8 @@ class AccountForger(settings: SidechainSettings,
              viewHolderRef: ActorRef,
              forgeMessageBuilder: AccountForgeMessageBuilder,
              timeProvider: NetworkTimeProvider,
-             params: NetworkParams) extends AbstractForger(
+             params: NetworkParams)
+  extends AbstractForger[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock](
   settings, viewHolderRef, forgeMessageBuilder, timeProvider, params
 ) {
   override type HSTOR = AccountHistoryStorage
