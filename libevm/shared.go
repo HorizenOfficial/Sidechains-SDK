@@ -8,6 +8,7 @@ import "C"
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/ethereum/go-ethereum/log"
 	"libevm/lib"
 	"reflect"
@@ -79,7 +80,7 @@ func invoke(method string, args string) (error, interface{}) {
 		f = reflect.ValueOf(instance).MethodByName(method)
 	}
 	if !f.IsValid() {
-		return errors.New("method not found"), nil
+		return fmt.Errorf("method not found: %s", method), nil
 	}
 	// unmarshal args struct
 	var inputs []reflect.Value

@@ -217,7 +217,12 @@ public final class LibEvm {
         Invoke("StateSetNonce", new NonceParams(handle, address, nonce));
     }
 
-    public static EvmResult EvmExecute(int handle, String from, String to, String value, byte[] input) throws Exception {
+    public static String StateGetCodeHash(int handle, String address) throws Exception {
+        return Invoke("StateGetCodeHash", new AccountParams(handle, address), String.class);
+    }
+
+    public static EvmResult EvmExecute(int handle, String from, String to, String value, byte[] input)
+        throws Exception {
         var cfg = new EvmConfig();
         cfg.origin = from;
         cfg.value = value;

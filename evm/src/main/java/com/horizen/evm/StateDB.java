@@ -46,6 +46,10 @@ public class StateDB implements AutoCloseable {
         LibEvm.StateSetNonce(handle, address, nonce);
     }
 
+    public String GetCodeHash(String address) throws Exception {
+        return LibEvm.StateGetCodeHash(handle, address);
+    }
+
     public LibEvm.EvmResult EvmExecute(String from, String to, String value, byte[] input) throws Exception {
         return LibEvm.EvmExecute(handle, from, to, value, input);
     }

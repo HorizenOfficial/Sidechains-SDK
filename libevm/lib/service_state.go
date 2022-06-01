@@ -1,7 +1,6 @@
 package lib
 
 import (
-	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -36,16 +35,12 @@ type NonceParams struct {
 // If the root hash is zero (or the hash of zero) this will give an empty trie.
 // If the hash is anything else this will result in an error if the nodes cannot be found.
 func (s *Service) StateOpen(params StateRootParams) (error, int) {
-	if s.database == nil {
-		return errors.New("database not initialized"), 0
-	}
 	// TODO: research if we want to use the snapshot feature
 	statedb, err := state.New(params.Root, s.database, nil)
 	if err != nil {
 		log.Error("failed to open state", "root", params.Root, "error", err)
 		return err, 0
 	}
-	log.Debug("state opened", "root", params.Root)
 	s.counter++
 	handle := s.counter
 	s.statedbs[handle] = statedb
@@ -59,7 +54,7 @@ func (s *Service) StateClose(params HandleParams) {
 func (s *Service) getState(handle int) (error, *state.StateDB) {
 	statedb := s.statedbs[handle]
 	if statedb == nil {
-		return errors.New(fmt.Sprintf("invalid state handle: %d", handle)), nil
+		return fmt.Errorf("invalid state handle: %d", handle), nil
 	}
 	return nil, s.statedbs[handle]
 }
@@ -95,7 +90,6 @@ func (s *Service) StateGetBalance(params AccountParams) (error, *types.BigInt) {
 	}
 	stateObject := statedb.GetOrNewStateObject(params.Address)
 	balance := stateObject.Balance()
-	log.Debug("account balance", "address", params.Address, "balance", balance)
 	return nil, types.NewBigInt(balance)
 }
 
@@ -141,4 +135,12 @@ func (s *Service) StateSetNonce(params NonceParams) error {
 	}
 	statedb.SetNonce(params.Address, params.Nonce)
 	return nil
+}
+
+func (s *Service) StateGetCodeHash(params AccountParams) (error, common.Hash) {
+	err, statedb := s.getState(params.Handle)
+	if err != nil {
+		return err, common.Hash{}
+	}
+	return nil, statedb.GetCodeHash(params.Address)
 }

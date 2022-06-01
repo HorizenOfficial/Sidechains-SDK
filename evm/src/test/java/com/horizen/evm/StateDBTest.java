@@ -73,13 +73,17 @@ public class StateDBTest {
         var databaseFolder = tempFolder.newFolder("evm-db");
         System.out.println("temporary database folder: " + databaseFolder.getAbsolutePath());
 
-        String hashNull = "0x0000000000000000000000000000000000000000000000000000000000000000";
-        String faucet = "0x1234561234561234561234561234561234561230";
-        String user = "0xbafe3b6f2a19658df3cb5efca158c93272ff5c0b";
+        String nullHash = "0x0000000000000000000000000000000000000000000000000000000000000000";
+        String codeHash = "0x4a78bbdd842b3867b596c8a29ce62441265c402fdb1ae4b43e33bf21b214f0de";
+
+        String addr1 = "0x1234561234561234561234561234561234561230";
+        String addr2 = "0xbafe3b6f2a19658df3cb5efca158c93272ff5c0b";
+
         String contractCode =
             "608060405234801561001057600080fd5b5060405161015738038061015783398101604081905261002f91610037565b600055610050565b60006020828403121561004957600080fd5b5051919050565b60f98061005e6000396000f3fe60806040526004361060305760003560e01c80632e64cec1146035578063371303c01460565780636057361d14606a575b600080fd5b348015604057600080fd5b5060005460405190815260200160405180910390f35b348015606157600080fd5b506068607a565b005b606860753660046086565b600055565b6000546075906001609e565b600060208284031215609757600080fd5b5035919050565b6000821982111560be57634e487b7160e01b600052601160045260246000fd5b50019056fea26469706673582212207464e228829f86206a2f85d9740ac1707dac21a7c3790c186c66c62e00bb514664736f6c634300080c0033";
         String initialValue = "0000000000000000000000000000000000000000000000000000000000000000";
-        String secondValue = "00000000000000000000000000000000000000000000000000000000000015b3";
+        String anotherValue = "00000000000000000000000000000000000000000000000000000000000015b3";
+
         String funcStore = "6057361d";
         String funcRetrieve = "2e64cec1";
 
@@ -89,39 +93,39 @@ public class StateDBTest {
         LibEvm.EvmResult result;
         String contractAddress;
 
-        try (var statedb = new StateDB(hashNull)) {
+        try (var statedb = new StateDB(nullHash)) {
             // test a simple value transfer
-            statedb.AddBalance(faucet, "10");
-            result = statedb.EvmExecute(faucet, user, "5", null);
+            statedb.AddBalance(addr1, "10");
+            result = statedb.EvmExecute(addr1, addr2, "5", null);
             assertEquals(result.evmError, "");
-            assertEquals(statedb.GetBalance(user), "5");
-            assertEquals(statedb.GetBalance(faucet), "5");
+            assertEquals(statedb.GetBalance(addr2), "5");
+            assertEquals(statedb.GetBalance(addr1), "5");
 
             // test contract deployment
-            result = statedb.EvmExecute(user, null, null, Converter.fromHexString(contractCode + initialValue));
+            result = statedb.EvmExecute(addr2, null, null, Converter.fromHexString(contractCode + initialValue));
             assertEquals(result.evmError, "");
             contractAddress = result.address;
-            System.out.println("contract create result: " + contractAddress);
+            assertEquals(statedb.GetCodeHash(contractAddress), codeHash);
 
             // call "store" function on the contract to set a value
-            result = statedb.EvmExecute(user, contractAddress, null, Converter.fromHexString(funcStore + secondValue));
+            result = statedb.EvmExecute(addr2, contractAddress, null, Converter.fromHexString(funcStore + anotherValue));
             assertEquals(result.evmError, "");
 
             // call "retrieve" on the contract to fetch the value we just set
-            result = statedb.EvmExecute(user, contractAddress, null, Converter.fromHexString(funcRetrieve));
+            result = statedb.EvmExecute(addr2, contractAddress, null, Converter.fromHexString(funcRetrieve));
             assertEquals(result.evmError, "");
             var returnValue = Converter.toHexString(result.returnData);
-            assertEquals(returnValue, secondValue);
+            assertEquals(returnValue, anotherValue);
 
             modifiedState = statedb.Commit();
         }
 
         // reopen the state and retrieve a value
         try (var statedb = new StateDB(modifiedState)) {
-            result = statedb.EvmExecute(user, contractAddress, null, Converter.fromHexString(funcRetrieve));
+            result = statedb.EvmExecute(addr2, contractAddress, null, Converter.fromHexString(funcRetrieve));
             assertEquals(result.evmError, "");
             var returnValue = Converter.toHexString(result.returnData);
-            assertEquals(returnValue, secondValue);
+            assertEquals(returnValue, anotherValue);
         }
 
         LibEvm.CloseDatabase();
