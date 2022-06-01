@@ -2,7 +2,7 @@ package com.horizen.account.history
 
 import java.util.{Optional => JOptional}
 import com.horizen.SidechainTypes
-import com.horizen.account.block.AccountBlock
+import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.node.NodeAccountHistory
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.consensus._
@@ -17,8 +17,8 @@ class AccountHistory private(storage: AccountHistoryStorage,
                              consensusDataStorage: ConsensusDataStorage,
                              params: NetworkParams,
                              semanticBlockValidators: Seq[SemanticBlockValidator[AccountBlock]],
-                             historyBlockValidators: Seq[HistoryBlockValidator[SidechainTypes#SCAT, AccountBlock, AccountHistoryStorage, AccountHistory]])
-extends com.horizen.AbstractHistory[SidechainTypes#SCAT, AccountBlock, AccountHistoryStorage, AccountHistory](
+                             historyBlockValidators: Seq[HistoryBlockValidator[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock, AccountHistoryStorage, AccountHistory]])
+extends com.horizen.AbstractHistory[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock, AccountHistoryStorage, AccountHistory](
     storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
   with NetworkParamsUtils
   with ConsensusDataProvider
@@ -46,7 +46,7 @@ object AccountHistory
                                       consensusDataStorage: ConsensusDataStorage,
                                       params: NetworkParams,
                                       semanticBlockValidators: Seq[SemanticBlockValidator[AccountBlock]],
-                                      historyBlockValidators: Seq[HistoryBlockValidator[SidechainTypes#SCAT, AccountBlock, AccountHistoryStorage, AccountHistory]]): Option[AccountHistory] = {
+                                      historyBlockValidators: Seq[HistoryBlockValidator[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock, AccountHistoryStorage, AccountHistory]]): Option[AccountHistory] = {
 
     if (!historyStorage.isEmpty)
       Some(new AccountHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators))
@@ -61,7 +61,7 @@ object AccountHistory
                                             params: NetworkParams,
                                             genesisBlock: AccountBlock,
                                             semanticBlockValidators: Seq[SemanticBlockValidator[AccountBlock]],
-                                            historyBlockValidators: Seq[HistoryBlockValidator[SidechainTypes#SCAT, AccountBlock, AccountHistoryStorage, AccountHistory]],
+                                            historyBlockValidators: Seq[HistoryBlockValidator[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock, AccountHistoryStorage, AccountHistory]],
                                             stakeEpochInfo: StakeConsensusEpochInfo) : Try[AccountHistory] = Try {
 
     if (historyStorage.isEmpty) {

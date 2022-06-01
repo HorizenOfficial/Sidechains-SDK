@@ -197,7 +197,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
       SidechainBlocksGenerator.txGen.generateRegularTransaction(rnd = rnd, transactionBaseTimeStamp = timestamp, inputTransactionsSize = 1, outputTransactionsSize = 1)
     )
 
-    val ommers: Seq[Ommer] = Seq()
+    val ommers: Seq[Ommer[SidechainBlockHeader]] = Seq()
 
     val sidechainTransactionsMerkleRootHash: Array[Byte] = SidechainBlock.calculateTransactionsMerkleRootHash(sidechainTransactions)
     val mainchainMerkleRootHash: Array[Byte] = SidechainBlockBase.calculateMainchainMerkleRootHash(mainchainBlockReferencesData, mainchainHeaders)

@@ -1,6 +1,6 @@
 package com.horizen.storage
 
-import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlockBase}
+import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain.{ActiveChain, FeePaymentsInfo, FeePaymentsInfoSerializer, MainchainBlockReferenceDataInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, MainchainHeaderMetadata, SidechainBlockInfo, SidechainBlockInfoSerializer, byteArrayToMainchainHeaderHash}
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.NetworkParams
@@ -14,9 +14,8 @@ import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Random, Success, Try}
-
-
 import com.horizen.utils._
+
 import java.util.{ArrayList => JArrayList, List => JList}
 import com.horizen.utils.{Pair => JPair}
 
@@ -24,7 +23,7 @@ trait SidechainBlockInfoProvider {
   def blockInfoById(blockId: ModifierId): SidechainBlockInfo
 }
 
-class AbstractHistoryStorage[PM <: SidechainBlockBase[_ <: Transaction], S <: AbstractHistoryStorage[PM, S]]
+class AbstractHistoryStorage[PM <: SidechainBlockBase[_ <: Transaction, _ <: SidechainBlockHeaderBase], S <: AbstractHistoryStorage[PM, S]]
   (
     storage: Storage,
     blockSerializer: ScorexSerializer[PM],

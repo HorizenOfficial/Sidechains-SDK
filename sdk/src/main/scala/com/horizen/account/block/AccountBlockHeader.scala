@@ -9,7 +9,7 @@ import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, Signature25519Serializer, VrfProof, VrfProofSerializer}
 import com.horizen.serialization.{MerklePathJsonSerializer, ScorexModifierIdSerializer, Views}
-import com.horizen.utils.{MerklePath, MerklePathSerializer}
+import com.horizen.utils.{MerklePath, MerklePathSerializer, MerkleTree}
 import com.horizen.validation.InvalidSidechainBlockHeaderException
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import scorex.core.block.Block
@@ -71,16 +71,16 @@ case class AccountBlockHeader(
     super.semanticValidity(params) match {
       case Success(_) =>
 
-        if (stateRoot.length != 32
-          || receiptsRoot.length != 32)
-          throw new InvalidSidechainBlockHeaderException(s"SidechainAccountBlockHeader $id contains out of bound fields.")
+        if (stateRoot.length != MerkleTree.ROOT_HASH_LENGTH
+          || receiptsRoot.length != MerkleTree.ROOT_HASH_LENGTH)
+          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id contains out of bound fields.")
 
-        if (version != AccountBlock.BLOCK_VERSION)
-          throw new InvalidSidechainBlockHeaderException(s"SidechainAccountBlock $id version $version is invalid.")
+        if (version != AccountBlock.ACCOUNT_BLOCK_VERSION)
+          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id version $version is invalid.")
 
         // check, that signature is valid
         if (!signature.isValid(forgingStakeInfo.blockSignPublicKey, messageToSign))
-          throw new InvalidSidechainBlockHeaderException(s"SidechainBlockHeader $id signature is invalid.")
+          throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id signature is invalid.")
 
       case Failure(exception) =>
         throw exception
@@ -88,7 +88,7 @@ case class AccountBlockHeader(
   }
 
 
-  override def toString =
+  override def toString: String =
     s"AccountBlockHeader($id, $version, $timestamp, $forgingStakeInfo, $vrfProof, " +
       s"${ByteUtils.toHexString(sidechainTransactionsMerkleRootHash)}, ${ByteUtils.toHexString(mainchainMerkleRootHash)}, " +
       s"${ByteUtils.toHexString(stateRoot)}, ${ByteUtils.toHexString(receiptsRoot)}, $forgerAddress" +
@@ -132,7 +132,7 @@ object AccountBlockHeaderSerializer extends ScorexSerializer[AccountBlockHeader]
   override def parse(r: Reader): AccountBlockHeader = {
     val version: Block.Version = r.getByte()
 
-    if(version != AccountBlock.BLOCK_VERSION)
+    if(version != AccountBlock.ACCOUNT_BLOCK_VERSION)
       throw new InvalidSidechainBlockHeaderException(s"SidechainAccountBlock version $version is invalid.")
 
     val parentId: ModifierId = bytesToId(r.getBytes(NodeViewModifier.ModifierIdSize))
@@ -149,9 +149,9 @@ object AccountBlockHeaderSerializer extends ScorexSerializer[AccountBlockHeader]
 
     val mainchainMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
 
-    val stateRoot = r.getBytes(32) // TODO add a constant
+    val stateRoot = r.getBytes(MerkleTree.ROOT_HASH_LENGTH) // TODO add a constant from EthMerkleTree impl in libevm
 
-    val receiptsRoot = r.getBytes(32) // TODO add a constant
+    val receiptsRoot = r.getBytes(MerkleTree.ROOT_HASH_LENGTH) // TODO add a constant from EthMerkleTree impl in libevm
 
     val forgerAddress = AddressPropositionSerializer.getSerializer.parse(r)
 

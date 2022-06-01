@@ -2,7 +2,7 @@ package com.horizen.validation
 
 import java.time.Instant
 import com.horizen.{SidechainHistory, SidechainTypes}
-import com.horizen.block.{MainchainBlockReference, SidechainBlock}
+import com.horizen.block.{MainchainBlockReference, SidechainBlock, SidechainBlockHeader}
 import com.horizen.box.Box
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
@@ -29,7 +29,7 @@ class WithdrawalEpochValidatorTest
     with TransactionFixture
     with CompanionsFixture {
 
-  type BoxWithdrawalEpochValidator = WithdrawalEpochValidator[SidechainTypes#SCBT, SidechainBlock, SidechainHistoryStorage, SidechainHistory]
+  type BoxWithdrawalEpochValidator = WithdrawalEpochValidator[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistoryStorage, SidechainHistory]
 
   val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
 

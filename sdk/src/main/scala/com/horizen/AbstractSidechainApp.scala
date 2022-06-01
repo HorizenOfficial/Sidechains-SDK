@@ -1,19 +1,13 @@
 package com.horizen
 
-import akka.actor.ActorRef
+
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
-import com.google.inject.Inject
-import com.google.inject.name.Named
 import com.horizen.api.http._
-import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockBase, SidechainBlockSerializer}
-import com.horizen.box.BoxSerializer
-import com.horizen.certificatesubmitter.CertificateSubmitterRef
-import com.horizen.certificatesubmitter.network.{CertificateSignaturesManagerRef, CertificateSignaturesSpec, GetCertificateSignaturesSpec}
+import com.horizen.block.{ProofOfWorkVerifier, SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.certificatesubmitter.network.{CertificateSignaturesSpec, GetCertificateSignaturesSpec}
 import com.horizen.companion._
 import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.csw.CswManagerRef
-import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
-import com.horizen.helper._
+import com.horizen.forge. MainchainSynchronizer
 import com.horizen.params._
 import com.horizen.proposition._
 import com.horizen.secret.SecretSerializer
@@ -23,7 +17,6 @@ import com.horizen.transaction._
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{BytesUtils, Pair}
 import com.horizen.websocket.client._
-import com.horizen.websocket.server.WebSocketServerRef
 import scorex.core.app.Application
 import scorex.core.network.PeerFeature
 import scorex.core.network.message.MessageSpec
@@ -34,10 +27,9 @@ import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
 import java.util.{HashMap => JHashMap, List => JList}
 import scala.collection.JavaConverters._
-import scala.collection.immutable.Map
 import scala.collection.mutable
 import scala.io.{Codec, Source}
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 
 abstract class AbstractSidechainApp
@@ -49,7 +41,7 @@ abstract class AbstractSidechainApp
   extends Application with ScorexLogging
 {
   override type TX <: Transaction
-  override type PMOD <: SidechainBlockBase[TX]
+  override type PMOD <: SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase]
 
   override implicit lazy val settings: ScorexSettings = sidechainSettings.scorexSettings
 

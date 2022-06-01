@@ -31,7 +31,8 @@ object ProofOfWorkVerifier {
   // Check that PoW target (bits) is correct for all MainchainHeaders and Ommers' MainchainHeaders (recursively) included into SidechainBlock.
   // The order of MainchainHeaders in Block (both active and orphaned) verified in block semantic validity method
   def checkNextWorkRequired[TX <: Transaction,
-    PMOD <: SidechainBlockBase[TX],
+    H <: SidechainBlockHeaderBase,
+    PMOD <: SidechainBlockBase[TX, H],
     HSTOR <: AbstractHistoryStorage[PMOD, HSTOR]](block: PMOD,
                                                   historyStorage: HSTOR,
                                                   params: NetworkParams): Boolean = {
@@ -93,7 +94,7 @@ object ProofOfWorkVerifier {
     true
   }
 
-  private def checkOmmersContainerNextWorkRequired(ommersContainer: OmmersContainer,
+  private def checkOmmersContainerNextWorkRequired[H <: SidechainBlockHeaderBase](ommersContainer: OmmersContainer[H],
                                                    initialTimeBitsData: List[Tuple2[Int, Int]],
                                                    initialBitsTotal: BigInteger,
                                                    params: NetworkParams): OmmersContainerNextWorkRequiredResult = {

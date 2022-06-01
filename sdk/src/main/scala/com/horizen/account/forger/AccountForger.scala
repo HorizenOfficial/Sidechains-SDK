@@ -1,44 +1,50 @@
-package com.horizen.forge
+package com.horizen.account.forger
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen._
-import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
-import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import com.horizen.account.companion.SidechainAccountTransactionsCompanion
+import com.horizen.account.history.AccountHistory
+import com.horizen.account.mempool.AccountMemoryPool
+import com.horizen.account.state.AccountState
+import com.horizen.account.storage.AccountHistoryStorage
+import com.horizen.account.wallet.AccountWallet
+import com.horizen.forge.{AbstractForger, MainchainSynchronizer}
 import com.horizen.params.NetworkParams
-import com.horizen.storage.SidechainHistoryStorage
 import scorex.core.utils.NetworkTimeProvider
 
-class Forger(settings: SidechainSettings,
+
+class AccountForger(settings: SidechainSettings,
              viewHolderRef: ActorRef,
-             forgeMessageBuilder: ForgeMessageBuilder,
+             forgeMessageBuilder: AccountForgeMessageBuilder,
              timeProvider: NetworkTimeProvider,
              params: NetworkParams)
-  extends AbstractForger[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock](
+  extends AbstractForger[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock](
   settings, viewHolderRef, forgeMessageBuilder, timeProvider, params
 ) {
-  override type HSTOR = SidechainHistoryStorage
-  override type HIS = SidechainHistory
-  override type MS = SidechainState
-  override type VL = SidechainWallet
-  override type MP = SidechainMemoryPool
+  override type HSTOR = AccountHistoryStorage
+  override type HIS = AccountHistory
+  override type MS = AccountState
+  override type VL = AccountWallet
+  override type MP = AccountMemoryPool
 }
 
-object ForgerRef {
+object AccountForgerRef {
   def props(settings: SidechainSettings,
             viewHolderRef: ActorRef,
             mainchainSynchronizer: MainchainSynchronizer,
-            companion: SidechainTransactionsCompanion,
+            companion: SidechainAccountTransactionsCompanion,
             timeProvider: NetworkTimeProvider,
             params: NetworkParams): Props = {
-    val forgeMessageBuilder: ForgeMessageBuilder = new ForgeMessageBuilder(mainchainSynchronizer, companion, params, settings.websocket.allowNoConnectionInRegtest)
+    val forgeMessageBuilder: AccountForgeMessageBuilder = new AccountForgeMessageBuilder(mainchainSynchronizer, companion, params, settings.websocket.allowNoConnectionInRegtest)
 
-    Props(new Forger(settings, viewHolderRef, forgeMessageBuilder, timeProvider, params))
+    Props(new AccountForger(settings, viewHolderRef, forgeMessageBuilder, timeProvider, params))
   }
 
   def apply(settings: SidechainSettings,
             viewHolderRef: ActorRef,
             mainchainSynchronizer: MainchainSynchronizer,
-            companion: SidechainTransactionsCompanion,
+            companion: SidechainAccountTransactionsCompanion,
             timeProvider: NetworkTimeProvider,
             params: NetworkParams)
            (implicit system: ActorSystem): ActorRef = system.actorOf(props(settings, viewHolderRef, mainchainSynchronizer, companion, timeProvider, params))
@@ -47,7 +53,7 @@ object ForgerRef {
             settings: SidechainSettings,
             viewHolderRef: ActorRef,
             mainchainSynchronizer: MainchainSynchronizer,
-            companion: SidechainTransactionsCompanion,
+            companion: SidechainAccountTransactionsCompanion,
             timeProvider: NetworkTimeProvider,
             params: NetworkParams)
            (implicit system: ActorSystem): ActorRef = system.actorOf(props(settings, viewHolderRef, mainchainSynchronizer, companion, timeProvider, params), name)

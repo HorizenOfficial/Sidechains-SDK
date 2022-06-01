@@ -1,6 +1,6 @@
 package com.horizen
 
-import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlockBase}
+import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain.{FeePaymentsInfo, MainchainBlockReferenceDataInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
 import com.horizen.consensus.{ConsensusDataProvider, ConsensusDataStorage, FullConsensusEpochInfo, blockIdToEpochId}
 import com.horizen.node.NodeHistoryBase
@@ -25,15 +25,16 @@ import scala.util.{Failure, Success, Try}
 
 abstract class AbstractHistory[
   TX <: Transaction,
-  PM <: SidechainBlockBase[TX],
+  H <: SidechainBlockHeaderBase,
+  PM <: SidechainBlockBase[TX, H],
   HSTOR <: AbstractHistoryStorage[PM, HSTOR],
-  HT <: AbstractHistory[TX, PM, HSTOR, HT]
+  HT <: AbstractHistory[TX, H, PM, HSTOR, HT]
 ] protected (
     val storage: HSTOR,
     val consensusDataStorage: ConsensusDataStorage,
     val params: NetworkParams,
     val semanticBlockValidators: Seq[SemanticBlockValidator[PM]],
-    val historyBlockValidators: Seq[HistoryBlockValidator[TX, PM, HSTOR, HT]]
+    val historyBlockValidators: Seq[HistoryBlockValidator[TX, H, PM, HSTOR, HT]]
   )
     extends scorex.core.consensus.History[PM, SidechainSyncInfo, HT]
       with NetworkParamsUtils
@@ -538,7 +539,7 @@ abstract class AbstractHistory[
 }
 
 object AbstractHistory {
-  def calculateGenesisBlockInfo[TX <: Transaction](block: SidechainBlockBase[TX], params: NetworkParams): SidechainBlockInfo = {
+  def calculateGenesisBlockInfo[TX <: Transaction](block: SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase], params: NetworkParams): SidechainBlockInfo = {
     require(block.id == params.sidechainGenesisBlockId, "Passed block is not a genesis block.")
 
     SidechainBlockInfo(
