@@ -3,8 +3,8 @@ package com.horizen.certificatesubmitter.network
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{TestActor, TestActorRef, TestProbe}
 import akka.util.Timeout
-import com.horizen.certificatesubmitter.CertificateSubmitter.ReceivableMessages.{GetSignaturesStatus, SignatureFromRemote}
-import com.horizen.certificatesubmitter.CertificateSubmitter.{BroadcastLocallyGeneratedSignature, CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, SignatureProcessingStatus, SignaturesStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.ReceivableMessages.{GetSignaturesStatus, SignatureFromRemote}
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.{BroadcastLocallyGeneratedSignature, CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, SignatureProcessingStatus, SignaturesStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
 import com.horizen.certificatesubmitter.network.CertificateSignaturesManager.InternalReceivableMessages.TryToSendGetCertificateSignatures
 import com.horizen.fixtures.FieldElementFixture
 import com.horizen.SidechainAppEvents
