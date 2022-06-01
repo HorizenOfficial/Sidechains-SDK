@@ -1,52 +1,43 @@
 package com.horizen
 
-import java.lang.{Byte => JByte}
-import java.nio.file.{Files, Paths}
-import java.util.{HashMap => JHashMap, List => JList}
 import akka.actor.ActorRef
-import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
+import com.google.inject.Inject
 import com.google.inject.name.Named
-import com.google.inject.{Inject, _}
-import com.horizen.api.http.{SidechainSubmitterApiRoute, _}
-import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockBase, SidechainBlockSerializer}
-import com.horizen.box.BoxSerializer
+import com.horizen.api.http._
+import com.horizen.block.{SidechainBlock, SidechainBlockBase, SidechainBlockHeader, SidechainBlockSerializer}
+import com.horizen.box.{Box, BoxSerializer}
 import com.horizen.certificatesubmitter.CertificateSubmitterRef
-import com.horizen.certificatesubmitter.network.{CertificateSignaturesManagerRef, CertificateSignaturesSpec, GetCertificateSignaturesSpec}
+import com.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
 import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.csw.CswManagerRef
-import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
-import com.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, SecretSubmitProvider, SecretSubmitProviderImpl, TransactionSubmitProvider, TransactionSubmitProviderImpl}
-import com.horizen.params._
-import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, SchnorrProposition, SchnorrPropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
+import com.horizen.forge.ForgerRef
+import com.horizen.helper._
+import com.horizen.network.SidechainNodeViewSynchronizer
+import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
+import com.horizen.proposition.Proposition
 import com.horizen.secret.SecretSerializer
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.transaction._
+import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{BlockUtils, BytesUtils, Pair}
 import com.horizen.wallet.ApplicationWallet
+import com.horizen.websocket.server.WebSocketServerRef
 import scorex.core.api.http.ApiRoute
-import scorex.core.app.Application
-import scorex.core.network.message.MessageSpec
-import scorex.core.network.PeerFeature
 import scorex.core.serialization.ScorexSerializer
 import scorex.core.settings.ScorexSettings
 import scorex.core.transaction.Transaction
 import scorex.core.{ModifierTypeId, NodeViewModifier}
-import scorex.util.ScorexLogging
 
+import java.lang.{Byte => JByte}
+import java.nio.file.{Files, Paths}
+import java.util.{HashMap => JHashMap, List => JList}
 import scala.collection.JavaConverters._
-import scala.collection.immutable.Map
 import scala.collection.mutable
 import scala.io.{Codec, Source}
-import com.horizen.network.SidechainNodeViewSynchronizer
-import com.horizen.websocket.client.{DefaultWebSocketReconnectionHandler, MainchainNodeChannelImpl, WebSocketChannel, WebSocketCommunicationClient, WebSocketConnector, WebSocketConnectorImpl, WebSocketReconnectionHandler}
-import com.horizen.websocket.server.WebSocketServerRef
-import com.horizen.serialization.JsonHorizenPublicKeyHashSerializer
-import com.horizen.transaction.mainchain.SidechainCreation
-
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 
 class SidechainApp @Inject()
@@ -67,7 +58,7 @@ class SidechainApp @Inject()
    @Named("WalletCswDataStorage") val walletCswDataStorage: Storage,
    @Named("ConsensusStorage") val consensusStorage: Storage,
    @Named("CustomApiGroups") customApiGroups: JList[ApplicationApiGroup],
-   @Named("RejectedApiPaths") rejectedApiPaths : JList[Pair[String, String]],
+   @Named("RejectedApiPaths") rejectedApiPaths : JList[Pair[String, String]]
   )
   extends AbstractSidechainApp(
     sidechainSettings,
@@ -202,7 +193,8 @@ class SidechainApp @Inject()
 
   var coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
     MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
-    SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
+    SidechainBlockApiRoute[BoxTransaction[Proposition, Box[Proposition]],
+      SidechainBlockHeader,SidechainBlock,NodeHistory,NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView](settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),

@@ -24,7 +24,7 @@ import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.reflect.ClassTag
+import scala.reflect.{ClassTag, classTag}
 import scala.util.{Failure, Success, Try}
 
 case class SidechainBlockApiRoute[
@@ -36,7 +36,7 @@ case class SidechainBlockApiRoute[
   NW <: NodeWalletBase,
   NP <: NodeMemoryPoolBase[TX],
   NV <: SidechainNodeViewBase[TX, H, PM, NH, NS, NW, NP]](override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, sidechainBlockActorRef: ActorRef, forgerRef: ActorRef)
-                                                         (implicit val context: ActorRefFactory, override val ec: ExecutionContext, implicit val c: ClassTag[NV])
+                                                         (implicit val context: ActorRefFactory, override val ec: ExecutionContext, override val tag: ClassTag[NV])
   extends SidechainBaseApiRoute[TX, H, PM, NH, NS, NW, NP, NV] {
 
   override val route: Route = pathPrefix("block") {
@@ -101,7 +101,7 @@ case class SidechainBlockApiRoute[
         val sidechainHistory = sidechainNodeView.getNodeHistory
         val height = sidechainHistory.getCurrentHeight
         if (height > 0) {
-          val bestBlock : PM = sidechainHistory.getBestBlock
+          val bestBlock: PM = sidechainHistory.getBestBlock
           ApiResponseUtil.toResponse(RespBest[TX, H, PM](bestBlock, height))
         } else
           ApiResponseUtil.toResponse(ErrorInvalidBlockHeight(s"Invalid height: ${height}", JOptional.empty()))
@@ -218,9 +218,11 @@ object SidechainBlockRestSchema {
   private[api] case class RespFindIdByHeight(blockId: String) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespBest[TX <: Transaction,
+  private[api] case class RespBest[
+    TX <: Transaction,
     H <: SidechainBlockHeaderBase,
-    PM <: SidechainBlockBase[TX, H]](block: PM, height: Int) extends SuccessResponse
+    PM <: SidechainBlockBase[TX, H]
+  ](block: PM, height: Int) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] object RespStartForging extends SuccessResponse

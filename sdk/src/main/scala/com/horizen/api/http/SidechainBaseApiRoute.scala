@@ -26,7 +26,7 @@ trait SidechainBaseApiRoute[
   val sidechainNodeViewHolderRef: ActorRef
 
   implicit val ec: ExecutionContext
-  implicit val c: ClassTag[NV]
+  implicit val tag: ClassTag[NV]
 
 
   //def applyOnNodeView[R](functionToBeApplied: SidechainNodeViewBase[H, S, W, P] => R): R = {
