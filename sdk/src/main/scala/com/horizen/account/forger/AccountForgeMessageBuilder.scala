@@ -13,7 +13,7 @@ import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
-import com.horizen.account.proposition.PublicKeySecp256k1Proposition
+import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.AccountState
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.utils.Secp256k1
@@ -65,7 +65,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     val stateRoot: Array[Byte] = ???
     val receiptsRoot: Array[Byte] = ???
-    val forgerAddress: PublicKeySecp256k1Proposition = ???
+    val forgerAddress: AddressProposition = ???
 
      AccountBlock.create(
       parentId,
@@ -107,7 +107,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),// stateRoot TODO add constant
-      new PublicKeySecp256k1Proposition(new Array[Byte](Secp256k1.PUBLIC_KEY_SIZE)),// forgerAddress: PublicKeySecp256k1Proposition TODO add constant,
+      new AddressProposition(new Array[Byte](Secp256k1.PUBLIC_KEY_SIZE)),// forgerAddress: PublicKeySecp256k1Proposition TODO add constant,
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       Long.MaxValue,
       new Array[Byte](NodeViewModifier.ModifierIdSize),
