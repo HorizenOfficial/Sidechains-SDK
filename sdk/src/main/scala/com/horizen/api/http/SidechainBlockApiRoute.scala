@@ -13,7 +13,7 @@ import com.horizen.box.ZenBox
 import com.horizen.consensus.{intToConsensusEpochNumber, intToConsensusSlotNumber}
 import com.horizen.forge.Forger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
 import com.horizen.forge.ForgingInfo
-import com.horizen.node.{NodeHistoryBase, NodeMemoryPool, NodeMemoryPoolBase, NodeState, NodeWalletBase}
+import com.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
 import com.horizen.serialization.Views
 import com.horizen.transaction.Transaction
 import com.horizen.utils.BytesUtils
@@ -24,7 +24,7 @@ import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.reflect.{ClassTag, classTag}
+import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
 case class SidechainBlockApiRoute[
@@ -32,12 +32,12 @@ case class SidechainBlockApiRoute[
   H <: SidechainBlockHeaderBase,
   PM <: SidechainBlockBase[TX, H],
   NH <: NodeHistoryBase[TX, H, PM],
-  NS <: NodeState,
+  NS <: NodeStateBase,
   NW <: NodeWalletBase,
   NP <: NodeMemoryPoolBase[TX],
   NV <: SidechainNodeViewBase[TX, H, PM, NH, NS, NW, NP]](override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, sidechainBlockActorRef: ActorRef, forgerRef: ActorRef)
                                                          (implicit val context: ActorRefFactory, override val ec: ExecutionContext, override val tag: ClassTag[NV])
-  extends SidechainBaseApiRoute[TX, H, PM, NH, NS, NW, NP, NV] {
+  extends SidechainApiRoute[TX, H, PM, NH, NS, NW, NP, NV] {
 
   override val route: Route = pathPrefix("block") {
     findById ~ findLastIds ~ findIdByHeight ~ getBestBlockInfo ~ getFeePayments ~ startForging ~ stopForging ~ generateBlockForEpochNumberAndSlot ~ getForgingInfo

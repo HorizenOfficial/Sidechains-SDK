@@ -88,33 +88,20 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     (history, wallet.scanPersistent(modToApply))
   }
 
-  override type NH = NodeAccountHistory
-  override type NS = NodeState
-  override type NW = NodeWalletBase
-  override type NP = NodeAccountMemoryPool
-
-  override protected def nodeHistory(): NH = history().asInstanceOf[NH]
-
-  override protected def nodeState(): NS = minimalState().asInstanceOf[NS]
-
-  override protected def nodeWallet(): NW = vault().asInstanceOf[NW]
-
-  override protected def nodeMemoryPool(): NP = memoryPool().asInstanceOf[NP]
-
-  override protected def getCurrentBaseSidechainNodeViewInfo: Receive = {
+  override protected def getCurrentSidechainNodeViewInfo: Receive = {
     case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView[
       AccountTransaction[Proposition, Proof[Proposition]],
       AccountBlockHeader,
       AccountBlock,
-      NH,
-      NS,
-      NW,
-      NP,
+      NodeAccountHistory,
+      NodeState,
+      NodeWalletBase,
+      NodeAccountMemoryPool,
       AccountNodeView,
       _] =>
       msg match {
         case AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView(f) => try {
-          val l: AccountNodeView = new AccountNodeView(nodeHistory(), nodeState(), nodeWallet(), nodeMemoryPool())
+          val l: AccountNodeView = new AccountNodeView(history(), minimalState(), vault(), memoryPool())
           sender() ! f(l)
         }
         catch {

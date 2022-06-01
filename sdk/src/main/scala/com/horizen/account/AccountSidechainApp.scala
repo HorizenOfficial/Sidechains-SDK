@@ -3,10 +3,12 @@ package com.horizen.account
 import akka.actor.ActorRef
 import com.google.inject.Inject
 import com.google.inject.name.Named
+import com.horizen._
 import com.horizen.account.api.http.AccountTransactionApiRoute
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader, AccountBlockSerializer}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.forger.AccountForgerRef
+import com.horizen.account.history.AccountHistory
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool}
 import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
 import com.horizen.account.transaction.AccountTransaction
@@ -16,7 +18,7 @@ import com.horizen.certificatesubmitter.CertificateSubmitterRef
 import com.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.network.SidechainNodeViewSynchronizer
-import com.horizen.node.{NodeState, NodeWalletBase}
+import com.horizen.node.{NodeStateBase, NodeWalletBase}
 import com.horizen.proof.Proof
 import com.horizen.proposition.Proposition
 import com.horizen.secret.SecretSerializer
@@ -25,7 +27,6 @@ import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.transaction._
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{BlockUtils, BytesUtils, Pair}
-import com.horizen._
 import scorex.core.api.http.ApiRoute
 import scorex.core.serialization.ScorexSerializer
 import scorex.core.settings.ScorexSettings
@@ -134,7 +135,7 @@ class AccountSidechainApp @Inject()
 
   // Init Transactions and Block actors for Api routes classes
   val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
-  val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef("AccountBlock", sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
+  val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef[PMOD,SidechainSyncInfo,AccountHistory]("AccountBlock", sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
 
   // Init Certificate Submitter
   val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
@@ -150,9 +151,10 @@ class AccountSidechainApp @Inject()
   customApiGroups.asScala.foreach(apiRoute => applicationApiRoutes = applicationApiRoutes :+ ApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
 
   var coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
-    MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
-    SidechainBlockApiRoute[AccountTransaction[Proposition, Proof[Proposition]],
-      AccountBlockHeader,AccountBlock,NodeAccountHistory,NodeState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
+    MainchainBlockApiRoute[TX,
+      AccountBlockHeader,PMOD,NodeAccountHistory,NodeStateBase,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef),
+    SidechainBlockApiRoute[TX,
+      AccountBlockHeader,PMOD,NodeAccountHistory,NodeStateBase,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi),
     AccountTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainAccountTransactionsCompanion, params),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
@@ -161,7 +163,7 @@ class AccountSidechainApp @Inject()
 
   // In order to provide the feature to override core api and exclude some other apis,
   // first we create custom reject routes (otherwise we cannot know which route has to be excluded), second we bind custom apis and then core apis
-  override val apiRoutes: Seq[ApiRoute] = Seq[SidechainApiRoute]()
+  override val apiRoutes: Seq[ApiRoute] = Seq[ApiRoute]()
     .union(rejectedApiRoutes)
     .union(applicationApiRoutes)
     .union(coreApiRoutes)

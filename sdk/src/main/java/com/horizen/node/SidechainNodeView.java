@@ -1,7 +1,6 @@
 package com.horizen.node;
 
 import com.horizen.SidechainNodeViewBase;
-import com.horizen.SidechainTypes;
 import com.horizen.block.SidechainBlock;
 import com.horizen.block.SidechainBlockHeader;
 import com.horizen.box.Box;

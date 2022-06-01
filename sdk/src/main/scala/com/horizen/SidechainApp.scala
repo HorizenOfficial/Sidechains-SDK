@@ -5,7 +5,7 @@ import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.horizen.api.http._
 import com.horizen.block.{SidechainBlock, SidechainBlockBase, SidechainBlockHeader, SidechainBlockSerializer}
-import com.horizen.box.{Box, BoxSerializer}
+import com.horizen.box.BoxSerializer
 import com.horizen.certificatesubmitter.CertificateSubmitterRef
 import com.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
 import com.horizen.companion._
@@ -15,8 +15,7 @@ import com.horizen.csw.CswManagerRef
 import com.horizen.forge.ForgerRef
 import com.horizen.helper._
 import com.horizen.network.SidechainNodeViewSynchronizer
-import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
-import com.horizen.proposition.Proposition
+import com.horizen.node._
 import com.horizen.secret.SecretSerializer
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
@@ -171,7 +170,7 @@ class SidechainApp @Inject()
 
   // Init Transactions and Block actors for Api routes classes
   val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
-  val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef("SidechainBlock", sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
+  val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef[PMOD,SidechainSyncInfo,SidechainHistory]("SidechainBlock", sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
 
   // Init Certificate Submitter
   val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
@@ -192,9 +191,10 @@ class SidechainApp @Inject()
   customApiGroups.asScala.foreach(apiRoute => applicationApiRoutes = applicationApiRoutes :+ ApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
 
   var coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
-    MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
-    SidechainBlockApiRoute[BoxTransaction[Proposition, Box[Proposition]],
-      SidechainBlockHeader,SidechainBlock,NodeHistory,NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView](settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
+    MainchainBlockApiRoute[TX,
+      SidechainBlockHeader,PMOD,NodeHistory,NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView](settings.restApi, nodeViewHolderRef),
+    SidechainBlockApiRoute[TX,
+      SidechainBlockHeader,PMOD,NodeHistory,NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView](settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
@@ -208,7 +208,7 @@ class SidechainApp @Inject()
 
   // In order to provide the feature to override core api and exclude some other apis,
   // first we create custom reject routes (otherwise we cannot know which route has to be excluded), second we bind custom apis and then core apis
-  override val apiRoutes: Seq[ApiRoute] = Seq[SidechainApiRoute]()
+  override val apiRoutes: Seq[ApiRoute] = Seq[ApiRoute]()
     .union(rejectedApiRoutes)
     .union(applicationApiRoutes)
     .union(coreApiRoutes)

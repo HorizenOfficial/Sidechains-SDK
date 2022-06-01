@@ -3,6 +3,7 @@ package com.horizen.api.http
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
+import scorex.core.api.http.{ApiDirectives, ApiRoute}
 import scorex.core.settings.RESTApiSettings
 
 import scala.concurrent.ExecutionContext
@@ -22,8 +23,8 @@ import scala.concurrent.ExecutionContext
   */
 case class SidechainRejectionApiRoute(basePath: String, path: String,
                                       override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
-                                     (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
-  extends SidechainApiRoute {
+                                     (implicit val context: ActorRefFactory)
+  extends ApiRoute with ApiDirectives {
 
   override def route: Route =
     if (path.isEmpty)

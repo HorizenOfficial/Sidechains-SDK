@@ -9,6 +9,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.account.storage.AccountStateMetadataStorage
+import com.horizen.node.NodeStateBase
 import scorex.core.{VersionTag, bytesToVersion, idToBytes, idToVersion, versionToBytes, versionToId}
 import scorex.util.{ModifierId, ScorexLogging, bytesToId}
 
@@ -20,6 +21,7 @@ class AccountState(val params: NetworkParams,
                    stateMetadataStorage: AccountStateMetadataStorage)
   extends State[SidechainTypes#SCAT, AccountBlock, AccountStateView, AccountState]
     with AccountStateReader
+    with NodeStateBase
     with ScorexLogging {
 
   override type NVCT = AccountState

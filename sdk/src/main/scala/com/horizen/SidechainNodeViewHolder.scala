@@ -72,18 +72,18 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override def receive: Receive = {
     applyFunctionOnNodeView orElse
       applyBiFunctionOnNodeView orElse
-      getCurrentSidechainNodeViewInfo orElse
+//      getCurrentSidechainNodeViewInfo orElse
       super.receive
   }
 
-  protected def getCurrentSidechainNodeViewInfo: Receive = {
-    case SidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView(f) => try {
-      sender() ! f(new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), minimalState().applicationState, vault().applicationWallet))
-    }
-    catch {
-      case e: Exception => sender() ! akka.actor.Status.Failure(e)
-    }
-  }
+//  protected def getCurrentSidechainNodeViewInfo: Receive = {
+//    case SidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView(f) => try {
+//      sender() ! f(new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), minimalState().applicationState, vault().applicationWallet))
+//    }
+//    catch {
+//      case e: Exception => sender() ! akka.actor.Status.Failure(e)
+//    }
+//  }
 
 
   protected def applyFunctionOnNodeView: Receive = {
@@ -138,33 +138,20 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     }
   }
 
-  override type NH = NodeHistory
-  override type NS = NodeState
-  override type NW = NodeWallet
-  override type NP = NodeMemoryPool
-
-  override protected def nodeHistory(): NH = history().asInstanceOf[NH]
-
-  override protected def nodeState(): NS = minimalState().asInstanceOf[NS]
-
-  override protected def nodeWallet(): NW = vault().asInstanceOf[NW]
-
-  override protected def nodeMemoryPool(): NP = memoryPool().asInstanceOf[NP]
-
-  override protected def getCurrentBaseSidechainNodeViewInfo: Receive = {
+  override protected def getCurrentSidechainNodeViewInfo: Receive = {
     case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView[
       BoxTransaction[Proposition, Box[Proposition]],
       SidechainBlockHeader,
       SidechainBlock,
-      NH,
-      NS,
-      NW,
-      NP,
+      NodeHistory,
+      NodeState,
+      NodeWallet,
+      NodeMemoryPool,
       SidechainNodeView,
       _] =>
       msg match {
         case AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView(f) => try {
-          val l: SidechainNodeView = new SidechainNodeView(nodeHistory(), nodeState(), nodeWallet(), nodeMemoryPool(), applicationState, applicationWallet)
+          val l: SidechainNodeView = new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), applicationState, applicationWallet)
           sender() ! f(l)
         }
         catch {
@@ -177,7 +164,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
 object SidechainNodeViewHolder {
   object ReceivableMessages {
-    case class GetDataFromCurrentSidechainNodeView[A](f: SidechainNodeView => A)
+//    case class GetDataFromCurrentSidechainNodeView[A](f: SidechainNodeView => A)
 
     case class ApplyFunctionOnNodeView[A](f: java.util.function.Function[SidechainNodeView, A])
 

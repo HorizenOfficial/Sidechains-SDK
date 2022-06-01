@@ -7,7 +7,9 @@ import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainWalletErrorResponse.ErrorSecretNotAdded
 import com.horizen.api.http.SidechainWalletRestScheme._
+import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.box.Box
+import com.horizen.node._
 import com.horizen.proposition.{Proposition, VrfPublicKey}
 import com.horizen.secret.{PrivateKey25519Creator, VrfKeyGenerator}
 import com.horizen.serialization.Views
@@ -18,11 +20,15 @@ import scorex.core.settings.RESTApiSettings
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.concurrent.{Await, ExecutionContext}
+import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
 case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
                                    sidechainNodeViewHolderRef: ActorRef)(implicit val context: ActorRefFactory, override val ec: ExecutionContext)
-  extends SidechainApiRoute {
+  extends SidechainApiRoute[SidechainTypes#SCBT,
+    SidechainBlockHeader,SidechainBlock,NodeHistory,NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView] {
+
+  override implicit val tag: ClassTag[SidechainNodeView] = ClassTag[SidechainNodeView](classOf[SidechainNodeView])
 
   override val route: Route = pathPrefix("wallet") {
     allBoxes ~ coinsBalance ~ balanceOfType ~ createPrivateKey25519 ~ createVrfSecret ~ allPublicKeys

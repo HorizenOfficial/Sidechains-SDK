@@ -1,21 +1,20 @@
 package com.horizen.api.http
 
-import java.lang
-import java.util.{Collections, ArrayList => JArrayList, List => JList}
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.horizen.{SidechainHistory, SidechainTypes}
+import com.horizen.SidechainTypes
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.SidechainTransactionErrorResponse._
 import com.horizen.api.http.SidechainTransactionRestScheme._
+import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
 import com.horizen.box.{Box, ZenBox}
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
+import com.horizen.node._
 import com.horizen.params.NetworkParams
 import com.horizen.proof.Proof
 import com.horizen.proposition._
@@ -24,12 +23,14 @@ import com.horizen.transaction._
 import com.horizen.utils.{BytesUtils, ZenCoinsUtils}
 import scorex.core.settings.RESTApiSettings
 
+import java.lang
+import java.util.{Collections, ArrayList => JArrayList, List => JList, Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.reflect.ClassTag
 import scala.util.control.Breaks._
 import scala.util.{Failure, Success, Try}
-import java.util.{Optional => JOptional}
 
 case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                                         sidechainNodeViewHolderRef: ActorRef,
@@ -37,7 +38,10 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                                         companion: SidechainTransactionsCompanion,
                                         params: NetworkParams)
                                        (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
-  extends SidechainApiRoute with SidechainTypes {
+  extends SidechainApiRoute[SidechainTypes#SCBT,
+    SidechainBlockHeader,SidechainBlock,NodeHistory,NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView]  with SidechainTypes {
+
+  override implicit val tag: ClassTag[SidechainNodeView] = ClassTag[SidechainNodeView](classOf[SidechainNodeView])
 
   override val route: Route = (pathPrefix("transaction")) {
     allTransactions ~ findById ~ decodeTransactionBytes ~ createCoreTransaction ~ createCoreTransactionSimplified ~
@@ -536,6 +540,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
     new SidechainCoreTransaction(boxIds, outputs, proofs.asJava, fee, SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION)
   }
+
 }
 
 

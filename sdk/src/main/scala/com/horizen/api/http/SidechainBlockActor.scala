@@ -3,10 +3,10 @@ package com.horizen.api.http
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
-import com.horizen.block.SidechainBlock
 import com.horizen.forge.Forger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot
-import com.horizen.{SidechainHistory, SidechainSettings, SidechainSyncInfo}
+import com.horizen.{SidechainSettings, SidechainSyncInfo}
 import scorex.core.PersistentNodeViewModifier
+import scorex.core.consensus.HistoryReader
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedHistory, SemanticallyFailedModification, SyntacticallyFailedModification}
 import scorex.util.{ModifierId, ScorexLogging}
 
@@ -17,7 +17,7 @@ import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
 
-class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyncInfo, HR <: SidechainHistory : ClassTag]
+class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyncInfo, HR <: HistoryReader[PMOD,SI] : ClassTag]
 (settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, forgerRef: ActorRef)(implicit ec: ExecutionContext)
   extends Actor with ScorexLogging {
 
@@ -35,7 +35,7 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyn
     context.system.eventStream.subscribe(self, classOf[ChangedHistory[HR]])
   }
 
-  def processBlockFailedEvent(sidechainBlock: SidechainBlock, throwable: Throwable): Unit = {
+  def processBlockFailedEvent(sidechainBlock: PMOD, throwable: Throwable): Unit = {
     if (submitBlockPromises.contains(sidechainBlock.id) || generatedBlocksPromises.contains(sidechainBlock.id)) {
       submitBlockPromises.get(sidechainBlock.id) match {
         case Some(p) =>
@@ -54,7 +54,7 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyn
     }
   }
 
-  def processHistoryChangedEvent(history: SidechainHistory): Unit = {
+  def processHistoryChangedEvent(history: HR): Unit = {
     val expectedBlocks = submitBlockPromises.keys ++ generatedBlocksPromises.keys
     for (id <- expectedBlocks) {
       if (history.contains(id)) {
@@ -76,13 +76,13 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyn
   }
 
   protected def processSidechainNodeViewHolderEvents: Receive = {
-    case SemanticallyFailedModification(sidechainBlock: SidechainBlock, throwable) =>
+    case SemanticallyFailedModification(sidechainBlock: PMOD, throwable) =>
       processBlockFailedEvent(sidechainBlock, throwable)
 
-    case SyntacticallyFailedModification(sidechainBlock: SidechainBlock, throwable) =>
+    case SyntacticallyFailedModification(sidechainBlock: PMOD, throwable) =>
       processBlockFailedEvent(sidechainBlock, throwable)
 
-    case ChangedHistory(history: SidechainHistory) =>
+    case ChangedHistory(history: HR) =>
       processHistoryChangedEvent(history)
 
   }
@@ -124,15 +124,15 @@ object SidechainBlockActor {
 }
 
 object SidechainBlockActorRef {
-  def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainForgerRef: ActorRef)
+  def props[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyncInfo, HR <: HistoryReader[PMOD,SI] : ClassTag](settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainForgerRef: ActorRef)
            (implicit ec: ExecutionContext): Props =
-    Props(new SidechainBlockActor(settings, sidechainNodeViewHolderRef, sidechainForgerRef))
+    Props(new SidechainBlockActor[PMOD,SI, HR](settings, sidechainNodeViewHolderRef, sidechainForgerRef))
 
-  def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainForgerRef: ActorRef)
+  def apply[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyncInfo, HR <: HistoryReader[PMOD,SI] : ClassTag](name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainForgerRef: ActorRef)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, sidechainForgerRef), name)
+    system.actorOf(props[PMOD,SI, HR](settings, sidechainNodeViewHolderRef, sidechainForgerRef), name)
 
-  def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainForgerRef: ActorRef)
+  def apply[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyncInfo, HR <: HistoryReader[PMOD,SI]: ClassTag](settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainForgerRef: ActorRef)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, sidechainForgerRef))
+    system.actorOf(props[PMOD,SI, HR](settings, sidechainNodeViewHolderRef, sidechainForgerRef))
 }

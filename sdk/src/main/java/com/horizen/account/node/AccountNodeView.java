@@ -5,6 +5,7 @@ import com.horizen.account.block.AccountBlock;
 import com.horizen.account.block.AccountBlockHeader;
 import com.horizen.account.transaction.AccountTransaction;
 import com.horizen.node.NodeState;
+import com.horizen.node.NodeStateBase;
 import com.horizen.node.NodeWalletBase;
 import com.horizen.proof.Proof;
 import com.horizen.proposition.Proposition;
@@ -15,20 +16,20 @@ public class AccountNodeView implements
                 AccountBlockHeader,
                 AccountBlock,
                 NodeAccountHistory,
-                NodeState,
+                NodeStateBase,
                 NodeWalletBase,
                 NodeAccountMemoryPool> {
 
     private NodeAccountHistory nodeHistory;
 
-    private NodeState nodeState;
+    private NodeStateBase nodeState;
 
     private NodeWalletBase nodeWallet;
 
     private NodeAccountMemoryPool nodeMemoryPool;
 
     public AccountNodeView(NodeAccountHistory nodeHistory,
-                           NodeState nodeState,
+                           NodeStateBase nodeState,
                            NodeWalletBase nodeWallet,
                            NodeAccountMemoryPool nodeMemoryPool) {
         this.nodeHistory = nodeHistory;
@@ -44,7 +45,7 @@ public class AccountNodeView implements
     }
 
     @Override
-    public NodeState getNodeState() {
+    public NodeStateBase getNodeState() {
         return nodeState;
     }
 

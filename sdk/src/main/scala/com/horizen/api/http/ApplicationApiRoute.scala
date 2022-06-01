@@ -6,17 +6,19 @@ import akka.http.scaladsl.server.directives.RouteDirectives
 import akka.pattern.ask
 import com.horizen.SidechainNodeViewHolder
 import com.horizen.node.SidechainNodeView
+import scorex.core.api.http.{ApiDirectives, ApiRoute}
 import scorex.core.settings.RESTApiSettings
 import scorex.core.utils.ScorexEncoding
 
 import scala.collection.JavaConverters._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{Await, Future}
 
 case class ApplicationApiRoute(override val settings: RESTApiSettings, applicationApiGroup: ApplicationApiGroup, sidechainNodeViewHolderRef: ActorRef)
-                              (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
-  extends SidechainApiRoute
-  with ScorexEncoding
-  with FunctionsApplierOnSidechainNodeView {
+                              (implicit val context: ActorRefFactory)
+  extends ApiRoute
+    with ApiDirectives
+    with ScorexEncoding
+    with FunctionsApplierOnSidechainNodeView {
 
   override def route: Route = convertRoutes
 
@@ -46,7 +48,7 @@ case class ApplicationApiRoute(override val settings: RESTApiSettings, applicati
       val result = Await.result[R](res, settings.timeout)
       result
     }
-    catch  {
+    catch {
       case e: Exception => throw new Exception(e)
     }
   }

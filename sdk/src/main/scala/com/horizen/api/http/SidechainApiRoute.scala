@@ -1,20 +1,32 @@
 package com.horizen.api.http
 
 import akka.actor.ActorRef
-import com.horizen.node.SidechainNodeView
+import com.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase, SidechainNodeView}
 import scorex.core.api.http.{ApiDirectives, ApiRoute}
 import akka.pattern.ask
 import akka.http.scaladsl.server.Route
+import com.horizen.{AbstractSidechainNodeViewHolder, SidechainNodeViewBase}
+import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.transaction.Transaction
 
 import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.reflect.ClassTag
 
-trait SidechainApiRoute extends ApiRoute with ApiDirectives {
+trait SidechainApiRoute[
+  TX <: Transaction,
+  H <: SidechainBlockHeaderBase,
+  PM <: SidechainBlockBase[TX, H],
+  NH <: NodeHistoryBase[TX, H, PM],
+  S <: NodeStateBase,
+  W <: NodeWalletBase,
+  P <: NodeMemoryPoolBase[TX],
+  NV <: SidechainNodeViewBase[TX, H, PM, NH, S, W, P]] extends ApiRoute with ApiDirectives {
 
-  import com.horizen.SidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView
 
   val sidechainNodeViewHolderRef: ActorRef
 
   implicit val ec: ExecutionContext
+  implicit val tag: ClassTag[NV]
 
   /**
    * Get an access to the SidechainNodeView and execute the method locking the NodeViewHolder
@@ -24,9 +36,9 @@ trait SidechainApiRoute extends ApiRoute with ApiDirectives {
    * @tparam R - generic result type of {@param functionToBeApplied}
    * @return instance of {@tparam R}
    */
-  def applyOnNodeView[R](functionToBeApplied: SidechainNodeView => R): R = {
+  def applyOnNodeView[R](functionToBeApplied: NV => R): R = {
     try {
-      val res = (sidechainNodeViewHolderRef ? GetDataFromCurrentSidechainNodeView(functionToBeApplied)).asInstanceOf[Future[R]]
+      val res = (sidechainNodeViewHolderRef ? AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView(functionToBeApplied)).asInstanceOf[Future[R]]
       val result = Await.result[R](res, settings.timeout)
       result
     }
@@ -43,14 +55,16 @@ trait SidechainApiRoute extends ApiRoute with ApiDirectives {
    * @param f - function to be applied on the SidechainNodeView
    * @return The instance of {@code Route}.
    */
-  def withNodeView(f: SidechainNodeView => Route): Route = onSuccess(viewAsync())(f)
+  def withNodeView(f: NV => Route): Route = onSuccess(viewAsync())(f)
 
-  protected def viewAsync(): Future[SidechainNodeView] = {
-    def f(v: SidechainNodeView) = v
+  protected def viewAsync(): Future[NV] = {
+    def f(v: NV) = v
 
-    (sidechainNodeViewHolderRef ? GetDataFromCurrentSidechainNodeView(f))
-      .mapTo[SidechainNodeView]
+
+    (sidechainNodeViewHolderRef ? AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView(f))
+      .mapTo[NV]
   }
+
 
 }
 

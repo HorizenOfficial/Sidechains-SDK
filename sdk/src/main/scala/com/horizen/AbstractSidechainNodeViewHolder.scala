@@ -31,21 +31,6 @@ abstract class AbstractSidechainNodeViewHolder[
   override type HIS <: AbstractHistory[TX, H, PMOD, HSTOR, HIS]
   override type VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PMOD, VL]
 
-  //TODO ST
-  type NH <: NodeHistoryBase[TX, H, PMOD]
-  type NS <: NodeState
-  type NW <: NodeWalletBase
-  type NP <: NodeMemoryPoolBase[TX]
-
-
-  protected def nodeHistory(): NH
-
-  protected def nodeState(): NS
-
-  protected def nodeWallet(): NW
-
-  protected def nodeMemoryPool(): NP
-
 
   case class SidechainNodeUpdateInformation(history: HIS,
                                             state: MS,
@@ -67,10 +52,10 @@ abstract class AbstractSidechainNodeViewHolder[
 
   override def receive: Receive = {
     processLocallyGeneratedSecret orElse
-      getCurrentBaseSidechainNodeViewInfo orElse super.receive
+      getCurrentSidechainNodeViewInfo orElse super.receive
   }
 
-  protected def getCurrentBaseSidechainNodeViewInfo: Receive
+  protected def getCurrentSidechainNodeViewInfo: Receive
 
 
   protected def processLocallyGeneratedSecret: Receive = {
@@ -230,12 +215,11 @@ abstract class AbstractSidechainNodeViewHolder[
 
 object AbstractSidechainNodeViewHolder {
   object ReceivableMessages {
-    // case class GetDataFromCurrentNodeView[NH <: NodeHistoryBase, NS <: NodeState, NW <: NodeWalletBase, NP <: NodeMemoryPool, A](f: SidechainNodeViewBase[NH, NS, NW, NP] => A)
     case class GetDataFromCurrentNodeView[TX <: Transaction,
       H <: SidechainBlockHeaderBase,
       PMOD <: SidechainBlockBase[TX, H],
       NH <: NodeHistoryBase[TX, H, PMOD],
-      NS <: NodeState,
+      NS <: NodeStateBase,
       NW <: NodeWalletBase,
       NP <: NodeMemoryPoolBase[TX],
       NV <: SidechainNodeViewBase[TX, H, PMOD, NH, NS, NW, NP],
