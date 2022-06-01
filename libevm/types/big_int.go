@@ -11,7 +11,7 @@ const JsonBase = 10
 // existence. Per default big.Int serializes to a JSON number type which is problematic as any number outside the
 // JavaScript number spec (IEEE 64-bit double) is prone to loss of precision when JSON is parsed according to spec.
 type BigInt struct {
-	*big.Int
+	internal *big.Int
 }
 
 func NewInt(x int64) *BigInt {
@@ -24,10 +24,17 @@ func NewBigInt(x *big.Int) *BigInt {
 	return &BigInt{z}
 }
 
+func (b *BigInt) Unwrap() *big.Int {
+	if b != nil {
+		return b.internal
+	}
+	return nil
+}
+
 func (b BigInt) MarshalJSON() ([]byte, error) {
 	// wrap in quotes because the JSON number type is just a double
 	// without quotes this would be out of spec and risk a loss of precision
-	return []byte("\"" + b.Text(JsonBase) + "\""), nil
+	return []byte("\"" + b.internal.Text(JsonBase) + "\""), nil
 }
 
 func (b *BigInt) UnmarshalJSON(p []byte) error {
@@ -39,6 +46,6 @@ func (b *BigInt) UnmarshalJSON(p []byte) error {
 	if !ok {
 		return fmt.Errorf("not a valid big integer: %s", p)
 	}
-	b.Int = &z
+	b.internal = &z
 	return nil
 }

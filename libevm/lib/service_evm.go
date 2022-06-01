@@ -14,10 +14,10 @@ type EvmParams struct {
 }
 
 type EvmResult struct {
-	ReturnData  []byte
-	Address     *common.Address
-	LeftOverGas uint64
-	EvmError    string
+	ReturnData  []byte          `json:"returnData"`
+	Address     *common.Address `json:"address"`
+	LeftOverGas uint64          `json:"leftOverGas"`
+	EvmError    string          `json:"evmError"`
 }
 
 func (s *Service) EvmExecute(params EvmParams) (error, *EvmResult) {
@@ -28,11 +28,13 @@ func (s *Service) EvmExecute(params EvmParams) (error, *EvmResult) {
 	cfg := params.Config.GetConfig()
 	cfg.State = statedb
 	var (
-		result *EvmResult
+		result = &EvmResult{}
 		evmErr error
 	)
 	if params.Address == nil {
-		_, *result.Address, result.LeftOverGas, evmErr = runtime.Create(params.Input, cfg)
+		var contractAddress common.Address
+		_, contractAddress, result.LeftOverGas, evmErr = runtime.Create(params.Input, cfg)
+		result.Address = &contractAddress
 	} else {
 		result.ReturnData, result.LeftOverGas, evmErr = runtime.Call(*params.Address, params.Input, cfg)
 	}

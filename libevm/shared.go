@@ -39,7 +39,6 @@ func initialize(params InitializeParams) error {
 }
 
 func response(err error, result interface{}) *C.char {
-	log.Debug("<< response", "err", err, "result", result)
 	var response InteropResult
 	if err != nil {
 		response.Error = err.Error()
@@ -52,6 +51,7 @@ func response(err error, result interface{}) *C.char {
 		return nil
 	}
 	jsonString := string(jsonBytes)
+	log.Debug("<< response", "err", err, "result", jsonString)
 	return C.CString(jsonString)
 }
 

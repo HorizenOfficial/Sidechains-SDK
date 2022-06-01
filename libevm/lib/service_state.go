@@ -104,7 +104,7 @@ func (s *Service) StateAddBalance(params BalanceParams) error {
 	if err != nil {
 		return err
 	}
-	statedb.AddBalance(params.Address, params.Amount.Int)
+	statedb.AddBalance(params.Address, params.Amount.Unwrap())
 	return nil
 }
 
@@ -113,7 +113,7 @@ func (s *Service) StateSubBalance(params BalanceParams) error {
 	if err != nil {
 		return err
 	}
-	statedb.SubBalance(params.Address, params.Amount.Int)
+	statedb.SubBalance(params.Address, params.Amount.Unwrap())
 	return nil
 }
 
@@ -122,7 +122,7 @@ func (s *Service) StateSetBalance(params BalanceParams) error {
 	if err != nil {
 		return err
 	}
-	statedb.SetBalance(params.Address, params.Amount.Int)
+	statedb.SetBalance(params.Address, params.Amount.Unwrap())
 	return nil
 }
 
