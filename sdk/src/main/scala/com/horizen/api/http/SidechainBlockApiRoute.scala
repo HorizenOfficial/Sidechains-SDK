@@ -10,7 +10,7 @@ import com.horizen.api.http.SidechainBlockRestSchema._
 import com.horizen.block.SidechainBlock
 import com.horizen.box.ZenBox
 import com.horizen.consensus.{intToConsensusEpochNumber, intToConsensusSlotNumber}
-import com.horizen.forge.Forger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
+import com.horizen.forge.AbstractForger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
 import com.horizen.forge.ForgingInfo
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils

@@ -10,9 +10,9 @@ import com.google.common.primitives.Ints;
 import com.horizen.account.block.AccountBlock;
 import com.horizen.account.block.AccountBlockHeader;
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion;
-import com.horizen.account.proposition.PublicKeySecp256k1Proposition;
+import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.transaction.AccountTransaction;
-import com.horizen.account.utils.Secp256k1;
+import com.horizen.account.utils.Account;
 import com.horizen.block.*;
 import com.horizen.box.Box;
 import com.horizen.box.ForgerBox;
@@ -29,7 +29,6 @@ import com.horizen.proof.VrfProof;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.*;
 import com.horizen.transaction.SidechainTransaction;
-import com.horizen.transaction.Transaction;
 import com.horizen.transaction.mainchain.SidechainCreation;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
 import com.horizen.utils.*;
@@ -557,7 +556,7 @@ public class CommandProcessor {
 
                 byte[] stateRoot = new byte[MerkleTree.ROOT_HASH_LENGTH];
                 byte[] receiptsRoot = new byte[MerkleTree.ROOT_HASH_LENGTH];
-                PublicKeySecp256k1Proposition forgerAddress = new PublicKeySecp256k1Proposition(new byte[Secp256k1.PUBLIC_KEY_SIZE]);
+                AddressProposition forgerAddress = new AddressProposition(new byte[Account.ADDRESS_SIZE]);
 
                 SidechainAccountTransactionsCompanion sidechainTransactionsCompanion = new SidechainAccountTransactionsCompanion(new HashMap<>());
 

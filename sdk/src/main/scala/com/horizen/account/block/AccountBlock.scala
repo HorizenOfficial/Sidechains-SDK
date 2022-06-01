@@ -2,7 +2,7 @@ package com.horizen.account.block
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
-import com.horizen.account.proposition.PublicKeySecp256k1Proposition
+import com.horizen.account.proposition.AddressProposition
 import com.horizen.block._
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.proof.{Signature25519, VrfProof}
@@ -32,7 +32,7 @@ class AccountBlock(override val header: AccountBlockHeader,
 
   override lazy val transactions: Seq[SidechainTypes#SCAT] = sidechainTransactions
 
-  def forgerPublicKey: PublicKeySecp256k1Proposition = header.forgerAddress
+  def forgerPublicKey: AddressProposition = header.forgerAddress
 
   @throws(classOf[InconsistentSidechainBlockDataException])
   override def verifyTransactionsDataConsistency(): Unit = {
@@ -61,7 +61,7 @@ object AccountBlock extends ScorexEncoding {
              feePaymentsHash: Array[Byte],
              stateRoot: Array[Byte],
              receiptsRoot: Array[Byte],
-             forgerAddress: PublicKeySecp256k1Proposition,
+             forgerAddress: AddressProposition,
              companion: SidechainAccountTransactionsCompanion,
              signatureOption: Option[Signature25519] = None // TO DO: later we should think about different unsigned/signed blocks creation methods
             ): Try[AccountBlock] = Try {

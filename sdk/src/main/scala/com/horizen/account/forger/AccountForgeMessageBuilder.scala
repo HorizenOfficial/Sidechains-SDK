@@ -1,6 +1,5 @@
 package com.horizen.account.forger
 
-import akka.util.Timeout
 import com.horizen.block._
 import com.horizen.consensus._
 import com.horizen.params.NetworkParams
@@ -13,13 +12,12 @@ import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
-import com.horizen.account.proposition.PublicKeySecp256k1Proposition
+import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.AccountState
 import com.horizen.account.storage.AccountHistoryStorage
-import com.horizen.account.utils.Secp256k1
+import com.horizen.account.utils.Account
 import com.horizen.account.wallet.AccountWallet
-import com.horizen.forge.{AbstractForgeMessageBuilder, ForgeResult, MainchainSynchronizer}
-import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
+import com.horizen.forge.{AbstractForgeMessageBuilder, MainchainSynchronizer}
 import scorex.core.NodeViewModifier
 import scorex.core.block.Block.{BlockId, Timestamp}
 import scorex.util.ModifierId
@@ -37,22 +35,11 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
      AccountBlock](
   mainchainSynchronizer, companion, params, allowNoWebsocketConnectionInRegtest
 ) {
-  type HSTOR =  AccountHistoryStorage
-  type VL =  AccountWallet
-  type HIS =  AccountHistory
-  type MS =  AccountState
-  type MP =  AccountMemoryPool
-
-  type ForgeMessageType = GetDataFromCurrentView[ AccountHistory,  AccountState,  AccountWallet,  AccountMemoryPool, ForgeResult]
-
-  def buildForgeMessageForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber, timeout: Timeout): ForgeMessageType = {
-    val forgingFunctionForEpochAndSlot: View => ForgeResult = tryToForgeNextBlock(consensusEpochNumber, consensusSlotNumber, timeout)
-
-    val forgeMessage: ForgeMessageType =
-      GetDataFromCurrentView[ AccountHistory,  AccountState,  AccountWallet,  AccountMemoryPool, ForgeResult](forgingFunctionForEpochAndSlot)
-
-    forgeMessage
-  }
+  type HSTOR = AccountHistoryStorage
+  type VL = AccountWallet
+  type HIS = AccountHistory
+  type MS = AccountState
+  type MP = AccountMemoryPool
 
   override def createNewBlock(
                  nodeView: View,
@@ -76,7 +63,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     val stateRoot: Array[Byte] = new Array[Byte](MerkleTree.ROOT_HASH_LENGTH)
     val receiptsRoot: Array[Byte] = new Array[Byte](MerkleTree.ROOT_HASH_LENGTH)
-    val forgerAddress: PublicKeySecp256k1Proposition = new PublicKeySecp256k1Proposition(new Array[Byte](Secp256k1.PUBLIC_KEY_SIZE))
+    val forgerAddress: AddressProposition = new AddressProposition(new Array[Byte](Account.ADDRESS_SIZE))
 
     AccountBlock.create(
       parentId,
@@ -118,7 +105,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),// stateRoot TODO add constant
-      new PublicKeySecp256k1Proposition(new Array[Byte](Secp256k1.PUBLIC_KEY_SIZE)),// forgerAddress: PublicKeySecp256k1Proposition TODO add constant,
+      new AddressProposition(new Array[Byte](Account.ADDRESS_SIZE)),// forgerAddress: PublicKeySecp256k1Proposition TODO add constant,
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       Long.MaxValue,
       new Array[Byte](NodeViewModifier.ModifierIdSize),
