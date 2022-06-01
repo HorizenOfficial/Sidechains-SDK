@@ -64,6 +64,8 @@ public class StateDBTest {
         try (var statedb = new StateDB(rootWithBalance802)) {
             assertEquals(statedb.GetBalance(origin), "802");
         }
+
+        LibEvm.CloseDatabase();
     }
 
     @Test
@@ -121,5 +123,7 @@ public class StateDBTest {
             var returnValue = Converter.toHexString(result.returnData);
             assertEquals(returnValue, secondValue);
         }
+
+        LibEvm.CloseDatabase();
     }
 }

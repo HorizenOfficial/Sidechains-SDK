@@ -61,6 +61,10 @@ public final class LibEvm {
         Invoke(method, args, Void.class);
     }
 
+    private static void Invoke(String method) throws Exception {
+        Invoke(method, null, Void.class);
+    }
+
     public static class InitializeParams extends JsonPointer {
         public String path;
 
@@ -167,6 +171,10 @@ public final class LibEvm {
 
     public static void Initialize(String path) throws Exception {
         Invoke("Initialize", new InitializeParams(path));
+    }
+
+    public static void CloseDatabase() throws Exception {
+        Invoke("CloseDatabase");
     }
 
     public static int StateOpen(String stateRootHex) throws Exception {

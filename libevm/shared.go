@@ -28,7 +28,7 @@ type InteropResult struct {
 
 func initialize(params InitializeParams) error {
 	if instance != nil {
-		_ = instance.Close()
+		_ = instance.CloseDatabase()
 		instance = nil
 	}
 	err, newInstance := lib.InitWithLevelDB(params.Path)

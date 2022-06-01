@@ -40,7 +40,7 @@ func InitWithMemoryDB() (error, *Service) {
 	return nil, New(storage)
 }
 
-func (s *Service) Close() error {
+func (s *Service) CloseDatabase() error {
 	err := s.storage.Close()
 	if err != nil {
 		log.Error("failed to close storage", "error", err)
