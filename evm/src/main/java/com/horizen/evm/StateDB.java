@@ -46,6 +46,10 @@ public class StateDB implements AutoCloseable {
         LibEvm.StateSetNonce(handle, address, nonce);
     }
 
+    public LibEvm.EvmResult EvmExecute(String from, String to, String value, byte[] input) throws Exception {
+        return LibEvm.EvmExecute(handle, from, to, value, input);
+    }
+
     @Override
     public String toString() {
         return String.format("StateDB{handle=%d}", handle);
