@@ -1,6 +1,5 @@
 package com.horizen.account.forger
 
-import akka.util.Timeout
 import com.horizen.block._
 import com.horizen.consensus._
 import com.horizen.params.NetworkParams
@@ -16,10 +15,9 @@ import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.AccountState
 import com.horizen.account.storage.AccountHistoryStorage
-import com.horizen.account.utils.Secp256k1
+import com.horizen.account.utils.Account
 import com.horizen.account.wallet.AccountWallet
-import com.horizen.forge.{AbstractForgeMessageBuilder, ForgeResult, MainchainSynchronizer}
-import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
+import com.horizen.forge.{AbstractForgeMessageBuilder, MainchainSynchronizer}
 import scorex.core.NodeViewModifier
 import scorex.core.block.Block.{BlockId, Timestamp}
 import scorex.util.ModifierId
@@ -61,13 +59,13 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                  signatureOption: Option[Signature25519]) : Try[SidechainBlockBase[SidechainTypes#SCAT,  AccountBlockHeader]] =
   {
 
-    val feePaymentsHash = ???
+    val feePaymentsHash: Array[Byte] = new Array[Byte](MerkleTree.ROOT_HASH_LENGTH)
 
-    val stateRoot: Array[Byte] = ???
-    val receiptsRoot: Array[Byte] = ???
-    val forgerAddress: AddressProposition = ???
+    val stateRoot: Array[Byte] = new Array[Byte](MerkleTree.ROOT_HASH_LENGTH)
+    val receiptsRoot: Array[Byte] = new Array[Byte](MerkleTree.ROOT_HASH_LENGTH)
+    val forgerAddress: AddressProposition = new AddressProposition(new Array[Byte](Account.ADDRESS_SIZE))
 
-     AccountBlock.create(
+    AccountBlock.create(
       parentId,
       AccountBlock.ACCOUNT_BLOCK_VERSION,
       timestamp,
@@ -107,7 +105,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),// stateRoot TODO add constant
-      new AddressProposition(new Array[Byte](Secp256k1.PUBLIC_KEY_SIZE)),// forgerAddress: PublicKeySecp256k1Proposition TODO add constant,
+      new AddressProposition(new Array[Byte](Account.ADDRESS_SIZE)),// forgerAddress: PublicKeySecp256k1Proposition TODO add constant,
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       Long.MaxValue,
       new Array[Byte](NodeViewModifier.ModifierIdSize),
