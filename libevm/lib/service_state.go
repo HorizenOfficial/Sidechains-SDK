@@ -3,9 +3,9 @@ package lib
 import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/log"
-	"libevm/types"
 )
 
 type StateRootParams struct {
@@ -23,7 +23,7 @@ type AccountParams struct {
 
 type BalanceParams struct {
 	AccountParams
-	Amount *types.BigInt `json:"amount"`
+	Amount *hexutil.Big `json:"amount"`
 }
 
 type NonceParams struct {
@@ -83,14 +83,14 @@ func (s *Service) StateCommit(params HandleParams) (error, common.Hash) {
 	return nil, hash
 }
 
-func (s *Service) StateGetBalance(params AccountParams) (error, *types.BigInt) {
+func (s *Service) StateGetBalance(params AccountParams) (error, *hexutil.Big) {
 	err, statedb := s.getState(params.Handle)
 	if err != nil {
 		return err, nil
 	}
 	stateObject := statedb.GetOrNewStateObject(params.Address)
 	balance := stateObject.Balance()
-	return nil, types.NewBigInt(balance)
+	return nil, (*hexutil.Big)(balance)
 }
 
 func (s *Service) StateAddBalance(params BalanceParams) error {
@@ -98,7 +98,7 @@ func (s *Service) StateAddBalance(params BalanceParams) error {
 	if err != nil {
 		return err
 	}
-	statedb.AddBalance(params.Address, params.Amount.Unwrap())
+	statedb.AddBalance(params.Address, params.Amount.ToInt())
 	return nil
 }
 
@@ -107,7 +107,7 @@ func (s *Service) StateSubBalance(params BalanceParams) error {
 	if err != nil {
 		return err
 	}
-	statedb.SubBalance(params.Address, params.Amount.Unwrap())
+	statedb.SubBalance(params.Address, params.Amount.ToInt())
 	return nil
 }
 
@@ -116,7 +116,7 @@ func (s *Service) StateSetBalance(params BalanceParams) error {
 	if err != nil {
 		return err
 	}
-	statedb.SetBalance(params.Address, params.Amount.Unwrap())
+	statedb.SetBalance(params.Address, params.Amount.ToInt())
 	return nil
 }
 
