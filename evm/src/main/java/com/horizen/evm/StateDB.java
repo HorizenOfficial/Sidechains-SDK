@@ -7,52 +7,52 @@ public class StateDB implements AutoCloseable {
     private final int handle;
 
     public StateDB(String stateRootHex) throws Exception {
-        handle = LibEvm.StateOpen(stateRootHex);
+        handle = LibEvm.stateOpen(stateRootHex);
     }
 
     @Override
     public void close() throws Exception {
-        LibEvm.StateClose(handle);
+        LibEvm.stateClose(handle);
     }
 
-    public String GetIntermediateRoot() throws Exception {
-        return LibEvm.StateIntermediateRoot(handle);
+    public String getIntermediateRoot() throws Exception {
+        return LibEvm.stateIntermediateRoot(handle);
     }
 
-    public String Commit() throws Exception {
-        return LibEvm.StateCommit(handle);
+    public String commit() throws Exception {
+        return LibEvm.stateCommit(handle);
     }
 
-    public String GetBalance(String address) throws Exception {
-        return LibEvm.StateGetBalance(handle, address);
+    public String getBalance(String address) throws Exception {
+        return LibEvm.stateGetBalance(handle, address);
     }
 
-    public void AddBalance(String address, String amount) throws Exception {
-        LibEvm.StateAddBalance(handle, address, amount);
+    public void addBalance(String address, String amount) throws Exception {
+        LibEvm.stateAddBalance(handle, address, amount);
     }
 
-    public void SubBalance(String address, String amount) throws Exception {
-        LibEvm.StateSubBalance(handle, address, amount);
+    public void subBalance(String address, String amount) throws Exception {
+        LibEvm.stateSubBalance(handle, address, amount);
     }
 
-    public void SetBalance(String address, String amount) throws Exception {
-        LibEvm.StateSetBalance(handle, address, amount);
+    public void setBalance(String address, String amount) throws Exception {
+        LibEvm.stateSetBalance(handle, address, amount);
     }
 
-    public long GetNonce(String address) throws Exception {
-        return LibEvm.StateGetNonce(handle, address);
+    public long getNonce(String address) throws Exception {
+        return LibEvm.stateGetNonce(handle, address);
     }
 
-    public void SetNonce(String address, long nonce) throws Exception {
-        LibEvm.StateSetNonce(handle, address, nonce);
+    public void setNonce(String address, long nonce) throws Exception {
+        LibEvm.stateSetNonce(handle, address, nonce);
     }
 
-    public String GetCodeHash(String address) throws Exception {
-        return LibEvm.StateGetCodeHash(handle, address);
+    public String getCodeHash(String address) throws Exception {
+        return LibEvm.stateGetCodeHash(handle, address);
     }
 
-    public EvmResult EvmExecute(String from, String to, String value, byte[] input) throws Exception {
-        return LibEvm.EvmExecute(handle, from, to, value, input);
+    public EvmResult evmExecute(String from, String to, String value, byte[] input) throws Exception {
+        return LibEvm.evmExecute(handle, from, to, value, input);
     }
 
     @Override

@@ -53,7 +53,7 @@ public final class LibEvm {
         }
     }
 
-    private static <R> R Invoke(String method, JsonPointer args, Class<R> responseType) throws Exception {
+    private static <R> R invoke(String method, JsonPointer args, Class<R> responseType) throws Exception {
         var json = instance.Invoke(method, args);
         // build type information to deserialize to generic type InteropResult<R>
         var type = TypeFactory.defaultInstance().constructParametricType(InteropResult.class, responseType);
@@ -64,76 +64,76 @@ public final class LibEvm {
         return response.result;
     }
 
-    private static void Invoke(String method, JsonPointer args) throws Exception {
-        Invoke(method, args, Void.class);
+    private static void invoke(String method, JsonPointer args) throws Exception {
+        invoke(method, args, Void.class);
     }
 
-    private static void Invoke(String method) throws Exception {
-        Invoke(method, null, Void.class);
+    private static void invoke(String method) throws Exception {
+        invoke(method, null, Void.class);
     }
 
-    public static void OpenMemoryDB() throws Exception {
-        Invoke("OpenMemoryDB");
+    public static void openMemoryDB() throws Exception {
+        invoke("OpenMemoryDB");
     }
 
-    public static void OpenLevelDB(String path) throws Exception {
-        Invoke("OpenLevelDB", new LevelDBParams(path));
+    public static void openLevelDB(String path) throws Exception {
+        invoke("OpenLevelDB", new LevelDBParams(path));
     }
 
-    public static void CloseDatabase() throws Exception {
-        Invoke("CloseDatabase");
+    public static void closeDatabase() throws Exception {
+        invoke("CloseDatabase");
     }
 
-    public static int StateOpen(String stateRootHex) throws Exception {
-        return Invoke("StateOpen", new OpenStateParams(stateRootHex), int.class);
+    public static int stateOpen(String stateRootHex) throws Exception {
+        return invoke("StateOpen", new OpenStateParams(stateRootHex), int.class);
     }
 
-    public static void StateClose(int handle) throws Exception {
-        Invoke("StateClose", new HandleParams(handle));
+    public static void stateClose(int handle) throws Exception {
+        invoke("StateClose", new HandleParams(handle));
     }
 
-    public static String StateIntermediateRoot(int handle) throws Exception {
-        return Invoke("StateIntermediateRoot", new HandleParams(handle), String.class);
+    public static String stateIntermediateRoot(int handle) throws Exception {
+        return invoke("StateIntermediateRoot", new HandleParams(handle), String.class);
     }
 
-    public static String StateCommit(int handle) throws Exception {
-        return Invoke("StateCommit", new HandleParams(handle), String.class);
+    public static String stateCommit(int handle) throws Exception {
+        return invoke("StateCommit", new HandleParams(handle), String.class);
     }
 
-    public static String StateGetBalance(int handle, String address) throws Exception {
-        return Invoke("StateGetBalance", new AccountParams(handle, address), String.class);
+    public static String stateGetBalance(int handle, String address) throws Exception {
+        return invoke("StateGetBalance", new AccountParams(handle, address), String.class);
     }
 
-    public static void StateAddBalance(int handle, String address, String amount) throws Exception {
-        Invoke("StateAddBalance", new BalanceParams(handle, address, amount));
+    public static void stateAddBalance(int handle, String address, String amount) throws Exception {
+        invoke("StateAddBalance", new BalanceParams(handle, address, amount));
     }
 
-    public static void StateSubBalance(int handle, String address, String amount) throws Exception {
-        Invoke("StateSubBalance", new BalanceParams(handle, address, amount));
+    public static void stateSubBalance(int handle, String address, String amount) throws Exception {
+        invoke("StateSubBalance", new BalanceParams(handle, address, amount));
     }
 
-    public static void StateSetBalance(int handle, String address, String amount) throws Exception {
-        Invoke("StateSetBalance", new BalanceParams(handle, address, amount));
+    public static void stateSetBalance(int handle, String address, String amount) throws Exception {
+        invoke("StateSetBalance", new BalanceParams(handle, address, amount));
     }
 
-    public static long StateGetNonce(int handle, String address) throws Exception {
-        return Invoke("StateGetNonce", new AccountParams(handle, address), long.class);
+    public static long stateGetNonce(int handle, String address) throws Exception {
+        return invoke("StateGetNonce", new AccountParams(handle, address), long.class);
     }
 
-    public static void StateSetNonce(int handle, String address, long nonce) throws Exception {
-        Invoke("StateSetNonce", new NonceParams(handle, address, nonce));
+    public static void stateSetNonce(int handle, String address, long nonce) throws Exception {
+        invoke("StateSetNonce", new NonceParams(handle, address, nonce));
     }
 
-    public static String StateGetCodeHash(int handle, String address) throws Exception {
-        return Invoke("StateGetCodeHash", new AccountParams(handle, address), String.class);
+    public static String stateGetCodeHash(int handle, String address) throws Exception {
+        return invoke("StateGetCodeHash", new AccountParams(handle, address), String.class);
     }
 
-    public static EvmResult EvmExecute(int handle, String from, String to, String value, byte[] input)
+    public static EvmResult evmExecute(int handle, String from, String to, String value, byte[] input)
         throws Exception {
         var cfg = new EvmParams.EvmConfig();
         cfg.origin = from;
         cfg.value = value;
         cfg.gasLimit = 100000;
-        return Invoke("EvmExecute", new EvmParams(handle, cfg, to, input), EvmResult.class);
+        return invoke("EvmExecute", new EvmParams(handle, cfg, to, input), EvmResult.class);
     }
 }

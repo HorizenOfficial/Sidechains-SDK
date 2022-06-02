@@ -21,59 +21,59 @@ public class StateDBTest {
         String hashEmpty = "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421";
         String origin = "0xbafe3b6f2a19658df3cb5efca158c93272ff5c0b";
 
-        LibEvm.OpenLevelDB(databaseFolder.getAbsolutePath());
+        LibEvm.openLevelDB(databaseFolder.getAbsolutePath());
 
         String rootWithBalance1234;
         String rootWithBalance802;
         try (var statedb = new StateDB(hashNull)) {
-            var intermediateRoot = statedb.GetIntermediateRoot();
+            var intermediateRoot = statedb.getIntermediateRoot();
             assertEquals(
                 "empty state should give the hash of an empty string as the root hash",
                 hashEmpty,
                 intermediateRoot
             );
 
-            var committedRoot = statedb.Commit();
+            var committedRoot = statedb.commit();
             assertEquals("committed root should equal intermediate root", intermediateRoot, committedRoot);
-            assertEquals("0", statedb.GetBalance(origin));
+            assertEquals("0", statedb.getBalance(origin));
 
-            statedb.AddBalance(origin, "1234");
-            assertEquals("1234", statedb.GetBalance(origin));
+            statedb.addBalance(origin, "1234");
+            assertEquals("1234", statedb.getBalance(origin));
             assertNotEquals(
                 "intermediate root should not equal committed root anymore",
-                statedb.GetIntermediateRoot(),
-                committedRoot
+                committedRoot,
+                statedb.getIntermediateRoot()
             );
-            rootWithBalance1234 = statedb.Commit();
+            rootWithBalance1234 = statedb.commit();
 
-            statedb.SubBalance(origin, "432");
-            assertEquals("802", statedb.GetBalance(origin));
+            statedb.subBalance(origin, "432");
+            assertEquals("802", statedb.getBalance(origin));
 
-            assertEquals(0, statedb.GetNonce(origin));
-            statedb.SetNonce(origin, 3);
-            assertEquals(3, statedb.GetNonce(origin));
-            rootWithBalance802 = statedb.Commit();
+            assertEquals(0, statedb.getNonce(origin));
+            statedb.setNonce(origin, 3);
+            assertEquals(3, statedb.getNonce(origin));
+            rootWithBalance802 = statedb.commit();
 
-            statedb.SetNonce(origin, 5);
-            assertEquals(5, statedb.GetNonce(origin));
+            statedb.setNonce(origin, 5);
+            assertEquals(5, statedb.getNonce(origin));
         }
         // verify that automatic resource management worked and StateDB.close() was called
         // if it did, the handle is invalid now and this should throw
-        assertThrows(Exception.class, () -> LibEvm.StateIntermediateRoot(1));
+        assertThrows(Exception.class, () -> LibEvm.stateIntermediateRoot(1));
 
-        LibEvm.OpenLevelDB(databaseFolder.getAbsolutePath());
+        LibEvm.openLevelDB(databaseFolder.getAbsolutePath());
 
         try (var statedb = new StateDB(rootWithBalance1234)) {
-            assertEquals("1234", statedb.GetBalance(origin));
-            assertEquals(0, statedb.GetNonce(origin));
+            assertEquals("1234", statedb.getBalance(origin));
+            assertEquals(0, statedb.getNonce(origin));
         }
 
         try (var statedb = new StateDB(rootWithBalance802)) {
-            assertEquals("802", statedb.GetBalance(origin), "802");
-            assertEquals(3, statedb.GetNonce(origin));
+            assertEquals("802", statedb.getBalance(origin), "802");
+            assertEquals(3, statedb.getNonce(origin));
         }
 
-        LibEvm.CloseDatabase();
+        LibEvm.closeDatabase();
     }
 
     @Test
@@ -95,7 +95,7 @@ public class StateDBTest {
         String funcStore = "6057361d";
         String funcRetrieve = "2e64cec1";
 
-        LibEvm.OpenMemoryDB();
+        LibEvm.openMemoryDB();
 
         String modifiedState;
         EvmResult result;
@@ -103,39 +103,39 @@ public class StateDBTest {
 
         try (var statedb = new StateDB(nullHash)) {
             // test a simple value transfer
-            statedb.AddBalance(addr1, "10");
-            result = statedb.EvmExecute(addr1, addr2, "5", null);
+            statedb.addBalance(addr1, "10");
+            result = statedb.evmExecute(addr1, addr2, "5", null);
             assertEquals("", result.evmError);
-            assertEquals("5", statedb.GetBalance(addr2));
-            assertEquals("5", statedb.GetBalance(addr1));
+            assertEquals("5", statedb.getBalance(addr2));
+            assertEquals("5", statedb.getBalance(addr1));
 
             // test contract deployment
-            result = statedb.EvmExecute(addr2, null, null, Converter.fromHexString(contractCode + initialValue));
+            result = statedb.evmExecute(addr2, null, null, Converter.fromHexString(contractCode + initialValue));
             assertEquals("", result.evmError);
             contractAddress = result.address;
-            assertEquals(codeHash, statedb.GetCodeHash(contractAddress));
+            assertEquals(codeHash, statedb.getCodeHash(contractAddress));
 
             // call "store" function on the contract to set a value
-            result = statedb.EvmExecute(addr2, contractAddress, null, Converter.fromHexString(funcStore + anotherValue));
+            result = statedb.evmExecute(addr2, contractAddress, null, Converter.fromHexString(funcStore + anotherValue));
             assertEquals("", result.evmError);
 
             // call "retrieve" on the contract to fetch the value we just set
-            result = statedb.EvmExecute(addr2, contractAddress, null, Converter.fromHexString(funcRetrieve));
+            result = statedb.evmExecute(addr2, contractAddress, null, Converter.fromHexString(funcRetrieve));
             assertEquals("", result.evmError);
             var returnValue = Converter.toHexString(result.returnData);
             assertEquals(anotherValue, returnValue);
 
-            modifiedState = statedb.Commit();
+            modifiedState = statedb.commit();
         }
 
         // reopen the state and retrieve a value
         try (var statedb = new StateDB(modifiedState)) {
-            result = statedb.EvmExecute(addr2, contractAddress, null, Converter.fromHexString(funcRetrieve));
+            result = statedb.evmExecute(addr2, contractAddress, null, Converter.fromHexString(funcRetrieve));
             assertEquals("", result.evmError);
             var returnValue = Converter.toHexString(result.returnData);
             assertEquals(anotherValue, returnValue);
         }
 
-        LibEvm.CloseDatabase();
+        LibEvm.closeDatabase();
     }
 }
