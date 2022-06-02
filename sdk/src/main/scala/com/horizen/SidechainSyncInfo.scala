@@ -1,11 +1,10 @@
 package com.horizen
 
-import com.horizen.block.SidechainBlock
+import com.horizen.block.{SidechainBlock, SidechainBlockBase}
 import scorex.core.NodeViewModifier
 import scorex.core.consensus.History.ModifierIds
 import scorex.util.ModifierId
 import scorex.core.consensus.SyncInfo
-
 import scorex.core.network.message.SyncInfoMessageSpec
 import scorex.core.serialization.ScorexSerializer
 import scorex.util.serialization.{Reader, Writer}
@@ -21,7 +20,7 @@ case class SidechainSyncInfo(knownBlockIds: Seq[ModifierId]) extends SyncInfo {
   // get most recent block
   override def startingPoints: ModifierIds = {
     knownBlockIds.headOption match {
-      case Some(id) => Seq(SidechainBlock.ModifierTypeId -> id)
+      case Some(id) => Seq(SidechainBlockBase.ModifierTypeId -> id)
       case None => Seq()
     }
   }

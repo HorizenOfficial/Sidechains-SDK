@@ -3,6 +3,7 @@ package com.horizen.api.http
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import com.horizen.SidechainTypes
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
+import com.horizen.transaction.Transaction
 import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, SuccessfulTransaction}
 import scorex.util.{ModifierId, ScorexLogging}
@@ -10,7 +11,7 @@ import scorex.util.{ModifierId, ScorexLogging}
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.{ExecutionContext, Promise}
 
-class SidechainTransactionActor[T <: SidechainTypes#SCBT](sidechainNodeViewHolderRef: ActorRef)(implicit ec: ExecutionContext)
+class SidechainTransactionActor[T <: Transaction](sidechainNodeViewHolderRef: ActorRef)(implicit ec: ExecutionContext)
   extends Actor with ScorexLogging {
 
   private val transactionMap : TrieMap[String, Promise[ModifierId]] = TrieMap()
@@ -27,7 +28,7 @@ class SidechainTransactionActor[T <: SidechainTypes#SCBT](sidechainNodeViewHolde
       transactionMap(transaction.id) = promise
       sender() ! future
 
-      sidechainNodeViewHolderRef ! LocallyGeneratedTransaction[SidechainTypes#SCBT](transaction)
+      sidechainNodeViewHolderRef ! LocallyGeneratedTransaction[Transaction](transaction)
   }
 
   protected def sidechainNodeViewHolderEvents: Receive = {
@@ -55,7 +56,7 @@ object SidechainTransactionActor {
 
   object ReceivableMessages {
 
-    case class BroadcastTransaction[T <: SidechainTypes#SCBT](transaction: T)
+    case class BroadcastTransaction[T <: Transaction](transaction: T)
 
   }
 

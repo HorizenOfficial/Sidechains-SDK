@@ -9,7 +9,6 @@ import com.horizen.box.Box;
 import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
 import com.horizen.serialization.Views;
-import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.ByteArrayWrapper;
 import com.horizen.utils.BytesUtils;
 import scorex.crypto.hash.Blake2b256;
@@ -59,8 +58,6 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
 
     @JsonProperty("isCustom")
     public Boolean isCustom() { return true; } // All transactions presume customs until it not defined otherwise
-
-    public abstract void semanticValidity() throws TransactionSemanticValidityException;
 
     // Transactions custom data to be considered during Transaction id calculation.
     // Note: in case custom field must be protected by the box unlocker proof,

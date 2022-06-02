@@ -3,7 +3,7 @@ package com.horizen
 import java.util
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestProbe
-import com.horizen.block.SidechainBlock
+import com.horizen.block.{SidechainBlock, SidechainBlockBase}
 import com.horizen.box.ZenBox
 import com.horizen.chain.FeePaymentsInfo
 import com.horizen.companion.SidechainTransactionsCompanion
@@ -280,7 +280,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
 
     // History appending check
     Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer( _ => {
-      Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq(SidechainBlock.ModifierTypeId -> blockIdToDownload)))
+      Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq(SidechainBlockBase.ModifierTypeId -> blockIdToDownload)))
     })
     // History semantic validity check
     Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenAnswer( _ => {

@@ -1,22 +1,18 @@
 package com.horizen.account.transaction;
 
-import com.horizen.account.proof.SignatureSecp256k1Serializer;
 import com.horizen.transaction.TransactionSerializer;
-import org.web3j.crypto.TransactionDecoder;
-import org.web3j.crypto.TransactionEncoder;
+import org.web3j.crypto.*;
+import org.web3j.rlp.*;
 import org.web3j.utils.Numeric;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
-
 public class EthereumTransactionSerializer implements TransactionSerializer<EthereumTransaction> {
 
     private static final EthereumTransactionSerializer serializer;
-    private static final SignatureSecp256k1Serializer signatureSerializer;
 
     static {
         serializer = new EthereumTransactionSerializer();
-        signatureSerializer = SignatureSecp256k1Serializer.getSerializer();
     }
 
     private EthereumTransactionSerializer() {
@@ -27,19 +23,33 @@ public class EthereumTransactionSerializer implements TransactionSerializer<Ethe
         return serializer;
     }
 
+    // Maybe we need to do the serialization in a different way to be eth compatible,
+    // because of here used message length integer needed for decoding
     @Override
     public void serialize(EthereumTransaction transaction, Writer writer) {
-        var encodedMessage = TransactionEncoder.encode(transaction.getTransaction());
+        byte[] encodedMessage;
+
+        if (transaction.getSignature() != null) {
+            Sign.SignatureData signatureData = new Sign.SignatureData(transaction.getSignature().getV(), transaction.getSignature().getR(), transaction.getSignature().getS());
+            var rlpValues = TransactionEncoder.asRlpValues(transaction.getTransaction(), signatureData);
+            RlpList rlpList = new RlpList(rlpValues);
+            encodedMessage = RlpEncoder.encode(rlpList);
+        } else {
+            encodedMessage = TransactionEncoder.encode(transaction.getTransaction());
+        }
+
         writer.putInt(encodedMessage.length);
         writer.putBytes(encodedMessage);
-        signatureSerializer.serialize(transaction.getSignature(), writer);
     }
 
     @Override
     public EthereumTransaction parse(Reader reader) {
-        var messageLength = reader.getInt();
-        var hexMessage = Numeric.toHexString(reader.getBytes(messageLength));
-        var signature = signatureSerializer.parse(reader);
-        return new EthereumTransaction(TransactionDecoder.decode(hexMessage), signature);
+        var length = reader.getInt();
+        var encodedMessage = reader.getBytes(length);
+        var transaction = TransactionDecoder.decode(Numeric.toHexString(encodedMessage));
+
+        if (transaction instanceof SignedRawTransaction)
+            return new EthereumTransaction((SignedRawTransaction) transaction);
+        return new EthereumTransaction(transaction);
     }
 }

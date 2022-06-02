@@ -1,14 +1,17 @@
 package com.horizen.chain
 
-import com.horizen.block.SidechainBlock
+import com.horizen.account.block.AccountBlock
+import com.horizen.block.{SidechainBlock, SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
 import com.horizen.vrf.{VrfOutput, VrfOutputSerializer}
 import scorex.core.NodeViewModifier
 import scorex.core.block.Block.Timestamp
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
+import com.horizen.transaction.Transaction
 import scorex.util.serialization.{Reader, Writer}
 import scorex.util.{ModifierId, bytesToId, idToBytes}
+
 import scala.collection.mutable.ArrayBuffer
 
 
@@ -33,11 +36,20 @@ case class SidechainBlockInfo(height: Int,
 }
 
 object SidechainBlockInfo {
+  // clone these methods
   def mainchainHeaderHashesFromBlock(sidechainBlock: SidechainBlock): Seq[MainchainHeaderHash] = {
     sidechainBlock.mainchainHeaders.map(header => byteArrayToMainchainHeaderHash(header.hash))
   }
 
+  def mainchainReferenceDataHeaderHashesFromBlock[TX <: Transaction](b: SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase]): Seq[MainchainHeaderHash] =
+    {
+      b.mainchainBlockReferencesData.map(data => byteArrayToMainchainHeaderHash(data.headerHash))
+    }
+
   def mainchainReferenceDataHeaderHashesFromBlock(sidechainBlock: SidechainBlock): Seq[MainchainHeaderHash] = {
+    sidechainBlock.mainchainBlockReferencesData.map(data => byteArrayToMainchainHeaderHash(data.headerHash))
+  }
+  def mainchainReferenceDataHeaderHashesFromBlock(sidechainBlock: AccountBlock): Seq[MainchainHeaderHash] = {
     sidechainBlock.mainchainBlockReferencesData.map(data => byteArrayToMainchainHeaderHash(data.headerHash))
   }
 }

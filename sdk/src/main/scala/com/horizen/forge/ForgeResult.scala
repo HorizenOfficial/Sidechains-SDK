@@ -1,10 +1,11 @@
 package com.horizen.forge
 
-import com.horizen.block.SidechainBlock
+import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.transaction.Transaction
 
 sealed trait ForgeResult
 
-case class ForgeSuccess(block: SidechainBlock) extends ForgeResult {
+case class ForgeSuccess[PMOD <: SidechainBlockBase[_<: Transaction,_<: SidechainBlockHeaderBase]](block: PMOD) extends ForgeResult {
   override def toString: String = s"Successfully generated block ${block.id}"
 }
 

@@ -7,6 +7,12 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
+import com.horizen.account.block.AccountBlock;
+import com.horizen.account.block.AccountBlockHeader;
+import com.horizen.account.companion.SidechainAccountTransactionsCompanion;
+import com.horizen.account.proposition.AddressProposition;
+import com.horizen.account.transaction.AccountTransaction;
+import com.horizen.account.utils.Account;
 import com.horizen.block.*;
 import com.horizen.box.Box;
 import com.horizen.box.ForgerBox;
@@ -18,6 +24,7 @@ import com.horizen.params.MainNetParams;
 import com.horizen.params.NetworkParams;
 import com.horizen.params.RegTestParams;
 import com.horizen.params.TestNetParams;
+import com.horizen.proof.Proof;
 import com.horizen.proof.VrfProof;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.*;
@@ -364,10 +371,12 @@ public class CommandProcessor {
                       "\t\t\"updateconfig\": boolean - Optional. Default false. If true, put the results in a copy of source config.\n" +
                       "\t\t\"sourceconfig\": <path to in config file> - expected if 'updateconfig' = true.\n" +
                       "\t\t\"resultconfig\": <path to out config file> - expected if 'updateconfig' = true.\n" +
-                      "\t}"
+                      "\t\t\"blockversion\": int - Optional, default = 1. UTXO model block version=1, Account model block version=2.\n" +
+                "\t}"
         );
         printer.print("Examples:\n" +
                       "\tgenesisinfo {\"secret\":\"78fa...e818\", \"info\":\"0001....ad11\"}\n\n" +
+                      "\tgenesisinfo {\"secret\":\"78fa...e818\", \"info\":\"0001....ad11\", \"blockversion\":2}\n\n" +
                       "\tgenesisinfo {\"secret\":\"78fa...e818\", \"info\":\"0001....ad11\", \n" +
                       "\t\"updateconfig\": true, \"sourceconfig\":\"./template.conf\", \"resultconfig\":\"./result.conf\"}");
     }
@@ -378,6 +387,20 @@ public class CommandProcessor {
             || !json.has("secret") || !json.get("secret").isTextual()) {
             printGenesisInfoUsageMsg("wrong arguments syntax.");
             return;
+        }
+
+        byte block_version;
+        if (json.has("blockversion"))
+        {
+            block_version = (byte)json.get("blockversion").asInt();
+            if ( block_version != SidechainBlock.BLOCK_VERSION() &&
+                 block_version != AccountBlock.ACCOUNT_BLOCK_VERSION())
+            {
+                printGenesisInfoUsageMsg(String.format("Optional 'blockversion' integer field expected to be %d or %d.", SidechainBlock.BLOCK_VERSION(), AccountBlock.ACCOUNT_BLOCK_VERSION()));
+                return;
+            }
+        } else {
+            block_version = SidechainBlock.BLOCK_VERSION();
         }
 
         SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
@@ -499,8 +522,6 @@ public class CommandProcessor {
 
             MainchainBlockReference mcRef = MainchainBlockReference.create(mcBlockBytes, params, versionsManager).get();
 
-            SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>());
-
             //Find Sidechain creation information
             SidechainCreation sidechainCreation = null;
             if (mcRef.data().sidechainRelatedAggregatedTransaction().isEmpty())
@@ -527,35 +548,79 @@ public class CommandProcessor {
             // no fee payments expected for the genesis block
             byte[] feePaymentsHash = new byte[32];
 
-            SidechainBlock sidechainBlock = SidechainBlock.create(
-                    params.sidechainGenesisBlockParentId(),
-                    SidechainBlock.BLOCK_VERSION(),
-                    timestamp,
-                    scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.data())).asScala().toSeq(),
-                    scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, Box<Proposition>>>()).asScala().toSeq(),
-                    scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.header())).asScala().toSeq(),
-                    scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer>()).asScala().toSeq(),
-                    key,
-                    forgingStakeInfo,
-                    vrfProof,
-                    mp,
-                    feePaymentsHash,
-                    sidechainTransactionsCompanion,
-                    scala.Option.empty()
-            ).get();
-
             int withdrawalEpochLength;
-            try {
-                SidechainCreation creationOutput = (SidechainCreation) sidechainBlock.mainchainBlockReferencesData().head().sidechainRelatedAggregatedTransaction().get().mc2scTransactionsOutputs().get(0);
-                withdrawalEpochLength = creationOutput.withdrawalEpochLength();
-            }
-            catch (Exception e) {
-                printGenesisInfoUsageMsg("'info' data is corrupted: MainchainBlock expected to contain a valid Transaction with a Sidechain Creation output.");
-                return;
-            }
+            String sidechainBlockHex;
 
-            String sidechainBlockHex = BytesUtils.toHexString(sidechainBlock.bytes());
+            // are we building a utxo or account model based block?
+            if (block_version == AccountBlock.ACCOUNT_BLOCK_VERSION()){
 
+                byte[] stateRoot = new byte[MerkleTree.ROOT_HASH_LENGTH];
+                byte[] receiptsRoot = new byte[MerkleTree.ROOT_HASH_LENGTH];
+                AddressProposition forgerAddress = new AddressProposition(new byte[Account.ADDRESS_SIZE]);
+
+                SidechainAccountTransactionsCompanion sidechainTransactionsCompanion = new SidechainAccountTransactionsCompanion(new HashMap<>());
+
+                AccountBlock accountBlock = AccountBlock.create(
+                        params.sidechainGenesisBlockParentId(),
+                        block_version,
+                        timestamp,
+                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.data())).asScala().toSeq(),
+                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<AccountTransaction<Proposition, Proof<Proposition>>>()).asScala().toSeq(),
+                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.header())).asScala().toSeq(),
+                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer<AccountBlockHeader>>()).asScala().toSeq(),
+                        key,
+                        forgingStakeInfo,
+                        vrfProof,
+                        mp,
+                        feePaymentsHash,
+                        stateRoot,
+                        receiptsRoot,
+                        forgerAddress,
+                        sidechainTransactionsCompanion,
+                        scala.Option.empty()
+                ).get();
+
+                try {
+                    SidechainCreation creationOutput = (SidechainCreation) accountBlock.mainchainBlockReferencesData().head().sidechainRelatedAggregatedTransaction().get().mc2scTransactionsOutputs().get(0);
+                    withdrawalEpochLength = creationOutput.withdrawalEpochLength();
+                }
+                catch (Exception e) {
+                    printGenesisInfoUsageMsg("'info' data is corrupted: MainchainBlock expected to contain a valid Transaction with a Sidechain Creation output.");
+                    return;
+                }
+
+                sidechainBlockHex = BytesUtils.toHexString(accountBlock.bytes());
+            } else {
+                SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>());
+
+                SidechainBlock sidechainBlock = SidechainBlock.create(
+                        params.sidechainGenesisBlockParentId(),
+                        block_version,
+                        timestamp,
+                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.data())).asScala().toSeq(),
+                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, Box<Proposition>>>()).asScala().toSeq(),
+                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.header())).asScala().toSeq(),
+                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer<SidechainBlockHeader>>()).asScala().toSeq(),
+                        key,
+                        forgingStakeInfo,
+                        vrfProof,
+                        mp,
+                        feePaymentsHash,
+                        sidechainTransactionsCompanion,
+                        scala.Option.empty()
+                ).get();
+
+                try {
+                    SidechainCreation creationOutput = (SidechainCreation) sidechainBlock.mainchainBlockReferencesData().head().sidechainRelatedAggregatedTransaction().get().mc2scTransactionsOutputs().get(0);
+                    withdrawalEpochLength = creationOutput.withdrawalEpochLength();
+                }
+                catch (Exception e) {
+                    printGenesisInfoUsageMsg("'info' data is corrupted: MainchainBlock expected to contain a valid Transaction with a Sidechain Creation output.");
+                    return;
+                }
+
+                sidechainBlockHex = BytesUtils.toHexString(sidechainBlock.bytes());
+            }
 
             ObjectNode resJson = new ObjectMapper().createObjectNode();
             resJson.put("scId", BytesUtils.toHexString(BytesUtils.reverseBytes(scId))); // scId output expected to be in BE

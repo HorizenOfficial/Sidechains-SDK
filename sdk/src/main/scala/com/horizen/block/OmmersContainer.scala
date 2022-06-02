@@ -9,10 +9,10 @@ import com.horizen.validation.InvalidOmmerDataException
 import scala.util.{Failure, Success, Try}
 
 @JsonView(Array(classOf[Views.Default]))
-trait OmmersContainer {
-  val header: SidechainBlockHeader
+trait OmmersContainer[H <: SidechainBlockHeaderBase] {
+  val header: H
   val mainchainHeaders: Seq[MainchainHeader]
-  val ommers: Seq[Ommer]
+  val ommers: Seq[Ommer[H]]
 
   def score: Long = 1L + ommers.map(_.score).sum
 

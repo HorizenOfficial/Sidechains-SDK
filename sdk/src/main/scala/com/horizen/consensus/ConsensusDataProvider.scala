@@ -1,9 +1,8 @@
 package com.horizen.consensus
 
 import java.security.MessageDigest
-
 import com.google.common.primitives.{Ints, Longs}
-import com.horizen.block.SidechainBlockHeader
+import com.horizen.block.{SidechainBlockHeader, SidechainBlockHeaderBase}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
 import com.horizen.storage.SidechainBlockInfoProvider
@@ -147,7 +146,7 @@ trait ConsensusDataProvider {
     }
   }
 
-  def getVrfOutput(blockHeader: SidechainBlockHeader, nonceConsensusEpochInfo: NonceConsensusEpochInfo): Option[VrfOutput] = {
+  def getVrfOutput(blockHeader: SidechainBlockHeaderBase, nonceConsensusEpochInfo: NonceConsensusEpochInfo): Option[VrfOutput] = {
     //try to get cached value, if no in cache then calculate
     val key = ConsensusDataProvider.blockIdAndNonceToKey(blockHeader.id, nonceConsensusEpochInfo)
     val cachedValue = ConsensusDataProvider.vrfOutputCache.get(key)
@@ -162,7 +161,7 @@ trait ConsensusDataProvider {
     }
   }
 
-  private def calculateVrfOutput(blockHeader: SidechainBlockHeader, nonceConsensusEpochInfo: NonceConsensusEpochInfo): Option[VrfOutput] = {
+  private def calculateVrfOutput(blockHeader: SidechainBlockHeaderBase, nonceConsensusEpochInfo: NonceConsensusEpochInfo): Option[VrfOutput] = {
     val slotNumber: ConsensusSlotNumber = TimeToEpochUtils.timeStampToSlotNumber(params, blockHeader.timestamp)
     val vrfMessage: VrfMessage = buildVrfMessage(slotNumber, nonceConsensusEpochInfo)
 
