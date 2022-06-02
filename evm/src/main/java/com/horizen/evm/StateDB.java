@@ -1,5 +1,6 @@
 package com.horizen.evm;
 
+import com.horizen.evm.library.EvmResult;
 import com.horizen.evm.library.LibEvm;
 
 public class StateDB implements AutoCloseable {
@@ -50,7 +51,7 @@ public class StateDB implements AutoCloseable {
         return LibEvm.StateGetCodeHash(handle, address);
     }
 
-    public LibEvm.EvmResult EvmExecute(String from, String to, String value, byte[] input) throws Exception {
+    public EvmResult EvmExecute(String from, String to, String value, byte[] input) throws Exception {
         return LibEvm.EvmExecute(handle, from, to, value, input);
     }
 

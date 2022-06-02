@@ -1,10 +1,17 @@
 package com.horizen.evm.library;
 
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.sun.jna.Library;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 
 public final class LibEvm {
+    private interface LibEvmInterface extends Library {
+        void Free(Pointer ptr);
+
+        JsonString Invoke(String method, JsonPointer args);
+    }
+
     private static final LibEvmInterface instance;
 
     static {
@@ -65,110 +72,6 @@ public final class LibEvm {
         Invoke(method, null, Void.class);
     }
 
-    public static class InitializeParams extends JsonPointer {
-        public String path;
-
-        public InitializeParams() {
-        }
-
-        public InitializeParams(String path) {
-            this.path = path;
-        }
-    }
-
-    public static class OpenStateParams extends JsonPointer {
-        public String root;
-
-        public OpenStateParams() {
-        }
-
-        public OpenStateParams(String root) {
-            this.root = root;
-        }
-    }
-
-    public static class HandleParams extends JsonPointer {
-        public int handle;
-
-        public HandleParams() {
-        }
-
-        public HandleParams(int handle) {
-            this.handle = handle;
-        }
-    }
-
-    public static class AccountParams extends HandleParams {
-        public String address;
-
-        public AccountParams() {
-        }
-
-        public AccountParams(int handle, String address) {
-            super(handle);
-            this.address = address;
-        }
-    }
-
-    public static class BalanceParams extends AccountParams {
-        public String amount;
-
-        public BalanceParams() {
-        }
-
-        public BalanceParams(int handle, String address, String amount) {
-            super(handle, address);
-            this.amount = amount;
-        }
-    }
-
-    public static class NonceParams extends AccountParams {
-        public long nonce;
-
-        public NonceParams() {
-        }
-
-        public NonceParams(int handle, String address, long nonce) {
-            super(handle, address);
-            this.nonce = nonce;
-        }
-    }
-
-    public static class EvmConfig {
-        public String difficulty; // uint256
-        public String origin; // address
-        public String coinbase; // address
-        public String blockNumber; // uint256
-        public String time; // uint256
-        public long gasLimit; // uint64
-        public String gasPrice; // uint256
-        public String value; // uint256
-        public String baseFee; // uint256
-    }
-
-    public static class EvmParams extends HandleParams {
-        public EvmConfig config;
-        public String address;
-        public byte[] input;
-
-        public EvmParams() {
-        }
-
-        public EvmParams(int handle, EvmConfig config, String address, byte[] input) {
-            super(handle);
-            this.config = config;
-            this.address = address;
-            this.input = input;
-        }
-    }
-
-    public static class EvmResult {
-        public byte[] returnData;
-        public String address;
-        public long leftOverGas;
-        public String evmError;
-    }
-
     public static void Initialize(String path) throws Exception {
         Invoke("Initialize", new InitializeParams(path));
     }
@@ -223,7 +126,7 @@ public final class LibEvm {
 
     public static EvmResult EvmExecute(int handle, String from, String to, String value, byte[] input)
         throws Exception {
-        var cfg = new EvmConfig();
+        var cfg = new EvmParams.EvmConfig();
         cfg.origin = from;
         cfg.value = value;
         cfg.gasLimit = 100000;

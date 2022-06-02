@@ -1,5 +1,6 @@
 package com.horizen.evm;
 
+import com.horizen.evm.library.EvmResult;
 import com.horizen.evm.library.LibEvm;
 import com.horizen.evm.utils.Converter;
 import org.junit.Rule;
@@ -53,8 +54,8 @@ public class StateDBTest {
             statedb.SetNonce(origin, 3);
             assertEquals(statedb.GetNonce(origin), 3);
         }
-        // verify that automatic resource management worked and StateDB.close() was called,
-        // if it did the handle is invalid now and this should throw
+        // verify that automatic resource management worked and StateDB.close() was called
+        // if it did, the handle is invalid now and this should throw
         assertThrows(Exception.class, () -> LibEvm.StateIntermediateRoot(1));
 
         try (var statedb = new StateDB(rootWithBalance1234)) {
@@ -90,7 +91,7 @@ public class StateDBTest {
         LibEvm.Initialize(databaseFolder.getAbsolutePath());
 
         String modifiedState;
-        LibEvm.EvmResult result;
+        EvmResult result;
         String contractAddress;
 
         try (var statedb = new StateDB(nullHash)) {
