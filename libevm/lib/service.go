@@ -8,36 +8,50 @@ import (
 )
 
 type Service struct {
-	storage  ethdb.Database
-	database state.Database
-	statedbs map[int]*state.StateDB
-	counter  int
+	initialized bool
+	storage     ethdb.Database
+	database    state.Database
+	statedbs    map[int]*state.StateDB
+	counter     int
 }
 
-func New(storage ethdb.Database) *Service {
+type LevelDBParams struct {
+	Path string `json:"path"`
+}
+
+func New() *Service {
 	return &Service{
-		storage: storage,
-		// TODO: enable caching
-		//database: state.NewDatabaseWithConfig(storage, &trie.Config{Cache: 16})
-		database: state.NewDatabase(storage),
-		statedbs: make(map[int]*state.StateDB),
+		initialized: false,
 	}
 }
 
-func InitWithLevelDB(path string) (error, *Service) {
-	log.Info("initializing leveldb", "path", path)
-	storage, err := rawdb.NewLevelDBDatabase(path, 0, 0, "zen/db/data/", false)
+func (s *Service) open(storage ethdb.Database) {
+	if s.initialized {
+		_ = s.CloseDatabase()
+	}
+	s.storage = storage
+	s.database = state.NewDatabase(storage)
+	// TODO: enable caching
+	//s.database = state.NewDatabaseWithConfig(storage, &trie.Config{Cache: 16})
+	s.statedbs = make(map[int]*state.StateDB)
+	s.initialized = true
+}
+
+func (s *Service) OpenMemoryDB() error {
+	log.Info("initializing memorydb")
+	s.open(rawdb.NewMemoryDatabase())
+	return nil
+}
+
+func (s *Service) OpenLevelDB(params LevelDBParams) error {
+	log.Info("initializing leveldb", "path", params.Path)
+	storage, err := rawdb.NewLevelDBDatabase(params.Path, 0, 0, "zen/db/data/", false)
 	if err != nil {
 		log.Error("failed to initialize database", "error", err)
-		return err, nil
+		return err
 	}
-	return nil, New(storage)
-}
-
-func InitWithMemoryDB() (error, *Service) {
-	log.Info("initializing memorydb")
-	storage := rawdb.NewMemoryDatabase()
-	return nil, New(storage)
+	s.open(storage)
+	return nil
 }
 
 func (s *Service) CloseDatabase() error {
@@ -45,5 +59,9 @@ func (s *Service) CloseDatabase() error {
 	if err != nil {
 		log.Error("failed to close storage", "error", err)
 	}
+	s.initialized = false
+	s.statedbs = nil
+	s.database = nil
+	s.storage = nil
 	return err
 }
