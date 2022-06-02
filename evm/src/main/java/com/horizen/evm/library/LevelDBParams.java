@@ -1,12 +1,12 @@
 package com.horizen.evm.library;
 
-public class InitializeParams extends JsonPointer {
+public class LevelDBParams extends JsonPointer {
     public String path;
 
-    public InitializeParams() {
+    public LevelDBParams() {
     }
 
-    public InitializeParams(String path) {
+    public LevelDBParams(String path) {
         this.path = path;
     }
 }

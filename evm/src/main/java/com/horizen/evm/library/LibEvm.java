@@ -72,8 +72,12 @@ public final class LibEvm {
         Invoke(method, null, Void.class);
     }
 
-    public static void Initialize(String path) throws Exception {
-        Invoke("Initialize", new InitializeParams(path));
+    public static void OpenMemoryDB() throws Exception {
+        Invoke("OpenMemoryDB");
+    }
+
+    public static void OpenLevelDB(String path) throws Exception {
+        Invoke("OpenLevelDB", new LevelDBParams(path));
     }
 
     public static void CloseDatabase() throws Exception {

@@ -21,7 +21,7 @@ public class StateDBTest {
         String hashEmpty = "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421";
         String origin = "0xbafe3b6f2a19658df3cb5efca158c93272ff5c0b";
 
-        LibEvm.Initialize(databaseFolder.getAbsolutePath());
+        LibEvm.OpenLevelDB(databaseFolder.getAbsolutePath());
 
         String rootWithBalance1234;
         String rootWithBalance802;
@@ -88,7 +88,7 @@ public class StateDBTest {
         String funcStore = "6057361d";
         String funcRetrieve = "2e64cec1";
 
-        LibEvm.Initialize(databaseFolder.getAbsolutePath());
+        LibEvm.OpenMemoryDB();
 
         String modifiedState;
         EvmResult result;

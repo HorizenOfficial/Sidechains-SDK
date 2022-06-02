@@ -26,9 +26,6 @@ func New() *Service {
 }
 
 func (s *Service) open(storage ethdb.Database) {
-	if s.initialized {
-		_ = s.CloseDatabase()
-	}
 	s.storage = storage
 	s.database = state.NewDatabase(storage)
 	// TODO: enable caching
@@ -38,12 +35,18 @@ func (s *Service) open(storage ethdb.Database) {
 }
 
 func (s *Service) OpenMemoryDB() error {
+	if s.initialized {
+		_ = s.CloseDatabase()
+	}
 	log.Info("initializing memorydb")
 	s.open(rawdb.NewMemoryDatabase())
 	return nil
 }
 
 func (s *Service) OpenLevelDB(params LevelDBParams) error {
+	if s.initialized {
+		_ = s.CloseDatabase()
+	}
 	log.Info("initializing leveldb", "path", params.Path)
 	storage, err := rawdb.NewLevelDBDatabase(params.Path, 0, 0, "zen/db/data/", false)
 	if err != nil {

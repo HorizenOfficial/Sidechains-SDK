@@ -7,7 +7,6 @@ package main
 import "C"
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/log"
 	"libevm/lib"
@@ -15,31 +14,22 @@ import (
 	"unsafe"
 )
 
-// instance holds the initialized lib.Service
-var instance *lib.Service
-
-type InitializeParams struct {
-	Path string `json:"path"`
-}
+// instance holds a singleton of lib.Service
+var instance = lib.New()
 
 type InteropResult struct {
 	Error  string      `json:"error"`
 	Result interface{} `json:"result"`
 }
 
-func initialize(params InitializeParams) error {
-	if instance != nil {
-		_ = instance.CloseDatabase()
-		instance = nil
-	}
-	err, newInstance := lib.InitWithLevelDB(params.Path)
-	if err == nil {
-		instance = newInstance
-	}
-	return err
+//export Free
+func Free(ptr unsafe.Pointer) {
+	C.free(ptr)
 }
 
-func response(err error, result interface{}) *C.char {
+//export Invoke
+func Invoke(method *C.char, args *C.char) *C.char {
+	err, result := invoke(C.GoString(method), C.GoString(args))
 	var response InteropResult
 	if err != nil {
 		response.Error = err.Error()
@@ -56,29 +46,10 @@ func response(err error, result interface{}) *C.char {
 	return C.CString(jsonString)
 }
 
-//export Free
-func Free(ptr unsafe.Pointer) {
-	C.free(ptr)
-}
-
-//export Invoke
-func Invoke(method *C.char, args *C.char) *C.char {
-	return response(invoke(C.GoString(method), C.GoString(args)))
-}
-
 func invoke(method string, args string) (error, interface{}) {
 	log.Debug(">> invoke", "method", method, "args", args)
-	var f reflect.Value
-	if method == "Initialize" {
-		// initialize is special as it is not a member function of lib.Service
-		f = reflect.ValueOf(initialize)
-	} else {
-		if instance == nil {
-			return errors.New("not initialized"), nil
-		}
-		// find the target function
-		f = reflect.ValueOf(instance).MethodByName(method)
-	}
+	// find the target function
+	f := reflect.ValueOf(instance).MethodByName(method)
 	if !f.IsValid() {
 		return fmt.Errorf("method not found: %s", method), nil
 	}
@@ -106,64 +77,3 @@ func invoke(method string, args string) (error, interface{}) {
 	}
 	return nil, nil
 }
-
-////export ContractCreate
-//func ContractCreate(args *C.char) *C.char {
-//	var params CreateParams
-//	err := fromJava(args, &params)
-//	if err != nil {
-//		return toJava(Fail(err))
-//	}
-//	_, addr, leftOverGas, err := instance.Create(params.Input, params.getConfig(), params.DiscardState)
-//	if err != nil {
-//		return toJava(Fail(err))
-//	}
-//	result := CreateResult{
-//		Address:     addr,
-//		LeftOverGas: leftOverGas,
-//	}
-//	return toJava(&result)
-//}
-//
-////export ContractCall
-//func ContractCall(args *C.char) *C.char {
-//	var params CallParams
-//	err := fromJava(args, &params)
-//	if err != nil {
-//		return toJava(Fail(err))
-//	}
-//	ret, leftOverGas, err := instance.Call(params.Address, params.Input, params.getConfig(), params.DiscardState)
-//	if err != nil {
-//		return toJava(Fail(err))
-//	}
-//	result := CallResult{
-//		Ret:         ret,
-//		LeftOverGas: leftOverGas,
-//	}
-//	return toJava(&result)
-//}
-//
-//func updateBalance(args *C.char, f func(common.Address, *big.Int)) *C.char {
-//	var params BalanceParams
-//	err := fromJava(args, &params)
-//	if err != nil {
-//		return toJava(Fail(err))
-//	}
-//	f(params.Address, params.Value.Int)
-//	return toJava(Success())
-//}
-//
-////export SetBalance
-//func SetBalance(args *C.char) *C.char {
-//	return updateBalance(args, instance.SetBalance)
-//}
-//
-////export AddBalance
-//func AddBalance(args *C.char) *C.char {
-//	return updateBalance(args, instance.AddBalance)
-//}
-//
-////export SubBalance
-//func SubBalance(args *C.char) *C.char {
-//	return updateBalance(args, instance.SubBalance)
-//}
