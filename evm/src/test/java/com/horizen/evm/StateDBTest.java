@@ -29,16 +29,16 @@ public class StateDBTest {
             var intermediateRoot = statedb.GetIntermediateRoot();
             assertEquals(
                 "empty state should give the hash of an empty string as the root hash",
-                intermediateRoot,
-                hashEmpty
+                hashEmpty,
+                intermediateRoot
             );
 
             var committedRoot = statedb.Commit();
-            assertEquals("committed root should equal intermediate root", committedRoot, intermediateRoot);
-            assertEquals(statedb.GetBalance(origin), "0");
+            assertEquals("committed root should equal intermediate root", intermediateRoot, committedRoot);
+            assertEquals("0", statedb.GetBalance(origin));
 
             statedb.AddBalance(origin, "1234");
-            assertEquals(statedb.GetBalance(origin), "1234");
+            assertEquals("1234", statedb.GetBalance(origin));
             assertNotEquals(
                 "intermediate root should not equal committed root anymore",
                 statedb.GetIntermediateRoot(),
@@ -47,23 +47,30 @@ public class StateDBTest {
             rootWithBalance1234 = statedb.Commit();
 
             statedb.SubBalance(origin, "432");
-            assertEquals(statedb.GetBalance(origin), "802");
+            assertEquals("802", statedb.GetBalance(origin));
+
+            assertEquals(0, statedb.GetNonce(origin));
+            statedb.SetNonce(origin, 3);
+            assertEquals(3, statedb.GetNonce(origin));
             rootWithBalance802 = statedb.Commit();
 
-            assertEquals(statedb.GetNonce(origin), 0);
-            statedb.SetNonce(origin, 3);
-            assertEquals(statedb.GetNonce(origin), 3);
+            statedb.SetNonce(origin, 5);
+            assertEquals(5, statedb.GetNonce(origin));
         }
         // verify that automatic resource management worked and StateDB.close() was called
         // if it did, the handle is invalid now and this should throw
         assertThrows(Exception.class, () -> LibEvm.StateIntermediateRoot(1));
 
+        LibEvm.OpenLevelDB(databaseFolder.getAbsolutePath());
+
         try (var statedb = new StateDB(rootWithBalance1234)) {
-            assertEquals(statedb.GetBalance(origin), "1234");
+            assertEquals("1234", statedb.GetBalance(origin));
+            assertEquals(0, statedb.GetNonce(origin));
         }
 
         try (var statedb = new StateDB(rootWithBalance802)) {
-            assertEquals(statedb.GetBalance(origin), "802");
+            assertEquals("802", statedb.GetBalance(origin), "802");
+            assertEquals(3, statedb.GetNonce(origin));
         }
 
         LibEvm.CloseDatabase();
@@ -98,25 +105,25 @@ public class StateDBTest {
             // test a simple value transfer
             statedb.AddBalance(addr1, "10");
             result = statedb.EvmExecute(addr1, addr2, "5", null);
-            assertEquals(result.evmError, "");
-            assertEquals(statedb.GetBalance(addr2), "5");
-            assertEquals(statedb.GetBalance(addr1), "5");
+            assertEquals("", result.evmError);
+            assertEquals("5", statedb.GetBalance(addr2));
+            assertEquals("5", statedb.GetBalance(addr1));
 
             // test contract deployment
             result = statedb.EvmExecute(addr2, null, null, Converter.fromHexString(contractCode + initialValue));
-            assertEquals(result.evmError, "");
+            assertEquals("", result.evmError);
             contractAddress = result.address;
-            assertEquals(statedb.GetCodeHash(contractAddress), codeHash);
+            assertEquals(codeHash, statedb.GetCodeHash(contractAddress));
 
             // call "store" function on the contract to set a value
             result = statedb.EvmExecute(addr2, contractAddress, null, Converter.fromHexString(funcStore + anotherValue));
-            assertEquals(result.evmError, "");
+            assertEquals("", result.evmError);
 
             // call "retrieve" on the contract to fetch the value we just set
             result = statedb.EvmExecute(addr2, contractAddress, null, Converter.fromHexString(funcRetrieve));
-            assertEquals(result.evmError, "");
+            assertEquals("", result.evmError);
             var returnValue = Converter.toHexString(result.returnData);
-            assertEquals(returnValue, anotherValue);
+            assertEquals(anotherValue, returnValue);
 
             modifiedState = statedb.Commit();
         }
@@ -124,9 +131,9 @@ public class StateDBTest {
         // reopen the state and retrieve a value
         try (var statedb = new StateDB(modifiedState)) {
             result = statedb.EvmExecute(addr2, contractAddress, null, Converter.fromHexString(funcRetrieve));
-            assertEquals(result.evmError, "");
+            assertEquals("", result.evmError);
             var returnValue = Converter.toHexString(result.returnData);
-            assertEquals(returnValue, anotherValue);
+            assertEquals(anotherValue, returnValue);
         }
 
         LibEvm.CloseDatabase();
