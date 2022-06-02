@@ -228,6 +228,4 @@ abstract class AbstractSidechainApp
     storageList += storage
     storage
   }
-
-  actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 }
