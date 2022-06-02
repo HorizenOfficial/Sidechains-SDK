@@ -8,6 +8,8 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"libevm/lib/runtime"
 	"libevm/types"
+	"math/rand"
+	"time"
 )
 
 type EvmParams struct {
@@ -15,6 +17,7 @@ type EvmParams struct {
 	Config  types.SerializableConfig `json:"config"`
 	Address *common.Address          `json:"address"`
 	Input   []byte                   `json:"input"`
+	Nonce   uint64                   `json:"nonce"`
 }
 
 type EvmResult struct {
@@ -64,8 +67,14 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmApplyResult) {
 	cfg := params.Config.GetConfig()
 	runtime.SetDefaults(cfg)
 
+	// TODO: this mocks the tx hash with random, replace with real tx hash
+	randSource := rand.NewSource(time.Now().UnixNano())
+	randGenerator := rand.New(randSource)
+	txHashRand := make([]byte, common.HashLength)
+	randGenerator.Read(txHashRand)
+
 	var (
-		txHash         = common.Hash{}
+		txHash         = common.BytesToHash(txHashRand)
 		txIndexInBlock = 0
 		blockContext   = vm.BlockContext{
 			CanTransfer: core.CanTransfer,
@@ -78,14 +87,10 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmApplyResult) {
 			GasLimit:    cfg.GasLimit,
 			BaseFee:     cfg.BaseFee,
 		}
-		msg       = gethTypes.NewMessage(cfg.Origin, params.Address, 0, cfg.Value, cfg.GasLimit, cfg.GasPrice, nil, nil, params.Input, nil, false)
+		msg       = gethTypes.NewMessage(cfg.Origin, params.Address, params.Nonce, cfg.Value, cfg.GasLimit, cfg.GasPrice, cfg.GasPrice, cfg.GasPrice, params.Input, nil, false)
 		txContext = core.NewEVMTxContext(msg)
 		evm       = vm.NewEVM(blockContext, txContext, statedb, cfg.ChainConfig, cfg.EVMConfig)
 	)
-
-	if rules := cfg.ChainConfig.Rules(evm.Context.BlockNumber, evm.Context.Random != nil); rules.IsBerlin {
-		statedb.PrepareAccessList(cfg.Origin, nil, vm.ActivePrecompiles(rules), nil)
-	}
 
 	gasPool := new(core.GasPool).AddGas(msg.Gas())
 	statedb.Prepare(txHash, txIndexInBlock)
@@ -104,16 +109,21 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmApplyResult) {
 	statedb.Finalise(true)
 
 	applyResult := &EvmApplyResult{
-		ReturnData: result.ReturnData,
-		UsedGas:    result.UsedGas,
-		EvmError:   result.Err.Error(),
-		Logs:       statedb.GetLogs(txHash, common.Hash{}),
+		UsedGas: result.UsedGas,
+		Logs:    statedb.GetLogs(txHash, common.Hash{}),
+	}
+
+	// no error means successful transaction, otherwise failure
+	if result.Err != nil {
+		applyResult.EvmError = result.Err.Error()
 	}
 
 	// If the transaction created a contract, store the creation address in the receipt.
 	if msg.To() == nil {
 		contractAddress := crypto.CreateAddress(evm.TxContext.Origin, msg.Nonce())
 		applyResult.ContractAddress = &contractAddress
+	} else {
+		applyResult.ReturnData = result.ReturnData
 	}
 
 	return nil, applyResult
