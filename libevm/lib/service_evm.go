@@ -21,10 +21,11 @@ type EvmParams struct {
 }
 
 type EvmResult struct {
-	ReturnData      []byte          `json:"returnData"`
-	ContractAddress *common.Address `json:"contractAddress"`
-	LeftOverGas     uint64          `json:"leftOverGas"`
-	EvmError        string          `json:"evmError"`
+	ReturnData      []byte           `json:"returnData"`
+	ContractAddress *common.Address  `json:"contractAddress"`
+	LeftOverGas     uint64           `json:"leftOverGas"`
+	EvmError        string           `json:"evmError"`
+	Logs            []*gethTypes.Log `json:"logs"`
 }
 
 type EvmApplyResult struct {
@@ -43,19 +44,37 @@ func (s *Service) EvmExecute(params EvmParams) (error, *EvmResult) {
 	cfg := params.Config.GetConfig()
 	cfg.State = statedb
 	var (
-		result = &EvmResult{}
-		evmErr error
+		mockRandSource = rand.NewSource(time.Now().UnixNano())
+		mockRandGen    = rand.New(mockRandSource)
+		mockTxHashRand = make([]byte, common.HashLength)
+		result         = &EvmResult{}
+		evmErr         error
 	)
+	// TODO: this mocks the tx hash with random, replace with real tx hash
+	mockRandGen.Read(mockTxHashRand)
+	var (
+		mockTxHash         = common.BytesToHash(mockTxHashRand)
+		mockTxIndexInBlock = 0
+	)
+	statedb.Prepare(mockTxHash, mockTxIndexInBlock)
 	if params.Address == nil {
 		var contractAddress common.Address
 		_, contractAddress, result.LeftOverGas, evmErr = runtime.Create(params.Input, cfg)
+		// If the transaction created a contract, store the creation address in the receipt.
 		result.ContractAddress = &contractAddress
 	} else {
 		result.ReturnData, result.LeftOverGas, evmErr = runtime.Call(*params.Address, params.Input, cfg)
 	}
+	// Update the state with pending changes.
+	statedb.Finalise(true)
+
+	// no error means successful transaction, otherwise failure
 	if evmErr != nil {
 		result.EvmError = evmErr.Error()
 	}
+	// get logs, if any
+	result.Logs = statedb.GetLogs(mockTxHash, common.Hash{})
+
 	return nil, result
 }
 

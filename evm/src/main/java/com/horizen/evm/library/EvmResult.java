@@ -7,4 +7,5 @@ public class EvmResult {
     public Address contractAddress;
     public long leftOverGas;
     public String evmError;
+    public EvmLog[] logs;
 }

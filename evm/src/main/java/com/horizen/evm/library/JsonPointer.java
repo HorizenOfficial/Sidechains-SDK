@@ -6,10 +6,7 @@ import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.horizen.evm.utils.Address;
-import com.horizen.evm.utils.BigIntDeserializer;
-import com.horizen.evm.utils.BigIntSerializer;
-import com.horizen.evm.utils.Hash;
+import com.horizen.evm.utils.*;
 import com.sun.jna.FromNativeContext;
 import com.sun.jna.NativeMapped;
 import com.sun.jna.Pointer;
@@ -59,6 +56,7 @@ public class JsonPointer implements NativeMapped {
             module.addSerializer(BigInteger.class, new BigIntSerializer());
             module.addSerializer(Address.class, new Address.Serializer());
             module.addSerializer(Hash.class, new Hash.Serializer());
+            module.addSerializer(HexBytes.class, new HexBytes.Serializer());
             var mapper = new ObjectMapper();
             mapper.registerModule(module);
             // do not serialize null or empty values
@@ -81,6 +79,7 @@ public class JsonPointer implements NativeMapped {
             module.addDeserializer(BigInteger.class, new BigIntDeserializer());
             module.addDeserializer(Address.class, new Address.Deserializer());
             module.addDeserializer(Hash.class, new Hash.Deserializer());
+            module.addDeserializer(HexBytes.class, new HexBytes.Deserializer());
             var mapper = new ObjectMapper();
             mapper.registerModule(module);
             return mapper.readValue(json, type);
