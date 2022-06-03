@@ -1,10 +1,12 @@
 package com.horizen.evm.library;
 
+import com.horizen.evm.utils.Address;
+
 public class EvmApplyResult {
     public long usedGas;
     public String evmError;
     public byte[] returnData;
-    public String contractAddress;
+    public Address contractAddress;
     public Log[] logs;
 
     public static class Log {

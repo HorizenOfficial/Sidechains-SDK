@@ -1,6 +1,8 @@
 package com.horizen.evm.library;
 
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.horizen.evm.utils.Address;
+import com.horizen.evm.utils.Hash;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
@@ -86,66 +88,66 @@ public final class LibEvm {
         invoke("CloseDatabase");
     }
 
-    public static int stateOpen(String stateRootHex) throws Exception {
-        return invoke("StateOpen", new OpenStateParams(stateRootHex), int.class);
+    public static int stateOpen(byte[] root) throws Exception {
+        return invoke("StateOpen", new OpenStateParams(root), int.class);
     }
 
     public static void stateClose(int handle) throws Exception {
         invoke("StateClose", new HandleParams(handle));
     }
 
-    public static String stateIntermediateRoot(int handle) throws Exception {
-        return invoke("StateIntermediateRoot", new HandleParams(handle), String.class);
+    public static byte[] stateIntermediateRoot(int handle) throws Exception {
+        return invoke("StateIntermediateRoot", new HandleParams(handle), Hash.class).toBytes();
     }
 
-    public static String stateCommit(int handle) throws Exception {
-        return invoke("StateCommit", new HandleParams(handle), String.class);
+    public static byte[] stateCommit(int handle) throws Exception {
+        return invoke("StateCommit", new HandleParams(handle), Hash.class).toBytes();
     }
 
-    public static BigInteger stateGetBalance(int handle, String address) throws Exception {
+    public static BigInteger stateGetBalance(int handle, byte[] address) throws Exception {
         return invoke("StateGetBalance", new AccountParams(handle, address), BigInteger.class);
     }
 
-    public static void stateAddBalance(int handle, String address, BigInteger amount) throws Exception {
+    public static void stateAddBalance(int handle, byte[] address, BigInteger amount) throws Exception {
         invoke("StateAddBalance", new BalanceParams(handle, address, amount));
     }
 
-    public static void stateSubBalance(int handle, String address, BigInteger amount) throws Exception {
+    public static void stateSubBalance(int handle, byte[] address, BigInteger amount) throws Exception {
         invoke("StateSubBalance", new BalanceParams(handle, address, amount));
     }
 
-    public static void stateSetBalance(int handle, String address, BigInteger amount) throws Exception {
+    public static void stateSetBalance(int handle, byte[] address, BigInteger amount) throws Exception {
         invoke("StateSetBalance", new BalanceParams(handle, address, amount));
     }
 
-    public static long stateGetNonce(int handle, String address) throws Exception {
+    public static long stateGetNonce(int handle, byte[] address) throws Exception {
         return invoke("StateGetNonce", new AccountParams(handle, address), long.class);
     }
 
-    public static void stateSetNonce(int handle, String address, long nonce) throws Exception {
+    public static void stateSetNonce(int handle, byte[] address, long nonce) throws Exception {
         invoke("StateSetNonce", new NonceParams(handle, address, nonce));
     }
 
-    public static String stateGetCodeHash(int handle, String address) throws Exception {
-        return invoke("StateGetCodeHash", new AccountParams(handle, address), String.class);
+    public static byte[] stateGetCodeHash(int handle, byte[] address) throws Exception {
+        return invoke("StateGetCodeHash", new AccountParams(handle, address), Hash.class).toBytes();
     }
 
-    public static EvmResult evmExecute(int handle, String from, String to, String value, byte[] input)
+    public static EvmResult evmExecute(int handle, byte[] from, byte[] to, BigInteger value, byte[] input)
         throws Exception {
         var cfg = new EvmParams.EvmConfig();
-        cfg.origin = from;
+        cfg.origin = new Address(from);
         cfg.value = value;
         cfg.gasLimit = 100000;
         return invoke("EvmExecute", new EvmParams(handle, cfg, to, input), EvmResult.class);
     }
 
-    public static EvmApplyResult evmApply(int handle, String from, String to, String value, byte[] input)
+    public static EvmApplyResult evmApply(int handle, byte[] from, byte[] to, BigInteger value, byte[] input)
         throws Exception {
         var cfg = new EvmParams.EvmConfig();
-        cfg.origin = from;
+        cfg.origin = new Address(from);
         cfg.value = value;
         cfg.gasLimit = 100000;
-        cfg.gasPrice = "0x3B9ACA00";
+        cfg.gasPrice = BigInteger.valueOf(1000000000);
         return invoke("EvmApply", new EvmParams(handle, cfg, to, input), EvmApplyResult.class);
     }
 }

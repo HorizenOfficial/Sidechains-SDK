@@ -1,13 +1,15 @@
 package com.horizen.evm.library;
 
+import com.horizen.evm.utils.Address;
+
 public class AccountParams extends HandleParams {
-    public String address;
+    public Address address;
 
     public AccountParams() {
     }
 
-    public AccountParams(int handle, String address) {
+    public AccountParams(int handle, byte[] address) {
         super(handle);
-        this.address = address;
+        this.address = new Address(address);
     }
 }

@@ -8,7 +8,7 @@ public class BalanceParams extends AccountParams {
     public BalanceParams() {
     }
 
-    public BalanceParams(int handle, String address, BigInteger amount) {
+    public BalanceParams(int handle, byte[] address, BigInteger amount) {
         super(handle, address);
         this.amount = amount;
     }

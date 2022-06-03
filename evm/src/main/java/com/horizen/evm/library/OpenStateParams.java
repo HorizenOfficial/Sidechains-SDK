@@ -1,12 +1,14 @@
 package com.horizen.evm.library;
 
+import com.horizen.evm.utils.Hash;
+
 public class OpenStateParams extends JsonPointer {
-    public String root;
+    public Hash root;
 
     public OpenStateParams() {
     }
 
-    public OpenStateParams(String root) {
-        this.root = root;
+    public OpenStateParams(byte[] root) {
+        this.root = new Hash(root);
     }
 }

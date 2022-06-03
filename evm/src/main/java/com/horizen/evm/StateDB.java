@@ -8,8 +8,8 @@ import java.math.BigInteger;
 public class StateDB implements AutoCloseable {
     private final int handle;
 
-    public StateDB(String stateRootHex) throws Exception {
-        handle = LibEvm.stateOpen(stateRootHex);
+    public StateDB(byte[] root) throws Exception {
+        handle = LibEvm.stateOpen(root);
     }
 
     @Override
@@ -17,43 +17,43 @@ public class StateDB implements AutoCloseable {
         LibEvm.stateClose(handle);
     }
 
-    public String getIntermediateRoot() throws Exception {
+    public byte[] getIntermediateRoot() throws Exception {
         return LibEvm.stateIntermediateRoot(handle);
     }
 
-    public String commit() throws Exception {
+    public byte[] commit() throws Exception {
         return LibEvm.stateCommit(handle);
     }
 
-    public BigInteger getBalance(String address) throws Exception {
+    public BigInteger getBalance(byte[] address) throws Exception {
         return LibEvm.stateGetBalance(handle, address);
     }
 
-    public void addBalance(String address, BigInteger amount) throws Exception {
+    public void addBalance(byte[] address, BigInteger amount) throws Exception {
         LibEvm.stateAddBalance(handle, address, amount);
     }
 
-    public void subBalance(String address, BigInteger amount) throws Exception {
+    public void subBalance(byte[] address, BigInteger amount) throws Exception {
         LibEvm.stateSubBalance(handle, address, amount);
     }
 
-    public void setBalance(String address, BigInteger amount) throws Exception {
+    public void setBalance(byte[] address, BigInteger amount) throws Exception {
         LibEvm.stateSetBalance(handle, address, amount);
     }
 
-    public long getNonce(String address) throws Exception {
+    public long getNonce(byte[] address) throws Exception {
         return LibEvm.stateGetNonce(handle, address);
     }
 
-    public void setNonce(String address, long nonce) throws Exception {
+    public void setNonce(byte[] address, long nonce) throws Exception {
         LibEvm.stateSetNonce(handle, address, nonce);
     }
 
-    public String getCodeHash(String address) throws Exception {
+    public byte[] getCodeHash(byte[] address) throws Exception {
         return LibEvm.stateGetCodeHash(handle, address);
     }
 
-    public EvmResult evmExecute(String from, String to, String value, byte[] input) throws Exception {
+    public EvmResult evmExecute(byte[] from, byte[] to, BigInteger value, byte[] input) throws Exception {
         return LibEvm.evmExecute(handle, from, to, value, input);
     }
 
