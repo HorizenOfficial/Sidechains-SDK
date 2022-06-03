@@ -3,6 +3,8 @@ package com.horizen.evm;
 import com.horizen.evm.library.EvmResult;
 import com.horizen.evm.library.LibEvm;
 
+import java.math.BigInteger;
+
 public class StateDB implements AutoCloseable {
     private final int handle;
 
@@ -23,19 +25,19 @@ public class StateDB implements AutoCloseable {
         return LibEvm.stateCommit(handle);
     }
 
-    public String getBalance(String address) throws Exception {
+    public BigInteger getBalance(String address) throws Exception {
         return LibEvm.stateGetBalance(handle, address);
     }
 
-    public void addBalance(String address, String amount) throws Exception {
+    public void addBalance(String address, BigInteger amount) throws Exception {
         LibEvm.stateAddBalance(handle, address, amount);
     }
 
-    public void subBalance(String address, String amount) throws Exception {
+    public void subBalance(String address, BigInteger amount) throws Exception {
         LibEvm.stateSubBalance(handle, address, amount);
     }
 
-    public void setBalance(String address, String amount) throws Exception {
+    public void setBalance(String address, BigInteger amount) throws Exception {
         LibEvm.stateSetBalance(handle, address, amount);
     }
 

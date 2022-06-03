@@ -5,11 +5,13 @@ import com.sun.jna.Library;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 
+import java.math.BigInteger;
+
 public final class LibEvm {
     private interface LibEvmInterface extends Library {
         void Free(Pointer ptr);
 
-        JsonString Invoke(String method, JsonPointer args);
+        JsonPointer Invoke(String method, JsonPointer args);
     }
 
     private static final LibEvmInterface instance;
@@ -100,19 +102,19 @@ public final class LibEvm {
         return invoke("StateCommit", new HandleParams(handle), String.class);
     }
 
-    public static String stateGetBalance(int handle, String address) throws Exception {
-        return invoke("StateGetBalance", new AccountParams(handle, address), String.class);
+    public static BigInteger stateGetBalance(int handle, String address) throws Exception {
+        return invoke("StateGetBalance", new AccountParams(handle, address), BigInteger.class);
     }
 
-    public static void stateAddBalance(int handle, String address, String amount) throws Exception {
+    public static void stateAddBalance(int handle, String address, BigInteger amount) throws Exception {
         invoke("StateAddBalance", new BalanceParams(handle, address, amount));
     }
 
-    public static void stateSubBalance(int handle, String address, String amount) throws Exception {
+    public static void stateSubBalance(int handle, String address, BigInteger amount) throws Exception {
         invoke("StateSubBalance", new BalanceParams(handle, address, amount));
     }
 
-    public static void stateSetBalance(int handle, String address, String amount) throws Exception {
+    public static void stateSetBalance(int handle, String address, BigInteger amount) throws Exception {
         invoke("StateSetBalance", new BalanceParams(handle, address, amount));
     }
 

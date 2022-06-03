@@ -2,10 +2,13 @@ package com.horizen.evm;
 
 import com.horizen.evm.library.EvmResult;
 import com.horizen.evm.library.LibEvm;
+import com.horizen.evm.utils.BigIntSerializer;
 import com.horizen.evm.utils.Converter;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+
+import java.math.BigInteger;
 
 import static org.junit.Assert.*;
 
@@ -21,6 +24,10 @@ public class StateDBTest {
         String hashEmpty = "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421";
         String origin = "0xbafe3b6f2a19658df3cb5efca158c93272ff5c0b";
 
+        BigInteger v1234 = BigInteger.valueOf(1234);
+        BigInteger v432 = BigInteger.valueOf(432);
+        BigInteger v802 = v1234.subtract(v432);
+
         LibEvm.openLevelDB(databaseFolder.getAbsolutePath());
 
         String rootWithBalance1234;
@@ -35,10 +42,10 @@ public class StateDBTest {
 
             var committedRoot = statedb.commit();
             assertEquals("committed root should equal intermediate root", intermediateRoot, committedRoot);
-            assertEquals("0x0", statedb.getBalance(origin));
+            assertEquals(BigInteger.ZERO, statedb.getBalance(origin));
 
-            statedb.addBalance(origin, "0x1234");
-            assertEquals("0x1234", statedb.getBalance(origin));
+            statedb.addBalance(origin, v1234);
+            assertEquals(v1234, statedb.getBalance(origin));
             assertNotEquals(
                 "intermediate root should not equal committed root anymore",
                 committedRoot,
@@ -46,8 +53,8 @@ public class StateDBTest {
             );
             rootWithBalance1234 = statedb.commit();
 
-            statedb.subBalance(origin, "0x432");
-            assertEquals("0xe02", statedb.getBalance(origin));
+            statedb.subBalance(origin, v432);
+            assertEquals(v802, statedb.getBalance(origin));
 
             assertEquals(0, statedb.getNonce(origin));
             statedb.setNonce(origin, 3);
@@ -64,12 +71,12 @@ public class StateDBTest {
         LibEvm.openLevelDB(databaseFolder.getAbsolutePath());
 
         try (var statedb = new StateDB(rootWithBalance1234)) {
-            assertEquals("0x1234", statedb.getBalance(origin));
+            assertEquals(v1234, statedb.getBalance(origin));
             assertEquals(0, statedb.getNonce(origin));
         }
 
         try (var statedb = new StateDB(rootWithBalance802)) {
-            assertEquals("0xe02", statedb.getBalance(origin));
+            assertEquals(v802, statedb.getBalance(origin));
             assertEquals(3, statedb.getNonce(origin));
         }
 
@@ -95,6 +102,9 @@ public class StateDBTest {
         String funcStore = "6057361d";
         String funcRetrieve = "2e64cec1";
 
+        BigInteger v10 = BigInteger.valueOf(10);
+        BigInteger v5 = BigInteger.valueOf(5);
+
         LibEvm.openMemoryDB();
 
         String modifiedState;
@@ -103,11 +113,11 @@ public class StateDBTest {
 
         try (var statedb = new StateDB(nullHash)) {
             // test a simple value transfer
-            statedb.addBalance(addr1, "0xA");
+            statedb.addBalance(addr1, v10);
             result = statedb.evmExecute(addr1, addr2, "0x5", null);
             assertEquals("", result.evmError);
-            assertEquals("0x5", statedb.getBalance(addr2));
-            assertEquals("0x5", statedb.getBalance(addr1));
+            assertEquals(v5, statedb.getBalance(addr2));
+            assertEquals(v5, statedb.getBalance(addr1));
 
             // test contract deployment
             result = statedb.evmExecute(addr2, null, null, Converter.fromHexString(contractCode + initialValue));

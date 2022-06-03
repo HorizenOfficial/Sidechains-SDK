@@ -2,32 +2,44 @@ package com.horizen.evm.library;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.Version;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.horizen.evm.utils.BigIntDeserializer;
+import com.horizen.evm.utils.BigIntSerializer;
 import com.sun.jna.FromNativeContext;
 import com.sun.jna.NativeMapped;
 import com.sun.jna.Pointer;
 
 import java.io.IOException;
+import java.math.BigInteger;
 
 public class JsonPointer implements NativeMapped {
+    private final String json;
+
+    public JsonPointer() {
+        this("");
+    }
+
+    public JsonPointer(String json) {
+        this.json = json;
+    }
+
+    /**
+     * When receiving data from native we expect it to be a pointer to a standard C string, i.e. null-terminated, that
+     * is copied to an instance of JsonPointer and free'ed on the native end. Deserialization is deferred to
+     * deserialize() because we need additional type information to do so.
+     */
     @Override
-    public Object fromNative(Object nativeValue, FromNativeContext fromNativeContext) {
+    public Object fromNative(Object nativeValue, FromNativeContext context) {
         if (nativeValue == null) {
             return null;
         } else {
             var ptr = (Pointer) nativeValue;
             try {
                 // copy json string from native memory
-                var json = ptr.getString(0);
-                // parse json into object
-                var objectMapper = new ObjectMapper();
-                return objectMapper.readValue(json, this.getClass());
-//            } catch (JsonMappingException e) {
-//                throw new IllegalArgumentException("JSON mapping error " + this.getClass());
-//            } catch (JsonParseException e) {
-//                throw new IllegalArgumentException("JSON parse error " + this.getClass());
-            } catch (IOException e) {
-                throw new IllegalArgumentException(e);
+                return new JsonPointer(ptr.getString(0));
             } finally {
                 // free the string pointer on the native end
                 LibEvm.Free(ptr);
@@ -35,11 +47,16 @@ public class JsonPointer implements NativeMapped {
         }
     }
 
+    /**
+     * When serializing to pass data to native we expect this class to be an instance of a subclass of JsonPointer.
+     */
     @Override
     public Object toNative() {
         try {
-            // serialize object to json
+            var module = new SimpleModule("LibEvmJson", Version.unknownVersion());
+            module.addSerializer(BigInteger.class, new BigIntSerializer());
             var mapper = new ObjectMapper();
+            mapper.registerModule(module);
             // do not serialize null or empty values
             mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
             mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
@@ -52,5 +69,21 @@ public class JsonPointer implements NativeMapped {
     @Override
     public Class<?> nativeType() {
         return Pointer.class;
+    }
+
+    public <T> T deserialize(JavaType type) {
+        try {
+            var module = new SimpleModule("LibEvmJson", Version.unknownVersion());
+            module.addDeserializer(BigInteger.class, new BigIntDeserializer());
+            var mapper = new ObjectMapper();
+            mapper.registerModule(module);
+            return mapper.readValue(json, type);
+//        } catch (JsonMappingException e) {
+//            throw new IllegalArgumentException("JSON mapping error " + this.getClass());
+//        } catch (JsonParseException e) {
+//            throw new IllegalArgumentException("JSON parse error " + this.getClass());
+        } catch (IOException e) {
+            throw new IllegalArgumentException(e);
+        }
     }
 }
