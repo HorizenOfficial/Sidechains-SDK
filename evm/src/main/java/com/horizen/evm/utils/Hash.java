@@ -14,11 +14,18 @@ public class Hash {
     public static final int LENGTH = 32;
     private final byte[] bytes;
 
-    public Hash(byte[] bytes) {
+    private Hash(byte[] bytes) {
         if (bytes.length != LENGTH) {
             throw new IllegalArgumentException("hash must have a length of " + LENGTH);
         }
         this.bytes = bytes;
+    }
+
+    public static Hash FromBytes(byte[] bytes) {
+        if (bytes == null) {
+            return null;
+        }
+        return new Hash(bytes);
     }
 
     public byte[] toBytes() {
@@ -42,7 +49,7 @@ public class Hash {
             if (!text.startsWith("0x")) {
                 throw new IOException("hash must be prefixed with 0x");
             }
-            return new Hash(Converter.fromHexString(text.substring(2)));
+            return Hash.FromBytes(Converter.fromHexString(text.substring(2)));
         }
     }
 }

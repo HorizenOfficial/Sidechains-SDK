@@ -9,6 +9,6 @@ public class OpenStateParams extends JsonPointer {
     }
 
     public OpenStateParams(byte[] root) {
-        this.root = new Hash(root);
+        this.root = Hash.FromBytes(root);
     }
 }

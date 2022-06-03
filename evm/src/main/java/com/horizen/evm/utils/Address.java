@@ -14,11 +14,18 @@ public class Address {
     public static final int LENGTH = 20;
     private final byte[] bytes;
 
-    public Address(byte[] bytes) {
+    private Address(byte[] bytes) {
         if (bytes.length != LENGTH) {
             throw new IllegalArgumentException("address must have a length of " + LENGTH);
         }
         this.bytes = bytes;
+    }
+
+    public static Address FromBytes(byte[] bytes) {
+        if (bytes == null) {
+            return null;
+        }
+        return new Address(bytes);
     }
 
     public byte[] toBytes() {
@@ -42,7 +49,7 @@ public class Address {
             if (!text.startsWith("0x")) {
                 throw new IOException("address must be prefixed with 0x");
             }
-            return new Address(Converter.fromHexString(text.substring(2)));
+            return Address.FromBytes(Converter.fromHexString(text.substring(2)));
         }
     }
 }

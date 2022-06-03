@@ -135,7 +135,7 @@ public final class LibEvm {
     public static EvmResult evmExecute(int handle, byte[] from, byte[] to, BigInteger value, byte[] input)
         throws Exception {
         var cfg = new EvmParams.EvmConfig();
-        cfg.origin = new Address(from);
+        cfg.origin = Address.FromBytes(from);
         cfg.value = value;
         cfg.gasLimit = 100000;
         return invoke("EvmExecute", new EvmParams(handle, cfg, to, input), EvmResult.class);
@@ -144,7 +144,7 @@ public final class LibEvm {
     public static EvmApplyResult evmApply(int handle, byte[] from, byte[] to, BigInteger value, byte[] input)
         throws Exception {
         var cfg = new EvmParams.EvmConfig();
-        cfg.origin = new Address(from);
+        cfg.origin = Address.FromBytes(from);
         cfg.value = value;
         cfg.gasLimit = 100000;
         cfg.gasPrice = BigInteger.valueOf(1000000000);

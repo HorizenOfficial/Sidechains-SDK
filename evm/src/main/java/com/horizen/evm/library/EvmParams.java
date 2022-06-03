@@ -27,9 +27,7 @@ public class EvmParams extends HandleParams {
     public EvmParams(int handle, EvmConfig config, byte[] address, byte[] input) {
         super(handle);
         this.config = config;
-        if (address != null) {
-            this.address = new Address(address);
-        }
+        this.address = Address.FromBytes(address);
         this.input = input;
     }
 }
