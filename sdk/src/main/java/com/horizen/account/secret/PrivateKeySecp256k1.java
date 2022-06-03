@@ -1,7 +1,7 @@
 package com.horizen.account.secret;
 
 import com.horizen.account.proof.SignatureSecp256k1;
-import com.horizen.account.proposition.PublicKeySecp256k1Proposition;
+import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.utils.Secp256k1;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.secret.Secret;
@@ -22,9 +22,9 @@ public final class PrivateKeySecp256k1 implements Secret {
     public PrivateKeySecp256k1(byte[] privateKey) {
         if (privateKey.length != Secp256k1.PRIVATE_KEY_SIZE) {
             throw new IllegalArgumentException(String.format(
-                "Incorrect private key length, %d expected, %d found",
-                Secp256k1.PRIVATE_KEY_SIZE,
-                privateKey.length
+                    "Incorrect private key length, %d expected, %d found",
+                    Secp256k1.PRIVATE_KEY_SIZE,
+                    privateKey.length
             ));
         }
         this.privateKey = Arrays.copyOf(privateKey, Secp256k1.PRIVATE_KEY_SIZE);
@@ -41,9 +41,9 @@ public final class PrivateKeySecp256k1 implements Secret {
     }
 
     @Override
-    public PublicKeySecp256k1Proposition publicImage() {
+    public AddressProposition publicImage() {
         var publicKey = ECKeyPair.create(privateKey).getPublicKey();
-        return new PublicKeySecp256k1Proposition(Numeric.toBytesPadded(publicKey, Secp256k1.PUBLIC_KEY_SIZE));
+        return new AddressProposition(Numeric.toBytesPadded(publicKey, Secp256k1.PUBLIC_KEY_SIZE));
     }
 
     @Override

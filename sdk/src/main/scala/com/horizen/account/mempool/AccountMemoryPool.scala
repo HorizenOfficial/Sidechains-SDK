@@ -67,11 +67,11 @@ class AccountMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#SCAT])
 
   def isTransactionCompatible(tx: SidechainTypes#SCAT, txList: Seq[SidechainTypes#SCAT]) : Boolean = {
     val from = tx.getFrom
-    val nonce = new ByteArrayWrapper(tx.getNonce)
+    val nonce = tx.getNonce
 
     // we must not have txes with the same from-account-address and nonce
     !unconfirmed.values.toList.exists(x => {
-      x.getFrom == from && new ByteArrayWrapper(x.getNonce) == nonce
+      x.getFrom == from && x.getNonce == nonce
     })
   }
 
