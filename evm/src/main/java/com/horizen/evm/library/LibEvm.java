@@ -136,4 +136,14 @@ public final class LibEvm {
         cfg.gasLimit = 100000;
         return invoke("EvmExecute", new EvmParams(handle, cfg, to, input), EvmResult.class);
     }
+
+    public static EvmApplyResult evmApply(int handle, String from, String to, String value, byte[] input)
+        throws Exception {
+        var cfg = new EvmParams.EvmConfig();
+        cfg.origin = from;
+        cfg.value = value;
+        cfg.gasLimit = 100000;
+        cfg.gasPrice = "0x3B9ACA00";
+        return invoke("EvmApply", new EvmParams(handle, cfg, to, input), EvmApplyResult.class);
+    }
 }

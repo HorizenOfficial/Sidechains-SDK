@@ -21,10 +21,10 @@ type EvmParams struct {
 }
 
 type EvmResult struct {
-	ReturnData  []byte          `json:"returnData"`
-	Address     *common.Address `json:"address"`
-	LeftOverGas uint64          `json:"leftOverGas"`
-	EvmError    string          `json:"evmError"`
+	ReturnData      []byte          `json:"returnData"`
+	ContractAddress *common.Address `json:"contractAddress"`
+	LeftOverGas     uint64          `json:"leftOverGas"`
+	EvmError        string          `json:"evmError"`
 }
 
 type EvmApplyResult struct {
@@ -49,7 +49,7 @@ func (s *Service) EvmExecute(params EvmParams) (error, *EvmResult) {
 	if params.Address == nil {
 		var contractAddress common.Address
 		_, contractAddress, result.LeftOverGas, evmErr = runtime.Create(params.Input, cfg)
-		result.Address = &contractAddress
+		result.ContractAddress = &contractAddress
 	} else {
 		result.ReturnData, result.LeftOverGas, evmErr = runtime.Call(*params.Address, params.Input, cfg)
 	}

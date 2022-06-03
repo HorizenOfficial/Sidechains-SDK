@@ -35,10 +35,10 @@ public class StateDBTest {
 
             var committedRoot = statedb.commit();
             assertEquals("committed root should equal intermediate root", intermediateRoot, committedRoot);
-            assertEquals("0", statedb.getBalance(origin));
+            assertEquals("0x0", statedb.getBalance(origin));
 
-            statedb.addBalance(origin, "1234");
-            assertEquals("1234", statedb.getBalance(origin));
+            statedb.addBalance(origin, "0x1234");
+            assertEquals("0x1234", statedb.getBalance(origin));
             assertNotEquals(
                 "intermediate root should not equal committed root anymore",
                 committedRoot,
@@ -46,8 +46,8 @@ public class StateDBTest {
             );
             rootWithBalance1234 = statedb.commit();
 
-            statedb.subBalance(origin, "432");
-            assertEquals("802", statedb.getBalance(origin));
+            statedb.subBalance(origin, "0x432");
+            assertEquals("0xe02", statedb.getBalance(origin));
 
             assertEquals(0, statedb.getNonce(origin));
             statedb.setNonce(origin, 3);
@@ -64,12 +64,12 @@ public class StateDBTest {
         LibEvm.openLevelDB(databaseFolder.getAbsolutePath());
 
         try (var statedb = new StateDB(rootWithBalance1234)) {
-            assertEquals("1234", statedb.getBalance(origin));
+            assertEquals("0x1234", statedb.getBalance(origin));
             assertEquals(0, statedb.getNonce(origin));
         }
 
         try (var statedb = new StateDB(rootWithBalance802)) {
-            assertEquals("802", statedb.getBalance(origin), "802");
+            assertEquals("0xe02", statedb.getBalance(origin));
             assertEquals(3, statedb.getNonce(origin));
         }
 
@@ -103,16 +103,16 @@ public class StateDBTest {
 
         try (var statedb = new StateDB(nullHash)) {
             // test a simple value transfer
-            statedb.addBalance(addr1, "10");
-            result = statedb.evmExecute(addr1, addr2, "5", null);
+            statedb.addBalance(addr1, "0xA");
+            result = statedb.evmExecute(addr1, addr2, "0x5", null);
             assertEquals("", result.evmError);
-            assertEquals("5", statedb.getBalance(addr2));
-            assertEquals("5", statedb.getBalance(addr1));
+            assertEquals("0x5", statedb.getBalance(addr2));
+            assertEquals("0x5", statedb.getBalance(addr1));
 
             // test contract deployment
             result = statedb.evmExecute(addr2, null, null, Converter.fromHexString(contractCode + initialValue));
             assertEquals("", result.evmError);
-            contractAddress = result.address;
+            contractAddress = result.contractAddress;
             assertEquals(codeHash, statedb.getCodeHash(contractAddress));
 
             // call "store" function on the contract to set a value
