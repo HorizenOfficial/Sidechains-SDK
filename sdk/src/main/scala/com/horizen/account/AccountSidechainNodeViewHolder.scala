@@ -10,7 +10,7 @@ import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataS
 import com.horizen.account.transaction.AccountTransaction
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.consensus._
-import com.horizen.node.{NodeState, NodeWalletBase}
+import com.horizen.node.{NodeStateBase, NodeWalletBase}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.Proof
 import com.horizen.proposition.Proposition
@@ -94,7 +94,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       AccountBlockHeader,
       AccountBlock,
       NodeAccountHistory,
-      NodeState,
+      NodeStateBase,
       NodeWalletBase,
       NodeAccountMemoryPool,
       AccountNodeView,
@@ -110,6 +110,54 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
       }
   }
+
+  override  protected def applyFunctionOnNodeView: Receive = {
+    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView[
+      AccountTransaction[Proposition, Proof[Proposition]],
+      AccountBlockHeader,
+      AccountBlock,
+      NodeAccountHistory,
+      NodeStateBase,
+      NodeWalletBase,
+      NodeAccountMemoryPool,
+      AccountNodeView,
+      _] =>
+      msg match {
+        case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView(f) => try {
+          val l: AccountNodeView = new AccountNodeView(history(), minimalState(), vault(), memoryPool())
+          sender() ! f(l)
+        }
+        catch {
+          case e: Exception => sender() ! akka.actor.Status.Failure(e)
+        }
+
+      }
+
+  }
+
+  override protected def applyBiFunctionOnNodeView[T, A]: Receive = {
+    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView[
+      AccountTransaction[Proposition, Proof[Proposition]],
+      AccountBlockHeader,
+      AccountBlock,
+      NodeAccountHistory,
+      NodeStateBase,
+      NodeWalletBase,
+      NodeAccountMemoryPool,
+      AccountNodeView,
+      _,_] =>
+      msg match {
+        case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView(f,functionParams) => try {
+          val l: AccountNodeView = new AccountNodeView(history(), minimalState(), vault(), memoryPool())
+          sender() ! f(l,functionParams)
+        }
+        catch {
+          case e: Exception => sender() ! akka.actor.Status.Failure(e)
+        }
+
+      }
+  }
+
 }
 
 object AccountNodeViewHolderRef {

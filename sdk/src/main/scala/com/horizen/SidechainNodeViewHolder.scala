@@ -3,15 +3,12 @@ package com.horizen
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
-import com.horizen.box.Box
 import com.horizen.chain.FeePaymentsInfo
 import com.horizen.consensus._
 import com.horizen.node._
 import com.horizen.params.NetworkParams
-import com.horizen.proposition.Proposition
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
-import com.horizen.transaction.BoxTransaction
 import com.horizen.wallet.ApplicationWallet
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ModifierId
@@ -69,39 +66,52 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     result.get
   }
 
-  override def receive: Receive = {
-    applyFunctionOnNodeView orElse
-      applyBiFunctionOnNodeView orElse
-//      getCurrentSidechainNodeViewInfo orElse
-      super.receive
+
+override  protected def applyFunctionOnNodeView: Receive = {
+    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView[
+      SidechainTypes#SCBT,
+      SidechainBlockHeader,
+      SidechainBlock,
+      NodeHistory,
+      NodeState,
+      NodeWallet,
+      NodeMemoryPool,
+      SidechainNodeView,
+      _] =>
+      msg match {
+        case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView(f) => try {
+          val l: SidechainNodeView = new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), applicationState, applicationWallet)
+          sender() ! f(l)
+        }
+        catch {
+          case e: Exception => sender() ! akka.actor.Status.Failure(e)
+        }
+
+      }
+
   }
 
-//  protected def getCurrentSidechainNodeViewInfo: Receive = {
-//    case SidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView(f) => try {
-//      sender() ! f(new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), minimalState().applicationState, vault().applicationWallet))
-//    }
-//    catch {
-//      case e: Exception => sender() ! akka.actor.Status.Failure(e)
-//    }
-//  }
+  override protected def applyBiFunctionOnNodeView[T, A]: Receive = {
+    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView[
+      SidechainTypes#SCBT,
+      SidechainBlockHeader,
+      SidechainBlock,
+      NodeHistory,
+      NodeState,
+      NodeWallet,
+      NodeMemoryPool,
+      SidechainNodeView,
+      _,_] =>
+      msg match {
+        case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView(f,functionParams) => try {
+          val l: SidechainNodeView = new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), applicationState, applicationWallet)
+          sender() ! f(l,functionParams)
+        }
+        catch {
+          case e: Exception => sender() ! akka.actor.Status.Failure(e)
+        }
 
-
-  protected def applyFunctionOnNodeView: Receive = {
-    case SidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView(function) => try {
-      sender() ! function(new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), minimalState().applicationState, vault().applicationWallet))
-    }
-    catch {
-      case e: Exception => sender() ! akka.actor.Status.Failure(e)
-    }
-  }
-
-  protected def applyBiFunctionOnNodeView[T, A]: Receive = {
-    case SidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView(function, functionParameter) => try {
-      sender() ! function(new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), minimalState().applicationState, vault().applicationWallet), functionParameter)
-    }
-    catch {
-      case e: Exception => sender() ! akka.actor.Status.Failure(e)
-    }
+      }
   }
 
   // Check if the next modifier will change Consensus Epoch, so notify History and Wallet with current info.
@@ -140,7 +150,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override protected def getCurrentSidechainNodeViewInfo: Receive = {
     case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView[
-      BoxTransaction[Proposition, Box[Proposition]],
+      SidechainTypes#SCBT,
       SidechainBlockHeader,
       SidechainBlock,
       NodeHistory,
@@ -159,16 +169,6 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
         }
 
       }
-  }
-}
-
-object SidechainNodeViewHolder {
-  object ReceivableMessages {
-//    case class GetDataFromCurrentSidechainNodeView[A](f: SidechainNodeView => A)
-
-    case class ApplyFunctionOnNodeView[A](f: java.util.function.Function[SidechainNodeView, A])
-
-    case class ApplyBiFunctionOnNodeView[T, A](f: java.util.function.BiFunction[SidechainNodeView, T, A], functionParameter: T)
   }
 }
 

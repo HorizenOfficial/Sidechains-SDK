@@ -1,6 +1,6 @@
 package com.horizen
 
-import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.block.{SidechainBlock, SidechainBlockBase, SidechainBlockHeader, SidechainBlockHeaderBase}
 import com.horizen.node._
 import com.horizen.params.NetworkParams
 import com.horizen.storage.AbstractHistoryStorage
@@ -52,11 +52,17 @@ abstract class AbstractSidechainNodeViewHolder[
 
   override def receive: Receive = {
     processLocallyGeneratedSecret orElse
-      getCurrentSidechainNodeViewInfo orElse super.receive
+      getCurrentSidechainNodeViewInfo orElse
+      applyFunctionOnNodeView orElse
+      applyBiFunctionOnNodeView orElse
+      super.receive
   }
 
   protected def getCurrentSidechainNodeViewInfo: Receive
 
+  protected def applyFunctionOnNodeView: Receive
+
+  protected def applyBiFunctionOnNodeView[T, A]: Receive
 
   protected def processLocallyGeneratedSecret: Receive = {
     case AbstractSidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret(secret) =>
@@ -226,6 +232,29 @@ object AbstractSidechainNodeViewHolder {
       A](f: NV => A)
 
     case class LocallyGeneratedSecret[S <: SidechainTypes#SCS](secret: S)
+
+    case class ApplyFunctionOnNodeView[TX <: Transaction,
+      H <: SidechainBlockHeaderBase,
+      PMOD <: SidechainBlockBase[TX, H],
+      NH <: NodeHistoryBase[TX, H, PMOD],
+      NS <: NodeStateBase,
+      NW <: NodeWalletBase,
+      NP <: NodeMemoryPoolBase[TX],
+      NV <: SidechainNodeViewBase[TX, H, PMOD, NH, NS, NW, NP],
+      A](f: java.util.function.Function[NV, A])
+
+    case class ApplyBiFunctionOnNodeView[
+      TX <: Transaction,
+      H <: SidechainBlockHeaderBase,
+      PMOD <: SidechainBlockBase[TX, H],
+      NH <: NodeHistoryBase[TX, H, PMOD],
+      NS <: NodeStateBase,
+      NW <: NodeWalletBase,
+      NP <: NodeMemoryPoolBase[TX],
+      NV <: SidechainNodeViewBase[TX, H, PMOD, NH, NS, NW, NP],
+      T,
+      A](f: java.util.function.BiFunction[NV, T, A], functionParameter: T)
+
   }
 
 

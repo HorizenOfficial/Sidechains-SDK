@@ -2,6 +2,7 @@ package com.horizen.account.api.http
 
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
+import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.horizen.SidechainTypes
@@ -10,17 +11,23 @@ import com.horizen.account.api.http.AccountTransactionRestScheme._
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool}
+import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.api.http.JacksonSupport._
+import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SidechainApiRoute, SuccessResponse}
 import com.horizen.node.{NodeStateBase, NodeWalletBase}
 import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
+import com.horizen.transaction.Transaction
+import org.web3j.crypto.{Keys, RawTransaction, Sign, SignedRawTransaction}
 import scorex.core.settings.RESTApiSettings
 
+import java.nio.charset.StandardCharsets
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters._
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.reflect.ClassTag
+import scala.util.{Failure, Success}
 
 case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                                       sidechainNodeViewHolderRef: ActorRef,
@@ -69,78 +76,43 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     entity(as[ReqSendCoinsToAddress]) { body =>
       // lock the view and try to create CoreTransaction
       applyOnNodeView { sidechainNodeView =>
-//        val outputList = body.outputs
-//        val fee = body.fee
-//        val wallet = sidechainNodeView.getNodeWallet
-//        createCoreTransaction(outputList, fee.getOrElse(0L), wallet, sidechainNodeView)
-        ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.empty()))       }
-//      match {
-//        case Success(transaction) => validateAndSendTransaction(transaction)
-//        case Failure(e) => ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(e)))
-//      }
+        val destAddress = body.toAddress
+        val valueInWei: java.math.BigInteger = java.math.BigInteger.valueOf(body.value * 10000000000L)
+        val rawTransaction = RawTransaction.createTransaction(valueInWei, valueInWei, valueInWei, destAddress, valueInWei, "")
+        val tmpEtherTx = new EthereumTransaction(rawTransaction)
+        val message = tmpEtherTx.messageToSign()
+
+        // Create a key pair, create tx signature and create ethereum Transaction
+        val pair = Keys.createEcKeyPair
+        val msgSignature = Sign.signMessage(message, pair, true)
+        val signedRawTransaction = new SignedRawTransaction(valueInWei, valueInWei, valueInWei, destAddress, valueInWei, "", msgSignature)
+        val ethereumTransaction = new EthereumTransaction(signedRawTransaction)
+        validateAndSendTransaction(ethereumTransaction)
+      }
     }
   }
 
 
   //function which describes default transaction representation for answer after adding the transaction to a memory pool
-  val defaultTransactionResponseRepresentation: (SidechainTypes#SCAT => SuccessResponse) = {
+  val defaultTransactionResponseRepresentation: (Transaction => SuccessResponse) = {
     transaction => TransactionIdDTO(transaction.id)
   }
 
-//  private def createCoreTransaction(zenBoxDataList: List[TransactionOutput],
-//                                    fee: Long,
-//                                    wallet: AccountWallet,
-//                                    sidechainNodeView: AccountNodeView): Try[SidechainCoreTransaction] = Try {
-//
-//    val memoryPool = sidechainNodeView.getNodeMemoryPool
-//
-//    val outputs: JList[BoxData[Proposition, Box[Proposition]]] = new JArrayList()
-//    zenBoxDataList.foreach(element =>
-//      outputs.add(new ZenBoxData(
-//        PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(element.publicKey)),
-//        element.value).asInstanceOf[BoxData[Proposition, Box[Proposition]]])
-//    )
-//
-//
-//    val outputsTotalAmount: Long = outputs.asScala.map(boxData => boxData.value()).sum
-//    val inputsMinimumExpectedAmount: Long = outputsTotalAmount + fee
-//    var inputsTotalAmount: Long = 0L
-//
-//    val boxes = ArrayBuffer[Box[Proposition]]()
-//
-//    if(inputsTotalAmount < inputsMinimumExpectedAmount)
-//      throw new IllegalArgumentException("Not enough balances in the wallet to create transaction.")
-//
-//
-//    // Create unsigned tx
-//    val boxIds = boxes.map(_.id()).asJava
-//    // Create a list of fake proofs for further messageToSign calculation
-//    val fakeProofs: JList[Proof[Proposition]] = Collections.nCopies(boxIds.size(), null)
-//    val unsignedTransaction = new SidechainCoreTransaction(boxIds, outputs, fakeProofs, fee, SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION)
-//
-//    // Create signed tx.
-//    val messageToSign = unsignedTransaction.messageToSign()
-//    val proofs = boxes.map(box => {
-//      wallet.secretByPublicKey(box.proposition()).get().sign(messageToSign).asInstanceOf[Proof[Proposition]]
-//    })
-//
-//    new SidechainCoreTransaction(boxIds, outputs, proofs.asJava, fee, SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION)
-//  }
 
+  private def validateAndSendTransaction(transaction: Transaction,
+                                         transactionResponseRepresentation: (Transaction => SuccessResponse) = defaultTransactionResponseRepresentation) = {
 
-//  private def validateAndSendTransaction(transaction: SidechainTypes#SCAT,
-//                                         transactionResponseRepresentation: (SidechainTypes#SCAT => SuccessResponse) = defaultTransactionResponseRepresentation) = {
-//    val barrier = Await.result(
-//      sidechainTransactionActorRef ? BroadcastTransaction(transaction),
-//      settings.timeout).asInstanceOf[Future[Unit]]
-//    onComplete(barrier) {
-//      case Success(_) =>
-//        ApiResponseUtil.toResponse(transactionResponseRepresentation(transaction))
-//      case Failure(exp) =>
-//        ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exp))
-//        )
-//    }
-//  }
+    val barrier = Await.result(
+      sidechainTransactionActorRef ? BroadcastTransaction(transaction),
+      settings.timeout).asInstanceOf[Future[Unit]]
+    onComplete(barrier) {
+      case Success(_) =>
+        ApiResponseUtil.toResponse(transactionResponseRepresentation(transaction))
+      case Failure(exp) =>
+        ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exp))
+        )
+    }
+  }
 
 }
 
@@ -204,10 +176,10 @@ object AccountTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqSendCoinsToAddress(outputs: List[TransactionOutput],
-                                                @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
-    require(outputs.nonEmpty, "Empty outputs list")
-    require(fee.getOrElse(0L) >= 0, "Negative fee. Fee must be >= 0")
+  private[api] case class ReqSendCoinsToAddress(toAddress: String,
+                                                @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long) {
+    require(toAddress.nonEmpty, "Empty destination address")
+    require(value >= 0, "Negative value. Value must be >= 0")
   }
 
   @JsonView(Array(classOf[Views.Default]))

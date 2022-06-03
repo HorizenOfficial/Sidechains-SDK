@@ -4,8 +4,12 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.directives.RouteDirectives
 import akka.pattern.ask
-import com.horizen.SidechainNodeViewHolder
-import com.horizen.node.SidechainNodeView
+import com.horizen.AbstractSidechainNodeViewHolder
+import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
+import com.horizen.box.Box
+import com.horizen.node._
+import com.horizen.proposition.Proposition
+import com.horizen.transaction.BoxTransaction
 import scorex.core.api.http.{ApiDirectives, ApiRoute}
 import scorex.core.settings.RESTApiSettings
 import scorex.core.utils.ScorexEncoding
@@ -33,12 +37,30 @@ case class ApplicationApiRoute(override val settings: RESTApiSettings, applicati
   }
 
   override def applyFunctionOnSidechainNodeView[R](f: java.util.function.Function[SidechainNodeView, R]): R = {
-    val messageToSend = SidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView(f)
+    val messageToSend = AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView[
+      BoxTransaction[Proposition, Box[Proposition]],
+      SidechainBlockHeader,
+      SidechainBlock,
+      NodeHistory,
+      NodeState,
+      NodeWallet,
+      NodeMemoryPool,
+      SidechainNodeView,
+      R](f)
     sendMessageToSidechainNodeView(messageToSend)
   }
 
   override def applyBiFunctionOnSidechainNodeView[T, R](f: java.util.function.BiFunction[SidechainNodeView, T, R], functionParameter: T): R = {
-    val messageToSend = SidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView(f, functionParameter)
+    val messageToSend = AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView[
+      BoxTransaction[Proposition, Box[Proposition]],
+      SidechainBlockHeader,
+      SidechainBlock,
+      NodeHistory,
+      NodeState,
+      NodeWallet,
+      NodeMemoryPool,
+      SidechainNodeView,
+      T,R](f, functionParameter)
     sendMessageToSidechainNodeView(messageToSend)
   }
 
