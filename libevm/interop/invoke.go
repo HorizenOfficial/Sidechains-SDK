@@ -1,55 +1,26 @@
-//go:build cgo
+package interop
 
-package main
-
-// #cgo CFLAGS: -g -Wall -O3 -fpic -Werror
-// #include <stdlib.h>
-import "C"
 import (
 	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum/log"
 	"libevm/lib"
 	"reflect"
-	"unsafe"
 )
 
 // instance holds a singleton of lib.Service
 var instance = lib.New()
 
-type InteropResult struct {
-	Error  string      `json:"error"`
-	Result interface{} `json:"result"`
-}
-
-//export Free
-func Free(ptr unsafe.Pointer) {
-	C.free(ptr)
-}
-
-//export Invoke
-func Invoke(method *C.char, args *C.char) *C.char {
-	err, result := invoke(C.GoString(method), C.GoString(args))
-	var response InteropResult
-	if err != nil {
-		response.Error = err.Error()
-	} else {
-		response.Result = result
-	}
-	jsonBytes, marshalErr := json.Marshal(response)
-	if marshalErr != nil {
-		log.Error("unable to marshal response", "error", marshalErr)
-		return nil
-	}
-	jsonString := string(jsonBytes)
-	log.Debug("<< response", "err", err, "result", jsonString)
-	return C.CString(jsonString)
-}
-
-func invoke(method string, args string) (error, interface{}) {
+func Invoke(method string, args string) string {
 	log.Debug(">> invoke", "method", method, "args", args)
+	result := toJsonResponse(callMethod(instance, method, args))
+	log.Debug("<< response", "result", result)
+	return result
+}
+
+func callMethod(target interface{}, method string, args string) (error, interface{}) {
 	// find the target function
-	f := reflect.ValueOf(instance).MethodByName(method)
+	f := reflect.ValueOf(target).MethodByName(method)
 	if !f.IsValid() {
 		return fmt.Errorf("method not found: %s", method), nil
 	}
@@ -76,4 +47,22 @@ func invoke(method string, args string) (error, interface{}) {
 		return nil, results[1].Interface()
 	}
 	return nil, nil
+}
+
+func toJsonResponse(err error, result interface{}) string {
+	var res struct {
+		Error  string      `json:"error"`
+		Result interface{} `json:"result"`
+	}
+	if err != nil {
+		res.Error = err.Error()
+	} else {
+		res.Result = result
+	}
+	bytes, marshalErr := json.Marshal(res)
+	if marshalErr != nil {
+		log.Error("unable to marshal response", "marshalErr", marshalErr, "response", res)
+		return ""
+	}
+	return string(bytes)
 }
