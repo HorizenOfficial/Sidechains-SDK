@@ -1,4 +1,6 @@
-package com.horizen.evm.library;
+package com.horizen.evm.interop;
+
+import com.horizen.evm.JsonPointer;
 
 public class LevelDBParams extends JsonPointer {
     public String path;

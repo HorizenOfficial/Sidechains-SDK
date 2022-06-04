@@ -1,4 +1,4 @@
-package com.horizen.evm.library;
+package com.horizen.evm;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;

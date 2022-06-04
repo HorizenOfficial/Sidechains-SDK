@@ -1,7 +1,6 @@
 package com.horizen.evm;
 
-import com.horizen.evm.library.EvmResult;
-import com.horizen.evm.library.LibEvm;
+import com.horizen.evm.interop.EvmResult;
 import com.horizen.evm.utils.Converter;
 import org.junit.Rule;
 import org.junit.Test;
@@ -30,7 +29,7 @@ public class StateDBTest {
         BigInteger v432 = BigInteger.valueOf(432);
         BigInteger v802 = v1234.subtract(v432);
 
-        LibEvm.openLevelDB(databaseFolder.getAbsolutePath());
+        Database.openLevelDB(databaseFolder.getAbsolutePath());
 
         byte[] rootWithBalance1234;
         byte[] rootWithBalance802;
@@ -70,7 +69,7 @@ public class StateDBTest {
         // if it did, the handle is invalid now and this should throw
         assertThrows(Exception.class, () -> LibEvm.stateIntermediateRoot(1));
 
-        LibEvm.openLevelDB(databaseFolder.getAbsolutePath());
+        Database.openLevelDB(databaseFolder.getAbsolutePath());
 
         try (var statedb = new StateDB(rootWithBalance1234)) {
             assertEquals(v1234, statedb.getBalance(origin));
@@ -82,7 +81,7 @@ public class StateDBTest {
             assertEquals(3, statedb.getNonce(origin));
         }
 
-        LibEvm.closeDatabase();
+        Database.closeDatabase();
     }
 
     @Test
@@ -106,7 +105,7 @@ public class StateDBTest {
         BigInteger v10 = BigInteger.valueOf(10);
         BigInteger v5 = BigInteger.valueOf(5);
 
-        LibEvm.openMemoryDB();
+        Database.openMemoryDB();
 
         EvmResult result;
         byte[] contractAddress;
@@ -148,6 +147,6 @@ public class StateDBTest {
             assertEquals(anotherValue, returnValue);
         }
 
-        LibEvm.closeDatabase();
+        Database.closeDatabase();
     }
 }

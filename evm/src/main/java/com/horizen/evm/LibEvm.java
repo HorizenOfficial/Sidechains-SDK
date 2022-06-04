@@ -1,6 +1,7 @@
-package com.horizen.evm.library;
+package com.horizen.evm;
 
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.horizen.evm.interop.*;
 import com.horizen.evm.utils.Address;
 import com.horizen.evm.utils.Hash;
 import com.sun.jna.Library;
@@ -9,7 +10,7 @@ import com.sun.jna.Pointer;
 
 import java.math.BigInteger;
 
-public final class LibEvm {
+final class LibEvm {
     private interface LibEvmInterface extends Library {
         void Free(Pointer ptr);
 

@@ -1,7 +1,5 @@
 package com.horizen.evm;
 
-import com.horizen.evm.library.LibEvm;
-
 import java.math.BigInteger;
 
 public class StateDB implements AutoCloseable {

@@ -1,8 +1,7 @@
 package com.horizen.evm;
 
-import com.horizen.evm.library.EvmApplyResult;
-import com.horizen.evm.library.EvmResult;
-import com.horizen.evm.library.LibEvm;
+import com.horizen.evm.interop.EvmApplyResult;
+import com.horizen.evm.interop.EvmResult;
 
 import java.math.BigInteger;
 

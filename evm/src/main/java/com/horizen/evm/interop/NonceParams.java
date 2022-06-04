@@ -1,4 +1,4 @@
-package com.horizen.evm.library;
+package com.horizen.evm.interop;
 
 public class NonceParams extends AccountParams {
     public long nonce;

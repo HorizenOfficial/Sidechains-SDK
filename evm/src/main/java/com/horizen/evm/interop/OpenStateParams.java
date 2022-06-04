@@ -1,5 +1,6 @@
-package com.horizen.evm.library;
+package com.horizen.evm.interop;
 
+import com.horizen.evm.JsonPointer;
 import com.horizen.evm.utils.Hash;
 
 public class OpenStateParams extends JsonPointer {
