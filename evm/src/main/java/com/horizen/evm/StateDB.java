@@ -1,12 +1,11 @@
 package com.horizen.evm;
 
-import com.horizen.evm.library.EvmResult;
 import com.horizen.evm.library.LibEvm;
 
 import java.math.BigInteger;
 
 public class StateDB implements AutoCloseable {
-    private final int handle;
+    final int handle;
 
     public StateDB(byte[] root) throws Exception {
         handle = LibEvm.stateOpen(root);
@@ -51,10 +50,6 @@ public class StateDB implements AutoCloseable {
 
     public byte[] getCodeHash(byte[] address) throws Exception {
         return LibEvm.stateGetCodeHash(handle, address);
-    }
-
-    public EvmResult evmExecute(byte[] from, byte[] to, BigInteger value, byte[] input) throws Exception {
-        return LibEvm.evmExecute(handle, from, to, value, input);
     }
 
     @Override

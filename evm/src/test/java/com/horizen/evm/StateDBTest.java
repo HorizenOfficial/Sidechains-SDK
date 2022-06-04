@@ -115,24 +115,24 @@ public class StateDBTest {
         try (var statedb = new StateDB(hashNull)) {
             // test a simple value transfer
             statedb.addBalance(addr1, v10);
-            result = statedb.evmExecute(addr1, addr2, v5, null);
+            result = Evm.Execute(statedb, addr1, addr2, v5, null);
             assertEquals("", result.evmError);
             assertEquals(v5, statedb.getBalance(addr2));
             assertEquals(v5, statedb.getBalance(addr1));
 
             // test contract deployment
-            result = statedb.evmExecute(addr2, null, null, Converter.fromHexString(contractCode + initialValue));
+            result = Evm.Execute(statedb, addr2, null, null, Converter.fromHexString(contractCode + initialValue));
             assertEquals("", result.evmError);
             contractAddress = result.contractAddress.toBytes();
             assertArrayEquals(codeHash, statedb.getCodeHash(contractAddress));
 
             // call "store" function on the contract to set a value
             result =
-                statedb.evmExecute(addr2, contractAddress, null, Converter.fromHexString(funcStore + anotherValue));
+                Evm.Execute(statedb, addr2, contractAddress, null, Converter.fromHexString(funcStore + anotherValue));
             assertEquals("", result.evmError);
 
             // call "retrieve" on the contract to fetch the value we just set
-            result = statedb.evmExecute(addr2, contractAddress, null, Converter.fromHexString(funcRetrieve));
+            result = Evm.Execute(statedb, addr2, contractAddress, null, Converter.fromHexString(funcRetrieve));
             assertEquals("", result.evmError);
             var returnValue = Converter.toHexString(result.returnData);
             assertEquals(anotherValue, returnValue);
@@ -142,7 +142,7 @@ public class StateDBTest {
 
         // reopen the state and retrieve a value
         try (var statedb = new StateDB(modifiedStateRoot)) {
-            result = statedb.evmExecute(addr2, contractAddress, null, Converter.fromHexString(funcRetrieve));
+            result = Evm.Execute(statedb, addr2, contractAddress, null, Converter.fromHexString(funcRetrieve));
             assertEquals("", result.evmError);
             var returnValue = Converter.toHexString(result.returnData);
             assertEquals(anotherValue, returnValue);
