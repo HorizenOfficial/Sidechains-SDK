@@ -12,7 +12,7 @@ type Service struct {
 	storage     ethdb.Database
 	database    state.Database
 	statedbs    map[int]*state.StateDB
-	counter     int
+	stateHandle int
 }
 
 type LevelDBParams struct {

@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/log"
+	"math"
 )
 
 type StateRootParams struct {
@@ -41,10 +42,15 @@ func (s *Service) StateOpen(params StateRootParams) (error, int) {
 		log.Error("failed to open state", "root", params.Root, "error", err)
 		return err, 0
 	}
-	s.counter++
-	handle := s.counter
-	s.statedbs[handle] = statedb
-	return nil, handle
+	// wrap around
+	if s.stateHandle == math.MaxInt32 {
+		s.stateHandle = 0
+	}
+	// this will never give a handle of 0, which is on purpose - we might consider a handle of 0 as invalid
+	s.stateHandle++
+	newHandle := s.stateHandle
+	s.statedbs[newHandle] = statedb
+	return nil, newHandle
 }
 
 func (s *Service) StateClose(params HandleParams) {
