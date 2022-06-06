@@ -2,6 +2,7 @@ package com.horizen.account.api.rpc.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Error;
+import com.thetransactioncompany.jsonrpc2.JSONRPC2ParamsType;
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Request;
 import com.thetransactioncompany.jsonrpc2.JSONRPC2Response;
 
@@ -31,6 +32,8 @@ public class RpcService {
         var m = rpcMethods.get(req.getMethod());
         if (m == null)
             return new JSONRPC2Response(JSONRPC2Error.METHOD_NOT_FOUND, req.getID());
+        if (req.getParamsType() != JSONRPC2ParamsType.ARRAY)
+            throw new UnsupportedOperationException("params must be an array");
         List params = req.getPositionalParams();
         var parameters = m.getParameterTypes();
         if (parameters.length != params.size()) throw new UnsupportedOperationException("invalid number of params");
