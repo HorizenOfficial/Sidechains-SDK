@@ -64,7 +64,6 @@ class ProofThreadTest {
     override def run()
     {
       proofWithQuality = generateProof(dataForProofGeneration)
-      generateProof(dataForProofGeneration)
     }
   }
 
