@@ -22,7 +22,6 @@ import com.horizen.transaction.Transaction
 import org.web3j.crypto.{Keys, RawTransaction, Sign, SignedRawTransaction}
 import scorex.core.settings.RESTApiSettings
 
-import java.nio.charset.StandardCharsets
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -47,6 +46,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
   override implicit val tag: ClassTag[AccountNodeView] = ClassTag[AccountNodeView](classOf[AccountNodeView])
 
+
   override val route: Route = (pathPrefix("transaction")) {
     allTransactions ~ sendCoinsToAddress
   }
@@ -68,6 +68,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   }
 
 
+
   /**
    * Create and sign a core transaction, specifying regular outputs and fee. Search for and spend proper amount of regular coins. Then validate and send the transaction.
    * Return the new transaction as a hex string if format = false, otherwise its JSON representation.
@@ -77,7 +78,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       // lock the view and try to create CoreTransaction
       applyOnNodeView { sidechainNodeView =>
         val destAddress = body.toAddress
-        val valueInWei: java.math.BigInteger = java.math.BigInteger.valueOf(body.value * 10000000000L)
+        val valueInWei = ZenConverter.convertZenniesToWei(body.value)
         val rawTransaction = RawTransaction.createTransaction(valueInWei, valueInWei, valueInWei, destAddress, valueInWei, "")
         val tmpEtherTx = new EthereumTransaction(rawTransaction)
         val message = tmpEtherTx.messageToSign()

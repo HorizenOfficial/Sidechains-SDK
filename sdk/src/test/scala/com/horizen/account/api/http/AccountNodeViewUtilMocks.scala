@@ -188,8 +188,8 @@ class AccountNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compani
 
   def getTransactionList: util.List[EthereumTransaction] = {
     val list: util.List[EthereumTransaction] = new util.ArrayList[EthereumTransaction]()
-    list.add(getTransaction(java.math.BigInteger.valueOf(1L * 10000000000L)))
-    list.add(getTransaction(java.math.BigInteger.valueOf(12L* 10000000000L)))
+    list.add(getTransaction(java.math.BigInteger.valueOf(1L * 10000000000L))) // 1 Zenny
+    list.add(getTransaction(java.math.BigInteger.valueOf(12L* 10000000000L))) // 12 Zennies
     list
   }
 

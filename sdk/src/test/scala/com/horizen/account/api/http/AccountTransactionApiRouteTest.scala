@@ -87,7 +87,6 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
       sidechainApiMockConfiguration.setShould_history_getTransactionsSortedByFee_return_value(true)
       Post(basePath + "sendCoinsToAddress")
         .withEntity(
-          //"{\"outputs\": [{\"publicKey\": \"sadasdasfsdfsdfsdf\",\"value\": 12}],\"fee\": 30}"
           SerializationUtil.serialize(ReqSendCoinsToAddress("00112233445566778899AABBCCDDEEFF01020304",10))
         ) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
