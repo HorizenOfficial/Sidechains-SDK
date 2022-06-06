@@ -151,6 +151,8 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
     list.add(box_5.asInstanceOf[Box[Proposition]])
     list
   }
+  val listOfSecrets = List(secret1, secret2)
+  val listOfPropositions = listOfSecrets.map(secret => secret.publicImage())
 
   def getNodeWalletMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeWallet = {
     val wallet: NodeWallet = mock[NodeWallet]
@@ -170,7 +172,6 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
         allBoxes
     })
 
-    val listOfSecrets = List(secret1, secret2)
 
     Mockito.when(wallet.secretsOfType(ArgumentMatchers.any())).thenAnswer(_ => listOfSecrets.asJava)
 

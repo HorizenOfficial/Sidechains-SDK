@@ -15,7 +15,6 @@ import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.proposition.{Proposition, PublicKey25519PropositionSerializer, VrfPublicKey}
 import com.horizen.secret.{PrivateKey25519Creator, VrfKeyGenerator}
 import com.horizen.serialization.Views
-import com.horizen.storage.SidechainSecretStorage
 import com.horizen.utils.BytesUtils
 import scorex.core.settings.RESTApiSettings
 
@@ -28,7 +27,6 @@ import java.util.{ArrayList => JArrayList}
 
 case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
                                    sidechainNodeViewHolderRef: ActorRef,
-                                   sidechainSecretStorage: SidechainSecretStorage,
                                    sidechainSecretsCompanion: SidechainSecretsCompanion)(implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute {
 
@@ -219,7 +217,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
               case Success(value) =>
                 if(!BytesUtils.toHexString(value.publicImage().bytes()).equals(keyPair(1))) {
                   log.error(s"Import Wallet: Public key doesn't match: ${BytesUtils.toHexString(value.publicImage().bytes())}  ${keyPair(1)}")
-                  error = JOptional.of(ErrorPropositionNotMatch("Public key doesn't match on line ", JOptional.empty()))
+                  error = JOptional.of(ErrorPropositionNotMatch(s"Public key doesn't match on line ${lineNumber}", JOptional.empty()))
                 } else {
                   secrets.add((value, lineNumber))
                 }
