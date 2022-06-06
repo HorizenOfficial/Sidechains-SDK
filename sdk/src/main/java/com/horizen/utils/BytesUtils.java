@@ -86,51 +86,52 @@ public final class BytesUtils {
                                 bytes[offset]);
     }
 
-    // get Bitcoin VarInt value, which length is from 1 to 9 bytes, starting from an offset position without copying an array.
-    public static VarInt getVarInt(byte[] bytes, int offset) {
+    // Bitcoin `ReadCompactSize` method return value which length is from 1 to 9 bytes, starting from an offset position without copying an array.
+    // Note: original "value" in bitcoin is stored in little endian (reversed).
+    // Used in std::vectors serialization to store the length of the vector.
+    public static CompactSize getCompactSize(byte[] bytes, int offset) {
         if(offset < 0 || bytes.length < offset + 1)
-            throw new IllegalArgumentException("Value is out of array bounds");
+            throw new IllegalArgumentException("CompactSize: Value is out of array bounds");
 
         byte first = bytes[offset];
+        int size;
+        long value;
         switch(first) {
             case (byte)253:
-                return new VarInt(BytesUtils.getShort(bytes, offset + 1), 3);
+                size = 3;
+                value = BytesUtils.getReversedShort(bytes, offset + 1) & 0xFFFF;
+                if(value < 253)
+                    throw new IllegalArgumentException("CompactSize: non-canonical value");
+
+                break;
 
             case (byte)254:
-                return new VarInt(BytesUtils.getInt(bytes, offset + 1), 5);
+                size = 5;
+                value = BytesUtils.getReversedInt(bytes, offset + 1) & 0xFFFFFFFFL;
+                if(value < 0x10000L)
+                    throw new IllegalArgumentException("CompactSize: non-canonical value");
+                break;
 
             case (byte)255:
-                return new VarInt(BytesUtils.getLong(bytes, offset + 1), 9);
+                size = 9;
+                value = BytesUtils.getReversedLong(bytes, offset + 1);
+                if(value < 0x100000000L)
+                    throw new IllegalArgumentException("CompactSize: non-canonical value");
+                break;
 
             default:
-                return new VarInt(first, 1);
+                size = 1;
+                value = first & 0xFF;
         }
+        if(value > CompactSize.MAX_SERIALIZED_COMPACT_SIZE)
+            throw new IllegalArgumentException("CompactSize: size too large");
+
+        return new CompactSize(value, size);
     }
 
-    // get Reversed Bitcoin VarInt value, which length is from 1 to 9 bytes, starting from an offset position without copying an array.
-    // Note: ReversedVarInt is stored like VarInt, but "value" part is in little endian (reversed)
-    public static VarInt getReversedVarInt(byte[] bytes, int offset) {
-        if(offset < 0 || bytes.length < offset + 1)
-            throw new IllegalArgumentException("Value is out of array bounds");
-
-        byte first = bytes[offset];
-        switch(first) {
-            case (byte)253:
-                return new VarInt(BytesUtils.getReversedShort(bytes, offset + 1), 3);
-
-            case (byte)254:
-                return new VarInt(BytesUtils.getReversedInt(bytes, offset + 1), 5);
-
-            case (byte)255:
-                return new VarInt(BytesUtils.getReversedLong(bytes, offset + 1), 9);
-
-            default:
-                return new VarInt(first & 0xFF, 1);
-        }
-    }
-
-    // Get byte array from VarInt value
-    public static byte[] fromVarInt(VarInt vi) {
+    // Get byte array representation of CompactSize value
+    // Note: we write the data in LE as MC does.
+    public static byte[] toCompactSizeBytes(CompactSize vi) {
         byte[] res = new byte[vi.size()];
         switch (vi.size()) {
             case 1:
@@ -163,7 +164,7 @@ public final class BytesUtils {
                 res[8] = (byte) ((vi.value() >> 56) & 255L);
                 break;
 
-            default: throw new IllegalArgumentException("Incorrect size of VarInt had been detected:" + vi.size());
+            default: throw new IllegalArgumentException("Incorrect size of CompactSize had been detected:" + vi.size());
         }
         return res;
     }

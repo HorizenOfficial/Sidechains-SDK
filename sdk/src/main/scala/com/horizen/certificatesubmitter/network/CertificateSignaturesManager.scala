@@ -52,6 +52,11 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
     context.system.eventStream.subscribe(self, SidechainAppEvents.SidechainApplicationStart.getClass)
   }
 
+  override def postStop(): Unit = {
+    log.debug("Certificate Signature Manager actor is stopping...")
+    super.postStop()
+  }
+
   override def postRestart(reason: Throwable): Unit = {
     super.postRestart(reason)
     log.error("CertificateSignaturesManager was restarted because of: ", reason)

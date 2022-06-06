@@ -24,6 +24,11 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
 
   override protected val deliveryTracker = new SidechainDeliveryTracker(context.system, deliveryTimeout, maxDeliveryChecks, self)
 
+  override def postStop(): Unit = {
+    log.info("SidechainNodeViewSynchronizer actor is stopping...")
+    super.postStop()
+  }
+
   private val onSyntacticallyFailedModifier: Receive = {
     case SyntacticallyFailedModification(mod, exception) =>
       exception match {

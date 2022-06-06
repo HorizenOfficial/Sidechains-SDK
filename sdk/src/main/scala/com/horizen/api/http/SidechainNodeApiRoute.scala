@@ -1,7 +1,6 @@
 package com.horizen.api.http
 
 import java.net.{InetAddress, InetSocketAddress}
-
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.horizen.api.http.SidechainNodeRestSchema._
@@ -14,18 +13,21 @@ import scorex.core.network.peer.PeerManager.ReceivableMessages.{Blacklisted, Get
 import scorex.core.utils.NetworkTimeProvider
 import JacksonSupport._
 import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.api.http.SidechainNodeErrorResponse.ErrorInvalidHost
+import com.horizen.SidechainApp
+import com.horizen.api.http.SidechainNodeErrorResponse.{ErrorInvalidHost, ErrorStopNodeAlreadyInProgress}
 import com.horizen.serialization.Views
+
+import java.lang.Thread.sleep
 import java.util.{Optional => JOptional}
 
 case class SidechainNodeApiRoute(peerManager: ActorRef,
                                  networkController: ActorRef,
                                  timeProvider: NetworkTimeProvider,
-                                 override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
+                                 override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, app: SidechainApp)
                                 (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
 
   override val route: Route = pathPrefix("node") {
-    connect ~ allPeers ~ connectedPeers ~ blacklistedPeers ~ disconnect
+    connect ~ allPeers ~ connectedPeers ~ blacklistedPeers ~ disconnect ~ stop
   }
 
   private val addressAndPortRegexp = "([\\w\\.]+):(\\d{1,5})".r
@@ -114,6 +116,31 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
     }
   }
 
+  def stop: Route = (post & path("stop")) {
+    if (app.stopAllInProgress.compareAndSet(false, true) ) {
+      try {
+        // we are stopping the node, and since we will shortly be closing network services lets do in a separate thread
+        // and give some time to the HTTP reply to be transmitted immediately in this thread
+        new Thread( new Runnable() {
+          override def run(): Unit = {
+            log.info("Stop command triggered...")
+            sleep(500)
+            log.info("Calling core application stop...")
+            app.sidechainStopAll()
+            log.info("... core application stop returned")
+          }
+        } ).start()
+
+        ApiResponseUtil.toResponse(RespStop())
+
+      } catch {
+        case e: Throwable => SidechainApiError(e)
+      }
+    } else {
+      log.warn("Stop node already in progress...")
+      ApiResponseUtil.toResponse(ErrorStopNodeAlreadyInProgress("Stop node procedure already in progress", JOptional.empty()))
+    }
+  }
 }
 
 object SidechainNodeRestSchema {
@@ -139,13 +166,21 @@ object SidechainNodeRestSchema {
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespDisconnect(disconnectedFrom: String) extends SuccessResponse
 
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqStop()
 
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespStop() extends SuccessResponse
 }
 
 object SidechainNodeErrorResponse {
 
   case class ErrorInvalidHost(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0401"
+  }
+
+  case class ErrorStopNodeAlreadyInProgress(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
+    override val code: String = "0402"
   }
 
 }

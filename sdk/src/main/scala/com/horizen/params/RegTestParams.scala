@@ -35,7 +35,7 @@ case class RegTestParams(
                         ) extends NetworkParams {
   override val EquihashN: Int = 48
   override val EquihashK: Int = 5
-  override val EquihashVarIntLength: Int = 1
+  override val EquihashCompactSizeLength: Int = 1
   override val EquihashSolutionLength: Int = 36
 
   override val powLimit: BigInteger = new BigInteger("0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f", 16)

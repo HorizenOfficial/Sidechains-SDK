@@ -11,7 +11,7 @@ import com.horizen.serialization.Views
 import scorex.core.serialization.BytesSerializable
 import com.horizen.transaction.{MC2SCAggregatedTransaction, Transaction}
 import com.horizen.transaction.exception.TransactionSemanticValidityException
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, VarInt}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, CompactSize}
 import scorex.core.serialization.ScorexSerializer
 import scorex.util.serialization.{Reader, Writer}
 import com.horizen.validation.{InconsistentMainchainBlockReferenceDataException, InvalidMainchainDataException}
@@ -251,7 +251,7 @@ object MainchainBlockReference extends ScorexLogging {
       case Success(header) =>
         offset += header.mainchainHeaderBytes.length
 
-        val transactionsCount: VarInt = BytesUtils.getReversedVarInt(mainchainBlockBytes, offset)
+        val transactionsCount: CompactSize = BytesUtils.getCompactSize(mainchainBlockBytes, offset)
         offset += transactionsCount.size()
 
         // parse transactions
@@ -267,7 +267,7 @@ object MainchainBlockReference extends ScorexLogging {
 
         // Parse certificates only if version is the same as specified and there is bytes to parse.
         if (header.version == SC_CERT_BLOCK_VERSION) {
-            val certificatesCount: VarInt = BytesUtils.getReversedVarInt(mainchainBlockBytes, offset)
+            val certificatesCount: CompactSize = BytesUtils.getCompactSize(mainchainBlockBytes, offset)
             offset += certificatesCount.size()
 
             while (certificates.size < certificatesCount.value()) {

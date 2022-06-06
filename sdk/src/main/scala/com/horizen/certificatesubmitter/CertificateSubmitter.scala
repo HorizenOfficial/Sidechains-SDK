@@ -84,6 +84,7 @@ class CertificateSubmitter(settings: SidechainSettings,
   }
 
   override def postStop(): Unit = {
+    log.debug("Certificate Submitter actor is stopping...")
     super.postStop()
     if(timers.isTimerActive(CertificateGenerationTimer)) {
       context.system.eventStream.publish(CertificateSubmissionStopped)
@@ -251,7 +252,7 @@ class CertificateSubmitter(settings: SidechainSettings,
   private def getFtMinAmount(referencedWithdrawalEpochNumber: Int): Long = 0
 
   private def getMessageToSign(referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
-    def getMessage(sidechainNodeView: View): Array[Byte] = {
+    def getMessage(sidechainNodeView: View): Try[Array[Byte]] = Try {
       val history = sidechainNodeView.history
       val state = sidechainNodeView.state
 
@@ -263,7 +264,11 @@ class CertificateSubmitter(settings: SidechainSettings,
       val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
       val sidechainId = params.sidechainId
 
-      val utxoMerkleTreeRoot = state.utxoMerkleTreeRoot(referencedWithdrawalEpochNumber).get
+      val utxoMerkleTreeRoot = state.utxoMerkleTreeRoot(referencedWithdrawalEpochNumber).getOrElse(
+        throw new Exception("CertificateSubmitter is too late against the State. " +
+          s"No utxo merkle tree root for requested epoch $referencedWithdrawalEpochNumber. " +
+          s"Current epoch is ${state.getWithdrawalEpochInfo.epoch}")
+      )
 
       CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(
         withdrawalRequests.asJava,
@@ -275,7 +280,7 @@ class CertificateSubmitter(settings: SidechainSettings,
         utxoMerkleTreeRoot)
     }
 
-    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getMessage), timeoutDuration).asInstanceOf[Array[Byte]]
+    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getMessage), timeoutDuration).asInstanceOf[Try[Array[Byte]]].get
   }
 
   private def calculateSignatures(messageToSign: Array[Byte]): Try[Seq[CertificateSignatureInfo]] = Try {

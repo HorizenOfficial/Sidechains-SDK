@@ -1,8 +1,11 @@
 package com.horizen.utils;
 
+import scorex.crypto.hash.Blake2b256;
+
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Random;
 
 public final class Utils
 {
@@ -106,4 +109,16 @@ public final class Utils
                 ((bytes[offset + 2] & 0xffl) << 8) |
                 (bytes[offset + 3] & 0xffl);
     }
+
+    public static byte[] nextVersion() {
+        byte[] version = new byte[32];
+        Random r = new Random();
+        r.nextBytes(version);
+        return version;
+    }
+
+    public static ByteArrayWrapper calculateKey(byte[] data) {
+        return new ByteArrayWrapper((byte[]) Blake2b256.hash(data));
+    }
+
 }

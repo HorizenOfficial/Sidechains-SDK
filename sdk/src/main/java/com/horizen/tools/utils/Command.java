@@ -1,4 +1,4 @@
-package com.horizen;
+package com.horizen.tools.utils;
 
 import com.fasterxml.jackson.databind.JsonNode;
 

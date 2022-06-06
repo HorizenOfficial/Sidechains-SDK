@@ -5,7 +5,8 @@ from mc_sc_forging_delegation import MCSCForgingDelegation
 from sc_ceased import SCCeased
 from sc_cert_no_coin_record import SCCertNoCoinRecord
 from sc_cert_submission_decentralization import SCCertSubmissionDecentralization
-from sc_cert_submitter_after_sync import ScCertSubmitterAfterSync
+from sc_cert_submitter_after_sync_1 import ScCertSubmitterAfterSync1
+from sc_cert_submitter_after_sync_2 import ScCertSubmitterAfterSync2
 from sc_csw_ceased_at_epoch_1 import SCCswCeasedAtEpoch1
 from sc_csw_ceased_at_epoch_2 import SCCswCeasedAtEpoch2
 from sc_csw_ceased_at_epoch_3 import SCCswCeasedAtEpoch3
@@ -29,8 +30,10 @@ from websocket_server import SCWsServer
 from mc_sc_forging_fee_payments import MCSCForgingFeePayments
 from sc_cert_fee_conf import CertFeeConfiguration
 from sc_bwt_minimum_value import SCBwtMinValue
+from sc_db_tool_cmds import DBToolTest
 from websocket_server_fee_payments import SCWsServerFeePayments
 from sc_closed_forger import SidechainClosedForgerTest
+from sc_blockid_for_backup import SidechainBlockIdForBackupTest
 
 
 def run_test(test):
@@ -101,8 +104,11 @@ def run_tests(log_file):
     result = run_test(SCCertSubmissionDecentralization())
     assert_equal(0, result, "sc_cert_submission_decentralization test failed!")
 
-    result = run_test(ScCertSubmitterAfterSync())
+    result = run_test(ScCertSubmitterAfterSync1())
     assert_equal(0, result, "sc_cert_submitter_after_sync test failed!")
+
+    result = run_test(ScCertSubmitterAfterSync2())
+    assert_equal(0, result, "sc_cert_submitter_after_sync2 test failed!")
 
     result = run_test(SCCertNoCoinRecord())
     assert_equal(0, result, "sc_cert_no_coin_record test failed!")
@@ -131,6 +137,11 @@ def run_tests(log_file):
     result = run_test(SidechainClosedForgerTest())
     assert_equal(0, result, "sc_closed_forger test failed!")
 
+    result = run_test(DBToolTest())
+    assert_equal(0, result, "DBToolTest test failed!")
+
+    result = run_test(SidechainBlockIdForBackupTest())
+    assert_equal(0, result, "sc_blockid_for_backup test failed!")
 
 if __name__ == "__main__":
     log_file = open("sc_test.log", "w")
