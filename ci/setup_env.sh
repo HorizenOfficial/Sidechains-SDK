@@ -46,7 +46,7 @@ touch "${HOME}/key.asc"
 if [ -n "${TRAVIS_TAG}" ]; then
   export GNUPGHOME="$(mktemp -d 2>/dev/null || mktemp -d -t 'GNUPGHOME')"
   # shellcheck disable=SC2086
-  import_gpg_keys ${MAINTAINERS_KEYS}
+  import_gpg_keys ${MAINTAINER_KEYS}
   check_signed_tag "${TRAVIS_TAG}"
   echo "" && echo "=== Release build ===" && echo ""
 
