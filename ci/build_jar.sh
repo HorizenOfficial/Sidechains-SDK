@@ -28,7 +28,7 @@ if [ "$CONTAINER_PUBLISH" = "true" ]; then
   echo "|              Deploying sdk bundle to maven repository              |"
   echo "======================================================================"
   echo
-  mvn deploy -P sign,build-extras --settings ../ci/mvn_settings.xml -DskipTests=true -B
+  #mvn deploy -P sign,build-extras --settings ../ci/mvn_settings.xml -DskipTests=true -B
   echo "======================================================================"
   echo "|         Deploying sdk bundle to maven repository completed         |"
   echo "======================================================================"
