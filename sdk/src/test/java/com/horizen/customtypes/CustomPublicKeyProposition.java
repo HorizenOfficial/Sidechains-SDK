@@ -2,21 +2,14 @@ package com.horizen.customtypes;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.horizen.ScorexEncoding;
-import com.horizen.proposition.ProofOfKnowledgeProposition;
-import com.horizen.proposition.PropositionSerializer;
-import com.horizen.proposition.ProvableCheckResult;
-import com.horizen.proposition.ProvableCheckResultImpl;
-import com.horizen.secret.Secret;
+import com.horizen.proposition.*;
 import com.horizen.serialization.Views;
 import com.horizen.utils.BytesUtils;
-
 import java.util.Arrays;
-import java.util.List;
+
 
 @JsonView(Views.Default.class)
-public class CustomPublicKeyProposition extends ScorexEncoding implements ProofOfKnowledgeProposition<CustomPrivateKey>
-{
+public class CustomPublicKeyProposition extends AbstractSingleSecretProofOfKnowledgeProposition<CustomPrivateKey> {
     public static final int PUBLIC_KEY_LENGTH = 128;
 
     @JsonProperty("publicKey")
@@ -61,16 +54,6 @@ public class CustomPublicKeyProposition extends ScorexEncoding implements ProofO
     @Override
     public byte[] pubKeyBytes() {
         return Arrays.copyOf(pubKeyBytes, PUBLIC_KEY_LENGTH);
-    }
-
-    @Override
-    public ProvableCheckResult<CustomPrivateKey> canBeProvedBy(List<Secret> secrectList){
-        for (Secret s : secrectList){
-            if ((s instanceof CustomPrivateKey) && ((CustomPrivateKey)s).publicImage().equals(this)){
-                return new ProvableCheckResultImpl(true, s);
-            }
-        }
-        return new ProvableCheckResultImpl(false);
     }
 
 }
