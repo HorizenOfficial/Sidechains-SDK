@@ -3,19 +3,21 @@ package com.horizen.account
 import akka.actor.ActorRef
 import com.google.inject.Inject
 import com.google.inject.name.Named
+import com.horizen._
 import com.horizen.account.api.http.AccountTransactionApiRoute
-import com.horizen.account.block.{AccountBlock, AccountBlockSerializer}
+import com.horizen.account.block.{AccountBlock, AccountBlockHeader, AccountBlockSerializer}
 import com.horizen.account.certificatesubmitter.AccountCertificateSubmitterRef
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.forger.AccountForgerRef
+import com.horizen.account.history.AccountHistory
 import com.horizen.account.network.AccountNodeViewSynchronizer
+import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
-import com.horizen.{AbstractSidechainApp, SidechainAppEvents, SidechainSettings, SidechainSyncInfoMessageSpec, SidechainTypes}
 import com.horizen.api.http._
 import com.horizen.block.SidechainBlockBase
-import com.horizen.certificatesubmitter.CertificateSubmitterRef
 import com.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
 import com.horizen.consensus.ConsensusDataStorage
+import com.horizen.node.NodeWalletBase
 import com.horizen.secret.SecretSerializer
 import com.horizen.storage._
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
@@ -32,7 +34,6 @@ import java.io.File
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}
 import scala.collection.JavaConverters.asScalaBufferConverter
-import scala.collection.immutable.Map
 import scala.collection.mutable
 import scala.io.{Codec, Source}
 import scala.util.{Failure, Success}
@@ -43,7 +44,7 @@ class AccountSidechainApp @Inject()
    @Named("CustomSecretSerializers") customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
    @Named("CustomAccountTransactionSerializers") val customAccountTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCAT]],
    @Named("CustomApiGroups") customApiGroups: JList[ApplicationApiGroup],
-   @Named("RejectedApiPaths") rejectedApiPaths : JList[Pair[String, String]],
+   @Named("RejectedApiPaths") rejectedApiPaths : JList[Pair[String, String]]
   )
   extends AbstractSidechainApp(
     sidechainSettings,
@@ -131,7 +132,7 @@ class AccountSidechainApp @Inject()
 
   // Init Transactions and Block actors for Api routes classes
   val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
-  val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef("AccountBlock", sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
+  val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef[PMOD,SidechainSyncInfo,AccountHistory]("AccountBlock", sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
 
   // Init Certificate Submitter
   val certificateSubmitterRef: ActorRef = AccountCertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
@@ -146,18 +147,20 @@ class AccountSidechainApp @Inject()
   var applicationApiRoutes : Seq[ApplicationApiRoute] = Seq[ApplicationApiRoute]()
   customApiGroups.asScala.foreach(apiRoute => applicationApiRoutes = applicationApiRoutes :+ ApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
 
-  var coreApiRoutes: Seq[SidechainApiRoute] = Seq[SidechainApiRoute](
-    MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
-    SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
-    SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef),
+  var coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
+    MainchainBlockApiRoute[TX,
+      AccountBlockHeader,PMOD,NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef),
+    SidechainBlockApiRoute[TX,
+      AccountBlockHeader,PMOD,NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
+    SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi),
     AccountTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainAccountTransactionsCompanion, params),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
-    SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef),
+    SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef)
   )
 
   // In order to provide the feature to override core api and exclude some other apis,
   // first we create custom reject routes (otherwise we cannot know which route has to be excluded), second we bind custom apis and then core apis
-  override val apiRoutes: Seq[ApiRoute] = Seq[SidechainApiRoute]()
+  override val apiRoutes: Seq[ApiRoute] = Seq[ApiRoute]()
     .union(rejectedApiRoutes)
     .union(applicationApiRoutes)
     .union(coreApiRoutes)

@@ -2,15 +2,16 @@ package com.horizen.account.state
 
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
+import com.horizen.account.node.NodeAccountState
+import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import com.horizen.account.storage.AccountStateMetadataStorage
-import scorex.core.{VersionTag, bytesToVersion, idToBytes, idToVersion, versionToBytes, versionToId}
-import scorex.util.{ModifierId, ScorexLogging, bytesToId}
+import scorex.core._
+import scorex.util.{ModifierId, ScorexLogging}
 
 import java.util
 import scala.util.{Failure, Try}
@@ -19,7 +20,7 @@ class AccountState(val params: NetworkParams,
                    override val version: VersionTag,
                    stateMetadataStorage: AccountStateMetadataStorage)
   extends State[SidechainTypes#SCAT, AccountBlock, AccountStateView, AccountState]
-    with AccountStateReader
+    with NodeAccountState
     with ScorexLogging {
 
   override type NVCT = AccountState

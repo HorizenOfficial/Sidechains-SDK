@@ -1,7 +1,6 @@
 package com.horizen.api.http
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import com.horizen.SidechainTypes
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.transaction.Transaction
 import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
