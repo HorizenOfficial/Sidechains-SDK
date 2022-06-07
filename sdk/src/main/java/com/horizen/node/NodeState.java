@@ -2,6 +2,6 @@ package com.horizen.node;
 
 import com.horizen.state.SidechainStateReader;
 
-public interface NodeState extends SidechainStateReader {
+public interface NodeState extends NodeStateBase, SidechainStateReader {
 
 }

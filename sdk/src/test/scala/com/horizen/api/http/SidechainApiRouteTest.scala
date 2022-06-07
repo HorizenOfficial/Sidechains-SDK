@@ -1,30 +1,36 @@
 package com.horizen.api.http
 
-import java.net.{InetAddress, InetSocketAddress}
-import java.util
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
-import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
+import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentNodeView, LocallyGeneratedSecret}
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
+import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
+import com.horizen.box.Box
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus.ConsensusEpochAndSlot
+import com.horizen.csw.CswManager.ReceivableMessages._
+import com.horizen.csw.CswManager.Responses._
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
+import com.horizen.forge.AbstractForger
+import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
 import com.horizen.params.MainNetParams
+import com.horizen.proposition.Proposition
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.transaction._
 import com.horizen.{SidechainSettings, SidechainTypes}
+import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
 import org.mockito.Mockito
-import org.scalatestplus.junit.JUnitRunner
-import org.scalatestplus.mockito.MockitoSugar
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.junit.JUnitRunner
+import org.scalatestplus.mockito.MockitoSugar
 import scorex.core.app.Version
 import scorex.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
 import scorex.core.network.peer.PeerInfo
@@ -34,15 +40,13 @@ import scorex.core.settings.{RESTApiSettings, ScorexSettings}
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.{ModifierId, bytesToId}
 
+import java.net.{InetAddress, InetSocketAddress}
+import java.util
+import java.util.function.BiFunction
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.util.{Failure, Success, Try}
-import com.horizen.csw.CswManager.ReceivableMessages.{GenerateCswProof, GetBoxNullifier, GetCeasedStatus, GetCswBoxIds, GetCswInfo}
-import com.horizen.csw.CswManager.Responses.{Absent, CswInfo, CswProofInfo, NoProofData, ProofCreationFinished}
-import com.horizen.forge.AbstractForger
-import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
-
 import scala.language.postfixOps
+import scala.util.{Failure, Success, Try}
 
 @RunWith(classOf[JUnitRunner])
 abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with ScalatestRouteTest with MockitoSugar with SidechainBlockFixture with CompanionsFixture with SidechainTypes {
@@ -103,15 +107,52 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   mockedSidechainNodeViewHolder.setAutoPilot(new testkit.TestActor.AutoPilot {
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
-        case GetDataFromCurrentSidechainNodeView(f) =>
-          if (sidechainApiMockConfiguration.getShould_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply())
-            sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration))
-        case ApplyFunctionOnNodeView(f) =>
-          if (sidechainApiMockConfiguration.getShould_nodeViewHolder_ApplyFunctionOnNodeView_reply())
-            sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration))
-        case ApplyBiFunctionOnNodeView(f, funParameter) =>
-          if (sidechainApiMockConfiguration.getShould_nodeViewHolder_ApplyBiFunctionOnNodeView_reply())
-            sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration), funParameter)
+        case m: GetDataFromCurrentNodeView[
+          BoxTransaction[Proposition, Box[Proposition]],
+          SidechainBlockHeader,
+          SidechainBlock,
+          NodeHistory,
+          NodeState,
+          NodeWallet,
+          NodeMemoryPool,
+          SidechainNodeView,
+          _] =>
+          m match {
+            case GetDataFromCurrentNodeView(f) =>
+              if (sidechainApiMockConfiguration.getShould_nodeViewHolder_GetDataFromCurrentNodeView_reply()) {
+                sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration))
+              }
+          }
+        case m: ApplyFunctionOnNodeView[
+          BoxTransaction[Proposition, Box[Proposition]],
+          SidechainBlockHeader,
+          SidechainBlock,
+          NodeHistory,
+          NodeState,
+          NodeWallet,
+          NodeMemoryPool,
+          SidechainNodeView,
+          _] =>
+          m match {
+            case ApplyFunctionOnNodeView(f) =>
+              if (sidechainApiMockConfiguration.getShould_nodeViewHolder_ApplyFunctionOnNodeView_reply())
+                sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration))
+          }
+        case m: ApplyBiFunctionOnNodeView[
+          BoxTransaction[Proposition, Box[Proposition]],
+          SidechainBlockHeader,
+          SidechainBlock,
+          NodeHistory,
+          NodeState,
+          NodeWallet,
+          NodeMemoryPool,
+          SidechainNodeView,
+          _,_] =>
+          m match {
+            case ApplyBiFunctionOnNodeView(f, funParameter) =>
+              if (sidechainApiMockConfiguration.getShould_nodeViewHolder_ApplyBiFunctionOnNodeView_reply())
+                sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration), funParameter)
+          }
         case LocallyGeneratedSecret(_) =>
           if (sidechainApiMockConfiguration.getShould_nodeViewHolder_LocallyGeneratedSecret_reply())
             sender ! Success(Unit)
@@ -280,9 +321,11 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   val sidechainTransactionApiRoute: Route = SidechainTransactionApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainTransactionActorRef,
     sidechainTransactionsCompanion, params).route
   val sidechainWalletApiRoute: Route = SidechainWalletApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
-  val sidechainNodeApiRoute: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
-  val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, mockedSidechainBlockForgerActorRef).route
-  val mainchainBlockApiRoute: Route = MainchainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
+  val sidechainNodeApiRoute: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings).route
+  val sidechainBlockApiRoute: Route = SidechainBlockApiRoute[BoxTransaction[Proposition, Box[Proposition]],
+    SidechainBlockHeader,SidechainBlock,NodeHistory,NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView](mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, mockedSidechainBlockForgerActorRef).route
+  val mainchainBlockApiRoute: Route = MainchainBlockApiRoute[BoxTransaction[Proposition, Box[Proposition]],
+    SidechainBlockHeader,SidechainBlock,NodeHistory,NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView](mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val applicationApiRoute: Route = ApplicationApiRoute(mockedRESTSettings, new SimpleCustomApi(), mockedSidechainNodeViewHolderRef).route
   val sidechainCswApiRoute: Route = SidechainCswApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedCswManagerActorRef).route
   val walletCoinsBalanceApiRejected: Route = SidechainRejectionApiRoute("wallet", "coinsBalance", mockedRESTSettings, mockedSidechainNodeViewHolderRef).route

@@ -1,6 +1,7 @@
 package com.horizen.api.http
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.horizen.account.transaction.AccountTransaction
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlock}
 import com.horizen.box.{Box, BoxUnlocker}
 import com.horizen.transaction.{BoxTransaction, MC2SCAggregatedTransaction}
@@ -73,6 +74,21 @@ class SidechainJSONBOChecker {
     for (i <- 0 until newBoxes.size())
       assertsOnBoxJson(newBoxesJsonNode(i), newBoxes.get(i).asInstanceOf[Box[_]])
   }
+
+  def assertsOnAccountTransactionJson(json: JsonNode, transaction: AccountTransaction[_, _]): Unit = {
+    assertTrue(json.elements().asScala.length >= 3)
+    assertTrue(json.get("id").isTextual)
+    assertEquals(BytesUtils.toHexString(scorex.util.idToBytes(ModifierId @@ transaction.id)), json.get("id").asText())
+    assertTrue(json.get("modifierTypeId").isNumber)
+    assertEquals(transaction.modifierTypeId.toInt, json.get("modifierTypeId").asInt())
+
+    assertTrue(json.get("value").isNumber)
+    assertEquals(transaction.getValue(), json.get("value").bigIntegerValue())
+
+
+
+  }
+
 
   def assertsOnBoxUnlockerJson(json: JsonNode, boxUnlocker: BoxUnlocker[_]): Unit = {
     assertEquals(2, json.elements().asScala.length)

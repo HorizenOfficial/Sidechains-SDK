@@ -4,8 +4,8 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen.SidechainAppEvents
-import com.horizen.certificatesubmitter.CertificateSubmitter.ReceivableMessages.{GetSignaturesStatus, SignatureFromRemote}
-import com.horizen.certificatesubmitter.CertificateSubmitter.{BroadcastLocallyGeneratedSignature, CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, SignatureProcessingStatus, SignaturesStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.ReceivableMessages.{GetSignaturesStatus, SignatureFromRemote}
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.{BroadcastLocallyGeneratedSignature, CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, SignatureProcessingStatus, SignaturesStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
 import com.horizen.certificatesubmitter.network.CertificateSignaturesManager.InternalReceivableMessages.TryToSendGetCertificateSignatures
 import com.horizen.params.NetworkParams
 import scorex.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, SendToNetwork}

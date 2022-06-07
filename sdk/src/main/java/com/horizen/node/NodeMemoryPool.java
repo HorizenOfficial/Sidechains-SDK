@@ -9,7 +9,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
-public interface NodeMemoryPool {
+public interface NodeMemoryPool extends NodeMemoryPoolBase<BoxTransaction<Proposition, Box<Proposition>>>{
     List<BoxTransaction<Proposition, Box<Proposition>>> getTransactions();
 
     List<BoxTransaction<Proposition, Box<Proposition>>> getTransactions(

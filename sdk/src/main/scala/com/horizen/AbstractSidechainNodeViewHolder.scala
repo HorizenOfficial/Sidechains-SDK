@@ -1,14 +1,15 @@
 package com.horizen
 
-import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.block.{SidechainBlock, SidechainBlockBase, SidechainBlockHeader, SidechainBlockHeaderBase}
+import com.horizen.node._
 import com.horizen.params.NetworkParams
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
-import com.horizen.validation.{ConsensusValidator, HistoryBlockValidator, MainchainBlockReferenceValidator, MainchainPoWValidator, SemanticBlockValidator, SidechainBlockSemanticValidator, WithdrawalEpochValidator}
+import com.horizen.validation._
 import scorex.core.NodeViewHolder.DownloadRequest
-import scorex.core.idToVersion
 import scorex.core.consensus.History.ProgressInfo
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{NewOpenSurface, RollbackFailed, SemanticallyFailedModification, SemanticallySuccessfulModifier, StartingPersistentModifierApplication, SyntacticallyFailedModification, SyntacticallySuccessfulModifier}
+import scorex.core.idToVersion
+import scorex.core.network.NodeViewSynchronizer.ReceivableMessages._
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
 
@@ -23,13 +24,13 @@ abstract class AbstractSidechainNodeViewHolder[
   timeProvider: NetworkTimeProvider
 )
   extends scorex.core.NodeViewHolder[TX, PMOD]
-    with SidechainTypes
-{
+    with SidechainTypes {
   override type SI = SidechainSyncInfo
   type HSTOR <: AbstractHistoryStorage[PMOD, HSTOR]
 
   override type HIS <: AbstractHistory[TX, H, PMOD, HSTOR, HIS]
   override type VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PMOD, VL]
+
 
   case class SidechainNodeUpdateInformation(history: HIS,
                                             state: MS,
@@ -50,11 +51,21 @@ abstract class AbstractSidechainNodeViewHolder[
   )
 
   override def receive: Receive = {
-    processLocallyGeneratedSecret orElse super.receive
+    processLocallyGeneratedSecret orElse
+      getCurrentSidechainNodeViewInfo orElse
+      applyFunctionOnNodeView orElse
+      applyBiFunctionOnNodeView orElse
+      super.receive
   }
 
+  protected def getCurrentSidechainNodeViewInfo: Receive
+
+  protected def applyFunctionOnNodeView: Receive
+
+  protected def applyBiFunctionOnNodeView[T, A]: Receive
+
   protected def processLocallyGeneratedSecret: Receive = {
-    case SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret(secret) =>
+    case AbstractSidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret(secret) =>
       vault().addSecret(secret) match {
         case Success(newVault) =>
           updateNodeView(updatedVault = Some(newVault))
@@ -185,7 +196,7 @@ abstract class AbstractSidechainNodeViewHolder[
             val historyAfterApply = newHistory.reportModifierIsValid(modToApply)
             context.system.eventStream.publish(SemanticallySuccessfulModifier(modToApply))
 
-            val (historyAfterUpdateFee , walletAfterApply) = scanBlockWithFeePayments(historyAfterApply, stateAfterApply, newWallet, modToApply)
+            val (historyAfterUpdateFee, walletAfterApply) = scanBlockWithFeePayments(historyAfterApply, stateAfterApply, newWallet, modToApply)
             SidechainNodeUpdateInformation(historyAfterUpdateFee, stateAfterApply, walletAfterApply, None, None, updateInfo.suffix :+ modToApply)
 
           case Failure(e) =>
@@ -204,4 +215,49 @@ abstract class AbstractSidechainNodeViewHolder[
   // Check is the modifier ends the withdrawal epoch, so notify History and Wallet about fees to be payed.
   // Scan modifier by the Wallet considering the forger fee payments.
   protected def scanBlockWithFeePayments(history: HIS, state: MS, wallet: VL, modToApply: PMOD): (HIS, VL)
+
+
 }
+
+object AbstractSidechainNodeViewHolder {
+  object ReceivableMessages {
+    case class GetDataFromCurrentNodeView[TX <: Transaction,
+      H <: SidechainBlockHeaderBase,
+      PMOD <: SidechainBlockBase[TX, H],
+      NH <: NodeHistoryBase[TX, H, PMOD],
+      NS <: NodeStateBase,
+      NW <: NodeWalletBase,
+      NP <: NodeMemoryPoolBase[TX],
+      NV <: SidechainNodeViewBase[TX, H, PMOD, NH, NS, NW, NP],
+      A](f: NV => A)
+
+    case class LocallyGeneratedSecret[S <: SidechainTypes#SCS](secret: S)
+
+    case class ApplyFunctionOnNodeView[TX <: Transaction,
+      H <: SidechainBlockHeaderBase,
+      PMOD <: SidechainBlockBase[TX, H],
+      NH <: NodeHistoryBase[TX, H, PMOD],
+      NS <: NodeStateBase,
+      NW <: NodeWalletBase,
+      NP <: NodeMemoryPoolBase[TX],
+      NV <: SidechainNodeViewBase[TX, H, PMOD, NH, NS, NW, NP],
+      A](f: java.util.function.Function[NV, A])
+
+    case class ApplyBiFunctionOnNodeView[
+      TX <: Transaction,
+      H <: SidechainBlockHeaderBase,
+      PMOD <: SidechainBlockBase[TX, H],
+      NH <: NodeHistoryBase[TX, H, PMOD],
+      NS <: NodeStateBase,
+      NW <: NodeWalletBase,
+      NP <: NodeMemoryPoolBase[TX],
+      NV <: SidechainNodeViewBase[TX, H, PMOD, NH, NS, NW, NP],
+      T,
+      A](f: java.util.function.BiFunction[NV, T, A], functionParameter: T)
+
+  }
+
+
+}
+
+

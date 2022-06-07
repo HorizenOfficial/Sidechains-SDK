@@ -2,26 +2,29 @@ package com.horizen.api.http
 
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
-import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.api.http.SidechainCswRestScheme.{ReqCswInfo, ReqGenerationCswState, ReqNullifier, RespCswBoxIds, RespCswHasCeasedState, RespCswInfo, RespGenerationCswState, RespNullifier}
-import com.horizen.serialization.Views
-
-import java.util.{Optional => JOptional}
 import akka.pattern.ask
-import com.horizen.api.http.SidechainCswErrorResponse.{ErrorCswGenerationState, ErrorRetrievingCeasingState, ErrorRetrievingCswBoxIds, ErrorRetrievingCswInfo, ErrorRetrievingNullifier}
-import com.horizen.csw.CswManager.ReceivableMessages.{GenerateCswProof, GetBoxNullifier, GetCeasedStatus, GetCswBoxIds, GetCswInfo}
-import com.horizen.csw.CswManager.Responses.{CswInfo, GenerateCswProofStatus, InvalidAddress, NoProofData, ProofCreationFinished, ProofGenerationInProcess, ProofGenerationStarted, SidechainIsAlive}
+import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.api.http.JacksonSupport._
+import com.horizen.api.http.SidechainCswErrorResponse._
+import com.horizen.api.http.SidechainCswRestScheme._
+import com.horizen.csw.CswManager.ReceivableMessages._
+import com.horizen.csw.CswManager.Responses._
+import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
+import scorex.core.api.http.{ApiDirectives, ApiRoute}
 import scorex.core.settings.RESTApiSettings
 
-import scala.concurrent.{Await, ExecutionContext}
+import java.util.{Optional => JOptional}
+import scala.concurrent.Await
 import scala.util.{Failure, Success, Try}
 
 case class SidechainCswApiRoute(override val settings: RESTApiSettings,
                                 sidechainNodeViewHolderRef: ActorRef,
                                 cswManager: ActorRef)
-                               (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
+                               (implicit val context: ActorRefFactory)
+  extends ApiRoute
+  with ApiDirectives
+{
 
   override val route: Route = pathPrefix("csw") {
     hasCeased ~ generateCswProof ~ cswInfo ~ cswBoxIds ~ nullifier
