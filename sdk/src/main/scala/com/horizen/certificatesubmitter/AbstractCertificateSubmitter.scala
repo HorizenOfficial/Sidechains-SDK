@@ -16,7 +16,7 @@ import com.horizen.proof.SchnorrProof
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
 import com.horizen.transaction.mainchain.SidechainCreation
-import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
 import com.horizen.websocket.client.{MainchainNodeChannel, WebsocketErrorResponseException, WebsocketInvalidErrorMessageException}
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
@@ -29,8 +29,8 @@ import java.util
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.Platform.EOL
 import scala.compat.java8.OptionConverters._
-import scala.concurrent.duration.{DurationInt, FiniteDuration, SECONDS}
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.duration.{FiniteDuration, SECONDS}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Random, Success, Try}
 
@@ -437,11 +437,10 @@ object AbstractCertificateSubmitter {
     object CertificateGenerationTimer
   }
 
-  protected[certificatesubmitter] object InternalReceivableMessages {
+  object InternalReceivableMessages {
     case class LocallyGeneratedSignature(info: CertificateSignatureInfo)
     case object TryToScheduleCertificateGeneration
     case object TryToGenerateCertificate
-
   }
 
   // Public interface

@@ -8,9 +8,7 @@ import com.horizen._
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.InternalReceivableMessages.{LocallyGeneratedSignature, TryToGenerateCertificate, TryToScheduleCertificateGeneration}
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.ReceivableMessages.SignatureFromRemote
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.Timers.CertificateGenerationTimer
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.{CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, CertificateSubmissionStarted, CertificateSubmissionStopped, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, SignaturesStatus, SubmissionWindowStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.{CertificateSignatureInfo, CertificateSubmissionStopped, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, SignaturesStatus, SubmissionWindowStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.NetworkParams
@@ -20,16 +18,13 @@ import com.horizen.secret.SchnorrSecret
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.websocket.client.MainchainNodeChannel
-import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 
-import java.util
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
-import scala.concurrent.duration.{FiniteDuration, SECONDS}
 import scala.concurrent.{Await, ExecutionContext}
 import scala.language.postfixOps
-import scala.util.{Failure, Random, Success, Try}
+import scala.util.{Failure, Success, Try}
 
 /**
  * Certificate submitter listens to the State changes and takes care of of certificate signatures managing (generation, storing and broadcasting)
@@ -53,8 +48,6 @@ class CertificateSubmitter(settings: SidechainSettings,
   type MS = SidechainState
   type MP = SidechainMemoryPool
   type PM = SidechainBlock
-
-  override type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
 
   override def preStart(): Unit = {
     super.preStart()
@@ -123,72 +116,6 @@ class CertificateSubmitter(settings: SidechainSettings,
       case (secret, pubKeyIndex) => CertificateSignatureInfo(pubKeyIndex, secret.sign(messageToSign))
     }
   }
-
-  /*
-  override protected def locallyGeneratedSignature: Receive = {
-    case LocallyGeneratedSignature(info: CertificateSignatureInfo) =>
-      signaturesStatus match {
-        case Some(status) =>
-          log.debug(s"Locally generated Certificate signature for pub key index ${info.pubKeyIndex} retrieved.")
-          if(status.knownSigs.exists(item => item.pubKeyIndex == info.pubKeyIndex))
-              log.error("Locally generated signature already presents")
-          else {
-            status.knownSigs.append(info)
-            val infoToRemote = CertificateSignatureFromRemoteInfo(info.pubKeyIndex, status.messageToSign, info.signature)
-            context.system.eventStream.publish(AbstractCertificateSubmitter.BroadcastLocallyGeneratedSignature(infoToRemote))
-            self ! TryToScheduleCertificateGeneration
-          }
-
-        case None => log.error("Locally generated signature was retrieved out of the certificate submission window.")
-      }
-  }
-
-
-  override protected def signatureFromRemote: Receive = {
-    case SignatureFromRemote(remoteSigInfo: CertificateSignatureFromRemoteInfo) =>
-      signaturesStatus match {
-        case Some(status) =>
-          log.debug(s"Certificate signature for pub key index ${remoteSigInfo.pubKeyIndex} retrieved from remote.")
-          if(!util.Arrays.equals(status.messageToSign, remoteSigInfo.messageToSign)) {
-            sender() ! DifferentMessageToSign
-          } else if(remoteSigInfo.pubKeyIndex < 0 || remoteSigInfo.pubKeyIndex >= params.signersPublicKeys.size) {
-            sender() ! InvalidPublicKeyIndex
-          } else if(!remoteSigInfo.signature.isValid(params.signersPublicKeys(remoteSigInfo.pubKeyIndex), remoteSigInfo.messageToSign)) {
-            sender() ! InvalidSignature
-          } else if(!status.knownSigs.exists(item => item.pubKeyIndex == remoteSigInfo.pubKeyIndex)) {
-            status.knownSigs.append(CertificateSignatureInfo(remoteSigInfo.pubKeyIndex, remoteSigInfo.signature))
-            sender() ! ValidSignature
-            self ! TryToScheduleCertificateGeneration
-          } else {
-            // Remote info has valid message to sign but the Signature record for the PubKey is known
-            sender() ! KnownSignature
-          }
-        case None =>
-            sender() ! SubmitterIsOutsideSubmissionWindow
-      }
-  }
-
-
-  override protected def tryToScheduleCertificateGeneration: Receive = {
-    // Do nothing if submitter is disabled or submission is in progress (scheduled or generating the proof)
-    case TryToScheduleCertificateGeneration if !submitterEnabled ||
-      certGenerationState || timers.isTimerActive(CertificateGenerationTimer) => // do nothing
-
-    // In other case check and schedule
-    case TryToScheduleCertificateGeneration =>
-      signaturesStatus match {
-        case Some(status) =>
-          if(checkQuality(status)) {
-            val delay = Random.nextInt(15) + 5 // random delay from 5 to 20 seconds
-            log.info(s"Scheduling Certificate generation in $delay seconds")
-            timers.startSingleTimer(CertificateGenerationTimer, TryToGenerateCertificate, FiniteDuration(delay, SECONDS))
-            context.system.eventStream.publish(CertificateSubmissionStarted)
-          }
-        case None =>
-          log.error("Trying to schedule certificate generation being outside Certificate submission window.")
-      }
-  }
-  */
 
   protected def tryToGenerateCertificate: Receive = {
     case TryToGenerateCertificate => Try {
