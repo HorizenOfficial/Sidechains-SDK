@@ -185,6 +185,16 @@ func getChunkKey(key common.Hash, chunkIndex int) common.Hash {
 	return crypto.Keccak256Hash(hashedData)
 }
 
+func skipLeadingZeroes(data common.Hash) []byte {
+	data.Bytes()
+	for i, b := range data.Bytes() {
+		if b != 0 {
+			return data.Bytes()[i:]
+		}
+	}
+	return nil
+}
+
 func (s *Service) StateGetStorage(params StorageParams) (error, []byte) {
 	err, statedb := s.getState(params.Handle)
 	if err != nil {
@@ -192,7 +202,7 @@ func (s *Service) StateGetStorage(params StorageParams) (error, []byte) {
 	}
 	value := statedb.GetState(params.Address, params.Key)
 	if value != chunkedMagicValue {
-		return nil, value.Bytes()
+		return nil, skipLeadingZeroes(value)
 	}
 	length := int(statedb.GetState(params.Address, getChunkKey(params.Key, 0)).Big().Int64())
 	data := make([]byte, length)
@@ -201,8 +211,8 @@ func (s *Service) StateGetStorage(params StorageParams) (error, []byte) {
 		if end > length {
 			end = length
 		}
-		chunk := statedb.GetState(params.Address, getChunkKey(params.Key, i+1)).Bytes()
-		copy(data[i:end], chunk)
+		chunk := statedb.GetState(params.Address, getChunkKey(params.Key, i+1))
+		copy(data[i:end], skipLeadingZeroes(chunk))
 	}
 	return nil, data
 }
