@@ -1,13 +1,17 @@
 package lib
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"math"
 )
+
+var emptyCodeHash = crypto.Keccak256(nil)
 
 type StateRootParams struct {
 	Root common.Hash `json:"root"`
@@ -30,6 +34,16 @@ type BalanceParams struct {
 type NonceParams struct {
 	AccountParams
 	Nonce uint64 `json:"nonce"`
+}
+
+type StorageParams struct {
+	AccountParams
+	Key common.Hash `json:"key"`
+}
+
+type SetStorageParams struct {
+	StorageParams
+	Value common.Hash `json:"value"`
 }
 
 // StateOpen will create a new state at the given root hash.
@@ -149,4 +163,31 @@ func (s *Service) StateGetCodeHash(params AccountParams) (error, common.Hash) {
 		return err, common.Hash{}
 	}
 	return nil, statedb.GetCodeHash(params.Address)
+}
+
+func (s *Service) StateGetStorage(params StorageParams) (error, common.Hash) {
+	err, statedb := s.getState(params.Handle)
+	if err != nil {
+		return err, common.Hash{}
+	}
+	return nil, statedb.GetState(params.Address, params.Key)
+}
+
+// this is basically a copy of stateObject.empty() which is not exported and therefore not accessible here
+func accountEmpty(statedb *state.StateDB, addr common.Address) bool {
+	obj := statedb.GetOrNewStateObject(addr)
+	return obj.Nonce() == 0 && obj.Balance().Sign() == 0 && bytes.Equal(obj.CodeHash(), emptyCodeHash)
+}
+
+func (s *Service) StateSetStorage(params SetStorageParams) error {
+	err, statedb := s.getState(params.Handle)
+	if err != nil {
+		return err
+	}
+	statedb.SetState(params.Address, params.Key, params.Value)
+	// make sure that this account is not declared "empty" and then removed
+	if accountEmpty(statedb, params.Address) {
+		statedb.SetNonce(params.Address, 1)
+	}
+	return nil
 }
