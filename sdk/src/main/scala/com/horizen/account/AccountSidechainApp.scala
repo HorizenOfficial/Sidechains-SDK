@@ -7,6 +7,7 @@ import com.horizen.account.api.http.AccountTransactionApiRoute
 import com.horizen.account.block.{AccountBlock, AccountBlockSerializer}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.forger.AccountForgerRef
+import com.horizen.account.network.AccountNodeViewSynchronizer
 import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
 import com.horizen.{AbstractSidechainApp, SidechainAppEvents, SidechainSettings, SidechainSyncInfoMessageSpec, SidechainTypes}
 import com.horizen.api.http._
@@ -14,7 +15,6 @@ import com.horizen.block.SidechainBlockBase
 import com.horizen.certificatesubmitter.CertificateSubmitterRef
 import com.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
 import com.horizen.consensus.ConsensusDataStorage
-import com.horizen.network.SidechainNodeViewSynchronizer
 import com.horizen.secret.SecretSerializer
 import com.horizen.storage._
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
@@ -121,7 +121,7 @@ class AccountSidechainApp @Inject()
       Transaction.ModifierTypeId -> sidechainAccountTransactionsCompanion)
 
   override val nodeViewSynchronizer: ActorRef =
-    actorSystem.actorOf(SidechainNodeViewSynchronizer.props(networkControllerRef, nodeViewHolderRef,
+    actorSystem.actorOf(AccountNodeViewSynchronizer.props(networkControllerRef, nodeViewHolderRef,
         SidechainSyncInfoMessageSpec, settings.network, timeProvider, modifierSerializers))
 
   // Init Forger with a proper web socket client
