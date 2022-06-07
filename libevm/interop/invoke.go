@@ -4,16 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum/log"
-	"libevm/lib"
 	"reflect"
 )
 
-// instance holds a singleton of lib.Service
-var instance = lib.New()
-
-func Invoke(method string, args string) string {
+func Invoke(target interface{}, method string, args string) string {
 	log.Debug(">> invoke", "method", method, "args", args)
-	result := toJsonResponse(callMethod(instance, method, args))
+	result := toJsonResponse(callMethod(target, method, args))
 	log.Debug("<< response", "result", result)
 	return result
 }

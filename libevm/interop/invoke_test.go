@@ -15,6 +15,7 @@ import (
 var (
 	//go:embed compiled/Storage.bin
 	storageContractDeploy string
+	instance              = lib.New()
 )
 
 func call(t *testing.T, method string, args interface{}) interface{} {
@@ -45,7 +46,7 @@ func TestInvoke(t *testing.T) {
 	funcStore := "6057361d"
 	//funcRetrieve := "2e64cec1"
 
-	call(t, "OpenLevelDB", lib.LevelDBParams{Path: "test-db"})
+	call(t, "OpenLevelDB", lib.LevelDBParams{Path: t.TempDir()})
 	handle := call(t, "StateOpen", lib.StateRootParams{Root: emptyHash}).(int)
 	call(t, "StateAddBalance", lib.BalanceParams{
 		AccountParams: lib.AccountParams{
