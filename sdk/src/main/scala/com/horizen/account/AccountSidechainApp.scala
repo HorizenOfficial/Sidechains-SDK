@@ -6,6 +6,7 @@ import com.google.inject.name.Named
 import com.horizen._
 import com.horizen.account.api.http.AccountTransactionApiRoute
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader, AccountBlockSerializer}
+import com.horizen.account.certificatesubmitter.AccountCertificateSubmitterRef
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.forger.AccountForgerRef
 import com.horizen.account.history.AccountHistory
@@ -14,7 +15,6 @@ import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccoun
 import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
 import com.horizen.api.http._
 import com.horizen.block.SidechainBlockBase
-import com.horizen.certificatesubmitter.CertificateSubmitterRef
 import com.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.node.NodeWalletBase
@@ -135,7 +135,7 @@ class AccountSidechainApp @Inject()
   val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef[PMOD,SidechainSyncInfo,AccountHistory]("AccountBlock", sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
 
   // Init Certificate Submitter
-  val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
+  val certificateSubmitterRef: ActorRef = AccountCertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
   val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.scorexSettings.network)
 
   // Init API

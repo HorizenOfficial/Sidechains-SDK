@@ -6,16 +6,16 @@ import akka.testkit.{TestActor, TestActorRef, TestProbe}
 import akka.util.Timeout
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, MainchainTxSidechainCreationCrosschainOutput, SidechainBlock}
 import com.horizen.box.Box
-import com.horizen.certificatesubmitter.CertificateSubmitter.ReceivableMessages.{DisableCertificateSigner, DisableSubmitter, EnableCertificateSigner, EnableSubmitter, GetCertificateGenerationState, GetSignaturesStatus, IsCertificateSigningEnabled, IsSubmitterEnabled, SignatureFromRemote}
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.ReceivableMessages.{DisableCertificateSigner, DisableSubmitter, EnableCertificateSigner, EnableSubmitter, GetCertificateGenerationState, GetSignaturesStatus, IsCertificateSigningEnabled, IsSubmitterEnabled, SignatureFromRemote}
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proposition.{Proposition, SchnorrProposition}
 import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.transaction.mainchain.{SidechainCreation, SidechainRelatedMainchainOutput}
 import com.horizen.websocket.client.{ChainTopQualityCertificateInfo, MainchainNodeChannel, MempoolTopQualityCertificateInfo, TopQualityCertificates, WebsocketErrorResponseException, WebsocketInvalidErrorMessageException}
 import com.horizen._
-import com.horizen.certificatesubmitter.CertificateSubmitter.InternalReceivableMessages.TryToGenerateCertificate
-import com.horizen.certificatesubmitter.CertificateSubmitter.Timers.CertificateGenerationTimer
-import com.horizen.certificatesubmitter.CertificateSubmitter.{BroadcastLocallyGeneratedSignature, CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, CertificateSubmissionStarted, CertificateSubmissionStopped, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, SignatureProcessingStatus, SignaturesStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.InternalReceivableMessages.TryToGenerateCertificate
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.Timers.CertificateGenerationTimer
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.{BroadcastLocallyGeneratedSignature, CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, CertificateSubmissionStarted, CertificateSubmissionStopped, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, SignatureProcessingStatus, SignaturesStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
 import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.fixtures.FieldElementFixture
 import com.horizen.node.util.MainchainBlockReferenceInfo
