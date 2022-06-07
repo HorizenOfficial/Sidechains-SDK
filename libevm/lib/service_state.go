@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"math"
+	"math/big"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -43,7 +44,7 @@ type StorageParams struct {
 
 type SetStorageParams struct {
 	StorageParams
-	Value common.Hash `json:"value"`
+	Value []byte `json:"value"`
 }
 
 // StateOpen will create a new state at the given root hash.
@@ -165,29 +166,74 @@ func (s *Service) StateGetCodeHash(params AccountParams) (error, common.Hash) {
 	return nil, statedb.GetCodeHash(params.Address)
 }
 
-func (s *Service) StateGetStorage(params StorageParams) (error, common.Hash) {
+// make sure that the given account is not declared "empty" and then removed
+func preserveAccount(statedb *state.StateDB, addr common.Address) {
+	obj := statedb.GetOrNewStateObject(addr)
+	// this is basically a copy of stateObject.empty() which is not exported and therefore not accessible here
+	empty := obj.Nonce() == 0 && obj.Balance().Sign() == 0 && bytes.Equal(obj.CodeHash(), emptyCodeHash)
+	if empty {
+		obj.SetCode(crypto.Keccak256Hash(addr.Bytes()), make([]byte, 0))
+	}
+}
+
+var chunkedMagicValue = common.HexToHash("0x55253b59b75c20e73965d68d3673a76f42f6415752c6fa3ce7a11c3ee5689aec")
+
+// chunk keys are generating by hashing the original key and the chunk index
+func getChunkKey(key common.Hash, chunkIndex int) common.Hash {
+	chunkIndexBytes := big.NewInt(int64(chunkIndex)).Bytes()
+	hashedData := append(key.Bytes(), chunkIndexBytes...)
+	return crypto.Keccak256Hash(hashedData)
+}
+
+func (s *Service) StateGetStorage(params StorageParams) (error, []byte) {
 	err, statedb := s.getState(params.Handle)
 	if err != nil {
-		return err, common.Hash{}
+		return err, nil
 	}
-	return nil, statedb.GetState(params.Address, params.Key)
+	value := statedb.GetState(params.Address, params.Key)
+	if value != chunkedMagicValue {
+		return nil, value.Bytes()
+	}
+	length := int(statedb.GetState(params.Address, getChunkKey(params.Key, 0)).Big().Int64())
+	data := make([]byte, length)
+	for i := 0; i < length; i += common.HashLength {
+		end := i + common.HashLength
+		if end > length {
+			end = length
+		}
+		chunk := statedb.GetState(params.Address, getChunkKey(params.Key, i+1)).Bytes()
+		copy(data[i:end], chunk)
+	}
+	return nil, data
 }
 
-// this is basically a copy of stateObject.empty() which is not exported and therefore not accessible here
-func accountEmpty(statedb *state.StateDB, addr common.Address) bool {
-	obj := statedb.GetOrNewStateObject(addr)
-	return obj.Nonce() == 0 && obj.Balance().Sign() == 0 && bytes.Equal(obj.CodeHash(), emptyCodeHash)
-}
-
+// StateSetStorage writes values of arbitrary length to the storage trie of given account
 func (s *Service) StateSetStorage(params SetStorageParams) error {
 	err, statedb := s.getState(params.Handle)
 	if err != nil {
 		return err
 	}
-	statedb.SetState(params.Address, params.Key, params.Value)
-	// make sure that this account is not declared "empty" and then removed
-	if accountEmpty(statedb, params.Address) {
-		statedb.SetNonce(params.Address, 1)
+	if len(params.Value) <= common.HashLength {
+		// Values shorter than 32 bytes can be stored directly as-is.
+		statedb.SetState(params.Address, params.Key, common.BytesToHash(params.Value))
+	} else {
+		// Values longer than 32 bytes are split up to as many chunks of 32-bytes length as necessary.
+		// To mark this value as chunked a magic number is stored at the original key, the length of the value is
+		// stored at hash(key, 0) and the chunks are stored at hash(key, i), where is the 1-based index of the chunk.
+
+		// store a magic number at the original key
+		statedb.SetState(params.Address, params.Key, chunkedMagicValue)
+		// and store the number of chunks at hash(key, 0)
+		statedb.SetState(params.Address, getChunkKey(params.Key, 0), common.BigToHash(big.NewInt(int64(len(params.Value)))))
+		// store the chunks
+		for i := 0; i < len(params.Value); i += common.HashLength {
+			end := i + common.HashLength
+			if end > len(params.Value) {
+				end = len(params.Value)
+			}
+			statedb.SetState(params.Address, getChunkKey(params.Key, i+1), common.BytesToHash(params.Value[i:end]))
+		}
 	}
+	preserveAccount(statedb, params.Address)
 	return nil
 }
