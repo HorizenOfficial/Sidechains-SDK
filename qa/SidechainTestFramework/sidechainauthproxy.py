@@ -71,7 +71,7 @@ class SidechainAuthServiceProxy(object):
             name = "%s.%s" % (self.__service_name, name)
         return SidechainAuthServiceProxy(self.__service_url, name, connection=self.__conn)
 
-    def _request(self, method, path, postdata):
+    def _request(self, method, path, postdata, additional_header):
         '''
         Do a HTTP request, with retry if we get disconnected (e.g. due to a timeout).
         This is a workaround for https://bugs.python.org/issue3566 which is fixed in Python 3.5.
@@ -80,7 +80,10 @@ class SidechainAuthServiceProxy(object):
         headers = {'Host': self.__url.hostname,
                    'User-Agent': USER_AGENT,
                    'Authorization': self.__auth_header,
-                   'Content-type': 'application/json'}
+                   'Content-type': 'application/json',}
+        if additional_header != None:
+            headers.update(json.loads(additional_header))
+
         try:
             self.__conn.request(method, path, postdata, headers)
             return self._get_response()
@@ -110,11 +113,14 @@ class SidechainAuthServiceProxy(object):
             path = self.__service_name
         path = "/" + path.replace("_","/") #Replacing underscores with slashes to correctly format the Rest API request
         postdata = None
+        additional_header = None
         if len(args) > 0:
             postdata = args[0]
+        if len(args) > 1:
+                additional_header = args[1]
         if len(kwargs) > 0:
             postdata = json.dumps(kwargs)
-        response = self._request(method, path, postdata)
+        response = self._request(method, path, postdata, additional_header)
         return response
 
     def _get_response(self):
