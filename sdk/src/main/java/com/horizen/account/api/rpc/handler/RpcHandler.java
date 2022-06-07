@@ -1,16 +1,18 @@
 package com.horizen.account.api.rpc.handler;
 
 import com.google.inject.Inject;
-import com.horizen.account.api.rpc.response.RpcResponse;
+import com.horizen.account.api.rpc.request.RpcRequest;
+import com.horizen.account.api.rpc.response.RpcResponseError;
+import com.horizen.account.api.rpc.response.RpcResponseSuccess;
 import com.horizen.account.api.rpc.service.EthService;
+import com.horizen.account.api.rpc.utils.RpcCode;
+import com.horizen.account.api.rpc.utils.RpcError;
 import com.horizen.api.http.ApiResponse;
-import com.thetransactioncompany.jsonrpc2.JSONRPC2Request;
-import com.thetransactioncompany.jsonrpc2.JSONRPC2Error;
 import com.horizen.node.SidechainNodeView;
 
 import java.util.function.BiFunction;
 
-public class RpcHandler implements BiFunction<SidechainNodeView, JSONRPC2Request, ApiResponse> {
+public class RpcHandler implements BiFunction<SidechainNodeView, RpcRequest, ApiResponse> {
     private final EthService ethService;
 
     @Inject
@@ -19,18 +21,18 @@ public class RpcHandler implements BiFunction<SidechainNodeView, JSONRPC2Request
     }
 
     @Override
-    public ApiResponse apply(SidechainNodeView sidechainNodeView, JSONRPC2Request request) {
+    public ApiResponse apply(SidechainNodeView sidechainNodeView, RpcRequest request) {
         try {
             Object result = null;
             if (ethService.hasMethod(request.getMethod())) {
                 result = ethService.execute(request);
             }
             if (result == null) {
-                return new RpcResponse(JSONRPC2Error.METHOD_NOT_FOUND, request.getID());
+                return new RpcResponseError(request.getId(), RpcError.fromCode(RpcCode.MethodNotFound));
             }
-            return new RpcResponse(result, request.getID());
+            return new RpcResponseSuccess(request.getId(), result);
         } catch (Exception e) {
-            return new RpcResponse(JSONRPC2Error.INTERNAL_ERROR, request.getID());
+            return new RpcResponseError(request.getId(), RpcError.fromCode(RpcCode.InternalError, e.getMessage()));
         }
     }
 }

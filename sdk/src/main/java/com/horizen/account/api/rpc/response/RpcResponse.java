@@ -3,17 +3,22 @@ package com.horizen.account.api.rpc.response;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.api.http.ApiResponse;
 import com.horizen.serialization.Views;
-import com.thetransactioncompany.jsonrpc2.JSONRPC2Response;
 
 @JsonView(Views.Default.class)
 public class RpcResponse implements ApiResponse {
-    JSONRPC2Response response;
+    private final String jsonrpc;
+    private final String id;
 
-    public RpcResponse(Object result, Object id) {
-        response = new JSONRPC2Response(result, id);
+    public RpcResponse(String id) {
+        this.jsonrpc = "2.0";
+        this.id = id;
     }
 
-    public JSONRPC2Response getResponse() {
-        return response;
+    public String getJsonrpc() {
+        return jsonrpc;
+    }
+
+    public String getId() {
+        return id;
     }
 }

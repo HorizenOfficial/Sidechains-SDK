@@ -1,25 +1,22 @@
 package com.horizen.account.api.rpc.service;
 
-import com.horizen.account.transaction.EthereumTransaction;
-import com.thetransactioncompany.jsonrpc2.JSONRPC2Error;
-import com.thetransactioncompany.jsonrpc2.JSONRPC2ParamsType;
-import com.thetransactioncompany.jsonrpc2.JSONRPC2Request;
-import com.thetransactioncompany.jsonrpc2.JSONRPC2Response;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.horizen.account.api.rpc.request.RpcRequest;
+import com.horizen.account.api.rpc.response.RpcResponseError;
+import com.horizen.account.api.rpc.utils.Quantity;
 import org.junit.Before;
 import org.junit.Test;
 import org.web3j.crypto.RawTransaction;
 
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.math.BigInteger;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
 
 import static org.junit.Assert.*;
 
 public class EthServiceTest {
-    JSONRPC2Request request;
+    RpcRequest request;
     EthService ethService;
     RawTransaction transaction;
 
@@ -32,36 +29,28 @@ public class EthServiceTest {
     }
 
     @Test
-    public void RpcHandlerTest() throws InvocationTargetException, IllegalAccessException {
-        List params = new LinkedList();
-        boolean exceptionOccurred = false;
+    public void RpcHandlerTest() throws InvocationTargetException, IllegalAccessException, IOException {
+        String json;
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode request;
+        RpcRequest rpcRequest;
 
         // Test 1: Parameters are of wrong type
-        Map<String,Object> namedParams = new HashMap<String,Object>();
-        namedParams.put("test", "test");
-        request = new JSONRPC2Request("eth_estimateGas", namedParams, "1");
-        try {
-            ethService.execute(request);
-        } catch (UnsupportedOperationException e) {
-            exceptionOccurred = true;
-        }
-        assertTrue("Test1: Exception during request execution expected.", exceptionOccurred);
+        json = "{\"id\":\"1\", \"jsonrpc\":\"2.0\",\"method\":\"eth_estimateGas\", \"params\":{\"tx\":\"test\", \"tx2\":\"test2\"}}";
+        request = mapper.readTree(json);
+        rpcRequest = new RpcRequest(request);
+        assertEquals("Invalid params", ((RpcResponseError) ethService.execute(rpcRequest)).getError().getMessage());
 
-        exceptionOccurred = false;
         // Test 2: Wrong number of parameters
-        request = new JSONRPC2Request("eth_estimateGas", params, "1");
-        try {
-            ethService.execute(request);
-        } catch (UnsupportedOperationException e) {
-            exceptionOccurred = true;
-        }
-        assertTrue("Test2: Exception during request execution expected.", exceptionOccurred);
+        json = "{\"id\":\"1\", \"jsonrpc\":\"2.0\",\"method\":\"eth_estimateGas\", \"params\":[5, 10, 20]}}";
+        request = mapper.readTree(json);
+        rpcRequest = new RpcRequest(request);
+        assertEquals("Invalid params", ((RpcResponseError) ethService.execute(rpcRequest)).getError().getMessage());
 
         // Test 3: Request execution calls correct function and returns value correctly
-        params.add(transaction);
-        params.add(new Quantity("latest"));
-        assertEquals("estimateGas expectected to return 0x1",
-                new Quantity("0x1").getValue(),
-                ((Quantity) ethService.execute(request)).getValue());
+        json = "{\"id\":\"1\", \"jsonrpc\":\"2.0\",\"method\":\"eth_chainId\", \"params\":[]}}";
+        request = mapper.readTree(json);
+        rpcRequest = new RpcRequest(request);
+        assertEquals("0x123", ((Quantity) ethService.execute(rpcRequest)).getValue());
     }
 }

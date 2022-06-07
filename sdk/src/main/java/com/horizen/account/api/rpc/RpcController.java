@@ -4,7 +4,7 @@ import akka.http.javadsl.server.Route;
 import com.google.inject.Inject;
 import com.horizen.account.api.ControllerBase;
 import com.horizen.account.api.rpc.handler.RpcHandler;
-import com.thetransactioncompany.jsonrpc2.JSONRPC2Request;
+import com.horizen.account.api.rpc.request.RpcRequest;
 
 import java.util.List;
 
@@ -23,7 +23,7 @@ public class RpcController extends ControllerBase {
 
     public List<Route> getRoutes() {
         return List.of(
-                bindPostRequestSubPath(rpcHandler, JSONRPC2Request.class, RPC_PATH)
+                bindPostRequestSubPath(rpcHandler, RpcRequest.class, RPC_PATH)
         );
     }
 }

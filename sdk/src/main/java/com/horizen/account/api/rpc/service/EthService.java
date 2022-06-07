@@ -1,5 +1,7 @@
 package com.horizen.account.api.rpc.service;
 
+import com.horizen.account.api.rpc.utils.Data;
+import com.horizen.account.api.rpc.utils.Quantity;
 import org.web3j.crypto.RawTransaction;
 import org.web3j.protocol.core.methods.response.EthBlock;
 import org.web3j.protocol.core.methods.response.Transaction;
