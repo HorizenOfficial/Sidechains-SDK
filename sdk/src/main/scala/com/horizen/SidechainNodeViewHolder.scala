@@ -5,7 +5,7 @@ import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.chain.FeePaymentsInfo
 import com.horizen.consensus._
-import com.horizen.node.SidechainNodeView
+import com.horizen.node._
 import com.horizen.params.NetworkParams
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
@@ -31,8 +31,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                               applicationWallet: ApplicationWallet,
                               applicationState: ApplicationState,
                               genesisBlock: SidechainBlock)
-  extends AbstractSidechainNodeViewHolder[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock](sidechainSettings, params, timeProvider)
-{
+  extends AbstractSidechainNodeViewHolder[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock](sidechainSettings, params, timeProvider) {
   override type HSTOR = SidechainHistoryStorage
   override type HIS = SidechainHistory
   override type MS = SidechainState
@@ -67,43 +66,79 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     result.get
   }
 
-  override def receive: Receive = {
-    applyFunctionOnNodeView orElse
-      applyBiFunctionOnNodeView orElse
-      getCurrentSidechainNodeViewInfo orElse
-      super.receive
+  override protected def getCurrentSidechainNodeViewInfo: Receive = {
+    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView[
+      SidechainTypes#SCBT,
+      SidechainBlockHeader,
+      SidechainBlock,
+      NodeHistory,
+      NodeState,
+      NodeWallet,
+      NodeMemoryPool,
+      SidechainNodeView,
+      _] =>
+      msg match {
+        case AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView(f) => try {
+          val l: SidechainNodeView = new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), applicationState, applicationWallet)
+          sender() ! f(l)
+        }
+        catch {
+          case e: Exception => sender() ! akka.actor.Status.Failure(e)
+        }
+
+      }
   }
 
-  protected def getCurrentSidechainNodeViewInfo: Receive = {
-    case SidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView(f) => try {
-      sender() ! f(new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), minimalState().applicationState, vault().applicationWallet))
-    }
-    catch {
-      case e: Exception => sender() ! akka.actor.Status.Failure(e)
-    }
+  override protected def applyFunctionOnNodeView: Receive = {
+    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView[
+      SidechainTypes#SCBT,
+      SidechainBlockHeader,
+      SidechainBlock,
+      NodeHistory,
+      NodeState,
+      NodeWallet,
+      NodeMemoryPool,
+      SidechainNodeView,
+      _] =>
+      msg match {
+        case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView(f) => try {
+          val l: SidechainNodeView = new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), applicationState, applicationWallet)
+          sender() ! f(l)
+        }
+        catch {
+          case e: Exception => sender() ! akka.actor.Status.Failure(e)
+        }
+
+      }
+
   }
 
-  protected def applyFunctionOnNodeView: Receive = {
-    case SidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView(function) => try {
-      sender() ! function(new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), minimalState().applicationState, vault().applicationWallet))
-    }
-    catch {
-      case e: Exception => sender() ! akka.actor.Status.Failure(e)
-    }
-  }
+  override protected def applyBiFunctionOnNodeView[T, A]: Receive = {
+    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView[
+      SidechainTypes#SCBT,
+      SidechainBlockHeader,
+      SidechainBlock,
+      NodeHistory,
+      NodeState,
+      NodeWallet,
+      NodeMemoryPool,
+      SidechainNodeView,
+      T, A] =>
+      msg match {
+        case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView(f, functionParams) => try {
+          val l: SidechainNodeView = new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), applicationState, applicationWallet)
+          sender() ! f(l, functionParams)
+        }
+        catch {
+          case e: Exception => sender() ! akka.actor.Status.Failure(e)
+        }
 
-  protected def applyBiFunctionOnNodeView[T, A]: Receive = {
-    case SidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView(function, functionParameter) => try {
-      sender() ! function(new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), minimalState().applicationState, vault().applicationWallet), functionParameter)
-    }
-    catch {
-      case e: Exception => sender() ! akka.actor.Status.Failure(e)
-    }
+      }
   }
 
   // Check if the next modifier will change Consensus Epoch, so notify History and Wallet with current info.
   override protected def applyConsensusEpochInfo(history: HIS, state: MS, wallet: VL, modToApply: SidechainBlock): (HIS, VL) = {
-    if(state.isSwitchingConsensusEpoch(modToApply)) {
+    if (state.isSwitchingConsensusEpoch(modToApply)) {
       val (lastBlockInEpoch: ModifierId, consensusEpochInfo: ConsensusEpochInfo) = state.getCurrentConsensusEpochInfo
       val nonceConsensusEpochInfo = history.calculateNonceForEpoch(blockIdToEpochId(lastBlockInEpoch))
       val stakeConsensusEpochInfo = StakeConsensusEpochInfo(consensusEpochInfo.forgingStakeInfoTree.rootHash(), consensusEpochInfo.forgersStake)
@@ -122,7 +157,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   // Scan modifier by the Wallet considering the forger fee payments.
   override protected def scanBlockWithFeePayments(history: HIS, state: MS, wallet: VL, modToApply: SidechainBlock): (HIS, VL) = {
     val stateWithdrawalEpochNumber: Int = state.getWithdrawalEpochInfo.epoch
-    if(state.isWithdrawalEpochLastIndex) {
+    if (state.isWithdrawalEpochLastIndex) {
       val feePayments = state.getFeePayments(stateWithdrawalEpochNumber)
       val historyAfterUpdateFee = history.updateFeePaymentsInfo(modToApply.id, FeePaymentsInfo(feePayments))
 
@@ -134,15 +169,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       (history, walletAfterApply)
     }
   }
-}
 
-object SidechainNodeViewHolder /*extends ScorexLogging with ScorexEncoding*/ {
-  object ReceivableMessages{
-    case class GetDataFromCurrentSidechainNodeView[HIS, MS, VL, MP, A](f: SidechainNodeView => A)
-    case class ApplyFunctionOnNodeView[HIS, MS, VL, MP, A](f: java.util.function.Function[SidechainNodeView, A])
-    case class ApplyBiFunctionOnNodeView[HIS, MS, VL, MP, T, A](f: java.util.function.BiFunction[SidechainNodeView, T, A], functionParameter: T)
-    case class LocallyGeneratedSecret[S <: SidechainTypes#SCS](secret: S)
-  }
 }
 
 object SidechainNodeViewHolderRef {
@@ -206,3 +233,4 @@ object SidechainNodeViewHolderRef {
     system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, walletBoxStorage, secretStorage,
       walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock), name)
 }
+

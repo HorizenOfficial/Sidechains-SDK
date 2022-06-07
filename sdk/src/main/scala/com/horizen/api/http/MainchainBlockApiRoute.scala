@@ -3,13 +3,16 @@ package com.horizen.api.http
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.annotation.JsonView
+import com.horizen.SidechainNodeViewBase
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.MainchainErrorResponse._
 import com.horizen.api.http.MainchainRestSchema._
-import com.horizen.block.MainchainBlockReference
+import com.horizen.block.{MainchainBlockReference, SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain.MainchainHeaderInfo
+import com.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.serialization.Views
+import com.horizen.transaction.Transaction
 import com.horizen.utils.BytesUtils
 import scorex.core.settings.RESTApiSettings
 import scorex.core.utils.ScorexEncoding
@@ -17,10 +20,19 @@ import scorex.core.utils.ScorexEncoding
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.ExecutionContext
 import java.util.{Optional => JOptional}
+import scala.reflect.ClassTag
 
-case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
-                                 (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
-  extends SidechainApiRoute
+case class MainchainBlockApiRoute[
+  TX <: Transaction,
+  H <: SidechainBlockHeaderBase,
+  PM <: SidechainBlockBase[TX, H],
+  NH <: NodeHistoryBase[TX, H, PM],
+  NS <: NodeStateBase,
+  NW <: NodeWalletBase,
+  NP <: NodeMemoryPoolBase[TX],
+  NV <: SidechainNodeViewBase[TX, H, PM, NH, NS, NW, NP]](override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
+                                 (implicit val context: ActorRefFactory, override val ec: ExecutionContext, override val tag: ClassTag[NV])
+  extends SidechainApiRoute[TX, H, PM, NH, NS, NW, NP, NV]
     with ScorexEncoding {
 
   override val route: Route = pathPrefix("mainchain") {

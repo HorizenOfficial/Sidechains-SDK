@@ -1,34 +1,38 @@
-package com.horizen.certificatesubmitter
-
+package com.horizen.account.certificatesubmitter
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen._
-import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
+import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import com.horizen.account.history.AccountHistory
+import com.horizen.account.mempool.AccountMemoryPool
+import com.horizen.account.state.AccountState
+import com.horizen.account.storage.AccountHistoryStorage
+import com.horizen.account.wallet.AccountWallet
 import com.horizen.box.WithdrawalRequestBox
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter
 import com.horizen.params.NetworkParams
-import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.websocket.client.MainchainNodeChannel
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 
 
-class CertificateSubmitter(settings: SidechainSettings,
+class AccountCertificateSubmitter(settings: SidechainSettings,
                            sidechainNodeViewHolderRef: ActorRef,
                            params: NetworkParams,
                            mainchainChannel: MainchainNodeChannel)
   (implicit ec: ExecutionContext)
   extends AbstractCertificateSubmitter[
-    SidechainTypes#SCBT,
-    SidechainBlockHeader,
-    SidechainBlock
+    SidechainTypes#SCAT,
+    AccountBlockHeader,
+    AccountBlock
   ](settings, sidechainNodeViewHolderRef, params, mainchainChannel)
 {
-  type HSTOR = SidechainHistoryStorage
-  type VL = SidechainWallet
-  type HIS = SidechainHistory
-  type MS = SidechainState
-  type MP = SidechainMemoryPool
-  type PM = SidechainBlock
+  type HSTOR = AccountHistoryStorage
+  type VL = AccountWallet
+  type HIS = AccountHistory
+  type MS = AccountState
+  type MP = AccountMemoryPool
+  type PM = AccountBlock
 
   override def preStart(): Unit = {
     super.preStart()
@@ -42,18 +46,18 @@ class CertificateSubmitter(settings: SidechainSettings,
     super.postStop()
   }
 
-  override def getUtxoMerkleTreeRoot(state: SidechainState, referencedEpoch: Int) : Array[Byte] =
-    state.utxoMerkleTreeRoot(referencedEpoch).get
+  override def getUtxoMerkleTreeRoot(state: AccountState, referencedEpoch: Int) : Array[Byte] =
+    new Array[Byte](0)
 
-  override def getWithdrawalRequests(state: SidechainState, referencedEpochNumber: Int): Seq[WithdrawalRequestBox] =
+  override def getWithdrawalRequests(state: AccountState, referencedEpochNumber: Int): Seq[WithdrawalRequestBox] =
     state.withdrawalRequests(referencedEpochNumber)
 }
 
-object CertificateSubmitterRef {
+object AccountCertificateSubmitterRef {
   def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit ec: ExecutionContext) : Props =
-    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel))
+    Props(new AccountCertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel))
 
   def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)

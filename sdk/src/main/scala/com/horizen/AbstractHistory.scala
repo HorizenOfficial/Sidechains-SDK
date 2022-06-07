@@ -1,21 +1,21 @@
 package com.horizen
 
 import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.chain.{FeePaymentsInfo, MainchainBlockReferenceDataInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
+import com.horizen.chain._
 import com.horizen.consensus.{ConsensusDataProvider, ConsensusDataStorage, FullConsensusEpochInfo, blockIdToEpochId}
 import com.horizen.node.NodeHistoryBase
+import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
-import com.horizen.storage.{AbstractHistoryStorage, SidechainHistoryStorage}
+import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.storage.leveldb.Algos.encoder
+import com.horizen.transaction.Transaction
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import scorex.core.consensus.History.{Equal, Fork, ModifierIds, Nonsense, Older, ProgressInfo, Younger}
+import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
+import scorex.core.NodeViewModifier
+import scorex.core.consensus.History._
 import scorex.core.consensus.{History, ModifierSemanticValidity}
 import scorex.core.validation.RecoverableModifierError
 import scorex.util.{ModifierId, ScorexLogging, idToBytes}
-import com.horizen.node.util.MainchainBlockReferenceInfo
-import com.horizen.transaction.Transaction
-import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
-import scorex.core.NodeViewModifier
 
 import java.util.Optional
 import scala.collection.mutable.ListBuffer
@@ -39,7 +39,7 @@ abstract class AbstractHistory[
     extends scorex.core.consensus.History[PM, SidechainSyncInfo, HT]
       with NetworkParamsUtils
       with ConsensusDataProvider
-      with NodeHistoryBase
+      with NodeHistoryBase[TX, H, PM]
       with ScorexLogging
 {
   self: HT =>
@@ -374,7 +374,7 @@ abstract class AbstractHistory[
     }
   }
 
-  def getBlockById(blockId: String): java.util.Optional[PM] = {
+  override def getBlockById(blockId: String): Optional[PM] = {
     getStorageBlockById(ModifierId(blockId)).asJava
   }
 
@@ -394,7 +394,7 @@ abstract class AbstractHistory[
     }
   }
 
-  def getBestBlock : PM = bestBlock
+  override def getBestBlock : PM = bestBlock
 
   override def getBlockIdByHeight(height: Int): java.util.Optional[String] = {
     storage.activeChainBlockId(height) match {
@@ -554,7 +554,7 @@ object AbstractHistory {
       // TODO check this
       WithdrawalEpochUtils.getWithdrawalEpochInfo[TX](block, WithdrawalEpochInfo(0,0), params),
       None,
-      block.id,
+      block.id
     )
   }
 }

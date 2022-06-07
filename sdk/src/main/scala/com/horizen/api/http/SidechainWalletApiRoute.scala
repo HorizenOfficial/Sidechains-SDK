@@ -4,27 +4,31 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.SidechainNodeViewHolder.ReceivableMessages
-import com.horizen.SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret
-import com.horizen.SidechainTypes
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainWalletErrorResponse.ErrorSecretNotAdded
 import com.horizen.api.http.SidechainWalletRestScheme._
+import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.box.Box
+import com.horizen.node._
 import com.horizen.proposition.{Proposition, VrfPublicKey}
 import com.horizen.secret.{PrivateKey25519Creator, VrfKeyGenerator}
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
+import com.horizen.{AbstractSidechainNodeViewHolder, SidechainTypes}
 import scorex.core.settings.RESTApiSettings
 
+import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.concurrent.{Await, ExecutionContext}
+import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
-import java.util.{Optional => JOptional}
 
 case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
                                    sidechainNodeViewHolderRef: ActorRef)(implicit val context: ActorRefFactory, override val ec: ExecutionContext)
-  extends SidechainApiRoute {
+  extends SidechainApiRoute[SidechainTypes#SCBT,
+    SidechainBlockHeader,SidechainBlock,NodeHistory,NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView] {
+
+  override implicit val tag: ClassTag[SidechainNodeView] = ClassTag[SidechainNodeView](classOf[SidechainNodeView])
 
   override val route: Route = pathPrefix("wallet") {
     allBoxes ~ coinsBalance ~ balanceOfType ~ createPrivateKey25519 ~ createVrfSecret ~ allPublicKeys
@@ -85,7 +89,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
       val secret = VrfKeyGenerator.getInstance().generateNextSecret(sidechainNodeView.getNodeWallet)
       val public = secret.publicImage()
 
-      val future = sidechainNodeViewHolderRef ? ReceivableMessages.LocallyGeneratedSecret(secret)
+      val future = sidechainNodeViewHolderRef ? AbstractSidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret(secret)
       Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
         case Success(_) =>
           ApiResponseUtil.toResponse(RespCreateVrfSecret(public))
@@ -102,7 +106,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
     withNodeView { sidechainNodeView =>
       val wallet = sidechainNodeView.getNodeWallet
       val secret = PrivateKey25519Creator.getInstance().generateNextSecret(wallet)
-      val future = sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)
+      val future = sidechainNodeViewHolderRef ? AbstractSidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret(secret)
       Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
         case Success(_) =>
           ApiResponseUtil.toResponse(RespCreatePrivateKey25519(secret.publicImage()))
