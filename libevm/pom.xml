@@ -27,6 +27,18 @@
         <final.extension>.dll</final.extension>
       </properties>
     </profile>
+    <profile>
+      <id>if-apfel-system</id>
+      <activation>
+        <os>
+          <name>Mac OS X</name>
+        </os>
+      </activation>
+      <properties>
+        <os.system>darwin</os.system>
+        <final.extension>.dylib</final.extension>
+      </properties>
+    </profile>
   </profiles>
 
   <build>
