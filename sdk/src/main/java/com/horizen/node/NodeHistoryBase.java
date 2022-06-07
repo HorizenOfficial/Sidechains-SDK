@@ -11,7 +11,7 @@ import java.util.Optional;
 
 public interface NodeHistoryBase<TX extends Transaction, H extends SidechainBlockHeaderBase, PM extends SidechainBlockBase<TX,H>>  {
 
-    Optional<? extends PM> getBlockById(String blockId);
+    Optional<PM> getBlockById(String blockId);
 
     PM getBestBlock();
 

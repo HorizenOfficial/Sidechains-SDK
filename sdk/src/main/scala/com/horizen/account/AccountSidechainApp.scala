@@ -10,14 +10,14 @@ import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.forger.AccountForgerRef
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.network.AccountNodeViewSynchronizer
-import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool}
+import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
 import com.horizen.api.http._
 import com.horizen.block.SidechainBlockBase
 import com.horizen.certificatesubmitter.CertificateSubmitterRef
 import com.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
 import com.horizen.consensus.ConsensusDataStorage
-import com.horizen.node.{NodeStateBase, NodeWalletBase}
+import com.horizen.node.NodeWalletBase
 import com.horizen.secret.SecretSerializer
 import com.horizen.storage._
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
@@ -149,9 +149,9 @@ class AccountSidechainApp @Inject()
 
   var coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
     MainchainBlockApiRoute[TX,
-      AccountBlockHeader,PMOD,NodeAccountHistory,NodeStateBase,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef),
+      AccountBlockHeader,PMOD,NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef),
     SidechainBlockApiRoute[TX,
-      AccountBlockHeader,PMOD,NodeAccountHistory,NodeStateBase,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
+      AccountBlockHeader,PMOD,NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi),
     AccountTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainAccountTransactionsCompanion, params),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),

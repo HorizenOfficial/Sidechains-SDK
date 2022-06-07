@@ -66,8 +66,30 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     result.get
   }
 
+  override protected def getCurrentSidechainNodeViewInfo: Receive = {
+    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView[
+      SidechainTypes#SCBT,
+      SidechainBlockHeader,
+      SidechainBlock,
+      NodeHistory,
+      NodeState,
+      NodeWallet,
+      NodeMemoryPool,
+      SidechainNodeView,
+      _] =>
+      msg match {
+        case AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView(f) => try {
+          val l: SidechainNodeView = new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), applicationState, applicationWallet)
+          sender() ! f(l)
+        }
+        catch {
+          case e: Exception => sender() ! akka.actor.Status.Failure(e)
+        }
 
-override  protected def applyFunctionOnNodeView: Receive = {
+      }
+  }
+
+  override protected def applyFunctionOnNodeView: Receive = {
     case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView[
       SidechainTypes#SCBT,
       SidechainBlockHeader,
@@ -101,11 +123,11 @@ override  protected def applyFunctionOnNodeView: Receive = {
       NodeWallet,
       NodeMemoryPool,
       SidechainNodeView,
-      _,_] =>
+      T, A] =>
       msg match {
-        case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView(f,functionParams) => try {
+        case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView(f, functionParams) => try {
           val l: SidechainNodeView = new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), applicationState, applicationWallet)
-          sender() ! f(l,functionParams)
+          sender() ! f(l, functionParams)
         }
         catch {
           case e: Exception => sender() ! akka.actor.Status.Failure(e)
@@ -148,28 +170,6 @@ override  protected def applyFunctionOnNodeView: Receive = {
     }
   }
 
-  override protected def getCurrentSidechainNodeViewInfo: Receive = {
-    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView[
-      SidechainTypes#SCBT,
-      SidechainBlockHeader,
-      SidechainBlock,
-      NodeHistory,
-      NodeState,
-      NodeWallet,
-      NodeMemoryPool,
-      SidechainNodeView,
-      _] =>
-      msg match {
-        case AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView(f) => try {
-          val l: SidechainNodeView = new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), applicationState, applicationWallet)
-          sender() ! f(l)
-        }
-        catch {
-          case e: Exception => sender() ! akka.actor.Status.Failure(e)
-        }
-
-      }
-  }
 }
 
 object SidechainNodeViewHolderRef {

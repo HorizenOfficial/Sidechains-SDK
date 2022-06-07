@@ -10,12 +10,12 @@ import com.horizen.account.api.http.AccountTransactionErrorResponse.GenericTrans
 import com.horizen.account.api.http.AccountTransactionRestScheme._
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
-import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool}
+import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SidechainApiRoute, SuccessResponse}
-import com.horizen.node.{NodeStateBase, NodeWalletBase}
+import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
 import com.horizen.transaction.Transaction
@@ -39,7 +39,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     AccountBlockHeader,
     AccountBlock,
     NodeAccountHistory,
-    NodeStateBase,
+    NodeAccountState,
     NodeWalletBase,
     NodeAccountMemoryPool,
     AccountNodeView] with SidechainTypes {

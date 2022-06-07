@@ -4,13 +4,13 @@ import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
-import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool}
+import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.account.state.AccountState
 import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
 import com.horizen.account.transaction.AccountTransaction
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.consensus._
-import com.horizen.node.{NodeStateBase, NodeWalletBase}
+import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
 import com.horizen.proof.Proof
 import com.horizen.proposition.Proposition
@@ -94,7 +94,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       AccountBlockHeader,
       AccountBlock,
       NodeAccountHistory,
-      NodeStateBase,
+      NodeAccountState,
       NodeWalletBase,
       NodeAccountMemoryPool,
       AccountNodeView,
@@ -117,7 +117,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       AccountBlockHeader,
       AccountBlock,
       NodeAccountHistory,
-      NodeStateBase,
+      NodeAccountState,
       NodeWalletBase,
       NodeAccountMemoryPool,
       AccountNodeView,
@@ -141,11 +141,11 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       AccountBlockHeader,
       AccountBlock,
       NodeAccountHistory,
-      NodeStateBase,
+      NodeAccountState,
       NodeWalletBase,
       NodeAccountMemoryPool,
       AccountNodeView,
-      _,_] =>
+      T,A] =>
       msg match {
         case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView(f,functionParams) => try {
           val l: AccountNodeView = new AccountNodeView(history(), minimalState(), vault(), memoryPool())

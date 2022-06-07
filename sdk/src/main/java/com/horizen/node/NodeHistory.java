@@ -9,12 +9,8 @@ import com.horizen.transaction.BoxTransaction;
 
 import java.util.Optional;
 
-public interface NodeHistory extends NodeHistoryBase
-        <
-                BoxTransaction<Proposition, Box<Proposition>>,
-                SidechainBlockHeader,
-                SidechainBlock
-                > {
+public interface NodeHistory
+        extends NodeHistoryBase<BoxTransaction<Proposition, Box<Proposition>>, SidechainBlockHeader, SidechainBlock> {
 
     @Override
     Optional<SidechainBlock> getBlockById(String blockId);

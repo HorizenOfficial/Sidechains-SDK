@@ -6,10 +6,10 @@ import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.SidechainTypes
 import com.horizen.account.api.http.SidechainWalletErrorResponse.ErrorNotImplemented
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
-import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool}
+import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SidechainApiRoute, SuccessResponse}
 import com.horizen.box.Box
-import com.horizen.node.{NodeStateBase, NodeWalletBase}
+import com.horizen.node.NodeWalletBase
 import com.horizen.proposition.{Proposition, VrfPublicKey}
 import com.horizen.serialization.Views
 import scorex.core.settings.RESTApiSettings
@@ -25,7 +25,7 @@ case class AccountWalletApiRoute(override val settings: RESTApiSettings,
     AccountBlockHeader,
     AccountBlock,
     NodeAccountHistory,
-    NodeStateBase,
+    NodeAccountState,
     NodeWalletBase,
     NodeAccountMemoryPool,
     AccountNodeView] {

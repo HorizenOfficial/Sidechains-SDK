@@ -10,12 +10,12 @@ import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFu
 import com.horizen.SidechainTypes
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
-import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool}
+import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.account.transaction.{AccountTransaction, EthereumTransaction}
-import com.horizen.api.http.{SidechainApiErrorHandler, SidechainApiMockConfiguration, SidechainApiRejectionHandler, SidechainJSONBOChecker}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
+import com.horizen.api.http.{SidechainApiErrorHandler, SidechainApiMockConfiguration, SidechainApiRejectionHandler, SidechainJSONBOChecker}
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
-import com.horizen.node.{NodeStateBase, NodeWalletBase}
+import com.horizen.node.NodeWalletBase
 import com.horizen.params.MainNetParams
 import com.horizen.proof.Proof
 import com.horizen.proposition.Proposition
@@ -95,7 +95,7 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
           AccountBlockHeader,
           AccountBlock,
           NodeAccountHistory,
-          NodeStateBase,
+          NodeAccountState,
           NodeWalletBase,
           NodeAccountMemoryPool,
           AccountNodeView,
@@ -111,7 +111,7 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
           AccountBlockHeader,
           AccountBlock,
           NodeAccountHistory,
-          NodeStateBase,
+          NodeAccountState,
           NodeWalletBase,
           NodeAccountMemoryPool,
           AccountNodeView,
@@ -126,7 +126,7 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
           AccountBlockHeader,
           AccountBlock,
           NodeAccountHistory,
-          NodeStateBase,
+          NodeAccountState,
           NodeWalletBase,
           NodeAccountMemoryPool,
           AccountNodeView,
