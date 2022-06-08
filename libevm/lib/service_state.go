@@ -68,15 +68,18 @@ func (s *Service) StateOpen(params StateRootParams) (error, int) {
 		log.Error("failed to open state", "root", params.Root, "error", err)
 		return err, 0
 	}
-	// wrap around
-	if s.stateHandle == math.MaxInt32 {
-		s.stateHandle = 0
-	}
+	// find the next unused handle:
 	// this will never give a handle of 0, which is on purpose - we might consider a handle of 0 as invalid
 	s.stateHandle++
-	newHandle := s.stateHandle
-	s.statedbs[newHandle] = statedb
-	return nil, newHandle
+	for s.statedbs[s.stateHandle] != nil {
+		// wrap around
+		if s.stateHandle == math.MaxInt32 {
+			s.stateHandle = 0
+		}
+		s.stateHandle++
+	}
+	s.statedbs[s.stateHandle] = statedb
+	return nil, s.stateHandle
 }
 
 func (s *Service) StateClose(params HandleParams) {
