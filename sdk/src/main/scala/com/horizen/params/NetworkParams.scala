@@ -61,4 +61,7 @@ trait NetworkParams {
   // Sidechain forger restriction
   val restrictForgers: Boolean = false
   val allowedForgersList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = Seq()
+
+  // Account chain params
+  val chainId : Int
 }

@@ -9,7 +9,7 @@ import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.forger.AccountForgerRef
 import com.horizen.account.network.AccountNodeViewSynchronizer
 import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
-import com.horizen.{AbstractSidechainApp, SidechainAppEvents, SidechainSettings, SidechainSyncInfoMessageSpec, SidechainTypes}
+import com.horizen.{AbstractSidechainApp, SidechainAppEvents, SidechainSettings, SidechainSyncInfoMessageSpec, SidechainTypes, ChainInfo}
 import com.horizen.api.http._
 import com.horizen.block.SidechainBlockBase
 import com.horizen.certificatesubmitter.CertificateSubmitterRef
@@ -43,12 +43,14 @@ class AccountSidechainApp @Inject()
    @Named("CustomAccountTransactionSerializers") val customAccountTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCAT]],
    @Named("CustomApiGroups") customApiGroups: JList[ApplicationApiGroup],
    @Named("RejectedApiPaths") rejectedApiPaths : JList[Pair[String, String]],
+   @Named("ChainInfo") chainInfo : ChainInfo,
   )
   extends AbstractSidechainApp(
     sidechainSettings,
     customSecretSerializers,
     customApiGroups,
-    rejectedApiPaths
+    rejectedApiPaths,
+    chainInfo
   )
 {
 
