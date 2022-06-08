@@ -35,7 +35,7 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
         initialize_chain_clean(self.options.tmpdir, self.number_of_mc_nodes)
 
     def setup_network(self, split = False):
-        # Setup nodes and connect them
+        # Setup nodes
         self.nodes = self.setup_nodes()
         self.sync_all()
 
@@ -44,7 +44,7 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
 
     def sc_setup_chain(self):
-        # Bootstrap new SC, specify SC node 1 connection to MC node 1
+        # Bootstrap new SC, specify SC node 1 and SC node 2 connection to MC node 1
         mc_node_1 = self.nodes[0]
 
         sc_node_1_configuration = SCNodeConfiguration(
