@@ -50,6 +50,22 @@ public class StateDB implements AutoCloseable {
         return LibEvm.stateGetCodeHash(handle, address);
     }
 
+    public byte[] getStorage(byte[] address, byte[] key) throws Exception {
+        return LibEvm.stateGetStorage(handle, address, key);
+    }
+
+    public void setStorage(byte[] address, byte[] key, byte[] value) throws Exception {
+        LibEvm.stateSetStorage(handle, address, key, value);
+    }
+
+    public byte[] getStorageBytes(byte[] address, byte[] key) throws Exception {
+        return LibEvm.stateGetStorageBytes(handle, address, key);
+    }
+
+    public void setStorageBytes(byte[] address, byte[] key, byte[] value) throws Exception {
+        LibEvm.stateSetStorageBytes(handle, address, key, value);
+    }
+
     @Override
     public String toString() {
         return String.format("StateDB{handle=%d}", handle);

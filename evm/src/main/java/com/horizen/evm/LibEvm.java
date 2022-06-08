@@ -133,6 +133,22 @@ final class LibEvm {
         return invoke("StateGetCodeHash", new AccountParams(handle, address), Hash.class).toBytes();
     }
 
+    public static byte[] stateGetStorage(int handle, byte[] address, byte[] key) throws Exception {
+        return invoke("StateGetStorage", new StorageParams(handle, address, key), Hash.class).toBytes();
+    }
+
+    public static void stateSetStorage(int handle, byte[] address, byte[] key, byte[] value) throws Exception {
+        invoke("StateSetStorage", new SetStorageParams(handle, address, key, value));
+    }
+
+    public static byte[] stateGetStorageBytes(int handle, byte[] address, byte[] key) throws Exception {
+        return invoke("StateGetStorageBytes", new StorageParams(handle, address, key), byte[].class);
+    }
+
+    public static void stateSetStorageBytes(int handle, byte[] address, byte[] key, byte[] value) throws Exception {
+        invoke("StateSetStorageBytes", new SetStorageBytesParams(handle, address, key, value));
+    }
+
     public static EvmResult evmExecute(int handle, byte[] from, byte[] to, BigInteger value, byte[] input)
         throws Exception {
         var cfg = new EvmParams.EvmConfig();
