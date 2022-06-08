@@ -97,6 +97,7 @@ func testStorageBytesSetCommitWrite(t *testing.T, instance *Service, addr common
 	if !bytes.Equal(writtenValue, value) {
 		t.Error("value not written correctly")
 	}
+	instance.StateClose(HandleParams{Handle: handle})
 }
 
 func TestStateStorageBytes(t *testing.T) {
@@ -119,6 +120,7 @@ func TestStateStorageBytes(t *testing.T) {
 	for _, value := range values {
 		testStorageBytesSetCommitWrite(t, instance, addr, key, value)
 	}
+	_ = instance.CloseDatabase()
 }
 
 func TestStateDBdirectly(t *testing.T) {
@@ -142,4 +144,5 @@ func TestStateDBdirectly(t *testing.T) {
 	if committedValue != value {
 		t.Error("value not committed correctly")
 	}
+	_ = instance.CloseDatabase()
 }
