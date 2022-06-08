@@ -56,7 +56,6 @@ public class JsonPointer implements NativeMapped {
             module.addSerializer(BigInteger.class, new BigIntSerializer());
             module.addSerializer(Address.class, new Address.Serializer());
             module.addSerializer(Hash.class, new Hash.Serializer());
-            module.addSerializer(HexBytes.class, new HexBytes.Serializer());
             var mapper = new ObjectMapper();
             mapper.registerModule(module);
             // do not serialize null or empty values
@@ -79,7 +78,6 @@ public class JsonPointer implements NativeMapped {
             module.addDeserializer(BigInteger.class, new BigIntDeserializer());
             module.addDeserializer(Address.class, new Address.Deserializer());
             module.addDeserializer(Hash.class, new Hash.Deserializer());
-            module.addDeserializer(HexBytes.class, new HexBytes.Deserializer());
             var mapper = new ObjectMapper();
             mapper.registerModule(module);
             return mapper.readValue(json, type);
