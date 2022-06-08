@@ -45,6 +45,7 @@ class TimeToEpochSlotConverterTest extends JUnitSuite {
     override val cswProvingKeyFilePath: String = ""
     override val cswVerificationKeyFilePath: String = ""
     override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1
+    override val chainId: Int = 11111111
   }
 
   private def checkSlotAndEpoch(timeStamp: Block.Timestamp,

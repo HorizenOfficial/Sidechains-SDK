@@ -535,6 +535,8 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val cswProvingKeyFilePath: String = params.cswProvingKeyFilePath
       override val cswVerificationKeyFilePath: String = params.cswVerificationKeyFilePath
       override val sidechainCreationVersion: SidechainCreationVersion = params.sidechainCreationVersion
+
+      override val chainId: Int = 11111111
     }
   }
 

@@ -10,6 +10,7 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 
 import com.horizen.SidechainSettings;
+import com.horizen.ChainInfo;
 import com.horizen.account.AccountAppModule;
 import com.horizen.account.transaction.AccountTransaction;
 import com.horizen.api.http.ApplicationApiGroup;
@@ -47,7 +48,8 @@ public class EvmAppModule extends AccountAppModule
         // Each pair consists of "group name" -> "route name"
         // For example new Pair("wallet, "allBoxes");
         List<Pair<String, String>> rejectedApiPaths = new ArrayList<>();
-
+        ChainInfo chainInfo = new ChainInfo(1997, 1661,7331);
+ 
 
 
         bind(SidechainSettings.class)
@@ -69,5 +71,9 @@ public class EvmAppModule extends AccountAppModule
         bind(new TypeLiteral<List<Pair<String, String>>> () {})
                 .annotatedWith(Names.named("RejectedApiPaths"))
                 .toInstance(rejectedApiPaths);
+
+        bind(ChainInfo.class)
+                .annotatedWith(Names.named("ChainInfo"))
+                .toInstance(chainInfo);
     }
 }
