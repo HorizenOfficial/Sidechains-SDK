@@ -21,19 +21,19 @@ type EvmParams struct {
 }
 
 type EvmResult struct {
-	ReturnData      []byte           `json:"returnData"`
-	ContractAddress *common.Address  `json:"contractAddress"`
-	LeftOverGas     uint64           `json:"leftOverGas"`
-	EvmError        string           `json:"evmError"`
-	Logs            []*gethTypes.Log `json:"logs"`
+	ReturnData      []byte          `json:"returnData"`
+	ContractAddress *common.Address `json:"contractAddress"`
+	LeftOverGas     uint64          `json:"leftOverGas"`
+	EvmError        string          `json:"evmError"`
+	Logs            []*Log          `json:"logs"`
 }
 
 type EvmApplyResult struct {
-	UsedGas         uint64           `json:"usedGas"`
-	EvmError        string           `json:"evmError"`
-	ReturnData      []byte           `json:"returnData"`
-	ContractAddress *common.Address  `json:"contractAddress"`
-	Logs            []*gethTypes.Log `json:"logs"`
+	UsedGas         uint64          `json:"usedGas"`
+	EvmError        string          `json:"evmError"`
+	ReturnData      []byte          `json:"returnData"`
+	ContractAddress *common.Address `json:"contractAddress"`
+	Logs            []*Log          `json:"logs"`
 }
 
 func (s *Service) EvmExecute(params EvmParams) (error, *EvmResult) {
@@ -73,7 +73,7 @@ func (s *Service) EvmExecute(params EvmParams) (error, *EvmResult) {
 		result.EvmError = evmErr.Error()
 	}
 	// get logs, if any
-	result.Logs = statedb.GetLogs(mockTxHash, common.Hash{})
+	result.Logs = getLogs(statedb, mockTxHash)
 
 	return nil, result
 }
@@ -129,7 +129,7 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmApplyResult) {
 
 	applyResult := &EvmApplyResult{
 		UsedGas: result.UsedGas,
-		Logs:    statedb.GetLogs(txHash, common.Hash{}),
+		Logs:    getLogs(statedb, txHash),
 	}
 
 	// no error means successful transaction, otherwise failure
