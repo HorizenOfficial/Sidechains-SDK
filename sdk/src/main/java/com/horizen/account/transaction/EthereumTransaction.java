@@ -93,6 +93,14 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return transaction.getGasLimit();
     }
 
+    public BigInteger getFeeCap() {
+        return transaction.getFeeCap();
+
+    }
+    public BigInteger getGasPremium() {
+        return transaction.getGasPremium();
+    }
+
     @JsonProperty("from")
     private String getAddress() {
         if (signature != null) {
@@ -126,8 +134,8 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     @Override
-    public String getData() {
-        return transaction.getData();
+    public byte[] getData() {
+        return Numeric.hexStringToByteArray(transaction.getData());
     }
 
     @Override
@@ -164,6 +172,6 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                 getGasLimit().toByteArray(),
                 getTo() != null ? getTo().address() : "".getBytes(StandardCharsets.UTF_8),
                 getValue().toByteArray(),
-                getData().getBytes(StandardCharsets.UTF_8));
+                getData());
     }
 }

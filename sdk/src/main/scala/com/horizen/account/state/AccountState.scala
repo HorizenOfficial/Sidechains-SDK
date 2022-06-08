@@ -18,7 +18,8 @@ import scala.util.{Failure, Try}
 
 class AccountState(val params: NetworkParams,
                    override val version: VersionTag,
-                   stateMetadataStorage: AccountStateMetadataStorage)
+                   stateMetadataStorage: AccountStateMetadataStorage,
+                   messageProcessors: Seq[MessageProcessor])
   extends State[SidechainTypes#SCAT, AccountBlock, AccountStateView, AccountState]
     with NodeAccountState
     with ScorexLogging {
@@ -165,7 +166,7 @@ class AccountState(val params: NetworkParams,
   override def rollbackTo(version: VersionTag): Try[AccountState] = {
     Try {
       require(version != null, "Version to rollback to must be NOT NULL.")
-      new AccountState(params, version, stateMetadataStorage.rollback(new ByteArrayWrapper(versionToBytes(version))).get)
+      new AccountState(params, version, stateMetadataStorage.rollback(new ByteArrayWrapper(versionToBytes(version))).get, messageProcessors)
     }.recoverWith({
       case exception =>
         log.error("Exception was thrown during rollback.", exception)
@@ -178,7 +179,7 @@ class AccountState(val params: NetworkParams,
 
   // View
   override def getView: AccountStateView = {
-    new AccountStateView(stateMetadataStorage.getView)
+    new AccountStateView(stateMetadataStorage.getView, messageProcessors)
   }
 
   // getters:
@@ -224,7 +225,7 @@ object AccountState {
                                     params: NetworkParams): Option[AccountState] = {
 
     if (!stateMetadataStorage.isEmpty)
-      Some(new AccountState(params, bytesToVersion(stateMetadataStorage.lastVersionId.get.data), stateMetadataStorage))
+      Some(new AccountState(params, bytesToVersion(stateMetadataStorage.lastVersionId.get.data), stateMetadataStorage, Seq()))
     else
       None
   }
@@ -234,7 +235,7 @@ object AccountState {
                                           genesisBlock: AccountBlock): Try[AccountState] = Try {
 
     if (stateMetadataStorage.isEmpty)
-      new AccountState(params, idToVersion(genesisBlock.parentId), stateMetadataStorage).applyModifier(genesisBlock).get
+      new AccountState(params, idToVersion(genesisBlock.parentId), stateMetadataStorage, Seq()).applyModifier(genesisBlock).get
     else
       throw new RuntimeException("State metadata storage is not empty!")
   }
