@@ -34,7 +34,7 @@ type BalanceParams struct {
 
 type NonceParams struct {
 	AccountParams
-	Nonce uint64 `json:"nonce"`
+	Nonce hexutil.Uint64 `json:"nonce"`
 }
 
 type CodeParams struct {
@@ -155,12 +155,12 @@ func (s *Service) StateSetBalance(params BalanceParams) error {
 	return nil
 }
 
-func (s *Service) StateGetNonce(params AccountParams) (error, uint64) {
+func (s *Service) StateGetNonce(params AccountParams) (error, hexutil.Uint64) {
 	err, statedb := s.getState(params.Handle)
 	if err != nil {
 		return err, 0
 	}
-	return nil, statedb.GetNonce(params.Address)
+	return nil, (hexutil.Uint64)(statedb.GetNonce(params.Address))
 }
 
 func (s *Service) StateSetNonce(params NonceParams) error {
@@ -168,7 +168,7 @@ func (s *Service) StateSetNonce(params NonceParams) error {
 	if err != nil {
 		return err
 	}
-	statedb.SetNonce(params.Address, params.Nonce)
+	statedb.SetNonce(params.Address, uint64(params.Nonce))
 	return nil
 }
 

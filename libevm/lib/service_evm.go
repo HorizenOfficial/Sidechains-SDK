@@ -23,8 +23,8 @@ type EvmParams struct {
 	To       *common.Address `json:"to"`
 	Value    *hexutil.Big    `json:"value"`
 	Input    []byte          `json:"input"`
-	Nonce    uint64          `json:"nonce"`
-	GasLimit uint64          `json:"gasLimit"`
+	Nonce    hexutil.Uint64  `json:"nonce"`
+	GasLimit hexutil.Uint64  `json:"gasLimit"`
 	GasPrice *hexutil.Big    `json:"gasPrice"`
 
 	// context parameters
@@ -41,7 +41,7 @@ func (p *EvmParams) setDefaults() {
 		p.Value = (*hexutil.Big)(new(big.Int))
 	}
 	if p.GasLimit == 0 {
-		p.GasLimit = math.MaxUint64
+		p.GasLimit = (hexutil.Uint64)(math.MaxUint64)
 	}
 	if p.GasPrice == nil {
 		p.GasPrice = (*hexutil.Big)(new(big.Int))
@@ -61,7 +61,7 @@ func (p *EvmParams) setDefaults() {
 }
 
 func (p *EvmParams) getMessage() types.Message {
-	return types.NewMessage(p.From, p.To, p.Nonce, p.Value.ToInt(), p.GasLimit, p.GasPrice.ToInt(), p.GasPrice.ToInt(), p.GasPrice.ToInt(), p.Input, nil, false)
+	return types.NewMessage(p.From, p.To, uint64(p.Nonce), p.Value.ToInt(), uint64(p.GasLimit), p.GasPrice.ToInt(), p.GasPrice.ToInt(), p.GasPrice.ToInt(), p.Input, nil, false)
 }
 
 func (p *EvmParams) getBlockContext() vm.BlockContext {
@@ -73,7 +73,7 @@ func (p *EvmParams) getBlockContext() vm.BlockContext {
 		BlockNumber: p.BlockNumber.ToInt(),
 		Time:        p.Time.ToInt(),
 		Difficulty:  p.Difficulty.ToInt(),
-		GasLimit:    p.GasLimit,
+		GasLimit:    uint64(p.GasLimit),
 		BaseFee:     p.BaseFee.ToInt(),
 	}
 }
