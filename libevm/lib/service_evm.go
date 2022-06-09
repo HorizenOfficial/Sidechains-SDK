@@ -14,11 +14,16 @@ import (
 	"time"
 )
 
-type EvmParams struct {
-	// statedb handle
-	HandleParams
+type EvmContext struct {
+	Difficulty  *hexutil.Big   `json:"difficulty"`
+	Coinbase    common.Address `json:"coinbase"`
+	BlockNumber *hexutil.Big   `json:"blockNumber"`
+	Time        *hexutil.Big   `json:"time"`
+	BaseFee     *hexutil.Big   `json:"baseFee"`
+}
 
-	// message to execute
+type EvmParams struct {
+	HandleParams
 	From     common.Address  `json:"from"`
 	To       *common.Address `json:"to"`
 	Value    *hexutil.Big    `json:"value"`
@@ -26,13 +31,7 @@ type EvmParams struct {
 	Nonce    hexutil.Uint64  `json:"nonce"`
 	GasLimit hexutil.Uint64  `json:"gasLimit"`
 	GasPrice *hexutil.Big    `json:"gasPrice"`
-
-	// context parameters
-	Difficulty  *hexutil.Big   `json:"difficulty"`
-	Coinbase    common.Address `json:"coinbase"`
-	BlockNumber *hexutil.Big   `json:"blockNumber"`
-	Time        *hexutil.Big   `json:"time"`
-	BaseFee     *hexutil.Big   `json:"baseFee"`
+	Context  EvmContext      `json:"context"`
 }
 
 // setDefaults for parameters that were omitted
@@ -46,17 +45,17 @@ func (p *EvmParams) setDefaults() {
 	if p.GasPrice == nil {
 		p.GasPrice = (*hexutil.Big)(new(big.Int))
 	}
-	if p.Difficulty == nil {
-		p.Difficulty = (*hexutil.Big)(new(big.Int))
+	if p.Context.Difficulty == nil {
+		p.Context.Difficulty = (*hexutil.Big)(new(big.Int))
 	}
-	if p.BlockNumber == nil {
-		p.BlockNumber = (*hexutil.Big)(new(big.Int))
+	if p.Context.BlockNumber == nil {
+		p.Context.BlockNumber = (*hexutil.Big)(new(big.Int))
 	}
-	if p.Time == nil {
-		p.Time = (*hexutil.Big)(big.NewInt(time.Now().Unix()))
+	if p.Context.Time == nil {
+		p.Context.Time = (*hexutil.Big)(big.NewInt(time.Now().Unix()))
 	}
-	if p.BaseFee == nil {
-		p.BaseFee = (*hexutil.Big)(big.NewInt(params.InitialBaseFee))
+	if p.Context.BaseFee == nil {
+		p.Context.BaseFee = (*hexutil.Big)(big.NewInt(params.InitialBaseFee))
 	}
 }
 
@@ -69,12 +68,12 @@ func (p *EvmParams) getBlockContext() vm.BlockContext {
 		CanTransfer: core.CanTransfer,
 		Transfer:    core.Transfer,
 		GetHash:     mockBlockHashFn,
-		Coinbase:    p.Coinbase,
-		BlockNumber: p.BlockNumber.ToInt(),
-		Time:        p.Time.ToInt(),
-		Difficulty:  p.Difficulty.ToInt(),
+		Coinbase:    p.Context.Coinbase,
+		BlockNumber: p.Context.BlockNumber.ToInt(),
+		Time:        p.Context.Time.ToInt(),
+		Difficulty:  p.Context.Difficulty.ToInt(),
 		GasLimit:    uint64(p.GasLimit),
-		BaseFee:     p.BaseFee.ToInt(),
+		BaseFee:     p.Context.BaseFee.ToInt(),
 	}
 }
 
