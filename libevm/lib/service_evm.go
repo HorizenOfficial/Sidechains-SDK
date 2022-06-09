@@ -2,33 +2,107 @@ package lib
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
-	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
-	"libevm/lib/runtime"
-	"libevm/types"
+	"github.com/ethereum/go-ethereum/params"
+	"math"
+	"math/big"
 	"math/rand"
 	"time"
 )
 
 type EvmParams struct {
+	// statedb handle
 	HandleParams
-	Config  types.SerializableConfig `json:"config"`
-	Address *common.Address          `json:"address"`
-	Input   []byte                   `json:"input"`
-	Nonce   uint64                   `json:"nonce"`
+
+	// message to execute
+	From     common.Address  `json:"from"`
+	To       *common.Address `json:"to"`
+	Value    *hexutil.Big    `json:"value"`
+	Input    []byte          `json:"input"`
+	Nonce    uint64          `json:"nonce"`
+	GasLimit uint64          `json:"gasLimit"`
+	GasPrice *hexutil.Big    `json:"gasPrice"`
+
+	// context parameters
+	Difficulty  *hexutil.Big   `json:"difficulty"`
+	Coinbase    common.Address `json:"coinbase"`
+	BlockNumber *hexutil.Big   `json:"blockNumber"`
+	Time        *hexutil.Big   `json:"time"`
+	BaseFee     *hexutil.Big   `json:"baseFee"`
+}
+
+// setDefaults for parameters that were omitted
+func (p *EvmParams) setDefaults() {
+	if p.Value == nil {
+		p.Value = (*hexutil.Big)(new(big.Int))
+	}
+	if p.GasLimit == 0 {
+		p.GasLimit = math.MaxUint64
+	}
+	if p.GasPrice == nil {
+		p.GasPrice = (*hexutil.Big)(new(big.Int))
+	}
+	if p.Difficulty == nil {
+		p.Difficulty = (*hexutil.Big)(new(big.Int))
+	}
+	if p.BlockNumber == nil {
+		p.BlockNumber = (*hexutil.Big)(new(big.Int))
+	}
+	if p.Time == nil {
+		p.Time = (*hexutil.Big)(big.NewInt(time.Now().Unix()))
+	}
+	if p.BaseFee == nil {
+		p.BaseFee = (*hexutil.Big)(big.NewInt(params.InitialBaseFee))
+	}
+}
+
+func (p *EvmParams) getMessage() types.Message {
+	return types.NewMessage(p.From, p.To, p.Nonce, p.Value.ToInt(), p.GasLimit, p.GasPrice.ToInt(), p.GasPrice.ToInt(), p.GasPrice.ToInt(), p.Input, nil, false)
+}
+
+func (p *EvmParams) getBlockContext() vm.BlockContext {
+	return vm.BlockContext{
+		CanTransfer: core.CanTransfer,
+		Transfer:    core.Transfer,
+		GetHash:     mockBlockHashFn,
+		Coinbase:    p.Coinbase,
+		BlockNumber: p.BlockNumber.ToInt(),
+		Time:        p.Time.ToInt(),
+		Difficulty:  p.Difficulty.ToInt(),
+		GasLimit:    p.GasLimit,
+		BaseFee:     p.BaseFee.ToInt(),
+	}
+}
+
+func mockBlockHashFn(n uint64) common.Hash {
+	return common.BytesToHash(crypto.Keccak256([]byte(new(big.Int).SetUint64(n).String())))
+}
+
+func defaultChainConfig() *params.ChainConfig {
+	return &params.ChainConfig{
+		ChainID:             big.NewInt(1),
+		HomesteadBlock:      new(big.Int),
+		DAOForkBlock:        new(big.Int),
+		DAOForkSupport:      false,
+		EIP150Block:         new(big.Int),
+		EIP150Hash:          common.Hash{},
+		EIP155Block:         new(big.Int),
+		EIP158Block:         new(big.Int),
+		ByzantiumBlock:      new(big.Int),
+		ConstantinopleBlock: new(big.Int),
+		PetersburgBlock:     new(big.Int),
+		IstanbulBlock:       new(big.Int),
+		MuirGlacierBlock:    new(big.Int),
+		BerlinBlock:         new(big.Int),
+		LondonBlock:         new(big.Int),
+	}
 }
 
 type EvmResult struct {
-	ReturnData      []byte          `json:"returnData"`
-	ContractAddress *common.Address `json:"contractAddress"`
-	LeftOverGas     uint64          `json:"leftOverGas"`
-	EvmError        string          `json:"evmError"`
-	Logs            []*Log          `json:"logs"`
-}
-
-type EvmApplyResult struct {
 	UsedGas         uint64          `json:"usedGas"`
 	EvmError        string          `json:"evmError"`
 	ReturnData      []byte          `json:"returnData"`
@@ -36,80 +110,38 @@ type EvmApplyResult struct {
 	Logs            []*Log          `json:"logs"`
 }
 
-func (s *Service) EvmExecute(params EvmParams) (error, *EvmResult) {
+func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 	err, statedb := s.getState(params.Handle)
 	if err != nil {
 		return err, nil
 	}
-	cfg := params.Config.GetConfig()
-	cfg.State = statedb
-	var (
-		mockRandSource = rand.NewSource(time.Now().UnixNano())
-		mockRandGen    = rand.New(mockRandSource)
-		mockTxHashRand = make([]byte, common.HashLength)
-		result         = &EvmResult{}
-		evmErr         error
-	)
-	// TODO: this mocks the tx hash with random, replace with real tx hash
-	mockRandGen.Read(mockTxHashRand)
-	var (
-		mockTxHash         = common.BytesToHash(mockTxHashRand)
-		mockTxIndexInBlock = 0
-	)
-	statedb.Prepare(mockTxHash, mockTxIndexInBlock)
-	if params.Address == nil {
-		var contractAddress common.Address
-		_, contractAddress, result.LeftOverGas, evmErr = runtime.Create(params.Input, cfg)
-		// If the transaction created a contract, store the creation address in the receipt.
-		result.ContractAddress = &contractAddress
-	} else {
-		result.ReturnData, result.LeftOverGas, evmErr = runtime.Call(*params.Address, params.Input, cfg)
-	}
-	// Update the state with pending changes.
-	statedb.Finalise(true)
 
-	// no error means successful transaction, otherwise failure
-	if evmErr != nil {
-		result.EvmError = evmErr.Error()
-	}
-	// get logs, if any
-	result.Logs = getLogs(statedb, mockTxHash)
-
-	return nil, result
-}
-
-func (s *Service) EvmApply(params EvmParams) (error, *EvmApplyResult) {
-	err, statedb := s.getState(params.Handle)
-	if err != nil {
-		return err, nil
-	}
-	cfg := params.Config.GetConfig()
-	runtime.SetDefaults(cfg)
-
-	// TODO: this mocks the tx hash with random, replace with real tx hash
-	randSource := rand.NewSource(time.Now().UnixNano())
-	randGenerator := rand.New(randSource)
-	txHashRand := make([]byte, common.HashLength)
-	randGenerator.Read(txHashRand)
+	// apply default to missing parameters
+	params.setDefaults()
 
 	var (
-		txHash         = common.BytesToHash(txHashRand)
-		txIndexInBlock = 0
-		blockContext   = vm.BlockContext{
-			CanTransfer: core.CanTransfer,
-			Transfer:    core.Transfer,
-			GetHash:     cfg.GetHashFn,
-			Coinbase:    cfg.Coinbase,
-			BlockNumber: cfg.BlockNumber,
-			Time:        cfg.Time,
-			Difficulty:  cfg.Difficulty,
-			GasLimit:    cfg.GasLimit,
-			BaseFee:     cfg.BaseFee,
+		msg          = params.getMessage()
+		txContext    = core.NewEVMTxContext(msg)
+		blockContext = params.getBlockContext()
+		chainConfig  = defaultChainConfig()
+		evmConfig    = vm.Config{
+			Debug:                   false,
+			Tracer:                  nil,
+			NoBaseFee:               false,
+			EnablePreimageRecording: false,
+			JumpTable:               nil,
+			ExtraEips:               nil,
 		}
-		msg       = gethTypes.NewMessage(cfg.Origin, params.Address, params.Nonce, cfg.Value, cfg.GasLimit, cfg.GasPrice, cfg.GasPrice, cfg.GasPrice, params.Input, nil, false)
-		txContext = core.NewEVMTxContext(msg)
-		evm       = vm.NewEVM(blockContext, txContext, statedb, cfg.ChainConfig, cfg.EVMConfig)
+		evm            = vm.NewEVM(blockContext, txContext, statedb, chainConfig, evmConfig)
+		txHash         = common.Hash{}
+		txIndexInBlock = 0
 	)
+	// TODO: this mocks the tx hash with random, replace with real tx hash
+	var (
+		randSource    = rand.NewSource(time.Now().UnixNano())
+		randGenerator = rand.New(randSource)
+	)
+	randGenerator.Read(txHash.Bytes())
 
 	gasPool := new(core.GasPool).AddGas(msg.Gas())
 	statedb.Prepare(txHash, txIndexInBlock)
@@ -127,7 +159,7 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmApplyResult) {
 	// Update the state with pending changes.
 	statedb.Finalise(true)
 
-	applyResult := &EvmApplyResult{
+	applyResult := &EvmResult{
 		UsedGas: result.UsedGas,
 		Logs:    getLogs(statedb, txHash),
 	}

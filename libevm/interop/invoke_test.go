@@ -6,7 +6,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"libevm/lib"
-	"libevm/types"
 	"math/big"
 	"testing"
 )
@@ -32,8 +31,7 @@ func call(t *testing.T, method string, args interface{}) interface{} {
 	if err != nil {
 		t.Errorf("invocation failed %v %v", err, result)
 	}
-	response := toJsonResponse(err, result)
-	t.Log("response", response)
+	t.Log("response", toJsonResponse(err, result))
 	return result
 }
 
@@ -57,32 +55,28 @@ func TestInvoke(t *testing.T) {
 		},
 		Amount: (*hexutil.Big)(big.NewInt(1000000000000000000)),
 	})
-	call(t, "EvmExecute", lib.EvmParams{
+	call(t, "EvmApply", lib.EvmParams{
 		HandleParams: lib.HandleParams{
 			Handle: handle,
 		},
-		Config: types.SerializableConfig{
-			Origin:   user,
-			GasLimit: 200000,
-			GasPrice: (*hexutil.Big)(big.NewInt(1000000000)),
-		},
-		Address: nil,
-		Nonce:   0,
-		Input:   common.Hex2Bytes(storageContractDeploy + initialValue),
+		From:     user,
+		To:       nil,
+		Input:    common.Hex2Bytes(storageContractDeploy + initialValue),
+		Nonce:    0,
+		GasLimit: 200000,
+		GasPrice: (*hexutil.Big)(big.NewInt(1000000000)),
 	})
 	contractAddress := common.HexToAddress("0x6F8C38b30Df9967a414543a1338D4497f2570775")
-	call(t, "EvmExecute", lib.EvmParams{
+	call(t, "EvmApply", lib.EvmParams{
 		HandleParams: lib.HandleParams{
 			Handle: handle,
 		},
-		Config: types.SerializableConfig{
-			Origin:   user,
-			GasLimit: 200000,
-			GasPrice: (*hexutil.Big)(big.NewInt(1000000000)),
-		},
-		Address: &contractAddress,
-		Nonce:   1,
-		Input:   common.Hex2Bytes(funcStore + anotherValue),
+		From:     user,
+		To:       &contractAddress,
+		Input:    common.Hex2Bytes(funcStore + anotherValue),
+		Nonce:    1,
+		GasLimit: 200000,
+		GasPrice: (*hexutil.Big)(big.NewInt(1000000000)),
 	})
 	call(t, "CloseDatabase", nil)
 }
