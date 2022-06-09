@@ -11,8 +11,8 @@ import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, VrfSecretKey}
 import com.horizen.transaction.SidechainTransaction
-import com.horizen.utils.{FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerkleTree, TimeToEpochUtils}
-import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
+import com.horizen.utils.{FeePaymentsUtils, FeeRate, ForgingStakeMerklePathInfo, ListSerializer, MerkleTree, TimeToEpochUtils}
+import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainTypes, SidechainWallet}
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.util.{ModifierId, ScorexLogging}
 
@@ -226,6 +226,14 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     header.bytes.length
   }
+
+  // define a custom sorting func based on fee rate
+  def txsSortFunc: (SidechainTypes#SCBT, SidechainTypes#SCBT) => Boolean = (a: SidechainTypes#SCBT, b: SidechainTypes#SCBT) =>
+  {
+    val fr1 = new FeeRate(a.fee, a.bytes().length)
+    val fr2 = new FeeRate(b.fee, b.bytes().length)
+    fr1 > fr2
+  }
   
   private def forgeBlock(nodeView: View,
                          timestamp: Long,
@@ -306,7 +314,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
         Seq() // no SC Txs allowed
       } else { // SC block is in the middle of the epoch
         var txsCounter: Int = 0
-        nodeView.pool.take(nodeView.pool.size).filter(tx => {
+        nodeView.pool.take(txsSortFunc, nodeView.pool.size).filter(tx => {
           val txSize = tx.bytes.length + 4 // placeholder for Tx length
           txsCounter += 1
           if(txsCounter > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER || blockSize + txSize > SidechainBlock.MAX_BLOCK_SIZE)
