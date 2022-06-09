@@ -35,7 +35,13 @@ public class EthereumTransactionSerializer implements TransactionSerializer<Ethe
             RlpList rlpList = new RlpList(rlpValues);
             encodedMessage = RlpEncoder.encode(rlpList);
         } else {
-            encodedMessage = TransactionEncoder.encode(transaction.getTransaction());
+            if (transaction.getTransaction().isEIP1559Transaction())
+                // TODO: get chain ID and put in
+                // chain id is used only in the creation of the signature data, but not contained in the transaction itself. 
+                // need a way to get the chain id on verification of signatures and here
+                encodedMessage = TransactionEncoder.encode(transaction.getTransaction()/*, chainId*/); 
+            else 
+                encodedMessage = TransactionEncoder.encode(transaction.getTransaction());
         }
 
         writer.putInt(encodedMessage.length);
