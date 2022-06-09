@@ -46,7 +46,7 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView, mes
   }
 
   // account modifiers:
-  protected def addAccount(address: Array[Byte], account: Account): Try[AccountStateView] = ???
+  def addAccount(address: Array[Byte], account: Account): Try[AccountStateView] = ???
 
   protected def addBalance(address: Array[Byte], amount: Long): Try[AccountStateView] = ???
 
