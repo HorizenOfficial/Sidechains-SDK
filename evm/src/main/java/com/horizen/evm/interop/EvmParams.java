@@ -5,29 +5,27 @@ import com.horizen.evm.utils.Address;
 import java.math.BigInteger;
 
 public class EvmParams extends HandleParams {
-    public static class EvmConfig {
-        public BigInteger difficulty; // uint256
-        public Address origin; // address
-        public Address coinbase; // address
-        public BigInteger blockNumber; // uint256
-        public BigInteger time; // uint256
-        public long gasLimit; // uint64
-        public BigInteger gasPrice; // uint256
-        public BigInteger value; // uint256
-        public BigInteger baseFee; // uint256
-    }
-
-    public EvmConfig config;
-    public Address address;
+    public Address from;
+    public Address to;
+    public BigInteger value;
     public byte[] input;
+    public BigInteger nonce; // uint64
+    public BigInteger gasLimit; // uint64
+    public BigInteger gasPrice;
+
+    public EvmContext context;
 
     public EvmParams() {
     }
 
-    public EvmParams(int handle, EvmConfig config, byte[] address, byte[] input) {
+    public EvmParams(int handle, byte[] from, byte[] to, BigInteger value, byte[] input, BigInteger nonce, BigInteger gasLimit, BigInteger gasPrice) {
         super(handle);
-        this.config = config;
-        this.address = Address.FromBytes(address);
+        this.from = Address.FromBytes(from);
+        this.to = Address.FromBytes(to);
+        this.value = value;
         this.input = input;
+        this.nonce = nonce;
+        this.gasLimit = gasLimit;
+        this.gasPrice = gasPrice;
     }
 }

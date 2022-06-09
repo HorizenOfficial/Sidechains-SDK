@@ -2,7 +2,6 @@ package com.horizen.evm;
 
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.horizen.evm.interop.*;
-import com.horizen.evm.utils.Address;
 import com.horizen.evm.utils.Hash;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
@@ -121,11 +120,11 @@ final class LibEvm {
         invoke("StateSetBalance", new BalanceParams(handle, address, amount));
     }
 
-    public static long stateGetNonce(int handle, byte[] address) throws Exception {
-        return invoke("StateGetNonce", new AccountParams(handle, address), long.class);
+    public static BigInteger stateGetNonce(int handle, byte[] address) throws Exception {
+        return invoke("StateGetNonce", new AccountParams(handle, address), BigInteger.class);
     }
 
-    public static void stateSetNonce(int handle, byte[] address, long nonce) throws Exception {
+    public static void stateSetNonce(int handle, byte[] address, BigInteger nonce) throws Exception {
         invoke("StateSetNonce", new NonceParams(handle, address, nonce));
     }
 
@@ -149,22 +148,13 @@ final class LibEvm {
         invoke("StateSetStorageBytes", new SetStorageBytesParams(handle, address, key, value));
     }
 
-    public static EvmResult evmExecute(int handle, byte[] from, byte[] to, BigInteger value, byte[] input)
+    public static EvmResult evmApply(int handle, byte[] from, byte[] to, BigInteger value, byte[] input, BigInteger nonce, BigInteger gasLimit, BigInteger gasPrice)
         throws Exception {
-        var cfg = new EvmParams.EvmConfig();
-        cfg.origin = Address.FromBytes(from);
-        cfg.value = value;
-        cfg.gasLimit = 100000;
-        return invoke("EvmExecute", new EvmParams(handle, cfg, to, input), EvmResult.class);
-    }
-
-    public static EvmApplyResult evmApply(int handle, byte[] from, byte[] to, BigInteger value, byte[] input)
-        throws Exception {
-        var cfg = new EvmParams.EvmConfig();
-        cfg.origin = Address.FromBytes(from);
-        cfg.value = value;
-        cfg.gasLimit = 100000;
-        cfg.gasPrice = BigInteger.valueOf(1000000000);
-        return invoke("EvmApply", new EvmParams(handle, cfg, to, input), EvmApplyResult.class);
+        var params = new EvmParams(handle, from, to, value, input, nonce, gasLimit, gasPrice);
+        // TODO: set context parameters
+        params.context = new EvmContext();
+        // TODO: decide what EIPs we are implementing, setting the baseFee to zero currently allows a gas price of zero
+        params.context.baseFee = BigInteger.ZERO;
+        return invoke("EvmApply", params, EvmResult.class);
     }
 }

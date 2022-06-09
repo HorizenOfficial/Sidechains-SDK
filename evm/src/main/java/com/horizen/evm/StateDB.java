@@ -38,11 +38,11 @@ public class StateDB implements AutoCloseable {
         LibEvm.stateSetBalance(handle, address, amount);
     }
 
-    public long getNonce(byte[] address) throws Exception {
+    public BigInteger getNonce(byte[] address) throws Exception {
         return LibEvm.stateGetNonce(handle, address);
     }
 
-    public void setNonce(byte[] address, long nonce) throws Exception {
+    public void setNonce(byte[] address, BigInteger nonce) throws Exception {
         LibEvm.stateSetNonce(handle, address, nonce);
     }
 

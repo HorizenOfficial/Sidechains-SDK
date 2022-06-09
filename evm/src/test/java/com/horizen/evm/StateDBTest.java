@@ -29,6 +29,8 @@ public class StateDBTest {
         final BigInteger v1234 = BigInteger.valueOf(1234);
         final BigInteger v432 = BigInteger.valueOf(432);
         final BigInteger v802 = v1234.subtract(v432);
+        final BigInteger v3 = BigInteger.valueOf(3);
+        final BigInteger v5 = BigInteger.valueOf(5);
 
         Database.openLevelDB(databaseFolder.getAbsolutePath());
 
@@ -58,13 +60,13 @@ public class StateDBTest {
             statedb.subBalance(origin, v432);
             assertEquals(v802, statedb.getBalance(origin));
 
-            assertEquals(0, statedb.getNonce(origin));
-            statedb.setNonce(origin, 3);
-            assertEquals(3, statedb.getNonce(origin));
+            assertEquals(BigInteger.ZERO, statedb.getNonce(origin));
+            statedb.setNonce(origin, v3);
+            assertEquals(v3, statedb.getNonce(origin));
             rootWithBalance802 = statedb.commit();
 
-            statedb.setNonce(origin, 5);
-            assertEquals(5, statedb.getNonce(origin));
+            statedb.setNonce(origin, v5);
+            assertEquals(v5, statedb.getNonce(origin));
         }
         // Verify that automatic resource management worked and StateDB.close() was called.
         // If it was, the handle is invalid now and this should throw.
@@ -74,12 +76,12 @@ public class StateDBTest {
 
         try (var statedb = new StateDB(rootWithBalance1234)) {
             assertEquals(v1234, statedb.getBalance(origin));
-            assertEquals(0, statedb.getNonce(origin));
+            assertEquals(BigInteger.ZERO, statedb.getNonce(origin));
         }
 
         try (var statedb = new StateDB(rootWithBalance802)) {
             assertEquals(v802, statedb.getBalance(origin));
-            assertEquals(3, statedb.getNonce(origin));
+            assertEquals(v3, statedb.getNonce(origin));
         }
 
         Database.closeDatabase();
@@ -104,7 +106,7 @@ public class StateDBTest {
         Database.openLevelDB(databaseFolder.getAbsolutePath());
         try (var statedb = new StateDB(hashEmpty)) {
             // make sure the account is not "empty"
-            statedb.setNonce(origin, 1);
+            statedb.setNonce(origin, BigInteger.ONE);
             for (byte[] value : values) {
                 statedb.setStorageBytes(origin, key, value);
                 var retrievedValue = statedb.getStorageBytes(origin, key);
@@ -142,8 +144,10 @@ public class StateDBTest {
         final String funcStore = "6057361d";
         final String funcRetrieve = "2e64cec1";
 
-        final BigInteger v10 = BigInteger.valueOf(10);
-        final BigInteger v5 = BigInteger.valueOf(5);
+        final BigInteger v10m = BigInteger.valueOf(10000000);
+        final BigInteger v5m = BigInteger.valueOf(5000000);
+        final BigInteger gasLimit = BigInteger.valueOf(200000);
+        final BigInteger gasPrice = BigInteger.valueOf(10);
 
         Database.openMemoryDB();
 
@@ -153,25 +157,36 @@ public class StateDBTest {
 
         try (var statedb = new StateDB(hashNull)) {
             // test a simple value transfer
-            statedb.addBalance(addr1, v10);
-            result = Evm.Execute(statedb, addr1, addr2, v5, null);
+            statedb.addBalance(addr1, v10m);
+            result = Evm.Apply(statedb, addr1, addr2, v5m, null, BigInteger.ZERO, gasLimit, gasPrice);
             assertEquals("", result.evmError);
-            assertEquals(v5, statedb.getBalance(addr2));
-            assertEquals(v5, statedb.getBalance(addr1));
+            assertEquals(v5m, statedb.getBalance(addr2));
+            // gas fees should also have been deducted
+            assertEquals(v5m.subtract(result.usedGas.multiply(gasPrice)), statedb.getBalance(addr1));
+            // gas fees are moved to the coinbase address which currently defaults to the zero-address
+            assertEquals(result.usedGas.multiply(gasPrice), statedb.getBalance(null));
 
             // test contract deployment
-            result = Evm.Execute(statedb, addr2, null, null, Converter.fromHexString(contractCode + initialValue));
+            BigInteger nonce = statedb.getNonce(addr2);
+            result = Evm.Apply(statedb, addr2, null, null, Converter.fromHexString(contractCode + initialValue), nonce, gasLimit, gasPrice);
             assertEquals("", result.evmError);
             contractAddress = result.contractAddress.toBytes();
             assertArrayEquals(codeHash, statedb.getCodeHash(contractAddress));
 
+            // verify that a wrong nonce throws
+            final BigInteger badNonce = nonce;
+            final BigInteger badNonce2 = nonce.add(BigInteger.TWO);
+            assertThrows(Exception.class, () -> Evm.Apply(statedb, addr2, addr1, BigInteger.ONE, null, badNonce, gasLimit, gasPrice));
+            assertThrows(Exception.class, () -> Evm.Apply(statedb, addr2, addr1, BigInteger.ONE, null, badNonce2, gasLimit, gasPrice));
+
             // call "store" function on the contract to set a value
-            result =
-                    Evm.Execute(statedb, addr2, contractAddress, null, Converter.fromHexString(funcStore + anotherValue));
+            nonce = nonce.add(BigInteger.ONE);
+            result = Evm.Apply(statedb, addr2, contractAddress, null, Converter.fromHexString(funcStore + anotherValue), nonce, gasLimit, gasPrice);
             assertEquals("", result.evmError);
 
             // call "retrieve" on the contract to fetch the value we just set
-            result = Evm.Execute(statedb, addr2, contractAddress, null, Converter.fromHexString(funcRetrieve));
+            nonce = nonce.add(BigInteger.ONE);
+            result = Evm.Apply(statedb, addr2, contractAddress, null, Converter.fromHexString(funcRetrieve), nonce, gasLimit, gasPrice);
             assertEquals("", result.evmError);
             var returnValue = Converter.toHexString(result.returnData);
             assertEquals(anotherValue, returnValue);
@@ -181,7 +196,8 @@ public class StateDBTest {
 
         // reopen the state and retrieve a value
         try (var statedb = new StateDB(modifiedStateRoot)) {
-            result = Evm.Execute(statedb, addr2, contractAddress, null, Converter.fromHexString(funcRetrieve));
+            BigInteger nonce = statedb.getNonce(addr2);
+            result = Evm.Apply(statedb, addr2, contractAddress, null, Converter.fromHexString(funcRetrieve), nonce, gasLimit, gasPrice);
             assertEquals("", result.evmError);
             var returnValue = Converter.toHexString(result.returnData);
             assertEquals(anotherValue, returnValue);

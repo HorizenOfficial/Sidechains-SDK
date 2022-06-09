@@ -1,12 +1,14 @@
 package com.horizen.evm.interop;
 
+import java.math.BigInteger;
+
 public class NonceParams extends AccountParams {
-    public long nonce;
+    public BigInteger nonce;
 
     public NonceParams() {
     }
 
-    public NonceParams(int handle, byte[] address, long nonce) {
+    public NonceParams(int handle, byte[] address, BigInteger nonce) {
         super(handle, address);
         this.nonce = nonce;
     }
