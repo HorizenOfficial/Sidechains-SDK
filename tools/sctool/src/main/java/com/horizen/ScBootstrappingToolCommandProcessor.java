@@ -39,6 +39,21 @@ import java.util.stream.Collectors;
 
 public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
+    // initialization of dlog key must be done only once by the rust cryptolib. Such data is stored in memory and is
+    // used in both generateCertProofInfo and generateCswProofInfo cmds
+    private static boolean dlogKeyInit = false;
+
+    private static boolean initDlogKey() {
+        if (dlogKeyInit) {
+            return true;
+        }
+        if (!CryptoLibProvider.commonCircuitFunctions().generateCoboundaryMarlinDLogKeys()) {
+            return false;
+        }
+        dlogKeyInit = true;
+        return true;
+    }
+
     public ScBootstrappingToolCommandProcessor(MessagePrinter printer) {
         super(printer);
     }
@@ -241,7 +256,8 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         // Generate all keys only if verification key doesn't exist.
         // Note: we are interested only in verification key raw data.
         if(!Files.exists(Paths.get(verificationKeyPath))) {
-            if (!CryptoLibProvider.commonCircuitFunctions().generateCoboundaryMarlinDLogKeys()) {
+
+            if (!initDlogKey()) {
                 printer.print("Error occurred during dlog key generation.");
                 return;
             }
@@ -327,7 +343,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         // Generate all keys only if verification key doesn't exist.
         // Note: we are interested only in verification key raw data.
         if(!Files.exists(Paths.get(verificationKeyPath))) {
-            if (!CryptoLibProvider.commonCircuitFunctions().generateCoboundaryMarlinDLogKeys()) {
+            if (!initDlogKey()) {
                 printer.print("Error occurred during dlog key generation.");
                 return;
             }
