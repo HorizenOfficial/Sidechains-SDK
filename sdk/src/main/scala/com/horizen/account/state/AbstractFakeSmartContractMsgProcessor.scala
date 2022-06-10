@@ -29,11 +29,11 @@ abstract class AbstractFakeSmartContractMsgProcessor extends MessageProcessor wi
 
       triedAccountStateView match {
         case Success(_) =>
-          log.debug(s"Successfully created Withdrawal Message Processor account $account")
+          log.debug(s"Successfully created Message Processor account $account")
 
         case Failure(exception) =>
-          log.error("Create account for Withdrawal Message Processor failed", exception)
-          throw new MessageProcessorInitializationException("Create account for Withdrawal Message Processor failed", exception)
+          log.error("Create account for Message Processor failed", exception)
+          throw new MessageProcessorInitializationException("Create account for Message Processor failed", exception)
       }
     }
   }
@@ -44,7 +44,7 @@ abstract class AbstractFakeSmartContractMsgProcessor extends MessageProcessor wi
 
   protected def getFunctionFromData(data: Array[Byte]): Array[Byte] ={
     require(data.length >= OP_CODE_LENGTH, s"Data length must be >= $OP_CODE_LENGTH")
-    data.slice(0,OP_CODE_LENGTH - 1)
+    data.slice(0,OP_CODE_LENGTH)
   }
 
   // assumes amount are already expressed in zennies (not wei)

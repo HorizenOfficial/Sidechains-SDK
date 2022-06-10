@@ -78,7 +78,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       // lock the view and try to create CoreTransaction
       applyOnNodeView { sidechainNodeView =>
         val destAddress = body.toAddress
-        val valueInWei = ZenConverter.convertZenniesToWei(body.value)
+        val valueInWei = ZenWeiConverter.convertZenniesToWei(body.value)
         val rawTransaction = RawTransaction.createTransaction(valueInWei, valueInWei, valueInWei, destAddress, valueInWei, "")
         val tmpEtherTx = new EthereumTransaction(rawTransaction)
         val message = tmpEtherTx.messageToSign()
