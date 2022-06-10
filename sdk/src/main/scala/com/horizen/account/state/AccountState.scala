@@ -26,6 +26,18 @@ class AccountState(val params: NetworkParams,
 
   override type NVCT = AccountState
 
+  // Execute MessageProcessors initialization phase
+  // Used once on genesis AccountState creation
+  private def initProcessors(initialVersion: VersionTag): Try[AccountState] = Try {
+    val view = getView
+    for(processor <- messageProcessors) {
+      processor.init(view)
+    }
+    // TODO: commit only StateDB part ???
+    // view.commit(initialVersion)
+    this
+  }
+
   // Modifiers:
   override def applyModifier(mod: AccountBlock): Try[AccountState] = Try {
     require(versionToBytes(version).sameElements(idToBytes(mod.parentId)),
@@ -222,21 +234,25 @@ class AccountState(val params: NetworkParams,
 
 object AccountState {
   private[horizen] def restoreState(stateMetadataStorage: AccountStateMetadataStorage,
+                                    messageProcessors: Seq[MessageProcessor],
                                     params: NetworkParams): Option[AccountState] = {
 
     if (!stateMetadataStorage.isEmpty)
-      Some(new AccountState(params, bytesToVersion(stateMetadataStorage.lastVersionId.get.data), stateMetadataStorage, Seq()))
+      Some(new AccountState(params, bytesToVersion(stateMetadataStorage.lastVersionId.get.data), stateMetadataStorage, messageProcessors))
     else
       None
   }
 
   private[horizen] def createGenesisState(stateMetadataStorage: AccountStateMetadataStorage,
+                                          messageProcessors: Seq[MessageProcessor],
                                           params: NetworkParams,
                                           genesisBlock: AccountBlock): Try[AccountState] = Try {
 
-    if (stateMetadataStorage.isEmpty)
-      new AccountState(params, idToVersion(genesisBlock.parentId), stateMetadataStorage, Seq()).applyModifier(genesisBlock).get
-    else
+    if (stateMetadataStorage.isEmpty) {
+      new AccountState(params, idToVersion(genesisBlock.parentId), stateMetadataStorage, messageProcessors)
+        .initProcessors(idToVersion(genesisBlock.parentId)).get
+        .applyModifier(genesisBlock).get
+    } else
       throw new RuntimeException("State metadata storage is not empty!")
   }
 }

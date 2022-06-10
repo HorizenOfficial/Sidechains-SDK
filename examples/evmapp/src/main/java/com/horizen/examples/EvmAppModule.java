@@ -1,6 +1,5 @@
 package com.horizen.examples;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -11,6 +10,7 @@ import com.google.inject.name.Names;
 
 import com.horizen.SidechainSettings;
 import com.horizen.account.AccountAppModule;
+import com.horizen.account.state.MessageProcessor;
 import com.horizen.account.transaction.AccountTransaction;
 import com.horizen.api.http.ApplicationApiGroup;
 import com.horizen.proof.Proof;
@@ -18,9 +18,6 @@ import com.horizen.proposition.Proposition;
 import com.horizen.secret.Secret;
 import com.horizen.secret.SecretSerializer;
 import com.horizen.settings.SettingsReader;
-import com.horizen.storage.Storage;
-import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter;
-import com.horizen.transaction.BoxTransaction;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.utils.Pair;
 
@@ -48,7 +45,9 @@ public class EvmAppModule extends AccountAppModule
         // For example new Pair("wallet, "allBoxes");
         List<Pair<String, String>> rejectedApiPaths = new ArrayList<>();
 
-
+        // Here I can add my custom logic to manage EthereumTransaction content.
+        // TODO: EvmProcessor instance expected.
+        List<MessageProcessor> customMessageProcessors = new ArrayList<>();
 
         bind(SidechainSettings.class)
                 .annotatedWith(Names.named("SidechainSettings"))
@@ -69,5 +68,9 @@ public class EvmAppModule extends AccountAppModule
         bind(new TypeLiteral<List<Pair<String, String>>> () {})
                 .annotatedWith(Names.named("RejectedApiPaths"))
                 .toInstance(rejectedApiPaths);
+
+        bind(new TypeLiteral<List<MessageProcessor>> () {})
+                .annotatedWith(Names.named("CustomMessageProcessors"))
+                .toInstance(customMessageProcessors);
     }
 }

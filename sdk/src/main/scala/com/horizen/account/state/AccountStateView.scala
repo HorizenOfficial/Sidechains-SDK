@@ -71,16 +71,16 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView, mes
   // def addLog(log: EvmLog) : Try[Unit] = ???
 
   // out-of-the-box helpers
-  override protected def addCertificate(cert: WithdrawalEpochCertificate): Try[AccountStateView] = Try {
+  override def addCertificate(cert: WithdrawalEpochCertificate): Try[AccountStateView] = Try {
     metadataStorageView.updateTopQualityCertificate(cert)
     new AccountStateView(metadataStorageView, messageProcessors)
   }
 
-  override protected def addWithdrawalRequest(wrb: WithdrawalRequestBox): Try[AccountStateView] = ???
+  override def addWithdrawalRequest(wrb: WithdrawalRequestBox): Try[AccountStateView] = ???
 
-  override protected def delegateStake(fb: ForgerBox): Try[AccountStateView] = ???
+  override def delegateStake(fb: ForgerBox): Try[AccountStateView] = ???
 
-  override protected def spendStake(fb: ForgerBox): Try[AccountStateView] = ???
+  override def spendStake(fb: ForgerBox): Try[AccountStateView] = ???
 
   // note: probably must be "set" than "add". Because we allow it only once per "commit".
   override def addFeeInfo(info: BlockFeeInfo): Try[AccountStateView] = Try {

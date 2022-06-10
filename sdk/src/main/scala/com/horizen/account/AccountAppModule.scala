@@ -2,6 +2,7 @@ package com.horizen.account
 
 import com.google.inject.Provides
 import com.google.inject.name.Named
+import com.horizen.account.state.MessageProcessor
 import com.horizen.api.http.ApplicationApiGroup
 import com.horizen.box.BoxSerializer
 import com.horizen.helper._
@@ -43,7 +44,8 @@ abstract class AccountAppModule extends com.google.inject.AbstractModule {
           @Named("CustomSecretSerializers")  customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
           @Named("CustomAccountTransactionSerializers")  customAccountTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCAT]],
           @Named("CustomApiGroups")  customApiGroups: JList[ApplicationApiGroup],
-          @Named("RejectedApiPaths")  rejectedApiPaths : JList[Pair[String, String]]
+          @Named("RejectedApiPaths")  rejectedApiPaths : JList[Pair[String, String]],
+          @Named("CustomMessageProcessors") customMessageProcessors: JList[MessageProcessor]
          ): AccountSidechainApp = {
     synchronized {
       if (app == null) {
@@ -52,7 +54,8 @@ abstract class AccountAppModule extends com.google.inject.AbstractModule {
           customSecretSerializers,
           customAccountTransactionSerializers,
           customApiGroups,
-          rejectedApiPaths
+          rejectedApiPaths,
+          customMessageProcessors
         )
       }
     }
