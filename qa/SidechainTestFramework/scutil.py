@@ -546,6 +546,8 @@ def wait_sidechainclients():
         sidechainclient.wait()
     sidechainclient_processes.clear()
 
+def get_sc_node_pids() :
+    return [process.pid for process in sidechainclient_processes.values()]
 
 def connect_sc_nodes(from_connection, node_num, wait_for=25):
     """

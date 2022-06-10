@@ -37,7 +37,6 @@ import scorex.core.settings.ScorexSettings
 import scorex.core.transaction.Transaction
 import scorex.core.{ModifierTypeId, NodeViewModifier}
 import scorex.util.ScorexLogging
-
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Map
 import scala.collection.mutable
