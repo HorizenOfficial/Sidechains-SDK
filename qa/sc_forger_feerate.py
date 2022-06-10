@@ -20,7 +20,7 @@ Configuration:
     Start 1 MC node and 1 SC node (with default websocket configuration).
     SC node connected to the first MC node.
 Test:
-    TODO   add description
+    Perform several transactions with different size and fee and verify that they are ordered by FeeRate.
 """
 class SCForgerFeerate(SidechainTestFramework):
 

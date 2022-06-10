@@ -29,6 +29,7 @@ trait MockedSidechainNodeViewHolderFixture extends MockitoSugar {
     val sidechainSettings = mock[SidechainSettings]
     val scorexSettings = mock[ScorexSettings]
     val networkSettings = mock[NetworkSettings]
+    val walletSettings = mock[WalletSettings]
     Mockito.when(sidechainSettings.scorexSettings)
       .thenAnswer(answer => {
         scorexSettings
@@ -41,7 +42,14 @@ trait MockedSidechainNodeViewHolderFixture extends MockitoSugar {
       .thenAnswer(answer => {
       maxModifiersCacheSize
     })
-
+    Mockito.when(sidechainSettings.wallet)
+      .thenAnswer(answer => {
+        walletSettings
+      })
+    Mockito.when(sidechainSettings.wallet.maxFee)
+      .thenAnswer(answer => {
+        10
+      })
     actorSystem.actorOf(Props(new MockedSidechainNodeViewHolder(sidechainSettings, history, state, wallet, mempool)))
   }
 }

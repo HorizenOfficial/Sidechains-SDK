@@ -1,9 +1,9 @@
 package com.horizen.api.http
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import com.horizen.SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import com.horizen.SidechainTypes
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, SuccessfulTransaction}
 import scorex.util.{ModifierId, ScorexLogging}
 
@@ -31,7 +31,6 @@ class SidechainTransactionActor[T <: SidechainTypes#SCBT](sidechainNodeViewHolde
       val future = promise.future
       transactionMap(transaction.id) = promise
       sender() ! future
-
       sidechainNodeViewHolderRef ! LocallyGeneratedTransaction[SidechainTypes#SCBT](transaction)
   }
 

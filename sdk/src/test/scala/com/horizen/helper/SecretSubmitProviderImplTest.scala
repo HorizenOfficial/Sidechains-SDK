@@ -4,20 +4,15 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{TestActor, TestProbe}
 import akka.util.Timeout
 import com.horizen.SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret
-import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, TransactionFixture}
+import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension}
 import com.horizen.secret.PrivateKey25519
-import com.horizen.transaction.RegularTransaction
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SuccessfulTransaction
-import scorex.util.ModifierId
 
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Promise}
+import scala.concurrent.{ExecutionContext}
 import scala.util.{Failure, Success, Try}
 import scala.language.postfixOps
 

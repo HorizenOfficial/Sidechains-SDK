@@ -2,6 +2,7 @@ package com.horizen
 
 
 import akka.actor.{ActorRef, ActorSystem, Props}
+import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{NewLocallyGeneratedTransactions}
 import com.horizen.block.SidechainBlock
 import com.horizen.chain.FeePaymentsInfo
 import com.horizen.consensus._
@@ -17,8 +18,10 @@ import scorex.core.NodeViewHolder.DownloadRequest
 import scorex.core.consensus.History.ProgressInfo
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages._
 import scorex.core.settings.ScorexSettings
+import scorex.core.transaction.Transaction
 import scorex.core.utils.NetworkTimeProvider
 import scorex.core.{ModifiersCache, idToVersion, versionToId}
+import scorex.core.{idToVersion, versionToId}
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.annotation.tailrec
@@ -65,6 +68,8 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     historyStorage, consensusDataStorage,
     utxoMerkleTreeStorage, stateStorage, forgerBoxStorage,
     secretStorage, walletBoxStorage, walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage)
+
+  val maxFee = sidechainSettings.wallet.maxFee
 
   private def semanticBlockValidators(params: NetworkParams): Seq[SemanticBlockValidator] = Seq(new SidechainBlockSemanticValidator(params))
   private def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator] = Seq(
@@ -287,11 +292,20 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   }
 
 
-
   protected def processGetStorageVersions: Receive = {
     case SidechainNodeViewHolder.ReceivableMessages.GetStorageVersions =>
        sender() ! getStorageVersions
 
+  protected def processLocallyGeneratedTransaction: Receive = {
+    case newTxs: NewLocallyGeneratedTransactions[SidechainTypes#SCBT] =>
+      newTxs.txs.foreach(tx => {
+        if(maxFee > -1 && tx.fee() > maxFee)
+          context.system.eventStream.publish(FailedTransaction(tx.asInstanceOf[Transaction].id, new IllegalArgumentException(s"Transaction ${tx.id()} with fee of ${tx.fee()} exceed the predefined MaxFee of ${maxFee}"),
+            immediateFailure = true))
+        else
+          txModify(tx)
+
+      })
   }
 
   override def receive: Receive = {
@@ -302,6 +316,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       processRemoteModifiers orElse
       applyModifier orElse
       processGetStorageVersions orElse
+      processLocallyGeneratedTransaction orElse
       super.receive
   }
 
@@ -531,6 +546,13 @@ object SidechainNodeViewHolder /*extends ScorexLogging with ScorexEncoding*/ {
 
   private[horizen] object InternalReceivableMessages {
     case class ApplyModifier(applied: Seq[SidechainBlock])
+    sealed trait NewLocallyGeneratedTransactions[TX <: Transaction]{
+      val txs: Iterable[TX]
+    }
+
+    case class LocallyGeneratedTransaction[TX <: Transaction](tx: TX) extends NewLocallyGeneratedTransactions[TX] {
+      override val txs: Iterable[TX] = Iterable(tx)
+    }
   }
 }
 

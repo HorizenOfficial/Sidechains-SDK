@@ -4,6 +4,7 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.testkit.{TestActor, TestProbe}
 import akka.util.Timeout
+import com.horizen.SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.SidechainTransactionActorRef
 import com.horizen.fixtures.{SidechainTypesTestsExtension, TransactionFixture}
@@ -11,15 +12,14 @@ import com.horizen.transaction.RegularTransaction
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, SuccessfulTransaction}
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
 import org.junit.Assert._
 import scorex.util.ModifierId
-import scala.language.postfixOps
 
+import scala.language.postfixOps
 import scala.concurrent.duration._
 
 class SidechainTransactionActorTest extends JUnitSuite with MockitoSugar with TransactionFixture with SidechainTypesTestsExtension {

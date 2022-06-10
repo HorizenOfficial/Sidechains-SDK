@@ -88,7 +88,9 @@ class SCNodeConfiguration(object):
                  automatic_fee_computation=True,
                  certificate_fee=0.0001,
                  forger_options = SCForgerConfiguration(),
-                 api_key = ""):
+                 api_key = "",
+                 max_fee = -1):
+                 ):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))
         self.mc_connection_info = mc_connection_info
@@ -100,7 +102,7 @@ class SCNodeConfiguration(object):
         self.certificate_fee = certificate_fee
         self.forger_options = forger_options
         self.api_key = api_key
-
+        self.max_fee = max_fee
 
 """
 The full network of many sidechain nodes connected to many mainchain nodes.

@@ -42,7 +42,8 @@ case class ForgerSettings(automaticForging: Boolean = false,
                           allowedForgersList: Seq[ForgerKeysData] = Seq())
 
 case class WalletSettings(seed: String,
-                          genesisSecrets: Seq[String])
+                          genesisSecrets: Seq[String],
+                          maxFee: Int = -1)
 
 case class CeasedSidechainWithdrawalSettings(cswProvingKeyFilePath: String,
                                              cswVerificationKeyFilePath: String)
