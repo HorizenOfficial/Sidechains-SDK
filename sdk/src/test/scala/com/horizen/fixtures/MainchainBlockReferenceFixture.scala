@@ -2,11 +2,12 @@ package com.horizen.fixtures
 
 import java.time.Instant
 import java.util.Random
-
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlock}
 import com.horizen.chain.{MainchainHeaderHash, byteArrayToMainchainHeaderHash}
 import com.horizen.params.NetworkParams
+import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.utils._
+import org.scalatestplus.mockito.MockitoSugar.mock
 
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -111,6 +112,13 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
     }
     else {
       generated
+    }
+  }
+
+
+  def mainchainBlockReferenceWithMockedAggTx(ref: MainchainBlockReference): MainchainBlockReference = {
+    new MainchainBlockReference(ref.header, MainchainBlockReferenceData(ref.header.hash, Some(mock[MC2SCAggregatedTransaction]), None, None, Seq(), None)) {
+      override def semanticValidity(params: NetworkParams): Try[Unit] = Success(Unit)
     }
   }
 }

@@ -1,4 +1,3 @@
-import binascii
 import os
 import sys
 
@@ -121,7 +120,7 @@ def launch_bootstrap_tool(command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK",
-                                          "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.3.0.jar",
+                                          "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.3.5-SNAPSHOT.jar",
                                 command_name, json_param], stdout=subprocess.PIPE)
     sc_bootstrap_output = java_ps.communicate()[0]
     try:
@@ -132,6 +131,27 @@ def launch_bootstrap_tool(command_name, json_parameters):
               .format(command_name, json_param, sc_bootstrap_output.decode()))
         raise Exception("Bootstrap tool error occurred")
 
+def launch_db_tool(dirName, command_name, json_parameters):
+
+    '''
+    we use "blockchain" postfix for specifying the dataDir (see qa/resources/template.conf:
+        dataDir = "%(DIRECTORY)s/sc_node%(NODE_NUMBER)s/blockchain"
+    '''
+    storagesPath = dirName + "/blockchain"
+
+    json_param = json.dumps(json_parameters)
+    java_ps = subprocess.Popen(["java", "-jar",
+                                os.getenv("SIDECHAIN_SDK",
+                                          "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-0.3.5-SNAPSHOT.jar",
+                                storagesPath, command_name, json_param], stdout=subprocess.PIPE)
+    db_tool_output = java_ps.communicate()[0]
+    try:
+        jsone_node = json.loads(db_tool_output)
+        return jsone_node
+    except ValueError:
+        print("DB tool error occurred for command= {}\nparams: {}\nError: {}\n"
+              .format(command_name, json_param, db_tool_output.decode()))
+        raise Exception("DB tool error occurred")
 
 """
 Generate a genesis info by calling ScBootstrappingTools with command "genesisinfo"
@@ -245,6 +265,23 @@ def generate_certificate_proof_info(seed, number_of_schnorr_keys, threshold, key
     certificate_proof_info = CertificateProofInfo(threshold, gen_sys_constant, verification_key, schnorr_secrets,
                                                   schnorr_public_keys)
     return certificate_proof_info
+
+
+"""
+return a string like '["127.0.0.1:xxxx","127.0.0.1:xxxx"]' to be set as known Peers in the configuration.
+Based on a index vector [0, 2, 3] where all peers could be [0,1,2,3,4]
+
+Parameters:
+ - known_peers_indexes: indexes of the known peers
+"""
+
+
+def get_known_peers(known_peers_indexes):
+    addresses = []
+    for index in known_peers_indexes:
+        addresses.append("\"" + ("127.0.0.1:" + str(sc_p2p_port(index))) + "\"")
+    peers = "[" + ",".join(addresses) + "]"
+    return peers
 
 
 """
@@ -448,7 +485,7 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
         lib_separator = ";"
 
     if binary is None:
-        binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.3.0.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+        binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.3.5-SNAPSHOT.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
     #        else if platform.system() == 'Linux':
     '''
     In order to effectively attach a debugger (e.g IntelliJ) to the simpleapp, it is necessary to start the process
@@ -458,15 +495,14 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     if (extra_args is not None) and ("-agentlib" in extra_args):
         dbg_agent_opt = ' -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005'
 
+    cfgFileName = datadir + ('/node%s.conf' % i)
     '''
     Some tools and libraries use reflection to access parts of the JDK that are meant for internal use only.
     This illegal reflective access will be disabled in a future release of the JDK.
     Currently, it is permitted by default and a warning is issued.
     The --add-opens VM option remove this warning.
     '''
-    bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + dbg_agent_opt + ' -cp ' + binary + " " + (
-                datadir + ('/node%s.conf' % i))
-
+    bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + dbg_agent_opt + ' -cp ' + binary + " " + cfgFileName
     if print_output_to_file:
         with open(datadir + "/log_out.txt", "wb") as out, open(datadir + "/log_err.txt", "wb") as err:
             sidechainclient_processes[i] = subprocess.Popen(bashcmd.split(), stdout=out, stderr=err)
@@ -476,6 +512,7 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     url = "http://rt:rt@%s:%d" % ('127.0.0.1' or rpchost, sc_rpc_port(i))
     proxy = SidechainAuthServiceProxy(url)
     proxy.url = url  # store URL on proxy for info
+    proxy.dataDir = datadir # store the name of the datadir
     return proxy
 
 
@@ -501,16 +538,18 @@ def check_sc_node(i):
 
 
 def stop_sc_node(node, i):
-    # Must be changed with a sort of .stop() API Call
-    sidechainclient_processes[i].kill()
-    del sidechainclient_processes[i]
+    node.node_stop()
+    if i in sidechainclient_processes:
+        sc_proc = sidechainclient_processes[i]
+        sc_proc.wait()
+        del sidechainclient_processes[i]
 
 
 def stop_sc_nodes(nodes):
-    # Must be changed with a sort of .stop() API call
     global sidechainclient_processes
-    for sc in sidechainclient_processes.values():
-        sc.kill()
+    for idx in range(0, len(nodes)):
+        if idx in sidechainclient_processes:
+            stop_sc_node(nodes[idx], idx)
     del nodes[:]
 
 
@@ -524,6 +563,8 @@ def wait_sidechainclients():
         sidechainclient.wait()
     sidechainclient_processes.clear()
 
+def get_sc_node_pids() :
+    return [process.pid for process in sidechainclient_processes.values()]
 
 def connect_sc_nodes(from_connection, node_num, wait_for=25):
     """
@@ -869,7 +910,7 @@ def get_next_epoch_slot(epoch, slot, slots_in_epoch, force_switch_to_next_epoch=
     return next_epoch, next_slot
 
 
-def generate_next_block(node, node_name, force_switch_to_next_epoch=False):
+def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbose=True):
     forging_info = node.block_forgingInfo()["result"]
     slots_in_epoch = forging_info["consensusSlotsInEpoch"]
     best_slot = forging_info["bestSlotNumber"]
@@ -890,14 +931,15 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False):
 
     assert_true("result" in forge_result, "Error during block generation for SC {0}".format(node_name))
     block_id = forge_result["result"]["blockId"]
-    print("Successfully forged block with id {blockId}".format(blockId=block_id))
+    if verbose == True:
+        print("Successfully forged block with id {blockId}".format(blockId=block_id))
     return forge_result["result"]["blockId"]
 
 
-def generate_next_blocks(node, node_name, blocks_count):
+def generate_next_blocks(node, node_name, blocks_count, verbose = True):
     blocks_ids = []
     for i in range(blocks_count):
-        blocks_ids.append(generate_next_block(node, node_name))
+        blocks_ids.append(generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbose=verbose))
     return blocks_ids
 
 

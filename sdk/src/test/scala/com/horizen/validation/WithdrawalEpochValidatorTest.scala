@@ -235,7 +235,7 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
 
     // Test 4: valid block - no MainchainBlockReferenceData, parent is at the beginning of the epoch
     Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
-      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(),  Seq(),
+      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(), Seq(),
         WithdrawalEpochInfo(1, 0), Option(VrfGenerator.generateVrfOutput(2)), bytesToId(new Array[Byte](32))
       ))
     })
@@ -460,6 +460,62 @@ class WithdrawalEpochValidatorTest extends JUnitSuite with MockitoSugar with Mai
       ))
     })
     assertTrue("Sidechain block with MainchainBlockReferenceData that lead to the finish of the epoch and 2 more MainchainHeaders expected to be valid.",
+      validator.validate(block, history).isSuccess)
+
+
+    // Test 15: valid block - MainchainBlockReferenceData with MC2SCAggTx, that lead to the end of the epoch.
+    mcRefs = Seq(generateMainchainBlockReference()).map(mainchainBlockReferenceWithMockedAggTx) // 1 MC block ref with mocked AggTx
+
+    block = SidechainBlock.create(
+      bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
+      Instant.now.getEpochSecond - 10000,
+      mcRefs.map(_.data), // 1 MainchainBlockReferenceData
+      Seq(),
+      mcRefs.map(_.header), // 1 MainchainHeaders
+      Seq(),
+      forgerMeta14.blockSignSecret,
+      forgerMeta14.forgingStakeInfo,
+      VrfGenerator.generateProof(456L),
+      MerkleTreeFixture.generateRandomMerklePath(456L),
+      new Array[Byte](32),
+      sidechainTransactionsCompanion
+    ).get
+    Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
+      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(), Seq(),
+        WithdrawalEpochInfo(1, withdrawalEpochLength - 1), // lead to the last epoch index -> no epoch switch
+        Option(VrfGenerator.generateVrfOutput(6)), bytesToId(new Array[Byte](32))
+      ))
+    })
+    assertTrue("Sidechain block with MainchainBlockReferenceData with Mc2ScAggTx that lead to the finish of the epoch expected to be valid.",
+      validator.validate(block, history).isSuccess)
+
+
+    // Test 16: valid block - 3 MainchainBlockReferenceData (where the first 2 has MC2SCAggTx), that lead to the end of the epoch.
+    mcRefs = Seq(generateMainchainBlockReference(), generateMainchainBlockReference()).map(mainchainBlockReferenceWithMockedAggTx) ++ Seq(generateMainchainBlockReference())
+
+    block = SidechainBlock.create(
+      bytesToId(new Array[Byte](32)),
+      SidechainBlock.BLOCK_VERSION,
+      Instant.now.getEpochSecond - 10000,
+      mcRefs.map(_.data), // 3 MainchainBlockReferenceData
+      Seq(),
+      mcRefs.map(_.header), // 3 MainchainHeaders
+      Seq(),
+      forgerMeta14.blockSignSecret,
+      forgerMeta14.forgingStakeInfo,
+      VrfGenerator.generateProof(456L),
+      MerkleTreeFixture.generateRandomMerklePath(456L),
+      new Array[Byte](32),
+      sidechainTransactionsCompanion
+    ).get
+    Mockito.when(historyStorage.blockInfoOptionById(ArgumentMatchers.any[ModifierId]())).thenReturn({
+      Some(SidechainBlockInfo(0, 0, null, 0, ModifierSemanticValidity.Valid, Seq(), Seq(),
+        WithdrawalEpochInfo(1, withdrawalEpochLength - 3), // lead to the last epoch index -> no epoch switch
+        Option(VrfGenerator.generateVrfOutput(6)), bytesToId(new Array[Byte](32))
+      ))
+    })
+    assertTrue("Sidechain block with multiple MainchainBlockReferenceData with Mc2ScAggTx that lead to the finish of the epoch expected to be valid.",
       validator.validate(block, history).isSuccess)
   }
 }

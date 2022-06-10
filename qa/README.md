@@ -49,7 +49,7 @@ In order to run a python test for debugging SDK application, the following proce
 
 1) When starting a sc node in the py test, add the option '_-agentlib_' to the _extra_args_ list in the relevant API call, for example:
    ```
-   start_sc_nodes(1, self.options.tmpdir, extra_args=[['-agentlib']])
+   start_sc_nodes(1, self.options.tmpdir, extra_args=['-agentlib'])
    ```
     This will cause the simpleApp process to start with the debug agent acting as a server. The process will wait until the debugger has been connected.
 

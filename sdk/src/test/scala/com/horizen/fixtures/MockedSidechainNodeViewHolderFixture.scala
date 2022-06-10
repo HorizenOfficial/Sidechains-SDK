@@ -11,7 +11,9 @@ class MockedSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                     state: SidechainState,
                                     wallet: SidechainWallet,
                                     mempool: SidechainMemoryPool)
-  extends SidechainNodeViewHolder(sidechainSettings, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null) {
+  extends SidechainNodeViewHolder(sidechainSettings, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null ) {
+
+  override def dumpStorages: Unit = {}
 
   override def restoreState(): Option[(HIS, MS, VL, MP)] = {
     Some(history, state, wallet, mempool)
@@ -20,6 +22,8 @@ class MockedSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
 
 trait MockedSidechainNodeViewHolderFixture extends MockitoSugar {
+  val maxModifiersCacheSize = 10
+
   def getMockedSidechainNodeViewHolderRef(history: SidechainHistory, state: SidechainState, wallet: SidechainWallet, mempool: SidechainMemoryPool)
                                          (implicit actorSystem: ActorSystem): ActorRef = {
     val sidechainSettings = mock[SidechainSettings]
@@ -35,7 +39,7 @@ trait MockedSidechainNodeViewHolderFixture extends MockitoSugar {
     })
     Mockito.when(networkSettings.maxModifiersCacheSize)
       .thenAnswer(answer => {
-      10
+      maxModifiersCacheSize
     })
 
     actorSystem.actorOf(Props(new MockedSidechainNodeViewHolder(sidechainSettings, history, state, wallet, mempool)))

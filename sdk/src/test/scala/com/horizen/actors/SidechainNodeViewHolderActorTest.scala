@@ -25,7 +25,7 @@ import scala.language.postfixOps
 class SidechainNodeViewHolderActorTest extends Suites(
   new SidechainNodeViewHolderActorTest1,
   new SidechainNodeViewHolderActorTest2
-)
+) {}
 
 @RunWith(classOf[JUnitRunner])
 class SidechainNodeViewHolderActorTest1

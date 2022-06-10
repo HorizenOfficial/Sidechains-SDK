@@ -21,6 +21,9 @@ import com.horizen.params.TestNetParams;
 import com.horizen.proof.VrfProof;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.*;
+import com.horizen.tools.utils.Command;
+import com.horizen.tools.utils.CommandProcessor;
+import com.horizen.tools.utils.MessagePrinter;
 import com.horizen.transaction.SidechainTransaction;
 import com.horizen.transaction.mainchain.SidechainCreation;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
@@ -34,7 +37,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class CommandProcessor {
+public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
     // initialization of dlog key must be done only once by the rust cryptolib. Such data is stored in memory and is
     // used in both generateCertProofInfo and generateCswProofInfo cmds
@@ -51,12 +54,11 @@ public class CommandProcessor {
         return true;
     }
 
-    private MessagePrinter printer;
-    
-    public CommandProcessor(MessagePrinter printer) {
-        this.printer = printer;
+    public ScBootstrappingToolCommandProcessor(MessagePrinter printer) {
+        super(printer);
     }
 
+    @Override
     public void processCommand(String input) throws IOException {
         Command command = parseCommand(input);
 
@@ -88,7 +90,8 @@ public class CommandProcessor {
     // 1) <command name>
     // 1) <command name> <json argument>
     // 2) <command name> -f <path to file with json argument>
-    private Command parseCommand(String input) throws IOException {
+    @Override
+    protected Command parseCommand(String input) throws IOException {
         String[] inputData = input.trim().split(" ", 2);
         if(inputData.length == 0)
             throw new IOException(String.format("Error: unrecognized input structure '%s'.%nSee 'help' for usage guideline.", input));
@@ -128,7 +131,8 @@ public class CommandProcessor {
         return new Command(inputData[0], jsonNode);
     }
 
-    private void printUsageMsg() {
+    @Override
+    protected void printUsageMsg() {
         printer.print("Usage:\n" +
                       "\tFrom command line: <program name> <command name> [<json data>]\n" +
                       "\tFor interactive mode: <command name> [<json data>]\n" +
@@ -142,10 +146,6 @@ public class CommandProcessor {
                       "\tgenesisinfo <arguments>\n" +
                       "\texit\n"
         );
-    }
-
-    private void printUnsupportedCommandMsg(String command) {
-        printer.print(String.format("Error: unsupported command '%s'.\nSee 'help' for usage guideline.", command));
     }
 
     private void printGenerateKeyUsageMsg(String error) {
@@ -467,7 +467,7 @@ public class CommandProcessor {
             byte[] scId = Arrays.copyOfRange(infoBytes, offset, offset + 32);
             offset += 32;
 
-            VarInt powDataLength = BytesUtils.getVarInt(infoBytes, offset);
+            CompactSize powDataLength = BytesUtils.getCompactSize(infoBytes, offset);
             offset += powDataLength.size();
 
             String powData = BytesUtils.toHexString(Arrays.copyOfRange(infoBytes, offset, offset + ((int)powDataLength.value() * 8)));
@@ -476,7 +476,7 @@ public class CommandProcessor {
             int mcBlockHeight = BytesUtils.getReversedInt(infoBytes, offset);
             offset += 4;
 
-            VarInt initialCumulativeCommTreeHashLength = BytesUtils.getReversedVarInt(infoBytes, offset);
+            CompactSize initialCumulativeCommTreeHashLength = BytesUtils.getCompactSize(infoBytes, offset);
             offset += initialCumulativeCommTreeHashLength.size();
 
             // Note: we keep this value in Little endian as expected by sc-cryptolib
@@ -493,7 +493,7 @@ public class CommandProcessor {
             SidechainsVersionsManager versionsManager = null;
             if(offset < infoBytes.length) {
                 Map<ByteArrayWrapper, Enumeration.Value> scVersions = new HashMap<>();
-                VarInt scSidechainVersionsLength = BytesUtils.getVarInt(infoBytes, offset);
+                CompactSize scSidechainVersionsLength = BytesUtils.getCompactSize(infoBytes, offset);
                 offset += scSidechainVersionsLength.size();
                 for (int i = 0; i < scSidechainVersionsLength.value(); i++) {
                     byte[] sidechainId = Arrays.copyOfRange(infoBytes, offset, offset + 32);

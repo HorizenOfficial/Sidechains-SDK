@@ -35,6 +35,11 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyn
     context.system.eventStream.subscribe(self, classOf[ChangedHistory[HR]])
   }
 
+  override def postStop(): Unit = {
+    log.debug("SidechainBlock Actor is stopping...")
+    super.postStop()
+  }
+
   def processBlockFailedEvent(sidechainBlock: SidechainBlock, throwable: Throwable): Unit = {
     if (submitBlockPromises.contains(sidechainBlock.id) || generatedBlocksPromises.contains(sidechainBlock.id)) {
       submitBlockPromises.get(sidechainBlock.id) match {

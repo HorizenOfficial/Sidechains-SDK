@@ -48,9 +48,21 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
 
   override def preStart: Unit = {
     super.preStart()
-
     // subscribe on Application Start event to be sure that Submitter itself was initialized.
     context.system.eventStream.subscribe(self, SidechainAppEvents.SidechainApplicationStart.getClass)
+  }
+
+  override def postStop(): Unit = {
+    log.debug("Certificate Signature Manager actor is stopping...")
+    super.postStop()
+  }
+
+  override def postRestart(reason: Throwable): Unit = {
+    super.postRestart(reason)
+    log.error("CertificateSignaturesManager was restarted because of: ", reason)
+    // Start working cycle to let new instance of CertificateSignaturesManager
+    // to make proper subscriptions and schedule events.
+    startWorkingCycle()
   }
 
   override def receive: Receive = {
@@ -67,16 +79,20 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
       log.warn(s"Strange input for CertificateSignaturesManager: $nonsense")
   }
 
+  protected def startWorkingCycle(): Unit = {
+    // Subscribe on the CertificateSubmitter locally generated signature event
+    context.system.eventStream.subscribe(self, classOf[BroadcastLocallyGeneratedSignature])
+
+    // Subscribe on the network CertificateSignature specific messages
+    networkControllerRef ! RegisterMessageSpecs(Seq(getCertificateSignaturesSpec, certificateSignaturesSpec), self)
+
+    // Schedule a periodic known signatures synchronization
+    context.system.scheduler.schedule(getCertificateSignaturesInterval, getCertificateSignaturesInterval)(self ! TryToSendGetCertificateSignatures)
+  }
+
   protected def onSidechainApplicationStart: Receive = {
     case SidechainAppEvents.SidechainApplicationStart =>
-      // Subscribe on the CertificateSubmitter locally generated signature event
-      context.system.eventStream.subscribe(self, classOf[BroadcastLocallyGeneratedSignature])
-
-      // Subscribe on the network CertificateSignature specific messages
-      networkControllerRef ! RegisterMessageSpecs(Seq(getCertificateSignaturesSpec, certificateSignaturesSpec), self)
-
-      // Schedule a periodic known signatures synchronization
-      context.system.scheduler.schedule(getCertificateSignaturesInterval, getCertificateSignaturesInterval)(self ! TryToSendGetCertificateSignatures)
+      startWorkingCycle()
   }
 
   private def tryToSendGetCertificateSignatures: Receive = {
@@ -97,7 +113,7 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
         }
       } match {
         case Success(_) =>
-        case Failure(exception) => log.error("Unexpected behavior on TryToSendGetCertificateSignatures.", exception)
+        case Failure(exception) => log.warn("Unexpected behavior on TryToSendGetCertificateSignatures.", exception)
       }
   }
 
@@ -121,7 +137,7 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
         }
       } match {
         case Success(_) =>
-        case Failure(exception) => log.error("Unexpected behavior while processing get certificate signatures.", exception)
+        case Failure(exception) => log.warn("Unexpected behavior while processing get certificate signatures.", exception)
       }
   }
 
@@ -148,7 +164,7 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
             }
           } match {
             case Success(_) =>
-            case Failure(exception) => log.error("Unexpected behavior while processing signatures from remote.", exception)
+            case Failure(exception) => log.warn("Unexpected behavior while processing signatures from remote.", exception)
           }
         }
       }

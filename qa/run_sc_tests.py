@@ -5,6 +5,8 @@ from mc_sc_forging_delegation import MCSCForgingDelegation
 from sc_ceased import SCCeased
 from sc_cert_no_coin_record import SCCertNoCoinRecord
 from sc_cert_submission_decentralization import SCCertSubmissionDecentralization
+from sc_cert_submitter_after_sync_1 import ScCertSubmitterAfterSync1
+from sc_cert_submitter_after_sync_2 import ScCertSubmitterAfterSync2
 from sc_csw_ceased_at_epoch_1 import SCCswCeasedAtEpoch1
 from sc_csw_ceased_at_epoch_2 import SCCswCeasedAtEpoch2
 from sc_csw_ceased_at_epoch_3 import SCCswCeasedAtEpoch3
@@ -13,6 +15,7 @@ from sc_genesisinfo_sc_versions import SCGenesisInfoScVersions
 from sc_multiple_certs import SCMultipleCerts
 from sc_nodes_initialize import SidechainNodesInitializationTest
 from sc_versions_and_mc_certs import SCVersionsAndMCCertificates
+from sc_withdrawal_epoch_last_block import SCWithdrawalEpochLastBlock
 from test_framework.util import assert_equal
 from mc_sc_connected_nodes import MCSCConnectedNodes
 from mc_sc_forging1 import MCSCForging1
@@ -27,8 +30,11 @@ from websocket_server import SCWsServer
 from mc_sc_forging_fee_payments import MCSCForgingFeePayments
 from sc_cert_fee_conf import CertFeeConfiguration
 from sc_bwt_minimum_value import SCBwtMinValue
+from sc_db_tool_cmds import DBToolTest
 from websocket_server_fee_payments import SCWsServerFeePayments
 from sc_closed_forger import SidechainClosedForgerTest
+from sc_node_response_along_sync import SCNodeResponseAlongSync
+from sc_blockid_for_backup import SidechainBlockIdForBackupTest
 
 
 def run_test(test):
@@ -75,6 +81,9 @@ def run_tests(log_file):
     result = run_test(SCForwardTransfer())
     assert_equal(0, result, "sc_forward_transfer test failed!")
 
+    result = run_test(SCWithdrawalEpochLastBlock())
+    assert_equal(0, result, "sc_withdrawal_epoch_last_block test failed!")
+
     result = run_test(SCCumCommTreeHash())
     assert_equal(0, result, "sc_cum_comm_tree_hash test failed!")
 
@@ -95,6 +104,12 @@ def run_tests(log_file):
 
     result = run_test(SCCertSubmissionDecentralization())
     assert_equal(0, result, "sc_cert_submission_decentralization test failed!")
+
+    result = run_test(ScCertSubmitterAfterSync1())
+    assert_equal(0, result, "sc_cert_submitter_after_sync test failed!")
+
+    result = run_test(ScCertSubmitterAfterSync2())
+    assert_equal(0, result, "sc_cert_submitter_after_sync2 test failed!")
 
     result = run_test(SCCertNoCoinRecord())
     assert_equal(0, result, "sc_cert_no_coin_record test failed!")
@@ -122,6 +137,15 @@ def run_tests(log_file):
 
     result = run_test(SidechainClosedForgerTest())
     assert_equal(0, result, "sc_closed_forger test failed!")
+
+    result = run_test(SCNodeResponseAlongSync())
+    assert_equal(0, result, "sc_node_response_along_sync test failed!")
+
+    result = run_test(DBToolTest())
+    assert_equal(0, result, "DBToolTest test failed!")
+
+    result = run_test(SidechainBlockIdForBackupTest())
+    assert_equal(0, result, "sc_blockid_for_backup test failed!")
 
 
 if __name__ == "__main__":

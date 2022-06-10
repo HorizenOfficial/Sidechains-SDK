@@ -3,7 +3,6 @@ package com.horizen.certificatesubmitter
 
 import java.io.File
 import java.util.Optional
-
 import akka.actor.{Actor, ActorRef, ActorSystem, Props, Timers}
 import akka.pattern.ask
 import akka.util.Timeout
@@ -24,14 +23,15 @@ import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 import scorex.util.ScorexLogging
-import java.util
 
+import java.util
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.Platform.EOL
 import scala.compat.java8.OptionConverters._
-import scala.concurrent.duration.{FiniteDuration, SECONDS}
+import scala.concurrent.duration.{DurationInt, FiniteDuration, SECONDS}
 import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.language.postfixOps
 import scala.util.{Failure, Random, Success, Try}
 
 /**
@@ -65,6 +65,7 @@ class CertificateSubmitter(settings: SidechainSettings,
   private val certificateFee = if (settings.withdrawalEpochCertificateSettings.certificateAutomaticFeeComputation) None else Some(settings.withdrawalEpochCertificateSettings.certificateFee)
 
   override def preStart(): Unit = {
+    super.preStart()
     context.system.eventStream.subscribe(self, classOf[SemanticallySuccessfulModifier[SidechainBlock]])
     context.system.eventStream.subscribe(self, SidechainAppEvents.SidechainApplicationStart.getClass)
 
@@ -74,11 +75,20 @@ class CertificateSubmitter(settings: SidechainSettings,
     context.become(initialization)
   }
 
-  override def aroundPostStop(): Unit = {
+  override def postRestart(reason: Throwable): Unit = {
+    super.postRestart(reason)
+    log.error("CertificateSubmitter was restarted because of: ", reason)
+    // Switch to the working cycle, otherwise Submitter will stuck on initialization phase.
+    loadProvingFilePath()
+    context.become(workingCycle)
+  }
+
+  override def postStop(): Unit = {
+    log.debug("Certificate Submitter actor is stopping...")
+    super.postStop()
     if(timers.isTimerActive(CertificateGenerationTimer)) {
       context.system.eventStream.publish(CertificateSubmissionStopped)
     }
-    super.aroundPostStop()
   }
 
   override def receive: Receive = reportStrangeInput
@@ -133,6 +143,10 @@ class CertificateSubmitter(settings: SidechainSettings,
         s"'${BytesUtils.toHexString(expectedSysDataConstantOpt.getOrElse(Array.emptyByteArray))}' but actual is '${BytesUtils.toHexString(actualSysDataConstant)}'")
     }
 
+    loadProvingFilePath()
+  }
+
+  private def loadProvingFilePath(): Unit = {
     if (params.certProvingKeyFilePath.isEmpty) {
       throw new IllegalStateException(s"Proving key file name is not set")
     }
@@ -177,36 +191,52 @@ class CertificateSubmitter(settings: SidechainSettings,
 
   private def newBlockArrived: Receive = {
     case SemanticallySuccessfulModifier(block: SidechainBlock) =>
-      val submissionWindowStatus: SubmissionWindowStatus = getSubmissionWindowStatus(block)
-      if(submissionWindowStatus.isInWindow) {
-        signaturesStatus match {
-          case Some(_) => // do nothing
-          case None =>
-            val referencedWithdrawalEpochNumber = submissionWindowStatus.withdrawalEpochInfo.epoch - 1
-            val messageToSign = getMessageToSign(referencedWithdrawalEpochNumber)
-            signaturesStatus = Some(SignaturesStatus(referencedWithdrawalEpochNumber, messageToSign, ArrayBuffer()))
+      getSubmissionWindowStatus(block) match {
+        case Success(submissionWindowStatus) =>
+          if(submissionWindowStatus.isInWindow) {
+            signaturesStatus match {
+              case Some(_) => // do nothing
+              case None =>
+                val referencedWithdrawalEpochNumber = submissionWindowStatus.withdrawalEpochInfo.epoch - 1
+                getMessageToSign(referencedWithdrawalEpochNumber) match {
+                  case Success(messageToSign) =>
+                    signaturesStatus = Some(SignaturesStatus(referencedWithdrawalEpochNumber, messageToSign, ArrayBuffer()))
 
-            // Try to calculate signatures if signing is enabled
-            if(certificateSigningEnabled) {
-              calculateSignatures(messageToSign).foreach(sigInfo => {
-                self ! LocallyGeneratedSignature(sigInfo)
-              })
+                    // Try to calculate signatures if signing is enabled
+                    if(certificateSigningEnabled) {
+                      calculateSignatures(messageToSign) match {
+                        case Success(signaturesInfo) =>
+                          signaturesInfo.foreach(sigInfo => {
+                            self ! LocallyGeneratedSignature(sigInfo)
+                          })
+                        case Failure(exception) =>
+                          log.warn(s"Unexpected behavior on SemanticallySuccessfulModifier($block) while calculating signatures.", exception)
+                          signaturesStatus = None // keep signaturesStatus undefined as before
+                      }
+                    }
+                  case Failure(exception) =>
+                    log.warn(s"Unexpected behavior on SemanticallySuccessfulModifier($block) while calculating message to sign.", exception)
+                    signaturesStatus = None // keep signaturesStatus undefined as before
+                }
             }
-        }
-      } else {
-        if(timers.isTimerActive(CertificateGenerationTimer)) {
-          timers.cancel(CertificateGenerationTimer)
-          log.info("Cancel the scheduled Certificate generation due to the Submission Window end")
-          context.system.eventStream.publish(CertificateSubmissionStopped)
-        }
-        signaturesStatus = None
+          } else {
+            if(timers.isTimerActive(CertificateGenerationTimer)) {
+              timers.cancel(CertificateGenerationTimer)
+              log.info("Cancel the scheduled Certificate generation due to the Submission Window end")
+              context.system.eventStream.publish(CertificateSubmissionStopped)
+            }
+            signaturesStatus = None
+          }
+
+        case Failure(exception) =>
+          log.warn(s"Unexpected behavior on SemanticallySuccessfulModifier($block) while calculating SubmissionWindowStatus.", exception)
       }
   }
 
   // Take withdrawal epoch info for block from the History.
   // Note: We can't rely on `State.getWithdrawalEpochInfo`, because it shows the tip info,
   // but the older block may being applied at the moment.
-  private def getSubmissionWindowStatus(block: SidechainBlock): SubmissionWindowStatus = {
+  private def getSubmissionWindowStatus(block: SidechainBlock): Try[SubmissionWindowStatus] = Try {
     def getStatus(sidechainNodeView: View): SubmissionWindowStatus = {
       val withdrawalEpochInfo: WithdrawalEpochInfo = sidechainNodeView.history.blockInfoById(block.id).withdrawalEpochInfo
       SubmissionWindowStatus(withdrawalEpochInfo, WithdrawalEpochUtils.inSubmitCertificateWindow(withdrawalEpochInfo, params))
@@ -221,8 +251,8 @@ class CertificateSubmitter(settings: SidechainSettings,
   // Every positive value FT is allowed.
   private def getFtMinAmount(referencedWithdrawalEpochNumber: Int): Long = 0
 
-  private def getMessageToSign(referencedWithdrawalEpochNumber: Int): Array[Byte] = {
-    def getMessage(sidechainNodeView: View): Array[Byte] = {
+  private def getMessageToSign(referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
+    def getMessage(sidechainNodeView: View): Try[Array[Byte]] = Try {
       val history = sidechainNodeView.history
       val state = sidechainNodeView.state
 
@@ -234,7 +264,11 @@ class CertificateSubmitter(settings: SidechainSettings,
       val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
       val sidechainId = params.sidechainId
 
-      val utxoMerkleTreeRoot = state.utxoMerkleTreeRoot(referencedWithdrawalEpochNumber).get
+      val utxoMerkleTreeRoot = state.utxoMerkleTreeRoot(referencedWithdrawalEpochNumber).getOrElse(
+        throw new Exception("CertificateSubmitter is too late against the State. " +
+          s"No utxo merkle tree root for requested epoch $referencedWithdrawalEpochNumber. " +
+          s"Current epoch is ${state.getWithdrawalEpochInfo.epoch}")
+      )
 
       CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(
         withdrawalRequests.asJava,
@@ -246,10 +280,10 @@ class CertificateSubmitter(settings: SidechainSettings,
         utxoMerkleTreeRoot)
     }
 
-    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getMessage), timeoutDuration).asInstanceOf[Array[Byte]]
+    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getMessage), timeoutDuration).asInstanceOf[Try[Array[Byte]]].get
   }
 
-  private def calculateSignatures(messageToSign: Array[Byte]): Seq[CertificateSignatureInfo] = {
+  private def calculateSignatures(messageToSign: Array[Byte]): Try[Seq[CertificateSignatureInfo]] = Try {
     def getSignersPrivateKeys(sidechainNodeView: View): Seq[(SchnorrSecret, Int)] = {
       val wallet = sidechainNodeView.vault
       params.signersPublicKeys.map(signerPublicKey => wallet.secret(signerPublicKey)).zipWithIndex.filter(_._1.isDefined).map {
@@ -260,8 +294,8 @@ class CertificateSubmitter(settings: SidechainSettings,
     val privateKeysWithIndexes = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getSignersPrivateKeys), timeoutDuration)
       .asInstanceOf[Seq[(SchnorrSecret, Int)]]
 
-    privateKeysWithIndexes.map{
-      case(secret, pubKeyIndex) => CertificateSignatureInfo(pubKeyIndex, secret.sign(messageToSign))
+    privateKeysWithIndexes.map {
+      case (secret, pubKeyIndex) => CertificateSignatureInfo(pubKeyIndex, secret.sign(messageToSign))
     }
   }
 
@@ -375,7 +409,7 @@ class CertificateSubmitter(settings: SidechainSettings,
   }
 
   private def tryToGenerateCertificate: Receive = {
-    case TryToGenerateCertificate =>
+    case TryToGenerateCertificate => Try {
       signaturesStatus match {
         case Some(status) =>
           // Check quality again, in case better Certificate appeared.
@@ -395,7 +429,7 @@ class CertificateSubmitter(settings: SidechainSettings,
                   proofWithQuality = generateProof(dataForProofGeneration)
                 } catch {
                   case e: Exception =>
-                    log.error(s"Proof creation failed due to: $e")
+                    log.error("Proof creation failed.", e)
                     context.system.eventStream.publish(CertificateSubmissionStopped)
                     return
                 }
@@ -419,7 +453,7 @@ class CertificateSubmitter(settings: SidechainSettings,
                     log.info(s"Backward transfer certificate response had been received. Cert hash = " + BytesUtils.toHexString(certificate.certificateId))
 
                   case Failure(ex) =>
-                    log.error("Creation of backward transfer certificate had been failed. " + ex)
+                    log.error("Creation of backward transfer certificate had been failed.", ex)
                 }
                 context.system.eventStream.publish(CertificateSubmissionStopped)
               }
@@ -431,6 +465,12 @@ class CertificateSubmitter(settings: SidechainSettings,
           log.debug("Can't generate Certificate because of being outside the Certificate submission window.")
           context.system.eventStream.publish(CertificateSubmissionStopped)
       }
+    } match {
+      case Success(_) =>
+      case Failure(exception) =>
+        log.error("Certificate creation failed.", exception)
+        context.system.eventStream.publish(CertificateSubmissionStopped)
+    }
   }
 
   case class DataForProofGeneration(referencedEpochNumber: Int,

@@ -73,11 +73,23 @@ trait BoxFixture
     new CustomBox(new CustomBoxData(getCustomPrivateKey.publicImage(), Random.nextInt(100)), Random.nextInt(1000))
   }
 
+  def getCustomBoxWithPrivateKey(proposition: CustomPublicKeyProposition): CustomBox = {
+    new CustomBox(new CustomBoxData(proposition, Random.nextInt(100)), Random.nextInt(1000))
+  }
+
   def getCustomBoxList(count: Int): JList[CustomBox] = {
     val boxList: JList[CustomBox] = new JArrayList()
 
     for (i <- 1 to count)
       boxList.add(getCustomBox)
+
+    boxList
+  }
+
+  def getCustomBoxListWithPrivateKeys(secretList: JList[CustomPrivateKey]): JList[CustomBox] = {
+    val boxList: JList[CustomBox] = new JArrayList()
+    for (s <- secretList.asScala)
+      boxList.add(getCustomBoxWithPrivateKey(s.publicImage()))
 
     boxList
   }

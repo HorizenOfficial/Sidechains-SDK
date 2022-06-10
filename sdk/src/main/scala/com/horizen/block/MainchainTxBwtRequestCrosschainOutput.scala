@@ -3,7 +3,7 @@ package com.horizen.block
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
 import com.horizen.serialization.ReverseBytesSerializer
-import com.horizen.utils.{BytesUtils, Utils, VarInt}
+import com.horizen.utils.{BytesUtils, Utils, CompactSize}
 
 import scala.util.Try
 
@@ -29,11 +29,11 @@ object MainchainTxBwtRequestCrosschainOutput {
     val sidechainId: Array[Byte] = bwtRequestOutputBytes.slice(currentOffset, currentOffset + 32)
     currentOffset += 32
 
-    val scRequestDataSize: VarInt = BytesUtils.getReversedVarInt(bwtRequestOutputBytes, currentOffset)
+    val scRequestDataSize: CompactSize = BytesUtils.getCompactSize(bwtRequestOutputBytes, currentOffset)
     currentOffset += scRequestDataSize.size()
 
     val scRequestDataSeq: Seq[Array[Byte]] = (1 to scRequestDataSize.value().intValue()).map(idx => {
-      val dataSize = BytesUtils.getReversedVarInt(bwtRequestOutputBytes, currentOffset)
+      val dataSize = BytesUtils.getCompactSize(bwtRequestOutputBytes, currentOffset)
       currentOffset += dataSize.size()
 
       if(dataSize.value() != FieldElementUtils.fieldElementLength())
