@@ -12,6 +12,7 @@ import com.horizen.account.forger.AccountForgerRef
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.network.AccountNodeViewSynchronizer
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
+import com.horizen.account.state.MessageProcessor
 import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
 import com.horizen.api.http._
 import com.horizen.block.SidechainBlockBase
@@ -44,7 +45,8 @@ class AccountSidechainApp @Inject()
    @Named("CustomSecretSerializers") customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
    @Named("CustomAccountTransactionSerializers") val customAccountTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCAT]],
    @Named("CustomApiGroups") customApiGroups: JList[ApplicationApiGroup],
-   @Named("RejectedApiPaths") rejectedApiPaths : JList[Pair[String, String]]
+   @Named("RejectedApiPaths") rejectedApiPaths : JList[Pair[String, String]],
+   @Named("CustomMessageProcessors") customMessageProcessors: JList[MessageProcessor]
   )
   extends AbstractSidechainApp(
     sidechainSettings,
@@ -112,6 +114,7 @@ class AccountSidechainApp @Inject()
     sidechainHistoryStorage,
     consensusDataStorage,
     stateMetadataStorage,
+    customMessageProcessors.asScala,
     sidechainSecretStorage,
     params,
     timeProvider,
