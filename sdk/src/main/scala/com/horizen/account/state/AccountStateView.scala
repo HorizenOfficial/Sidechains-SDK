@@ -48,11 +48,27 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView, mes
   // account modifiers:
   def addAccount(address: Array[Byte], account: Account): Try[AccountStateView] = ???
 
-  protected def addBalance(address: Array[Byte], amount: Long): Try[AccountStateView] = ???
+  def addBalance(address: Array[Byte], amount: Long): Try[AccountStateView] = ???
 
-  protected def subBalance(address: Array[Byte], amount: Long): Try[AccountStateView] = ???
+  def subBalance(address: Array[Byte], amount: Long): Try[AccountStateView] = ???
 
   protected def updateAccountStorageRoot(address: Array[Byte], root: Array[Byte]): Try[AccountStateView] = ???
+
+  def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Try[Unit] =
+  {
+    //stateDb-->
+    //public void setStorage(byte[] address, byte[] key, byte[] value) throws Exception {
+    ???
+  }
+
+  def getAccountStorage(address: Array[Byte], key: Array[Byte]): Try[Array[Byte]] = {
+    // it should be legal to have a valid address with no values for the given key
+    // It should throw an exception if the address does not exist
+    ???
+  }
+
+  // log handling
+  // def addLog(log: EvmLog) : Try[Unit] = ???
 
   // out-of-the-box helpers
   override protected def addCertificate(cert: WithdrawalEpochCertificate): Try[AccountStateView] = Try {
