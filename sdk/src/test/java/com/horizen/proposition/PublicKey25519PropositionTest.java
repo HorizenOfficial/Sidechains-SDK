@@ -1,5 +1,6 @@
 package com.horizen.proposition;
 
+import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Ed25519;
 import com.horizen.utils.Pair;
 import org.junit.Before;
@@ -67,7 +68,7 @@ public class PublicKey25519PropositionTest {
     public void PublicKey25519Proposition_AddressTest() {
         PublicKey25519Proposition prop1 = new PublicKey25519Proposition(publicKey);
         String encodedAddress = prop1.address();
-        byte[] decodedAddress = PublicKey25519Proposition.encoder().decode(encodedAddress).get();
+        byte[] decodedAddress = BytesUtils.fromHexString(encodedAddress);
         assertEquals("Another address length expected", PublicKey25519Proposition.ADDRESS_LENGTH, decodedAddress.length);
 
         PublicKey25519Proposition prop2 = PublicKey25519Proposition.parseAddress(encodedAddress);

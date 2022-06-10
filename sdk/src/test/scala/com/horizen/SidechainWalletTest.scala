@@ -685,14 +685,19 @@ class SidechainWalletTest
     val secret2 = getPrivateKey25519("testSeed2".getBytes())
 
 
-    // Test 1: test secret(proposition) and secretByPublicKey(proposition)
+    // Test 1: test secret(proposition) and secretByPublicKey25519Proposition(proposition)
     Mockito.when(mockedSecretStorage1.get(secret1.publicImage())).thenReturn(Some(secret1))
+    Mockito.when(mockedSecretStorage1.getAll).thenReturn(List(secret1, secret2))
 
     var actualSecret = sidechainWallet.secret(secret1.publicImage()).get
     assertEquals("SidechainWallet failed to retrieve a proper Secret.", secret1, actualSecret)
 
-    actualSecret = sidechainWallet.secretByPublicKey(secret1.publicImage()).get
+    actualSecret = sidechainWallet.secretByPublicKey25519Proposition(secret1.publicImage()).get
     assertEquals("SidechainWallet failed to retrieve a proper Secret.", secret1, actualSecret)
+
+    val retList =  sidechainWallet.secretsByProposition(secret1.publicImage())
+    assertEquals("SidechainWallet failed to retrieve a proper Secret.", 1, retList.size())
+    assertEquals("SidechainWallet failed to retrieve a proper Secret.", secret1, retList.get(0))
 
 
     // Test 2: test secrets(), publicKeys(), allSecrets(), secretsOfType(type)
@@ -785,32 +790,38 @@ class SidechainWalletTest
       mockedWalletTransactionStorage1, mockedForgingBoxesMerklePathStorage1, mockedCswDataStorage1, params, mockedVersion, new CustomApplicationWallet())
     val walletBoxZen1 = getWalletBox(classOf[ZenBox])
     val walletBoxZen2 = getWalletBox(classOf[ZenBox])
-    val walletBoxCustom = getWalletBox(classOf[ZenBox])
+    val walletBoxZen3 = getWalletBox(classOf[ZenBox])
+    val walletBoxCustom = getWalletBox(classOf[CustomBox])
 
 
     // Test 1: test test boxes(), allBoxes(), allBoxes(boxIdsToExclude)
-    Mockito.when(mockedWalletBoxStorage1.getAll).thenReturn(List(walletBoxZen1, walletBoxZen2, walletBoxCustom))
+    Mockito.when(mockedWalletBoxStorage1.getAll).thenReturn(List(walletBoxZen1, walletBoxZen2, walletBoxZen3, walletBoxCustom))
 
     val actualBoxes = sidechainWallet.boxes()
     assertEquals("SidechainWallet failed to retrieve a proper Boxes.",
-      List(walletBoxZen1, walletBoxZen2, walletBoxCustom), actualBoxes)
+      List(walletBoxZen1, walletBoxZen2, walletBoxZen3, walletBoxCustom), actualBoxes)
 
     val actualBoxesJava = sidechainWallet.allBoxes
     assertEquals("SidechainWallet failed to retrieve a proper Boxes.",
-      util.Arrays.asList(walletBoxZen1.box, walletBoxZen2.box, walletBoxCustom.box), actualBoxesJava)
+      util.Arrays.asList(walletBoxZen1.box, walletBoxZen2.box, walletBoxZen3.box, walletBoxCustom.box), actualBoxesJava)
 
     // exclude id of walletBoxZen1
     val actualBoxesWithExcludeJava = sidechainWallet.allBoxes(util.Arrays.asList(walletBoxZen1.box.id()))
     assertEquals("SidechainWallet failed to retrieve a proper Boxes with excluded ids.",
-      util.Arrays.asList(walletBoxZen2.box, walletBoxCustom.box), actualBoxesWithExcludeJava)
+      util.Arrays.asList(walletBoxZen2.box, walletBoxZen3.box, walletBoxCustom.box), actualBoxesWithExcludeJava)
 
 
     // Test 2: test boxesOfType(type) and boxesOfType(type, boxIdsToExclude)
     Mockito.when(mockedWalletBoxStorage1.getByType(classOf[ZenBox])).thenReturn(List(walletBoxZen1, walletBoxZen2))
+    Mockito.when(mockedWalletBoxStorage1.getByType(classOf[CustomBox])).thenReturn(List(walletBoxCustom))
 
     val actualBoxesByTypeJava = sidechainWallet.boxesOfType(classOf[ZenBox])
     assertEquals("SidechainWallet failed to retrieve a proper Boxes of type ZenBox.",
       util.Arrays.asList(walletBoxZen1.box, walletBoxZen2.box), actualBoxesByTypeJava)
+
+    val actualCustomBoxesByTypeJava = sidechainWallet.boxesOfType(classOf[CustomBox])
+    assertEquals("SidechainWallet failed to retrieve a proper Boxes of type CustomBox.",
+      util.Arrays.asList(walletBoxCustom.box), actualCustomBoxesByTypeJava)
 
     val actualBoxesByTypeWithExcludeJava = sidechainWallet.boxesOfType(classOf[ZenBox], util.Arrays.asList(walletBoxZen1.box.id()))
     assertEquals("SidechainWallet failed to retrieve a proper Boxes of type ZenBox with excluded ids.",
