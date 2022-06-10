@@ -387,6 +387,13 @@ def assert_equal(expected, actual, message=""):
             message = "; %s" % message 
         raise AssertionError("(left == right)%s\n  left: <%s>\n right: <%s>" % (message, str(expected), str(actual)))
 
+def assert_not_equal(expected, actual, message=""):
+    if expected == actual:
+        if message:
+            message = "; %s" % message
+        raise AssertionError("(left != right)%s\n  left: <%s>\n right: <%s>" % (message, str(expected), str(actual)))
+
+
 def assert_true(condition, message = ""):
     if not condition:
         raise AssertionError(message)

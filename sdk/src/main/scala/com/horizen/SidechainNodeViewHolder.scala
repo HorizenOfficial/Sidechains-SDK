@@ -9,6 +9,7 @@ import com.horizen.node.SidechainNodeView
 import com.horizen.params.NetworkParams
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
+import com.horizen.utils.SDKModifiersCache
 import com.horizen.utils.BytesUtils
 import com.horizen.validation._
 import com.horizen.wallet.ApplicationWallet
@@ -17,14 +18,10 @@ import scorex.core.consensus.History.ProgressInfo
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages._
 import scorex.core.settings.ScorexSettings
 import scorex.core.utils.NetworkTimeProvider
-import scorex.core.{bytesToVersion, idToVersion, versionToId}
-import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
+import scorex.core.{ModifiersCache, idToVersion, versionToId}
+import scorex.util.{ModifierId, ScorexLogging}
 
-import java.util
 import scala.annotation.tailrec
-import scala.collection.JavaConverters.asScalaBufferConverter
-import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
 class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
@@ -62,6 +59,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                             suffix: IndexedSeq[SidechainBlock])
 
   override val scorexSettings: ScorexSettings = sidechainSettings.scorexSettings
+  private var applyingBlock: Boolean = false
 
   lazy val listOfStorageInfo : Seq[SidechainStorageInfo] = Seq[SidechainStorageInfo](
     historyStorage, consensusDataStorage,
@@ -75,6 +73,12 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     new MainchainBlockReferenceValidator(params),
     new ConsensusValidator(timeProvider)
   )
+
+  /**
+   * Cache for modifiers. If modifiers are coming out-of-order, they are to be stored in this cache.
+   */
+  protected override lazy val modifiersCache: ModifiersCache[SidechainBlock, HIS] =
+    new SDKModifiersCache[SidechainBlock, HIS](scorexSettings.network.maxModifiersCacheSize)
 
   // this method is called at the startup after the load of the storages from the persistent db. It might happen that the node was not
   // stopped gracefully and therefore the consistency among storages might not be ensured. This method tries to recover this situation
@@ -287,7 +291,43 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       applyBiFunctionOnNodeView orElse
       getCurrentSidechainNodeViewInfo orElse
       processLocallyGeneratedSecret orElse
+      processRemoteModifiers orElse
+      applyModifier orElse
       super.receive
+  }
+
+  /**
+   * Process new modifiers from remote.
+   * Put all candidates to modifiersCache and then try to apply as much modifiers from cache as possible.
+   * Clear cache if it's size exceeds size limit.
+   * Publish `ModifiersProcessingResult` message with all just applied and removed from cache modifiers.
+   */
+  override protected def processRemoteModifiers: Receive = {
+    case scorex.core.NodeViewHolder.ReceivableMessages.ModifiersFromRemote(mods: Seq[SidechainBlock]) =>
+      mods.foreach(m => modifiersCache.put(m.id, m))
+
+      log.debug(s"Cache size before: ${modifiersCache.size}")
+
+      if (!applyingBlock) {
+        applyingBlock = true
+        self ! SidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(Seq())
+      }
+  }
+
+  def applyModifier: Receive = {
+    case SidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(applied: Seq[SidechainBlock]) => {
+      modifiersCache.popCandidate(history()) match {
+        case Some(mod) =>
+          pmodModify(mod)
+          self ! SidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(mod +: applied)
+        case None => {
+          val cleared = modifiersCache.cleanOverfull()
+          context.system.eventStream.publish(ModifiersProcessingResult(applied, cleared))
+          applyingBlock = false
+          log.debug(s"Cache size after: ${modifiersCache.size}")
+        }
+      }
+    }
   }
 
   // This method is actually a copy-paste of parent NodeViewHolder.pmodModify method.
@@ -472,11 +512,15 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 }
 
 object SidechainNodeViewHolder /*extends ScorexLogging with ScorexEncoding*/ {
-  object ReceivableMessages{
+  object ReceivableMessages {
     case class GetDataFromCurrentSidechainNodeView[HIS, MS, VL, MP, A](f: SidechainNodeView => A)
     case class ApplyFunctionOnNodeView[HIS, MS, VL, MP, A](f: java.util.function.Function[SidechainNodeView, A])
     case class ApplyBiFunctionOnNodeView[HIS, MS, VL, MP, T, A](f: java.util.function.BiFunction[SidechainNodeView, T, A], functionParameter: T)
     case class LocallyGeneratedSecret[S <: SidechainTypes#SCS](secret: S)
+  }
+
+  private[horizen] object InternalReceivableMessages {
+    case class ApplyModifier(applied: Seq[SidechainBlock])
   }
 }
 
@@ -500,7 +544,7 @@ object SidechainNodeViewHolderRef {
             applicationState: ApplicationState,
             genesisBlock: SidechainBlock): Props =
     Props(new SidechainNodeViewHolder(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, backupStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock))
+      walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, backupStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock)).withMailbox("akka.actor.deployment.prio-mailbox")
 
   def apply(sidechainSettings: SidechainSettings,
             historyStorage: SidechainHistoryStorage,
@@ -521,7 +565,7 @@ object SidechainNodeViewHolderRef {
             genesisBlock: SidechainBlock)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, backupStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock))
+      walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, backupStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock).withMailbox("akka.actor.deployment.prio-mailbox"))
 
   def apply(name: String,
             sidechainSettings: SidechainSettings,
@@ -543,5 +587,5 @@ object SidechainNodeViewHolderRef {
             genesisBlock: SidechainBlock)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, backupStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock), name)
+      walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, backupStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock).withMailbox("akka.actor.deployment.prio-mailbox"), name)
 }

@@ -33,6 +33,7 @@ from sc_bwt_minimum_value import SCBwtMinValue
 from sc_db_tool_cmds import DBToolTest
 from websocket_server_fee_payments import SCWsServerFeePayments
 from sc_closed_forger import SidechainClosedForgerTest
+from sc_node_response_along_sync import SCNodeResponseAlongSync
 from sc_blockid_for_backup import SidechainBlockIdForBackupTest
 
 
@@ -137,11 +138,15 @@ def run_tests(log_file):
     result = run_test(SidechainClosedForgerTest())
     assert_equal(0, result, "sc_closed_forger test failed!")
 
+    result = run_test(SCNodeResponseAlongSync())
+    assert_equal(0, result, "sc_node_response_along_sync test failed!")
+
     result = run_test(DBToolTest())
     assert_equal(0, result, "DBToolTest test failed!")
 
     result = run_test(SidechainBlockIdForBackupTest())
     assert_equal(0, result, "sc_blockid_for_backup test failed!")
+
 
 if __name__ == "__main__":
     log_file = open("sc_test.log", "w")
