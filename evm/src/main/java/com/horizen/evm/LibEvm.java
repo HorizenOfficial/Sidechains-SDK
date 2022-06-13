@@ -168,7 +168,16 @@ final class LibEvm {
         invoke("StateRemoveStorageBytes", new StorageParams(handle, address, key));
     }
 
-    public static EvmResult evmApply(int handle, byte[] from, byte[] to, BigInteger value, byte[] input, BigInteger nonce, BigInteger gasLimit, BigInteger gasPrice)
+    public static EvmResult evmApply(
+        int handle,
+        byte[] from,
+        byte[] to,
+        BigInteger value,
+        byte[] input,
+        BigInteger nonce,
+        BigInteger gasLimit,
+        BigInteger gasPrice
+    )
         throws Exception {
         var params = new EvmParams(handle, from, to, value, input, nonce, gasLimit, gasPrice);
         // TODO: set context parameters
