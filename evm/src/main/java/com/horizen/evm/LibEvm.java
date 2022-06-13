@@ -76,20 +76,20 @@ final class LibEvm {
         invoke(method, null, Void.class);
     }
 
-    public static void openMemoryDB() throws Exception {
-        invoke("OpenMemoryDB");
+    public static int openMemoryDB() throws Exception {
+        return invoke("OpenMemoryDB", null, int.class);
     }
 
-    public static void openLevelDB(String path) throws Exception {
-        invoke("OpenLevelDB", new LevelDBParams(path));
+    public static int openLevelDB(String path) throws Exception {
+        return invoke("OpenLevelDB", new LevelDBParams(path), int.class);
     }
 
-    public static void closeDatabase() throws Exception {
-        invoke("CloseDatabase");
+    public static void closeDatabase(int handle) throws Exception {
+        invoke("CloseDatabase", new DatabaseParams(handle));
     }
 
-    public static int stateOpen(byte[] root) throws Exception {
-        return invoke("StateOpen", new OpenStateParams(root), int.class);
+    public static int stateOpen(int databaseHandle, byte[] root) throws Exception {
+        return invoke("StateOpen", new OpenStateParams(databaseHandle, root), int.class);
     }
 
     public static void stateClose(int handle) throws Exception {

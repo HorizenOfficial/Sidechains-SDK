@@ -1,18 +1,14 @@
 package com.horizen.evm;
 
-public final class Database {
-    private Database() {
+class Database implements AutoCloseable {
+    final int handle;
+
+    public Database(int handle) {
+        this.handle = handle;
     }
 
-    public static void openMemoryDB() throws Exception {
-        LibEvm.openMemoryDB();
-    }
-
-    public static void openLevelDB(String path) throws Exception {
-        LibEvm.openLevelDB(path);
-    }
-
-    public static void closeDatabase() throws Exception {
-        LibEvm.closeDatabase();
+    @Override
+    public void close() throws Exception {
+        LibEvm.closeDatabase(handle);
     }
 }

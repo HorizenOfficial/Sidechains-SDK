@@ -5,8 +5,8 @@ import java.math.BigInteger;
 public class StateDB implements AutoCloseable {
     final int handle;
 
-    public StateDB(byte[] root) throws Exception {
-        handle = LibEvm.stateOpen(root);
+    public StateDB(Database db, byte[] root) throws Exception {
+        handle = LibEvm.stateOpen(db.handle, root);
     }
 
     @Override

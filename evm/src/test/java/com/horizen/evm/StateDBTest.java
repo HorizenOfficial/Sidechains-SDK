@@ -32,59 +32,60 @@ public class StateDBTest {
         final BigInteger v3 = BigInteger.valueOf(3);
         final BigInteger v5 = BigInteger.valueOf(5);
 
-        Database.openLevelDB(databaseFolder.getAbsolutePath());
-
         byte[] rootWithBalance1234;
         byte[] rootWithBalance802;
-        try (var statedb = new StateDB(hashNull)) {
-            var intermediateRoot = statedb.getIntermediateRoot();
-            assertArrayEquals(
+
+        try (var db = new LevelDBDatabase(databaseFolder.getAbsolutePath())) {
+            try (var statedb = new StateDB(db, hashNull)) {
+                var intermediateRoot = statedb.getIntermediateRoot();
+                assertArrayEquals(
                     "empty state should give the hash of an empty string as the root hash",
                     hashEmpty,
                     intermediateRoot
-            );
+                );
 
-            var committedRoot = statedb.commit();
-            assertArrayEquals("committed root should equal intermediate root", intermediateRoot, committedRoot);
-            assertEquals(BigInteger.ZERO, statedb.getBalance(origin));
+                var committedRoot = statedb.commit();
+                assertArrayEquals("committed root should equal intermediate root", intermediateRoot, committedRoot);
+                assertEquals(BigInteger.ZERO, statedb.getBalance(origin));
 
-            statedb.addBalance(origin, v1234);
-            assertEquals(v1234, statedb.getBalance(origin));
-            assertNotEquals(
+                statedb.addBalance(origin, v1234);
+                assertEquals(v1234, statedb.getBalance(origin));
+                assertNotEquals(
                     "intermediate root should not equal committed root anymore",
                     committedRoot,
                     statedb.getIntermediateRoot()
-            );
-            rootWithBalance1234 = statedb.commit();
+                );
+                rootWithBalance1234 = statedb.commit();
 
-            statedb.subBalance(origin, v432);
-            assertEquals(v802, statedb.getBalance(origin));
+                statedb.subBalance(origin, v432);
+                assertEquals(v802, statedb.getBalance(origin));
 
-            assertEquals(BigInteger.ZERO, statedb.getNonce(origin));
-            statedb.setNonce(origin, v3);
-            assertEquals(v3, statedb.getNonce(origin));
-            rootWithBalance802 = statedb.commit();
+                assertEquals(BigInteger.ZERO, statedb.getNonce(origin));
+                statedb.setNonce(origin, v3);
+                assertEquals(v3, statedb.getNonce(origin));
+                rootWithBalance802 = statedb.commit();
 
-            statedb.setNonce(origin, v5);
-            assertEquals(v5, statedb.getNonce(origin));
+                statedb.setNonce(origin, v5);
+                assertEquals(v5, statedb.getNonce(origin));
+            }
+            // Verify that automatic resource management worked and StateDB.close() was called.
+            // If it was, the handle is invalid now and this should throw.
+            assertThrows(Exception.class, () -> LibEvm.stateIntermediateRoot(1));
         }
-        // Verify that automatic resource management worked and StateDB.close() was called.
-        // If it was, the handle is invalid now and this should throw.
-        assertThrows(Exception.class, () -> LibEvm.stateIntermediateRoot(1));
+        // also verify that the database was closed
+        assertThrows(Exception.class, () -> LibEvm.stateOpen(1, hashNull));
 
-        Database.openLevelDB(databaseFolder.getAbsolutePath());
+        try (var db = new LevelDBDatabase(databaseFolder.getAbsolutePath())) {
+            try (var statedb = new StateDB(db, rootWithBalance1234)) {
+                assertEquals(v1234, statedb.getBalance(origin));
+                assertEquals(BigInteger.ZERO, statedb.getNonce(origin));
+            }
 
-        try (var statedb = new StateDB(rootWithBalance1234)) {
-            assertEquals(v1234, statedb.getBalance(origin));
-            assertEquals(BigInteger.ZERO, statedb.getNonce(origin));
+            try (var statedb = new StateDB(db, rootWithBalance802)) {
+                assertEquals(v802, statedb.getBalance(origin));
+                assertEquals(v3, statedb.getNonce(origin));
+            }
         }
-
-        try (var statedb = new StateDB(rootWithBalance802)) {
-            assertEquals(v802, statedb.getBalance(origin));
-            assertEquals(v3, statedb.getNonce(origin));
-        }
-
-        Database.closeDatabase();
     }
 
     @Test
@@ -105,37 +106,37 @@ public class StateDBTest {
         byte[] initialRoot;
         var roots = new ArrayList<byte[]>();
 
-        Database.openLevelDB(databaseFolder.getAbsolutePath());
-        try (var statedb = new StateDB(hashEmpty)) {
-            assertFalse("account must not exist in an empty state", statedb.exists(origin));
-            // make sure the account is not "empty"
-            statedb.setCodeHash(origin, fakeCodeHash);
-            assertTrue("account must exist after setting code hash", statedb.exists(origin));
-            initialRoot = statedb.getIntermediateRoot();
-            for (byte[] value : values) {
-                statedb.setStorage(origin, key, value, StateStorageStrategy.CHUNKED);
-                var retrievedValue = statedb.getStorage(origin, key, StateStorageStrategy.CHUNKED);
-                assertArrayEquals(value, retrievedValue);
-                // store the root hash of each state
-                roots.add(statedb.commit());
-                var committedValue = statedb.getStorage(origin, key, StateStorageStrategy.CHUNKED);
-                assertArrayEquals(value, committedValue);
+        try (var db = new LevelDBDatabase(databaseFolder.getAbsolutePath())) {
+            try (var statedb = new StateDB(db, hashEmpty)) {
+                assertFalse("account must not exist in an empty state", statedb.exists(origin));
+                // make sure the account is not "empty"
+                statedb.setCodeHash(origin, fakeCodeHash);
+                assertTrue("account must exist after setting code hash", statedb.exists(origin));
+                initialRoot = statedb.getIntermediateRoot();
+                for (byte[] value : values) {
+                    statedb.setStorage(origin, key, value, StateStorageStrategy.CHUNKED);
+                    var retrievedValue = statedb.getStorage(origin, key, StateStorageStrategy.CHUNKED);
+                    assertArrayEquals(value, retrievedValue);
+                    // store the root hash of each state
+                    roots.add(statedb.commit());
+                    var committedValue = statedb.getStorage(origin, key, StateStorageStrategy.CHUNKED);
+                    assertArrayEquals(value, committedValue);
+                }
             }
         }
-        Database.closeDatabase();
 
         // verify that every committed state can be loaded again and that the stored values are still as expected
-        Database.openLevelDB(databaseFolder.getAbsolutePath());
-        for (int i = 0; i < values.length; i++) {
-            try (var statedb = new StateDB(roots.get(i))) {
-                var writtenValue = statedb.getStorage(origin, key, StateStorageStrategy.CHUNKED);
-                assertArrayEquals(values[i], writtenValue);
-                // verify that removing the key results in the initial state root
-                statedb.removeStorage(origin, key, StateStorageStrategy.CHUNKED);
-                assertArrayEquals(initialRoot, statedb.getIntermediateRoot());
+        try (var db = new LevelDBDatabase(databaseFolder.getAbsolutePath())) {
+            for (int i = 0; i < values.length; i++) {
+                try (var statedb = new StateDB(db, roots.get(i))) {
+                    var writtenValue = statedb.getStorage(origin, key, StateStorageStrategy.CHUNKED);
+                    assertArrayEquals(values[i], writtenValue);
+                    // verify that removing the key results in the initial state root
+                    statedb.removeStorage(origin, key, StateStorageStrategy.CHUNKED);
+                    assertArrayEquals(initialRoot, statedb.getIntermediateRoot());
+                }
             }
         }
-        Database.closeDatabase();
     }
 
     @Test
@@ -157,60 +158,58 @@ public class StateDBTest {
         final BigInteger gasLimit = BigInteger.valueOf(200000);
         final BigInteger gasPrice = BigInteger.valueOf(10);
 
-        Database.openMemoryDB();
-
         EvmResult result;
         byte[] contractAddress;
         byte[] modifiedStateRoot;
 
-        try (var statedb = new StateDB(hashNull)) {
-            // test a simple value transfer
-            statedb.addBalance(addr1, v10m);
-            result = Evm.Apply(statedb, addr1, addr2, v5m, null, BigInteger.ZERO, gasLimit, gasPrice);
-            assertEquals("", result.evmError);
-            assertEquals(v5m, statedb.getBalance(addr2));
-            // gas fees should also have been deducted
-            assertEquals(v5m.subtract(result.usedGas.multiply(gasPrice)), statedb.getBalance(addr1));
-            // gas fees are moved to the coinbase address which currently defaults to the zero-address
-            assertEquals(result.usedGas.multiply(gasPrice), statedb.getBalance(null));
+        try (var db = new MemoryDatabase()) {
+            try (var statedb = new StateDB(db, hashNull)) {
+                // test a simple value transfer
+                statedb.addBalance(addr1, v10m);
+                result = Evm.Apply(statedb, addr1, addr2, v5m, null, BigInteger.ZERO, gasLimit, gasPrice);
+                assertEquals("", result.evmError);
+                assertEquals(v5m, statedb.getBalance(addr2));
+                // gas fees should also have been deducted
+                assertEquals(v5m.subtract(result.usedGas.multiply(gasPrice)), statedb.getBalance(addr1));
+                // gas fees are moved to the coinbase address which currently defaults to the zero-address
+                assertEquals(result.usedGas.multiply(gasPrice), statedb.getBalance(null));
 
-            // test contract deployment
-            BigInteger nonce = statedb.getNonce(addr2);
-            result = Evm.Apply(statedb, addr2, null, null, Converter.fromHexString(contractCode + initialValue), nonce, gasLimit, gasPrice);
-            assertEquals("", result.evmError);
-            contractAddress = result.contractAddress.toBytes();
-            assertArrayEquals(codeHash, statedb.getCodeHash(contractAddress));
+                // test contract deployment
+                BigInteger nonce = statedb.getNonce(addr2);
+                result = Evm.Apply(statedb, addr2, null, null, Converter.fromHexString(contractCode + initialValue), nonce, gasLimit, gasPrice);
+                assertEquals("", result.evmError);
+                contractAddress = result.contractAddress.toBytes();
+                assertArrayEquals(codeHash, statedb.getCodeHash(contractAddress));
 
-            // verify that a wrong nonce throws
-            final BigInteger badNonce = nonce;
-            final BigInteger badNonce2 = nonce.add(BigInteger.TWO);
-            assertThrows(Exception.class, () -> Evm.Apply(statedb, addr2, addr1, BigInteger.ONE, null, badNonce, gasLimit, gasPrice));
-            assertThrows(Exception.class, () -> Evm.Apply(statedb, addr2, addr1, BigInteger.ONE, null, badNonce2, gasLimit, gasPrice));
+                // verify that a wrong nonce throws
+                final BigInteger badNonce = nonce;
+                final BigInteger badNonce2 = nonce.add(BigInteger.TWO);
+                assertThrows(Exception.class, () -> Evm.Apply(statedb, addr2, addr1, BigInteger.ONE, null, badNonce, gasLimit, gasPrice));
+                assertThrows(Exception.class, () -> Evm.Apply(statedb, addr2, addr1, BigInteger.ONE, null, badNonce2, gasLimit, gasPrice));
 
-            // call "store" function on the contract to set a value
-            nonce = nonce.add(BigInteger.ONE);
-            result = Evm.Apply(statedb, addr2, contractAddress, null, Converter.fromHexString(funcStore + anotherValue), nonce, gasLimit, gasPrice);
-            assertEquals("", result.evmError);
+                // call "store" function on the contract to set a value
+                nonce = nonce.add(BigInteger.ONE);
+                result = Evm.Apply(statedb, addr2, contractAddress, null, Converter.fromHexString(funcStore + anotherValue), nonce, gasLimit, gasPrice);
+                assertEquals("", result.evmError);
 
-            // call "retrieve" on the contract to fetch the value we just set
-            nonce = nonce.add(BigInteger.ONE);
-            result = Evm.Apply(statedb, addr2, contractAddress, null, Converter.fromHexString(funcRetrieve), nonce, gasLimit, gasPrice);
-            assertEquals("", result.evmError);
-            var returnValue = Converter.toHexString(result.returnData);
-            assertEquals(anotherValue, returnValue);
+                // call "retrieve" on the contract to fetch the value we just set
+                nonce = nonce.add(BigInteger.ONE);
+                result = Evm.Apply(statedb, addr2, contractAddress, null, Converter.fromHexString(funcRetrieve), nonce, gasLimit, gasPrice);
+                assertEquals("", result.evmError);
+                var returnValue = Converter.toHexString(result.returnData);
+                assertEquals(anotherValue, returnValue);
 
-            modifiedStateRoot = statedb.commit();
+                modifiedStateRoot = statedb.commit();
+            }
+
+            // reopen the state and retrieve a value
+            try (var statedb = new StateDB(db, modifiedStateRoot)) {
+                BigInteger nonce = statedb.getNonce(addr2);
+                result = Evm.Apply(statedb, addr2, contractAddress, null, Converter.fromHexString(funcRetrieve), nonce, gasLimit, gasPrice);
+                assertEquals("", result.evmError);
+                var returnValue = Converter.toHexString(result.returnData);
+                assertEquals(anotherValue, returnValue);
+            }
         }
-
-        // reopen the state and retrieve a value
-        try (var statedb = new StateDB(modifiedStateRoot)) {
-            BigInteger nonce = statedb.getNonce(addr2);
-            result = Evm.Apply(statedb, addr2, contractAddress, null, Converter.fromHexString(funcRetrieve), nonce, gasLimit, gasPrice);
-            assertEquals("", result.evmError);
-            var returnValue = Converter.toHexString(result.returnData);
-            assertEquals(anotherValue, returnValue);
-        }
-
-        Database.closeDatabase();
     }
 }
