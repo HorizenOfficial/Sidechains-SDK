@@ -8,7 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
-	"math"
 	"math/big"
 )
 
@@ -68,30 +67,19 @@ func (s *Service) StateOpen(params StateRootParams) (error, int) {
 		log.Error("failed to open state", "root", params.Root, "error", err)
 		return err, 0
 	}
-	// find the next unused handle:
-	// this will never give a handle of 0, which is on purpose - we might consider a handle of 0 as invalid
-	s.stateHandle++
-	for s.statedbs[s.stateHandle] != nil {
-		// wrap around
-		if s.stateHandle == math.MaxInt32 {
-			s.stateHandle = 0
-		}
-		s.stateHandle++
-	}
-	s.statedbs[s.stateHandle] = statedb
-	return nil, s.stateHandle
+	return nil, s.statedbs.Add(statedb)
 }
 
 func (s *Service) StateClose(params HandleParams) {
-	delete(s.statedbs, params.Handle)
+	s.statedbs.Remove(params.Handle)
 }
 
 func (s *Service) getState(handle int) (error, *state.StateDB) {
-	statedb := s.statedbs[handle]
-	if statedb == nil {
-		return fmt.Errorf("invalid state handle: %d", handle), nil
+	err, statedb := s.statedbs.Get(handle)
+	if err != nil {
+		return err, nil
 	}
-	return nil, s.statedbs[handle]
+	return nil, statedb.(*state.StateDB)
 }
 
 func (s *Service) StateIntermediateRoot(params HandleParams) (error, common.Hash) {
