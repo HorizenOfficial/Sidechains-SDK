@@ -45,9 +45,9 @@ public class JsonPointer implements NativeMapped {
     }
 
     /**
-     * When receiving data from native we expect it to be a pointer to a standard C string, i.e. null-terminated, that
-     * is copied to an instance of JsonPointer and free'ed on the native end. Deserialization is deferred to
-     * deserialize() because we need additional type information to do so.
+     * When receiving data from native we expect it to be a pointer to a standard C string, i.e. null-terminated
+     * character array, that is copied to an instance of JsonPointer and free'ed on the native end. Deserialization is
+     * deferred to deserialize() because we need additional type information to do so.
      */
     @Override
     public Object fromNative(Object nativeValue, FromNativeContext context) {
@@ -66,7 +66,7 @@ public class JsonPointer implements NativeMapped {
     }
 
     /**
-     * When serializing to pass data to native we expect this class to be an instance of a subclass of JsonPointer.
+     * When serializing to pass data to native we expect this to be an instance of a subclass of JsonPointer.
      */
     @Override
     public Object toNative() {
@@ -82,6 +82,13 @@ public class JsonPointer implements NativeMapped {
         return Pointer.class;
     }
 
+    /**
+     * Deserialize json content into the given type.
+     *
+     * @param type target type to deserialize to
+     * @param <T> expected return type
+     * @return object instance deserialized from json
+     */
     public <T> T deserialize(JavaType type) {
         try {
             return mapper.readValue(json, type);

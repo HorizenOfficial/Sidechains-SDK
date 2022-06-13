@@ -16,6 +16,9 @@ final class LibEvm {
         JsonPointer Invoke(String method, JsonPointer args);
     }
 
+    /**
+     * Singleton instance of the native library.
+     */
     private static final LibEvmInterface instance;
 
     static {
