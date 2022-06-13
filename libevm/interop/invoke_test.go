@@ -14,10 +14,9 @@ import (
 var (
 	//go:embed compiled/Storage.bin
 	storageContractDeploy string
-	instance              = lib.New()
 )
 
-func call(t *testing.T, method string, args interface{}) interface{} {
+func call(t *testing.T, instance *lib.Service, method string, args interface{}) interface{} {
 	jsonArgs := ""
 	if args != nil {
 		jsonBytes, err := json.Marshal(args)
@@ -29,54 +28,55 @@ func call(t *testing.T, method string, args interface{}) interface{} {
 	t.Log("invoke", method, jsonArgs)
 	err, result := callMethod(instance, method, jsonArgs)
 	if err != nil {
-		t.Errorf("invocation failed %v %v", err, result)
+		t.Errorf("invocation failed: %v", err)
 	}
 	t.Log("response", toJsonResponse(err, result))
 	return result
 }
 
 func TestInvoke(t *testing.T) {
-	user := common.HexToAddress("0xbafe3b6f2a19658df3cb5efca158c93272ff5c0b")
-	emptyHash := common.HexToHash("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
-	initialValue := "0000000000000000000000000000000000000000000000000000000000000000"
-	anotherValue := "00000000000000000000000000000000000000000000000000000000000015b3"
+	var (
+		instance     = lib.New()
+		user         = common.HexToAddress("0xbafe3b6f2a19658df3cb5efca158c93272ff5c0b")
+		emptyHash    = common.HexToHash("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
+		initialValue = "0000000000000000000000000000000000000000000000000000000000000000"
+		anotherValue = "00000000000000000000000000000000000000000000000000000000000015b3"
+		funcStore    = "6057361d"
+		//funcRetrieve = "2e64cec1"
+	)
 
-	funcStore := "6057361d"
-	//funcRetrieve := "2e64cec1"
-
-	call(t, "OpenLevelDB", lib.LevelDBParams{Path: t.TempDir()})
-	handle := call(t, "StateOpen", lib.StateRootParams{Root: emptyHash}).(int)
-	call(t, "StateAddBalance", lib.BalanceParams{
+	dbHandle := call(t, instance, "OpenLevelDB", lib.LevelDBParams{Path: t.TempDir()}).(int)
+	handle := call(t, instance, "StateOpen", lib.StateParams{
+		DatabaseParams: lib.DatabaseParams{DatabaseHandle: dbHandle},
+		Root:           emptyHash,
+	}).(int)
+	call(t, instance, "StateAddBalance", lib.BalanceParams{
 		AccountParams: lib.AccountParams{
-			HandleParams: lib.HandleParams{
-				Handle: handle,
-			},
-			Address: user,
+			HandleParams: lib.HandleParams{Handle: handle},
+			Address:      user,
 		},
 		Amount: (*hexutil.Big)(big.NewInt(1000000000000000000)),
 	})
-	call(t, "EvmApply", lib.EvmParams{
-		HandleParams: lib.HandleParams{
-			Handle: handle,
-		},
-		From:     user,
-		To:       nil,
-		Input:    common.Hex2Bytes(storageContractDeploy + initialValue),
-		Nonce:    0,
-		GasLimit: 200000,
-		GasPrice: (*hexutil.Big)(big.NewInt(1000000000)),
+	call(t, instance, "EvmApply", lib.EvmParams{
+		HandleParams: lib.HandleParams{Handle: handle},
+		From:         user,
+		To:           nil,
+		Input:        common.Hex2Bytes(storageContractDeploy + initialValue),
+		Nonce:        0,
+		GasLimit:     200000,
+		GasPrice:     (*hexutil.Big)(big.NewInt(1000000000)),
 	})
 	contractAddress := common.HexToAddress("0x6F8C38b30Df9967a414543a1338D4497f2570775")
-	call(t, "EvmApply", lib.EvmParams{
-		HandleParams: lib.HandleParams{
-			Handle: handle,
-		},
-		From:     user,
-		To:       &contractAddress,
-		Input:    common.Hex2Bytes(funcStore + anotherValue),
-		Nonce:    1,
-		GasLimit: 200000,
-		GasPrice: (*hexutil.Big)(big.NewInt(1000000000)),
+	call(t, instance, "EvmApply", lib.EvmParams{
+		HandleParams: lib.HandleParams{Handle: handle},
+		From:         user,
+		To:           &contractAddress,
+		Input:        common.Hex2Bytes(funcStore + anotherValue),
+		Nonce:        1,
+		GasLimit:     200000,
+		GasPrice:     (*hexutil.Big)(big.NewInt(1000000000)),
 	})
-	call(t, "CloseDatabase", nil)
+	call(t, instance, "CloseDatabase", lib.DatabaseParams{
+		DatabaseHandle: dbHandle,
+	})
 }

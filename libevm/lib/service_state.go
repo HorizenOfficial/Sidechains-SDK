@@ -13,7 +13,8 @@ import (
 
 var emptyCodeHash = crypto.Keccak256(nil)
 
-type StateRootParams struct {
+type StateParams struct {
+	DatabaseParams
 	Root common.Hash `json:"root"`
 }
 
@@ -64,9 +65,13 @@ type SetStorageBytesParams struct {
 // StateOpen will create a new state at the given root hash.
 // If the root hash is zero (or the hash of zero) this will give an empty trie.
 // If the hash is anything else this will result in an error if the nodes cannot be found.
-func (s *Service) StateOpen(params StateRootParams) (error, int) {
+func (s *Service) StateOpen(params StateParams) (error, int) {
+	err, db := s.databases.Get(params.DatabaseHandle)
+	if err != nil {
+		return err, 0
+	}
 	// TODO: research if we want to use the snapshot feature
-	statedb, err := state.New(params.Root, s.database, nil)
+	statedb, err := state.New(params.Root, db.database, nil)
 	if err != nil {
 		log.Error("failed to open state", "root", params.Root, "error", err)
 		return err, 0
