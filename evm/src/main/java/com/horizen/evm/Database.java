@@ -1,10 +1,8 @@
 package com.horizen.evm;
 
-class Database implements AutoCloseable {
-    final int handle;
-
+class Database extends ResouceHandle {
     public Database(int handle) {
-        this.handle = handle;
+        super(handle);
     }
 
     @Override

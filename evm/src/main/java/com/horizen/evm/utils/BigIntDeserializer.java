@@ -15,6 +15,6 @@ public class BigIntDeserializer extends JsonDeserializer<BigInteger> {
         if (text.startsWith("0x")) {
             return new BigInteger(text.substring(2), 16);
         }
-        return new BigInteger(jsonParser.getText(), 10);
+        return new BigInteger(text, 10);
     }
 }

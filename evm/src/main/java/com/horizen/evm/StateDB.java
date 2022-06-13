@@ -2,11 +2,9 @@ package com.horizen.evm;
 
 import java.math.BigInteger;
 
-public class StateDB implements AutoCloseable {
-    final int handle;
-
+public class StateDB extends ResouceHandle {
     public StateDB(Database db, byte[] root) {
-        handle = LibEvm.stateOpen(db.handle, root);
+        super(LibEvm.stateOpen(db.handle, root));
     }
 
     @Override
