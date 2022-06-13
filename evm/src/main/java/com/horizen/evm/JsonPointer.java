@@ -2,7 +2,6 @@ package com.horizen.evm;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -15,6 +14,23 @@ import java.io.IOException;
 import java.math.BigInteger;
 
 public class JsonPointer implements NativeMapped {
+    private static final ObjectMapper mapper;
+
+    static {
+        var module = new SimpleModule();
+        module.addSerializer(BigInteger.class, new BigIntSerializer());
+        module.addSerializer(Address.class, new Address.Serializer());
+        module.addSerializer(Hash.class, new Hash.Serializer());
+        module.addDeserializer(BigInteger.class, new BigIntDeserializer());
+        module.addDeserializer(Address.class, new Address.Deserializer());
+        module.addDeserializer(Hash.class, new Hash.Deserializer());
+        mapper = new ObjectMapper();
+        mapper.registerModule(module);
+        // do not serialize null or empty values
+        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
+    }
+
     private final String json;
 
     public JsonPointer() {
@@ -52,15 +68,6 @@ public class JsonPointer implements NativeMapped {
     @Override
     public Object toNative() {
         try {
-            var module = new SimpleModule("LibEvmJson", Version.unknownVersion());
-            module.addSerializer(BigInteger.class, new BigIntSerializer());
-            module.addSerializer(Address.class, new Address.Serializer());
-            module.addSerializer(Hash.class, new Hash.Serializer());
-            var mapper = new ObjectMapper();
-            mapper.registerModule(module);
-            // do not serialize null or empty values
-            mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-            mapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
             return mapper.writeValueAsString(this);
         } catch (JsonProcessingException e) {
             throw new IllegalArgumentException("JSON processing error " + this.getClass());
@@ -74,17 +81,7 @@ public class JsonPointer implements NativeMapped {
 
     public <T> T deserialize(JavaType type) {
         try {
-            var module = new SimpleModule("LibEvmJson", Version.unknownVersion());
-            module.addDeserializer(BigInteger.class, new BigIntDeserializer());
-            module.addDeserializer(Address.class, new Address.Deserializer());
-            module.addDeserializer(Hash.class, new Hash.Deserializer());
-            var mapper = new ObjectMapper();
-            mapper.registerModule(module);
             return mapper.readValue(json, type);
-//        } catch (JsonMappingException e) {
-//            throw new IllegalArgumentException("JSON mapping error " + this.getClass());
-//        } catch (JsonParseException e) {
-//            throw new IllegalArgumentException("JSON parse error " + this.getClass());
         } catch (IOException e) {
             throw new IllegalArgumentException(e);
         }
