@@ -200,6 +200,16 @@ func (s *Service) StateSetStorage(params SetStorageParams) error {
 	return nil
 }
 
+func (s *Service) StateRemoveStorage(params StorageParams) error {
+	err, statedb := s.statedbs.Get(params.Handle)
+	if err != nil {
+		return err
+	}
+	// the "empty" value will cause the key-value pair to be deleted
+	statedb.SetState(params.Address, params.Key, common.Hash{})
+	return nil
+}
+
 // this is basically a copy of stateObject.empty() which is not exported and therefore not accessible here
 func isAccountEmpty(statedb *state.StateDB, addr common.Address) bool {
 	obj := statedb.GetOrNewStateObject(addr)
@@ -231,13 +241,14 @@ func (s *Service) StateGetStorageBytes(params StorageParams) (error, []byte) {
 	}
 	length := int(statedb.GetState(params.Address, params.Key).Big().Int64())
 	data := make([]byte, length)
-	for i := 0; i < length; i += common.HashLength {
-		end := i + common.HashLength
+	for start := 0; start < length; start += common.HashLength {
+		chunkIndex := start / common.HashLength
+		end := start + common.HashLength
 		if end > length {
 			end = length
 		}
-		chunk := statedb.GetState(params.Address, getChunkKey(params.Key, i))
-		copy(data[i:end], chunk.Bytes())
+		chunk := statedb.GetState(params.Address, getChunkKey(params.Key, chunkIndex))
+		copy(data[start:end], chunk.Bytes())
 	}
 	return nil, data
 }
@@ -252,16 +263,37 @@ func (s *Service) StateSetStorageBytes(params SetStorageBytesParams) error {
 		// if the account is empty any changes would be dropped during the commit phase
 		return fmt.Errorf("account is empty, cannot modify storage trie: %v", params.Address)
 	}
-	// Values are split up to as many chunks of 32-bytes length as necessary.
-	// The length of the value is stored at the original key and the chunks are stored at hash(key, i).
-	length := len(params.Value)
-	statedb.SetState(params.Address, params.Key, common.BigToHash(big.NewInt(int64(length))))
-	for i := 0; i < length; i += common.HashLength {
-		end := i + common.HashLength
-		if end > length {
-			end = length
+	// get previous length of value stored, if any
+	oldLength := int(statedb.GetState(params.Address, params.Key).Big().Int64())
+	// values are split up into 32-bytes chunks:
+	// the length of the value is stored at the original key and the chunks are stored at hash(key, i)
+	newLength := len(params.Value)
+	// if the new value is empty remove all key-value pairs, including the one holding the value length
+	statedb.SetState(params.Address, params.Key, common.BigToHash(big.NewInt(int64(newLength))))
+	for start := 0; start < newLength || start < oldLength; start += common.HashLength {
+		chunkIndex := start / common.HashLength
+		var chunk common.Hash
+		if start < newLength {
+			end := start + common.HashLength
+			if end > newLength {
+				end = newLength
+			}
+			// (over-)write chunks
+			chunk = packBytesIntoHash(params.Value[start:end])
+		} else {
+			// remove previous chunks that are not needed anymore
+			chunk = common.Hash{}
 		}
-		statedb.SetState(params.Address, getChunkKey(params.Key, i), packBytesIntoHash(params.Value[i:end]))
+		statedb.SetState(params.Address, getChunkKey(params.Key, chunkIndex), chunk)
 	}
 	return nil
+}
+
+func (s *Service) StateRemoveStorageBytes(params StorageParams) error {
+	deleteParams := SetStorageBytesParams{
+		StorageParams: params,
+		// the "empty" value will cause the key-value pair to be deleted
+		Value: nil,
+	}
+	return s.StateSetStorageBytes(deleteParams)
 }
