@@ -11,7 +11,7 @@ type Service struct {
 	initialized bool
 	storage     ethdb.Database
 	database    state.Database
-	statedbs    *Handles
+	statedbs    *Handles[*state.StateDB]
 	stateHandle int
 }
 
@@ -30,7 +30,7 @@ func (s *Service) open(storage ethdb.Database) {
 	s.database = state.NewDatabase(storage)
 	// TODO: enable caching
 	//s.database = state.NewDatabaseWithConfig(storage, &trie.Config{Cache: 16})
-	s.statedbs = NewHandles()
+	s.statedbs = NewHandles[*state.StateDB]()
 	s.initialized = true
 }
 
