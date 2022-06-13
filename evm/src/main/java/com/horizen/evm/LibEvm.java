@@ -57,114 +57,114 @@ final class LibEvm {
         }
     }
 
-    private static <R> R invoke(String method, JsonPointer args, Class<R> responseType) throws Exception {
+    private static <R> R invoke(String method, JsonPointer args, Class<R> responseType) {
         var json = instance.Invoke(method, args);
         // build type information to deserialize to generic type InteropResult<R>
         var type = TypeFactory.defaultInstance().constructParametricType(InteropResult.class, responseType);
         InteropResult<R> response = json.deserialize(type);
         if (response.isError()) {
-            throw new Exception(response.error);
+            throw new InvokeException(response.error, method, args);
         }
         return response.result;
     }
 
-    private static void invoke(String method, JsonPointer args) throws Exception {
+    private static void invoke(String method, JsonPointer args) {
         invoke(method, args, Void.class);
     }
 
-    private static void invoke(String method) throws Exception {
+    private static void invoke(String method) {
         invoke(method, null, Void.class);
     }
 
-    public static int openMemoryDB() throws Exception {
+    public static int openMemoryDB() {
         return invoke("OpenMemoryDB", null, int.class);
     }
 
-    public static int openLevelDB(String path) throws Exception {
+    public static int openLevelDB(String path) {
         return invoke("OpenLevelDB", new LevelDBParams(path), int.class);
     }
 
-    public static void closeDatabase(int handle) throws Exception {
+    public static void closeDatabase(int handle) {
         invoke("CloseDatabase", new DatabaseParams(handle));
     }
 
-    public static int stateOpen(int databaseHandle, byte[] root) throws Exception {
+    public static int stateOpen(int databaseHandle, byte[] root) {
         return invoke("StateOpen", new OpenStateParams(databaseHandle, root), int.class);
     }
 
-    public static void stateClose(int handle) throws Exception {
+    public static void stateClose(int handle) {
         invoke("StateClose", new HandleParams(handle));
     }
 
-    public static byte[] stateIntermediateRoot(int handle) throws Exception {
+    public static byte[] stateIntermediateRoot(int handle) {
         return invoke("StateIntermediateRoot", new HandleParams(handle), Hash.class).toBytes();
     }
 
-    public static byte[] stateCommit(int handle) throws Exception {
+    public static byte[] stateCommit(int handle) {
         return invoke("StateCommit", new HandleParams(handle), Hash.class).toBytes();
     }
 
-    public static boolean stateExists(int handle, byte[] address) throws Exception {
+    public static boolean stateExists(int handle, byte[] address) {
         return invoke("StateExists", new AccountParams(handle, address), boolean.class);
     }
 
-    public static BigInteger stateGetBalance(int handle, byte[] address) throws Exception {
+    public static BigInteger stateGetBalance(int handle, byte[] address) {
         return invoke("StateGetBalance", new AccountParams(handle, address), BigInteger.class);
     }
 
-    public static void stateAddBalance(int handle, byte[] address, BigInteger amount) throws Exception {
+    public static void stateAddBalance(int handle, byte[] address, BigInteger amount) {
         invoke("StateAddBalance", new BalanceParams(handle, address, amount));
     }
 
-    public static void stateSubBalance(int handle, byte[] address, BigInteger amount) throws Exception {
+    public static void stateSubBalance(int handle, byte[] address, BigInteger amount) {
         invoke("StateSubBalance", new BalanceParams(handle, address, amount));
     }
 
-    public static void stateSetBalance(int handle, byte[] address, BigInteger amount) throws Exception {
+    public static void stateSetBalance(int handle, byte[] address, BigInteger amount) {
         invoke("StateSetBalance", new BalanceParams(handle, address, amount));
     }
 
-    public static BigInteger stateGetNonce(int handle, byte[] address) throws Exception {
+    public static BigInteger stateGetNonce(int handle, byte[] address) {
         return invoke("StateGetNonce", new AccountParams(handle, address), BigInteger.class);
     }
 
-    public static void stateSetNonce(int handle, byte[] address, BigInteger nonce) throws Exception {
+    public static void stateSetNonce(int handle, byte[] address, BigInteger nonce) {
         invoke("StateSetNonce", new NonceParams(handle, address, nonce));
     }
 
-    public static byte[] stateGetCodeHash(int handle, byte[] address) throws Exception {
+    public static byte[] stateGetCodeHash(int handle, byte[] address) {
         return invoke("StateGetCodeHash", new AccountParams(handle, address), Hash.class).toBytes();
     }
 
-    public static void stateSetCodeHash(int handle, byte[] address, byte[] codeHash) throws Exception {
+    public static void stateSetCodeHash(int handle, byte[] address, byte[] codeHash) {
         invoke("StateSetCodeHash", new CodeHashParams(handle, address, codeHash));
     }
 
-    public static void stateSetCode(int handle, byte[] address, byte[] code) throws Exception {
+    public static void stateSetCode(int handle, byte[] address, byte[] code) {
         invoke("StateSetCode", new CodeParams(handle, address, code));
     }
 
-    public static byte[] stateGetStorage(int handle, byte[] address, byte[] key) throws Exception {
+    public static byte[] stateGetStorage(int handle, byte[] address, byte[] key) {
         return invoke("StateGetStorage", new StorageParams(handle, address, key), Hash.class).toBytes();
     }
 
-    public static void stateSetStorage(int handle, byte[] address, byte[] key, byte[] value) throws Exception {
+    public static void stateSetStorage(int handle, byte[] address, byte[] key, byte[] value) {
         invoke("StateSetStorage", new SetStorageParams(handle, address, key, value));
     }
 
-    public static void stateRemoveStorage(int handle, byte[] address, byte[] key) throws Exception {
+    public static void stateRemoveStorage(int handle, byte[] address, byte[] key) {
         invoke("StateRemoveStorage", new StorageParams(handle, address, key));
     }
 
-    public static byte[] stateGetStorageBytes(int handle, byte[] address, byte[] key) throws Exception {
+    public static byte[] stateGetStorageBytes(int handle, byte[] address, byte[] key) {
         return invoke("StateGetStorageBytes", new StorageParams(handle, address, key), byte[].class);
     }
 
-    public static void stateSetStorageBytes(int handle, byte[] address, byte[] key, byte[] value) throws Exception {
+    public static void stateSetStorageBytes(int handle, byte[] address, byte[] key, byte[] value) {
         invoke("StateSetStorageBytes", new SetStorageBytesParams(handle, address, key, value));
     }
 
-    public static void stateRemoveStorageBytes(int handle, byte[] address, byte[] key) throws Exception {
+    public static void stateRemoveStorageBytes(int handle, byte[] address, byte[] key) {
         invoke("StateRemoveStorageBytes", new StorageParams(handle, address, key));
     }
 
@@ -177,8 +177,7 @@ final class LibEvm {
         BigInteger nonce,
         BigInteger gasLimit,
         BigInteger gasPrice
-    )
-        throws Exception {
+    ) {
         var params = new EvmParams(handle, from, to, value, input, nonce, gasLimit, gasPrice);
         // TODO: set context parameters
         params.context = new EvmContext();

@@ -5,7 +5,7 @@ import java.math.BigInteger;
 public class StateDB implements AutoCloseable {
     final int handle;
 
-    public StateDB(Database db, byte[] root) throws Exception {
+    public StateDB(Database db, byte[] root) {
         handle = LibEvm.stateOpen(db.handle, root);
     }
 
@@ -14,66 +14,66 @@ public class StateDB implements AutoCloseable {
         LibEvm.stateClose(handle);
     }
 
-    public byte[] getIntermediateRoot() throws Exception {
+    public byte[] getIntermediateRoot() {
         return LibEvm.stateIntermediateRoot(handle);
     }
 
-    public byte[] commit() throws Exception {
+    public byte[] commit() {
         return LibEvm.stateCommit(handle);
     }
 
-    public boolean exists(byte[] address) throws Exception {
+    public boolean exists(byte[] address) {
         return LibEvm.stateExists(handle, address);
     }
 
-    public BigInteger getBalance(byte[] address) throws Exception {
+    public BigInteger getBalance(byte[] address) {
         return LibEvm.stateGetBalance(handle, address);
     }
 
-    public void addBalance(byte[] address, BigInteger amount) throws Exception {
+    public void addBalance(byte[] address, BigInteger amount) {
         LibEvm.stateAddBalance(handle, address, amount);
     }
 
-    public void subBalance(byte[] address, BigInteger amount) throws Exception {
+    public void subBalance(byte[] address, BigInteger amount) {
         LibEvm.stateSubBalance(handle, address, amount);
     }
 
-    public void setBalance(byte[] address, BigInteger amount) throws Exception {
+    public void setBalance(byte[] address, BigInteger amount) {
         LibEvm.stateSetBalance(handle, address, amount);
     }
 
-    public BigInteger getNonce(byte[] address) throws Exception {
+    public BigInteger getNonce(byte[] address) {
         return LibEvm.stateGetNonce(handle, address);
     }
 
-    public void setNonce(byte[] address, BigInteger nonce) throws Exception {
+    public void setNonce(byte[] address, BigInteger nonce) {
         LibEvm.stateSetNonce(handle, address, nonce);
     }
 
-    public byte[] getCodeHash(byte[] address) throws Exception {
+    public byte[] getCodeHash(byte[] address) {
         return LibEvm.stateGetCodeHash(handle, address);
     }
 
-    public void setCodeHash(byte[] address, byte[] codeHash) throws Exception {
+    public void setCodeHash(byte[] address, byte[] codeHash) {
         LibEvm.stateSetCodeHash(handle, address, codeHash);
     }
 
-    public void setCode(byte[] address, byte[] code) throws Exception {
+    public void setCode(byte[] address, byte[] code) {
         LibEvm.stateSetCode(handle, address, code);
     }
 
-    public byte[] getStorage(byte[] address, byte[] key, StateStorageStrategy strategy) throws Exception {
+    public byte[] getStorage(byte[] address, byte[] key, StateStorageStrategy strategy) {
         switch (strategy) {
             case RAW:
                 return LibEvm.stateGetStorage(handle, address, key);
             case CHUNKED:
                 return LibEvm.stateGetStorageBytes(handle, address, key);
             default:
-                throw new Exception("invalid storage strategy");
+                throw new RuntimeException("invalid storage strategy");
         }
     }
 
-    public void setStorage(byte[] address, byte[] key, byte[] value, StateStorageStrategy strategy) throws Exception {
+    public void setStorage(byte[] address, byte[] key, byte[] value, StateStorageStrategy strategy) {
         switch (strategy) {
             case RAW:
                 LibEvm.stateSetStorage(handle, address, key, value);
@@ -82,11 +82,11 @@ public class StateDB implements AutoCloseable {
                 LibEvm.stateSetStorageBytes(handle, address, key, value);
                 return;
             default:
-                throw new Exception("invalid storage strategy");
+                throw new RuntimeException("invalid storage strategy");
         }
     }
 
-    public void removeStorage(byte[] address, byte[] key, StateStorageStrategy strategy) throws Exception {
+    public void removeStorage(byte[] address, byte[] key, StateStorageStrategy strategy) {
         switch (strategy) {
             case RAW:
                 LibEvm.stateRemoveStorage(handle, address, key);
@@ -95,7 +95,7 @@ public class StateDB implements AutoCloseable {
                 LibEvm.stateRemoveStorageBytes(handle, address, key);
                 return;
             default:
-                throw new Exception("invalid storage strategy");
+                throw new RuntimeException("invalid storage strategy");
         }
     }
 

@@ -17,8 +17,7 @@ public final class Evm {
         BigInteger nonce,
         BigInteger gasLimit,
         BigInteger gasPrice
-    )
-        throws Exception {
+    ) {
         return LibEvm.evmApply(stateDB.handle, from, to, value, input, nonce, gasLimit, gasPrice);
     }
 }
