@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import pprint
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, Account, LARGE_WITHDRAWAL_EPOCH_LENGTH
@@ -52,6 +53,23 @@ class SCEvmBootstrap(SidechainTestFramework):
         mc_block = self.nodes[0].getblock(str(self.sc_nodes_bootstrap_info.mainchain_block_height))
         mc_block_hex = self.nodes[0].getblock(mc_block["hash"], False)
         print("SC genesis mc block hex = " + mc_block_hex)
+
+        # send an eth tx to mempool
+        amount = 1000
+        j = {
+            "toAddress": "abcdeabcdeabcdeabcdeabcdeabcdeabcdeabcde", # must be 20 bytes
+            "value": amount
+        }
+        request = json.dumps(j)
+        response = sc_node.transaction_sendCoinsToAddress(request)
+        print("tx sent:")
+        pprint.pprint(response)
+
+        # get mempool contents
+        response = sc_node.transaction_allTransactions()
+        print("mempool contents:")
+        pprint.pprint(response)
+
         input("\n\t======> Enter any input to continue...")
 
         # For the time being this will timeout since hhtp APIs are not yet impemented
