@@ -74,16 +74,8 @@ func (s *Service) StateClose(params HandleParams) {
 	s.statedbs.Remove(params.Handle)
 }
 
-func (s *Service) getState(handle int) (error, *state.StateDB) {
-	err, statedb := s.statedbs.Get(handle)
-	if err != nil {
-		return err, nil
-	}
-	return nil, statedb.(*state.StateDB)
-}
-
 func (s *Service) StateIntermediateRoot(params HandleParams) (error, common.Hash) {
-	err, statedb := s.getState(params.Handle)
+	err, statedb := s.statedbs.Get(params.Handle)
 	if err != nil {
 		return err, common.Hash{}
 	}
@@ -91,7 +83,7 @@ func (s *Service) StateIntermediateRoot(params HandleParams) (error, common.Hash
 }
 
 func (s *Service) StateCommit(params HandleParams) (error, common.Hash) {
-	err, statedb := s.getState(params.Handle)
+	err, statedb := s.statedbs.Get(params.Handle)
 	if err != nil {
 		return err, common.Hash{}
 	}
@@ -107,7 +99,7 @@ func (s *Service) StateCommit(params HandleParams) (error, common.Hash) {
 }
 
 func (s *Service) StateGetBalance(params AccountParams) (error, *hexutil.Big) {
-	err, statedb := s.getState(params.Handle)
+	err, statedb := s.statedbs.Get(params.Handle)
 	if err != nil {
 		return err, nil
 	}
@@ -117,7 +109,7 @@ func (s *Service) StateGetBalance(params AccountParams) (error, *hexutil.Big) {
 }
 
 func (s *Service) StateAddBalance(params BalanceParams) error {
-	err, statedb := s.getState(params.Handle)
+	err, statedb := s.statedbs.Get(params.Handle)
 	if err != nil {
 		return err
 	}
@@ -126,7 +118,7 @@ func (s *Service) StateAddBalance(params BalanceParams) error {
 }
 
 func (s *Service) StateSubBalance(params BalanceParams) error {
-	err, statedb := s.getState(params.Handle)
+	err, statedb := s.statedbs.Get(params.Handle)
 	if err != nil {
 		return err
 	}
@@ -135,7 +127,7 @@ func (s *Service) StateSubBalance(params BalanceParams) error {
 }
 
 func (s *Service) StateSetBalance(params BalanceParams) error {
-	err, statedb := s.getState(params.Handle)
+	err, statedb := s.statedbs.Get(params.Handle)
 	if err != nil {
 		return err
 	}
@@ -144,7 +136,7 @@ func (s *Service) StateSetBalance(params BalanceParams) error {
 }
 
 func (s *Service) StateGetNonce(params AccountParams) (error, hexutil.Uint64) {
-	err, statedb := s.getState(params.Handle)
+	err, statedb := s.statedbs.Get(params.Handle)
 	if err != nil {
 		return err, 0
 	}
@@ -152,7 +144,7 @@ func (s *Service) StateGetNonce(params AccountParams) (error, hexutil.Uint64) {
 }
 
 func (s *Service) StateSetNonce(params NonceParams) error {
-	err, statedb := s.getState(params.Handle)
+	err, statedb := s.statedbs.Get(params.Handle)
 	if err != nil {
 		return err
 	}
@@ -161,7 +153,7 @@ func (s *Service) StateSetNonce(params NonceParams) error {
 }
 
 func (s *Service) StateGetCodeHash(params AccountParams) (error, common.Hash) {
-	err, statedb := s.getState(params.Handle)
+	err, statedb := s.statedbs.Get(params.Handle)
 	if err != nil {
 		return err, common.Hash{}
 	}
@@ -169,7 +161,7 @@ func (s *Service) StateGetCodeHash(params AccountParams) (error, common.Hash) {
 }
 
 func (s *Service) StateSetCode(params CodeParams) error {
-	err, statedb := s.getState(params.Handle)
+	err, statedb := s.statedbs.Get(params.Handle)
 	if err != nil {
 		return err
 	}
@@ -183,7 +175,7 @@ func (s *Service) StateSetCode(params CodeParams) error {
 }
 
 func (s *Service) StateGetStorage(params StorageParams) (error, common.Hash) {
-	err, statedb := s.getState(params.Handle)
+	err, statedb := s.statedbs.Get(params.Handle)
 	if err != nil {
 		return err, common.Hash{}
 	}
@@ -192,7 +184,7 @@ func (s *Service) StateGetStorage(params StorageParams) (error, common.Hash) {
 }
 
 func (s *Service) StateSetStorage(params SetStorageParams) error {
-	err, statedb := s.getState(params.Handle)
+	err, statedb := s.statedbs.Get(params.Handle)
 	if err != nil {
 		return err
 	}
@@ -225,7 +217,7 @@ func packBytesIntoHash(bytes []byte) common.Hash {
 }
 
 func (s *Service) StateGetStorageBytes(params StorageParams) (error, []byte) {
-	err, statedb := s.getState(params.Handle)
+	err, statedb := s.statedbs.Get(params.Handle)
 	if err != nil {
 		return err, nil
 	}
@@ -244,7 +236,7 @@ func (s *Service) StateGetStorageBytes(params StorageParams) (error, []byte) {
 
 // StateSetStorageBytes writes values of arbitrary length to the storage trie of given account
 func (s *Service) StateSetStorageBytes(params SetStorageBytesParams) error {
-	err, statedb := s.getState(params.Handle)
+	err, statedb := s.statedbs.Get(params.Handle)
 	if err != nil {
 		return err
 	}

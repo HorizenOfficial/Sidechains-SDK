@@ -110,7 +110,7 @@ type EvmResult struct {
 }
 
 func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
-	err, statedb := s.getState(params.Handle)
+	err, statedb := s.statedbs.Get(params.Handle)
 	if err != nil {
 		return err, nil
 	}
