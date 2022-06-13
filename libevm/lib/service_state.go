@@ -98,6 +98,14 @@ func (s *Service) StateCommit(params HandleParams) (error, common.Hash) {
 	return nil, hash
 }
 
+func (s *Service) StateExists(params AccountParams) (error, bool) {
+	err, statedb := s.statedbs.Get(params.Handle)
+	if err != nil {
+		return err, false
+	}
+	return nil, statedb.Exist(params.Address)
+}
+
 func (s *Service) StateGetBalance(params AccountParams) (error, *hexutil.Big) {
 	err, statedb := s.statedbs.Get(params.Handle)
 	if err != nil {
