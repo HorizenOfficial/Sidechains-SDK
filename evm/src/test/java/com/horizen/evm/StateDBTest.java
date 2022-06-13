@@ -101,19 +101,23 @@ public class StateDBTest {
                 Converter.fromHexString("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeffabcd001122"),
         };
 
+        byte[] initialRoot;
         var roots = new ArrayList<byte[]>();
 
         Database.openLevelDB(databaseFolder.getAbsolutePath());
         try (var statedb = new StateDB(hashEmpty)) {
+            assertFalse("account must not exist in an empty state", statedb.exists(origin));
             // make sure the account is not "empty"
             statedb.setNonce(origin, BigInteger.ONE);
+            assertTrue("account must exist after setting nonce", statedb.exists(origin));
+            initialRoot = statedb.getIntermediateRoot();
             for (byte[] value : values) {
-                statedb.setStorageBytes(origin, key, value);
-                var retrievedValue = statedb.getStorageBytes(origin, key);
+                statedb.setStorage(origin, key, value, StateStorageStrategy.CHUNKED);
+                var retrievedValue = statedb.getStorage(origin, key, StateStorageStrategy.CHUNKED);
                 assertArrayEquals(value, retrievedValue);
                 // store the root hash of each state
                 roots.add(statedb.commit());
-                var committedValue = statedb.getStorageBytes(origin, key);
+                var committedValue = statedb.getStorage(origin, key, StateStorageStrategy.CHUNKED);
                 assertArrayEquals(value, committedValue);
             }
         }
@@ -123,8 +127,11 @@ public class StateDBTest {
         Database.openLevelDB(databaseFolder.getAbsolutePath());
         for (int i = 0; i < values.length; i++) {
             try (var statedb = new StateDB(roots.get(i))) {
-                var writtenValue = statedb.getStorageBytes(origin, key);
+                var writtenValue = statedb.getStorage(origin, key, StateStorageStrategy.CHUNKED);
                 assertArrayEquals(values[i], writtenValue);
+                // verify that removing the key results in the initial state root
+                statedb.removeStorage(origin, key, StateStorageStrategy.CHUNKED);
+                assertArrayEquals(initialRoot, statedb.getIntermediateRoot());
             }
         }
         Database.closeDatabase();

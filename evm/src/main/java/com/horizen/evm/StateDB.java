@@ -22,6 +22,10 @@ public class StateDB implements AutoCloseable {
         return LibEvm.stateCommit(handle);
     }
 
+    public boolean exists(byte[] address) throws Exception {
+        return LibEvm.stateExists(handle, address);
+    }
+
     public BigInteger getBalance(byte[] address) throws Exception {
         return LibEvm.stateGetBalance(handle, address);
     }
@@ -50,20 +54,41 @@ public class StateDB implements AutoCloseable {
         return LibEvm.stateGetCodeHash(handle, address);
     }
 
-    public byte[] getStorage(byte[] address, byte[] key) throws Exception {
-        return LibEvm.stateGetStorage(handle, address, key);
+    public byte[] getStorage(byte[] address, byte[] key, StateStorageStrategy strategy) throws Exception {
+        switch (strategy) {
+            case RAW:
+                return LibEvm.stateGetStorage(handle, address, key);
+            case CHUNKED:
+                return LibEvm.stateGetStorageBytes(handle, address, key);
+            default:
+                throw new Exception("invalid storage strategy");
+        }
     }
 
-    public void setStorage(byte[] address, byte[] key, byte[] value) throws Exception {
-        LibEvm.stateSetStorage(handle, address, key, value);
+    public void setStorage(byte[] address, byte[] key, byte[] value, StateStorageStrategy strategy) throws Exception {
+        switch (strategy) {
+            case RAW:
+                LibEvm.stateSetStorage(handle, address, key, value);
+                return;
+            case CHUNKED:
+                LibEvm.stateSetStorageBytes(handle, address, key, value);
+                return;
+            default:
+                throw new Exception("invalid storage strategy");
+        }
     }
 
-    public byte[] getStorageBytes(byte[] address, byte[] key) throws Exception {
-        return LibEvm.stateGetStorageBytes(handle, address, key);
-    }
-
-    public void setStorageBytes(byte[] address, byte[] key, byte[] value) throws Exception {
-        LibEvm.stateSetStorageBytes(handle, address, key, value);
+    public void removeStorage(byte[] address, byte[] key, StateStorageStrategy strategy) throws Exception {
+        switch (strategy) {
+            case RAW:
+                LibEvm.stateRemoveStorage(handle, address, key);
+                return;
+            case CHUNKED:
+                LibEvm.stateRemoveStorageBytes(handle, address, key);
+                return;
+            default:
+                throw new Exception("invalid storage strategy");
+        }
     }
 
     @Override

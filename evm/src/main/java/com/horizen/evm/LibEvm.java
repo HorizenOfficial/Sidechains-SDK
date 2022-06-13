@@ -104,6 +104,10 @@ final class LibEvm {
         return invoke("StateCommit", new HandleParams(handle), Hash.class).toBytes();
     }
 
+    public static boolean stateExists(int handle, byte[] address) throws Exception {
+        return invoke("StateExists", new AccountParams(handle, address), boolean.class);
+    }
+
     public static BigInteger stateGetBalance(int handle, byte[] address) throws Exception {
         return invoke("StateGetBalance", new AccountParams(handle, address), BigInteger.class);
     }
@@ -140,12 +144,20 @@ final class LibEvm {
         invoke("StateSetStorage", new SetStorageParams(handle, address, key, value));
     }
 
+    public static void stateRemoveStorage(int handle, byte[] address, byte[] key) throws Exception {
+        invoke("StateRemoveStorage", new StorageParams(handle, address, key));
+    }
+
     public static byte[] stateGetStorageBytes(int handle, byte[] address, byte[] key) throws Exception {
         return invoke("StateGetStorageBytes", new StorageParams(handle, address, key), byte[].class);
     }
 
     public static void stateSetStorageBytes(int handle, byte[] address, byte[] key, byte[] value) throws Exception {
         invoke("StateSetStorageBytes", new SetStorageBytesParams(handle, address, key, value));
+    }
+
+    public static void stateRemoveStorageBytes(int handle, byte[] address, byte[] key) throws Exception {
+        invoke("StateRemoveStorageBytes", new StorageParams(handle, address, key));
     }
 
     public static EvmResult evmApply(int handle, byte[] from, byte[] to, BigInteger value, byte[] input, BigInteger nonce, BigInteger gasLimit, BigInteger gasPrice)
