@@ -136,6 +136,14 @@ final class LibEvm {
         return invoke("StateGetCodeHash", new AccountParams(handle, address), Hash.class).toBytes();
     }
 
+    public static void stateSetCodeHash(int handle, byte[] address, byte[] codeHash) throws Exception {
+        invoke("StateSetCodeHash", new CodeHashParams(handle, address, codeHash));
+    }
+
+    public static void stateSetCode(int handle, byte[] address, byte[] code) throws Exception {
+        invoke("StateSetCode", new CodeParams(handle, address, code));
+    }
+
     public static byte[] stateGetStorage(int handle, byte[] address, byte[] key) throws Exception {
         return invoke("StateGetStorage", new StorageParams(handle, address, key), Hash.class).toBytes();
     }

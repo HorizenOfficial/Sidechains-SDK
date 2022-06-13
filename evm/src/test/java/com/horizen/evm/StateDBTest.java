@@ -92,6 +92,7 @@ public class StateDBTest {
         final var databaseFolder = tempFolder.newFolder("account-db");
         final byte[] origin = Converter.fromHexString("bafe3b6f2a19658df3cb5efca158c93272ff5cff");
         final byte[] key = Converter.fromHexString("bafe3b6f2a19658df3cb5efca158c93272ff5cff010101010101010102020202");
+        final byte[] fakeCodeHash = Converter.fromHexString("abcdef00000000000000000000000000000000ff010101010101010102020202");
         final byte[][] values = {
                 Converter.fromHexString("aa"),
                 Converter.fromHexString("ffff"),
@@ -108,8 +109,8 @@ public class StateDBTest {
         try (var statedb = new StateDB(hashEmpty)) {
             assertFalse("account must not exist in an empty state", statedb.exists(origin));
             // make sure the account is not "empty"
-            statedb.setNonce(origin, BigInteger.ONE);
-            assertTrue("account must exist after setting nonce", statedb.exists(origin));
+            statedb.setCodeHash(origin, fakeCodeHash);
+            assertTrue("account must exist after setting code hash", statedb.exists(origin));
             initialRoot = statedb.getIntermediateRoot();
             for (byte[] value : values) {
                 statedb.setStorage(origin, key, value, StateStorageStrategy.CHUNKED);

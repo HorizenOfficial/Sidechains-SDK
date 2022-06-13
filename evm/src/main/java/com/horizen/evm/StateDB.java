@@ -54,6 +54,14 @@ public class StateDB implements AutoCloseable {
         return LibEvm.stateGetCodeHash(handle, address);
     }
 
+    public void setCodeHash(byte[] address, byte[] codeHash) throws Exception {
+        LibEvm.stateSetCodeHash(handle, address, codeHash);
+    }
+
+    public void setCode(byte[] address, byte[] code) throws Exception {
+        LibEvm.stateSetCode(handle, address, code);
+    }
+
     public byte[] getStorage(byte[] address, byte[] key, StateStorageStrategy strategy) throws Exception {
         switch (strategy) {
             case RAW:

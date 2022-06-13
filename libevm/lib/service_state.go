@@ -36,10 +36,14 @@ type NonceParams struct {
 	Nonce hexutil.Uint64 `json:"nonce"`
 }
 
+type CodeHashParams struct {
+	AccountParams
+	CodeHash common.Hash `json:"codeHash"`
+}
+
 type CodeParams struct {
 	AccountParams
-	Code     []byte      `json:"code"`
-	CodeHash common.Hash `json:"codeHash"`
+	Code []byte `json:"code"`
 }
 
 type StorageParams struct {
@@ -168,17 +172,24 @@ func (s *Service) StateGetCodeHash(params AccountParams) (error, common.Hash) {
 	return nil, statedb.GetCodeHash(params.Address)
 }
 
-func (s *Service) StateSetCode(params CodeParams) error {
+// StateSetCodeHash sets just the code hash, the code itself is set to nil
+func (s *Service) StateSetCodeHash(params CodeHashParams) error {
 	err, statedb := s.statedbs.Get(params.Handle)
 	if err != nil {
 		return err
 	}
 	obj := statedb.GetOrNewStateObject(params.Address)
-	code := params.Code
-	if len(code) == 0 {
-		code = make([]byte, 0)
+	obj.SetCode(params.CodeHash, nil)
+	return nil
+}
+
+// StateSetCode sets the given code, the code hash is updated automatically
+func (s *Service) StateSetCode(params CodeParams) error {
+	err, statedb := s.statedbs.Get(params.Handle)
+	if err != nil {
+		return err
 	}
-	obj.SetCode(params.CodeHash, code)
+	statedb.SetCode(params.Address, params.Code)
 	return nil
 }
 
