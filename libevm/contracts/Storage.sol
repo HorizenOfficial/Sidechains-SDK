@@ -10,8 +10,17 @@ contract Storage {
 
     uint256 number;
 
+    // Event declaration
+    // Up to 3 parameters can be indexed.
+    // Indexed parameters helps you filter the logs by the indexed parameter
+    event Log(address indexed sender, string message);
+    event AnotherLog();
+
     constructor(uint256 initialNumber) {
         number = initialNumber;
+        emit Log(msg.sender, "Hello World!");
+        emit Log(msg.sender, "Hello EVM!");
+        emit AnotherLog();
     }
 
     function inc() public {
