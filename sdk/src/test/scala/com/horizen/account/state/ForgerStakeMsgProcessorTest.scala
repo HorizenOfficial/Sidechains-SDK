@@ -84,6 +84,7 @@ class ForgerStakeMsgProcessorTest
     Mockito.when(mockStateView.getAccountStorageBytes(
       ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[Array[Byte]])).thenReturn(Success(new Array[Byte](0)))
 
+    // positive case
     ForgerStakeMsgProcessor.process(msg, mockStateView) match {
       case res: ExecutionSucceeded =>
         assertTrue(res.hasReturnData)
@@ -91,16 +92,20 @@ class ForgerStakeMsgProcessorTest
       case result => Assert.fail(s"Wrong result: $result")
     }
 
-    /*
-    val msgWithoutData = new Message(null, ForgerStakeMsgProcessor.myAddress, dummyBigInteger, dummyBigInteger, dummyBigInteger, dummyBigInteger, dummyBigInteger, dummyBigInteger, new Array[Byte](0))
+    // try processing a msg with bad serialized data in state db
+    // set returned value to thrash record
+    val thrashValue = BytesUtils.fromHexString("badcaffe")
+    Mockito.when(mockStateView.getAccountStorageBytes(
+      ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[Array[Byte]])).thenReturn(Success(thrashValue))
 
-    ForgerStakeMsgProcessor.process(msgWithoutData, mockStateView) match {
+    ForgerStakeMsgProcessor.process(msg, mockStateView) match {
       case res: InvalidMessage =>
+        println("This is the reason: " + res.getReason.toString)
       case result => Assert.fail(s"Wrong result: $result")
 
     }
 
-     */
+
 
 
   }
