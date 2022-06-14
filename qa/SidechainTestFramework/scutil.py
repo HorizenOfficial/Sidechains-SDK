@@ -345,7 +345,9 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
 
     all_private_keys = bootstrap_info.certificate_proof_info.schnorr_secrets
     signer_private_keys = [all_private_keys[idx] for idx in sc_node_config.submitter_private_keys_indexes]
-
+    api_key_hash = ""
+    if(sc_node_config.api_key != ""):
+        api_key_hash = calculateApiKeyHash(sc_node_config.api_key)
     config = tmpConfig % {
         'NODE_NUMBER': n,
         'DIRECTORY': dirname,
@@ -354,7 +356,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         'WALLET_SEED': "sidechain_seed_{0}".format(n),
         'API_ADDRESS': "127.0.0.1",
         'API_PORT': str(apiPort),
-        'API_KEY_HASH': str(sc_node_config.api_key_hash),
+        'API_KEY_HASH': api_key_hash,
         'API_TIMEOUT': (str(rest_api_timeout) + "s"),
         'BIND_PORT': str(bindPort),
         'MAX_CONNECTIONS': sc_node_config.max_connections,
@@ -475,7 +477,7 @@ def get_websocket_configuration(index, array_of_MCConnectionInfo):
     return array_of_MCConnectionInfo[index] if index < len(array_of_MCConnectionInfo) else MCConnectionInfo()
 
 
-def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None, print_output_to_file=False):
+def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None, print_output_to_file=False, auth_api_key = None):
     """
     Start a SC node and returns API connection to it
     """
@@ -511,20 +513,20 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
         sidechainclient_processes[i] = subprocess.Popen(bashcmd.split())
 
     url = "http://rt:rt@%s:%d" % ('127.0.0.1' or rpchost, sc_rpc_port(i))
-    proxy = SidechainAuthServiceProxy(url)
+    proxy = SidechainAuthServiceProxy(url, auth_api_key=auth_api_key)
     proxy.url = url  # store URL on proxy for info
     proxy.dataDir = datadir # store the name of the datadir
     return proxy
 
 
-def start_sc_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=None, print_output_to_file=False):
+def start_sc_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=None, print_output_to_file=False, auth_api_key = None):
     """
     Start multiple SC clients, return connections to them
     """
     if extra_args is None: extra_args = [None for i in range(num_nodes)]
     if binary is None: binary = [None for i in range(num_nodes)]
     nodes = [
-        start_sc_node(i, dirname, extra_args[i], rpchost, binary=binary[i], print_output_to_file=print_output_to_file)
+        start_sc_node(i, dirname, extra_args[i], rpchost, binary=binary[i], print_output_to_file=print_output_to_file, auth_api_key=auth_api_key)
         for i in range(num_nodes)]
     wait_for_sc_node_initialization(nodes)
     return nodes
@@ -879,6 +881,13 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
                            sc_creation_info.withdrawal_epoch_length, vrf_key, certificate_proof_info,
                            genesis_data["initialCumulativeCommTreeHash"], cert_keys_paths, csw_keys_paths)
 
+
+def calculateApiKeyHash(auth_api_key):
+
+    json_parameters = {
+        "string": auth_api_key
+    }
+    return launch_bootstrap_tool("encodeString", json_parameters)["encodedString"] 
 
 """
 Bootstrap one sidechain node: create directory and configuration file for the node.

@@ -389,7 +389,12 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         String toEncode = json.get("string").asText();
 
         String encoded = Base16.encode((byte[]) Blake2b256.apply(toEncode));
-        printer.print(encoded);
+
+        ObjectNode resJson = new ObjectMapper().createObjectNode();
+        resJson.put("encodedString", encoded);
+
+        String res = resJson.toString();
+        printer.print(res);
     }
 
 

@@ -75,6 +75,11 @@ class TransactionCreatorNodeWallet implements NodeWallet {
     }
 
     @Override
+    public <S extends Secret> Optional<S> secretByProposition(byte[] proposition) {
+        return (Optional<S>) secretByPublicKey25519Proposition(PublicKey25519PropositionSerializer.getSerializer().parseBytes(proposition));
+    }
+
+    @Override
     public List<Box<Proposition>> allBoxes() {
         return _boxesOrderedBytCreationTime;
     }

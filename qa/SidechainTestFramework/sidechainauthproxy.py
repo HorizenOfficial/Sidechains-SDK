@@ -34,10 +34,11 @@ class SCAPIException(Exception):
 class SidechainAuthServiceProxy(object):
     __id_count = 0
 
-    def __init__(self, service_url, service_name=None, timeout=HTTP_TIMEOUT, connection=None):
+    def __init__(self, service_url, service_name=None, timeout=HTTP_TIMEOUT, connection=None, auth_api_key = None):
         self.__service_url = service_url
         self.__service_name = service_name
         self.__url = urlparse.urlparse(service_url)
+        self.auth_api_key = auth_api_key
         if self.__url.port is None:
             port = 80
         else:
@@ -71,7 +72,7 @@ class SidechainAuthServiceProxy(object):
             name = "%s.%s" % (self.__service_name, name)
         return SidechainAuthServiceProxy(self.__service_url, name, connection=self.__conn)
 
-    def _request(self, method, path, postdata, additional_header):
+    def _request(self, method, path, postdata, api_key):
         '''
         Do a HTTP request, with retry if we get disconnected (e.g. due to a timeout).
         This is a workaround for https://bugs.python.org/issue3566 which is fixed in Python 3.5.
@@ -81,8 +82,10 @@ class SidechainAuthServiceProxy(object):
                    'User-Agent': USER_AGENT,
                    'Authorization': self.__auth_header,
                    'Content-type': 'application/json',}
-        if additional_header != None:
-            headers.update(json.loads(additional_header))
+        if api_key != None:
+            headers.update({"api_key":api_key})
+        elif self.auth_api_key != None:
+            headers.update({"api_key":self.auth_api_key})
 
         try:
             self.__conn.request(method, path, postdata, headers)

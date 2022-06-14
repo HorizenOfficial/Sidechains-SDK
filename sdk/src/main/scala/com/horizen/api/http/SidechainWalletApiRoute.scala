@@ -13,7 +13,7 @@ import com.horizen.api.http.SidechainWalletRestScheme.{ReqDumpWallet, ReqExportS
 import com.horizen.box.Box
 import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.proposition.{Proposition, PublicKey25519PropositionSerializer, VrfPublicKey}
-import com.horizen.secret.{PrivateKey25519Creator, VrfKeyGenerator}
+import com.horizen.secret.{PrivateKey25519Creator, Secret, VrfKeyGenerator}
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import scorex.core.settings.RESTApiSettings
@@ -31,7 +31,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
   extends SidechainApiRoute {
 
   override val route: Route = pathPrefix("wallet") {
-    allBoxes ~ coinsBalance ~ balanceOfType ~ createPrivateKey25519 ~ createVrfSecret ~ allPublicKeys ~ importSecret  ~ exportSecret ~ dumpSecrets ~ importSecrets
+    allBoxes ~ coinsBalance ~ balanceOfType ~ createPrivateKey25519 ~ createVrfSecret ~ allPublicKeys ~ importSecret ~ exportSecret ~ dumpSecrets ~ importSecrets
   }
 
   /**
@@ -162,10 +162,9 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
   def exportSecret: Route = (post & path("exportSecret")) {
     withAuth {
       entity(as[ReqExportSecret]) { body =>
-        val proposition = PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.publickey))
         withNodeView { sidechainNodeView =>
           val wallet = sidechainNodeView.getNodeWallet
-          val optionalPrivKey = wallet.secretByPublicKey(proposition)
+          val optionalPrivKey: JOptional[Secret] = wallet.secretByProposition(BytesUtils.fromHexString(body.publickey))
           if (optionalPrivKey.isEmpty) {
             ApiResponseUtil.toResponse(ErrorPropositionNotFound("Proposition not found in the wallet!", JOptional.empty()))
           } else {

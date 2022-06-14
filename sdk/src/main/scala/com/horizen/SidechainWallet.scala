@@ -1,11 +1,9 @@
 package com.horizen
 
-import java.lang
+import java.{lang, util}
 import java.util.{List => JList, Optional => JOptional}
 import java.util.{ArrayList => JArrayList}
-
 import com.horizen.backup.BoxIterator
-
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock}
 import com.horizen.box.{Box, CoinsBox, ForgerBox, ZenBox}
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo}
@@ -13,7 +11,7 @@ import com.horizen.wallet.ApplicationWallet
 import com.horizen.node.NodeWallet
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{ProofOfKnowledgeProposition, Proposition, ProvableCheckResult, PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
-import com.horizen.secret.{SchnorrSecret, Secret, VrfSecretKey, PrivateKey25519}
+import com.horizen.secret.{PrivateKey25519, SchnorrSecret, Secret, VrfSecretKey}
 import com.horizen.storage._
 import com.horizen.transaction.Transaction
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
@@ -23,7 +21,7 @@ import com.horizen.utils._
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.util.{Failure, Success, Try}
-import scala.util.{Try}
+import scala.util.Try
 import scorex.core.block.Block.Timestamp
 import scorex.util.ModifierId
 
@@ -338,6 +336,13 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
 
   override def secretsByProposition[S <: SCS](proposition: ProofOfKnowledgeProposition[S]): JList[S] = {
       proposition.canBeProvedBy(secretStorage.getAll.asJava).secretsNeeded()
+  }
+
+  override def secretByProposition[S <: SCS](proposition: Array[Byte]): JOptional[S] = {
+    secretStorage.getAll.find(secret => util.Arrays.equals(secret.publicImage().pubKeyBytes(), proposition)) match {
+      case Some(s) => JOptional.of(s.asInstanceOf[S])
+      case None => JOptional.empty()
+    }
   }
 
   override def allSecrets(): JList[Secret] = {

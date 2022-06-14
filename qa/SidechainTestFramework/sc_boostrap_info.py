@@ -88,7 +88,7 @@ class SCNodeConfiguration(object):
                  automatic_fee_computation=True,
                  certificate_fee=0.0001,
                  forger_options = SCForgerConfiguration(),
-                 api_key_hash = ""):
+                 api_key = ""):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))
         self.mc_connection_info = mc_connection_info
@@ -99,7 +99,7 @@ class SCNodeConfiguration(object):
         self.automatic_fee_computation = automatic_fee_computation
         self.certificate_fee = certificate_fee
         self.forger_options = forger_options
-        self.api_key_hash = api_key_hash
+        self.api_key = api_key
 
 
 """

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import shutil
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, assert_false, assert_true, initialize_chain_clean, start_nodes, websocket_port_by_mc_node_index, forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import start_sc_nodes, generate_next_blocks, bootstrap_sidechain_nodes, connect_sc_nodes
@@ -19,7 +20,7 @@ from SidechainTestFramework.sidechainauthproxy import SCAPIException
     - Create a new address on node2
     - Export its private key and import it inside the node1
     - Verify that node1 owns this address
-    - Send coins to this address and verify that the balance on node1 is unchanged and node2 owns the new amount
+    - Send coins from node1 to this address and verify that the balance on node1 is unchanged and node2 owns the new amount
     
     - Create some new addresses on node1 and dump all its secret on file
     - Import the node1 secrets inside the node2 and verify that we imported only the secrets that were missing
@@ -28,8 +29,8 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
     number_of_mc_nodes = 1
     number_of_sidechain_nodes = 2
     withdrawalEpochLength=10
-    API_KEY = "Horizen"
-    API_KEY_HASH = "aa8ed2a907753a4a7c66f2aa1d48a0a74d4fde9a6ef34bae96a86dcd7800af98"
+    API_KEY_NODE1 = "aaaa"
+    API_KEY_NODE2 = "Horizen2"
 
     def setup_chain(self):
         initialize_chain_clean(self.options.tmpdir, self.number_of_mc_nodes)
@@ -51,13 +52,13 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0))),
             True,
             automatic_fee_computation=False,
-            api_key_hash=self.API_KEY_HASH
+            api_key=self.API_KEY_NODE1
         )
         sc_node_2_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0))),
             True,
             automatic_fee_computation=False,
-            api_key_hash=self.API_KEY_HASH
+            api_key=self.API_KEY_NODE2
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, self.withdrawalEpochLength),
                                          sc_node_1_configuration,
@@ -139,7 +140,7 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
         # Call the endpoint exportSecret and store the secret of the new address
         print("# Call the endpoint exportSecret and store the secret of the new address")
 
-        sc_secret_2 = http_wallet_exportSecret(sc_node2, sc_address_2, self.API_KEY)    
+        sc_secret_2 = http_wallet_exportSecret(sc_node2, sc_address_2, self.API_KEY_NODE2)
 
         # Test authentication on importSecret endpoint
         print("# Test authentication on importSecret endpoint")
@@ -153,7 +154,7 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
         # Import the secret in the sc_node1 and verify that it owns also the new address
         print("# Import the secret in the sc_node1 and verify that it owns also the new address")
 
-        http_wallet_importSecret(sc_node1, sc_secret_2, self.API_KEY)
+        http_wallet_importSecret(sc_node1, sc_secret_2, self.API_KEY_NODE1)
         pkeys_node1 = http_wallet_allPublicKeys(sc_node1)
         assert_true(self.findAddress(pkeys_node1, sc_address_2))
 
@@ -179,6 +180,7 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
         print("##### TEST import/dump secrets ######")
 
         DUMP_PATH = self.options.tmpdir+"/dumpSecrets"
+        DUMP_PATH_CORRUPTED = self.options.tmpdir+"/dumpSecretsCorrupted"
 
         # Create a couple of new address on node 1
         print("# Create a couple of new address on node 1")
@@ -199,7 +201,7 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
         # Test that we dumped all the secrets
         print("# Test that we dumped all the secrets")
 
-        http_wallet_dumpSecrets(sc_node1, DUMP_PATH, self.API_KEY)
+        http_wallet_dumpSecrets(sc_node1, DUMP_PATH, self.API_KEY_NODE1)
         key_list = self.readFile(DUMP_PATH)
         pkeys_node1 = http_wallet_allPublicKeys(sc_node1)
         pkeys_node2 = http_wallet_allPublicKeys(sc_node2)
@@ -226,10 +228,24 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
             exception = True
         assert_true(exception)           
 
+        # Test that we stop the execution of importSecrets if the file is corrupted.
+        print("# Test that we stop the execution of importSecrets if the file is corrupted.")
+        shutil.copyfile(DUMP_PATH, DUMP_PATH_CORRUPTED)
+        f = open(DUMP_PATH_CORRUPTED, "a")
+        f.write("Corrupted_line C_\n")
+        f.close()
+
+        exception = False
+        try:
+            http_wallet_importSecrets(sc_node2, DUMP_PATH_CORRUPTED, self.API_KEY_NODE2)
+        except SCAPIException as e:
+            exception = True
+        assert_true(exception)
+
         # Test that we imported in the sc_node2 only the 4 missing keys
         print("# Test that we imported in the sc_node2 only the 4 missing keys")
 
-        result = http_wallet_importSecrets(sc_node2, DUMP_PATH, self.API_KEY)
+        result = http_wallet_importSecrets(sc_node2, DUMP_PATH, self.API_KEY_NODE2)
         assert_equal(result["successfullyAdded"], 4)
         assert_equal(result["failedToAdd"], common_addresses)
         assert_equal(len(result["summary"]), common_addresses)

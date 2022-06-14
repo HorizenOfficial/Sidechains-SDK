@@ -1205,6 +1205,155 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
+  /wallet/importSecret:
+    post:
+      tags:
+        - wallet
+      summary: Import a secret inside the wallet
+      description: Import a secret and consequentially the corresponding proposition inside the wallet
+      operationId: importSecret
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                privKey:
+                  description: The secret to import
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      proposition:
+                        $ref: '#/components/schemas/Proposition'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /wallet/exportSecret:
+    post:
+      tags:
+        - wallet
+      summary: Returns the secret corresponding to a proposition.
+      description: Returns the secret corresponding to a proposition (taken from the wallet).
+      operationId: exportSecret
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                publickey:
+                  description: The proposition corresponding to the secret to export
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      privKey:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /wallet/importSecrets:
+    post:
+      tags:
+        - wallet
+      summary: Import all the secrets taken from a file.
+      description: Import all the secrets stored to a file. Each line of the file must be in the format "SECRET" + " " + "PROPOSITION"
+      operationId: importSecrets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                path:
+                  description: Path to the file contaning the secrets
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    $ref: '#/components/schemas/ImportSecretsResponse'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /wallet/dumpSecrets:
+    post:
+      tags:
+        - wallet
+      summary: Export all the secrets taken from a file.
+      description: Export all the secrets stored to a file. Each line of the file will be in the format "SECRET" + " " + "PROPOSITION"
+      operationId: dumpSecrets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                path:
+                  description: Path where the files will be created
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
   # Sidechain node operations
   /node/allPeers:
     post:
@@ -1352,7 +1501,6 @@ paths:
               schema:
                 type: object
                 properties:
-                  result:
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -1890,7 +2038,7 @@ paths:
                     type: object
                     properties:
                       nullifier:
-                        type: String
+                        type: string
                         description: nullifier for given box id
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
@@ -1925,6 +2073,32 @@ components:
         description:
           type: string
         detail:
+          type: string
+
+    ImportSecretsResponse:
+      description: The response of the importSecrets endpoint
+      type: object
+      properties:
+        successfullyAdded:
+          type: integer
+          format: int32
+        failedToAdd:
+          type: integer
+          format: int32
+        summary:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportSecretDetailError'
+
+    ImportSecretDetailError:
+      description: Error generated while trying to import a secret in the importSecrets endpoint
+      type: object
+      properties:
+        lineNumber:
+          type: integer
+          format: int32
+          description: File line number of the secret that was not imported.
+        description:
           type: string
 
     BlacklistedPeersNode:
