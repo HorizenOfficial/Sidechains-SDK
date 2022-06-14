@@ -43,7 +43,7 @@ abstract class AbstractFakeSmartContractMsgProcessor extends MessageProcessor wi
   }
 
   protected def getFunctionFromData(data: Array[Byte]): Array[Byte] ={
-    require(data.length >= OP_CODE_LENGTH, s"Data length must be >= $OP_CODE_LENGTH")
+    require(data.length >= OP_CODE_LENGTH, s"Data length ${data.length} must be >= $OP_CODE_LENGTH")
     data.slice(0,OP_CODE_LENGTH)
   }
 

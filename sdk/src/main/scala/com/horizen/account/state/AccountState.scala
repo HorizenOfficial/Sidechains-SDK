@@ -7,6 +7,7 @@ import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, intToConsensusEpochNumber}
+import com.horizen.evm._
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
@@ -19,6 +20,7 @@ import scala.util.{Failure, Try}
 class AccountState(val params: NetworkParams,
                    override val version: VersionTag,
                    stateMetadataStorage: AccountStateMetadataStorage,
+                   //stateDbStorage: xxx
                    messageProcessors: Seq[MessageProcessor])
   extends State[SidechainTypes#SCAT, AccountBlock, AccountStateView, AccountState]
     with NodeAccountState
@@ -191,7 +193,11 @@ class AccountState(val params: NetworkParams,
 
   // View
   override def getView: AccountStateView = {
-    new AccountStateView(stateMetadataStorage.getView, messageProcessors)
+    // get state root
+    val stateRoot = stateMetadataStorage.getAccountStateRoot
+    //val statedb = new StateDB(xxx, stateRoot)
+
+    new AccountStateView(stateMetadataStorage.getView, messageProcessors) //, statedb)
   }
 
   // getters:
