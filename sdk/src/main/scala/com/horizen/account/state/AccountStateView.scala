@@ -61,10 +61,24 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView, mes
     ???
   }
 
+  def updateAccountStorageBytes(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Try[Unit] =
+  {
+    //stateDb-->
+    //public void setStorageBytes(byte[] address, byte[] key, byte[] value) throws Exception {
+    ???
+  }
+
   def getAccountStorage(address: Array[Byte], key: Array[Byte]): Try[Array[Byte]] = {
     // it should be legal to have a valid address with no values for the given key
     // It should throw an exception if the address does not exist
     ???
+  }
+
+  def getAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Try[Array[Byte]] = {
+    // it should be legal to have a valid address with no values for the given key
+    // It should throw an exception if the address does not exist
+    ???
+    // getStorageBytes--> handling values longer than 32 bytes
   }
 
   // log handling
