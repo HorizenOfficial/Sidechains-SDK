@@ -171,6 +171,14 @@ final class LibEvm {
         invoke("StateRemoveStorageBytes", new StorageParams(handle, address, key));
     }
 
+    public static int stateSnapshot(int handle) {
+        return invoke("StateSnapshot", new HandleParams(handle), int.class);
+    }
+
+    public static void stateRevertToSnapshot(int handle, int revisionId) {
+        invoke("StateRevertToSnapshot", new SnapshotParams(handle, revisionId));
+    }
+
     public static EvmResult evmApply(
         int handle,
         byte[] from,

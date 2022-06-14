@@ -57,6 +57,11 @@ public class StateDBTest {
                 );
                 rootWithBalance1234 = statedb.commit();
 
+                var revisionId = statedb.snapshot();
+                statedb.subBalance(origin, v432);
+                assertEquals(v802, statedb.getBalance(origin));
+                statedb.revertToSnapshot(revisionId);
+                assertEquals(v1234, statedb.getBalance(origin));
                 statedb.subBalance(origin, v432);
                 assertEquals(v802, statedb.getBalance(origin));
 
@@ -180,7 +185,8 @@ public class StateDBTest {
 
                 // test contract deployment
                 BigInteger nonce = statedb.getNonce(addr2);
-                result = Evm.Apply(statedb,
+                result = Evm.Apply(
+                    statedb,
                     addr2,
                     null,
                     null,
@@ -207,7 +213,8 @@ public class StateDBTest {
 
                 // call "store" function on the contract to set a value
                 nonce = nonce.add(BigInteger.ONE);
-                result = Evm.Apply(statedb,
+                result = Evm.Apply(
+                    statedb,
                     addr2,
                     contractAddress,
                     null,
@@ -220,7 +227,8 @@ public class StateDBTest {
 
                 // call "retrieve" on the contract to fetch the value we just set
                 nonce = nonce.add(BigInteger.ONE);
-                result = Evm.Apply(statedb,
+                result = Evm.Apply(
+                    statedb,
                     addr2,
                     contractAddress,
                     null,
@@ -239,7 +247,8 @@ public class StateDBTest {
             // reopen the state and retrieve a value
             try (var statedb = new StateDB(db, modifiedStateRoot)) {
                 BigInteger nonce = statedb.getNonce(addr2);
-                result = Evm.Apply(statedb,
+                result = Evm.Apply(
+                    statedb,
                     addr2,
                     contractAddress,
                     null,

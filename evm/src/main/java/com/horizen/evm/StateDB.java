@@ -28,7 +28,7 @@ public class StateDB extends ResouceHandle {
     }
 
     /**
-     * Commit any pending changes.
+     * Commit any pending changes. Invalidates all snapshots taken before.
      *
      * @return updated state root hash
      */
@@ -194,6 +194,24 @@ public class StateDB extends ResouceHandle {
             default:
                 throw new RuntimeException("invalid storage strategy");
         }
+    }
+
+    /**
+     * Create a lightweight snapshot at the current state.
+     *
+     * @return revision id of the snapshot
+     */
+    public int snapshot() {
+        return LibEvm.stateSnapshot(handle);
+    }
+
+    /**
+     * Rollback all state modifications since the snapshot with the given revision id was created.
+     *
+     * @param revisionId revision id of the snapshot to revert to
+     */
+    public void revertToSnapshot(int revisionId) {
+        LibEvm.stateRevertToSnapshot(handle, revisionId);
     }
 
     @Override
