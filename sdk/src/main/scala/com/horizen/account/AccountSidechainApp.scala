@@ -4,7 +4,7 @@ import akka.actor.ActorRef
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.horizen._
-import com.horizen.account.api.http.AccountTransactionApiRoute
+import com.horizen.account.api.http.{AccountEthRpcRoute, AccountTransactionApiRoute}
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader, AccountBlockSerializer}
 import com.horizen.account.certificatesubmitter.AccountCertificateSubmitterRef
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
@@ -155,7 +155,8 @@ class AccountSidechainApp @Inject()
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi),
     AccountTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainAccountTransactionsCompanion, params),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
-    SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef)
+    SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef),
+    AccountEthRpcRoute(settings.restApi, nodeViewHolderRef)
   )
 
   // In order to provide the feature to override core api and exclude some other apis,

@@ -1,6 +1,8 @@
 package com.horizen.account.api.rpc.response;
 
-public class RpcResponseSuccess extends RpcResponse {
+import com.horizen.api.http.SuccessResponse;
+
+public class RpcResponseSuccess extends RpcResponse implements SuccessResponse {
     private final Object result;
 
     public RpcResponseSuccess(String id, Object result) {

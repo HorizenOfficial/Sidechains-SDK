@@ -11,9 +11,6 @@ import com.google.inject.name.Names;
 
 import com.horizen.SidechainSettings;
 import com.horizen.account.AccountAppModule;
-import com.horizen.account.api.rpc.RpcController;
-import com.horizen.account.api.rpc.handler.RpcHandler;
-import com.horizen.account.api.rpc.service.EthService;
 import com.horizen.account.transaction.AccountTransaction;
 import com.horizen.api.http.ApplicationApiGroup;
 import com.horizen.proof.Proof;
@@ -45,7 +42,6 @@ public class EvmAppModule extends AccountAppModule
 
         // Here I can add my custom rest api and/or override existing one
         List<ApplicationApiGroup> customApiGroups = new ArrayList<>();
-        customApiGroups.add(new RpcController(new RpcHandler(new EthService())));
 
         // Here I can reject some of existing API routes
         // Each pair consists of "group name" -> "route name"

@@ -2,6 +2,7 @@ package com.horizen.account.api.rpc.service;
 
 import com.horizen.account.api.rpc.utils.Data;
 import com.horizen.account.api.rpc.utils.Quantity;
+import com.horizen.account.node.AccountNodeView;
 import org.web3j.crypto.RawTransaction;
 import org.web3j.protocol.core.methods.response.EthBlock;
 import org.web3j.protocol.core.methods.response.Transaction;
@@ -10,6 +11,12 @@ import org.web3j.protocol.core.methods.response.TransactionReceipt;
 import java.util.ArrayList;
 
 public class EthService extends RpcService {
+    public final AccountNodeView nodeView;
+
+    public EthService(AccountNodeView view){
+        nodeView = view;
+    }
+
     @RpcMethod("eth_getBlockByNumber")
     public EthBlock.Block getBlockByNumber(Quantity tag, Boolean rtnTxObj) {
         return new EthBlock.Block("0x1", "0x56",

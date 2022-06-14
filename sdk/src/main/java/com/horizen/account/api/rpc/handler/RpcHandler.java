@@ -8,11 +8,8 @@ import com.horizen.account.api.rpc.service.EthService;
 import com.horizen.account.api.rpc.utils.RpcCode;
 import com.horizen.account.api.rpc.utils.RpcError;
 import com.horizen.api.http.ApiResponse;
-import com.horizen.node.SidechainNodeView;
 
-import java.util.function.BiFunction;
-
-public class RpcHandler implements BiFunction<SidechainNodeView, RpcRequest, ApiResponse> {
+public class RpcHandler {
     private final EthService ethService;
 
     @Inject
@@ -20,8 +17,7 @@ public class RpcHandler implements BiFunction<SidechainNodeView, RpcRequest, Api
         this.ethService = ethService;
     }
 
-    @Override
-    public ApiResponse apply(SidechainNodeView sidechainNodeView, RpcRequest request) {
+    public ApiResponse apply(RpcRequest request) {
         try {
             Object result = null;
             if (ethService.hasMethod(request.getMethod())) {

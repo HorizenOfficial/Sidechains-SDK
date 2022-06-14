@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.horizen.account.api.rpc.request.RpcRequest;
 import com.horizen.account.api.rpc.response.RpcResponseError;
 import com.horizen.account.api.rpc.utils.Quantity;
+import com.horizen.account.node.AccountNodeView;
 import org.junit.Before;
 import org.junit.Test;
 import org.web3j.crypto.RawTransaction;
@@ -22,10 +23,11 @@ public class EthServiceTest {
 
     @Before
     public void BeforeEachTest() {
+        AccountNodeView view = null;
         final BigInteger someValue = BigInteger.ONE;
         transaction = RawTransaction.createTransaction(someValue,
                 someValue, someValue, "0x", someValue, "");
-        ethService = new EthService();
+        ethService = new EthService(view);
     }
 
     @Test
