@@ -116,14 +116,14 @@ class SidechainAuthServiceProxy(object):
             path = self.__service_name
         path = "/" + path.replace("_","/") #Replacing underscores with slashes to correctly format the Rest API request
         postdata = None
-        additional_header = None
+        auth = None
         if len(args) > 0:
             postdata = args[0]
         if len(args) > 1:
-                additional_header = args[1]
+                auth = args[1]
         if len(kwargs) > 0:
             postdata = json.dumps(kwargs)
-        response = self._request(method, path, postdata, additional_header)
+        response = self._request(method, path, postdata, auth)
         return response
 
     def _get_response(self):
