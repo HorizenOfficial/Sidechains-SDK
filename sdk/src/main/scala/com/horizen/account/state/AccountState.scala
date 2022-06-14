@@ -198,7 +198,7 @@ class AccountState(val params: NetworkParams,
   // View
   override def getView: AccountStateView = {
     // get state root
-    val stateRoot = stateMetadataStorage.getAccountStateRoot.get
+    val stateRoot = stateMetadataStorage.getAccountStateRoot.getOrElse(new Array[Byte](32))
     val statedb = new StateDB(stateDbStorage, stateRoot)
 
     new AccountStateView(stateMetadataStorage.getView, statedb, messageProcessors)

@@ -13,6 +13,8 @@ import org.mockito._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
 
+import java.math.BigInteger
+
 
 class ForgerStakeMsgProcessorTest
   extends JUnitSuite
@@ -60,6 +62,12 @@ class ForgerStakeMsgProcessorTest
     stateView.stateDb.close()
   }
 
+  def getRandomNonce() : BigInteger = {
+    val codeHash = new Array[Byte](32)
+    util.Random.nextBytes(codeHash)
+    new java.math.BigInteger(codeHash)
+  }
+
   @Test
   def testAddStake(): Unit = {
 
@@ -81,12 +89,20 @@ class ForgerStakeMsgProcessorTest
 
     val data: Array[Byte] = Bytes.concat(
       BytesUtils.fromHexString(ForgerStakeMsgProcessor.AddNewStakeCmd),
-      BytesUtils.fromHexString("1122334455667788112233445566778811223344556677881122334455667788"),
-      BytesUtils.fromHexString("aabbccddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff0099"),
-      BytesUtils.fromHexString("1122334455112233445511223344551122334455"))
+      BytesUtils.fromHexString("1122334455667788112233445566778811223344556677881122334455667788"), // blockSignProposition
+      BytesUtils.fromHexString("aabbccddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff0099"), // vrfPublicKey
+      BytesUtils.fromHexString("1122334455112233445511223344551122334455")) // ownerPublicKey
 
-    val msg = new Message(from, ForgerStakeMsgProcessor.myAddress, dummyBigInteger, dummyBigInteger, dummyBigInteger, dummyBigInteger,
-      stakedAmount, dummyBigInteger, data)
+    val msg = new Message(
+      from,
+      ForgerStakeMsgProcessor.myAddress, // to
+      dummyBigInteger, // gasPrice
+      dummyBigInteger, // gasFeeCap
+      dummyBigInteger, // gasTipCap
+      dummyBigInteger, // gasLimit
+      stakedAmount,
+      getRandomNonce(), // nonce
+      data)
 
     Mockito.when(stateView.metadataStorageView.getConsensusEpochNumber).thenReturn(Some(consensusEpochNumber))
 
@@ -95,15 +111,38 @@ class ForgerStakeMsgProcessorTest
       case res: ExecutionSucceeded =>
         assertTrue(res.hasReturnData)
         assertTrue(res.gasUsed() == ForgerStakeMsgProcessor.AddNewStakeGasPaidValue)
+        println("This is the returned value: " + BytesUtils.toHexString(res.returnData()))
+
       case result => Assert.fail(s"Wrong result: $result")
     }
 
-    // try processing a msg with the same stake
-
+    // try processing a msg with the same stake, should fail
     ForgerStakeMsgProcessor.process(msg, stateView) match {
       case res: InvalidMessage =>
         println("This is the reason: " + res.getReason.toString)
       case result => Assert.fail(s"Wrong result: $result")
+    }
+
+
+    val msg2 = new Message(
+      from,
+      ForgerStakeMsgProcessor.myAddress, // to
+      dummyBigInteger, // gasPrice
+      dummyBigInteger, // gasFeeCap
+      dummyBigInteger, // gasTipCap
+      dummyBigInteger, // gasLimit
+      stakedAmount,
+      getRandomNonce(), // nonce
+      data)
+
+    // try processing a msg with different stake, should succeed
+    ForgerStakeMsgProcessor.process(msg2, stateView) match {
+      case res: InvalidMessage => Assert.fail(s"Wrong result: $res")
+      case res: ExecutionFailed => Assert.fail(s"Wrong result: $res")
+      case res: ExecutionSucceeded =>
+        assertTrue(res.hasReturnData)
+        assertTrue(res.gasUsed() == ForgerStakeMsgProcessor.AddNewStakeGasPaidValue)
+        println("This is the returned value: " + BytesUtils.toHexString(res.returnData()))
 
     }
 
