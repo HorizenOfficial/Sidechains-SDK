@@ -18,23 +18,18 @@ abstract class AbstractFakeSmartContractMsgProcessor extends MessageProcessor wi
 
   @throws[MessageProcessorInitializationException]
   override def init(view: AccountStateView): Unit = {
-
-    if (view.getAccount(myAddress.address()) == null) {
-      //TODO to check with Jan Christoph: if the get fails it creates an empty one?
+    if (!view.accountExists(myAddress.address()))
+    {
       val codeHash = new Array[Byte](32)
       util.Random.nextBytes(codeHash)
 
-      val account = Account(0, 0, codeHash, new Array[Byte](0))
-      val triedAccountStateView = view.addAccount(myAddress.address(), account)
+      view.addAccount(myAddress.address(), codeHash)
 
-      triedAccountStateView match {
-        case Success(_) =>
-          log.debug(s"Successfully created Message Processor account $account")
-
-        case Failure(exception) =>
-          log.error("Create account for Message Processor failed", exception)
-          throw new MessageProcessorInitializationException("Create account for Message Processor failed", exception)
-      }
+      log.debug(s"created Message Processor account ${BytesUtils.toHexString(myAddress.address())}")
+    }
+    else
+    {
+      log.warn(s"Account ${BytesUtils.toHexString(myAddress.address())} already exists")
     }
   }
 
@@ -46,7 +41,7 @@ abstract class AbstractFakeSmartContractMsgProcessor extends MessageProcessor wi
     require(data.length >= OP_CODE_LENGTH, s"Data length ${data.length} must be >= $OP_CODE_LENGTH")
     data.slice(0,OP_CODE_LENGTH)
   }
-
  }
+
 
 

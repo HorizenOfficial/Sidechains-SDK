@@ -6,14 +6,18 @@ import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
 import com.horizen.box.{ForgerBox, WithdrawalRequestBox}
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber}
+import com.horizen.evm.{StateDB, StateStorageStrategy}
 import com.horizen.state.StateView
 import com.horizen.utils.{BlockFeeInfo, MerkleTree, WithdrawalEpochInfo}
 import scorex.core.VersionTag
 import scorex.util.{ModifierId, bytesToId}
 
+import java.math.BigInteger
 import scala.util.Try
 
-class AccountStateView(metadataStorageView: AccountStateMetadataStorageView, messageProcessors: Seq[MessageProcessor]) extends StateView[SidechainTypes#SCAT, AccountStateView] with AccountStateReader {
+class AccountStateView( val metadataStorageView: AccountStateMetadataStorageView,
+                        val stateDb: StateDB,
+                        messageProcessors: Seq[MessageProcessor]) extends StateView[SidechainTypes#SCAT, AccountStateView] with AccountStateReader {
   view: AccountStateView =>
 
   override type NVCT = this.type
@@ -45,40 +49,49 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView, mes
       throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
   }
 
+  def accountExists(address: Array[Byte]): Boolean = stateDb.exists(address)
+
   // account modifiers:
-  def addAccount(address: Array[Byte], account: Account): Try[AccountStateView] = ???
+  def addAccount(address: Array[Byte], codeHash: Array[Byte]): Unit = stateDb.setCodeHash(address, codeHash)
 
-  def addBalance(address: Array[Byte], amount: Long): Try[AccountStateView] = ???
+  def addBalance(address: Array[Byte], amount: BigInteger): Try[Unit] = Try {
+    stateDb.addBalance(address, amount)
+  }
 
-  def subBalance(address: Array[Byte], amount: Long): Try[AccountStateView] = ???
+  def subBalance(address: Array[Byte], amount: BigInteger): Try[Unit] = Try {
+    stateDb.subBalance(address, amount)
+  }
 
   protected def updateAccountStorageRoot(address: Array[Byte], root: Array[Byte]): Try[AccountStateView] = ???
 
   def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Try[Unit] =
   {
-    //stateDb-->
-    //public void setStorage(byte[] address, byte[] key, byte[] value) throws Exception {
-    ???
+    Try {
+      stateDb.setStorage(address, key, value, StateStorageStrategy.RAW)
+    }
   }
 
   def updateAccountStorageBytes(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Try[Unit] =
   {
-    //stateDb-->
-    //public void setStorageBytes(byte[] address, byte[] key, byte[] value) throws Exception {
-    ???
+    Try {
+      stateDb.setStorage(address, key, value, StateStorageStrategy.CHUNKED)
+    }
   }
 
   def getAccountStorage(address: Array[Byte], key: Array[Byte]): Try[Array[Byte]] = {
     // it should be legal to have a valid address with no values for the given key
     // It should throw an exception if the address does not exist
-    ???
+    Try {
+      stateDb.getStorage(address, key, StateStorageStrategy.RAW)
+    }
   }
 
   def getAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Try[Array[Byte]] = {
     // it should be legal to have a valid address with no values for the given key
     // It should throw an exception if the address does not exist
-    ???
-    // getStorageBytes--> handling values longer than 32 bytes
+    Try {
+      stateDb.getStorage(address, key, StateStorageStrategy.CHUNKED)
+    }
   }
 
   // log handling
@@ -87,7 +100,7 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView, mes
   // out-of-the-box helpers
   override def addCertificate(cert: WithdrawalEpochCertificate): Try[AccountStateView] = Try {
     metadataStorageView.updateTopQualityCertificate(cert)
-    new AccountStateView(metadataStorageView, messageProcessors)
+    new AccountStateView(metadataStorageView, stateDb, messageProcessors)
   }
 
   override def addWithdrawalRequest(wrb: WithdrawalRequestBox): Try[AccountStateView] = ???
@@ -99,27 +112,27 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView, mes
   // note: probably must be "set" than "add". Because we allow it only once per "commit".
   override def addFeeInfo(info: BlockFeeInfo): Try[AccountStateView] = Try {
     metadataStorageView.addFeePayment(info)
-    new AccountStateView(metadataStorageView, messageProcessors)
+    new AccountStateView(metadataStorageView, stateDb, messageProcessors)
   }
 
   override def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo): Try[AccountStateView] = Try {
     metadataStorageView.updateWithdrawalEpochInfo(withdrawalEpochInfo)
-    new AccountStateView(metadataStorageView, messageProcessors)
+    new AccountStateView(metadataStorageView, stateDb, messageProcessors)
   }
 
   override def updateConsensusEpochNumber(consensusEpochNum: ConsensusEpochNumber): Try[AccountStateView] = Try {
     metadataStorageView.updateConsensusEpochNumber(consensusEpochNum)
-    new AccountStateView(metadataStorageView, messageProcessors)
+    new AccountStateView(metadataStorageView, stateDb, messageProcessors)
   }
 
   def updateAccountStateRoot(accountStateRoot: Array[Byte]): Try[AccountStateView] = Try {
     metadataStorageView.updateAccountStateRoot(accountStateRoot)
-    new AccountStateView(metadataStorageView, messageProcessors)
+    new AccountStateView(metadataStorageView, stateDb, messageProcessors)
   }
 
   override def setCeased(): Try[AccountStateView] = Try {
     metadataStorageView.setCeased()
-    new AccountStateView(metadataStorageView, messageProcessors)
+    new AccountStateView(metadataStorageView, stateDb, messageProcessors)
   }
 
   // view controls

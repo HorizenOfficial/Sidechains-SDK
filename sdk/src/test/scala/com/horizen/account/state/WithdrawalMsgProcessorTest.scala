@@ -28,7 +28,7 @@ class WithdrawalMsgProcessorTest
   def testInit(): Unit = {
 
     val mockStateView: AccountStateView = mock[AccountStateView]
-    Mockito.when(mockStateView.addAccount(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[Account])).
+    Mockito.when(mockStateView.addAccount(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[Array[Byte]])).
       thenAnswer(answer => {
         Try {
           require(util.Arrays.equals(answer.getArgument(0), WithdrawalMsgProcessor.myAddress.address()))
@@ -87,8 +87,6 @@ class WithdrawalMsgProcessorTest
       case result => Assert.fail(s"Wrong result: $result")
 
     }
-
-
   }
 
   //  @Test

@@ -20,7 +20,7 @@ import scala.util.{Failure, Try}
 class AccountState(val params: NetworkParams,
                    override val version: VersionTag,
                    stateMetadataStorage: AccountStateMetadataStorage,
-                   //stateDbStorage: xxx
+                   stateDbStorage: LevelDBDatabase,
                    messageProcessors: Seq[MessageProcessor])
   extends State[SidechainTypes#SCAT, AccountBlock, AccountStateView, AccountState]
     with NodeAccountState
@@ -180,7 +180,11 @@ class AccountState(val params: NetworkParams,
   override def rollbackTo(version: VersionTag): Try[AccountState] = {
     Try {
       require(version != null, "Version to rollback to must be NOT NULL.")
-      new AccountState(params, version, stateMetadataStorage.rollback(new ByteArrayWrapper(versionToBytes(version))).get, messageProcessors)
+      // TODO get correct storage for stateDb
+      val stateDbStorage = new LevelDBDatabase("/tmp/evm_storage")
+      new AccountState(params, version,
+        stateMetadataStorage.rollback(new ByteArrayWrapper(versionToBytes(version))).get,
+        stateDbStorage, messageProcessors)
     }.recoverWith({
       case exception =>
         log.error("Exception was thrown during rollback.", exception)
@@ -194,10 +198,10 @@ class AccountState(val params: NetworkParams,
   // View
   override def getView: AccountStateView = {
     // get state root
-    val stateRoot = stateMetadataStorage.getAccountStateRoot
-    //val statedb = new StateDB(xxx, stateRoot)
+    val stateRoot = stateMetadataStorage.getAccountStateRoot.get
+    val statedb = new StateDB(stateDbStorage, stateRoot)
 
-    new AccountStateView(stateMetadataStorage.getView, messageProcessors) //, statedb)
+    new AccountStateView(stateMetadataStorage.getView, statedb, messageProcessors)
   }
 
   // getters:
@@ -243,9 +247,12 @@ object AccountState {
                                     messageProcessors: Seq[MessageProcessor],
                                     params: NetworkParams): Option[AccountState] = {
 
-    if (!stateMetadataStorage.isEmpty)
-      Some(new AccountState(params, bytesToVersion(stateMetadataStorage.lastVersionId.get.data), stateMetadataStorage, messageProcessors))
-    else
+    if (!stateMetadataStorage.isEmpty) {
+      // TODO pass from outside
+      val stateDbStorage = new LevelDBDatabase("/tmp/evm_storage")
+      Some(new AccountState(params, bytesToVersion(stateMetadataStorage.lastVersionId.get.data), stateMetadataStorage,
+        stateDbStorage, messageProcessors))
+    } else
       None
   }
 
@@ -255,7 +262,9 @@ object AccountState {
                                           genesisBlock: AccountBlock): Try[AccountState] = Try {
 
     if (stateMetadataStorage.isEmpty) {
-      new AccountState(params, idToVersion(genesisBlock.parentId), stateMetadataStorage, messageProcessors)
+      // TODO pass from outside
+      val stateDbStorage = new LevelDBDatabase("/tmp/evm")
+      new AccountState(params, idToVersion(genesisBlock.parentId), stateMetadataStorage, stateDbStorage, messageProcessors)
         .initProcessors(idToVersion(genesisBlock.parentId)).get
         .applyModifier(genesisBlock).get
     } else

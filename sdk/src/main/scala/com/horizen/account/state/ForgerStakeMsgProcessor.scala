@@ -1,22 +1,21 @@
 package com.horizen.account.state
 
+import com.fasterxml.jackson.annotation.JsonView
 import com.google.common.primitives.Bytes
 import com.horizen.utils.{BytesUtils, ListSerializer}
 
 import java.math.BigInteger
 import com.google.common.primitives.Ints
 import com.horizen.account.api.http.ZenWeiConverter.isValidZenAmount
-import com.horizen.account.forger.{AccountForgingStakeInfo, AccountForgingStakeInfoSerializer}
-import com.horizen.account.proposition.AddressProposition
-import com.horizen.box.{ForgerBox, ForgerBoxSerializer}
-import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
-import scorex.crypto.hash
+import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
+import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
+import com.horizen.serialization.Views
+import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.crypto.hash.Keccak256
+import scorex.util.serialization.{Reader, Writer}
 
 import java.util
-import scala.+:
-import scala.collection.JavaConverters.{asJavaIterableConverter, asScalaBufferConverter}
-import scala.collection.mutable.ListBuffer
+import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.util.{Failure, Success}
 
 
@@ -24,7 +23,7 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
 
   override val myAddress: AddressProposition = new AddressProposition(BytesUtils.fromHexString("0000000000000000000022222222222222222222"))
 
-  val stakeIdsListKey = BytesUtils.fromHexString("0000000000000000000033333333333333333333")
+  val stakeIdsListKey = BytesUtils.fromHexString("1122334411223344112233441122334411223344112233441122334411223344")
 
   val GetListOfForgersCmd: String = "00"
   val AddNewStakeCmd: String =      "01"
@@ -92,18 +91,6 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
           }
           */
 
-          // store a new record into a "stake contract" storage
-          /*
-          val key = stakeId
-          val value = Bytes.concat(
-            msg.getData, msg.getValue.toByteArray, Ints.toByteArray(currentConsensusEpochNumber))
-
-          view.updateAccountStorage(myAddress.address(), key, value)
-          */
-
-          // TODO add log ForgerStakeDelegation(StakeId, ...) to the StateView ???
-          //view.addLog(new EvmLog concrete instance) // EvmLog will be used internally
-
           // Add this stakeId to the list of all stakes
           val forgingInfoSerializer = new ListSerializer[AccountForgingStakeInfo](AccountForgingStakeInfoSerializer)
 
@@ -122,33 +109,45 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
             }
           }
 
+          // do we already have this key?
+          if (stakeInfoList.asScala.exists(
+            x => { BytesUtils.toHexString(x.stakeId) == BytesUtils.toHexString(stakeId)}))
+          {
+            return new InvalidMessage(new Exception("Stake id already in storage"))
+          }
+
           // add new obj
           stakeInfoList.add(
             AccountForgingStakeInfo(
               stakeId, blockSignProposition, vrfPublicKey, ownerPublicKey,
               msg.getValue.longValue(), currentConsensusEpochNumber))
 
-          // serialize the list
-          val newList : Array[Byte] = forgingInfoSerializer.toBytes(stakeInfoList)
+          // decrease the balance of `from` account by `tx.value`
+          view.subBalance(msg.getFrom.address(), msg.getValue) match {
+            case Success(_) =>
 
-          // update the sb
-          view.updateAccountStorageBytes(myAddress.address(), stakeIdsListKey, newList)
+              // serialize the list
+              val newList : Array[Byte] = forgingInfoSerializer.toBytes(stakeInfoList)
 
-          // decrease the balance of `from` account by `tx.value` and gas paid
-          val chargeSenderResult : ExecutionResult = chargeSender(
-            msg.getFrom.address(), AddNewStakeGasPaidValue.longValue(), msg.getValue.longValue(), view)
+              // update the db
+              view.updateAccountStorageBytes(myAddress.address(), stakeIdsListKey, newList).get
 
-          chargeSenderResult match {
-            case _: ExecutionSucceeded =>
               // increase the balance of the "stake smart contract” account
-              view.addBalance(myAddress.address(), msg.getValue.longValue())
+              view.addBalance(myAddress.address(), msg.getValue).get
+
+              // TODO add log ForgerStakeDelegation(StakeId, ...) to the StateView ???
+              //view.addLog(new EvmLog concrete instance) // EvmLog will be used internally
 
               // Maybe result is not useful in case of success execution (used probably for RPC cmds only)
               val result = stakeId
               return new ExecutionSucceeded(AddNewStakeGasPaidValue, result)
 
-            case _ => return chargeSenderResult
+            case Failure(e) =>
+              val balance = view.getBalance(msg.getFrom.address())
+              log.error(s"Could not subtract ${msg.getValue} from account: current balance = ${balance}")
+              return new ExecutionFailed(AddNewStakeGasPaidValue, new Exception(e))
           }
+
 
 
 
@@ -167,4 +166,48 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
   }
 }
 
+@JsonView(Array(classOf[Views.Default]))
+case class AccountForgingStakeInfo(
+                                    stakeId: Array[Byte],
+                                    blockSignProposition: PublicKey25519Proposition,
+                                    vrfPublicKey: VrfPublicKey,
+                                    ownerPublicKey: AddressProposition,
+                                    stakedAmount: Long,
+                                    consensusEpochNumber: Int
+                                  )
+  extends BytesSerializable  {
+  require(stakedAmount >= 0, "stakeAmount expected to be non negative.")
 
+  override type M = AccountForgingStakeInfo
+
+  override def serializer: ScorexSerializer[AccountForgingStakeInfo] = AccountForgingStakeInfoSerializer
+
+  override def toString: String = "%s(stakeId: %s, blockSignPublicKey: %s, vrfPublicKey: %s, ownerPublicKey: %s, stakeAmount: %d, epoch: %d)"
+    .format(this.getClass.toString, BytesUtils.toHexString(stakeId), blockSignProposition, vrfPublicKey, ownerPublicKey, stakedAmount, consensusEpochNumber)
+
+}
+
+
+object AccountForgingStakeInfoSerializer extends ScorexSerializer[AccountForgingStakeInfo]{
+  override def serialize(s: AccountForgingStakeInfo, w: Writer): Unit = {
+    w.putBytes(s.stakeId)
+    PublicKey25519PropositionSerializer.getSerializer.serialize(s.blockSignProposition, w)
+    VrfPublicKeySerializer.getSerializer.serialize(s.vrfPublicKey, w)
+    AddressPropositionSerializer.getSerializer.serialize(s.ownerPublicKey, w)
+    w.putLong(s.stakedAmount)
+    w.putInt(s.consensusEpochNumber)
+  }
+
+  override def parse(r: Reader): AccountForgingStakeInfo = {
+    val stakeId = r.getBytes(32)
+    val blockSignPublicKey = PublicKey25519PropositionSerializer.getSerializer.parse(r)
+    val vrfPublicKey = VrfPublicKeySerializer.getSerializer.parse(r)
+    val ownerPublicKey = AddressPropositionSerializer.getSerializer.parse(r)
+    val stakeAmount = r.getLong()
+    val consensusEpochNumber = r.getInt
+
+    AccountForgingStakeInfo(
+      stakeId, blockSignPublicKey, vrfPublicKey, ownerPublicKey, stakeAmount, consensusEpochNumber)
+
+  }
+}
