@@ -47,28 +47,6 @@ abstract class AbstractFakeSmartContractMsgProcessor extends MessageProcessor wi
     data.slice(0,OP_CODE_LENGTH)
   }
 
-  // assumes amount are already expressed in zennies (not wei)
-  def chargeSender(address: Array[Byte], gasUsed: Long, amount: Long, view: AccountStateView) : ExecutionResult = {
-    // decrease the balance of `from` account by `tx.value` and gas paid
-    try {
-        view.subBalance(address, gasUsed)
-    } catch {
-      case e: Exception =>
-        log.error("Could not deduce gas value from account")
-        return new InvalidMessage(e)
-    }
-
-    try {
-      // TODO check this:
-      // at this point if after gas deduction we have no funds, return ExecutionFailed
-      view.subBalance(address, amount)
-    } catch {
-      case e: Exception =>
-        log.error("Could not deduce msg value from account")
-        return new ExecutionFailed(AddNewStakeGasPaidValue, e)
-    }
-    new ExecutionSucceeded(BigInteger.valueOf(gasUsed), null)
-  }
-}
+ }
 
 
