@@ -9,7 +9,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <mvn.golang.go.version>1.17.3</mvn.golang.go.version>
+    <mvn.golang.go.version>1.18.3</mvn.golang.go.version>
     <os.system>linux-x86-64</os.system>
     <final.extension>.so</final.extension>
   </properties>
@@ -25,6 +25,18 @@
       <properties>
         <os.system>windows64</os.system>
         <final.extension>.dll</final.extension>
+      </properties>
+    </profile>
+    <profile>
+      <id>if-apfel-system</id>
+      <activation>
+        <os>
+          <name>Mac OS X</name>
+        </os>
+      </activation>
+      <properties>
+        <os.system>darwin</os.system>
+        <final.extension>.dylib</final.extension>
       </properties>
     </profile>
   </profiles>
