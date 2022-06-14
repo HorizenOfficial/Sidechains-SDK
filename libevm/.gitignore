@@ -1,2 +1,3 @@
 bin/
-evm/contracts/compiled/
+interop/compiled/
+test-db
