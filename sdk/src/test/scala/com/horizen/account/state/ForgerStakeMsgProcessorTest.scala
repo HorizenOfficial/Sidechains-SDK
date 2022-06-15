@@ -1,10 +1,13 @@
 package com.horizen.account.state
 
-import com.google.common.primitives.{Bytes, Ints}
+import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.AddressProposition
+import com.horizen.account.secret.PrivateKeySecp256k1
+import com.horizen.account.state.ForgerStakeMsgProcessor.{getMessageToSign, getStakeId}
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.consensus
 import com.horizen.evm.{LevelDBDatabase, StateDB}
+import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 import org.junit._
@@ -12,6 +15,7 @@ import org.junit.rules.TemporaryFolder
 import org.mockito._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
+import org.web3j.crypto.{Keys, Sign}
 
 import java.math.BigInteger
 
@@ -69,15 +73,23 @@ class ForgerStakeMsgProcessorTest
   }
 
   @Test
-  def testAddStake(): Unit = {
+  def testAddAndRemoveStake(): Unit = {
 
     val stateView = getView()
+
+    // create private/public key pair
+    val pair = Keys.createEcKeyPair
+
+    // TODO check this does not work (creating an address proposition from private key)
+    //val ownerPrivateKey = new PrivateKeySecp256k1(BytesUtils.fromHexString("1122334455667788112233445566778811223344556677881122334455667788")) // 32 bytes
+    //val ownerAddressProposition2 = ownerPrivateKey.publicImage()
+
+    val ownerAddressProposition = new AddressProposition(BytesUtils.fromHexString(Keys.getAddress(pair)))
 
     val dummyBigInteger: java.math.BigInteger = java.math.BigInteger.ONE
     val stakedAmount: java.math.BigInteger = new java.math.BigInteger("10000000000")
     val from : AddressProposition = new AddressProposition(BytesUtils.fromHexString("00aabbcc9900aabbcc9900aabbcc9900aabbcc99"))
     val consensusEpochNumber : consensus.ConsensusEpochNumber = consensus.ConsensusEpochNumber@@123
-
 
     // we have to call init beforehand
     assertFalse(stateView.accountExists(ForgerStakeMsgProcessor.myAddress.address()))
@@ -86,12 +98,12 @@ class ForgerStakeMsgProcessorTest
 
     assertTrue(stateView.accountExists(ForgerStakeMsgProcessor.myAddress.address()))
 
-
-    val data: Array[Byte] = Bytes.concat(
-      BytesUtils.fromHexString(ForgerStakeMsgProcessor.AddNewStakeCmd),
-      BytesUtils.fromHexString("1122334455667788112233445566778811223344556677881122334455667788"), // blockSignProposition
-      BytesUtils.fromHexString("aabbccddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff0099"), // vrfPublicKey
-      BytesUtils.fromHexString("1122334455112233445511223344551122334455")) // ownerPublicKey
+    val cmdInput = AddNewStakeInput(
+      new PublicKey25519Proposition(BytesUtils.fromHexString("1122334455667788112233445566778811223344556677881122334455667788")), // 32 bytes
+      new VrfPublicKey(             BytesUtils.fromHexString("aabbccddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff001234")), // 33 bytes
+      ownerAddressProposition
+    )
+    val data: Array[Byte] = AddNewStakeInputSerializer.toBytes(cmdInput)
 
     val msg = new Message(
       from,
@@ -141,6 +153,39 @@ class ForgerStakeMsgProcessorTest
       case res: ExecutionSucceeded =>
         assertTrue(res.hasReturnData)
         assertTrue(res.gasUsed() == ForgerStakeMsgProcessor.AddNewStakeGasPaidValue)
+        println("This is the returned value: " + BytesUtils.toHexString(res.returnData()))
+
+    }
+
+    // remove first stake id
+    val stakeId = getStakeId(stateView, msg)
+    val nonce3 = getRandomNonce()
+    val msgToSign = getMessageToSign(stakeId, from.address(), nonce3.toByteArray)
+    val msgSignatureData = Sign.signMessage(msgToSign, pair, true)
+    val msgSignature = new SignatureSecp256k1(msgSignatureData)
+
+    val removeCmdInput = RemoveStakeInput(stakeId, msgSignature)
+
+    val data3: Array[Byte] = RemoveStakeInputSerializer.toBytes(removeCmdInput)
+
+    val msg3 = new Message(
+      from,
+      ForgerStakeMsgProcessor.myAddress, // to
+      dummyBigInteger, // gasPrice
+      dummyBigInteger, // gasFeeCap
+      dummyBigInteger, // gasTipCap
+      dummyBigInteger, // gasLimit
+      BigInteger.valueOf(-1),
+      nonce3, // nonce
+      data3)
+
+    // try processing the removal of stake
+    ForgerStakeMsgProcessor.process(msg3, stateView) match {
+      case res: InvalidMessage => Assert.fail(s"Wrong result: $res")
+      case res: ExecutionFailed => Assert.fail(s"Wrong result: $res")
+      case res: ExecutionSucceeded =>
+        assertTrue(res.hasReturnData)
+        assertTrue(res.gasUsed() == ForgerStakeMsgProcessor.RemoveStakeGasPaidValue)
         println("This is the returned value: " + BytesUtils.toHexString(res.returnData()))
 
     }
