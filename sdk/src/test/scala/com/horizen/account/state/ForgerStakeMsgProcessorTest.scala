@@ -123,7 +123,6 @@ class ForgerStakeMsgProcessorTest
       case result => Assert.fail(s"Wrong result: $result")
     }
 
-
     val msg2 = new Message(
       from,
       ForgerStakeMsgProcessor.myAddress, // to

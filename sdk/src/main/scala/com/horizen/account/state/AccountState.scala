@@ -180,11 +180,12 @@ class AccountState(val params: NetworkParams,
   override def rollbackTo(version: VersionTag): Try[AccountState] = {
     Try {
       require(version != null, "Version to rollback to must be NOT NULL.")
-      // TODO get correct storage for stateDb
-      val stateDbStorage = new LevelDBDatabase("/tmp/evm_storage")
+      val newMetaState = stateMetadataStorage.rollback(new ByteArrayWrapper(versionToBytes(version))).get
+
       new AccountState(params, version,
-        stateMetadataStorage.rollback(new ByteArrayWrapper(versionToBytes(version))).get,
-        stateDbStorage, messageProcessors)
+        newMetaState,
+        stateDbStorage, // TODO rollback stateDb
+        messageProcessors)
     }.recoverWith({
       case exception =>
         log.error("Exception was thrown during rollback.", exception)
@@ -244,12 +245,11 @@ class AccountState(val params: NetworkParams,
 
 object AccountState {
   private[horizen] def restoreState(stateMetadataStorage: AccountStateMetadataStorage,
+                                    stateDbStorage: LevelDBDatabase,
                                     messageProcessors: Seq[MessageProcessor],
                                     params: NetworkParams): Option[AccountState] = {
 
     if (!stateMetadataStorage.isEmpty) {
-      // TODO pass from outside
-      val stateDbStorage = new LevelDBDatabase("/tmp/evm_storage")
       Some(new AccountState(params, bytesToVersion(stateMetadataStorage.lastVersionId.get.data), stateMetadataStorage,
         stateDbStorage, messageProcessors))
     } else
@@ -257,6 +257,7 @@ object AccountState {
   }
 
   private[horizen] def createGenesisState(stateMetadataStorage: AccountStateMetadataStorage,
+                                          stateDbStorage: LevelDBDatabase,
                                           messageProcessors: Seq[MessageProcessor],
                                           params: NetworkParams,
                                           genesisBlock: AccountBlock): Try[AccountState] = Try {
