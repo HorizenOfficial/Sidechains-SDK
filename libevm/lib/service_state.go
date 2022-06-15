@@ -62,6 +62,11 @@ type SetStorageBytesParams struct {
 	Value []byte `json:"value"`
 }
 
+type SnapshotParams struct {
+	HandleParams
+	RevisionId int `json:"revisionId"`
+}
+
 // StateOpen will create a new state at the given root hash.
 // If the root hash is zero (or the hash of zero) this will give an empty trie.
 // If the hash is anything else this will result in an error if the nodes cannot be found.
@@ -312,4 +317,21 @@ func (s *Service) StateRemoveStorageBytes(params StorageParams) error {
 		Value: nil,
 	}
 	return s.StateSetStorageBytes(deleteParams)
+}
+
+func (s *Service) StateSnapshot(params HandleParams) (error, int) {
+	err, statedb := s.statedbs.Get(params.Handle)
+	if err != nil {
+		return err, 0
+	}
+	return nil, statedb.Snapshot()
+}
+
+func (s *Service) StateRevertToSnapshot(params SnapshotParams) error {
+	err, statedb := s.statedbs.Get(params.Handle)
+	if err != nil {
+		return err
+	}
+	statedb.RevertToSnapshot(params.RevisionId)
+	return nil
 }

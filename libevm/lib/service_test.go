@@ -235,12 +235,20 @@ func TestRawStateDB(t *testing.T) {
 	_, dbHandle := instance.OpenLevelDB(LevelDBParams{Path: t.TempDir()})
 	_, db := instance.databases.Get(dbHandle)
 	statedb, _ := state.New(common.Hash{}, db.database, nil)
-	statedb.SetState(addr, key, value)
 	statedb.SetNonce(addr, 1)
+	revid := statedb.Snapshot()
+	statedb.SetState(addr, key, value)
 	retrievedValue := statedb.GetState(addr, key)
 	if retrievedValue != value {
 		t.Error("value not set correctly")
 	}
+	statedb.RevertToSnapshot(revid)
+	revertedValue := statedb.GetState(addr, key)
+	emptyHash := common.Hash{}
+	if revertedValue != emptyHash {
+		t.Error("snapshot rollback failed")
+	}
+	statedb.SetState(addr, key, value)
 	hash, _ := statedb.Commit(true)
 	_ = statedb.Database().TrieDB().Commit(hash, false, nil)
 	committedValue := statedb.GetState(addr, key)
