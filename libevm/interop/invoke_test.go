@@ -39,10 +39,10 @@ func TestInvoke(t *testing.T) {
 		instance     = lib.New()
 		user         = common.HexToAddress("0xbafe3b6f2a19658df3cb5efca158c93272ff5c0b")
 		emptyHash    = common.HexToHash("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
-		initialValue = "0000000000000000000000000000000000000000000000000000000000000000"
-		anotherValue = "00000000000000000000000000000000000000000000000000000000000015b3"
+		initialValue = common.Big0
+		anotherValue = big.NewInt(5555)
 		funcStore    = "6057361d"
-		//funcRetrieve = "2e64cec1"
+		funcRetrieve = "2e64cec1"
 	)
 
 	dbHandle := call(t, instance, "OpenLevelDB", lib.LevelDBParams{Path: t.TempDir()}).(int)
@@ -57,25 +57,46 @@ func TestInvoke(t *testing.T) {
 		},
 		Amount: (*hexutil.Big)(big.NewInt(1000000000000000000)),
 	})
-	call(t, instance, "EvmApply", lib.EvmParams{
+	// deploy contract
+	result := call(t, instance, "EvmApply", lib.EvmParams{
 		HandleParams: lib.HandleParams{Handle: handle},
 		From:         user,
 		To:           nil,
-		Input:        common.Hex2Bytes(storageContractDeploy + initialValue),
+		Input:        append(common.Hex2Bytes(storageContractDeploy), common.BigToHash(initialValue).Bytes()...),
 		Nonce:        0,
 		GasLimit:     200000,
 		GasPrice:     (*hexutil.Big)(big.NewInt(1000000000)),
-	})
-	contractAddress := common.HexToAddress("0x6F8C38b30Df9967a414543a1338D4497f2570775")
+	}).(*lib.EvmResult)
+	if result.EvmError != "" {
+		t.Fatalf("vm error: %v", result.EvmError)
+	}
+	// call function to store value
 	call(t, instance, "EvmApply", lib.EvmParams{
 		HandleParams: lib.HandleParams{Handle: handle},
 		From:         user,
-		To:           &contractAddress,
-		Input:        common.Hex2Bytes(funcStore + anotherValue),
+		To:           result.ContractAddress,
+		Input:        append(common.Hex2Bytes(funcStore), common.BigToHash(anotherValue).Bytes()...),
 		Nonce:        1,
 		GasLimit:     200000,
 		GasPrice:     (*hexutil.Big)(big.NewInt(1000000000)),
 	})
+	// call function to retrieve value
+	resultRetrieve := call(t, instance, "EvmApply", lib.EvmParams{
+		HandleParams: lib.HandleParams{Handle: handle},
+		From:         user,
+		To:           result.ContractAddress,
+		Input:        common.Hex2Bytes(funcRetrieve),
+		Nonce:        2,
+		GasLimit:     200000,
+		GasPrice:     (*hexutil.Big)(big.NewInt(1000000000)),
+	}).(*lib.EvmResult)
+	if resultRetrieve.EvmError != "" {
+		t.Fatalf("vm error: %v", resultRetrieve.EvmError)
+	}
+	retrievedValue := common.BytesToHash(resultRetrieve.ReturnData).Big()
+	if anotherValue.Cmp(retrievedValue) != 0 {
+		t.Fatalf("retrieved bad value: expected %v, actual %v", anotherValue, retrievedValue)
+	}
 	call(t, instance, "CloseDatabase", lib.DatabaseParams{
 		DatabaseHandle: dbHandle,
 	})
