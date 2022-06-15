@@ -11,8 +11,8 @@ import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, VrfSecretKey}
 import com.horizen.transaction.SidechainTransaction
-import com.horizen.utils.{FeePaymentsUtils, FeeRate, ForgingStakeMerklePathInfo, ListSerializer, MerkleTree, TimeToEpochUtils}
-import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainTypes, SidechainWallet}
+import com.horizen.utils.{FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerkleTree, TimeToEpochUtils}
+import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainMemoryPoolEntry, SidechainState, SidechainWallet}
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.util.{ModifierId, ScorexLogging}
 
@@ -228,11 +228,9 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   }
 
   // define a custom sorting func based on fee rate
-  def txsSortFunc: (SidechainTypes#SCBT, SidechainTypes#SCBT) => Boolean = (a: SidechainTypes#SCBT, b: SidechainTypes#SCBT) =>
+  def txsSortFunc: (SidechainMemoryPoolEntry, SidechainMemoryPoolEntry) => Boolean = (a: SidechainMemoryPoolEntry, b: SidechainMemoryPoolEntry) =>
   {
-    val fr1 = new FeeRate(a.fee, a.bytes().length)
-    val fr2 = new FeeRate(b.fee, b.bytes().length)
-    fr1 > fr2
+    a.getTxFeeRate() > b.getTxFeeRate()
   }
   
   private def forgeBlock(nodeView: View,
