@@ -237,7 +237,7 @@ class AccountState(val params: NetworkParams,
   // Account specific getters
   override def getAccount(address: Array[Byte]): Account = ???
 
-  override def getBalance(address: Array[Byte]): Long = ???
+  override def getBalance(address: Array[Byte]): java.math.BigInteger = ???
 
   override def getAccountStateRoot: Option[Array[Byte]] = getView.getAccountStateRoot
 }

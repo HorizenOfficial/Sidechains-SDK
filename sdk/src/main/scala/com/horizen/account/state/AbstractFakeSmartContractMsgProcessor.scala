@@ -1,14 +1,8 @@
 package com.horizen.account.state
 
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeGasPaidValue, log}
-import com.horizen.box.{WithdrawalRequestBox, WithdrawalRequestBoxSerializer}
-import com.horizen.utils.{BytesUtils, ListSerializer}
+import com.horizen.utils.BytesUtils
 import scorex.util.ScorexLogging
-
-import java.math.BigInteger
-import scala.collection.JavaConverters.seqAsJavaListConverter
-import scala.util.{Failure, Success}
 
 abstract class AbstractFakeSmartContractMsgProcessor extends MessageProcessor with ScorexLogging {
 

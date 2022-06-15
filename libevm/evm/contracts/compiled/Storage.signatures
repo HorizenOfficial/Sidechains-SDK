@@ -1,0 +1,4 @@
+Function signatures:
+371303c0: inc()
+2e64cec1: retrieve()
+6057361d: store(uint256)

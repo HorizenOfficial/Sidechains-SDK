@@ -180,7 +180,7 @@ class AccountStateView( val metadataStorageView: AccountStateMetadataStorageView
   // account specific getters
   override def getAccount(address: Array[Byte]): Account = ???
 
-  override def getBalance(address: Array[Byte]): Long = ???
+  override def getBalance(address: Array[Byte]): java.math.BigInteger = stateDb.getBalance(address)
 
   override def getAccountStateRoot: Option[Array[Byte]] = metadataStorageView.getAccountStateRoot
 

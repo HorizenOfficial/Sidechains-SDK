@@ -16,6 +16,7 @@ import org.scalatestplus.mockito._
 import java.math.BigInteger
 
 
+@Ignore
 class ForgerStakeMsgProcessorTest
   extends JUnitSuite
     with MockitoSugar
