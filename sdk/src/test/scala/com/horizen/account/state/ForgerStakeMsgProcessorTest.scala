@@ -3,12 +3,12 @@ package com.horizen.account.state
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.secret.PrivateKeySecp256k1
-import com.horizen.account.state.ForgerStakeMsgProcessor.{getMessageToSign, getStakeId}
+import com.horizen.account.state.ForgerStakeMsgProcessor.{GetListOfForgersCmd, getMessageToSign, getStakeId}
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.consensus
 import com.horizen.evm.{LevelDBDatabase, StateDB}
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
-import com.horizen.utils.BytesUtils
+import com.horizen.utils.{BytesUtils, ListSerializer}
 import org.junit.Assert._
 import org.junit._
 import org.junit.rules.TemporaryFolder
@@ -179,6 +179,7 @@ class ForgerStakeMsgProcessorTest
       nonce3, // nonce
       data3)
 
+
     // try processing the removal of stake
     ForgerStakeMsgProcessor.process(msg3, stateView) match {
       case res: InvalidMessage => Assert.fail(s"Wrong result: $res")
@@ -189,6 +190,39 @@ class ForgerStakeMsgProcessorTest
         println("This is the returned value: " + BytesUtils.toHexString(res.returnData()))
 
     }
+
+    val data4: Array[Byte] = BytesUtils.fromHexString(GetListOfForgersCmd)
+
+    val msg4 = new Message(
+      from,
+      ForgerStakeMsgProcessor.myAddress, // to
+      dummyBigInteger, // gasPrice
+      dummyBigInteger, // gasFeeCap
+      dummyBigInteger, // gasTipCap
+      dummyBigInteger, // gasLimit
+      BigInteger.valueOf(-1),
+      getRandomNonce(), // nonce
+      data4)
+
+    // try getting the list
+    ForgerStakeMsgProcessor.process(msg4, stateView) match {
+      case res: InvalidMessage => Assert.fail(s"Wrong result: $res")
+      case res: ExecutionFailed => Assert.fail(s"Wrong result: $res")
+      case res: ExecutionSucceeded =>
+        assertTrue(res.hasReturnData)
+        assertTrue(res.gasUsed() == ForgerStakeMsgProcessor.RemoveStakeGasPaidValue)
+
+        val forgingInfoSerializer = new ListSerializer[AccountForgingStakeInfo](AccountForgingStakeInfoSerializer)
+        val returnedList = forgingInfoSerializer.parseBytesTry(res.returnData()).get
+
+        assertTrue(returnedList.size() == 1)
+        val item = returnedList.get(0)
+        assertTrue(BytesUtils.toHexString(item.stakeId) == BytesUtils.toHexString(getStakeId(stateView, msg2)))
+
+        println("This is the returned value: " + item)
+
+    }
+
 
     stateView.stateDb.close()
   }

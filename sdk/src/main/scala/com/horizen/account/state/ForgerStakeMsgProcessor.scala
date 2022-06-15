@@ -55,11 +55,28 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
     try {
       val cmdString = BytesUtils.toHexString(getFunctionFromData(msg.getData))
       cmdString match {
-        case `GetListOfForgersCmd` => // TODO
-          // we do not have any argument here
-          require(msg.getData.length == OP_CODE_LENGTH, s"Wrong data length ${msg.getData.length}")
-          val listOfForgers = Array[Byte]() //view.getForgerList
-          new ExecutionSucceeded(GetListOfForgersGasPaidValue, listOfForgers)
+        case `GetListOfForgersCmd` =>
+
+          // Add this stakeId to the list of all stakes
+          val forgingInfoSerializer = new ListSerializer[AccountForgingStakeInfo](AccountForgingStakeInfoSerializer)
+
+          // get current list from db and unserialize it, just to be sure we have the right data
+          val serializedStakeIdList : Array[Byte] = view.getAccountStorageBytes(myAddress.address(), stakeIdsListKey).get
+          val stakeInfoList = serializedStakeIdList.length match {
+            case 0 =>
+              new util.ArrayList[AccountForgingStakeInfo]()
+
+            case _ =>  forgingInfoSerializer.parseBytesTry(serializedStakeIdList) match {
+              case Success(obj) => obj
+              case Failure(exception) =>
+                log.error("Error while parsing list of forging info.", exception)
+                return new InvalidMessage(new Exception(exception))
+            }
+          }
+
+          val listOfForgers : Array[Byte] = forgingInfoSerializer.toBytes(stakeInfoList)
+
+          return new ExecutionSucceeded(GetListOfForgersGasPaidValue, listOfForgers)
 
         case `AddNewStakeCmd` =>
           // first of all check msg.value, it must be a legal wei amount convertible in satoshi without any remainder
