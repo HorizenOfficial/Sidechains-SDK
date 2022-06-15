@@ -179,6 +179,10 @@ final class LibEvm {
         invoke("StateRevertToSnapshot", new SnapshotParams(handle, revisionId));
     }
 
+    public static EvmLog[] stateGetLogs(int handle, byte[] txHash) {
+        return invoke("StateGetLogs", new GetLogsParams(handle, txHash), EvmLog[].class);
+    }
+
     public static EvmResult evmApply(
         int handle,
         byte[] from,

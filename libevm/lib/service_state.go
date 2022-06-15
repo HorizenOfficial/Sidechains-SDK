@@ -67,6 +67,11 @@ type SnapshotParams struct {
 	RevisionId int `json:"revisionId"`
 }
 
+type GetLogsParams struct {
+	AccountParams
+	TxHash common.Hash `json:"txHash"`
+}
+
 // StateOpen will create a new state at the given root hash.
 // If the root hash is zero (or the hash of zero) this will give an empty trie.
 // If the hash is anything else this will result in an error if the nodes cannot be found.
@@ -334,4 +339,12 @@ func (s *Service) StateRevertToSnapshot(params SnapshotParams) error {
 	}
 	statedb.RevertToSnapshot(params.RevisionId)
 	return nil
+}
+
+func (s *Service) StateGetLogs(params GetLogsParams) (error, []*Log) {
+	err, statedb := s.statedbs.Get(params.Handle)
+	if err != nil {
+		return err, nil
+	}
+	return nil, getLogs(statedb, params.TxHash)
 }
