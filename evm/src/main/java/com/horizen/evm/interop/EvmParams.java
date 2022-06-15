@@ -26,7 +26,8 @@ public class EvmParams extends HandleParams {
         byte[] input,
         BigInteger nonce,
         BigInteger gasLimit,
-        BigInteger gasPrice
+        BigInteger gasPrice,
+        EvmContext context
     ) {
         super(handle);
         this.from = Address.FromBytes(from);
@@ -36,5 +37,6 @@ public class EvmParams extends HandleParams {
         this.nonce = nonce;
         this.gasLimit = gasLimit;
         this.gasPrice = gasPrice;
+        this.context = context;
     }
 }
