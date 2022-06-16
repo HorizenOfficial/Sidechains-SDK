@@ -16,11 +16,8 @@ import scorex.core.network.peer.PeerInfo
 import scorex.core.network.peer.PeerManager.ReceivableMessages.{Blacklisted, GetAllPeers, GetBlacklistedPeers, RemovePeer}
 import scorex.core.settings.RESTApiSettings
 import scorex.core.utils.NetworkTimeProvider
-import JacksonSupport._
-import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.SidechainApp
-import com.horizen.api.http.SidechainNodeErrorResponse.{ErrorInvalidHost, ErrorStopNodeAlreadyInProgress}
-import com.horizen.serialization.Views
+import com.horizen.api.http.SidechainNodeErrorResponse.{ErrorStopNodeAlreadyInProgress}
 
 import java.lang.Thread.sleep
 
