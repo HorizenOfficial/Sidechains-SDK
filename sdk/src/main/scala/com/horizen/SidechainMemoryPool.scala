@@ -6,17 +6,23 @@ import com.horizen.node.NodeMemoryPool
 import com.horizen.transaction.BoxTransaction
 import com.horizen.utils.FeeRate
 import scorex.util.ModifierId
+import scorex.util.{ModifierId, ScorexLogging}
 import scorex.core.transaction.MempoolReader
 
 import scala.collection.concurrent.TrieMap
 import scala.util.{Failure, Success, Try}
 import scala.collection.JavaConverters._
 
-class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry])
+class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry], mempoolSettings: MempoolSettings)
   extends scorex.core.transaction.MemoryPool[SidechainTypes#SCBT, SidechainMemoryPool]
   with SidechainTypes
   with NodeMemoryPool
+  with ScorexLogging
 {
+  var maxPoolSizeBytes : Long =  mempoolSettings.maxSize * 1024 * 1024
+  var usedPoolSizeBytes : Long = 0
+  val minFeeRate : Long = mempoolSettings.minFeeRate
+
   override type NVCT = SidechainMemoryPool
   //type BT = BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]
 
@@ -64,9 +70,20 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
     filter(t => !txs.exists(_.id == t.id))
   }
 
+  /**
+   * Filters the txs cointained in the mempool, recalculates the used bytes, and return an instance of itself.
+   * @param condition to use to filter the transactions
+   */
   override def filter(condition: SidechainTypes#SCBT => Boolean): SidechainMemoryPool = {
+    usedPoolSizeBytes = 0
     unconfirmed.retain { (k, v) =>
       condition(v.getUnconfirmedTx())
+      if (condition(v.getUnconfirmedTx())){
+        usedPoolSizeBytes = usedPoolSizeBytes + v.getTxFeeRate().getSize()
+        true
+      }else{
+        false
+      }
     }
     this
   }
@@ -83,14 +100,20 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
   override def put(tx: SidechainTypes#SCBT): Try[SidechainMemoryPool] = {
     // check if tx is not colliding with unconfirmed using
     // tx.incompatibilityChecker().hasIncompatibleTransactions(tx, unconfirmed)
-    if (tx.incompatibilityChecker().isMemoryPoolCompatible &&
+    val txFeeRate = new FeeRate(tx.fee(), tx.size())
+    if (txFeeRate.getFeeRate() < minFeeRate) {
+       Failure(new IllegalArgumentException("Transaction fee is less than mempool.minFeeRate - " + tx))
+    } else if (tx.incompatibilityChecker().isMemoryPoolCompatible &&
         tx.incompatibilityChecker().isTransactionCompatible(tx, unconfirmed.values.toList.map(t => t.getUnconfirmedTx()).asJava)) {
-      unconfirmed.put(tx.id, SidechainMemoryPoolEntry(tx))
-      Success[SidechainMemoryPool](this)
-    }
-    else
+      if (addWithSizeCheck(SidechainMemoryPoolEntry(tx, txFeeRate)))
+        Success[SidechainMemoryPool](this)
+      else
+        Failure(new IllegalArgumentException("Mempool full and tx feeRate too low, unable to add transaction - " + tx))
+    } else {
         Failure(new IllegalArgumentException("Transaction is incompatible - " + tx))
+    }
   }
+
 
   override def put(txs: Iterable[SidechainTypes#SCBT]): Try[SidechainMemoryPool] = {
     // for each tx in txs call "put"
@@ -109,10 +132,35 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
     }
 
     for (t <- txs) {
-      unconfirmed.put(t.id, SidechainMemoryPoolEntry(t))
+      val txFeeRate = new FeeRate(t.fee(), t.size())
+      if (txFeeRate.getFeeRate() >= minFeeRate) {
+        addWithSizeCheck(SidechainMemoryPoolEntry(t, txFeeRate))
+      }
     }
-
     new Success[SidechainMemoryPool](this)
+  }
+
+  /**
+   * Add tx to the mempool.
+   * Lowest fee-rate txs are removed in case max mempool size is reached.
+   * @return true if the transaction has been inserted succesfully
+   */
+  def addWithSizeCheck(entry: SidechainMemoryPoolEntry) : Boolean = {
+    val orderedEntries = unconfirmed.values.toSeq.sortWith((a,b) => {
+      a.getTxFeeRate().getFeeRate() < b.getTxFeeRate().getFeeRate()
+    })
+    while (usedPoolSizeBytes + entry.getTxFeeRate().getSize() > maxPoolSizeBytes){
+      val lastEntry = orderedEntries.take(1).last
+      if (lastEntry.getTxFeeRate().getFeeRate() > entry.getTxFeeRate().getFeeRate()){
+        //the pool is full, and the entry we are trying to add has feerate lower than the miminum in pool,
+        //so the insert will fail
+        return false;
+      }
+      remove(lastEntry.getUnconfirmedTx())
+    }
+    unconfirmed.put(entry.getUnconfirmedTx().id(), entry)
+    usedPoolSizeBytes = usedPoolSizeBytes + entry.getTxFeeRate().getSize()
+    true
   }
 
   // TO DO: check usage in Scorex core
@@ -129,7 +177,10 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
     }
 
     for (t <- txs) {
-      unconfirmed.put(t.id, SidechainMemoryPoolEntry(t))
+      val txFeeRate = new FeeRate(t.fee(), t.size())
+      if (txFeeRate.getFeeRate() >= minFeeRate) {
+        addWithSizeCheck(SidechainMemoryPoolEntry(t, txFeeRate))
+      }
     }
 
     this
@@ -137,6 +188,7 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
 
   override def remove(tx: SidechainTypes#SCBT): SidechainMemoryPool = {
     unconfirmed.remove(tx.id)
+    usedPoolSizeBytes = usedPoolSizeBytes - tx.size()
     this
   }
 
@@ -152,6 +204,14 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
 
   override def getSize: Int = unconfirmed.size
 
+  def getUsedSizeKb: Int = {
+    Math.round(usedPoolSizeBytes/1024)
+  }
+
+  def getUsedPercentage: Int = {
+    Math.round((usedPoolSizeBytes*100)/maxPoolSizeBytes)
+  }
+
   override def getTransactionById(transactionId: String): Optional[BoxTransaction[SCP, Box[SCP]]] = {
     Optional.ofNullable(unconfirmed.get(transactionId) match {
       case Some(mempoolEntry) => mempoolEntry.getUnconfirmedTx()
@@ -162,6 +222,8 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
 
 object SidechainMemoryPool
 {
-  lazy val emptyPool : SidechainMemoryPool = new SidechainMemoryPool(TrieMap())
+  def createEmptyMempool(mempoolSettings: MempoolSettings) : SidechainMemoryPool = {
+    new SidechainMemoryPool(TrieMap(), mempoolSettings)
+  }
 }
 
