@@ -3,13 +3,14 @@ package com.horizen.certificatesubmitter
 
 import java.io.File
 import java.util.Optional
+
 import akka.actor.{Actor, ActorRef, ActorSystem, Props, Timers}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen._
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.WithdrawalRequestBox
-import com.horizen.certificatesubmitter.CertificateSubmitter.{CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, CertificateSubmissionStarted, CertificateSubmissionStopped, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, SignaturesStatus, SubmissionWindowStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
+import com.horizen.certificatesubmitter.CertificateSubmitter.{CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, CertificateSubmissionStarted, CertificateSubmissionStopped, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, ObsoleteWithdrawalEpochException, SignaturesStatus, SubmissionWindowStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
 import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.NetworkParams
@@ -23,8 +24,8 @@ import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 import scorex.util.ScorexLogging
-
 import java.util
+
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.Platform.EOL
@@ -346,11 +347,26 @@ class CertificateSubmitter(settings: SidechainSettings,
       .map(topQualityCertificates => {
         topQualityCertificates.mempoolCertInfo match {
           // case we have mempool cert for the given epoch return its quality.
-          case Some(mempoolInfo) if (mempoolInfo.epoch == epoch) => mempoolInfo.quality
+          case Some(mempoolInfo) =>
+            if (mempoolInfo.epoch == epoch) {
+              mempoolInfo.quality
+            } else if (epoch < mempoolInfo.epoch) {
+              throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + mempoolInfo.quality)
+            } else {
+              0
+            }
           // else look for inchain cert
           case _ => topQualityCertificates.chainCertInfo match {
             // case we have chain cert for the given epoch return its quality.
-            case Some(chainInfo) if (chainInfo.epoch == epoch) => chainInfo.quality
+            case Some(chainInfo) => {
+              if (chainInfo.epoch == epoch) {
+                chainInfo.quality
+              } else if (epoch < chainInfo.epoch) {
+                throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + chainInfo.quality)
+              } else {
+                0
+              }
+            }
             // no known certs
             case _ => 0
           }
@@ -371,6 +387,10 @@ class CertificateSubmitter(settings: SidechainSettings,
             // So we don't know the result
             // Return true to keep submitter going and prevent SC ceasing
             return true
+          // May happen during node synchronization and node behind for one epoch or more
+          case ex: ObsoleteWithdrawalEpochException =>
+            log.error("Sidechain is behind the Mainchain(" + ex + ")")
+            return false
           // May happen if MC and SDK websocket protocol is inconsistent.
           // Should never happen in production.
           case ex: WebsocketInvalidErrorMessageException =>
@@ -608,6 +628,9 @@ object CertificateSubmitter {
     require(messageToSign.length == FieldElementUtils.fieldElementLength(), "messageToSign has invalid length")
   }
 
+  case class ObsoleteWithdrawalEpochException(message: String = "", cause: Option[Throwable] = None)
+    extends RuntimeException(message, cause.orNull)
+
   // Internal interface
   private[certificatesubmitter] object Timers {
     object CertificateGenerationTimer
@@ -640,15 +663,15 @@ object CertificateSubmitterRef {
   def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit ec: ExecutionContext) : Props =
-    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel))
+    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel)).withMailbox("akka.actor.deployment.prio-mailbox")
 
   def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel))
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel).withMailbox("akka.actor.deployment.prio-mailbox"))
 
   def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel), name)
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel).withMailbox("akka.actor.deployment.prio-mailbox"), name)
 }

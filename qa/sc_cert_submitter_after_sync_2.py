@@ -71,7 +71,7 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
     def do_cert_cycle(self, mc_node, sc_forger_node, sc_submitter_node, mc_blocks_in_epoch_left, additional_sc_blocks):
         # Generate MC blocks to reach one block before the end of the withdrawal epoch (WE)
         # 1 SC block contains MC block
-        for i in range(mc_blocks_in_epoch_left):
+        for i in range(mc_blocks_in_epoch_left - 1):
             mc_node.generate(1)
             generate_next_block(sc_forger_node, "node")
 
@@ -108,7 +108,7 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
         connect_sc_nodes(sc_node1, 1)  # Connect SC nodes
 
         print("Starting synchronization...")
-        sync_sc_blocks(self.sc_nodes, 200, True)
+        sync_sc_blocks(self.sc_nodes, 500, True)
         print("Synchronization finished.")
 
         # Disable sc node 1 submitter
