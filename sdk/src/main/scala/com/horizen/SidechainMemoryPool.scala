@@ -149,7 +149,10 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
   override def getSize: Int = unconfirmed.size
 
   override def getTransactionById(transactionId: String): Optional[BoxTransaction[SCP, Box[SCP]]] = {
-    Optional.ofNullable(unconfirmed.getOrElse(transactionId, null).getUnconfirmedTx())
+    Optional.ofNullable(unconfirmed.get(transactionId) match {
+      case Some(tx) => tx.getUnconfirmedTx()
+      case None => null
+    })
   }
 }
 
