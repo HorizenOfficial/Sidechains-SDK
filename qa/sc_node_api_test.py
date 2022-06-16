@@ -72,8 +72,19 @@ class SidechainNodeApiTest(SidechainTestFramework):
         print("OK\n")
 
         print("-->Calling storageVersions API...")
-        storage_versions_result = sc_node.node_storageVersions()
-        print(storage_versions_result) #TODO needs a more meaningful test
+        storage_versions_result = sc_node.node_storageVersions()["result"]["listOfVersions"]
+        print(storage_versions_result)
+        assert_equal(storage_versions_result["SidechainStateForgerBoxStorage"], sc_node_best_block_id)
+        assert_equal(storage_versions_result["SidechainWalletBoxStorage"], sc_node_best_block_id)
+        assert_equal(storage_versions_result["SidechainStateStorage"], sc_node_best_block_id)
+        assert_equal(storage_versions_result["SidechainWalletCswDataStorage"], sc_node_best_block_id)
+        assert_equal(storage_versions_result["SidechainStateUtxoMerkleTreeStorage"], sc_node_best_block_id)
+        assert_equal(storage_versions_result["SidechainWalletTransactionStorage"], sc_node_best_block_id)
+        assert_equal(storage_versions_result["ForgingBoxesInfoStorage"], sc_node_best_block_id)
+        #SidechainSecretStorage use random versions, we cannot predict them.
+        #SidechainHistoryStorage use random versions, we cannot predict them.
+        #ConsensusDataStorage use random versions, we cannot predict them.
+
         print("OK\n")
 
         print("-->Calling sidechainId API...")
