@@ -63,5 +63,5 @@ trait NetworkParams {
   val allowedForgersList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = Seq()
 
   // Account chain params
-  val chainId : Int
+  val chainId : Long
 }

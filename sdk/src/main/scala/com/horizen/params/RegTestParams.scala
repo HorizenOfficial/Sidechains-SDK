@@ -32,7 +32,7 @@ case class RegTestParams(
                           override val restrictForgers: Boolean = false,
                           override val allowedForgersList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = Seq(),
                           override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1,
-                          override val chainId : Int = 1111111
+                          override val chainId: Long = 1111111
                         ) extends NetworkParams {
   override val EquihashN: Int = 48
   override val EquihashK: Int = 5
