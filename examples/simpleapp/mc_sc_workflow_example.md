@@ -15,7 +15,7 @@ Build SDK components by using command (in the root of the SDK folder):
 
 Run Bootstrapping tool using command: 
 
-`java -jar tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.3.4.jar`
+`java -jar tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.3.5.jar`
 
 All other commands are performed as commands for Bootstrapping tool in next format: `"command name"  "parameters for command in JSON format"`.
 For any help you could use command `help`, for exit just print `exit`
@@ -397,15 +397,15 @@ Run SimpleApp with the `my_settings.conf`:
 
 * For Windows:
  ```
-    java -cp ./examples/simpleapp/target/sidechains-sdk-simpleapp-0.3.4.jar;./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp ./examples/my_settings.conf
+    java -cp ./examples/simpleapp/target/sidechains-sdk-simpleapp-0.3.5.jar;./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp ./examples/my_settings.conf
 ```
 * For Linux (Glibc):
 ```
-    java -cp ./examples/simpleapp/target/sidechains-sdk-simpleapp-0.3.4.jar:./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp ./examples/my_settings.conf
+    java -cp ./examples/simpleapp/target/sidechains-sdk-simpleapp-0.3.5.jar:./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp ./examples/my_settings.conf
 ```
 * For Linux (Jemalloc):
 ```
-    LD_PRELOAD=<path to jemalloc library>/libjemalloc.so.1 java -cp ./examples/simpleapp/target/sidechains-sdk-simpleapp-0.3.4.jar:./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp ./examples/my_settings.conf
+    LD_PRELOAD=<path to jemalloc library>/libjemalloc.so.1 java -cp ./examples/simpleapp/target/sidechains-sdk-simpleapp-0.3.5.jar:./examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp ./examples/my_settings.conf
 ```
 - In the folder `ci` you will find the script `run_sc.sh` to automatically check and use jemalloc library while starting the sidechain node.
 
