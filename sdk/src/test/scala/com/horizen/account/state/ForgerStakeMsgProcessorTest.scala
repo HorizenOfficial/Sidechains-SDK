@@ -20,6 +20,7 @@ import org.web3j.crypto.{Keys, Sign}
 import java.math.BigInteger
 
 
+@Ignore
 class ForgerStakeMsgProcessorTest
   extends JUnitSuite
     with MockitoSugar
