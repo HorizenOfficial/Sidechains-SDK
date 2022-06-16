@@ -8,27 +8,27 @@ abstract class AbstractFakeSmartContractMsgProcessor extends MessageProcessor wi
 
   val OP_CODE_LENGTH = 1
 
-  val myAddress: AddressProposition
+  val fakeSmartContractAddress: AddressProposition
 
   @throws[MessageProcessorInitializationException]
   override def init(view: AccountStateView): Unit = {
-    if (!view.accountExists(myAddress.address()))
+    if (!view.accountExists(fakeSmartContractAddress.address()))
     {
       val codeHash = new Array[Byte](32)
       util.Random.nextBytes(codeHash)
 
-      view.addAccount(myAddress.address(), codeHash)
+      view.addAccount(fakeSmartContractAddress.address(), codeHash)
 
-      log.debug(s"created Message Processor account ${BytesUtils.toHexString(myAddress.address())}")
+      log.debug(s"created Message Processor account ${BytesUtils.toHexString(fakeSmartContractAddress.address())}")
     }
     else
     {
-      log.warn(s"Account ${BytesUtils.toHexString(myAddress.address())} already exists")
+      log.warn(s"Account ${BytesUtils.toHexString(fakeSmartContractAddress.address())} already exists")
     }
   }
 
   override def canProcess(msg: Message, view: AccountStateView): Boolean = {
-    myAddress.equals(msg.getTo)
+    fakeSmartContractAddress.equals(msg.getTo)
   }
 
   protected def getFunctionFromData(data: Array[Byte]): Array[Byte] ={

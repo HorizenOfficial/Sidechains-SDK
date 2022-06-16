@@ -59,6 +59,12 @@ class AccountStateView( val metadataStorageView: AccountStateMetadataStorageView
   }
 
   def subBalance(address: Array[Byte], amount: BigInteger): Try[Unit] = Try {
+    // stateDb lib does not do any sanity check, and negative balances might arise (and java/go json IF does not correctly handle it)
+    // TODO: for the time being do the checks here, later they will be done in the caller stack
+    require(amount.compareTo(BigInteger.ZERO) >= 0)
+    val balance = stateDb.getBalance(address)
+    require(balance.compareTo(amount) >= 0)
+
     stateDb.subBalance(address, amount)
   }
 

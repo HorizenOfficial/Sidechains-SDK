@@ -15,7 +15,7 @@ import scala.util.{Failure, Success, Try}
 
 object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
 
-  override val myAddress: AddressProposition = new AddressProposition(BytesUtils.fromHexString("0000000000000000000011111111111111111111"))
+  override val fakeSmartContractAddress: AddressProposition = new AddressProposition(BytesUtils.fromHexString("0000000000000000000011111111111111111111"))
 
   val getListOfWithdrawalReqsCmdSig: String = "00"
   val addNewWithdrawalReqCmdSig: String = "01"
@@ -30,7 +30,7 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
 
 
   override def canProcess(msg: Message, view: AccountStateView): Boolean = {
-    myAddress.equals(msg.getTo)
+    fakeSmartContractAddress.equals(msg.getTo)
   }
 
   override def process(msg: Message, view: AccountStateView): ExecutionResult = {
@@ -104,20 +104,20 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
       checkWithdrawalRequestValidity(msg, view)
       val currentEpochNum = view.getWithdrawalEpochInfo.epoch
       val key = getWithdrawalEpochCounterKey(currentEpochNum)
-      val numOfWithdrawalReqs = Ints.fromByteArray(view.getAccountStorage(myAddress.address(), key).get)
+      val numOfWithdrawalReqs = Ints.fromByteArray(view.getAccountStorage(fakeSmartContractAddress.address(), key).get)
       if (numOfWithdrawalReqs >= MAX_WITHDRAWAL_REQS_NUM_PER_EPOCH) {
         log.error(s"Reached maximum number of Withdrawal Requests per epoch: request is invalid")
         new ExecutionFailed(gasSpentForAddNewWithdrawalReqFailure, new IllegalArgumentException("Reached maximum number of Withdrawal Requests per epoch"))
       }
 
       val nextNumOfWithdrawalReqs: Int = numOfWithdrawalReqs + 1
-      view.updateAccountStorageBytes(myAddress.address(), key, Ints.toByteArray(nextNumOfWithdrawalReqs)).get
+      view.updateAccountStorageBytes(fakeSmartContractAddress.address(), key, Ints.toByteArray(nextNumOfWithdrawalReqs)).get
 
       val mcDestAddr = msg.getData.slice(OP_CODE_LENGTH, OP_CODE_LENGTH + MCPublicKeyHashProposition.KEY_LENGTH)
       val withdrawalAmount = msg.getValue
       val request = WithdrawalRequest(new MCPublicKeyHashProposition(mcDestAddr), withdrawalAmount)
       val requestInBytes = request.serializer.toBytes(request)
-      view.updateAccountStorageBytes(myAddress.address(), getWithdrawalRequestsKey(currentEpochNum, nextNumOfWithdrawalReqs), requestInBytes).get
+      view.updateAccountStorageBytes(fakeSmartContractAddress.address(), getWithdrawalRequestsKey(currentEpochNum, nextNumOfWithdrawalReqs), requestInBytes).get
 
       view.subBalance(msg.getFrom.address(), withdrawalAmount).get
       new ExecutionSucceeded(gasSpentForAddNewWithdrawalReqCmd, requestInBytes)

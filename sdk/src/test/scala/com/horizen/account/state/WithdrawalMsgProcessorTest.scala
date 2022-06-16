@@ -50,7 +50,7 @@ class WithdrawalMsgProcessorTest
     Mockito.when(mockStateView.addAccount(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[Array[Byte]])).
       thenAnswer(answer => {
         Try {
-          require(util.Arrays.equals(answer.getArgument(0), WithdrawalMsgProcessor.myAddress.address()))
+          require(util.Arrays.equals(answer.getArgument(0), WithdrawalMsgProcessor.fakeSmartContractAddress.address()))
           val account: Account = answer.getArgument(1).asInstanceOf[Account]
           require(account.nonce == 0)
           require(account.balance == 0)
@@ -68,7 +68,7 @@ class WithdrawalMsgProcessorTest
   def testCanProcess(): Unit = {
 
     val value: java.math.BigInteger = java.math.BigInteger.ONE
-    val msg = new Message(null, WithdrawalMsgProcessor.myAddress, value, value, value, value, value, value, new Array[Byte](0))
+    val msg = new Message(null, WithdrawalMsgProcessor.fakeSmartContractAddress, value, value, value, value, value, value, new Array[Byte](0))
     val mockStateView: AccountStateView = mock[AccountStateView]
 
     assertTrue("Message for WithdrawalMsgProcessor cannot be processed", WithdrawalMsgProcessor.canProcess(msg, mockStateView))
@@ -90,11 +90,11 @@ class WithdrawalMsgProcessorTest
     assertEquals("msgForWrongProcessor processing should result in InvalidMessage", classOf[InvalidMessage], WithdrawalMsgProcessor.process(msgForWrongProcessor, mockStateView).getClass)
 
     val data = BytesUtils.fromHexString("99")
-    val msgWithWrongFunctionCall = new Message(null, WithdrawalMsgProcessor.myAddress, gasValue, gasValue, gasValue, gasValue, value, nonce, data)
+    val msgWithWrongFunctionCall = new Message(null, WithdrawalMsgProcessor.fakeSmartContractAddress, gasValue, gasValue, gasValue, gasValue, value, nonce, data)
     assertEquals("msgWithWrongFunctionCall processing should result in ExecutionFailed", classOf[ExecutionFailed], WithdrawalMsgProcessor.process(msgWithWrongFunctionCall, mockStateView).getClass)
 
     val mockMsg = mock[Message]
-    Mockito.when(mockMsg.getTo).thenReturn(WithdrawalMsgProcessor.myAddress)
+    Mockito.when(mockMsg.getTo).thenReturn(WithdrawalMsgProcessor.fakeSmartContractAddress)
     val expException = new RuntimeException()
     Mockito.when(mockMsg.getData).thenThrow(expException)
     val res = WithdrawalMsgProcessor.process(mockMsg, mockStateView)
@@ -115,7 +115,7 @@ class WithdrawalMsgProcessorTest
     val data: Array[Byte] = Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.addNewWithdrawalReqCmdSig),
       mcAddr.bytes())
     val gas = java.math.BigInteger.ONE
-    val msg = new Message(from, WithdrawalMsgProcessor.myAddress, gas, gas, gas, gas, withdrawalAmountUnderDustThreshold, java.math.BigInteger.valueOf(234), data)
+    val msg = new Message(from, WithdrawalMsgProcessor.fakeSmartContractAddress, gas, gas, gas, gas, withdrawalAmountUnderDustThreshold, java.math.BigInteger.valueOf(234), data)
 
 
     Mockito.when(mockStateView.getBalance(from.address())).thenReturn(ZenWeiConverter.convertZenniesToWei(1300))
@@ -144,7 +144,7 @@ class WithdrawalMsgProcessorTest
     val data: Array[Byte] = Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.addNewWithdrawalReqCmdSig),
       mcAddr.bytes())
     val gas = java.math.BigInteger.ONE
-    val msg = new Message(from, WithdrawalMsgProcessor.myAddress, gas, gas, gas, gas, withdrawalAmount, java.math.BigInteger.valueOf(234), data)
+    val msg = new Message(from, WithdrawalMsgProcessor.fakeSmartContractAddress, gas, gas, gas, gas, withdrawalAmount, java.math.BigInteger.valueOf(234), data)
 
     // Step 4: call process
     val res = WithdrawalMsgProcessor.process(msg, stateView)
