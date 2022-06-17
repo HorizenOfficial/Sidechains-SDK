@@ -1,7 +1,6 @@
 package com.horizen.account.state
 
 import com.horizen.account.api.http.ZenWeiConverter
-import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.evm.StateDB
 import com.horizen.proposition.MCPublicKeyHashProposition
@@ -24,13 +23,24 @@ class AccountStateViewTest
   def setUp(): Unit = {
 
     val mockWithdrawalReqProvider = mock[WithdrawalRequestProvider]
-    val messageProcessors: Seq[MessageProcessor] = Seq(mockWithdrawalReqProvider)
+    val messageProcessors: Seq[MessageProcessor] = Seq()
     val metadataStorageView: AccountStateMetadataStorageView = mock[AccountStateMetadataStorageView]
     val stateDb: StateDB = mock[StateDB]
-    stateView = new AccountStateView(metadataStorageView, stateDb, messageProcessors){
-      //Horrid hack because using the real implementation with mockWithdrawalReqProvider causes a mysterious ClassCastException
-      override lazy val withdrawalReqProvider = mockWithdrawalReqProvider
+    stateView = new AccountStateView(metadataStorageView, stateDb, messageProcessors) {
+      override lazy val withdrawalReqProvider: WithdrawalRequestProvider = mockWithdrawalReqProvider
     }
+
+  }
+
+  @Test
+  def testWithdrawalReqProviderFieldInitialization(): Unit = {
+
+    val messageProcessors: Seq[MessageProcessor] = Seq(mock[MessageProcessor], mock[MessageProcessor], WithdrawalMsgProcessor, mock[MessageProcessor])
+    val metadataStorageView: AccountStateMetadataStorageView = mock[AccountStateMetadataStorageView]
+    val stateDb: StateDB = mock[StateDB]
+    stateView = new AccountStateView(metadataStorageView, stateDb, messageProcessors)
+
+    assertEquals("Wrong withdrawalReqProvider", WithdrawalMsgProcessor, stateView.withdrawalReqProvider)
 
   }
 
@@ -40,7 +50,7 @@ class AccountStateViewTest
 
     // No withdrawal requests
 
-    Mockito.when(stateView.withdrawalReqProvider.getListOfWithdrawalReqRecords(epochNum,stateView)).thenReturn(Seq())
+    Mockito.when(stateView.withdrawalReqProvider.getListOfWithdrawalReqRecords(epochNum, stateView)).thenReturn(Seq())
 
     var res = stateView.withdrawalRequests(epochNum)
 
@@ -55,7 +65,7 @@ class AccountStateViewTest
       WithdrawalRequest(destAddress, ZenWeiConverter.convertZenniesToWei(index))
     }
     )
-    Mockito.when(stateView.withdrawalReqProvider.getListOfWithdrawalReqRecords(epochNum,stateView)).thenReturn(listOfWR)
+    Mockito.when(stateView.withdrawalReqProvider.getListOfWithdrawalReqRecords(epochNum, stateView)).thenReturn(listOfWR)
 
     res = stateView.withdrawalRequests(epochNum)
 

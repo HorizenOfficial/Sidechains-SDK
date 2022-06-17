@@ -3,20 +3,18 @@ package com.horizen.account.state
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.account.api.http.ZenWeiConverter
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.proposition.{MCPublicKeyHashProposition, MCPublicKeyHashPropositionSerializer}
+import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.utils.{BytesUtils, ListSerializer, ZenCoinsUtils}
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.crypto.hash.Keccak256
-import scorex.util.serialization.{Reader, Writer}
 
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.{Failure, Success, Try}
 
-trait WithdrawalRequestProvider extends AbstractFakeSmartContractMsgProcessor {
+trait WithdrawalRequestProvider {
   private[horizen] def getListOfWithdrawalReqRecords(epochNum: Int, view: AccountStateView): Seq[WithdrawalRequest]
 }
 
-object WithdrawalMsgProcessor extends WithdrawalRequestProvider {
+object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with WithdrawalRequestProvider {
 
   override val fakeSmartContractAddress: AddressProposition = new AddressProposition(BytesUtils.fromHexString("0000000000000000000011111111111111111111"))
 
@@ -31,7 +29,7 @@ object WithdrawalMsgProcessor extends WithdrawalRequestProvider {
   val gasSpentForGenericFailure: java.math.BigInteger = java.math.BigInteger.ONE
 
   val MAX_WITHDRAWAL_REQS_NUM_PER_EPOCH = 3900
-  val DUST_THRESHOLD_IN_WEI = ZenWeiConverter.convertZenniesToWei(ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE))
+  val DUST_THRESHOLD_IN_WEI: java.math.BigInteger = ZenWeiConverter.convertZenniesToWei(ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE))
 
 
   override def canProcess(msg: Message, view: AccountStateView): Boolean = {
@@ -141,7 +139,7 @@ object WithdrawalMsgProcessor extends WithdrawalRequestProvider {
     else {
       val balance = view.getBalance(msg.getFrom.address())
       if (balance.compareTo(withdrawalAmount) < 0) {
-        log.error(s"Insufficient balance amount: balance: ${balance}, requested withdrawal amount: $withdrawalAmount")
+        log.error(s"Insufficient balance amount: balance: $balance, requested withdrawal amount: $withdrawalAmount")
         throw new IllegalArgumentException("Insufficient balance amount")
       }
     }
