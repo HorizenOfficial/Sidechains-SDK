@@ -2,27 +2,41 @@ package com.horizen.account.state
 
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
+import com.horizen.account.node.NodeAccountState
+import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import com.horizen.account.storage.AccountStateMetadataStorage
-import scorex.core.{VersionTag, bytesToVersion, idToBytes, idToVersion, versionToBytes, versionToId}
-import scorex.util.{ModifierId, ScorexLogging, bytesToId}
+import scorex.core._
+import scorex.util.{ModifierId, ScorexLogging}
 
 import java.util
 import scala.util.{Failure, Try}
 
 class AccountState(val params: NetworkParams,
                    override val version: VersionTag,
-                   stateMetadataStorage: AccountStateMetadataStorage)
+                   stateMetadataStorage: AccountStateMetadataStorage,
+                   messageProcessors: Seq[MessageProcessor])
   extends State[SidechainTypes#SCAT, AccountBlock, AccountStateView, AccountState]
-    with AccountStateReader
+    with NodeAccountState
     with ScorexLogging {
 
   override type NVCT = AccountState
+
+  // Execute MessageProcessors initialization phase
+  // Used once on genesis AccountState creation
+  private def initProcessors(initialVersion: VersionTag): Try[AccountState] = Try {
+    val view = getView
+    for(processor <- messageProcessors) {
+      processor.init(view)
+    }
+    // TODO: commit only StateDB part ???
+    // view.commit(initialVersion)
+    this
+  }
 
   // Modifiers:
   override def applyModifier(mod: AccountBlock): Try[AccountState] = Try {
@@ -164,7 +178,7 @@ class AccountState(val params: NetworkParams,
   override def rollbackTo(version: VersionTag): Try[AccountState] = {
     Try {
       require(version != null, "Version to rollback to must be NOT NULL.")
-      new AccountState(params, version, stateMetadataStorage.rollback(new ByteArrayWrapper(versionToBytes(version))).get)
+      new AccountState(params, version, stateMetadataStorage.rollback(new ByteArrayWrapper(versionToBytes(version))).get, messageProcessors)
     }.recoverWith({
       case exception =>
         log.error("Exception was thrown during rollback.", exception)
@@ -177,11 +191,14 @@ class AccountState(val params: NetworkParams,
 
   // View
   override def getView: AccountStateView = {
-    new AccountStateView(stateMetadataStorage.getView)
+    new AccountStateView(stateMetadataStorage.getView, messageProcessors)
   }
 
   // getters:
-  override def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequestBox] = ???
+  override def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequestBox] = {
+    log.error("TODO - needs to be implemented")
+    Seq()
+  }
 
   override def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
     getView.certificate(referencedWithdrawalEpoch)
@@ -217,21 +234,25 @@ class AccountState(val params: NetworkParams,
 
 object AccountState {
   private[horizen] def restoreState(stateMetadataStorage: AccountStateMetadataStorage,
+                                    messageProcessors: Seq[MessageProcessor],
                                     params: NetworkParams): Option[AccountState] = {
 
     if (!stateMetadataStorage.isEmpty)
-      Some(new AccountState(params, bytesToVersion(stateMetadataStorage.lastVersionId.get.data), stateMetadataStorage))
+      Some(new AccountState(params, bytesToVersion(stateMetadataStorage.lastVersionId.get.data), stateMetadataStorage, messageProcessors))
     else
       None
   }
 
   private[horizen] def createGenesisState(stateMetadataStorage: AccountStateMetadataStorage,
+                                          messageProcessors: Seq[MessageProcessor],
                                           params: NetworkParams,
                                           genesisBlock: AccountBlock): Try[AccountState] = Try {
 
-    if (stateMetadataStorage.isEmpty)
-      new AccountState(params, idToVersion(genesisBlock.parentId), stateMetadataStorage).applyModifier(genesisBlock).get
-    else
+    if (stateMetadataStorage.isEmpty) {
+      new AccountState(params, idToVersion(genesisBlock.parentId), stateMetadataStorage, messageProcessors)
+        .initProcessors(idToVersion(genesisBlock.parentId)).get
+        .applyModifier(genesisBlock).get
+    } else
       throw new RuntimeException("State metadata storage is not empty!")
   }
 }

@@ -1,23 +1,22 @@
 package com.horizen.actors
 
-import java.util.concurrent.TimeUnit
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.testkit.TestKit
 import akka.util.Timeout
-import com.horizen.SidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView
+import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView
 import com.horizen.fixtures.SidechainNodeViewHolderFixture
 import com.horizen.node.SidechainNodeView
-import org.scalatest.BeforeAndAfterAll
-import org.scalatest.funsuite.AnyFunSuiteLike
+import org.junit.runner.RunWith
+import org.scalatest._
 import org.scalatest.featurespec.AnyFeatureSpecLike
+import org.scalatest.funsuite.AnyFunSuiteLike
 import org.scalatest.matchers.should.Matchers
+import org.scalatestplus.junit.JUnitRunner
+
+import java.util.concurrent.TimeUnit
 import scala.concurrent._
 import scala.concurrent.duration._
-import org.scalatest._
-import org.junit.runner.RunWith
-import org.scalatestplus.junit.JUnitRunner
 import scala.language.postfixOps
 
 
@@ -45,7 +44,7 @@ class SidechainNodeViewHolderActorTest1
   test ("Test1") {
     def f(v: SidechainNodeView) = v
     val sidechainNodeViewHolderRef: ActorRef = getSidechainNodeViewHolderRef
-    val nodeView = (sidechainNodeViewHolderRef ? GetDataFromCurrentSidechainNodeView(f))
+    val nodeView = (sidechainNodeViewHolderRef ? GetDataFromCurrentNodeView(f))
       .mapTo[SidechainNodeView]
 
     assert(Await.result(nodeView, 5 seconds) != null)
@@ -74,7 +73,7 @@ class SidechainNodeViewHolderActorTest2
 
       def f(v: SidechainNodeView) = v
       val sidechainNodeViewHolderRef: ActorRef = getSidechainNodeViewHolderRef
-      val nodeView = (sidechainNodeViewHolderRef ? GetDataFromCurrentSidechainNodeView(f))
+      val nodeView = (sidechainNodeViewHolderRef ? GetDataFromCurrentNodeView(f))
         .mapTo[SidechainNodeView]
 
       Await.result(nodeView, 5 seconds) should not be(null)

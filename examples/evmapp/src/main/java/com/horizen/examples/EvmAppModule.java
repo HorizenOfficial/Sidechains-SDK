@@ -1,6 +1,5 @@
 package com.horizen.examples;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -12,6 +11,7 @@ import com.google.inject.name.Names;
 import com.horizen.SidechainSettings;
 import com.horizen.ChainInfo;
 import com.horizen.account.AccountAppModule;
+import com.horizen.account.state.MessageProcessor;
 import com.horizen.account.transaction.AccountTransaction;
 import com.horizen.api.http.ApplicationApiGroup;
 import com.horizen.proof.Proof;
@@ -19,9 +19,6 @@ import com.horizen.proposition.Proposition;
 import com.horizen.secret.Secret;
 import com.horizen.secret.SecretSerializer;
 import com.horizen.settings.SettingsReader;
-import com.horizen.storage.Storage;
-import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter;
-import com.horizen.transaction.BoxTransaction;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.utils.Pair;
 
@@ -48,9 +45,12 @@ public class EvmAppModule extends AccountAppModule
         // Each pair consists of "group name" -> "route name"
         // For example new Pair("wallet, "allBoxes");
         List<Pair<String, String>> rejectedApiPaths = new ArrayList<>();
-        ChainInfo chainInfo = new ChainInfo(1997, 1661,7331);
- 
 
+        ChainInfo chainInfo = new ChainInfo(1997, 1661,7331);
+
+        // Here I can add my custom logic to manage EthereumTransaction content.
+        // TODO: EvmProcessor instance expected.
+        List<MessageProcessor> customMessageProcessors = new ArrayList<>();
 
         bind(SidechainSettings.class)
                 .annotatedWith(Names.named("SidechainSettings"))
@@ -75,5 +75,9 @@ public class EvmAppModule extends AccountAppModule
         bind(ChainInfo.class)
                 .annotatedWith(Names.named("ChainInfo"))
                 .toInstance(chainInfo);
+
+        bind(new TypeLiteral<List<MessageProcessor>> () {})
+                .annotatedWith(Names.named("CustomMessageProcessors"))
+                .toInstance(customMessageProcessors);
     }
 }

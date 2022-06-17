@@ -253,6 +253,11 @@
       <version>4.9.2</version>
     </dependency>
     <dependency>
+      <groupId>com.thetransactioncompany</groupId>
+      <artifactId>jsonrpc2-base</artifactId>
+      <version>2.0</version>
+    </dependency>
+    <dependency>
       <groupId>com.horizen</groupId>
       <artifactId>evm</artifactId>
       <version>0.3.2</version>

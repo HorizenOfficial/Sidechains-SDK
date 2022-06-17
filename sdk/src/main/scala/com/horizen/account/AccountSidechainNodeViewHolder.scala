@@ -1,17 +1,21 @@
 package com.horizen.account
 
 import akka.actor.{ActorRef, ActorSystem, Props}
-import com.horizen.SidechainNodeViewHolderRef.props
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
-import com.horizen.account.state.AccountState
+import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
+import com.horizen.account.state.{AccountState, MessageProcessor}
 import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
+import com.horizen.account.transaction.AccountTransaction
 import com.horizen.account.wallet.AccountWallet
-import com.horizen.consensus.{ConsensusDataStorage, ConsensusEpochInfo, FullConsensusEpochInfo, StakeConsensusEpochInfo, blockIdToEpochId}
-import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
+import com.horizen.consensus._
+import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
+import com.horizen.proof.Proof
+import com.horizen.proposition.Proposition
 import com.horizen.storage.SidechainSecretStorage
+import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ModifierId
 
@@ -23,26 +27,33 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                      historyStorage: AccountHistoryStorage,
                                      consensusDataStorage: ConsensusDataStorage,
                                      stateMetadataStorage: AccountStateMetadataStorage,
+                                     customMessageProcessors: Seq[MessageProcessor],
                                      secretStorage: SidechainSecretStorage,
                                      genesisBlock: AccountBlock)
   extends AbstractSidechainNodeViewHolder[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock](sidechainSettings, params, timeProvider) {
 
   override type HSTOR = AccountHistoryStorage
-  override type VL = AccountWallet
   override type HIS = AccountHistory
   override type MS = AccountState
+  override type VL = AccountWallet
   override type MP = AccountMemoryPool
+
+  protected def messageProcessors(params: NetworkParams): Seq[MessageProcessor] = {
+    Seq(
+      // todo: put core message processors here
+    ) ++ customMessageProcessors
+  }
 
   override def restoreState(): Option[(HIS, MS, VL, MP)] = for {
     history <- AccountHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
-    state <- AccountState.restoreState(stateMetadataStorage, params)
+    state <- AccountState.restoreState(stateMetadataStorage, messageProcessors(params), params)
     wallet <- AccountWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes, secretStorage)
     pool <- Some(AccountMemoryPool.emptyPool)
   } yield (history, state, wallet, pool)
 
   override protected def genesisState: (HIS, MS, VL, MP) = {
     val result = for {
-      state <- AccountState.createGenesisState(stateMetadataStorage, params, genesisBlock)
+      state <- AccountState.createGenesisState(stateMetadataStorage, messageProcessors(params), params, genesisBlock)
 
       (_: ModifierId, consensusEpochInfo: ConsensusEpochInfo) <- Success(state.getConsensusEpochInfo)
 
@@ -83,6 +94,77 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override protected def scanBlockWithFeePayments(history: HIS, state: MS, wallet: VL, modToApply: AccountBlock): (HIS, VL) = {
     (history, wallet.scanPersistent(modToApply))
   }
+
+  override protected def getCurrentSidechainNodeViewInfo: Receive = {
+    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView[
+      AccountTransaction[Proposition, Proof[Proposition]],
+      AccountBlockHeader,
+      AccountBlock,
+      NodeAccountHistory,
+      NodeAccountState,
+      NodeWalletBase,
+      NodeAccountMemoryPool,
+      AccountNodeView,
+      _] =>
+      msg match {
+        case AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView(f) => try {
+          val l: AccountNodeView = new AccountNodeView(history(), minimalState(), vault(), memoryPool())
+          sender() ! f(l)
+        }
+        catch {
+          case e: Exception => sender() ! akka.actor.Status.Failure(e)
+        }
+
+      }
+  }
+
+  override  protected def applyFunctionOnNodeView: Receive = {
+    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView[
+      AccountTransaction[Proposition, Proof[Proposition]],
+      AccountBlockHeader,
+      AccountBlock,
+      NodeAccountHistory,
+      NodeAccountState,
+      NodeWalletBase,
+      NodeAccountMemoryPool,
+      AccountNodeView,
+      _] =>
+      msg match {
+        case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView(f) => try {
+          val l: AccountNodeView = new AccountNodeView(history(), minimalState(), vault(), memoryPool())
+          sender() ! f(l)
+        }
+        catch {
+          case e: Exception => sender() ! akka.actor.Status.Failure(e)
+        }
+
+      }
+
+  }
+
+  override protected def applyBiFunctionOnNodeView[T, A]: Receive = {
+    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView[
+      AccountTransaction[Proposition, Proof[Proposition]],
+      AccountBlockHeader,
+      AccountBlock,
+      NodeAccountHistory,
+      NodeAccountState,
+      NodeWalletBase,
+      NodeAccountMemoryPool,
+      AccountNodeView,
+      T,A] =>
+      msg match {
+        case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView(f,functionParams) => try {
+          val l: AccountNodeView = new AccountNodeView(history(), minimalState(), vault(), memoryPool())
+          sender() ! f(l,functionParams)
+        }
+        catch {
+          case e: Exception => sender() ! akka.actor.Status.Failure(e)
+        }
+
+      }
+  }
+
 }
 
 object AccountNodeViewHolderRef {
@@ -90,36 +172,39 @@ object AccountNodeViewHolderRef {
             historyStorage: AccountHistoryStorage,
             consensusDataStorage: ConsensusDataStorage,
             stateMetadataStorage: AccountStateMetadataStorage,
+            customMessageProcessors: Seq[MessageProcessor],
             secretStorage: SidechainSecretStorage,
             params: NetworkParams,
             timeProvider: NetworkTimeProvider,
             genesisBlock: AccountBlock): Props =
     Props(new AccountSidechainNodeViewHolder(sidechainSettings, params, timeProvider, historyStorage,
-      consensusDataStorage, stateMetadataStorage, secretStorage, genesisBlock))
+      consensusDataStorage, stateMetadataStorage, customMessageProcessors, secretStorage, genesisBlock))
 
   def apply(sidechainSettings: SidechainSettings,
             historyStorage: AccountHistoryStorage,
             consensusDataStorage: ConsensusDataStorage,
             stateMetadataStorage: AccountStateMetadataStorage,
+            customMessageProcessors: Seq[MessageProcessor],
             secretStorage: SidechainSecretStorage,
             params: NetworkParams,
             timeProvider: NetworkTimeProvider,
             genesisBlock: AccountBlock)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateMetadataStorage,
-      secretStorage, params, timeProvider, genesisBlock))
+      customMessageProcessors, secretStorage, params, timeProvider, genesisBlock))
 
   def apply(name: String,
             sidechainSettings: SidechainSettings,
             historyStorage: AccountHistoryStorage,
             consensusDataStorage: ConsensusDataStorage,
             stateMetadataStorage: AccountStateMetadataStorage,
+            customMessageProcessors: Seq[MessageProcessor],
             secretStorage: SidechainSecretStorage,
             params: NetworkParams,
             timeProvider: NetworkTimeProvider,
             genesisBlock: AccountBlock)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateMetadataStorage,
-      secretStorage, params, timeProvider, genesisBlock), name)
+      customMessageProcessors, secretStorage, params, timeProvider, genesisBlock), name)
 
 }

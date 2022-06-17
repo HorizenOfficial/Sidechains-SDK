@@ -2,6 +2,7 @@ package com.horizen.account.state
 
 import com.horizen.SidechainTypes
 import com.horizen.account.storage.AccountStateMetadataStorageView
+import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
 import com.horizen.box.{ForgerBox, WithdrawalRequestBox}
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber}
@@ -12,7 +13,7 @@ import scorex.util.{ModifierId, bytesToId}
 
 import scala.util.Try
 
-class AccountStateView(metadataStorageView: AccountStateMetadataStorageView) extends StateView[SidechainTypes#SCAT, AccountStateView] with AccountStateReader {
+class AccountStateView(metadataStorageView: AccountStateMetadataStorageView, messageProcessors: Seq[MessageProcessor]) extends StateView[SidechainTypes#SCAT, AccountStateView] with AccountStateReader {
   view: AccountStateView =>
 
   override type NVCT = this.type
@@ -23,9 +24,25 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView) ext
     this
   }
 
-  override def applyTransaction(tx: SidechainTypes#SCAT): Try[AccountStateView] = Try {
+  def setupTxContext(tx: EthereumTransaction): Unit = {
     // TODO
-    this
+  }
+
+  override def applyTransaction(tx: SidechainTypes#SCAT): Try[AccountStateView] = Try {
+    if(tx.isInstanceOf[EthereumTransaction]) {
+      val ethTx = tx.asInstanceOf[EthereumTransaction]
+      setupTxContext(ethTx)
+      val message: Message = Message.fromTransaction(ethTx)
+      val processor = messageProcessors.find(_.canProcess(message, this)).getOrElse(
+        throw new IllegalArgumentException(s"Transaction ${ethTx.id} has no known processor.")
+      )
+      processor.process(message, this) match {
+        case success: ExecutionSucceeded => this // TODO
+        case failed: ExecutionFailed => this // TODO
+        case invalid: InvalidMessage => throw new Exception(s"Transaction ${ethTx.id} is invalid.", invalid.getReason)
+      }
+    } else
+      throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
   }
 
   // account modifiers:
@@ -38,41 +55,41 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView) ext
   protected def updateAccountStorageRoot(address: Array[Byte], root: Array[Byte]): Try[AccountStateView] = ???
 
   // out-of-the-box helpers
-  override protected def addCertificate(cert: WithdrawalEpochCertificate): Try[AccountStateView] = Try {
+  override def addCertificate(cert: WithdrawalEpochCertificate): Try[AccountStateView] = Try {
     metadataStorageView.updateTopQualityCertificate(cert)
-    new AccountStateView(metadataStorageView)
+    new AccountStateView(metadataStorageView, messageProcessors)
   }
 
-  override protected def addWithdrawalRequest(wrb: WithdrawalRequestBox): Try[AccountStateView] = ???
+  override def addWithdrawalRequest(wrb: WithdrawalRequestBox): Try[AccountStateView] = ???
 
-  override protected def delegateStake(fb: ForgerBox): Try[AccountStateView] = ???
+  override def delegateStake(fb: ForgerBox): Try[AccountStateView] = ???
 
-  override protected def spendStake(fb: ForgerBox): Try[AccountStateView] = ???
+  override def spendStake(fb: ForgerBox): Try[AccountStateView] = ???
 
   // note: probably must be "set" than "add". Because we allow it only once per "commit".
   override def addFeeInfo(info: BlockFeeInfo): Try[AccountStateView] = Try {
     metadataStorageView.addFeePayment(info)
-    new AccountStateView(metadataStorageView)
+    new AccountStateView(metadataStorageView, messageProcessors)
   }
 
   override def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo): Try[AccountStateView] = Try {
     metadataStorageView.updateWithdrawalEpochInfo(withdrawalEpochInfo)
-    new AccountStateView(metadataStorageView)
+    new AccountStateView(metadataStorageView, messageProcessors)
   }
 
   override def updateConsensusEpochNumber(consensusEpochNum: ConsensusEpochNumber): Try[AccountStateView] = Try {
     metadataStorageView.updateConsensusEpochNumber(consensusEpochNum)
-    new AccountStateView(metadataStorageView)
+    new AccountStateView(metadataStorageView, messageProcessors)
   }
 
   def updateAccountStateRoot(accountStateRoot: Array[Byte]): Try[AccountStateView] = Try {
     metadataStorageView.updateAccountStateRoot(accountStateRoot)
-    new AccountStateView(metadataStorageView)
+    new AccountStateView(metadataStorageView, messageProcessors)
   }
 
   override def setCeased(): Try[AccountStateView] = Try {
     metadataStorageView.setCeased()
-    new AccountStateView(metadataStorageView)
+    new AccountStateView(metadataStorageView, messageProcessors)
   }
 
   // view controls

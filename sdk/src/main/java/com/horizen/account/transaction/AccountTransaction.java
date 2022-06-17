@@ -22,7 +22,7 @@ public abstract class AccountTransaction<P extends Proposition, PR extends Proof
 
     public abstract BigInteger getValue();
 
-    public abstract String getData();
+    public abstract byte[] getData();
 
     public abstract PR getSignature();
 }

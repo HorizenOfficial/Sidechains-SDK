@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import json
+import pprint
 
+import test_framework.util
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, Account, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
@@ -52,6 +54,31 @@ class SCEvmBootstrap(SidechainTestFramework):
         mc_block = self.nodes[0].getblock(str(self.sc_nodes_bootstrap_info.mainchain_block_height))
         mc_block_hex = self.nodes[0].getblock(mc_block["hash"], False)
         print("SC genesis mc block hex = " + mc_block_hex)
+
+        # send an eth tx to mempool
+        amount = 1000
+        j = {
+            "toAddress": "abcdeabcdeabcdeabcdeabcdeabcdeabcdeabcde", # must be 20 bytes
+            "value": amount
+        }
+        request = json.dumps(j)
+        response = sc_node.transaction_sendCoinsToAddress(request)
+        print("tx sent:")
+        pprint.pprint(response)
+
+        # get mempool contents
+        response = sc_node.transaction_allTransactions()
+        print("mempool contents:")
+        pprint.pprint(response)
+
+        # request chainId via rpc route
+        print("rpc response:")
+        pprint.pprint(sc_node.rpc_eth_chainId())
+
+        # request getBalance via rpc route
+        print("rpc response:")
+        pprint.pprint(sc_node.rpc_eth_getBalance("0x0", "1"))
+
         input("\n\t======> Enter any input to continue...")
 
         # For the time being this will timeout since hhtp APIs are not yet impemented

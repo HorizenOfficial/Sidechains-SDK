@@ -156,7 +156,6 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return this.transaction.getGasLimit();
     }
 
-
     @Override
     @JsonIgnore
     public AddressProposition getFrom() {
@@ -193,8 +192,8 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     @Override
-    public String getData() {
-        return this.transaction.getData();
+    public byte[] getData() {
+        return Numeric.hexStringToByteArray(transaction.getData());
     }
 
     @Override

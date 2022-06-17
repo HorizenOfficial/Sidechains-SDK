@@ -1,67 +1,119 @@
 package com.horizen.account.api.http
 
-import java.lang
-import java.util.{Collections, ArrayList => JArrayList, List => JList}
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.horizen.SidechainTypes
-import com.horizen.api.http.JacksonSupport._
-import com.fasterxml.jackson.annotation.JsonView
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.horizen.SidechainTypes
-import com.horizen.account.api.http.AccountTransactionRestScheme.{ReqAllTransactions, ReqFindById, ReqSendCoinsToAddress, RespAllTransactionIds, RespAllTransactions}
+import com.horizen.account.api.http.AccountTransactionErrorResponse.GenericTransactionError
+import com.horizen.account.api.http.AccountTransactionRestScheme._
+import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
+import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
+import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.api.http.JacksonSupport._
+import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SidechainApiRoute, SuccessResponse}
-import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.node.NodeWallet
+import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
-import com.horizen.proof.Proof
-import com.horizen.proposition._
 import com.horizen.serialization.Views
-import com.horizen.transaction._
-import com.horizen.utils.{BytesUtils, ZenCoinsUtils}
+import com.horizen.transaction.Transaction
+import org.web3j.crypto.{Keys, RawTransaction, Sign, SignedRawTransaction}
 import scorex.core.settings.RESTApiSettings
 
-import scala.collection.JavaConverters._
-import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.util.control.Breaks._
-import scala.util.{Failure, Success, Try}
 import java.util.{Optional => JOptional}
+import scala.collection.JavaConverters._
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.reflect.ClassTag
+import scala.util.{Failure, Success}
 
 case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
-                                        sidechainNodeViewHolderRef: ActorRef,
-                                        sidechainTransactionActorRef: ActorRef,
-                                        companion: SidechainAccountTransactionsCompanion,
-                                        params: NetworkParams)
-                                       (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
-  extends SidechainApiRoute with SidechainTypes {
+                                      sidechainNodeViewHolderRef: ActorRef,
+                                      sidechainTransactionActorRef: ActorRef,
+                                      companion: SidechainAccountTransactionsCompanion,
+                                      params: NetworkParams)
+                                     (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
+  extends SidechainApiRoute[
+    SidechainTypes#SCAT,
+    AccountBlockHeader,
+    AccountBlock,
+    NodeAccountHistory,
+    NodeAccountState,
+    NodeWalletBase,
+    NodeAccountMemoryPool,
+    AccountNodeView] with SidechainTypes {
+
+  override implicit val tag: ClassTag[AccountNodeView] = ClassTag[AccountNodeView](classOf[AccountNodeView])
+
 
   override val route: Route = (pathPrefix("transaction")) {
-    allTransactions ~ sendCoinsToAddress }
+    allTransactions ~ sendCoinsToAddress
+  }
 
   /**
-    * Returns an array of transaction ids if formatMemPool=false, otherwise a JSONObject for each transaction.
-    */
+   * Returns an array of transaction ids if formatMemPool=false, otherwise a JSONObject for each transaction.
+   */
   def allTransactions: Route = (post & path("allTransactions")) {
-    entity(as[ReqAllTransactions]) { body => ???
+    entity(as[ReqAllTransactions]) { body =>
+      withNodeView { sidechainNodeView =>
+        val unconfirmedTxs = sidechainNodeView.getNodeMemoryPool.getTransactions()
+        if (body.format.getOrElse(true)) {
+          ApiResponseUtil.toResponse(RespAllTransactions(unconfirmedTxs.asScala.toList))
+        } else {
+          ApiResponseUtil.toResponse(RespAllTransactionIds(unconfirmedTxs.asScala.toList.map(tx => tx.id.toString)))
+        }
+      }
     }
   }
+
 
 
   /**
-    * Create and sign a core transaction, specifying regular outputs and fee. Search for and spend proper amount of regular coins. Then validate and send the transaction.
-    * Return the new transaction as a hex string if format = false, otherwise its JSON representation.
-    */
+   * Create and sign a core transaction, specifying regular outputs and fee. Search for and spend proper amount of regular coins. Then validate and send the transaction.
+   * Return the new transaction as a hex string if format = false, otherwise its JSON representation.
+   */
   def sendCoinsToAddress: Route = (post & path("sendCoinsToAddress")) {
-    entity(as[ReqSendCoinsToAddress]) { body => ???
+    entity(as[ReqSendCoinsToAddress]) { body =>
+      // lock the view and try to create CoreTransaction
+      applyOnNodeView { sidechainNodeView =>
+        val destAddress = body.toAddress
+        val valueInWei = ZenConverter.convertZenniesToWei(body.value)
+        val rawTransaction = RawTransaction.createTransaction(valueInWei, valueInWei, valueInWei, destAddress, valueInWei, "")
+        val tmpEtherTx = new EthereumTransaction(rawTransaction)
+        val message = tmpEtherTx.messageToSign()
+
+        // Create a key pair, create tx signature and create ethereum Transaction
+        val pair = Keys.createEcKeyPair
+        val msgSignature = Sign.signMessage(message, pair, true)
+        val signedRawTransaction = new SignedRawTransaction(valueInWei, valueInWei, valueInWei, destAddress, valueInWei, "", msgSignature)
+        val ethereumTransaction = new EthereumTransaction(signedRawTransaction)
+        validateAndSendTransaction(ethereumTransaction)
+      }
     }
   }
 
 
+  //function which describes default transaction representation for answer after adding the transaction to a memory pool
+  val defaultTransactionResponseRepresentation: (Transaction => SuccessResponse) = {
+    transaction => TransactionIdDTO(transaction.id)
+  }
+
+
+  private def validateAndSendTransaction(transaction: Transaction,
+                                         transactionResponseRepresentation: (Transaction => SuccessResponse) = defaultTransactionResponseRepresentation) = {
+
+    val barrier = Await.result(
+      sidechainTransactionActorRef ? BroadcastTransaction(transaction),
+      settings.timeout).asInstanceOf[Future[Unit]]
+    onComplete(barrier) {
+      case Success(_) =>
+        ApiResponseUtil.toResponse(transactionResponseRepresentation(transaction))
+      case Failure(exp) =>
+        ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exp))
+        )
+    }
+  }
 
 }
 
@@ -106,10 +158,10 @@ object AccountTransactionRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqCreateCoreTransaction(transactionInputs: List[TransactionInput],
-                                                      regularOutputs: List[TransactionOutput],
-                                                      withdrawalRequests: List[TransactionWithdrawalRequestOutput],
-                                                      forgerOutputs: List[TransactionForgerOutput],
-                                                      format: Option[Boolean]) {
+                                                   regularOutputs: List[TransactionOutput],
+                                                   withdrawalRequests: List[TransactionWithdrawalRequestOutput],
+                                                   forgerOutputs: List[TransactionForgerOutput],
+                                                   format: Option[Boolean]) {
     require(transactionInputs.nonEmpty, "Empty inputs list")
     require(regularOutputs.nonEmpty || withdrawalRequests.nonEmpty || forgerOutputs.nonEmpty, "Empty outputs")
   }
@@ -125,10 +177,10 @@ object AccountTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqSendCoinsToAddress(outputs: List[TransactionOutput],
-                                                @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
-    require(outputs.nonEmpty, "Empty outputs list")
-    require(fee.getOrElse(0L) >= 0, "Negative fee. Fee must be >= 0")
+  private[api] case class ReqSendCoinsToAddress(toAddress: String,
+                                                @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long) {
+    require(toAddress.nonEmpty, "Empty destination address")
+    require(value >= 0, "Negative value. Value must be >= 0")
   }
 
   @JsonView(Array(classOf[Views.Default]))
@@ -153,12 +205,14 @@ object AccountTransactionRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqSpendForgingStake(transactionInputs: List[TransactionInput],
-                                                      regularOutputs: List[TransactionOutput],
-                                                      forgerOutputs: List[TransactionForgerOutput],
-                                                      format: Option[Boolean]) {
+                                               regularOutputs: List[TransactionOutput],
+                                               forgerOutputs: List[TransactionForgerOutput],
+                                               format: Option[Boolean]) {
     require(transactionInputs.nonEmpty, "Empty inputs list")
     require(regularOutputs.nonEmpty || forgerOutputs.nonEmpty, "Empty outputs")
   }
+
+
 
 }
 

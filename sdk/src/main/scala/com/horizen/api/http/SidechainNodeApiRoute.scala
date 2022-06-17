@@ -1,7 +1,6 @@
 package com.horizen.api.http
 
 import java.net.{InetAddress, InetSocketAddress}
-
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.horizen.api.http.SidechainNodeRestSchema._
@@ -16,13 +15,15 @@ import JacksonSupport._
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.api.http.SidechainNodeErrorResponse.ErrorInvalidHost
 import com.horizen.serialization.Views
+import scorex.core.api.http.ApiRoute
+
 import java.util.{Optional => JOptional}
 
 case class SidechainNodeApiRoute(peerManager: ActorRef,
                                  networkController: ActorRef,
                                  timeProvider: NetworkTimeProvider,
-                                 override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
-                                (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
+                                 override val settings: RESTApiSettings)
+                                (implicit val context: ActorRefFactory, val ec: ExecutionContext) extends ApiRoute {
 
   override val route: Route = pathPrefix("node") {
     connect ~ allPeers ~ connectedPeers ~ blacklistedPeers ~ disconnect
