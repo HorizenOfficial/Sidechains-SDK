@@ -286,6 +286,7 @@ class ForgerStakeMsgProcessorTest
         val forgingInfoSerializer = new ListSerializer[AccountForgingStakeInfo](AccountForgingStakeInfoSerializer)
         val returnedList = forgingInfoSerializer.parseBytesTry(res.returnData()).get
 
+        // we should have the second stake id only
         assertTrue(returnedList.size() == 1)
         val item = returnedList.get(0)
         println("This is the returned value: " + item)
@@ -465,6 +466,41 @@ class ForgerStakeMsgProcessorTest
         assertTrue(res.gasUsed() == ForgerStakeMsgProcessor.AddNewStakeGasPaidValue)
         println("This is the returned value: " + res.getReason)
 
+      case result =>
+        Assert.fail(s"Wrong result: $result")
+    }
+
+    stateView.stateDb.close()
+  }
+
+  @Test
+  def testExtraBytesInGetListCmd(): Unit = {
+
+    val allowedForgerList: java.util.List[AllowedForgerInfo] = new java.util.ArrayList[AllowedForgerInfo]()
+
+    val blockSignerProposition = new PublicKey25519Proposition(BytesUtils.fromHexString("1122334455667788112233445566778811223344556677881122334455667788")) // 32 bytes
+    val vrfPublicKey = new VrfPublicKey(BytesUtils.fromHexString("aabbccddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff001234")) // 33 bytes
+
+    // add the forger into the allowed list
+    allowedForgerList.add(AllowedForgerInfo(blockSignerProposition, vrfPublicKey))
+
+    val stateView = getView()
+
+    ForgerStakeMsgProcessor.init(stateView)
+
+    // create sender account with some fund in it
+    val initialAmount = BigInteger.valueOf(10).multiply(validWeiAmount)
+    createSenderAccount(stateView, initialAmount)
+
+    // try getting the list of stakes with some extra byte after op code (should fail)
+    val data: Array[Byte] = new Array[Byte](1)
+    val msg = getDefaultMessage(
+      BytesUtils.fromHexString(GetListOfForgersCmd),
+      data, getRandomNonce())
+
+    ForgerStakeMsgProcessor.process(msg, stateView) match {
+      case res: InvalidMessage =>
+        println(res.getReason.getMessage)
       case result =>
         Assert.fail(s"Wrong result: $result")
     }

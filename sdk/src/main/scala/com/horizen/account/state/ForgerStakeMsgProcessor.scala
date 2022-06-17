@@ -4,12 +4,10 @@ import com.google.common.primitives.Bytes
 import com.horizen.utils.{BytesUtils, ListSerializer}
 
 import java.math.BigInteger
-import com.google.common.primitives.Ints
 import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
 import com.horizen.account.proof.{SignatureSecp256k1, SignatureSecp256k1Serializer}
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
-import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, RemoveStakeCmd}
-import com.horizen.account.state.WithdrawalMsgProcessor.OP_CODE_LENGTH
+
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.crypto.hash.Keccak256
@@ -33,6 +31,13 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
   val GetListOfForgersCmd: String = "00"
   val AddNewStakeCmd: String =      "01"
   val RemoveStakeCmd: String =      "02"
+
+  // ensure we have strings consistent with size of opcode
+  require(
+    GetListOfForgersCmd.size == 2*OP_CODE_LENGTH &&
+    AddNewStakeCmd.size == 2*OP_CODE_LENGTH &&
+    RemoveStakeCmd.size == 2*OP_CODE_LENGTH
+  )
 
   // TODO set proper values
   val GetListOfForgersGasPaidValue : BigInteger = java.math.BigInteger.ONE
