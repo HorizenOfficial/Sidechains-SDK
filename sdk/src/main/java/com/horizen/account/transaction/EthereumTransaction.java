@@ -14,6 +14,7 @@ import org.web3j.crypto.SignedRawTransaction;
 import org.web3j.crypto.TransactionEncoder;
 import org.web3j.crypto.transaction.type.LegacyTransaction;
 import org.web3j.crypto.transaction.type.Transaction1559;
+import org.web3j.crypto.transaction.type.TransactionType;
 import org.web3j.utils.Numeric;
 
 import javax.annotation.Nullable;
@@ -87,7 +88,9 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public byte version() {
-        return 1;
+        if (transaction.getType() == TransactionType.LEGACY)
+            return 0x0;
+        return 0x2;
     }
 
     @Override
