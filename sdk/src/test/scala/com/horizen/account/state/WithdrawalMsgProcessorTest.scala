@@ -161,32 +161,32 @@ class WithdrawalMsgProcessorTest
   @Test
   def testGetListOfWithdrawalReqs(): Unit = {
 
-    //    val withdrawalAmount: java.math.BigInteger = ZenWeiConverter.convertZenniesToWei(13)
-    //    val epochNum = 102
-    //    val mcAddr = new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte))
-    //    val data: Array[Byte] = Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.getListOfWithdrawalReqsCmdSig),
-    //      mcAddr.bytes())
-    //    val gas = java.math.BigInteger.ONE
-    //    val msg = new Message(null, WithdrawalMsgProcessor.myAddress, gas, gas, gas, gas, withdrawalAmount, 234, data)
-    //    val mockStateView: AccountStateView = mock[AccountStateView]
-    //
-    //    Mockito.when(mockStateView.withdrawalRequests(epochNum)).thenReturn(listOfWithdrawalRequestBox)
-    //
-    //    val res = WithdrawalMsgProcessor.process(msg, mockStateView)
-    //    assertTrue("Wrong result", res.isInstanceOf[ExecutionSucceeded])
-    //    assertTrue("Missing withdrawal request data", res.asInstanceOf[ExecutionSucceeded].hasReturnData)
-    //    val wtInBytes = res.asInstanceOf[ExecutionSucceeded].returnData()
-    //    val wt = WithdrawalRequestSerializer.parseBytes(wtInBytes)
-    //    assertEquals("Wrong destination address", mcAddr, wt.proposition)
-    //    assertEquals("Wrong amount", withdrawalAmount, wt.value)
-    //
-    //    val msgWithoutData = new Message(null, WithdrawalMsgProcessor.myAddress, value, value, value, value, value, value, new Array[Byte](0))
-    //
-    //    WithdrawalMsgProcessor.process(msgWithoutData, mockStateView) match {
-    //      case res: InvalidMessage =>
-    //      case result => Assert.fail(s"Wrong result: $result")
-    //
-    //    }
+        val withdrawalAmount: java.math.BigInteger = ZenWeiConverter.convertZenniesToWei(13)
+        val epochNum = 102
+        val mcAddr = new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte))
+        val data: Array[Byte] = Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.getListOfWithdrawalReqsCmdSig),
+          mcAddr.bytes())
+        val gas = java.math.BigInteger.ONE
+        val msg = new Message(null, WithdrawalMsgProcessor.myAddress, gas, gas, gas, gas, withdrawalAmount, 234, data)
+        val mockStateView: AccountStateView = mock[AccountStateView]
+
+        Mockito.when(mockStateView.withdrawalRequests(epochNum)).thenReturn(listOfWithdrawalRequestBox)
+
+        val res = WithdrawalMsgProcessor.process(msg, mockStateView)
+        assertTrue("Wrong result", res.isInstanceOf[ExecutionSucceeded])
+        assertTrue("Missing withdrawal request data", res.asInstanceOf[ExecutionSucceeded].hasReturnData)
+        val wtInBytes = res.asInstanceOf[ExecutionSucceeded].returnData()
+        val wt = WithdrawalRequestSerializer.parseBytes(wtInBytes)
+        assertEquals("Wrong destination address", mcAddr, wt.proposition)
+        assertEquals("Wrong amount", withdrawalAmount, wt.value)
+
+        val msgWithoutData = new Message(null, WithdrawalMsgProcessor.myAddress, value, value, value, value, value, value, new Array[Byte](0))
+
+        WithdrawalMsgProcessor.process(msgWithoutData, mockStateView) match {
+          case res: InvalidMessage =>
+          case result => Assert.fail(s"Wrong result: $result")
+
+        }
   }
 
 
