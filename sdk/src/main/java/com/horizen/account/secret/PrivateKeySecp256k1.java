@@ -3,7 +3,6 @@ package com.horizen.account.secret;
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.utils.Secp256k1;
-import com.horizen.evm.utils.Address;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.secret.Secret;
 import com.horizen.secret.SecretSerializer;
