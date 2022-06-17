@@ -26,14 +26,14 @@ type EvmContext struct {
 
 type EvmParams struct {
 	HandleParams
-	From     common.Address  `json:"from"`
-	To       *common.Address `json:"to"`
-	Value    *hexutil.Big    `json:"value"`
-	Input    []byte          `json:"input"`
-	Nonce    hexutil.Uint64  `json:"nonce"`
-	GasLimit hexutil.Uint64  `json:"gasLimit"`
-	GasPrice *hexutil.Big    `json:"gasPrice"`
-	Context  EvmContext      `json:"context"`
+	From       common.Address   `json:"from"`
+	To         *common.Address  `json:"to"`
+	Value      *hexutil.Big     `json:"value"`
+	Input      []byte           `json:"input"`
+	GasLimit   hexutil.Uint64   `json:"gasLimit"`
+	GasPrice   *hexutil.Big     `json:"gasPrice"`
+	AccessList types.AccessList `json:"accessList"`
+	Context    EvmContext       `json:"context"`
 }
 
 // setDefaults for parameters that were omitted
@@ -64,10 +64,6 @@ func (p *EvmParams) setDefaults() {
 		p.GasPrice = (*hexutil.Big)(new(big.Int))
 	}
 	p.Context.setDefaults()
-}
-
-func (p *EvmParams) getMessage() types.Message {
-	return types.NewMessage(p.From, p.To, uint64(p.Nonce), p.Value.ToInt(), uint64(p.GasLimit), p.GasPrice.ToInt(), p.GasPrice.ToInt(), p.GasPrice.ToInt(), p.Input, nil, false)
 }
 
 func (p *EvmParams) getBlockContext() vm.BlockContext {
@@ -125,8 +121,10 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 	params.setDefaults()
 
 	var (
-		msg          = params.getMessage()
-		txContext    = core.NewEVMTxContext(msg)
+		txContext = vm.TxContext{
+			Origin:   params.From,
+			GasPrice: new(big.Int).Set(params.GasPrice.ToInt()),
+		}
 		blockContext = params.getBlockContext()
 		chainConfig  = defaultChainConfig()
 		evmConfig    = vm.Config{
@@ -138,9 +136,9 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 			ExtraEips:               nil,
 		}
 		evm              = vm.NewEVM(blockContext, txContext, statedb, chainConfig, evmConfig)
-		sender           = vm.AccountRef(msg.From())
-		gas              = msg.Gas()
-		contractCreation = msg.To() == nil
+		sender           = vm.AccountRef(params.From)
+		gas              = uint64(params.GasLimit)
+		contractCreation = params.To == nil
 		homestead        = evm.ChainConfig().IsHomestead(evm.Context.BlockNumber)
 		istanbul         = evm.ChainConfig().IsIstanbul(evm.Context.BlockNumber)
 	)
@@ -148,7 +146,7 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 	statedb.Prepare(params.Context.TxHash, params.Context.TxIndex)
 
 	// Check clauses 4-5, subtract intrinsic gas if everything is correct
-	intrinsicGas, err := core.IntrinsicGas(msg.Data(), msg.AccessList(), contractCreation, homestead, istanbul)
+	intrinsicGas, err := core.IntrinsicGas(params.Input, params.AccessList, contractCreation, homestead, istanbul)
 	if err != nil {
 		return err, nil
 	}
@@ -165,7 +163,7 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 
 	// Set up the initial access list.
 	if rules := evm.ChainConfig().Rules(evm.Context.BlockNumber, evm.Context.Random != nil); rules.IsBerlin {
-		statedb.PrepareAccessList(msg.From(), msg.To(), vm.ActivePrecompiles(rules), msg.AccessList())
+		statedb.PrepareAccessList(params.From, params.To, vm.ActivePrecompiles(rules), params.AccessList)
 	}
 	var (
 		returnData      []byte
@@ -174,17 +172,19 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 	)
 	if contractCreation {
 		var deployedContractAddress common.Address
+		initialNonce := statedb.GetNonce(params.From)
 		// we ignore returnData here because it holds the contract code that was just deployed
-		// TODO: evm.Create() will also increment the callers nonce - for EOAs we would like to get rid of that:
-		//  easiest solution would probably be to just decrement the nonce after the evm invocation
-		//  (after verifying that it was altered, because in some error cases it might not)
-		_, deployedContractAddress, gas, vmerr = evm.Create(sender, msg.Data(), gas, msg.Value())
+		_, deployedContractAddress, gas, vmerr = evm.Create(sender, params.Input, gas, params.Value.ToInt())
+		// evm.Create() will also increment the callers' nonce - for EOAs, which the sender here always is,
+		// we don't want that, because it is handled by the core outside this scope.
+		// Essiest solution is to just reset the nonce after the evm invocation if it was altered.
+		// The check is necessary because in some error cases the nonce might not have been altered.
+		if initialNonce != statedb.GetNonce(params.From) {
+			statedb.SetNonce(params.From, initialNonce)
+		}
 		contractAddress = &deployedContractAddress
 	} else {
-		// Increment the nonce for the next transaction
-		// TODO: remove nonce increment?
-		statedb.SetNonce(msg.From(), statedb.GetNonce(sender.Address())+1)
-		returnData, gas, vmerr = evm.Call(sender, *msg.To(), msg.Data(), gas, msg.Value())
+		returnData, gas, vmerr = evm.Call(sender, *params.To, params.Input, gas, params.Value.ToInt())
 	}
 
 	// no error means successful transaction, otherwise failure
@@ -194,7 +194,7 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 	}
 
 	return nil, &EvmResult{
-		UsedGas:         msg.Gas() - gas,
+		UsedGas:         uint64(params.GasLimit) - gas,
 		EvmError:        evmError,
 		ReturnData:      returnData,
 		ContractAddress: contractAddress,
