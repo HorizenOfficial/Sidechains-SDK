@@ -1,3 +1,5 @@
+import test_framework
+
 try:
     import http.client as httplib
 except ImportError:
@@ -108,7 +110,12 @@ class SidechainAuthServiceProxy(object):
         else:
             method = 'POST'
             path = self.__service_name
-        path = "/" + path.replace("_","/") #Replacing underscores with slashes to correctly format the Rest API request
+        if "rpc_" in path: #If Ethereum RPC Server is used, create json body for request and change route
+            rpc_method = path.replace("rpc_","")
+            args = ( test_framework.util.create_json2_rpc_request(rpc_method, args), )
+            path = "/ethv1"
+        else:
+            path = "/" + path.replace("_","/") #Replacing underscores with slashes to correctly format the Rest API request
         postdata = None
         if len(args) > 0:
             postdata = args[0]

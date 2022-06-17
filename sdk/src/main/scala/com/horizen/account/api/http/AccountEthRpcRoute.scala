@@ -32,7 +32,7 @@ case class AccountEthRpcRoute(override val settings: RESTApiSettings, sidechainN
   override implicit val tag: ClassTag[AccountNodeView] = ClassTag[AccountNodeView](classOf[AccountNodeView])
 
 
-  override val route: Route = (pathPrefix("eth_v1")) {
+  override val route: Route = (pathPrefix("ethv1")) {
     ethRpc ~ ethOptions
   }
 
