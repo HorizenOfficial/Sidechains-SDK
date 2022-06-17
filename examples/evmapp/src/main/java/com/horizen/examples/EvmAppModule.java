@@ -49,8 +49,8 @@ public class EvmAppModule extends AccountAppModule
         ChainInfo chainInfo = new ChainInfo(1997, 1661,7331);
 
         // Here I can add my custom logic to manage EthereumTransaction content.
-        // TODO: EvmProcessor instance expected.
         List<MessageProcessor> customMessageProcessors = new ArrayList<>();
+        customMessageProcessors.add(new EvmMessageProcessor());
 
         bind(SidechainSettings.class)
                 .annotatedWith(Names.named("SidechainSettings"))
