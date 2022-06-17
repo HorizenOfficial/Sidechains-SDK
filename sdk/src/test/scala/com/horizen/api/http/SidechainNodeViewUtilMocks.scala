@@ -191,7 +191,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
       allBoxes
     })
 
-    Mockito.when(wallet.secretByProposition(ArgumentMatchers.any[Array[Byte]])).thenAnswer(asw => {
+    Mockito.when(wallet.secretByPublicKeyBytes(ArgumentMatchers.any[Array[Byte]])).thenAnswer(asw => {
       val prop = asw.getArgument(0).asInstanceOf[Array[Byte]]
       if(util.Arrays.equals(prop, secret1.publicImage().bytes)) Optional.of(secret1)
       else if(util.Arrays.equals(prop, secret2.publicImage().bytes)) Optional.of(secret2)

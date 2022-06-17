@@ -338,7 +338,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
       proposition.canBeProvedBy(secretStorage.getAll.asJava).secretsNeeded()
   }
 
-  override def secretByProposition[S <: SCS](proposition: Array[Byte]): JOptional[S] = {
+  override def secretByPublicKeyBytes[S <: SCS](proposition: Array[Byte]): JOptional[S] = {
     secretStorage.getAll.find(secret => util.Arrays.equals(secret.publicImage().pubKeyBytes(), proposition)) match {
       case Some(s) => JOptional.of(s.asInstanceOf[S])
       case None => JOptional.empty()

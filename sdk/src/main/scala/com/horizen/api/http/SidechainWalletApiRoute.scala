@@ -109,7 +109,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
       val future = sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)
       Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
         case Success(_) =>
-          ApiResponseUtil.toResponse(RespCreatePrivateKey25519(secret.publicImage()))
+          ApiResponseUtil.toResponse(RespCreatePrivateKey(secret.publicImage()))
         case Failure(e) =>
           ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create key pair.", JOptional.of(e)))
       }
@@ -148,7 +148,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
         val future = sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)
         Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
           case Success(_) =>
-            ApiResponseUtil.toResponse(RespCreatePrivateKey25519(secret.publicImage()))
+            ApiResponseUtil.toResponse(RespCreatePrivateKey(secret.publicImage()))
           case Failure(e) =>
             ApiResponseUtil.toResponse(ErrorSecretAlreadyPresent("Failed to add the key.", JOptional.of(e)))
         }
@@ -164,7 +164,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
       entity(as[ReqExportSecret]) { body =>
         withNodeView { sidechainNodeView =>
           val wallet = sidechainNodeView.getNodeWallet
-          val optionalPrivKey: JOptional[Secret] = wallet.secretByProposition(BytesUtils.fromHexString(body.publickey))
+          val optionalPrivKey: JOptional[Secret] = wallet.secretByPublicKeyBytes(BytesUtils.fromHexString(body.publickey))
           if (optionalPrivKey.isEmpty) {
             ApiResponseUtil.toResponse(ErrorPropositionNotFound("Proposition not found in the wallet!", JOptional.empty()))
           } else {
@@ -279,7 +279,7 @@ object SidechainWalletRestScheme {
   private[api] case class RespBalance(balance: Long) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespCreatePrivateKey25519(proposition: Proposition) extends SuccessResponse
+  private[api] case class RespCreatePrivateKey(proposition: Proposition) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespCreateVrfSecret(proposition: VrfPublicKey) extends SuccessResponse

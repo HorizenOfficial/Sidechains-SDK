@@ -33,7 +33,7 @@ public interface NodeWallet {
 
     <S extends Secret> List<S> secretsByProposition(ProofOfKnowledgeProposition<S> proposition);
 
-    <S extends Secret> Optional<S> secretByProposition(byte[] proposition);
+    <S extends Secret> Optional<S> secretByPublicKeyBytes(byte[] proposition);
 
     List<Secret> allSecrets();
 
