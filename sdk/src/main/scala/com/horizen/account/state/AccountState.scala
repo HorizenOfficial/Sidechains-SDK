@@ -184,7 +184,7 @@ class AccountState(val params: NetworkParams,
 
       new AccountState(params, version,
         newMetaState,
-        stateDbStorage, // TODO rollback stateDb
+        stateDbStorage,
         messageProcessors)
     }.recoverWith({
       case exception =>

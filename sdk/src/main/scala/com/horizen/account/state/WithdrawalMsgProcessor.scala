@@ -1,8 +1,8 @@
 package com.horizen.account.state
 
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.account.api.http.ZenWeiConverter
 import com.horizen.account.proposition.AddressProposition
+import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.box.{WithdrawalRequestBox, WithdrawalRequestBoxSerializer}
 import com.horizen.proposition.{MCPublicKeyHashProposition, MCPublicKeyHashPropositionSerializer}
 import com.horizen.utils.{BytesUtils, ListSerializer, ZenCoinsUtils}
@@ -40,7 +40,7 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
       }
       else {
 
-        val functionSig = BytesUtils.toHexString(getFunctionFromData(msg.getData))
+        val functionSig = BytesUtils.toHexString(getOpCodeFromData(msg.getData))
         if (getListOfWithdrawalReqsCmdSig.equals(functionSig)) {
           require(msg.getData.length == OP_CODE_LENGTH + Ints.BYTES, s"Wrong data length ${msg.getData.length}")
           val epochNum = BytesUtils.getInt(msg.getData, OP_CODE_LENGTH)

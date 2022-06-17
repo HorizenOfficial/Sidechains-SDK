@@ -1,9 +1,9 @@
 package com.horizen.account.state
 
 import com.google.common.primitives.Bytes
-import com.horizen.account.api.http.ZenWeiConverter
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.storage.AccountStateMetadataStorageView
+import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.evm.{LevelDBDatabase, StateDB}
 import com.horizen.fixtures.BoxFixture
 import com.horizen.proposition.MCPublicKeyHashProposition

@@ -2,6 +2,7 @@ package com.horizen.account.api.http
 
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.api.http.SidechainApiMockConfiguration
 import com.horizen.fixtures._
 import com.horizen.node.NodeWalletBase

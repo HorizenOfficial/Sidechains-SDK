@@ -23,7 +23,9 @@ abstract class AbstractFakeSmartContractMsgProcessor extends MessageProcessor wi
     }
     else
     {
-      log.warn(s"Account ${BytesUtils.toHexString(fakeSmartContractAddress.address())} already exists")
+      val errorMsg = s"Account ${BytesUtils.toHexString(fakeSmartContractAddress.address())} already exists"
+      log.error(errorMsg)
+      throw new MessageProcessorInitializationException(errorMsg)
     }
   }
 
@@ -31,9 +33,14 @@ abstract class AbstractFakeSmartContractMsgProcessor extends MessageProcessor wi
     fakeSmartContractAddress.equals(msg.getTo)
   }
 
-  protected def getFunctionFromData(data: Array[Byte]): Array[Byte] ={
+  protected def getOpCodeFromData(data: Array[Byte]): Array[Byte] ={
     require(data.length >= OP_CODE_LENGTH, s"Data length ${data.length} must be >= $OP_CODE_LENGTH")
-    data.slice(0,OP_CODE_LENGTH)
+    data.slice(0, OP_CODE_LENGTH)
+  }
+
+  protected def getArgumentsFromData(data: Array[Byte]): Array[Byte] ={
+    require(data.length >= OP_CODE_LENGTH, s"Data length ${data.length} must be >= $OP_CODE_LENGTH")
+    data.drop(OP_CODE_LENGTH)
   }
  }
 

@@ -5,7 +5,7 @@ import com.horizen.utils.{BytesUtils, ListSerializer}
 
 import java.math.BigInteger
 import com.google.common.primitives.Ints
-import com.horizen.account.api.http.ZenWeiConverter.isValidZenAmount
+import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
 import com.horizen.account.proof.{SignatureSecp256k1, SignatureSecp256k1Serializer}
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, RemoveStakeCmd}
@@ -37,11 +37,10 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
   val AddNewStakeGasPaidValue : BigInteger      = java.math.BigInteger.ONE
   val RemoveStakeGasPaidValue : BigInteger      = java.math.BigInteger.ONE
 
-  def getStakeId(view: AccountStateView, msg: Message): Array[Byte] = {
-    val currentConsensusEpochNumber: Int = view.getConsensusEpochNumber.getOrElse(0)
+  def getStakeId(msg: Message): Array[Byte] = {
     Keccak256.hash(Bytes.concat(
       msg.getFrom.address(), msg.getNonce.toByteArray, msg.getValue.toByteArray,
-      msg.getData, Ints.toByteArray(currentConsensusEpochNumber)))
+      msg.getData))
   }
 
   def getMessageToSign(stakeId: Array[Byte], from: Array[Byte], nonce: Array[Byte]): Array[Byte] = {
@@ -53,9 +52,15 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
 
   override def process(msg: Message, view: AccountStateView): ExecutionResult = {
     try {
-      val cmdString = BytesUtils.toHexString(getFunctionFromData(msg.getData))
+      val cmdString = BytesUtils.toHexString(getOpCodeFromData(msg.getData))
       cmdString match {
         case `GetListOfForgersCmd` =>
+          // check we have no other bytes after the op code in the msg data
+          if (getArgumentsFromData(msg.getData).length > 0) {
+            val errorMsg = s"invalid msg data length: ${msg.getData.length}, expected ${OP_CODE_LENGTH}"
+            log.error(errorMsg)
+            return new InvalidMessage(new Exception(errorMsg))
+          }
 
           // get current list from db and unserialize it, just to be sure we have the right data
           val serializedStakeIdList : Array[Byte] = view.getAccountStorageBytes(fakeSmartContractAddress.address(), stakeIdsListKey).get
@@ -73,7 +78,7 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
 
           val listOfForgers : Array[Byte] = forgingInfoSerializer.toBytes(stakeInfoList)
 
-          return new ExecutionSucceeded(GetListOfForgersGasPaidValue, listOfForgers)
+          new ExecutionSucceeded(GetListOfForgersGasPaidValue, listOfForgers)
 
         case `AddNewStakeCmd` =>
           // first of all check msg.value, it must be a legal wei amount convertible in satoshi without any remainder
@@ -90,7 +95,7 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
             return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(errMsg))
           }
 
-          val cmdInput = AddNewStakeCmdInputSerializer.parseBytesTry(msg.getData) match {
+          val cmdInput = AddNewStakeCmdInputSerializer.parseBytesTry(getArgumentsFromData(msg.getData)) match {
             case Success(obj) => obj
             case Failure(exception) =>
               log.error("Error while parsing cmd input.", exception)
@@ -124,7 +129,7 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
           }
 
           // compute stakeId
-          val stakeId = getStakeId(view, msg)
+          val stakeId = getStakeId(msg)
 
           // do we already have this id?
           if (stakeInfoList.asScala.exists(
@@ -168,7 +173,7 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
 
         case `RemoveStakeCmd` =>
 
-          val cmdInput = RemoveStakeCmdInputSerializer.parseBytesTry(msg.getData) match {
+          val cmdInput = RemoveStakeCmdInputSerializer.parseBytesTry(getArgumentsFromData(msg.getData)) match {
             case Success(obj) => obj
             case Failure(exception) =>
               log.error("Error while parsing cmd input.", exception)
@@ -336,7 +341,6 @@ object AddNewStakeCmdInputSerializer extends ScorexSerializer[AddNewStakeCmdInpu
   private val allowedForgerListSerializer : ListSerializer[AllowedForgerInfo] = new ListSerializer[AllowedForgerInfo](AllowedForgerInfoSerializer)
 
   override def serialize(s: AddNewStakeCmdInput, w: Writer): Unit = {
-    w.putBytes(BytesUtils.fromHexString(AddNewStakeCmd))
     PublicKey25519PropositionSerializer.getSerializer.serialize(s.blockSignProposition, w)
     VrfPublicKeySerializer.getSerializer.serialize(s.vrfPublicKey, w)
     AddressPropositionSerializer.getSerializer.serialize(s.ownerPublicKey, w)
@@ -344,8 +348,6 @@ object AddNewStakeCmdInputSerializer extends ScorexSerializer[AddNewStakeCmdInpu
   }
 
   override def parse(r: Reader): AddNewStakeCmdInput = {
-    val opCode = r.getBytes(OP_CODE_LENGTH)
-    require(BytesUtils.toHexString(opCode) == AddNewStakeCmd)
     val blockSignPublicKey = PublicKey25519PropositionSerializer.getSerializer.parse(r)
     val vrfPublicKey = VrfPublicKeySerializer.getSerializer.parse(r)
     val ownerPublicKey = AddressPropositionSerializer.getSerializer.parse(r)
@@ -374,14 +376,11 @@ case class RemoveStakeCmdInput(
 
 object RemoveStakeCmdInputSerializer extends ScorexSerializer[RemoveStakeCmdInput]{
   override def serialize(s: RemoveStakeCmdInput, w: Writer): Unit = {
-    w.putBytes(BytesUtils.fromHexString(RemoveStakeCmd))
     w.putBytes(s.stakeId)
     SignatureSecp256k1Serializer.getSerializer.serialize(s.signature, w)
   }
 
   override def parse(r: Reader): RemoveStakeCmdInput = {
-    val opCode = r.getBytes(OP_CODE_LENGTH)
-    require(BytesUtils.toHexString(opCode) == RemoveStakeCmd)
     val stakeId = r.getBytes(32)
     val signature = SignatureSecp256k1Serializer.getSerializer.parse(r)
 

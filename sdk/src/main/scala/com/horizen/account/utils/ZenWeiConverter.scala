@@ -1,4 +1,4 @@
-package com.horizen.account.api.http
+package com.horizen.account.utils
 
 import com.horizen.utils.ZenCoinsUtils
 
@@ -19,7 +19,7 @@ object ZenWeiConverter {
 
   def isValidZenAmount(valueInWei: java.math.BigInteger): Boolean = {
     require(valueInWei != null, s"Wei amount is null")
-    if (valueInWei.compareTo(java.math.BigInteger.ZERO) >= 0){
+    if (valueInWei.compareTo(java.math.BigInteger.ZERO) >= 0) {
       (valueInWei.compareTo(MAX_MONEY_IN_WEI) <= 0 &&
         valueInWei.remainder(ZENNY_TO_WEI_MULTIPLIER).longValue() == 0)
     }

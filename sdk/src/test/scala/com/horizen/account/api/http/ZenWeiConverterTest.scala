@@ -1,6 +1,7 @@
 package com.horizen.account.api.http
 
 import com.horizen.SidechainTypes
+import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.customtypes._
 import com.horizen.fixtures._
