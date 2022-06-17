@@ -3,10 +3,12 @@ package com.horizen.account.secret;
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.utils.Secp256k1;
+import com.horizen.evm.utils.Address;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.secret.Secret;
 import com.horizen.secret.SecretSerializer;
 import org.web3j.crypto.ECKeyPair;
+import org.web3j.crypto.Hash;
 import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
 
@@ -43,7 +45,8 @@ public final class PrivateKeySecp256k1 implements Secret {
     @Override
     public AddressProposition publicImage() {
         var publicKey = ECKeyPair.create(privateKey).getPublicKey();
-        return new AddressProposition(Numeric.toBytesPadded(publicKey, Secp256k1.PUBLIC_KEY_SIZE));
+        var hashedKey = Hash.sha3(Numeric.toBytesPadded(publicKey, Secp256k1.PUBLIC_KEY_SIZE));
+        return new AddressProposition(Arrays.copyOfRange(hashedKey, 0, 20));
     }
 
     @Override
