@@ -34,12 +34,12 @@ def websocket_port_by_mc_node_index(n):
     return 13000 + n + os.getpid()%999
 
 # Helper for creating json rpc requests correctly
-def create_json2_rpc_request(method, params, id):
+def create_json2_rpc_request(method, args):
     return json.dumps({
         "jsonrpc": "2.0",
         "method": method,
-        "params": params,
-        "id": id
+        "params": args,
+        "id": "1"
     })
 
 def check_json_precision():

@@ -72,18 +72,12 @@ class SCEvmBootstrap(SidechainTestFramework):
         pprint.pprint(response)
 
         # request chainId via rpc route
-        params = []
-        request = test_framework.util.create_json2_rpc_request("eth_chainId", params, "1")
-        response = sc_node.ethv1(request)
         print("rpc response:")
-        pprint.pprint(response)
+        pprint.pprint(sc_node.rpc_eth_chainId())
 
         # request getBalance via rpc route
-        params = ["0x0", "1"]
-        request = test_framework.util.create_json2_rpc_request("eth_getBalance", params, "1")
-        response = sc_node.ethv1(request)
         print("rpc response:")
-        pprint.pprint(response)
+        pprint.pprint(sc_node.rpc_eth_getBalance("0x0", "1"))
 
         input("\n\t======> Enter any input to continue...")
 
