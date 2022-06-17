@@ -41,7 +41,7 @@ public class EthService extends RpcService {
 
     @RpcMethod("eth_chainId")
     public Quantity chainId() {
-        return new Quantity("0x123");
+        return new Quantity("0x1337");
     }
 
     @RpcMethod("eth_getBalance")
