@@ -187,6 +187,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     @Override
     public boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath) {
         return NaiveThresholdSigProof.setup(ProvingSystemType.COBOUNDARY_MARLIN, maxPks, CommonCircuit.customFieldsNumber,
+                Optional.of(supportedSegmentSize),
                 provingKeyPath, verificationKeyPath, CommonCircuit.maxProofPlusVkSize);
     }
 }

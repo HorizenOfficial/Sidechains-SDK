@@ -120,7 +120,7 @@ def launch_bootstrap_tool(command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK",
-                                          "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.3.4.jar",
+                                          "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.3.5.jar",
                                 command_name, json_param], stdout=subprocess.PIPE)
     sc_bootstrap_output = java_ps.communicate()[0]
     try:
@@ -142,7 +142,7 @@ def launch_db_tool(dirName, command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK",
-                                          "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-0.3.4.jar",
+                                          "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-0.3.5.jar",
                                 storagesPath, command_name, json_param], stdout=subprocess.PIPE)
     db_tool_output = java_ps.communicate()[0]
     try:
@@ -468,7 +468,7 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
         lib_separator = ";"
 
     if binary is None:
-        binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.3.4.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+        binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.3.5.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
     #        else if platform.system() == 'Linux':
     '''
     In order to effectively attach a debugger (e.g IntelliJ) to the simpleapp, it is necessary to start the process
@@ -777,7 +777,7 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration, block_tim
     ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
     if not os.path.isdir(ps_keys_dir):
         os.makedirs(ps_keys_dir)
-    cert_keys_paths = cert_proof_keys_paths(ps_keys_dir)
+    cert_keys_paths = cert_proof_keys_paths(ps_keys_dir, sc_creation_info.cert_max_keys)
     csw_keys_paths = csw_proof_keys_paths(ps_keys_dir, sc_creation_info.withdrawal_epoch_length)
     sc_nodes_bootstrap_info = create_sidechain(sc_creation_info,
                                                block_timestamp_rewind,
@@ -807,10 +807,11 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration, block_tim
     return sc_nodes_bootstrap_info
 
 
-def cert_proof_keys_paths(dirname):
+def cert_proof_keys_paths(dirname, cert_threshold_sig_max_keys):
     # use replace for Windows OS to be able to parse the path to the keys in the config file
-    return ProofKeysPaths(os.path.join(dirname, "cert_marlin_snark_pk").replace("\\", "/"),
-                          os.path.join(dirname, "cert_marlin_snark_vk").replace("\\", "/"))
+    return ProofKeysPaths(
+        os.path.join(dirname, "cert_marlin_snark_pk_" + str(cert_threshold_sig_max_keys)).replace("\\", "/"),
+        os.path.join(dirname, "cert_marlin_snark_vk_" + str(cert_threshold_sig_max_keys)).replace("\\", "/"))
 
 
 def csw_proof_keys_paths(dirname, withdrawal_epoch_length):
@@ -836,7 +837,7 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
     vrf_keys = generate_vrf_secrets("seed", 1)
     genesis_account = accounts[0]
     vrf_key = vrf_keys[0]
-    certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, cert_keys_paths)
+    certificate_proof_info = generate_certificate_proof_info("seed", sc_creation_info.cert_max_keys, sc_creation_info.cert_sig_threshold, cert_keys_paths)
     csw_verification_key = generate_csw_proof_info(sc_creation_info.withdrawal_epoch_length, csw_keys_paths)
     genesis_info = initialize_new_sidechain_in_mainchain(
         sc_creation_info.mc_node,

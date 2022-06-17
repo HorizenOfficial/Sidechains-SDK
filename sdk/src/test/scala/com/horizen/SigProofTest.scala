@@ -65,8 +65,8 @@ class SigProofTest {
   @Ignore
   @Test
   def simpleCheck(): Unit = {
-    val keyPairsLen = 7
-    val threshold = 5 //hardcoded value
+    val keyPairsLen = 9
+    val threshold = 6 //hardcoded value
 
     val keyPairs = (0 until keyPairsLen).view.map(buildSchnorrPrivateKey).map(secret => (secret, secret.getPublicKey))
     val publicKeysBytes: util.List[Array[Byte]] = keyPairs.map(_._2.serializePublicKey()).toList.asJava

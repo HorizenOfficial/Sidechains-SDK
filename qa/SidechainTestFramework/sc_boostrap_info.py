@@ -23,12 +23,15 @@ class SCCreationInfo(object):
     # Note: the maximum withdrawal_epoch_length allowed is around 900, otherwise snark keys size check will fail
     # because of too complex circuit from MC perspective.
     def __init__(self, mc_node, forward_amount=100, withdrawal_epoch_length=LARGE_WITHDRAWAL_EPOCH_LENGTH,
-                 btr_data_length=0, sc_creation_version=SC_CREATION_VERSION_1):
+                 btr_data_length=0, sc_creation_version=SC_CREATION_VERSION_1,
+                 cert_max_keys=7, cert_sig_threshold=5):
         self.mc_node = mc_node
         self.forward_amount = forward_amount
         self.withdrawal_epoch_length = withdrawal_epoch_length
         self.btr_data_length = btr_data_length
         self.sc_creation_version = sc_creation_version
+        self.cert_max_keys = cert_max_keys
+        self.cert_sig_threshold = cert_sig_threshold
 
 
 """
