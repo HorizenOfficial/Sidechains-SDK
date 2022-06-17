@@ -63,7 +63,6 @@ func TestInvoke(t *testing.T) {
 		From:         user,
 		To:           nil,
 		Input:        append(common.Hex2Bytes(storageContractDeploy), common.BigToHash(initialValue).Bytes()...),
-		Nonce:        0,
 		GasLimit:     200000,
 		GasPrice:     (*hexutil.Big)(big.NewInt(1000000000)),
 	}).(*lib.EvmResult)
@@ -76,7 +75,6 @@ func TestInvoke(t *testing.T) {
 		From:         user,
 		To:           result.ContractAddress,
 		Input:        append(common.Hex2Bytes(funcStore), common.BigToHash(anotherValue).Bytes()...),
-		Nonce:        1,
 		GasLimit:     200000,
 		GasPrice:     (*hexutil.Big)(big.NewInt(1000000000)),
 	})
@@ -86,7 +84,6 @@ func TestInvoke(t *testing.T) {
 		From:         user,
 		To:           result.ContractAddress,
 		Input:        common.Hex2Bytes(funcRetrieve),
-		Nonce:        2,
 		GasLimit:     200000,
 		GasPrice:     (*hexutil.Big)(big.NewInt(1000000000)),
 	}).(*lib.EvmResult)

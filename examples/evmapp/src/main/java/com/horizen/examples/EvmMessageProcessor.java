@@ -31,7 +31,6 @@ public class EvmMessageProcessor implements MessageProcessor {
                 msg.getTo().address(),
                 msg.getValue(),
                 msg.getData(),
-                msg.getNonce(),
                 msg.getGasLimit(),
                 msg.getGasPrice()
             );

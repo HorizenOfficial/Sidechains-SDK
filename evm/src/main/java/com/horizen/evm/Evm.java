@@ -15,12 +15,11 @@ public final class Evm {
         byte[] to,
         BigInteger value,
         byte[] input,
-        BigInteger nonce,
         BigInteger gasLimit,
         BigInteger gasPrice,
         EvmContext context
     ) {
-        return LibEvm.evmApply(stateDB.handle, from, to, value, input, nonce, gasLimit, gasPrice, context);
+        return LibEvm.evmApply(stateDB.handle, from, to, value, input, gasLimit, gasPrice, context);
     }
 
     public static EvmResult Apply(
@@ -29,10 +28,9 @@ public final class Evm {
         byte[] to,
         BigInteger value,
         byte[] input,
-        BigInteger nonce,
         BigInteger gasLimit,
         BigInteger gasPrice
     ) {
-        return LibEvm.evmApply(stateDB.handle, from, to, value, input, nonce, gasLimit, gasPrice, null);
+        return LibEvm.evmApply(stateDB.handle, from, to, value, input, gasLimit, gasPrice, null);
     }
 }
