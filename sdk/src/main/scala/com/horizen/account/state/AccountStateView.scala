@@ -11,6 +11,7 @@ import com.horizen.utils.{BlockFeeInfo, MerkleTree, WithdrawalEpochInfo}
 import scorex.core.VersionTag
 import scorex.util.{ModifierId, bytesToId}
 
+import java.math.BigInteger
 import scala.util.Try
 
 class AccountStateView(metadataStorageView: AccountStateMetadataStorageView, messageProcessors: Seq[MessageProcessor]) extends StateView[SidechainTypes#SCAT, AccountStateView] with AccountStateReader {
@@ -139,6 +140,13 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView, mes
 
   override def getBalance(address: Array[Byte]): Long = ???
 
+  override def getCodeHash(address: Array[Byte]): Array[Byte] = ???
+
   override def getAccountStateRoot: Option[Array[Byte]] = metadataStorageView.getAccountStateRoot
+
+  // account specific setters
+  def addBalance(address: Array[Byte], amount: BigInteger): Try[AccountStateView] = ???
+
+  def subBalance(address: Array[Byte], amount: BigInteger): Try[AccountStateView] = ???
 
 }

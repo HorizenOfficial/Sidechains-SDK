@@ -229,6 +229,8 @@ class AccountState(val params: NetworkParams,
   override def getBalance(address: Array[Byte]): Long = ???
 
   override def getAccountStateRoot: Option[Array[Byte]] = getView.getAccountStateRoot
+
+  override def getCodeHash(address: Array[Byte]): Array[Byte] = ???
 }
 
 

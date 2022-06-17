@@ -5,7 +5,7 @@ import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
-import com.horizen.account.state.{AccountState, MessageProcessor}
+import com.horizen.account.state.{AccountState, EoaMessageProcessor, MessageProcessor}
 import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
 import com.horizen.account.transaction.AccountTransaction
 import com.horizen.account.wallet.AccountWallet
@@ -40,7 +40,8 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   protected def messageProcessors(params: NetworkParams): Seq[MessageProcessor] = {
     Seq(
-      // todo: put core message processors here
+      EoaMessageProcessor
+      // todo: put other core message processors here
     ) ++ customMessageProcessors
   }
 
