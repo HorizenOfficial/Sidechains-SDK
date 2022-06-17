@@ -6,11 +6,11 @@ import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.horizen.SidechainTypes
 import com.horizen.account.api.rpc.handler.RpcHandler
 import com.horizen.account.api.rpc.request.RpcRequest
-import com.horizen.account.api.rpc.service.{EthService}
+import com.horizen.account.api.rpc.service.EthService
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.{ApiResponse, ApiResponseUtil, ErrorResponse, SidechainApiRoute, SuccessResponse}
+import com.horizen.api.http.{ApiResponse, ApiResponseUtil, ErrorResponse, SidechainApiResponse, SidechainApiRoute, SuccessResponse}
 import com.horizen.node.NodeWalletBase
 import scorex.core.settings.RESTApiSettings
 
@@ -33,19 +33,23 @@ case class AccountEthRpcRoute(override val settings: RESTApiSettings, sidechainN
 
 
   override val route: Route = (pathPrefix("eth_v1")) {
-    ethRpc
+    ethRpc ~ ethOptions
   }
 
   /**
    * Returns the success / error response of called rpc method or error if method does not exist
    */
-  def ethRpc: Route = (post & path("rpc")) {
+  def ethRpc: Route = (post) {
     entity(as[JsonNode])
     { body =>
       withNodeView { view =>
         var rpcHandler = new RpcHandler(new EthService(view));
-        ApiResponseUtil.toResponse(rpcHandler.apply(new RpcRequest(body)));
+        ApiResponseUtil.toResponseWithoutResultWrapper(rpcHandler.apply(new RpcRequest(body)));
       }
     }
+  }
+
+  def ethOptions: Route = (options) {
+    complete("Allow: OPTIONS, POST");
   }
 }
