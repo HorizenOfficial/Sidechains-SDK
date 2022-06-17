@@ -1,6 +1,6 @@
 package com.horizen
 case class ChainInfo(
-                      regtestId: Int,
-                      testnetId: Int,
-                      mainnetId: Int
+                      regtestId: Long,
+                      testnetId: Long,
+                      mainnetId: Long
                     )
