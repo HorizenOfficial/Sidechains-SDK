@@ -2,6 +2,7 @@
 import json
 import pprint
 
+import test_framework.util
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, Account, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
@@ -68,6 +69,20 @@ class SCEvmBootstrap(SidechainTestFramework):
         # get mempool contents
         response = sc_node.transaction_allTransactions()
         print("mempool contents:")
+        pprint.pprint(response)
+
+        # request chainId via rpc route
+        params = []
+        request = test_framework.util.create_json2_rpc_request("eth_chainId", params, "1")
+        response = sc_node.ethv1(request)
+        print("rpc response:")
+        pprint.pprint(response)
+
+        # request getBalance via rpc route
+        params = ["0x0", "1"]
+        request = test_framework.util.create_json2_rpc_request("eth_getBalance", params, "1")
+        response = sc_node.ethv1(request)
+        print("rpc response:")
         pprint.pprint(response)
 
         input("\n\t======> Enter any input to continue...")

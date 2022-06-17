@@ -33,6 +33,15 @@ def rpc_port(n):
 def websocket_port_by_mc_node_index(n):
     return 13000 + n + os.getpid()%999
 
+# Helper for creating json rpc requests correctly
+def create_json2_rpc_request(method, params, id):
+    return json.dumps({
+        "jsonrpc": "2.0",
+        "method": method,
+        "params": params,
+        "id": id
+    })
+
 def check_json_precision():
     """Make sure json library being used does not lose precision converting BTC values"""
     n = Decimal("20000000.00000003")
