@@ -191,6 +191,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return this.transaction.getValue();
     }
 
+    //TODO: getData was defined as byte array before, if we want to change to String, please look at all other usages
     @Override
     public byte[] getData() {
         return Numeric.hexStringToByteArray(transaction.getData());
