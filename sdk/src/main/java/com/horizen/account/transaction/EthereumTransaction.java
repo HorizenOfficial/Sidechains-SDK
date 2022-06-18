@@ -87,7 +87,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public byte version() {
-        return 1;
+        return this.transaction.getType().getRlpType();
     }
 
     @Override
@@ -199,8 +199,13 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public SignatureSecp256k1 getSignature() {
-        if (this.isSigned())
-            return new SignatureSecp256k1(((SignedRawTransaction) this.transaction).getSignatureData());
+        if (this.isSigned()) {
+            SignedRawTransaction stx = (SignedRawTransaction) this.transaction;
+            return new SignatureSecp256k1(
+                    new byte[]{stx.getRealV(Numeric.toBigInt(stx.getSignatureData().getV()))},
+                    stx.getSignatureData().getR(),
+                    stx.getSignatureData().getS());
+        }
         return null;
     }
 
@@ -216,7 +221,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                     Numeric.toHexStringWithPrefix(this.getGasLimit()),
                     this.getTo(),
                     Numeric.toHexStringWithPrefix(this.getValue()),
-                    this.getData() != null ? this.getData() : "",
+                    this.getData() != null ? Numeric.toHexString(this.getData()) : "",
                     Numeric.toHexStringWithPrefix(this.getMaxFeePerGas()),
                     Numeric.toHexStringWithPrefix(this.getMaxPriorityFeePerGas()),
                     isSigned() ? getSignature().toString() : ""
@@ -230,7 +235,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                 Numeric.toHexStringWithPrefix(this.getGasLimit()),
                 this.getTo(),
                 Numeric.toHexStringWithPrefix(this.getValue()),
-                this.getData() != null ? this.getData() : "",
+                this.getData() != null ? Numeric.toHexString(this.getData()) : "",
                 isSigned() ? getSignature().toString() : ""
         );
     }
