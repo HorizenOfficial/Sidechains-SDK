@@ -40,8 +40,19 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
     unconfirmed.size
   }
 
+  // define a custom sorting func based on fee rate
+  def getTransactionsSortedByFeeRate: (SidechainMemoryPoolEntry, SidechainMemoryPoolEntry) => Boolean = (a: SidechainMemoryPoolEntry, b: SidechainMemoryPoolEntry) =>
+  {
+    a.feeRate > b.feeRate
+  }
+
+
+  override def getTransactionsSortedByFee(limit: Int): JList[SidechainTypes#SCBT] = {
+    unconfirmed.values.toList.sortBy(-_.getUnconfirmedTx().fee).take(limit).map(tx => tx.getUnconfirmedTx()).asJava
+  }
+
   override def take(limit: Int): Iterable[SidechainTypes#SCBT] = {
-    unconfirmed.values.toSeq.sortBy(-_.getUnconfirmedTx().fee()).take(limit).map(tx => tx.getUnconfirmedTx())
+    unconfirmed.values.toSeq.sortWith(getTransactionsSortedByFeeRate).take(limit).map(tx => tx.getUnconfirmedTx())
   }
 
   def take(sortFunc: (SidechainMemoryPoolEntry, SidechainMemoryPoolEntry) => Boolean,
@@ -74,8 +85,7 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
     // tx.incompatibilityChecker().hasIncompatibleTransactions(tx, unconfirmed)
     if (tx.incompatibilityChecker().isMemoryPoolCompatible &&
         tx.incompatibilityChecker().isTransactionCompatible(tx, unconfirmed.values.toList.map(t => t.getUnconfirmedTx()).asJava)) {
-      val txFeeRate = new FeeRate(tx.fee(), tx.size())
-      unconfirmed.put(tx.id, SidechainMemoryPoolEntry(tx, txFeeRate))
+      unconfirmed.put(tx.id, SidechainMemoryPoolEntry(tx))
       Success[SidechainMemoryPool](this)
     }
     else
@@ -99,8 +109,7 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
     }
 
     for (t <- txs) {
-      val txFeeRate = new FeeRate(t.fee(), t.size())
-      unconfirmed.put(t.id, SidechainMemoryPoolEntry(t, txFeeRate))
+      unconfirmed.put(t.id, SidechainMemoryPoolEntry(t))
     }
 
     new Success[SidechainMemoryPool](this)
@@ -120,8 +129,7 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
     }
 
     for (t <- txs) {
-      val txFeeRate = new FeeRate(t.fee(), t.size())
-      unconfirmed.put(t.id, SidechainMemoryPoolEntry(t, txFeeRate))
+      unconfirmed.put(t.id, SidechainMemoryPoolEntry(t))
     }
 
     this
@@ -142,15 +150,11 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
     txs.subList(0, limit)
   }
 
-  override def getTransactionsSortedByFee(limit: Int): JList[SidechainTypes#SCBT] = {
-    unconfirmed.values.toList.sortBy(-_.getUnconfirmedTx().fee).take(limit).map(tx => tx.getUnconfirmedTx()).asJava
-  }
-
   override def getSize: Int = unconfirmed.size
 
   override def getTransactionById(transactionId: String): Optional[BoxTransaction[SCP, Box[SCP]]] = {
     Optional.ofNullable(unconfirmed.get(transactionId) match {
-      case Some(tx) => tx.getUnconfirmedTx()
+      case Some(mempoolEntry) => mempoolEntry.getUnconfirmedTx()
       case None => null
     })
   }

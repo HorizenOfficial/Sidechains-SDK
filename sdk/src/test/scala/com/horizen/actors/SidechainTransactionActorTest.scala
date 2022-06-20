@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.testkit.{TestActor, TestProbe}
 import akka.util.Timeout
-import com.horizen.SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
+import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.SidechainTransactionActorRef
 import com.horizen.fixtures.{SidechainTypesTestsExtension, TransactionFixture}

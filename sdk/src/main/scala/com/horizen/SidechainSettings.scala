@@ -43,7 +43,7 @@ case class ForgerSettings(automaticForging: Boolean = false,
 
 case class WalletSettings(seed: String,
                           genesisSecrets: Seq[String],
-                          maxFee: Int = -1)
+                          maxTxFee: Long = 10000000)
 
 case class CeasedSidechainWithdrawalSettings(cswProvingKeyFilePath: String,
                                              cswVerificationKeyFilePath: String)

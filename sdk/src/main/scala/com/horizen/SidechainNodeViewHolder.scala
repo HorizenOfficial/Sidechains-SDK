@@ -2,7 +2,6 @@ package com.horizen
 
 
 import akka.actor.{ActorRef, ActorSystem, Props}
-import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{NewLocallyGeneratedTransactions}
 import com.horizen.block.SidechainBlock
 import com.horizen.chain.FeePaymentsInfo
 import com.horizen.consensus._
@@ -15,6 +14,7 @@ import com.horizen.utils.BytesUtils
 import com.horizen.validation._
 import com.horizen.wallet.ApplicationWallet
 import scorex.core.NodeViewHolder.DownloadRequest
+import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import scorex.core.consensus.History.ProgressInfo
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages._
 import scorex.core.settings.ScorexSettings
@@ -69,7 +69,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     utxoMerkleTreeStorage, stateStorage, forgerBoxStorage,
     secretStorage, walletBoxStorage, walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage)
 
-  val maxFee = sidechainSettings.wallet.maxFee
+  val maxTxFee = sidechainSettings.wallet.maxTxFee
 
   private def semanticBlockValidators(params: NetworkParams): Seq[SemanticBlockValidator] = Seq(new SidechainBlockSemanticValidator(params))
   private def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator] = Seq(
@@ -297,10 +297,10 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
        sender() ! getStorageVersions
 
   protected def processLocallyGeneratedTransaction: Receive = {
-    case newTxs: NewLocallyGeneratedTransactions[SidechainTypes#SCBT] =>
+    case newTxs: LocallyGeneratedTransaction[SidechainTypes#SCBT] =>
       newTxs.txs.foreach(tx => {
-        if(maxFee > -1 && tx.fee() > maxFee)
-          context.system.eventStream.publish(FailedTransaction(tx.asInstanceOf[Transaction].id, new IllegalArgumentException(s"Transaction ${tx.id()} with fee of ${tx.fee()} exceed the predefined MaxFee of ${maxFee}"),
+        if(tx.fee() > maxTxFee)
+          context.system.eventStream.publish(FailedTransaction(tx.asInstanceOf[Transaction].id, new IllegalArgumentException(s"Transaction ${tx.id()} with fee of ${tx.fee()} exceed the predefined MaxFee of ${maxTxFee}"),
             immediateFailure = true))
         else
           txModify(tx)

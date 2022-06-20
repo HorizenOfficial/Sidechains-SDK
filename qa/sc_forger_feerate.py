@@ -128,7 +128,7 @@ class SCForgerFeerate(SidechainTestFramework):
 
         tx4 = self.send_coins(sc_node, sc_address, amount=333333, fee=101, numberOfOutputs=1)
 
-        tx4 = self.send_coins(sc_node, sc_address, amount=333333, fee=99, numberOfOutputs=1)
+        tx5 = self.send_coins(sc_node, sc_address, amount=333333, fee=99, numberOfOutputs=1)
 
         print("Generating SC Block with send coins transaction...")
         scblock_id2 = generate_next_blocks(sc_node, "first node", 1)[0]

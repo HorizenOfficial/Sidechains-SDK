@@ -226,12 +226,6 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     header.bytes.length
   }
-
-  // define a custom sorting func based on fee rate
-  def txsSortFunc: (SidechainMemoryPoolEntry, SidechainMemoryPoolEntry) => Boolean = (a: SidechainMemoryPoolEntry, b: SidechainMemoryPoolEntry) =>
-  {
-    a.getTxFeeRate() > b.getTxFeeRate()
-  }
   
   private def forgeBlock(nodeView: View,
                          timestamp: Long,
@@ -312,7 +306,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
         Seq() // no SC Txs allowed
       } else { // SC block is in the middle of the epoch
         var txsCounter: Int = 0
-        nodeView.pool.take(txsSortFunc, nodeView.pool.size).filter(tx => {
+        nodeView.pool.take(nodeView.pool.size).filter(tx => {
           val txSize = tx.bytes.length + 4 // placeholder for Tx length
           txsCounter += 1
           if(txsCounter > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER || blockSize + txSize > SidechainBlock.MAX_BLOCK_SIZE)

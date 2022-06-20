@@ -89,8 +89,7 @@ class SCNodeConfiguration(object):
                  certificate_fee=0.0001,
                  forger_options = SCForgerConfiguration(),
                  api_key = "",
-                 max_fee = -1):
-                 ):
+                 max_fee = 10000000):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))
         self.mc_connection_info = mc_connection_info
