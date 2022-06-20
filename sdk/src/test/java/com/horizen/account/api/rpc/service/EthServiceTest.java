@@ -53,6 +53,6 @@ public class EthServiceTest {
         json = "{\"id\":\"1\", \"jsonrpc\":\"2.0\",\"method\":\"eth_chainId\", \"params\":[]}}";
         request = mapper.readTree(json);
         rpcRequest = new RpcRequest(request);
-        assertEquals("0x123", ((Quantity) ethService.execute(rpcRequest)).getValue());
+        assertEquals("0x1337", ((Quantity) ethService.execute(rpcRequest)).getValue());
     }
 }
