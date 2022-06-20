@@ -94,6 +94,15 @@ func TestInvoke(t *testing.T) {
 	if anotherValue.Cmp(retrievedValue) != 0 {
 		t.Fatalf("retrieved bad value: expected %v, actual %v", anotherValue, retrievedValue)
 	}
+	// verify that EOA nonce was not updated
+	nonce := call(t, instance, "StateGetNonce", lib.AccountParams{
+		HandleParams: lib.HandleParams{Handle: handle},
+		Address:      user,
+	}).(hexutil.Uint64)
+	if uint64(nonce) != 0 {
+		t.Fatalf("nonce was modified: expected 0, actual %v", nonce)
+	}
+	// cleanup
 	call(t, instance, "CloseDatabase", lib.DatabaseParams{
 		DatabaseHandle: dbHandle,
 	})
