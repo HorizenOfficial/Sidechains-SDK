@@ -82,17 +82,23 @@ class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
   }
 
   def getAccountStorage(address: Array[Byte], key: Array[Byte]): Try[Array[Byte]] =
-    // it should be legal to have a valid address with no values for the given key
-    // It should throw an exception if the address does not exist
     Try {
       stateDb.getStorage(address, key, StateStorageStrategy.RAW)
     }
 
   def getAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Try[Array[Byte]] =
-    // it should be legal to have a valid address with no values for the given key
-    // It should throw an exception if the address does not exist
     Try {
       stateDb.getStorage(address, key, StateStorageStrategy.CHUNKED)
+    }
+
+  def removeAccountStorage(address: Array[Byte], key: Array[Byte]): Try[Unit] =
+    Try {
+      stateDb.removeStorage(address, key, StateStorageStrategy.RAW)
+    }
+
+  def removeAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Try[Unit] =
+    Try {
+      stateDb.removeStorage(address, key, StateStorageStrategy.CHUNKED)
     }
 
   // log handling

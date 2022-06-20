@@ -52,6 +52,14 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
   override def init(view: AccountStateView): Unit = {
     super.init(view)
     // set the initial value for the linked list head
+
+    // check we do not have this key set to any value yet
+    val initialHead = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListHeadKey).get
+
+    // getting a not existing key from state DB using RAW strategy as the api is doing
+    // gives 32 bytes filled with 0 (CHUNK strategy gives an empty array instead
+    require (BytesUtils.toHexString(initialHead) == BytesUtils.toHexString(new Array[Byte](32)))
+
     view.updateAccountStorage(fakeSmartContractAddress.address(), LinkedListHeadKey, LinkedListNullValue)
   }
 
@@ -64,6 +72,9 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
       view.getAccountStorageBytes(fakeSmartContractAddress.address(), stakeId) match {
         case Success(data) =>
           if(data.length == 0) {
+            // getting a not existing key from state DB using RAW strategy
+            // gives an array of 32 bytes filled with 0, while using CHUNK strategy, as the api is doing here
+            // gives an empty array instead
             None
           } else {
             ForgerStakeDataSerializer.parseBytesTry(data) match {
@@ -75,8 +86,8 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
           }
 
         case Failure(e) =>
-          log.info("No such stake id: " + e.getMessage)
-          None
+          log.error("Failure in getting value from state DB", e)
+          throw new Exception(e)
       }
   }
 
@@ -84,6 +95,9 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
     view.getAccountStorageBytes(fakeSmartContractAddress.address(), nodeId) match {
       case Success(data) =>
         if(data.length == 0) {
+          // getting a not existing key from state DB using RAW strategy
+          // gives an array of 32 bytes filled with 0, while using CHUNK strategy, as the api is doing here
+          // gives an empty array instead
           None
         } else {
           LinkedListNodeSerializer.parseBytesTry(data) match {
@@ -95,8 +109,8 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
         }
 
       case Failure(e) =>
-        log.info("No such stake id: " + e.getMessage)
-        None
+        log.error("Failure in getting value from state DB", e)
+        throw new Exception(e)
     }
   }
 
@@ -190,7 +204,10 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
     }
 
     // remove the stake
-    view.updateAccountStorageBytes(fakeSmartContractAddress.address(), dataToRemoveId, new Array[Byte](0))
+    view.removeAccountStorageBytes(fakeSmartContractAddress.address(), dataToRemoveId)
+
+    // remove the node from the linked list
+    view.removeAccountStorageBytes(fakeSmartContractAddress.address(), nodeToRemoveId)
   }
 
   def getListItem(view: AccountStateView, head: Array[Byte]) : (AccountForgingStakeInfo, Array[Byte]) = {

@@ -4,18 +4,14 @@ import com.google.common.primitives.Bytes
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, GetListOfForgersCmd, RemoveStakeCmd, fakeSmartContractAddress, getMessageToSign, getStakeId}
-import com.horizen.account.storage.AccountStateMetadataStorageView
-import com.horizen.consensus
-import com.horizen.evm.{LevelDBDatabase, StateDB}
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
-import com.horizen.utils.{BytesUtils, ListSerializer}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ListSerializer}
 import org.junit.Assert._
 import org.junit._
-import org.junit.rules.TemporaryFolder
-import org.mockito._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
 import org.web3j.crypto.{ECKeyPair, Keys, Sign}
+import scorex.crypto.hash.Keccak256
 
 import java.math.BigInteger
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
@@ -23,9 +19,8 @@ import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 
 class ForgerStakeMsgProcessorTest
   extends JUnitSuite
-    with MockitoSugar {
-
-  var tempFolder = new TemporaryFolder
+    with MockitoSugar
+    with MessageProcessorFixture {
 
   val dummyBigInteger: java.math.BigInteger = java.math.BigInteger.ONE
   val negativeAmount: java.math.BigInteger = BigInteger.valueOf(-1)
@@ -34,10 +29,7 @@ class ForgerStakeMsgProcessorTest
   val validWeiAmount: java.math.BigInteger = new java.math.BigInteger("10000000000")
 
   val senderProposition: AddressProposition = new AddressProposition(BytesUtils.fromHexString("00aabbcc9900aabbcc9900aabbcc9900aabbcc99"))
-  val consensusEpochNumber: consensus.ConsensusEpochNumber = consensus.ConsensusEpochNumber @@ 123
-
   val forgingInfoSerializer = new ListSerializer[AccountForgingStakeInfo](AccountForgingStakeInfoSerializer)
-
 
   // create private/public key pair
   val pair : ECKeyPair = Keys.createEcKeyPair
@@ -45,17 +37,6 @@ class ForgerStakeMsgProcessorTest
 
   @Before
   def setUp(): Unit = {
-  }
-
-  def getView: AccountStateView = {
-    tempFolder.create()
-    val databaseFolder = tempFolder.newFolder("evm-db" + Math.random())
-    val hashNull = BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000000")
-    val db : LevelDBDatabase = new LevelDBDatabase(databaseFolder.getAbsolutePath)
-    val messageProcessors: Seq[MessageProcessor] = Seq()
-    val metadataStorageView: AccountStateMetadataStorageView = mock[AccountStateMetadataStorageView]
-    val stateDb: StateDB = new StateDB(db, hashNull)
-    new AccountStateView(metadataStorageView, stateDb, messageProcessors)
   }
 
   def getDefaultMessage(opCode: Array[Byte], arguments: Array[Byte], nonce: BigInteger, value: BigInteger = negativeAmount) : Message = {
@@ -136,6 +117,29 @@ class ForgerStakeMsgProcessorTest
   }
 
   @Test
+  def testNullRecords(): Unit = {
+    val stateView = getView
+    ForgerStakeMsgProcessor.init(stateView)
+
+    // getting a not existing key from state DB using RAW strategy gives an array of 32 bytes filled with 0, while
+    // using CHUNK strategy gives an empty array instead.
+    // If this behaviour changes, the codebase must change as well
+
+    val notExistingKey1 = Keccak256.hash("NONE1")
+    stateView.removeAccountStorage(fakeSmartContractAddress.address(), notExistingKey1)
+    val ret1 = stateView.getAccountStorage(fakeSmartContractAddress.address(), notExistingKey1).get
+    require(new ByteArrayWrapper(ret1) == new ByteArrayWrapper(new Array[Byte](32)))
+
+    val notExistingKey2 = Keccak256.hash("NONE2")
+    stateView.removeAccountStorageBytes(fakeSmartContractAddress.address(), notExistingKey2)
+    val ret2 = stateView.getAccountStorageBytes(fakeSmartContractAddress.address(), notExistingKey2).get
+    require(new ByteArrayWrapper(ret2) == new ByteArrayWrapper(new Array[Byte](0)))
+
+    stateView.stateDb.close()
+  }
+
+
+  @Test
   def testInit(): Unit = {
     val stateView = getView
 
@@ -185,9 +189,6 @@ class ForgerStakeMsgProcessorTest
     val initialAmount = BigInteger.valueOf(10).multiply(validWeiAmount)
     createSenderAccount(stateView, initialAmount)
 
-    // just to have a valid epoch number
-    Mockito.when(stateView.metadataStorageView.getConsensusEpochNumber).thenReturn(Some(consensusEpochNumber))
-
     val cmdInput = AddNewStakeCmdInput(
       ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
       ownerAddressProposition,
@@ -219,7 +220,7 @@ class ForgerStakeMsgProcessorTest
       case result => Assert.fail(s"Wrong result: $result")
     }
 
-    // try processing a msg with different stake id (diferent nonce), should succeed
+    // try processing a msg with different stake id (different nonce), should succeed
     val msg2 = getDefaultMessage(
       BytesUtils.fromHexString(AddNewStakeCmd),
       data, getRandomNonce, validWeiAmount)
@@ -401,8 +402,6 @@ class ForgerStakeMsgProcessorTest
       BytesUtils.fromHexString(AddNewStakeCmd),
       data, getRandomNonce, invalidWeiAmount)// gasLimit
 
-    Mockito.when(stateView.metadataStorageView.getConsensusEpochNumber).thenReturn(Some(consensusEpochNumber))
-
     // should fail because staked amount is not a zat amount
     ForgerStakeMsgProcessor.process(msg, stateView) match {
       case res: ExecutionFailed =>
@@ -452,8 +451,6 @@ class ForgerStakeMsgProcessorTest
     val msg = getDefaultMessage(
       BytesUtils.fromHexString(AddNewStakeCmd),
       data, getRandomNonce, validWeiAmount)
-
-    Mockito.when(stateView.metadataStorageView.getConsensusEpochNumber).thenReturn(Some(consensusEpochNumber))
 
     // should fail because staked amount is not a zat amount
     ForgerStakeMsgProcessor.process(msg, stateView) match {
@@ -521,9 +518,6 @@ class ForgerStakeMsgProcessorTest
     // create sender account with some fund in it
     val initialAmount = BigInteger.valueOf(10).multiply(validWeiAmount)
     createSenderAccount(stateView, initialAmount)
-
-    // just to have a valid epoch number
-    Mockito.when(stateView.metadataStorageView.getConsensusEpochNumber).thenReturn(Some(consensusEpochNumber))
 
     val cmdInput = AddNewStakeCmdInput(
       ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
@@ -593,14 +587,14 @@ class ForgerStakeMsgProcessorTest
       // call msg processor for removing the selected stake
       removeForgerStake(stateView, stakeIdToRemove)
 
-      // call msg pocessor for retrieving the resulting list of forgers
+      // call msg processor for retrieving the resulting list of forgers
       val returnedList = getForgerStakeList(stateView)
 
       // check the results:
       //  we removed just one element
       assertTrue(returnedList.size() == inputList.size()-1)
 
-      // we have now the expected total forger stake amuont
+      // we have now the expected total forger stake amount
       val listTotalAmount = returnedList.asScala.foldLeft(BigInteger.ZERO)(
         (amount, forgerStake) => forgerStake.forgerStakeData.stakedAmount.add(amount) )
       assertTrue(listTotalAmount == totAmount.subtract(stakedAmountToRemove))
