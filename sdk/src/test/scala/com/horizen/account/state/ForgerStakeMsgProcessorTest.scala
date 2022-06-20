@@ -15,7 +15,7 @@ import org.junit.rules.TemporaryFolder
 import org.mockito._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
-import org.web3j.crypto.{Keys, Sign}
+import org.web3j.crypto.{ECKeyPair, Keys, Sign}
 
 import java.math.BigInteger
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
@@ -40,25 +40,25 @@ class ForgerStakeMsgProcessorTest
 
 
   // create private/public key pair
-  val pair = Keys.createEcKeyPair
+  val pair : ECKeyPair = Keys.createEcKeyPair
   val ownerAddressProposition = new AddressProposition(BytesUtils.fromHexString(Keys.getAddress(pair)))
 
   @Before
   def setUp(): Unit = {
   }
 
-  def getView(): AccountStateView = {
+  def getView: AccountStateView = {
     tempFolder.create()
     val databaseFolder = tempFolder.newFolder("evm-db" + Math.random())
     val hashNull = BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000000")
-    val db = new LevelDBDatabase(databaseFolder.getAbsolutePath())
+    val db : LevelDBDatabase = new LevelDBDatabase(databaseFolder.getAbsolutePath)
     val messageProcessors: Seq[MessageProcessor] = Seq()
     val metadataStorageView: AccountStateMetadataStorageView = mock[AccountStateMetadataStorageView]
     val stateDb: StateDB = new StateDB(db, hashNull)
     new AccountStateView(metadataStorageView, stateDb, messageProcessors)
   }
 
-  def getDefaultMessage(opCode: Array[Byte], arguments: Array[Byte], nonce: BigInteger, value: BigInteger = negativeAmount) = {
+  def getDefaultMessage(opCode: Array[Byte], arguments: Array[Byte], nonce: BigInteger, value: BigInteger = negativeAmount) : Message = {
     val data = Bytes.concat(opCode, arguments)
     new Message(
       senderProposition,
@@ -72,15 +72,14 @@ class ForgerStakeMsgProcessorTest
       data)
   }
 
-  def getRandomNonce(): BigInteger = {
+  def getRandomNonce: BigInteger = {
     val codeHash = new Array[Byte](32)
     scala.util.Random.nextBytes(codeHash)
     new java.math.BigInteger(codeHash)
   }
 
-  def removeForgerStake(stateView: AccountStateView, stakeId: Array[Byte]) = {
-    // remove first stake id
-    val nonce = getRandomNonce()
+  def removeForgerStake(stateView: AccountStateView, stakeId: Array[Byte]): Unit = {
+    val nonce = getRandomNonce
     val msgToSign = getMessageToSign(stakeId, senderProposition.address(), nonce.toByteArray)
     val msgSignatureData = Sign.signMessage(msgToSign, pair, true)
     val msgSignature = new SignatureSecp256k1(msgSignatureData)
@@ -107,12 +106,12 @@ class ForgerStakeMsgProcessorTest
 
     val data: Array[Byte] = new Array[Byte](0)
     val msg = getDefaultMessage(BytesUtils.fromHexString(GetListOfForgersCmd),
-      data, getRandomNonce())
+      data, getRandomNonce)
 
     ForgerStakeMsgProcessor.process(msg, stateView) match {
-      case res: InvalidMessage =>
+      case _: InvalidMessage =>
         throw new IllegalArgumentException("")
-      case res: ExecutionFailed =>
+      case _: ExecutionFailed =>
         throw new IllegalArgumentException("")
 
       case res: ExecutionSucceeded =>
@@ -138,7 +137,7 @@ class ForgerStakeMsgProcessorTest
 
   @Test
   def testInit(): Unit = {
-    val stateView = getView()
+    val stateView = getView
 
     // we have to call init beforehand
     assertFalse(stateView.accountExists(ForgerStakeMsgProcessor.fakeSmartContractAddress.address()))
@@ -152,7 +151,7 @@ class ForgerStakeMsgProcessorTest
 
   @Test
   def testCanProcess(): Unit = {
-    val stateView = getView()
+    val stateView = getView
 
     val msg = new Message(senderProposition, ForgerStakeMsgProcessor.fakeSmartContractAddress,
       dummyBigInteger, dummyBigInteger, dummyBigInteger, dummyBigInteger, dummyBigInteger, dummyBigInteger, new Array[Byte](0))
@@ -170,15 +169,15 @@ class ForgerStakeMsgProcessorTest
   @Test
   def testAddAndRemoveStake(): Unit = {
 
-    val allowedForgerList: java.util.List[AllowedForgerInfo] = new java.util.ArrayList[AllowedForgerInfo]()
+    val allowedForgerList: java.util.List[ForgerPublicKeys] = new java.util.ArrayList[ForgerPublicKeys]()
 
     val blockSignerProposition = new PublicKey25519Proposition(BytesUtils.fromHexString("1122334455667788112233445566778811223344556677881122334455667788")) // 32 bytes
     val vrfPublicKey = new VrfPublicKey(BytesUtils.fromHexString("aabbccddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff001234")) // 33 bytes
 
     // add the forger into the allowed list
-    allowedForgerList.add(AllowedForgerInfo(blockSignerProposition, vrfPublicKey))
+    allowedForgerList.add(ForgerPublicKeys(blockSignerProposition, vrfPublicKey))
 
-    val stateView = getView()
+    val stateView = getView
 
     ForgerStakeMsgProcessor.init(stateView)
 
@@ -190,15 +189,14 @@ class ForgerStakeMsgProcessorTest
     Mockito.when(stateView.metadataStorageView.getConsensusEpochNumber).thenReturn(Some(consensusEpochNumber))
 
     val cmdInput = AddNewStakeCmdInput(
-      blockSignerProposition,
-      vrfPublicKey,
+      ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
       ownerAddressProposition,
       allowedForgerList
     )
     val data: Array[Byte] = AddNewStakeCmdInputSerializer.toBytes(cmdInput)
     val msg = getDefaultMessage(
       BytesUtils.fromHexString(AddNewStakeCmd),
-      data, getRandomNonce(), validWeiAmount)
+      data, getRandomNonce, validWeiAmount)
 
     // positive case, verify we can add the stake to view
     ForgerStakeMsgProcessor.process(msg, stateView) match {
@@ -224,7 +222,7 @@ class ForgerStakeMsgProcessorTest
     // try processing a msg with different stake id (diferent nonce), should succeed
     val msg2 = getDefaultMessage(
       BytesUtils.fromHexString(AddNewStakeCmd),
-      data, getRandomNonce(), validWeiAmount)
+      data, getRandomNonce, validWeiAmount)
 
     ForgerStakeMsgProcessor.process(msg2, stateView) match {
       case res: InvalidMessage => Assert.fail(s"Wrong result: $res")
@@ -241,7 +239,7 @@ class ForgerStakeMsgProcessorTest
 
     // remove first stake id
     val stakeId = getStakeId(msg)
-    val nonce3 = getRandomNonce()
+    val nonce3 = getRandomNonce
     val msgToSign = getMessageToSign(stakeId, senderProposition.address(), nonce3.toByteArray)
     val msgSignatureData = Sign.signMessage(msgToSign, pair, true)
     val msgSignature = new SignatureSecp256k1(msgSignatureData)
@@ -274,7 +272,7 @@ class ForgerStakeMsgProcessorTest
     val data4: Array[Byte] = new Array[Byte](0)
     val msg4 = getDefaultMessage(
       BytesUtils.fromHexString(GetListOfForgersCmd),
-      data4, getRandomNonce())
+      data4, getRandomNonce)
 
     ForgerStakeMsgProcessor.process(msg4, stateView) match {
       case res: InvalidMessage => Assert.fail(s"Wrong result: $res")
@@ -291,7 +289,7 @@ class ForgerStakeMsgProcessorTest
         val item = returnedList.get(0)
         println("This is the returned value: " + item)
         assertTrue(BytesUtils.toHexString(item.stakeId) == BytesUtils.toHexString(getStakeId(msg2)))
-        assertTrue(item.stakedAmount.equals(validWeiAmount))
+        assertTrue(item.forgerStakeData.stakedAmount.equals(validWeiAmount))
     }
 
     stateView.stateDb.close()
@@ -300,7 +298,7 @@ class ForgerStakeMsgProcessorTest
   @Test
   def testAddStakeNotInAllowedList(): Unit = {
 
-    val stateView = getView()
+    val stateView = getView
 
     val blockSignerProposition1 = new PublicKey25519Proposition(BytesUtils.fromHexString("1100000000000000000000000000000000000000000000000000000000000011")) // 32 bytes
     val vrfPublicKey1 = new VrfPublicKey(BytesUtils.fromHexString("110000000000000000000000000000000000000000000000000000000000000011")) // 33 bytes
@@ -311,25 +309,24 @@ class ForgerStakeMsgProcessorTest
     ForgerStakeMsgProcessor.init(stateView)
     createSenderAccount(stateView)
 
-    val allowedForgerList: java.util.List[AllowedForgerInfo] = new java.util.ArrayList[AllowedForgerInfo]()
+    val allowedForgerList: java.util.List[ForgerPublicKeys] = new java.util.ArrayList[ForgerPublicKeys]()
 
     // add the forger into the allowed list
-    allowedForgerList.add(AllowedForgerInfo(blockSignerProposition1, vrfPublicKey1))
-    allowedForgerList.add(AllowedForgerInfo(blockSignerProposition2, vrfPublicKey2))
+    allowedForgerList.add(ForgerPublicKeys(blockSignerProposition1, vrfPublicKey1))
+    allowedForgerList.add(ForgerPublicKeys(blockSignerProposition2, vrfPublicKey2))
 
     val notAllowedBlockSignerProposition = new PublicKey25519Proposition(BytesUtils.fromHexString("ff22334455667788112233445566778811223344556677881122334455667788")) // 32 bytes
     val notAllowedVrfPublicKey = new VrfPublicKey(BytesUtils.fromHexString("ffbbccddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff001234")) // 33 bytes
 
     val cmdInput = AddNewStakeCmdInput(
-      notAllowedBlockSignerProposition,
-      notAllowedVrfPublicKey,
+      ForgerPublicKeys(notAllowedBlockSignerProposition, notAllowedVrfPublicKey),
       ownerAddressProposition,
       allowedForgerList
     )
     val data: Array[Byte] = AddNewStakeCmdInputSerializer.toBytes(cmdInput)
     val msg = getDefaultMessage(
       BytesUtils.fromHexString(AddNewStakeCmd),
-      data, getRandomNonce(), validWeiAmount)
+      data, getRandomNonce, validWeiAmount)
 
     // should fail because forger is not in the allowed list
     ForgerStakeMsgProcessor.process(msg, stateView) match {
@@ -346,7 +343,7 @@ class ForgerStakeMsgProcessorTest
   @Test
   def testProcessInvalidOpCode(): Unit = {
 
-    val stateView = getView()
+    val stateView = getView
 
     ForgerStakeMsgProcessor.init(stateView)
 
@@ -354,7 +351,7 @@ class ForgerStakeMsgProcessorTest
 
     val msg = getDefaultMessage(
       BytesUtils.fromHexString("03"),
-      data, getRandomNonce())
+      data, getRandomNonce)
 
     // should fail because op code is invalid
     ForgerStakeMsgProcessor.process(msg, stateView) match {
@@ -371,7 +368,7 @@ class ForgerStakeMsgProcessorTest
   def testAddStakeAmountNotValid(): Unit = {
     // this test will not be meaningful anymore when all sanity checks will be performed before calling any MessageProcessor
 
-    val stateView = getView()
+    val stateView = getView
 
     // create private/public key pair
     val pair = Keys.createEcKeyPair
@@ -386,15 +383,14 @@ class ForgerStakeMsgProcessorTest
 
     ForgerStakeMsgProcessor.init(stateView)
 
-    val allowedForgerList: java.util.List[AllowedForgerInfo] = new java.util.ArrayList[AllowedForgerInfo]()
+    val allowedForgerList: java.util.List[ForgerPublicKeys] = new java.util.ArrayList[ForgerPublicKeys]()
 
     // add the forger into the allowed list
-    allowedForgerList.add(AllowedForgerInfo(blockSignerProposition1, vrfPublicKey1))
-    allowedForgerList.add(AllowedForgerInfo(blockSignerProposition2, vrfPublicKey2))
+    allowedForgerList.add(ForgerPublicKeys(blockSignerProposition1, vrfPublicKey1))
+    allowedForgerList.add(ForgerPublicKeys(blockSignerProposition2, vrfPublicKey2))
 
     val cmdInput = AddNewStakeCmdInput(
-      blockSignerProposition1,
-      vrfPublicKey1,
+      ForgerPublicKeys(blockSignerProposition1, vrfPublicKey1),
       ownerAddressProposition,
       allowedForgerList
     )
@@ -403,7 +399,7 @@ class ForgerStakeMsgProcessorTest
 
     val msg = getDefaultMessage(
       BytesUtils.fromHexString(AddNewStakeCmd),
-      data, getRandomNonce(), invalidWeiAmount)// gasLimit
+      data, getRandomNonce, invalidWeiAmount)// gasLimit
 
     Mockito.when(stateView.metadataStorageView.getConsensusEpochNumber).thenReturn(Some(consensusEpochNumber))
 
@@ -423,7 +419,7 @@ class ForgerStakeMsgProcessorTest
   def testAddStakeFromEmptyBalanceAccount(): Unit = {
 
     // this test will not be meaningful anymore when all sanity checks will be performed before calling any MessageProcessor
-    val stateView = getView()
+    val stateView = getView
 
     // create private/public key pair
     val pair = Keys.createEcKeyPair
@@ -438,17 +434,16 @@ class ForgerStakeMsgProcessorTest
 
     ForgerStakeMsgProcessor.init(stateView)
 
-    val allowedForgerList: java.util.List[AllowedForgerInfo] = new java.util.ArrayList[AllowedForgerInfo]()
+    val allowedForgerList: java.util.List[ForgerPublicKeys] = new java.util.ArrayList[ForgerPublicKeys]()
 
     // add the forger into the allowed list
-    allowedForgerList.add(AllowedForgerInfo(blockSignerProposition1, vrfPublicKey1))
-    allowedForgerList.add(AllowedForgerInfo(blockSignerProposition2, vrfPublicKey2))
+    allowedForgerList.add(ForgerPublicKeys(blockSignerProposition1, vrfPublicKey1))
+    allowedForgerList.add(ForgerPublicKeys(blockSignerProposition2, vrfPublicKey2))
 
     createSenderAccount(stateView, BigInteger.ZERO)
 
     val cmdInput = AddNewStakeCmdInput(
-      blockSignerProposition1,
-      vrfPublicKey1,
+      ForgerPublicKeys(blockSignerProposition1, vrfPublicKey1),
       ownerAddressProposition,
       allowedForgerList
     )
@@ -456,7 +451,7 @@ class ForgerStakeMsgProcessorTest
 
     val msg = getDefaultMessage(
       BytesUtils.fromHexString(AddNewStakeCmd),
-      data, getRandomNonce(), validWeiAmount)
+      data, getRandomNonce, validWeiAmount)
 
     Mockito.when(stateView.metadataStorageView.getConsensusEpochNumber).thenReturn(Some(consensusEpochNumber))
 
@@ -476,15 +471,15 @@ class ForgerStakeMsgProcessorTest
   @Test
   def testExtraBytesInGetListCmd(): Unit = {
 
-    val allowedForgerList: java.util.List[AllowedForgerInfo] = new java.util.ArrayList[AllowedForgerInfo]()
+    val allowedForgerList: java.util.List[ForgerPublicKeys] = new java.util.ArrayList[ForgerPublicKeys]()
 
     val blockSignerProposition = new PublicKey25519Proposition(BytesUtils.fromHexString("1122334455667788112233445566778811223344556677881122334455667788")) // 32 bytes
     val vrfPublicKey = new VrfPublicKey(BytesUtils.fromHexString("aabbccddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff001234")) // 33 bytes
 
     // add the forger into the allowed list
-    allowedForgerList.add(AllowedForgerInfo(blockSignerProposition, vrfPublicKey))
+    allowedForgerList.add(ForgerPublicKeys(blockSignerProposition, vrfPublicKey))
 
-    val stateView = getView()
+    val stateView = getView
 
     ForgerStakeMsgProcessor.init(stateView)
 
@@ -496,7 +491,7 @@ class ForgerStakeMsgProcessorTest
     val data: Array[Byte] = new Array[Byte](1)
     val msg = getDefaultMessage(
       BytesUtils.fromHexString(GetListOfForgersCmd),
-      data, getRandomNonce())
+      data, getRandomNonce)
 
     ForgerStakeMsgProcessor.process(msg, stateView) match {
       case res: InvalidMessage =>
@@ -511,15 +506,15 @@ class ForgerStakeMsgProcessorTest
   @Test
   def testForgerStakeLinkedList(): Unit = {
 
-    val allowedForgerList: java.util.List[AllowedForgerInfo] = new java.util.ArrayList[AllowedForgerInfo]()
+    val allowedForgerList: java.util.List[ForgerPublicKeys] = new java.util.ArrayList[ForgerPublicKeys]()
 
     val blockSignerProposition = new PublicKey25519Proposition(BytesUtils.fromHexString("1122334455667788112233445566778811223344556677881122334455667788")) // 32 bytes
     val vrfPublicKey = new VrfPublicKey(BytesUtils.fromHexString("aabbccddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff001234")) // 33 bytes
 
     // add the forger into the allowed list
-    allowedForgerList.add(AllowedForgerInfo(blockSignerProposition, vrfPublicKey))
+    allowedForgerList.add(ForgerPublicKeys(blockSignerProposition, vrfPublicKey))
 
-    val stateView = getView()
+    val stateView = getView
 
     ForgerStakeMsgProcessor.init(stateView)
 
@@ -531,8 +526,7 @@ class ForgerStakeMsgProcessorTest
     Mockito.when(stateView.metadataStorageView.getConsensusEpochNumber).thenReturn(Some(consensusEpochNumber))
 
     val cmdInput = AddNewStakeCmdInput(
-      blockSignerProposition,
-      vrfPublicKey,
+      ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
       ownerAddressProposition,
       allowedForgerList
     )
@@ -546,7 +540,7 @@ class ForgerStakeMsgProcessorTest
       totalForgersAmount = totalForgersAmount.add(stakeAmount)
         val msg = getDefaultMessage(
           BytesUtils.fromHexString(AddNewStakeCmd),
-          data, getRandomNonce(), stakeAmount)
+          data, getRandomNonce, stakeAmount)
         ForgerStakeMsgProcessor.process(msg, stateView) match {
           case res: ExecutionSucceeded =>
             assertTrue(res.hasReturnData)
@@ -557,7 +551,8 @@ class ForgerStakeMsgProcessorTest
 
     var forgerList = getForgerStakeList(stateView)
     assertTrue(forgerList.size() == 4)
-    val listTotalAmount = forgerList.asScala.foldLeft(BigInteger.ZERO)( (a, b) => b.stakedAmount.add(a) )
+    val listTotalAmount = forgerList.asScala.foldLeft(BigInteger.ZERO)(
+      (amount, forgerStake) => forgerStake.forgerStakeData.stakedAmount.add(amount) )
     assertTrue(listTotalAmount == totalForgersAmount)
 
     // remove in the middle of the list
@@ -593,7 +588,7 @@ class ForgerStakeMsgProcessorTest
       // get the info related to the item to remove
       val stakeInfo = inputList.get(itemPosition)
       val stakeIdToRemove = stakeInfo.stakeId
-      val stakedAmountToRemove = stakeInfo.stakedAmount
+      val stakedAmountToRemove = stakeInfo.forgerStakeData.stakedAmount
 
       // call msg processor for removing the selected stake
       removeForgerStake(stateView, stakeIdToRemove)
@@ -606,7 +601,8 @@ class ForgerStakeMsgProcessorTest
       assertTrue(returnedList.size() == inputList.size()-1)
 
       // we have now the expected total forger stake amuont
-      val listTotalAmount = returnedList.asScala.foldLeft(BigInteger.ZERO)( (a, b) => b.stakedAmount.add(a) )
+      val listTotalAmount = returnedList.asScala.foldLeft(BigInteger.ZERO)(
+        (amount, forgerStake) => forgerStake.forgerStakeData.stakedAmount.add(amount) )
       assertTrue(listTotalAmount == totAmount.subtract(stakedAmountToRemove))
 
       // return the list just retrieved and the current total forgers stake
