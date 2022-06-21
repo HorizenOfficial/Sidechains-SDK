@@ -34,10 +34,11 @@ class SCAPIException(Exception):
 class SidechainAuthServiceProxy(object):
     __id_count = 0
 
-    def __init__(self, service_url, service_name=None, timeout=HTTP_TIMEOUT, connection=None):
+    def __init__(self, service_url, service_name=None, timeout=HTTP_TIMEOUT, connection=None, auth_api_key = None):
         self.__service_url = service_url
         self.__service_name = service_name
         self.__url = urlparse.urlparse(service_url)
+        self.auth_api_key = auth_api_key
         if self.__url.port is None:
             port = 80
         else:
@@ -71,7 +72,7 @@ class SidechainAuthServiceProxy(object):
             name = "%s.%s" % (self.__service_name, name)
         return SidechainAuthServiceProxy(self.__service_url, name, connection=self.__conn)
 
-    def _request(self, method, path, postdata):
+    def _request(self, method, path, postdata, api_key):
         '''
         Do a HTTP request, with retry if we get disconnected (e.g. due to a timeout).
         This is a workaround for https://bugs.python.org/issue3566 which is fixed in Python 3.5.
@@ -80,7 +81,12 @@ class SidechainAuthServiceProxy(object):
         headers = {'Host': self.__url.hostname,
                    'User-Agent': USER_AGENT,
                    'Authorization': self.__auth_header,
-                   'Content-type': 'application/json'}
+                   'Content-type': 'application/json',}
+        if api_key != None:
+            headers.update({"api_key":api_key})
+        elif self.auth_api_key != None:
+            headers.update({"api_key":self.auth_api_key})
+
         try:
             self.__conn.request(method, path, postdata, headers)
             return self._get_response()
@@ -110,11 +116,14 @@ class SidechainAuthServiceProxy(object):
             path = self.__service_name
         path = "/" + path.replace("_","/") #Replacing underscores with slashes to correctly format the Rest API request
         postdata = None
+        auth = None
         if len(args) > 0:
             postdata = args[0]
+        if len(args) > 1:
+                auth = args[1]
         if len(kwargs) > 0:
             postdata = json.dumps(kwargs)
-        response = self._request(method, path, postdata)
+        response = self._request(method, path, postdata, auth)
         return response
 
     def _get_response(self):
