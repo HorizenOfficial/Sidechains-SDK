@@ -120,6 +120,8 @@ class SCMempoolMinFeeRate(SidechainTestFramework):
             error = True
         assert_false(error)
 
+        time.sleep(5)
+
         #check that on node2 the lowest fee transaction is not present in mempool
         memmpoolState = allTransactions(sc_node2, False)
         assert_true(len(memmpoolState['transactionIds']) == 1)

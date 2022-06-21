@@ -79,7 +79,7 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
     unconfirmed.retain { (k, v) =>
       condition(v.getUnconfirmedTx())
       if (condition(v.getUnconfirmedTx())){
-        usedPoolSizeBytes = usedPoolSizeBytes + v.getTxFeeRate().getSize()
+        usedPoolSizeBytes = usedPoolSizeBytes + v.feeRate.getSize()
         true
       }else{
         false
@@ -100,12 +100,12 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
   override def put(tx: SidechainTypes#SCBT): Try[SidechainMemoryPool] = {
     // check if tx is not colliding with unconfirmed using
     // tx.incompatibilityChecker().hasIncompatibleTransactions(tx, unconfirmed)
-    val txFeeRate = new FeeRate(tx.fee(), tx.size())
-    if (txFeeRate.getFeeRate() < minFeeRate) {
+    val entry = SidechainMemoryPoolEntry(tx)
+    if (entry.feeRate.getFeeRate() < minFeeRate) {
        Failure(new IllegalArgumentException("Transaction fee is less than mempool.minFeeRate - " + tx))
     } else if (tx.incompatibilityChecker().isMemoryPoolCompatible &&
         tx.incompatibilityChecker().isTransactionCompatible(tx, unconfirmed.values.toList.map(t => t.getUnconfirmedTx()).asJava)) {
-      if (addWithSizeCheck(SidechainMemoryPoolEntry(tx, txFeeRate)))
+      if (addWithSizeCheck(entry))
         Success[SidechainMemoryPool](this)
       else
         Failure(new IllegalArgumentException("Mempool full and tx feeRate too low, unable to add transaction - " + tx))
@@ -132,9 +132,9 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
     }
 
     for (t <- txs) {
-      val txFeeRate = new FeeRate(t.fee(), t.size())
-      if (txFeeRate.getFeeRate() >= minFeeRate) {
-        addWithSizeCheck(SidechainMemoryPoolEntry(t, txFeeRate))
+      val entry = SidechainMemoryPoolEntry(t)
+      if (entry.feeRate.getFeeRate() >= minFeeRate) {
+        addWithSizeCheck(entry)
       }
     }
     new Success[SidechainMemoryPool](this)
@@ -147,11 +147,11 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
    */
   def addWithSizeCheck(entry: SidechainMemoryPoolEntry) : Boolean = {
     val orderedEntries = unconfirmed.values.toSeq.sortWith((a,b) => {
-      a.getTxFeeRate().getFeeRate() < b.getTxFeeRate().getFeeRate()
+      a.feeRate.getFeeRate() < b.feeRate.getFeeRate()
     })
-    while (usedPoolSizeBytes + entry.getTxFeeRate().getSize() > maxPoolSizeBytes){
+    while (usedPoolSizeBytes + entry.feeRate.getSize() > maxPoolSizeBytes){
       val lastEntry = orderedEntries.take(1).last
-      if (lastEntry.getTxFeeRate().getFeeRate() > entry.getTxFeeRate().getFeeRate()){
+      if (lastEntry.feeRate.getFeeRate() > entry.feeRate.getFeeRate()){
         //the pool is full, and the entry we are trying to add has feerate lower than the miminum in pool,
         //so the insert will fail
         return false;
@@ -159,7 +159,7 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
       remove(lastEntry.getUnconfirmedTx())
     }
     unconfirmed.put(entry.getUnconfirmedTx().id(), entry)
-    usedPoolSizeBytes = usedPoolSizeBytes + entry.getTxFeeRate().getSize()
+    usedPoolSizeBytes = usedPoolSizeBytes + entry.feeRate.getSize()
     true
   }
 
@@ -177,9 +177,9 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
     }
 
     for (t <- txs) {
-      val txFeeRate = new FeeRate(t.fee(), t.size())
-      if (txFeeRate.getFeeRate() >= minFeeRate) {
-        addWithSizeCheck(SidechainMemoryPoolEntry(t, txFeeRate))
+      val entry = SidechainMemoryPoolEntry(t)
+      if (entry.feeRate.getFeeRate() >= minFeeRate) {
+        addWithSizeCheck(entry)
       }
     }
 
