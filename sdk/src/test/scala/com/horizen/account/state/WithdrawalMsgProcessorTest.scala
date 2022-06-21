@@ -58,7 +58,7 @@ class WithdrawalMsgProcessorTest
 
     assertTrue("Message for WithdrawalMsgProcessor cannot be processed", WithdrawalMsgProcessor.canProcess(msg, mockStateView))
 
-    val msgNotProcessable = getMessage(fakeAddress, java.math.BigInteger.ZERO, new Array[Byte](0))
+    val msgNotProcessable = getMessage(fakeAddress, java.math.BigInteger.ZERO, Array.emptyByteArray)
     assertFalse("Message not for WithdrawalMsgProcessor can be processed", WithdrawalMsgProcessor.canProcess(msgNotProcessable, mockStateView))
 
   }
@@ -68,7 +68,7 @@ class WithdrawalMsgProcessorTest
   def testProcess(): Unit = {
     val value: java.math.BigInteger = java.math.BigInteger.valueOf(1000000000L) //1 zenny and 1 wei
 
-    val msgForWrongProcessor = getMessage(fakeAddress, value,new Array[Byte](0))
+    val msgForWrongProcessor = getMessage(fakeAddress, value,Array.emptyByteArray)
     val mockStateView: AccountStateView = mock[AccountStateView]
     assertEquals("msgForWrongProcessor processing should result in InvalidMessage", classOf[InvalidMessage], WithdrawalMsgProcessor.process(msgForWrongProcessor, mockStateView).getClass)
 
@@ -93,7 +93,7 @@ class WithdrawalMsgProcessorTest
 
     //Invalid data
     var withdrawalAmount: java.math.BigInteger = ZenWeiConverter.convertZenniesToWei(50)
-    var msg = getMessage(WithdrawalMsgProcessor.fakeSmartContractAddress, withdrawalAmount, new Array[Byte](0))
+    var msg = getMessage(WithdrawalMsgProcessor.fakeSmartContractAddress, withdrawalAmount, Array.emptyByteArray)
     var res = WithdrawalMsgProcessor.process(msg, mockStateView)
     assertEquals("Withdrawal request with invalid data should result in ExecutionFailed", classOf[ExecutionFailed], res.getClass)
     assertEquals(classOf[IllegalArgumentException], res.asInstanceOf[ExecutionFailed].getReason.getClass)
@@ -147,12 +147,10 @@ class WithdrawalMsgProcessorTest
   @Test
   def testGetListOfWithdrawalReqs(): Unit = {
     val mockStateView = mock[AccountStateView]
-    val gas = java.math.BigInteger.ONE
-    val nonce = java.math.BigInteger.valueOf(234)
     val epochNum = 102
 
     //Invalid data
-    var msg = getMessage(WithdrawalMsgProcessor.fakeSmartContractAddress, java.math.BigInteger.ZERO, new Array[Byte](0))
+    var msg = getMessage(WithdrawalMsgProcessor.fakeSmartContractAddress, java.math.BigInteger.ZERO, Array.emptyByteArray)
     var res = WithdrawalMsgProcessor.process(msg, mockStateView)
     assertEquals("Withdrawal request list with invalid data should result in ExecutionFailed", classOf[ExecutionFailed], res.getClass)
     assertEquals(classOf[IllegalArgumentException], res.asInstanceOf[ExecutionFailed].getReason.getClass)
