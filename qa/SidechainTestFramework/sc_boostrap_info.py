@@ -98,6 +98,8 @@ class SCNodeConfiguration(object):
                  automatic_fee_computation=True,
                  certificate_fee=0.0001,
                  forger_options=SCForgerConfiguration(),
+                 mempool_max_size = 300,
+                 mempool_min_fee_rate = 0,
                  api_key=DEFAULT_API_KEY,
                  max_fee=10000000):
         if submitter_private_keys_indexes is None:
@@ -112,6 +114,8 @@ class SCNodeConfiguration(object):
         self.forger_options = forger_options
         self.api_key = api_key
         self.max_fee = max_fee
+        self.mempool_max_size = mempool_max_size
+        self.mempool_min_fee_rate = mempool_min_fee_rate
 
 """
 The full network of many sidechain nodes connected to many mainchain nodes.

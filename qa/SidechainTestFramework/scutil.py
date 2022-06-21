@@ -369,6 +369,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         'OFFLINE_GENERATION': "false",
         'GENESIS_SECRETS': json.dumps(genesis_secrets),
         'MAX_TX_FEE': sc_node_config.max_fee,
+        'MEMPOOL_MAX_SIZE': sc_node_config.mempool_max_size,
+        'MEMPOOL_MIN_FEE_RATE': sc_node_config.mempool_min_fee_rate,
         'SIDECHAIN_ID': bootstrap_info.sidechain_id,
         'GENESIS_DATA': bootstrap_info.sidechain_genesis_block_hex,
         'POW_DATA': bootstrap_info.pow_data,
