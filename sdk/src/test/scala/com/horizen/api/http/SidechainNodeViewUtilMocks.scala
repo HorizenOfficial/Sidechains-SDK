@@ -3,7 +3,6 @@ package com.horizen.api.http
 import java.time.Instant
 import java.util
 import java.util.{Optional, ArrayList => JArrayList, List => JList}
-
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.data.{BoxData, ZenBoxData}
 import com.horizen.box.{Box, ZenBox}
@@ -12,7 +11,7 @@ import com.horizen.fixtures.{BoxFixture, CompanionsFixture, ForgerBoxFixture, Me
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
 import com.horizen.params.MainNetParams
-import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
+import com.horizen.proposition.{Proposition, PublicKey25519Proposition, PublicKey25519PropositionSerializer}
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.state.ApplicationState
 import com.horizen.transaction.RegularTransaction
@@ -151,6 +150,8 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
     list.add(box_5.asInstanceOf[Box[Proposition]])
     list
   }
+  val listOfSecrets = List(secret1, secret2)
+  val listOfPropositions = listOfSecrets.map(secret => secret.publicImage())
 
   def getNodeWalletMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeWallet = {
     val wallet: NodeWallet = mock[NodeWallet]
@@ -170,7 +171,6 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
         allBoxes
     })
 
-    val listOfSecrets = List(secret1, secret2)
 
     Mockito.when(wallet.secretsOfType(ArgumentMatchers.any())).thenAnswer(_ => listOfSecrets.asJava)
 
@@ -189,6 +189,15 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
 
     Mockito.when(wallet.boxesOfType(ArgumentMatchers.any(), ArgumentMatchers.any())).thenAnswer(asw => {
       allBoxes
+    })
+
+    Mockito.when(wallet.secretByPublicKeyBytes(ArgumentMatchers.any[Array[Byte]])).thenAnswer(asw => {
+      val prop = asw.getArgument(0).asInstanceOf[Array[Byte]]
+      if(util.Arrays.equals(prop, secret1.publicImage().bytes)) Optional.of(secret1)
+      else if(util.Arrays.equals(prop, secret2.publicImage().bytes)) Optional.of(secret2)
+      else if(util.Arrays.equals(prop, secret3.publicImage().bytes)) Optional.of(secret3)
+      else if(util.Arrays.equals(prop, secret4.publicImage().bytes)) Optional.of(secret4)
+      else Optional.empty()
     })
 
     wallet
