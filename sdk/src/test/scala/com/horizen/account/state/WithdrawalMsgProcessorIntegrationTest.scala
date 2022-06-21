@@ -37,6 +37,8 @@ class WithdrawalMsgProcessorIntegrationTest
     assertEquals("Wrong initial nonce", java.math.BigInteger.ZERO, stateView.stateDb.getNonce(WithdrawalMsgProcessor.fakeSmartContractAddress.address()))
     assertNotNull("Wrong initial codehash", stateView.stateDb.getCodeHash(WithdrawalMsgProcessor.fakeSmartContractAddress.address()))
 
+    stateView.stateDb.close()
+
   }
 
 
@@ -140,6 +142,8 @@ class WithdrawalMsgProcessorIntegrationTest
     val wr2 = listOfWR.get(1)
     assertEquals("wrong address", mcAddr, wr2.proposition)
     assertEquals("wrong amount", withdrawalAmount2, wr2.value)
+
+    stateView.stateDb.close()
   }
 
 }
