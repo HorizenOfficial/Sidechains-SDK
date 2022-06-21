@@ -3,24 +3,27 @@ package com.horizen.account.state
 import com.horizen.SidechainTypes
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
+import com.horizen.box.data.WithdrawalRequestBoxData
 import com.horizen.box.{ForgerBox, WithdrawalRequestBox}
-import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber}
+import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.evm.{StateDB, StateStorageStrategy}
 import com.horizen.state.StateView
-import com.horizen.utils.{BlockFeeInfo, MerkleTree, WithdrawalEpochInfo}
+import com.horizen.utils.{BlockFeeInfo, WithdrawalEpochInfo}
 import scorex.core.VersionTag
-import scorex.util.{ModifierId, bytesToId}
 
 import java.math.BigInteger
 import scala.util.Try
 
-class AccountStateView( val metadataStorageView: AccountStateMetadataStorageView,
-                        val stateDb: StateDB,
-                        messageProcessors: Seq[MessageProcessor]) extends StateView[SidechainTypes#SCAT, AccountStateView] with AccountStateReader {
+class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
+                       val stateDb: StateDB,
+                       messageProcessors: Seq[MessageProcessor]) extends StateView[SidechainTypes#SCAT, AccountStateView] with AccountStateReader {
   view: AccountStateView =>
 
   override type NVCT = this.type
+
+  lazy val withdrawalReqProvider: WithdrawalRequestProvider = messageProcessors.find(_.isInstanceOf[WithdrawalRequestProvider]).get.asInstanceOf[WithdrawalRequestProvider]
 
   // modifiers
   override def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[AccountStateView] = Try {
@@ -33,7 +36,7 @@ class AccountStateView( val metadataStorageView: AccountStateMetadataStorageView
   }
 
   override def applyTransaction(tx: SidechainTypes#SCAT): Try[AccountStateView] = Try {
-    if(tx.isInstanceOf[EthereumTransaction]) {
+    if (tx.isInstanceOf[EthereumTransaction]) {
       val ethTx = tx.asInstanceOf[EthereumTransaction]
       setupTxContext(ethTx)
       val message: Message = Message.fromTransaction(ethTx)
@@ -70,6 +73,7 @@ class AccountStateView( val metadataStorageView: AccountStateMetadataStorageView
 
   protected def updateAccountStorageRoot(address: Array[Byte], root: Array[Byte]): Try[AccountStateView] = ???
 
+
   def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Try[Unit] = Try {
     stateDb.setStorage(address, key, value, StateStorageStrategy.RAW)
   }
@@ -101,8 +105,6 @@ class AccountStateView( val metadataStorageView: AccountStateMetadataStorageView
     metadataStorageView.updateTopQualityCertificate(cert)
     new AccountStateView(metadataStorageView, stateDb, messageProcessors)
   }
-
-  override def addWithdrawalRequest(wrb: WithdrawalRequestBox): Try[AccountStateView] = ???
 
   override def delegateStake(fb: ForgerBox): Try[AccountStateView] = ???
 
@@ -150,7 +152,13 @@ class AccountStateView( val metadataStorageView: AccountStateMetadataStorageView
   override def maxRollbackDepth: Int = ???
 
   // getters
-  override def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequestBox] = ???
+  override def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequestBox] = {
+    val listOfWr = withdrawalReqProvider.getListOfWithdrawalReqRecords(withdrawalEpoch, this)
+    listOfWr.map(wr => {
+      val boxData = new WithdrawalRequestBoxData(wr.proposition, ZenWeiConverter.convertWeiToZennies(wr.value))
+      new WithdrawalRequestBox(boxData, 0)
+    })
+  }
 
   override def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
     metadataStorageView.getTopQualityCertificate(referencedWithdrawalEpoch)

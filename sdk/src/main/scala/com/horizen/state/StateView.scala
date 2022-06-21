@@ -16,7 +16,6 @@ trait StateView[TX <: Transaction, SV <: StateView[TX, SV]] extends StateReader 
   def applyTransaction(tx: TX): Try[SV]
 
   def addCertificate(cert: WithdrawalEpochCertificate): Try[SV]
-  def addWithdrawalRequest(wrb: WithdrawalRequestBox): Try[SV]
   def delegateStake(fb: ForgerBox): Try[SV] // todo
   def spendStake(fb: ForgerBox): Try[SV] // todo
   def addFeeInfo(info: BlockFeeInfo): Try[SV]
