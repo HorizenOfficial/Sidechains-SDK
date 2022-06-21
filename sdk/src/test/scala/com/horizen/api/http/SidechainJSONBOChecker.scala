@@ -3,11 +3,13 @@ package com.horizen.api.http
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlock}
 import com.horizen.box.{Box, BoxUnlocker}
+import com.horizen.chain.SidechainBlockInfo
 import com.horizen.transaction.{BoxTransaction, MC2SCAggregatedTransaction}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
-import org.junit.Assert._
+import org.junit.Assert.{assertEquals, _}
 import scorex.util.ModifierId
 
+import scala.Console.println
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.language.existentials
@@ -160,6 +162,43 @@ class SidechainJSONBOChecker {
     for (i <- scTransaction.indices)
       assertsOnTransactionJson(sidechainTransactions(i), scTransaction(i))
   }
+
+  def assertsOnBlockInfoJson(json: JsonNode, block: SidechainBlockInfo): Unit = {
+    assertEquals(json.toString, 10, json.elements().asScala.length)
+
+    assertTrue(json.get("height").isInt)
+    assertTrue(json.get("score").isNumber)
+    assertTrue(json.get("parentId").isTextual)
+    assertTrue(json.get("timestamp").isNumber)
+    assertTrue(json.get("semanticValidity").isTextual)
+    assertTrue(json.get("mainchainHeaderBaseInfo").isArray)
+    assertTrue(json.get("mainchainReferenceDataHeaderHashes").isArray)
+    assertTrue(json.get("withdrawalEpochInfo").isObject)
+    assertTrue(json.get("vrfOutputOpt").isObject)
+    assertTrue(json.get("lastBlockInPreviousConsensusEpoch").isTextual)
+
+    assertEquals(block.height, json.get("height").asInt)
+    assertEquals(block.score.toLong, json.get("score").asLong)
+    assertEquals(BytesUtils.toHexString(scorex.util.idToBytes(block.parentId)),json.get("parentId").asText)
+    assertEquals(block.timestamp.toLong, json.get("timestamp").asLong)
+    assertEquals(block.semanticValidity.toString, json.get("semanticValidity").asText)
+    assertEquals(block.mainchainHeaderBaseInfo.size, json.get("mainchainHeaderBaseInfo").elements.asScala.toList.size)
+    val h = block.mainchainHeaderBaseInfo.zip(json.get("mainchainHeaderBaseInfo").elements.asScala.toList)
+    assertTrue( h.forall{case (a,b) =>
+      assertEquals(2,b.elements().asScala.toList.size)
+      BytesUtils.toHexString(a.hash.data()) == b.get("hash").asText()
+      BytesUtils.toHexString(a.cumulativeCommTreeHash) == b.get("cumulativeCommTreeHash").asText()
+    })
+
+    assertEquals(block.mainchainReferenceDataHeaderHashes.size, json.get("mainchainReferenceDataHeaderHashes").elements.asScala.toList.size)
+    val r = block.mainchainReferenceDataHeaderHashes.zip(json.get("mainchainReferenceDataHeaderHashes").elements.asScala.toList)
+    h.forall{case (a,b) => a.toString == b.asText() }
+    assertEquals(block.withdrawalEpochInfo.epoch, json.get("withdrawalEpochInfo").get("epoch").asInt)
+    assertEquals(block.withdrawalEpochInfo.lastEpochIndex, json.get("withdrawalEpochInfo").get("lastEpochIndex").asInt)
+    assertEquals(BytesUtils.toHexString(block.vrfOutputOpt.get.bytes()), json.get("vrfOutputOpt").get("bytes").asText)
+    assertEquals(BytesUtils.toHexString(scorex.util.idToBytes(block.lastBlockInPreviousConsensusEpoch)), json.get("lastBlockInPreviousConsensusEpoch").asText)
+  }
+
 
   def assertsOnMainchainHeaderJson(json: JsonNode, header: MainchainHeader): Unit = {
     assertEquals(9, json.elements().asScala.length)

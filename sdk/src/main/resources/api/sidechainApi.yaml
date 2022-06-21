@@ -28,8 +28,8 @@ paths:
     post:
       tags:
         - block
-      summary: finds block by id
-      description: Returns a single block
+      summary: find block by id
+      description: return a single block and its height
       operationId: getBlock
       requestBody:
         content:
@@ -57,6 +57,9 @@ paths:
                         type: string
                       block:
                         $ref: '#/components/schemas/SidechainBlock'
+                      height:
+                        type: integer
+                        format: int64
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -215,6 +218,48 @@ paths:
                         type: array
                         items:
                           $ref: '#/components/schemas/Box'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /block/findBlockInfoById:
+    post:
+      tags:
+        - block
+      summary: finds SidechainBlockInfo by id
+      description: returns SidechainBlockInfo for a single block and if it is in the active chain
+      operationId: findBlockInfoById
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - blockId
+              properties:
+                blockId:
+                  description: ID of block to return
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      blockInfo:
+                        $ref: '#/components/schemas/SidechainBlockInfo'
+                      isInActiveChain:
+                        type: boolean
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -1509,6 +1554,67 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
+
+  /node/storageVersions:
+    post:
+      tags:
+        - node
+      summary: find versions for all node storages
+      description: Returns the list of all node storage versions
+      operationId: getNodeStorageVersions
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      listOfVersions:
+                        type: object
+                        additionalProperties:
+                          type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /node/sidechainId:
+    post:
+      tags:
+        - node
+      summary: Returns the sidechain id
+      description: Returns the sidechain id
+      operationId: getSidechainId
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      sidechainId:
+                        type: string
+                    error:
+                      $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
   # Mainchain references info
   /mainchain/bestBlockReferenceInfo:
     post:
@@ -2259,6 +2365,34 @@ components:
         signature:
           $ref: '#/components/schemas/Signature25519'
 
+    SidechainBlockInfo:
+      type: object
+      properties:
+        height:
+          type: integer
+        score:
+          type: integer
+          format: int64
+        parentId:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+        mainchainHeaderBaseInfo:
+          type: array
+          items:
+            $ref: '#/components/schemas/MainchainHeaderBaseInfo'
+        mainchainReferenceDataHeaderHashes:
+          type: array
+          items:
+            type: string
+        withdrawalEpochInfo:
+          $ref: '#/components/schemas/WithdrawalEpochInfo'
+        vrfOutputOpt:
+          $ref: '#/components/schemas/VrfOutput'
+        lastBlockInPreviousConsensusEpoch:
+          type: string
+
     CswInfo:
       type: object
       properties:
@@ -2285,4 +2419,26 @@ components:
         scProof:
           type: string
         receiverAddress:
+          type: string
+
+    MainchainHeaderBaseInfo:
+      type: object
+      properties:
+        hash:
+          type: string
+        cumulativeCommTreeHash:
+          type: string
+
+    WithdrawalEpochInfo:
+      type: object
+      properties:
+        epoch:
+          type: integer
+        lastEpochIndex:
+          type: integer
+
+    VrfOutput:
+      type: object
+      properties:
+        bytes:
           type: string
