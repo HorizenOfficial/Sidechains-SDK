@@ -310,6 +310,34 @@ class ForgerStakeMsgProcessorTest
 
     // should fail because op code is invalid
     ForgerStakeMsgProcessor.process(msg, stateView) match {
+      case res: ExecutionFailed =>
+        println("This is the returned value: " + res.getReason)
+
+      case result => Assert.fail(s"Wrong result: $result")
+    }
+
+    stateView.stateDb.close()
+  }
+
+  @Test
+  def testProcessInvalidFakeSmartContractAddress(): Unit = {
+
+    val stateView = getView()
+
+    ForgerStakeMsgProcessor.init(stateView)
+
+    val data = Bytes.concat(
+      BytesUtils.fromHexString(GetListOfForgersCmd),
+      new Array[Byte](0))
+
+    val msg = new Message(
+      senderProposition,
+      WithdrawalMsgProcessor.fakeSmartContractAddress, // wrong address
+      dummyBigInteger, dummyBigInteger, dummyBigInteger, dummyBigInteger,
+      validWeiAmount, getRandomNonce(), data)
+
+    // should fail because op code is invalid
+    ForgerStakeMsgProcessor.process(msg, stateView) match {
       case res: InvalidMessage =>
         println("This is the returned value: " + res.getReason)
 
@@ -318,6 +346,7 @@ class ForgerStakeMsgProcessorTest
 
     stateView.stateDb.close()
   }
+
 
   @Test
   def testAddStakeAmountNotValid(): Unit = {
@@ -452,7 +481,7 @@ class ForgerStakeMsgProcessorTest
       data, getRandomNonce())
 
     ForgerStakeMsgProcessor.process(msg, stateView) match {
-      case res: InvalidMessage =>
+      case res: ExecutionFailed =>
         println(res.getReason.getMessage)
       case result =>
         Assert.fail(s"Wrong result: $result")

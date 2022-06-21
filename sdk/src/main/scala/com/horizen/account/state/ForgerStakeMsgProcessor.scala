@@ -4,14 +4,10 @@ import com.google.common.primitives.Bytes
 import com.horizen.utils.{BytesUtils, ListSerializer}
 
 import java.math.BigInteger
-import com.google.common.primitives.Ints
 import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
 import com.horizen.account.proof.{SignatureSecp256k1, SignatureSecp256k1Serializer}
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
-import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, RemoveStakeCmd}
-import com.horizen.account.state.WithdrawalMsgProcessor.OP_CODE_LENGTH
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
-
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.crypto.hash.Keccak256
 import scorex.util.serialization.{Reader, Writer}
@@ -52,14 +48,21 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
 
   override def process(msg: Message, view: AccountStateView): ExecutionResult = {
     try {
+
+      if (!canProcess(msg, view)) {
+        val errMsg = s"Cannot process message $msg"
+        log.error(errMsg)
+        return new InvalidMessage(new IllegalArgumentException(errMsg))
+      }
+
       val cmdString = BytesUtils.toHexString(getOpCodeFromData(msg.getData))
       cmdString match {
         case `GetListOfForgersCmd` =>
           // check we have no other bytes after the op code in the msg data
           if (getArgumentsFromData(msg.getData).length > 0) {
-            val errorMsg = s"invalid msg data length: ${msg.getData.length}, expected ${OP_CODE_LENGTH}"
-            log.error(errorMsg)
-            return new InvalidMessage(new Exception(errorMsg))
+            val errMsg = s"invalid msg data length: ${msg.getData.length}, expected ${OP_CODE_LENGTH}"
+            log.error(errMsg)
+            return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(errMsg))
           }
 
           // get current list from db and unserialize it, just to be sure we have the right data
@@ -71,8 +74,9 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
             case _ =>  forgingInfoSerializer.parseBytesTry(serializedStakeIdList) match {
               case Success(obj) => obj
               case Failure(exception) =>
-                log.error("Error while parsing list of forging info.", exception)
-                return new InvalidMessage(new Exception(exception))
+                val errMsg = "Error while parsing list of forging info."
+                log.error(errMsg, exception)
+                return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(errMsg))
             }
           }
 
@@ -98,8 +102,9 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
           val cmdInput = AddNewStakeCmdInputSerializer.parseBytesTry(getArgumentsFromData(msg.getData)) match {
             case Success(obj) => obj
             case Failure(exception) =>
-              log.error("Error while parsing cmd input.", exception)
-              return new InvalidMessage(new Exception(exception))
+              val errMsg = "Error while parsing cmd input"
+              log.error(errMsg, exception)
+              return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(errMsg))
           }
 
           val blockSignProposition : PublicKey25519Proposition = cmdInput.blockSignProposition
@@ -123,7 +128,8 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
             case _ =>  forgingInfoSerializer.parseBytesTry(serializedStakeIdList) match {
               case Success(obj) => obj
               case Failure(exception) =>
-                log.error("Error while parsing list of forging info.", exception)
+                val errMsg = "Error while parsing list of forging info."
+                log.error(errMsg, exception)
                 return new InvalidMessage(new Exception(exception))
             }
           }
@@ -135,9 +141,9 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
           if (stakeInfoList.asScala.exists(
             x => { BytesUtils.toHexString(x.stakeId) == BytesUtils.toHexString(stakeId)}))
           {
-            val errorMsg = s"Stake ${BytesUtils.toHexString(stakeId)} already in stateDb"
-            log.error(errorMsg)
-            return new ExecutionFailed(AddNewStakeGasPaidValue, new Exception(errorMsg))
+            val errMsg = s"Stake ${BytesUtils.toHexString(stakeId)} already in stateDb"
+            log.error(errMsg)
+            return new ExecutionFailed(AddNewStakeGasPaidValue, new Exception(errMsg))
           }
 
           // add new obj to memory list
@@ -162,12 +168,12 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
 
               // Maybe result is not useful in case of success execution (used probably for RPC cmds only)
               val result = stakeId
-              return new ExecutionSucceeded(AddNewStakeGasPaidValue, result)
+              new ExecutionSucceeded(AddNewStakeGasPaidValue, result)
 
             case Failure(e) =>
               val balance = view.getBalance(msg.getFrom.address())
               log.error(s"Could not subtract ${msg.getValue} from account: current balance = ${balance}")
-              return new ExecutionFailed(AddNewStakeGasPaidValue, new Exception(e))
+              new ExecutionFailed(AddNewStakeGasPaidValue, new Exception(e))
           }
 
 
@@ -177,7 +183,7 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
             case Success(obj) => obj
             case Failure(exception) =>
               log.error("Error while parsing cmd input.", exception)
-              return new InvalidMessage(new Exception(exception))
+              return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(exception))
           }
 
           val stakeId : Array[Byte]          = cmdInput.stakeId
@@ -194,7 +200,7 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
               case Success(obj) => obj
               case Failure(exception) =>
                 log.error("Error while parsing list of forging info.", exception)
-                return new InvalidMessage(new Exception(exception))
+                return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(exception))
             }
           }
 
@@ -238,18 +244,19 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
 
           // Maybe result is not useful in case of success execution (used probably for RPC cmds only)
           val result = stakeId
-          return new ExecutionSucceeded(RemoveStakeGasPaidValue, result)
+          new ExecutionSucceeded(RemoveStakeGasPaidValue, result)
 
         case _ =>
-          val errorMsg = s"op code ${cmdString} not supported"
-            log.error(errorMsg)
-          new InvalidMessage(new IllegalArgumentException(errorMsg))
+          val errMsg = s"op code ${cmdString} not supported"
+          log.error(errMsg)
+          new ExecutionFailed(RemoveStakeGasPaidValue, new IllegalArgumentException(errMsg))
       }
     }
     catch {
       case e : Exception =>
-        log.error(s"Exception while processing message: $msg",e)
-        new InvalidMessage(e)
+        val errMsg = s"Exception while processing message: $msg"
+        log.error(errMsg)
+        new ExecutionFailed(RemoveStakeGasPaidValue, new IllegalArgumentException(errMsg))
     }
   }
 }
