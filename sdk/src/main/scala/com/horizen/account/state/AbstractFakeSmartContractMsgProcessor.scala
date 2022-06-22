@@ -9,15 +9,13 @@ abstract class AbstractFakeSmartContractMsgProcessor extends MessageProcessor wi
   val OP_CODE_LENGTH = 1
 
   val fakeSmartContractAddress: AddressProposition
+  def fakeSmartContractCodeHash: Array[Byte]
 
   @throws[MessageProcessorInitializationException]
   override def init(view: AccountStateView): Unit = {
     if (!view.accountExists(fakeSmartContractAddress.address()))
     {
-      val codeHash = new Array[Byte](32)
-      util.Random.nextBytes(codeHash)
-
-      view.addAccount(fakeSmartContractAddress.address(), codeHash)
+      view.addAccount(fakeSmartContractAddress.address(), fakeSmartContractCodeHash)
 
       log.debug(s"created Message Processor account ${BytesUtils.toHexString(fakeSmartContractAddress.address())}")
     }

@@ -237,7 +237,7 @@ class AccountState(val params: NetworkParams,
   // Account specific getters
   override def getAccount(address: Array[Byte]): Account = ???
 
-  override def getBalance(address: Array[Byte]): java.math.BigInteger = ???
+  override def getBalance(address: Array[Byte]): Try[java.math.BigInteger] = ???
 
   override def getAccountStateRoot: Option[Array[Byte]] = getView.getAccountStateRoot
 }
@@ -263,8 +263,6 @@ object AccountState {
                                           genesisBlock: AccountBlock): Try[AccountState] = Try {
 
     if (stateMetadataStorage.isEmpty) {
-      // TODO pass from outside
-      val stateDbStorage = new LevelDBDatabase("/tmp/evm")
       new AccountState(params, idToVersion(genesisBlock.parentId), stateMetadataStorage, stateDbStorage, messageProcessors)
         .initProcessors(idToVersion(genesisBlock.parentId)).get
         .applyModifier(genesisBlock).get
