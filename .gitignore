@@ -1,3 +1,4 @@
+pom.xml.versionsBackup
 out/
 .idea/
 target/
@@ -13,5 +14,7 @@ examples/simpleapp/dependency-reduced-pom.xml
 qa/tmp
 hs_err*
 log
+/examples/entrypoint.sh
+/examples/Dockerfile
 project/
 

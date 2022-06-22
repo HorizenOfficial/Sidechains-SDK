@@ -381,43 +381,9 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         ) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-      }}
-//      Post(basePath + "sendCoinsToAddress") ~> sidechainTransactionApiRoute ~> check {
-//        status.intValue() shouldBe StatusCodes.OK.intValue
-//        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-//        println(response)
-//        assertsOnSidechainErrorResponseSchema(entityAs[String], GenericTransactionError("", None).code)
-//      }
-//      Post(basePath + "sendCoinsToAddress") ~> sidechainTransactionApiRoute ~> check {
-//        status.intValue() shouldBe StatusCodes.OK.intValue
-//        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-//        println(response)
-//        assertsOnSidechainErrorResponseSchema(entityAs[String], GenericTransactionError("", None).code)
-//      }
-//    }
-//
-//    "reply at /sendTransaction" in {
-//      // parameter 'format' = true
-//      Post(basePath + "sendTransaction") ~> sidechainTransactionApiRoute ~> check {
-//        status.intValue() shouldBe StatusCodes.OK.intValue
-//        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-//        println(response)
-//      }
-//      Post(basePath + "sendTransaction") ~> sidechainTransactionApiRoute ~> check {
-//        status.intValue() shouldBe StatusCodes.OK.intValue
-//        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-//        println(response)
-//        assertsOnSidechainErrorResponseSchema(entityAs[String], GenericTransactionError("", None).code)
-//      }
-//      Post(basePath + "sendTransaction") ~> sidechainTransactionApiRoute ~> check {
-//        status.intValue() shouldBe StatusCodes.OK.intValue
-//        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-//        println(response)
-//        assertsOnSidechainErrorResponseSchema(entityAs[String], GenericTransactionError("", None).code)
-//      }
-//    }
+      }
+    }
 
-    /*
     "reply at /spendForgingStake" in {
         // parameter 'format' = true
         // Spend 1 forger box to create 1 regular box and 1 forger box
@@ -426,7 +392,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
         val forgerOutputs: List[TransactionForgerOutput] = List(TransactionForgerOutput(
           BytesUtils.toHexString(utilMocks.box_1.proposition().bytes),
           None,
-          BytesUtils.toHexString(utilMocks.box_1.proposition().bytes),
+          BytesUtils.toHexString(utilMocks.box_4.vrfPubKey().bytes),
           10))
 
         Post(basePath + "spendForgingStake")
@@ -448,10 +414,10 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
           println(response)
           status.intValue() shouldBe StatusCodes.OK.intValue
           responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-          assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotFoundTransactionInput("", None).code)
+          assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorNotFoundTransactionInput("", JOptional.empty()).code)
         }
     }
-    */
+
     "reply at /sendTransaction" in {
       val transaction = memoryPool.get(0)
       val transactionBytes = sidechainTransactionsCompanion.toBytes(transaction)

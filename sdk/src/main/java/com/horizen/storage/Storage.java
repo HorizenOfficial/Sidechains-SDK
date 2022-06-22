@@ -5,7 +5,7 @@ import java.util.List;
 import com.horizen.utils.Pair;
 import com.horizen.utils.ByteArrayWrapper;
 
-public interface Storage {
+public interface Storage extends AutoCloseable {
 
     Optional<ByteArrayWrapper> get(ByteArrayWrapper key);
     ByteArrayWrapper getOrElse(ByteArrayWrapper key, ByteArrayWrapper defaultValue);
@@ -21,7 +21,14 @@ public interface Storage {
 
     List<ByteArrayWrapper> rollbackVersions();
 
+    List<ByteArrayWrapper> rollbackVersions(int maxNumberOfItems);
+
     boolean isEmpty();
 
+    int numberOfVersions();
+
+    @Override
     void close();
+
+    StorageIterator getIterator();
 }

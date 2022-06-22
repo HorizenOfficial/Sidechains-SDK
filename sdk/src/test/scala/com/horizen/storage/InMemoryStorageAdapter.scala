@@ -1,7 +1,6 @@
 package com.horizen.storage
 import java.util
 import java.util.{Optional, List => JList}
-
 import com.horizen.utils.{ByteArrayWrapper, Pair => JPair}
 
 import scala.collection.JavaConverters._
@@ -31,9 +30,16 @@ class InMemoryStorageAdapter(hashMap: mutable.HashMap[ByteArrayWrapper, ByteArra
 
   override def rollbackVersions(): util.List[ByteArrayWrapper] = ???
 
+  override def rollbackVersions(maxNumberOfItems: Int): util.List[ByteArrayWrapper] = ???
+
   override def isEmpty: Boolean = hashMap.isEmpty
+
+  override def numberOfVersions(): Int = ???
 
   override def close(): Unit = {}
 
   def copy(): InMemoryStorageAdapter = new InMemoryStorageAdapter(hashMap.clone())
+
+  override def getIterator: StorageIterator = ???
+
 }

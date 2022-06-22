@@ -2,7 +2,6 @@ package com.horizen.api.http
 
 import java.net.{InetAddress, InetSocketAddress}
 import java.util
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler, Route}
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
@@ -13,6 +12,9 @@ import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOn
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.backup.BoxIterator
+import com.horizen.box.BoxSerializer
+import com.horizen.companion.{SidechainBoxesCompanion}
 import com.horizen.consensus.ConsensusEpochAndSlot
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
 import com.horizen.forge.Forger
@@ -20,10 +22,10 @@ import com.horizen.forge.Forger.ReceivableMessages.TryForgeNextBlockForEpochAndS
 import com.horizen.params.MainNetParams
 import com.horizen.serialization.ApplicationJsonSerializer
 import com.horizen.transaction._
-import com.horizen.{SidechainSettings, SidechainTypes}
+import com.horizen.{SidechainApp, SidechainSettings, SidechainTypes}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
-import org.mockito.Mockito
+import org.mockito.{Mockito}
 import org.scalatestplus.junit.JUnitRunner
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatest.matchers.should.Matchers
@@ -42,7 +44,16 @@ import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 import com.horizen.csw.CswManager.ReceivableMessages.{GenerateCswProof, GetBoxNullifier, GetCeasedStatus, GetCswBoxIds, GetCswInfo}
 import com.horizen.csw.CswManager.Responses.{Absent, CswInfo, CswProofInfo, NoProofData, ProofCreationFinished}
+import com.horizen.customtypes.{CustomBox, CustomBoxSerializer}
+import com.horizen.storage.StorageIterator
+import com.horizen.utils.{ByteArrayWrapper}
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
+import scorex.crypto.hash.Blake2b256
+
+import java.lang.{Byte => JByte}
+import java.util.{HashMap => JHashMap}
+import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.collection.mutable.ListBuffer
 
 import scala.language.postfixOps
 
@@ -276,17 +287,45 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   })
   val mockedCswManagerActorRef: Option[ActorRef] = Some(mockedCswManagerActor.ref)
 
+
+  val customBoxesSerializers: JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]] = new JHashMap()
+  customBoxesSerializers.put(CustomBox.BOX_TYPE_ID, CustomBoxSerializer.getSerializer.asInstanceOf[BoxSerializer[SidechainTypes#SCB]])
+  val sidechainBoxesCompanion = SidechainBoxesCompanion(customBoxesSerializers)
+  val mockedStorageIterator: StorageIterator = mock[StorageIterator]
+  var boxList:ListBuffer[SidechainTypes#SCB] = new ListBuffer[SidechainTypes#SCB]()
+  boxList ++= getCustomBoxList(3).asScala.map(_.asInstanceOf[SidechainTypes#SCB])
+  val storedBoxList = new ListBuffer[util.Map.Entry[Array[Byte], Array[Byte]]]()
+  for (b <- boxList) {
+    storedBoxList.append({
+      val key = new ByteArrayWrapper(Blake2b256.hash(b.id())).data()
+      val value = new ByteArrayWrapper(sidechainBoxesCompanion.toBytes(b)).data()
+      val entry: util.Map.Entry[Array[Byte], Array[Byte]] = util.Map.entry(key, value)
+      entry
+    })
+  }
+
+  def mockStorageIterator = {
+    Mockito.when(mockedStorageIterator.hasNext).thenReturn(true).thenReturn(true).thenReturn(true).thenReturn(false)
+    Mockito.when(mockedStorageIterator.next()).thenReturn(storedBoxList(0)).thenReturn(storedBoxList(1)).thenReturn(storedBoxList(2))
+  }
+  mockStorageIterator
+  val mockedBoxIterator: BoxIterator = new BoxIterator(mockedStorageIterator, sidechainBoxesCompanion)
+
   implicit def default() = RouteTestTimeout(3.second)
 
   val params = MainNetParams()
   val sidechainTransactionApiRoute: Route = SidechainTransactionApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainTransactionActorRef,
     sidechainTransactionsCompanion, params).route
   val sidechainWalletApiRoute: Route = SidechainWalletApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
-  val sidechainNodeApiRoute: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
+
+  val mockedSidechainApp: SidechainApp = mock[SidechainApp]
+
+  val sidechainNodeApiRoute: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainApp).route
   val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, mockedSidechainBlockForgerActorRef).route
   val mainchainBlockApiRoute: Route = MainchainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val applicationApiRoute: Route = ApplicationApiRoute(mockedRESTSettings, new SimpleCustomApi(), mockedSidechainNodeViewHolderRef).route
   val sidechainCswApiRoute: Route = SidechainCswApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedCswManagerActorRef,params).route
+  val sidechainBackupApiRoute: Route = SidechainBackupApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedBoxIterator).route
   val walletCoinsBalanceApiRejected: Route = SidechainRejectionApiRoute("wallet", "coinsBalance", mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val walletApiRejected: Route = SidechainRejectionApiRoute("wallet", "", mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
 

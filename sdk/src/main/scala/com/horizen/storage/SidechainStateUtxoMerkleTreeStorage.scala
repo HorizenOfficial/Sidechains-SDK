@@ -1,21 +1,19 @@
 package com.horizen.storage
 
 import com.horizen.SidechainTypes
-import com.horizen.box.Box
 import com.horizen.cryptolibprovider.{CryptoLibProvider, InMemorySparseMerkleTreeWrapper}
 import com.horizen.librustsidechains.FieldElement
-import com.horizen.utils.{ByteArrayWrapper, UtxoMerkleTreeLeafInfo, UtxoMerkleTreeLeafInfoSerializer}
-import scorex.crypto.hash.Blake2b256
+import com.horizen.utils.{ByteArrayWrapper, UtxoMerkleTreeLeafInfo, UtxoMerkleTreeLeafInfoSerializer, Pair => JPair}
+import com.horizen.utils.Utils
 import scorex.util.ScorexLogging
 
-import scala.util.{Failure, Success, Try}
+import java.util.{List => JList}
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
-import java.util.{List => JList}
-import com.horizen.utils.{Pair => JPair}
+import scala.util.{Failure, Success, Try}
 
 class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
-  extends ScorexLogging with SidechainTypes {
+  extends ScorexLogging with SidechainStorageInfo with SidechainTypes {
 
   var merkleTreeWrapper: InMemorySparseMerkleTreeWrapper = loadMerkleTree()
 
@@ -45,12 +43,9 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
     CryptoLibProvider.cswCircuitFunctions.getUtxoMerkleTreeLeaf(box)
   }
 
-  private[horizen] def calculateKey(boxId: Array[Byte]): ByteArrayWrapper = {
-    new ByteArrayWrapper(Blake2b256.hash(boxId))
-  }
 
   def getLeafInfo(boxId: Array[Byte]): Option[UtxoMerkleTreeLeafInfo] = {
-    storage.get(calculateKey(boxId)) match {
+    storage.get(Utils.calculateKey(boxId)) match {
       case v if v.isPresent =>
         UtxoMerkleTreeLeafInfoSerializer.parseBytesTry(v.get().data) match {
           case Success(leafInfo) => Option(leafInfo)
@@ -80,7 +75,7 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
     require(boxesToAppend != null, "List of boxes to add must be NOT NULL. Use empty List instead.")
     require(boxesToRemoveSet != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")
 
-    val removeList: JList[ByteArrayWrapper] = boxesToRemoveSet.map(id => calculateKey(id.data)).toList.asJava
+    val removeList: JList[ByteArrayWrapper] = boxesToRemoveSet.map(id => Utils.calculateKey(id.data)).toList.asJava
 
     // Remove leaves from inmemory tree
     require(merkleTreeWrapper.removeLeaves(boxesToRemoveSet.flatMap(id => {
@@ -93,7 +88,7 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
       throw new IllegalStateException("Not enough empty leaves in the UTXOMerkleTree.")
     }
 
-    val leavesToAppend = boxesToAppend.map(box => (calculateKey(box.id()), calculateLeaf(box))).zip(newLeavesPositions)
+    val leavesToAppend = boxesToAppend.map(box => (Utils.calculateKey(box.id()), calculateLeaf(box))).zip(newLeavesPositions)
 
     // Add leaves to inmemory tree
     require(merkleTreeWrapper.addLeaves(leavesToAppend.map {
@@ -122,12 +117,16 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
       Failure(exception)
   }
 
-  def lastVersionId: Option[ByteArrayWrapper] = {
+  override def lastVersionId: Option[ByteArrayWrapper] = {
     storage.lastVersionID().asScala
   }
 
-  def rollbackVersions: Seq[ByteArrayWrapper] = {
+  def rollbackVersions(): Seq[ByteArrayWrapper] = {
     storage.rollbackVersions().asScala.toList
+  }
+
+  def rollbackVersions(maxNumberOfVersions: Int): List[ByteArrayWrapper] = {
+    storage.rollbackVersions(maxNumberOfVersions).asScala.toList
   }
 
   def rollback(version: ByteArrayWrapper): Try[SidechainStateUtxoMerkleTreeStorage] = Try {

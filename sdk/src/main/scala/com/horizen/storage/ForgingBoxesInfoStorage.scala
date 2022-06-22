@@ -2,19 +2,18 @@ package com.horizen.storage
 
 import com.horizen.SidechainTypes
 import com.horizen.consensus.ConsensusEpochNumber
-import com.horizen.utils.{ByteArrayWrapper, ForgingStakeMerklePathInfo, ForgerBoxMerklePathInfoSerializer, ListSerializer, Pair}
-import scorex.util.ScorexLogging
+import com.horizen.utils.{ByteArrayWrapper, ForgerBoxMerklePathInfoSerializer, ForgingStakeMerklePathInfo, ListSerializer, Pair}
+import scorex.util.{ScorexLogging, bytesToId}
 import scorex.crypto.hash.Blake2b256
 
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Random, Success, Try}
 import java.util.{ArrayList => JArrayList}
-
 import com.horizen.box.{ForgerBox, ForgerBoxSerializer}
 
 
-class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with ScorexLogging
+class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with SidechainStorageInfo with ScorexLogging
 {
   require(storage != null, "Storage must be NOT NULL.")
 
@@ -97,12 +96,16 @@ class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with Scor
     }
   }
 
-  def lastVersionId: Option[ByteArrayWrapper] = {
+  override def lastVersionId: Option[ByteArrayWrapper] = {
     storage.lastVersionID().asScala
   }
 
-  def rollbackVersions: List[ByteArrayWrapper] = {
+  def rollbackVersions(): List[ByteArrayWrapper] = {
     storage.rollbackVersions().asScala.toList
+  }
+
+  def rollbackVersions(maxNumberOfVersions: Int): List[ByteArrayWrapper] = {
+    storage.rollbackVersions(maxNumberOfVersions).asScala.toList
   }
 
   def rollback(version: ByteArrayWrapper): Try[ForgingBoxesInfoStorage] = Try {
@@ -112,4 +115,6 @@ class ForgingBoxesInfoStorage(storage: Storage) extends SidechainTypes with Scor
   }
 
   def isEmpty: Boolean = storage.isEmpty
+
+  def numberOfVersions : Int = storage.numberOfVersions()
 }

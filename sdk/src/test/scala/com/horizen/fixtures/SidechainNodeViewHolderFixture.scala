@@ -10,6 +10,7 @@ import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSer
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
 import com.horizen.consensus.ConsensusDataStorage
+import com.horizen.customconfig.CustomAkkaConfiguration
 import com.horizen.customtypes.{DefaultApplicationState, DefaultApplicationWallet}
 import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams, TestNetParams}
 import com.horizen.secret.{PrivateKey25519Serializer, SecretSerializer}
@@ -35,7 +36,7 @@ trait SidechainNodeViewHolderFixture
   implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
   implicit def rejectionHandler: RejectionHandler = ApiRejectionHandler.rejectionHandler
 
-  implicit val actorSystem: ActorSystem = ActorSystem(sidechainSettings.scorexSettings.network.agentName)
+  implicit val actorSystem: ActorSystem = ActorSystem(sidechainSettings.scorexSettings.network.agentName, CustomAkkaConfiguration.getCustomConfig())
   implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("scorex.executionContext")
   implicit val materializer: ActorMaterializer = ActorMaterializer()
 
@@ -101,6 +102,7 @@ trait SidechainNodeViewHolderFixture
   val sidechainWalletTransactionStorage = new SidechainWalletTransactionStorage(getStorage(), sidechainTransactionsCompanion)
   val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(getStorage())
   val cswDataProvider: SidechainWalletCswDataProvider = SidechainWalletCswDataProviderCSWEnabled(new SidechainWalletCswDataStorage(getStorage()))
+  val backupStorage = new BackupStorage(getStorage(), sidechainBoxesCompanion)
 
   // Append genesis secrets if we start the node first time
   if(sidechainSecretStorage.isEmpty) {
@@ -120,6 +122,7 @@ trait SidechainNodeViewHolderFixture
     sidechainWalletTransactionStorage,
     forgingBoxesMerklePathStorage,
     cswDataProvider,
+    backupStorage,
     params,
     timeProvider,
     defaultApplicationWallet,

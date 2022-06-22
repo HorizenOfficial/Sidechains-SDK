@@ -3,6 +3,7 @@ package com.horizen.api.http
 import java.time.Instant
 import java.util
 import java.util.{Optional, ArrayList => JArrayList, List => JList}
+
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.data.{BoxData, ZenBoxData}
 import com.horizen.box.{Box, ZenBox}
@@ -11,7 +12,7 @@ import com.horizen.fixtures.{BoxFixture, CompanionsFixture, ForgerBoxFixture, Me
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
 import com.horizen.params.MainNetParams
-import com.horizen.proposition.Proposition
+import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator}
 import com.horizen.state.ApplicationState
 import com.horizen.transaction.RegularTransaction
@@ -179,7 +180,7 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
 
     Mockito.when(wallet.allSecrets()).thenAnswer(_ => listOfSecrets.asJava)
 
-    Mockito.when(wallet.secretByPublicKey(ArgumentMatchers.any[Proposition])).thenAnswer(asw => {
+    Mockito.when(wallet.secretByPublicKey25519Proposition(ArgumentMatchers.any[PublicKey25519Proposition])).thenAnswer(asw => {
       val prop: Proposition = asw.getArgument(0).asInstanceOf[Proposition]
       if(BytesUtils.toHexString(prop.bytes).equals(BytesUtils.toHexString(secret1.publicImage().bytes))) Optional.of(secret1)
       else if(BytesUtils.toHexString(prop.bytes).equals(BytesUtils.toHexString(secret2.publicImage().bytes))) Optional.of(secret2)

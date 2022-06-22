@@ -1,21 +1,20 @@
 package com.horizen.storage
 
+import com.horizen.block._
+import com.horizen.chain._
 import java.util.{ArrayList => JArrayList, List => JList}
 
-import com.horizen.block.{SidechainBlockSerializer, _}
-import com.horizen.chain.{FeePaymentsInfo, MainchainBlockReferenceDataInfo, _}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.NetworkParams
-import com.horizen.utils._
-import com.horizen.utils.{Pair => JPair}
+import com.horizen.utils.{Pair => JPair, _}
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.java8.OptionConverters._
-import scala.util.{Failure, Random, Success, Try}
+import scala.util.{Failure, Success, Try}
 
 
 trait SidechainBlockInfoProvider {
@@ -24,7 +23,8 @@ trait SidechainBlockInfoProvider {
 
 class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: SidechainTransactionsCompanion, params: NetworkParams)
   extends SidechainBlockInfoProvider
-  with ScorexLogging {
+    with SidechainStorageInfo
+    with ScorexLogging {
   // Version - RandomBytes(32)
 
   require(storage != null, "Storage must be NOT NULL.")
@@ -63,12 +63,6 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
   private def blockInfoKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"blockInfo$blockId"))
 
   private def feePaymentsInfoKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"feePaymentsInfo$blockId"))
-
-  private def nextVersion: Array[Byte] = {
-    val version = new Array[Byte](32)
-    Random.nextBytes(version)
-    version
-  }
 
   def height: Int = activeChain.height
 
@@ -250,7 +244,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     toUpdate.add(new JPair(new ByteArrayWrapper(idToBytes(block.id)), new ByteArrayWrapper(block.bytes)))
 
     storage.update(
-      new ByteArrayWrapper(nextVersion),
+      new ByteArrayWrapper(Utils.nextVersion),
       toUpdate,
       new JArrayList[ByteArrayWrapper]())
 
@@ -259,7 +253,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
 
   def updateFeePaymentsInfo(blockId: ModifierId, feePaymentsInfo: FeePaymentsInfo): Try[SidechainHistoryStorage] = Try {
     storage.update(
-      nextVersion,
+      Utils.nextVersion,
       java.util.Arrays.asList(new JPair(new ByteArrayWrapper(feePaymentsInfoKey(blockId)), new ByteArrayWrapper(feePaymentsInfo.bytes))),
       new JArrayList[ByteArrayWrapper]()
     )
@@ -283,7 +277,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
     val blockInfo = oldInfo.copy(semanticValidity = status)
 
     storage.update(
-      new ByteArrayWrapper(nextVersion),
+      new ByteArrayWrapper(Utils.nextVersion),
       java.util.Arrays.asList(new JPair(new ByteArrayWrapper(blockInfoKey(block.id)), new ByteArrayWrapper(blockInfo.bytes))),
       new JArrayList()
     )
@@ -292,7 +286,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
 
   def setAsBestBlock(block: SidechainBlock, blockInfo: SidechainBlockInfo): Try[SidechainHistoryStorage] = Try {
     storage.update(
-      new ByteArrayWrapper(nextVersion),
+      new ByteArrayWrapper(Utils.nextVersion),
       java.util.Arrays.asList(new JPair(bestBlockIdKey, new ByteArrayWrapper(idToBytes(block.id)))),
       new JArrayList()
     )
@@ -303,4 +297,8 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
   }
 
   def isEmpty: Boolean = storage.isEmpty
+
+  override def lastVersionId : Option[ByteArrayWrapper] = {
+    storage.lastVersionID().asScala
+  }
 }

@@ -1,18 +1,17 @@
 package com.horizen.storage
 
 
-import java.util.{ArrayList => JArrayList}
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.SidechainTypes
+import com.horizen.backup.{BoxIterator}
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
 import com.horizen.box.{WithdrawalRequestBox, WithdrawalRequestBoxSerializer}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
 import com.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
-import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
 
-import java.util
+import java.util.{ArrayList => JArrayList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters._
@@ -20,7 +19,8 @@ import scala.util._
 
 class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: SidechainBoxesCompanion)
   extends ScorexLogging
-  with SidechainTypes
+    with SidechainStorageInfo
+    with SidechainTypes
 {
   // Version - block Id
   // Key - byte array box Id
@@ -28,45 +28,42 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   require(storage != null, "Storage must be NOT NULL.")
   require(sidechainBoxesCompanion != null, "SidechainBoxesCompanion must be NOT NULL.")
 
-  private[horizen] val withdrawalEpochInformationKey = calculateKey("withdrawalEpochInformation".getBytes)
+  private[horizen] val withdrawalEpochInformationKey = Utils.calculateKey("withdrawalEpochInformation".getBytes)
   private val withdrawalRequestSerializer = new ListSerializer[WithdrawalRequestBox](WithdrawalRequestBoxSerializer.getSerializer)
 
-  private[horizen] val consensusEpochKey = calculateKey("consensusEpoch".getBytes)
+  private[horizen] val consensusEpochKey = Utils.calculateKey("consensusEpoch".getBytes)
 
-  private[horizen] val ceasingStateKey = calculateKey("ceasingStateKey".getBytes)
+  private[horizen] val ceasingStateKey = Utils.calculateKey("ceasingStateKey".getBytes)
 
   private val undefinedWithdrawalEpochCounter: Int = -1
   private[horizen] def getWithdrawalEpochCounterKey(withdrawalEpoch: Int): ByteArrayWrapper = {
-    calculateKey(Bytes.concat("withdrawalEpochCounter".getBytes, Ints.toByteArray(withdrawalEpoch)))
+    Utils.calculateKey(Bytes.concat("withdrawalEpochCounter".getBytes, Ints.toByteArray(withdrawalEpoch)))
   }
 
   private[horizen] def getWithdrawalRequestsKey(withdrawalEpoch: Int, counter: Int): ByteArrayWrapper = {
-    calculateKey(Bytes.concat("withdrawalRequests".getBytes, Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
+    Utils.calculateKey(Bytes.concat("withdrawalRequests".getBytes, Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
   }
 
   private[horizen] def getTopQualityCertificateKey(referencedWithdrawalEpoch: Int): ByteArrayWrapper = {
-    calculateKey(Bytes.concat("topQualityCertificate".getBytes, Ints.toByteArray(referencedWithdrawalEpoch)))
+    Utils.calculateKey(Bytes.concat("topQualityCertificate".getBytes, Ints.toByteArray(referencedWithdrawalEpoch)))
   }
 
   private val undefinedBlockFeeInfoCounter: Int = -1
   private[horizen] def getBlockFeeInfoCounterKey(withdrawalEpochNumber: Int): ByteArrayWrapper = {
-    calculateKey(Bytes.concat("blockFeeInfoCounter".getBytes, Ints.toByteArray(withdrawalEpochNumber)))
+    Utils.calculateKey(Bytes.concat("blockFeeInfoCounter".getBytes, Ints.toByteArray(withdrawalEpochNumber)))
   }
 
   private[horizen] def getBlockFeeInfoKey(withdrawalEpochNumber: Int, counter: Int): ByteArrayWrapper = {
-    calculateKey(Bytes.concat("blockFeeInfo".getBytes, Ints.toByteArray(withdrawalEpochNumber), Ints.toByteArray(counter)))
+    Utils.calculateKey(Bytes.concat("blockFeeInfo".getBytes, Ints.toByteArray(withdrawalEpochNumber), Ints.toByteArray(counter)))
   }
 
   private[horizen] def getUtxoMerkleTreeRootKey(withdrawalEpochNumber: Int): ByteArrayWrapper = {
-    calculateKey(Bytes.concat("utxoMerkleTreeRoot".getBytes, Ints.toByteArray(withdrawalEpochNumber)))
+    Utils.calculateKey(Bytes.concat("utxoMerkleTreeRoot".getBytes, Ints.toByteArray(withdrawalEpochNumber)))
   }
 
-  def calculateKey(boxId : Array[Byte]) : ByteArrayWrapper = {
-    new ByteArrayWrapper(Blake2b256.hash(boxId))
-  }
 
   def getBox(boxId : Array[Byte]) : Option[SidechainTypes#SCB] = {
-    storage.get(calculateKey(boxId)) match {
+    storage.get(Utils.calculateKey(boxId)) match {
       case v if v.isPresent =>
         sidechainBoxesCompanion.parseBytesTry(v.get().data) match {
           case Success(box) => Option(box)
@@ -208,10 +205,10 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
     // Update boxes data
     for (r <- boxIdsRemoveSet)
-      removeList.add(calculateKey(r.data))
+      removeList.add(Utils.calculateKey(r.data))
 
     for (b <- boxUpdateList)
-      updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](calculateKey(b.id()),
+      updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](Utils.calculateKey(b.id()),
         new ByteArrayWrapper(sidechainBoxesCompanion.toBytes(b))))
 
     // Update Withdrawal epoch related data
@@ -285,16 +282,19 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       updateList.add(new JPair(ceasingStateKey, new ByteArrayWrapper(Array.emptyByteArray)))
 
     storage.update(version, updateList, removeList)
-
     this
   }
 
-  def lastVersionId : Option[ByteArrayWrapper] = {
+  override def lastVersionId : Option[ByteArrayWrapper] = {
     storage.lastVersionID().asScala
   }
 
-  def rollbackVersions : Seq[ByteArrayWrapper] = {
+  def rollbackVersions() : Seq[ByteArrayWrapper] = {
     storage.rollbackVersions().asScala.toList
+  }
+
+  def rollbackVersions(maxNumberOfVersions: Int): List[ByteArrayWrapper] = {
+    storage.rollbackVersions(maxNumberOfVersions).asScala.toList
   }
 
   def rollback (version : ByteArrayWrapper) : Try[SidechainStateStorage] = Try {
@@ -305,4 +305,37 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
   def isEmpty: Boolean = storage.isEmpty
 
+  def getIterator: StorageIterator = storage.getIterator
+
+  /**
+   * This function restores the unspent boxes that come from a ceased sidechain by saving
+   * them into the SidechainStateStorage
+   *
+   * @param backupStorage: storage containing the boxes saved from the ceased sidechain
+   */
+  def restoreBackup(backupStorageBoxIterator: BoxIterator, lastVersion: Array[Byte]): Unit = {
+    val removeList = new JArrayList[ByteArrayWrapper]()
+    val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
+    val lastVersionWrapper = new ByteArrayWrapper(lastVersion)
+
+    var optionalBox = backupStorageBoxIterator.nextBox
+    while(optionalBox.isPresent) {
+      val box = optionalBox.get.getBox
+      updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](Utils.calculateKey(box.id()),
+        new ByteArrayWrapper(sidechainBoxesCompanion.toBytes(box))))
+      log.info("Restore Box id "+box.boxTypeId())
+      optionalBox = backupStorageBoxIterator.nextBox
+      if (updateList.size() == leveldb.Constants.BatchSize) {
+        if (optionalBox.isPresent)
+          storage.update(new ByteArrayWrapper(Utils.nextVersion),updateList, removeList)
+        else
+          storage.update(lastVersionWrapper,updateList, removeList)
+        updateList.clear()
+      }
+    }
+
+    if (updateList.size() != 0)
+      storage.update(lastVersionWrapper,updateList, removeList)
+    log.info("SidechainStateStorage restore completed successfully!")
+  }
 }

@@ -2,8 +2,6 @@ package com.horizen.proposition;
 
 import org.junit.Before;
 import org.junit.Test;
-import scala.Tuple2;
-import scorex.crypto.signatures.Curve25519;
 
 import static org.junit.Assert.*;
 

@@ -506,7 +506,7 @@ object SidechainBlocksGenerator extends CompanionsFixture {
     new NetworkParams {
       override val EquihashN: Int = params.EquihashN
       override val EquihashK: Int = params.EquihashK
-      override val EquihashVarIntLength: Int = params.EquihashVarIntLength
+      override val EquihashCompactSizeLength: Int = params.EquihashCompactSizeLength
       override val EquihashSolutionLength: Int = params.EquihashSolutionLength
 
       override val powLimit: BigInteger = params.powLimit

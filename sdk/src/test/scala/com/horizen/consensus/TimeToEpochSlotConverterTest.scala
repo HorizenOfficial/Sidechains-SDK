@@ -27,7 +27,7 @@ class TimeToEpochSlotConverterTest extends JUnitSuite {
     override val mainchainCreationBlockHeight: Int = 1
     override val EquihashN: Int = 200
     override val EquihashK: Int = 9
-    override val EquihashVarIntLength: Int = 3
+    override val EquihashCompactSizeLength: Int = 3
     override val EquihashSolutionLength: Int = 1344
     override val withdrawalEpochLength: Int = 100
     override val powLimit: BigInteger = new BigInteger("07ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16)

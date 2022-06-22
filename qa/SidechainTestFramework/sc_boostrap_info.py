@@ -54,7 +54,7 @@ class MCConnectionInfo(object):
         self.reconnectionMaxAttempts = reconnectionMaxAttempts
 
 """
-Configration that enables the possibility to restrict the forging phase
+Configuration that enables the possibility to restrict the forging phase
  to a specific list of forgers.
 """
 class SCForgerConfiguration(object):
@@ -120,6 +120,12 @@ class SCNetworkConfiguration(object):
     def __init__(self, sc_creation_info, *sc_nodes_configuration):
         self.sc_creation_info = sc_creation_info
         self.sc_nodes_configuration = sc_nodes_configuration
+
+# class SCMultiNetworkConfiguration(SCNetworkConfiguration):
+#
+#     def __init__(self, sc_creation_info, sc_nodes_configuration):
+#         self.sc_creation_info = sc_creation_info
+#         self.sc_nodes_configuration = sc_nodes_configuration
 
 
 """

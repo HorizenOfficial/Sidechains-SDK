@@ -4,7 +4,7 @@ import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock}
 import com.horizen.box.CoinsBox
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.PublicKey25519Proposition
-import com.horizen.storage.SidechainWalletCswDataStorage
+import com.horizen.storage.{SidechainStorageInfo, SidechainWalletCswDataStorage}
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.{ByteArrayWrapper, CswData, ForwardTransferCswData, UtxoCswData}
 
@@ -12,7 +12,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
-trait SidechainWalletCswDataProvider {
+trait SidechainWalletCswDataProvider extends SidechainStorageInfo{
 
   def rollback(version: ByteArrayWrapper): Try[SidechainWalletCswDataProvider]
 
@@ -27,6 +27,10 @@ trait SidechainWalletCswDataProvider {
 }
 
 case class SidechainWalletCswDataProviderCSWEnabled(private val sidechainWalletCswDataStorage: SidechainWalletCswDataStorage) extends  SidechainWalletCswDataProvider {
+
+  override def lastVersionId: Option[ByteArrayWrapper] = {
+    sidechainWalletCswDataStorage.lastVersionId
+  }
 
   override def rollback(version: ByteArrayWrapper): Try[SidechainWalletCswDataProvider] = Try {
     require(version != null, "Version to rollback to must be NOT NULL.")
@@ -100,6 +104,8 @@ case class SidechainWalletCswDataProviderCSWEnabled(private val sidechainWalletC
 }
 
 case class SidechainWalletCswDataProviderCSWDisabled() extends  SidechainWalletCswDataProvider {
+
+  override def lastVersionId: Option[ByteArrayWrapper] = None
 
   override def rollback(version: ByteArrayWrapper): Try[SidechainWalletCswDataProvider] = Try {
     this

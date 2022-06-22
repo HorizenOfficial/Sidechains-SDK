@@ -2,15 +2,13 @@ package com.horizen
 
 import com.horizen.box.CoinsBox
 import com.horizen.proposition.PublicKey25519Proposition
-import com.horizen.storage.SidechainStateUtxoMerkleTreeStorage
+import com.horizen.storage.{SidechainStateUtxoMerkleTreeStorage, SidechainStorageInfo}
 import com.horizen.utils.ByteArrayWrapper
 
 import scala.util.Try
 
-trait SidechainStateUtxoMerkleTreeProvider {
+trait SidechainStateUtxoMerkleTreeProvider extends  SidechainStorageInfo{
   def rollback(version: ByteArrayWrapper): Try[SidechainStateUtxoMerkleTreeProvider]
-
-  def lastVersionId: Option[ByteArrayWrapper]
 
   def getMerklePath(boxId: Array[Byte]): Option[Array[Byte]]
 
