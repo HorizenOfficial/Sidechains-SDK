@@ -29,7 +29,7 @@ public class AddressPropositionSerializerTest {
     }
 
     @Test
-    public void signatureSecp256k1SerializeTest() {
+    public void addressPropositionSerializeTest() {
         // Get proposition serializer and serialize
         PropositionSerializer serializer = addressProposition.serializer();
         byte[] bytes = serializer.toBytes(addressProposition);
