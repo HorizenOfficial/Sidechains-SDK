@@ -11,6 +11,8 @@ import json
 """
 
 class SidechainNodesInitializationTest(SidechainTestFramework):
+    API_KEY = "Horizen"
+
     def add_options(self, parser):
         #empty implementation
         pass
@@ -24,7 +26,7 @@ class SidechainNodesInitializationTest(SidechainTestFramework):
         pass
     
     def sc_setup_chain(self):
-        initialize_default_sc_chain_clean(self.options.tmpdir, 3)
+        initialize_default_sc_chain_clean(self.options.tmpdir, 3, self.API_KEY)
         
     def sc_setup_network(self, split = False):
         self.sc_nodes = self.sc_setup_nodes()

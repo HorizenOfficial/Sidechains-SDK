@@ -31,6 +31,7 @@ class MCSCConnectedNodes(SidechainTestFramework):
     number_of_mc_nodes = 2
     number_of_sidechain_nodes = 2
     sc_nodes_bootstrap_info=None
+    API_KEY = "Horizen"
 
     def setup_chain(self):
         initialize_chain_clean(self.options.tmpdir, self.number_of_mc_nodes)
@@ -42,17 +43,19 @@ class MCSCConnectedNodes(SidechainTestFramework):
         mc_node_1 = self.nodes[0]
         mc_node_2 = self.nodes[1]
         sc_node_1_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0)))
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0))),
+            api_key = self.API_KEY
         )
         sc_node_2_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_2.hostname, websocket_port_by_mc_node_index(1)))
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_2.hostname, websocket_port_by_mc_node_index(1))),
+            api_key = self.API_KEY
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, LARGE_WITHDRAWAL_EPOCH_LENGTH),
                                          sc_node_1_configuration, sc_node_2_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
 
     def sc_setup_nodes(self):
-        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
+        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir, auth_api_key=self.API_KEY)
 
     def run_test(self):
         mc_nodes = self.nodes

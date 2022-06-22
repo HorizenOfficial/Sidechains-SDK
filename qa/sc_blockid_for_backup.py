@@ -14,9 +14,10 @@ from httpCalls.block.best import http_block_best
     height =  Genesis_MC_block_height + (current_epoch-2) * withdrawalEpochçength -1
 """
 class SidechainBlockIdForBackupTest(SidechainTestFramework):
-    number_of_mc_nodes = 3
+    number_of_mc_nodes = 1
     number_of_sidechain_nodes = 1
     withdrawalEpochLength=10
+    API_KEY = "Horizen"
 
     def setup_chain(self):
         initialize_chain_clean(self.options.tmpdir, self.number_of_mc_nodes)
@@ -24,12 +25,10 @@ class SidechainBlockIdForBackupTest(SidechainTestFramework):
     def setup_network(self, split = False):
         # Setup nodes and connect them
         self.nodes = self.setup_nodes()
-        connect_nodes_bi(self.nodes, 0, 1)
-        connect_nodes_bi(self.nodes, 0, 2)
         self.sync_all()
 
     def setup_nodes(self):
-        # Start 3 MC nodes
+        # Start 1 MC nodes
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
 
     def sc_setup_chain(self):
@@ -40,6 +39,7 @@ class SidechainBlockIdForBackupTest(SidechainTestFramework):
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0))),
             True,
             automatic_fee_computation=False,
+            api_key = self.API_KEY
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, self.withdrawalEpochLength),
                                          sc_node_1_configuration)
@@ -47,7 +47,7 @@ class SidechainBlockIdForBackupTest(SidechainTestFramework):
 
     def sc_setup_nodes(self):
         # Start 1 SC node
-        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
+        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir, auth_api_key=self.API_KEY)
 
     def run_test(self):
         self.sync_all()

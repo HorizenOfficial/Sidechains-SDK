@@ -407,7 +407,7 @@ For each node put also genesis data in configuration files.
 """
 
 
-def initialize_default_sc_datadir(dirname, n):
+def initialize_default_sc_datadir(dirname, n, api_key):
     apiAddress = "127.0.0.1"
     configsData = []
     apiPort = sc_rpc_port(n)
@@ -424,12 +424,16 @@ def initialize_default_sc_datadir(dirname, n):
 
     with open('./resources/template_predefined_genesis.conf', 'r') as templateFile:
         tmpConfig = templateFile.read()
+    api_key_hash = ""
+    if(api_key != ""):
+        api_key_hash = calculateApiKeyHash(api_key)
     config = tmpConfig % {
         'NODE_NUMBER': n,
         'DIRECTORY': dirname,
         'WALLET_SEED': "sidechain_seed_{0}".format(n),
         'API_ADDRESS': "127.0.0.1",
         'API_PORT': str(apiPort),
+        'API_KEY_HASH': api_key_hash,
         'API_TIMEOUT': "5s",
         'BIND_PORT': str(bindPort),
         'MAX_CONNECTIONS': 100,
@@ -454,13 +458,13 @@ def initialize_default_sc_datadir(dirname, n):
     return configsData
 
 
-def initialize_default_sc_chain_clean(test_dir, num_nodes):
+def initialize_default_sc_chain_clean(test_dir, num_nodes, api_key = ""):
     """
     Create an empty blockchain and num_nodes wallets.
     Useful if a test case wants complete control over initialization.
     """
     for i in range(num_nodes):
-        initialize_default_sc_datadir(test_dir, i)
+        initialize_default_sc_datadir(test_dir, i, api_key)
 
 
 def initialize_sc_chain_clean(test_dir, num_nodes, genesis_secrets, genesis_info, array_of_MCConnectionInfo=[]):

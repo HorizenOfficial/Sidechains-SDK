@@ -39,6 +39,7 @@ class SCBackwardTransfer(SidechainTestFramework):
 
     sc_nodes_bootstrap_info = None
     sc_withdrawal_epoch_length = 10
+    API_KEY = "Horizen"
 
     def setup_nodes(self):
         num_nodes = 1
@@ -48,13 +49,14 @@ class SCBackwardTransfer(SidechainTestFramework):
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
         sc_node_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
+            api_key = self.API_KEY
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length), sc_node_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
 
     def sc_setup_nodes(self):
-        return start_sc_nodes(1, self.options.tmpdir)
+        return start_sc_nodes(1, self.options.tmpdir, auth_api_key=self.API_KEY)
 
     def run_test(self):
         time.sleep(0.1)

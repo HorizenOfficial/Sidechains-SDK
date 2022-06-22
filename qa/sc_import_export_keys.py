@@ -94,7 +94,7 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
         assert_true(sc_node1.submitter_isCertificateSubmitterEnabled()["result"]["enabled"],
             "Node 1 submitter expected to be enabled.")
 
-        sc_address_1 = http_wallet_createPrivateKey25519(sc_node1)
+        sc_address_1 = http_wallet_createPrivateKey25519(sc_node1, self.API_KEY_NODE1)
 
         # Generate 1 SC block
         generate_next_blocks(sc_node1, "first node", 1)
@@ -116,13 +116,13 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
         # Generate 1 address in sc_node2
         print("# Generate 1 address in sc_node2")
 
-        sc_address_2 = http_wallet_createPrivateKey25519(sc_node2)
+        sc_address_2 = http_wallet_createPrivateKey25519(sc_node2, self.API_KEY_NODE2)
  
         # Verify that we have this address inside sc_node2 but not in sc_node1
         print("# Verify that we have this address inside sc_node2 but not in sc_node1")
 
-        pkeys_node1 = http_wallet_allPublicKeys(sc_node1)
-        pkeys_node2 = http_wallet_allPublicKeys(sc_node2)
+        pkeys_node1 = http_wallet_allPublicKeys(sc_node1, self.API_KEY_NODE1)
+        pkeys_node2 = http_wallet_allPublicKeys(sc_node2, self.API_KEY_NODE2)
 
         assert_false(self.findAddress(pkeys_node1, sc_address_2))
         assert_true(self.findAddress(pkeys_node2, sc_address_2))
@@ -155,24 +155,24 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
         print("# Import the secret in the sc_node1 and verify that it owns also the new address")
 
         http_wallet_importSecret(sc_node1, sc_secret_2, self.API_KEY_NODE1)
-        pkeys_node1 = http_wallet_allPublicKeys(sc_node1)
+        pkeys_node1 = http_wallet_allPublicKeys(sc_node1, self.API_KEY_NODE1)
         assert_true(self.findAddress(pkeys_node1, sc_address_2))
 
         # Send some coins to this address and verify that the balance on sc_node1 is not changed while the sc_node2 has some balance now
         print("# Send some coins to this address and verify that the balance on sc_node1 is not changed while the sc_node2 has some balance now")
 
-        balance_node1 = http_wallet_balance(sc_node1)
-        balance_node2 = http_wallet_balance(sc_node2)
+        balance_node1 = http_wallet_balance(sc_node1, self.API_KEY_NODE1)
+        balance_node2 = http_wallet_balance(sc_node2, self.API_KEY_NODE2)
         assert_equal(balance_node2, 0)
 
-        sendCoinsToAddress(sc_node1, sc_address_2, 1000, 0)
+        sendCoinsToAddress(sc_node1, sc_address_2, 1000, 0, self.API_KEY_NODE1)
 
         self.sc_sync_all()
         generate_next_blocks(sc_node1, "first node", 1)
         self.sc_sync_all()
 
-        balance_node1_updated = http_wallet_balance(sc_node1)
-        balance_node2_updated = http_wallet_balance(sc_node2)
+        balance_node1_updated = http_wallet_balance(sc_node1, self.API_KEY_NODE1)
+        balance_node2_updated = http_wallet_balance(sc_node2, self.API_KEY_NODE2)
         assert_equal(balance_node1_updated, balance_node1)
         assert_equal(balance_node2_updated, 1000)
 
@@ -185,8 +185,8 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
         # Create a couple of new address on node 1
         print("# Create a couple of new address on node 1")
 
-        sc_address_3 = http_wallet_createPrivateKey25519(sc_node1)
-        sc_address_4 = http_wallet_createPrivateKey25519(sc_node1)
+        sc_address_3 = http_wallet_createPrivateKey25519(sc_node1, self.API_KEY_NODE1)
+        sc_address_4 = http_wallet_createPrivateKey25519(sc_node1, self.API_KEY_NODE1)
 
         # Test authentication on dumpSecrets endpoint
         print("# Test authentication on dumpSecrets endpoint")
@@ -203,8 +203,8 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
 
         http_wallet_dumpSecrets(sc_node1, DUMP_PATH, self.API_KEY_NODE1)
         key_list = self.readFile(DUMP_PATH)
-        pkeys_node1 = http_wallet_allPublicKeys(sc_node1)
-        pkeys_node2 = http_wallet_allPublicKeys(sc_node2)
+        pkeys_node1 = http_wallet_allPublicKeys(sc_node1, self.API_KEY_NODE1)
+        pkeys_node2 = http_wallet_allPublicKeys(sc_node2, self.API_KEY_NODE2)
         assert_equal(len(pkeys_node1), len(key_list))
         assert_equal(len(pkeys_node2), len(key_list) - 4)
 
@@ -253,7 +253,7 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
         for error in result["summary"]:
             assert_true("requirement failed: Key already exists" in error["description"])
 
-        pkeys_node2 = http_wallet_allPublicKeys(sc_node2)
+        pkeys_node2 = http_wallet_allPublicKeys(sc_node2, self.API_KEY_NODE2)
         assert_equal(len(pkeys_node2), len(pkeys_node1))
         propositions_node2 = list(map(lambda key: key['publicKey'], pkeys_node2))
 

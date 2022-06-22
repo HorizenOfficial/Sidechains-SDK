@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
-import pprint
 from datetime import datetime
 import time
-
-# import raw_input
 
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
 from sc_cert_fee_conf import EXPECTED_CERT_FEE
 from test_framework.util import assert_equal, initialize_chain_clean, start_nodes, \
-    websocket_port_by_mc_node_index, connect_nodes_bi, disconnect_nodes_bi
+    websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks, \
-    connect_sc_nodes, assert_true, stop_sc_nodes, stop_sc_node, launch_db_tool, start_sc_node, \
+    connect_sc_nodes, assert_true, stop_sc_node, launch_db_tool, start_sc_node, \
     wait_for_sc_node_initialization
 from SidechainTestFramework.sc_forging_util import *
 
