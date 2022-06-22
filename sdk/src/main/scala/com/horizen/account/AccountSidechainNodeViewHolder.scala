@@ -10,7 +10,7 @@ import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataS
 import com.horizen.account.transaction.AccountTransaction
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.consensus._
-import com.horizen.evm.LevelDBDatabase
+import com.horizen.evm.Database
 import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
 import com.horizen.proof.Proof
@@ -28,7 +28,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                      historyStorage: AccountHistoryStorage,
                                      consensusDataStorage: ConsensusDataStorage,
                                      stateMetadataStorage: AccountStateMetadataStorage,
-                                     stateDbStorage: LevelDBDatabase,
+                                     stateDbStorage: Database,
                                      customMessageProcessors: Seq[MessageProcessor],
                                      secretStorage: SidechainSecretStorage,
                                      genesisBlock: AccountBlock)
@@ -176,7 +176,7 @@ object AccountNodeViewHolderRef {
             historyStorage: AccountHistoryStorage,
             consensusDataStorage: ConsensusDataStorage,
             stateMetadataStorage: AccountStateMetadataStorage,
-            stateDbStorage: LevelDBDatabase,
+            stateDbStorage: Database,
             customMessageProcessors: Seq[MessageProcessor],
             secretStorage: SidechainSecretStorage,
             params: NetworkParams,
@@ -189,7 +189,7 @@ object AccountNodeViewHolderRef {
             historyStorage: AccountHistoryStorage,
             consensusDataStorage: ConsensusDataStorage,
             stateMetadataStorage: AccountStateMetadataStorage,
-            stateDbStorage: LevelDBDatabase,
+            stateDbStorage: Database,
             customMessageProcessors: Seq[MessageProcessor],
             secretStorage: SidechainSecretStorage,
             params: NetworkParams,
@@ -204,7 +204,7 @@ object AccountNodeViewHolderRef {
             historyStorage: AccountHistoryStorage,
             consensusDataStorage: ConsensusDataStorage,
             stateMetadataStorage: AccountStateMetadataStorage,
-            stateDbStorage: LevelDBDatabase,
+            stateDbStorage: Database,
             customMessageProcessors: Seq[MessageProcessor],
             secretStorage: SidechainSecretStorage,
             params: NetworkParams,

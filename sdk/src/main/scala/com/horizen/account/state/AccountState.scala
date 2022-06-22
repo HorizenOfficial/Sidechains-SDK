@@ -20,7 +20,7 @@ import scala.util.{Failure, Try}
 class AccountState(val params: NetworkParams,
                    override val version: VersionTag,
                    stateMetadataStorage: AccountStateMetadataStorage,
-                   stateDbStorage: LevelDBDatabase,
+                   stateDbStorage: Database,
                    messageProcessors: Seq[MessageProcessor])
   extends State[SidechainTypes#SCAT, AccountBlock, AccountStateView, AccountState]
     with NodeAccountState
@@ -245,7 +245,7 @@ class AccountState(val params: NetworkParams,
 
 object AccountState {
   private[horizen] def restoreState(stateMetadataStorage: AccountStateMetadataStorage,
-                                    stateDbStorage: LevelDBDatabase,
+                                    stateDbStorage: Database,
                                     messageProcessors: Seq[MessageProcessor],
                                     params: NetworkParams): Option[AccountState] = {
 
@@ -257,7 +257,7 @@ object AccountState {
   }
 
   private[horizen] def createGenesisState(stateMetadataStorage: AccountStateMetadataStorage,
-                                          stateDbStorage: LevelDBDatabase,
+                                          stateDbStorage: Database,
                                           messageProcessors: Seq[MessageProcessor],
                                           params: NetworkParams,
                                           genesisBlock: AccountBlock): Try[AccountState] = Try {
