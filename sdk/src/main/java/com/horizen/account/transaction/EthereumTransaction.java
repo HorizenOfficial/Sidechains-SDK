@@ -21,6 +21,7 @@ import javax.annotation.Nullable;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.SignatureException;
+import java.util.Objects;
 
 // TODO ensure that the json parameters are fitting for the use case
 @JsonPropertyOrder({"from", "gasPrice", "nonce", "to", "value", "signature"})
@@ -31,8 +32,11 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     // depends on the transaction
     public EthereumTransaction(
-            @NotNull RawTransaction transaction
-    ) {
+            RawTransaction transaction
+    ) throws NullPointerException {
+        Objects.requireNonNull(transaction);
+        if (transaction instanceof SignedRawTransaction)
+            Objects.requireNonNull(((SignedRawTransaction) transaction).getSignatureData());
         this.transaction = transaction;
     }
 
@@ -77,6 +81,10 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         );
     }
 
+    public RawTransaction getTransaction() {
+        return this.transaction;
+    }
+
     public boolean isSigned() {
         return this.transaction instanceof SignedRawTransaction;
     }
@@ -103,11 +111,12 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         if (getGasLimit().signum() <= 0)
             throw new TransactionSemanticValidityException("Cannot create transaction with zero gas limit");
         if (this.isSigned()) {
-            if (this.getFrom().address().length <= Account.ADDRESS_SIZE)
+            if (this.getFrom().address().length != Account.ADDRESS_SIZE)
                 throw new TransactionSemanticValidityException("Cannot create signed transaction without valid from address");
             if (!this.getSignature().isValid(this.getFrom(),
                     "test".getBytes(StandardCharsets.UTF_8)))
-                throw new TransactionSemanticValidityException("Cannot create transaction with invalid signature");
+                throw new TransactionSemanticValidityException("Cannot create signed transaction with invalid " +
+                        "signature");
 
         }
     }
@@ -181,10 +190,9 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @JsonProperty("from")
     public String getFromAddress() {
-        try {
-            if (this.isSigned()) return ((SignedRawTransaction) this.transaction).getFrom();
-        } catch (SignatureException e) {
-            return null;
+        if (this.isSigned()) try {
+            return ((SignedRawTransaction) this.transaction).getFrom();
+        } catch (SignatureException ignored) {
         }
         return "";
     }
@@ -222,7 +230,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                     getFromAddress(),
                     Numeric.toHexStringWithPrefix(this.getNonce()),
                     Numeric.toHexStringWithPrefix(this.getGasLimit()),
-                    this.getTo(),
+                    this.getTo() != null ? this.getTo() : "0x",
                     Numeric.toHexStringWithPrefix(this.getValue()),
                     this.getData() != null ? Numeric.toHexString(this.getData()) : "",
                     Numeric.toHexStringWithPrefix(this.getMaxFeePerGas()),
@@ -236,7 +244,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                 Numeric.toHexStringWithPrefix(this.getNonce()),
                 Numeric.toHexStringWithPrefix(this.getGasPrice()),
                 Numeric.toHexStringWithPrefix(this.getGasLimit()),
-                this.getTo(),
+                this.getTo() != null ? this.getTo() : "0x",
                 Numeric.toHexStringWithPrefix(this.getValue()),
                 this.getData() != null ? Numeric.toHexString(this.getData()) : "",
                 isSigned() ? getSignature().toString() : ""
@@ -253,8 +261,8 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
      */
     @Override
     public byte[] messageToSign() {
-        if (this.isSigned() && ((SignedRawTransaction) this.transaction).getChainId() != null)
-            return ((SignedRawTransaction) this.transaction).getEncodedTransaction(((SignedRawTransaction) this.transaction).getChainId());
+        if (this.isSigned())
+            return ((SignedRawTransaction) this.transaction).getEncodedTransaction(this.getChainId());
         return TransactionEncoder.encode(this.transaction);
     }
 }

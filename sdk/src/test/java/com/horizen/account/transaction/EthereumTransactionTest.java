@@ -7,6 +7,7 @@ import com.horizen.utils.BytesUtils;
 import org.junit.Before;
 import org.junit.Test;
 import org.web3j.crypto.*;
+import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -44,66 +45,107 @@ public class EthereumTransactionTest {
     }
 
     @Test
-    public void ethereumLegacyRawTransactionTest() throws TransactionSemanticValidityException {
-        // Test 1: everything is correct
-        boolean exceptionOccurred = false;
+    public void ethereumLegacyRawTransactionTest() {
+        // Test 1: direct constructor test
+        try {
+            var someTx = new EthereumTransaction(
+                    "0x", someValue, someValue, someValue,
+                    someValue, "", null
+            );
+            assertNull(someTx.getSignature());
+        } catch (NullPointerException e) {
+            fail("Test1: Successful EthereumTransaction creation expected.");
+        }
+
+        // Test 2: raw tx constructor check
         try {
             new EthereumTransaction(rawTransaction);
         } catch (NullPointerException e) {
-            exceptionOccurred = true;
+            fail("Test2: Successful EthereumTransaction creation expected.");
         }
-        assertFalse("Test1: Successful EthereumTransaction creation expected.", exceptionOccurred);
 
         // Test 2: raw transaction is null
-        exceptionOccurred = false;
+        boolean exceptionOccurred = false;
         try {
             new EthereumTransaction(null);
         } catch (NullPointerException e) {
             exceptionOccurred = true;
         }
-        assertTrue("Test2: Exception during EthereumTransaction creation expected.", exceptionOccurred);
+        assertTrue("Test3: Exception during EthereumTransaction creation expected.", exceptionOccurred);
 
-        // Test 3: toString function returns correctly
+        // Test 4: toString function returns correctly
         ethereumTransaction = new EthereumTransaction(rawTransaction);
         assertEquals("Ethereum Transaction to String expected to be equal",
-                "EthereumTransaction{from=, nonce=0x1, gasPrice=0x1, gasLimit=0x1, to=0x, data=, Signature=}",
+                "EthereumTransaction{from=, nonce=0x1, gasPrice=0x1, gasLimit=0x1, to=0x, value=0x1, data=0x, " +
+                        "Signature=}",
                 ethereumTransaction.toString());
 
-        // Test 4: ethereum transaction object returns transaction type id correctly
+        // Test 5: ethereum transaction object returns transaction type id correctly
         assertEquals((byte) 2, ethereumTransaction.transactionTypeId());
 
-        // Test 5: ethereum transaction object returns version correctly
-        assertEquals(1, ethereumTransaction.version());
+        // Test 6: ethereum transaction object returns version correctly
+        assertEquals(0/*legacy*/, ethereumTransaction.version());
 
-        // Test 6: ethereum transaction instance returns messageToSign correctly
+        // Test 7: ethereum transaction instance returns messageToSign correctly
         EthereumTransaction ethereumTransactionDeserialize = EthereumTransactionSerializer.getSerializer().parseBytes(ethereumTransaction.bytes());
         assert (Arrays.equals(ethereumTransaction.messageToSign(), ethereumTransactionDeserialize.messageToSign()));
 
-        // Test 7: ethereum transaction instance returns Signature correctly
-        assertEquals(null, ethereumTransaction.getSignature());
+        // Test 7: getMaxFeePerGas should be null, as this is a legacy transaction
+        assertNull(ethereumTransaction.getMaxFeePerGas());
+        // Test 8: getMaxPriorityFeePerGas should be null, as this is a legacy transaction
+        assertNull(ethereumTransaction.getMaxPriorityFeePerGas());
+        // Test 9: getChainId should be null, as this is a legacy transaction
+        assertNull(ethereumTransaction.getChainId());
+        // Test 10: getFrom should be null, as this is an unsigned tx
+        assertNull(ethereumTransaction.getFrom());
 
-        // Test 8: ethereum transaction instance returns transaction serializer correctly
+        // Test 11: ethereum transaction instance returns Signature correctly
+        assertNull(ethereumTransaction.getSignature());
+
+        // Test 12: ethereum transaction instance returns transaction serializer correctly
         assertEquals(EthereumTransactionSerializer.getSerializer(), ethereumTransaction.serializer());
 
-        // Test 9: ethereum transaction instance returns null as to is empty or has false size
-        assertEquals(null, ethereumTransaction.getTo());
+        // Test 13: ethereum transaction instance returns null as to is empty or has false size
+        assertNull(ethereumTransaction.getTo());
 
-        // Test 10: ethereum transaction instance returns to proposition address correctly
+        // Test 14: ethereum transaction instance returns to proposition address correctly
         RawTransaction toTx = RawTransaction.createTransaction(someValue,
                 someValue, someValue, "00112233445566778899AABBCCDDEEFF01020304", someValue, "");
         EthereumTransaction toEthereumTransaction = new EthereumTransaction(toTx);
         AddressProposition toProposition = new AddressProposition(BytesUtils.fromHexString("00112233445566778899AABBCCDDEEFF01020304"));
         assert (Arrays.equals(toEthereumTransaction.getTo().address(), toProposition.address()));
 
-        // Test 11: ethereum transaction made from an unsigned raw transaction should return false for isSigned
+        // Test 15: ethereum transaction made from an unsigned raw transaction should return false for isSigned
         assertFalse(ethereumTransaction.isSigned());
 
-        // Test 12: ethereum transaction made from an unsigned raw legacy transaction should return false for isEIP1559
+        // Test 16: ethereum transaction made from an unsigned raw legacy transaction should return false for isEIP1559
         assertFalse(ethereumTransaction.isEIP1559());
+
+        var semanticallyInvalidTransaction = new EthereumTransaction("", someValue, someValue, BigInteger.ZERO,
+                someValue, "",
+                null);
+        exceptionOccurred = false;
+        try {
+            semanticallyInvalidTransaction.semanticValidity();
+        } catch (TransactionSemanticValidityException ignored) {
+            exceptionOccurred = true;
+        }
+        assertTrue("Semantic validity should have failed", exceptionOccurred);
     }
 
     @Test
-    public void ethereumEIP1559RawTransactionTest() throws TransactionSemanticValidityException {
+    public void ethereumEIP1559RawTransactionTest() {
+        // Test 0: direct constructor
+        try {
+            var someTx = new EthereumTransaction(someValue.longValue(),
+                    "0x", someValue, someValue, someValue, someValue,
+                    someValue, "", null
+            );
+            assertNull(someTx.getSignature());
+        } catch (Exception ignored) {
+            fail("Should not happen");
+        }
+
         rawTransaction = RawTransaction.createTransaction(someValue.longValue(), someValue,
                 someValue, "0x", someValue, "", someValue, someValue);
 
@@ -118,7 +160,7 @@ public class EthereumTransactionTest {
 
         // Test 2: toString function returns correctly
         ethereumTransaction = new EthereumTransaction(rawTransaction);
-        assertEquals("EthereumTransaction{from=, nonce=0x1, gasLimit=0x1, to=0x, value=0x1, data=, " +
+        assertEquals("EthereumTransaction{from=, nonce=0x1, gasLimit=0x1, to=0x, value=0x1, data=0x, " +
                         "maxFeePerGas=0x1, maxPriorityFeePerGas=0x1, Signature=}",
                 ethereumTransaction.toString());
 
@@ -126,25 +168,32 @@ public class EthereumTransactionTest {
         assertEquals((byte) 2, ethereumTransaction.transactionTypeId());
 
         // Test 4: ethereum transaction object returns version correctly
-        assertEquals(1, ethereumTransaction.version());
+        assertEquals(2 /*eip1559*/, ethereumTransaction.version());
+
+        assertNull(ethereumTransaction.getGasPrice());
 
         // Test 5: ethereum transaction instance returns messageToSign correctly
         EthereumTransaction ethereumTransactionDeserialize = EthereumTransactionSerializer.getSerializer().parseBytes(ethereumTransaction.bytes());
         assert (Arrays.equals(ethereumTransaction.messageToSign(), ethereumTransactionDeserialize.messageToSign()));
 
         // Test 6: ethereum transaction instance returns Signature correctly
-        assertEquals(null, ethereumTransaction.getSignature());
+        assertNull(ethereumTransaction.getSignature());
 
         // Test 7: ethereum transaction instance returns transaction serializer correctly
         assertEquals(EthereumTransactionSerializer.getSerializer(), ethereumTransaction.serializer());
 
         // Test 8: ethereum transaction instance returns null as to is empty or has false size
-        assertEquals(null, ethereumTransaction.getTo());
+        assertNull(ethereumTransaction.getTo());
+
+        assertEquals(ethereumTransaction.getMaxFeePerGas(), someValue);
+        assertEquals(ethereumTransaction.getMaxPriorityFeePerGas(), someValue);
+        assertEquals(ethereumTransaction.getChainId().longValue(), someValue.longValue());
 
         // Test 9: ethereum transaction instance returns to proposition address correctly
         RawTransaction toTx =
                 RawTransaction.createTransaction(someValue.longValue(), someValue,
-                        someValue, "0x", someValue, "00112233445566778899AABBCCDDEEFF01020304", someValue, someValue);
+                        someValue, "0x00112233445566778899AABBCCDDEEFF01020304", someValue,
+                        "", someValue, someValue);
         EthereumTransaction toEthereumTransaction = new EthereumTransaction(toTx);
         AddressProposition toProposition = new AddressProposition(BytesUtils.fromHexString("00112233445566778899AABBCCDDEEFF01020304"));
         assert (Arrays.equals(toEthereumTransaction.getTo().address(), toProposition.address()));
@@ -157,7 +206,18 @@ public class EthereumTransactionTest {
     }
 
     @Test
-    public void ethereumSignedRawTransactionTest() throws TransactionSemanticValidityException {
+    public void ethereumSignedRawTransactionTest() {
+        // Test 0: direct constructor
+        try {
+            var someTx = new EthereumTransaction(
+                    "0x", someValue, someValue, someValue,
+                    someValue, "", signedRawTransaction.getSignatureData()
+            );
+            assertNotNull(someTx.getSignature());
+        } catch (Exception ignored) {
+            fail("Should not happen");
+        }
+
         // Test 1: everything is correct
         boolean exceptionOccurred = false;
         try {
@@ -192,22 +252,30 @@ public class EthereumTransactionTest {
         try {
             assertEquals("Ethereum Transaction to String expected to be equal",
                     "EthereumTransaction{from=" + signedRawTransaction.getFrom()
-                            + ", nonce=0x1, gasPrice=0x1, gasLimit=0x1, to=0x, data=, "
+                            + ", nonce=0x1, gasPrice=0x1, gasLimit=0x1, to=0x, value=0x1, data=0x, "
                             + "Signature=" + secp256k1Signature.toString() + "}",
                     ethereumTransaction.toString());
         } catch (SignatureException e) {
             throw new RuntimeException(e);
         }
 
+        boolean semanticValidityFail = false;
+        try {
+            ethereumTransaction.semanticValidity();
+        } catch (TransactionSemanticValidityException ignored) {
+            semanticValidityFail = true;
+        }
+        assertTrue("Semantic validity should fail", semanticValidityFail);
+
         // Test 4: ethereum transaction object returns transaction type id correctly
         assertEquals((byte) 2, ethereumTransaction.transactionTypeId());
 
         // Test 5: ethereum transaction object returns version correctly
-        assertEquals(1, ethereumTransaction.version());
+        assertEquals(0 /*legacy*/, ethereumTransaction.version());
 
         // Test 6: ethereum transaction instance returns messageToSign correctly
-        EthereumTransaction ethereumTransactionDeserialize = EthereumTransactionSerializer.getSerializer().parseBytes(ethereumTransaction.bytes());
-        assertEquals(45, ethereumTransactionDeserialize.messageToSign().length);
+        assert (Arrays.equals(ethereumTransaction.messageToSign(),
+                TransactionEncoder.encode(ethereumTransaction.getTransaction())));
 
         // Test 7: ethereum transaction instance returns Signature correctly
         assert (Arrays.equals(secp256k1Signature.bytes(), ethereumTransaction.getSignature().bytes()));
@@ -216,7 +284,7 @@ public class EthereumTransactionTest {
         assertEquals(EthereumTransactionSerializer.getSerializer(), ethereumTransaction.serializer());
 
         // Test 9: ethereum transaction instance returns null as to is empty or has false size
-        assertEquals(null, ethereumTransaction.getTo());
+        assertNull(ethereumTransaction.getTo());
 
         // Test 10: ethereum transaction instance returns to proposition address correctly
         SignedRawTransaction toTx = new SignedRawTransaction(someValue,
@@ -228,28 +296,97 @@ public class EthereumTransactionTest {
         assert (Arrays.equals(toEthereumTransaction.getTo().address(), toProposition.address()));
     }
 
-    // TODO expand test cases to other constructors and functionality
+    @Test
+    public void ethereumSignedEIP1559TransactionTest() {
+        // Test 0: direct constructor
+        try {
+            var someTx = new EthereumTransaction(someValue.longValue(),
+                    "0x", someValue, someValue, someValue, someValue,
+                    someValue, "", signedRawTransaction.getSignatureData()
+            );
+            assertNotNull(someTx.getSignature());
+            assertEquals("EthereumTransaction{from=" + someTx.getFromAddress() + ", nonce=0x1, gasLimit=0x1, to=0x, value=" +
+                            "0x1, data=0x, " +
+                            "maxFeePerGas=0x1, maxPriorityFeePerGas=0x1, Signature=" + someTx.getSignature().toString() + '}',
+                    someTx.toString());
 
-    /** TODO: We need a test case - later, because of missing information - for whole ethereum transaction data
-     * {
-     * "jsonrpc":"2.0",
-     * "id":0,
-     * "result":{
-     *  "blockHash":"0x43dd926aa138a58d3f4740dae387bcff3c7bc525db2d0a449f323f8b8f92a229",
-     *  "blockNumber":"0xa4f285",
-     *  "from":"0xea8a7ef30f894bce23b42314613458d13f9d43ea",
-     *  "gas":"0x30d40",
-     *  "gasPrice":"0x2e90edd000",
-     *  "hash":"0x72ee43a3784cc6749f64fad1ecf0bbd51a54dd6892ae0573f211566809e0d511",
-     *  "input":"0x",
-     *  "nonce":"0x1e7",
-     *  "to":"0xbd064928cdd4fd67fb99917c880e6560978d7ca1",
-     *  "transactionIndex":"0x0",
-     *  "value":"0xde0b6b3a7640000",
-     *  "v":"0x25",
-     *  "r":"0x7e833413ead52b8c538001b12ab5a85bac88db0b34b61251bb0fc81573ca093f",
-     *  "s":"0x49634f1e439e3760265888434a2f9782928362412030db1429458ddc9dcee995"
-     *  }
-     * }
-     */
+            assertEquals(
+                    Numeric.toHexString(someTx.getFrom().address()),
+                    someTx.getFromAddress()
+            );
+        } catch (Exception ignored) {
+            fail("Should not happen");
+        }
+
+        // Test 1: everything is correct
+        boolean exceptionOccurred = false;
+        try {
+            new EthereumTransaction(signedRawTransaction);
+        } catch (NullPointerException e) {
+            exceptionOccurred = true;
+        }
+        assertFalse("Test1: Successful EthereumTransaction creation expected.", exceptionOccurred);
+
+        // Test 2: raw transaction is null
+        exceptionOccurred = false;
+        try {
+            new EthereumTransaction(null);
+        } catch (NullPointerException e) {
+            exceptionOccurred = true;
+        }
+        assertTrue("Test2: Exception during EthereumTransaction creation expected.", exceptionOccurred);
+
+        exceptionOccurred = false;
+        try {
+            var falseSignedRawTransaction = new SignedRawTransaction(someValue,
+                    someValue, someValue, "0x", someValue, "",
+                    null);
+            new EthereumTransaction(falseSignedRawTransaction);
+        } catch (RuntimeException e) {
+            exceptionOccurred = true;
+        }
+        assertTrue("Test3: Exception during EthereumTransaction creation expected", exceptionOccurred);
+
+        // Test 3: toString function returns correctly
+        ethereumTransaction = new EthereumTransaction(signedRawTransaction);
+        try {
+            assertEquals("Ethereum Transaction to String expected to be equal",
+                    "EthereumTransaction{from=" + signedRawTransaction.getFrom()
+                            + ", nonce=0x1, gasPrice=0x1, gasLimit=0x1, to=0x, value=0x1, data=0x, "
+                            + "Signature=" + secp256k1Signature.toString() + "}",
+                    ethereumTransaction.toString());
+        } catch (SignatureException e) {
+            throw new RuntimeException(e);
+        }
+
+        // Test 4: ethereum transaction object returns transaction type id correctly
+        assertEquals((byte) 2, ethereumTransaction.transactionTypeId());
+
+        // Test 5: ethereum transaction object returns version correctly
+        assertEquals(0 /*legacy*/, ethereumTransaction.version());
+
+        // Test 6: ethereum transaction instance returns messageToSign correctly
+        assert (Arrays.equals(ethereumTransaction.messageToSign(),
+                TransactionEncoder.encode(ethereumTransaction.getTransaction())));
+
+        // Test 7: ethereum transaction instance returns Signature correctly
+        assert (Arrays.equals(secp256k1Signature.bytes(), ethereumTransaction.getSignature().bytes()));
+
+        // Test 8: ethereum transaction instance returns transaction serializer correctly
+        assertEquals(EthereumTransactionSerializer.getSerializer(), ethereumTransaction.serializer());
+
+        // Test 9: ethereum transaction instance returns null as to is empty or has false size
+        assertNull(ethereumTransaction.getTo());
+
+        // Test 10: ethereum transaction instance returns to proposition address correctly
+        SignedRawTransaction toTx = new SignedRawTransaction(someValue,
+                someValue, someValue, "00112233445566778899AABBCCDDEEFF01020304",
+                someValue, "", msgSignature);
+        EthereumTransaction toEthereumTransaction = new EthereumTransaction(toTx);
+        AddressProposition toProposition = new AddressProposition(
+                BytesUtils.fromHexString("00112233445566778899AABBCCDDEEFF01020304"));
+        assert (Arrays.equals(toEthereumTransaction.getTo().address(), toProposition.address()));
+    }
+
+
 }
