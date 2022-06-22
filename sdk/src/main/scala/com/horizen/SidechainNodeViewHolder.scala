@@ -294,7 +294,8 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   protected def processGetStorageVersions: Receive = {
     case SidechainNodeViewHolder.ReceivableMessages.GetStorageVersions =>
-       sender() ! getStorageVersions
+      sender() ! getStorageVersions
+  }
 
   protected def processLocallyGeneratedTransaction: Receive = {
     case newTxs: LocallyGeneratedTransaction[SidechainTypes#SCBT] =>
