@@ -1,10 +1,7 @@
 package com.horizen.account.proof;
 
 import com.horizen.account.proposition.AddressProposition;
-import com.horizen.account.secret.PrivateKeySecp256k1;
-import com.horizen.proof.ProofSerializer;
 import com.horizen.utils.BytesUtils;
-import com.typesafe.config.ConfigException;
 import org.junit.Before;
 import org.junit.Test;
 import org.web3j.crypto.ECKeyPair;
@@ -12,7 +9,6 @@ import org.web3j.crypto.Keys;
 import org.web3j.crypto.RawTransaction;
 import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
-import scala.util.Try;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -20,7 +16,6 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.SignatureException;
-import java.util.Objects;
 
 import static org.junit.Assert.*;
 
