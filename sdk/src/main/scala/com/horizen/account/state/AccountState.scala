@@ -7,6 +7,7 @@ import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, intToConsensusEpochNumber}
+import com.horizen.evm._
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
@@ -19,6 +20,7 @@ import scala.util.{Failure, Try}
 class AccountState(val params: NetworkParams,
                    override val version: VersionTag,
                    stateMetadataStorage: AccountStateMetadataStorage,
+                   stateDbStorage: Database,
                    messageProcessors: Seq[MessageProcessor])
   extends State[SidechainTypes#SCAT, AccountBlock, AccountStateView, AccountState]
     with NodeAccountState
@@ -178,7 +180,12 @@ class AccountState(val params: NetworkParams,
   override def rollbackTo(version: VersionTag): Try[AccountState] = {
     Try {
       require(version != null, "Version to rollback to must be NOT NULL.")
-      new AccountState(params, version, stateMetadataStorage.rollback(new ByteArrayWrapper(versionToBytes(version))).get, messageProcessors)
+      val newMetaState = stateMetadataStorage.rollback(new ByteArrayWrapper(versionToBytes(version))).get
+
+      new AccountState(params, version,
+        newMetaState,
+        stateDbStorage,
+        messageProcessors)
     }.recoverWith({
       case exception =>
         log.error("Exception was thrown during rollback.", exception)
@@ -191,7 +198,11 @@ class AccountState(val params: NetworkParams,
 
   // View
   override def getView: AccountStateView = {
-    new AccountStateView(stateMetadataStorage.getView, messageProcessors)
+    // get state root
+    val stateRoot = stateMetadataStorage.getAccountStateRoot.getOrElse(new Array[Byte](32))
+    val statedb = new StateDB(stateDbStorage, stateRoot)
+
+    new AccountStateView(stateMetadataStorage.getView, statedb, messageProcessors)
   }
 
   // getters:
@@ -226,7 +237,7 @@ class AccountState(val params: NetworkParams,
   // Account specific getters
   override def getAccount(address: Array[Byte]): Account = ???
 
-  override def getBalance(address: Array[Byte]): Long = ???
+  override def getBalance(address: Array[Byte]): Try[java.math.BigInteger] = ???
 
   override def getAccountStateRoot: Option[Array[Byte]] = getView.getAccountStateRoot
 
@@ -236,22 +247,25 @@ class AccountState(val params: NetworkParams,
 
 object AccountState {
   private[horizen] def restoreState(stateMetadataStorage: AccountStateMetadataStorage,
+                                    stateDbStorage: Database,
                                     messageProcessors: Seq[MessageProcessor],
                                     params: NetworkParams): Option[AccountState] = {
 
-    if (!stateMetadataStorage.isEmpty)
-      Some(new AccountState(params, bytesToVersion(stateMetadataStorage.lastVersionId.get.data), stateMetadataStorage, messageProcessors))
-    else
+    if (!stateMetadataStorage.isEmpty) {
+      Some(new AccountState(params, bytesToVersion(stateMetadataStorage.lastVersionId.get.data), stateMetadataStorage,
+        stateDbStorage, messageProcessors))
+    } else
       None
   }
 
   private[horizen] def createGenesisState(stateMetadataStorage: AccountStateMetadataStorage,
+                                          stateDbStorage: Database,
                                           messageProcessors: Seq[MessageProcessor],
                                           params: NetworkParams,
                                           genesisBlock: AccountBlock): Try[AccountState] = Try {
 
     if (stateMetadataStorage.isEmpty) {
-      new AccountState(params, idToVersion(genesisBlock.parentId), stateMetadataStorage, messageProcessors)
+      new AccountState(params, idToVersion(genesisBlock.parentId), stateMetadataStorage, stateDbStorage, messageProcessors)
         .initProcessors(idToVersion(genesisBlock.parentId)).get
         .applyModifier(genesisBlock).get
     } else

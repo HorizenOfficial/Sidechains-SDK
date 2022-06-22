@@ -18,6 +18,7 @@ import com.horizen.api.http._
 import com.horizen.block.SidechainBlockBase
 import com.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
 import com.horizen.consensus.ConsensusDataStorage
+import com.horizen.evm.LevelDBDatabase
 import com.horizen.node.NodeWalletBase
 import com.horizen.secret.SecretSerializer
 import com.horizen.storage._
@@ -92,6 +93,9 @@ class AccountSidechainApp @Inject()
   protected val stateMetadataStorage = new AccountStateMetadataStorage(
     registerStorage(new VersionedLevelDbStorageAdapter(metaStateStore)))
 
+  // TODO for the time being not registered
+  protected val stateDbStorage = new LevelDBDatabase(dataDirAbsolutePath + "/evm-state")
+
   protected val sidechainHistoryStorage = new AccountHistoryStorage(
     registerStorage(new VersionedLevelDbStorageAdapter(historyStore)),
     sidechainAccountTransactionsCompanion,
@@ -114,6 +118,7 @@ class AccountSidechainApp @Inject()
     sidechainHistoryStorage,
     consensusDataStorage,
     stateMetadataStorage,
+    stateDbStorage,
     customMessageProcessors.asScala,
     sidechainSecretStorage,
     params,

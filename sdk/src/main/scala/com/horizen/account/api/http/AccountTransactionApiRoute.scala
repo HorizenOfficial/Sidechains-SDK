@@ -12,6 +12,7 @@ import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SidechainApiRoute, SuccessResponse}
@@ -78,7 +79,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       // lock the view and try to create CoreTransaction
       applyOnNodeView { sidechainNodeView =>
         val destAddress = body.toAddress
-        val valueInWei = ZenConverter.convertZenniesToWei(body.value)
+        val valueInWei = ZenWeiConverter.convertZenniesToWei(body.value)
         val rawTransaction = RawTransaction.createTransaction(valueInWei, valueInWei, valueInWei, destAddress, valueInWei, "")
         val tmpEtherTx = new EthereumTransaction(rawTransaction)
         val message = tmpEtherTx.messageToSign()
