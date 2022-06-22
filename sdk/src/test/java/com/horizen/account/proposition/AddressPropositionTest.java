@@ -2,6 +2,7 @@ package com.horizen.account.proposition;
 
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.utils.Account;
+import com.horizen.account.utils.Secp256k1;
 import com.horizen.evm.utils.Address;
 import com.horizen.utils.BytesUtils;
 import org.junit.Before;
@@ -25,11 +26,13 @@ public class AddressPropositionTest {
     AddressProposition addressProposition;
     byte[] address;
     ECKeyPair pair;
+    byte[] privateKey;
 
     @Before
     public void BeforeEachTest() throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException {
         // Create a key pair and create proposition
-        pair = Keys.createEcKeyPair();
+        privateKey = Arrays.copyOf(new BigInteger("4164020894437499837987386266872312011773540175446618547506457344").toByteArray(), Secp256k1.PRIVATE_KEY_SIZE);
+        pair = ECKeyPair.create(privateKey);
         address = Arrays.copyOf(BytesUtils.fromHexString(Keys.getAddress(pair)), Account.ADDRESS_SIZE);
         addressProposition = new AddressProposition(address);
     }
@@ -37,7 +40,7 @@ public class AddressPropositionTest {
     @Test
     public void addressPropositionTest() {
         // Test 1: Returns hash code correctly
-        assertEquals(Arrays.hashCode(addressProposition.address()), addressProposition.hashCode());
+        assertEquals(-355916771, addressProposition.hashCode());
 
         // Test 2: Returns true as the object is the same
         assertTrue(addressProposition.equals(addressProposition));
@@ -59,24 +62,12 @@ public class AddressPropositionTest {
         assertTrue(addressProposition.equals(anotherAddressProposition));
 
         // Test 7: Nullpointer Exception while creating new AddressProposition expected
-        var exceptionOccurred = false;
-        try {
-            new AddressProposition(null);
-        } catch (NullPointerException e) {
-            exceptionOccurred = true;
-        }
-        assertTrue("Test7: Nullpointer Exception while creating new AddressProposition expected", exceptionOccurred);
+        assertThrows(NullPointerException.class, () -> new AddressProposition(null));
 
         // Test 8: Nullpointer Exception while creating new AddressProposition expected
-        exceptionOccurred = false;
-        try {
-            new AddressProposition(Numeric.hexStringToByteArray("12345134"));
-        } catch (IllegalArgumentException e) {
-            exceptionOccurred = true;
-        }
-        assertTrue("Test8: Illegal Argument Exception while creating new AddressProposition expected", exceptionOccurred);
+        assertThrows(IllegalArgumentException.class, () -> new AddressProposition(Numeric.hexStringToByteArray("12345134")));
 
         // Test 9: Returns checksum correctly
-        assertEquals(Keys.toChecksumAddress(Numeric.toHexString(addressProposition.address())), addressProposition.checksumAddress());
+        assertEquals("0xd51C15351339F694Fe234E12A036746721afB506", addressProposition.checksumAddress());
     }
 }

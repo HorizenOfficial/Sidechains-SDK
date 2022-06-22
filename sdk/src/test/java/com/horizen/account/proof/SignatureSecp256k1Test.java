@@ -44,49 +44,19 @@ public class SignatureSecp256k1Test {
     @Test
     public void signatureSecp256k1Test() throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException, SignatureException {
         // Test 1: Nullpointer Exception while creating new PrivateKeySecp256k1 expected
-        boolean exceptionOccurred = false;
-        try {
-            new SignatureSecp256k1(signatureData.getV(), signatureSecp256k1.getR(), null);
-        } catch (NullPointerException e) {
-            exceptionOccurred = true;
-        }
-        assertTrue("Test1: Nullpointer Exception while creating new signature expected", exceptionOccurred);
+        assertThrows(NullPointerException.class, () -> new SignatureSecp256k1(signatureData.getV(), signatureSecp256k1.getR(), null));
 
         // Test 2: Nullpointer Exception while creating new PrivateKeySecp256k1 expected
-        exceptionOccurred = false;
-        try {
-            new SignatureSecp256k1(signatureData.getV(), null, signatureSecp256k1.getS());
-        } catch (NullPointerException e) {
-            exceptionOccurred = true;
-        }
-        assertTrue("Test2: Nullpointer Exception while creating new signature expected", exceptionOccurred);
+        assertThrows(NullPointerException.class, () -> new SignatureSecp256k1(signatureData.getV(), null, signatureSecp256k1.getS()));
 
         // Test 3: Nullpointer Exception while creating new PrivateKeySecp256k1 expected
-        exceptionOccurred = false;
-        try {
-            new SignatureSecp256k1(null, signatureSecp256k1.getR(), signatureSecp256k1.getS());
-        } catch (NullPointerException e) {
-            exceptionOccurred = true;
-        }
-        assertTrue("Test3: Nullpointer Exception while creating new signature expected", exceptionOccurred);
+        assertThrows(NullPointerException.class, () -> new SignatureSecp256k1(null, signatureSecp256k1.getR(), signatureSecp256k1.getS()));
 
         // Test 4: Illegal Argument Exception while creating new PrivateKeySecp256k1 expected
-        exceptionOccurred = false;
-        try {
-            new SignatureSecp256k1(new byte[20], signatureSecp256k1.getR(), signatureSecp256k1.getS());
-        } catch (IllegalArgumentException e) {
-            exceptionOccurred = true;
-        }
-        assertTrue("Test4: Illegal Argument Exception while creating new signature expected", exceptionOccurred);
+        assertThrows(IllegalArgumentException.class, () -> new SignatureSecp256k1(new byte[20], signatureSecp256k1.getR(), signatureSecp256k1.getS()));
 
         // Test 5: Successful creation expected
-        exceptionOccurred = false;
-        try {
-            new SignatureSecp256k1(signatureData.getV(), signatureSecp256k1.getR(), signatureSecp256k1.getS());
-        } catch (NullPointerException e) {
-            exceptionOccurred = true;
-        }
-        assertFalse("Test5: Successful signature creation expected", exceptionOccurred);
+        assertNotNull(new SignatureSecp256k1(signatureData.getV(), signatureSecp256k1.getR(), signatureSecp256k1.getS()));
 
         // Test 6: Returns signature data string correctly
         assertEquals(String.format("SignatureSecp256k1{v=%s, r=%s, s=%s}", Numeric.toHexString(signatureData.getV()), Numeric.toHexString(signatureData.getR()), Numeric.toHexString(signatureData.getS())), signatureSecp256k1.toString());

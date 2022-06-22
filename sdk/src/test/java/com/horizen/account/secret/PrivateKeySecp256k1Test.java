@@ -37,7 +37,7 @@ public class PrivateKeySecp256k1Test {
     @Test
     public void privateKeySecp256k1Test() {
         // Test 1: Returns correct address proposition from private key
-        assert(Arrays.equals(privateKeySecp256k1.publicImage().address(), addressProposition.address()));
+        assertArrayEquals(privateKeySecp256k1.publicImage().address(), Numeric.hexStringToByteArray("d51c15351339f694fe234e12a036746721afb506"));
 
         // Test 2: Returns correct signature for message
         String payload = "This is string to sign";
@@ -71,21 +71,9 @@ public class PrivateKeySecp256k1Test {
         assertEquals(PrivateKeySecp256k1SecretId.id(), privateKeySecp256k1.secretTypeId());
 
         // Test 11: Illegal Argument Exception while creating new PrivateKeySecp256k1 expected
-        boolean exceptionOccurred = false;
-        try {
-            new PrivateKeySecp256k1(new BigInteger("4164020894437499837987386266872312011773540175446618547506457344").toByteArray());
-        } catch (IllegalArgumentException e) {
-            exceptionOccurred = true;
-        }
-        assertTrue("Test11: Illegal Argument Exception while creating new PrivateKeySecp256k1 because of incorrect key length expected", exceptionOccurred);
+        assertThrows(IllegalArgumentException.class, () -> new PrivateKeySecp256k1(new BigInteger("4164020894437499837987386266872312011773540175446618547506457344").toByteArray()));
 
         // Test 12: Nullpointer Exception while creating new PrivateKeySecp256k1 expected
-        exceptionOccurred = false;
-        try {
-            new PrivateKeySecp256k1(null);
-        } catch (NullPointerException e) {
-            exceptionOccurred = true;
-        }
-        assertTrue("Test12: Nullpointer Exception while creating new PrivateKeySecp256k1 expected", exceptionOccurred);
+        assertThrows(NullPointerException.class, () -> new PrivateKeySecp256k1(null));
     }
 }
