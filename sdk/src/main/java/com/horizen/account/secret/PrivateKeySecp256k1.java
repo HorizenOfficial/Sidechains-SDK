@@ -2,6 +2,7 @@ package com.horizen.account.secret;
 
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
+import com.horizen.account.utils.Account;
 import com.horizen.account.utils.Secp256k1;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.secret.Secret;
@@ -45,7 +46,7 @@ public final class PrivateKeySecp256k1 implements Secret {
     public AddressProposition publicImage() {
         var publicKey = ECKeyPair.create(privateKey).getPublicKey();
         var hashedKey = Hash.sha3(Numeric.toBytesPadded(publicKey, Secp256k1.PUBLIC_KEY_SIZE));
-        return new AddressProposition(Arrays.copyOfRange(hashedKey, 0, 20));
+        return new AddressProposition(Arrays.copyOfRange(hashedKey, hashedKey.length - Account.ADDRESS_SIZE, hashedKey.length));
     }
 
     @Override
