@@ -8,6 +8,7 @@ from sc_cert_submission_decentralization import SCCertSubmissionDecentralization
 from sc_cert_submitter_after_sync_1 import ScCertSubmitterAfterSync1
 from sc_cert_submitter_after_sync_2 import ScCertSubmitterAfterSync2
 from sc_csw_ceased_at_epoch_1 import SCCswCeasedAtEpoch1
+from sc_csw_ceased_at_epoch_1_with_large_epoch_length import SCCswCeasedAtEpoch1WithLargeEpochLength
 from sc_csw_ceased_at_epoch_2 import SCCswCeasedAtEpoch2
 from sc_csw_ceased_at_epoch_3 import SCCswCeasedAtEpoch3
 from sc_cum_comm_tree_hash import SCCumCommTreeHash
@@ -124,6 +125,9 @@ def run_tests(log_file):
 
     result = run_test(SCCswCeasedAtEpoch1())
     assert_equal(0, result, "sc_csw_ceased_at_epoch_1 test failed!")
+
+    result = run_test(SCCswCeasedAtEpoch1WithLargeEpochLength())
+    assert_equal(0, result, "sc_csw_ceased_at_epoch_1_with_large_epoch_length test failed!")
 
     result = run_test(SCCswCeasedAtEpoch2())
     assert_equal(0, result, "sc_csw_ceased_at_epoch_2 test failed!")
