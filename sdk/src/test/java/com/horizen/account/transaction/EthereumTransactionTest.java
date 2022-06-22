@@ -97,7 +97,7 @@ public class EthereumTransactionTest {
         // Test 9: getChainId should be null, as this is a legacy transaction
         assertNull(ethereumTransaction.getChainId());
         // Test 10: getFrom should be null, as this is an unsigned tx
-        assertNull(ethereumTransaction.getFrom());
+        assertEquals("", ethereumTransaction.getFrom());
 
         // Test 11: ethereum transaction instance returns Signature correctly
         assertNull(ethereumTransaction.getSignature());
