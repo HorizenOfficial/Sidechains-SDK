@@ -8,12 +8,8 @@ import com.horizen.box.data.WithdrawalRequestBoxData;
 import com.horizen.fixtures.BoxFixtureClass;
 import com.horizen.fixtures.SecretFixtureClass;
 import com.horizen.node.NodeWallet;
-import com.horizen.proposition.MCPublicKeyHashProposition;
-import com.horizen.proposition.Proposition;
-import com.horizen.proposition.PublicKey25519Proposition;
-import com.horizen.secret.PrivateKey25519;
-import com.horizen.secret.PrivateKey25519Creator;
-import com.horizen.secret.Secret;
+import com.horizen.proposition.*;
+import com.horizen.secret.*;
 import com.horizen.utils.Pair;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,8 +24,8 @@ import static org.junit.Assert.*;
 class TransactionCreatorNodeWallet implements NodeWallet {
 
     List<Box<Proposition>> _boxesOrderedBytCreationTime;
-    List<Secret> _secrets;
-    public TransactionCreatorNodeWallet(List<Pair<Box, Long>> boxesWithCreationTime, List<Secret> secrets) {
+    List<PrivateKey25519> _secrets;
+    public TransactionCreatorNodeWallet(List<Pair<Box, Long>> boxesWithCreationTime, List<PrivateKey25519> secrets) {
         List<Pair<Box, Long>> _boxesWithCreationTime = new ArrayList<>(boxesWithCreationTime);
         _boxesWithCreationTime.sort( (a, b) ->  Long.signum (a.getValue() - b.getValue()));
         _boxesOrderedBytCreationTime = new ArrayList<>();
@@ -45,6 +41,42 @@ class TransactionCreatorNodeWallet implements NodeWallet {
             sum += b.value();
         }
         return sum;
+    }
+
+    @Override
+    public Optional<PrivateKey25519> secretByPublicKey25519Proposition(PublicKey25519Proposition proposition) {
+        for(PrivateKey25519 s : _secrets)
+        {
+            if(s.publicImage().equals(proposition))
+                return Optional.ofNullable(s);
+        }
+        return Optional.empty();
+    }
+
+    @Override
+    public Optional<SchnorrSecret> secretBySchnorrProposition(SchnorrProposition proposition) {
+        return Optional.empty();
+    }
+
+    @Override
+    public Optional<VrfSecretKey> secretByVrfPublicKey(VrfPublicKey proposition) {
+        return Optional.empty();
+    }
+
+    @Override
+    public <S extends Secret> List<S> secretsByProposition(ProofOfKnowledgeProposition<S> proposition) {
+        List<S> retList = new ArrayList<>();
+        if (proposition instanceof PublicKey25519Proposition){
+            secretByPublicKey25519Proposition((PublicKey25519Proposition)proposition).ifPresent( s ->
+                    retList.add((S)s)
+            );
+        }
+        return retList;
+    }
+
+    @Override
+    public <S extends Secret> Optional<S> secretByPublicKeyBytes(byte[] proposition) {
+        return (Optional<S>) secretByPublicKey25519Proposition(PublicKey25519PropositionSerializer.getSerializer().parseBytes(proposition));
     }
 
     @Override
@@ -103,16 +135,6 @@ class TransactionCreatorNodeWallet implements NodeWallet {
     }
 
     @Override
-    public Optional<Secret> secretByPublicKey(Proposition publicImage) {
-        for(Secret s : _secrets)
-        {
-            if(s.publicImage().equals(publicImage))
-                return Optional.ofNullable(s);
-        }
-        return Optional.empty();
-    }
-
-    @Override
     public List<Secret> allSecrets() {
         return null;
     }
@@ -159,7 +181,7 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
         boxesWithCreationTime.add(new Pair<>(getZenBox(pk2.publicImage(), 1, 40), 2000L));
         boxesWithCreationTime.add(new Pair<>(getZenBox(pk3.publicImage(), 1, 50), 3000L));
 
-        List<Secret> secrets = new ArrayList<>();
+        List<PrivateKey25519> secrets = new ArrayList<>();
         secrets.add(pk1);
         secrets.add(pk2);
         secrets.add(pk3);
@@ -188,7 +210,7 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
         boxesWithCreationTime.add(new Pair<>(getZenBox(pk2.publicImage(), 1, 20), 2000L));
         boxesWithCreationTime.add(new Pair<>(getZenBox(pk3.publicImage(), 1, 30), 3000L));
 
-        List<Secret> secrets = new ArrayList<>();
+        List<PrivateKey25519> secrets = new ArrayList<>();
         secrets.add(pk1);
         secrets.add(pk2);
         secrets.add(pk3);
@@ -244,7 +266,7 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
         boxesWithCreationTime.add(new Pair<>(getZenBox(pk2.publicImage(), 1, 20), 2000L));
         boxesWithCreationTime.add(new Pair<>(getZenBox(pk3.publicImage(), 1, 30), 3000L));
 
-        List<Secret> secrets = new ArrayList<>();
+        List<PrivateKey25519> secrets = new ArrayList<>();
         secrets.add(pk1);
         secrets.add(pk2);
         secrets.add(pk3);
@@ -294,7 +316,7 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
         boxesWithCreationTime.add(new Pair<>(getZenBox(pk2.publicImage(), 1, 20), 2000L));
         boxesWithCreationTime.add(new Pair<>(getZenBox(pk3.publicImage(), 1, 30), 3000L));
 
-        List<Secret> secrets = new ArrayList<>();
+        List<PrivateKey25519> secrets = new ArrayList<>();
         secrets.add(pk1);
         secrets.add(pk2);
         secrets.add(pk3);
@@ -325,7 +347,7 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
         ZenBox boxToExclude = getZenBox(pk1.publicImage(), 1, 100);
         boxesWithCreationTime.add(new Pair<>(boxToExclude, 1000L));
 
-        List<Secret> secrets = new ArrayList<>();
+        List<PrivateKey25519> secrets = new ArrayList<>();
         secrets.add(pk1);
 
         NodeWallet wallet = new TransactionCreatorNodeWallet(boxesWithCreationTime, secrets);
@@ -359,7 +381,7 @@ public class RegularTransactionCreatorTest extends BoxFixtureClass {
         boxesWithCreationTime.add(new Pair<>(expectedBox, 1L));
         boxesWithCreationTime.add(new Pair<>(getZenBox(pk2.publicImage(), 1, 10), 2L));
 
-        List<Secret> secrets = new ArrayList<>();
+        List<PrivateKey25519> secrets = new ArrayList<>();
         secrets.add(pk1);
         secrets.add(pk2);
         secrets.add(pk3);

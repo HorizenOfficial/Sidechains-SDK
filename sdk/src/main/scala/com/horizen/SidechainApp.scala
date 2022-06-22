@@ -3,7 +3,7 @@ package com.horizen
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
 import java.util.{HashMap => JHashMap, List => JList}
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import akka.stream.ActorMaterializer
@@ -17,6 +17,7 @@ import com.horizen.certificatesubmitter.network.{CertificateSignaturesManagerRef
 import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.customconfig.CustomAkkaConfiguration
 import com.horizen.csw.CswManagerRef
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
 import com.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, SecretSubmitProvider, SecretSubmitProviderImpl, TransactionSubmitProvider, TransactionSubmitProviderImpl}
@@ -37,7 +38,6 @@ import scorex.core.settings.ScorexSettings
 import scorex.core.transaction.Transaction
 import scorex.core.{ModifierTypeId, NodeViewModifier}
 import scorex.util.ScorexLogging
-
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Map
 import scala.collection.mutable
@@ -85,6 +85,8 @@ class SidechainApp @Inject()
   override type NVHT = SidechainNodeViewHolder
 
   override implicit lazy val settings: ScorexSettings = sidechainSettings.scorexSettings
+
+  override protected implicit lazy val actorSystem: ActorSystem = ActorSystem(settings.network.agentName, CustomAkkaConfiguration.getCustomConfig())
 
   private val storageList = mutable.ListBuffer[Storage]()
 
@@ -346,9 +348,9 @@ class SidechainApp @Inject()
   var coreApiRoutes: Seq[SidechainApiRoute] = Seq[SidechainApiRoute](
     MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
-    SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this),
+    SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params),
-    SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
+    SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
     SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef),
     SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager),
     SidechainBackupApiRoute(settings.restApi, nodeViewHolderRef, boxIterator)

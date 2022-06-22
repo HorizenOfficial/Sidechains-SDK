@@ -8,8 +8,6 @@ import com.horizen.node.NodeWallet;
 import com.horizen.proposition.Proposition;
 import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.secret.PrivateKey25519;
-import com.horizen.secret.Secret;
-
 import com.horizen.utils.Pair;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,13 +53,12 @@ public class RegularTransactionCreator {
         List<Pair<ZenBox, PrivateKey25519>> from = new ArrayList<>();
         long currentAmount = 0;
         for(ZenBox box : boxes) {
-            Secret s = wallet.secretByPublicKey(box.proposition()).get();
-            if(s instanceof PrivateKey25519) {
-                from.add(new Pair<>(box, (PrivateKey25519)s));
-                currentAmount += box.value();
-                if (currentAmount >= toAmount)
-                    break;
-            }
+            PrivateKey25519 s = wallet.secretByPublicKey25519Proposition(box.proposition()).get();
+            from.add(new Pair<>(box, s));
+            currentAmount += box.value();
+            if (currentAmount >= toAmount)
+                break;
+
         }
         if(currentAmount < toAmount)
             throw new IllegalArgumentException("Not enough balances in the wallet to create a transaction.");

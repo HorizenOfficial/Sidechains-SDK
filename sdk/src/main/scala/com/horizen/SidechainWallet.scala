@@ -1,19 +1,17 @@
 package com.horizen
 
-import java.lang
+import java.{lang, util}
 import java.util.{List => JList, Optional => JOptional}
 import java.util.{ArrayList => JArrayList}
-
 import com.horizen.backup.BoxIterator
-
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock}
 import com.horizen.box.{Box, CoinsBox, ForgerBox, ZenBox}
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.wallet.ApplicationWallet
 import com.horizen.node.NodeWallet
 import com.horizen.params.NetworkParams
-import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
-import com.horizen.secret.Secret
+import com.horizen.proposition.{ProofOfKnowledgeProposition, Proposition, ProvableCheckResult, PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
+import com.horizen.secret.{PrivateKey25519, SchnorrSecret, Secret, VrfSecretKey}
 import com.horizen.storage._
 import com.horizen.transaction.Transaction
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
@@ -23,7 +21,7 @@ import com.horizen.utils._
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.util.{Failure, Success, Try}
-import scala.util.{Try}
+import scala.util.Try
 import scorex.core.block.Block.Timestamp
 import scorex.util.ModifierId
 
@@ -129,6 +127,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     val version = BytesUtils.fromHexString(modifier.id)
     val changes = SidechainState.changes(modifier).get
     val pubKeys = publicKeys()
+    val privKeys = secretStorage.getAll.asJava
 
     val txBoxes: Map[ByteArrayWrapper, SidechainTypes#SCBT] = modifier.transactions
       .foldLeft(Map.empty[ByteArrayWrapper, SidechainTypes#SCBT]) {
@@ -140,7 +139,11 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     val newBoxes: Seq[SidechainTypes#SCB] = changes.toAppend.map(_.box) ++ feePaymentBoxes.map(_.asInstanceOf[SidechainTypes#SCB])
 
     val newWalletBoxes = newBoxes
-      .withFilter(box => pubKeys.contains(box.proposition()))
+      .withFilter(box => {
+          ((box.proposition().isInstanceOf[ProofOfKnowledgeProposition[_ <: Secret]]) &&
+            (box.proposition().asInstanceOf[ProofOfKnowledgeProposition[_ <: Secret]].canBeProvedBy(privKeys).canBeProved))
+        }
+      )
       .map(box => {
         if (txBoxes.contains(box.id())) {
           val boxTransaction = txBoxes(box.id())
@@ -310,9 +313,34 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     walletBoxStorage.getBoxesBalance(boxType)
   }
 
-  override def secretByPublicKey(publicKey: Proposition): JOptional[Secret] = {
+  override def secretByPublicKey25519Proposition(publicKey: PublicKey25519Proposition): JOptional[PrivateKey25519] = {
     secretStorage.get(publicKey) match {
-      case Some(secret) => JOptional.of(secret)
+      case Some(secret) => JOptional.of(secret.asInstanceOf[PrivateKey25519])
+      case None => JOptional.empty()
+    }
+  }
+
+  override def secretBySchnorrProposition(publicKey: SchnorrProposition): JOptional[SchnorrSecret] = {
+    secretStorage.get(publicKey) match {
+      case Some(secret) => JOptional.of(secret.asInstanceOf[SchnorrSecret])
+      case None => JOptional.empty()
+    }
+  }
+
+  override def secretByVrfPublicKey(publicKey: VrfPublicKey): JOptional[VrfSecretKey] = {
+    secretStorage.get(publicKey) match {
+      case Some(secret) => JOptional.of(secret.asInstanceOf[VrfSecretKey])
+      case None => JOptional.empty()
+    }
+  }
+
+  override def secretsByProposition[S <: SCS](proposition: ProofOfKnowledgeProposition[S]): JList[S] = {
+      proposition.canBeProvedBy(secretStorage.getAll.asJava).secretsNeeded()
+  }
+
+  override def secretByPublicKeyBytes[S <: SCS](proposition: Array[Byte]): JOptional[S] = {
+    secretStorage.getAll.find(secret => util.Arrays.equals(secret.publicImage().pubKeyBytes(), proposition)) match {
+      case Some(s) => JOptional.of(s.asInstanceOf[S])
       case None => JOptional.empty()
     }
   }

@@ -16,7 +16,7 @@ import com.horizen.fixtures.{CswDataFixture, MainchainBlockReferenceFixture, Sid
 import com.horizen.librustsidechains.FieldElement
 import com.horizen.{SidechainAppEvents, SidechainHistory, SidechainMemoryPool, SidechainSettings, SidechainState, SidechainWallet}
 import com.horizen.params.{MainNetParams, NetworkParams}
-import com.horizen.proposition.Proposition
+import com.horizen.proposition.{Proposition, PublicKey25519Proposition}
 import com.horizen.secret.{PrivateKey25519Creator, Secret}
 import com.horizen.utils.{ByteArrayWrapper, CswData, ForwardTransferCswData, UtxoCswData, WithdrawalEpochInfo}
 import org.junit.Assert._
@@ -603,7 +603,7 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
     })
     val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
 
-    Mockito.when(wallet.secretByPublicKey(ArgumentMatchers.any[Proposition]())).thenAnswer(_ => {
+    Mockito.when(wallet.secretByPublicKey25519Proposition(ArgumentMatchers.any[PublicKey25519Proposition]())).thenAnswer(_ => {
       java.util.Optional.of(PrivateKey25519Creator.getInstance().generateSecret("secret".getBytes).asInstanceOf[Secret])
     })
 

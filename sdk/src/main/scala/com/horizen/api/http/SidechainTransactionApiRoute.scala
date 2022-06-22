@@ -14,7 +14,7 @@ import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.Broadca
 import com.horizen.api.http.SidechainTransactionErrorResponse._
 import com.horizen.api.http.SidechainTransactionRestScheme._
 import com.horizen.box.data.{ForgerBoxData, BoxData, WithdrawalRequestBoxData, ZenBoxData}
-import com.horizen.box.{Box, ZenBox}
+import com.horizen.box.{Box, ZenBox, ForgerBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.{NodeWallet, SidechainNodeView}
 import com.horizen.params.NetworkParams
@@ -175,7 +175,9 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
       applyOnNodeView { sidechainNodeView =>
         val wallet = sidechainNodeView.getNodeWallet
         val inputBoxes = wallet.allBoxes().asScala
-          .filter(box => body.transactionInputs.exists(p => p.boxId.contentEquals(BytesUtils.toHexString(box.id()))))
+          .filter(box =>
+            (box.isInstanceOf[ZenBox] || box.isInstanceOf[ForgerBox]) &&
+            body.transactionInputs.exists(p => p.boxId.contentEquals(BytesUtils.toHexString(box.id()))))
 
         if (inputBoxes.length < body.transactionInputs.size) {
           ApiResponseUtil.toResponse(ErrorNotFoundTransactionInput(s"Unable to find input(s)", JOptional.empty()))
@@ -227,7 +229,11 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
             // Create signed tx. Note: we suppose that box use proposition that require general secret.sign(...) usage only.
             val messageToSign = unsignedTransaction.messageToSign()
             val proofs = inputBoxes.map(box => {
-              wallet.secretByPublicKey(box.proposition()).get().sign(messageToSign).asInstanceOf[Proof[Proposition]]
+              if (box.proposition().isInstanceOf[PublicKey25519Proposition]) {
+                wallet.secretByPublicKey25519Proposition(box.proposition().asInstanceOf[PublicKey25519Proposition]).get().sign(messageToSign).asInstanceOf[Proof[Proposition]]
+              }else{
+                throw new IllegalArgumentException(s"Unexpected box locking proposition for box id [${BytesUtils.toHexString(box.id())}]. Expected: PublicKey25519Proposition, got ${box.proposition().getClass}")
+              }
             })
 
             val transaction = new SidechainCoreTransaction(boxIds, outputs, proofs.asJava, fee, SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION)
@@ -259,7 +265,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
         getChangeAddress(wallet) match {
           case Some(changeAddress) =>
-            createCoreTransaction(classOf[ZenBox], outputList, withdrawalRequestList, forgerOutputList, fee, changeAddress, wallet, sidechainNodeView) match {
+            createCoreTransaction(outputList, withdrawalRequestList, forgerOutputList, fee, changeAddress, wallet, sidechainNodeView) match {
               case Success(transaction) =>
                 if (body.format.getOrElse(false))
                   ApiResponseUtil.toResponse(TransactionDTO(transaction))
@@ -289,7 +295,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
         getChangeAddress(wallet) match {
           case Some(changeAddress) =>
-            createCoreTransaction(classOf[ZenBox], outputList, List(), List(), fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView)
+            createCoreTransaction(outputList, List(), List(), fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView)
           case None =>
             Failure(new IllegalStateException("Can't find change address in wallet. Please, create a PrivateKey secret first."))
         }
@@ -310,7 +316,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
         getChangeAddress(wallet) match {
           case Some(changeAddress) =>
-            createCoreTransaction(classOf[ZenBox], List(), withdrawalOutputsList, List(), fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView)
+            createCoreTransaction(List(), withdrawalOutputsList, List(), fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView)
           case None =>
             Failure(new IllegalStateException("Can't find change address in wallet. Please, create a PrivateKey secret first."))
         }
@@ -331,7 +337,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
         getChangeAddress(wallet) match {
           case Some(changeAddress) =>
-            createCoreTransaction(classOf[ZenBox], List(), List(), forgerOutputsList, fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView)
+            createCoreTransaction(List(), List(), forgerOutputsList, fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView)
           case None =>
             Failure(new IllegalStateException("Can't find change address in wallet. Please, create a PrivateKey secret first."))
         }
@@ -352,7 +358,9 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
       applyOnNodeView { sidechainNodeView =>
         val wallet = sidechainNodeView.getNodeWallet
         val inputBoxes = wallet.allBoxes().asScala
-          .filter(box => body.transactionInputs.exists(p => p.boxId.contentEquals(BytesUtils.toHexString(box.id()))))
+          .filter(box =>
+            (box.isInstanceOf[ZenBox] || box.isInstanceOf[ForgerBox]) &&
+            body.transactionInputs.exists(p => p.boxId.contentEquals(BytesUtils.toHexString(box.id()))))
 
         if (inputBoxes.length < body.transactionInputs.size) {
           Left(ApiResponseUtil.toResponse(ErrorNotFoundTransactionInput(s"Unable to find input(s)", JOptional.empty())))
@@ -389,7 +397,11 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
             // Create signed tx. Note: we suppose that box use proposition that require general secret.sign(...) usage only.
             val messageToSign = unsignedTransaction.messageToSign()
             val proofs = inputBoxes.map(box => {
-              wallet.secretByPublicKey(box.proposition()).get().sign(messageToSign).asInstanceOf[Proof[Proposition]]
+              if (box.proposition().isInstanceOf[PublicKey25519Proposition]) {
+                wallet.secretByPublicKey25519Proposition(box.proposition().asInstanceOf[PublicKey25519Proposition]).get().sign(messageToSign).asInstanceOf[Proof[Proposition]]
+              }else{
+               throw new IllegalArgumentException(s"Unexpected box locking proposition for box id [${BytesUtils.toHexString(box.id())}]. Expected: PublicKey25519Proposition, got ${box.proposition().getClass}")
+              }
             })
 
             val transaction: SidechainCoreTransaction = new SidechainCoreTransaction(boxIds, outputs, proofs.asJava, fee, SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION)
@@ -455,8 +467,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
       .map(_.publicImage().asInstanceOf[PublicKey25519Proposition])
   }
 
-  private def createCoreTransaction(inputBoxesType: Class[_<: Box[_ <: Proposition]],
-                                    zenBoxDataList: List[TransactionOutput],
+  private def createCoreTransaction(zenBoxDataList: List[TransactionOutput],
                                     withdrawalRequestBoxDataList: List[TransactionWithdrawalRequestOutput],
                                     forgerBoxDataList: List[TransactionForgerOutput],
                                     fee: Long,
@@ -505,10 +516,10 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     val inputsMinimumExpectedAmount: Long = outputsTotalAmount + fee
     var inputsTotalAmount: Long = 0L
 
-    val boxes = ArrayBuffer[Box[Proposition]]()
+    val boxes = ArrayBuffer[ZenBox]()
     breakable {
-      for (box: Box[Proposition] <- wallet.boxesOfType(inputBoxesType, boxIdsToExclude).asScala) {
-        boxes.append(box)
+      for (box <- wallet.boxesOfType(classOf[ZenBox], boxIdsToExclude).asScala) {
+        boxes.append(box.asInstanceOf[ZenBox])
         inputsTotalAmount += box.value()
         if (inputsTotalAmount >= inputsMinimumExpectedAmount)
           break
@@ -532,7 +543,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     // Create signed tx.
     val messageToSign = unsignedTransaction.messageToSign()
     val proofs = boxes.map(box => {
-      wallet.secretByPublicKey(box.proposition()).get().sign(messageToSign).asInstanceOf[Proof[Proposition]]
+      wallet.secretByPublicKey25519Proposition(box.proposition()).get().sign(messageToSign).asInstanceOf[Proof[Proposition]]
     })
 
     new SidechainCoreTransaction(boxIds, outputs, proofs.asJava, fee, SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION)

@@ -16,6 +16,10 @@ tags:
     description: Sidechain node operations
   - name: mainchain
     description: Sidechain mainchain operations
+  - name: submitter
+    description: Sidechain submitter operations
+  - name: csw
+    description: Cesead Sidechain Withdrawal operations
 
 paths:
 
@@ -25,7 +29,7 @@ paths:
       tags:
         - block
       summary: find block by id
-      description: return a single block
+      description: return a single block and its height
       operationId: getBlock
       requestBody:
         content:
@@ -53,6 +57,9 @@ paths:
                         type: string
                       block:
                         $ref: '#/components/schemas/SidechainBlock'
+                      height:
+                        type: integer
+                        format: int64
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -66,7 +73,7 @@ paths:
     post:
       tags:
         - block
-      summary: find last block ids
+      summary: finds last block ids
       description: Returns an array of number last sidechain block ids
       operationId: getLastBlockIds
       requestBody:
@@ -109,8 +116,8 @@ paths:
     post:
       tags:
         - block
-      summary: find a block id by height
-      description: Return a sidechain block Id by its height in a blockchain
+      summary: finds a block id by height
+      description: Returns a sidechain block Id by its height in a blockchain
       operationId: getBlockIdByHeight
       requestBody:
         content:
@@ -150,8 +157,8 @@ paths:
     post:
       tags:
         - block
-      summary: find the best block
-      description: Return here best sidechain block id and height in active chain
+      summary: finds the best block
+      description: Returns here best sidechain block id and height in active chain
       operationId: getBestBlockInfo
       responses:
         '200':
@@ -182,7 +189,7 @@ paths:
     post:
       tags:
         - block
-      summary: get the list of forgers fee payments paid after the given block was applied
+      summary: gets the list of forgers fee payments paid after the given block was applied
       description: Returns the list of ZenBoxes that represents the forgers fee payments paid after the given block was applied.
       operationId: getFeePayments
       requestBody:
@@ -190,16 +197,12 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - blockId
               properties:
-                result:
-                  type: object
-                  properties:
-                    feePayemnts:
-                      type: array
-                      items:
-                        $ref: '#/components/schemas/Box'
-                error:
-                  $ref: '#/components/schemas/SidechainApiErrorResponse'
+                blockId:
+                  description: ID of block to return
+                  type: string
       responses:
         '200':
           description: successful operation
@@ -224,12 +227,54 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
+  /block/findBlockInfoById:
+    post:
+      tags:
+        - block
+      summary: finds SidechainBlockInfo by id
+      description: returns SidechainBlockInfo for a single block and if it is in the active chain
+      operationId: findBlockInfoById
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - blockId
+              properties:
+                blockId:
+                  description: ID of block to return
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      blockInfo:
+                        $ref: '#/components/schemas/SidechainBlockInfo'
+                      isInActiveChain:
+                        type: boolean
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
   /block/startForging:
     post:
       tags:
         - block
-      summary: Start forging
-      description: Start forging
+      summary: starts forging
+      description: Starts forging
       operationId: startForging
       responses:
         '200':
@@ -257,8 +302,8 @@ paths:
     post:
       tags:
         - block
-      summary: Stop forging
-      description: Stop forging
+      summary: stops forging
+      description: Stops forging
       operationId: stopForging
       responses:
         '200':
@@ -286,7 +331,7 @@ paths:
     post:
       tags:
         - block
-      summary: try to generate new block by epoch and slot number
+      summary: tries to generate new block by epoch and slot number
       description: Returns id of generated sidechain block
       operationId: generateBlockForEpochNumberAndSlot
       requestBody:
@@ -295,7 +340,8 @@ paths:
             schema:
               type: object
               required:
-                - number
+                - epochNumber
+                - slotNumber
               properties:
                 epochNumber:
                   description: Epoch number
@@ -331,8 +377,8 @@ paths:
     post:
       tags:
         - block
-      summary: Get forging info
-      description: Get forging info
+      summary: gets forging info
+      description: Gets forging info
       operationId: getForgingInfo
       responses:
         '200':
@@ -357,7 +403,10 @@ paths:
                       bestSlotNumber:
                         type: integer
                         format: int32
-                  error:
+                      forgingEnabled:
+                        type: boolean
+                        description: True or False depending if forging is enabled
+                    error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
           description: any kind of http error
@@ -371,8 +420,8 @@ paths:
     post:
       tags:
         - transaction
-      summary: find all transactions in memory pool
-      description: Returns an array of transaction ids if formatMemPool=false, otherwise a JSONObject for each transaction
+      summary: finds all transactions in memory pool
+      description: Returns an array of transaction ids if format=false, otherwise a JSONObject for each transaction
       operationId: getMemoryPool
       requestBody:
         content:
@@ -415,12 +464,12 @@ paths:
     post:
       tags:
         - transaction
-      summary: find transaction in memory pool, or in a block or in full blockchain
+      summary: finds transaction in memory pool, or in a block or in full blockchain
       description:  "All the possible behaviours are:\n
       1) blockHash set -> Search in block referenced by blockHash (do not care about txIndex parameter)\n
       2) blockHash not set, txIndex = true -> Search in memory pool, if not found, search in the whole blockchain\n
       3) blockHash not set, txIndex = false -> Search in memory pool"
-      operationId: getRawTransaction
+      operationId: findById
       requestBody:
         content:
           application/json:
@@ -468,8 +517,8 @@ paths:
     post:
       tags:
         - transaction
-      summary: a human readable representation of the trasanction
-      description: Return a JSON representation of a transaction given its byte serialization
+      summary: a human readable representation of the transaction
+      description: Returns a JSON representation of a transaction given its byte serialization
       operationId: decodeRawTransaction
       requestBody:
         content:
@@ -507,8 +556,8 @@ paths:
     post:
       tags:
         - transaction
-      summary: create and sign a Sidechain core transaction
-      description: Create and sign a Sidechain core transaction, specifying inputs and outputs. Return the new transaction as a hex string if format = false, otherwise its JSON representation.
+      summary: creates and signs a Sidechain core transaction
+      description: Creates and signs a Sidechain core transaction, specifying inputs and outputs. Return the new transaction as a hex string if format = false, otherwise its JSON representation.
       operationId: createCoreTransaction
       requestBody:
         content:
@@ -607,8 +656,8 @@ paths:
     post:
       tags:
         - transaction
-      summary: create and sign a Sidechain core transaction
-      description: Create and sign a Sidechain core transaction, specifying outputs and fee. Return the new transaction as a hex string if format = false, otherwise its JSON representation.
+      summary: creates and signs a Sidechain core transaction
+      description: Creates and signs a Sidechain core transaction, specifying outputs and fee. Return the new transaction as a hex string if format = false, otherwise its JSON representation.
       operationId: createCoreTransactionSimplified
       requestBody:
         content:
@@ -699,8 +748,8 @@ paths:
     post:
       tags:
         - transaction
-      summary: send a transaction
-      description: Create and sign a regular transaction, specifying outputs and fee. Then validate and send the transaction. Then return the id of the transaction
+      summary: sends a transaction
+      description: Creates and signs a regular transaction, specifying outputs and fee. Then validate and send the transaction. Then return the id of the transaction
       operationId: sendCoinsToAddress
       requestBody:
         content:
@@ -752,8 +801,8 @@ paths:
     post:
       tags:
         - transaction
-      summary: send a transaction
-      description: Create and sign a regular transaction, specifying withdrawal outputs and fee. Then validate and send the transaction. Then return the id of the transaction
+      summary: sends a transaction
+      description: Creates and signs a regular transaction, specifying withdrawal outputs and fee. Then validate and send the transaction. Then return the id of the transaction
       operationId: withdrawCoins
       requestBody:
         content:
@@ -806,8 +855,8 @@ paths:
     post:
       tags:
         - transaction
-      summary: create transaction with forger stake
-      description: Create and sign a Sidechain core transaction, specifying forger stake outputs and fee. Then validate and send the transaction. Then return the id of the transaction
+      summary: creates transaction with forger stake
+      description: Creates and signs a Sidechain core transaction, specifying forger stake outputs and fee. Then validate and send the transaction. Then return the id of the transaction
       operationId: makeForgerStake
       requestBody:
         content:
@@ -864,8 +913,8 @@ paths:
     post:
       tags:
         - transaction
-      summary: create and sign sidechain core transaction
-      description: Create and sign sidechain core transaction, specifying inputs and outputs. Return the new transaction as a hex string if format = false, otherwise its JSON representation.
+      summary: creates and signs sidechain core transaction
+      description: Creates and signs sidechain core transaction, specifying inputs and outputs. Return the new transaction as a hex string if format = false, otherwise its JSON representation.
       operationId: spendForgingStake
       requestBody:
         content:
@@ -949,8 +998,8 @@ paths:
     post:
       tags:
         - transaction
-      summary: send a transaction
-      description: Validate and send a transaction, given its serialization as input. Then return the id of the transaction
+      summary: sends a transaction
+      description: Validates and sends a transaction, given its serialization as input. Then return the id of the transaction
       operationId: sendRawTransaction
       requestBody:
         content:
@@ -989,8 +1038,8 @@ paths:
     post:
       tags:
         - wallet
-      summary: find all boxes
-      description: Return all boxes, excluding those which ids are included in excludeBoxIds list
+      summary: finds all boxes
+      description: Returns all boxes, excluding those which ids are included in excludeBoxIds list
       operationId: getAllBoxes
       requestBody:
         content:
@@ -1034,7 +1083,7 @@ paths:
       tags:
         - wallet
       summary: the global balance of coins boxes
-      description: Return the global balance for all types of coins boxes
+      description: Returns the global balance for all types of coins boxes
       operationId: getCoinsBalance
       requestBody:
         content:
@@ -1069,7 +1118,7 @@ paths:
         tags:
           - wallet
         summary: the total balance of boxes of given type
-        description: Return the global balance for given type of boxes
+        description: Returns the global balance for given type of boxes
         operationId: getBalance
         requestBody:
           content:
@@ -1108,7 +1157,7 @@ paths:
       tags:
         - wallet
       summary: new 25519 secret
-      description: Create new secret and return corresponding address (public key)
+      description: Creates new secret and returns corresponding address (public key)
       operationId: createPrivateKey25519
       responses:
         '200':
@@ -1137,7 +1186,7 @@ paths:
       tags:
         - wallet
       summary: new Vrf secret
-      description: Create new Vrf secret and return corresponding public key
+      description: Creates new Vrf secret and returns corresponding public key
       operationId: createVrfSecret
       responses:
         '200':
@@ -1165,7 +1214,7 @@ paths:
     post:
       tags:
         - wallet
-      summary: find all public keys
+      summary: finds all public keys
       description: Returns the list of all wallet’s propositions (public keys)
       operationId: getPropositions
       requestBody:
@@ -1201,12 +1250,161 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
+  /wallet/importSecret:
+    post:
+      tags:
+        - wallet
+      summary: Import a secret inside the wallet
+      description: Import a secret and consequentially the corresponding proposition inside the wallet
+      operationId: importSecret
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                privKey:
+                  description: The secret to import
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      proposition:
+                        $ref: '#/components/schemas/Proposition'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /wallet/exportSecret:
+    post:
+      tags:
+        - wallet
+      summary: Returns the secret corresponding to a proposition.
+      description: Returns the secret corresponding to a proposition (taken from the wallet).
+      operationId: exportSecret
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                publickey:
+                  description: The proposition corresponding to the secret to export
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      privKey:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /wallet/importSecrets:
+    post:
+      tags:
+        - wallet
+      summary: Import all the secrets taken from a file.
+      description: Import all the secrets stored to a file. Each line of the file must be in the format "SECRET" + " " + "PROPOSITION"
+      operationId: importSecrets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                path:
+                  description: Path to the file contaning the secrets
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    $ref: '#/components/schemas/ImportSecretsResponse'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /wallet/dumpSecrets:
+    post:
+      tags:
+        - wallet
+      summary: Export all the secrets taken from a file.
+      description: Export all the secrets stored to a file. Each line of the file will be in the format "SECRET" + " " + "PROPOSITION"
+      operationId: dumpSecrets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                path:
+                  description: Path where the files will be created
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
   # Sidechain node operations
   /node/allPeers:
     post:
       tags:
         - node
-      summary: find all peers node
+      summary: finds all peers node
       description: Returns the list of all sidechain node peers
       operationId: allPeers
       responses:
@@ -1237,8 +1435,8 @@ paths:
     post:
       tags:
         - node
-      summary: connect to a node
-      description: Send the request to connect to a sidechain node
+      summary: connects to a node
+      description: Sends the request to connect to a sidechain node
       operationId: connect
       requestBody:
         content:
@@ -1311,7 +1509,7 @@ paths:
     post:
       tags:
         - node
-      summary: find all blacklisted peers node
+      summary: finds all blacklisted peers node
       description: Returns the list of all blacklisted sidechain node peers
       operationId: blacklistedPeers
       responses:
@@ -1348,7 +1546,6 @@ paths:
               schema:
                 type: object
                 properties:
-                  result:
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -1357,12 +1554,73 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
+
+  /node/storageVersions:
+    post:
+      tags:
+        - node
+      summary: find versions for all node storages
+      description: Returns the list of all node storage versions
+      operationId: getNodeStorageVersions
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      listOfVersions:
+                        type: object
+                        additionalProperties:
+                          type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /node/sidechainId:
+    post:
+      tags:
+        - node
+      summary: Returns the sidechain id
+      description: Returns the sidechain id
+      operationId: getSidechainId
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      sidechainId:
+                        type: string
+                    error:
+                      $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
   # Mainchain references info
   /mainchain/bestBlockReferenceInfo:
     post:
       tags:
         - mainchain
-      summary: find the best MC block header which has already been included in a SC block
+      summary: finds the best MC block header which has already been included in a SC block
       description: "Returns the best MC block header which has already been included in a SC block. Returns:\n
         1) Mainchain block reference hash with the most height; \n
         2) Its height in mainchain; \n
@@ -1396,8 +1654,8 @@ paths:
     post:
       tags:
         - mainchain
-      summary: ""
-      description: ""
+      summary: returns genesis MC block header
+      description: Returns genesis MC block header
       operationId: genesisBlockReferenceInfo
       responses:
         '200':
@@ -1427,8 +1685,8 @@ paths:
     post:
       tags:
         - mainchain
-      summary: ""
-      description: ""
+      summary: finds Mainchain Block reference by its hash or by its height
+      description: Finds Mainchain Block reference by its hash or by its height
       operationId: blockReferenceInfoBy
       requestBody:
         content:
@@ -1472,8 +1730,8 @@ paths:
     post:
       tags:
         - mainchain
-      summary: ""
-      description: ""
+      summary: finds Mainchain Block by its hash
+      description: Finds Mainchain Block by its hash
       operationId: blockReferenceByHash
       requestBody:
         content:
@@ -1518,7 +1776,7 @@ paths:
       tags:
         - submitter
       summary: returns if certificate generation is in progress
-      description: returns if certificate generation is in progress
+      description: Returns if certificate generation is in progress
       operationId: isCertGenerationActive
       responses:
         '200':
@@ -1548,7 +1806,7 @@ paths:
       tags:
         - submitter
       summary: returns if certificate submitter is enabled
-      description: returns if certificate submitter is enabled, so will automatically try to create and send certificate during the submission window.
+      description: Returns if certificate submitter is enabled, so will automatically try to create and send certificate during the submission window.
       operationId: isCertificateSubmitterEnabled
       responses:
         '200':
@@ -1578,7 +1836,7 @@ paths:
       tags:
         - submitter
       summary: enables automatic certificate submission
-      description: enables automatic certificate submission
+      description: Enables automatic certificate submission
       operationId: enableCertificateSubmitter
       responses:
         '200':
@@ -1604,7 +1862,7 @@ paths:
       tags:
         - submitter
       summary: disables automatic certificate submission
-      description: disables automatic certificate submission
+      description: Disables automatic certificate submission
       operationId: disableCertificateSubmitter
       responses:
         '200':
@@ -1630,7 +1888,7 @@ paths:
       tags:
         - submitter
       summary: returns if certificate signing option is enabled
-      description: returns if certificate signing is enabled, so will automatically try to sign certificate and broadcast the signature to the network.
+      description: Returns if certificate signing is enabled, so will automatically try to sign certificate and broadcast the signature to the network.
       operationId: isCertificateSignerEnabled
       responses:
         '200':
@@ -1660,7 +1918,7 @@ paths:
       tags:
         - submitter
       summary: enables automatic certificate signing
-      description: enables automatic certificate signing
+      description: Enables automatic certificate signing
       operationId: enableCertificateSigner
       responses:
         '200':
@@ -1686,7 +1944,7 @@ paths:
       tags:
         - submitter
       summary: disables automatic certificate signing
-      description: disables automatic certificate signing
+      description: Disables automatic certificate signing
       operationId: disableCertificateSigner
       responses:
         '200':
@@ -1713,7 +1971,7 @@ paths:
       tags:
         - csw
       summary: returns current status of the Sidechain
-      description: returns current status of the Sidechain
+      description: Returns current status of the Sidechain
       operationId: hasCeased
       responses:
         '200':
@@ -1743,7 +2001,7 @@ paths:
       tags:
         - csw
       summary: generates csw proof
-      description: try to generate csw proof and return current status of this operation
+      description: Tries to generate csw proof and returns current status of this operation
       operationId: generateCswProof
       requestBody:
         content:
@@ -1790,7 +2048,7 @@ paths:
       tags:
         - csw
       summary: csw information
-      description: retrieves information about csw proof for given box id
+      description: Retrieves information about csw proof for given box id
       operationId: cswInfo
       requestBody:
         content:
@@ -1829,8 +2087,8 @@ paths:
     post:
       tags:
         - csw
-      summary: return list of available box ids for csw
-      description: return list of available box ids for csw
+      summary: returns list of available box ids for csw
+      description: Returns list of available box ids for csw
       operationId: cswBoxIds
       responses:
         '200':
@@ -1861,7 +2119,7 @@ paths:
       tags:
         - csw
       summary: retrieves nullifier
-      description: retrieves nullifier for given box id
+      description: Retrieves nullifier for given box id
       operationId: nullifier
       requestBody:
         content:
@@ -1886,7 +2144,7 @@ paths:
                     type: object
                     properties:
                       nullifier:
-                        type: String
+                        type: string
                         description: nullifier for given box id
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
@@ -1921,6 +2179,32 @@ components:
         description:
           type: string
         detail:
+          type: string
+
+    ImportSecretsResponse:
+      description: The response of the importSecrets endpoint
+      type: object
+      properties:
+        successfullyAdded:
+          type: integer
+          format: int32
+        failedToAdd:
+          type: integer
+          format: int32
+        summary:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportSecretDetailError'
+
+    ImportSecretDetailError:
+      description: Error generated while trying to import a secret in the importSecrets endpoint
+      type: object
+      properties:
+        lineNumber:
+          type: integer
+          format: int32
+          description: File line number of the secret that was not imported.
+        description:
           type: string
 
     BlacklistedPeersNode:
@@ -2046,6 +2330,10 @@ components:
     MainchainBlockInfo:
       type: object
       properties:
+        mainchainHeaderSidechainBlockId:
+          type: string
+        mainchainReferenceDataSidechainBlockId:
+          type: string
         hash:
           type: string
         parentHash:
@@ -2053,8 +2341,6 @@ components:
         height:
           type: integer
           format: int64
-        sidechainBlockId:
-          type: string
 
     SidechainBlock:
       type: object
@@ -2078,6 +2364,34 @@ components:
           $ref: '#/components/schemas/Proposition'
         signature:
           $ref: '#/components/schemas/Signature25519'
+
+    SidechainBlockInfo:
+      type: object
+      properties:
+        height:
+          type: integer
+        score:
+          type: integer
+          format: int64
+        parentId:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+        mainchainHeaderBaseInfo:
+          type: array
+          items:
+            $ref: '#/components/schemas/MainchainHeaderBaseInfo'
+        mainchainReferenceDataHeaderHashes:
+          type: array
+          items:
+            type: string
+        withdrawalEpochInfo:
+          $ref: '#/components/schemas/WithdrawalEpochInfo'
+        vrfOutputOpt:
+          $ref: '#/components/schemas/VrfOutput'
+        lastBlockInPreviousConsensusEpoch:
+          type: string
 
     CswInfo:
       type: object
@@ -2105,4 +2419,26 @@ components:
         scProof:
           type: string
         receiverAddress:
+          type: string
+
+    MainchainHeaderBaseInfo:
+      type: object
+      properties:
+        hash:
+          type: string
+        cumulativeCommTreeHash:
+          type: string
+
+    WithdrawalEpochInfo:
+      type: object
+      properties:
+        epoch:
+          type: integer
+        lastEpochIndex:
+          type: integer
+
+    VrfOutput:
+      type: object
+      properties:
+        bytes:
           type: string

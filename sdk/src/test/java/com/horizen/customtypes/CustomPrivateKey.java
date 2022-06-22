@@ -1,6 +1,5 @@
 package com.horizen.customtypes;
 
-import com.google.common.primitives.Bytes;
 import com.horizen.proof.ProofOfKnowledge;
 import com.horizen.proposition.ProofOfKnowledgeProposition;
 import com.horizen.secret.Secret;

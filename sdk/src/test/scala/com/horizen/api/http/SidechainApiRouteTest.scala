@@ -8,13 +8,12 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
-import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
+import com.horizen.SidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, GetStorageVersions, LocallyGeneratedSecret}
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
 import com.horizen.backup.BoxIterator
 import com.horizen.box.BoxSerializer
-import com.horizen.companion.{SidechainBoxesCompanion}
 import com.horizen.consensus.ConsensusEpochAndSlot
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
 import com.horizen.forge.Forger
@@ -25,7 +24,7 @@ import com.horizen.transaction._
 import com.horizen.{SidechainApp, SidechainSettings, SidechainTypes}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.runner.RunWith
-import org.mockito.{Mockito}
+import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitRunner
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatest.matchers.should.Matchers
@@ -45,16 +44,17 @@ import scala.util.{Failure, Success, Try}
 import com.horizen.csw.CswManager.ReceivableMessages.{GenerateCswProof, GetBoxNullifier, GetCeasedStatus, GetCswBoxIds, GetCswInfo}
 import com.horizen.csw.CswManager.Responses.{Absent, CswInfo, CswProofInfo, NoProofData, ProofCreationFinished}
 import com.horizen.customtypes.{CustomBox, CustomBoxSerializer}
+import com.horizen.secret.SecretSerializer
 import com.horizen.storage.StorageIterator
-import com.horizen.utils.{ByteArrayWrapper}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import scorex.crypto.hash.Blake2b256
 
+import java.io.{File, PrintWriter}
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.collection.mutable.ListBuffer
-
 import scala.language.postfixOps
 
 @RunWith(classOf[JUnitRunner])
@@ -63,6 +63,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
 
   implicit def rejectionHandler: RejectionHandler = SidechainApiRejectionHandler.rejectionHandler
+
 
   val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
 
@@ -97,11 +98,14 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   val memoryPool: util.List[RegularTransaction] = utilMocks.transactionList
   val allBoxes = utilMocks.allBoxes
   val genesisBlock = utilMocks.genesisBlock
-
+  val genesisBlockInfo = utilMocks.genesisBlockInfo
+  val listOfStorageVersions = utilMocks.listOfNodeStorageVersion
+  val sidechainId = utilMocks.sidechainId
   val mainchainBlockReferenceInfoRef = utilMocks.mainchainBlockReferenceInfoRef
 
   val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
   Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 1 seconds)
+  Mockito.when(mockedRESTSettings.apiKeyHash).thenAnswer(_ => Some("aa8ed2a907753a4a7c66f2aa1d48a0a74d4fde9a6ef34bae96a86dcd7800af98"))
 
   val mockedSidechainSettings: SidechainSettings = mock[SidechainSettings]
   Mockito.when(mockedSidechainSettings.scorexSettings).thenAnswer(_ => {
@@ -129,6 +133,9 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
           if (sidechainApiMockConfiguration.getShould_nodeViewHolder_LocallyGeneratedSecret_reply())
             sender ! Success(Unit)
           else sender ! Failure(new Exception("Secret not added."))
+        case GetStorageVersions =>
+          if (sidechainApiMockConfiguration.getShould_nodeViewHolder_GetStorageVersions_reply())
+            sender ! listOfStorageVersions
       }
       TestActor.KeepRunning
     }
@@ -311,16 +318,22 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   mockStorageIterator
   val mockedBoxIterator: BoxIterator = new BoxIterator(mockedStorageIterator, sidechainBoxesCompanion)
 
+  val customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]] = new JHashMap()
+  val sidechainSecretsCompanion = SidechainSecretsCompanion(customSecretSerializers)
+  val apiTokenHeader = new ApiTokenHeader("api_key","Horizen")
+  val badApiTokenHeader = new ApiTokenHeader("api_key","Harizen")
+
   implicit def default() = RouteTestTimeout(3.second)
 
-  val params = MainNetParams()
+  val params = MainNetParams(sidechainId = utilMocks.sidechainIdArray)
   val sidechainTransactionApiRoute: Route = SidechainTransactionApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainTransactionActorRef,
     sidechainTransactionsCompanion, params).route
-  val sidechainWalletApiRoute: Route = SidechainWalletApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
+  val sidechainWalletApiRoute: Route = SidechainWalletApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, sidechainSecretsCompanion).route
 
   val mockedSidechainApp: SidechainApp = mock[SidechainApp]
 
-  val sidechainNodeApiRoute: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainApp).route
+  val sidechainNodeApiRoute: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainApp, params).route
+
   val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, mockedSidechainBlockForgerActorRef).route
   val mainchainBlockApiRoute: Route = MainchainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val applicationApiRoute: Route = ApplicationApiRoute(mockedRESTSettings, new SimpleCustomApi(), mockedSidechainNodeViewHolderRef).route
@@ -342,6 +355,23 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
         assertEquals(errorCode, error.get("code").asText())
       case _ => fail("Serialization failed for object SidechainApiErrorResponseScheme")
     }
+  }
+
+  val dumpSecretsFilePath = System.getProperty("user.dir")+"/dumpSecrets"
+  val dumpFile = new File(dumpSecretsFilePath)
+
+  protected def createDumpSecretsFile(badSecret: Boolean, badProposition: Boolean): Unit = {
+    val secret1 = getPrivateKey25519
+    val secret2 = getPrivateKey25519
+    val writer = new PrintWriter(dumpFile)
+    writer.write("#Title#\n")
+    writer.write(BytesUtils.toHexString(sidechainSecretsCompanion.toBytes(secret1))+" "+BytesUtils.toHexString(secret1.publicImage().bytes())+"\n")
+    writer.write(BytesUtils.toHexString(sidechainSecretsCompanion.toBytes(secret2))+" "+BytesUtils.toHexString(secret2.publicImage().bytes())+"\n")
+    if (badSecret)
+      writer.write("aeaeaeaeaeaeaeaeaeae"+" "+BytesUtils.toHexString(secret2.publicImage().bytes())+"\n")
+    if (badProposition)
+      writer.write(BytesUtils.toHexString(sidechainSecretsCompanion.toBytes(secret2))+" "+BytesUtils.toHexString(secret1.publicImage().bytes())+"\n")
+    writer.close()
   }
 
 }

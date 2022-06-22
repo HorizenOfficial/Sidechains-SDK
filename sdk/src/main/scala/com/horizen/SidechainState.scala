@@ -128,7 +128,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     validateBlockTransactionsMutuality(mod)
     mod.transactions.foreach(tx => validate(tx).get)
 
-
     val currentWithdrawalEpochInfo = stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0))
     val modWithdrawalEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, currentWithdrawalEpochInfo, params)
 

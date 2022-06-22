@@ -120,7 +120,7 @@ def launch_bootstrap_tool(command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK",
-                                          "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.3.5.jar",
+                                          "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.3.5-SNAPSHOT.jar",
                                 command_name, json_param], stdout=subprocess.PIPE)
     sc_bootstrap_output = java_ps.communicate()[0]
     try:
@@ -142,7 +142,7 @@ def launch_db_tool(dirName, command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK",
-                                          "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-0.3.5.jar",
+                                          "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-0.3.5-SNAPSHOT.jar",
                                 storagesPath, command_name, json_param], stdout=subprocess.PIPE)
     db_tool_output = java_ps.communicate()[0]
     try:
@@ -268,6 +268,23 @@ def generate_certificate_proof_info(seed, number_of_schnorr_keys, threshold, key
 
 
 """
+return a string like '["127.0.0.1:xxxx","127.0.0.1:xxxx"]' to be set as known Peers in the configuration.
+Based on a index vector [0, 2, 3] where all peers could be [0,1,2,3,4]
+
+Parameters:
+ - known_peers_indexes: indexes of the known peers
+"""
+
+
+def get_known_peers(known_peers_indexes):
+    addresses = []
+    for index in known_peers_indexes:
+        addresses.append("\"" + ("127.0.0.1:" + str(sc_p2p_port(index))) + "\"")
+    peers = "[" + ",".join(addresses) + "]"
+    return peers
+
+
+"""
 Generate ceased sidechain withdrawal proof info calling ScBootstrappingTools with command "generateCswProofInfo"
 Parameters:
  - withdrawalEpochLen
@@ -328,7 +345,9 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
 
     all_private_keys = bootstrap_info.certificate_proof_info.schnorr_secrets
     signer_private_keys = [all_private_keys[idx] for idx in sc_node_config.submitter_private_keys_indexes]
-
+    api_key_hash = ""
+    if(sc_node_config.api_key != ""):
+        api_key_hash = calculateApiKeyHash(sc_node_config.api_key)
     config = tmpConfig % {
         'NODE_NUMBER': n,
         'DIRECTORY': dirname,
@@ -337,6 +356,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         'WALLET_SEED': "sidechain_seed_{0}".format(n),
         'API_ADDRESS': "127.0.0.1",
         'API_PORT': str(apiPort),
+        'API_KEY_HASH': api_key_hash,
         'API_TIMEOUT': (str(rest_api_timeout) + "s"),
         'BIND_PORT': str(bindPort),
         'MAX_CONNECTIONS': sc_node_config.max_connections,
@@ -457,7 +477,7 @@ def get_websocket_configuration(index, array_of_MCConnectionInfo):
     return array_of_MCConnectionInfo[index] if index < len(array_of_MCConnectionInfo) else MCConnectionInfo()
 
 
-def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None, print_output_to_file=False):
+def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None, print_output_to_file=False, auth_api_key = None):
     """
     Start a SC node and returns API connection to it
     """
@@ -468,7 +488,7 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
         lib_separator = ";"
 
     if binary is None:
-        binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.3.5.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+        binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.3.5-SNAPSHOT.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
     #        else if platform.system() == 'Linux':
     '''
     In order to effectively attach a debugger (e.g IntelliJ) to the simpleapp, it is necessary to start the process
@@ -493,20 +513,20 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
         sidechainclient_processes[i] = subprocess.Popen(bashcmd.split())
 
     url = "http://rt:rt@%s:%d" % ('127.0.0.1' or rpchost, sc_rpc_port(i))
-    proxy = SidechainAuthServiceProxy(url)
+    proxy = SidechainAuthServiceProxy(url, auth_api_key=auth_api_key)
     proxy.url = url  # store URL on proxy for info
     proxy.dataDir = datadir # store the name of the datadir
     return proxy
 
 
-def start_sc_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=None, print_output_to_file=False):
+def start_sc_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=None, print_output_to_file=False, auth_api_key = None):
     """
     Start multiple SC clients, return connections to them
     """
     if extra_args is None: extra_args = [None for i in range(num_nodes)]
     if binary is None: binary = [None for i in range(num_nodes)]
     nodes = [
-        start_sc_node(i, dirname, extra_args[i], rpchost, binary=binary[i], print_output_to_file=print_output_to_file)
+        start_sc_node(i, dirname, extra_args[i], rpchost, binary=binary[i], print_output_to_file=print_output_to_file, auth_api_key=auth_api_key)
         for i in range(num_nodes)]
     wait_for_sc_node_initialization(nodes)
     return nodes
@@ -546,6 +566,8 @@ def wait_sidechainclients():
         sidechainclient.wait()
     sidechainclient_processes.clear()
 
+def get_sc_node_pids() :
+    return [process.pid for process in sidechainclient_processes.values()]
 
 def connect_sc_nodes(from_connection, node_num, wait_for=25):
     """
@@ -860,6 +882,13 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
                            sc_creation_info.withdrawal_epoch_length, vrf_key, certificate_proof_info,
                            genesis_data["initialCumulativeCommTreeHash"], cert_keys_paths, csw_keys_paths)
 
+
+def calculateApiKeyHash(auth_api_key):
+
+    json_parameters = {
+        "string": auth_api_key
+    }
+    return launch_bootstrap_tool("encodeString", json_parameters)["encodedString"] 
 
 """
 Bootstrap one sidechain node: create directory and configuration file for the node.
