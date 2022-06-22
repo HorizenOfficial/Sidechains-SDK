@@ -198,7 +198,9 @@ class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
   }
 
 
-  override def getCodeHash(address: Array[Byte]): Array[Byte] = ???
+  override def getCodeHash(address: Array[Byte]): Array[Byte] = {
+    stateDb.getCodeHash(address)
+  }
 
   override def getAccountStateRoot: Option[Array[Byte]] = metadataStorageView.getAccountStateRoot
 

@@ -42,7 +42,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   protected def messageProcessors(params: NetworkParams): Seq[MessageProcessor] = {
     Seq(
-      EoaMessageProcessor
+      EoaMessageProcessor,
       WithdrawalMsgProcessor,
       ForgerStakeMsgProcessor(params)
     ) ++ customMessageProcessors
