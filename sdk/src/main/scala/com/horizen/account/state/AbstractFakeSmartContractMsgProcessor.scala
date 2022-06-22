@@ -7,6 +7,7 @@ import scorex.util.ScorexLogging
 abstract class AbstractFakeSmartContractMsgProcessor extends MessageProcessor with ScorexLogging {
 
   val OP_CODE_LENGTH = 1
+  val NULL_HEX_STRING_32 = BytesUtils.toHexString(new Array[Byte](32))
 
   val fakeSmartContractAddress: AddressProposition
   def fakeSmartContractCodeHash: Array[Byte]

@@ -6,7 +6,6 @@ import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.proposition.MCPublicKeyHashProposition
 
-
 import com.horizen.utils.{BytesUtils, ListSerializer, ZenCoinsUtils}
 import scorex.crypto.hash.Keccak256
 

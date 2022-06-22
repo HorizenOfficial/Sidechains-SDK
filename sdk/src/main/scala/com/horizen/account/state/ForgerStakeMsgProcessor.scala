@@ -7,14 +7,15 @@ import java.math.BigInteger
 import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
 import com.horizen.account.proof.{SignatureSecp256k1, SignatureSecp256k1Serializer}
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
+
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
-import scorex.crypto.hash.Keccak256
+import scorex.crypto.hash.{Blake2b256, Keccak256}
 import scorex.util.serialization.{Reader, Writer}
 
 import java.util
-import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
+
 import scala.util.{Failure, Success}
 
 
@@ -24,11 +25,19 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
   override def fakeSmartContractCodeHash: Array[Byte] =
     Keccak256.hash("ForgerStakeSmartContractCodeHash")
 
-  val stakeIdsListKey : Array[Byte] = BytesUtils.fromHexString("1122334411223344112233441122334411223344112233441122334411223344")
+  val LinkedListTipKey : Array[Byte] = Blake2b256.hash("Tip")
+  val LinkedListNullValue : Array[Byte] = Blake2b256.hash("Null")
 
   val GetListOfForgersCmd: String = "00"
   val AddNewStakeCmd: String =      "01"
   val RemoveStakeCmd: String =      "02"
+
+  // ensure we have strings consistent with size of opcode
+  require(
+    GetListOfForgersCmd.length == 2*OP_CODE_LENGTH &&
+    AddNewStakeCmd.length == 2*OP_CODE_LENGTH &&
+    RemoveStakeCmd.length == 2*OP_CODE_LENGTH
+  )
 
   // TODO set proper values
   val GetListOfForgersGasPaidValue : BigInteger = java.math.BigInteger.ONE
@@ -39,16 +48,211 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
 
   def getStakeId(msg: Message): Array[Byte] = {
     Keccak256.hash(Bytes.concat(
-      msg.getFrom.address(), msg.getNonce.toByteArray, msg.getValue.toByteArray,
-      msg.getData))
+      msg.getFrom.address(), msg.getNonce.toByteArray, msg.getValue.toByteArray, msg.getData))
+  }
+
+  private val forgingInfoSerializer: ListSerializer[AccountForgingStakeInfo] =
+    new ListSerializer[AccountForgingStakeInfo](AccountForgingStakeInfoSerializer)
+
+  override def init(view: AccountStateView): Unit = {
+    super.init(view)
+    // set the initial value for the linked list last element (null hash)
+
+    // check we do not have this key set to any value yet
+    val initialTip = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey).get
+
+    // getting a not existing key from state DB using RAW strategy as the api is doing
+    // gives 32 bytes filled with 0 (CHUNK strategy gives an empty array instead
+    require (BytesUtils.toHexString(initialTip) == NULL_HEX_STRING_32)
+
+    view.updateAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey, LinkedListNullValue)
   }
 
   def getMessageToSign(stakeId: Array[Byte], from: Array[Byte], nonce: Array[Byte]): Array[Byte] = {
     Bytes.concat(from, nonce, stakeId)
   }
 
-  private val forgingInfoSerializer: ListSerializer[AccountForgingStakeInfo] =
-    new ListSerializer[AccountForgingStakeInfo](AccountForgingStakeInfoSerializer)
+  def existsStakeData(view: AccountStateView, stakeId: Array[Byte]): Boolean = {
+    // do the RAW-strategy read even if the record is actually multi-line in stateDb. It will save some gas.
+    view.getAccountStorage(fakeSmartContractAddress.address(), stakeId) match {
+      case Success(data) =>
+        // getting a not existing key from state DB using RAW strategy
+        // gives an array of 32 bytes filled with 0, while using CHUNK strategy
+        // gives an empty array instead
+        BytesUtils.toHexString(data) != NULL_HEX_STRING_32
+
+      case Failure(e) =>
+        log.error("Failure in getting value from state DB", e)
+        throw new Exception(e)
+    }
+  }
+
+  def findStakeData(view: AccountStateView, stakeId: Array[Byte]): Option[ForgerStakeData] = {
+      view.getAccountStorageBytes(fakeSmartContractAddress.address(), stakeId) match {
+        case Success(data) =>
+          if(data.length == 0) {
+            // getting a not existing key from state DB using RAW strategy
+            // gives an array of 32 bytes filled with 0, while using CHUNK strategy, as the api is doing here
+            // gives an empty array instead
+            None
+          } else {
+            ForgerStakeDataSerializer.parseBytesTry(data) match {
+              case Success(obj) => Some(obj)
+              case Failure(exception) =>
+                log.error("Error while parsing forger data.", exception)
+                throw exception
+            }
+          }
+
+        case Failure(e) =>
+          log.error("Failure in getting value from state DB", e)
+          throw new Exception(e)
+      }
+  }
+
+  def findLinkedListNode(view: AccountStateView, nodeId: Array[Byte]): Option[LinkedListNode] = {
+    view.getAccountStorageBytes(fakeSmartContractAddress.address(), nodeId) match {
+      case Success(data) =>
+        if(data.length == 0) {
+          // getting a not existing key from state DB using RAW strategy
+          // gives an array of 32 bytes filled with 0, while using CHUNK strategy, as the api is doing here
+          // gives an empty array instead
+          None
+        } else {
+          LinkedListNodeSerializer.parseBytesTry(data) match {
+            case Success(obj) => Some(obj)
+            case Failure(exception) =>
+              log.error("Error while parsing forging info.", exception)
+              throw exception
+          }
+        }
+
+      case Failure(e) =>
+        log.error("Failure in getting value from state DB", e)
+        throw new Exception(e)
+    }
+  }
+
+  def addNewNodeToList(view: AccountStateView, stakeId: Array[Byte]) : Unit =
+  {
+    val oldTip = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey).get
+
+    val newTip = Blake2b256.hash(stakeId)
+
+    // modify previous node (if any) to point at this one
+    if (!linkedListNodeRefIsNull(oldTip))
+    {
+      val previousNode = findLinkedListNode(view, oldTip).get
+
+      val modPreviousNode = LinkedListNode(
+        previousNode.dataKey,
+        previousNode.previousNodeKey,
+        newTip
+      )
+
+      // store the modified previous node
+      view.updateAccountStorageBytes(fakeSmartContractAddress.address(), oldTip,
+        LinkedListNodeSerializer.toBytes(modPreviousNode))
+    }
+
+    // update list tip, now it is this newly added one
+    view.updateAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey, newTip)
+
+    // store the new node
+    view.updateAccountStorageBytes(fakeSmartContractAddress.address(), newTip,
+      LinkedListNodeSerializer.toBytes(
+        LinkedListNode(stakeId, oldTip, LinkedListNullValue)))
+  }
+
+  def addForgerStake(view: AccountStateView, stakeId: Array[Byte],
+                     blockSignProposition: PublicKey25519Proposition,
+                     vrfPublicKey: VrfPublicKey,
+                     ownerPublicKey: AddressProposition,
+                     stakedAmount: BigInteger): Unit =
+  {
+
+    // add a new node to the linked list pointing to this forger stake data
+    addNewNodeToList(view, stakeId)
+
+    val forgerStakeData = ForgerStakeData(
+      ForgerPublicKeys(blockSignProposition, vrfPublicKey), ownerPublicKey, stakedAmount)
+
+     // store the forger stake data
+    view.updateAccountStorageBytes(fakeSmartContractAddress.address(), stakeId,
+      ForgerStakeDataSerializer.toBytes(forgerStakeData))
+  }
+
+  def removeForgerStake(view: AccountStateView, stakeId: Array[Byte]): Unit=
+  {
+    val nodeToRemoveId = Blake2b256.hash(stakeId)
+
+    // we assume that the caller have checked that the forger stake really exists in the stateDb.
+    // in this case we must necessarily have a linked list node
+    val nodeToRemove = findLinkedListNode(view, nodeToRemoveId).get
+
+    // modify previous node if any
+    if (!linkedListNodeRefIsNull(nodeToRemove.previousNodeKey))
+    {
+      val prevNodeId = nodeToRemove.previousNodeKey
+      val previousNode = findLinkedListNode(view, prevNodeId).get
+
+      val modPreviousNode = LinkedListNode(
+       previousNode.dataKey,
+       previousNode.previousNodeKey,
+       nodeToRemove.nextNodeKey)
+
+      // store the modified previous node
+      view.updateAccountStorageBytes(fakeSmartContractAddress.address(), prevNodeId,
+        LinkedListNodeSerializer.toBytes(modPreviousNode))
+    }
+
+    // modify next node if any
+    if (!linkedListNodeRefIsNull(nodeToRemove.nextNodeKey))
+    {
+      val nextNodeId = nodeToRemove.nextNodeKey
+      val nextNode = findLinkedListNode(view, nextNodeId).get
+
+      val modNextNode = LinkedListNode(
+        nextNode.dataKey,
+        nodeToRemove.previousNodeKey,
+        nextNode.nextNodeKey)
+
+      // store the modified next node
+      view.updateAccountStorageBytes(fakeSmartContractAddress.address(), nextNodeId,
+        LinkedListNodeSerializer.toBytes(modNextNode))
+    } else {
+      // if there is no next node, we update the linked list tip to point to the previous node, promoted to be the new tip
+      view.updateAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey, nodeToRemove.previousNodeKey)
+    }
+
+    // remove the stake
+    view.removeAccountStorageBytes(fakeSmartContractAddress.address(), stakeId)
+
+    // remove the node from the linked list
+    view.removeAccountStorageBytes(fakeSmartContractAddress.address(), nodeToRemoveId)
+  }
+
+  def getListItem(view: AccountStateView, tip: Array[Byte]) : (AccountForgingStakeInfo, Array[Byte]) = {
+    if (!linkedListNodeRefIsNull(tip))
+    {
+      val node = findLinkedListNode(view, tip).get
+      val stakeData = findStakeData(view, node.dataKey).get
+      val listItem = AccountForgingStakeInfo(
+        node.dataKey,
+        ForgerStakeData(
+          ForgerPublicKeys(
+            stakeData.forgerPublicKeys.blockSignPublicKey, stakeData.forgerPublicKeys.vrfPublicKey),
+          stakeData.ownerPublicKey, stakeData.stakedAmount)
+      )
+      val prevNodeKey = node.previousNodeKey
+      (listItem, prevNodeKey)
+    } else {
+      throw new IllegalArgumentException("Tip has the null value, no list here")
+    }
+  }
+
+  def linkedListNodeRefIsNull(ref: Array[Byte]) : Boolean =
+    BytesUtils.toHexString(ref).equals(BytesUtils.toHexString(LinkedListNullValue))
 
   override def process(msg: Message, view: AccountStateView): ExecutionResult = {
     try {
@@ -69,24 +273,20 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
             return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(errMsg))
           }
 
-          // get current list from db and unserialize it, just to be sure we have the right data
-          val serializedStakeIdList : Array[Byte] = view.getAccountStorageBytes(fakeSmartContractAddress.address(), stakeIdsListKey).get
-          val stakeInfoList = serializedStakeIdList.length match {
-            case 0 =>
-              new util.ArrayList[AccountForgingStakeInfo]()
+          val stakeList = new util.ArrayList[AccountForgingStakeInfo]()
+          var nodeReference = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey).get
 
-            case _ =>  forgingInfoSerializer.parseBytesTry(serializedStakeIdList) match {
-              case Success(obj) => obj
-              case Failure(exception) =>
-                val errMsg = "Error while parsing list of forging info."
-                log.error(errMsg, exception)
-                return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(errMsg))
-            }
+          while (!linkedListNodeRefIsNull(nodeReference))
+          {
+            val (item : AccountForgingStakeInfo, prevNodeReference: Array[Byte]) = getListItem(view, nodeReference)
+            stakeList.add(item)
+            nodeReference = prevNodeReference
           }
 
-          val listOfForgers : Array[Byte] = forgingInfoSerializer.toBytes(stakeInfoList)
+          val listOfForgers : Array[Byte] = forgingInfoSerializer.toBytes(stakeList)
 
           new ExecutionSucceeded(GetListOfForgersGasPaidValue, listOfForgers)
+
 
         case `AddNewStakeCmd` =>
           // first of all check msg.value, it must be a legal wei amount convertible in satoshi without any remainder
@@ -111,71 +311,47 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
               return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(errMsg))
           }
 
-          val blockSignProposition : PublicKey25519Proposition = cmdInput.blockSignProposition
-          val vrfPublicKey :VrfPublicKey                       = cmdInput.vrfPublicKey
-          val ownerPublicKey: AddressProposition               = cmdInput.ownerPublicKey
+          val blockSignPublicKey : PublicKey25519Proposition = cmdInput.forgerPublicKeys.blockSignPublicKey
+          val vrfPublicKey :VrfPublicKey                     = cmdInput.forgerPublicKeys.vrfPublicKey
+          val ownerPublicKey: AddressProposition             = cmdInput.ownerPublicKey
 
           // check that the delegation arguments satisfy the restricted list of forgers.
-          if (!networkParams.allowedForgersList.contains((blockSignProposition, vrfPublicKey))) {
+          if (!networkParams.allowedForgersList.contains((blockSignPublicKey, vrfPublicKey))) {
             log.error("Forger is not in the allowed list")
             return new ExecutionFailed(AddNewStakeGasPaidValue, new Exception("Forger is not in the allowed list"))
           }
 
-          // get current stakes list from db
-          val serializedStakeIdList : Array[Byte] = view.getAccountStorageBytes(fakeSmartContractAddress.address(), stakeIdsListKey).get
-
-          val stakeInfoList = serializedStakeIdList.length match {
-            case 0 =>
-              new util.ArrayList[AccountForgingStakeInfo]()
-
-            case _ =>  forgingInfoSerializer.parseBytesTry(serializedStakeIdList) match {
-              case Success(obj) => obj
-              case Failure(exception) =>
-                val errMsg = "Error while parsing list of forging info."
-                log.error(errMsg, exception)
-                return new InvalidMessage(new Exception(exception))
-            }
-          }
-
           // compute stakeId
-          val stakeId = getStakeId(msg)
+          val newStakeId = getStakeId(msg)
 
-          // do we already have this id?
-          if (stakeInfoList.asScala.exists(
-            x => { BytesUtils.toHexString(x.stakeId) == BytesUtils.toHexString(stakeId)}))
-          {
-            val errMsg = s"Stake ${BytesUtils.toHexString(stakeId)} already in stateDb"
-            log.error(errMsg)
-            return new ExecutionFailed(AddNewStakeGasPaidValue, new Exception(errMsg))
+          // check we do not already have this stake obj in the db
+          if (existsStakeData(view, newStakeId)) {
+            val errorMsg = s"Stake ${BytesUtils.toHexString(newStakeId)} already in stateDb"
+            log.error(errorMsg)
+            return new ExecutionFailed(AddNewStakeGasPaidValue, new Exception(errorMsg))
           }
 
-          // add new obj to memory list
-          stakeInfoList.add(
-            AccountForgingStakeInfo(stakeId, blockSignProposition, vrfPublicKey, ownerPublicKey, msg.getValue))
+          // add the obj to stateDb
+          val stakedAmount = msg.getValue
+          addForgerStake(view, newStakeId, blockSignPublicKey, vrfPublicKey, ownerPublicKey, stakedAmount)
 
           // decrease the balance of `from` account by `tx.value`
-          view.subBalance(msg.getFrom.address(), msg.getValue) match {
+          view.subBalance(msg.getFrom.address(), stakedAmount) match {
             case Success(_) =>
-
-              // serialize the list
-              val newList : Array[Byte] = forgingInfoSerializer.toBytes(stakeInfoList)
-
-              // update the db
-              view.updateAccountStorageBytes(fakeSmartContractAddress.address(), stakeIdsListKey, newList).get
-
-              // increase the balance of the "stake smart contract” account
-              view.addBalance(fakeSmartContractAddress.address(), msg.getValue).get
+              // increase the balance of the "forger stake smart contract” account
+              view.addBalance(fakeSmartContractAddress.address(), stakedAmount).get
 
               // TODO add log ForgerStakeDelegation(StakeId, ...) to the StateView ???
               //view.addLog(new EvmLog concrete instance) // EvmLog will be used internally
 
-              // Maybe result is not useful in case of success execution (used probably for RPC cmds only)
-              val result = stakeId
+              // Maybe result is not useful in case of success execution (used probably for RPC commands only)
+              val result = newStakeId
+
               new ExecutionSucceeded(AddNewStakeGasPaidValue, result)
 
             case Failure(e) =>
               val balance = view.getBalance(msg.getFrom.address())
-              log.error(s"Could not subtract ${msg.getValue} from account: current balance = $balance")
+              log.error(s"Could not subtract $stakedAmount from account: current balance = $balance")
               new ExecutionFailed(AddNewStakeGasPaidValue, new Exception(e))
           }
 
@@ -192,60 +368,36 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
           val stakeId : Array[Byte]          = cmdInput.stakeId
           val signature : SignatureSecp256k1 = cmdInput.signature
 
-          // get current list from db
-          val serializedStakeIdList : Array[Byte] = view.getAccountStorageBytes(fakeSmartContractAddress.address(), stakeIdsListKey).get
-
-          val stakeInfoList = serializedStakeIdList.length match {
-            case 0 =>
-              return new ExecutionFailed(RemoveStakeGasPaidValue, new Exception("No stakes in state-db"))
-
-            case _ =>  forgingInfoSerializer.parseBytesTry(serializedStakeIdList) match {
-              case Success(obj) => obj
-              case Failure(exception) =>
-                log.error("Error while parsing list of forging info.", exception)
-                return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(exception))
-            }
-          }
-
-          // remove the entry if any
-          var removedElement : AccountForgingStakeInfo = null
-          val newList = stakeInfoList.asScala.filterNot(
-            x => {
-              if (BytesUtils.toHexString(x.stakeId) == BytesUtils.toHexString(stakeId))
-              {
-                removedElement = x
-                true
-              } else {
-                false
-              }
-            })
-
-          if (removedElement == null) {
-            return new ExecutionFailed(RemoveStakeGasPaidValue, new Exception("No such stake id in state-db"))
+          // get the forger stake data to remove
+          val stakeData = findStakeData(view, stakeId) match {
+            case Some(obj) => obj
+            case None =>
+              val errorMsg = "No such stake id in state-db"
+              log.error(errorMsg)
+              return new ExecutionFailed(RemoveStakeGasPaidValue, new Exception(errorMsg))
           }
 
           // check signature
           val msgToSign = getMessageToSign(stakeId, msg.getFrom.address(), msg.getNonce.toByteArray)
-          if (!signature.isValid(removedElement.ownerPublicKey, msgToSign)) {
-            return new ExecutionFailed(RemoveStakeGasPaidValue, new Exception("Invalid signature"))
+          if (!signature.isValid(stakeData.ownerPublicKey, msgToSign)) {
+            val errorMsg = "Invalid signature"
+            log.error(errorMsg)
+            return new ExecutionFailed(RemoveStakeGasPaidValue, new Exception(errorMsg))
           }
 
-          // serialize the list
-          val newListSerialized : Array[Byte] = forgingInfoSerializer.toBytes(newList.toList.asJava)
-
-          // update the db
-          view.updateAccountStorageBytes(fakeSmartContractAddress.address(), stakeIdsListKey, newListSerialized).get
+          // remove the forger stake data
+          removeForgerStake(view, stakeId)
 
           // TODO add log ForgerStakeWithdrawal(StakeId, ...) to the StateView ???
           //view.addLog(new EvmLog concrete instance) // EvmLog will be used internally
 
           // decrease the balance of the "stake smart contract” account
-          view.subBalance(fakeSmartContractAddress.address(), removedElement.stakedAmount).get
+          view.subBalance(fakeSmartContractAddress.address(), stakeData.stakedAmount).get
 
           // increase the balance of owner (not the sender) by withdrawn amount.
-          view.addBalance(removedElement.ownerPublicKey.address(), removedElement.stakedAmount)
+          view.addBalance(stakeData.ownerPublicKey.address(), stakeData.stakedAmount)
 
-          // Maybe result is not useful in case of success execution (used probably for RPC cmds only)
+          // Maybe result is not useful in case of success execution (used probably for RPC commands only)
           val result = stakeId
           new ExecutionSucceeded(RemoveStakeGasPaidValue, result)
 
@@ -265,105 +417,93 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
 }
 
 //@JsonView(Array(classOf[Views.Default]))
+// used as element of the list to return when getting all forger stakes via msg processor
 case class AccountForgingStakeInfo(
                                     stakeId: Array[Byte],
-                                    blockSignProposition: PublicKey25519Proposition,
-                                    vrfPublicKey: VrfPublicKey,
-                                    ownerPublicKey: AddressProposition,
-                                    stakedAmount: BigInteger)
+                                    forgerStakeData: ForgerStakeData)
   extends BytesSerializable  {
-  require(stakedAmount.signum() != -1, "stakeAmount expected to be non negative.")
+  require(forgerStakeData.stakedAmount.signum() != -1, "stakeAmount expected to be non negative.")
 
   override type M = AccountForgingStakeInfo
 
   override def serializer: ScorexSerializer[AccountForgingStakeInfo] = AccountForgingStakeInfoSerializer
 
-  override def toString: String = "%s(stakeId: %s, blockSignPublicKey: %s, vrfPublicKey: %s, ownerPublicKey: %s, stakeAmount: %d)"
-    .format(this.getClass.toString, BytesUtils.toHexString(stakeId), blockSignProposition, vrfPublicKey, ownerPublicKey, stakedAmount)
-
+  override def toString: String = "%s(stakeId: %s, forgerStakeData: %s)"
+    .format(this.getClass.toString, BytesUtils.toHexString(stakeId), forgerStakeData)
 }
 
-
 object AccountForgingStakeInfoSerializer extends ScorexSerializer[AccountForgingStakeInfo]{
+
   override def serialize(s: AccountForgingStakeInfo, w: Writer): Unit = {
     w.putBytes(s.stakeId)
-    PublicKey25519PropositionSerializer.getSerializer.serialize(s.blockSignProposition, w)
-    VrfPublicKeySerializer.getSerializer.serialize(s.vrfPublicKey, w)
-    AddressPropositionSerializer.getSerializer.serialize(s.ownerPublicKey, w)
-    w.putInt(s.stakedAmount.toByteArray.length)
-    w.putBytes(s.stakedAmount.toByteArray)
+    ForgerStakeDataSerializer.serialize(s.forgerStakeData, w)
   }
 
   override def parse(r: Reader): AccountForgingStakeInfo = {
     val stakeId = r.getBytes(32)
-    val blockSignPublicKey = PublicKey25519PropositionSerializer.getSerializer.parse(r)
-    val vrfPublicKey = VrfPublicKeySerializer.getSerializer.parse(r)
-    val ownerPublicKey = AddressPropositionSerializer.getSerializer.parse(r)
-    val stakeAmountLength = r.getInt()
-    val stakeAmount = new BigInteger(r.getBytes(stakeAmountLength))
+    val forgerStakeData = ForgerStakeDataSerializer.parse(r)
 
-    AccountForgingStakeInfo(stakeId, blockSignPublicKey, vrfPublicKey, ownerPublicKey, stakeAmount)
-
+    AccountForgingStakeInfo(stakeId, forgerStakeData)
   }
 }
 
 
-case class AllowedForgerInfo(
-                blockSignProposition: PublicKey25519Proposition,
-                vrfPublicKey: VrfPublicKey
-              ) extends BytesSerializable {
-  override type M = AllowedForgerInfo
+case class ForgerPublicKeys(
+                              blockSignPublicKey: PublicKey25519Proposition,
+                              vrfPublicKey: VrfPublicKey)
+  extends BytesSerializable {
+  override type M = ForgerPublicKeys
 
-  override def serializer: ScorexSerializer[AllowedForgerInfo] = AllowedForgerInfoSerializer
+  override def serializer: ScorexSerializer[ForgerPublicKeys] = ForgerPublicKeysSerializer
 }
 
-object AllowedForgerInfoSerializer extends ScorexSerializer[AllowedForgerInfo] {
+object ForgerPublicKeysSerializer extends ScorexSerializer[ForgerPublicKeys] {
 
-  override def serialize(s: AllowedForgerInfo, w: Writer): Unit = {
-    PublicKey25519PropositionSerializer.getSerializer.serialize(s.blockSignProposition, w)
+  override def serialize(s: ForgerPublicKeys, w: Writer): Unit = {
+    PublicKey25519PropositionSerializer.getSerializer.serialize(s.blockSignPublicKey, w)
     VrfPublicKeySerializer.getSerializer.serialize(s.vrfPublicKey, w)
   }
 
-  override def parse(r: Reader): AllowedForgerInfo = {
+  override def parse(r: Reader): ForgerPublicKeys = {
     val blockSignProposition = PublicKey25519PropositionSerializer.getSerializer.parse(r)
     val vrfPublicKey = VrfPublicKeySerializer.getSerializer.parse(r)
-    AllowedForgerInfo(blockSignProposition, vrfPublicKey)
+    ForgerPublicKeys(blockSignProposition, vrfPublicKey)
   }
 }
 
+
 case class AddNewStakeCmdInput(
-                        blockSignProposition: PublicKey25519Proposition,
-                        vrfPublicKey: VrfPublicKey,
+                        forgerPublicKeys: ForgerPublicKeys,
                         ownerPublicKey: AddressProposition)
+
   extends BytesSerializable  {
 
   override type M = AddNewStakeCmdInput
 
   override def serializer: ScorexSerializer[AddNewStakeCmdInput] = AddNewStakeCmdInputSerializer
 
-  override def toString: String = "%s(blockSignPublicKey: %s, vrfPublicKey: %s, ownerPublicKey: %s)"
-    .format(this.getClass.toString, blockSignProposition, vrfPublicKey, ownerPublicKey)
+  override def toString: String = "%s(forgerPubKeys: %s, ownerPublicKey: %s)"
+    .format(this.getClass.toString, forgerPublicKeys, ownerPublicKey)
+
 }
 
 object AddNewStakeCmdInputSerializer extends ScorexSerializer[AddNewStakeCmdInput]{
 
+
   override def serialize(s: AddNewStakeCmdInput, w: Writer): Unit = {
-    PublicKey25519PropositionSerializer.getSerializer.serialize(s.blockSignProposition, w)
-    VrfPublicKeySerializer.getSerializer.serialize(s.vrfPublicKey, w)
+    ForgerPublicKeysSerializer.serialize(s.forgerPublicKeys, w)
     AddressPropositionSerializer.getSerializer.serialize(s.ownerPublicKey, w)
   }
 
   override def parse(r: Reader): AddNewStakeCmdInput = {
-    val blockSignPublicKey = PublicKey25519PropositionSerializer.getSerializer.parse(r)
-    val vrfPublicKey = VrfPublicKeySerializer.getSerializer.parse(r)
+    val forgerPublicKeys = ForgerPublicKeysSerializer.parse(r)
     val ownerPublicKey = AddressPropositionSerializer.getSerializer.parse(r)
+    AddNewStakeCmdInput(forgerPublicKeys, ownerPublicKey)
 
-    AddNewStakeCmdInput(blockSignPublicKey, vrfPublicKey, ownerPublicKey)
   }
 }
 
 
-//@JsonView(Array(classOf[Views.Default]))
 case class RemoveStakeCmdInput(
                              stakeId: Array[Byte],
                              signature: SignatureSecp256k1)
@@ -375,9 +515,7 @@ case class RemoveStakeCmdInput(
 
   override def toString: String = "%s(stakeId: %s, signature: %s)"
     .format(this.getClass.toString, BytesUtils.toHexString(stakeId), signature)
-
 }
-
 
 object RemoveStakeCmdInputSerializer extends ScorexSerializer[RemoveStakeCmdInput]{
   override def serialize(s: RemoveStakeCmdInput, w: Writer): Unit = {
@@ -390,7 +528,119 @@ object RemoveStakeCmdInputSerializer extends ScorexSerializer[RemoveStakeCmdInpu
     val signature = SignatureSecp256k1Serializer.getSerializer.parse(r)
 
     RemoveStakeCmdInput(stakeId, signature)
-
   }
 }
 
+// the forger stake data record, stored in stateDb as: key=stakeId / value=data
+case class ForgerStakeData(
+                           forgerPublicKeys: ForgerPublicKeys,
+                           ownerPublicKey: AddressProposition,
+                           stakedAmount: BigInteger)
+  extends BytesSerializable  {
+
+
+  override type M = ForgerStakeData
+
+  override def serializer: ScorexSerializer[ForgerStakeData] = ForgerStakeDataSerializer
+
+  override def toString: String = "%s(forgerPubKeys: %s, ownerPublicKey: %s, stakedAmount: %s)"
+    .format(this.getClass.toString, forgerPublicKeys, ownerPublicKey, stakedAmount)
+}
+
+object ForgerStakeDataSerializer extends ScorexSerializer[ForgerStakeData]{
+  override def serialize(s: ForgerStakeData, w: Writer): Unit = {
+    ForgerPublicKeysSerializer.serialize(s.forgerPublicKeys, w)
+    AddressPropositionSerializer.getSerializer.serialize(s.ownerPublicKey, w)
+    w.putInt(s.stakedAmount.toByteArray.length)
+    w.putBytes(s.stakedAmount.toByteArray)
+  }
+
+  override def parse(r: Reader): ForgerStakeData = {
+    val forgerPublicKeys = ForgerPublicKeysSerializer.parse(r)
+    val ownerPublicKey = AddressPropositionSerializer.getSerializer.parse(r)
+    val stakeAmountLength = r.getInt()
+    val stakeAmount = new BigInteger(r.getBytes(stakeAmountLength))
+
+    ForgerStakeData(forgerPublicKeys, ownerPublicKey, stakeAmount)
+  }
+}
+
+// A (sort of) linked list node containing:
+//     stakeId of a forger stake data db record
+//     two keys to contiguous nodes, previous and next
+// Each node is stored in stateDb as key/value pair:
+//     key=Hash(node.dataKey) / value = node
+// Note:
+// 1) we use Blake256b hash since stateDb internally uses Keccak hash of stakeId as key for forger stake data records
+// and it would clash
+// 2) TIP value is stored in the state db as well, initialized as NULL value
+
+/*
+TIP                            NULL
+  |                               ^
+  |                                \
+  |                                 \
+  +-----> NODE_n [stakeId_n, prev, next]  <------------+
+                    |         |                         \
+                    |         |                          \
+                    |         V                           \
+                    |       NODE_n-1 [stakeId_n-1, prev, next]  <------------+
+                    |                   |           |                         \
+                    |                   |           |                          \
+                    V                   |           V                           \
+                 STAKE_n                |         NODE_n-2 [stakeId_n-2, prev, next]
+                                        |                     |           |
+                                        |                    ...         ...
+                                        V
+                                     STAKE_n-1                      .
+                                                                     .
+                                                                      .
+
+                                                                                    ...
+                                                                                      \
+                                                          NODE_1 [stakeId_n-1, prev, next]  <---------+
+                                                                    |           |                      \
+                                                                    |           |                       \
+                                                                    |           V                        \
+                                                                    |         NODE_0 [stakeId_0, prev, next]
+                                                                    |                   |         |
+                                                                    |                   |         |
+                                                                    V                   |         V
+                                                                 STAKE_1                |       NULL
+                                                                                        |
+                                                                                        |
+                                                                                        V
+                                                                                     STAKE_0
+
+ */
+
+case class LinkedListNode(dataKey: Array[Byte], previousNodeKey: Array[Byte], nextNodeKey: Array[Byte])
+  extends BytesSerializable  {
+
+  require(dataKey.length == 32, "data key size should be 32")
+  require(previousNodeKey.length == 32, "next node key size should be 32")
+  require(nextNodeKey.length == 32, "next node key size should be 32")
+
+  override type M = LinkedListNode
+
+  override def serializer: ScorexSerializer[LinkedListNode] = LinkedListNodeSerializer
+
+  override def toString: String = "%s(dataKey: %s, previousNodeKey: %s, nextNodeKey: %s)"
+    .format(this.getClass.toString, BytesUtils.toHexString(dataKey),
+      BytesUtils.toHexString(previousNodeKey), BytesUtils.toHexString(nextNodeKey))
+}
+
+object LinkedListNodeSerializer extends ScorexSerializer[LinkedListNode]{
+  override def serialize(s: LinkedListNode, w: Writer): Unit = {
+    w.putBytes(s.dataKey)
+    w.putBytes(s.previousNodeKey)
+    w.putBytes(s.nextNodeKey)
+  }
+
+  override def parse(r: Reader): LinkedListNode = {
+    val dataKey = r.getBytes(32)
+    val previousNodeKey = r.getBytes(32)
+    val nextNodeKey = r.getBytes(32)
+    LinkedListNode(dataKey, previousNodeKey, nextNodeKey)
+  }
+}
