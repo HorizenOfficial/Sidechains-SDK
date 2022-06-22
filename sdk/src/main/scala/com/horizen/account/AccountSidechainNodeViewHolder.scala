@@ -5,12 +5,12 @@ import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
-import com.horizen.account.state.{AccountState, MessageProcessor, WithdrawalMsgProcessor}
+import com.horizen.account.state.{AccountState, ForgerStakeMsgProcessor, MessageProcessor, WithdrawalMsgProcessor}
 import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
 import com.horizen.account.transaction.AccountTransaction
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.consensus._
-import com.horizen.evm.LevelDBDatabase
+import com.horizen.evm.Database
 import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
 import com.horizen.proof.Proof
@@ -28,7 +28,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                      historyStorage: AccountHistoryStorage,
                                      consensusDataStorage: ConsensusDataStorage,
                                      stateMetadataStorage: AccountStateMetadataStorage,
-                                     stateDbStorage: LevelDBDatabase,
+                                     stateDbStorage: Database,
                                      customMessageProcessors: Seq[MessageProcessor],
                                      secretStorage: SidechainSecretStorage,
                                      genesisBlock: AccountBlock)
@@ -43,7 +43,8 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   protected def messageProcessors(params: NetworkParams): Seq[MessageProcessor] = {
     Seq(
       // todo: put core message processors here
-      WithdrawalMsgProcessor
+      WithdrawalMsgProcessor,
+      ForgerStakeMsgProcessor(params)
     ) ++ customMessageProcessors
   }
 
@@ -175,7 +176,7 @@ object AccountNodeViewHolderRef {
             historyStorage: AccountHistoryStorage,
             consensusDataStorage: ConsensusDataStorage,
             stateMetadataStorage: AccountStateMetadataStorage,
-            stateDbStorage: LevelDBDatabase,
+            stateDbStorage: Database,
             customMessageProcessors: Seq[MessageProcessor],
             secretStorage: SidechainSecretStorage,
             params: NetworkParams,
@@ -188,7 +189,7 @@ object AccountNodeViewHolderRef {
             historyStorage: AccountHistoryStorage,
             consensusDataStorage: ConsensusDataStorage,
             stateMetadataStorage: AccountStateMetadataStorage,
-            stateDbStorage: LevelDBDatabase,
+            stateDbStorage: Database,
             customMessageProcessors: Seq[MessageProcessor],
             secretStorage: SidechainSecretStorage,
             params: NetworkParams,
@@ -203,7 +204,7 @@ object AccountNodeViewHolderRef {
             historyStorage: AccountHistoryStorage,
             consensusDataStorage: ConsensusDataStorage,
             stateMetadataStorage: AccountStateMetadataStorage,
-            stateDbStorage: LevelDBDatabase,
+            stateDbStorage: Database,
             customMessageProcessors: Seq[MessageProcessor],
             secretStorage: SidechainSecretStorage,
             params: NetworkParams,

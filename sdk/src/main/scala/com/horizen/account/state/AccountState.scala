@@ -20,7 +20,7 @@ import scala.util.{Failure, Try}
 class AccountState(val params: NetworkParams,
                    override val version: VersionTag,
                    stateMetadataStorage: AccountStateMetadataStorage,
-                   stateDbStorage: LevelDBDatabase,
+                   stateDbStorage: Database,
                    messageProcessors: Seq[MessageProcessor])
   extends State[SidechainTypes#SCAT, AccountBlock, AccountStateView, AccountState]
     with NodeAccountState
@@ -237,7 +237,7 @@ class AccountState(val params: NetworkParams,
   // Account specific getters
   override def getAccount(address: Array[Byte]): Account = ???
 
-  override def getBalance(address: Array[Byte]): java.math.BigInteger = ???
+  override def getBalance(address: Array[Byte]): Try[java.math.BigInteger] = ???
 
   override def getAccountStateRoot: Option[Array[Byte]] = getView.getAccountStateRoot
 }
@@ -245,7 +245,7 @@ class AccountState(val params: NetworkParams,
 
 object AccountState {
   private[horizen] def restoreState(stateMetadataStorage: AccountStateMetadataStorage,
-                                    stateDbStorage: LevelDBDatabase,
+                                    stateDbStorage: Database,
                                     messageProcessors: Seq[MessageProcessor],
                                     params: NetworkParams): Option[AccountState] = {
 
@@ -257,14 +257,12 @@ object AccountState {
   }
 
   private[horizen] def createGenesisState(stateMetadataStorage: AccountStateMetadataStorage,
-                                          stateDbStorage: LevelDBDatabase,
+                                          stateDbStorage: Database,
                                           messageProcessors: Seq[MessageProcessor],
                                           params: NetworkParams,
                                           genesisBlock: AccountBlock): Try[AccountState] = Try {
 
     if (stateMetadataStorage.isEmpty) {
-      // TODO pass from outside
-      val stateDbStorage = new LevelDBDatabase("/tmp/evm")
       new AccountState(params, idToVersion(genesisBlock.parentId), stateMetadataStorage, stateDbStorage, messageProcessors)
         .initProcessors(idToVersion(genesisBlock.parentId)).get
         .applyModifier(genesisBlock).get

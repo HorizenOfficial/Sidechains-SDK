@@ -18,7 +18,7 @@ import scala.util.Try
 
 class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
                        val stateDb: StateDB,
-                       messageProcessors: Seq[MessageProcessor]) extends StateView[SidechainTypes#SCAT, AccountStateView] with AccountStateReader {
+                       messageProcessors: Seq[MessageProcessor]) extends StateView[SidechainTypes#SCAT, AccountStateView] with AccountStateReader with AutoCloseable {
   view: AccountStateView =>
 
   override type NVCT = this.type
@@ -55,7 +55,9 @@ class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
   def accountExists(address: Array[Byte]): Boolean = stateDb.exists(address)
 
   // account modifiers:
-  def addAccount(address: Array[Byte], codeHash: Array[Byte]): Unit = stateDb.setCodeHash(address, codeHash)
+  def addAccount(address: Array[Byte], codeHash: Array[Byte]): Try[Unit] = Try {
+    stateDb.setCodeHash(address, codeHash)
+  }
 
   def addBalance(address: Array[Byte], amount: BigInteger): Try[Unit] = Try {
     stateDb.addBalance(address, amount)
@@ -191,8 +193,16 @@ class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
   // account specific getters
   override def getAccount(address: Array[Byte]): Account = ???
 
-  override def getBalance(address: Array[Byte]): java.math.BigInteger = stateDb.getBalance(address)
+  override def getBalance(address: Array[Byte]): Try[java.math.BigInteger] = Try {
+    stateDb.getBalance(address)
+  }
+
 
   override def getAccountStateRoot: Option[Array[Byte]] = metadataStorageView.getAccountStateRoot
+
+  def close() : Unit = {
+    // when a method is called on a closed handle, LibEvm throws an exception
+    stateDb.close()
+  }
 
 }

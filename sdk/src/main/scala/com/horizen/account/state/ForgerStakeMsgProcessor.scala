@@ -7,18 +7,23 @@ import java.math.BigInteger
 import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
 import com.horizen.account.proof.{SignatureSecp256k1, SignatureSecp256k1Serializer}
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
+
+import com.horizen.params.NetworkParams
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.crypto.hash.{Blake2b256, Keccak256}
 import scorex.util.serialization.{Reader, Writer}
 
 import java.util
+
 import scala.util.{Failure, Success}
 
 
-object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
+case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSmartContractMsgProcessor {
 
   override val fakeSmartContractAddress: AddressProposition = new AddressProposition(BytesUtils.fromHexString("0000000000000000000022222222222222222222"))
+  override def fakeSmartContractCodeHash: Array[Byte] =
+    Keccak256.hash("ForgerStakeSmartContractCodeHash")
 
   val LinkedListTipKey : Array[Byte] = Blake2b256.hash("Tip")
   val LinkedListNullValue : Array[Byte] = Blake2b256.hash("Null")
@@ -38,6 +43,8 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
   val GetListOfForgersGasPaidValue : BigInteger = java.math.BigInteger.ONE
   val AddNewStakeGasPaidValue : BigInteger      = java.math.BigInteger.ONE
   val RemoveStakeGasPaidValue : BigInteger      = java.math.BigInteger.ONE
+
+  val networkParams : NetworkParams = params
 
   def getStakeId(msg: Message): Array[Byte] = {
     Keccak256.hash(Bytes.concat(
@@ -249,14 +256,21 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
 
   override def process(msg: Message, view: AccountStateView): ExecutionResult = {
     try {
+
+      if (!canProcess(msg, view)) {
+        val errMsg = s"Cannot process message $msg"
+        log.error(errMsg)
+        return new InvalidMessage(new IllegalArgumentException(errMsg))
+      }
+
       val cmdString = BytesUtils.toHexString(getOpCodeFromData(msg.getData))
       cmdString match {
         case `GetListOfForgersCmd` =>
           // check we have no other bytes after the op code in the msg data
           if (getArgumentsFromData(msg.getData).length > 0) {
-            val errorMsg = s"invalid msg data length: ${msg.getData.length}, expected $OP_CODE_LENGTH}"
-            log.error(errorMsg)
-            return new InvalidMessage(new Exception(errorMsg))
+            val errMsg = s"invalid msg data length: ${msg.getData.length}, expected $OP_CODE_LENGTH"
+            log.error(errMsg)
+            return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(errMsg))
           }
 
           val stakeList = new util.ArrayList[AccountForgingStakeInfo]()
@@ -292,17 +306,17 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
           val cmdInput = AddNewStakeCmdInputSerializer.parseBytesTry(getArgumentsFromData(msg.getData)) match {
             case Success(obj) => obj
             case Failure(exception) =>
-              log.error("Error while parsing cmd input.", exception)
-              return new InvalidMessage(new Exception(exception))
+              val errMsg = "Error while parsing cmd input"
+              log.error(errMsg, exception)
+              return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(errMsg))
           }
 
           val blockSignPublicKey : PublicKey25519Proposition = cmdInput.forgerPublicKeys.blockSignPublicKey
-          val vrfPublicKey :VrfPublicKey                       = cmdInput.forgerPublicKeys.vrfPublicKey
-          val ownerPublicKey: AddressProposition               = cmdInput.ownerPublicKey
-          val allowedForgerList: util.List[ForgerPublicKeys]        = cmdInput.allowedForgerList
+          val vrfPublicKey :VrfPublicKey                     = cmdInput.forgerPublicKeys.vrfPublicKey
+          val ownerPublicKey: AddressProposition             = cmdInput.ownerPublicKey
 
           // check that the delegation arguments satisfy the restricted list of forgers.
-          if (!allowedForgerList.contains(ForgerPublicKeys(blockSignPublicKey, vrfPublicKey))) {
+          if (!networkParams.allowedForgersList.contains((blockSignPublicKey, vrfPublicKey))) {
             log.error("Forger is not in the allowed list")
             return new ExecutionFailed(AddNewStakeGasPaidValue, new Exception("Forger is not in the allowed list"))
           }
@@ -332,6 +346,7 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
 
               // Maybe result is not useful in case of success execution (used probably for RPC commands only)
               val result = newStakeId
+
               new ExecutionSucceeded(AddNewStakeGasPaidValue, result)
 
             case Failure(e) =>
@@ -347,7 +362,7 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
             case Success(obj) => obj
             case Failure(exception) =>
               log.error("Error while parsing cmd input.", exception)
-              return new InvalidMessage(new Exception(exception))
+              return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(exception))
           }
 
           val stakeId : Array[Byte]          = cmdInput.stakeId
@@ -387,15 +402,16 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
           new ExecutionSucceeded(RemoveStakeGasPaidValue, result)
 
         case _ =>
-          val errorMsg = s"op code $cmdString not supported"
-            log.error(errorMsg)
-          new InvalidMessage(new IllegalArgumentException(errorMsg))
+          val errMsg = s"op code $cmdString not supported"
+          log.error(errMsg)
+          new ExecutionFailed(RemoveStakeGasPaidValue, new IllegalArgumentException(errMsg))
       }
     }
     catch {
       case e : Exception =>
-        log.error(s"Exception while processing message: $msg",e)
-        new InvalidMessage(e)
+        val errMsg = s"Exception while processing message: $msg"
+        log.error(errMsg)
+        new ExecutionFailed(RemoveStakeGasPaidValue, new IllegalArgumentException(e))
     }
   }
 }
@@ -458,33 +474,32 @@ object ForgerPublicKeysSerializer extends ScorexSerializer[ForgerPublicKeys] {
 
 case class AddNewStakeCmdInput(
                         forgerPublicKeys: ForgerPublicKeys,
-                        ownerPublicKey: AddressProposition,
-                        allowedForgerList: util.List[ForgerPublicKeys])
+                        ownerPublicKey: AddressProposition)
+
   extends BytesSerializable  {
 
   override type M = AddNewStakeCmdInput
 
   override def serializer: ScorexSerializer[AddNewStakeCmdInput] = AddNewStakeCmdInputSerializer
 
-  override def toString: String = "%s(forgerPubKeys: %s, ownerPublicKey: %s, allowedForgerList: %s)"
-    .format(this.getClass.toString, forgerPublicKeys, ownerPublicKey, allowedForgerList)
+  override def toString: String = "%s(forgerPubKeys: %s, ownerPublicKey: %s)"
+    .format(this.getClass.toString, forgerPublicKeys, ownerPublicKey)
+
 }
 
 object AddNewStakeCmdInputSerializer extends ScorexSerializer[AddNewStakeCmdInput]{
 
-  private val allowedForgerListSerializer : ListSerializer[ForgerPublicKeys] = new ListSerializer[ForgerPublicKeys](ForgerPublicKeysSerializer)
 
   override def serialize(s: AddNewStakeCmdInput, w: Writer): Unit = {
     ForgerPublicKeysSerializer.serialize(s.forgerPublicKeys, w)
     AddressPropositionSerializer.getSerializer.serialize(s.ownerPublicKey, w)
-    allowedForgerListSerializer.serialize(s.allowedForgerList, w)
   }
 
   override def parse(r: Reader): AddNewStakeCmdInput = {
     val forgerPublicKeys = ForgerPublicKeysSerializer.parse(r)
     val ownerPublicKey = AddressPropositionSerializer.getSerializer.parse(r)
-    val allowedForgerList = allowedForgerListSerializer.parse(r)
-    AddNewStakeCmdInput(forgerPublicKeys, ownerPublicKey, allowedForgerList)
+    AddNewStakeCmdInput(forgerPublicKeys, ownerPublicKey)
+
   }
 }
 

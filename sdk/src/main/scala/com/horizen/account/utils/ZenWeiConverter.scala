@@ -3,7 +3,7 @@ package com.horizen.account.utils
 import com.horizen.utils.ZenCoinsUtils
 
 object ZenWeiConverter {
-  val ZENNY_TO_WEI_MULTIPLIER: java.math.BigInteger = java.math.BigInteger.valueOf(10000000000L)
+  val ZENNY_TO_WEI_MULTIPLIER: java.math.BigInteger = java.math.BigInteger.TEN.pow(10)
   val MAX_MONEY_IN_WEI: java.math.BigInteger = convertZenniesToWei(ZenCoinsUtils.MAX_MONEY)
 
 

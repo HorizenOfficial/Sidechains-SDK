@@ -20,6 +20,9 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
 
   override val fakeSmartContractAddress: AddressProposition = new AddressProposition(BytesUtils.fromHexString("0000000000000000000011111111111111111111"))
 
+  override def fakeSmartContractCodeHash: Array[Byte] =
+    Keccak256.hash("WithdrawalRequestSmartContractCodeHash")
+
   val getListOfWithdrawalReqsCmdSig: String = "00"
   val addNewWithdrawalReqCmdSig: String = "01"
 
@@ -141,7 +144,7 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
       throw new IllegalArgumentException("Withdrawal amount is under the dust threshold")
     }
     else {
-      val balance = view.getBalance(msg.getFrom.address())
+      val balance = view.getBalance(msg.getFrom.address()).get
       if (balance.compareTo(withdrawalAmount) < 0) {
         log.error(s"Insufficient balance amount: balance: $balance, requested withdrawal amount: $withdrawalAmount")
         throw new IllegalArgumentException("Insufficient balance amount")
