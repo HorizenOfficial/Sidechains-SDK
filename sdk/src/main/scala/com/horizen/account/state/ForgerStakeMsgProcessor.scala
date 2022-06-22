@@ -20,9 +20,7 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
 
   override val fakeSmartContractAddress: AddressProposition = new AddressProposition(BytesUtils.fromHexString("0000000000000000000022222222222222222222"))
 
-  val stakeIdsListKey : Array[Byte] = BytesUtils.fromHexString("1122334411223344112233441122334411223344112233441122334411223344")
-
-  val LinkedListHeadKey : Array[Byte] = Blake2b256.hash("Head")
+  val LinkedListTipKey : Array[Byte] = Blake2b256.hash("Tip")
   val LinkedListNullValue : Array[Byte] = Blake2b256.hash("Null")
 
   val GetListOfForgersCmd: String = "00"
@@ -51,22 +49,36 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
 
   override def init(view: AccountStateView): Unit = {
     super.init(view)
-    // set the initial value for the linked list head
+    // set the initial value for the linked list last element (null hash)
 
     // check we do not have this key set to any value yet
-    val initialHead = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListHeadKey).get
+    val initialTip = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey).get
 
     // getting a not existing key from state DB using RAW strategy as the api is doing
     // gives 32 bytes filled with 0 (CHUNK strategy gives an empty array instead
-    require (BytesUtils.toHexString(initialHead) == BytesUtils.toHexString(new Array[Byte](32)))
+    require (BytesUtils.toHexString(initialTip) == NULL_HEX_STRING_32)
 
-    view.updateAccountStorage(fakeSmartContractAddress.address(), LinkedListHeadKey, LinkedListNullValue)
+    view.updateAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey, LinkedListNullValue)
   }
 
   def getMessageToSign(stakeId: Array[Byte], from: Array[Byte], nonce: Array[Byte]): Array[Byte] = {
     Bytes.concat(from, nonce, stakeId)
   }
 
+  def existsStakeData(view: AccountStateView, stakeId: Array[Byte]): Boolean = {
+    // do the RAW-strategy read even if the record is actually multi-line in stateDb. It will save some gas.
+    view.getAccountStorage(fakeSmartContractAddress.address(), stakeId) match {
+      case Success(data) =>
+        // getting a not existing key from state DB using RAW strategy
+        // gives an array of 32 bytes filled with 0, while using CHUNK strategy
+        // gives an empty array instead
+        BytesUtils.toHexString(data) != NULL_HEX_STRING_32
+
+      case Failure(e) =>
+        log.error("Failure in getting value from state DB", e)
+        throw new Exception(e)
+    }
+  }
 
   def findStakeData(view: AccountStateView, stakeId: Array[Byte]): Option[ForgerStakeData] = {
       view.getAccountStorageBytes(fakeSmartContractAddress.address(), stakeId) match {
@@ -116,33 +128,33 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
 
   def addNewNodeToList(view: AccountStateView, stakeId: Array[Byte]) : Unit =
   {
-    val oldHead = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListHeadKey).get
+    val oldTip = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey).get
 
-    val newHead = Blake2b256.hash(stakeId)
+    val newTip = Blake2b256.hash(stakeId)
 
     // modify previous node (if any) to point at this one
-    if (!linkedListNodeRefIsNull(oldHead))
+    if (!linkedListNodeRefIsNull(oldTip))
     {
-      val previousNode = findLinkedListNode(view, oldHead).get
+      val previousNode = findLinkedListNode(view, oldTip).get
 
       val modPreviousNode = LinkedListNode(
         previousNode.dataKey,
         previousNode.previousNodeKey,
-        newHead
+        newTip
       )
 
       // store the modified previous node
-      view.updateAccountStorageBytes(fakeSmartContractAddress.address(), oldHead,
+      view.updateAccountStorageBytes(fakeSmartContractAddress.address(), oldTip,
         LinkedListNodeSerializer.toBytes(modPreviousNode))
     }
 
-    // update list head, now it is this newly added one
-    view.updateAccountStorage(fakeSmartContractAddress.address(), LinkedListHeadKey, newHead)
+    // update list tip, now it is this newly added one
+    view.updateAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey, newTip)
 
     // store the new node
-    view.updateAccountStorageBytes(fakeSmartContractAddress.address(), newHead,
+    view.updateAccountStorageBytes(fakeSmartContractAddress.address(), newTip,
       LinkedListNodeSerializer.toBytes(
-        LinkedListNode(stakeId, oldHead, LinkedListNullValue)))
+        LinkedListNode(stakeId, oldTip, LinkedListNullValue)))
   }
 
   def addForgerStake(view: AccountStateView, stakeId: Array[Byte],
@@ -163,9 +175,12 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
       ForgerStakeDataSerializer.toBytes(forgerStakeData))
   }
 
-  def removeForgerStake(view: AccountStateView, dataToRemoveId: Array[Byte]): Unit=
+  def removeForgerStake(view: AccountStateView, stakeId: Array[Byte]): Unit=
   {
-    val nodeToRemoveId = Blake2b256.hash(dataToRemoveId)
+    val nodeToRemoveId = Blake2b256.hash(stakeId)
+
+    // we assume that the caller have checked that the forger stake really exists in the stateDb.
+    // in this case we must necessarily have a linked list node
     val nodeToRemove = findLinkedListNode(view, nodeToRemoveId).get
 
     // modify previous node if any
@@ -199,21 +214,21 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
       view.updateAccountStorageBytes(fakeSmartContractAddress.address(), nextNodeId,
         LinkedListNodeSerializer.toBytes(modNextNode))
     } else {
-      // if there is no next node, we update the linked list head to point to the previous node, promoted to be the new head
-      view.updateAccountStorage(fakeSmartContractAddress.address(), LinkedListHeadKey, nodeToRemove.previousNodeKey)
+      // if there is no next node, we update the linked list tip to point to the previous node, promoted to be the new tip
+      view.updateAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey, nodeToRemove.previousNodeKey)
     }
 
     // remove the stake
-    view.removeAccountStorageBytes(fakeSmartContractAddress.address(), dataToRemoveId)
+    view.removeAccountStorageBytes(fakeSmartContractAddress.address(), stakeId)
 
     // remove the node from the linked list
     view.removeAccountStorageBytes(fakeSmartContractAddress.address(), nodeToRemoveId)
   }
 
-  def getListItem(view: AccountStateView, head: Array[Byte]) : (AccountForgingStakeInfo, Array[Byte]) = {
-    if (!linkedListNodeRefIsNull(head))
+  def getListItem(view: AccountStateView, tip: Array[Byte]) : (AccountForgingStakeInfo, Array[Byte]) = {
+    if (!linkedListNodeRefIsNull(tip))
     {
-      val node = findLinkedListNode(view, head).get
+      val node = findLinkedListNode(view, tip).get
       val stakeData = findStakeData(view, node.dataKey).get
       val listItem = AccountForgingStakeInfo(
         node.dataKey,
@@ -225,7 +240,7 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
       val prevNodeKey = node.previousNodeKey
       (listItem, prevNodeKey)
     } else {
-      throw new IllegalArgumentException("Head is the null value, no list here")
+      throw new IllegalArgumentException("Tip has the null value, no list here")
     }
   }
 
@@ -245,7 +260,7 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
           }
 
           val stakeList = new util.ArrayList[AccountForgingStakeInfo]()
-          var nodeReference = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListHeadKey).get
+          var nodeReference = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey).get
 
           while (!linkedListNodeRefIsNull(nodeReference))
           {
@@ -296,7 +311,7 @@ object ForgerStakeMsgProcessor extends AbstractFakeSmartContractMsgProcessor {
           val newStakeId = getStakeId(msg)
 
           // check we do not already have this stake obj in the db
-          if (findStakeData(view, newStakeId).isDefined) {
+          if (existsStakeData(view, newStakeId)) {
             val errorMsg = s"Stake ${BytesUtils.toHexString(newStakeId)} already in stateDb"
             log.error(errorMsg)
             return new ExecutionFailed(AddNewStakeGasPaidValue, new Exception(errorMsg))
@@ -543,10 +558,10 @@ object ForgerStakeDataSerializer extends ScorexSerializer[ForgerStakeData]{
 // Note:
 // 1) we use Blake256b hash since stateDb internally uses Keccak hash of stakeId as key for forger stake data records
 // and it would clash
-// 2) HEAD value is stored in the state db as well, initialized as NULL value
+// 2) TIP value is stored in the state db as well, initialized as NULL value
 
 /*
-HEAD                            NULL
+TIP                            NULL
   |                               ^
   |                                \
   |                                 \
