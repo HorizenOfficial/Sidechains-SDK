@@ -182,8 +182,10 @@ class SidechainMemoryPoolTest
     var totalTxSizeMax = (1024*1024)  //1MB
     val list = mutable.MutableList[RegularTransaction]()
     val lowestFeeTx = getRegularRandomTransaction(10, 1)
+    val secondLowestFeeTx = getRegularRandomTransaction(20, 1)
     list += lowestFeeTx
-    var totalTxSize = lowestFeeTx.size()
+    list += secondLowestFeeTx
+    var totalTxSize = lowestFeeTx.size() + secondLowestFeeTx.size()
     while (totalTxSize < totalTxSizeMax) {
       var newTx = getRegularRandomTransaction(30, 1)
       list += newTx
@@ -203,6 +205,12 @@ class SidechainMemoryPoolTest
     assertEquals("MemoryPool must have correct size ", list.size-1, memoryPool.size)
     assertEquals("Lowest fee transaction must not be present ", false, memoryPool.getTransactionById(lowestFeeTx.id()).isPresent)
 
+    //now the tx with lowest fee is secondLowestFeeTx: we try to add another tx with the same feerate
+    var aNewTx = getRegularRandomTransaction(20, 1)
+    assertEquals("Put tx operation must be success.", true, memoryPool.put(aNewTx).isSuccess)
+    assertEquals("MemoryPool must have correct size ", list.size-1, memoryPool.size)
+    assertEquals("Old lowest fee transaction must not be present ", false, memoryPool.getTransactionById(secondLowestFeeTx.id()).isPresent)
+    assertEquals("New lowest fee transaction must be present ", true, memoryPool.getTransactionById(aNewTx.id()).isPresent)
   }
 
   private def getMockedMempoolSettings(maxSize: Int, minFeeRate: Long): MempoolSettings = {

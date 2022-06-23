@@ -120,6 +120,8 @@ class SCMempoolMinFeeRate(SidechainTestFramework):
             error = True
         assert_false(error)
 
+        #a litte pause to let tx spread through the node mempools
+        #note: we cannot use sync_sc_mempools since the mempools are different
         time.sleep(5)
 
         #check that on node2 the lowest fee transaction is not present in mempool
