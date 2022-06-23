@@ -50,7 +50,7 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
             // verify signature validity for the given message
             final var signingAddress = Keys.getAddress(Sign.signedMessageToKey(message, signature));
             // verify that the signature was created with the expected address
-            return Objects.equals(Numeric.hexStringToByteArray(signingAddress), proposition.address());
+            return Objects.equals(signingAddress, Numeric.toHexStringNoPrefix(proposition.address()));
         } catch (SignatureException e) {
             return false;
         }
