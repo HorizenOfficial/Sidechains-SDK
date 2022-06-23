@@ -11,8 +11,8 @@
             <PatternLayout pattern="${LOG_PATTERN}"/>
         </Console>
 
-        <!--RollingFile name="errorLog" fileName="log/application2-error.log"
-                     filePattern="log/application-error-%d{yyyy-MM-dd}-%i.log" >
+        <!--RollingFile name="errorLog" fileName="${sys:logDir}application-error.log"
+                     filePattern="${sys:logDir}application-error-%d{yyyy-MM-dd}-%i.log" >
             <LevelRangeFilter minLevel="ERROR" maxLevel="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
             <PatternLayout pattern="${LOG_PATTERN}"/>
             <Policies>
@@ -22,8 +22,8 @@
         </RollingFile-->
 
         <!-- if filePattern ends in .gz, the rollover files are compressed -->
-        <RollingFile name="debugLog" fileName="${sys:logFilename}"
-                     filePattern="${sys:logFilename}-%d{yyyy-MM-dd}-%i.gz" >
+        <RollingFile name="debugLog" fileName="${sys:logDir}${sys:logFilename}"
+                     filePattern="${sys:logDir}${sys:logFilename}-%d{yyyy-MM-dd}-%i.gz" >
             <ThresholdFilter level="all" onMatch="ACCEPT" onMismatch="DENY"/>
             <PatternLayout pattern="${LOG_PATTERN}"/>
             <Policies>
