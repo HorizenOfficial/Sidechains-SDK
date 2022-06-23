@@ -54,7 +54,7 @@ class SCBackwardTransfer(SidechainTestFramework):
         mc_node = self.nodes[0]
         sc_node_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            api_key = self.API_KEY
+            api_key = self.API_KEY,
             submitter_private_keys_indexes=list(range(cert_max_keys))  # SC node owns all schnorr private keys.
         )
 

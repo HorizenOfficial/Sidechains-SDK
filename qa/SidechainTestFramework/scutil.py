@@ -833,7 +833,7 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration, block_tim
     return sc_nodes_bootstrap_info
 
 
-def cert_proof_keys_paths(dirname, cert_threshold_sig_max_keys):
+def cert_proof_keys_paths(dirname, cert_threshold_sig_max_keys = 7):
     # use replace for Windows OS to be able to parse the path to the keys in the config file
     return ProofKeysPaths(
         os.path.join(dirname, "cert_marlin_snark_pk_" + str(cert_threshold_sig_max_keys)).replace("\\", "/"),
