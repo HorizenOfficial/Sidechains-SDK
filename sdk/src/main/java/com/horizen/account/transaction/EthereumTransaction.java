@@ -1,43 +1,92 @@
 package com.horizen.account.transaction;
 
 import com.fasterxml.jackson.annotation.*;
-import com.google.common.primitives.Bytes;
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.utils.Account;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
+import org.jetbrains.annotations.NotNull;
 import org.web3j.crypto.RawTransaction;
+import org.web3j.crypto.Sign.SignatureData;
 import org.web3j.crypto.SignedRawTransaction;
+import org.web3j.crypto.TransactionEncoder;
+import org.web3j.crypto.transaction.type.LegacyTransaction;
+import org.web3j.crypto.transaction.type.Transaction1559;
+import org.web3j.crypto.transaction.type.TransactionType;
 import org.web3j.utils.Numeric;
 
+import javax.annotation.Nullable;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.SignatureException;
 import java.util.Objects;
 
+// TODO ensure that the json parameters are fitting for the use case
 @JsonPropertyOrder({"from", "gasPrice", "nonce", "to", "value", "signature"})
 @JsonIgnoreProperties({"transaction", "gasLimit"})
 @JsonView(Views.Default.class)
 public class EthereumTransaction extends AccountTransaction<AddressProposition, SignatureSecp256k1> {
-
     private final RawTransaction transaction;
-    private final int version = 1;
-    @JsonUnwrapped
-    private final SignatureSecp256k1 signature;
 
-    public EthereumTransaction(SignedRawTransaction transaction) {
-        Objects.requireNonNull(transaction, "Raw Transaction can't be null.");
+    // depends on the transaction
+    public EthereumTransaction(
+            RawTransaction transaction
+    ) throws NullPointerException {
+        Objects.requireNonNull(transaction);
+        if (transaction instanceof SignedRawTransaction)
+            Objects.requireNonNull(((SignedRawTransaction) transaction).getSignatureData());
         this.transaction = transaction;
-        signature = new SignatureSecp256k1(transaction.getSignatureData().getV(),
-                transaction.getSignatureData().getR(), transaction.getSignatureData().getS());
     }
 
-    public EthereumTransaction(RawTransaction transaction) {
-        Objects.requireNonNull(transaction, "Raw Transaction can't be null.");
-        this.transaction = transaction;
-        signature = null;
+    // creates a legacy transaction
+    public EthereumTransaction(
+            @NotNull String to,
+            @NotNull BigInteger nonce,
+            @NotNull BigInteger gasPrice,
+            @NotNull BigInteger gasLimit,
+            @Nullable BigInteger value,
+            @Nullable String data,
+            @Nullable SignatureData signature
+    ) {
+        this(signature != null ?
+                new SignedRawTransaction(
+                        RawTransaction.createTransaction(nonce, gasPrice, gasLimit, to, value, data).getTransaction(),
+                        signature) :
+                RawTransaction.createTransaction(nonce, gasPrice, gasLimit, to, value, data)
+        );
+    }
+
+    // creates an eip1559 transaction
+    public EthereumTransaction(
+            long chainId,
+            @NotNull String to,
+            @NotNull BigInteger nonce,
+            @NotNull BigInteger gasLimit,
+            @NotNull BigInteger maxPriorityFeePerGas,
+            @NotNull BigInteger maxFeePerGas,
+            @Nullable BigInteger value,
+            @Nullable String data,
+            @Nullable SignatureData signature
+    ) {
+        this(
+                signature != null ?
+                        new SignedRawTransaction(
+                                RawTransaction.createTransaction(chainId, nonce, gasLimit, to, value, data,
+                                        maxPriorityFeePerGas, maxFeePerGas).getTransaction(),
+                                signature)
+                        : RawTransaction.createTransaction(chainId, nonce, gasLimit, to, value, data,
+                        maxPriorityFeePerGas, maxFeePerGas)
+        );
+    }
+
+    public RawTransaction getTransaction() {
+        return this.transaction;
+    }
+
+    public boolean isSigned() {
+        return this.transaction instanceof SignedRawTransaction;
     }
 
     @Override
@@ -47,7 +96,9 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public byte version() {
-        return version;
+        if (transaction.getType() == TransactionType.LEGACY)
+            return 0x0;
+        return 0x2;
     }
 
     @Override
@@ -55,84 +106,103 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return EthereumTransactionSerializer.getSerializer();
     }
 
-    public RawTransaction getTransaction() {
-        return this.transaction;
-    }
-
     @Override
     public void semanticValidity() throws TransactionSemanticValidityException {
-        if (transaction.getValue().signum() <= 0) {
-            throw new TransactionSemanticValidityException("Cannot create transaction with zero value");
-        } else if (transaction.getGasLimit().signum() <= 0) {
+        if (getGasLimit().signum() <= 0)
             throw new TransactionSemanticValidityException("Cannot create transaction with zero gas limit");
-        } else {
-            try {
-                if (signature != null && this.getFrom().address().length <= Account.ADDRESS_SIZE) {
-                    throw new TransactionSemanticValidityException("Cannot create signed transaction without valid from address");
-                } else if (!signature.isValid(getFrom(), "test".getBytes(StandardCharsets.UTF_8))) {
-                    throw new TransactionSemanticValidityException("Cannot create transaction with invalid signature");
-                }
-            } catch (TransactionSemanticValidityException e) {
-                throw new TransactionSemanticValidityException(e);
-            }
+        if (this.isSigned()) {
+            if (this.getFrom().address().length != Account.ADDRESS_SIZE)
+                throw new TransactionSemanticValidityException("Cannot create signed transaction without valid from address");
+            if (!this.getSignature().isValid(this.getFrom(),
+                    "test".getBytes(StandardCharsets.UTF_8)))
+                throw new TransactionSemanticValidityException("Cannot create signed transaction with invalid " +
+                        "signature");
+
         }
     }
 
     @Override
     public BigInteger getNonce() {
-        return transaction.getNonce();
+        return this.transaction.getNonce();
     }
 
     @Override
     public BigInteger getGasPrice() {
-        return transaction.getGasPrice();
+        if (!this.isEIP1559())
+            return this.legacyTx().getGasPrice();
+        return null;
+    }
+
+    public BigInteger getMaxFeePerGas() {
+        if (this.isEIP1559())
+            return this.eip1559Tx().getMaxFeePerGas();
+        return null;
+    }
+
+    public BigInteger getMaxPriorityFeePerGas() {
+        if (this.isEIP1559())
+            return this.eip1559Tx().getMaxPriorityFeePerGas();
+        return null;
+    }
+
+    public Long getChainId() {
+        if (this.isEIP1559())
+            return this.eip1559Tx().getChainId();
+        return null;
+    }
+
+    public boolean isEIP1559() {
+        return this.transaction.getTransaction() instanceof Transaction1559;
+    }
+
+    private Transaction1559 eip1559Tx() {
+        return (Transaction1559) this.transaction.getTransaction();
+    }
+
+    private LegacyTransaction legacyTx() {
+        return (LegacyTransaction) this.transaction.getTransaction();
     }
 
     @Override
     public BigInteger getGasLimit() {
-        return transaction.getGasLimit();
-    }
-
-    public BigInteger getFeeCap() {
-        return transaction.getFeeCap();
-
-    }
-    public BigInteger getGasPremium() {
-        return transaction.getGasPremium();
-    }
-
-    @JsonProperty("from")
-    private String getAddress() {
-        if (signature != null) {
-            SignedRawTransaction tx = (SignedRawTransaction) transaction;
-            try {
-                return tx.getFrom();
-            } catch (SignatureException e) { /*we return an empty string if signature is empty or invalid*/ }
-        }
-        return "";
+        return this.transaction.getGasLimit();
     }
 
     @Override
     @JsonIgnore
     public AddressProposition getFrom() {
-        if (signature != null)
-            return new AddressProposition(Numeric.hexStringToByteArray(getAddress()));
+        if (this.isSigned())
+            return new AddressProposition(Numeric.hexStringToByteArray(getFromAddress()));
         return null;
     }
 
     @Override
     public AddressProposition getTo() {
-        var to = Numeric.hexStringToByteArray(transaction.getTo());
+        var to = Numeric.hexStringToByteArray(this.getToAddress());
         if (to.length == Account.ADDRESS_SIZE)
             return new AddressProposition(to);
         return null;
     }
 
-    @Override
-    public BigInteger getValue() {
-        return transaction.getValue();
+    public String getToAddress() {
+        return this.transaction.getTo();
     }
 
+    @JsonProperty("from")
+    public String getFromAddress() {
+        if (this.isSigned()) try {
+            return ((SignedRawTransaction) this.transaction).getFrom();
+        } catch (SignatureException ignored) {
+        }
+        return "";
+    }
+
+    @Override
+    public BigInteger getValue() {
+        return this.transaction.getValue();
+    }
+
+    //TODO: getData was defined as byte array before, if we want to change to String, please look at all other usages
     @Override
     public byte[] getData() {
         return Numeric.hexStringToByteArray(transaction.getData());
@@ -140,20 +210,44 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public SignatureSecp256k1 getSignature() {
-        return signature;
+        if (this.isSigned()) {
+            SignedRawTransaction stx = (SignedRawTransaction) this.transaction;
+            return new SignatureSecp256k1(
+                    new byte[]{stx.getRealV(Numeric.toBigInt(stx.getSignatureData().getV()))},
+                    stx.getSignatureData().getR(),
+                    stx.getSignatureData().getS());
+        }
+        return null;
     }
+
 
     @Override
     public String toString() {
-        return String.format(
-                "EthereumTransaction{from=%s, nonce=%s, gasPrice=%s, gasLimit=%s, to=%s, data=%s, Signature=%s}",
-                getAddress(),
-                Numeric.toHexStringWithPrefix(transaction.getNonce()),
-                Numeric.toHexStringWithPrefix(transaction.getGasPrice()),
-                Numeric.toHexStringWithPrefix(transaction.getGasLimit()),
-                transaction.getTo(),
-                transaction.getData(),
-                signature != null ? signature.toString() : ""
+        if (this.isEIP1559())
+            return String.format(
+                    "EthereumTransaction{from=%s, nonce=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
+                            "maxFeePerGas=%s, maxPriorityFeePerGas=%s, Signature=%s}",
+                    getFromAddress(),
+                    Numeric.toHexStringWithPrefix(this.getNonce()),
+                    Numeric.toHexStringWithPrefix(this.getGasLimit()),
+                    this.getTo() != null ? this.getTo() : "0x",
+                    Numeric.toHexStringWithPrefix(this.getValue()),
+                    this.getData() != null ? Numeric.toHexString(this.getData()) : "",
+                    Numeric.toHexStringWithPrefix(this.getMaxFeePerGas()),
+                    Numeric.toHexStringWithPrefix(this.getMaxPriorityFeePerGas()),
+                    isSigned() ? getSignature().toString() : ""
+            );
+        else return String.format(
+                "EthereumTransaction{from=%s, nonce=%s, gasPrice=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
+                        "Signature=%s}",
+                getFromAddress(),
+                Numeric.toHexStringWithPrefix(this.getNonce()),
+                Numeric.toHexStringWithPrefix(this.getGasPrice()),
+                Numeric.toHexStringWithPrefix(this.getGasLimit()),
+                this.getTo() != null ? this.getTo() : "0x",
+                Numeric.toHexStringWithPrefix(this.getValue()),
+                this.getData() != null ? Numeric.toHexString(this.getData()) : "",
+                isSigned() ? getSignature().toString() : ""
         );
     }
 
@@ -167,11 +261,8 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
      */
     @Override
     public byte[] messageToSign() {
-        return Bytes.concat(getAddress().getBytes(StandardCharsets.UTF_8),
-                getGasPrice().toByteArray(),
-                getGasLimit().toByteArray(),
-                getTo() != null ? getTo().address() : "".getBytes(StandardCharsets.UTF_8),
-                getValue().toByteArray(),
-                getData());
+        if (this.isSigned())
+            return ((SignedRawTransaction) this.transaction).getEncodedTransaction(this.getChainId());
+        return TransactionEncoder.encode(this.transaction);
     }
 }

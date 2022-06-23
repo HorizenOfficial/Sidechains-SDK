@@ -63,8 +63,12 @@ class SidechainApp @Inject()
     sidechainSettings,
     customSecretSerializers,
     customApiGroups,
-    rejectedApiPaths
-  )
+    rejectedApiPaths,
+    ChainInfo(
+      regtestId = 111, 
+      testnetId = 222, 
+      mainnetId = 333)
+    )
 {
 
   override type TX = SidechainTypes#SCBT

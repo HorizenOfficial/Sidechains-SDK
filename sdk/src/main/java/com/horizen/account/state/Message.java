@@ -76,7 +76,8 @@ public class Message {
     }
 
     public static Message fromTransaction(EthereumTransaction tx) {
-        return new Message(tx.getFrom(), tx.getTo(), tx.getGasPrice(), tx.getFeeCap(), tx.getGasPremium(),
+        // TODO: fix message
+        return new Message(tx.getFrom(), tx.getTo(), tx.getGasPrice(), BigInteger.ONE /*tx.getFeeCap()*/, BigInteger.ONE/*tx.getGasPremium()*/,
                 tx.getGasLimit(), tx.getValue(), tx.getNonce(), tx.getData());
     }
 }
