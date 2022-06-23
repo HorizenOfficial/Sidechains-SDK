@@ -39,27 +39,27 @@ class EoaMessageProcessorTest extends JUnitSuite
     val mockStateView: AccountStateView = mock[AccountStateView]
 
 
-    // Test 1: send form EOA account, tx with empty "data"
+    // Test 1: send to EOA account, tx with empty "data"
     Mockito.when(mockStateView.getCodeHash(ArgumentMatchers.any[Array[Byte]])).thenAnswer(args => {
       val addressBytes: Array[Byte] = args.getArgument(0)
-      assertArrayEquals("Different address found", msg.getFrom.address(), addressBytes)
+      assertArrayEquals("Different address found", msg.getTo.address(), addressBytes)
       Array.emptyByteArray
     })
 
     assertTrue("Message for EoaMessageProcessor cannot be processed", EoaMessageProcessor.canProcess(msg, mockStateView))
 
 
-    // Test 2: Failure: tx has non-empty data field.
+    // Test 2: send to EOA account, tx with no-empty "data"
     val data: Array[Byte] = new Array[Byte](1000)
     val msgWithData: Message = getMessage(address, value, data)
-    assertFalse("Message for EoaMessageProcessor wrongly can be processed", EoaMessageProcessor.canProcess(msgWithData, mockStateView))
+    assertTrue("Message for EoaMessageProcessor cannot be processed", EoaMessageProcessor.canProcess(msgWithData, mockStateView))
 
 
-    // Test 2: Failure: send from smart contract account
+    // Test 2: Failure: send to smart contract account
     Mockito.reset(mockStateView)
     Mockito.when(mockStateView.getCodeHash(ArgumentMatchers.any[Array[Byte]])).thenAnswer(args => {
       val addressBytes: Array[Byte] = args.getArgument(0)
-      assertArrayEquals("Different address found", msg.getFrom.address(), addressBytes)
+      assertArrayEquals("Different address found", msg.getTo.address(), addressBytes)
       // code hash exists
       val codeHash = new Array[Byte](32)
       codeHash

@@ -11,17 +11,17 @@ import scala.util.Failure
  */
 object EoaMessageProcessor extends MessageProcessor with ScorexLogging {
   //TODO: actual gas to be defined
-  val gasUsed: BigInteger = BigInteger.valueOf(20000L)
+  val gasUsed: BigInteger = BigInteger.valueOf(21000L)
 
   override def init(view: AccountStateView): Unit = {
     // No actions required for transferring coins during genesis state initialization.
   }
 
   override def canProcess(msg: Message, view: AccountStateView): Boolean = {
-    // Can process only EOA to EOA transfer, so when:
-    // 1. "from" account must be an EOA account - no "code" set;
-    // 2. transaction "data" is empty.
-    msg.getData.isEmpty && view.getCodeHash(msg.getFrom.address()).isEmpty
+    // Can process only EOA to EOA transfer, so when "to" is an EOA account (no "code" defined).
+    // There is no need to check "from" account because it can't be a smart contract one,
+    // because there is no known private key to create a valid signature.
+    view.getCodeHash(msg.getTo.address()).isEmpty
   }
 
   override def process(msg: Message, view: AccountStateView): ExecutionResult = {
