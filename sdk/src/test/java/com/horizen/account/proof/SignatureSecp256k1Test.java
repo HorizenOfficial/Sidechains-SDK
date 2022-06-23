@@ -30,9 +30,6 @@ public class SignatureSecp256k1Test {
         // Create the raw Transaction
         String payload = "This is string to sign";
         message = payload.getBytes(StandardCharsets.UTF_8);
-        var someValue = BigInteger.ONE;
-        var rawTX = RawTransaction.createTransaction(someValue,
-                someValue, someValue, "0x", someValue, "");
 
         // Create a key pair and create the signature
         ECKeyPair pair = Keys.createEcKeyPair();
