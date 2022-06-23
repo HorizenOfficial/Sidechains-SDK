@@ -12,7 +12,7 @@ import com.horizen.storage.Storage
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.Pair
 import com.horizen.wallet.ApplicationWallet
-import com.horizen.{SidechainApp, SidechainSettings, SidechainTypes}
+import com.horizen.{SidechainApp, SidechainSettings, SidechainTypes, ChainInfo}
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}
@@ -45,6 +45,7 @@ abstract class AccountAppModule extends com.google.inject.AbstractModule {
           @Named("CustomAccountTransactionSerializers")  customAccountTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCAT]],
           @Named("CustomApiGroups")  customApiGroups: JList[ApplicationApiGroup],
           @Named("RejectedApiPaths")  rejectedApiPaths : JList[Pair[String, String]],
+          @Named("ChainInfo") chainInfo : ChainInfo,
           @Named("CustomMessageProcessors") customMessageProcessors: JList[MessageProcessor]
          ): AccountSidechainApp = {
     synchronized {
@@ -55,6 +56,7 @@ abstract class AccountAppModule extends com.google.inject.AbstractModule {
           customAccountTransactionSerializers,
           customApiGroups,
           rejectedApiPaths,
+          chainInfo,
           customMessageProcessors
         )
       }

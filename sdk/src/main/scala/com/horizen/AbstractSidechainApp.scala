@@ -37,6 +37,7 @@ abstract class AbstractSidechainApp
    val customSecretSerializers: JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]],
    val customApiGroups: JList[ApplicationApiGroup],
    val rejectedApiPaths : JList[Pair[String, String]],
+   val chainInfo : ChainInfo,
   )
   extends Application with ScorexLogging
 {
@@ -101,7 +102,8 @@ abstract class AbstractSidechainApp
       cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath,
       restrictForgers = sidechainSettings.forger.restrictForgers,
       allowedForgersList = forgerList,
-      sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version
+      sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
+      chainId = chainInfo.regtestId
     )
 
     case "testnet" => TestNetParams(
@@ -123,7 +125,8 @@ abstract class AbstractSidechainApp
       cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath,
       restrictForgers = sidechainSettings.forger.restrictForgers,
       allowedForgersList = forgerList,
-      sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version
+      sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
+      chainId = chainInfo.testnetId
     )
 
     case "mainnet" => MainNetParams(
@@ -145,7 +148,8 @@ abstract class AbstractSidechainApp
       cswVerificationKeyFilePath = sidechainSettings.csw.cswVerificationKeyFilePath,
       restrictForgers = sidechainSettings.forger.restrictForgers,
       allowedForgersList = forgerList,
-      sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version
+      sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
+      chainId = chainInfo.mainnetId
     )
     case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
   }

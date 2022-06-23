@@ -25,13 +25,16 @@ case class MainNetParams(
                           override val certProvingKeyFilePath: String = "",
                           override val certVerificationKeyFilePath: String = "",
                           override val calculatedSysDataConstant: Array[Byte] = new Array[Byte](32),
-                          override val initialCumulativeCommTreeHash: Array[Byte] = new Array[Byte](CumulativeHashFunctions.hashLength()),
-                          override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig] = Seq(),
+                          override val initialCumulativeCommTreeHash: Array[Byte] = new Array[Byte]
+                          (CumulativeHashFunctions.hashLength()),
+                          override val scCreationBitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig]
+                          = Seq(),
                           override val cswProvingKeyFilePath: String = "",
                           override val cswVerificationKeyFilePath: String = "",
                           override val restrictForgers: Boolean = false,
                           override val allowedForgersList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = Seq(),
-                          override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1
+                          override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1,
+                          override val chainId: Long = 33333333
                         ) extends NetworkParams {
   override val EquihashN: Int = 200
   override val EquihashK: Int = 9

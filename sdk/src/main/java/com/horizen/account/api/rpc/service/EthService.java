@@ -26,7 +26,7 @@ public class EthService extends RpcService {
                 "0", "0", "0",
                 "0", "0",
                 "1", "3000", "2000",
-                "22", new ArrayList<EthBlock.TransactionResult>(), new ArrayList<String>(), new ArrayList<String>());
+                "22", new ArrayList<EthBlock.TransactionResult>(), new ArrayList<String>(), new ArrayList<String>(), "");
     }
 
     @RpcMethod("eth_call")
