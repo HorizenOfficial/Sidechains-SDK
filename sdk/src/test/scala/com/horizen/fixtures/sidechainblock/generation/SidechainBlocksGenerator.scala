@@ -32,24 +32,26 @@ import scala.collection.JavaConverters._
 
 
 case class GeneratedBlockInfo(block: SidechainBlock, forger: SidechainForgingData)
+
 case class FinishedEpochInfo(epochId: ConsensusEpochId, stakeConsensusEpochInfo: StakeConsensusEpochInfo, nonceConsensusEpochInfo: NonceConsensusEpochInfo)
 
 //will be thrown if block generation no longer is possible, for example: nonce no longer can be calculated due no mainchain references in whole epoch
 class GenerationIsNoLongerPossible extends IllegalStateException
 
 // @TODO consensusDataStorage is shared between generator instances, so data could be already added. Shall be fixed.
-class SidechainBlocksGenerator private (val params: NetworkParams,
-                                        forgersSet: PossibleForgersSet,
-                                        consensusDataStorage: ConsensusDataStorage,
-                                        val lastBlockId: Block.BlockId,
-                                        lastMainchainBlockId: ByteArrayWrapper,
-                                        val nextFreeSlotNumber: ConsensusSlotNumber,
-                                        nextEpochNumber: ConsensusEpochNumber,
-                                        nextBlockNonceEpochId: ConsensusEpochId,
-                                        nextBlockStakeEpochId: ConsensusEpochId,
-                                        allEligibleVrfOutputs: List[Array[Byte]],
-                                        previousEpochId: ConsensusEpochId,
-                                        rnd: Random) {
+class SidechainBlocksGenerator private(val params: NetworkParams,
+                                       forgersSet: PossibleForgersSet,
+                                       consensusDataStorage: ConsensusDataStorage,
+                                       val lastBlockId: Block.BlockId,
+                                       lastMainchainBlockId: ByteArrayWrapper,
+                                       val nextFreeSlotNumber: ConsensusSlotNumber,
+                                       nextEpochNumber: ConsensusEpochNumber,
+                                       nextBlockNonceEpochId: ConsensusEpochId,
+                                       nextBlockStakeEpochId: ConsensusEpochId,
+                                       allEligibleVrfOutputs: List[Array[Byte]],
+                                       previousEpochId: ConsensusEpochId,
+                                       rnd: Random) {
+
   import SidechainBlocksGenerator._
 
   def getNotSpentBoxes: Set[SidechainForgingData] = forgersSet.getNotSpentSidechainForgingData.map(_.copy())
@@ -57,7 +59,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
   def tryToGenerateBlockForCurrentSlot(generationRules: GenerationRules): Option[GeneratedBlockInfo] = {
     checkGenerationRules(generationRules)
     val nextSlot = intToConsensusSlotNumber(Math.min(nextFreeSlotNumber, params.consensusSlotsInEpoch))
-    getNextEligibleForgerForCurrentEpoch(generationRules, nextSlot).map{
+    getNextEligibleForgerForCurrentEpoch(generationRules, nextSlot).map {
       case (blockForger, vrfProof, vrfOutput, usedSlotNumber) => {
         println(s"Got forger for block: ${blockForger}")
         val newBlock = generateBlock(blockForger, vrfProof, vrfOutput, usedSlotNumber, generationRules)
@@ -112,12 +114,12 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
 
     val possibleForger = (nextFreeSlotNumber to endSlot)
       .toStream
-      .flatMap{currentSlot =>
+      .flatMap { currentSlot =>
         val slotWithShift = intToConsensusSlotNumber(Math.min(currentSlot + generationRules.corruption.consensusSlotShift, params.consensusSlotsInEpoch))
         println(s"Process slot: ${slotWithShift}")
         val res = forgersSet.getEligibleForger(slotWithShift, consensusNonce, totalStake, generationRules.corruption.getStakeCheckCorruptionFunction)
-        if (res.isEmpty) {println(s"No forger had been found for slot ${currentSlot}")}
-        res.map{case(forger, proof, vrfOutput) => (forger, proof, vrfOutput, intToConsensusSlotNumber(currentSlot))}
+        if (res.isEmpty) {println(s"No forger had been found for slot ${currentSlot}") }
+        res.map { case (forger, proof, vrfOutput) => (forger, proof, vrfOutput, intToConsensusSlotNumber(currentSlot)) }
       }
       .headOption
 
@@ -151,12 +153,13 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
 
   private def generateBlock(possibleForger: PossibleForger, vrfProof: VrfProof, vrfOutput: VrfOutput, usedSlotNumber: ConsensusSlotNumber, generationRules: GenerationRules): SidechainBlock = {
     val parentId = generationRules.forcedParentId.getOrElse(lastBlockId)
-    val timestamp = generationRules.forcedTimestamp.getOrElse{
-      TimeToEpochUtils.getTimeStampForEpochAndSlot(params, nextEpochNumber, usedSlotNumber) + generationRules.corruption.timestampShiftInSlots * params.consensusSecondsInSlot}
+    val timestamp = generationRules.forcedTimestamp.getOrElse {
+      TimeToEpochUtils.getTimeStampForEpochAndSlot(params, nextEpochNumber, usedSlotNumber) + generationRules.corruption.timestampShiftInSlots * params.consensusSecondsInSlot
+    }
 
     val mainchainBlockReferences: Seq[MainchainBlockReference] = generationRules.mcReferenceIsPresent match {
       //generate at least one MC block reference
-      case Some(true)  => {
+      case Some(true) => {
         val necessaryMcBlockReference = mcRefGen.generateMainchainBlockReference(parentOpt = Some(lastMainchainBlockId), rnd = rnd, timestamp = timestamp.toInt)
         mcRefGen.generateMainchainReferences(generated = Seq(necessaryMcBlockReference), rnd = rnd, timestamp = timestamp.toInt)
       }
@@ -164,7 +167,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
       case Some(false) => Seq()
 
       //truly random generated MC
-      case None        => SidechainBlocksGenerator.mcRefGen.generateMainchainReferences(parentOpt = Some(lastMainchainBlockId), rnd = rnd, timestamp = timestamp.toInt)
+      case None => SidechainBlocksGenerator.mcRefGen.generateMainchainReferences(parentOpt = Some(lastMainchainBlockId), rnd = rnd, timestamp = timestamp.toInt)
     }
 
     // TODO: we need more complex cases
@@ -305,7 +308,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
 
   private def createGeneratorAndFinishedEpochInfo: (SidechainBlocksGenerator, FinishedEpochInfo) = {
     val finishedEpochId = blockIdToEpochId(lastBlockId)
-    if (finishedEpochId == previousEpochId) {throw new GenerationIsNoLongerPossible()} //no generated block during whole epoch
+    if (finishedEpochId == previousEpochId) {throw new GenerationIsNoLongerPossible() } //no generated block during whole epoch
 
     val (newForgers, realStakeConsensusEpochInfo) = forgersSet.finishCurrentEpoch()
     //Just to increase chance for forgers, @TODO do it as parameter
@@ -317,18 +320,18 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
     consensusDataStorage.addStakeConsensusEpochInfo(finishedEpochId, stakeConsensusEpochInfo)
 
     val newGenerator: SidechainBlocksGenerator = new SidechainBlocksGenerator(
-                                                  params = params,
-                                                  forgersSet = newForgers,
-                                                  consensusDataStorage = consensusDataStorage,
-                                                  lastBlockId = lastBlockId,
-                                                  lastMainchainBlockId = lastMainchainBlockId,
-                                                  nextFreeSlotNumber = intToConsensusSlotNumber(1),
-                                                  nextEpochNumber = intToConsensusEpochNumber(nextEpochNumber + 1),
-                                                  nextBlockNonceEpochId = blockIdToEpochId(lastBlockId),
-                                                  nextBlockStakeEpochId = nextBlockNonceEpochId,
-                                                  allEligibleVrfOutputs = List(),
-                                                  previousEpochId = finishedEpochId,
-                                                  rnd = rnd)
+      params = params,
+      forgersSet = newForgers,
+      consensusDataStorage = consensusDataStorage,
+      lastBlockId = lastBlockId,
+      lastMainchainBlockId = lastMainchainBlockId,
+      nextFreeSlotNumber = intToConsensusSlotNumber(1),
+      nextEpochNumber = intToConsensusEpochNumber(nextEpochNumber + 1),
+      nextBlockNonceEpochId = blockIdToEpochId(lastBlockId),
+      nextBlockStakeEpochId = nextBlockNonceEpochId,
+      allEligibleVrfOutputs = List(),
+      previousEpochId = finishedEpochId,
+      rnd = rnd)
 
     (newGenerator, FinishedEpochInfo(finishedEpochId, stakeConsensusEpochInfo, nonceConsensusEpochInfo))
   }
@@ -336,13 +339,13 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
   private def calculateNewNonce(): NonceConsensusEpochInfo = {
 
     val digest: MessageDigest = MessageDigest.getInstance("SHA-256")
-    allEligibleVrfOutputs.foldRight(digest){case (bytes, messageDigest) =>
+    allEligibleVrfOutputs.foldRight(digest) { case (bytes, messageDigest) =>
       messageDigest.update(bytes)
       messageDigest
     }
 
     val previousNonce: Array[Byte] = consensusDataStorage.getNonceConsensusEpochInfo(previousEpochId)
-      .getOrElse(throw new IllegalStateException (s"Failed to get nonce info for epoch id ${previousEpochId}"))
+      .getOrElse(throw new IllegalStateException(s"Failed to get nonce info for epoch id ${previousEpochId}"))
       .consensusNonce
     digest.update(previousNonce)
 
@@ -535,6 +538,8 @@ object SidechainBlocksGenerator extends CompanionsFixture {
       override val cswProvingKeyFilePath: String = params.cswProvingKeyFilePath
       override val cswVerificationKeyFilePath: String = params.cswVerificationKeyFilePath
       override val sidechainCreationVersion: SidechainCreationVersion = params.sidechainCreationVersion
+
+      override val chainId: Long = 11111111
     }
   }
 

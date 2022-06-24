@@ -35,7 +35,7 @@ trait MessageProcessorFixture {
     getMessage(WithdrawalMsgProcessor.fakeSmartContractAddress, amount, data)
   }
 
-  def getGetListOfWithdrawalRequestMessage(epochNum: Int): Message ={
+  def getGetListOfWithdrawalRequestMessage(epochNum: Int): Message = {
     val data: Array[Byte] = Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.getListOfWithdrawalReqsCmdSig),
       Ints.toByteArray(epochNum))
 
@@ -43,7 +43,7 @@ trait MessageProcessorFixture {
   }
 
 
-  def getMessage(destContractAddress: AddressProposition, amount: java.math.BigInteger, data: Array[Byte]): Message ={
+  def getMessage(destContractAddress: AddressProposition, amount: java.math.BigInteger, data: Array[Byte]): Message = {
     val gas = java.math.BigInteger.ONE
     val nonce = java.math.BigInteger.valueOf(234)
     val from: AddressProposition = new AddressProposition(BytesUtils.fromHexString("00aabbcc9900aabbcc9900aabbcc9900aabbcc99"))

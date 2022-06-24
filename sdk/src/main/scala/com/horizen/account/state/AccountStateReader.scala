@@ -7,6 +7,7 @@ import scala.util.Try
 trait AccountStateReader extends StateReader {
 
   def getAccount(address: Array[Byte]): Account
+  def getCodeHash(address: Array[Byte]): Array[Byte]
   def getBalance(address: Array[Byte]): Try[java.math.BigInteger]
   // etc.
 

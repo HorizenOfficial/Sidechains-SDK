@@ -32,7 +32,7 @@ class AccountState(val params: NetworkParams,
   // Used once on genesis AccountState creation
   private def initProcessors(initialVersion: VersionTag): Try[AccountState] = Try {
     val view = getView
-    for(processor <- messageProcessors) {
+    for (processor <- messageProcessors) {
       processor.init(view)
     }
     // TODO: commit only StateDB part ???
@@ -50,12 +50,12 @@ class AccountState(val params: NetworkParams,
 
     var stateView: AccountStateView = getView
 
-    if(stateView.hasCeased) {
+    if (stateView.hasCeased) {
       throw new IllegalStateException(s"Can't apply Block ${mod.id}, because the sidechain has ceased.")
     }
 
     // Check Txs semantic validity first
-    for(tx <- mod.sidechainTransactions)
+    for (tx <- mod.sidechainTransactions)
       tx.semanticValidity()
 
     // Validate top quality certificate in the end of the submission window:
@@ -66,7 +66,7 @@ class AccountState(val params: NetworkParams,
 
     // If SC block has reached the certificate submission window end -> check the top quality certificate
     // Note: even if mod contains multiple McBlockRefData entries, we are sure they belongs to the same withdrawal epoch.
-    if(WithdrawalEpochUtils.hasReachedCertificateSubmissionWindowEnd(mod, currentWithdrawalEpochInfo, params)) {
+    if (WithdrawalEpochUtils.hasReachedCertificateSubmissionWindowEnd(mod, currentWithdrawalEpochInfo, params)) {
       val certReferencedEpochNumber = modWithdrawalEpochInfo.epoch - 1
 
       // Top quality certificate may present in the current SC block or in the previous blocks or can be absent.
@@ -94,17 +94,17 @@ class AccountState(val params: NetworkParams,
     // Verify that Forger assumed the same fees to be paid as the current node does.
     // If SC block is in the middle of the withdrawal epoch -> no fee payments hash expected to be defined.
     val isWithdrawalEpochFinished: Boolean = WithdrawalEpochUtils.isEpochLastIndex(modWithdrawalEpochInfo, params)
-    if(isWithdrawalEpochFinished) {
+    if (isWithdrawalEpochFinished) {
       // Note: that current block fee info is already in the view
       // TODO: get the list of block info and recalculate the root of it
       val feePayments = stateView.getBlockFeePayments(modWithdrawalEpochInfo.epoch)
-      val feePaymentsHash: Array[Byte] = new Array[Byte](32)// TODO: analog of FeePaymentsUtils.calculateFeePaymentsHash(feePayments)
+      val feePaymentsHash: Array[Byte] = new Array[Byte](32) // TODO: analog of FeePaymentsUtils.calculateFeePaymentsHash(feePayments)
 
-      if(!mod.feePaymentsHash.sameElements(feePaymentsHash))
+      if (!mod.feePaymentsHash.sameElements(feePaymentsHash))
         throw new IllegalArgumentException(s"Block ${mod.id} has feePaymentsHash different to expected one: ${BytesUtils.toHexString(feePaymentsHash)}")
     } else {
       // No fee payments expected
-      if(!mod.feePaymentsHash.sameElements(FeePaymentsUtils.DEFAULT_FEE_PAYMENTS_HASH))
+      if (!mod.feePaymentsHash.sameElements(FeePaymentsUtils.DEFAULT_FEE_PAYMENTS_HASH))
         throw new IllegalArgumentException(s"Block ${mod.id} has feePaymentsHash ${BytesUtils.toHexString(mod.feePaymentsHash)} defined when no fee payments expected.")
     }
 
@@ -112,7 +112,7 @@ class AccountState(val params: NetworkParams,
       stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
     }
 
-    for(tx <- mod.sidechainTransactions) {
+    for (tx <- mod.sidechainTransactions) {
       stateView = stateView.applyTransaction(tx).get
     }
 
@@ -143,7 +143,7 @@ class AccountState(val params: NetworkParams,
     // Check that BTs are identical for both Cert and State
     topQualityCertificate.backwardTransferOutputs.zip(expectedWithdrawalRequests).foreach {
       case (certOutput, expectedWithdrawalRequestBox) => {
-        if(certOutput.amount != expectedWithdrawalRequestBox.value() ||
+        if (certOutput.amount != expectedWithdrawalRequestBox.value() ||
           !util.Arrays.equals(certOutput.pubKeyHash, expectedWithdrawalRequestBox.proposition().bytes())) {
           throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate backward transfers " +
             s"data is different than expected. Node's active chain is the fork from MC perspective.")
@@ -240,6 +240,8 @@ class AccountState(val params: NetworkParams,
   override def getBalance(address: Array[Byte]): Try[java.math.BigInteger] = ???
 
   override def getAccountStateRoot: Option[Array[Byte]] = getView.getAccountStateRoot
+
+  override def getCodeHash(address: Array[Byte]): Array[Byte] = getView.getCodeHash(address)
 }
 
 

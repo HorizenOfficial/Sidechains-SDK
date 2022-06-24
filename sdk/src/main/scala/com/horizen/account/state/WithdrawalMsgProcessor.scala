@@ -20,7 +20,7 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
 
   override val fakeSmartContractAddress: AddressProposition = new AddressProposition(BytesUtils.fromHexString("0000000000000000000011111111111111111111"))
 
-  override def fakeSmartContractCodeHash: Array[Byte] =
+  override val fakeSmartContractCodeHash: Array[Byte] =
     Keccak256.hash("WithdrawalRequestSmartContractCodeHash")
 
   val getListOfWithdrawalReqsCmdSig: String = "00"

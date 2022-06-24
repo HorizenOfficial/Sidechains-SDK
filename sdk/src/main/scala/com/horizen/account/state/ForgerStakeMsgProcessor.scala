@@ -21,8 +21,7 @@ import scala.util.{Failure, Success}
 case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSmartContractMsgProcessor {
 
   override val fakeSmartContractAddress: AddressProposition = ForgerStakeSmartContractAddress
-
-  override def fakeSmartContractCodeHash: Array[Byte] =
+  override val fakeSmartContractCodeHash: Array[Byte] =
     Keccak256.hash("ForgerStakeSmartContractCodeHash")
 
   // ensure we have strings consistent with size of opcode
@@ -251,35 +250,36 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
 
     // first of all check msg.value, it must be a legal wei amount convertible in satoshi without any remainder
     if (!isValidZenAmount(msg.getValue)) {
-      val errMsg =s"Value is not a legal wei amount: ${msg.getValue.toString()}"
-      log.error(errMsg)
-      return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(errMsg))
+      val msgStr =s"Value is not a legal wei amount: ${msg.getValue.toString()}"
+      log.debug(msgStr)
+      return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(msgStr))
     }
 
     // check also that sender account exists (unless we are staking in the sc creation phase)
     if (!isGenesisScCreation && !view.accountExists(msg.getFrom.address())) {
-      val errMsg =s"Sender account does not exist: ${msg.getFrom.toString}"
-      log.error(errMsg)
-      return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(errMsg))
+      val msgStr =s"Sender account does not exist: ${msg.getFrom.toString}"
+      log.debug(msgStr)
+      return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(msgStr))
     }
 
     val cmdInput = AddNewStakeCmdInputSerializer.parseBytesTry(getArgumentsFromData(msg.getData)) match {
       case Success(obj) => obj
       case Failure(exception) =>
-        val errMsg = "Error while parsing cmd input"
-        log.error(errMsg, exception)
-        return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(errMsg))
+        val msgStr = "Error while parsing cmd input"
+        log.debug(msgStr, exception)
+        return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(msgStr))
     }
 
     val blockSignPublicKey : PublicKey25519Proposition = cmdInput.forgerPublicKeys.blockSignPublicKey
     val vrfPublicKey :VrfPublicKey                     = cmdInput.forgerPublicKeys.vrfPublicKey
-    val ownerPublicKey: AddressProposition             = cmdInput.ownerPublicKey
+    val ownerAddress: AddressProposition               = cmdInput.ownerAddress
 
     // check that the delegation arguments satisfy the restricted list of forgers.
     if (!isGenesisScCreation)// TODO temporarily skipped for genesis sc creation
       if (!networkParams.allowedForgersList.contains((blockSignPublicKey, vrfPublicKey))) {
-        log.error("Forger is not in the allowed list")
-        return new ExecutionFailed(AddNewStakeGasPaidValue, new Exception("Forger is not in the allowed list"))
+        val msgStr = "Forger is not in the allowed list"
+        log.debug(msgStr)
+        return new ExecutionFailed(AddNewStakeGasPaidValue, new Exception(msgStr))
       }
 
     // compute stakeId
@@ -287,14 +287,14 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
 
     // check we do not already have this stake obj in the db
     if (existsStakeData(view, newStakeId)) {
-      val errorMsg = s"Stake ${BytesUtils.toHexString(newStakeId)} already in stateDb"
-      log.error(errorMsg)
-      return new ExecutionFailed(AddNewStakeGasPaidValue, new Exception(errorMsg))
+      val msgStr = s"Stake ${BytesUtils.toHexString(newStakeId)} already in stateDb"
+      log.error(msgStr)
+      return new ExecutionFailed(AddNewStakeGasPaidValue, new Exception(msgStr))
     }
 
     // add the obj to stateDb
     val stakedAmount = msg.getValue
-    addForgerStake(view, newStakeId, blockSignPublicKey, vrfPublicKey, ownerPublicKey, stakedAmount)
+    addForgerStake(view, newStakeId, blockSignPublicKey, vrfPublicKey, ownerAddress, stakedAmount)
 
     if (isGenesisScCreation) {
       new ExecutionSucceeded(AddNewStakeGasPaidValue, newStakeId)
@@ -313,7 +313,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
 
         case Failure(e) =>
           val balance = view.getBalance(msg.getFrom.address())
-          log.error(s"Could not subtract $stakedAmount from account: current balance = $balance")
+          log.debug(s"Could not subtract $stakedAmount from account: current balance = $balance")
           new ExecutionFailed(AddNewStakeGasPaidValue, new Exception(e))
       }
     }
@@ -322,9 +322,9 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
   def doGetListOfForgersCmd(msg: Message, view: AccountStateView) : ExecutionResult = {
     // check we have no other bytes after the op code in the msg data
     if (getArgumentsFromData(msg.getData).length > 0) {
-      val errMsg = s"invalid msg data length: ${msg.getData.length}, expected $OP_CODE_LENGTH"
-      log.error(errMsg)
-      return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(errMsg))
+      val msgStr = s"invalid msg data length: ${msg.getData.length}, expected $OP_CODE_LENGTH"
+      log.debug(msgStr)
+      return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(msgStr))
     }
 
     val stakeList = new util.ArrayList[AccountForgingStakeInfo]()
@@ -346,7 +346,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     val cmdInput = RemoveStakeCmdInputSerializer.parseBytesTry(getArgumentsFromData(msg.getData)) match {
       case Success(obj) => obj
       case Failure(exception) =>
-        log.error("Error while parsing cmd input.", exception)
+        val msgStr = "Error while parsing cmd input"
+        log.debug(msgStr, exception)
         return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(exception))
     }
 
@@ -357,17 +358,17 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     val stakeData = findStakeData(view, stakeId) match {
       case Some(obj) => obj
       case None =>
-        val errorMsg = "No such stake id in state-db"
-        log.error(errorMsg)
-        return new ExecutionFailed(RemoveStakeGasPaidValue, new Exception(errorMsg))
+        val msgStr = "No such stake id in state-db"
+        log.debug(msgStr)
+        return new ExecutionFailed(RemoveStakeGasPaidValue, new Exception(msgStr))
     }
 
     // check signature
     val msgToSign = getMessageToSign(stakeId, msg.getFrom.address(), msg.getNonce.toByteArray)
     if (!signature.isValid(stakeData.ownerPublicKey, msgToSign)) {
-      val errorMsg = "Invalid signature"
-      log.error(errorMsg)
-      return new ExecutionFailed(RemoveStakeGasPaidValue, new Exception(errorMsg))
+      val msgStr = "Invalid signature"
+      log.debug(msgStr)
+      return new ExecutionFailed(RemoveStakeGasPaidValue, new Exception(msgStr))
     }
 
     // remove the forger stake data
@@ -407,18 +408,16 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
         case `RemoveStakeCmd` =>
           doRemoveStakeCmd(msg, view)
 
-
-
         case _ =>
-          val errMsg = s"op code $cmdString not supported"
-          log.error(errMsg)
-          new ExecutionFailed(RemoveStakeGasPaidValue, new IllegalArgumentException(errMsg))
+          val msgStr = s"op code $cmdString not supported"
+          log.debug(msgStr)
+          new ExecutionFailed(RemoveStakeGasPaidValue, new IllegalArgumentException(msgStr))
       }
     }
     catch {
       case e : Exception =>
-        val errMsg = s"Exception while processing message: $msg"
-        log.error(errMsg)
+        val msgStr = s"Exception while processing message: $msg"
+        log.debug(msgStr)
         new ExecutionFailed(RemoveStakeGasPaidValue, new IllegalArgumentException(e))
     }
   }
@@ -441,7 +440,6 @@ case class AccountForgingStakeInfo(
                                     stakeId: Array[Byte],
                                     forgerStakeData: ForgerStakeData)
   extends BytesSerializable  {
-  require(forgerStakeData.stakedAmount.signum() != -1, "stakeAmount expected to be non negative.")
 
   override type M = AccountForgingStakeInfo
 
@@ -492,8 +490,8 @@ object ForgerPublicKeysSerializer extends ScorexSerializer[ForgerPublicKeys] {
 
 
 case class AddNewStakeCmdInput(
-                        forgerPublicKeys: ForgerPublicKeys,
-                        ownerPublicKey: AddressProposition)
+                                forgerPublicKeys: ForgerPublicKeys,
+                                ownerAddress: AddressProposition)
 
   extends BytesSerializable  {
 
@@ -501,8 +499,8 @@ case class AddNewStakeCmdInput(
 
   override def serializer: ScorexSerializer[AddNewStakeCmdInput] = AddNewStakeCmdInputSerializer
 
-  override def toString: String = "%s(forgerPubKeys: %s, ownerPublicKey: %s)"
-    .format(this.getClass.toString, forgerPublicKeys, ownerPublicKey)
+  override def toString: String = "%s(forgerPubKeys: %s, ownerAddress: %s)"
+    .format(this.getClass.toString, forgerPublicKeys, ownerAddress)
 
 }
 
@@ -511,7 +509,7 @@ object AddNewStakeCmdInputSerializer extends ScorexSerializer[AddNewStakeCmdInpu
 
   override def serialize(s: AddNewStakeCmdInput, w: Writer): Unit = {
     ForgerPublicKeysSerializer.serialize(s.forgerPublicKeys, w)
-    AddressPropositionSerializer.getSerializer.serialize(s.ownerPublicKey, w)
+    AddressPropositionSerializer.getSerializer.serialize(s.ownerAddress, w)
   }
 
   override def parse(r: Reader): AddNewStakeCmdInput = {
@@ -557,12 +555,13 @@ case class ForgerStakeData(
                            stakedAmount: BigInteger)
   extends BytesSerializable  {
 
+  require(stakedAmount.signum() != -1, "stakeAmount expected to be non negative.")
 
   override type M = ForgerStakeData
 
   override def serializer: ScorexSerializer[ForgerStakeData] = ForgerStakeDataSerializer
 
-  override def toString: String = "%s(forgerPubKeys: %s, ownerPublicKey: %s, stakedAmount: %s)"
+  override def toString: String = "%s(forgerPubKeys: %s, ownerAddress: %s, stakedAmount: %s)"
     .format(this.getClass.toString, forgerPublicKeys, ownerPublicKey, stakedAmount)
 }
 
