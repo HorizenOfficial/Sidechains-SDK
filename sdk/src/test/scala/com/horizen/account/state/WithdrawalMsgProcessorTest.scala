@@ -134,7 +134,7 @@ class WithdrawalMsgProcessorTest
     val epochNum = 102
     Mockito.when(mockStateView.getWithdrawalEpochInfo).thenReturn(WithdrawalEpochInfo(epochNum, 1))
     val key = WithdrawalMsgProcessor.getWithdrawalEpochCounterKey(epochNum)
-    val numOfWithdrawalReqs = Ints.toByteArray(WithdrawalMsgProcessor.MAX_WITHDRAWAL_REQS_NUM_PER_EPOCH)
+    val numOfWithdrawalReqs = Ints.toByteArray(WithdrawalMsgProcessor.MaxWithdrawalReqsNumPerEpoch)
 
     Mockito.when(mockStateView.getAccountStorageBytes(WithdrawalMsgProcessor.fakeSmartContractAddress.address(), key)).thenReturn(Success(numOfWithdrawalReqs))
     res = WithdrawalMsgProcessor.process(msg, mockStateView)
@@ -175,7 +175,7 @@ class WithdrawalMsgProcessorTest
 
 
     // With 3900 withdrawal requests
-    val maxNumOfWithdrawalReqs = WithdrawalMsgProcessor.MAX_WITHDRAWAL_REQS_NUM_PER_EPOCH
+    val maxNumOfWithdrawalReqs = WithdrawalMsgProcessor.MaxWithdrawalReqsNumPerEpoch
 
     val destAddress = new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte))
     val mockWithdrawalRequestsList = new util.HashMap[ByteArrayWrapper, Array[Byte]](maxNumOfWithdrawalReqs)

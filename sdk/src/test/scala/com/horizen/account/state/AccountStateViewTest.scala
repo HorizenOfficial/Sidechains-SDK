@@ -58,7 +58,7 @@ class AccountStateViewTest
 
 
     // With 3900 withdrawal requests
-    val maxNumOfWithdrawalReqs = WithdrawalMsgProcessor.MAX_WITHDRAWAL_REQS_NUM_PER_EPOCH
+    val maxNumOfWithdrawalReqs = WithdrawalMsgProcessor.MaxWithdrawalReqsNumPerEpoch
 
     val destAddress = new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte))
     val listOfWR = (1 to maxNumOfWithdrawalReqs).map(index => {

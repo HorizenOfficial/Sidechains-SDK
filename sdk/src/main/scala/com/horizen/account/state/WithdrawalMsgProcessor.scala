@@ -2,15 +2,12 @@ package com.horizen.account.state
 
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.account.proposition.AddressProposition
-
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.proposition.MCPublicKeyHashProposition
-
 import com.horizen.utils.{BytesUtils, ListSerializer, ZenCoinsUtils}
 import scorex.crypto.hash.Keccak256
 
 import scala.collection.JavaConverters.seqAsJavaListConverter
-import scala.util.{Failure, Success, Try}
 
 trait WithdrawalRequestProvider {
   private[horizen] def getListOfWithdrawalReqRecords(epochNum: Int, view: AccountStateView): Seq[WithdrawalRequest]
@@ -23,69 +20,42 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
   override val fakeSmartContractCodeHash: Array[Byte] =
     Keccak256.hash("WithdrawalRequestSmartContractCodeHash")
 
-  val getListOfWithdrawalReqsCmdSig: String = "00"
-  val addNewWithdrawalReqCmdSig: String = "01"
+  val GetListOfWithdrawalReqsCmdSig: String = "00"
+  val AddNewWithdrawalReqCmdSig: String = "01"
 
   //TODO Define a proper amount of gas spent for each operation
-  val gasSpentForGetListOfWithdrawalReqsCmd: java.math.BigInteger = java.math.BigInteger.ONE
-  val gasSpentForGetListOfWithdrawalReqsFailure: java.math.BigInteger = java.math.BigInteger.ONE
-  val gasSpentForAddNewWithdrawalReqCmd: java.math.BigInteger = java.math.BigInteger.ONE
-  val gasSpentForAddNewWithdrawalReqFailure: java.math.BigInteger = java.math.BigInteger.ONE
-  val gasSpentForGenericFailure: java.math.BigInteger = java.math.BigInteger.ONE
+  val GasSpentForGetListOfWithdrawalReqsCmd: java.math.BigInteger = java.math.BigInteger.ONE
+  val GasSpentForGetListOfWithdrawalReqsFailure: java.math.BigInteger = java.math.BigInteger.ONE
+  val GasSpentForAddNewWithdrawalReqCmd: java.math.BigInteger = java.math.BigInteger.ONE
+  val GasSpentForAddNewWithdrawalReqFailure: java.math.BigInteger = java.math.BigInteger.ONE
+  val GasSpentForGenericFailure: java.math.BigInteger = java.math.BigInteger.ONE
 
-  val MAX_WITHDRAWAL_REQS_NUM_PER_EPOCH = 3900
-  val DUST_THRESHOLD_IN_WEI: java.math.BigInteger = ZenWeiConverter.convertZenniesToWei(ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE))
+  val MaxWithdrawalReqsNumPerEpoch = 3900
+  val DustThresholdInWei: java.math.BigInteger = ZenWeiConverter.convertZenniesToWei(ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE))
 
-
-  override def canProcess(msg: Message, view: AccountStateView): Boolean = {
-    fakeSmartContractAddress.equals(msg.getTo)
-  }
 
   override def process(msg: Message, view: AccountStateView): ExecutionResult = {
     //TODO: check errors in Ethereum, maybe for some kind of errors there a predefined types or codes
 
     try {
       if (!canProcess(msg, view)) {
+        log.error(s"Cannot process message $msg")
         new InvalidMessage(new IllegalArgumentException(s"Cannot process message $msg"))
       }
       else {
-
         val functionSig = BytesUtils.toHexString(getOpCodeFromData(msg.getData))
-
-        if (getListOfWithdrawalReqsCmdSig.equals(functionSig)) {
-          getListOfWithdrawalReqRecords(msg, view) match {
-            case Success(result) =>
-              result
-            //TODO log
-            case Failure(exception: IllegalArgumentException) =>
-              new ExecutionFailed(gasSpentForGetListOfWithdrawalReqsFailure, exception)
-            case Failure(exception) =>
-              log.error(s"Error while requesting Withdrawal Request list: ${exception.getMessage}", exception)
-              new ExecutionFailed(gasSpentForGetListOfWithdrawalReqsFailure, new Exception(exception))
-          }
-        }
-        else if (addNewWithdrawalReqCmdSig.equals(functionSig)) {
-          addWithdrawalRequest(msg, view) match {
-            case Success(result) =>
-              result
-            //TODO log
-            case Failure(exception: IllegalArgumentException) =>
-              new ExecutionFailed(gasSpentForAddNewWithdrawalReqFailure, exception)
-            case Failure(exception) =>
-              log.error(s"Error while adding a new Withdrawal Request: ${exception.getMessage}", exception)
-              new ExecutionFailed(gasSpentForAddNewWithdrawalReqFailure, new Exception(exception))
-          }
-        }
-        else {
-          log.error(s"Requested function does not exist. Function signature: $functionSig")
-          new ExecutionFailed(gasSpentForGenericFailure, new IllegalArgumentException(s"Requested function does not exist"))
+        functionSig match {
+          case GetListOfWithdrawalReqsCmdSig => getListOfWithdrawalReqRecords(msg, view)
+          case AddNewWithdrawalReqCmdSig => addWithdrawalRequest(msg, view)
+          case _ => log.debug(s"Requested function does not exist. Function signature: $functionSig")
+            new ExecutionFailed(GasSpentForGenericFailure, new IllegalArgumentException(s"Requested function does not exist"))
         }
       }
     }
     catch {
       case e: Exception =>
         log.error(s"Exception while processing message: $msg", e)
-        new ExecutionFailed(gasSpentForGenericFailure, e)
+        new ExecutionFailed(GasSpentForGenericFailure, e)
     }
 
   }
@@ -112,8 +82,8 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
     listOfWithdrawalReqs
   }
 
-  protected def getListOfWithdrawalReqRecords(msg: Message, view: AccountStateView): Try[ExecutionResult] = {
-    Try {
+  protected def getListOfWithdrawalReqRecords(msg: Message, view: AccountStateView): ExecutionResult = {
+    try {
       require(msg.getData.length == OP_CODE_LENGTH + Ints.BYTES, s"Wrong data length ${msg.getData.length}")
       val epochNum = BytesUtils.getInt(msg.getData, OP_CODE_LENGTH)
 
@@ -121,11 +91,17 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
 
       val withdrawalRequestSerializer = new ListSerializer[WithdrawalRequest](WithdrawalRequestSerializer)
       val list = withdrawalRequestSerializer.toBytes(listOfWithdrawalReqs.asJava)
-      new ExecutionSucceeded(gasSpentForGetListOfWithdrawalReqsCmd, list)
+
+      //Evm log
+      new ExecutionSucceeded(GasSpentForGetListOfWithdrawalReqsCmd, list)
+    }
+    catch {
+      case e: Exception =>
+        log.debug(s"Error while adding a new Withdrawal Request: ${e.getMessage}", e)
+        new ExecutionFailed(GasSpentForGetListOfWithdrawalReqsFailure, e)
     }
 
   }
-
 
 
   private[horizen] def checkWithdrawalRequestValidity(msg: Message, view: AccountStateView): Unit = {
@@ -139,7 +115,7 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
       log.error(s"Withdrawal amount is not a valid Zen amount: $withdrawalAmount")
       throw new IllegalArgumentException("Withdrawal amount is not a valid Zen amount")
     }
-    else if (withdrawalAmount.compareTo(DUST_THRESHOLD_IN_WEI) < 0) {
+    else if (withdrawalAmount.compareTo(DustThresholdInWei) < 0) {
       log.error(s"Withdrawal amount is under the dust threshold: $withdrawalAmount")
       throw new IllegalArgumentException("Withdrawal amount is under the dust threshold")
     }
@@ -153,14 +129,14 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
 
   }
 
-  protected def addWithdrawalRequest(msg: Message, view: AccountStateView): Try[ExecutionResult] = {
-    Try {
+  protected def addWithdrawalRequest(msg: Message, view: AccountStateView): ExecutionResult = {
+    try {
       checkWithdrawalRequestValidity(msg, view)
       val currentEpochNum = view.getWithdrawalEpochInfo.epoch
       val numOfWithdrawalReqs = getWithdrawalEpochCounter(view, currentEpochNum)
-      if (numOfWithdrawalReqs >= MAX_WITHDRAWAL_REQS_NUM_PER_EPOCH) {
-        log.error(s"Reached maximum number of Withdrawal Requests per epoch: request is invalid")
-        new ExecutionFailed(gasSpentForAddNewWithdrawalReqFailure, new IllegalArgumentException("Reached maximum number of Withdrawal Requests per epoch"))
+      if (numOfWithdrawalReqs >= MaxWithdrawalReqsNumPerEpoch) {
+        log.debug(s"Reached maximum number of Withdrawal Requests per epoch: request is invalid")
+        new ExecutionFailed(GasSpentForAddNewWithdrawalReqFailure, new IllegalArgumentException("Reached maximum number of Withdrawal Requests per epoch"))
       }
 
       val nextNumOfWithdrawalReqs: Int = numOfWithdrawalReqs + 1
@@ -174,7 +150,12 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
       view.updateAccountStorageBytes(fakeSmartContractAddress.address(), getWithdrawalRequestsKey(currentEpochNum, nextNumOfWithdrawalReqs), requestInBytes).get
 
       view.subBalance(msg.getFrom.address(), withdrawalAmount).get
-      new ExecutionSucceeded(gasSpentForAddNewWithdrawalReqCmd, requestInBytes)
+      new ExecutionSucceeded(GasSpentForAddNewWithdrawalReqCmd, requestInBytes)
+    }
+    catch {
+      case e: Exception =>
+        log.debug("Exception while adding a new Withdrawal Request", e)
+        new ExecutionFailed(GasSpentForAddNewWithdrawalReqFailure, e)
     }
 
   }
