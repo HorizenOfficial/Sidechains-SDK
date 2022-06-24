@@ -37,6 +37,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
+import scorex.crypto.hash.Blake2b256;
+import scorex.util.encode.Base16;
 
 public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
@@ -81,6 +83,9 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                 break;
             case "generateCswProofInfo":
                 processGenerateCswProofInfo(command.data());
+                break;
+            case "encodeString":
+                processEncodeString(command.data());
                 break;
             default:
                 printUnsupportedCommandMsg(command.name());
@@ -327,6 +332,12 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                 "\"verificationKeyPath\": \"/tmp/sidechain/csw_verification_key\" }");
     }
 
+    private void printEncodeStringUsageMsg(String error) {
+        printer.print("Error: " + error);
+        printer.print("Usage:\n" +
+                "\tencodeString {\"string\":\"string_to_encode\"}");
+    }
+
     private void processGenerateCswProofInfo(JsonNode json) {
 
         if (!json.has("withdrawalEpochLen") || !json.get("withdrawalEpochLen").isInt()) {
@@ -378,6 +389,22 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
         resJson.put("withdrawalEpochLen", withdrawalEpochLen);
         resJson.put("verificationKey", verificationKey);
+
+        String res = resJson.toString();
+        printer.print(res);
+    }
+
+    private void processEncodeString(JsonNode json ) {
+        if (!json.has("string") || !json.get("string").isTextual()) {
+            printEncodeStringUsageMsg("wrong string");
+            return;
+        }
+        String toEncode = json.get("string").asText();
+
+        String encoded = Base16.encode((byte[]) Blake2b256.apply(toEncode));
+
+        ObjectNode resJson = new ObjectMapper().createObjectNode();
+        resJson.put("encodedString", encoded);
 
         String res = resJson.toString();
         printer.print(res);

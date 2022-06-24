@@ -219,7 +219,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   def getStorageVersions: Map[String, String] =
     listOfStorageInfo.map(x => {
-      x.getClass.getSimpleName -> x.lastVersionId.map(value => BytesUtils.toHexString(value.data())).getOrElse("")
+      x.getStorageName -> x.lastVersionId.map(value => BytesUtils.toHexString(value.data())).getOrElse("")
     }).toMap
 
 
@@ -286,6 +286,14 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       }
   }
 
+
+
+  protected def processGetStorageVersions: Receive = {
+    case SidechainNodeViewHolder.ReceivableMessages.GetStorageVersions =>
+       sender() ! getStorageVersions
+
+  }
+
   override def receive: Receive = {
       applyFunctionOnNodeView orElse
       applyBiFunctionOnNodeView orElse
@@ -293,6 +301,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       processLocallyGeneratedSecret orElse
       processRemoteModifiers orElse
       applyModifier orElse
+      processGetStorageVersions orElse
       super.receive
   }
 
@@ -517,6 +526,7 @@ object SidechainNodeViewHolder /*extends ScorexLogging with ScorexEncoding*/ {
     case class ApplyFunctionOnNodeView[HIS, MS, VL, MP, A](f: java.util.function.Function[SidechainNodeView, A])
     case class ApplyBiFunctionOnNodeView[HIS, MS, VL, MP, T, A](f: java.util.function.BiFunction[SidechainNodeView, T, A], functionParameter: T)
     case class LocallyGeneratedSecret[S <: SidechainTypes#SCS](secret: S)
+    case object GetStorageVersions
   }
 
   private[horizen] object InternalReceivableMessages {

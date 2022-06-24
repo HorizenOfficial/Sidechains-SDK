@@ -208,6 +208,7 @@ object SidechainBlock extends ScorexEncoding {
   val MAX_SIDECHAIN_TXS_NUMBER: Int = 1000
   val ModifierTypeId: ModifierTypeId = scorex.core.ModifierTypeId @@ 3.toByte
   val BLOCK_VERSION: Block.Version = 1: Byte
+  val BlockIdHexStringLength = 64
 
   def create(parentId: Block.BlockId,
              blockVersion: Block.Version,

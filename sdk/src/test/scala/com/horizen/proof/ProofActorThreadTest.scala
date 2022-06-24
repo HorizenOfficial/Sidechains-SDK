@@ -56,7 +56,7 @@ private class ProofThreadActorReceiver
                                     endCumulativeEpochBlockHash: Array[Byte],
                                     publicKeysBytes: util.List[Array[Byte]],
                                     signatures:util.List[Optional[Array[Byte]]],
-                                    merkelTreeRoot: Optional[Array[Byte]]
+                                    merkelTreeRoot: Array[Byte]
                                    )
 
   override def receive = {
@@ -118,7 +118,7 @@ private class ProofThreadActorReceiver
       .toList ++ emptySigs)
       .asJava
 
-    DataForProofGeneration(sidechainId, epochNumber, threshold, wb, endCummulativeTransactionCommTreeHash, publicKeysBytes, signatures, Optional.of(merkelTreeRoot))
+    DataForProofGeneration(sidechainId, epochNumber, threshold, wb, endCummulativeTransactionCommTreeHash, publicKeysBytes, signatures, merkelTreeRoot)
   }
 
   private def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
@@ -129,7 +129,7 @@ private class ProofThreadActorReceiver
       dataForProofGeneration.endCumulativeEpochBlockHash, // Pass block hash in LE endianness
       0, // long btrFee
       0, // long ftMinAmount
-      dataForProofGeneration.merkelTreeRoot, // utxoMerkleTreeRoot
+      Optional.of(dataForProofGeneration.merkelTreeRoot), // utxoMerkleTreeRoot
       dataForProofGeneration.signatures, // List<Optional<byte[]>> schnorrSignatureBytesList
       dataForProofGeneration.publicKeysBytes, // List<byte[]> schnorrPublicKeysBytesList
       dataForProofGeneration.threshold, //long threshold

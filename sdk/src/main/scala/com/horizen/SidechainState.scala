@@ -3,8 +3,8 @@ package com.horizen
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.backup.BoxIterator
 import com.horizen.block.{SidechainBlock, WithdrawalEpochCertificate}
-import com.horizen.box.data.ZenBoxData
 import com.horizen.box._
+import com.horizen.box.data.ZenBoxData
 import com.horizen.consensus._
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.node.NodeState

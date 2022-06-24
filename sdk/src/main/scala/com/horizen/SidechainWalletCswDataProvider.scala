@@ -12,7 +12,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
-trait SidechainWalletCswDataProvider extends SidechainStorageInfo{
+trait SidechainWalletCswDataProvider extends SidechainStorageInfo {
 
   def rollback(version: ByteArrayWrapper): Try[SidechainWalletCswDataProvider]
 
@@ -24,6 +24,8 @@ trait SidechainWalletCswDataProvider extends SidechainStorageInfo{
              utxoMerkleTreeViewOpt: Option[UtxoMerkleTreeView]): Try[SidechainWalletCswDataProvider]
 
   def getCswData(withdrawalEpoch: Int): Seq[CswData]
+
+  override def getStorageName: String = "SidechainWalletCswDataStorage"
 }
 
 case class SidechainWalletCswDataProviderCSWEnabled(private val sidechainWalletCswDataStorage: SidechainWalletCswDataStorage) extends  SidechainWalletCswDataProvider {

@@ -86,7 +86,7 @@ class CertificateSubmitter(settings: SidechainSettings,
   override def postStop(): Unit = {
     log.debug("Certificate Submitter actor is stopping...")
     super.postStop()
-    if (timers.isTimerActive(CertificateGenerationTimer)) {
+    if(timers.isTimerActive(CertificateGenerationTimer)) {
       context.system.eventStream.publish(CertificateSubmissionStopped)
     }
   }
@@ -104,16 +104,16 @@ class CertificateSubmitter(settings: SidechainSettings,
 
   private[certificatesubmitter] def workingCycle: Receive = {
     onCertificateSubmissionEvent orElse
-      newBlockArrived orElse
-      locallyGeneratedSignature orElse
-      signatureFromRemote orElse
-      tryToScheduleCertificateGeneration orElse
-      tryToGenerateCertificate orElse
-      getCertGenerationState orElse
-      getSignaturesStatus orElse
-      submitterStatus orElse
-      signerStatus orElse
-      reportStrangeInput
+    newBlockArrived orElse
+    locallyGeneratedSignature orElse
+    signatureFromRemote orElse
+    tryToScheduleCertificateGeneration orElse
+    tryToGenerateCertificate orElse
+    getCertGenerationState orElse
+    getSignaturesStatus orElse
+    submitterStatus orElse
+    signerStatus orElse
+    reportStrangeInput
   }
 
   protected def checkSubmitter: Receive = {

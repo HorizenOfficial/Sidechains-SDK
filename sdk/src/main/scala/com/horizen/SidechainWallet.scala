@@ -16,8 +16,8 @@ import scorex.core.block.Block.Timestamp
 import scorex.core.{VersionTag, bytesToVersion, idToVersion, versionToBytes}
 import scorex.util.{ModifierId, ScorexLogging}
 
-import java.lang
 import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
+import java.{lang, util}
 import scala.collection.JavaConverters._
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
@@ -280,6 +280,13 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
       proposition.canBeProvedBy(secretStorage.getAll.asJava).secretsNeeded()
   }
 
+  override def secretByPublicKeyBytes[S <: SCS](proposition: Array[Byte]): JOptional[S] = {
+    secretStorage.getAll.find(secret => util.Arrays.equals(secret.publicImage().pubKeyBytes(), proposition)) match {
+      case Some(s) => JOptional.of(s.asInstanceOf[S])
+      case None => JOptional.empty()
+    }
+  }
+
   override def allSecrets(): JList[Secret] = {
     secretStorage.getAll.asJava
   }
@@ -387,6 +394,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
       throw new RuntimeException("Wallet storage versions are NOT consistent")
     }
   }
+
 }
 
 object SidechainWallet

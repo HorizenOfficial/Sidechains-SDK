@@ -177,10 +177,8 @@ class DBToolTest(SidechainTestFramework):
         print("Test 0 ######")
         # Check that in stopped node SC2 all storages versioned with blockid (but "walletForgingStake")
         # are consistent with genesis block id
-        # storages_list = ["wallet", "walletTransaction", "walletCswDataStorage",
-        #                  "stateUtxoMerkleTree", "state", "stateForgerBox"]
-        storages_list = ["walletCswDataStorage",
-                         "stateUtxoMerkleTree"]
+        storages_list = ["wallet", "walletTransaction", "walletCswDataStorage",
+                         "stateUtxoMerkleTree", "state", "stateForgerBox"]
         checkStoragesVersion(sc_node2, storages_list, genesis_sc_block_id)
 
         # Check that wallet forging stake has the same block id in the rollback versions and precisely

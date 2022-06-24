@@ -64,20 +64,20 @@ class SigProofTest {
   @Ignore
   @Test
   def simpleCheck(): Unit = {
-    val keyPairsLen = 7
-    val threshold = 5 //hardcoded value
+    val keyPairsLen = 9
+    val threshold = 6 //hardcoded value
 
     val keyPairs = (0 until keyPairsLen).view.map(buildSchnorrPrivateKey).map(secret => (secret, secret.getPublicKey))
     val publicKeysBytes: util.List[Array[Byte]] = keyPairs.map(_._2.serializePublicKey()).toList.asJava
 
     val sysConstant = sigCircuit.generateSysDataConstant(publicKeysBytes, threshold)
 
-    val epochNumber: Int = 10;
-    val btrFee: Long = 100;
-    val ftMinAmount: Long = 100;
+    val epochNumber: Int = 10
+    val btrFee: Long = 100
+    val ftMinAmount: Long = 100
     val endCumulativeScTxCommTreeRoot = FieldElementFixture.generateFieldElement()
     val sidechainId = FieldElementFixture.generateFieldElement()
-    var utxoMerkleTreeRoot = Optional.of(FieldElementFixture.generateFieldElement())
+    val utxoMerkleTreeRoot = Optional.of(FieldElementFixture.generateFieldElement())
 
     val wb: util.List[WithdrawalRequestBox] = Seq(new WithdrawalRequestBox(new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte)), 2345), 42)).asJava
 

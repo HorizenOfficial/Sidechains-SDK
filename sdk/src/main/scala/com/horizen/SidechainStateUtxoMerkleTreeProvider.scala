@@ -7,7 +7,7 @@ import com.horizen.utils.ByteArrayWrapper
 
 import scala.util.Try
 
-trait SidechainStateUtxoMerkleTreeProvider extends  SidechainStorageInfo{
+trait SidechainStateUtxoMerkleTreeProvider extends SidechainStorageInfo {
   def rollback(version: ByteArrayWrapper): Try[SidechainStateUtxoMerkleTreeProvider]
 
   def getMerklePath(boxId: Array[Byte]): Option[Array[Byte]]
@@ -17,6 +17,8 @@ trait SidechainStateUtxoMerkleTreeProvider extends  SidechainStorageInfo{
              boxesToRemoveSet: Set[ByteArrayWrapper]): Try[SidechainStateUtxoMerkleTreeProvider]
 
   def getMerkleTreeRoot: Array[Byte]
+
+  override def getStorageName: String = "SidechainStateUtxoMerkleTreeStorage"
 }
 
 case class SidechainUtxoMerkleTreeProviderCSWEnabled(private val utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage) extends SidechainStateUtxoMerkleTreeProvider{

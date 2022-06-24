@@ -6,6 +6,7 @@ import com.horizen.block.SidechainBlock;
 import com.horizen.box.Box;
 import com.horizen.chain.FeePaymentsInfo;
 import com.horizen.chain.MainchainHeaderInfo;
+import com.horizen.chain.SidechainBlockInfo;
 import com.horizen.node.util.MainchainBlockReferenceInfo;
 import com.horizen.proposition.Proposition;
 import com.horizen.transaction.BoxTransaction;
@@ -15,6 +16,10 @@ import java.util.Optional;
 
 public interface NodeHistory {
     Optional<SidechainBlock> getBlockById(String blockId);
+
+    Optional<SidechainBlockInfo> getBlockInfoById(String blockId);
+
+    boolean isInActiveChain(String blockId);
 
     List<String> getLastBlockIds(int count);
 

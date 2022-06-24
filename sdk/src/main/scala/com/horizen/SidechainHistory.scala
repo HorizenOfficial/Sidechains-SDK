@@ -382,6 +382,12 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     storage.blockById(ModifierId(blockId)).asJava
   }
 
+  override def getBlockInfoById(blockId: String): JOptional[SidechainBlockInfo] = {
+    storage.blockInfoOptionById(ModifierId(blockId)).asJava
+  }
+
+  override def isInActiveChain(blockId: String): Boolean = storage.isInActiveChain(ModifierId(blockId))
+
   override def getLastBlockIds(count: Int): JList[String] = {
     val blockList = new JArrayList[String]()
     if(isEmpty)

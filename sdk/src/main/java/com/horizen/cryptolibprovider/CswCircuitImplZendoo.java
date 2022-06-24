@@ -89,7 +89,7 @@ public class CswCircuitImplZendoo implements CswCircuit {
         int rangeSize = rangeSize(withdrawalEpochLength);
         boolean isConstantPresent = true;
         return CswProof.setup(ProvingSystemType.COBOUNDARY_MARLIN, rangeSize, CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW,
-                isConstantPresent, provingKeyPath, verificationKeyPath, CommonCircuit.maxProofPlusVkSize);
+                isConstantPresent, Optional.of(supportedSegmentSize), provingKeyPath, verificationKeyPath, CommonCircuit.maxProofPlusVkSize);
     }
 
     private WithdrawalCertificate createWithdrawalCertificate(WithdrawalEpochCertificate cert, Enumeration.Value sidechainCreationVersion) {

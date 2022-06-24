@@ -2,7 +2,13 @@ package com.horizen
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
+import java.lang.{Byte => JByte}
+import java.nio.file.{Files, Paths}
+import java.util.{HashMap => JHashMap, List => JList}
+import akka.actor.{ActorRef, ActorSystem}
+import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
+import akka.stream.ActorMaterializer
 import akka.stream.ActorMaterializer
 import com.google.inject.Inject
 import com.google.inject.name.Named
@@ -13,6 +19,8 @@ import com.horizen.certificatesubmitter.network.{CertificateSignaturesManagerRef
 import com.horizen.certificatesubmitter.CertificateSubmitterRef
 import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
+import com.horizen.cryptolibprovider.CryptoLibProvider
+import com.horizen.customconfig.CustomAkkaConfiguration
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.csw.CswManagerRef
 import com.horizen.customconfig.CustomAkkaConfiguration
@@ -49,6 +57,15 @@ import java.util.{HashMap => JHashMap, List => JList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.io.{Codec, Source}
+import com.horizen.network.SidechainNodeViewSynchronizer
+import com.horizen.websocket.client.{DefaultWebSocketReconnectionHandler, MainchainNodeChannelImpl, WebSocketChannel, WebSocketCommunicationClient, WebSocketConnector, WebSocketConnectorImpl, WebSocketReconnectionHandler}
+import com.horizen.websocket.server.WebSocketServerRef
+import com.horizen.serialization.JsonHorizenPublicKeyHashSerializer
+import com.horizen.transaction.mainchain.SidechainCreation
+import scorex.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
+
+import java.util.concurrent.atomic.AtomicBoolean
+
 import scala.util.{Failure, Success, Try}
 
 
@@ -366,9 +383,9 @@ class SidechainApp @Inject()
   var coreApiRoutes: Seq[SidechainApiRoute] = Seq[SidechainApiRoute](
     MainchainBlockApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
-    SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this),
+    SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params),
-    SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
+    SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
     SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef),
     SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager, params),
     SidechainBackupApiRoute(settings.restApi, nodeViewHolderRef, boxIterator)
