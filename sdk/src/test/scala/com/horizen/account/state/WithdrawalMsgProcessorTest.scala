@@ -4,7 +4,7 @@ import com.google.common.primitives.Ints
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.proposition.MCPublicKeyHashProposition
-import com.horizen.utils.{BytesUtils, ListSerializer, WithdrawalEpochInfo}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ListSerializer, WithdrawalEpochInfo}
 import org.junit.Assert._
 import org.junit._
 import org.mockito._
@@ -177,15 +177,19 @@ class WithdrawalMsgProcessorTest
     // With 3900 withdrawal requests
     val maxNumOfWithdrawalReqs = WithdrawalMsgProcessor.MAX_WITHDRAWAL_REQS_NUM_PER_EPOCH
 
-    Mockito.when(mockStateView.getAccountStorageBytes(WithdrawalMsgProcessor.fakeSmartContractAddress.address(), key)).thenReturn(Success(Ints.toByteArray(maxNumOfWithdrawalReqs)))
     val destAddress = new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte))
+    val mockWithdrawalRequestsList = new util.HashMap[ByteArrayWrapper, Array[Byte]](maxNumOfWithdrawalReqs)
+
     (1 to maxNumOfWithdrawalReqs).foreach(index => {
       val wr = WithdrawalRequest(destAddress, ZenWeiConverter.convertZenniesToWei(index))
       val key = WithdrawalMsgProcessor.getWithdrawalRequestsKey(epochNum, index)
-      Mockito.when(mockStateView.getAccountStorageBytes(WithdrawalMsgProcessor.fakeSmartContractAddress.address(), key)).thenReturn(Success(WithdrawalRequestSerializer.toBytes(wr)))
-
+      mockWithdrawalRequestsList.put(new ByteArrayWrapper(key), WithdrawalRequestSerializer.toBytes(wr))
     }
     )
+    Mockito.when(mockStateView.getAccountStorageBytes(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[Array[Byte]])).thenReturn(Success(Ints.toByteArray(maxNumOfWithdrawalReqs))).thenAnswer(answer => {
+      val key : Array[Byte] = answer.getArgument(1)
+      Success(mockWithdrawalRequestsList.get(new ByteArrayWrapper(key)))
+    })
 
     res = WithdrawalMsgProcessor.process(msg, mockStateView)
     assertEquals("Wrong result type", classOf[ExecutionSucceeded], res.getClass)
