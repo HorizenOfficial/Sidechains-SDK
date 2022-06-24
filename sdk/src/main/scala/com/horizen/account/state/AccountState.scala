@@ -36,7 +36,10 @@ class AccountState(val params: NetworkParams,
       processor.init(view)
     }
     // TODO: commit only StateDB part ???
-    // view.commit(initialVersion)
+    // If we commit only stateDb we will not be able to
+    // start a new view from the last rootHash
+    view.commit(initialVersion)
+    view.close()
     this
   }
 
@@ -85,7 +88,7 @@ class AccountState(val params: NetworkParams,
     stateView.updateWithdrawalEpochInfo(modWithdrawalEpochInfo).get
 
     val consensusEpochNum: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)
-   stateView.updateConsensusEpochNumber(consensusEpochNum)
+    stateView.updateConsensusEpochNumber(consensusEpochNum)
 
     // If SC block has reached the end of the withdrawal epoch -> fee payments expected to be produced.
     // Verify that Forger assumed the same fees to be paid as the current node does.
@@ -106,7 +109,7 @@ class AccountState(val params: NetworkParams,
     }
 
     for(mcBlockRefData <- mod.mainchainBlockReferencesData) {
-      stateView = stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
+      stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
     }
 
     for(tx <- mod.sidechainTransactions) {
@@ -116,9 +119,6 @@ class AccountState(val params: NetworkParams,
     // TODO: calculate and update fee info.
     // Note: we should save the total gas paid and the forgerAddress
     stateView.addFeeInfo(BlockFeeInfo(0L, mod.header.forgingStakeInfo.blockSignPublicKey)).get
-
-    //TODO:
-    stateView.updateAccountStateRoot(new Array[Byte](32))
 
     stateView.commit(idToVersion(mod.id)).get
 

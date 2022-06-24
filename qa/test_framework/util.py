@@ -10,6 +10,7 @@
 # Add python-bitcoinrpc to module search path:
 import codecs
 import os
+import pprint
 import sys
 
 from binascii import hexlify, unhexlify
@@ -499,7 +500,9 @@ def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_lengt
         print("Generating {} blocks for reaching needed mc fork point...".format(diff))
         mainchain_node.generate(diff)
 
-    custom_creation_data = vrf_public_key
+    # TODO temporary for testing: pass block sign key as param
+    custom_creation_data = vrf_public_key + "1122334455667788990011223344556677889900112233445566778899001122"
+    pprint.pprint(custom_creation_data)
     fe_certificate_field_configs = [255, 255]
     bitvector_certificate_field_configs = []  # [[254*8, 254*8]]
     ft_min_amount = 0

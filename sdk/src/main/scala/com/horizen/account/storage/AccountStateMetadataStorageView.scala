@@ -196,30 +196,33 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   }
 
   private[horizen] def saveToStorage(version: ByteArrayWrapper): Unit = {
-    require(withdrawalEpochInfoOpt.nonEmpty, "WithdrawalEpochInfo must be NOT NULL.")
-    require(blockFeeInfoOpt.nonEmpty, "BlockFeeInfo must be NOT NULL.")
+
     require(accountStateRootOpt.nonEmpty, "Account State Root must be NOT NULL.")
 
     val updateList = new JArrayList[JPair[ByteArrayWrapper, ByteArrayWrapper]]()
     val removeList = new JArrayList[ByteArrayWrapper]()
 
-    // Update Withdrawal epoch related data
-    updateList.add(new JPair(withdrawalEpochInformationKey,
-      new ByteArrayWrapper(WithdrawalEpochInfoSerializer.toBytes(withdrawalEpochInfoOpt.get))))
+    withdrawalEpochInfoOpt.foreach(epochInfo => {
+      // Update Withdrawal epoch related data
+      updateList.add(new JPair(withdrawalEpochInformationKey,
+        new ByteArrayWrapper(WithdrawalEpochInfoSerializer.toBytes(epochInfo))))
+
+      // Update BlockFeeInfo data
+      val nextBlockFeeInfoCounter: Int = getBlockFeeInfoCounter(epochInfo.epoch) + 1
+      updateList.add(new JPair(getBlockFeeInfoCounterKey(epochInfo.epoch),
+        new ByteArrayWrapper(Ints.toByteArray(nextBlockFeeInfoCounter))))
+
+      require(blockFeeInfoOpt.nonEmpty, "BlockFeeInfo must be NOT NULL.")
+
+      updateList.add(new JPair(getBlockFeeInfoKey(epochInfo.epoch, nextBlockFeeInfoCounter),
+        new ByteArrayWrapper(BlockFeeInfoSerializer.toBytes(blockFeeInfoOpt.get))))
+    })
 
     // Store the top quality cert for epoch if present
     topQualityCertificateOpt.foreach(certificate => {
       updateList.add(new JPair(getTopQualityCertificateKey(certificate.epochNumber),
         WithdrawalEpochCertificateSerializer.toBytes(certificate)))
-    }
-    )
-
-    // Update BlockFeeInfo data
-    val nextBlockFeeInfoCounter: Int = getBlockFeeInfoCounter(withdrawalEpochInfoOpt.get.epoch) + 1
-    updateList.add(new JPair(getBlockFeeInfoCounterKey(withdrawalEpochInfoOpt.get.epoch),
-      new ByteArrayWrapper(Ints.toByteArray(nextBlockFeeInfoCounter))))
-    updateList.add(new JPair(getBlockFeeInfoKey(withdrawalEpochInfoOpt.get.epoch, nextBlockFeeInfoCounter),
-      new ByteArrayWrapper(BlockFeeInfoSerializer.toBytes(blockFeeInfoOpt.get))))
+    })
 
     // Update Consensus related data
     consensusEpochOpt.foreach(currConsensusEpoch => {
@@ -241,22 +244,26 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     //    Note: we should keep last 2 epoch certificates, so in case SC has ceased we have an access to the last active cert.
     // 1) remove outdated BlockFeeInfo records
 
-    val isWithdrawalEpochSwitched: Boolean = getWithdrawalEpochInfoFromStorage match {
-      case Some(storedEpochInfo) => storedEpochInfo.epoch != withdrawalEpochInfoOpt.get.epoch
-      case _ => false
-    }
-    if (isWithdrawalEpochSwitched) {
-      val certEpochNumberToRemove: Int = withdrawalEpochInfoOpt.get.epoch - 4
-      removeList.add(getTopQualityCertificateKey(certEpochNumberToRemove))
+    withdrawalEpochInfoOpt match {
+      case Some(epochInfo) =>
+        val isWithdrawalEpochSwitched: Boolean = getWithdrawalEpochInfoFromStorage match {
+          case Some(storedEpochInfo) => storedEpochInfo.epoch != epochInfo.epoch
+          case _ => false
+        }
+        if (isWithdrawalEpochSwitched) {
+          val certEpochNumberToRemove: Int = epochInfo.epoch - 4
+          removeList.add(getTopQualityCertificateKey(certEpochNumberToRemove))
 
-      val blockFeeInfoEpochToRemove: Int = withdrawalEpochInfoOpt.get.epoch - 1
-      for (counter <- 0 to getBlockFeeInfoCounter(blockFeeInfoEpochToRemove)) {
-        removeList.add(getBlockFeeInfoKey(blockFeeInfoEpochToRemove, counter))
-      }
-      removeList.add(getBlockFeeInfoCounterKey(blockFeeInfoEpochToRemove))
+          val blockFeeInfoEpochToRemove: Int = epochInfo.epoch - 1
+          for (counter <- 0 to getBlockFeeInfoCounter(blockFeeInfoEpochToRemove)) {
+            removeList.add(getBlockFeeInfoKey(blockFeeInfoEpochToRemove, counter))
+          }
+          removeList.add(getBlockFeeInfoCounterKey(blockFeeInfoEpochToRemove))
+        }
+      case _ => // do nothing
     }
 
-   storage.update(version, updateList, removeList)
+    storage.update(version, updateList, removeList)
 
   }
 

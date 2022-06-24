@@ -11,6 +11,8 @@ import com.horizen.utils.Utils;
 import com.horizen.proposition.VrfPublicKey;
 import scala.compat.java8.OptionConverters;
 import scorex.crypto.hash.Blake2b256;
+
+import java.util.Arrays;
 import java.util.Optional;
 
 public final class SidechainCreation implements SidechainRelatedMainchainOutput<ForgerBox> {
@@ -47,7 +49,9 @@ public final class SidechainCreation implements SidechainRelatedMainchainOutput<
         // Note: SC output address is stored in original MC LE form, but we in SC we expect BE raw data.
         PublicKey25519Proposition proposition = new PublicKey25519Proposition(BytesUtils.reverseBytes(output.address()));
         long value = output.amount();
-        VrfPublicKey vrfPublicKey = new VrfPublicKey(output.customCreationData());
+
+        // we must not read past the vfr key bytes in the custom data
+        VrfPublicKey vrfPublicKey = new VrfPublicKey(Arrays.copyOfRange(output.customCreationData(), 0, VrfPublicKey.KEY_LENGTH));
 
         ForgerBoxData forgerBoxData = new ForgerBoxData(proposition, value, proposition, vrfPublicKey);
 

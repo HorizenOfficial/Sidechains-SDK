@@ -1,24 +1,37 @@
 package com.horizen.account.state
 
+import com.google.common.primitives.Bytes
 import com.horizen.SidechainTypes
+import com.horizen.account.proposition.AddressProposition
+import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress}
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.ZenWeiConverter
-import com.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
+import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput, WithdrawalEpochCertificate}
 import com.horizen.box.data.WithdrawalRequestBoxData
 import com.horizen.box.{ForgerBox, WithdrawalRequestBox}
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.evm.{StateDB, StateStorageStrategy}
+import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.StateView
-import com.horizen.utils.{BlockFeeInfo, WithdrawalEpochInfo}
+import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
+import com.horizen.utils.{BlockFeeInfo, BytesUtils, WithdrawalEpochInfo}
 import scorex.core.VersionTag
+import scorex.crypto.hash.Keccak256
+import scorex.util.ScorexLogging
 
 import java.math.BigInteger
-import scala.util.Try
+import scala.collection.JavaConverters.collectionAsScalaIterableConverter
+import scala.util.{Failure, Success, Try}
 
 class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
                        val stateDb: StateDB,
-                       messageProcessors: Seq[MessageProcessor]) extends StateView[SidechainTypes#SCAT, AccountStateView] with AccountStateReader with AutoCloseable {
+                       messageProcessors: Seq[MessageProcessor])
+  extends StateView[SidechainTypes#SCAT, AccountStateView]
+    with AccountStateReader
+    with AutoCloseable
+    with ScorexLogging {
+
   view: AccountStateView =>
 
   override type NVCT = this.type
@@ -26,9 +39,76 @@ class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
   lazy val withdrawalReqProvider: WithdrawalRequestProvider = messageProcessors.find(_.isInstanceOf[WithdrawalRequestProvider]).get.asInstanceOf[WithdrawalRequestProvider]
 
   // modifiers
-  override def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[AccountStateView] = Try {
-    // TODO
-    this
+  override def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[Unit] = Try {
+    // While processing sidechain creation output:
+    // 1. extract first forger stake info: block sign public key, vrf public key, owner address, stake amount
+    // 2. store the stake info record in the forging fake smart contract storage
+
+    refData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {
+      aggTx.mc2scTransactionsOutputs().asScala.map(_ match {
+        case sc: SidechainCreation =>
+          val scOut : MainchainTxSidechainCreationCrosschainOutput = sc.getScCrOutput
+
+          val stakedAmount = ZenWeiConverter.convertZenniesToWei(scOut.amount)
+
+          // TODO we must get 20 bytes out of 32 with the proper padding and byte order
+          val ownerAddressProposition = new AddressProposition(BytesUtils.reverseBytes(scOut.address.take(20)))
+          // TODO customData contains both vrf key and blockSignerKey with proper byte order
+          val vrfPublicKey = new VrfPublicKey(scOut.customCreationData.take(33))
+          val blockSignerProposition = new PublicKey25519Proposition(scOut.customCreationData.drop(33))
+
+          val cmdInput = AddNewStakeCmdInput(
+            ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
+            ownerAddressProposition,
+          )
+
+          val data : Array[Byte] = Bytes.concat(
+            BytesUtils.fromHexString(AddNewStakeCmd),
+            AddNewStakeCmdInputSerializer.toBytes(cmdInput))
+
+          val message = new Message(
+            ownerAddressProposition, // sender proposition can be the same as owner
+            ForgerStakeSmartContractAddress,
+            BigInteger.ZERO, // gasPrice
+            BigInteger.ZERO, // gasFeeCap
+            BigInteger.ZERO, // gasTipCap
+            BigInteger.ZERO, // gasLimit
+            stakedAmount,
+            BigInteger.ONE.negate(), // a negative nonce value will rule out collision with real transactions
+            data)
+
+          val processor = messageProcessors.find(_.canProcess(message, this)).getOrElse{
+            val errMsg = s"No known processor for msg: $message"
+            log.error(errMsg)
+            throw new IllegalArgumentException(errMsg)
+          }
+
+          processor.asInstanceOf[ForgerStakeMsgProcessor].doAddNewStakeCmd(message, view, isGenesisScCreation = true) match {
+            case res: ExecutionFailed =>
+              log.error(res.getReason.getMessage)
+              throw new IllegalArgumentException(res.getReason)
+            case res: InvalidMessage =>
+              log.error(res.getReason.getMessage)
+              throw new IllegalArgumentException(res.getReason)
+            case _ : ExecutionSucceeded =>
+          }
+
+        case ft: ForwardTransfer =>
+          val ftOut : MainchainTxForwardTransferCrosschainOutput = ft.getFtOutput
+
+          // we trust the MC that this is a valid amount
+          val value = ZenWeiConverter.convertZenniesToWei(ftOut.amount)
+
+          // TODO we must get 20 bytes out of 32 with the propoer padding and byte order
+          val recipientProposition = new AddressProposition(BytesUtils.reverseBytes(ftOut.propositionBytes.take(20)))
+
+          // TODO check we have this account, otherwise set codeHash??
+          view.addBalance(recipientProposition.address(), value)
+
+      })
+    })
+
+
   }
 
   def setupTxContext(tx: EthereumTransaction): Unit = {
@@ -148,7 +228,9 @@ class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
   override def rollbackToSavepoint(): Try[AccountStateView] = ???
 
   override def commit(version: VersionTag): Try[Unit] = Try {
-    // Update StateDB without version, then commit metadataStorageView
+    // Update StateDB without version, then set the rootHash and commit metadataStorageView
+    val rootHash = stateDb.commit()
+    metadataStorageView.updateAccountStateRoot(rootHash)
     metadataStorageView.commit(version)
   }
 
