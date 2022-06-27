@@ -29,7 +29,6 @@ Test:
 class SCForwardTransfer(SidechainTestFramework):
 
     sc_nodes_bootstrap_info=None
-    API_KEY = "Horizen"
 
     def setup_nodes(self):
         return start_nodes(1, self.options.tmpdir)
@@ -37,14 +36,13 @@ class SCForwardTransfer(SidechainTestFramework):
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
         sc_node_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            api_key = self.API_KEY
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, 5), sc_node_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
 
     def sc_setup_nodes(self):
-        return start_sc_nodes(1, self.options.tmpdir, auth_api_key=self.API_KEY)
+        return start_sc_nodes(1, self.options.tmpdir)
 
     def run_test(self):
         sc_node = self.sc_nodes[0]

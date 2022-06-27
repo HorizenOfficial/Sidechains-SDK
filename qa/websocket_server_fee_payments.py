@@ -40,22 +40,20 @@ class SCWsServerFeePayments(SidechainTestFramework):
     blocks = []
     number_of_sidechain_nodes = 1
     withdrawal_epoch_length = 10
-    API_KEY = "Horizen"
 
     def sc_setup_chain(self):
         mc_node_1 = self.nodes[0]
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0))),
             cert_submitter_enabled=False,
-            cert_signing_enabled=False,
-            api_key = self.API_KEY
+            cert_signing_enabled=False
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, self.withdrawal_epoch_length), sc_node_1_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
 
     def sc_setup_nodes(self):
         # Start 1 SC node
-        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir, auth_api_key = self.API_KEY)
+        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
 
     def run_test(self):
         print("SC ws server fee payments test is starting...")

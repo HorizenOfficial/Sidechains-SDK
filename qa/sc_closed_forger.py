@@ -16,7 +16,6 @@ class SidechainClosedForgerTest(SidechainTestFramework):
     number_of_sidechain_nodes = 1
     allowed_forger_proposition = generate_secrets("seed", 1)[0].publicKey
     allowed_forger_vrf_public_key = generate_vrf_secrets("seed", 1)[0].publicKey
-    API_KEY = "Horizen"
 
     def setup_chain(self):
         initialize_chain_clean(self.options.tmpdir, self.number_of_mc_nodes)
@@ -39,8 +38,7 @@ class SidechainClosedForgerTest(SidechainTestFramework):
 
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0))),
-            forger_options = forger_configuration,
-            api_key = self.API_KEY
+            forger_options = forger_configuration
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, LARGE_WITHDRAWAL_EPOCH_LENGTH),
                                          sc_node_1_configuration)
@@ -48,7 +46,7 @@ class SidechainClosedForgerTest(SidechainTestFramework):
 
     def sc_setup_nodes(self):
         # Start 1 SC node
-        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir, auth_api_key=self.API_KEY)
+        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
 
     def run_test(self):
         self.sync_all()

@@ -49,7 +49,6 @@ class SCMultipleCerts(SidechainTestFramework):
 
     number_of_mc_nodes = 1
     number_of_sidechain_nodes = 2
-    API_KEY = "Horizen"
 
     sc_nodes_bootstrap_info = None
     sc_withdrawal_epoch_length = 15
@@ -65,13 +64,11 @@ class SCMultipleCerts(SidechainTestFramework):
         mc_node = self.nodes[0]
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            True, True, list(range(7)),  # certificate submitter is enabled with 7 schnorr PKs
-            api_key = self.API_KEY
+            True, True, list(range(7))  # certificate submitter is enabled with 7 schnorr PKs
         )
         sc_node_2_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            True, True, list(range(6)),  # certificate submitter is enabled with 6 schnorr PKs
-            api_key = self.API_KEY
+            True, True, list(range(6))  # certificate submitter is enabled with 6 schnorr PKs
         )
 
         network = SCNetworkConfiguration(
@@ -83,7 +80,7 @@ class SCMultipleCerts(SidechainTestFramework):
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720*120*5)
 
     def sc_setup_nodes(self):
-        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir, auth_api_key=self.API_KEY)
+        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
 
     def run_test(self):
         mc_node = self.nodes[0]

@@ -6,6 +6,9 @@ LARGE_WITHDRAWAL_EPOCH_LENGTH = 900
 
 SC_CREATION_VERSION_0 = 0
 SC_CREATION_VERSION_1 = 1
+
+DEFAULT_API_KEY = "TopSecret"
+
 """
 All information needed to bootstrap sidechain network within specified mainchain node.
 The JSON representation is only for documentation.
@@ -94,8 +97,9 @@ class SCNodeConfiguration(object):
                  max_connections=100,
                  automatic_fee_computation=True,
                  certificate_fee=0.0001,
-                 forger_options = SCForgerConfiguration(),
-                 api_key = ""):
+                 forger_options=SCForgerConfiguration(),
+                 api_key=DEFAULT_API_KEY,
+                 max_fee=10000000):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))
         self.mc_connection_info = mc_connection_info
@@ -107,7 +111,7 @@ class SCNodeConfiguration(object):
         self.certificate_fee = certificate_fee
         self.forger_options = forger_options
         self.api_key = api_key
-
+        self.max_fee = max_fee
 
 """
 The full network of many sidechain nodes connected to many mainchain nodes.

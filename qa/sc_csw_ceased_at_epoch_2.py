@@ -48,7 +48,6 @@ class SCCswCeasedAtEpoch2(SidechainTestFramework):
 
     sidechain_id = None
     sc_withdrawal_epoch_length = 10
-    API_KEY = "Horizen"
 
     def setup_nodes(self):
         num_nodes = 1
@@ -60,14 +59,13 @@ class SCCswCeasedAtEpoch2(SidechainTestFramework):
         sc_node_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
             cert_submitter_enabled=True,  # enable submitter
-            cert_signing_enabled=True,  # enable signer
-            api_key = self.API_KEY
+            cert_signing_enabled=True  # enable signer
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length, csw_enabled=True), sc_node_configuration)
         self.sidechain_id = bootstrap_sidechain_nodes(self.options, network).sidechain_id
 
     def sc_setup_nodes(self):
-        return start_sc_nodes(1, self.options.tmpdir, auth_api_key=self.API_KEY)
+        return start_sc_nodes(1, self.options.tmpdir)
 
     def run_test(self):
         time.sleep(0.1)

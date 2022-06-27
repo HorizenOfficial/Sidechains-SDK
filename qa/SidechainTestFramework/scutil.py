@@ -5,7 +5,8 @@ import json
 from decimal import Decimal
 
 from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
-    VrfAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths, LARGE_WITHDRAWAL_EPOCH_LENGTH, SCCreationInfo
+    VrfAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths, LARGE_WITHDRAWAL_EPOCH_LENGTH, \
+    SCCreationInfo, DEFAULT_API_KEY
 from SidechainTestFramework.sidechainauthproxy import SidechainAuthServiceProxy
 import subprocess
 import time
@@ -351,7 +352,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
     all_private_keys = bootstrap_info.certificate_proof_info.schnorr_secrets
     signer_private_keys = [all_private_keys[idx] for idx in sc_node_config.submitter_private_keys_indexes]
     api_key_hash = ""
-    if (sc_node_config.api_key != ""):
+    if sc_node_config.api_key != "":
         api_key_hash = calculateApiKeyHash(sc_node_config.api_key)
     config = tmpConfig % {
         'NODE_NUMBER': n,
@@ -367,6 +368,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         'MAX_CONNECTIONS': sc_node_config.max_connections,
         'OFFLINE_GENERATION': "false",
         'GENESIS_SECRETS': json.dumps(genesis_secrets),
+        'MAX_TX_FEE': sc_node_config.max_fee,
         'SIDECHAIN_ID': bootstrap_info.sidechain_id,
         'GENESIS_DATA': bootstrap_info.sidechain_genesis_block_hex,
         'POW_DATA': bootstrap_info.pow_data,
@@ -431,7 +433,7 @@ def initialize_default_sc_datadir(dirname, n, api_key):
     with open('./resources/template_predefined_genesis.conf', 'r') as templateFile:
         tmpConfig = templateFile.read()
     api_key_hash = ""
-    if (api_key != ""):
+    if api_key != "":
         api_key_hash = calculateApiKeyHash(api_key)
     config = tmpConfig % {
         'NODE_NUMBER': n,
@@ -531,7 +533,7 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
 
 
 def start_sc_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=None, print_output_to_file=False,
-                   auth_api_key=None):
+                   auth_api_key=DEFAULT_API_KEY):
     """
     Start multiple SC clients, return connections to them
     """
