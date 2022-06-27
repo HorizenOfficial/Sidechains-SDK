@@ -1,6 +1,7 @@
 package com.horizen.account.state
 
 import com.horizen.account.proposition.AddressProposition
+import com.horizen.evm.StateDB
 import com.horizen.fixtures.SecretFixture
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertTrue}
 import org.junit.Test
@@ -40,10 +41,10 @@ class EoaMessageProcessorTest extends JUnitSuite
 
 
     // Test 1: send to EOA account, tx with empty "data"
-    Mockito.when(mockStateView.getCodeHash(ArgumentMatchers.any[Array[Byte]])).thenAnswer(args => {
+    Mockito.when(mockStateView.isEoaAccount(ArgumentMatchers.any[Array[Byte]])).thenAnswer(args => {
       val addressBytes: Array[Byte] = args.getArgument(0)
       assertArrayEquals("Different address found", msg.getTo.address(), addressBytes)
-      Array.emptyByteArray
+      true
     })
 
     assertTrue("Message for EoaMessageProcessor cannot be processed", EoaMessageProcessor.canProcess(msg, mockStateView))
@@ -52,17 +53,16 @@ class EoaMessageProcessorTest extends JUnitSuite
     // Test 2: send to EOA account, tx with no-empty "data"
     val data: Array[Byte] = new Array[Byte](1000)
     val msgWithData: Message = getMessage(address, value, data)
+
     assertTrue("Message for EoaMessageProcessor cannot be processed", EoaMessageProcessor.canProcess(msgWithData, mockStateView))
 
 
     // Test 2: Failure: send to smart contract account
     Mockito.reset(mockStateView)
-    Mockito.when(mockStateView.getCodeHash(ArgumentMatchers.any[Array[Byte]])).thenAnswer(args => {
+    Mockito.when(mockStateView.isEoaAccount(ArgumentMatchers.any[Array[Byte]])).thenAnswer(args => {
       val addressBytes: Array[Byte] = args.getArgument(0)
       assertArrayEquals("Different address found", msg.getTo.address(), addressBytes)
-      // code hash exists
-      val codeHash = new Array[Byte](32)
-      codeHash
+      false
     })
 
     assertFalse("Message for EoaMessageProcessor wrongly can be processed", EoaMessageProcessor.canProcess(msg, mockStateView))
@@ -100,7 +100,7 @@ class EoaMessageProcessorTest extends JUnitSuite
 
     EoaMessageProcessor.process(msg, mockStateView) match {
       case es: ExecutionSucceeded =>
-        assertEquals("Different gas found", EoaMessageProcessor.gasUsed, es.gasUsed())
+        assertEquals("Different gas found", EoaMessageProcessor.GAS_USED, es.gasUsed())
         assertArrayEquals("Different return data found", Array.emptyByteArray, es.returnData())
       case _: ExecutionFailed | _: InvalidMessage => fail("Execution failure received")
     }
@@ -116,7 +116,7 @@ class EoaMessageProcessorTest extends JUnitSuite
     EoaMessageProcessor.process(msg, mockStateView) match {
       case _: ExecutionSucceeded | _: InvalidMessage => fail("Execution failure expected")
       case ef: ExecutionFailed =>
-        assertEquals("Different gas found", EoaMessageProcessor.gasUsed, ef.gasUsed())
+        assertEquals("Different gas found", EoaMessageProcessor.GAS_USED, ef.gasUsed())
         assertEquals("Different exception found", exception, ef.getReason.getCause)
     }
 
@@ -141,7 +141,7 @@ class EoaMessageProcessorTest extends JUnitSuite
     EoaMessageProcessor.process(msg, mockStateView) match {
       case _: ExecutionSucceeded | _: InvalidMessage => fail("Execution failure expected")
       case ef: ExecutionFailed =>
-        assertEquals("Different gas found", EoaMessageProcessor.gasUsed, ef.gasUsed())
+        assertEquals("Different gas found", EoaMessageProcessor.GAS_USED, ef.gasUsed())
         assertEquals("Different exception found", exception, ef.getReason.getCause)
     }
   }

@@ -52,6 +52,10 @@ class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
       throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
   }
 
+  def isEoaAccount(address: Array[Byte]): Boolean = stateDb.isEoaAccount(address)
+
+  def isSmartContractAccount(address: Array[Byte]): Boolean = stateDb.isSmartContractAccount(address)
+
   def accountExists(address: Array[Byte]): Boolean = stateDb.exists(address)
 
   // account modifiers:
