@@ -1,8 +1,12 @@
 package com.horizen.evm;
 
+import com.horizen.evm.utils.Converter;
+
 import java.math.BigInteger;
+import java.util.Arrays;
 
 public class StateDB extends ResouceHandle {
+    public static byte[] NULL_CODE_HASH = Converter.fromHexString("c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
     /**
      * Opens a view on the state at the given state root hash.
      */
@@ -44,6 +48,29 @@ public class StateDB extends ResouceHandle {
      */
     public boolean exists(byte[] address) {
         return LibEvm.stateExists(handle, address);
+    }
+
+    /**
+     * Check if account is and EAO one.
+     * Account considered an EOA account in two cases:
+     * 1) account doesn't exist in the StateDB (first time it receives coins);
+     * 2) account has no code (code hash is a keccak256 hash of empty array).
+     *
+     * @param address account address
+     * @return true if account is EOA, otherwise false
+     */
+    public boolean isEoaAccount(byte[] address) {
+        return !exists(address) || Arrays.equals(getCodeHash(address), NULL_CODE_HASH);
+    }
+
+    /**
+     * Check if an account is a smart contract account
+     *
+     * @param address account address
+     * @return true if account is a smart contract one, otherwise false
+     */
+    public boolean isSmartContractAccount(byte[] address) {
+        return !isEoaAccount(address);
     }
 
     /**

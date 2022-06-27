@@ -29,14 +29,14 @@ trait MessageProcessorFixture {
 
 
   def getAddWithdrawalRequestMessage(amount: java.math.BigInteger): Message = {
-     val data: Array[Byte] = Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.addNewWithdrawalReqCmdSig),
+     val data: Array[Byte] = Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.AddNewWithdrawalReqCmdSig),
       mcAddr.bytes())
 
     getMessage(WithdrawalMsgProcessor.fakeSmartContractAddress, amount, data)
   }
 
   def getGetListOfWithdrawalRequestMessage(epochNum: Int): Message = {
-    val data: Array[Byte] = Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.getListOfWithdrawalReqsCmdSig),
+    val data: Array[Byte] = Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.GetListOfWithdrawalReqsCmdSig),
       Ints.toByteArray(epochNum))
 
     getMessage(WithdrawalMsgProcessor.fakeSmartContractAddress, java.math.BigInteger.ZERO, data)
