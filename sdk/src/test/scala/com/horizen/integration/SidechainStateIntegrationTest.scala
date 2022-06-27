@@ -375,8 +375,8 @@ class SidechainStateIntegrationTest
     val sidechainStateAfterApplyModifier = commonApplyModifierTest(sidechainState,transactionList)
 
     // Test that utxo merkle tree root was not stored
-    assertTrue("Utxo merkle tree root expected to be an empty array after finishing the epoch: " + initialWithdrawalEpochInfo,
-      sidechainStateAfterApplyModifier.utxoMerkleTreeRoot(initialWithdrawalEpochInfo.epoch).get.isEmpty)
+    assertFalse("Utxo merkle tree root expected to be None after finishing the epoch: " + initialWithdrawalEpochInfo,
+      sidechainStateAfterApplyModifier.utxoMerkleTreeRoot(initialWithdrawalEpochInfo.epoch).isDefined)
 
 
     // Test rollback

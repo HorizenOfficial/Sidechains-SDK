@@ -348,7 +348,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
         val updatedUtxoMerkleTreeProvider = utxoMerkleTreeProvider.update(version, boxesToAppend, boxIdsToRemoveSet).get
         val utxoMerkleTreeRootOpt: Option[Array[Byte]] = if(isWithdrawalEpochFinished) {
-          Some(updatedUtxoMerkleTreeProvider.getMerkleTreeRoot)
+          updatedUtxoMerkleTreeProvider.getMerkleTreeRoot
         } else {
           None
         }

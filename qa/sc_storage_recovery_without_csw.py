@@ -1,29 +1,28 @@
 #!/usr/bin/env python3
-import pprint
-from datetime import datetime
 import time
+from datetime import datetime
+
+from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
+    SCNetworkConfiguration
+from SidechainTestFramework.sc_test_framework import SidechainTestFramework
+from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks, \
+    connect_sc_nodes, assert_true, stop_sc_node, launch_db_tool, start_sc_node, \
+    wait_for_sc_node_initialization
+from test_framework.util import assert_equal, initialize_chain_clean, start_nodes, \
+    websocket_port_by_mc_node_index
 
 # import raw_input
 
-from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration
-from sc_cert_fee_conf import EXPECTED_CERT_FEE
-from test_framework.util import assert_equal, initialize_chain_clean, start_nodes, \
-    websocket_port_by_mc_node_index, connect_nodes_bi, disconnect_nodes_bi
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks, \
-    connect_sc_nodes, assert_true, stop_sc_nodes, stop_sc_node, launch_db_tool, start_sc_node, \
-    wait_for_sc_node_initialization
-from SidechainTestFramework.sc_forging_util import *
-
 """
-Test the offline db tool useful for interacting with the storage dbs 
+Test that the sidechain can recover after a crash that left the SC storages inconsistent. 
+For testing this scenario, the offline db tool is used for interacting with the storage dbs.
+For this testing the CSW is disabled. 
 
 Configuration:
     Start 1 MC nodes and 2 SC nodes.
     First SC1 node is connected to the MC node.
     Second SC2 Node is not connected to MC nor to first SC1 node
-    CSW is enabled.
+    CSW is disabled.
 
 Test:
     - Synchronize MC node to the point of SC Creation Block.
@@ -39,18 +38,16 @@ Test:
         1. History storage (block)
         ------------------------
             application (appState1, appState2 storages)
-        2. stateUtxoMerkleTree
-        3. state
-        4. stateForgerBox
+        2. state
+        3. stateForgerBox
         ------------------------
             application (appWallet1, appWallet2 storages)
-        5. wallet
-        6. walletTransaction
-        7. walletForgingStake
-        8. walletCswDataStorage
+        4. wallet
+        5. walletTransaction
+        6. walletForgingStake
         ------------------------
-        9. History storage (block info with validity attribute)
-       10. History storage (best block id)
+        7. History storage (block info with validity attribute)
+        8. History storage (best block id)
     
 """
 
@@ -63,7 +60,7 @@ def checkStoragesVersion(node, storages_list, expectedVersion):
         json_params = {"storage": name}
         ret = launch_db_tool(node.dataDir, "lastVersionID", json_params)
         version = ret['version']
-        #print("{} --> {}".format(name, version))
+        # print("{} --> {}".format(name, version))
         # check we got the expected version
         assert_equal(version, expectedVersion)
 
@@ -79,12 +76,12 @@ def rollbackStorages(node, storages_list, numberOfVersionsToRollback):
         json_params = {"storage": name, "versionToRollback": rollbackVersion}
         print("...Rollbacking storage \"{}\" to version {}".format(name, rollbackVersion))
         ret = launch_db_tool(node.dataDir, "rollback", json_params)
-        #print("{} --> {}".format(name, rollbackVersion))
+        # print("{} --> {}".format(name, rollbackVersion))
         # check that we did it correctly
         assert_equal(ret["versionCurrent"], rollbackVersion)
 
 
-class DBToolTest(SidechainTestFramework):
+class StorageRecoveryWithoutCSWTest(SidechainTestFramework):
     number_of_mc_nodes = 1
     number_of_sidechain_nodes = 2
 
@@ -109,7 +106,7 @@ class DBToolTest(SidechainTestFramework):
 
         sc_node_2_configuration = SCNodeConfiguration(MCConnectionInfo(), False)
 
-        self.network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, WITHDRAWAL_EPOCH_LENGTH, csw_enabled=True),
+        self.network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, WITHDRAWAL_EPOCH_LENGTH),
                                               sc_node_1_configuration, sc_node_2_configuration)
         bootstrap_sidechain_nodes(self.options, self.network, block_timestamp_rewind=2000 * 120)
 
@@ -151,8 +148,8 @@ class DBToolTest(SidechainTestFramework):
         time.sleep(1)
 
         # Check that all storages versioned with blockid are consistent with chainTip in SC node 2
-        storages_list = ["wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage",
-                            "stateUtxoMerkleTree", "state", "stateForgerBox"]
+        storages_list = ["wallet", "walletTransaction", "walletForgingStake",
+                         "state", "stateForgerBox"]
         chainTipId = self.blocks[-1]
         checkStoragesVersion(self.sc_nodes[1], storages_list, chainTipId)
 
@@ -177,8 +174,7 @@ class DBToolTest(SidechainTestFramework):
         print("Test 0 ######")
         # Check that in stopped node SC2 all storages versioned with blockid (but "walletForgingStake")
         # are consistent with genesis block id
-        storages_list = ["wallet", "walletTransaction", "walletCswDataStorage",
-                         "stateUtxoMerkleTree", "state", "stateForgerBox"]
+        storages_list = ["wallet", "walletTransaction", "state", "stateForgerBox"]
         checkStoragesVersion(sc_node2, storages_list, genesis_sc_block_id)
 
         # Check that wallet forging stake has the same block id in the rollback versions and precisely
@@ -194,75 +190,59 @@ class DBToolTest(SidechainTestFramework):
         print("Stopping SC2")
         stop_sc_node(sc_node2, 1)
 
-        print("Test 10 ######")
-        storages_list = ["history"]
-        rollbackStorages(sc_node2, storages_list, 2)
-        self.forgeBlockAndCheckSync()
-
-        print("Test 9 ######")
-        storages_list = ["history"]
-        rollbackStorages(sc_node2, storages_list, 3)
-        self.forgeBlockAndCheckSync()
-
         print("Test 8 ######")
         storages_list = ["history"]
-        rollbackStorages(sc_node2, storages_list, 3)
-        storages_list = ["walletCswDataStorage"]
         rollbackStorages(sc_node2, storages_list, 2)
         self.forgeBlockAndCheckSync()
 
         print("Test 7 ######")
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 3)
-        storages_list = ["walletForgingStake", "walletCswDataStorage"]
-        rollbackStorages(sc_node2, storages_list, 2)
         self.forgeBlockAndCheckSync()
 
         print("Test 6 ######")
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 3)
-        storages_list = ["walletTransaction", "walletForgingStake", "walletCswDataStorage"]
+        storages_list = ["walletForgingStake"]
         rollbackStorages(sc_node2, storages_list, 2)
         self.forgeBlockAndCheckSync()
 
         print("Test 5 ######")
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 3)
-        storages_list = ["wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
-        rollbackStorages(sc_node2, storages_list, 2)
-        self.forgeBlockAndCheckSync()
-
-        print("Test application wallet misalignment ######")
-        storages_list = ["history"]
-        rollbackStorages(sc_node2, storages_list, 3)
-        storages_list = ["appWallet2", "wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
+        storages_list = ["walletTransaction", "walletForgingStake"]
         rollbackStorages(sc_node2, storages_list, 2)
         self.forgeBlockAndCheckSync()
 
         print("Test 4 ######")
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 3)
-        storages_list = ["stateForgerBox",
-                         "appWallet1", "appWallet2",
-                         "wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
+        storages_list = ["wallet", "walletTransaction", "walletForgingStake"]
+        rollbackStorages(sc_node2, storages_list, 2)
+        self.forgeBlockAndCheckSync()
+
+        print("Test application wallet misalignment ######")
+        storages_list = ["history"]
+        rollbackStorages(sc_node2, storages_list, 3)
+        storages_list = ["appWallet2", "wallet", "walletTransaction", "walletForgingStake"]
         rollbackStorages(sc_node2, storages_list, 2)
         self.forgeBlockAndCheckSync()
 
         print("Test 3 ######")
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 3)
-        storages_list = ["state", "stateForgerBox",
+        storages_list = ["stateForgerBox",
                          "appWallet1", "appWallet2",
-                         "wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
+                         "wallet", "walletTransaction", "walletForgingStake"]
         rollbackStorages(sc_node2, storages_list, 2)
         self.forgeBlockAndCheckSync()
 
         print("Test 2 ######")
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 3)
-        storages_list = ["stateUtxoMerkleTree", "state", "stateForgerBox",
+        storages_list = ["state", "stateForgerBox",
                          "appWallet1", "appWallet2",
-                         "wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
+                         "wallet", "walletTransaction", "walletForgingStake"]
         rollbackStorages(sc_node2, storages_list, 2)
         self.forgeBlockAndCheckSync()
 
@@ -271,9 +251,9 @@ class DBToolTest(SidechainTestFramework):
         rollbackStorages(sc_node2, storages_list, 3)
         # rollback just one of the two app storages (simple app has app1 and app2 storages)
         storages_list = ["appState2",
-                         "stateUtxoMerkleTree", "state", "stateForgerBox",
+                         "state", "stateForgerBox",
                          "appWallet1", "appWallet2",
-                         "wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
+                         "wallet", "walletTransaction", "walletForgingStake"]
         rollbackStorages(sc_node2, storages_list, 2)
         self.forgeBlockAndCheckSync()
 
@@ -281,9 +261,9 @@ class DBToolTest(SidechainTestFramework):
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 4)
         storages_list = ["appState1", "appState2",
-                         "stateUtxoMerkleTree", "state", "stateForgerBox",
+                         "state", "stateForgerBox",
                          "appWallet1", "appWallet2",
-                         "wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
+                         "wallet", "walletTransaction", "walletForgingStake"]
         rollbackStorages(sc_node2, storages_list, 2)
         self.forgeBlockAndCheckSync()
 
@@ -306,9 +286,9 @@ class DBToolTest(SidechainTestFramework):
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 3)
         storages_list = ["appState1", "appState2",
-                         "stateUtxoMerkleTree", "state", "stateForgerBox",
+                         "state", "stateForgerBox",
                          "appWallet1", "appWallet2",
-                         "wallet", "walletTransaction", "walletForgingStake", "walletCswDataStorage"]
+                         "wallet", "walletTransaction", "walletForgingStake"]
         rollbackStorages(sc_node2, storages_list, 2)
 
         # Check that wallet forging stake has the same blockid version of the wallet in its rollback versions
@@ -332,9 +312,7 @@ class DBToolTest(SidechainTestFramework):
         storages_list = ["history"]
         rollbackStorages(sc_node2, storages_list, 7)
 
-        storages_list = ["stateUtxoMerkleTree", "walletCswDataStorage"]
-        rollbackStorages(sc_node2, storages_list, 5)
-        storages_list = ["stateForgerBox", "walletCswDataStorage"]
+        storages_list = ["stateForgerBox"]
         rollbackStorages(sc_node2, storages_list, 2)
         storages_list = ["state", "wallet", "walletTransaction", "walletForgingStake"]
         rollbackStorages(sc_node2, storages_list, 13)
@@ -351,4 +329,4 @@ class DBToolTest(SidechainTestFramework):
 
 
 if __name__ == "__main__":
-    DBToolTest().main()
+    StorageRecoveryWithoutCSWTest().main()

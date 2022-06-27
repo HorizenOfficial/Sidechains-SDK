@@ -16,7 +16,7 @@ trait SidechainStateUtxoMerkleTreeProvider extends SidechainStorageInfo {
              boxesToAppend: Seq[SidechainTypes#SCB],
              boxesToRemoveSet: Set[ByteArrayWrapper]): Try[SidechainStateUtxoMerkleTreeProvider]
 
-  def getMerkleTreeRoot: Array[Byte]
+  def getMerkleTreeRoot: Option[Array[Byte]]
 
   override def getStorageName: String = "SidechainStateUtxoMerkleTreeStorage"
 }
@@ -46,7 +46,7 @@ case class SidechainUtxoMerkleTreeProviderCSWEnabled(private val utxoMerkleTreeS
     SidechainUtxoMerkleTreeProviderCSWEnabled(utxoMerkleTreeStorage.update(version, coinBoxesToAppend, boxesToRemoveSet).get)
   }
 
-  override def getMerkleTreeRoot: Array[Byte] = utxoMerkleTreeStorage.getMerkleTreeRoot
+  override def getMerkleTreeRoot: Option[Array[Byte]] = Some(utxoMerkleTreeStorage.getMerkleTreeRoot)
 }
 
 case class SidechainUtxoMerkleTreeProviderCSWDisabled() extends SidechainStateUtxoMerkleTreeProvider{
@@ -66,5 +66,5 @@ case class SidechainUtxoMerkleTreeProviderCSWDisabled() extends SidechainStateUt
     this
   }
 
-  override def getMerkleTreeRoot: Array[Byte] = Array()
+  override def getMerkleTreeRoot: Option[Array[Byte]] = None
 }
