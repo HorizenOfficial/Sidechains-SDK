@@ -1,14 +1,14 @@
 package com.horizen.network
 
-import java.net.InetSocketAddress
+import java.io.{BufferedReader, FileReader}
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.TestProbe
 import com.horizen._
-import com.horizen.block.SidechainBlock
+import com.horizen.block.{SidechainBlock, SidechainBlockSerializer}
 import com.horizen.fixtures.SidechainBlockInfoFixture
 import com.horizen.validation.{BlockInFutureException, InconsistentDataException, InvalidBlockException, InvalidSidechainBlockHeaderException}
-import org.junit.{After, Test}
+import org.junit.{After, Ignore, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
@@ -19,7 +19,21 @@ import scorex.util.ModifierId
 import org.junit.Assert.{assertEquals, assertTrue}
 import scorex.core.network.{ConnectedPeer, ConnectionId, Incoming}
 import scorex.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs}
+import scorex.core.network.NetworkControllerSharedMessages.ReceivableMessages.DataFromPeer
+import scorex.core.network.message.{ModifiersData, ModifiersSpec, RequestModifierSpec}
+import java.net.InetSocketAddress
 
+import com.horizen.companion.SidechainTransactionsCompanion
+import com.horizen.fixtures.SidechainBlockFixture.{getDefaultTransactionsCompanion, sidechainTransactionsCompanion}
+import com.horizen.transaction.RegularTransactionSerializer
+import com.horizen.utils.BytesUtils
+import scorex.core.{ModifierTypeId, NodeViewModifier}
+import scorex.core.NodeViewHolder.ReceivableMessages.{GetNodeViewChanges, ModifiersFromRemote}
+import scorex.core.network.ModifiersStatus.Requested
+import scorex.core.serialization.ScorexSerializer
+import scorex.core.transaction.Transaction
+
+import scala.collection.immutable.Map
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Promise}
 import scala.language.postfixOps
@@ -31,7 +45,7 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
   implicit val actorSystem: ActorSystem = ActorSystem("sc_nvhs_mocked")
   implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("scorex.executionContext")
 
-  val (nodeViewSynchronizerRef, deliveryTracker, block, peer, networkControllerProbe) = prepareData()
+  val (nodeViewSynchronizerRef, deliveryTracker, block, peer, networkControllerProbe, viewHolderProbe) = prepareData()
 
   @Test
   def onSyntacticallyFailedModification(): Unit = {
@@ -122,7 +136,71 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
     assertTrue("Delivery tracker expected to set block id as Invalid.", setInvalidExecuted)
   }
 
+  @Ignore
+  @Test
+  def onAdditianalTransactionBytes(): Unit = {
+    val modifiersSpec = new ModifiersSpec(1024 * 1024)
 
+    val classLoader = getClass.getClassLoader
+    val file = new FileReader(classLoader.getResource("regulartransaction_hex").getFile)
+    val transactionBytes = BytesUtils.fromHexString(new BufferedReader(file).readLine())
+
+    val additianalBytes: Array[Byte] = Array(0x00, 0x0a, 0x01, 0x0b)
+    val transferData = transactionBytes ++ additianalBytes
+    val regularTransactionSerializer = RegularTransactionSerializer.getSerializer()
+
+    val deserializedTransactionTry = regularTransactionSerializer.parseBytesTry(transactionBytes)
+    assertTrue("Cannot deserialize original Sidechain transaction", deserializedTransactionTry.isSuccess)
+    val deserializedTransaction = deserializedTransactionTry.get
+
+    Mockito.reset(deliveryTracker)
+    Mockito.when(deliveryTracker.status(ArgumentMatchers.any[ModifierId])).thenAnswer(answer => {
+      val receivedId: ModifierId = answer.getArgument(0)
+      assertEquals("Different transaction id expected.", deserializedTransaction.id, receivedId)
+      Requested
+    })
+
+    nodeViewSynchronizerRef ! DataFromPeer(modifiersSpec, ModifiersData(Transaction.ModifierTypeId, Map(ModifierId @@ deserializedTransaction.id -> transactionBytes)), peer)
+    networkControllerProbe.expectMsgType[PenalizePeer]
+
+    nodeViewSynchronizerRef ! DataFromPeer(modifiersSpec, ModifiersData(Transaction.ModifierTypeId, Map(ModifierId @@ deserializedTransaction.id -> transferData)), peer)
+    viewHolderProbe.expectMsgType[ModifiersFromRemote[SidechainBlock]]
+    // Check that sender was penalize
+    networkControllerProbe.expectMsgType[PenalizePeer]
+  }
+
+  @Test
+  def onAdditianalBlockBytes(): Unit = {
+    val modifiersSpec = new ModifiersSpec(1024 * 1024)
+    val classLoader = getClass.getClassLoader
+    val file = new FileReader(classLoader.getResource("sidechainblock_hex").getFile)
+    val blockBytes = BytesUtils.fromHexString(new BufferedReader(file).readLine())
+
+    val additianalBytes: Array[Byte] = Array(0x00, 0x0a, 0x01, 0x0b)
+    val transferData = blockBytes ++ additianalBytes
+
+    val sidechainTransactionsCompanion: SidechainTransactionsCompanion = getDefaultTransactionsCompanion
+    val sidechainBlockSerializer = new SidechainBlockSerializer(sidechainTransactionsCompanion)
+
+    val deserializedBlockTry = sidechainBlockSerializer.parseBytesTry(blockBytes)
+    assertTrue("Cannot deserialize original SidechainBlock", deserializedBlockTry.isSuccess)
+    val deserializedBlock = deserializedBlockTry.get
+
+    Mockito.reset(deliveryTracker)
+    Mockito.when(deliveryTracker.status(ArgumentMatchers.any[ModifierId])).thenAnswer(answer => {
+      val receivedId: ModifierId = answer.getArgument(0)
+      assertEquals("Different block id expected.", deserializedBlock.id, receivedId)
+      Requested
+    })
+
+    nodeViewSynchronizerRef ! DataFromPeer(modifiersSpec, ModifiersData(SidechainBlock.ModifierTypeId, Map(deserializedBlock.id -> blockBytes)), peer)
+    viewHolderProbe.expectMsgType[ModifiersFromRemote[SidechainBlock]]
+
+    nodeViewSynchronizerRef ! DataFromPeer(modifiersSpec, ModifiersData(SidechainBlock.ModifierTypeId, Map(deserializedBlock.id -> transferData)), peer)
+    viewHolderProbe.expectMsgType[ModifiersFromRemote[SidechainBlock]]
+    // Check that sender was penalize
+    networkControllerProbe.expectMsgType[PenalizePeer]
+  }
 
   @After
   def afterAll(): Unit = {
@@ -130,27 +208,31 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
   }
 
 
-  protected def prepareData(): (ActorRef, SidechainDeliveryTracker, SidechainBlock, ConnectedPeer, TestProbe) = {
+  protected def prepareData(): (ActorRef, SidechainDeliveryTracker, SidechainBlock, ConnectedPeer, TestProbe, TestProbe) = {
     val networkControllerProbe = TestProbe()
     val viewHolderProbe = TestProbe()
     val scorexSettings: ScorexSettings = ScorexSettings.read(Some(getClass.getClassLoader.getResource("sc_node_holder_fixter_settings.conf").getFile))
     val timeProvider = new NetworkTimeProvider(scorexSettings.ntp)
 
-
     val peer = ConnectedPeer(ConnectionId(new InetSocketAddress(10), new InetSocketAddress(11), Incoming), mock[ActorRef], None)
     val tracker: SidechainDeliveryTracker = mock[SidechainDeliveryTracker]
 
+    val modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =
+    Map(SidechainBlock.ModifierTypeId -> new SidechainBlockSerializer(sidechainTransactionsCompanion),
+      Transaction.ModifierTypeId -> sidechainTransactionsCompanion)
+
     val nodeViewSynchronizerRef = actorSystem.actorOf(Props(
-      new SidechainNodeViewSynchronizer(networkControllerProbe.ref, viewHolderProbe.ref, SidechainSyncInfoMessageSpec, scorexSettings.network, timeProvider, Map()) {
+      new SidechainNodeViewSynchronizer(networkControllerProbe.ref, viewHolderProbe.ref, SidechainSyncInfoMessageSpec, scorexSettings.network, timeProvider, modifierSerializers) {
         override protected val deliveryTracker: SidechainDeliveryTracker = tracker
       }))
 
     networkControllerProbe.expectMsgType[RegisterMessageSpecs]
+    viewHolderProbe.expectMsgType[GetNodeViewChanges]
 
     val modifierId: ModifierId = getRandomModifier()
     val block = mock[SidechainBlock]
     Mockito.when(block.id).thenReturn(modifierId)
 
-    (nodeViewSynchronizerRef, tracker, block, peer, networkControllerProbe)
+    (nodeViewSynchronizerRef, tracker, block, peer, networkControllerProbe, viewHolderProbe)
   }
 }
