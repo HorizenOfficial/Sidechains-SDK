@@ -240,7 +240,7 @@ func intToHash(value int) common.Hash {
 	return common.BigToHash(big.NewInt(int64(value)))
 }
 
-// convert integer to 256-bit hash value, takes care of deserialization and padding
+// convert 256-bit hash value to int, takes care of deserialization and padding
 func hashToInt(hash common.Hash) int {
 	return int(hash.Big().Int64())
 }
