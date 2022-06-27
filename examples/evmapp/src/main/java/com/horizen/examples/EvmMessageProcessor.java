@@ -2,6 +2,9 @@ package com.horizen.examples;
 
 import com.horizen.account.state.*;
 import com.horizen.evm.Evm;
+import scorex.crypto.hash.Keccak256;
+
+import java.util.Arrays;
 
 public class EvmMessageProcessor implements MessageProcessor {
     @Override
@@ -18,15 +21,17 @@ public class EvmMessageProcessor implements MessageProcessor {
      */
     @Override
     public boolean canProcess(Message msg, AccountStateView view) {
-        return msg.getTo() == null || view.getCodeHash(msg.getTo().address());
+        // contract deployment to a new account
+        if (msg.getTo() == null) return true;
+        var to = msg.getTo().address();
+        return view.isSmartContractAccount(to);
     }
 
     @Override
     public ExecutionResult process(Message msg, AccountStateView view) {
         try {
-            // TODO: get stateDB
             var result = Evm.Apply(
-                null,
+                view.stateDb(),
                 msg.getFrom().address(),
                 msg.getTo().address(),
                 msg.getValue(),
