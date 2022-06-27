@@ -12,21 +12,21 @@ import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter
 import com.horizen.params.NetworkParams
 import com.horizen.websocket.client.MainchainNodeChannel
+
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 
 
 class AccountCertificateSubmitter(settings: SidechainSettings,
-                           sidechainNodeViewHolderRef: ActorRef,
-                           params: NetworkParams,
-                           mainchainChannel: MainchainNodeChannel)
-  (implicit ec: ExecutionContext)
+                                  sidechainNodeViewHolderRef: ActorRef,
+                                  params: NetworkParams,
+                                  mainchainChannel: MainchainNodeChannel)
+                                 (implicit ec: ExecutionContext)
   extends AbstractCertificateSubmitter[
     SidechainTypes#SCAT,
     AccountBlockHeader,
     AccountBlock
-  ](settings, sidechainNodeViewHolderRef, params, mainchainChannel)
-{
+  ](settings, sidechainNodeViewHolderRef, params, mainchainChannel) {
   type HSTOR = AccountHistoryStorage
   type VL = AccountWallet
   type HIS = AccountHistory
@@ -46,7 +46,7 @@ class AccountCertificateSubmitter(settings: SidechainSettings,
     super.postStop()
   }
 
-  override def getUtxoMerkleTreeRoot(state: AccountState, referencedEpoch: Int) : Array[Byte] =
+  override def getUtxoMerkleTreeRoot(state: AccountState, referencedEpoch: Int): Array[Byte] =
     new Array[Byte](0)
 
   override def getWithdrawalRequests(state: AccountState, referencedEpochNumber: Int): Seq[WithdrawalRequestBox] =
@@ -56,7 +56,7 @@ class AccountCertificateSubmitter(settings: SidechainSettings,
 object AccountCertificateSubmitterRef {
   def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
-           (implicit ec: ExecutionContext) : Props =
+           (implicit ec: ExecutionContext): Props =
     Props(new AccountCertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel))
 
   def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,

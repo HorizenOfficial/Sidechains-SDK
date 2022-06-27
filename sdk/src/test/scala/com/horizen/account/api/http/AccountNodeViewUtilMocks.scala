@@ -2,6 +2,7 @@ package com.horizen.account.api.http
 
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.api.http.SidechainApiMockConfiguration
 import com.horizen.fixtures._
 import com.horizen.node.NodeWalletBase
@@ -45,8 +46,8 @@ class AccountNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compani
 
   def getTransactionList: util.List[EthereumTransaction] = {
     val list: util.List[EthereumTransaction] = new util.ArrayList[EthereumTransaction]()
-    list.add(getTransaction(ZenConverter.convertZenniesToWei(1))) // 1 Zenny
-    list.add(getTransaction(ZenConverter.convertZenniesToWei(12))) // 12 Zennies
+    list.add(getTransaction(ZenWeiConverter.convertZenniesToWei(1))) // 1 Zenny
+    list.add(getTransaction(ZenWeiConverter.convertZenniesToWei(12))) // 12 Zennies
     list
   }
 
