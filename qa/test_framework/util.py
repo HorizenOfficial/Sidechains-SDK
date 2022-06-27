@@ -23,9 +23,16 @@ import subprocess
 import time
 import re
 
+import SidechainTestFramework
 from test_framework.authproxy import AuthServiceProxy
 
 COIN = 100000000 # 1 zen in zatoshis
+
+
+# UTXO vs Account model block versions
+UtxoModelBlockVersion = 1
+AccountModelBlockVersion = 2
+DefaultBlockVersion = UtxoModelBlockVersion
 
 def p2p_port(n):
     return 11000 + n + os.getpid()%999
@@ -490,9 +497,12 @@ Output: an array of two information:
  - created sidechain id
 
 """
+
+
+
 def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_length, public_key, forward_transfer_amount,
                                           vrf_public_key, gen_sys_constant, cert_vk, csw_vk, btr_data_length,
-                                          sc_creation_version, account_address):
+                                          sc_creation_version, blockversion=DefaultBlockVersion):
     number_of_blocks_to_enable_sc_logic = 449
     number_of_blocks = mainchain_node.getblockcount()
     diff = number_of_blocks_to_enable_sc_logic - number_of_blocks
@@ -500,12 +510,19 @@ def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_lengt
         print("Generating {} blocks for reaching needed mc fork point...".format(diff))
         mainchain_node.generate(diff)
 
-    # TODO temporary for testing: pass block sign key as param
-    custom_creation_data = vrf_public_key + public_key#"1122334455667788990011223344556677889900112233445566778899001122"
-    pprint.pprint(custom_creation_data)
-    pprint.pprint(vrf_public_key)
-    pprint.pprint(public_key)
-    pprint.pprint(account_address)
+    if (blockversion == AccountModelBlockVersion):
+        account_keys = SidechainTestFramework.scutil.generate_account_proposition("seed", 1)
+        account_key = account_keys[0]
+        custom_creation_data = vrf_public_key + public_key
+        pprint.pprint(custom_creation_data)
+        pprint.pprint(vrf_public_key)
+        pprint.pprint(public_key)
+        pprint.pprint(account_key.proposition)
+        to_address = account_key.proposition
+    else:
+        custom_creation_data = vrf_public_key
+        to_address = public_key
+
     fe_certificate_field_configs = [255, 255]
     bitvector_certificate_field_configs = []  # [[254*8, 254*8]]
     ft_min_amount = 0
@@ -514,7 +531,7 @@ def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_lengt
     sc_create_args = {
         "version": sc_creation_version,
         "withdrawalEpochLength": withdrawal_epoch_length,
-        "toaddress": account_address,
+        "toaddress": to_address,
         "amount": forward_transfer_amount,
         "wCertVk": cert_vk,
         "customData": custom_creation_data,

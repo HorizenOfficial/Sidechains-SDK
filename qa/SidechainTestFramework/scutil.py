@@ -1,4 +1,3 @@
-import binascii
 import os
 import sys
 
@@ -14,7 +13,8 @@ import socket
 from contextlib import closing
 
 from test_framework.mc_test.mc_test import generate_random_field_element_hex, get_field_element_with_padding
-from test_framework.util import initialize_new_sidechain_in_mainchain, get_spendable, swap_bytes, assert_equal
+from test_framework.util import initialize_new_sidechain_in_mainchain, get_spendable, swap_bytes, assert_equal, \
+    DefaultBlockVersion
 
 WAIT_CONST = 1
 
@@ -716,10 +716,6 @@ def check_box_balance(sc_node, account, box_class_name, expected_boxes_count, ex
 # without receiving "block in future" error. By default we rewind half of the consensus epoch.
 DefaultBlockTimestampRewind = 720 * 120 / 2
 
-# UTXO vs Account model block versions
-UtxoModelBlockVersion = 1
-AccountModelBlockVersion = 2
-DefaultBlockVersion = UtxoModelBlockVersion
 
 
 """
@@ -840,8 +836,6 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
     vrf_keys = generate_vrf_secrets("seed", 1)
     genesis_account = accounts[0]
     vrf_key = vrf_keys[0]
-    account_keys = generate_account_proposition("seed", 1)
-    account_key = account_keys[0]
     certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, cert_keys_paths)
     csw_verification_key = generate_csw_proof_info(sc_creation_info.withdrawal_epoch_length, csw_keys_paths)
     genesis_info = initialize_new_sidechain_in_mainchain(
@@ -855,7 +849,7 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
         csw_verification_key,
         sc_creation_info.btr_data_length,
         sc_creation_info.sc_creation_version,
-        account_key.proposition
+        blockversion
     )
 
     genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret, vrf_key.secret,
