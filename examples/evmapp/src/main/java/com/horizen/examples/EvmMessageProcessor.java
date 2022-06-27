@@ -33,7 +33,7 @@ public class EvmMessageProcessor implements MessageProcessor {
             var result = Evm.Apply(
                 view.stateDb(),
                 msg.getFrom().address(),
-                msg.getTo().address(),
+                msg.getTo() == null ? null : msg.getTo().address(),
                 msg.getValue(),
                 msg.getData(),
                 msg.getGasLimit(),
