@@ -50,6 +50,10 @@ Workflow modelled in this test:
         -Verify that both event are triggered
         -Send some coin to previous public key
         -Verify that mempool changed event is triggered
+    Test that we don't return FeePaymentTransactions in case of no transactions in the epoch
+        -Generate block in order to complete the epoch
+        -Advance of another epoch without sending any transaction
+        -Verify that updateTip event and get single block request of the last epoch block don't return FeePaymentTransaction
 """
 
 class SCWsServer(SidechainTestFramework):

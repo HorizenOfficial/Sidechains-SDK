@@ -407,7 +407,7 @@ For each node put also genesis data in configuration files.
 """
 
 
-def initialize_default_sc_datadir(dirname, n):
+def initialize_default_sc_datadir(dirname, n, api_key = ""):
     apiAddress = "127.0.0.1"
     configsData = []
     apiPort = sc_rpc_port(n)
@@ -424,12 +424,16 @@ def initialize_default_sc_datadir(dirname, n):
 
     with open('./resources/template_predefined_genesis.conf', 'r') as templateFile:
         tmpConfig = templateFile.read()
+    api_key_hash = ""
+    if(api_key != ""):
+        api_key_hash = calculateApiKeyHash(api_key)
     config = tmpConfig % {
         'NODE_NUMBER': n,
         'DIRECTORY': dirname,
         'WALLET_SEED': "sidechain_seed_{0}".format(n),
         'API_ADDRESS': "127.0.0.1",
         'API_PORT': str(apiPort),
+        'API_KEY_HASH': api_key_hash,
         'API_TIMEOUT': "5s",
         'BIND_PORT': str(bindPort),
         'MAX_CONNECTIONS': 100,
@@ -829,7 +833,7 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration, block_tim
     return sc_nodes_bootstrap_info
 
 
-def cert_proof_keys_paths(dirname, cert_threshold_sig_max_keys):
+def cert_proof_keys_paths(dirname, cert_threshold_sig_max_keys = 7):
     # use replace for Windows OS to be able to parse the path to the keys in the config file
     return ProofKeysPaths(
         os.path.join(dirname, "cert_marlin_snark_pk_" + str(cert_threshold_sig_max_keys)).replace("\\", "/"),
