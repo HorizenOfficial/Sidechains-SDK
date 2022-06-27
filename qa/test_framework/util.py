@@ -23,16 +23,9 @@ import subprocess
 import time
 import re
 
-import SidechainTestFramework
 from test_framework.authproxy import AuthServiceProxy
 
 COIN = 100000000 # 1 zen in zatoshis
-
-
-# UTXO vs Account model block versions
-UtxoModelBlockVersion = 1
-AccountModelBlockVersion = 2
-DefaultBlockVersion = UtxoModelBlockVersion
 
 def p2p_port(n):
     return 11000 + n + os.getpid()%999
@@ -497,12 +490,9 @@ Output: an array of two information:
  - created sidechain id
 
 """
-
-
-
 def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_length, public_key, forward_transfer_amount,
                                           vrf_public_key, gen_sys_constant, cert_vk, csw_vk, btr_data_length,
-                                          sc_creation_version, blockversion=DefaultBlockVersion):
+                                          sc_creation_version, account_public_key=None):
     number_of_blocks_to_enable_sc_logic = 449
     number_of_blocks = mainchain_node.getblockcount()
     diff = number_of_blocks_to_enable_sc_logic - number_of_blocks
@@ -510,15 +500,17 @@ def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_lengt
         print("Generating {} blocks for reaching needed mc fork point...".format(diff))
         mainchain_node.generate(diff)
 
-    if (blockversion == AccountModelBlockVersion):
-        account_keys = SidechainTestFramework.scutil.generate_account_proposition("seed", 1)
-        account_key = account_keys[0]
+    if (account_public_key is not None):
+        # in account based model, we pass to the customData fields not only the vrf public key bytes, but also block sign key
         custom_creation_data = vrf_public_key + public_key
+        # the recipient address is a 20 byte account address. MC will pad them with 0 bytes up to 32 bytes
+        to_address = account_public_key
+
+        # test
         pprint.pprint(custom_creation_data)
         pprint.pprint(vrf_public_key)
         pprint.pprint(public_key)
-        pprint.pprint(account_key.proposition)
-        to_address = account_key.proposition
+        pprint.pprint(account_public_key)
     else:
         custom_creation_data = vrf_public_key
         to_address = public_key
