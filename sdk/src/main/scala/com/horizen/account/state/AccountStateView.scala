@@ -40,22 +40,26 @@ class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
 
   // modifiers
   override def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[Unit] = Try {
-    // While processing sidechain creation output:
-    // 1. extract first forger stake info: block sign public key, vrf public key, owner address, stake amount
-    // 2. store the stake info record in the forging fake smart contract storage
+
 
     refData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {
       aggTx.mc2scTransactionsOutputs().asScala.map(_ match {
         case sc: SidechainCreation =>
+          // While processing sidechain creation output:
+          // 1. extract first forger stake info: block sign public key, vrf public key, owner address, stake amount
+          // 2. store the stake info record in the forging fake smart contract storage
           val scOut : MainchainTxSidechainCreationCrosschainOutput = sc.getScCrOutput
 
           val stakedAmount = ZenWeiConverter.convertZenniesToWei(scOut.amount)
 
-          // TODO we must get 20 bytes out of 32 with the proper padding and byte order
-          val ownerAddressProposition = new AddressProposition(BytesUtils.reverseBytes(scOut.address.take(20)))
-          // TODO customData contains both vrf key and blockSignerKey with proper byte order
-          val vrfPublicKey = new VrfPublicKey(scOut.customCreationData.take(33))
-          val blockSignerProposition = new PublicKey25519Proposition(scOut.customCreationData.drop(33))
+          // we must get 20 bytes out of 32 with the proper padding and byte order
+          // MC prepends a padding of 0 bytes (if needed) in the sc_create command when a 32 bytes address is specified.
+          // After reversing the bytes, the padding is trailed to the correct 20 bytes proposition
+          val ownerAddressProposition = new AddressProposition(BytesUtils.reverseBytes(scOut.address.take(com.horizen.account.utils.Account.ADDRESS_SIZE)))
+
+          // customData = vrf key | blockSignerKey
+          val vrfPublicKey = new VrfPublicKey(scOut.customCreationData.take(VrfPublicKey.KEY_LENGTH))
+          val blockSignerProposition = new PublicKey25519Proposition(scOut.customCreationData.slice(VrfPublicKey.KEY_LENGTH, VrfPublicKey.KEY_LENGTH + PublicKey25519Proposition.KEY_LENGTH))
 
           val cmdInput = AddNewStakeCmdInput(
             ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
@@ -67,7 +71,7 @@ class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
             AddNewStakeCmdInputSerializer.toBytes(cmdInput))
 
           val message = new Message(
-            ownerAddressProposition, // sender proposition can be the same as owner
+            ownerAddressProposition,
             ForgerStakeSmartContractAddress,
             BigInteger.ZERO, // gasPrice
             BigInteger.ZERO, // gasFeeCap
@@ -99,8 +103,12 @@ class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
           // we trust the MC that this is a valid amount
           val value = ZenWeiConverter.convertZenniesToWei(ftOut.amount)
 
-          // TODO we must get 20 bytes out of 32 with the propoer padding and byte order
-          val recipientProposition = new AddressProposition(BytesUtils.reverseBytes(ftOut.propositionBytes.take(20)))
+          // we must get 20 bytes out of 32 with the proper padding and byte order
+          // MC prepends a padding of 0 bytes (if needed) in the sc_create command when a 32 bytes address is specified.
+          // After reversing the bytes, the padding is trailed to the correct 20 bytes proposition
+          val recipientProposition = new AddressProposition(BytesUtils.reverseBytes(ftOut.propositionBytes.take(com.horizen.account.utils.Account.ADDRESS_SIZE)))
+
+          log.debug(s"adding FT amount = $value to address=$recipientProposition")
 
           // TODO check we have this account, otherwise set codeHash??
           view.addBalance(recipientProposition.address(), value)

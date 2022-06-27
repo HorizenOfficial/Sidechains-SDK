@@ -492,7 +492,7 @@ Output: an array of two information:
 """
 def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_length, public_key, forward_transfer_amount,
                                           vrf_public_key, gen_sys_constant, cert_vk, csw_vk, btr_data_length,
-                                          sc_creation_version):
+                                          sc_creation_version, account_address):
     number_of_blocks_to_enable_sc_logic = 449
     number_of_blocks = mainchain_node.getblockcount()
     diff = number_of_blocks_to_enable_sc_logic - number_of_blocks
@@ -501,8 +501,11 @@ def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_lengt
         mainchain_node.generate(diff)
 
     # TODO temporary for testing: pass block sign key as param
-    custom_creation_data = vrf_public_key + "1122334455667788990011223344556677889900112233445566778899001122"
+    custom_creation_data = vrf_public_key + public_key#"1122334455667788990011223344556677889900112233445566778899001122"
     pprint.pprint(custom_creation_data)
+    pprint.pprint(vrf_public_key)
+    pprint.pprint(public_key)
+    pprint.pprint(account_address)
     fe_certificate_field_configs = [255, 255]
     bitvector_certificate_field_configs = []  # [[254*8, 254*8]]
     ft_min_amount = 0
@@ -511,7 +514,7 @@ def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_lengt
     sc_create_args = {
         "version": sc_creation_version,
         "withdrawalEpochLength": withdrawal_epoch_length,
-        "toaddress": public_key,
+        "toaddress": account_address,
         "amount": forward_transfer_amount,
         "wCertVk": cert_vk,
         "customData": custom_creation_data,

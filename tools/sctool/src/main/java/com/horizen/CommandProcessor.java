@@ -11,8 +11,10 @@ import com.horizen.account.block.AccountBlock;
 import com.horizen.account.block.AccountBlockHeader;
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion;
 import com.horizen.account.proposition.AddressProposition;
+import com.horizen.account.secret.PrivateKeySecp256k1;
 import com.horizen.account.transaction.AccountTransaction;
 import com.horizen.account.utils.Account;
+import com.horizen.account.utils.Secp256k1;
 import com.horizen.block.*;
 import com.horizen.box.Box;
 import com.horizen.box.ForgerBox;
@@ -27,17 +29,22 @@ import com.horizen.params.TestNetParams;
 import com.horizen.proof.Proof;
 import com.horizen.proof.VrfProof;
 import com.horizen.proposition.Proposition;
+import com.horizen.proposition.PropositionSerializer;
 import com.horizen.secret.*;
 import com.horizen.transaction.SidechainTransaction;
 import com.horizen.transaction.mainchain.SidechainCreation;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
 import com.horizen.utils.*;
+import org.web3j.crypto.Keys;
 import scala.Enumeration;
+import org.web3j.crypto.ECKeyPair;
+
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.security.SecureRandom;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -63,6 +70,9 @@ public class CommandProcessor {
                 break;
             case "generateVrfKey":
                 processGenerateVrfKey(command.data());
+                break;
+            case "generateAccountKey":
+                processGenerateAccountKey(command.data());
                 break;
             case "generateCertProofInfo":
                 processGenerateCertProofInfo(command.data());
@@ -187,6 +197,40 @@ public class CommandProcessor {
         String res = resJson.toString();
         printer.print(res);
     }
+
+    private void processGenerateAccountKey(JsonNode json) {
+
+        if(!json.has("seed") || !json.get("seed").isTextual()) {
+            printGenerateVrfKeyUsageMsg("seed is not specified or has invalid format.");
+            return;
+        }
+
+        String accountSecretStr;
+        String accountPropositionStr;
+
+        try {
+            ECKeyPair pair = Keys.createEcKeyPair(new SecureRandom(json.get("seed").asText().getBytes()));
+
+            byte[] accountSecretBytes = Arrays.copyOf(pair.getPrivateKey().toByteArray(), Secp256k1.PRIVATE_KEY_SIZE);
+            AddressProposition addressProposition = new AddressProposition(BytesUtils.fromHexString(Keys.getAddress(pair)));
+
+            accountSecretStr      = BytesUtils.toHexString(accountSecretBytes);
+            accountPropositionStr = BytesUtils.toHexString(addressProposition.address());
+
+        } catch (Exception e) {
+            // throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException
+            printGenerateVrfKeyUsageMsg("exception thrown: " + e.getMessage().toString());
+            return;
+        }
+
+        ObjectNode resJson = new ObjectMapper().createObjectNode();
+        resJson.put("accountSecret", accountSecretStr);
+        resJson.put("accountProposition", accountPropositionStr);
+
+        String res = resJson.toString();
+        printer.print(res);
+    }
+
 
     private void printGenerateCertProofInfoUsageMsg(String error) {
         printer.print("Error: " + error);
@@ -536,8 +580,6 @@ public class CommandProcessor {
             if (sidechainCreation == null)
                 throw new IllegalArgumentException("Sidechain creation transaction is not found in genesisinfo mc block.");
 
-            ForgerBox forgerBox = sidechainCreation.getBox();
-            ForgingStakeInfo forgingStakeInfo = new ForgingStakeInfo(forgerBox.blockSignProposition(), forgerBox.vrfPubKey(), forgerBox.value());
             byte[] vrfMessage =  "!SomeVrfMessage1!SomeVrfMessage2".getBytes();
             VrfProof vrfProof  = vrfSecretKey.prove(vrfMessage).getKey();
             MerklePath mp = new MerklePath(new ArrayList<>());
@@ -559,6 +601,8 @@ public class CommandProcessor {
                 AddressProposition forgerAddress = new AddressProposition(new byte[Account.ADDRESS_SIZE]);
 
                 SidechainAccountTransactionsCompanion sidechainTransactionsCompanion = new SidechainAccountTransactionsCompanion(new HashMap<>());
+
+                ForgingStakeInfo forgingStakeInfo = sidechainCreation.getAccountForgerStakeInfo();
 
                 AccountBlock accountBlock = AccountBlock.create(
                         params.sidechainGenesisBlockParentId(),
@@ -591,6 +635,9 @@ public class CommandProcessor {
 
                 sidechainBlockHex = BytesUtils.toHexString(accountBlock.bytes());
             } else {
+                ForgerBox forgerBox = sidechainCreation.getBox();
+                ForgingStakeInfo forgingStakeInfo = new ForgingStakeInfo(forgerBox.blockSignProposition(), forgerBox.vrfPubKey(), forgerBox.value());
+
                 SidechainTransactionsCompanion sidechainTransactionsCompanion = new SidechainTransactionsCompanion(new HashMap<>());
 
                 SidechainBlock sidechainBlock = SidechainBlock.create(

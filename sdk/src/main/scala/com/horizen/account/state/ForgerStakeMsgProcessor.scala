@@ -274,13 +274,14 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     val vrfPublicKey :VrfPublicKey                     = cmdInput.forgerPublicKeys.vrfPublicKey
     val ownerAddress: AddressProposition               = cmdInput.ownerAddress
 
-    // check that the delegation arguments satisfy the restricted list of forgers.
-    if (!isGenesisScCreation)// TODO temporarily skipped for genesis sc creation
+    if (networkParams.restrictForgers) {
+      // check that the delegation arguments satisfy the restricted list of forgers.
       if (!networkParams.allowedForgersList.contains((blockSignPublicKey, vrfPublicKey))) {
         val msgStr = "Forger is not in the allowed list"
         log.debug(msgStr)
         return new ExecutionFailed(AddNewStakeGasPaidValue, new Exception(msgStr))
       }
+    }
 
     // compute stakeId
     val newStakeId = getStakeId(msg)
@@ -295,6 +296,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     // add the obj to stateDb
     val stakedAmount = msg.getValue
     addForgerStake(view, newStakeId, blockSignPublicKey, vrfPublicKey, ownerAddress, stakedAmount)
+    log.debug(s"Added stake: newStakeId=$newStakeId, blockSignPublicKey=$blockSignPublicKey, vrfPublicKey=$vrfPublicKey, ownerAddress=$ownerAddress, stakedAmount=$stakedAmount")
 
     if (isGenesisScCreation) {
       new ExecutionSucceeded(AddNewStakeGasPaidValue, newStakeId)

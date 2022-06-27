@@ -169,6 +169,14 @@ class ForgerStakeMsgProcessorTest
   def testCanProcess(): Unit = {
     val stateView = getView
 
+    val msgBad = new Message(senderProposition, forgerStakeMessageProcessor.fakeSmartContractAddress,
+      dummyBigInteger, dummyBigInteger, dummyBigInteger, dummyBigInteger, dummyBigInteger, dummyBigInteger, new Array[Byte](0))
+
+    // befor calling init, we should not be able to process
+    assertFalse(forgerStakeMessageProcessor.canProcess(msgBad, stateView))
+
+    forgerStakeMessageProcessor.init(stateView)
+
     val msg = new Message(senderProposition, forgerStakeMessageProcessor.fakeSmartContractAddress,
       dummyBigInteger, dummyBigInteger, dummyBigInteger, dummyBigInteger, dummyBigInteger, dummyBigInteger, new Array[Byte](0))
 
@@ -179,13 +187,17 @@ class ForgerStakeMsgProcessorTest
       dummyBigInteger, dummyBigInteger, dummyBigInteger, dummyBigInteger, dummyBigInteger, dummyBigInteger, new Array[Byte](0))
     assertFalse(forgerStakeMessageProcessor.canProcess(msgNotProcessable, stateView))
 
+    val nullForgerStakeProposition = null
+    val msgNotProcessable2 = new Message(senderProposition, nullForgerStakeProposition,
+      dummyBigInteger, dummyBigInteger, dummyBigInteger, dummyBigInteger, dummyBigInteger, dummyBigInteger, new Array[Byte](0))
+    assertFalse(forgerStakeMessageProcessor.canProcess(msgNotProcessable, stateView))
+
     stateView.stateDb.commit()
     stateView.close()
   }
 
   @Test
   def testAddAndRemoveStake(): Unit = {
-
 
     val blockSignerProposition = new PublicKey25519Proposition(BytesUtils.fromHexString("1122334455667788112233445566778811223344556677881122334455667788")) // 32 bytes
     val vrfPublicKey = new VrfPublicKey(BytesUtils.fromHexString("aabbccddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff001234")) // 33 bytes
@@ -198,6 +210,7 @@ class ForgerStakeMsgProcessorTest
     val initialAmount = BigInteger.valueOf(10).multiply(validWeiAmount)
     createSenderAccount(stateView, initialAmount)
 
+    Mockito.when(mockNetworkParams.restrictForgers).thenReturn(true)
     Mockito.when(mockNetworkParams.allowedForgersList).thenReturn(Seq((blockSignerProposition,vrfPublicKey)))
 
     val cmdInput = AddNewStakeCmdInput(
@@ -325,6 +338,7 @@ class ForgerStakeMsgProcessorTest
     forgerStakeMessageProcessor.init(stateView)
     createSenderAccount(stateView)
 
+    Mockito.when(mockNetworkParams.restrictForgers).thenReturn(true)
     Mockito.when(mockNetworkParams.allowedForgersList).thenReturn(Seq(
       (blockSignerProposition1,vrfPublicKey1),
       (blockSignerProposition2,vrfPublicKey2)
@@ -432,7 +446,7 @@ class ForgerStakeMsgProcessorTest
 
     forgerStakeMessageProcessor.init(stateView)
 
-
+    Mockito.when(mockNetworkParams.restrictForgers).thenReturn(true)
     Mockito.when(mockNetworkParams.allowedForgersList).thenReturn(Seq(
       (blockSignerProposition1,vrfPublicKey1),
       (blockSignerProposition2,vrfPublicKey2)
@@ -481,7 +495,7 @@ class ForgerStakeMsgProcessorTest
 
     forgerStakeMessageProcessor.init(stateView)
 
-
+    Mockito.when(mockNetworkParams.restrictForgers).thenReturn(true)
     Mockito.when(mockNetworkParams.allowedForgersList).thenReturn(Seq(
       (blockSignerProposition1,vrfPublicKey1),
       (blockSignerProposition2,vrfPublicKey2)
@@ -519,6 +533,7 @@ class ForgerStakeMsgProcessorTest
     val blockSignerProposition = new PublicKey25519Proposition(BytesUtils.fromHexString("1122334455667788112233445566778811223344556677881122334455667788")) // 32 bytes
     val vrfPublicKey = new VrfPublicKey(BytesUtils.fromHexString("aabbccddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff001234")) // 33 bytes
 
+    Mockito.when(mockNetworkParams.restrictForgers).thenReturn(true)
     Mockito.when(mockNetworkParams.allowedForgersList).thenReturn(Seq(
       (blockSignerProposition, vrfPublicKey)
     ))
@@ -554,6 +569,7 @@ class ForgerStakeMsgProcessorTest
     val blockSignerProposition = new PublicKey25519Proposition(BytesUtils.fromHexString("1122334455667788112233445566778811223344556677881122334455667788")) // 32 bytes
     val vrfPublicKey = new VrfPublicKey(BytesUtils.fromHexString("aabbccddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff001234")) // 33 bytes
 
+    Mockito.when(mockNetworkParams.restrictForgers).thenReturn(true)
     Mockito.when(mockNetworkParams.allowedForgersList).thenReturn(Seq(
       (blockSignerProposition, vrfPublicKey)
     ))
