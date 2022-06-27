@@ -27,6 +27,8 @@ public class EvmMessageProcessor implements MessageProcessor {
     @Override
     public ExecutionResult process(Message msg, AccountStateView view) {
         try {
+            // TODO: this will only process legacy transactions correctly as PriorityFee and FeeCap are ignored
+            //  (and the baseFee is set to zero internally in `LibEvm.evmApply`)
             var result = Evm.Apply(
                     view.stateDb(),
                     msg.getFrom().address(),
