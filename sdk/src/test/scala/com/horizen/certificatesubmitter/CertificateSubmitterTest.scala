@@ -7,7 +7,7 @@ import akka.util.Timeout
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, MainchainTxSidechainCreationCrosschainOutput, SidechainBlock}
 import com.horizen.box.Box
 import com.horizen.certificatesubmitter.CertificateSubmitter.ReceivableMessages.{DisableCertificateSigner, DisableSubmitter, EnableCertificateSigner, EnableSubmitter, GetCertificateGenerationState, GetSignaturesStatus, IsCertificateSigningEnabled, IsSubmitterEnabled, SignatureFromRemote}
-import com.horizen.params.{NetworkParams, RegTestParams}
+import com.horizen.params.{CommonParams, NetworkParams, RegTestParams}
 import com.horizen.proposition.{Proposition, SchnorrProposition}
 import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.transaction.mainchain.{SidechainCreation, SidechainRelatedMainchainOutput}
@@ -416,7 +416,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     })
     Mockito.when(state.utxoMerkleTreeRoot(ArgumentMatchers.any[Int])).thenAnswer(answer => {
       assertEquals("Invalid referenced epoch number retrieved for state.withdrawalRequests.", referencedEpochNumber, answer.getArgument(0).asInstanceOf[Int])
-      Some(BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000000"))
+     Some(BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000000"))
     })
 
     Mockito.reset(history)

@@ -1,6 +1,6 @@
 package com.horizen.transaction.mainchain;
 
-import com.horizen.CommonParams;
+import com.horizen.params.CommonParams;
 import com.horizen.block.MainchainTxSidechainCreationCrosschainOutput;
 import com.horizen.block.MainchainTxSidechainCreationCrosschainOutputData;
 import scorex.util.serialization.Reader;

@@ -3,8 +3,12 @@ package com.horizen.api.http
 import akka.http.scaladsl.model.{ContentTypes, HttpMethods, StatusCodes}
 import akka.http.scaladsl.server.{MalformedRequestContentRejection, MethodRejection, Route}
 import com.horizen.fixtures.BoxFixture
+import com.horizen.params.MainNetParams
+import com.typesafe.scalalogging.Logger
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import org.junit.Assert._
+import org.mockito.Mockito
+import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 
@@ -24,7 +28,7 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
-      Post(basePath + "hasCeased").withEntity("maybe_a_json") ~> sidechainCswApiRoute ~> check {
+     Post(basePath + "hasCeased").withEntity("maybe_a_json") ~> sidechainCswApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
@@ -33,8 +37,17 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
+      Post(basePath + "isCSWEnabled").withEntity("maybe_a_json") ~> sidechainCswApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+      Post(basePath + "isCSWEnabled").withEntity("maybe_a_json") ~> Route.seal(sidechainCswApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+
       Post(basePath + "generateCswProof").withEntity("maybe_a_json") ~> sidechainCswApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "generateCswProof").withEntity("maybe_a_json") ~> Route.seal(sidechainCswApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
@@ -42,7 +55,7 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
       }
 
       Post(basePath + "cswInfo").withEntity("maybe_a_json") ~> sidechainCswApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "cswInfo").withEntity("maybe_a_json") ~> Route.seal(sidechainCswApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
@@ -59,7 +72,7 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
       }
 
       Post(basePath + "nullifier").withEntity("maybe_a_json") ~> sidechainCswApiRoute ~> check {
-        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName)
       }
       Post(basePath + "nullifier").withEntity("maybe_a_json") ~> Route.seal(sidechainCswApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
@@ -71,6 +84,38 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
       Post(basePath + "hasCeased") ~> sidechainCswApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("state").isBoolean)
+        assertTrue(result.get("state").asBoolean)
+      }
+      //Testing response in case of internal error
+      sidechainApiMockConfiguration.setShould_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply(false)
+      Post(basePath + "hasCeased") ~> sidechainCswApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("error")
+        if (result == null)
+          fail("Serialization failed for object ErrorRetrievingCeasingState")
+        assertEquals(3, result.elements().asScala.length)
+        assertTrue(result.get("code").isTextual)
+        assertEquals("0701", result.get("code").asText())
+      }
+
+    }
+
+    "reply at /isCSWEnabled" in {
+      Post(basePath + "isCSWEnabled") ~> sidechainCswApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("cswEnabled").isBoolean)
+        assertTrue(result.get("cswEnabled").asBoolean)
       }
     }
 
@@ -162,4 +207,98 @@ class SidechainCswApiRouteTest extends SidechainApiRouteTest with BoxFixture {
       }
     }
   }
+
+  "When CSW is disabled, the Api" should {
+    val params = MainNetParams(isCSWEnabled = false)
+    val sidechainCswApiRouteWithDisabledCSW = SidechainCswApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedCswManagerActorRef,params).route
+
+    "reply at /hasCeased" in {
+      sidechainApiMockConfiguration.setShould_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply(true)
+      Post(basePath + "hasCeased") ~> sidechainCswApiRouteWithDisabledCSW ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("state").isBoolean)
+        assertTrue(result.get("state").asBoolean)
+      }
+    }
+
+    "reply at /isCSWEnabled" in {
+      Post(basePath + "isCSWEnabled") ~> sidechainCswApiRouteWithDisabledCSW ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("cswEnabled").isBoolean)
+        assertFalse(result.get("cswEnabled").asBoolean)
+      }
+    }
+
+    def checkIsNotImplemented(): Unit = {
+      status.intValue() shouldBe StatusCodes.OK.intValue
+      responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      val result = mapper.readTree(entityAs[String]).get("error")
+      if (result == null)
+        fail("Serialization failed for object ErrorCSWNotEnabled")
+
+      assertEquals(3, result.elements().asScala.length)
+      assertTrue(result.get("code").isTextual)
+      assertEquals("0707", result.get("code").asText())
+    }
+
+    "reply that it is not implemented at /cswBoxIds" in {
+      Post(basePath + "cswBoxIds") ~> sidechainCswApiRouteWithDisabledCSW ~> check {
+        checkIsNotImplemented()
+      }
+    }
+
+    "reply that it is not implemented at /cswInfo" in {
+      Post(basePath + "cswInfo")
+        .withEntity("{\"boxId\":\"" + ByteUtils.toHexString(getRandomBoxId(0)) + "\"}") ~> sidechainCswApiRouteWithDisabledCSW ~> check {
+        checkIsNotImplemented()
+      }
+    }
+
+    "reply that it is not implemented at /nullifier" in {
+      Post(basePath + "nullifier")
+        .withEntity("{\"boxId\":\"" + ByteUtils.toHexString(getRandomBoxId(0)) + "\"}") ~> sidechainCswApiRouteWithDisabledCSW ~> check {
+        checkIsNotImplemented()
+      }
+    }
+
+
+    "reply that it is not implemented at /generateCswProof" in {
+      Post(basePath + "generateCswProof")
+        .withEntity("{\"boxId\":\"" + ByteUtils.toHexString(getRandomBoxId(0)) + "\", \"receiverAddress\":\"" + mcAddress + "\"}") ~> sidechainCswApiRouteWithDisabledCSW ~> check {
+        checkIsNotImplemented()
+      }
+    }
+
+    "reject and reply with http error" in {
+      Get(basePath) ~> sidechainCswApiRouteWithDisabledCSW ~> check {
+        rejection shouldBe MethodRejection(HttpMethods.POST)
+      }
+
+      Get(basePath) ~> Route.seal(sidechainCswApiRouteWithDisabledCSW) ~> check {
+        status.intValue() shouldBe StatusCodes.MethodNotAllowed.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+
+
+      Post(basePath + "randomMethodName").withEntity("maybe_a_json") ~> Route.seal(sidechainCswApiRouteWithDisabledCSW) ~> check {
+        status.intValue() shouldBe StatusCodes.NotFound.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+
+    }
+
+
+
+  }
+
 }

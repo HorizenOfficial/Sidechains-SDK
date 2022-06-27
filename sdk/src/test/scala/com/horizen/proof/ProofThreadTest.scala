@@ -3,11 +3,10 @@ package com.horizen.proof
 import java.io.{BufferedReader, File, FileReader}
 import java.util
 import java.util.Optional
-
 import com.google.common.io.Files
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.box.data.WithdrawalRequestBoxData
-import com.horizen.cryptolibprovider.{CryptoLibProvider, SchnorrFunctionsImplZendoo}
+import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider, SchnorrFunctionsImplZendoo}
 import com.horizen.fixtures.FieldElementFixture
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.{NetworkParams, RegTestParams}
@@ -85,7 +84,7 @@ class ProofThreadTest {
       dataForProofGeneration.withdrawalRequests,
       0,
       0,
-      Array(0),
+      Optional.of(Array(0)),
       None,
       params)
     true
@@ -104,7 +103,7 @@ class ProofThreadTest {
 
     val wb: Seq[WithdrawalRequestBox] = Seq(new WithdrawalRequestBox(new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte)), 2345), 42))
 
-    val message = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(wb.asJava, sidechainId, epochNumber, endCummulativeTransactionCommTreeHash, 0, 0, merkelTreeRoot)
+    val message = CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(wb.asJava, sidechainId, epochNumber, endCummulativeTransactionCommTreeHash, 0, 0, Optional.of(merkelTreeRoot))
     val emptySigs = List.fill[Optional[Array[Byte]]](keyPairsLen - threshold)(Optional.empty[Array[Byte]]())
 
     val signatures: util.List[Optional[Array[Byte]]] = (keyPairs
@@ -125,7 +124,7 @@ class ProofThreadTest {
       dataForProofGeneration.endCumulativeEpochBlockHash, // Pass block hash in LE endianness
       0, // long btrFee
       0, // long ftMinAmount
-      dataForProofGeneration.merkelTreeRoot, // utxoMerkleTreeRoot
+      Optional.of(dataForProofGeneration.merkelTreeRoot), // utxoMerkleTreeRoot
       dataForProofGeneration.signatures, // List<Optional<byte[]>> schnorrSignatureBytesList
       dataForProofGeneration.publicKeysBytes, // List<byte[]> schnorrPublicKeysBytesList
       dataForProofGeneration.threshold, //long threshold
@@ -145,7 +144,7 @@ class ProofThreadTest {
     }
 
     println(s"Generating Marlin snark keys. Path: pk=$provingKeyPath, vk=$verificationKeyPath")
-    if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(keyPairsLen, provingKeyPath, verificationKeyPath)) {
+    if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(keyPairsLen, provingKeyPath, verificationKeyPath, CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW)) {
       fail("Error occurred during snark keys generation.")
     }
 

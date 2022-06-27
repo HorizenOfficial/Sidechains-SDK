@@ -87,7 +87,7 @@ class Demo(SidechainTestFramework):
             os.makedirs(ps_keys_dir)
 
         cert_keys_paths = cert_proof_keys_paths(ps_keys_dir)
-        certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, cert_keys_paths)
+        certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, cert_keys_paths, True)
 
         csw_keys_paths = csw_proof_keys_paths(ps_keys_dir, sc_creation_info.withdrawal_epoch_length)
         csw_vr_key = generate_csw_proof_info(withdrawal_epoch_length, csw_keys_paths)
