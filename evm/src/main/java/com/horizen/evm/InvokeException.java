@@ -14,10 +14,10 @@ public class InvokeException extends RuntimeException {
     @Override
     public String toString() {
         return String.format(
-            "InvokeException{error='%s', method='%s', args=%s}",
-            error,
-            method,
-            args == null ? null : args.toNative()
+                "InvokeException{error='%s', method='%s', args=%s}",
+                error,
+                method,
+                args == null ? null : args.toNative()
         );
     }
 }

@@ -184,14 +184,14 @@ final class LibEvm {
     }
 
     public static EvmResult evmApply(
-        int handle,
-        byte[] from,
-        byte[] to,
-        BigInteger value,
-        byte[] input,
-        BigInteger gasLimit,
-        BigInteger gasPrice,
-        EvmContext context
+            int handle,
+            byte[] from,
+            byte[] to,
+            BigInteger value,
+            byte[] input,
+            BigInteger gasLimit,
+            BigInteger gasPrice,
+            EvmContext context
     ) {
         if (context == null) {
             context = new EvmContext();

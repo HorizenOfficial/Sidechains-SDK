@@ -26,23 +26,23 @@ public class EvmMessageProcessorTest extends MessageProcessorTestBase {
 
         assertTrue("should process smart contract deployment", processor.canProcess(getMessage(null), mockStateView));
         assertTrue(
-            "should process calls to existing smart contracts",
-            processor.canProcess(getMessage(contractAddress), mockStateView)
+                "should process calls to existing smart contracts",
+                processor.canProcess(getMessage(contractAddress), mockStateView)
         );
         assertFalse(
-            "should not process EOA to EOA transfer (empty account)",
-            processor.canProcess(getMessage(emptyAddress), mockStateView)
+                "should not process EOA to EOA transfer (empty account)",
+                processor.canProcess(getMessage(emptyAddress), mockStateView)
         );
         assertFalse(
-            "should not process EOA to EOA transfer (non-empty account)",
-            processor.canProcess(getMessage(eoaAddress), mockStateView)
+                "should not process EOA to EOA transfer (non-empty account)",
+                processor.canProcess(getMessage(eoaAddress), mockStateView)
         );
         assertFalse(
-            "should ignore data on EOA to EOA transfer",
-            processor.canProcess(
-                getMessage(eoaAddress, "the same thing we do every night, pinky".getBytes()),
-                mockStateView
-            )
+                "should ignore data on EOA to EOA transfer",
+                processor.canProcess(
+                        getMessage(eoaAddress, "the same thing we do every night, pinky".getBytes()),
+                        mockStateView
+                )
         );
     }
 }

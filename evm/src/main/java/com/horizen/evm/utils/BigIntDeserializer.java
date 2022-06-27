@@ -10,7 +10,7 @@ import java.math.BigInteger;
 public class BigIntDeserializer extends JsonDeserializer<BigInteger> {
     @Override
     public BigInteger deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
-        throws IOException {
+            throws IOException {
         var text = jsonParser.getText();
         if (text.startsWith("0x")) {
             return new BigInteger(text.substring(2), 16);

@@ -18,14 +18,14 @@ public class EvmParams extends HandleParams {
     }
 
     public EvmParams(
-        int handle,
-        byte[] from,
-        byte[] to,
-        BigInteger value,
-        byte[] input,
-        BigInteger gasLimit,
-        BigInteger gasPrice,
-        EvmContext context
+            int handle,
+            byte[] from,
+            byte[] to,
+            BigInteger value,
+            byte[] input,
+            BigInteger gasLimit,
+            BigInteger gasPrice,
+            EvmContext context
     ) {
         super(handle);
         this.from = Address.FromBytes(from);

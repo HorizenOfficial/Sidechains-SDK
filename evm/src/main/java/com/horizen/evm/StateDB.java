@@ -8,7 +8,7 @@ import java.util.Arrays;
 
 public class StateDB extends ResouceHandle {
     public static byte[] EMPTY_CODE_HASH =
-        Converter.fromHexString("c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
+            Converter.fromHexString("c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
 
     /**
      * Opens a view on the state at the given state root hash.

@@ -2,9 +2,6 @@ package com.horizen.examples;
 
 import com.horizen.account.state.*;
 import com.horizen.evm.Evm;
-import scorex.crypto.hash.Keccak256;
-
-import java.util.Arrays;
 
 public class EvmMessageProcessor implements MessageProcessor {
     @Override
@@ -31,13 +28,13 @@ public class EvmMessageProcessor implements MessageProcessor {
     public ExecutionResult process(Message msg, AccountStateView view) {
         try {
             var result = Evm.Apply(
-                view.stateDb(),
-                msg.getFrom().address(),
-                msg.getTo() == null ? null : msg.getTo().address(),
-                msg.getValue(),
-                msg.getData(),
-                msg.getGasLimit(),
-                msg.getGasPrice()
+                    view.stateDb(),
+                    msg.getFrom().address(),
+                    msg.getTo() == null ? null : msg.getTo().address(),
+                    msg.getValue(),
+                    msg.getData(),
+                    msg.getGasLimit(),
+                    msg.getGasPrice()
             );
             if (result.evmError.isEmpty()) {
                 return new ExecutionSucceeded(result.usedGas, result.returnData);

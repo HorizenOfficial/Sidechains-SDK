@@ -9,13 +9,13 @@ import java.math.BigInteger;
 
 public abstract class MessageProcessorTestBase extends TestCase {
     protected static final byte[] hashNull =
-        BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000000");
+            BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000000");
 
     protected static final byte[] originAddress = BytesUtils.fromHexString("00000000000000000000000000000000FFFFFF01");
     protected static final byte[] emptyAddress = BytesUtils.fromHexString("00000000000000000000000000000000FFFFFF02");
     protected static final byte[] eoaAddress = BytesUtils.fromHexString("00000000000000000000000000000000FFFFFF03");
     protected static final byte[] contractAddress =
-        BytesUtils.fromHexString("00000000000000000000000000000000FFFFFF04");
+            BytesUtils.fromHexString("00000000000000000000000000000000FFFFFF04");
 
     protected Message getMessage(byte[] destination, byte[] data) {
         var gas = BigInteger.valueOf(200000);
