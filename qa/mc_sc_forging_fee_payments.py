@@ -49,6 +49,7 @@ class MCSCForgingFeePayments(SidechainTestFramework):
     number_of_sidechain_nodes = 2
 
     withdrawal_epoch_length = 5
+    API_KEY = "Horizen"
 
     def setup_chain(self):
         initialize_chain_clean(self.options.tmpdir, self.number_of_mc_nodes)
@@ -65,10 +66,12 @@ class MCSCForgingFeePayments(SidechainTestFramework):
         # Bootstrap new SC, specify SC nodes connection to MC node
         mc_node_1 = self.nodes[0]
         sc_node_1_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0)))
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0))),
+            api_key = self.API_KEY
         )
         sc_node_2_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0)))
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0))),
+            api_key = self.API_KEY
         )
 
         network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 500, self.withdrawal_epoch_length),
@@ -79,7 +82,7 @@ class MCSCForgingFeePayments(SidechainTestFramework):
 
     def sc_setup_nodes(self):
         # Start 2 SC nodes
-        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
+        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir, auth_api_key = self.API_KEY)
 
     def run_test(self):
         mc_node = self.nodes[0]

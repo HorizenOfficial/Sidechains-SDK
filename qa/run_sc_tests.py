@@ -123,7 +123,7 @@ def run_tests(log_file):
     assert_equal(0, result, "sc_cert_fee_conf test failed!")
 
     result = run_test(SCBwtMinValue())
-    assert_equal(0, result, "sc_bwt_min_value test failed!")
+    assert_equal(0, result, "sc_bwt_minimum_value test failed!")
 
     result = run_test(SCCswCeasedAtEpoch1())
     assert_equal(0, result, "sc_csw_ceased_at_epoch_1 test failed!")

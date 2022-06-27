@@ -851,7 +851,7 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
     return sc_nodes_bootstrap_info
 
 
-def cert_proof_keys_paths(dirname, cert_threshold_sig_max_keys, isCSWEnabled=False):
+def cert_proof_keys_paths(dirname, cert_threshold_sig_max_keys=7, isCSWEnabled=False):
     # use replace for Windows OS to be able to parse the path to the keys in the config file
     pk = "cert_marlin_snark_pk"
     vk = "cert_marlin_snark_vk"

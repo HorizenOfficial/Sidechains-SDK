@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 
-import codecs
 import pprint
 import time
-from decimal import Decimal
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.mc_test.mc_test import CertTestUtils, generate_random_field_element_hex
-from test_framework.util import assert_false, start_nodes, \
+from test_framework.mc_test.mc_test import CertTestUtils
+from test_framework.util import start_nodes, \
     websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, generate_next_blocks, generate_next_block, \
@@ -32,6 +30,7 @@ class SCVersionsAndMCCertificates(SidechainTestFramework):
 
     sc_nodes_bootstrap_info = None
     sc_withdrawal_epoch_length = 10
+    API_KEY = "Horizen"
 
     def setup_nodes(self):
         num_nodes = 1
@@ -41,7 +40,8 @@ class SCVersionsAndMCCertificates(SidechainTestFramework):
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
         sc_node_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
+            api_key = self.API_KEY
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length, btr_data_length=0
                                                         , sc_creation_version=1), sc_node_configuration)
@@ -49,7 +49,7 @@ class SCVersionsAndMCCertificates(SidechainTestFramework):
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
 
     def sc_setup_nodes(self):
-        return start_sc_nodes(1, self.options.tmpdir)
+        return start_sc_nodes(1, self.options.tmpdir, auth_api_key=self.API_KEY)
 
     def run_test(self):
         time.sleep(0.1)

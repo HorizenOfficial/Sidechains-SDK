@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 import json
 
-from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration, Account
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import assert_equal, assert_true, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, is_mainchain_block_included_in_sc_block, check_box_balance, \
-    check_mainchain_block_reference_info, generate_next_blocks
+from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
+    SCNetworkConfiguration
+from test_framework.util import assert_equal, assert_true, forward_transfer_to_sidechain, websocket_port_by_mc_node_index
+from SidechainTestFramework.scutil import generate_next_blocks, bootstrap_sidechain_nodes, start_sc_nodes
 from httpCalls.wallet.balance import http_wallet_balance
 from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress
 from httpCalls.wallet.createPrivateKey25519 import  http_wallet_createPrivateKey25519
@@ -16,11 +13,6 @@ from httpCalls.transaction.findTransactionByID import http_transaction_findById
 from httpCalls.block.findBlockByID import http_block_findById
 from httpCalls.block.best import http_block_best
 from SidechainTestFramework.websocket_client import WebsocketClient
-try:
-    import thread
-except ImportError:
-    import _thread as thread
-import time
 
 """
 The purpose of this test is to verify the websocket server inside the SC node
@@ -58,7 +50,27 @@ Workflow modelled in this test:
 """
 
 class SCWsServer(SidechainTestFramework):
+    number_of_sidechain_nodes = 1
     blocks = []
+    API_KEY = "Horizen"
+
+    def sc_setup_chain(self):
+        # Bootstrap new SC, specify SC node connection to MC node
+        mc_node_1 = self.nodes[0]
+        sc_node_1_configuration = SCNodeConfiguration(
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0))),
+            api_key = self.API_KEY
+        )
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 500),
+                                        sc_node_1_configuration)
+
+        # rewind sc genesis block timestamp for 5 consensus epochs
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720*120*5)
+
+    def sc_setup_nodes(self):
+        # Start 1 SC node
+        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir, auth_api_key = self.API_KEY)
+
 
     def run_test(self):
         print("SC ws server requests test is starting...")

@@ -49,7 +49,6 @@ abstract class SidechainCswApiRoute(override val settings: RESTApiSettings,
   def isCeasedSidechainWithdrawalEnabled: Route = (post & path("isCSWEnabled")) {
      ApiResponseUtil.toResponse(RespCswIsEnabled(params.isCSWEnabled))
   }
-
 }
 
 
@@ -82,22 +81,24 @@ object SidechainCswApiRoute {
      * Then inform about current status of this proof
      */
     def generateCswProof: Route = (post & path("generateCswProof")) {
-      entity(as[ReqGenerationCswState]) { body =>
-        Try {
-          Await.result(cswManager ? GenerateCswProof(BytesUtils.fromHexString(body.boxId), body.receiverAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
-        } match {
-          case Success(res) =>
-            res match {
-              case SidechainIsAlive => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "Sidechain is alive"))
-              case InvalidAddress => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "Invalid MC address"))
-              case NoProofData => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "Sidechain is alive"))
-              case ProofGenerationStarted => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "CSW proof generation is started"))
-              case ProofGenerationInProcess => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "CSW proof generation in process"))
-              case ProofCreationFinished => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "CSW proof generation is finished"))
+      withAuth {
+        entity(as[ReqGenerationCswState]) { body =>
+          Try {
+            Await.result(cswManager ? GenerateCswProof(BytesUtils.fromHexString(body.boxId), body.receiverAddress), timeout.duration).asInstanceOf[GenerateCswProofStatus]
+          } match {
+            case Success(res) =>
+              res match {
+                case SidechainIsAlive => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "Sidechain is alive"))
+                case InvalidAddress => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "Invalid MC address"))
+                case NoProofData => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "Sidechain is alive"))
+                case ProofGenerationStarted => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "CSW proof generation is started"))
+                case ProofGenerationInProcess => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "CSW proof generation in process"))
+                case ProofCreationFinished => ApiResponseUtil.toResponse(RespGenerationCswState(res.toString(), "CSW proof generation is finished"))
+              }
+            case Failure(e) => {
+              log.error("Unexpected error during CSW proof generation.")
+              ApiResponseUtil.toResponse(ErrorCswGenerationState("Unexpected error during CSW proof generation.", JOptional.of(e)))
             }
-          case Failure(e) => {
-            log.error("Unexpected error during CSW proof generation.")
-            ApiResponseUtil.toResponse(ErrorCswGenerationState("Unexpected error during CSW proof generation.", JOptional.of(e)))
           }
         }
       }

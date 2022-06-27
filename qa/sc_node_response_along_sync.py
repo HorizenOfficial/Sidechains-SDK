@@ -1,5 +1,4 @@
 #!/usr/bin/env python2
-import json
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -8,7 +7,7 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, initialize_chain_clean, start_nodes, \
     websocket_port_by_mc_node_index, assert_not_equal
 from SidechainTestFramework.scutil import connect_sc_nodes, bootstrap_sidechain_nodes, start_sc_nodes, \
-    generate_next_blocks, sc_p2p_port, sync_sc_blocks
+    generate_next_blocks, sync_sc_blocks
 
 """
 Check that a node could response to api calls though if it is Syncronizing

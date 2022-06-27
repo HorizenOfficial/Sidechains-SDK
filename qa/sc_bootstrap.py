@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-import json
-
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, Account, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
@@ -27,6 +25,7 @@ Test:
 class SCBootstrap(SidechainTestFramework):
 
     sc_nodes_bootstrap_info=None
+    API_KEY = "Horizen"
 
     def setup_nodes(self):
         return start_nodes(1, self.options.tmpdir)
@@ -34,13 +33,14 @@ class SCBootstrap(SidechainTestFramework):
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
         sc_node_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
+            api_key = self.API_KEY
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, LARGE_WITHDRAWAL_EPOCH_LENGTH), sc_node_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
 
     def sc_setup_nodes(self):
-        return start_sc_nodes(1, self.options.tmpdir)
+        return start_sc_nodes(1, self.options.tmpdir, auth_api_key=self.API_KEY)
 
     def run_test(self):
         sc_node = self.sc_nodes[0]
