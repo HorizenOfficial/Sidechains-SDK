@@ -30,7 +30,7 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
   val GasSpentForAddNewWithdrawalReqFailure: java.math.BigInteger = java.math.BigInteger.ONE
   val GasSpentForGenericFailure: java.math.BigInteger = java.math.BigInteger.ONE
 
-  val MaxWithdrawalReqsNumPerEpoch = 3900
+  val MaxWithdrawalReqsNumPerEpoch = 3999
   val DustThresholdInWei: java.math.BigInteger = ZenWeiConverter.convertZenniesToWei(ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE))
 
 

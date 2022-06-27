@@ -57,7 +57,7 @@ class AccountStateViewTest
     assertTrue("The list of withdrawal requests is not empty", res.isEmpty)
 
 
-    // With 3900 withdrawal requests
+    // With 3999 withdrawal requests
     val maxNumOfWithdrawalReqs = WithdrawalMsgProcessor.MaxWithdrawalReqsNumPerEpoch
 
     val destAddress = new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte))
