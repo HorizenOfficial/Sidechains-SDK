@@ -13,6 +13,7 @@ import com.horizen.box.ForgerBox;
 import com.horizen.companion.SidechainSecretsCompanion;
 import com.horizen.companion.SidechainTransactionsCompanion;
 import com.horizen.consensus.ForgingStakeInfo;
+import com.horizen.cryptolibprovider.CommonCircuit;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
 import com.horizen.params.MainNetParams;
 import com.horizen.params.NetworkParams;
@@ -207,8 +208,10 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         printer.print("Usage:\n" +
                       "\tgenerateCertProofInfo {\"seed\":\"my seed\", \"maxPks\":7, \"threshold\":5, " +
                       "\"provingKeyPath\": \"/tmp/sidechain/snark_proving_key\", " +
-                      "\"verificationKeyPath\": \"/tmp/sidechain/snark_verification_key\" }" +
-                      "\tthreshold parameter should be less or equal to keyCount.");
+                      "\"verificationKeyPath\": \"/tmp/sidechain/snark_verification_key\", "+
+                      "\"isCSWEnabled\": true}" +
+                      "\n\t - threshold parameter should be less or equal to keyCount." +
+                      "\n\t - isCSWEnabled parameter could be true or false."  );
     }
 
     private void processGenerateCertProofInfo(JsonNode json) {
@@ -256,6 +259,12 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         }
         String verificationKeyPath = json.get("verificationKeyPath").asText();
 
+        if (!json.has("isCSWEnabled") || !json.get("isCSWEnabled").isBoolean()) {
+            printGenerateCertProofInfoUsageMsg("wrong isCSWEnabled value. Boolean value expected.");
+            return;
+        }
+        boolean isCSWEnabled = json.get("isCSWEnabled").asBoolean();
+
         SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
 
         // Generate all keys only if verification key doesn't exist.
@@ -267,7 +276,11 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                 return;
             }
 
-            if (!CryptoLibProvider.sigProofThresholdCircuitFunctions().generateCoboundaryMarlinSnarkKeys(maxPks, provingKeyPath, verificationKeyPath)) {
+            int numOfCustomFields = CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW;
+            if (isCSWEnabled){
+                numOfCustomFields = CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW;
+            }
+            if (!CryptoLibProvider.sigProofThresholdCircuitFunctions().generateCoboundaryMarlinSnarkKeys(maxPks, provingKeyPath, verificationKeyPath, numOfCustomFields)) {
                 printer.print("Error occurred during snark keys generation.");
                 return;
             }
@@ -346,7 +359,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         String provingKeyPath = json.get("provingKeyPath").asText();
 
         if (!json.has("verificationKeyPath") || !json.get("verificationKeyPath").isTextual()) {
-            printGenerateCertProofInfoUsageMsg("wrong verificationKeyPath value. Textual value expected.");
+            printGenerateCswProofInfoUsageMsg("wrong verificationKeyPath value. Textual value expected.");
             return;
         }
         String verificationKeyPath = json.get("verificationKeyPath").asText();
@@ -645,11 +658,11 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     private NetworkParams getNetworkParams(byte network, byte[] scId) {
         switch(network) {
             case 0: // mainnet
-                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, 0, null, null, null, null, null, null, null, false, null, null);
+                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, 0, null, null, null, null, null, null, null, false, null, null,true);
             case 1: // testnet
-                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null, null, null, null, null, false, null, null);
+                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null, null, null, null, null, false, null, null,true);
             case 2: // regtest
-                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null, null, null, null, null, false, null, null);
+                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null, null, null, null, null, false, null, null,true);
             default:
                 throw new IllegalStateException("Unexpected network type: " + network);
         }

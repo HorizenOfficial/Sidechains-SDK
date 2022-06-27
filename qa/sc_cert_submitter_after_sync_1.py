@@ -52,7 +52,7 @@ class ScCertSubmitterAfterSync1(SidechainTestFramework):
         )
 
         network = SCNetworkConfiguration(
-            SCCreationInfo(mc_node, self.sc_creation_amount, self.sc_withdrawal_epoch_length),
+            SCCreationInfo(mc_node, self.sc_creation_amount, self.sc_withdrawal_epoch_length, csw_enabled=True),
             sc_node_1_configuration,
             sc_node_2_configuration)
 

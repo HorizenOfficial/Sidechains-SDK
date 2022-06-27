@@ -30,7 +30,7 @@ class SidechainNodesInitializationTest(SidechainTestFramework):
         
     def sc_setup_network(self, split = False):
         self.sc_nodes = self.sc_setup_nodes()
-        #Connect nodes toghether
+        #Connect nodes together
         print("Connecting node0, node1 and node2...")
         connect_sc_nodes(self.sc_nodes[0], 1) #In Scorex, it is just needed to call connect on one of the two
         connect_sc_nodes(self.sc_nodes[1], 2)

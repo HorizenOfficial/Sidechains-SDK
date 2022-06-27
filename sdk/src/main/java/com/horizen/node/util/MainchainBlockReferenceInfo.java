@@ -2,7 +2,7 @@ package com.horizen.node.util;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.horizen.CommonParams;
+import com.horizen.params.CommonParams;
 import com.horizen.serialization.Views;
 import scorex.core.serialization.BytesSerializable;
 import scorex.core.serialization.ScorexSerializer;

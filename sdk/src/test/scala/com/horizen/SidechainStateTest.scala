@@ -40,7 +40,7 @@ class SidechainStateTest
 
   val mockedStateStorage: SidechainStateStorage = mock[SidechainStateStorage]
   val mockedStateForgerBoxStorage: SidechainStateForgerBoxStorage = mock[SidechainStateForgerBoxStorage]
-  val mockedStateUtxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage = mock[SidechainStateUtxoMerkleTreeStorage]
+  val mockedStateUtxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider = mock[SidechainStateUtxoMerkleTreeProvider]
   val mockedApplicationState: ApplicationState = mock[ApplicationState]
 
   val boxList: ListBuffer[SidechainTypes#SCB] = new ListBuffer[SidechainTypes#SCB]()
@@ -50,7 +50,7 @@ class SidechainStateTest
   val secretList = new ListBuffer[PrivateKey25519]()
 
   val params = MainNetParams()
-  
+
   def getRegularTransaction(regularOutputsCount: Int,
                             forgerOutputsCount: Int,
                             boxesWithSecretToOpen: Seq[(ZenBox,PrivateKey25519)],
@@ -119,9 +119,9 @@ class SidechainStateTest
 
     Mockito.when(mockedStateForgerBoxStorage.getForgerBox(ArgumentMatchers.any[Array[Byte]]())).thenReturn(None)
 
-    Mockito.when(mockedStateUtxoMerkleTreeStorage.lastVersionId).thenReturn(Some(stateVersion.last))
+    Mockito.when(mockedStateUtxoMerkleTreeProvider.lastVersionId).thenReturn(Some(stateVersion.last))
 
-    val sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeStorage,
+    val sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeProvider,
       params, bytesToVersion(stateVersion.last.data), mockedApplicationState)
 
     //Test get
@@ -334,9 +334,9 @@ class SidechainStateTest
       Success(mockedStateForgerBoxStorage)
     })
 
-    Mockito.when(mockedStateUtxoMerkleTreeStorage.lastVersionId).thenAnswer(_ => Some(stateVersion.last))
+    Mockito.when(mockedStateUtxoMerkleTreeProvider.lastVersionId).thenAnswer(_ => Some(stateVersion.last))
 
-    Mockito.when(mockedStateUtxoMerkleTreeStorage.update(
+    Mockito.when(mockedStateUtxoMerkleTreeProvider.update(
       ArgumentMatchers.any[ByteArrayWrapper](),
       ArgumentMatchers.any[Seq[SidechainTypes#SCB]](),
       ArgumentMatchers.any[Set[ByteArrayWrapper]]()
@@ -350,7 +350,7 @@ class SidechainStateTest
       assertEquals("Different boxes to append found.", expectedBoxesToAppend, boxesToAppend)
       assertEquals("Different boxes to remove found.", expectedBoxesToRemove, boxesToRemove)
 
-      Success(mockedStateUtxoMerkleTreeStorage)
+      Success(mockedStateUtxoMerkleTreeProvider)
     })
 
     val mockedBlock = mock[SidechainBlock]
@@ -390,7 +390,7 @@ class SidechainStateTest
       ArgumentMatchers.any[JList[Array[Byte]]]()))
       .thenReturn(Success(mockedApplicationState))
 
-    val sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeStorage,
+    val sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeProvider,
       params, bytesToVersion(stateVersion.last.data), mockedApplicationState)
 
     val applyTry = sidechainState.applyModifier(mockedBlock)
@@ -406,15 +406,15 @@ class SidechainStateTest
   def feePayments(): Unit = {
     val stateStorage: SidechainStateStorage = mock[SidechainStateStorage]
     val stateForgerBoxStorage: SidechainStateForgerBoxStorage = mock[SidechainStateForgerBoxStorage]
-    val stateUtxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage = mock[SidechainStateUtxoMerkleTreeStorage]
+    val stateUtxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider = mock[SidechainStateUtxoMerkleTreeProvider]
     val applicationState: ApplicationState = mock[ApplicationState]
 
     val version = getVersion
     Mockito.when(stateStorage.lastVersionId).thenReturn(Some(version))
     Mockito.when(stateForgerBoxStorage.lastVersionId).thenReturn(Some(version))
-    Mockito.when(stateUtxoMerkleTreeStorage.lastVersionId).thenReturn(Some(version))
+    Mockito.when(stateUtxoMerkleTreeProvider.lastVersionId).thenReturn(Some(version))
 
-    val sidechainState = new SidechainState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage,
+    val sidechainState = new SidechainState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeProvider,
       params, bytesToVersion(version.data), applicationState)
 
     // Test 1: No block fee info record in the storage
@@ -488,15 +488,15 @@ class SidechainStateTest
   def utxoMerkleTreeRoot(): Unit = {
     val stateStorage: SidechainStateStorage = mock[SidechainStateStorage]
     val stateForgerBoxStorage: SidechainStateForgerBoxStorage = mock[SidechainStateForgerBoxStorage]
-    val stateUtxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage = mock[SidechainStateUtxoMerkleTreeStorage]
+    val stateUtxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider = mock[SidechainStateUtxoMerkleTreeProvider]
     val applicationState: ApplicationState = mock[ApplicationState]
 
     val version = getVersion
     Mockito.when(stateStorage.lastVersionId).thenReturn(Some(version))
     Mockito.when(stateForgerBoxStorage.lastVersionId).thenReturn(Some(version))
-    Mockito.when(stateUtxoMerkleTreeStorage.lastVersionId).thenReturn(Some(version))
+    Mockito.when(stateUtxoMerkleTreeProvider.lastVersionId).thenReturn(Some(version))
 
-    val sidechainState = new SidechainState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage,
+    val sidechainState = new SidechainState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeProvider,
       params, bytesToVersion(version.data), applicationState)
 
 
@@ -524,19 +524,20 @@ class SidechainStateTest
     assertArrayEquals("Different root value found.", expectedRoot, rootOpt2.get)
   }
 
+
   @Test
   def ceased(): Unit = {
     val stateStorage: SidechainStateStorage = mock[SidechainStateStorage]
     val stateForgerBoxStorage: SidechainStateForgerBoxStorage = mock[SidechainStateForgerBoxStorage]
-    val stateUtxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage = mock[SidechainStateUtxoMerkleTreeStorage]
+    val stateUtxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider = mock[SidechainStateUtxoMerkleTreeProvider]
     val applicationState: ApplicationState = mock[ApplicationState]
 
     val version = getVersion
     Mockito.when(stateStorage.lastVersionId).thenReturn(Some(version))
     Mockito.when(stateForgerBoxStorage.lastVersionId).thenReturn(Some(version))
-    Mockito.when(stateUtxoMerkleTreeStorage.lastVersionId).thenReturn(Some(version))
+    Mockito.when(stateUtxoMerkleTreeProvider.lastVersionId).thenReturn(Some(version))
 
-    val sidechainState = new SidechainState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeStorage,
+    val sidechainState = new SidechainState(stateStorage, stateForgerBoxStorage, stateUtxoMerkleTreeProvider,
       params, bytesToVersion(version.data), applicationState)
 
 
@@ -577,12 +578,12 @@ class SidechainStateTest
 
     Mockito.when(mockedStateForgerBoxStorage.lastVersionId).thenReturn(Some(stateVersion.last))
 
-    Mockito.when(mockedStateUtxoMerkleTreeStorage.lastVersionId).thenReturn(Some(stateVersion.last))
+    Mockito.when(mockedStateUtxoMerkleTreeProvider.lastVersionId).thenReturn(Some(stateVersion.last))
 
     val mockedParams = mock[MainNetParams]
     Mockito.when(mockedParams.restrictForgers).thenReturn(false)
 
-    val sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeStorage,
+    val sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeProvider,
       mockedParams, bytesToVersion(stateVersion.last.data), mockedApplicationState)
 
     //Test validate(Transaction) with no restrict forgers enabled
