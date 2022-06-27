@@ -7,7 +7,7 @@ import junit.framework.TestCase;
 
 import java.math.BigInteger;
 
-public class MessageProcessorTest extends TestCase {
+public abstract class MessageProcessorTestBase extends TestCase {
     protected static final byte[] hashNull =
         BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000000");
 

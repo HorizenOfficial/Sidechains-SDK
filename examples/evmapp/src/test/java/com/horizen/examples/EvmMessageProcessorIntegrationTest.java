@@ -15,7 +15,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-public class EvmMessageProcessorIntegrationTest extends MessageProcessorTest {
+public class EvmMessageProcessorIntegrationTest extends MessageProcessorTestBase {
     private Database storage;
     private AccountStateView stateView;
 

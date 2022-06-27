@@ -6,7 +6,7 @@ import org.mockito.Mockito;
 
 import java.util.Arrays;
 
-public class EvmMessageProcessorTest extends MessageProcessorTest {
+public class EvmMessageProcessorTest extends MessageProcessorTestBase {
     public void testInit() {
         var mockStateView = Mockito.mock(AccountStateView.class);
         var processor = new EvmMessageProcessor();
