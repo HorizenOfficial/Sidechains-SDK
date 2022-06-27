@@ -44,13 +44,13 @@ public class StateDB extends ResouceHandle {
     }
 
     /**
-     * Check if an account with the given address exists.
+     * Check if the account with the given address is empty
      *
      * @param address account address
      * @return true if account exists, otherwise false
      */
-    public boolean exists(byte[] address) {
-        return LibEvm.stateExists(handle, address);
+    public boolean isEmpty(byte[] address) {
+        return LibEvm.stateEmpty(handle, address);
     }
 
     /**
@@ -64,7 +64,7 @@ public class StateDB extends ResouceHandle {
      * @return true if account is EOA, otherwise false
      */
     public boolean isEoaAccount(byte[] address) {
-        return !exists(address) || Arrays.equals(getCodeHash(address), EMPTY_CODE_HASH);
+        return isEmpty(address) || Arrays.equals(getCodeHash(address), EMPTY_CODE_HASH);
     }
 
     /**

@@ -56,7 +56,7 @@ class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
 
   def isSmartContractAccount(address: Array[Byte]): Boolean = stateDb.isSmartContractAccount(address)
 
-  def accountExists(address: Array[Byte]): Boolean = stateDb.exists(address)
+  def accountExists(address: Array[Byte]): Boolean = !stateDb.isEmpty(address)
 
   // account modifiers:
   def addAccount(address: Array[Byte], codeHash: Array[Byte]): Try[Unit] = Try {

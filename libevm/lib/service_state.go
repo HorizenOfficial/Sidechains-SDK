@@ -116,20 +116,14 @@ func (s *Service) StateCommit(params HandleParams) (error, common.Hash) {
 	return nil, hash
 }
 
-// TODO: we might want to change this to "StateEmpty()" because the logic behind Exists() is a bit unpredictable
-// "empty" means nonce==0 && balance==0 && codeHash==emptyHash
-// on commit, empty accounts are automatically removed, therefore the following slightly confusion scenario is possible:
-// - check existance of an account: false
-// - touch the account in any way without actually changing it, e.g. setBalance(0)
-// - check existance again: true
-// - commit changes
-// - check existance again: false (the account was removed on commit as it was still considered "empty")
-func (s *Service) StateExists(params AccountParams) (error, bool) {
+// StateEmpty tests if the given account is empty,
+// "empty" means non-existent or nonce==0 && balance==0 && codeHash==emptyHash (hash of nil)
+func (s *Service) StateEmpty(params AccountParams) (error, bool) {
 	err, statedb := s.statedbs.Get(params.Handle)
 	if err != nil {
 		return err, false
 	}
-	return nil, statedb.Exist(params.Address)
+	return nil, statedb.Empty(params.Address)
 }
 
 func (s *Service) StateGetBalance(params AccountParams) (error, *hexutil.Big) {

@@ -107,8 +107,8 @@ final class LibEvm {
         return invoke("StateCommit", new HandleParams(handle), Hash.class).toBytes();
     }
 
-    public static boolean stateExists(int handle, byte[] address) {
-        return invoke("StateExists", new AccountParams(handle, address), boolean.class);
+    public static boolean stateEmpty(int handle, byte[] address) {
+        return invoke("StateEmpty", new AccountParams(handle, address), boolean.class);
     }
 
     public static BigInteger stateGetBalance(int handle, byte[] address) {

@@ -134,10 +134,10 @@ public class StateDBTest {
 
         try (var db = new LevelDBDatabase(databaseFolder.getAbsolutePath())) {
             try (var statedb = new StateDB(db, hashEmpty)) {
-                assertFalse("account must not exist in an empty state", statedb.exists(origin));
+                assertTrue("account must not exist in an empty state", statedb.isEmpty(origin));
                 // make sure the account is not "empty"
                 statedb.setCodeHash(origin, fakeCodeHash);
-                assertTrue("account must exist after setting code hash", statedb.exists(origin));
+                assertFalse("account must exist after setting code hash", statedb.isEmpty(origin));
                 initialRoot = statedb.getIntermediateRoot();
                 for (var value : values) {
                     statedb.setStorage(origin, key, value, StateStorageStrategy.CHUNKED);
