@@ -9,6 +9,7 @@ import java.math.BigDecimal
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.utils.BytesUtils
 
+import java.util.Optional
 import scala.collection.convert.ImplicitConversions._
 
 
@@ -48,7 +49,7 @@ object CertificateRequestCreator {
              withdrawalRequestBoxes: Seq[WithdrawalRequestBox],
              ftMinAmount: Long,
              btrFee: Long,
-             utxoMerkleTreeRoot: Array[Byte],
+             utxoMerkleTreeRoot: Optional[Array[Byte]],
              fee: Option[String],
              params: NetworkParams) : SendCertificateRequest = {
     SendCertificateRequest(
@@ -63,11 +64,12 @@ object CertificateRequestCreator {
         val pubKeyAddress: String = BytesUtils.toHorizenPublicKeyAddress(wrb.proposition().bytes(), params)
         BackwardTransferEntry(pubKeyAddress, new BigDecimal(wrb.value()).divide(ZEN_COINS_DIVISOR).toPlainString)
       }),
-      CryptoLibProvider.sigProofThresholdCircuitFunctions.splitUtxoMerkleTreeRoot(utxoMerkleTreeRoot).toSeq,
+      CryptoLibProvider.sigProofThresholdCircuitFunctions.getCertificateCustomFields(utxoMerkleTreeRoot).toSeq,
       Seq(), // No bitvectors support for Threshold signature proofs
       new BigDecimal(ftMinAmount).divide(ZEN_COINS_DIVISOR).toPlainString,
       new BigDecimal(btrFee).divide(ZEN_COINS_DIVISOR).toPlainString,
       fee
     )
+
   }
 }

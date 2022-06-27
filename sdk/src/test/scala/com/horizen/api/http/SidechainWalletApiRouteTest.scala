@@ -26,29 +26,49 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
         status.intValue() shouldBe StatusCodes.MethodNotAllowed.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
+      Post(basePath + "createPrivateKey25519").withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.Forbidden.intValue
+      }
+
+      Post(basePath + "createVrfSecret").withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.Forbidden.intValue
+      }
 
       Post(basePath + "allBoxes").withEntity("maybe_a_json") ~> sidechainWalletApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
-      Post(basePath + "allBoxes").withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+      Post(basePath + "allBoxes").withHeaders(apiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+      Post(basePath + "allBoxes").withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.Forbidden.intValue
+      }
+
+      Post(basePath + "coinsBalance").withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.Forbidden.intValue
       }
 
       Post(basePath + "balanceOfType").withEntity("maybe_a_json") ~> sidechainWalletApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
-      Post(basePath + "balanceOfType").withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+      Post(basePath + "balanceOfType").withHeaders(apiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+      Post(basePath + "balanceOfType").withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.Forbidden.intValue
       }
 
       Post(basePath + "allPublicKeys").withEntity("maybe_a_json") ~> sidechainWalletApiRoute ~> check {
         rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
       }
-      Post(basePath + "allPublicKeys").withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+      Post(basePath + "allPublicKeys").withHeaders(apiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
         status.intValue() shouldBe StatusCodes.BadRequest.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
+      Post(basePath + "allPublicKeys").withHeaders(badApiTokenHeader).withEntity("maybe_a_json") ~> Route.seal(sidechainWalletApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.Forbidden.intValue
       }
 
 
@@ -98,7 +118,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
     }
 
     "reply at /allBoxes" in {
-      Post(basePath + "allBoxes") ~> sidechainWalletApiRoute ~> check {
+      Post(basePath + "allBoxes").withHeaders(apiTokenHeader) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
@@ -116,12 +136,14 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
           jsonChecker.assertsOnBoxJson(box_json(i), allBoxes.get(i))
       }
       Post(basePath + "allBoxes")
+        .withHeaders(apiTokenHeader)
         .withEntity(
           SerializationUtil.serialize(ReqAllBoxes(Some("a_boxTypeClass"), None))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.InternalServerError.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
       Post(basePath + "allBoxes")
+        .withHeaders(apiTokenHeader)
         .withEntity(
           SerializationUtil.serialize(ReqAllBoxes(None, Some(Seq(
             BytesUtils.toHexString(allBoxes.get(0).id()), BytesUtils.toHexString(allBoxes.get(1).id())))))) ~> sidechainWalletApiRoute ~> check {
@@ -140,6 +162,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
         assertEquals(allBoxes.size() - 2, node.elements().asScala.length)
       }
       Post(basePath + "allBoxes")
+        .withHeaders(apiTokenHeader)
         .withEntity(
           SerializationUtil.serialize(ReqAllBoxes(Some("a_boxTypeClass"), Some(Seq("boxId_1", "boxId_2"))))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.InternalServerError.intValue
@@ -148,7 +171,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
     }
 
     "reply at /coinsBalance" in {
-      Post(basePath + "coinsBalance") ~> sidechainWalletApiRoute ~> check {
+      Post(basePath + "coinsBalance").withHeaders(apiTokenHeader) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
@@ -166,6 +189,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
 
     "reply at /balanceOfType" in {
       Post(basePath + "balanceOfType")
+        .withHeaders(apiTokenHeader)
         .withEntity(
           SerializationUtil.serialize(ReqBalance("a_class"))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.InternalServerError.intValue
@@ -176,7 +200,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
     "reply at /createVrfSecret" in {
       sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(true)
       // secret is added
-      Post(basePath + "createVrfSecret") ~> sidechainWalletApiRoute ~> check {
+      Post(basePath + "createVrfSecret").withHeaders(apiTokenHeader) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
@@ -193,7 +217,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       }
       // secret is not added
       sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(false)
-      Post(basePath + "createVrfSecret") ~> sidechainWalletApiRoute ~> check {
+      Post(basePath + "createVrfSecret").withHeaders(apiTokenHeader) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorSecretNotAdded("", JOptional.empty()).code)
@@ -203,7 +227,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
     "reply at /createPrivateKey25519" in {
       // secret is added
       sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(true)
-      Post(basePath + "createPrivateKey25519") ~> sidechainWalletApiRoute ~> check {
+      Post(basePath + "createPrivateKey25519").withHeaders(apiTokenHeader) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val fr = mapper.readTree(entityAs[String])
@@ -221,7 +245,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
       }
       // secret is not added
       sidechainApiMockConfiguration.setShould_nodeViewHolder_LocallyGeneratedSecret_reply(false)
-      Post(basePath + "createPrivateKey25519") ~> sidechainWalletApiRoute ~> check {
+      Post(basePath + "createPrivateKey25519").withHeaders(apiTokenHeader) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         assertsOnSidechainErrorResponseSchema(entityAs[String], ErrorSecretNotAdded("", JOptional.empty()).code)
@@ -229,7 +253,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
     }
 
     "reply at /allPublicKeys" in {
-      Post(basePath + "allPublicKeys") ~> sidechainWalletApiRoute ~> check {
+      Post(basePath + "allPublicKeys").withHeaders(apiTokenHeader) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
@@ -245,6 +269,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
         assertEquals(2, node.findValues("publicKey").size())
       }
       Post(basePath + "allPublicKeys")
+        .withHeaders(apiTokenHeader)
         .withEntity(
           SerializationUtil.serialize(ReqAllPropositions(Some("proptype")))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.InternalServerError.intValue

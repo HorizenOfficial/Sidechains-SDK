@@ -32,12 +32,12 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                               consensusDataStorage: ConsensusDataStorage,
                               stateStorage: SidechainStateStorage,
                               forgerBoxStorage: SidechainStateForgerBoxStorage,
-                              utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
+                              utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
                               walletBoxStorage: SidechainWalletBoxStorage,
                               secretStorage: SidechainSecretStorage,
                               walletTransactionStorage: SidechainWalletTransactionStorage,
                               forgingBoxesInfoStorage: ForgingBoxesInfoStorage,
-                              cswDataStorage: SidechainWalletCswDataStorage,
+                              cswDataProvider: SidechainWalletCswDataProvider,
                               backupStorage: BackupStorage,
                               params: NetworkParams,
                               timeProvider: NetworkTimeProvider,
@@ -66,8 +66,8 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   lazy val listOfStorageInfo : Seq[SidechainStorageInfo] = Seq[SidechainStorageInfo](
     historyStorage, consensusDataStorage,
-    utxoMerkleTreeStorage, stateStorage, forgerBoxStorage,
-    secretStorage, walletBoxStorage, walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage)
+    utxoMerkleTreeProvider, stateStorage, forgerBoxStorage,
+    secretStorage, walletBoxStorage, walletTransactionStorage, forgingBoxesInfoStorage, cswDataProvider)
 
   val maxTxFee = sidechainSettings.wallet.maxTxFee
 
@@ -201,9 +201,9 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     log.info("Restoring persistent state from storage...")
     val restoredData = for {
       history <- SidechainHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
-      state <- SidechainState.restoreState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, applicationState)
+      state <- SidechainState.restoreState(stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, params, applicationState)
       wallet <- SidechainWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes, walletBoxStorage, secretStorage,
-        walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, params, applicationWallet)
+        walletTransactionStorage, forgingBoxesInfoStorage, cswDataProvider, params, applicationWallet)
       pool <- Some(SidechainMemoryPool.emptyPool)
     } yield (history, state, wallet, pool)
 
@@ -224,7 +224,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   def getStorageVersions: Map[String, String] =
     listOfStorageInfo.map(x => {
-      x.getClass.getSimpleName -> x.lastVersionId.map(value => BytesUtils.toHexString(value.data())).getOrElse("")
+      x.getStorageName -> x.lastVersionId.map(value => BytesUtils.toHexString(value.data())).getOrElse("")
     }).toMap
 
 
@@ -235,13 +235,13 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override protected def genesisState: (HIS, MS, VL, MP) = {
     val result = for {
-      state <- SidechainState.createGenesisState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, backupStorage, params, applicationState, genesisBlock)
+      state <- SidechainState.createGenesisState(stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, backupStorage, params, applicationState, genesisBlock)
 
       (_: ModifierId, consensusEpochInfo: ConsensusEpochInfo) <- Success(state.getCurrentConsensusEpochInfo)
       withdrawalEpochNumber: Int <- Success(state.getWithdrawalEpochInfo.epoch)
 
       wallet <- SidechainWallet.createGenesisWallet(sidechainSettings.wallet.seed.getBytes, walletBoxStorage, secretStorage,
-        walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, backupStorage, params, applicationWallet,
+        walletTransactionStorage, forgingBoxesInfoStorage, cswDataProvider, backupStorage, params, applicationWallet,
         genesisBlock, withdrawalEpochNumber, consensusEpochInfo)
 
       history <- SidechainHistory.createGenesisHistory(historyStorage, consensusDataStorage, params, genesisBlock, semanticBlockValidators(params),
@@ -564,32 +564,32 @@ object SidechainNodeViewHolderRef {
             consensusDataStorage: ConsensusDataStorage,
             stateStorage: SidechainStateStorage,
             forgerBoxStorage: SidechainStateForgerBoxStorage,
-            utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
+            utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
             walletBoxStorage: SidechainWalletBoxStorage,
             secretStorage: SidechainSecretStorage,
             walletTransactionStorage: SidechainWalletTransactionStorage,
             forgingBoxesInfoStorage: ForgingBoxesInfoStorage,
-            cswDataStorage: SidechainWalletCswDataStorage,
+            cswDataProvider: SidechainWalletCswDataProvider,
             backupStorage: BackupStorage,
             params: NetworkParams,
             timeProvider: NetworkTimeProvider,
             applicationWallet: ApplicationWallet,
             applicationState: ApplicationState,
             genesisBlock: SidechainBlock): Props =
-    Props(new SidechainNodeViewHolder(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, backupStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock)).withMailbox("akka.actor.deployment.prio-mailbox")
+    Props(new SidechainNodeViewHolder(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, walletBoxStorage, secretStorage,
+      walletTransactionStorage, forgingBoxesInfoStorage, cswDataProvider, backupStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock)).withMailbox("akka.actor.deployment.prio-mailbox")
 
   def apply(sidechainSettings: SidechainSettings,
             historyStorage: SidechainHistoryStorage,
             consensusDataStorage: ConsensusDataStorage,
             stateStorage: SidechainStateStorage,
             forgerBoxStorage: SidechainStateForgerBoxStorage,
-            utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
+            utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
             walletBoxStorage: SidechainWalletBoxStorage,
             secretStorage: SidechainSecretStorage,
             walletTransactionStorage: SidechainWalletTransactionStorage,
             forgingBoxesInfoStorage: ForgingBoxesInfoStorage,
-            cswDataStorage: SidechainWalletCswDataStorage,
+            cswDataProvider: SidechainWalletCswDataProvider,
             backupStorage: BackupStorage,
             params: NetworkParams,
             timeProvider: NetworkTimeProvider,
@@ -597,8 +597,8 @@ object SidechainNodeViewHolderRef {
             applicationState: ApplicationState,
             genesisBlock: SidechainBlock)
            (implicit system: ActorSystem): ActorRef =
-    system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, backupStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock).withMailbox("akka.actor.deployment.prio-mailbox"))
+    system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, walletBoxStorage, secretStorage,
+      walletTransactionStorage, forgingBoxesInfoStorage, cswDataProvider, backupStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock).withMailbox("akka.actor.deployment.prio-mailbox"))
 
   def apply(name: String,
             sidechainSettings: SidechainSettings,
@@ -606,12 +606,12 @@ object SidechainNodeViewHolderRef {
             consensusDataStorage: ConsensusDataStorage,
             stateStorage: SidechainStateStorage,
             forgerBoxStorage: SidechainStateForgerBoxStorage,
-            utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
+            utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
             walletBoxStorage: SidechainWalletBoxStorage,
             secretStorage: SidechainSecretStorage,
             walletTransactionStorage: SidechainWalletTransactionStorage,
             forgingBoxesInfoStorage: ForgingBoxesInfoStorage,
-            cswDataStorage: SidechainWalletCswDataStorage,
+            cswDataProvider: SidechainWalletCswDataProvider,
             backupStorage: BackupStorage,
             params: NetworkParams,
             timeProvider: NetworkTimeProvider,
@@ -619,6 +619,6 @@ object SidechainNodeViewHolderRef {
             applicationState: ApplicationState,
             genesisBlock: SidechainBlock)
            (implicit system: ActorSystem): ActorRef =
-    system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, backupStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock).withMailbox("akka.actor.deployment.prio-mailbox"), name)
+    system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, walletBoxStorage, secretStorage,
+      walletTransactionStorage, forgingBoxesInfoStorage, cswDataProvider, backupStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock).withMailbox("akka.actor.deployment.prio-mailbox"), name)
 }

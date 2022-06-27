@@ -8,6 +8,7 @@ from sc_cert_submission_decentralization import SCCertSubmissionDecentralization
 from sc_cert_submitter_after_sync_1 import ScCertSubmitterAfterSync1
 from sc_cert_submitter_after_sync_2 import ScCertSubmitterAfterSync2
 from sc_csw_ceased_at_epoch_1 import SCCswCeasedAtEpoch1
+from sc_csw_ceased_at_epoch_1_with_large_epoch_length import SCCswCeasedAtEpoch1WithLargeEpochLength
 from sc_csw_ceased_at_epoch_2 import SCCswCeasedAtEpoch2
 from sc_csw_ceased_at_epoch_3 import SCCswCeasedAtEpoch3
 from sc_cum_comm_tree_hash import SCCumCommTreeHash
@@ -30,7 +31,8 @@ from websocket_server import SCWsServer
 from mc_sc_forging_fee_payments import MCSCForgingFeePayments
 from sc_cert_fee_conf import CertFeeConfiguration
 from sc_bwt_minimum_value import SCBwtMinValue
-from sc_db_tool_cmds import DBToolTest
+from sc_storage_recovery_with_csw import StorageRecoveryWithCSWTest
+from sc_storage_recovery_without_csw import StorageRecoveryWithoutCSWTest
 from websocket_server_fee_payments import SCWsServerFeePayments
 from sc_closed_forger import SidechainClosedForgerTest
 from sc_node_response_along_sync import SCNodeResponseAlongSync
@@ -39,6 +41,7 @@ from sc_node_api_test import SidechainNodeApiTest
 from sc_import_export_keys import SidechainImportExportKeysTest
 from sc_forger_feerate import SCForgerFeerate
 from sc_mempool_max_fee import SCMempoolMaxFee
+from sc_csw_disabled import SCCswDisabled
 
 def run_test(test):
     try:
@@ -121,10 +124,13 @@ def run_tests(log_file):
     assert_equal(0, result, "sc_cert_fee_conf test failed!")
 
     result = run_test(SCBwtMinValue())
-    assert_equal(0, result, "sc_bwt_min_value test failed!")
+    assert_equal(0, result, "sc_bwt_minimum_value test failed!")
 
     result = run_test(SCCswCeasedAtEpoch1())
     assert_equal(0, result, "sc_csw_ceased_at_epoch_1 test failed!")
+
+    result = run_test(SCCswCeasedAtEpoch1WithLargeEpochLength())
+    assert_equal(0, result, "sc_csw_ceased_at_epoch_1_with_large_epoch_length test failed!")
 
     result = run_test(SCCswCeasedAtEpoch2())
     assert_equal(0, result, "sc_csw_ceased_at_epoch_2 test failed!")
@@ -144,8 +150,11 @@ def run_tests(log_file):
     result = run_test(SCNodeResponseAlongSync())
     assert_equal(0, result, "sc_node_response_along_sync test failed!")
 
-    result = run_test(DBToolTest())
-    assert_equal(0, result, "DBToolTest test failed!")
+    result = run_test(StorageRecoveryWithCSWTest())
+    assert_equal(0, result, "Storage recovery with CSW enabled test failed!")
+
+    result = run_test(StorageRecoveryWithoutCSWTest())
+    assert_equal(0, result, "DStorage recovery with CSW disabled test failed!")
 
     result = run_test(SidechainBlockIdForBackupTest())
     assert_equal(0, result, "sc_blockid_for_backup test failed!")
@@ -162,6 +171,10 @@ def run_tests(log_file):
     result = run_test(SCMempoolMaxFee())
     assert_equal(0, result, "sc_mempool_max_fee test failed!")
 
+    result = run_test(SCCswDisabled())
+    assert_equal(0, result, "sc_csw_disabled test failed!")
+
+
 if __name__ == "__main__":
-    log_file = open("sc_test.log", "w")
-    run_tests(log_file)
+    my_log_file = open("sc_test.log", "w")
+    run_tests(my_log_file)

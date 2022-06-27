@@ -1,4 +1,4 @@
-package com.horizen
+package com.horizen.params
 
 import com.horizen.utils.Utils
 import scorex.core.NodeViewModifier

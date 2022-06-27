@@ -18,7 +18,7 @@ import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.utils.BytesUtils
 import com.horizen.wallet.ApplicationWallet
-import com.horizen.{SidechainNodeViewHolderRef, SidechainSettings, SidechainSettingsReader, SidechainTypes}
+import com.horizen.{SidechainNodeViewHolderRef, SidechainSettings, SidechainSettingsReader, SidechainTypes, SidechainUtxoMerkleTreeProviderCSWEnabled, SidechainWalletCswDataProvider, SidechainWalletCswDataProviderCSWEnabled}
 import scorex.core.api.http.ApiRejectionHandler
 import scorex.core.utils.NetworkTimeProvider
 
@@ -95,12 +95,13 @@ trait SidechainNodeViewHolderFixture
   val sidechainWalletBoxStorage = new SidechainWalletBoxStorage(getStorage(), sidechainBoxesCompanion)
   val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion)
   val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(getStorage())
-  val sidechainStateUtxoMerkleTreeStorage = new SidechainStateUtxoMerkleTreeStorage(getStorage())
+  val sidechainStateUtxoMerkleTreeProvider: SidechainUtxoMerkleTreeProviderCSWEnabled = SidechainUtxoMerkleTreeProviderCSWEnabled(new SidechainStateUtxoMerkleTreeStorage(getStorage()))
+
   val sidechainHistoryStorage = new SidechainHistoryStorage(getStorage(), sidechainTransactionsCompanion, params)
   val consensusDataStorage = new ConsensusDataStorage(getStorage())
   val sidechainWalletTransactionStorage = new SidechainWalletTransactionStorage(getStorage(), sidechainTransactionsCompanion)
   val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(getStorage())
-  val cswDataStorage = new SidechainWalletCswDataStorage(getStorage())
+  val cswDataProvider: SidechainWalletCswDataProvider = SidechainWalletCswDataProviderCSWEnabled(new SidechainWalletCswDataStorage(getStorage()))
   val backupStorage = new BackupStorage(getStorage(), sidechainBoxesCompanion)
 
   // Append genesis secrets if we start the node first time
@@ -115,12 +116,12 @@ trait SidechainNodeViewHolderFixture
     consensusDataStorage,
     sidechainStateStorage,
     sidechainStateForgerBoxStorage,
-    sidechainStateUtxoMerkleTreeStorage,
+    sidechainStateUtxoMerkleTreeProvider,
     sidechainWalletBoxStorage,
     sidechainSecretStorage,
     sidechainWalletTransactionStorage,
     forgingBoxesMerklePathStorage,
-    cswDataStorage,
+    cswDataProvider,
     backupStorage,
     params,
     timeProvider,
