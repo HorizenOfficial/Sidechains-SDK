@@ -83,12 +83,13 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       // TODO also account for gas fees
       applyOnNodeView { sidechainNodeView =>
         val wallet = sidechainNodeView.getNodeWallet//
+        val valueInWei = ZenWeiConverter.convertZenniesToWei(body.value)
         // get all accounts
         val allAccounts = wallet.secretsOfType(classOf[PrivateKeySecp256k1])
         val secret = allAccounts.find(
           a =>
             sidechainNodeView.getNodeState.getBalance(a.asInstanceOf[PrivateKeySecp256k1].publicImage.address)
-              >= body.value // TODO account for gas
+              .getOrElse(BigInteger.valueOf(0)).compareTo(valueInWei) >= 0// TODO account for gas
         )
         secret match {
           case Some(secret) =>
@@ -97,7 +98,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               sidechainNodeView.getNodeState.getAccount(accountSecret.publicImage.address).nonce)
 
             val destAddress = body.toAddress
-            val valueInWei = ZenWeiConverter.convertZenniesToWei(body.value)
             val gasPrice = BigInteger.valueOf(1) // TODO actual gas implementation
             val gasLimit = BigInteger.valueOf(1) // TODO actual gas implementation
             val tmpTx = new EthereumTransaction(
