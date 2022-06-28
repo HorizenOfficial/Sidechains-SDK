@@ -74,7 +74,7 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
 
       if (reader.remaining != 0) {
         penalizeMisbehavingPeer(remote)
-        log.warn(s"Received additianl bytes after block. Declared id ${encoder.encodeId(id)} from ${remote.toString}")
+        log.warn(s"Received additional bytes after block. Declared id ${encoder.encodeId(id)} from ${remote.toString}")
       }
 
       if (id == mod.id) {

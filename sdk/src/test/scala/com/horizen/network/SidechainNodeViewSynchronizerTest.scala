@@ -137,7 +137,7 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
   }
 
   @Test
-  def onAdditianalTransactionBytes(): Unit = {
+  def onAdditionalTransactionBytes(): Unit = {
     val modifiersSpec = new ModifiersSpec(1024 * 1024)
 
     val classLoader = getClass.getClassLoader
@@ -171,7 +171,7 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
   }
 
   @Test
-  def onAdditianalBlockBytes(): Unit = {
+  def onAdditionalBlockBytes(): Unit = {
     val modifiersSpec = new ModifiersSpec(1024 * 1024)
     val classLoader = getClass.getClassLoader
     val file = new FileReader(classLoader.getResource("sidechainblock_hex").getFile)
