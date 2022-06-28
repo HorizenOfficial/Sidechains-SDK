@@ -179,6 +179,12 @@ public class CommandProcessor {
                       "\tgenerateVrfKey {\"seed\":\"my seed\"}");
     }
 
+    private void printGenerateAccountKeyUsageMsg(String error) {
+        printer.print("Error: " + error);
+        printer.print("Usage:\n" +
+                "\tgenerateAccountKey {\"seed\":\"my seed\"}");
+    }
+
     private  void processGenerateVrfKey(JsonNode json) {
 
         if(!json.has("seed") || !json.get("seed").isTextual()) {
@@ -201,7 +207,7 @@ public class CommandProcessor {
     private void processGenerateAccountKey(JsonNode json) {
 
         if(!json.has("seed") || !json.get("seed").isTextual()) {
-            printGenerateVrfKeyUsageMsg("seed is not specified or has invalid format.");
+            printGenerateAccountKeyUsageMsg("seed is not specified or has invalid format.");
             return;
         }
 
@@ -219,7 +225,7 @@ public class CommandProcessor {
 
         } catch (Exception e) {
             // throws InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException
-            printGenerateVrfKeyUsageMsg("exception thrown: " + e.getMessage().toString());
+            printGenerateAccountKeyUsageMsg("exception thrown: " + e.getMessage().toString());
             return;
         }
 
@@ -230,7 +236,6 @@ public class CommandProcessor {
         String res = resJson.toString();
         printer.print(res);
     }
-
 
     private void printGenerateCertProofInfoUsageMsg(String error) {
         printer.print("Error: " + error);

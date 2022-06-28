@@ -299,7 +299,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     log.debug(s"Added stake: newStakeId=$newStakeId, blockSignPublicKey=$blockSignPublicKey, vrfPublicKey=$vrfPublicKey, ownerAddress=$ownerAddress, stakedAmount=$stakedAmount")
 
     if (isGenesisScCreation) {
-      new ExecutionSucceeded(AddNewStakeGasPaidValue, newStakeId)
+      // no gas paid here
+      new ExecutionSucceeded(BigInteger.ZERO, newStakeId)
     } else {
       // decrease the balance of `from` account by `tx.value`
       view.subBalance(msg.getFrom.address(), stakedAmount) match {

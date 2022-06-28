@@ -206,22 +206,24 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
       // Update Withdrawal epoch related data
       updateList.add(new JPair(withdrawalEpochInformationKey,
         new ByteArrayWrapper(WithdrawalEpochInfoSerializer.toBytes(epochInfo))))
-
-      // Update BlockFeeInfo data
-      val nextBlockFeeInfoCounter: Int = getBlockFeeInfoCounter(epochInfo.epoch) + 1
-      updateList.add(new JPair(getBlockFeeInfoCounterKey(epochInfo.epoch),
-        new ByteArrayWrapper(Ints.toByteArray(nextBlockFeeInfoCounter))))
-
-      require(blockFeeInfoOpt.nonEmpty, "BlockFeeInfo must be NOT NULL.")
-
-      updateList.add(new JPair(getBlockFeeInfoKey(epochInfo.epoch, nextBlockFeeInfoCounter),
-        new ByteArrayWrapper(BlockFeeInfoSerializer.toBytes(blockFeeInfoOpt.get))))
     })
 
     // Store the top quality cert for epoch if present
     topQualityCertificateOpt.foreach(certificate => {
       updateList.add(new JPair(getTopQualityCertificateKey(certificate.epochNumber),
         WithdrawalEpochCertificateSerializer.toBytes(certificate)))
+    })
+
+    withdrawalEpochInfoOpt.foreach(epochInfo => {
+      // Update BlockFeeInfo data
+      val nextBlockFeeInfoCounter: Int = getBlockFeeInfoCounter(epochInfo.epoch) + 1
+      updateList.add(new JPair(getBlockFeeInfoCounterKey(epochInfo.epoch),
+        new ByteArrayWrapper(Ints.toByteArray(nextBlockFeeInfoCounter))))
+
+      blockFeeInfoOpt.foreach(feeInfo =>
+        updateList.add(new JPair(getBlockFeeInfoKey(epochInfo.epoch, nextBlockFeeInfoCounter),
+          new ByteArrayWrapper(BlockFeeInfoSerializer.toBytes(feeInfo))))
+      )
     })
 
     // Update Consensus related data

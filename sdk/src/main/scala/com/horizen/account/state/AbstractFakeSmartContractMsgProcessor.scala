@@ -29,8 +29,8 @@ abstract class AbstractFakeSmartContractMsgProcessor extends MessageProcessor wi
   }
 
   override def canProcess(msg: Message, view: AccountStateView): Boolean = {
-    fakeSmartContractAddress.equals(msg.getTo) &&
-      view.accountExists(msg.getTo().address())
+    // we rely on the condition that init() has already been called at this point
+    fakeSmartContractAddress.equals(msg.getTo)
   }
 
   protected def getOpCodeFromData(data: Array[Byte]): Array[Byte] ={
