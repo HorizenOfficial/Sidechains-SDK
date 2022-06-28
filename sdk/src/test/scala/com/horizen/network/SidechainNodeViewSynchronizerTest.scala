@@ -25,10 +25,10 @@ import java.net.InetSocketAddress
 
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.SidechainBlockFixture.{getDefaultTransactionsCompanion, sidechainTransactionsCompanion}
-import com.horizen.transaction.RegularTransactionSerializer
+import com.horizen.transaction.{RegularTransaction, RegularTransactionSerializer}
 import com.horizen.utils.BytesUtils
 import scorex.core.{ModifierTypeId, NodeViewModifier}
-import scorex.core.NodeViewHolder.ReceivableMessages.{GetNodeViewChanges, ModifiersFromRemote}
+import scorex.core.NodeViewHolder.ReceivableMessages.{GetNodeViewChanges, ModifiersFromRemote, TransactionsFromRemote}
 import scorex.core.network.ModifiersStatus.Requested
 import scorex.core.serialization.ScorexSerializer
 import scorex.core.transaction.Transaction
@@ -136,35 +136,36 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
     assertTrue("Delivery tracker expected to set block id as Invalid.", setInvalidExecuted)
   }
 
-  @Ignore
   @Test
   def onAdditianalTransactionBytes(): Unit = {
     val modifiersSpec = new ModifiersSpec(1024 * 1024)
 
     val classLoader = getClass.getClassLoader
     val file = new FileReader(classLoader.getResource("regulartransaction_hex").getFile)
-    val transactionBytes = BytesUtils.fromHexString(new BufferedReader(file).readLine())
+    val transactionHexBytes = BytesUtils.fromHexString(new BufferedReader(file).readLine())
 
     val additianalBytes: Array[Byte] = Array(0x00, 0x0a, 0x01, 0x0b)
-    val transferData = transactionBytes ++ additianalBytes
     val regularTransactionSerializer = RegularTransactionSerializer.getSerializer()
 
-    val deserializedTransactionTry = regularTransactionSerializer.parseBytesTry(transactionBytes)
+    val deserializedTransactionTry = regularTransactionSerializer.parseBytesTry(transactionHexBytes)
     assertTrue("Cannot deserialize original Sidechain transaction", deserializedTransactionTry.isSuccess)
-    val deserializedTransaction = deserializedTransactionTry.get
+    val originalTransaction = deserializedTransactionTry.get
+
+    val transactionBytes = sidechainTransactionsCompanion.toBytes(originalTransaction)
+    val transferData = transactionBytes ++ additianalBytes
 
     Mockito.reset(deliveryTracker)
     Mockito.when(deliveryTracker.status(ArgumentMatchers.any[ModifierId])).thenAnswer(answer => {
       val receivedId: ModifierId = answer.getArgument(0)
-      assertEquals("Different transaction id expected.", deserializedTransaction.id, receivedId)
+      assertEquals("Different transaction id expected.", originalTransaction.id, receivedId)
       Requested
     })
 
-    nodeViewSynchronizerRef ! DataFromPeer(modifiersSpec, ModifiersData(Transaction.ModifierTypeId, Map(ModifierId @@ deserializedTransaction.id -> transactionBytes)), peer)
-    networkControllerProbe.expectMsgType[PenalizePeer]
+    nodeViewSynchronizerRef ! DataFromPeer(modifiersSpec, ModifiersData(Transaction.ModifierTypeId, Map(ModifierId @@ originalTransaction.id -> transactionBytes)), peer)
+    viewHolderProbe.expectMsgType[TransactionsFromRemote[RegularTransaction]]
 
-    nodeViewSynchronizerRef ! DataFromPeer(modifiersSpec, ModifiersData(Transaction.ModifierTypeId, Map(ModifierId @@ deserializedTransaction.id -> transferData)), peer)
-    viewHolderProbe.expectMsgType[ModifiersFromRemote[SidechainBlock]]
+    nodeViewSynchronizerRef ! DataFromPeer(modifiersSpec, ModifiersData(Transaction.ModifierTypeId, Map(ModifierId @@ originalTransaction.id -> transferData)), peer)
+    viewHolderProbe.expectMsgType[TransactionsFromRemote[RegularTransaction]]
     // Check that sender was penalize
     networkControllerProbe.expectMsgType[PenalizePeer]
   }
