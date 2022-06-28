@@ -507,7 +507,10 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
             val stateWithdrawalEpochNumber: Int = stateAfterApply.getWithdrawalEpochInfo.epoch
             val (historyResult, walletResult) = if (stateAfterApply.isWithdrawalEpochLastIndex) {
               val feePayments = stateAfterApply.getFeePayments(stateWithdrawalEpochNumber)
-              val historyAfterUpdateFee = newHistory.updateFeePaymentsInfo(modToApply.id, FeePaymentsInfo(feePayments))
+              var historyAfterUpdateFee = newHistory
+              if (feePayments.nonEmpty) {
+                historyAfterUpdateFee = newHistory.updateFeePaymentsInfo(modToApply.id, FeePaymentsInfo(feePayments))
+              }
 
               val walletAfterApply: SidechainWallet = newWallet.scanPersistent(modToApply, stateWithdrawalEpochNumber, feePayments, Some(stateAfterApply))
               (historyAfterUpdateFee, walletAfterApply)

@@ -412,8 +412,6 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
 Create directories for each node and default configuration files inside them.
 For each node put also genesis data in configuration files.
 """
-
-
 def initialize_default_sc_datadir(dirname, n, api_key):
     apiAddress = "127.0.0.1"
     configsData = []
