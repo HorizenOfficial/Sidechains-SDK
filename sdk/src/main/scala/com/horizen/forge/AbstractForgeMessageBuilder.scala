@@ -77,7 +77,7 @@ abstract class AbstractForgeMessageBuilder[
     val vrfMessage = buildVrfMessage(nextConsensusSlotNumber, consensusInfo.nonceConsensusEpochInfo)
 
     // Get ForgingStakeMerklePathInfo from wallet and order them by stake decreasing.
-    val forgingStakeMerklePathInfoSeq: Seq[ForgingStakeMerklePathInfo] = getForgingStakeMerklePathInfo(nextConsensusEpochNumber, nodeView.vault)
+    val forgingStakeMerklePathInfoSeq: Seq[ForgingStakeMerklePathInfo] = getForgingStakeMerklePathInfo(nextConsensusEpochNumber, nodeView.vault, nodeView.history, nodeView.state)
 
 
     if (forgingStakeMerklePathInfoSeq.isEmpty) {
@@ -348,7 +348,7 @@ abstract class AbstractForgeMessageBuilder[
 
   def getOmmersSize(ommers: Seq[Ommer[H]]) : Int
 
-  def getForgingStakeMerklePathInfo(nextConsensusEpochNumber: consensus.ConsensusEpochNumber, wallet: VL) : Seq[ForgingStakeMerklePathInfo]
+  def getForgingStakeMerklePathInfo(nextConsensusEpochNumber: ConsensusEpochNumber, wallet: VL, history: HIS, state: MS): Seq[ForgingStakeMerklePathInfo]
 }
 
 

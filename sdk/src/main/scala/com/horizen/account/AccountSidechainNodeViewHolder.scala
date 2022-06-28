@@ -42,9 +42,9 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   protected def messageProcessors(params: NetworkParams): Seq[MessageProcessor] = {
     Seq(
-      EoaMessageProcessor,
       WithdrawalMsgProcessor,
-      ForgerStakeMsgProcessor(params)
+      ForgerStakeMsgProcessor(params),
+      EoaMessageProcessor
     ) ++ customMessageProcessors
   }
 
@@ -96,7 +96,9 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   // since account balances are tracked only in the AccountState.
   // TODO: do we need to notify History with fee payments info?
   override protected def scanBlockWithFeePayments(history: HIS, state: MS, wallet: VL, modToApply: AccountBlock): (HIS, VL) = {
-    (history, wallet.scanPersistent(modToApply))
+    // TODO check this
+    (history, wallet)
+    //(history, wallet.scanPersistent(modToApply))
   }
 
   override protected def getCurrentSidechainNodeViewInfo: Receive = {

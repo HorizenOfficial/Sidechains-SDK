@@ -4,9 +4,9 @@ import com.horizen.block._
 import com.horizen.consensus._
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
-import com.horizen.secret.PrivateKey25519
+import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.transaction.{Transaction, TransactionSerializer}
-import com.horizen.utils.{DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree}
+import com.horizen.utils.{ByteArrayWrapper, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree}
 import com.horizen._
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
@@ -17,13 +17,14 @@ import com.horizen.account.state.AccountState
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.utils.Account
 import com.horizen.account.wallet.AccountWallet
-import com.horizen.forge.{AbstractForgeMessageBuilder, MainchainSynchronizer}
+import com.horizen.forge.{AbstractForgeMessageBuilder, ForgeFailed, MainchainSynchronizer}
+import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import scorex.core.NodeViewModifier
 import scorex.core.block.Block.{BlockId, Timestamp}
 import scorex.util.ModifierId
 
 import scala.collection.JavaConverters._
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                                  companion: SidechainAccountTransactionsCompanion,
@@ -140,9 +141,91 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     ommersSerializer.toBytes(ommers.asJava).length
   }
 
-  override def getForgingStakeMerklePathInfo(nextConsensusEpochNumber: ConsensusEpochNumber, wallet:  AccountWallet): Seq[ForgingStakeMerklePathInfo] =
-    ???
+  // TODO the stateRoot of the genesis block
+  def getGenesisBlockRootHash =
+    new Array[Byte](32)
 
+  def getStateRoot(history: AccountHistory, nextConsensusEpochNumber: ConsensusEpochNumber) : (ConsensusEpochNumber, Array[Byte]) = {
+
+    // For given epoch N we should get data from the ending of the epoch N-2.
+    // genesis block is the single and the last block of epoch 1 - that is a special case:
+    // Data from epoch 1 is also valid for epoch 2, so for epoch N==2, we should get info from epoch 1.
+    nextConsensusEpochNumber match {
+      case epoch if (epoch <= 2) =>
+        (ConsensusEpochNumber @@ 1, getGenesisBlockRootHash)
+
+      case epoch =>
+
+        val branchPointInfo: BranchPointInfo = getBranchPointInfo(history) match {
+          case Success(info) => info
+          case Failure(ex) =>
+            throw ex
+        }
+
+        // apply two times the api for getting previous epoch last block
+        val parentId_0 = branchPointInfo.branchPointId
+        val ts_0 = history.blockInfoById(parentId_0).timestamp
+        val blockId_0 = history.getLastBlockInPreviousConsensusEpoch(ts_0, parentId_0)
+
+        val parentId_1 = blockId_0
+        val ts_1 = history.blockInfoById(parentId_1).timestamp
+        val blockId_1 = history.getLastBlockInPreviousConsensusEpoch(ts_1, parentId_1)
+
+        val lastBlock = history.getBlockById(blockId_1)
+        val stateRoot = lastBlock.get().header.stateRoot
+
+        (ConsensusEpochNumber @@ (epoch - 2), stateRoot)
+    }
+  }
+
+  override def getForgingStakeMerklePathInfo(
+         nextConsensusEpochNumber: ConsensusEpochNumber,
+         wallet: AccountWallet,
+         history: AccountHistory,
+         state: AccountState): Seq[ForgingStakeMerklePathInfo] = {
+
+    // 1. get from history the state root from the header of the block of 2 epochs before
+    val (consensusEpochNumber, stateRoot) = getStateRoot(history, nextConsensusEpochNumber)
+
+    // 2. get from stateDb using root above the collection of all forger stakes (ordered)
+    val stateViewFromRoot = if (ByteUtils.toHexString(stateRoot) == ByteUtils.toHexString(getGenesisBlockRootHash)) {
+      // in case of genesis block
+      state.getView
+    } else {
+      state.getStateDbViewFromRoot(stateRoot)
+    }
+
+    val forgingStakeInfoSeq : Seq[ForgingStakeInfo] = stateViewFromRoot.getOrderedForgingStakeInfoSeq()
+
+    // 3. using wallet secrets, filter out the not-mine forging stakes
+     val secrets : Seq[Secret] = wallet.allSecrets().asScala
+
+    val walletPubKeys = secrets.map( e => e.publicImage())
+
+    val filteredForgingStakeInfoSeq = forgingStakeInfoSeq.filter(p => walletPubKeys.contains(p.blockSignPublicKey))
+
+    val epochInfo = ConsensusEpochInfo(
+      consensusEpochNumber,
+      MerkleTree.createMerkleTree(filteredForgingStakeInfoSeq.map(info => info.hash).asJava),
+      filteredForgingStakeInfoSeq.map(_.stakeAmount).sum)
+
+    // 4. prepare merkle tree of all forger stakes and extract path info of mine (what is left after 3)
+    val merkleTreeLeaves = epochInfo.forgingStakeInfoTree.leaves().asScala.map(leaf => new ByteArrayWrapper(leaf))
+
+    // Calculate merkle path for all delegated forgerBoxes
+    val forgingStakeMerklePathInfoSeq: Seq[ForgingStakeMerklePathInfo] =
+      filteredForgingStakeInfoSeq.flatMap(forgingStakeInfo => {
+        merkleTreeLeaves.indexOf(new ByteArrayWrapper(forgingStakeInfo.hash)) match {
+          case -1 => None // May occur in case if Wallet doesn't contain information about all boxes for given blockSignKey and vrfKey
+          case index => Some(ForgingStakeMerklePathInfo(
+            forgingStakeInfo,
+            epochInfo.forgingStakeInfoTree.getMerklePathForLeaf(index)
+          ))
+        }
+      })
+
+    forgingStakeMerklePathInfoSeq
+  }
 }
 
 

@@ -11,7 +11,7 @@ from test_framework.util import assert_equal, assert_true, start_nodes, \
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, is_mainchain_block_included_in_sc_block, check_box_balance, \
     check_mainchain_block_reference_info, check_wallet_coins_balance, check_box_balance, get_lib_separator, \
-    AccountModelBlockVersion, EVM_APP_BINARY
+    AccountModelBlockVersion, EVM_APP_BINARY, generate_next_blocks
 
 """
 Check the EVM bootstrap feature.
@@ -55,6 +55,27 @@ class SCEvmBootstrap(SidechainTestFramework):
         mc_block_hex = self.nodes[0].getblock(mc_block["hash"], False)
         print("SC genesis mc block hex = " + mc_block_hex)
 
+        sc_best_block = sc_node.block_best()["result"]
+
+        assert_equal(sc_best_block["height"], 1, "The best block has not the specified height.")
+
+        # verify MC block reference's inclusion
+        res = is_mainchain_block_included_in_sc_block(sc_best_block["block"], mc_block)
+        assert_true(res, "The mainchain block is not included in SC node.")
+
+        sc_mc_best_block_ref_info = sc_node.mainchain_bestBlockReferenceInfo()["result"]
+        assert_true(
+            check_mainchain_block_reference_info(sc_mc_best_block_ref_info, mc_block),
+            "The mainchain block is not included inside SC block reference info.")
+
+        #input("\n\t======> Enter any input to continue generating a new sc block...")
+
+        scblock_id0 = generate_next_blocks(sc_node, "first node", 1)[0]
+
+        sc_best_block = sc_node.block_best()["result"]
+
+        assert_equal(sc_best_block["height"], 2, "The best block has not the specified height.")
+
         # send an eth tx to mempool
         amount = 1000
         j = {
@@ -79,26 +100,6 @@ class SCEvmBootstrap(SidechainTestFramework):
         print("rpc response:")
         pprint.pprint(sc_node.rpc_eth_getBalance("0x0", "1"))
 
-        input("\n\t======> Enter any input to continue...")
-
-        # For the time being this will timeout since hhtp APIs are not yet impemented
-        sc_best_block = sc_node.block_best()["result"]
-
-        assert_equal(sc_best_block["height"], 1, "The best block has not the specified height.")
-
-        # verify MC block reference's inclusion
-        res = is_mainchain_block_included_in_sc_block(sc_best_block["block"], mc_block)
-        assert_true(res, "The mainchain block is not included in SC node.")
-
-        sc_mc_best_block_ref_info = sc_node.mainchain_bestBlockReferenceInfo()["result"]
-        assert_true(
-            check_mainchain_block_reference_info(sc_mc_best_block_ref_info, mc_block),
-            "The mainchain block is not included inside SC block reference info.")
-
-        # check all keys/boxes/balances are coherent with the default initialization
-        check_wallet_coins_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account_balance)
-        check_box_balance(sc_node, self.sc_nodes_bootstrap_info.genesis_account, "ForgerBox", 1,
-                                 self.sc_nodes_bootstrap_info.genesis_account_balance)
 
 
 if __name__ == "__main__":

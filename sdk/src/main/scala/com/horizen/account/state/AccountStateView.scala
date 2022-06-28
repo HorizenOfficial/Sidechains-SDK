@@ -10,12 +10,12 @@ import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput, WithdrawalEpochCertificate}
 import com.horizen.box.data.WithdrawalRequestBoxData
 import com.horizen.box.{ForgerBox, WithdrawalRequestBox}
-import com.horizen.consensus.ConsensusEpochNumber
+import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.evm.{StateDB, StateStorageStrategy}
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.StateView
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
-import com.horizen.utils.{BlockFeeInfo, BytesUtils, WithdrawalEpochInfo}
+import com.horizen.utils.{BlockFeeInfo, BytesUtils, ListSerializer, WithdrawalEpochInfo}
 import scorex.core.VersionTag
 import scorex.crypto.hash.Keccak256
 import scorex.util.ScorexLogging
@@ -40,7 +40,6 @@ class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
 
   // modifiers
   override def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[Unit] = Try {
-
 
     refData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {
       aggTx.mc2scTransactionsOutputs().asScala.map(_ match {
@@ -115,9 +114,50 @@ class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
 
       })
     })
-
-
   }
+
+  def getOrderedForgingStakeInfoSeq() : Seq[ForgingStakeInfo] = {
+    val data: Array[Byte] = BytesUtils.fromHexString(AddNewStakeCmd)
+    val message = new Message(
+      null, // sender proposition
+      ForgerStakeSmartContractAddress,
+      BigInteger.ZERO, // gasPrice
+      BigInteger.ZERO, // gasFeeCap
+      BigInteger.ZERO, // gasTipCap
+      BigInteger.ZERO, // gasLimit
+      BigInteger.ZERO, // value, not used here,
+      BigInteger.ONE.negate(), // nonce, not used here
+      data)
+
+    val processor = messageProcessors.find(_.canProcess(message, this)).getOrElse{
+      val errMsg = s"No known processor for msg: $message"
+      log.error(errMsg)
+      throw new IllegalArgumentException(errMsg)
+    }
+
+    val forgerStakeList = processor.asInstanceOf[ForgerStakeMsgProcessor].doGetListOfForgersCmd(message, this) match {
+      case res: ExecutionFailed =>
+        log.error(res.getReason.getMessage)
+        throw new IllegalArgumentException(res.getReason)
+      case res: InvalidMessage =>
+        log.error(res.getReason.getMessage)
+        throw new IllegalArgumentException(res.getReason)
+      case res : ExecutionSucceeded =>
+        val forgingInfoSerializer: ListSerializer[AccountForgingStakeInfo] =
+          new ListSerializer[AccountForgingStakeInfo](AccountForgingStakeInfoSerializer)
+
+        forgingInfoSerializer.parseBytesTry(res.returnData()).get
+    }
+
+    // TODO do the ordering
+    forgerStakeList.asScala.map {
+      item => ForgingStakeInfo(
+        item.forgerStakeData.forgerPublicKeys.blockSignPublicKey,
+        item.forgerStakeData.forgerPublicKeys.vrfPublicKey,
+        ZenWeiConverter.convertWeiToZennies(item.forgerStakeData.stakedAmount))
+    }.toSeq
+  }
+
 
   def setupTxContext(tx: EthereumTransaction): Unit = {
     // TODO
