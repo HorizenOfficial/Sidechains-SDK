@@ -169,12 +169,6 @@ class ForgerStakeMsgProcessorTest
   def testCanProcess(): Unit = {
     val stateView = getView
 
-    val msgBad = new Message(senderProposition, forgerStakeMessageProcessor.fakeSmartContractAddress,
-      dummyBigInteger, dummyBigInteger, dummyBigInteger, dummyBigInteger, dummyBigInteger, dummyBigInteger, new Array[Byte](0))
-
-    // befor calling init, we should not be able to process
-    assertFalse(forgerStakeMessageProcessor.canProcess(msgBad, stateView))
-
     forgerStakeMessageProcessor.init(stateView)
 
     val msg = new Message(senderProposition, forgerStakeMessageProcessor.fakeSmartContractAddress,

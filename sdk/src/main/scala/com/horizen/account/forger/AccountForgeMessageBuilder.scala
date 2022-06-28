@@ -142,7 +142,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   }
 
   // TODO the stateRoot of the genesis block
-  def getGenesisBlockRootHash =
+  val getGenesisBlockRootHash =
     new Array[Byte](32)
 
   def getStateRoot(history: AccountHistory, nextConsensusEpochNumber: ConsensusEpochNumber) : (ConsensusEpochNumber, Array[Byte]) = {
