@@ -1,18 +1,16 @@
 package com.horizen.cryptolibprovider;
 
 import com.horizen.box.WithdrawalRequestBox;
-import com.horizen.librustsidechains.Constants;
+import com.horizen.certnative.BackwardTransfer;
+import com.horizen.certnative.CreateProofResult;
+import com.horizen.certnative.NaiveThresholdSigProof;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.schnorrnative.SchnorrPublicKey;
 import com.horizen.schnorrnative.SchnorrSignature;
-import com.horizen.certnative.BackwardTransfer;
-import com.horizen.certnative.NaiveThresholdSigProof;
-import com.horizen.certnative.CreateProofResult;
 import com.horizen.utils.Pair;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -29,11 +27,20 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     }
 
     @Override
-    public List<byte[]> splitUtxoMerkleTreeRoot(byte[] utxoMerkleTreeRoot) {
-        List<FieldElement> fes = splitUtxoMerkleTreeRootToFieldElements(utxoMerkleTreeRoot);
+    public List<byte[]> getCertificateCustomFields(Optional<byte[]> utxoMerkleTreeRoot) {
+        List<FieldElement> fes = prepareCustomFieldElements(utxoMerkleTreeRoot);
         List<byte[]> fesBytes = fes.stream().map(fe -> fe.serializeFieldElement()).collect(Collectors.toList());
         fes.forEach(fe -> fe.freeFieldElement());
         return fesBytes;
+    }
+
+    private List<FieldElement> prepareCustomFieldElements(Optional<byte[]> utxoMerkleTreeRoot)  {
+        if (utxoMerkleTreeRoot.isPresent())   {
+            return splitUtxoMerkleTreeRootToFieldElements(utxoMerkleTreeRoot.get());
+        }
+        else {
+            return new ArrayList<>();
+        }
     }
 
     private List<FieldElement> splitUtxoMerkleTreeRootToFieldElements(byte[] utxoMerkleTreeRoot) {
@@ -72,13 +79,13 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
                                             byte[] endCumulativeScTxCommTreeRoot,
                                             long btrFee,
                                             long ftMinAmount,
-                                            byte[] utxoMerkleTreeRoot) {
+                                            Optional<byte[]> utxoMerkleTreeRoot) {
         BackwardTransfer[] backwardTransfers =
                 bt.stream().map(ThresholdSignatureCircuitImplZendoo::withdrawalRequestBoxToBackwardTransfer).toArray(BackwardTransfer[]::new);
 
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
-        List<FieldElement> customFe = splitUtxoMerkleTreeRootToFieldElements(utxoMerkleTreeRoot);
+        List<FieldElement> customFe = prepareCustomFieldElements(utxoMerkleTreeRoot);
 
         FieldElement messageToSign = NaiveThresholdSigProof.createMsgToSign(backwardTransfers, sidechainIdFe,
                 epochNumber, endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount, customFe);
@@ -99,7 +106,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
                                           byte[] endCumulativeScTxCommTreeRoot,
                                           long btrFee,
                                           long ftMinAmount,
-                                          byte[] utxoMerkleTreeRoot,
+                                          Optional<byte[]> utxoMerkleTreeRoot,
                                           List<Optional<byte[]>> schnorrSignatureBytesList,
                                           List<byte[]> schnorrPublicKeysBytesList,
                                           long threshold,
@@ -119,7 +126,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
 
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
-        List<FieldElement> customFe = splitUtxoMerkleTreeRootToFieldElements(utxoMerkleTreeRoot);
+        List<FieldElement> customFe = prepareCustomFieldElements(utxoMerkleTreeRoot);
 
         CreateProofResult proofAndQuality = NaiveThresholdSigProof.createProof(
                 backwardTransfers, sidechainIdFe, epochNumber, endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount,
@@ -143,7 +150,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
                                byte[] endCumulativeScTxCommTreeRoot,
                                long btrFee,
                                long ftMinAmount,
-                               byte[] utxoMerkleTreeRoot,
+                               Optional<byte[]> utxoMerkleTreeRoot,
                                byte[] constant,
                                long quality, byte[] proof,
                                boolean checkProof,
@@ -155,7 +162,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         FieldElement constantFe = FieldElement.deserialize(constant);
         FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
-        List<FieldElement> customFe = splitUtxoMerkleTreeRootToFieldElements(utxoMerkleTreeRoot);
+        List<FieldElement> customFe = prepareCustomFieldElements(utxoMerkleTreeRoot);
 
         boolean verificationResult = NaiveThresholdSigProof.verifyProof(backwardTransfers, sidechainIdFe, epochNumber,
                 endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount, constantFe, quality, customFe, proof, checkProof,
@@ -185,8 +192,9 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     }
 
     @Override
-    public boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath) {
-        return NaiveThresholdSigProof.setup(ProvingSystemType.COBOUNDARY_MARLIN, maxPks, CommonCircuit.customFieldsNumber,
+    public boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath, int customFieldsNum) {
+        return NaiveThresholdSigProof.setup(ProvingSystemType.COBOUNDARY_MARLIN, maxPks, customFieldsNum,
+                Optional.of(supportedSegmentSize),
                 provingKeyPath, verificationKeyPath, CommonCircuit.maxProofPlusVkSize);
     }
 }

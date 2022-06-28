@@ -2,30 +2,27 @@ package com.horizen
 
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.backup.BoxIterator
-
-import java.io.File
-import java.util
-import java.util.{Optional => JOptional}
 import com.horizen.block.{SidechainBlock, WithdrawalEpochCertificate}
-import com.horizen.box.{Box, CoinsBox, ForgerBox, WithdrawalRequestBox, ZenBox}
+import com.horizen.box._
+import com.horizen.box.data.ZenBoxData
 import com.horizen.consensus._
+import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.node.NodeState
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.ApplicationState
-import com.horizen.storage.{BackupStorage, SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
+import com.horizen.storage.{BackupStorage, SidechainStateForgerBoxStorage, SidechainStateStorage}
 import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import scorex.core._
-import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, MinimalState, ModifierValidation, Removal, TransactionValidation}
+import scorex.core.transaction.state._
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging, bytesToId}
 
+import java.io.File
 import java.math.{BigDecimal, MathContext}
-import com.horizen.box.data.ZenBoxData
-import com.horizen.companion.SidechainBoxesCompanion
-import com.horizen.cryptolibprovider.CryptoLibProvider
-
+import java.util
+import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
@@ -33,7 +30,7 @@ import scala.util.{Failure, Success, Try}
 
 class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
                                        forgerBoxStorage: SidechainStateForgerBoxStorage,
-                                       utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
+                                       utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
                                        val params: NetworkParams,
                                        override val version: VersionTag,
                                        val applicationState: ApplicationState)
@@ -91,7 +88,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   }
 
   override def utxoMerklePath(boxId: Array[Byte]): Option[Array[Byte]] = {
-    utxoMerkleTreeStorage.getMerklePath(boxId)
+    utxoMerkleTreeProvider.getMerklePath(boxId)
   }
 
   def hasCeased: Boolean = stateStorage.hasCeased
@@ -119,7 +116,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   // Validate block itself: version and semanticValidity for block
   override def validate(mod: SidechainBlock): Try[Unit] = Try {
     require(versionToBytes(version).sameElements(idToBytes(mod.parentId)),
-      s"Incorrect state version!: ${mod.parentId} found, " + s"${version} expected")
+      s"Incorrect state version!: ${mod.parentId} found, " + s"$version expected")
 
     if(hasCeased) {
       throw new IllegalStateException(s"Can't apply Block ${mod.id}, because the sidechain has ceased.")
@@ -199,29 +196,34 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
     // Check that BTs are identical for both Cert and State
     topQualityCertificate.backwardTransferOutputs.zip(expectedWithdrawalRequests).foreach {
-      case (certOutput, expectedWithdrawalRequestBox) => {
+      case (certOutput, expectedWithdrawalRequestBox) =>
         if(certOutput.amount != expectedWithdrawalRequestBox.value() ||
               !util.Arrays.equals(certOutput.pubKeyHash, expectedWithdrawalRequestBox.proposition().bytes())) {
           throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate backward transfers " +
             s"data is different than expected. Node's active chain is the fork from MC perspective.")
         }
-      }
     }
 
-    if(topQualityCertificate.fieldElementCertificateFields.size != 2)
-      throw new IllegalArgumentException(s"Top quality certificate should contain exactly 2 custom fields.")
+    if (params.isCSWEnabled) {
+      if (topQualityCertificate.fieldElementCertificateFields.size != CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW)
+        throw new IllegalArgumentException(s"Top quality certificate should contain exactly ${CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW} custom fields.")
 
-    utxoMerkleTreeRoot(certReferencedEpochNumber) match {
-      case Some(expectedMerkleTreeRoot) =>
-        val certUtxoMerkleRoot = CryptoLibProvider.sigProofThresholdCircuitFunctions.reconstructUtxoMerkleTreeRoot(
-          topQualityCertificate.fieldElementCertificateFields.head.fieldElementBytes(params.sidechainCreationVersion),
-          topQualityCertificate.fieldElementCertificateFields(1).fieldElementBytes(params.sidechainCreationVersion)
-        )
-        if(!expectedMerkleTreeRoot.sameElements(certUtxoMerkleRoot))
-          throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate utxo merkle tree root " +
-            s"data is different than expected. Node's active chain is the fork from MC perspective.")
-      case None =>
-        throw new IllegalArgumentException(s"There is no utxo merkle tree root stored for the referenced epoch $certReferencedEpochNumber.")
+      utxoMerkleTreeRoot(certReferencedEpochNumber) match {
+        case Some(expectedMerkleTreeRoot) =>
+          val certUtxoMerkleRoot = CryptoLibProvider.sigProofThresholdCircuitFunctions.reconstructUtxoMerkleTreeRoot(
+            topQualityCertificate.fieldElementCertificateFields.head.fieldElementBytes(params.sidechainCreationVersion),
+            topQualityCertificate.fieldElementCertificateFields(1).fieldElementBytes(params.sidechainCreationVersion)
+          )
+          if (!expectedMerkleTreeRoot.sameElements(certUtxoMerkleRoot))
+            throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate utxo merkle tree root " +
+              s"data is different than expected. Node's active chain is the fork from MC perspective.")
+        case None =>
+          throw new IllegalArgumentException(s"There is no utxo merkle tree root stored for the referenced epoch $certReferencedEpochNumber.")
+      }
+    }
+    else {
+      if (topQualityCertificate.fieldElementCertificateFields.size != CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW )
+        throw new IllegalArgumentException(s"Top quality certificate should contain exactly ${CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW} custom fields when ceased sidechain withdrawal is disabled.")
     }
   }
 
@@ -337,17 +339,16 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         otherBoxesToAppend.append(box)
     })
 
-    val coinBoxesToAppend = boxesToAppend.filter(box => box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]])
-
     applicationState.onApplyChanges(this,
       version.data,
       boxesToAppend.asJava,
       changes.toRemove.map(_.boxId.array).asJava) match {
       case Success(appState) =>
         val boxIdsToRemoveSet = changes.toRemove.map(r => new ByteArrayWrapper(r.boxId)).toSet
-        val updatedUtxoMerkleTreeStorage = utxoMerkleTreeStorage.update(version, coinBoxesToAppend, boxIdsToRemoveSet).get
+
+        val updatedUtxoMerkleTreeProvider = utxoMerkleTreeProvider.update(version, boxesToAppend, boxIdsToRemoveSet).get
         val utxoMerkleTreeRootOpt: Option[Array[Byte]] = if(isWithdrawalEpochFinished) {
-          Some(updatedUtxoMerkleTreeStorage.getMerkleTreeRoot)
+          updatedUtxoMerkleTreeProvider.getMerkleTreeRoot
         } else {
           None
         }
@@ -356,7 +357,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           stateStorage.update(version, withdrawalEpochInfo, otherBoxesToAppend.toSet, boxIdsToRemoveSet,
             withdrawalRequestsToAppend, consensusEpoch, topQualityCertificateOpt, blockFeeInfo, utxoMerkleTreeRootOpt, scHasCeased).get,
           forgerBoxStorage.update(version, forgerBoxesToAppend, boxIdsToRemoveSet).get,
-          updatedUtxoMerkleTreeStorage,
+          updatedUtxoMerkleTreeProvider,
           params,
           newVersion,
           appState
@@ -384,14 +385,14 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
     val forgerBoxStorageNew = forgerBoxStorage.rollback(bawVersion).get
     val stateStorageNew = stateStorage.rollback(bawVersion).get
-    val utxoMerkleTreeStorageNew = utxoMerkleTreeStorage.rollback(bawVersion).get
+    val utxoMerkleTreeProviderNew = utxoMerkleTreeProvider.rollback(bawVersion).get
 
     applicationState.onRollback(version) match {
       case Success(appState) => {
         new SidechainState(
           stateStorageNew,
           forgerBoxStorageNew,
-          utxoMerkleTreeStorageNew,
+          utxoMerkleTreeProviderNew,
           params,
           to,
           appState)
@@ -462,9 +463,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     if (appStateVersionOk) {
       // appState is aligned with the last storage version, require that also intermediate storages have the same version
 
-      // TODO csw capability will be optional, related utxo mrkl tree storage might even be empty
-      if (utxoMerkleTreeStorage.lastVersionId.isDefined) {
-        val versionUmt = bytesToId(utxoMerkleTreeStorage.lastVersionId.get.data())
+      if (params.isCSWEnabled) {
+        val versionUmt = bytesToId(utxoMerkleTreeProvider.lastVersionId.get.data())
         require(versionFb == versionUmt, "ForgerBox and Utxo storage versions must be aligned")
       }
 
@@ -569,32 +569,32 @@ object SidechainState
 
     // Q: Do we need to call some static method of ApplicationState?
     // A: Probably yes. To remove some out of date boxes, like VoretBallotRight box for previous voting epoch.
-    // Note: we need to implement a lot of limitation for changes from ApplicationState (only deletion, only non coin realted boxes, etc.)
+    // Note: we need to implement a lot of limitation for changes from ApplicationState (only deletion, only non coin related boxes, etc.)
   }
 
   private[horizen] def restoreState(stateStorage: SidechainStateStorage,
                                     forgerBoxStorage: SidechainStateForgerBoxStorage,
-                                    utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
+                                    utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
                                     params: NetworkParams,
                                     applicationState: ApplicationState): Option[SidechainState] = {
 
-    if (!stateStorage.isEmpty)
-      Some(new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage,
+    if (!stateStorage.isEmpty) {
+      Some(new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeProvider,
         params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState))
-    else
+    } else
       None
   }
 
   private[horizen] def createGenesisState(stateStorage: SidechainStateStorage,
                                           forgerBoxStorage: SidechainStateForgerBoxStorage,
-                                          utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
+                                          utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
                                           backupStorage: BackupStorage,
                                           params: NetworkParams,
                                           applicationState: ApplicationState,
                                           genesisBlock: SidechainBlock): Try[SidechainState] = Try {
 
     if (stateStorage.isEmpty) {
-      var state = new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, idToVersion(genesisBlock.parentId), applicationState)
+      var state = new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, params, idToVersion(genesisBlock.parentId), applicationState)
       if (!backupStorage.isEmpty) {
         state = state.restoreBackup(backupStorage.getBoxIterator, versionToBytes(idToVersion(genesisBlock.parentId))).get
       }

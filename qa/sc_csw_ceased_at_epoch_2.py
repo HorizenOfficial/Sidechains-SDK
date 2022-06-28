@@ -5,7 +5,7 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
     SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import fail, assert_equal, assert_true, assert_false, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain
+    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, certificate_field_config_csw_enabled
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, generate_next_blocks, generate_next_block, if_csws_were_generated
 from SidechainTestFramework.sc_forging_util import *
@@ -61,7 +61,7 @@ class SCCswCeasedAtEpoch2(SidechainTestFramework):
             cert_submitter_enabled=True,  # enable submitter
             cert_signing_enabled=True  # enable signer
         )
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length), sc_node_configuration)
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length, csw_enabled=True), sc_node_configuration)
         self.sidechain_id = bootstrap_sidechain_nodes(self.options, network).sidechain_id
 
     def sc_setup_nodes(self):
@@ -72,6 +72,27 @@ class SCCswCeasedAtEpoch2(SidechainTestFramework):
         self.sync_all()
         mc_node = self.nodes[0]
         sc_node = self.sc_nodes[0]
+
+        # Check CSW is enabled on SC node
+        is_csw_enabled = sc_node.csw_isCSWEnabled()["result"]["cswEnabled"]
+        assert_true(is_csw_enabled, "Ceased Sidechain Withdrawal expected to be enabled.")
+
+        # Checks that CSW is enabled in Sidechain creation transaction on Mainchain
+        mc_block_height = mc_node.getblockcount()
+        mc_block = mc_node.getblock(str(mc_block_height))
+        mc_sc_creation_tx_id = mc_block["tx"][1]
+        mc_sc_creation_tx = mc_node.getrawtransaction(mc_sc_creation_tx_id, 1)
+
+        vsc_ccout_ = mc_sc_creation_tx["vsc_ccout"][0]
+        assert_true(vsc_ccout_["vFieldElementCertificateFieldConfig"] == certificate_field_config_csw_enabled,
+                    "Custom Field Elements Configuration in MC are wrong. Expected: " + format(certificate_field_config_csw_enabled) +
+                    ", actual: " + format(vsc_ccout_["vFieldElementCertificateFieldConfig"]))
+        assert_true("wCeasedVk" in vsc_ccout_, "CSW verification key should be present")
+
+        # Checks that Sidechain creation transaction is in SC block
+        mc_block_hash = mc_sc_creation_tx["blockhash"]
+        sc_block_id = sc_node.block_best()["result"]["block"]["id"]
+        check_mcreference_presence(mc_block_hash, sc_block_id, sc_node)
 
         # ******************** EPOCH 0 START ********************
         epoch_mc_blocks_left = self.sc_withdrawal_epoch_length - 1
@@ -284,7 +305,7 @@ class SCCswCeasedAtEpoch2(SidechainTestFramework):
         assert_equal("CEASED", sc_info['state'], "Sidechain expected to be ceased.")
         # Same for SC
         has_ceased = sc_node.csw_hasCeased()["result"]["state"]
-        assert_true("Sidechain expected to be ceased.", has_ceased)
+        assert_true(has_ceased, "Sidechain expected to be ceased.")
 
         # Check SC node owned boxes:
         # 3 FTs must be spent from wallet perspective
@@ -300,6 +321,10 @@ class SCCswCeasedAtEpoch2(SidechainTestFramework):
         for opened_box_id in opened_box_ids:
             assert_false(any(box["id"] == opened_box_id for box in all_zen_boxes),
                         "Opened box appeared in the wallet: " + opened_box_id)
+
+        # Check CSW is enabled on SC node
+        is_csw_enabled = sc_node.csw_isCSWEnabled()["result"]["cswEnabled"]
+        assert_true(is_csw_enabled, "Ceased Sidechain Withdrawal expected to be enabled.")
 
         # Check CSW available boxes on SC node
         csw_boxes = [ft_box_1, ft_box_2, ft_box_3, ft_box_4, ft_box_5, ft_box_6]

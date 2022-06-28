@@ -1,13 +1,17 @@
 package com.horizen.chain
 
+import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.block.SidechainBlock
 import com.horizen.cryptolibprovider.CumulativeHashFunctions
+import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
 import scala.collection.mutable.ArrayBuffer
 
+@JsonView(Array(classOf[Views.Default]))
+@JsonIgnoreProperties(Array("serializer"))
 case class MainchainHeaderBaseInfo (hash: MainchainHeaderHash,
                                     cumulativeCommTreeHash: Array[Byte]) extends BytesSerializable {
   override type M = MainchainHeaderBaseInfo

@@ -2,7 +2,7 @@ import json
 
 
 # execute a transaction/sendCoinsToAddress call
-def sendCoinsToAddress(sidechainNode, address, amount, fee):
+def sendCoinsToAddress(sidechainNode, address, amount, fee, api_key = None):
     j = {
         "outputs": [
             {
@@ -13,5 +13,8 @@ def sendCoinsToAddress(sidechainNode, address, amount, fee):
         "fee": fee
     }
     request = json.dumps(j)
-    response = sidechainNode.transaction_sendCoinsToAddress(request)
+    if (api_key != None):
+        response = sidechainNode.transaction_sendCoinsToAddress(request, api_key)
+    else:
+        response = sidechainNode.transaction_sendCoinsToAddress(request)
     return response["result"]["transactionId"]

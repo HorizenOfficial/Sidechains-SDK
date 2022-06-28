@@ -1,14 +1,13 @@
 package com.horizen.fixtures
 
-import com.horizen.SidechainMemoryPool
-import com.horizen.SidechainTypes
+import com.horizen.{SidechainMemoryPool, SidechainMemoryPoolEntry}
 
 import scala.collection.concurrent.TrieMap
 
 trait SidechainMemoryPoolFixture {
 
   def getSidechainMemoryPool () : SidechainMemoryPool = {
-    new SidechainMemoryPool(new TrieMap[String, SidechainTypes#SCBT]())
+    new SidechainMemoryPool(new TrieMap[String, SidechainMemoryPoolEntry]())
   }
 
 }

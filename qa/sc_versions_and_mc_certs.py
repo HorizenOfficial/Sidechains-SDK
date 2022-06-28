@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 
-import codecs
 import pprint
 import time
-from decimal import Decimal
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.mc_test.mc_test import CertTestUtils, generate_random_field_element_hex
-from test_framework.util import assert_false, start_nodes, \
+from test_framework.mc_test.mc_test import CertTestUtils
+from test_framework.util import start_nodes, \
     websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, generate_next_blocks, generate_next_block, \

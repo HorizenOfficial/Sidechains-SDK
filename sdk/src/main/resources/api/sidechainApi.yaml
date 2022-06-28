@@ -29,7 +29,7 @@ paths:
       tags:
         - block
       summary: finds block by id
-      description: Returns a single block
+      description: Returns a single block and its height
       operationId: getBlock
       requestBody:
         content:
@@ -57,6 +57,9 @@ paths:
                         type: string
                       block:
                         $ref: '#/components/schemas/SidechainBlock'
+                      height:
+                        type: integer
+                        format: int64
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -215,6 +218,48 @@ paths:
                         type: array
                         items:
                           $ref: '#/components/schemas/Box'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /block/findBlockInfoById:
+    post:
+      tags:
+        - block
+      summary: finds SidechainBlockInfo by id
+      description: returns SidechainBlockInfo for a single block and if it is in the active chain
+      operationId: findBlockInfoById
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - blockId
+              properties:
+                blockId:
+                  description: ID of block to return
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      blockInfo:
+                        $ref: '#/components/schemas/SidechainBlockInfo'
+                      isInActiveChain:
+                        type: boolean
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -1205,6 +1250,155 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
+  /wallet/importSecret:
+    post:
+      tags:
+        - wallet
+      summary: Import a secret inside the wallet
+      description: Import a secret and consequentially the corresponding proposition inside the wallet
+      operationId: importSecret
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                privKey:
+                  description: The secret to import
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      proposition:
+                        $ref: '#/components/schemas/Proposition'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /wallet/exportSecret:
+    post:
+      tags:
+        - wallet
+      summary: Returns the secret corresponding to a proposition.
+      description: Returns the secret corresponding to a proposition (taken from the wallet).
+      operationId: exportSecret
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                publickey:
+                  description: The proposition corresponding to the secret to export
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      privKey:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /wallet/importSecrets:
+    post:
+      tags:
+        - wallet
+      summary: Import all the secrets taken from a file.
+      description: Import all the secrets stored to a file. Each line of the file must be in the format "SECRET" + " " + "PROPOSITION"
+      operationId: importSecrets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                path:
+                  description: Path to the file contaning the secrets
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    $ref: '#/components/schemas/ImportSecretsResponse'
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /wallet/dumpSecrets:
+    post:
+      tags:
+        - wallet
+      summary: Export all the secrets taken from a file.
+      description: Export all the secrets stored to a file. Each line of the file will be in the format "SECRET" + " " + "PROPOSITION"
+      operationId: dumpSecrets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                path:
+                  description: Path where the files will be created
+                  type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
   # Sidechain node operations
   /node/allPeers:
     post:
@@ -1330,6 +1524,90 @@ paths:
                     $ref: '#/components/schemas/BlacklistedPeersNode'
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /node/stop:
+    post:
+      tags:
+        - node
+      summary: stop the node
+      description: stop the node in a gracefully way
+      operationId: stop
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /node/storageVersions:
+    post:
+      tags:
+        - node
+      summary: find versions for all node storages
+      description: Returns the list of all node storage versions
+      operationId: getNodeStorageVersions
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      listOfVersions:
+                        type: object
+                        additionalProperties:
+                          type: string
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /node/sidechainId:
+    post:
+      tags:
+        - node
+      summary: Returns the sidechain id
+      description: Returns the sidechain id
+      operationId: getSidechainId
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      sidechainId:
+                        type: string
+                    error:
+                      $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
           description: any kind of http error
           content:
@@ -1742,6 +2020,36 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
+  /csw/isCSWEnabled:
+    post:
+      tags:
+        - csw
+      summary: returns if the Ceased Sidechain Withdrawal is enabled in the Sidechain
+      description: returns if the Ceased Sidechain Withdrawal is enabled in the Sidechain
+      operationId: isCSWEnabled
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      cswEnabled:
+                        type: boolean
+                        description: True or False depending if CSW is enabled
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
   /csw/generateCswProof:
     post:
       tags:
@@ -1890,7 +2198,7 @@ paths:
                     type: object
                     properties:
                       nullifier:
-                        type: String
+                        type: string
                         description: nullifier for given box id
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
@@ -1925,6 +2233,32 @@ components:
         description:
           type: string
         detail:
+          type: string
+
+    ImportSecretsResponse:
+      description: The response of the importSecrets endpoint
+      type: object
+      properties:
+        successfullyAdded:
+          type: integer
+          format: int32
+        failedToAdd:
+          type: integer
+          format: int32
+        summary:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportSecretDetailError'
+
+    ImportSecretDetailError:
+      description: Error generated while trying to import a secret in the importSecrets endpoint
+      type: object
+      properties:
+        lineNumber:
+          type: integer
+          format: int32
+          description: File line number of the secret that was not imported.
+        description:
           type: string
 
     BlacklistedPeersNode:
@@ -2085,6 +2419,34 @@ components:
         signature:
           $ref: '#/components/schemas/Signature25519'
 
+    SidechainBlockInfo:
+      type: object
+      properties:
+        height:
+          type: integer
+        score:
+          type: integer
+          format: int64
+        parentId:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+        mainchainHeaderBaseInfo:
+          type: array
+          items:
+            $ref: '#/components/schemas/MainchainHeaderBaseInfo'
+        mainchainReferenceDataHeaderHashes:
+          type: array
+          items:
+            type: string
+        withdrawalEpochInfo:
+          $ref: '#/components/schemas/WithdrawalEpochInfo'
+        vrfOutputOpt:
+          $ref: '#/components/schemas/VrfOutput'
+        lastBlockInPreviousConsensusEpoch:
+          type: string
+
     CswInfo:
       type: object
       properties:
@@ -2111,4 +2473,26 @@ components:
         scProof:
           type: string
         receiverAddress:
+          type: string
+
+    MainchainHeaderBaseInfo:
+      type: object
+      properties:
+        hash:
+          type: string
+        cumulativeCommTreeHash:
+          type: string
+
+    WithdrawalEpochInfo:
+      type: object
+      properties:
+        epoch:
+          type: integer
+        lastEpochIndex:
+          type: integer
+
+    VrfOutput:
+      type: object
+      properties:
+        bytes:
           type: string

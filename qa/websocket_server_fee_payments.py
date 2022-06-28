@@ -7,7 +7,7 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from httpCalls.block.getFeePayments import http_block_getFeePayments
 from test_framework.util import assert_equal, assert_true, websocket_port_by_mc_node_index,\
     forward_transfer_to_sidechain
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, generate_next_blocks
+from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, generate_next_blocks, start_sc_nodes
 from httpCalls.wallet.balance import http_wallet_balance
 from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress
 from SidechainTestFramework.websocket_client import WebsocketClient
@@ -38,6 +38,7 @@ Workflow modelled in this test:
 
 class SCWsServerFeePayments(SidechainTestFramework):
     blocks = []
+    number_of_sidechain_nodes = 1
     withdrawal_epoch_length = 10
 
     def sc_setup_chain(self):
@@ -49,6 +50,10 @@ class SCWsServerFeePayments(SidechainTestFramework):
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, self.withdrawal_epoch_length), sc_node_1_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
+
+    def sc_setup_nodes(self):
+        # Start 1 SC node
+        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
 
     def run_test(self):
         print("SC ws server fee payments test is starting...")

@@ -5,4 +5,5 @@ abstract class Transaction
 {
   def transactionTypeId: Byte
   def version: Byte
+  def size(): Long
 }

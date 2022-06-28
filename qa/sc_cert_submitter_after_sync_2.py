@@ -4,7 +4,7 @@ import time
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import fail, assert_false, assert_true, start_nodes, \
+from test_framework.util import start_nodes, \
     websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, generate_next_block, connect_sc_nodes, sync_sc_blocks
@@ -58,7 +58,7 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
         )
 
         network = SCNetworkConfiguration(
-            SCCreationInfo(mc_node, self.sc_creation_amount, self.sc_withdrawal_epoch_length),
+            SCCreationInfo(mc_node, self.sc_creation_amount, self.sc_withdrawal_epoch_length, csw_enabled=True),
             sc_node_1_configuration,
             sc_node_2_configuration)
 
