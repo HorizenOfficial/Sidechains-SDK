@@ -25,6 +25,7 @@ import org.web3j.crypto.{Keys, RawTransaction, Sign, SignedRawTransaction}
 import scorex.core.settings.RESTApiSettings
 import org.web3j.crypto.Sign.SignatureData
 import com.horizen.account.wallet.AccountWallet
+import com.horizen.utils.BytesUtils
 
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
@@ -73,6 +74,33 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     }
   }
 
+  def getFittingSecret(nodeView: AccountNodeView, fromAddress: Option[String], txValueInWei: BigInteger)
+  : Option[PrivateKeySecp256k1] = {
+    val wallet = nodeView.getNodeWallet
+    val allAccounts = wallet.secretsOfType(classOf[PrivateKeySecp256k1])
+    val secret = allAccounts.find(
+      a => (fromAddress.isEmpty ||
+        BytesUtils.toHexString(a.asInstanceOf[PrivateKeySecp256k1].publicImage
+          .address) == fromAddress.get) &&
+        nodeView.getNodeState.getBalance(a.asInstanceOf[PrivateKeySecp256k1].publicImage.address)
+          .getOrElse(BigInteger.valueOf(0)).compareTo(txValueInWei) >= 0// TODO account for gas
+    )
+
+    if (secret.nonEmpty) Option.apply(secret.asInstanceOf[PrivateKeySecp256k1])
+    else Option.empty[PrivateKeySecp256k1]
+  }
+
+  def signTransactionWithSecret(secret: PrivateKeySecp256k1, tx: EthereumTransaction): EthereumTransaction = {
+    val messageToSign = tx.messageToSign()
+    val msgSignature = secret.sign(messageToSign)
+    new EthereumTransaction(
+      new SignedRawTransaction(
+        tx.getTransaction.getTransaction,
+        new SignatureData(msgSignature.getV, msgSignature.getR, msgSignature.getV)
+      )
+    )
+  }
+
   /**
    * Create and sign a core transaction, specifying regular outputs and fee. Search for and spend proper amount of regular coins. Then validate and send the transaction.
    * Return the new transaction as a hex string if format = false, otherwise its JSON representation.
@@ -82,24 +110,16 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       // lock the view and try to create EvmTransaction
       // TODO also account for gas fees
       applyOnNodeView { sidechainNodeView =>
-        val wallet = sidechainNodeView.getNodeWallet//
         val valueInWei = ZenWeiConverter.convertZenniesToWei(body.value)
-        // get all accounts
-        val allAccounts = wallet.secretsOfType(classOf[PrivateKeySecp256k1])
-        val secret = allAccounts.find(
-          a =>
-            sidechainNodeView.getNodeState.getBalance(a.asInstanceOf[PrivateKeySecp256k1].publicImage.address)
-              .getOrElse(BigInteger.valueOf(0)).compareTo(valueInWei) >= 0// TODO account for gas
-        )
+        val destAddress = body.to
+        val gasPrice = BigInteger.valueOf(1) // TODO actual gas implementation
+        val gasLimit = BigInteger.valueOf(1) // TODO actual gas implementation
+        // check if the fromAddress is either empty or it fits and the value is high enough
+        val secret = getFittingSecret(sidechainNodeView, body.from, valueInWei)
         secret match {
           case Some(secret) =>
-            val accountSecret = secret.asInstanceOf[PrivateKeySecp256k1]
             val nonce = BigInteger.valueOf(
-              sidechainNodeView.getNodeState.getAccount(accountSecret.publicImage.address).nonce)
-
-            val destAddress = body.toAddress
-            val gasPrice = BigInteger.valueOf(1) // TODO actual gas implementation
-            val gasLimit = BigInteger.valueOf(1) // TODO actual gas implementation
+              sidechainNodeView.getNodeState.getAccount(secret.publicImage.address).nonce)
             val tmpTx = new EthereumTransaction(
               destAddress,
               nonce,
@@ -109,15 +129,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               "",
               null
             )
-            val messageToSign = tmpTx.messageToSign()
-            val msgSignature = accountSecret.sign(messageToSign)
-            val ethereumTransaction = new EthereumTransaction(
-              new SignedRawTransaction(
-                tmpTx.getTransaction.getTransaction,
-                new SignatureData(msgSignature.getV, msgSignature.getR, msgSignature.getV)
-              )
-            )
-            validateAndSendTransaction(ethereumTransaction)
+            validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
           case None =>
             ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
         }
@@ -130,27 +142,37 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
    * Return the new transaction as a hex string if format = false, otherwise its JSON representation.
    */
   def createEIP1559Transaction: Route = (post & path("createEIP1559Transaction")) {
-    entity(as[ReqCreateEIP1559Transaction]) { body =>
-      val ethTx = new EthereumTransaction(
-        body.payload.chainId,
-        body.payload.to.orNull,
-        body.payload.nonce,
-        body.payload.gasLimit,
-        body.payload.maxPriorityFeePerGas,
-        body.payload.maxFeePerGas,
-        body.payload.value,
-        body.payload.data,
-        if (body.payload.signature_v.isDefined)
-          new SignatureData(
-            body.payload.signature_v.get,
-            body.payload.signature_r.get,
-            body.payload.signature_s.get)
-        else
-          null
-      )
+    entity(as[ReqEIP1559Transaction]) { body =>
       // lock the view and try to create CoreTransaction
       applyOnNodeView { sidechainNodeView =>
-        validateAndSendTransaction(ethTx)
+        var signedTx: EthereumTransaction = new EthereumTransaction(
+          body.chainId,
+          body.to.orNull,
+          body.nonce,
+          body.gasLimit,
+          body.maxPriorityFeePerGas,
+          body.maxFeePerGas,
+          body.value,
+          body.data,
+          if (body.signature_v.isDefined)
+            new SignatureData(
+              body.signature_v.get,
+              body.signature_r.get,
+              body.signature_s.get)
+          else
+            null
+        );
+        if (!signedTx.isSigned) {
+          val secret =
+            getFittingSecret(sidechainNodeView, body.from, signedTx.getValue)
+          secret match {
+            case Some(secret) =>
+              signedTx = signTransactionWithSecret(secret, signedTx)
+            case None =>
+              return ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
+          }
+        }
+        validateAndSendTransaction(signedTx)
       }
     }
   }
@@ -159,26 +181,35 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
    * Create a legacy evm transaction, specifying inputs.
    */
   def createLegacyTransaction: Route = (post & path("createLegacyTransaction")) {
-    entity(as[ReqCreateLegacyTransaction]) { body =>
-      //  TODO uncomment once EVM-161 is merged
-      val ethTx = new EthereumTransaction(
-        body.payload.to.orNull,
-        body.payload.nonce,
-        body.payload.gasPrice,
-        body.payload.gasLimit,
-        body.payload.value,
-        body.payload.data,
-        if (body.payload.signature_v.isDefined)
-          new SignatureData(
-            body.payload.signature_v.get,
-            body.payload.signature_r.get,
-            body.payload.signature_s.get)
-        else
-          null
-      )
+    entity(as[ReqLegacyTransaction]) { body =>
       // lock the view and try to send the tx
       applyOnNodeView { sidechainNodeView =>
-        validateAndSendTransaction(ethTx)
+        var signedTx = new EthereumTransaction(
+          body.to.orNull,
+          body.nonce,
+          body.gasPrice,
+          body.gasLimit,
+          body.value,
+          body.data,
+          if (body.signature_v.isDefined)
+            new SignatureData(
+              body.signature_v.get,
+              body.signature_r.get,
+              body.signature_s.get)
+          else
+            null
+        )
+        if (!signedTx.isSigned) {
+          val secret =
+            getFittingSecret(sidechainNodeView, body.from, signedTx.getValue)
+          secret match {
+            case Some(secret) =>
+              signedTx = signTransactionWithSecret(secret, signedTx)
+            case None =>
+              return ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
+          }
+        }
+        validateAndSendTransaction(signedTx)
       }
     }
   }
@@ -187,30 +218,40 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
    * Create a raw evm transaction, specifying the bytes.
    */
   def sendRawTransaction: Route = (post & path("createRawTransaction")) {
-    entity(as[ReqCreateRawTransaction]) { body =>
-      val ethTx = EthereumTransactionSerializer.getSerializer.parseBytes(body.payload)
+    entity(as[ReqRawTransaction]) { body =>
       // lock the view and try to create CoreTransaction
       applyOnNodeView { sidechainNodeView =>
-        validateAndSendTransaction(ethTx)
+        var signedTx = EthereumTransactionSerializer.getSerializer.parseBytes(body.payload)
+        if (!signedTx.isSigned) {
+          val secret =
+            getFittingSecret(sidechainNodeView, body.from, signedTx.getValue)
+          secret match {
+            case Some(secret) =>
+              signedTx = signTransactionWithSecret(secret, signedTx)
+            case None =>
+              return ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
+          }
+        }
+        validateAndSendTransaction(signedTx)
       }
     }
   }
 
   def signTransaction: Route = (post & path("signTransaction")) {
-    entity(as[ReqCreateRawTransaction]) {
+    entity(as[ReqRawTransaction]) {
       body => {
-        val tmpEtherTx = EthereumTransactionSerializer.getSerializer.parseBytes(body.payload)
-        val message = tmpEtherTx.messageToSign()
-
-        // where does the key come from? It has to be the sender's key that's used to sign???
-        val pair = Keys.createEcKeyPair
-        val msgSignature = Sign.signMessage(message, pair, true)
-        val ethereumTransaction = new EthereumTransaction(
-          new SignedRawTransaction(
-            tmpEtherTx.getTransaction.getTransaction,
-            msgSignature)
-        )
-        ApiResponseUtil.toResponse(defaultTransactionResponseRepresentation(ethereumTransaction))
+        applyOnNodeView { sidechainNodeView =>
+          var signedTx = EthereumTransactionSerializer.getSerializer.parseBytes(body.payload)
+          val secret =
+            getFittingSecret(sidechainNodeView, body.from, signedTx.getValue)
+          secret match {
+            case Some(secret) =>
+              signedTx = signTransactionWithSecret(secret, signedTx)
+            case None =>
+              return ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
+          }
+          ApiResponseUtil.toResponse(defaultTransactionResponseRepresentation(signedTx))
+        }
       }
     }
   }
@@ -299,9 +340,10 @@ object AccountTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqSendCoinsToAddress(toAddress: String,
+  private[api] case class ReqSendCoinsToAddress(from: Option[String],
+                                                to: String,
                                                 @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long) {
-    require(toAddress.nonEmpty, "Empty destination address")
+    require(to.nonEmpty, "Empty destination address")
     require(value >= 0, "Negative value. Value must be >= 0")
   }
 
@@ -334,19 +376,19 @@ object AccountTransactionRestScheme {
     require(regularOutputs.nonEmpty || forgerOutputs.nonEmpty, "Empty outputs")
   }
 
-
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class EIP1559TransactionPayload(chainId: Long,
-                                                    to: Option[String],
-                                                    nonce: BigInteger,
-                                                    gasLimit: BigInteger,
-                                                    maxPriorityFeePerGas: BigInteger,
-                                                    maxFeePerGas: BigInteger,
-                                                    value: BigInteger,
-                                                    data: String,
-                                                    signature_v: Option[Array[Byte]],
-                                                    signature_r: Option[Array[Byte]],
-                                                    signature_s: Option[Array[Byte]]) {
+  private[api] case class ReqEIP1559Transaction(chainId: Long,
+                                                from: Option[String],
+                                                to: Option[String],
+                                                nonce: BigInteger,
+                                                gasLimit: BigInteger,
+                                                maxPriorityFeePerGas: BigInteger,
+                                                maxFeePerGas: BigInteger,
+                                                value: BigInteger,
+                                                data: String,
+                                                signature_v: Option[Array[Byte]],
+                                                signature_r: Option[Array[Byte]],
+                                                signature_s: Option[Array[Byte]]) {
     require(
       (signature_v.nonEmpty && signature_r.nonEmpty && signature_s.nonEmpty)
         || (signature_v.isEmpty && signature_r.isEmpty && signature_s.isEmpty),
@@ -359,15 +401,16 @@ object AccountTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class LegacyTransactionPayload(to: Option[String],
-                                                   nonce: BigInteger,
-                                                   gasLimit: BigInteger,
-                                                   gasPrice: BigInteger,
-                                                   value: BigInteger,
-                                                   data: String,
-                                                   signature_v: Option[Array[Byte]],
-                                                   signature_r: Option[Array[Byte]],
-                                                   signature_s: Option[Array[Byte]]) {
+  private[api] case class ReqLegacyTransaction(to: Option[String],
+                                               from: Option[String],
+                                               nonce: BigInteger,
+                                               gasLimit: BigInteger,
+                                               gasPrice: BigInteger,
+                                               value: BigInteger,
+                                               data: String,
+                                               signature_v: Option[Array[Byte]],
+                                               signature_r: Option[Array[Byte]],
+                                               signature_s: Option[Array[Byte]]) {
     require(
       (signature_v.nonEmpty && signature_r.nonEmpty && signature_s.nonEmpty)
         || (signature_v.isEmpty && signature_r.isEmpty && signature_s.isEmpty),
@@ -378,15 +421,8 @@ object AccountTransactionRestScheme {
     require(to.isEmpty || to.get.length == 42 /* address length with prefix 0x */)
   }
 
-
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqCreateEIP1559Transaction(payload: EIP1559TransactionPayload)
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqCreateLegacyTransaction(payload: LegacyTransactionPayload)
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqCreateRawTransaction(payload: Array[Byte]);
+  private[api] case class ReqRawTransaction(from: Option[String], payload: Array[Byte]);
 
 
 }
