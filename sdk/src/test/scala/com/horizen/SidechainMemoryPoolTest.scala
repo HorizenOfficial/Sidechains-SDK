@@ -13,6 +13,7 @@ import scorex.util.ModifierId
 import org.scalatestplus.mockito.MockitoSugar
 
 import scala.collection.JavaConverters._
+import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 
 class SidechainMemoryPoolTest
@@ -26,7 +27,8 @@ class SidechainMemoryPoolTest
   def remove(): Unit = {
     val memoryPool = SidechainMemoryPool.createEmptyMempool(getMockedMempoolSettings(300, 0))
     val tx = getRegularTransaction
-    var tx2 = getCompatibleTransaction
+    val tx2 = getCompatibleTransaction
+    val tx3 = getRegularRandomTransaction(10,1)
     val txId: ModifierId = ModifierId @@ tx.id
     assertEquals("maxPoolSizeBytes must be equals to 300MB size",
       memoryPool.maxPoolSizeBytes, (300*1024*1024))
@@ -37,6 +39,12 @@ class SidechainMemoryPoolTest
 
     assertEquals("Put operation must be success.", memoryPool.put(tx2).isSuccess,
       true)
+    assertEquals("Size must be 2.", memoryPool.size, 2)
+    assertEquals("usedPoolSizeBytes must be equals to tx1+tx2 size", memoryPool.usedPoolSizeBytes,
+      tx.size() + tx2.size())
+
+    //remove unexisting tx
+    memoryPool.remove(tx3)
     assertEquals("Size must be 2.", memoryPool.size, 2)
     assertEquals("usedPoolSizeBytes must be equals to tx1+tx2 size", memoryPool.usedPoolSizeBytes,
       tx.size() + tx2.size())
@@ -90,10 +98,10 @@ class SidechainMemoryPoolTest
 
     val mp = memoryPool.filter(List(tx))
 
-    assertEquals("After applying of filter size must be 1.", memoryPool.size, 1)
-    assertEquals("After applying of filter usedPoolSizeBytes must be updated correctly", memoryPool.usedPoolSizeBytes, txCompat.size())
-    assertEquals("MemoryPool must contain transaction " + txCompat.id, memoryPool.modifierById(ModifierId @@ txCompat.id).get, txCompat)
-    assertEquals("MemoryPool must contain transaction " + txCompat.id, memoryPool.contains(ModifierId @@ txCompat.id), true)
+    assertEquals("After applying of filter size must be 1.", mp.size, 1)
+    assertEquals("After applying of filter usedPoolSizeBytes must be updated correctly", mp.usedPoolSizeBytes, txCompat.size())
+    assertEquals("MemoryPool must contain transaction " + txCompat.id, mp.modifierById(ModifierId @@ txCompat.id).get, txCompat)
+    assertEquals("MemoryPool must contain transaction " + txCompat.id, mp.contains(ModifierId @@ txCompat.id), true)
   }
 
   @Test
@@ -211,6 +219,20 @@ class SidechainMemoryPoolTest
     assertEquals("MemoryPool must have correct size ", list.size-1, memoryPool.size)
     assertEquals("Old lowest fee transaction must not be present ", false, memoryPool.getTransactionById(secondLowestFeeTx.id()).isPresent)
     assertEquals("New lowest fee transaction must be present ", true, memoryPool.getTransactionById(aNewTx.id()).isPresent)
+  }
+
+  @Test
+  def testwithZeroMaxSize(): Unit = {
+    val tx1 = getRegularRandomTransaction(10,1)
+    val memoryPool = SidechainMemoryPool.createEmptyMempool(getMockedMempoolSettings(0, 0))
+    assertEquals("Put tx operation must not be successfull.", false, memoryPool.put(tx1).isSuccess)
+  }
+
+  @Test
+  def testWithHighRateAndEmptyMempool(): Unit = {
+    val tx1 = getRegularRandomTransaction(10,1)
+    val memoryPool = SidechainMemoryPool.createEmptyMempool(getMockedMempoolSettings(1, 200))
+    assertEquals("Put tx operation must not be successfull.", false, memoryPool.put(tx1).isSuccess)
   }
 
   private def getMockedMempoolSettings(maxSize: Int, minFeeRate: Long): MempoolSettings = {

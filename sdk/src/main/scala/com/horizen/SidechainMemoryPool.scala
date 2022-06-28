@@ -4,24 +4,22 @@ import java.util.{Comparator, Optional, List => JList}
 import com.horizen.box.Box
 import com.horizen.node.NodeMemoryPool
 import com.horizen.transaction.BoxTransaction
-import com.horizen.utils.FeeRate
-import scorex.util.ModifierId
 import scorex.util.{ModifierId, ScorexLogging}
 import scorex.core.transaction.MempoolReader
-
 import scala.collection.concurrent.TrieMap
 import scala.util.{Failure, Success, Try}
 import scala.collection.JavaConverters._
 
-class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry], mempoolSettings: MempoolSettings)
+class SidechainMemoryPool private(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry], mempoolSettings: MempoolSettings)
   extends scorex.core.transaction.MemoryPool[SidechainTypes#SCBT, SidechainMemoryPool]
   with SidechainTypes
   with NodeMemoryPool
   with ScorexLogging
 {
   var maxPoolSizeBytes : Long =  mempoolSettings.maxSize * 1024 * 1024
-  var usedPoolSizeBytes : Long = 0
+  var usedPoolSizeBytes : Long =  unconfirmed.values.foldLeft(0L)((total,detail) => detail.feeRate.getSize()  + total )
   val minFeeRate : Long = mempoolSettings.minFeeRate
+
 
   override type NVCT = SidechainMemoryPool
   //type BT = BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]
@@ -71,21 +69,12 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
   }
 
   /**
-   * Filters the txs cointained in the mempool, recalculates the used bytes, and return an instance of itself.
+   * Return a new SidechainMemoryPool instance with the subset of the original txs satisfying the condition check
    * @param condition to use to filter the transactions
    */
   override def filter(condition: SidechainTypes#SCBT => Boolean): SidechainMemoryPool = {
-    usedPoolSizeBytes = 0
-    unconfirmed.retain { (k, v) =>
-      condition(v.getUnconfirmedTx())
-      if (condition(v.getUnconfirmedTx())){
-        usedPoolSizeBytes = usedPoolSizeBytes + v.feeRate.getSize()
-        true
-      }else{
-        false
-      }
-    }
-    this
+    val filteredMap = unconfirmed.filter(ele => condition(ele._2.getUnconfirmedTx()))
+    new SidechainMemoryPool(filteredMap, mempoolSettings)
   }
 
   override def notIn(ids: Seq[ModifierId]): Seq[ModifierId] = {
@@ -150,13 +139,14 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
       a.feeRate.getFeeRate() < b.feeRate.getFeeRate()
     })
     while (usedPoolSizeBytes + entry.feeRate.getSize() > maxPoolSizeBytes){
-      val lastEntry = orderedEntries.take(1).last
-      if (lastEntry.feeRate.getFeeRate() > entry.feeRate.getFeeRate()){
-        //the pool is full, and the entry we are trying to add has feerate lower than the miminum in pool,
-        //so the insert will fail
+      val lastEntry = orderedEntries.headOption
+      if (lastEntry.isEmpty || (lastEntry.get.feeRate.getFeeRate() > entry.feeRate.getFeeRate())){
+        //the pool is empty but txsize exceeds its  limit,
+        //or the pool is full, and the entry we are trying to add has feerate lower than the miminum in pool
+        //In both cases the insert will fail
         return false;
       }
-      remove(lastEntry.getUnconfirmedTx())
+      remove(lastEntry.get.getUnconfirmedTx())
     }
     unconfirmed.put(entry.getUnconfirmedTx().id(), entry)
     usedPoolSizeBytes = usedPoolSizeBytes + entry.feeRate.getSize()
@@ -187,8 +177,10 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
   }
 
   override def remove(tx: SidechainTypes#SCBT): SidechainMemoryPool = {
-    unconfirmed.remove(tx.id)
-    usedPoolSizeBytes = usedPoolSizeBytes - tx.size()
+    unconfirmed.remove(tx.id) match {
+      case Some(tx) =>  usedPoolSizeBytes = usedPoolSizeBytes - tx.feeRate.getSize()
+      case None => //do nothing
+    }
     this
   }
 
@@ -225,5 +217,6 @@ object SidechainMemoryPool
   def createEmptyMempool(mempoolSettings: MempoolSettings) : SidechainMemoryPool = {
     new SidechainMemoryPool(TrieMap(), mempoolSettings)
   }
+
 }
 
