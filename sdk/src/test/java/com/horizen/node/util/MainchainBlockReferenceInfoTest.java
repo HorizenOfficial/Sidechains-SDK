@@ -1,6 +1,6 @@
 package com.horizen.node.util;
 
-import com.horizen.CommonParams;
+import com.horizen.params.CommonParams;
 import org.junit.Test;
 
 import static org.junit.Assert.*;

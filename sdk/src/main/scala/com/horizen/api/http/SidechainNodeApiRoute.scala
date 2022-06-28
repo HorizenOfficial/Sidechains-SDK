@@ -1,12 +1,12 @@
 package com.horizen.api.http
 
-import java.net.{InetAddress, InetSocketAddress}
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.annotation.JsonView
+import com.horizen.SidechainApp
 import com.horizen.SidechainNodeViewHolder.ReceivableMessages.GetStorageVersions
 import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.SidechainNodeErrorResponse.ErrorInvalidHost
+import com.horizen.api.http.SidechainNodeErrorResponse.{ErrorInvalidHost, ErrorStopNodeAlreadyInProgress}
 import com.horizen.api.http.SidechainNodeRestSchema._
 import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
@@ -16,11 +16,9 @@ import scorex.core.network.peer.PeerInfo
 import scorex.core.network.peer.PeerManager.ReceivableMessages.{Blacklisted, GetAllPeers, GetBlacklistedPeers, RemovePeer}
 import scorex.core.settings.RESTApiSettings
 import scorex.core.utils.NetworkTimeProvider
-import com.horizen.SidechainApp
-import com.horizen.api.http.SidechainNodeErrorResponse.{ErrorStopNodeAlreadyInProgress}
 
 import java.lang.Thread.sleep
-
+import java.net.{InetAddress, InetSocketAddress}
 import java.util.{Optional => JOptional}
 import scala.concurrent.{Await, ExecutionContext}
 

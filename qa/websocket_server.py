@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 import json
 
-from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration, Account
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import assert_equal, assert_true, assert_false, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, generate_next_blocks
+from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
+    SCNetworkConfiguration
+from test_framework.util import assert_equal, assert_true, forward_transfer_to_sidechain, \
+    websocket_port_by_mc_node_index, assert_false
+from SidechainTestFramework.scutil import generate_next_blocks, bootstrap_sidechain_nodes, start_sc_nodes
 from httpCalls.wallet.balance import http_wallet_balance
 from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress
 from httpCalls.wallet.createPrivateKey25519 import  http_wallet_createPrivateKey25519

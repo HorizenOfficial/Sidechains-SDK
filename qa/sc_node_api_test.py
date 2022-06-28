@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import assert_equal, assert_true
-from SidechainTestFramework.scutil import initialize_default_sc_chain_clean, start_sc_nodes, \
-                                         generate_next_blocks
-from httpCalls.block.findBlockByID import http_block_findById
 import json
 import os
+
+from SidechainTestFramework.sc_test_framework import SidechainTestFramework
+from SidechainTestFramework.scutil import initialize_default_sc_chain_clean, start_sc_nodes, \
+    generate_next_blocks
+from httpCalls.block.findBlockByID import http_block_findById
+from test_framework.util import assert_equal, assert_true
 
 """
     Sets up 1 SC Node and tests the http Apis.
@@ -77,10 +78,13 @@ class SidechainNodeApiTest(SidechainTestFramework):
         assert_equal(storage_versions_result["SidechainStateForgerBoxStorage"], sc_node_best_block_id)
         assert_equal(storage_versions_result["SidechainWalletBoxStorage"], sc_node_best_block_id)
         assert_equal(storage_versions_result["SidechainStateStorage"], sc_node_best_block_id)
-        assert_equal(storage_versions_result["SidechainWalletCswDataStorage"], sc_node_best_block_id)
-        assert_equal(storage_versions_result["SidechainStateUtxoMerkleTreeStorage"], sc_node_best_block_id)
         assert_equal(storage_versions_result["SidechainWalletTransactionStorage"], sc_node_best_block_id)
         assert_equal(storage_versions_result["ForgingBoxesInfoStorage"], sc_node_best_block_id)
+        #SidechainStateUtxoMerkleTreeStorage and SidechainWalletCswDataStorage don't have a version, because they're not used without the CSW
+        empty_version = ""
+        assert_equal(storage_versions_result["SidechainStateUtxoMerkleTreeStorage"], empty_version)
+        assert_equal(storage_versions_result["SidechainWalletCswDataStorage"], empty_version)
+
         #SidechainSecretStorage use random versions, we cannot predict them.
         #SidechainHistoryStorage use random versions, we cannot predict them.
         #ConsensusDataStorage use random versions, we cannot predict them.

@@ -29,19 +29,22 @@ public class LogInitializer
         levelSet.add("all");
 
         String logDir = info.scorexSettings().logDir().toString();
+        if (!logDir.endsWith(File.separator)){
+            logDir = logDir + File.separator;
+        }
         String logFileName = info.logInfo().logFileName();
-        String logFileNameWithPath = logDir + File.separator + logFileName;
         String logFileLevel = getCheckedLevel(info.logInfo().logFileLevel());
         String logConsoleLevel = getCheckedLevel(info.logInfo().logConsoleLevel());
 
         // init log4j2 logger
-        System.setProperty("logFilename", logFileNameWithPath);
+        System.setProperty("logDir", logDir);
+        System.setProperty("logFilename", logFileName);
         System.setProperty("logFileLevel", logFileLevel);
         System.setProperty("logConsoleLevel", logConsoleLevel);
 
         org.apache.logging.log4j.Logger logger = org.apache.logging.log4j.LogManager.getLogger(com.horizen.settings.LogInitializer.class);
         logger.log(Level.INFO,
-                "Logging system started, log file: [" +logFileNameWithPath +
+                "Logging system started, log file: [" + (logDir + File.separator + logFileName) +
                 "], file log level: [" + logFileLevel +
                 "], console log level: [" + logConsoleLevel + "]");
     }

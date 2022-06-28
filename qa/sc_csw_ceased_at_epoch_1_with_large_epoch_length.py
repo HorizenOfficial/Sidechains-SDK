@@ -22,6 +22,7 @@ Configuration:
     Start 1 MC node and 1 SC node (with default websocket configuration).
     SC node connected to the first MC node.
     SC node has DISABLED certificate submitter.
+    CSW is enabled
 
 Test:
     For the SC node:
@@ -56,11 +57,11 @@ class SCCswCeasedAtEpoch1WithLargeEpochLength(SidechainTestFramework):
             cert_submitter_enabled=False,  # disable submitter
             cert_signing_enabled=False  # disable signer
         )
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length), sc_node_configuration)
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length, csw_enabled=True), sc_node_configuration)
         self.sidechain_id = bootstrap_sidechain_nodes(self.options, network).sidechain_id
 
     def sc_setup_nodes(self):
-        return start_sc_nodes(1, self.options.tmpdir)
+        return start_sc_nodes(1, self.options.tmpdir
 
     def run_test(self):
         time.sleep(0.1)
@@ -260,7 +261,7 @@ class SCCswCeasedAtEpoch1WithLargeEpochLength(SidechainTestFramework):
             assert_equal("ProofGenerationStarted", state, "Different proof generation state found")
 
         # Wait for proofs generation completion.
-        attempts = 100
+        attempts = 200
         while not if_csws_were_generated(sc_node, csw_box_ids, allow_absent=True) and attempts > 0:
             print("Wait for CSW proofs creation completion...")
             time.sleep(10)

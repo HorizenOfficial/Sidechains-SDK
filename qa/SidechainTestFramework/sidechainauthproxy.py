@@ -34,7 +34,7 @@ class SCAPIException(Exception):
 class SidechainAuthServiceProxy(object):
     __id_count = 0
 
-    def __init__(self, service_url, service_name=None, timeout=HTTP_TIMEOUT, connection=None, auth_api_key = None):
+    def __init__(self, service_url, service_name=None, timeout=HTTP_TIMEOUT, connection=None, auth_api_key=None):
         self.__service_url = service_url
         self.__service_name = service_name
         self.__url = urlparse.urlparse(service_url)
@@ -70,7 +70,7 @@ class SidechainAuthServiceProxy(object):
             raise AttributeError
         if self.__service_name is not None:
             name = "%s.%s" % (self.__service_name, name)
-        return SidechainAuthServiceProxy(self.__service_url, name, connection=self.__conn)
+        return SidechainAuthServiceProxy(self.__service_url, name, connection=self.__conn, auth_api_key=self.auth_api_key)
 
     def _request(self, method, path, postdata, api_key):
         '''

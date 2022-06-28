@@ -65,7 +65,7 @@ class SidechainMemoryPoolTestTestsExtension
     assertEquals("Take must return transaction " + tx.id, tx, memoryPool.take(1).head)
     assertEquals("Take with custom sort function must return transaction " + txCompat.id, txCompat,
       memoryPool.take( (a,b) => {
-        if (a.fee() < b.fee())
+        if (a.getUnconfirmedTx().fee() < b.getUnconfirmedTx().fee())
           true
         else
           false

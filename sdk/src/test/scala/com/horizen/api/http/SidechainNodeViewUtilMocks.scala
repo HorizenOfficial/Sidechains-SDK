@@ -3,6 +3,7 @@ package com.horizen.api.http
 import java.time.Instant
 import java.util
 import java.util.{Optional, ArrayList => JArrayList, List => JList}
+
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.data.{BoxData, ZenBoxData}
 import com.horizen.box.{Box, ZenBox}
@@ -177,7 +178,9 @@ class SidechainNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compa
   }
 
   def getNodeStateMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeState = {
-    mock[NodeState]
+    val nodeState: NodeState = mock[NodeState]
+    Mockito.when(nodeState.hasCeased()).thenReturn(true)
+    nodeState
   }
 
   private def walletAllBoxes(): util.List[Box[Proposition]] = {

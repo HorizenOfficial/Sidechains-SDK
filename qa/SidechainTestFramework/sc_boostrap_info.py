@@ -6,16 +6,22 @@ LARGE_WITHDRAWAL_EPOCH_LENGTH = 900
 
 SC_CREATION_VERSION_0 = 0
 SC_CREATION_VERSION_1 = 1
+
+DEFAULT_API_KEY = "TopSecret"
+
 """
 All information needed to bootstrap sidechain network within specified mainchain node.
 The JSON representation is only for documentation.
 
 SCCreationInfo: {
-    "mc_node":
-    "sc_id":
-    "forward_amout":
-    "withdrawal_epoch_length":
+    "mc_node": Mainchain node
+    "forward_amount": first Forward Transfer coin amount
+    "withdrawal_epoch_length": length of Withdrawal Epoch
     "btr_data_length": size of scRequestData array for MBTRs. 0 if MBTRs are not supported at all.
+    "sc_creation_version": sidechain version
+    "cert_max_keys": defines the max number of Certificate proofs generation participants
+    "cert_sig_threshold": the minimum set of the participants required for a valid proof creation
+    "csw_enabled": true if the Ceased Sidechain Withdrawal should be enabled on the sidechain
 }
 """
 class SCCreationInfo(object):
@@ -24,7 +30,7 @@ class SCCreationInfo(object):
     # because of too complex circuit from MC perspective.
     def __init__(self, mc_node, forward_amount=100, withdrawal_epoch_length=LARGE_WITHDRAWAL_EPOCH_LENGTH,
                  btr_data_length=0, sc_creation_version=SC_CREATION_VERSION_1,
-                 cert_max_keys=7, cert_sig_threshold=5):
+                 cert_max_keys=7, cert_sig_threshold=5, csw_enabled=False):
         self.mc_node = mc_node
         self.forward_amount = forward_amount
         self.withdrawal_epoch_length = withdrawal_epoch_length
@@ -32,6 +38,7 @@ class SCCreationInfo(object):
         self.sc_creation_version = sc_creation_version
         self.cert_max_keys = cert_max_keys
         self.cert_sig_threshold = cert_sig_threshold
+        self.csw_enabled = csw_enabled
 
 
 """
@@ -55,7 +62,7 @@ class MCConnectionInfo(object):
         self.reconnectionMaxAttempts = reconnectionMaxAttempts
 
 """
-Configration that enables the possibility to restrict the forging phase
+Configuration that enables the possibility to restrict the forging phase
  to a specific list of forgers.
 """
 class SCForgerConfiguration(object):
@@ -90,8 +97,9 @@ class SCNodeConfiguration(object):
                  max_connections=100,
                  automatic_fee_computation=True,
                  certificate_fee=0.0001,
-                 forger_options = SCForgerConfiguration(),
-                 api_key = ""):
+                 forger_options=SCForgerConfiguration(),
+                 api_key=DEFAULT_API_KEY,
+                 max_fee=10000000):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))
         self.mc_connection_info = mc_connection_info
@@ -103,7 +111,7 @@ class SCNodeConfiguration(object):
         self.certificate_fee = certificate_fee
         self.forger_options = forger_options
         self.api_key = api_key
-
+        self.max_fee = max_fee
 
 """
 The full network of many sidechain nodes connected to many mainchain nodes.

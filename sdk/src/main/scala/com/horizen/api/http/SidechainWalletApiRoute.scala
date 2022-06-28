@@ -30,6 +30,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
                                    sidechainSecretsCompanion: SidechainSecretsCompanion)(implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute {
 
+  //Please don't forget to add Auth for every new method of the wallet.
   override val route: Route = pathPrefix("wallet") {
     allBoxes ~ coinsBalance ~ balanceOfType ~ createPrivateKey25519 ~ createVrfSecret ~ allPublicKeys ~ importSecret ~ exportSecret ~ dumpSecrets ~ importSecrets
   }
@@ -38,18 +39,20 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
     * Return all boxes, excluding those which ids are included in 'excludeBoxIds' list. Filter boxes of a given type
     */
   def allBoxes: Route = (post & path("allBoxes")) {
-    entity(as[ReqAllBoxes]) { body =>
-      withNodeView { sidechainNodeView =>
-        val optBoxTypeClass = body.boxTypeClass
-        val wallet = sidechainNodeView.getNodeWallet
-        val idsOfBoxesToExclude = body.excludeBoxIds.getOrElse(List()).map(idHex => BytesUtils.fromHexString(idHex))
-        if (optBoxTypeClass.isEmpty) {
-          val closedBoxesJson = wallet.allBoxes(idsOfBoxesToExclude.asJava).asScala.toList
-          ApiResponseUtil.toResponse(RespAllBoxes(closedBoxesJson))
-        } else {
-          val clazz: java.lang.Class[_ <: SidechainTypes#SCB] = getClassByBoxClassName(optBoxTypeClass.get)
-          val allClosedBoxesByType = wallet.boxesOfType(clazz, idsOfBoxesToExclude.asJava).asScala.toList
-          ApiResponseUtil.toResponse(RespAllBoxes(allClosedBoxesByType))
+    withAuth {
+      entity(as[ReqAllBoxes]) { body =>
+        withNodeView { sidechainNodeView =>
+          val optBoxTypeClass = body.boxTypeClass
+          val wallet = sidechainNodeView.getNodeWallet
+          val idsOfBoxesToExclude = body.excludeBoxIds.getOrElse(List()).map(idHex => BytesUtils.fromHexString(idHex))
+          if (optBoxTypeClass.isEmpty) {
+            val closedBoxesJson = wallet.allBoxes(idsOfBoxesToExclude.asJava).asScala.toList
+            ApiResponseUtil.toResponse(RespAllBoxes(closedBoxesJson))
+          } else {
+            val clazz: java.lang.Class[_ <: SidechainTypes#SCB] = getClassByBoxClassName(optBoxTypeClass.get)
+            val allClosedBoxesByType = wallet.boxesOfType(clazz, idsOfBoxesToExclude.asJava).asScala.toList
+            ApiResponseUtil.toResponse(RespAllBoxes(allClosedBoxesByType))
+          }
         }
       }
     }
@@ -59,10 +62,12 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
     * Returns the balance of all types of coins boxes
     */
   def coinsBalance: Route = (post & path("coinsBalance")) {
-    withNodeView { sidechainNodeView =>
-      val wallet = sidechainNodeView.getNodeWallet
-      val sumOfBalances: Long = wallet.allCoinsBoxesBalance()
-      ApiResponseUtil.toResponse(RespBalance(sumOfBalances))
+    withAuth {
+      withNodeView { sidechainNodeView =>
+        val wallet = sidechainNodeView.getNodeWallet
+        val sumOfBalances: Long = wallet.allCoinsBoxesBalance()
+        ApiResponseUtil.toResponse(RespBalance(sumOfBalances))
+      }
     }
   }
 
@@ -70,12 +75,14 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
     * Returns the balance for given box type
     */
   def balanceOfType: Route = (post & path("balanceOfType")) {
-    entity(as[ReqBalance]) { body =>
-      withNodeView { sidechainNodeView =>
-        val wallet = sidechainNodeView.getNodeWallet
-        val clazz: java.lang.Class[_ <: SidechainTypes#SCB] = getClassByBoxClassName(body.boxType)
-        val balance = wallet.boxesBalance(clazz)
-        ApiResponseUtil.toResponse(RespBalance(balance))
+    withAuth {
+      entity(as[ReqBalance]) { body =>
+        withNodeView { sidechainNodeView =>
+          val wallet = sidechainNodeView.getNodeWallet
+          val clazz: java.lang.Class[_ <: SidechainTypes#SCB] = getClassByBoxClassName(body.boxType)
+          val balance = wallet.boxesBalance(clazz)
+          ApiResponseUtil.toResponse(RespBalance(balance))
+        }
       }
     }
   }
@@ -84,17 +91,19 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
    * Create new Vrf secret and return corresponding public key
    */
   def createVrfSecret: Route = (post & path("createVrfSecret")) {
-    withNodeView { sidechainNodeView =>
-      //replace to VRFKeyGenerator.generateNextSecret(wallet)
-      val secret = VrfKeyGenerator.getInstance().generateNextSecret(sidechainNodeView.getNodeWallet)
-      val public = secret.publicImage()
+    withAuth {
+      withNodeView { sidechainNodeView =>
+        //replace to VRFKeyGenerator.generateNextSecret(wallet)
+        val secret = VrfKeyGenerator.getInstance().generateNextSecret(sidechainNodeView.getNodeWallet)
+        val public = secret.publicImage()
 
-      val future = sidechainNodeViewHolderRef ? ReceivableMessages.LocallyGeneratedSecret(secret)
-      Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
-        case Success(_) =>
-          ApiResponseUtil.toResponse(RespCreateVrfSecret(public))
-        case Failure(e) =>
-          ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create Vrf key pair.", JOptional.of(e)))
+        val future = sidechainNodeViewHolderRef ? ReceivableMessages.LocallyGeneratedSecret(secret)
+        Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
+          case Success(_) =>
+            ApiResponseUtil.toResponse(RespCreateVrfSecret(public))
+          case Failure(e) =>
+            ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create Vrf key pair.", JOptional.of(e)))
+        }
       }
     }
   }
@@ -103,15 +112,17 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
     * Create new secret and return corresponding address (public key)
     */
   def createPrivateKey25519: Route = (post & path("createPrivateKey25519")) {
-    withNodeView { sidechainNodeView =>
-      val wallet = sidechainNodeView.getNodeWallet
-      val secret = PrivateKey25519Creator.getInstance().generateNextSecret(wallet)
-      val future = sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)
-      Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
-        case Success(_) =>
-          ApiResponseUtil.toResponse(RespCreatePrivateKey(secret.publicImage()))
-        case Failure(e) =>
-          ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create key pair.", JOptional.of(e)))
+    withAuth {
+      withNodeView { sidechainNodeView =>
+        val wallet = sidechainNodeView.getNodeWallet
+        val secret = PrivateKey25519Creator.getInstance().generateNextSecret(wallet)
+        val future = sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)
+        Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
+          case Success(_) =>
+            ApiResponseUtil.toResponse(RespCreatePrivateKey(secret.publicImage()))
+          case Failure(e) =>
+            ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create key pair.", JOptional.of(e)))
+        }
       }
     }
   }
@@ -120,19 +131,21 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
     * Returns the list of all wallet’s propositions (public keys). Filter propositions of the given type
     */
   def allPublicKeys: Route = (post & path("allPublicKeys")) {
-    entity(as[ReqAllPropositions]) { body =>
-      withNodeView { sidechainNodeView =>
-        val wallet = sidechainNodeView.getNodeWallet
-        val optPropType = body.proptype
-        if (optPropType.isEmpty) {
-          val listOfPropositions = wallet.allSecrets().asScala.map(s =>
-            s.publicImage().asInstanceOf[SidechainTypes#SCP])
-          ApiResponseUtil.toResponse(RespAllPublicKeys(listOfPropositions))
-        } else {
-          val clazz: java.lang.Class[_ <: SidechainTypes#SCS] = getClassBySecretClassName(optPropType.get)
-          val listOfPropositions = wallet.secretsOfType(clazz).asScala.map(secret =>
-            secret.publicImage().asInstanceOf[SidechainTypes#SCP])
-          ApiResponseUtil.toResponse(RespAllPublicKeys(listOfPropositions))
+    withAuth {
+      entity(as[ReqAllPropositions]) { body =>
+        withNodeView { sidechainNodeView =>
+          val wallet = sidechainNodeView.getNodeWallet
+          val optPropType = body.proptype
+          if (optPropType.isEmpty) {
+            val listOfPropositions = wallet.allSecrets().asScala.map(s =>
+              s.publicImage().asInstanceOf[SidechainTypes#SCP])
+            ApiResponseUtil.toResponse(RespAllPublicKeys(listOfPropositions))
+          } else {
+            val clazz: java.lang.Class[_ <: SidechainTypes#SCS] = getClassBySecretClassName(optPropType.get)
+            val listOfPropositions = wallet.secretsOfType(clazz).asScala.map(secret =>
+              secret.publicImage().asInstanceOf[SidechainTypes#SCP])
+            ApiResponseUtil.toResponse(RespAllPublicKeys(listOfPropositions))
+          }
         }
       }
     }

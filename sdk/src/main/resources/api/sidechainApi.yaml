@@ -28,8 +28,8 @@ paths:
     post:
       tags:
         - block
-      summary: find block by id
-      description: return a single block and its height
+      summary: finds block by id
+      description: Returns a single block and its height
       operationId: getBlock
       requestBody:
         content:
@@ -1615,6 +1615,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
+  /node/stop:
+    post:
+      tags:
+        - node
+      summary: stop the node
+      description: stop the node in a gracefully way
+      operationId: stop
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
   # Mainchain references info
   /mainchain/bestBlockReferenceInfo:
     post:
@@ -1987,6 +2011,36 @@ paths:
                       state:
                         type: boolean
                         description: True or False depending if Sidechain is ceased
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+
+  /csw/isCSWEnabled:
+    post:
+      tags:
+        - csw
+      summary: returns if the Ceased Sidechain Withdrawal is enabled in the Sidechain
+      description: returns if the Ceased Sidechain Withdrawal is enabled in the Sidechain
+      operationId: isCSWEnabled
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      cswEnabled:
+                        type: boolean
+                        description: True or False depending if CSW is enabled
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:

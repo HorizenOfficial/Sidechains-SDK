@@ -31,7 +31,8 @@ case class MainNetParams(
                           override val cswVerificationKeyFilePath: String = "",
                           override val restrictForgers: Boolean = false,
                           override val allowedForgersList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = Seq(),
-                          override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1
+                          override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1,
+                          override val isCSWEnabled: Boolean = true
                         ) extends NetworkParams {
   override val EquihashN: Int = 200
   override val EquihashK: Int = 9

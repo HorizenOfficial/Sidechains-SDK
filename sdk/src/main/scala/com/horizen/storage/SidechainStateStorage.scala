@@ -161,6 +161,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     storage.get(getUtxoMerkleTreeRootKey(withdrawalEpoch)).asScala.map(_.data)
   }
 
+
   def hasCeased: Boolean = {
     storage.get(ceasingStateKey).isPresent
   }
