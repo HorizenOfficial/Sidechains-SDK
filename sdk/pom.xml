@@ -84,12 +84,6 @@
         </exclusion>
       </exclusions>
     </dependency>
-    <dependency>
-      <groupId>org.scorexfoundation</groupId>
-      <artifactId>scorex-util_2.11</artifactId>
-      <version>0.1.8</version>
-<!--      <scope>compile</scope>-->
-    </dependency>
     <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-slf4j-impl -->
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
