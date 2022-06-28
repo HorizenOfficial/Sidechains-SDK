@@ -11,9 +11,9 @@ import com.horizen.account.api.http.AccountTransactionRestScheme._
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
+import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.transaction.{EthereumTransaction, EthereumTransactionSerializer}
-import com.horizen.account.utils.Secp256k1
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SidechainApiRoute, SuccessResponse}
@@ -97,7 +97,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               sidechainNodeView.getNodeState.getAccount(accountSecret.publicImage.address).nonce)
 
             val destAddress = body.toAddress
-            val valueInWei = ZenConverter.convertZenniesToWei(body.value)
+            val valueInWei = ZenWeiConverter.convertZenniesToWei(body.value)
             val gasPrice = BigInteger.valueOf(1) // TODO actual gas implementation
             val gasLimit = BigInteger.valueOf(1) // TODO actual gas implementation
             val tmpTx = new EthereumTransaction(

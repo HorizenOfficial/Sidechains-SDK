@@ -7,6 +7,7 @@ import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, intToConsensusEpochNumber}
+import com.horizen.evm._
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
@@ -19,6 +20,7 @@ import scala.util.{Failure, Try}
 class AccountState(val params: NetworkParams,
                    override val version: VersionTag,
                    stateMetadataStorage: AccountStateMetadataStorage,
+                   stateDbStorage: Database,
                    messageProcessors: Seq[MessageProcessor])
   extends State[SidechainTypes#SCAT, AccountBlock, AccountStateView, AccountState]
     with NodeAccountState
@@ -30,7 +32,7 @@ class AccountState(val params: NetworkParams,
   // Used once on genesis AccountState creation
   private def initProcessors(initialVersion: VersionTag): Try[AccountState] = Try {
     val view = getView
-    for(processor <- messageProcessors) {
+    for (processor <- messageProcessors) {
       processor.init(view)
     }
     // TODO: commit only StateDB part ???
@@ -45,12 +47,12 @@ class AccountState(val params: NetworkParams,
 
     var stateView: AccountStateView = getView
 
-    if(stateView.hasCeased) {
+    if (stateView.hasCeased) {
       throw new IllegalStateException(s"Can't apply Block ${mod.id}, because the sidechain has ceased.")
     }
 
     // Check Txs semantic validity first
-    for(tx <- mod.sidechainTransactions)
+    for (tx <- mod.sidechainTransactions)
       tx.semanticValidity()
 
     // Validate top quality certificate in the end of the submission window:
@@ -61,7 +63,7 @@ class AccountState(val params: NetworkParams,
 
     // If SC block has reached the certificate submission window end -> check the top quality certificate
     // Note: even if mod contains multiple McBlockRefData entries, we are sure they belongs to the same withdrawal epoch.
-    if(WithdrawalEpochUtils.hasReachedCertificateSubmissionWindowEnd(mod, currentWithdrawalEpochInfo, params)) {
+    if (WithdrawalEpochUtils.hasReachedCertificateSubmissionWindowEnd(mod, currentWithdrawalEpochInfo, params)) {
       val certReferencedEpochNumber = modWithdrawalEpochInfo.epoch - 1
 
       // Top quality certificate may present in the current SC block or in the previous blocks or can be absent.
@@ -83,31 +85,31 @@ class AccountState(val params: NetworkParams,
     stateView.updateWithdrawalEpochInfo(modWithdrawalEpochInfo).get
 
     val consensusEpochNum: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)
-   stateView.updateConsensusEpochNumber(consensusEpochNum)
+    stateView.updateConsensusEpochNumber(consensusEpochNum)
 
     // If SC block has reached the end of the withdrawal epoch -> fee payments expected to be produced.
     // Verify that Forger assumed the same fees to be paid as the current node does.
     // If SC block is in the middle of the withdrawal epoch -> no fee payments hash expected to be defined.
     val isWithdrawalEpochFinished: Boolean = WithdrawalEpochUtils.isEpochLastIndex(modWithdrawalEpochInfo, params)
-    if(isWithdrawalEpochFinished) {
+    if (isWithdrawalEpochFinished) {
       // Note: that current block fee info is already in the view
       // TODO: get the list of block info and recalculate the root of it
       val feePayments = stateView.getBlockFeePayments(modWithdrawalEpochInfo.epoch)
-      val feePaymentsHash: Array[Byte] = new Array[Byte](32)// TODO: analog of FeePaymentsUtils.calculateFeePaymentsHash(feePayments)
+      val feePaymentsHash: Array[Byte] = new Array[Byte](32) // TODO: analog of FeePaymentsUtils.calculateFeePaymentsHash(feePayments)
 
-      if(!mod.feePaymentsHash.sameElements(feePaymentsHash))
+      if (!mod.feePaymentsHash.sameElements(feePaymentsHash))
         throw new IllegalArgumentException(s"Block ${mod.id} has feePaymentsHash different to expected one: ${BytesUtils.toHexString(feePaymentsHash)}")
     } else {
       // No fee payments expected
-      if(!mod.feePaymentsHash.sameElements(FeePaymentsUtils.DEFAULT_FEE_PAYMENTS_HASH))
+      if (!mod.feePaymentsHash.sameElements(FeePaymentsUtils.DEFAULT_FEE_PAYMENTS_HASH))
         throw new IllegalArgumentException(s"Block ${mod.id} has feePaymentsHash ${BytesUtils.toHexString(mod.feePaymentsHash)} defined when no fee payments expected.")
     }
 
-    for(mcBlockRefData <- mod.mainchainBlockReferencesData) {
+    for (mcBlockRefData <- mod.mainchainBlockReferencesData) {
       stateView = stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
     }
 
-    for(tx <- mod.sidechainTransactions) {
+    for (tx <- mod.sidechainTransactions) {
       stateView = stateView.applyTransaction(tx).get
     }
 
@@ -141,7 +143,7 @@ class AccountState(val params: NetworkParams,
     // Check that BTs are identical for both Cert and State
     topQualityCertificate.backwardTransferOutputs.zip(expectedWithdrawalRequests).foreach {
       case (certOutput, expectedWithdrawalRequestBox) => {
-        if(certOutput.amount != expectedWithdrawalRequestBox.value() ||
+        if (certOutput.amount != expectedWithdrawalRequestBox.value() ||
           !util.Arrays.equals(certOutput.pubKeyHash, expectedWithdrawalRequestBox.proposition().bytes())) {
           throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate backward transfers " +
             s"data is different than expected. Node's active chain is the fork from MC perspective.")
@@ -178,7 +180,12 @@ class AccountState(val params: NetworkParams,
   override def rollbackTo(version: VersionTag): Try[AccountState] = {
     Try {
       require(version != null, "Version to rollback to must be NOT NULL.")
-      new AccountState(params, version, stateMetadataStorage.rollback(new ByteArrayWrapper(versionToBytes(version))).get, messageProcessors)
+      val newMetaState = stateMetadataStorage.rollback(new ByteArrayWrapper(versionToBytes(version))).get
+
+      new AccountState(params, version,
+        newMetaState,
+        stateDbStorage,
+        messageProcessors)
     }.recoverWith({
       case exception =>
         log.error("Exception was thrown during rollback.", exception)
@@ -191,7 +198,11 @@ class AccountState(val params: NetworkParams,
 
   // View
   override def getView: AccountStateView = {
-    new AccountStateView(stateMetadataStorage.getView, messageProcessors)
+    // get state root
+    val stateRoot = stateMetadataStorage.getAccountStateRoot.getOrElse(new Array[Byte](32))
+    val statedb = new StateDB(stateDbStorage, stateRoot)
+
+    new AccountStateView(stateMetadataStorage.getView, statedb, messageProcessors)
   }
 
   // getters:
@@ -226,30 +237,35 @@ class AccountState(val params: NetworkParams,
   // Account specific getters
   override def getAccount(address: Array[Byte]): Account = ???
 
-  override def getBalance(address: Array[Byte]): Long = ???
+  override def getBalance(address: Array[Byte]): Try[java.math.BigInteger] = ???
 
   override def getAccountStateRoot: Option[Array[Byte]] = getView.getAccountStateRoot
+
+  override def getCodeHash(address: Array[Byte]): Array[Byte] = getView.getCodeHash(address)
 }
 
 
 object AccountState {
   private[horizen] def restoreState(stateMetadataStorage: AccountStateMetadataStorage,
+                                    stateDbStorage: Database,
                                     messageProcessors: Seq[MessageProcessor],
                                     params: NetworkParams): Option[AccountState] = {
 
-    if (!stateMetadataStorage.isEmpty)
-      Some(new AccountState(params, bytesToVersion(stateMetadataStorage.lastVersionId.get.data), stateMetadataStorage, messageProcessors))
-    else
+    if (!stateMetadataStorage.isEmpty) {
+      Some(new AccountState(params, bytesToVersion(stateMetadataStorage.lastVersionId.get.data), stateMetadataStorage,
+        stateDbStorage, messageProcessors))
+    } else
       None
   }
 
   private[horizen] def createGenesisState(stateMetadataStorage: AccountStateMetadataStorage,
+                                          stateDbStorage: Database,
                                           messageProcessors: Seq[MessageProcessor],
                                           params: NetworkParams,
                                           genesisBlock: AccountBlock): Try[AccountState] = Try {
 
     if (stateMetadataStorage.isEmpty) {
-      new AccountState(params, idToVersion(genesisBlock.parentId), stateMetadataStorage, messageProcessors)
+      new AccountState(params, idToVersion(genesisBlock.parentId), stateMetadataStorage, stateDbStorage, messageProcessors)
         .initProcessors(idToVersion(genesisBlock.parentId)).get
         .applyModifier(genesisBlock).get
     } else
