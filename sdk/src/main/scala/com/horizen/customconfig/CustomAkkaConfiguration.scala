@@ -11,6 +11,9 @@ object CustomAkkaConfiguration {
             prio-mailbox {
                 mailbox-type = "com.horizen.mailbox.PrioritizedMailbox"
             }
+            submitter-prio-mailbox {
+                mailbox-type = "com.horizen.mailbox.SubmitterPrioritizedMailbox"
+            }
         }
       """)
   }

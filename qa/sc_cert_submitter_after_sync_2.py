@@ -71,7 +71,7 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
     def do_cert_cycle(self, mc_node, sc_forger_node, sc_submitter_node, mc_blocks_in_epoch_left, additional_sc_blocks):
         # Generate MC blocks to reach one block before the end of the withdrawal epoch (WE)
         # 1 SC block contains MC block
-        for i in range(mc_blocks_in_epoch_left):
+        for i in range(mc_blocks_in_epoch_left - 1):
             mc_node.generate(1)
             generate_next_block(sc_forger_node, "node")
 
@@ -87,7 +87,12 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
         generate_next_block(sc_forger_node, "second node")  # 1 MC block to trigger Submitter logic
 
         # Wait for Certificates appearance
-        time.sleep(10)
+        time.sleep(5)
+        print("Waiting to start certificate generation.")
+        # The following line also checks Certificate Submitter Api during the node synchronization
+        while not sc_submitter_node.submitter_isCertGenerationActive()["result"]["state"]:
+            time.sleep(1)
+
         while mc_node.getmempoolinfo()["size"] < 1 and sc_submitter_node.submitter_isCertGenerationActive()["result"]["state"]:
             print("Wait for certificates in the MC mempool...")
             if sc_submitter_node.submitter_isCertGenerationActive()["result"]["state"]:
@@ -108,7 +113,11 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
         connect_sc_nodes(sc_node1, 1)  # Connect SC nodes
 
         print("Starting synchronization...")
-        sync_sc_blocks(self.sc_nodes, 200, True)
+        time.sleep(20)
+        # The following lines checks Certificate Submitter Api during the node synchronization
+        assert_equal(True, sc_node2.submitter_isCertificateSubmitterEnabled()["result"]["enabled"])
+        assert_equal(True, sc_node2.submitter_isCertificateSubmitterEnabled()["result"]["enabled"])
+        sync_sc_blocks(self.sc_nodes, 500, True)
         print("Synchronization finished.")
 
         # Disable sc node 1 submitter

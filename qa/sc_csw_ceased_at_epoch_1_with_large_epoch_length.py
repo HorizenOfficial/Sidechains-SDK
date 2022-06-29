@@ -61,7 +61,7 @@ class SCCswCeasedAtEpoch1WithLargeEpochLength(SidechainTestFramework):
         self.sidechain_id = bootstrap_sidechain_nodes(self.options, network).sidechain_id
 
     def sc_setup_nodes(self):
-        return start_sc_nodes(1, self.options.tmpdir
+        return start_sc_nodes(1, self.options.tmpdir)
 
     def run_test(self):
         time.sleep(0.1)

@@ -101,6 +101,8 @@ class SCNodeResponseAlongSync(SidechainTestFramework):
         assert_not_equal(best2_1, best1, " Too fast to synchronize, they are already sync")  # try to add more block??
         print("Middle check passed")
 
+        assert_equal(True, sc_node1.submitter_isCertificateSubmitterEnabled()["result"]["enabled"])
+        assert_equal(True, sc_node1.submitter_isCertificateSubmitterEnabled()["result"]["enabled"])
         sync_sc_blocks(self.sc_nodes, 200, True)
         best2_2 = (sc_node2.block_best()['result']['block']['id'])
         print("Final check")
