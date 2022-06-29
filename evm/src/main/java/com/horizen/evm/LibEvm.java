@@ -107,8 +107,8 @@ final class LibEvm {
         return invoke("StateCommit", new HandleParams(handle), Hash.class).toBytes();
     }
 
-    public static boolean stateExists(int handle, byte[] address) {
-        return invoke("StateExists", new AccountParams(handle, address), boolean.class);
+    public static boolean stateEmpty(int handle, byte[] address) {
+        return invoke("StateEmpty", new AccountParams(handle, address), boolean.class);
     }
 
     public static BigInteger stateGetBalance(int handle, byte[] address) {
@@ -179,21 +179,26 @@ final class LibEvm {
         invoke("StateRevertToSnapshot", new SnapshotParams(handle, revisionId));
     }
 
+    public static EvmLog[] stateGetLogs(int handle, byte[] txHash) {
+        return invoke("StateGetLogs", new GetLogsParams(handle, txHash), EvmLog[].class);
+    }
+
     public static EvmResult evmApply(
-        int handle,
-        byte[] from,
-        byte[] to,
-        BigInteger value,
-        byte[] input,
-        BigInteger nonce,
-        BigInteger gasLimit,
-        BigInteger gasPrice
+            int handle,
+            byte[] from,
+            byte[] to,
+            BigInteger value,
+            byte[] input,
+            BigInteger gasLimit,
+            BigInteger gasPrice,
+            EvmContext context
     ) {
-        var params = new EvmParams(handle, from, to, value, input, nonce, gasLimit, gasPrice);
-        // TODO: set context parameters
-        params.context = new EvmContext();
-        // TODO: decide what EIPs we are implementing, setting the baseFee to zero currently allows a gas price of zero
-        params.context.baseFee = BigInteger.ZERO;
+        if (context == null) {
+            context = new EvmContext();
+            // TODO: decide what EIPs we are implementing, setting the baseFee to zero currently allows a gas price of zero
+            context.baseFee = BigInteger.ZERO;
+        }
+        var params = new EvmParams(handle, from, to, value, input, gasLimit, gasPrice, context);
         return invoke("EvmApply", params, EvmResult.class);
     }
 }

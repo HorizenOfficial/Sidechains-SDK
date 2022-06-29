@@ -10,7 +10,7 @@ import java.math.BigInteger;
 public class BigIntSerializer extends JsonSerializer<BigInteger> {
     @Override
     public void serialize(
-        BigInteger bigInteger, JsonGenerator jsonGenerator, SerializerProvider serializerProvider
+            BigInteger bigInteger, JsonGenerator jsonGenerator, SerializerProvider serializerProvider
     ) throws IOException {
         jsonGenerator.writeString("0x" + bigInteger.toString(16));
     }

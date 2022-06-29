@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
@@ -10,11 +11,12 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"math"
 	"math/big"
-	"math/rand"
 	"time"
 )
 
 type EvmContext struct {
+	TxHash      common.Hash    `json:"txHash"`
+	TxIndex     int            `json:"txIndex"`
 	Difficulty  *hexutil.Big   `json:"difficulty"`
 	Coinbase    common.Address `json:"coinbase"`
 	BlockNumber *hexutil.Big   `json:"blockNumber"`
@@ -24,14 +26,30 @@ type EvmContext struct {
 
 type EvmParams struct {
 	HandleParams
-	From     common.Address  `json:"from"`
-	To       *common.Address `json:"to"`
-	Value    *hexutil.Big    `json:"value"`
-	Input    []byte          `json:"input"`
-	Nonce    hexutil.Uint64  `json:"nonce"`
-	GasLimit hexutil.Uint64  `json:"gasLimit"`
-	GasPrice *hexutil.Big    `json:"gasPrice"`
-	Context  EvmContext      `json:"context"`
+	From       common.Address   `json:"from"`
+	To         *common.Address  `json:"to"`
+	Value      *hexutil.Big     `json:"value"`
+	Input      []byte           `json:"input"`
+	GasLimit   hexutil.Uint64   `json:"gasLimit"`
+	GasPrice   *hexutil.Big     `json:"gasPrice"`
+	AccessList types.AccessList `json:"accessList"`
+	Context    EvmContext       `json:"context"`
+}
+
+// setDefaults for parameters that were omitted
+func (c *EvmContext) setDefaults() {
+	if c.Difficulty == nil {
+		c.Difficulty = (*hexutil.Big)(new(big.Int))
+	}
+	if c.BlockNumber == nil {
+		c.BlockNumber = (*hexutil.Big)(new(big.Int))
+	}
+	if c.Time == nil {
+		c.Time = (*hexutil.Big)(big.NewInt(time.Now().Unix()))
+	}
+	if c.BaseFee == nil {
+		c.BaseFee = (*hexutil.Big)(big.NewInt(params.InitialBaseFee))
+	}
 }
 
 // setDefaults for parameters that were omitted
@@ -45,22 +63,7 @@ func (p *EvmParams) setDefaults() {
 	if p.GasPrice == nil {
 		p.GasPrice = (*hexutil.Big)(new(big.Int))
 	}
-	if p.Context.Difficulty == nil {
-		p.Context.Difficulty = (*hexutil.Big)(new(big.Int))
-	}
-	if p.Context.BlockNumber == nil {
-		p.Context.BlockNumber = (*hexutil.Big)(new(big.Int))
-	}
-	if p.Context.Time == nil {
-		p.Context.Time = (*hexutil.Big)(big.NewInt(time.Now().Unix()))
-	}
-	if p.Context.BaseFee == nil {
-		p.Context.BaseFee = (*hexutil.Big)(big.NewInt(params.InitialBaseFee))
-	}
-}
-
-func (p *EvmParams) getMessage() types.Message {
-	return types.NewMessage(p.From, p.To, uint64(p.Nonce), p.Value.ToInt(), uint64(p.GasLimit), p.GasPrice.ToInt(), p.GasPrice.ToInt(), p.GasPrice.ToInt(), p.Input, nil, false)
+	p.Context.setDefaults()
 }
 
 func (p *EvmParams) getBlockContext() vm.BlockContext {
@@ -106,7 +109,6 @@ type EvmResult struct {
 	EvmError        string          `json:"evmError"`
 	ReturnData      []byte          `json:"returnData"`
 	ContractAddress *common.Address `json:"contractAddress"`
-	Logs            []*Log          `json:"logs"`
 }
 
 func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
@@ -119,8 +121,10 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 	params.setDefaults()
 
 	var (
-		msg          = params.getMessage()
-		txContext    = core.NewEVMTxContext(msg)
+		txContext = vm.TxContext{
+			Origin:   params.From,
+			GasPrice: new(big.Int).Set(params.GasPrice.ToInt()),
+		}
 		blockContext = params.getBlockContext()
 		chainConfig  = defaultChainConfig()
 		evmConfig    = vm.Config{
@@ -131,50 +135,68 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 			JumpTable:               nil,
 			ExtraEips:               nil,
 		}
-		evm            = vm.NewEVM(blockContext, txContext, statedb, chainConfig, evmConfig)
-		txHash         = common.Hash{}
-		txIndexInBlock = 0
+		evm              = vm.NewEVM(blockContext, txContext, statedb, chainConfig, evmConfig)
+		sender           = vm.AccountRef(params.From)
+		gas              = uint64(params.GasLimit)
+		contractCreation = params.To == nil
+		homestead        = evm.ChainConfig().IsHomestead(evm.Context.BlockNumber)
+		istanbul         = evm.ChainConfig().IsIstanbul(evm.Context.BlockNumber)
 	)
-	// TODO: this mocks the tx hash with random, replace with real tx hash
-	var (
-		randSource    = rand.NewSource(time.Now().UnixNano())
-		randGenerator = rand.New(randSource)
-	)
-	randGenerator.Read(txHash.Bytes())
 
-	gasPool := new(core.GasPool).AddGas(msg.Gas())
-	statedb.Prepare(txHash, txIndexInBlock)
+	statedb.Prepare(params.Context.TxHash, params.Context.TxIndex)
 
-	// reference for the following is:
-	// https://github.com/ethereum/go-ethereum/blob/5bc4e8f09d7c9369b718b16c1c073070ee758395/core/state_processor.go#L95
-	// the actual receipt is expected to be created in the core
-
-	// Apply the transaction to the current state (included in the env).
-	result, err := core.ApplyMessage(evm, msg, gasPool)
+	// Check clauses 4-5, subtract intrinsic gas if everything is correct
+	intrinsicGas, err := core.IntrinsicGas(params.Input, params.AccessList, contractCreation, homestead, istanbul)
 	if err != nil {
 		return err, nil
 	}
+	if gas < intrinsicGas {
+		return fmt.Errorf("%w: have %d, want %d", core.ErrIntrinsicGas, gas, intrinsicGas), nil
+	}
+	gas -= intrinsicGas
 
-	// Update the state with pending changes.
-	statedb.Finalise(true)
+	// Check clause 6
+	// TODO: do we need this here?
+	//if msg.Value().Sign() > 0 && !evm.Context.CanTransfer(statedb, msg.From(), msg.Value()) {
+	//	return fmt.Errorf("%w: address %v", core.ErrInsufficientFundsForTransfer, msg.From().Hex()), nil
+	//}
 
-	applyResult := &EvmResult{
-		UsedGas: result.UsedGas,
-		Logs:    getLogs(statedb, txHash),
+	// Set up the initial access list.
+	if rules := evm.ChainConfig().Rules(evm.Context.BlockNumber, evm.Context.Random != nil); rules.IsBerlin {
+		statedb.PrepareAccessList(params.From, params.To, vm.ActivePrecompiles(rules), params.AccessList)
+	}
+	var (
+		returnData      []byte
+		vmerr           error
+		contractAddress *common.Address
+	)
+	if contractCreation {
+		var deployedContractAddress common.Address
+		initialNonce := statedb.GetNonce(params.From)
+		// we ignore returnData here because it holds the contract code that was just deployed
+		_, deployedContractAddress, gas, vmerr = evm.Create(sender, params.Input, gas, params.Value.ToInt())
+		// evm.Create() will also increment the callers' nonce - for EOAs, which the sender here always is,
+		// we don't want that, because it is handled by the core outside this scope.
+		// Essiest solution is to just reset the nonce after the evm invocation if it was altered.
+		// The check is necessary because in some error cases the nonce might not have been altered.
+		if initialNonce != statedb.GetNonce(params.From) {
+			statedb.SetNonce(params.From, initialNonce)
+		}
+		contractAddress = &deployedContractAddress
+	} else {
+		returnData, gas, vmerr = evm.Call(sender, *params.To, params.Input, gas, params.Value.ToInt())
 	}
 
 	// no error means successful transaction, otherwise failure
-	if result.Err != nil {
-		applyResult.EvmError = result.Err.Error()
+	evmError := ""
+	if vmerr != nil {
+		evmError = vmerr.Error()
 	}
 
-	// If the transaction created a contract, store the creation address in the receipt.
-	if msg.To() == nil {
-		contractAddress := crypto.CreateAddress(evm.TxContext.Origin, msg.Nonce())
-		applyResult.ContractAddress = &contractAddress
-	} else {
-		applyResult.ReturnData = result.ReturnData
+	return nil, &EvmResult{
+		UsedGas:         uint64(params.GasLimit) - gas,
+		EvmError:        evmError,
+		ReturnData:      returnData,
+		ContractAddress: contractAddress,
 	}
-
-	return nil, applyResult
 }

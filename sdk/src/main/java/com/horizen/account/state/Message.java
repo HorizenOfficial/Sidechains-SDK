@@ -19,15 +19,17 @@ public class Message {
     private final BigInteger nonce;
     private final byte[] data;
 
-    public Message(AddressProposition from,
-                   AddressProposition to,
-                   BigInteger gasPrice,
-                   BigInteger gasFeeCap,
-                   BigInteger gasTipCap,
-                   BigInteger gasLimit,
-                   BigInteger value,
-                   BigInteger nonce,
-                   byte[] data) {
+    public Message(
+        AddressProposition from,
+        AddressProposition to,
+        BigInteger gasPrice,
+        BigInteger gasFeeCap,
+        BigInteger gasTipCap,
+        BigInteger gasLimit,
+        BigInteger value,
+        BigInteger nonce,
+        byte[] data
+    ) {
         this.from = from;
         this.to = to;
         this.gasPrice = gasPrice;
@@ -36,7 +38,7 @@ public class Message {
         this.gasLimit = gasLimit;
         this.value = value;
         this.nonce = nonce;
-        this.data = Arrays.copyOf(data, data.length);
+        this.data = data == null ? null : Arrays.copyOf(data, data.length);
     }
 
     public AddressProposition getFrom() {
@@ -77,7 +79,16 @@ public class Message {
 
     public static Message fromTransaction(EthereumTransaction tx) {
         // TODO: fix message
-        return new Message(tx.getFrom(), tx.getTo(), tx.getGasPrice(), BigInteger.ONE /*tx.getFeeCap()*/, BigInteger.ONE/*tx.getGasPremium()*/,
-                tx.getGasLimit(), tx.getValue(), tx.getNonce(), tx.getData());
+        return new Message(
+            tx.getFrom(),
+            tx.getTo(),
+            tx.getGasPrice(),
+            BigInteger.ONE /*tx.getFeeCap()*/,
+            BigInteger.ONE/*tx.getGasPremium()*/,
+            tx.getGasLimit(),
+            tx.getValue(),
+            tx.getNonce(),
+            tx.getData()
+        );
     }
 }
