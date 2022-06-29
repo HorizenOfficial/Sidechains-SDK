@@ -21,7 +21,7 @@ import com.horizen.forge.{AbstractForgeMessageBuilder, ForgeFailed, MainchainSyn
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import scorex.core.NodeViewModifier
 import scorex.core.block.Block.{BlockId, Timestamp}
-import scorex.util.ModifierId
+import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
@@ -35,7 +35,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
      AccountBlockHeader,
      AccountBlock](
   mainchainSynchronizer, companion, params, allowNoWebsocketConnectionInRegtest
-) {
+) with ScorexLogging {
   type HSTOR = AccountHistoryStorage
   type VL = AccountWallet
   type HIS = AccountHistory
@@ -145,8 +145,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   val getGenesisBlockRootHash =
     new Array[Byte](32)
 
-  def getStateRoot(
-                    history: AccountHistory,
+  def getStateRoot( history: AccountHistory,
                     nextConsensusEpochNumber: ConsensusEpochNumber,
                     branchPointInfo: BranchPointInfo): Array[Byte] = {
 
@@ -184,7 +183,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       state.getStateDbViewFromRoot(stateRoot)
     }
 
-    val forgingStakeInfoSeq : Seq[ForgingStakeInfo] = stateViewFromRoot.getOrderedForgingStakeInfoSeq()
+    val forgingStakeInfoSeq : Seq[ForgingStakeInfo] = stateViewFromRoot.getOrderedForgingStakeInfoSeq
 
     // 3. using wallet secrets, filter out the not-mine forging stakes
     val secrets : Seq[Secret] = wallet.allSecrets().asScala

@@ -1,10 +1,6 @@
 package com.horizen.account.state;
 
 public interface MessageProcessor {
-    default String name() {
-        return "DEFAULT_NAME";
-    };
-
     // Initialization is going to happen only once at genesis State creation.
     // Common pattern: declare a new fake smart contract account in the View
     void init(AccountStateView view) throws MessageProcessorInitializationException;

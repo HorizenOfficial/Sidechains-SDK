@@ -3,7 +3,7 @@ package com.horizen.account.state
 import com.google.common.primitives.Bytes
 import com.horizen.SidechainTypes
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeMsgProcessorName, ForgerStakeSmartContractAddress}
+import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress}
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.ZenWeiConverter
@@ -15,14 +15,13 @@ import com.horizen.evm.{StateDB, StateStorageStrategy}
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.StateView
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
-import com.horizen.utils.{BlockFeeInfo, BytesUtils, ListSerializer, WithdrawalEpochInfo}
+import com.horizen.utils.{BlockFeeInfo, BytesUtils, WithdrawalEpochInfo}
 import scorex.core.VersionTag
-import scorex.crypto.hash.Keccak256
 import scorex.util.ScorexLogging
 
 import java.math.BigInteger
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
                        val stateDb: StateDB,
@@ -37,17 +36,18 @@ class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
   override type NVCT = this.type
 
   lazy val withdrawalReqProvider: WithdrawalRequestProvider = messageProcessors.find(_.isInstanceOf[WithdrawalRequestProvider]).get.asInstanceOf[WithdrawalRequestProvider]
+  lazy val forgerStakesProvider: ForgerStakesProvider = messageProcessors.find(_.isInstanceOf[ForgerStakesProvider]).get.asInstanceOf[ForgerStakesProvider]
 
   // modifiers
   override def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[Unit] = Try {
 
     refData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {
-      aggTx.mc2scTransactionsOutputs().asScala.map(_ match {
+      aggTx.mc2scTransactionsOutputs().asScala.map {
         case sc: SidechainCreation =>
           // While processing sidechain creation output:
           // 1. extract first forger stake info: block sign public key, vrf public key, owner address, stake amount
           // 2. store the stake info record in the forging fake smart contract storage
-          val scOut : MainchainTxSidechainCreationCrosschainOutput = sc.getScCrOutput
+          val scOut: MainchainTxSidechainCreationCrosschainOutput = sc.getScCrOutput
 
           val stakedAmount = ZenWeiConverter.convertZenniesToWei(scOut.amount)
 
@@ -65,7 +65,7 @@ class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
             ownerAddressProposition,
           )
 
-          val data : Array[Byte] = Bytes.concat(
+          val data: Array[Byte] = Bytes.concat(
             BytesUtils.fromHexString(AddNewStakeCmd),
             AddNewStakeCmdInputSerializer.toBytes(cmdInput))
 
@@ -80,24 +80,19 @@ class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
             BigInteger.ONE.negate(), // a negative nonce value will rule out collision with real transactions
             data)
 
-          val processor = messageProcessors.find(_.canProcess(message, this)).getOrElse{
-            val errMsg = s"No known processor for msg: $message"
-            log.error(errMsg)
-            throw new IllegalArgumentException(errMsg)
-          }
-
-          processor.asInstanceOf[ForgerStakeMsgProcessor].doAddNewStakeCmd(message, view, isGenesisScCreation = true) match {
+          forgerStakesProvider.addScCreationForgerStake(message, view) match {
             case res: ExecutionFailed =>
               log.error(res.getReason.getMessage)
               throw new IllegalArgumentException(res.getReason)
             case res: InvalidMessage =>
               log.error(res.getReason.getMessage)
               throw new IllegalArgumentException(res.getReason)
-            case _ : ExecutionSucceeded =>
+            case res: ExecutionSucceeded =>
+              log.debug(s"sc creation forging stake added with stakeid: ${BytesUtils.toHexString(res.returnData())}")
           }
 
         case ft: ForwardTransfer =>
-          val ftOut : MainchainTxForwardTransferCrosschainOutput = ft.getFtOutput
+          val ftOut: MainchainTxForwardTransferCrosschainOutput = ft.getFtOutput
 
           // we trust the MC that this is a valid amount
           val value = ZenWeiConverter.convertZenniesToWei(ftOut.amount)
@@ -107,43 +102,23 @@ class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
           // After reversing the bytes, the padding is trailed to the correct 20 bytes proposition
           val recipientProposition = new AddressProposition(BytesUtils.reverseBytes(ftOut.propositionBytes.take(com.horizen.account.utils.Account.ADDRESS_SIZE)))
 
-          log.debug(s"adding FT amount = $value to address=$recipientProposition")
-
-          // TODO check we have this account, otherwise set codeHash??
+          // stateDb will implicitly create account if not existing yet
           view.addBalance(recipientProposition.address(), value)
-
-      })
+          log.debug(s"added FT amount = $value to address=$recipientProposition")
+      }
     })
   }
 
-  def getOrderedForgingStakeInfoSeq() : Seq[ForgingStakeInfo] = {
+  def getOrderedForgingStakeInfoSeq : Seq[ForgingStakeInfo] = {
 
-    val processor = messageProcessors.find(_.name().equals(ForgerStakeMsgProcessorName)).getOrElse{
-      val errMsg = s"No processor $ForgerStakeMsgProcessorName"
-      log.error(errMsg)
-      throw new IllegalArgumentException(errMsg)
-    }
+    val forgerStakeList = forgerStakesProvider.getListOfForgers(this)
 
-    val forgerStakeList = processor.asInstanceOf[ForgerStakeMsgProcessor].doUncheckedGetListOfForgersCmd(this) match {
-      case res: ExecutionFailed =>
-        log.error(res.getReason.getMessage)
-        throw new IllegalArgumentException(res.getReason)
-      case res: InvalidMessage =>
-        log.error(res.getReason.getMessage)
-        throw new IllegalArgumentException(res.getReason)
-      case res : ExecutionSucceeded =>
-        val forgingInfoSerializer: ListSerializer[AccountForgingStakeInfo] =
-          new ListSerializer[AccountForgingStakeInfo](AccountForgingStakeInfoSerializer)
-
-        forgingInfoSerializer.parseBytesTry(res.returnData()).get
-    }
-
-    forgerStakeList.asScala.map {
+    forgerStakeList.map {
       item => ForgingStakeInfo(
         item.forgerStakeData.forgerPublicKeys.blockSignPublicKey,
         item.forgerStakeData.forgerPublicKeys.vrfPublicKey,
         ZenWeiConverter.convertWeiToZennies(item.forgerStakeData.stakedAmount))
-    }.toSeq.sorted(Ordering[ForgingStakeInfo].reverse)
+    }.sorted(Ordering[ForgingStakeInfo].reverse)
   }
 
 

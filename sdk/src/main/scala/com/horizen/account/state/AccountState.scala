@@ -227,15 +227,16 @@ class AccountState(val params: NetworkParams,
 
   override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = getView.getConsensusEpochNumber
 
-  def getOrderedForgingStakesInfoSeq() : Seq[ForgingStakeInfo] = {
+  def getOrderedForgingStakesInfoSeq : Seq[ForgingStakeInfo] = {
     val stateView: AccountStateView = getView
-    stateView.getOrderedForgingStakeInfoSeq()
+    stateView.getOrderedForgingStakeInfoSeq
   }
 
   // Returns lastBlockInEpoch and ConsensusEpochInfo for that epoch
   // Identical to the SidechainState.getCurrentConsensusEpochInfo method
+  // TODO this is common code with SidechainState
   def getConsensusEpochInfo: (ModifierId, ConsensusEpochInfo) = {
-    val forgingStakes: Seq[ForgingStakeInfo] = getOrderedForgingStakesInfoSeq()
+    val forgingStakes: Seq[ForgingStakeInfo] = getOrderedForgingStakesInfoSeq
     if (forgingStakes.isEmpty) {
       throw new IllegalStateException("ForgerStakes list can't be empty.")
     }

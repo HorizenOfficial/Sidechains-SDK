@@ -7,7 +7,7 @@ import java.math.BigInteger
 import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
 import com.horizen.account.proof.{SignatureSecp256k1, SignatureSecp256k1Serializer}
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
-import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeMsgProcessorName, ForgerStakeSmartContractAddress, GetListOfForgersCmd, LinkedListNullValue, LinkedListTipKey, RemoveStakeCmd}
+import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress, GetListOfForgersCmd, LinkedListNullValue, LinkedListTipKey, RemoveStakeCmd}
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
@@ -15,10 +15,15 @@ import scorex.crypto.hash.{Blake2b256, Keccak256}
 import scorex.util.serialization.{Reader, Writer}
 
 import java.util
+import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.util.{Failure, Success}
 
+trait ForgerStakesProvider {
+  private[horizen] def getListOfForgers(view: AccountStateView): Seq[AccountForgingStakeInfo]
+  private[horizen] def addScCreationForgerStake(msg: Message, view: AccountStateView): ExecutionResult
+}
 
-case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSmartContractMsgProcessor {
+case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSmartContractMsgProcessor with ForgerStakesProvider {
 
   override val fakeSmartContractAddress: AddressProposition = ForgerStakeSmartContractAddress
   override val fakeSmartContractCodeHash: Array[Byte] =
@@ -37,8 +42,6 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
   val RemoveStakeGasPaidValue : BigInteger      = java.math.BigInteger.ONE
 
   val networkParams : NetworkParams = params
-
-  override def name(): String = ForgerStakeMsgProcessorName
 
   def getStakeId(msg: Message): Array[Byte] = {
     Keccak256.hash(Bytes.concat(
@@ -248,6 +251,9 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
   def linkedListNodeRefIsNull(ref: Array[Byte]) : Boolean =
     BytesUtils.toHexString(ref).equals(BytesUtils.toHexString(LinkedListNullValue))
 
+  override def addScCreationForgerStake(msg: Message, view: AccountStateView): ExecutionResult =
+    doAddNewStakeCmd(msg, view, isGenesisScCreation = true)
+
   def doAddNewStakeCmd(msg: Message, view: AccountStateView, isGenesisScCreation: Boolean = false) : ExecutionResult = {
 
     // first of all check msg.value, it must be a legal wei amount convertible in satoshi without any remainder
@@ -298,7 +304,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     // add the obj to stateDb
     val stakedAmount = msg.getValue
     addForgerStake(view, newStakeId, blockSignPublicKey, vrfPublicKey, ownerAddress, stakedAmount)
-    log.debug(s"Added stake: newStakeId=$newStakeId, blockSignPublicKey=$blockSignPublicKey, vrfPublicKey=$vrfPublicKey, ownerAddress=$ownerAddress, stakedAmount=$stakedAmount")
+    log.debug(s"Added stake to stateDb: newStakeId=${BytesUtils.toHexString(newStakeId)}, blockSignPublicKey=$blockSignPublicKey, vrfPublicKey=$vrfPublicKey, ownerAddress=$ownerAddress, stakedAmount=$stakedAmount")
 
     if (isGenesisScCreation) {
       // no gas paid here
@@ -324,12 +330,21 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     }
   }
 
-  private def checkGetListOfForgersCmd(msg: Message, view: AccountStateView): Unit = {
+  private def checkGetListOfForgersCmd(msg: Message): Unit = {
     // check we have no other bytes after the op code in the msg data
     if (getArgumentsFromData(msg.getData).length > 0) {
       val msgStr = s"invalid msg data length: ${msg.getData.length}, expected $OP_CODE_LENGTH"
       log.debug(msgStr)
       throw new IllegalArgumentException(msgStr)
+    }
+  }
+
+  override def getListOfForgers(view: AccountStateView) : Seq[AccountForgingStakeInfo] = {
+    doUncheckedGetListOfForgersCmd(view) match {
+      case res : ExecutionSucceeded =>
+        forgingInfoSerializer.parseBytesTry(res.returnData()).get.asScala
+
+      case _ => Seq()
     }
   }
 
@@ -351,7 +366,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
 
   def doGetListOfForgersCmd(msg: Message, view: AccountStateView) : ExecutionResult = {
     try {
-        checkGetListOfForgersCmd(msg, view)
+        checkGetListOfForgersCmd(msg)
     }
     catch {
       case e: Exception =>
