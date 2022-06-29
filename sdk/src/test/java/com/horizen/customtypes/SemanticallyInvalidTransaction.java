@@ -61,4 +61,7 @@ public final class SemanticallyInvalidTransaction extends SidechainTransaction<P
     public byte version() {
         return Byte.MAX_VALUE;
     }
+
+    @Override
+    public long size() { return 100;}
 }

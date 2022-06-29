@@ -16,4 +16,5 @@ hs_err*
 log
 /examples/entrypoint.sh
 /examples/Dockerfile
+project/
 
