@@ -11,7 +11,7 @@ type HashParams struct {
 }
 
 // HashRoot returns the root hash of the merkle trie after adding all the given values using their index as the key
-// heavily based on types.Derive(), see https://github.com/ethereum/go-ethereum/blob/d12b1a91cd9423f83bf77dbe363164797549ff15/core/types/hashing.go#L87
+// heavily based on types.DeriveSha(), see https://github.com/ethereum/go-ethereum/blob/d12b1a91cd9423f83bf77dbe363164797549ff15/core/types/hashing.go#L87
 func (s *Service) HashRoot(params HashParams) (error, common.Hash) {
 	hasher := trie.NewStackTrie(nil)
 	count := len(params.Values)
