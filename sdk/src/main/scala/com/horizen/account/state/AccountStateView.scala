@@ -17,7 +17,7 @@ import java.math.BigInteger
 import scala.util.Try
 
 class AccountStateView(private val metadataStorageView: AccountStateMetadataStorageView,
-                       override val stateDb: StateDB,
+                       val stateDb: StateDB,
                        messageProcessors: Seq[MessageProcessor]) extends StateView[SidechainTypes#SCAT, AccountStateView]
   with BaseAccountStateView
   with AutoCloseable {
@@ -211,4 +211,5 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     stateDb.close()
   }
 
+  override def getStateDbHandle: Int = stateDb.handle
 }

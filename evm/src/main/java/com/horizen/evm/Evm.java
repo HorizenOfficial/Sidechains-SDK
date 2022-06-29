@@ -10,7 +10,7 @@ public final class Evm {
     }
 
     public static EvmResult Apply(
-            StateDB stateDB,
+            int stateDBHandle,
             byte[] from,
             byte[] to,
             BigInteger value,
@@ -19,11 +19,11 @@ public final class Evm {
             BigInteger gasPrice,
             EvmContext context
     ) {
-        return LibEvm.evmApply(stateDB.handle, from, to, value, input, gasLimit, gasPrice, context);
+        return LibEvm.evmApply(stateDBHandle, from, to, value, input, gasLimit, gasPrice, context);
     }
 
     public static EvmResult Apply(
-            StateDB stateDB,
+            int stateDBHandle,
             byte[] from,
             byte[] to,
             BigInteger value,
@@ -31,6 +31,6 @@ public final class Evm {
             BigInteger gasLimit,
             BigInteger gasPrice
     ) {
-        return LibEvm.evmApply(stateDB.handle, from, to, value, input, gasLimit, gasPrice, null);
+        return LibEvm.evmApply(stateDBHandle, from, to, value, input, gasLimit, gasPrice, null);
     }
 }

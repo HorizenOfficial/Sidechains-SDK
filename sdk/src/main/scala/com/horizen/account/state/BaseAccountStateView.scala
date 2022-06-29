@@ -6,7 +6,7 @@ import java.math.BigInteger
 import scala.util.Try
 
 trait BaseAccountStateView extends AccountStateReader {
-  val stateDb: StateDB
+  def getStateDbHandle: Int
 
   def isEoaAccount(address: Array[Byte]): Boolean
 

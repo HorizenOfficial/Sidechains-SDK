@@ -29,7 +29,7 @@ public class EvmMessageProcessor implements MessageProcessor {
             // TODO: this will only process legacy transactions correctly as PriorityFee and FeeCap are ignored
             //  (and the baseFee is set to zero internally in `LibEvm.evmApply`)
             var result = Evm.Apply(
-                    view.stateDb(),
+                    view.getStateDbHandle(),
                     msg.getFrom().address(),
                     msg.getTo() == null ? null : msg.getTo().address(),
                     msg.getValue(),
