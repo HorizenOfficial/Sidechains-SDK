@@ -1,24 +1,28 @@
 package com.horizen
 
 import java.util.{Comparator, Optional, List => JList}
+
 import com.horizen.box.Box
 import com.horizen.node.NodeMemoryPool
 import com.horizen.transaction.BoxTransaction
-import com.horizen.utils.FeeRate
-import scorex.util.ModifierId
+import com.horizen.utils.MempoolMap
+import scorex.util.{ModifierId, ScorexLogging}
 import scorex.core.transaction.MempoolReader
 
 import scala.collection.concurrent.TrieMap
 import scala.util.{Failure, Success, Try}
 import scala.collection.JavaConverters._
 
-class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry])
+class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: MempoolSettings)
   extends scorex.core.transaction.MemoryPool[SidechainTypes#SCBT, SidechainMemoryPool]
   with SidechainTypes
   with NodeMemoryPool
+  with ScorexLogging
 {
+  var maxPoolSizeBytes : Long =  mempoolSettings.maxSize * 1024 * 1024
+  val minFeeRate : Long = mempoolSettings.minFeeRate
+
   override type NVCT = SidechainMemoryPool
-  //type BT = BoxTransaction[ProofOfKnowledgeProposition[Secret], Box[ProofOfKnowledgeProposition[Secret]]]
 
   // Getters:
   override def modifierById(modifierId: ModifierId): Option[SidechainTypes#SCBT] = {
@@ -40,19 +44,16 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
     unconfirmed.size
   }
 
-  // define a custom sorting func based on fee rate
-  def getTransactionsSortedByFeeRate: (SidechainMemoryPoolEntry, SidechainMemoryPoolEntry) => Boolean = (a: SidechainMemoryPoolEntry, b: SidechainMemoryPoolEntry) =>
-  {
-    a.feeRate > b.feeRate
-  }
-
-
   override def getTransactionsSortedByFee(limit: Int): JList[SidechainTypes#SCBT] = {
     unconfirmed.values.toList.sortBy(-_.getUnconfirmedTx().fee).take(limit).map(tx => tx.getUnconfirmedTx()).asJava
   }
 
+  override def getTransactionsSortedByFeeRate(limit: Int): JList[SidechainTypes#SCBT] = {
+    take(limit).toList.asJava
+  }
+
   override def take(limit: Int): Iterable[SidechainTypes#SCBT] = {
-    unconfirmed.values.toSeq.sortWith(getTransactionsSortedByFeeRate).take(limit).map(tx => tx.getUnconfirmedTx())
+    unconfirmed.takeHighest(limit).map(ele => ele.getUnconfirmedTx())
   }
 
   def take(sortFunc: (SidechainMemoryPoolEntry, SidechainMemoryPoolEntry) => Boolean,
@@ -64,11 +65,13 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
     filter(t => !txs.exists(_.id == t.id))
   }
 
+  /**
+   * Return a new SidechainMemoryPool instance with the subset of the original txs satisfying the condition check
+   * @param condition to use to filter the transactions
+   */
   override def filter(condition: SidechainTypes#SCBT => Boolean): SidechainMemoryPool = {
-    unconfirmed.retain { (k, v) =>
-      condition(v.getUnconfirmedTx())
-    }
-    this
+    val filteredMap = unconfirmed.values.filter(ele => condition(ele.getUnconfirmedTx()))
+    new SidechainMemoryPool(new MempoolMap(filteredMap), mempoolSettings)
   }
 
   override def notIn(ids: Seq[ModifierId]): Seq[ModifierId] = {
@@ -83,14 +86,20 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
   override def put(tx: SidechainTypes#SCBT): Try[SidechainMemoryPool] = {
     // check if tx is not colliding with unconfirmed using
     // tx.incompatibilityChecker().hasIncompatibleTransactions(tx, unconfirmed)
-    if (tx.incompatibilityChecker().isMemoryPoolCompatible &&
+    val entry = SidechainMemoryPoolEntry(tx)
+    if (entry.feeRate.getFeeRate() < minFeeRate) {
+       Failure(new IllegalArgumentException("Transaction fee is less than mempool.minFeeRate - " + tx))
+    } else if (tx.incompatibilityChecker().isMemoryPoolCompatible &&
         tx.incompatibilityChecker().isTransactionCompatible(tx, unconfirmed.values.toList.map(t => t.getUnconfirmedTx()).asJava)) {
-      unconfirmed.put(tx.id, SidechainMemoryPoolEntry(tx))
-      Success[SidechainMemoryPool](this)
-    }
-    else
+      if (addWithSizeCheck(entry))
+        Success[SidechainMemoryPool](this)
+      else
+        Failure(new IllegalArgumentException("Mempool full and tx feeRate too low, unable to add transaction - " + tx))
+    } else {
         Failure(new IllegalArgumentException("Transaction is incompatible - " + tx))
+    }
   }
+
 
   override def put(txs: Iterable[SidechainTypes#SCBT]): Try[SidechainMemoryPool] = {
     // for each tx in txs call "put"
@@ -109,10 +118,32 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
     }
 
     for (t <- txs) {
-      unconfirmed.put(t.id, SidechainMemoryPoolEntry(t))
+      val entry = SidechainMemoryPoolEntry(t)
+      if (entry.feeRate.getFeeRate() >= minFeeRate) {
+        addWithSizeCheck(entry)
+      }
     }
-
     new Success[SidechainMemoryPool](this)
+  }
+
+  /**
+   * Add tx to the mempool.
+   * Lowest fee-rate txs are removed in case max mempool size is reached.
+   * @return true if the transaction has been inserted succesfully
+   */
+  def addWithSizeCheck(entry: SidechainMemoryPoolEntry) : Boolean = {
+    while (unconfirmed.usedSizeBytes + entry.feeRate.getSize() > maxPoolSizeBytes){
+      val lastEntry = unconfirmed.headOption
+      if (lastEntry.isEmpty || (lastEntry.get.feeRate.getFeeRate() > entry.feeRate.getFeeRate())){
+        //the pool is empty but txsize exceeds its  limit,
+        //or the pool is full, and the entry we are trying to add has feerate lower than the miminum in pool
+        //In both cases the insert will fail
+        return false;
+      }
+      unconfirmed.remove(lastEntry.get.getUnconfirmedTx().id())
+    }
+    unconfirmed.add(entry)
+    true
   }
 
   // TO DO: check usage in Scorex core
@@ -129,7 +160,10 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
     }
 
     for (t <- txs) {
-      unconfirmed.put(t.id, SidechainMemoryPoolEntry(t))
+      val entry = SidechainMemoryPoolEntry(t)
+      if (entry.feeRate.getFeeRate() >= minFeeRate) {
+        addWithSizeCheck(entry)
+      }
     }
 
     this
@@ -139,7 +173,7 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
     unconfirmed.remove(tx.id)
     this
   }
-
+  
   override def getTransactions: JList[SidechainTypes#SCBT] = {
     unconfirmed.values.map(el => el.getUnconfirmedTx()).toList.asJava
   }
@@ -152,16 +186,33 @@ class SidechainMemoryPool(unconfirmed: TrieMap[String, SidechainMemoryPoolEntry]
 
   override def getSize: Int = unconfirmed.size
 
+  def usedSizeBytes: Long = {
+    unconfirmed.usedSizeBytes
+  }
+
+  def usedSizeKBytes: Int = {
+    Math.round(unconfirmed.usedSizeBytes/1024)
+  }
+
+  def usedPercentage: Int = {
+    Math.round((unconfirmed.usedSizeBytes*100)/maxPoolSizeBytes)
+  }
+
   override def getTransactionById(transactionId: String): Optional[BoxTransaction[SCP, Box[SCP]]] = {
     Optional.ofNullable(unconfirmed.get(transactionId) match {
       case Some(mempoolEntry) => mempoolEntry.getUnconfirmedTx()
       case None => null
     })
   }
+
+
 }
 
 object SidechainMemoryPool
 {
-  lazy val emptyPool : SidechainMemoryPool = new SidechainMemoryPool(TrieMap())
+  def createEmptyMempool(mempoolSettings: MempoolSettings) : SidechainMemoryPool = {
+    new SidechainMemoryPool(new MempoolMap(List()), mempoolSettings)
+  }
+
 }
 

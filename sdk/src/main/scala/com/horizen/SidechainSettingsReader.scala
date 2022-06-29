@@ -24,13 +24,14 @@ object SidechainSettingsReader
     val scorexSettings = config.as[ScorexSettings]("scorex")
     val genesisSettings = config.as[GenesisDataSettings]("scorex.genesis")
     val certificateSettings = config.as[WithdrawalEpochCertificateSettings]("scorex.withdrawalEpochCertificate")
+    val mempoolSettings = config.as[MempoolSettings]("scorex.mempool")
     val walletSettings = config.as[WalletSettings]("scorex.wallet")
     val forgerSettings = config.as[ForgerSettings]("scorex.forger")
     val cswSettings = config.as[CeasedSidechainWithdrawalSettings]("scorex.csw")
     val logInfoSettings = config.as[LogInfoSettings]("scorex.logInfo")
 
     SidechainSettings(scorexSettings, genesisSettings, webSocketConnectorConfigurationSettings, certificateSettings,
-      walletSettings, forgerSettings, cswSettings, logInfoSettings)
+      mempoolSettings, walletSettings, forgerSettings, cswSettings, logInfoSettings)
   }
 
   def readConfigFromPath(userConfigPath: String, applicationConfigPath: Option[String]): Config = {

@@ -22,11 +22,13 @@ import scorex.core.NodeViewHolder.ReceivableMessages.{LocallyGeneratedModifier, 
 import scorex.core.consensus.History.ProgressInfo
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ModifiersProcessingResult, SemanticallySuccessfulModifier}
 import scorex.core.validation.RecoverableModifierError
+import scorex.core.settings.NetworkSettings
 import scorex.core.{VersionTag, idToVersion}
 import scorex.util.ModifierId
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration.FiniteDuration
 import scala.util.{Failure, Success}
 
 class SidechainNodeViewHolderTest extends JUnitSuite
@@ -49,13 +51,21 @@ class SidechainNodeViewHolderTest extends JUnitSuite
   val params: NetworkParams = RegTestParams(initialCumulativeCommTreeHash = FieldElementFixture.generateFieldElement())
   implicit lazy val timeout: Timeout = Timeout(10000 milliseconds)
 
+
   @Before
   def setUp(): Unit = {
     history = mock[SidechainHistory]
     state = mock[SidechainState]
     wallet = mock[SidechainWallet]
-    mempool = SidechainMemoryPool.emptyPool
+    mempool = SidechainMemoryPool.createEmptyMempool(getMockedMempoolSettings(300))
     mockedNodeViewHolderRef = getMockedSidechainNodeViewHolderRef(history, state, wallet, mempool)
+  }
+
+  private def getMockedMempoolSettings(maxSize: Int): MempoolSettings = {
+    val mockedSettings: MempoolSettings = mock[MempoolSettings]
+    Mockito.when(mockedSettings.maxSize).thenReturn(maxSize)
+    Mockito.when(mockedSettings.minFeeRate).thenReturn(0)
+    mockedSettings
   }
 
   @Test

@@ -90,6 +90,19 @@ trait TransactionFixture extends BoxFixture {
     RegularTransaction.create(from, to, 10L)
   }
 
+
+  def getRegularRandomTransaction(fee : Long, numberoOfOutputs: Int): RegularTransaction = {
+    assert(numberoOfOutputs > 0)
+    val from : JList[JPair[ZenBox,PrivateKey25519]] = new JArrayList[JPair[ZenBox,PrivateKey25519]]()
+    val to: JList[BoxData[_ <: Proposition, _ <: Box[_ <: Proposition]]] = new JArrayList()
+    from.add(new JPair(getZenBox(pk1.publicImage(), Random.nextLong(), 10), pk1))
+    from.add(new JPair(getZenBox(pk2.publicImage(), Random.nextLong(), 20 * numberoOfOutputs), pk2))
+    for (i <- 1 to numberoOfOutputs) {
+      to.add(new ZenBoxData(pk7.publicImage(), 20L))
+    }
+    RegularTransaction.create(from, to, fee)
+  }
+
   def getCompatibleTransaction: RegularTransaction = {
     val from: JList[JPair[ZenBox,PrivateKey25519]] = new JArrayList[JPair[ZenBox,PrivateKey25519]]()
     val to: JList[BoxData[_ <: Proposition, _ <: Box[_ <: Proposition]]] = new JArrayList()

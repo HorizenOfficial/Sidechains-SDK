@@ -42,6 +42,8 @@ from sc_import_export_keys import SidechainImportExportKeysTest
 from sc_forger_feerate import SCForgerFeerate
 from sc_mempool_max_fee import SCMempoolMaxFee
 from sc_csw_disabled import SCCswDisabled
+from sc_mempool_max_size import  SCMempoolMaxSize
+from sc_mempool_min_fee_rate import SCMempoolMinFeeRate
 
 def run_test(test):
     try:
@@ -173,6 +175,12 @@ def run_tests(log_file):
 
     result = run_test(SCCswDisabled())
     assert_equal(0, result, "sc_csw_disabled test failed!")
+
+    result = run_test(SCMempoolMaxSize())
+    assert_equal(0, result, "sc_mempool_max_size test failed!")
+
+    result = run_test(SCMempoolMinFeeRate())
+    assert_equal(0, result, "sc_mempool_min_fee_rate test failed!")
 
 
 if __name__ == "__main__":
