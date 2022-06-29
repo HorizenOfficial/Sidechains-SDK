@@ -162,9 +162,8 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     ommersSerializer.toBytes(ommers.asJava).length
   }
 
-  override def getForgingStakeMerklePathInfo(nextConsensusEpochNumber: ConsensusEpochNumber, wallet: SidechainWallet, history: SidechainHistory, state: SidechainState): Seq[ForgingStakeMerklePathInfo] =
-     wallet.getForgingStakeMerklePathInfoOpt(nextConsensusEpochNumber).getOrElse(Seq())
-     .sortWith(_.forgingStakeInfo.stakeAmount > _.forgingStakeInfo.stakeAmount)
+  override def getForgingStakeMerklePathInfo(nextConsensusEpochNumber: ConsensusEpochNumber, wallet: SidechainWallet, history: SidechainHistory, state: SidechainState, branchPointInfo: BranchPointInfo): Seq[ForgingStakeMerklePathInfo] =
+     sortByStakeAmount(wallet.getForgingStakeMerklePathInfoOpt(nextConsensusEpochNumber).getOrElse(Seq()) )
 
 
 }

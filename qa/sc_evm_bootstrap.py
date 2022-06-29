@@ -11,7 +11,7 @@ from test_framework.util import assert_equal, assert_true, start_nodes, \
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, is_mainchain_block_included_in_sc_block, check_box_balance, \
     check_mainchain_block_reference_info, check_wallet_coins_balance, check_box_balance, get_lib_separator, \
-    AccountModelBlockVersion, EVM_APP_BINARY, generate_next_blocks
+    AccountModelBlockVersion, EVM_APP_BINARY, generate_next_blocks, generate_next_block
 
 """
 Check the EVM bootstrap feature.
@@ -44,7 +44,8 @@ class SCEvmBootstrap(SidechainTestFramework):
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, LARGE_WITHDRAWAL_EPOCH_LENGTH), sc_node_configuration)
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, blockversion=AccountModelBlockVersion)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, block_timestamp_rewind=720*120*5, blockversion=AccountModelBlockVersion)
+
 
     def sc_setup_nodes(self):
         return start_sc_nodes(num_nodes=1, dirname=self.options.tmpdir, binary=[EVM_APP_BINARY])#, extra_args=['-agentlib'])
@@ -69,12 +70,23 @@ class SCEvmBootstrap(SidechainTestFramework):
             "The mainchain block is not included inside SC block reference info.")
 
         #input("\n\t======> Enter any input to continue generating a new sc block...")
+        generate_next_blocks(sc_node, "first node", 1)[0]
+        self.sc_sync_all()
+        sc_best_block = sc_node.block_best()["result"]
+        assert_equal(sc_best_block["height"], 2, "The best block has not the specified height.")
 
-        scblock_id0 = generate_next_blocks(sc_node, "first node", 1)[0]
+        #input("\n\t======> Enter any input to continue generating blocks till next consensus epoch...")
+        # Generate SC block on SC node 1 for the next consensus epoch
+        generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
+        self.sc_sync_all()
+
+        #input("\n\t======> Enter any input to continue generating blocks till next consensus epoch...")
+        # Generate SC block on SC node 1 for the next consensus epoch
+        generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
+        self.sc_sync_all()
 
         sc_best_block = sc_node.block_best()["result"]
-
-        assert_equal(sc_best_block["height"], 2, "The best block has not the specified height.")
+        pprint.pprint(sc_best_block)
 
         # send an eth tx to mempool
         amount = 1000

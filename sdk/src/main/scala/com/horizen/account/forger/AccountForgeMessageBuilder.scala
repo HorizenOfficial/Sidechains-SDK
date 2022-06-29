@@ -145,47 +145,36 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   val getGenesisBlockRootHash =
     new Array[Byte](32)
 
-  def getStateRoot(history: AccountHistory, nextConsensusEpochNumber: ConsensusEpochNumber) : (ConsensusEpochNumber, Array[Byte]) = {
+  def getStateRoot(
+                    history: AccountHistory,
+                    nextConsensusEpochNumber: ConsensusEpochNumber,
+                    branchPointInfo: BranchPointInfo): Array[Byte] = {
 
     // For given epoch N we should get data from the ending of the epoch N-2.
     // genesis block is the single and the last block of epoch 1 - that is a special case:
     // Data from epoch 1 is also valid for epoch 2, so for epoch N==2, we should get info from epoch 1.
     nextConsensusEpochNumber match {
       case epoch if (epoch <= 2) =>
-        (ConsensusEpochNumber @@ 1, getGenesisBlockRootHash)
+        getGenesisBlockRootHash
 
-      case epoch =>
+      case _ =>
+        val parentId = branchPointInfo.branchPointId
+        val ts = history.blockInfoById(parentId).timestamp
+        val lastBlockId = history.getLastBlockIdOfPrePreviousEpochs(ts, parentId)
 
-        val branchPointInfo: BranchPointInfo = getBranchPointInfo(history) match {
-          case Success(info) => info
-          case Failure(ex) =>
-            throw ex
-        }
-
-        // apply two times the api for getting previous epoch last block
-        val parentId_0 = branchPointInfo.branchPointId
-        val ts_0 = history.blockInfoById(parentId_0).timestamp
-        val blockId_0 = history.getLastBlockInPreviousConsensusEpoch(ts_0, parentId_0)
-
-        val parentId_1 = blockId_0
-        val ts_1 = history.blockInfoById(parentId_1).timestamp
-        val blockId_1 = history.getLastBlockInPreviousConsensusEpoch(ts_1, parentId_1)
-
-        val lastBlock = history.getBlockById(blockId_1)
-        val stateRoot = lastBlock.get().header.stateRoot
-
-        (ConsensusEpochNumber @@ (epoch - 2), stateRoot)
+        val lastBlock = history.getBlockById(lastBlockId)
+        lastBlock.get().header.stateRoot
     }
   }
 
   override def getForgingStakeMerklePathInfo(
-         nextConsensusEpochNumber: ConsensusEpochNumber,
-         wallet: AccountWallet,
-         history: AccountHistory,
-         state: AccountState): Seq[ForgingStakeMerklePathInfo] = {
+          nextConsensusEpochNumber: ConsensusEpochNumber,
+          wallet: AccountWallet, history: AccountHistory,
+          state: AccountState,
+          branchPointInfo: BranchPointInfo): Seq[ForgingStakeMerklePathInfo] = {
 
     // 1. get from history the state root from the header of the block of 2 epochs before
-    val (consensusEpochNumber, stateRoot) = getStateRoot(history, nextConsensusEpochNumber)
+    val stateRoot = getStateRoot(history, nextConsensusEpochNumber, branchPointInfo)
 
     // 2. get from stateDb using root above the collection of all forger stakes (ordered)
     val stateViewFromRoot = if (ByteUtils.toHexString(stateRoot) == ByteUtils.toHexString(getGenesisBlockRootHash)) {
@@ -198,33 +187,33 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val forgingStakeInfoSeq : Seq[ForgingStakeInfo] = stateViewFromRoot.getOrderedForgingStakeInfoSeq()
 
     // 3. using wallet secrets, filter out the not-mine forging stakes
-     val secrets : Seq[Secret] = wallet.allSecrets().asScala
+    val secrets : Seq[Secret] = wallet.allSecrets().asScala
 
     val walletPubKeys = secrets.map( e => e.publicImage())
 
-    val filteredForgingStakeInfoSeq = forgingStakeInfoSeq.filter(p => walletPubKeys.contains(p.blockSignPublicKey))
+    val filteredForgingStakeInfoSeq = forgingStakeInfoSeq.filter(p => {
+      walletPubKeys.contains(p.blockSignPublicKey) &&
+        walletPubKeys.contains(p.vrfPublicKey)
+    })
 
-    val epochInfo = ConsensusEpochInfo(
-      consensusEpochNumber,
-      MerkleTree.createMerkleTree(filteredForgingStakeInfoSeq.map(info => info.hash).asJava),
-      filteredForgingStakeInfoSeq.map(_.stakeAmount).sum)
+    val forgingStakeInfoTree = MerkleTree.createMerkleTree(filteredForgingStakeInfoSeq.map(info => info.hash).asJava)
 
     // 4. prepare merkle tree of all forger stakes and extract path info of mine (what is left after 3)
-    val merkleTreeLeaves = epochInfo.forgingStakeInfoTree.leaves().asScala.map(leaf => new ByteArrayWrapper(leaf))
+    val merkleTreeLeaves = forgingStakeInfoTree.leaves().asScala.map(leaf => new ByteArrayWrapper(leaf))
 
     // Calculate merkle path for all delegated forgerBoxes
     val forgingStakeMerklePathInfoSeq: Seq[ForgingStakeMerklePathInfo] =
       filteredForgingStakeInfoSeq.flatMap(forgingStakeInfo => {
         merkleTreeLeaves.indexOf(new ByteArrayWrapper(forgingStakeInfo.hash)) match {
-          case -1 => None // May occur in case if Wallet doesn't contain information about all boxes for given blockSignKey and vrfKey
+          case -1 => None // May occur in case Wallet doesn't contain information about blockSignKey and vrfKey
           case index => Some(ForgingStakeMerklePathInfo(
             forgingStakeInfo,
-            epochInfo.forgingStakeInfoTree.getMerklePathForLeaf(index)
+            forgingStakeInfoTree.getMerklePathForLeaf(index)
           ))
         }
       })
 
-    forgingStakeMerklePathInfoSeq
+    sortByStakeAmount(forgingStakeMerklePathInfoSeq)
   }
 }
 

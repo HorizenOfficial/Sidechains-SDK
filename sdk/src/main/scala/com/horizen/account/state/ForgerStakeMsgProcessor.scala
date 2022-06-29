@@ -7,7 +7,7 @@ import java.math.BigInteger
 import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
 import com.horizen.account.proof.{SignatureSecp256k1, SignatureSecp256k1Serializer}
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
-import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress, GetListOfForgersCmd, LinkedListNullValue, LinkedListTipKey, RemoveStakeCmd}
+import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeMsgProcessorName, ForgerStakeSmartContractAddress, GetListOfForgersCmd, LinkedListNullValue, LinkedListTipKey, RemoveStakeCmd}
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
@@ -37,6 +37,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
   val RemoveStakeGasPaidValue : BigInteger      = java.math.BigInteger.ONE
 
   val networkParams : NetworkParams = params
+
+  override def name(): String = ForgerStakeMsgProcessorName
 
   def getStakeId(msg: Message): Array[Byte] = {
     Keccak256.hash(Bytes.concat(
@@ -322,14 +324,16 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     }
   }
 
-  def doGetListOfForgersCmd(msg: Message, view: AccountStateView) : ExecutionResult = {
+  private def checkGetListOfForgersCmd(msg: Message, view: AccountStateView): Unit = {
     // check we have no other bytes after the op code in the msg data
     if (getArgumentsFromData(msg.getData).length > 0) {
       val msgStr = s"invalid msg data length: ${msg.getData.length}, expected $OP_CODE_LENGTH"
       log.debug(msgStr)
-      return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(msgStr))
+      throw new IllegalArgumentException(msgStr)
     }
+  }
 
+  def doUncheckedGetListOfForgersCmd(view: AccountStateView) : ExecutionResult = {
     val stakeList = new util.ArrayList[AccountForgingStakeInfo]()
     var nodeReference = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey).get
 
@@ -343,6 +347,19 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     val listOfForgers : Array[Byte] = forgingInfoSerializer.toBytes(stakeList)
 
     new ExecutionSucceeded(GetListOfForgersGasPaidValue, listOfForgers)
+  }
+
+  def doGetListOfForgersCmd(msg: Message, view: AccountStateView) : ExecutionResult = {
+    try {
+        checkGetListOfForgersCmd(msg, view)
+    }
+    catch {
+      case e: Exception =>
+        log.debug("Exception while adding a new Withdrawal Request", e)
+        return new ExecutionFailed(GetListOfForgersGasPaidValue, e)
+    }
+
+    doUncheckedGetListOfForgersCmd(view)
   }
 
   def doRemoveStakeCmd(msg: Message, view: AccountStateView) : ExecutionResult = {
@@ -435,6 +452,8 @@ object ForgerStakeMsgProcessor {
   val RemoveStakeCmd: String =      "02"
 
   val ForgerStakeSmartContractAddress = new AddressProposition(BytesUtils.fromHexString("0000000000000000000022222222222222222222"))
+
+  val ForgerStakeMsgProcessorName : String = "FORGER_STAKE"
 }
 
 //@JsonView(Array(classOf[Views.Default]))

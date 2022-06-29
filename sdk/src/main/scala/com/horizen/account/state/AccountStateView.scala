@@ -3,7 +3,7 @@ package com.horizen.account.state
 import com.google.common.primitives.Bytes
 import com.horizen.SidechainTypes
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress}
+import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeMsgProcessorName, ForgerStakeSmartContractAddress}
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.ZenWeiConverter
@@ -117,25 +117,14 @@ class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
   }
 
   def getOrderedForgingStakeInfoSeq() : Seq[ForgingStakeInfo] = {
-    val data: Array[Byte] = BytesUtils.fromHexString(AddNewStakeCmd)
-    val message = new Message(
-      null, // sender proposition
-      ForgerStakeSmartContractAddress,
-      BigInteger.ZERO, // gasPrice
-      BigInteger.ZERO, // gasFeeCap
-      BigInteger.ZERO, // gasTipCap
-      BigInteger.ZERO, // gasLimit
-      BigInteger.ZERO, // value, not used here,
-      BigInteger.ONE.negate(), // nonce, not used here
-      data)
 
-    val processor = messageProcessors.find(_.canProcess(message, this)).getOrElse{
-      val errMsg = s"No known processor for msg: $message"
+    val processor = messageProcessors.find(_.name().equals(ForgerStakeMsgProcessorName)).getOrElse{
+      val errMsg = s"No processor $ForgerStakeMsgProcessorName"
       log.error(errMsg)
       throw new IllegalArgumentException(errMsg)
     }
 
-    val forgerStakeList = processor.asInstanceOf[ForgerStakeMsgProcessor].doGetListOfForgersCmd(message, this) match {
+    val forgerStakeList = processor.asInstanceOf[ForgerStakeMsgProcessor].doUncheckedGetListOfForgersCmd(this) match {
       case res: ExecutionFailed =>
         log.error(res.getReason.getMessage)
         throw new IllegalArgumentException(res.getReason)
@@ -149,13 +138,12 @@ class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
         forgingInfoSerializer.parseBytesTry(res.returnData()).get
     }
 
-    // TODO do the ordering
     forgerStakeList.asScala.map {
       item => ForgingStakeInfo(
         item.forgerStakeData.forgerPublicKeys.blockSignPublicKey,
         item.forgerStakeData.forgerPublicKeys.vrfPublicKey,
         ZenWeiConverter.convertWeiToZennies(item.forgerStakeData.stakedAmount))
-    }.toSeq
+    }.toSeq.sorted(Ordering[ForgingStakeInfo].reverse)
   }
 
 
