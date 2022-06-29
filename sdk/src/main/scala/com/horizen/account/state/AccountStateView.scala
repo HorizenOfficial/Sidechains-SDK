@@ -16,9 +16,11 @@ import scorex.core.VersionTag
 import java.math.BigInteger
 import scala.util.Try
 
-class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
-                       val stateDb: StateDB,
-                       messageProcessors: Seq[MessageProcessor]) extends StateView[SidechainTypes#SCAT, AccountStateView] with AccountStateReader with AutoCloseable {
+class AccountStateView(private val metadataStorageView: AccountStateMetadataStorageView,
+                       override val stateDb: StateDB,
+                       messageProcessors: Seq[MessageProcessor]) extends StateView[SidechainTypes#SCAT, AccountStateView]
+  with BaseAccountStateView
+  with AutoCloseable {
   view: AccountStateView =>
 
   override type NVCT = this.type
@@ -52,22 +54,22 @@ class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
       throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
   }
 
-  def isEoaAccount(address: Array[Byte]): Boolean = stateDb.isEoaAccount(address)
+  override def isEoaAccount(address: Array[Byte]): Boolean = stateDb.isEoaAccount(address)
 
-  def isSmartContractAccount(address: Array[Byte]): Boolean = stateDb.isSmartContractAccount(address)
+  override def isSmartContractAccount(address: Array[Byte]): Boolean = stateDb.isSmartContractAccount(address)
 
-  def accountExists(address: Array[Byte]): Boolean = !stateDb.isEmpty(address)
+  override def accountExists(address: Array[Byte]): Boolean = !stateDb.isEmpty(address)
 
   // account modifiers:
-  def addAccount(address: Array[Byte], codeHash: Array[Byte]): Try[Unit] = Try {
+  override def addAccount(address: Array[Byte], codeHash: Array[Byte]): Try[Unit] = Try {
     stateDb.setCodeHash(address, codeHash)
   }
 
-  def addBalance(address: Array[Byte], amount: BigInteger): Try[Unit] = Try {
+  override def addBalance(address: Array[Byte], amount: BigInteger): Try[Unit] = Try {
     stateDb.addBalance(address, amount)
   }
 
-  def subBalance(address: Array[Byte], amount: BigInteger): Try[Unit] = Try {
+  override def subBalance(address: Array[Byte], amount: BigInteger): Try[Unit] = Try {
     // stateDb lib does not do any sanity check, and negative balances might arise (and java/go json IF does not correctly handle it)
     // TODO: for the time being do the checks here, later they will be done in the caller stack
     require(amount.compareTo(BigInteger.ZERO) >= 0)
@@ -79,30 +81,30 @@ class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
 
   protected def updateAccountStorageRoot(address: Array[Byte], root: Array[Byte]): Try[AccountStateView] = ???
 
-  def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Try[Unit] = Try {
+  override def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Try[Unit] = Try {
     stateDb.setStorage(address, key, value, StateStorageStrategy.RAW)
   }
 
-  def updateAccountStorageBytes(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Try[Unit] = Try {
+  override def updateAccountStorageBytes(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Try[Unit] = Try {
     stateDb.setStorage(address, key, value, StateStorageStrategy.CHUNKED)
   }
 
-  def getAccountStorage(address: Array[Byte], key: Array[Byte]): Try[Array[Byte]] =
+  override def getAccountStorage(address: Array[Byte], key: Array[Byte]): Try[Array[Byte]] =
     Try {
       stateDb.getStorage(address, key, StateStorageStrategy.RAW)
     }
 
-  def getAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Try[Array[Byte]] =
+  override def getAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Try[Array[Byte]] =
     Try {
       stateDb.getStorage(address, key, StateStorageStrategy.CHUNKED)
     }
 
-  def removeAccountStorage(address: Array[Byte], key: Array[Byte]): Try[Unit] =
+  override def removeAccountStorage(address: Array[Byte], key: Array[Byte]): Try[Unit] =
     Try {
       stateDb.removeStorage(address, key, StateStorageStrategy.RAW)
     }
 
-  def removeAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Try[Unit] =
+  override def removeAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Try[Unit] =
     Try {
       stateDb.removeStorage(address, key, StateStorageStrategy.CHUNKED)
     }
@@ -146,10 +148,6 @@ class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
     new AccountStateView(metadataStorageView, stateDb, messageProcessors)
   }
 
-  // view controls
-  override def savepoint(): Unit = ???
-
-  override def rollbackToSavepoint(): Try[AccountStateView] = ???
 
   override def commit(version: VersionTag): Try[Unit] = Try {
     // Update StateDB without version, then commit metadataStorageView
@@ -208,7 +206,7 @@ class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
 
   override def getAccountStateRoot: Option[Array[Byte]] = metadataStorageView.getAccountStateRoot
 
-  def close() : Unit = {
+  override def close() : Unit = {
     // when a method is called on a closed handle, LibEvm throws an exception
     stateDb.close()
   }

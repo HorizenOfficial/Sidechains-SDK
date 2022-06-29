@@ -4,7 +4,7 @@ import com.horizen.evm.Evm;
 
 public class EvmMessageProcessor implements MessageProcessor {
     @Override
-    public void init(AccountStateView view) {
+    public void init(BaseAccountStateView view) {
         // nothing to do here
     }
 
@@ -16,7 +16,7 @@ public class EvmMessageProcessor implements MessageProcessor {
      * </ol>
      */
     @Override
-    public boolean canProcess(Message msg, AccountStateView view) {
+    public boolean canProcess(Message msg, BaseAccountStateView view) {
         // contract deployment to a new account
         if (msg.getTo() == null) return true;
         var to = msg.getTo().address();
@@ -24,7 +24,7 @@ public class EvmMessageProcessor implements MessageProcessor {
     }
 
     @Override
-    public ExecutionResult process(Message msg, AccountStateView view) {
+    public ExecutionResult process(Message msg, BaseAccountStateView view) {
         try {
             // TODO: this will only process legacy transactions correctly as PriorityFee and FeeCap are ignored
             //  (and the baseFee is set to zero internally in `LibEvm.evmApply`)

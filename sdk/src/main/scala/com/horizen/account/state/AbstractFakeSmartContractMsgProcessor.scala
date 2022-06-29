@@ -13,7 +13,7 @@ abstract class AbstractFakeSmartContractMsgProcessor extends MessageProcessor wi
   val fakeSmartContractCodeHash: Array[Byte]
 
   @throws[MessageProcessorInitializationException]
-  override def init(view: AccountStateView): Unit = {
+  override def init(view: BaseAccountStateView): Unit = {
     if (!view.accountExists(fakeSmartContractAddress.address()))
     {
       view.addAccount(fakeSmartContractAddress.address(), fakeSmartContractCodeHash)
@@ -28,7 +28,7 @@ abstract class AbstractFakeSmartContractMsgProcessor extends MessageProcessor wi
     }
   }
 
-  override def canProcess(msg: Message, view: AccountStateView): Boolean = {
+  override def canProcess(msg: Message, view: BaseAccountStateView): Boolean = {
     fakeSmartContractAddress.equals(msg.getTo)
   }
 
