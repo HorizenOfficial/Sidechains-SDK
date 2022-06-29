@@ -40,18 +40,18 @@ class SidechainMemoryPoolTest
     assertEquals("Put operation must be success.", memoryPool.put(tx2).isSuccess,
       true)
     assertEquals("Size must be 2.", memoryPool.size, 2)
-    assertEquals("usedPoolSizeBytes must be equals to tx1+tx2 size", memoryPool.usedPoolSizeBytes,
+    assertEquals("usedPoolSizeBytes must be equals to tx1+tx2 size", memoryPool.usedSizeBytes,
       tx.size() + tx2.size())
 
     //remove unexisting tx
     memoryPool.remove(tx3)
     assertEquals("Size must be 2.", memoryPool.size, 2)
-    assertEquals("usedPoolSizeBytes must be equals to tx1+tx2 size", memoryPool.usedPoolSizeBytes,
+    assertEquals("usedPoolSizeBytes must be equals to tx1+tx2 size", memoryPool.usedSizeBytes,
       tx.size() + tx2.size())
 
     memoryPool.remove(tx)
     assertEquals("Size must be 1.", memoryPool.size, 1)
-    assertEquals("usedPoolSizeBytes must be equals to tx2 size", memoryPool.usedPoolSizeBytes, tx2.size())
+    assertEquals("usedPoolSizeBytes must be equals to tx2 size", memoryPool.usedSizeBytes, tx2.size())
 
 
   }
@@ -85,7 +85,7 @@ class SidechainMemoryPoolTest
     assertEquals("MemoryPool must not contain transaction " + txIncompat.id,
       1, memoryPool.notIn(Seq(ModifierId @@ txIncompat.id)).size)
 
-    assertEquals("usedPoolSizeBytes must be correct", memoryPool.usedPoolSizeBytes, tx.size()+txCompat.size())
+    assertEquals("usedPoolSizeBytes must be correct", memoryPool.usedSizeBytes, tx.size()+txCompat.size())
 
     assertEquals("Take must return transaction " + tx.id, tx, memoryPool.take(1).head)
     assertEquals("Take with custom sort function must return transaction " + txCompat.id, txCompat,
@@ -99,7 +99,7 @@ class SidechainMemoryPoolTest
     val mp = memoryPool.filter(List(tx))
 
     assertEquals("After applying of filter size must be 1.", mp.size, 1)
-    assertEquals("After applying of filter usedPoolSizeBytes must be updated correctly", mp.usedPoolSizeBytes, txCompat.size())
+    assertEquals("After applying of filter usedPoolSizeBytes must be updated correctly", mp.usedSizeBytes, txCompat.size())
     assertEquals("MemoryPool must contain transaction " + txCompat.id, mp.modifierById(ModifierId @@ txCompat.id).get, txCompat)
     assertEquals("MemoryPool must contain transaction " + txCompat.id, mp.contains(ModifierId @@ txCompat.id), true)
   }
@@ -129,14 +129,14 @@ class SidechainMemoryPoolTest
     txList.foreach((tx) => totFee = totFee + tx.size())
     compatibleList.foreach((tx) => totFee = totFee + tx.size())
     assertEquals("usedPoolSizeBytes must be updated correctly",
-      totFee, memoryPool.usedPoolSizeBytes)
+      totFee, memoryPool.usedSizeBytes)
 
     assertEquals("Size must be 2.", memoryPool.size, 2)
 
     assertEquals("Put operation must be failure.", memoryPool.put(getIncompatibleTransactionList).isSuccess,
       false)
     assertEquals("Size must be 2.", memoryPool.size, 2)
-    assertEquals("usedPoolSizeBytes must be the same as before",  totFee, memoryPool.usedPoolSizeBytes)
+    assertEquals("usedPoolSizeBytes must be the same as before",  totFee, memoryPool.usedSizeBytes)
   }
 
   @Test
@@ -183,6 +183,29 @@ class SidechainMemoryPoolTest
     assertEquals("Put tx4 operation must be success.", true, memoryPool.put(list.apply(3)).isSuccess)
     assertEquals("MemoryPool must  have size 3 ", 3, memoryPool.size)
   }
+
+  @Test
+  def take(): Unit = {
+
+    val list = List(
+      getRegularRandomTransaction(10,1),
+      getRegularRandomTransaction(2000,2),
+      getRegularRandomTransaction(3000000,3),
+      getRegularRandomTransaction(400000000,1)
+    )
+    val memoryPool = SidechainMemoryPool.createEmptyMempool(getMockedMempoolSettings(300, 0))
+
+    assertEquals("Put tx1 operation must be success.", true, memoryPool.put(list.apply(0)).isSuccess)
+    assertEquals("Put tx2 operation must be success.", true, memoryPool.put(list.apply(1)).isSuccess)
+    assertEquals("Put tx3 operation must be success.", true,  memoryPool.put(list.apply(2)).isSuccess)
+    assertEquals("Put tx4 operation must be success.", true, memoryPool.put(list.apply(3)).isSuccess)
+    assertEquals("MemoryPool must  have size 4 ", 4, memoryPool.size)
+    val it = memoryPool.take(2)
+    assertEquals("MemoryPool take must  have size 2", 2, it.size)
+    assertEquals(400000000, it.toSeq(0).fee())
+    assertEquals(3000000, it.toSeq(1).fee())
+  }
+
 
   @Test
   def putWithLimitedPoolSize(): Unit = {

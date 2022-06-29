@@ -16,7 +16,13 @@ public interface NodeMemoryPool {
             Comparator<BoxTransaction<Proposition, Box<Proposition>>> c,
             int limit);
 
+    /**
+     * @deprecated use {@link #getTransactionsSortedByFeeRate(int)} instead.
+     */
+    @Deprecated
     List<BoxTransaction<Proposition, Box<Proposition>>> getTransactionsSortedByFee(int limit);
+
+    List<BoxTransaction<Proposition, Box<Proposition>>> getTransactionsSortedByFeeRate(int limit);
 
     int getSize();
 

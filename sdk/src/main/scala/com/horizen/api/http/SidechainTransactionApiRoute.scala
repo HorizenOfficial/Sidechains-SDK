@@ -492,7 +492,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     val memoryPool = sidechainNodeView.getNodeMemoryPool
     val boxIdsToExclude: JArrayList[Array[scala.Byte]] = new JArrayList()
 
-    for(transaction <- memoryPool.getTransactionsSortedByFee(memoryPool.getSize).asScala)
+    for(transaction <- memoryPool.getTransactions().asScala)
       for(id <- transaction.boxIdsToOpen().asScala)
         boxIdsToExclude.add(id.data)
 

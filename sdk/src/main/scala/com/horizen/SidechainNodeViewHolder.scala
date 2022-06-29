@@ -382,7 +382,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                 log.info(s"Persistent modifier ${pmod.encodedId} applied successfully, now updating node view")
                 updateNodeView(Some(newHistory), Some(newState), Some(newWallet), Some(newMemPool))
 
-                log.debug(s"Current mempool size: ${newMemPool.getSize} transactions - ${newMemPool.getUsedSizeKb}kb (${newMemPool.getUsedPercentage}%)")
+                log.debug(s"Current mempool size: ${newMemPool.getSize} transactions - ${newMemPool.usedSizeKBytes}kb (${newMemPool.usedPercentage}%)")
               case Failure(e) =>
                 log.warn(s"Can`t apply persistent modifier (id: ${pmod.encodedId}, contents: $pmod) to minimal state", e)
                 updateNodeView(updatedHistory = Some(newHistory))
