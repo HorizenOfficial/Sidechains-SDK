@@ -1,7 +1,5 @@
-package com.horizen.examples;
+package com.horizen.account.state;
 
-import com.horizen.account.state.AccountStateView;
-import com.horizen.account.state.MessageProcessor;
 import com.horizen.account.storage.AccountStateMetadataStorageView;
 import com.horizen.evm.Database;
 import com.horizen.evm.MemoryDatabase;
@@ -33,10 +31,10 @@ public class EvmMessageProcessorIntegrationTest extends MessageProcessorTestBase
     @Override
     public void setUp() {
         storage = new MemoryDatabase();
-        var messageProcessors = new ArrayList<MessageProcessor>();
+        var messageProcessors = JavaConverters.asScalaBuffer(new ArrayList<MessageProcessor>()).toSeq();
         var metadataStorageView = Mockito.mock(AccountStateMetadataStorageView.class);
         var stateDb = new StateDB(storage, hashNull);
-        stateView = new AccountStateView(metadataStorageView, stateDb, JavaConverters.asScalaBuffer(messageProcessors));
+        stateView = new AccountStateView(metadataStorageView, stateDb, messageProcessors);
     }
 
     @Override
@@ -70,8 +68,10 @@ public class EvmMessageProcessorIntegrationTest extends MessageProcessorTestBase
 
     public void testProcess() {
         var processor = new EvmMessageProcessor();
+        // smart contract constructor has one argument (256-bit uint)
         var initialValue = new byte[32];
         initialValue[initialValue.length - 1] = 42;
+        // add constructor arguments to the end of the deployment code
         var msg = getMessage(null, concat(deployCode, initialValue));
         assertTrue("should process test contract deployment", processor.canProcess(msg, stateView));
         var result = processor.process(msg, stateView);

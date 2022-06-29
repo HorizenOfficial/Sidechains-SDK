@@ -1,6 +1,5 @@
-package com.horizen.examples;
+package com.horizen.account.state;
 
-import com.horizen.account.state.AccountStateView;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 

@@ -5,6 +5,7 @@ import com.google.inject.name.Names;
 import com.horizen.ChainInfo;
 import com.horizen.SidechainSettings;
 import com.horizen.account.AccountAppModule;
+import com.horizen.account.state.EvmMessageProcessor;
 import com.horizen.account.state.MessageProcessor;
 import com.horizen.account.transaction.AccountTransaction;
 import com.horizen.api.http.ApplicationApiGroup;

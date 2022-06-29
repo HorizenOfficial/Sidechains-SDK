@@ -1,7 +1,6 @@
-package com.horizen.examples;
+package com.horizen.account.state;
 
 import com.horizen.account.proposition.AddressProposition;
-import com.horizen.account.state.Message;
 import com.horizen.utils.BytesUtils;
 import junit.framework.TestCase;
 

@@ -8,7 +8,6 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 
-
 public class EvmApp {
     public static void main(String[] args) {
         if (args.length == 0) {
