@@ -16,7 +16,7 @@ class MempoolMapTest extends JUnitSuite
 
   @Test
   def takeLowest(): Unit = {
-    val map = new MempoolMap(Option.empty)
+    val map = new MempoolMap(List())
     map.add(SidechainMemoryPoolEntry(tx1))
     map.add(SidechainMemoryPoolEntry(tx2))
     map.add(SidechainMemoryPoolEntry(tx3))
@@ -27,8 +27,21 @@ class MempoolMapTest extends JUnitSuite
   }
 
   @Test
+  def takeLowestWithInitialiList(): Unit = {
+    val map = new MempoolMap(List(
+      SidechainMemoryPoolEntry(tx1),
+      SidechainMemoryPoolEntry(tx2),
+      SidechainMemoryPoolEntry(tx3))
+    )
+    val ret = map.takeLowest(2)
+    assertEquals(2, ret.size)
+    assertEquals(tx1.id(), ret(0).getUnconfirmedTx().id())
+    assertEquals(tx3.id(), ret(1).getUnconfirmedTx().id())
+  }
+
+  @Test
   def takeHighest(): Unit = {
-    val map = new MempoolMap(Option.empty)
+    val map = new MempoolMap(List())
     map.add(SidechainMemoryPoolEntry(tx1))
     map.add(SidechainMemoryPoolEntry(tx2))
     map.add(SidechainMemoryPoolEntry(tx3))
@@ -40,7 +53,7 @@ class MempoolMapTest extends JUnitSuite
 
   @Test
   def headOption(): Unit = {
-    val map = new MempoolMap(Option.empty)
+    val map = new MempoolMap(List())
     map.add(SidechainMemoryPoolEntry(tx1))
     map.add(SidechainMemoryPoolEntry(tx2))
     map.add(SidechainMemoryPoolEntry(tx3))
@@ -51,7 +64,7 @@ class MempoolMapTest extends JUnitSuite
 
   @Test
   def remove(): Unit = {
-    val map = new MempoolMap(Option.empty)
+    val map = new MempoolMap(List())
     map.add(SidechainMemoryPoolEntry(tx1))
     map.add(SidechainMemoryPoolEntry(tx2))
     map.add(SidechainMemoryPoolEntry(tx3))
@@ -78,7 +91,7 @@ class MempoolMapTest extends JUnitSuite
       txSame3 = getRegularRandomTransaction(10,1)
     }
 
-    val map = new MempoolMap(Option.empty)
+    val map = new MempoolMap(List())
     map.add(SidechainMemoryPoolEntry(txSame1))
     map.add(SidechainMemoryPoolEntry(txSame2))
     map.add(SidechainMemoryPoolEntry(txSame3))

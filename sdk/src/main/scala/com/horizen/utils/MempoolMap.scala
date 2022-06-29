@@ -8,27 +8,24 @@ import scala.collection.concurrent.TrieMap
  * Map of SidechainMemoryPoolEntry, with additional data structures to keep the order by feeRate and the total bytes
  * of all the transactions contained.
  */
-class MempoolMap(initialValues: Option[Iterable[SidechainMemoryPoolEntry]])  {
+class MempoolMap(initialValues: Iterable[SidechainMemoryPoolEntry])  {
 
   private val map = new TrieMap[String, SidechainMemoryPoolEntry]()
   private var usedPoolSizeBytes = 0L
-  private var idsSortedByFeeRate =  Seq[MempoolMapKey]()
+  private var idsSortedByFeeRate =  scala.collection.SortedSet[MempoolMapKey]()
 
-  if (initialValues.isDefined){
-    for (ele <- initialValues.get) {
-      idsSortedByFeeRate :+ new MempoolMapKey(ele.getUnconfirmedTx().id(), ele.feeRate.getFeeRate())
-      usedPoolSizeBytes += ele.feeRate.getSize()
-      map.put(ele.getUnconfirmedTx().id(), ele)
-    }
-    idsSortedByFeeRate.sortBy(_.feeRate)
+  for (ele <- initialValues) {
+    idsSortedByFeeRate = idsSortedByFeeRate + MempoolMapKey(ele.getUnconfirmedTx().id(), ele.feeRate.getFeeRate())
+    usedPoolSizeBytes += ele.feeRate.getSize()
+    map.put(ele.getUnconfirmedTx().id(), ele)
   }
+
 
   def add(entry: SidechainMemoryPoolEntry) : Option[SidechainMemoryPoolEntry] = {
     map.put(entry.getUnconfirmedTx().id(), entry) match {
       case Some(e) => Some(e)
       case None => {
-        idsSortedByFeeRate = idsSortedByFeeRate :+ new MempoolMapKey(entry.getUnconfirmedTx().id(), entry.feeRate.getFeeRate())
-        idsSortedByFeeRate = idsSortedByFeeRate.sortBy(_.feeRate)
+        idsSortedByFeeRate = idsSortedByFeeRate + MempoolMapKey(entry.getUnconfirmedTx().id(), entry.feeRate.getFeeRate())
         usedPoolSizeBytes += entry.feeRate.getSize()
         None
       }
@@ -93,6 +90,16 @@ class MempoolMap(initialValues: Option[Iterable[SidechainMemoryPoolEntry]])  {
 
 }
 
-class MempoolMapKey(val txid: String, val feeRate: Long)  {
+case class MempoolMapKey(txid: String, feeRate: Long) extends Ordered[MempoolMapKey]{
+
+  override def compare(that: MempoolMapKey): Int = {
+    if (this.feeRate > that.feeRate){
+      1
+    }else if (this.feeRate < that.feeRate){
+      -1
+    }else{
+      this.txid.compareTo(that.txid)
+    }
+  }
 
 }

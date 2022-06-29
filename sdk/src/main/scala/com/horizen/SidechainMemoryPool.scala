@@ -49,7 +49,7 @@ class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: Memp
   }
 
   override def getTransactionsSortedByFeeRate(limit: Int): JList[SidechainTypes#SCBT] = {
-    unconfirmed.takeLowest(limit).map(ele => ele.getUnconfirmedTx()).asJava
+    take(limit).toList.asJava
   }
 
   override def take(limit: Int): Iterable[SidechainTypes#SCBT] = {
@@ -71,7 +71,7 @@ class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: Memp
    */
   override def filter(condition: SidechainTypes#SCBT => Boolean): SidechainMemoryPool = {
     val filteredMap = unconfirmed.values.filter(ele => condition(ele.getUnconfirmedTx()))
-    new SidechainMemoryPool(new MempoolMap(Some(filteredMap)), mempoolSettings)
+    new SidechainMemoryPool(new MempoolMap(filteredMap), mempoolSettings)
   }
 
   override def notIn(ids: Seq[ModifierId]): Seq[ModifierId] = {
@@ -211,7 +211,7 @@ class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: Memp
 object SidechainMemoryPool
 {
   def createEmptyMempool(mempoolSettings: MempoolSettings) : SidechainMemoryPool = {
-    new SidechainMemoryPool(new MempoolMap(Option.empty), mempoolSettings)
+    new SidechainMemoryPool(new MempoolMap(List()), mempoolSettings)
   }
 
 }
