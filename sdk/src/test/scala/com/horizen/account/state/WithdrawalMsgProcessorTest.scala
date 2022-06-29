@@ -185,7 +185,7 @@ class WithdrawalMsgProcessorTest
     assertTrue("The list of withdrawal requests is not empty", listOfWR.isEmpty)
 
 
-    // With 3900 withdrawal requests
+    // With 3999 withdrawal requests
     val maxNumOfWithdrawalReqs = WithdrawalMsgProcessor.MaxWithdrawalReqsNumPerEpoch
 
     val numOfWithdrawalReqsInBytes = Bytes.concat(new Array[Byte](32 - Ints.BYTES), Ints.toByteArray(maxNumOfWithdrawalReqs))

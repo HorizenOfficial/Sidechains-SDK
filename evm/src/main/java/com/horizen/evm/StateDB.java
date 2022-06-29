@@ -1,12 +1,15 @@
 package com.horizen.evm;
 
+import com.horizen.evm.interop.EvmLog;
 import com.horizen.evm.utils.Converter;
 
 import java.math.BigInteger;
 import java.util.Arrays;
 
 public class StateDB extends ResouceHandle {
-    public static byte[] NULL_CODE_HASH = Converter.fromHexString("c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
+    public static byte[] EMPTY_CODE_HASH =
+            Converter.fromHexString("c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
+
     /**
      * Opens a view on the state at the given state root hash.
      */
@@ -41,26 +44,27 @@ public class StateDB extends ResouceHandle {
     }
 
     /**
-     * Check if an account with the given address exists.
+     * Check if the account with the given address is empty
      *
      * @param address account address
      * @return true if account exists, otherwise false
      */
-    public boolean exists(byte[] address) {
-        return LibEvm.stateExists(handle, address);
+    public boolean isEmpty(byte[] address) {
+        return LibEvm.stateEmpty(handle, address);
     }
 
     /**
-     * Check if account is and EAO one.
-     * Account considered an EOA account in two cases:
-     * 1) account doesn't exist in the StateDB (first time it receives coins);
-     * 2) account has no code (code hash is a keccak256 hash of empty array).
+     * Check if account is an EAO one. Account is considered an EOA in two cases:
+     * <ol>
+     * <li>account doesn't exist in the StateDB (first time it receives coins);</li>
+     * <li>account has no code (code hash is a keccak256 hash of empty array).</li>
+     * </ol>
      *
      * @param address account address
      * @return true if account is EOA, otherwise false
      */
     public boolean isEoaAccount(byte[] address) {
-        return !exists(address) || Arrays.equals(getCodeHash(address), NULL_CODE_HASH);
+        return isEmpty(address) || Arrays.equals(getCodeHash(address), EMPTY_CODE_HASH);
     }
 
     /**
@@ -239,6 +243,16 @@ public class StateDB extends ResouceHandle {
      */
     public void revertToSnapshot(int revisionId) {
         LibEvm.stateRevertToSnapshot(handle, revisionId);
+    }
+
+    /**
+     * Get log entries created during the execution of given transaction.
+     *
+     * @param txHash transaction hash
+     * @return log entries related to given transaction hash
+     */
+    public EvmLog[] getLogs(byte[] txHash) {
+        return LibEvm.stateGetLogs(handle, txHash);
     }
 
     @Override

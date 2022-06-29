@@ -35,7 +35,7 @@ public class Hash {
     public static class Serializer extends JsonSerializer<Hash> {
         @Override
         public void serialize(
-            Hash address, JsonGenerator jsonGenerator, SerializerProvider serializerProvider
+                Hash address, JsonGenerator jsonGenerator, SerializerProvider serializerProvider
         ) throws IOException {
             jsonGenerator.writeString("0x" + Converter.toHexString(address.bytes));
         }
@@ -44,7 +44,7 @@ public class Hash {
     public static class Deserializer extends JsonDeserializer<Hash> {
         @Override
         public Hash deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
-            throws IOException {
+                throws IOException {
             var text = jsonParser.getText();
             if (!text.startsWith("0x")) {
                 throw new IOException("hash must be prefixed with 0x");
