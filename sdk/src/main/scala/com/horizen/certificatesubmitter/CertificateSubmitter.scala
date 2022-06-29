@@ -345,31 +345,19 @@ class CertificateSubmitter(settings: SidechainSettings,
   private def getCertificateTopQuality(epoch: Int): Try[Long] = {
     mainchainChannel.getTopQualityCertificates(BytesUtils.toHexString(BytesUtils.reverseBytes(params.sidechainId)))
       .map(topQualityCertificates => {
-        topQualityCertificates.mempoolCertInfo match {
+        (topQualityCertificates.mempoolCertInfo, topQualityCertificates.chainCertInfo) match {
           // case we have mempool cert for the given epoch return its quality.
-          case Some(mempoolInfo) =>
-            if (mempoolInfo.epoch == epoch) {
-              mempoolInfo.quality
-            } else if (epoch < mempoolInfo.epoch) {
-              throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + mempoolInfo.quality)
-            } else {
-              0
-            }
-          // else look for inchain cert
-          case _ => topQualityCertificates.chainCertInfo match {
-            // case we have chain cert for the given epoch return its quality.
-            case Some(chainInfo) => {
-              if (chainInfo.epoch == epoch) {
-                chainInfo.quality
-              } else if (epoch < chainInfo.epoch) {
-                throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + chainInfo.quality)
-              } else {
-                0
-              }
-            }
-            // no known certs
-            case _ => 0
-          }
+          case (Some(mempoolInfo), _) if mempoolInfo.epoch == epoch => mempoolInfo.quality
+          // case the mempool certificate epoch is a newer than submitter epoch thrown an exception
+          case (Some(mempoolInfo), _) if mempoolInfo.epoch > epoch =>
+          throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + mempoolInfo.quality)
+          // case we have chain cert for the given epoch return its quality.
+          case (_, Some(chainInfo)) if chainInfo.epoch == epoch => chainInfo.quality
+          // case the chain certificate epoch is a newer than submitter epoch thrown an exception
+          case (_, Some(chainInfo)) if chainInfo.epoch > epoch =>
+          throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + chainInfo.quality)
+          // no known certs
+          case _ => 0
         }
       })
   }
@@ -389,7 +377,7 @@ class CertificateSubmitter(settings: SidechainSettings,
             return true
           // May happen during node synchronization and node behind for one epoch or more
           case ex: ObsoleteWithdrawalEpochException =>
-            log.error("Sidechain is behind the Mainchain(" + ex + ")")
+            log.info("Sidechain is behind the Mainchain(" + ex + ")")
             return false
           // May happen if MC and SDK websocket protocol is inconsistent.
           // Should never happen in production.
@@ -424,7 +412,7 @@ class CertificateSubmitter(settings: SidechainSettings,
             context.system.eventStream.publish(CertificateSubmissionStarted)
           }
         case None =>
-          log.error("Trying to schedule certificate generation being outside Certificate submission window.")
+          log.warn("Trying to schedule certificate generation being outside Certificate submission window.")
       }
   }
 
@@ -663,15 +651,15 @@ object CertificateSubmitterRef {
   def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit ec: ExecutionContext) : Props =
-    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel)).withMailbox("akka.actor.deployment.prio-mailbox")
+    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel)).withMailbox("akka.actor.deployment.submitter-prio-mailbox")
 
   def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel).withMailbox("akka.actor.deployment.prio-mailbox"))
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel).withMailbox("akka.actor.deployment.submitter-prio-mailbox"))
 
   def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel).withMailbox("akka.actor.deployment.prio-mailbox"), name)
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel).withMailbox("akka.actor.deployment.submitter-prio-mailbox"), name)
 }
