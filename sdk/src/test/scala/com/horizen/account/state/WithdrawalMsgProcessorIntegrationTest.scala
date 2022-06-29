@@ -49,7 +49,7 @@ class WithdrawalMsgProcessorIntegrationTest
     WithdrawalMsgProcessor.init(stateView)
 
     val epochNum = 102
-    Mockito.when(stateView.metadataStorageView.getWithdrawalEpochInfo).thenReturn(Some(WithdrawalEpochInfo(epochNum, 1)))
+    Mockito.when(stateView.metadataStorageView.getWithdrawalEpochInfo).thenReturn(WithdrawalEpochInfo(epochNum, 1))
 
     // GetListOfWithdrawalRequest without withdrawal requests yet
 

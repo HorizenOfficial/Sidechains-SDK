@@ -91,7 +91,7 @@ class SCEvmBootstrap(SidechainTestFramework):
         # send an eth tx to mempool
         amount = 1000
         j = {
-            "toAddress": "abcdeabcdeabcdeabcdeabcdeabcdeabcdeabcde", # must be 20 bytes
+            "to": "abcdeabcdeabcdeabcdeabcdeabcdeabcdeabcde", # must be 20 bytes
             "value": amount
         }
         request = json.dumps(j)

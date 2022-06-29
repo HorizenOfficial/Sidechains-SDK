@@ -145,35 +145,20 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   val getGenesisBlockRootHash =
     new Array[Byte](32)
 
-  def getStateRoot( history: AccountHistory,
-                    nextConsensusEpochNumber: ConsensusEpochNumber,
-                    branchPointInfo: BranchPointInfo): Array[Byte] = {
-
+  def getStateRoot(history: AccountHistory, forgedBlockTimestamp: Long, branchPointInfo: BranchPointInfo): Array[Byte] = {
     // For given epoch N we should get data from the ending of the epoch N-2.
     // genesis block is the single and the last block of epoch 1 - that is a special case:
     // Data from epoch 1 is also valid for epoch 2, so for epoch N==2, we should get info from epoch 1.
-    nextConsensusEpochNumber match {
-      case epoch if (epoch <= 2) =>
-        getGenesisBlockRootHash
-
-      case _ =>
-        val parentId = branchPointInfo.branchPointId
-        val ts = history.blockInfoById(parentId).timestamp
-        val lastBlockId = history.getLastBlockIdOfPrePreviousEpochs(ts, parentId)
-
-        val lastBlock = history.getBlockById(lastBlockId)
-        lastBlock.get().header.stateRoot
-    }
+    val parentId = branchPointInfo.branchPointId
+    val lastBlockId = history.getLastBlockIdOfPrePreviousEpochs(forgedBlockTimestamp, parentId)
+    val lastBlock = history.getBlockById(lastBlockId)
+    lastBlock.get().header.stateRoot
   }
 
-  override def getForgingStakeMerklePathInfo(
-          nextConsensusEpochNumber: ConsensusEpochNumber,
-          wallet: AccountWallet, history: AccountHistory,
-          state: AccountState,
-          branchPointInfo: BranchPointInfo): Seq[ForgingStakeMerklePathInfo] = {
+  override def getForgingStakeMerklePathInfo(nextConsensusEpochNumber: ConsensusEpochNumber, wallet: AccountWallet, history: AccountHistory, state: AccountState, branchPointInfo: BranchPointInfo, nextBlockTimestamp: Long): Seq[ForgingStakeMerklePathInfo] = {
 
     // 1. get from history the state root from the header of the block of 2 epochs before
-    val stateRoot = getStateRoot(history, nextConsensusEpochNumber, branchPointInfo)
+    val stateRoot = getStateRoot(history, nextBlockTimestamp, branchPointInfo)
 
     // 2. get from stateDb using root above the collection of all forger stakes (ordered)
     val stateViewFromRoot = if (ByteUtils.toHexString(stateRoot) == ByteUtils.toHexString(getGenesisBlockRootHash)) {
@@ -212,7 +197,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
         }
       })
 
-    sortByStakeAmount(forgingStakeMerklePathInfoSeq)
+    forgingStakeMerklePathInfoSeq
   }
 }
 

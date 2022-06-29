@@ -38,8 +38,10 @@ class AccountStateMetadataStorageViewTest
     assertEquals("Initial height should be 0 in view", 0, storageView.getHeight)
     assertEquals("Initial height should be 0 in storage", 0, stateMetadataStorage.getHeight)
 
-    assertTrue("No withdrawal epoch info should be present in view", storageView.getWithdrawalEpochInfo.isEmpty)
-    assertTrue("No withdrawal epoch info should be present in storage", stateMetadataStorage.getWithdrawalEpochInfo.isEmpty)
+    assertTrue("Only default epoch info should be present in view", storageView.getWithdrawalEpochInfo.epoch == 0)
+    assertTrue("Only default epoch info should be present in view", storageView.getWithdrawalEpochInfo.lastEpochIndex == 0)
+    assertTrue("Only default epoch info should be present in storage", stateMetadataStorage.getWithdrawalEpochInfo.epoch == 0)
+    assertTrue("Only default epoch info should be present in storage", stateMetadataStorage.getWithdrawalEpochInfo.lastEpochIndex == 0)
 
     assertTrue("Block fee info should be empty in view", storageView.getFeePayments(0).isEmpty)
     assertTrue("Block fee info should be empty in storage", stateMetadataStorage.getFeePayments(0).isEmpty)
@@ -56,8 +58,10 @@ class AccountStateMetadataStorageViewTest
     assertFalse("Sidechain is ceased in storage", stateMetadataStorage.hasCeased)
 
     storageView.updateWithdrawalEpochInfo(WithdrawalEpochInfo(currentEpoch, 1))
-    assertFalse("No withdrawal epoch info is present in view", storageView.getWithdrawalEpochInfo.isEmpty)
-    assertTrue("No withdrawal epoch info should be present in storage yet", stateMetadataStorage.getWithdrawalEpochInfo.isEmpty)
+    assertTrue("epoch info should be present in view", storageView.getWithdrawalEpochInfo.epoch == currentEpoch)
+    assertTrue("epoch info should be present in view", storageView.getWithdrawalEpochInfo.lastEpochIndex == 1)
+    assertTrue("Only default epoch info should be present in storage", stateMetadataStorage.getWithdrawalEpochInfo.epoch == 0)
+    assertTrue("Only default epoch info should be present in storage", stateMetadataStorage.getWithdrawalEpochInfo.lastEpochIndex == 0)
 
     storageView.addFeePayment(BlockFeeInfo(100, getPrivateKey25519("8333".getBytes()).publicImage()))
     assertEquals("Block fee is not present in view", 1, storageView.getFeePayments(currentEpoch).size)

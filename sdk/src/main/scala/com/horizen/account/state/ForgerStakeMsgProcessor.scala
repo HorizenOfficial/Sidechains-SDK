@@ -467,8 +467,6 @@ object ForgerStakeMsgProcessor {
   val RemoveStakeCmd: String =      "02"
 
   val ForgerStakeSmartContractAddress = new AddressProposition(BytesUtils.fromHexString("0000000000000000000022222222222222222222"))
-
-  val ForgerStakeMsgProcessorName : String = "FORGER_STAKE"
 }
 
 //@JsonView(Array(classOf[Views.Default]))

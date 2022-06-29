@@ -78,7 +78,8 @@ abstract class AbstractForgeMessageBuilder[
 
     // Get ForgingStakeMerklePathInfo from wallet and order them by stake decreasing.
     val forgingStakeMerklePathInfoSeq: Seq[ForgingStakeMerklePathInfo] = getForgingStakeMerklePathInfo(
-      nextConsensusEpochNumber, nodeView.vault, nodeView.history, nodeView.state, branchPointInfo)
+      nextConsensusEpochNumber, nodeView.vault, nodeView.history, nodeView.state, branchPointInfo, nextBlockTimestamp)
+      .sortWith(_.forgingStakeInfo.stakeAmount > _.forgingStakeInfo.stakeAmount)
 
     if (forgingStakeMerklePathInfoSeq.isEmpty) {
       NoOwnedForgingStake
@@ -348,11 +349,7 @@ abstract class AbstractForgeMessageBuilder[
 
   def getOmmersSize(ommers: Seq[Ommer[H]]) : Int
 
-  def sortByStakeAmount(list: Seq[ForgingStakeMerklePathInfo]) : Seq[ForgingStakeMerklePathInfo] = {
-    list.sortWith(_.forgingStakeInfo.stakeAmount > _.forgingStakeInfo.stakeAmount)
-  }
-
-  def getForgingStakeMerklePathInfo(nextConsensusEpochNumber: ConsensusEpochNumber, wallet: VL, history: HIS, state: MS, branchPointInfo: BranchPointInfo): Seq[ForgingStakeMerklePathInfo]
+  def getForgingStakeMerklePathInfo(nextConsensusEpochNumber: ConsensusEpochNumber, wallet: VL, history: HIS, state: MS, branchPointInfo: BranchPointInfo, nextBlockTimestamp: Long): Seq[ForgingStakeMerklePathInfo]
 }
 
 

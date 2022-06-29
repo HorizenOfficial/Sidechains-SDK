@@ -30,7 +30,7 @@ class AccountStateMetadataStorage(storage: Storage) extends AccountStateMetadata
 
   def isEmpty: Boolean = storage.isEmpty
 
-  override def getWithdrawalEpochInfo: Option[WithdrawalEpochInfo] = getView.getWithdrawalEpochInfo
+  override def getWithdrawalEpochInfo: WithdrawalEpochInfo = getView.getWithdrawalEpochInfo
 
   override def getFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo] = getView.getFeePayments(withdrawalEpochNumber)
 

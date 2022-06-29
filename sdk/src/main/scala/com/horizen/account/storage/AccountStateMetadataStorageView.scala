@@ -36,10 +36,10 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
 
   // all getters same as in StateMetadataStorage, but looking first in the cached/dirty entries in memory
 
-  override def getWithdrawalEpochInfo: Option[WithdrawalEpochInfo] = {
+  override def getWithdrawalEpochInfo: WithdrawalEpochInfo = {
     withdrawalEpochInfoOpt match {
-      case None => getWithdrawalEpochInfoFromStorage
-      case Some(_) => withdrawalEpochInfoOpt
+      case None => getWithdrawalEpochInfoFromStorage.getOrElse(WithdrawalEpochInfo(0, 0))
+      case Some(res) => res
     }
   }
 
@@ -54,9 +54,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
         }
       case _ => Option.empty
     }
-
   }
-
 
   override def getFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo] = {
     val blockFees: ListBuffer[BlockFeeInfo] = ListBuffer()
@@ -73,7 +71,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
         case None =>
           log.error(s"Error while fee payments retrieving: record expected to exist for epoch $withdrawalEpochNumber and counter $counter")
           throw new IllegalStateException("Error while fee payments retrieving: record expected to exist.")
-
       }
     }
 
@@ -91,7 +88,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
       case Some(certificate) if certificate.epochNumber == referencedWithdrawalEpoch => topQualityCertificateOpt
       case _ => getTopQualityCertificateFromStorage(referencedWithdrawalEpoch)
     }
-
   }
 
   private[horizen] def getTopQualityCertificateFromStorage(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
@@ -112,7 +108,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
       case Some(_) => consensusEpochOpt
       case _ => getConsensusEpochNumberFromStorage
     }
-
   }
 
   private[horizen] def getConsensusEpochNumberFromStorage: Option[ConsensusEpochNumber] = {
@@ -148,7 +143,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
       case _ => getAccountStateRootFromStorage
     }
   }
-
 
   // put in memory cache and mark the entry as "dirty"
   def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo): Unit =
@@ -214,17 +208,17 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
         WithdrawalEpochCertificateSerializer.toBytes(certificate)))
     })
 
-    withdrawalEpochInfoOpt.foreach(epochInfo => {
-      // Update BlockFeeInfo data
+    blockFeeInfoOpt.foreach(feeInfo => {
+      val epochInfo = withdrawalEpochInfoOpt.getOrElse(getWithdrawalEpochInfo)
       val nextBlockFeeInfoCounter: Int = getBlockFeeInfoCounter(epochInfo.epoch) + 1
+
       updateList.add(new JPair(getBlockFeeInfoCounterKey(epochInfo.epoch),
         new ByteArrayWrapper(Ints.toByteArray(nextBlockFeeInfoCounter))))
 
-      blockFeeInfoOpt.foreach(feeInfo =>
-        updateList.add(new JPair(getBlockFeeInfoKey(epochInfo.epoch, nextBlockFeeInfoCounter),
-          new ByteArrayWrapper(BlockFeeInfoSerializer.toBytes(feeInfo))))
-      )
-    })
+      updateList.add(new JPair(getBlockFeeInfoKey(epochInfo.epoch, nextBlockFeeInfoCounter),
+        new ByteArrayWrapper(BlockFeeInfoSerializer.toBytes(feeInfo))))
+      }
+    )
 
     // Update Consensus related data
     consensusEpochOpt.foreach(currConsensusEpoch => {

@@ -276,7 +276,7 @@ class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
 
   // get the record of storage or return WithdrawalEpochInfo(0,0) if state is empty
   override def getWithdrawalEpochInfo: WithdrawalEpochInfo = {
-    metadataStorageView.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0, 0))
+    metadataStorageView.getWithdrawalEpochInfo
   }
 
   override def hasCeased: Boolean = metadataStorageView.hasCeased
