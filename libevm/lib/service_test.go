@@ -3,9 +3,11 @@ package lib
 import (
 	"bytes"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	"github.com/ethereum/go-ethereum/trie"
 	"math/big"
 	"testing"
@@ -272,9 +274,39 @@ func TestRawStateDB(t *testing.T) {
 	_ = instance.CloseDatabase(DatabaseParams{DatabaseHandle: dbHandle})
 }
 
+func generateTransactions(count int) types.Transactions {
+	txs := make(types.Transactions, 0)
+	var (
+		to       = common.NewMixedcaseAddress(common.HexToAddress("0x1337"))
+		gas      = hexutil.Uint64(21000)
+		gasPrice = (hexutil.Big)(*big.NewInt(2000000000))
+		data     = hexutil.Bytes(common.Hex2Bytes("01020304050607080a"))
+	)
+	for v := 0; v < count; v++ {
+		value := (hexutil.Big)(*new(big.Int).Mul(big.NewInt(1e18), big.NewInt(int64(v))))
+		nonce := (hexutil.Uint64)(v)
+		tx := apitypes.SendTxArgs{
+			To:    &to,
+			Gas:   gas,
+			Value: value,
+			Data:  &data,
+			Nonce: nonce,
+		}
+		//if v%3 == 0 {
+		// legacy TX
+		tx.GasPrice = &gasPrice
+		//} else {
+		//	// dynamic fee TX
+		//	tx.MaxFeePerGas = &gasPrice
+		//	tx.MaxPriorityFeePerGas = &gasPrice
+		//}
+		txs = append(txs, tx.ToTransaction())
+	}
+	return txs
+}
+
 func generateReceipts(count int) types.Receipts {
 	receipts := make(types.Receipts, 0)
-
 	for v := 0; v < count; v++ {
 		status := types.ReceiptStatusSuccessful
 		// mark a number of receipts as failed
@@ -288,7 +320,6 @@ func generateReceipts(count int) types.Receipts {
 			Status:            status,
 			TxHash:            crypto.Keccak256Hash(big.NewInt(int64(41271*count + v)).Bytes()),
 		}
-
 		// Set the receipt logs and create the bloom filter.
 		receipt.Logs = make([]*types.Log, 0)
 		receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
@@ -298,8 +329,35 @@ func generateReceipts(count int) types.Receipts {
 		receipt.TransactionIndex = uint(v)
 		receipts = append(receipts, receipt)
 	}
-
 	return receipts
+}
+
+func verifyRootHash(t *testing.T, instance *Service, list types.DerivableList) common.Hash {
+	var (
+		expectedRoot = types.DeriveSha(list, trie.NewStackTrie(nil))
+		valueBuf     = new(bytes.Buffer)
+		values       = make([][]byte, 0)
+	)
+	length := list.Len()
+	// RLP encode receipts
+	for i := 0; i < length; i++ {
+		valueBuf.Reset()
+		list.EncodeIndex(i, valueBuf)
+		values = append(values, common.CopyBytes(valueBuf.Bytes()))
+	}
+	err, actualRoot := instance.HashRoot(HashParams{
+		Values: values,
+	})
+	if err != nil {
+		t.Errorf("error hashing: %v", err)
+	} else if actualRoot != expectedRoot {
+		t.Errorf("got wrong root hash: expected %v got %v", expectedRoot, actualRoot)
+	}
+	// explicitly make sure we get the empty root hash for an empty trie
+	if length == 0 && actualRoot != types.EmptyRootHash {
+		t.Errorf("got wrong root hash for empty trie: expected %v got %v", types.EmptyRootHash, actualRoot)
+	}
+	return actualRoot
 }
 
 // compare root hash results to the original GETH implementation
@@ -307,31 +365,11 @@ func TestHashRoot(t *testing.T) {
 	var (
 		testCounts = []int{0, 1, 2, 3, 4, 10, 51, 1000, 126, 127, 128, 129, 130, 765}
 		instance   = New()
-		valueBuf   = new(bytes.Buffer)
 	)
 	for _, count := range testCounts {
-		var (
-			receipts     = generateReceipts(count)
-			expectedRoot = types.DeriveSha(receipts, trie.NewStackTrie(nil))
-			values       = make([][]byte, 0)
-		)
-		// RLP encode receipts
-		for i := range receipts {
-			valueBuf.Reset()
-			receipts.EncodeIndex(i, valueBuf)
-			values = append(values, common.CopyBytes(valueBuf.Bytes()))
-		}
-		err, actualRoot := instance.HashRoot(HashParams{
-			Values: values,
-		})
-		if err != nil {
-			t.Errorf("error hashing: %v", err)
-		} else if actualRoot != expectedRoot {
-			t.Errorf("got wrong root hash: expected %v got %v", expectedRoot, actualRoot)
-		}
-		// explicitly make sure we get the empty root hash for an empty trie
-		if count == 0 && actualRoot != types.EmptyRootHash {
-			t.Errorf("got wrong root hash for empty trie: expected %v got %v", types.EmptyRootHash, actualRoot)
-		}
+		t.Logf("transactions root hash (%4v) %v", count, verifyRootHash(t, instance, generateTransactions(count)))
+	}
+	for _, count := range testCounts {
+		t.Logf("receipts root hash (%4v) %v", count, verifyRootHash(t, instance, generateReceipts(count)))
 	}
 }
