@@ -45,7 +45,7 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
   def getAll: List[SidechainTypes#SCS] = secrets.values.toList
 
   def add (secret: SidechainTypes#SCS): Try[SidechainSecretStorage] = Try {
-    require(secret != null, "Secret must be NOT NULL.")
+    require(secret != null, "Can not add to storge: Secret must be NOT NULL.")
     val version = new Array[Byte](32)
     val key = calculateKey(secret.publicImage())
 
@@ -65,7 +65,7 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
   }
 
   def add (secretList: List[SidechainTypes#SCS]): Try[SidechainSecretStorage] = Try {
-    require(!secretList.contains(null), "Secret must be NOT NULL.")
+    require(!secretList.contains(null), "Null secret in list: Secret must be NOT NULL.")
     val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
     val version = new Array[Byte](32)
 

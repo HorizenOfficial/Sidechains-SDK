@@ -51,7 +51,7 @@ abstract class AbstractWallet[
   // 1) check for existence
   // 2) try to store in SecretStore using SidechainSecretsCompanion
   override def addSecret(secret: SidechainTypes#SCS): Try[W] = Try{
-    require(secret != null, "Secret must be NOT NULL.")
+    require(secret != null, "AbstractWallet: Secret must be NOT NULL.")
     secretStorage.add(secret).get
     this
   }

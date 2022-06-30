@@ -14,6 +14,7 @@ import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePayment
 import scorex.core._
 import scorex.util.{ModifierId, ScorexLogging}
 
+import java.math.BigInteger
 import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.{Failure, Try}
@@ -257,13 +258,17 @@ class AccountState(val params: NetworkParams,
   override def getBlockFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo] = getView.getBlockFeePayments(withdrawalEpochNumber)
 
   // Account specific getters
-  override def getAccount(address: Array[Byte]): Account = ???
+  override def getAccount(address: Array[Byte]): Account = getView.getAccount(address)
 
-  override def getBalance(address: Array[Byte]): Try[java.math.BigInteger] = ???
+  override def getBalance(address: Array[Byte]): Try[java.math.BigInteger] = getView.getBalance(address)
 
   override def getAccountStateRoot: Option[Array[Byte]] = getView.getAccountStateRoot
 
   override def getCodeHash(address: Array[Byte]): Array[Byte] = getView.getCodeHash(address)
+
+  override def getNonce(address: Array[Byte]): BigInteger = getView.getNonce(address)
+
+
 }
 
 
