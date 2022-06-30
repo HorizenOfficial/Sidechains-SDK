@@ -8,7 +8,7 @@ import com.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificat
 import com.horizen.box.data.WithdrawalRequestBoxData
 import com.horizen.box.{ForgerBox, WithdrawalRequestBox}
 import com.horizen.consensus.ConsensusEpochNumber
-import com.horizen.evm.{StateDB, StateStorageStrategy}
+import com.horizen.evm.{ResourceHandle, StateDB, StateStorageStrategy}
 import com.horizen.state.StateView
 import com.horizen.utils.{BlockFeeInfo, WithdrawalEpochInfo}
 import scorex.core.VersionTag
@@ -211,5 +211,5 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     stateDb.close()
   }
 
-  override def getStateDbHandle: Int = stateDb.handle
+  override def getStateDbHandle: ResourceHandle = stateDb
 }

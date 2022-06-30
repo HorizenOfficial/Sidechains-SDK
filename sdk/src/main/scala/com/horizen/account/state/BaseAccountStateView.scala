@@ -1,12 +1,12 @@
 package com.horizen.account.state
 
-import com.horizen.evm.StateDB
+import com.horizen.evm.ResourceHandle
 
 import java.math.BigInteger
 import scala.util.Try
 
 trait BaseAccountStateView extends AccountStateReader {
-  def getStateDbHandle: Int
+  def getStateDbHandle: ResourceHandle
 
   def isEoaAccount(address: Array[Byte]): Boolean
 

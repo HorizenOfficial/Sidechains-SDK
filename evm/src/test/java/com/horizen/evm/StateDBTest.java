@@ -194,7 +194,7 @@ public class StateDBTest {
             try (var statedb = new StateDB(db, hashNull)) {
                 // test a simple value transfer
                 statedb.addBalance(addr1, v10m);
-                result = Evm.Apply(statedb.handle, addr1, addr2, v5m, null, gasLimit, gasPrice);
+                result = Evm.Apply(statedb, addr1, addr2, v5m, null, gasLimit, gasPrice);
                 assertEquals("", result.evmError);
                 assertEquals(v5m, statedb.getBalance(addr2));
                 // gas fees should not have been deducted
@@ -206,7 +206,7 @@ public class StateDBTest {
                 calldata = concat(contractCode, initialValue);
                 var context = new EvmContext();
                 context.txHash = Hash.FromBytes(txHash);
-                final var createResult = Evm.Apply(statedb.handle, addr2, null, null, calldata, gasLimit, gasPrice, context);
+                final var createResult = Evm.Apply(statedb, addr2, null, null, calldata, gasLimit, gasPrice, context);
                 assertEquals("", createResult.evmError);
                 contractAddress = createResult.contractAddress.toBytes();
                 assertEquals(hex(codeHash), hex(statedb.getCodeHash(contractAddress)));
@@ -221,11 +221,11 @@ public class StateDBTest {
 
                 // call "store" function on the contract to set a value
                 calldata = concat(funcStore, anotherValue);
-                result = Evm.Apply(statedb.handle, addr2, contractAddress, null, calldata, gasLimit, gasPrice);
+                result = Evm.Apply(statedb, addr2, contractAddress, null, calldata, gasLimit, gasPrice);
                 assertEquals("", result.evmError);
 
                 // call "retrieve" on the contract to fetch the value we just set
-                result = Evm.Apply(statedb.handle, addr2, contractAddress, null, funcRetrieve, gasLimit, gasPrice);
+                result = Evm.Apply(statedb, addr2, contractAddress, null, funcRetrieve, gasLimit, gasPrice);
                 assertEquals("", result.evmError);
                 assertEquals(hex(anotherValue), hex(result.returnData));
 
@@ -234,7 +234,7 @@ public class StateDBTest {
 
             // reopen the state and retrieve a value
             try (var statedb = new StateDB(db, modifiedStateRoot)) {
-                result = Evm.Apply(statedb.handle, addr2, contractAddress, null, funcRetrieve, gasLimit, gasPrice);
+                result = Evm.Apply(statedb, addr2, contractAddress, null, funcRetrieve, gasLimit, gasPrice);
                 assertEquals("", result.evmError);
                 assertEquals(hex(anotherValue), hex(result.returnData));
             }
