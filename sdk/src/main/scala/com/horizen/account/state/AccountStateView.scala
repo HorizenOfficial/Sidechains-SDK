@@ -1,35 +1,126 @@
 package com.horizen.account.state
 
+import com.google.common.primitives.Bytes
 import com.horizen.SidechainTypes
+import com.horizen.account.proposition.AddressProposition
+import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress}
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.ZenWeiConverter
-import com.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
+import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput, WithdrawalEpochCertificate}
 import com.horizen.box.data.WithdrawalRequestBoxData
 import com.horizen.box.{ForgerBox, WithdrawalRequestBox}
-import com.horizen.consensus.ConsensusEpochNumber
+import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.evm.{StateDB, StateStorageStrategy}
+import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.StateView
-import com.horizen.utils.{BlockFeeInfo, WithdrawalEpochInfo}
+import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
+import com.horizen.utils.{BlockFeeInfo, BytesUtils, WithdrawalEpochInfo}
 import scorex.core.VersionTag
+import scorex.util.ScorexLogging
 
 import java.math.BigInteger
+import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 import scala.util.Try
 
 class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
                        val stateDb: StateDB,
-                       messageProcessors: Seq[MessageProcessor]) extends StateView[SidechainTypes#SCAT, AccountStateView] with AccountStateReader with AutoCloseable {
+                       messageProcessors: Seq[MessageProcessor])
+  extends StateView[SidechainTypes#SCAT, AccountStateView]
+    with AccountStateReader
+    with AutoCloseable
+    with ScorexLogging {
+
   view: AccountStateView =>
 
   override type NVCT = this.type
 
   lazy val withdrawalReqProvider: WithdrawalRequestProvider = messageProcessors.find(_.isInstanceOf[WithdrawalRequestProvider]).get.asInstanceOf[WithdrawalRequestProvider]
+  lazy val forgerStakesProvider: ForgerStakesProvider = messageProcessors.find(_.isInstanceOf[ForgerStakesProvider]).get.asInstanceOf[ForgerStakesProvider]
 
   // modifiers
-  override def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[AccountStateView] = Try {
-    // TODO
-    this
+  override def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[Unit] = Try {
+
+    refData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {
+      aggTx.mc2scTransactionsOutputs().asScala.map {
+        case sc: SidechainCreation =>
+          // While processing sidechain creation output:
+          // 1. extract first forger stake info: block sign public key, vrf public key, owner address, stake amount
+          // 2. store the stake info record in the forging fake smart contract storage
+          val scOut: MainchainTxSidechainCreationCrosschainOutput = sc.getScCrOutput
+
+          val stakedAmount = ZenWeiConverter.convertZenniesToWei(scOut.amount)
+
+          // we must get 20 bytes out of 32 with the proper padding and byte order
+          // MC prepends a padding of 0 bytes (if needed) in the sc_create command when a 32 bytes address is specified.
+          // After reversing the bytes, the padding is trailed to the correct 20 bytes proposition
+          val ownerAddressProposition = new AddressProposition(BytesUtils.reverseBytes(scOut.address.take(com.horizen.account.utils.Account.ADDRESS_SIZE)))
+
+          // customData = vrf key | blockSignerKey
+          val vrfPublicKey = new VrfPublicKey(scOut.customCreationData.take(VrfPublicKey.KEY_LENGTH))
+          val blockSignerProposition = new PublicKey25519Proposition(scOut.customCreationData.slice(VrfPublicKey.KEY_LENGTH, VrfPublicKey.KEY_LENGTH + PublicKey25519Proposition.KEY_LENGTH))
+
+          val cmdInput = AddNewStakeCmdInput(
+            ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
+            ownerAddressProposition,
+          )
+
+          val data: Array[Byte] = Bytes.concat(
+            BytesUtils.fromHexString(AddNewStakeCmd),
+            AddNewStakeCmdInputSerializer.toBytes(cmdInput))
+
+          val message = new Message(
+            ownerAddressProposition,
+            ForgerStakeSmartContractAddress,
+            BigInteger.ZERO, // gasPrice
+            BigInteger.ZERO, // gasFeeCap
+            BigInteger.ZERO, // gasTipCap
+            BigInteger.ZERO, // gasLimit
+            stakedAmount,
+            BigInteger.ONE.negate(), // a negative nonce value will rule out collision with real transactions
+            data)
+
+          forgerStakesProvider.addScCreationForgerStake(message, view) match {
+            case res: ExecutionFailed =>
+              log.error(res.getReason.getMessage)
+              throw new IllegalArgumentException(res.getReason)
+            case res: InvalidMessage =>
+              log.error(res.getReason.getMessage)
+              throw new IllegalArgumentException(res.getReason)
+            case res: ExecutionSucceeded =>
+              log.debug(s"sc creation forging stake added with stakeid: ${BytesUtils.toHexString(res.returnData())}")
+          }
+
+        case ft: ForwardTransfer =>
+          val ftOut: MainchainTxForwardTransferCrosschainOutput = ft.getFtOutput
+
+          // we trust the MC that this is a valid amount
+          val value = ZenWeiConverter.convertZenniesToWei(ftOut.amount)
+
+          // we must get 20 bytes out of 32 with the proper padding and byte order
+          // MC prepends a padding of 0 bytes (if needed) in the sc_create command when a 32 bytes address is specified.
+          // After reversing the bytes, the padding is trailed to the correct 20 bytes proposition
+          val recipientProposition = new AddressProposition(BytesUtils.reverseBytes(ftOut.propositionBytes.take(com.horizen.account.utils.Account.ADDRESS_SIZE)))
+
+          // stateDb will implicitly create account if not existing yet
+          view.addBalance(recipientProposition.address(), value)
+          log.debug(s"added FT amount = $value to address=$recipientProposition")
+      }
+    })
   }
+
+  def getOrderedForgingStakeInfoSeq : Seq[ForgingStakeInfo] = {
+
+    val forgerStakeList = forgerStakesProvider.getListOfForgers(this)
+
+    forgerStakeList.map {
+      item => ForgingStakeInfo(
+        item.forgerStakeData.forgerPublicKeys.blockSignPublicKey,
+        item.forgerStakeData.forgerPublicKeys.vrfPublicKey,
+        ZenWeiConverter.convertWeiToZennies(item.forgerStakeData.stakedAmount))
+    }.sorted(Ordering[ForgingStakeInfo].reverse)
+  }
+
 
   def setupTxContext(tx: EthereumTransaction): Unit = {
     // TODO
@@ -152,7 +243,9 @@ class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
   override def rollbackToSavepoint(): Try[AccountStateView] = ???
 
   override def commit(version: VersionTag): Try[Unit] = Try {
-    // Update StateDB without version, then commit metadataStorageView
+    // Update StateDB without version, then set the rootHash and commit metadataStorageView
+    val rootHash = stateDb.commit()
+    metadataStorageView.updateAccountStateRoot(rootHash)
     metadataStorageView.commit(version)
   }
 
@@ -183,7 +276,7 @@ class AccountStateView(val metadataStorageView: AccountStateMetadataStorageView,
 
   // get the record of storage or return WithdrawalEpochInfo(0,0) if state is empty
   override def getWithdrawalEpochInfo: WithdrawalEpochInfo = {
-    metadataStorageView.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0, 0))
+    metadataStorageView.getWithdrawalEpochInfo
   }
 
   override def hasCeased: Boolean = metadataStorageView.hasCeased

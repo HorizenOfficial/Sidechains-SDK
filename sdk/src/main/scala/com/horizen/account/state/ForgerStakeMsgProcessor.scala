@@ -7,7 +7,7 @@ import java.math.BigInteger
 import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
 import com.horizen.account.proof.{SignatureSecp256k1, SignatureSecp256k1Serializer}
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
-
+import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress, GetListOfForgersCmd, LinkedListNullValue, LinkedListTipKey, RemoveStakeCmd}
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
@@ -15,23 +15,19 @@ import scorex.crypto.hash.{Blake2b256, Keccak256}
 import scorex.util.serialization.{Reader, Writer}
 
 import java.util
-
+import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.util.{Failure, Success}
 
+trait ForgerStakesProvider {
+  private[horizen] def getListOfForgers(view: AccountStateView): Seq[AccountForgingStakeInfo]
+  private[horizen] def addScCreationForgerStake(msg: Message, view: AccountStateView): ExecutionResult
+}
 
-case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSmartContractMsgProcessor {
+case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSmartContractMsgProcessor with ForgerStakesProvider {
 
-  override val fakeSmartContractAddress: AddressProposition = new AddressProposition(BytesUtils.fromHexString("0000000000000000000022222222222222222222"))
+  override val fakeSmartContractAddress: AddressProposition = ForgerStakeSmartContractAddress
   override val fakeSmartContractCodeHash: Array[Byte] =
     Keccak256.hash("ForgerStakeSmartContractCodeHash")
-
-  // TODO use Keccak256 hash instead
-  val LinkedListTipKey : Array[Byte] = Blake2b256.hash("Tip")
-  val LinkedListNullValue : Array[Byte] = Blake2b256.hash("Null")
-
-  val GetListOfForgersCmd: String = "00"
-  val AddNewStakeCmd: String =      "01"
-  val RemoveStakeCmd: String =      "02"
 
   // ensure we have strings consistent with size of opcode
   require(
@@ -255,6 +251,178 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
   def linkedListNodeRefIsNull(ref: Array[Byte]) : Boolean =
     BytesUtils.toHexString(ref).equals(BytesUtils.toHexString(LinkedListNullValue))
 
+  override def addScCreationForgerStake(msg: Message, view: AccountStateView): ExecutionResult =
+    doAddNewStakeCmd(msg, view, isGenesisScCreation = true)
+
+  def doAddNewStakeCmd(msg: Message, view: AccountStateView, isGenesisScCreation: Boolean = false) : ExecutionResult = {
+
+    // first of all check msg.value, it must be a legal wei amount convertible in satoshi without any remainder
+    if (!isValidZenAmount(msg.getValue)) {
+      val msgStr =s"Value is not a legal wei amount: ${msg.getValue.toString()}"
+      log.debug(msgStr)
+      return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(msgStr))
+    }
+
+    // check also that sender account exists (unless we are staking in the sc creation phase)
+    if (!isGenesisScCreation && !view.accountExists(msg.getFrom.address())) {
+      val msgStr =s"Sender account does not exist: ${msg.getFrom.toString}"
+      log.debug(msgStr)
+      return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(msgStr))
+    }
+
+    val cmdInput = AddNewStakeCmdInputSerializer.parseBytesTry(getArgumentsFromData(msg.getData)) match {
+      case Success(obj) => obj
+      case Failure(exception) =>
+        val msgStr = "Error while parsing cmd input"
+        log.debug(msgStr, exception)
+        return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(msgStr))
+    }
+
+    val blockSignPublicKey : PublicKey25519Proposition = cmdInput.forgerPublicKeys.blockSignPublicKey
+    val vrfPublicKey :VrfPublicKey                     = cmdInput.forgerPublicKeys.vrfPublicKey
+    val ownerAddress: AddressProposition               = cmdInput.ownerAddress
+
+    if (networkParams.restrictForgers) {
+      // check that the delegation arguments satisfy the restricted list of forgers.
+      if (!networkParams.allowedForgersList.contains((blockSignPublicKey, vrfPublicKey))) {
+        val msgStr = "Forger is not in the allowed list"
+        log.debug(msgStr)
+        return new ExecutionFailed(AddNewStakeGasPaidValue, new Exception(msgStr))
+      }
+    }
+
+    // compute stakeId
+    val newStakeId = getStakeId(msg)
+
+    // check we do not already have this stake obj in the db
+    if (existsStakeData(view, newStakeId)) {
+      val msgStr = s"Stake ${BytesUtils.toHexString(newStakeId)} already in stateDb"
+      log.error(msgStr)
+      return new ExecutionFailed(AddNewStakeGasPaidValue, new Exception(msgStr))
+    }
+
+    // add the obj to stateDb
+    val stakedAmount = msg.getValue
+    addForgerStake(view, newStakeId, blockSignPublicKey, vrfPublicKey, ownerAddress, stakedAmount)
+    log.debug(s"Added stake to stateDb: newStakeId=${BytesUtils.toHexString(newStakeId)}, blockSignPublicKey=$blockSignPublicKey, vrfPublicKey=$vrfPublicKey, ownerAddress=$ownerAddress, stakedAmount=$stakedAmount")
+
+    if (isGenesisScCreation) {
+      // no gas paid here
+      new ExecutionSucceeded(BigInteger.ZERO, newStakeId)
+    } else {
+      // decrease the balance of `from` account by `tx.value`
+      view.subBalance(msg.getFrom.address(), stakedAmount) match {
+        case Success(_) =>
+          // increase the balance of the "forger stake smart contract” account
+          view.addBalance(fakeSmartContractAddress.address(), stakedAmount).get
+
+          // TODO add log ForgerStakeDelegation(StakeId, ...) to the StateView ???
+          //view.addLog(new EvmLog concrete instance) // EvmLog will be used internally
+
+          // Maybe result is not useful in case of success execution (used probably for RPC commands only)
+          new ExecutionSucceeded(AddNewStakeGasPaidValue, newStakeId)
+
+        case Failure(e) =>
+          val balance = view.getBalance(msg.getFrom.address())
+          log.debug(s"Could not subtract $stakedAmount from account: current balance = $balance")
+          new ExecutionFailed(AddNewStakeGasPaidValue, new Exception(e))
+      }
+    }
+  }
+
+  private def checkGetListOfForgersCmd(msg: Message): Unit = {
+    // check we have no other bytes after the op code in the msg data
+    if (getArgumentsFromData(msg.getData).length > 0) {
+      val msgStr = s"invalid msg data length: ${msg.getData.length}, expected $OP_CODE_LENGTH"
+      log.debug(msgStr)
+      throw new IllegalArgumentException(msgStr)
+    }
+  }
+
+  override def getListOfForgers(view: AccountStateView) : Seq[AccountForgingStakeInfo] = {
+    doUncheckedGetListOfForgersCmd(view) match {
+      case res : ExecutionSucceeded =>
+        forgingInfoSerializer.parseBytesTry(res.returnData()).get.asScala
+
+      case _ => Seq()
+    }
+  }
+
+  def doUncheckedGetListOfForgersCmd(view: AccountStateView) : ExecutionResult = {
+    val stakeList = new util.ArrayList[AccountForgingStakeInfo]()
+    var nodeReference = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey).get
+
+    while (!linkedListNodeRefIsNull(nodeReference))
+    {
+      val (item : AccountForgingStakeInfo, prevNodeReference: Array[Byte]) = getListItem(view, nodeReference)
+      stakeList.add(item)
+      nodeReference = prevNodeReference
+    }
+
+    val listOfForgers : Array[Byte] = forgingInfoSerializer.toBytes(stakeList)
+
+    new ExecutionSucceeded(GetListOfForgersGasPaidValue, listOfForgers)
+  }
+
+  def doGetListOfForgersCmd(msg: Message, view: AccountStateView) : ExecutionResult = {
+    try {
+        checkGetListOfForgersCmd(msg)
+    }
+    catch {
+      case e: Exception =>
+        log.debug("Exception while adding a new Withdrawal Request", e)
+        return new ExecutionFailed(GetListOfForgersGasPaidValue, e)
+    }
+
+    doUncheckedGetListOfForgersCmd(view)
+  }
+
+  def doRemoveStakeCmd(msg: Message, view: AccountStateView) : ExecutionResult = {
+    val cmdInput = RemoveStakeCmdInputSerializer.parseBytesTry(getArgumentsFromData(msg.getData)) match {
+      case Success(obj) => obj
+      case Failure(exception) =>
+        val msgStr = "Error while parsing cmd input"
+        log.debug(msgStr, exception)
+        return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(exception))
+    }
+
+    val stakeId : Array[Byte]          = cmdInput.stakeId
+    val signature : SignatureSecp256k1 = cmdInput.signature
+
+    // get the forger stake data to remove
+    val stakeData = findStakeData(view, stakeId) match {
+      case Some(obj) => obj
+      case None =>
+        val msgStr = "No such stake id in state-db"
+        log.debug(msgStr)
+        return new ExecutionFailed(RemoveStakeGasPaidValue, new Exception(msgStr))
+    }
+
+    // check signature
+    val msgToSign = getMessageToSign(stakeId, msg.getFrom.address(), msg.getNonce.toByteArray)
+    if (!signature.isValid(stakeData.ownerPublicKey, msgToSign)) {
+      val msgStr = "Invalid signature"
+      log.debug(msgStr)
+      return new ExecutionFailed(RemoveStakeGasPaidValue, new Exception(msgStr))
+    }
+
+    // remove the forger stake data
+    removeForgerStake(view, stakeId)
+
+    // TODO add log ForgerStakeWithdrawal(StakeId, ...) to the StateView ???
+    //view.addLog(new EvmLog concrete instance) // EvmLog will be used internally
+
+    // decrease the balance of the "stake smart contract” account
+    view.subBalance(fakeSmartContractAddress.address(), stakeData.stakedAmount).get
+
+    // increase the balance of owner (not the sender) by withdrawn amount.
+    view.addBalance(stakeData.ownerPublicKey.address(), stakeData.stakedAmount)
+
+    // Maybe result is not useful in case of success execution (used probably for RPC commands only)
+    val result = stakeId
+    new ExecutionSucceeded(RemoveStakeGasPaidValue, result)
+  }
+
   override def process(msg: Message, view: AccountStateView): ExecutionResult = {
     try {
 
@@ -267,144 +435,13 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
       val cmdString = BytesUtils.toHexString(getOpCodeFromData(msg.getData))
       cmdString match {
         case `GetListOfForgersCmd` =>
-          // check we have no other bytes after the op code in the msg data
-          if (getArgumentsFromData(msg.getData).length > 0) {
-            val msgStr = s"invalid msg data length: ${msg.getData.length}, expected $OP_CODE_LENGTH"
-            log.debug(msgStr)
-            return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(msgStr))
-          }
-
-          val stakeList = new util.ArrayList[AccountForgingStakeInfo]()
-          var nodeReference = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey).get
-
-          while (!linkedListNodeRefIsNull(nodeReference))
-          {
-            val (item : AccountForgingStakeInfo, prevNodeReference: Array[Byte]) = getListItem(view, nodeReference)
-            stakeList.add(item)
-            nodeReference = prevNodeReference
-          }
-
-          val listOfForgers : Array[Byte] = forgingInfoSerializer.toBytes(stakeList)
-
-          new ExecutionSucceeded(GetListOfForgersGasPaidValue, listOfForgers)
-
+          doGetListOfForgersCmd(msg, view)
 
         case `AddNewStakeCmd` =>
-          // first of all check msg.value, it must be a legal wei amount convertible in satoshi without any remainder
-          if (!isValidZenAmount(msg.getValue)) {
-            val msgStr =s"Value is not a legal wei amount: ${msg.getValue.toString()}"
-            log.debug(msgStr)
-            return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(msgStr))
-          }
-
-          // check also that sender account exists (TODO to be moved into AccountState level)
-          if (!view.accountExists(msg.getFrom.address())) {
-            val msgStr =s"Sender account does not exist: ${msg.getFrom.toString}"
-            log.debug(msgStr)
-            return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(msgStr))
-          }
-
-          val cmdInput = AddNewStakeCmdInputSerializer.parseBytesTry(getArgumentsFromData(msg.getData)) match {
-            case Success(obj) => obj
-            case Failure(exception) =>
-              val msgStr = "Error while parsing cmd input"
-              log.debug(msgStr, exception)
-              return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(msgStr))
-          }
-
-          val blockSignPublicKey : PublicKey25519Proposition = cmdInput.forgerPublicKeys.blockSignPublicKey
-          val vrfPublicKey :VrfPublicKey                     = cmdInput.forgerPublicKeys.vrfPublicKey
-          val ownerAddress: AddressProposition               = cmdInput.ownerAddress
-
-          // check that the delegation arguments satisfy the restricted list of forgers.
-          if (!networkParams.allowedForgersList.contains((blockSignPublicKey, vrfPublicKey))) {
-            val msgStr = "Forger is not in the allowed list"
-            log.debug(msgStr)
-            return new ExecutionFailed(AddNewStakeGasPaidValue, new Exception(msgStr))
-          }
-
-          // compute stakeId
-          val newStakeId = getStakeId(msg)
-
-          // check we do not already have this stake obj in the db
-          // TODO - We can rely on fact, that stakeId has a unique value, because depends on account and nonce, which
-          //  never repeats. So in this case we may save some gas and remove existence check
-          if (existsStakeData(view, newStakeId)) {
-            val msgStr = s"Stake ${BytesUtils.toHexString(newStakeId)} already in stateDb"
-            log.error(msgStr)
-            return new ExecutionFailed(AddNewStakeGasPaidValue, new Exception(msgStr))
-          }
-
-          // add the obj to stateDb
-          val stakedAmount = msg.getValue
-          addForgerStake(view, newStakeId, blockSignPublicKey, vrfPublicKey, ownerAddress, stakedAmount)
-
-          // decrease the balance of `from` account by `tx.value`
-          view.subBalance(msg.getFrom.address(), stakedAmount) match {
-            case Success(_) =>
-              // increase the balance of the "forger stake smart contract” account
-              view.addBalance(fakeSmartContractAddress.address(), stakedAmount).get
-
-              // TODO add log ForgerStakeDelegation(StakeId, ...) to the StateView ???
-              //view.addLog(new EvmLog concrete instance) // EvmLog will be used internally
-
-              // Maybe result is not useful in case of success execution (used probably for RPC commands only)
-              val result = newStakeId
-
-              new ExecutionSucceeded(AddNewStakeGasPaidValue, result)
-
-            case Failure(e) =>
-              val balance = view.getBalance(msg.getFrom.address())
-              log.debug(s"Could not subtract $stakedAmount from account: current balance = $balance")
-              new ExecutionFailed(AddNewStakeGasPaidValue, new Exception(e))
-          }
-
+          doAddNewStakeCmd(msg, view)
 
         case `RemoveStakeCmd` =>
-
-          val cmdInput = RemoveStakeCmdInputSerializer.parseBytesTry(getArgumentsFromData(msg.getData)) match {
-            case Success(obj) => obj
-            case Failure(exception) =>
-              val msgStr = "Error while parsing cmd input"
-              log.debug(msgStr, exception)
-              return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(exception))
-          }
-
-          val stakeId : Array[Byte]          = cmdInput.stakeId
-          val signature : SignatureSecp256k1 = cmdInput.signature
-
-          // get the forger stake data to remove
-          val stakeData = findStakeData(view, stakeId) match {
-            case Some(obj) => obj
-            case None =>
-              val msgStr = "No such stake id in state-db"
-              log.debug(msgStr)
-              return new ExecutionFailed(RemoveStakeGasPaidValue, new Exception(msgStr))
-          }
-
-          // check signature
-          val msgToSign = getMessageToSign(stakeId, msg.getFrom.address(), msg.getNonce.toByteArray)
-          if (!signature.isValid(stakeData.ownerPublicKey, msgToSign)) {
-            val msgStr = "Invalid signature"
-            log.debug(msgStr)
-            return new ExecutionFailed(RemoveStakeGasPaidValue, new Exception(msgStr))
-          }
-
-          // remove the forger stake data
-          removeForgerStake(view, stakeId)
-
-          // TODO add log ForgerStakeWithdrawal(StakeId, ...) to the StateView ???
-          //view.addLog(new EvmLog concrete instance) // EvmLog will be used internally
-
-          // decrease the balance of the "stake smart contract” account
-          view.subBalance(fakeSmartContractAddress.address(), stakeData.stakedAmount).get
-
-          // increase the balance of owner (not the sender) by withdrawn amount.
-          view.addBalance(stakeData.ownerPublicKey.address(), stakeData.stakedAmount)
-
-          // Maybe result is not useful in case of success execution (used probably for RPC commands only)
-          val result = stakeId
-          new ExecutionSucceeded(RemoveStakeGasPaidValue, result)
+          doRemoveStakeCmd(msg, view)
 
         case _ =>
           val msgStr = s"op code $cmdString not supported"
@@ -419,6 +456,17 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
         new ExecutionFailed(RemoveStakeGasPaidValue, new IllegalArgumentException(e))
     }
   }
+}
+
+object ForgerStakeMsgProcessor {
+  val LinkedListTipKey : Array[Byte] = Blake2b256.hash("Tip")
+  val LinkedListNullValue : Array[Byte] = Blake2b256.hash("Null")
+
+  val GetListOfForgersCmd: String = "00"
+  val AddNewStakeCmd: String =      "01"
+  val RemoveStakeCmd: String =      "02"
+
+  val ForgerStakeSmartContractAddress = new AddressProposition(BytesUtils.fromHexString("0000000000000000000022222222222222222222"))
 }
 
 //@JsonView(Array(classOf[Views.Default]))
@@ -486,7 +534,7 @@ case class AddNewStakeCmdInput(
 
   override def serializer: ScorexSerializer[AddNewStakeCmdInput] = AddNewStakeCmdInputSerializer
 
-  override def toString: String = "%s(forgerPubKeys: %s, ownerPublicKey: %s)"
+  override def toString: String = "%s(forgerPubKeys: %s, ownerAddress: %s)"
     .format(this.getClass.toString, forgerPublicKeys, ownerAddress)
 
 }
@@ -548,7 +596,7 @@ case class ForgerStakeData(
 
   override def serializer: ScorexSerializer[ForgerStakeData] = ForgerStakeDataSerializer
 
-  override def toString: String = "%s(forgerPubKeys: %s, ownerPublicKey: %s, stakedAmount: %s)"
+  override def toString: String = "%s(forgerPubKeys: %s, ownerAddress: %s, stakedAmount: %s)"
     .format(this.getClass.toString, forgerPublicKeys, ownerPublicKey, stakedAmount)
 }
 

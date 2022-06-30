@@ -1,4 +1,3 @@
-import binascii
 import os
 import sys
 
@@ -6,7 +5,7 @@ import json
 from decimal import Decimal
 
 from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
-    VrfAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths, LARGE_WITHDRAWAL_EPOCH_LENGTH
+    VrfAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths, LARGE_WITHDRAWAL_EPOCH_LENGTH, AccountKey
 from SidechainTestFramework.sidechainauthproxy import SidechainAuthServiceProxy
 import subprocess
 import time
@@ -207,6 +206,17 @@ def generate_vrf_secrets(seed, number_of_vrf_keys):
         vrf_keys.append(VrfAccount(secret["vrfSecret"], secret["vrfPublicKey"]))
     return vrf_keys
 
+def generate_account_proposition(seed, number_of_acc_props):
+    acc_props = []
+    secrets = []
+    for i in range(number_of_acc_props):
+        jsonParameters = {"seed": "{0}_{1}".format(seed, i + 1)}
+        secrets.append(launch_bootstrap_tool("generateAccountKey", jsonParameters))
+
+    for i in range(len(secrets)):
+        secret = secrets[i]
+        acc_props.append(AccountKey(secret["accountSecret"], secret["accountProposition"]))
+    return acc_props
 
 # Maybe should we give the possibility to customize the configuration file by adding more fields ?
 
@@ -831,6 +841,12 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
     vrf_key = vrf_keys[0]
     certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, cert_keys_paths)
     csw_verification_key = generate_csw_proof_info(sc_creation_info.withdrawal_epoch_length, csw_keys_paths)
+
+    account_public_key = None
+    if (blockversion == AccountModelBlockVersion):
+        account_keys = generate_account_proposition("seed", 1)
+        account_public_key = account_keys[0].proposition
+
     genesis_info = initialize_new_sidechain_in_mainchain(
         sc_creation_info.mc_node,
         sc_creation_info.withdrawal_epoch_length,
@@ -841,7 +857,9 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
         certificate_proof_info.verificationKey,
         csw_verification_key,
         sc_creation_info.btr_data_length,
-        sc_creation_info.sc_creation_version)
+        sc_creation_info.sc_creation_version,
+        account_public_key
+    )
 
     genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret, vrf_key.secret,
                                          block_timestamp_rewind, blockversion)

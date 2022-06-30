@@ -7,7 +7,7 @@ import scorex.util.ScorexLogging
 abstract class AbstractFakeSmartContractMsgProcessor extends MessageProcessor with ScorexLogging {
 
   val OP_CODE_LENGTH = 1
-  val NULL_HEX_STRING_32 = BytesUtils.toHexString(new Array[Byte](32))
+  val NULL_HEX_STRING_32: String = BytesUtils.toHexString(new Array[Byte](32))
 
   val fakeSmartContractAddress: AddressProposition
   val fakeSmartContractCodeHash: Array[Byte]
@@ -29,6 +29,7 @@ abstract class AbstractFakeSmartContractMsgProcessor extends MessageProcessor wi
   }
 
   override def canProcess(msg: Message, view: AccountStateView): Boolean = {
+    // we rely on the condition that init() has already been called at this point
     fakeSmartContractAddress.equals(msg.getTo)
   }
 

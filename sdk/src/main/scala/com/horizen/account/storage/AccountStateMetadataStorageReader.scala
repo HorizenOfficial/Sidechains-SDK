@@ -7,7 +7,7 @@ import com.horizen.utils.{BlockFeeInfo, WithdrawalEpochInfo}
 // expect this storage to be passed by the app during SidechainApp initialization
 trait AccountStateMetadataStorageReader {
 
-  def getWithdrawalEpochInfo: Option[WithdrawalEpochInfo]
+  def getWithdrawalEpochInfo: WithdrawalEpochInfo
 
   def getFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo]
 

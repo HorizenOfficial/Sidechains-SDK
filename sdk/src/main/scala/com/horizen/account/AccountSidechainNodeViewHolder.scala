@@ -44,7 +44,8 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     Seq(
       EoaMessageProcessor,
       WithdrawalMsgProcessor,
-      ForgerStakeMsgProcessor(params)
+      ForgerStakeMsgProcessor(params),
+
     ) ++ customMessageProcessors
   }
 
