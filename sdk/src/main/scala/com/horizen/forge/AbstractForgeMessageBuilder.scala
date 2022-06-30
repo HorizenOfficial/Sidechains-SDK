@@ -81,7 +81,6 @@ abstract class AbstractForgeMessageBuilder[
       nextConsensusEpochNumber, nodeView.vault, nodeView.history, nodeView.state, branchPointInfo, nextBlockTimestamp)
       .sortWith(_.forgingStakeInfo.stakeAmount > _.forgingStakeInfo.stakeAmount)
 
-
     if (forgingStakeMerklePathInfoSeq.isEmpty) {
       NoOwnedForgingStake
     } else {

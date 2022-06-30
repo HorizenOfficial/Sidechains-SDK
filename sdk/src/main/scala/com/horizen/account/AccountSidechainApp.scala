@@ -165,6 +165,7 @@ class AccountSidechainApp @Inject()
       AccountBlockHeader,PMOD,NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi),
     AccountTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainAccountTransactionsCompanion, params),
+    // TODO there can be only one of them since both has the 'wallet' tag in the path. Fix this. 
     //SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
     AccountWalletApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef),

@@ -116,7 +116,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         val gasPrice = BigInteger.valueOf(1) // TODO actual gas implementation
         val gasLimit = BigInteger.valueOf(1) // TODO actual gas implementation
         // check if the fromAddress is either empty or it fits and the value is high enough
-        // TEST
+        // TEST, remove it
         if(body.from.isDefined) {
           val fromAddr = new AddressProposition(BytesUtils.fromHexString(body.from.get))
           val fromBalance = sidechainNodeView.getNodeState.getBalance(fromAddr.address())
