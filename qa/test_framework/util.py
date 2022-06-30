@@ -10,6 +10,7 @@
 # Add python-bitcoinrpc to module search path:
 import codecs
 import os
+import pprint
 import sys
 
 from binascii import hexlify, unhexlify
@@ -491,7 +492,7 @@ Output: an array of two information:
 """
 def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_length, public_key, forward_transfer_amount,
                                           vrf_public_key, gen_sys_constant, cert_vk, csw_vk, btr_data_length,
-                                          sc_creation_version):
+                                          sc_creation_version, account_public_key=None):
     number_of_blocks_to_enable_sc_logic = 449
     number_of_blocks = mainchain_node.getblockcount()
     diff = number_of_blocks_to_enable_sc_logic - number_of_blocks
@@ -499,7 +500,21 @@ def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_lengt
         print("Generating {} blocks for reaching needed mc fork point...".format(diff))
         mainchain_node.generate(diff)
 
-    custom_creation_data = vrf_public_key
+    if (account_public_key is not None):
+        # in account based model, we pass to the customData fields not only the vrf public key bytes, but also block sign key
+        custom_creation_data = vrf_public_key + public_key
+        # the recipient address is a 20 byte account address. MC will pad them with 0 bytes up to 32 bytes
+        to_address = account_public_key
+
+        # test
+        pprint.pprint(custom_creation_data)
+        pprint.pprint(vrf_public_key)
+        pprint.pprint(public_key)
+        pprint.pprint(account_public_key)
+    else:
+        custom_creation_data = vrf_public_key
+        to_address = public_key
+
     fe_certificate_field_configs = [255, 255]
     bitvector_certificate_field_configs = []  # [[254*8, 254*8]]
     ft_min_amount = 0
@@ -508,7 +523,7 @@ def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_lengt
     sc_create_args = {
         "version": sc_creation_version,
         "withdrawalEpochLength": withdrawal_epoch_length,
-        "toaddress": public_key,
+        "toaddress": to_address,
         "amount": forward_transfer_amount,
         "wCertVk": cert_vk,
         "customData": custom_creation_data,

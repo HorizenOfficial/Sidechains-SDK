@@ -12,7 +12,7 @@ import scala.util.Try
 trait StateView[TX <: Transaction, SV <: StateView[TX, SV]] extends StateReader {
   view: SV =>
 
-  def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[SV]
+  def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[Unit]
   def applyTransaction(tx: TX): Try[SV]
 
   def addCertificate(cert: WithdrawalEpochCertificate): Try[SV]

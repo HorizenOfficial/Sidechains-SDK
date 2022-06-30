@@ -145,10 +145,14 @@ VrfAccount : {
 }
 """
 class VrfAccount(object):
-
     def __init__(self, secret, publicKey):
         self.secret = secret
         self.publicKey = publicKey
+
+class AccountKey(object):
+    def __init__(self, secret, proposition):
+        self.secret = secret
+        self.proposition = proposition
 
 """
 Withdrawal certificate proof info  data .

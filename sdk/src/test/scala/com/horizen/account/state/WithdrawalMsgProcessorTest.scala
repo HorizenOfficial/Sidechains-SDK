@@ -55,6 +55,7 @@ class WithdrawalMsgProcessorTest
     val value: java.math.BigInteger = java.math.BigInteger.ONE
     val msg = getAddWithdrawalRequestMessage(value)
     val mockStateView: AccountStateView = mock[AccountStateView]
+    Mockito.when(mockStateView.accountExists(msg.getTo.address())).thenReturn(true)
 
     assertTrue("Message for WithdrawalMsgProcessor cannot be processed", WithdrawalMsgProcessor.canProcess(msg, mockStateView))
 
@@ -70,13 +71,18 @@ class WithdrawalMsgProcessorTest
 
     val msgForWrongProcessor = getMessage(fakeAddress, value,Array.emptyByteArray)
     val mockStateView: AccountStateView = mock[AccountStateView]
+    Mockito.when(mockStateView.accountExists(msgForWrongProcessor.getTo.address())).thenReturn(true)
+
     assertEquals("msgForWrongProcessor processing should result in InvalidMessage", classOf[InvalidMessage], WithdrawalMsgProcessor.process(msgForWrongProcessor, mockStateView).getClass)
 
     val data = BytesUtils.fromHexString("99")
     val msgWithWrongFunctionCall = getMessage(WithdrawalMsgProcessor.fakeSmartContractAddress, value,data)
+    Mockito.when(mockStateView.accountExists(msgWithWrongFunctionCall.getTo.address())).thenReturn(true)
+
     assertEquals("msgWithWrongFunctionCall processing should result in ExecutionFailed", classOf[ExecutionFailed], WithdrawalMsgProcessor.process(msgWithWrongFunctionCall, mockStateView).getClass)
 
     val mockMsg = mock[Message]
+
     Mockito.when(mockMsg.getTo).thenReturn(WithdrawalMsgProcessor.fakeSmartContractAddress)
     val expException = new RuntimeException()
     Mockito.when(mockMsg.getData).thenThrow(expException)
@@ -94,10 +100,11 @@ class WithdrawalMsgProcessorTest
     //Invalid data
     var withdrawalAmount: java.math.BigInteger = ZenWeiConverter.convertZenniesToWei(50)
     var msg = getMessage(WithdrawalMsgProcessor.fakeSmartContractAddress, withdrawalAmount, Array.emptyByteArray)
+    Mockito.when(mockStateView.accountExists(msg.getTo.address())).thenReturn(true)
+
     var res = WithdrawalMsgProcessor.process(msg, mockStateView)
     assertEquals("Withdrawal request with invalid data should result in ExecutionFailed", classOf[ExecutionFailed], res.getClass)
     assertEquals(classOf[IllegalArgumentException], res.asInstanceOf[ExecutionFailed].getReason.getClass)
-
 
     //Invalid zen amount
     withdrawalAmount = java.math.BigInteger.valueOf(50)
@@ -147,10 +154,14 @@ class WithdrawalMsgProcessorTest
   @Test
   def testGetListOfWithdrawalReqs(): Unit = {
     val mockStateView = mock[AccountStateView]
+
     val epochNum = 102
 
     //Invalid data
     var msg = getMessage(WithdrawalMsgProcessor.fakeSmartContractAddress, java.math.BigInteger.ZERO, Array.emptyByteArray)
+
+    Mockito.when(mockStateView.accountExists(msg.getTo.address())).thenReturn(true)
+
     var res = WithdrawalMsgProcessor.process(msg, mockStateView)
     assertEquals("Withdrawal request list with invalid data should result in ExecutionFailed", classOf[ExecutionFailed], res.getClass)
     assertEquals(classOf[IllegalArgumentException], res.asInstanceOf[ExecutionFailed].getReason.getClass)

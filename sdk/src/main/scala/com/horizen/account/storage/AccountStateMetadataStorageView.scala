@@ -36,10 +36,10 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
 
   // all getters same as in StateMetadataStorage, but looking first in the cached/dirty entries in memory
 
-  override def getWithdrawalEpochInfo: Option[WithdrawalEpochInfo] = {
+  override def getWithdrawalEpochInfo: WithdrawalEpochInfo = {
     withdrawalEpochInfoOpt match {
-      case None => getWithdrawalEpochInfoFromStorage
-      case Some(_) => withdrawalEpochInfoOpt
+      case None => getWithdrawalEpochInfoFromStorage.getOrElse(WithdrawalEpochInfo(0, 0))
+      case Some(res) => res
     }
   }
 
@@ -54,9 +54,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
         }
       case _ => Option.empty
     }
-
   }
-
 
   override def getFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo] = {
     val blockFees: ListBuffer[BlockFeeInfo] = ListBuffer()
@@ -73,7 +71,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
         case None =>
           log.error(s"Error while fee payments retrieving: record expected to exist for epoch $withdrawalEpochNumber and counter $counter")
           throw new IllegalStateException("Error while fee payments retrieving: record expected to exist.")
-
       }
     }
 
@@ -91,7 +88,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
       case Some(certificate) if certificate.epochNumber == referencedWithdrawalEpoch => topQualityCertificateOpt
       case _ => getTopQualityCertificateFromStorage(referencedWithdrawalEpoch)
     }
-
   }
 
   private[horizen] def getTopQualityCertificateFromStorage(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
@@ -112,7 +108,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
       case Some(_) => consensusEpochOpt
       case _ => getConsensusEpochNumberFromStorage
     }
-
   }
 
   private[horizen] def getConsensusEpochNumberFromStorage: Option[ConsensusEpochNumber] = {
@@ -148,7 +143,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
       case _ => getAccountStateRootFromStorage
     }
   }
-
 
   // put in memory cache and mark the entry as "dirty"
   def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo): Unit =
@@ -196,30 +190,35 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   }
 
   private[horizen] def saveToStorage(version: ByteArrayWrapper): Unit = {
-    require(withdrawalEpochInfoOpt.nonEmpty, "WithdrawalEpochInfo must be NOT NULL.")
-    require(blockFeeInfoOpt.nonEmpty, "BlockFeeInfo must be NOT NULL.")
+
     require(accountStateRootOpt.nonEmpty, "Account State Root must be NOT NULL.")
 
     val updateList = new JArrayList[JPair[ByteArrayWrapper, ByteArrayWrapper]]()
     val removeList = new JArrayList[ByteArrayWrapper]()
 
-    // Update Withdrawal epoch related data
-    updateList.add(new JPair(withdrawalEpochInformationKey,
-      new ByteArrayWrapper(WithdrawalEpochInfoSerializer.toBytes(withdrawalEpochInfoOpt.get))))
+    withdrawalEpochInfoOpt.foreach(epochInfo => {
+      // Update Withdrawal epoch related data
+      updateList.add(new JPair(withdrawalEpochInformationKey,
+        new ByteArrayWrapper(WithdrawalEpochInfoSerializer.toBytes(epochInfo))))
+    })
 
     // Store the top quality cert for epoch if present
     topQualityCertificateOpt.foreach(certificate => {
       updateList.add(new JPair(getTopQualityCertificateKey(certificate.epochNumber),
         WithdrawalEpochCertificateSerializer.toBytes(certificate)))
-    }
-    )
+    })
 
-    // Update BlockFeeInfo data
-    val nextBlockFeeInfoCounter: Int = getBlockFeeInfoCounter(withdrawalEpochInfoOpt.get.epoch) + 1
-    updateList.add(new JPair(getBlockFeeInfoCounterKey(withdrawalEpochInfoOpt.get.epoch),
-      new ByteArrayWrapper(Ints.toByteArray(nextBlockFeeInfoCounter))))
-    updateList.add(new JPair(getBlockFeeInfoKey(withdrawalEpochInfoOpt.get.epoch, nextBlockFeeInfoCounter),
-      new ByteArrayWrapper(BlockFeeInfoSerializer.toBytes(blockFeeInfoOpt.get))))
+    blockFeeInfoOpt.foreach(feeInfo => {
+      val epochInfo = withdrawalEpochInfoOpt.getOrElse(getWithdrawalEpochInfo)
+      val nextBlockFeeInfoCounter: Int = getBlockFeeInfoCounter(epochInfo.epoch) + 1
+
+      updateList.add(new JPair(getBlockFeeInfoCounterKey(epochInfo.epoch),
+        new ByteArrayWrapper(Ints.toByteArray(nextBlockFeeInfoCounter))))
+
+      updateList.add(new JPair(getBlockFeeInfoKey(epochInfo.epoch, nextBlockFeeInfoCounter),
+        new ByteArrayWrapper(BlockFeeInfoSerializer.toBytes(feeInfo))))
+      }
+    )
 
     // Update Consensus related data
     consensusEpochOpt.foreach(currConsensusEpoch => {
@@ -241,22 +240,26 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     //    Note: we should keep last 2 epoch certificates, so in case SC has ceased we have an access to the last active cert.
     // 1) remove outdated BlockFeeInfo records
 
-    val isWithdrawalEpochSwitched: Boolean = getWithdrawalEpochInfoFromStorage match {
-      case Some(storedEpochInfo) => storedEpochInfo.epoch != withdrawalEpochInfoOpt.get.epoch
-      case _ => false
-    }
-    if (isWithdrawalEpochSwitched) {
-      val certEpochNumberToRemove: Int = withdrawalEpochInfoOpt.get.epoch - 4
-      removeList.add(getTopQualityCertificateKey(certEpochNumberToRemove))
+    withdrawalEpochInfoOpt match {
+      case Some(epochInfo) =>
+        val isWithdrawalEpochSwitched: Boolean = getWithdrawalEpochInfoFromStorage match {
+          case Some(storedEpochInfo) => storedEpochInfo.epoch != epochInfo.epoch
+          case _ => false
+        }
+        if (isWithdrawalEpochSwitched) {
+          val certEpochNumberToRemove: Int = epochInfo.epoch - 4
+          removeList.add(getTopQualityCertificateKey(certEpochNumberToRemove))
 
-      val blockFeeInfoEpochToRemove: Int = withdrawalEpochInfoOpt.get.epoch - 1
-      for (counter <- 0 to getBlockFeeInfoCounter(blockFeeInfoEpochToRemove)) {
-        removeList.add(getBlockFeeInfoKey(blockFeeInfoEpochToRemove, counter))
-      }
-      removeList.add(getBlockFeeInfoCounterKey(blockFeeInfoEpochToRemove))
+          val blockFeeInfoEpochToRemove: Int = epochInfo.epoch - 1
+          for (counter <- 0 to getBlockFeeInfoCounter(blockFeeInfoEpochToRemove)) {
+            removeList.add(getBlockFeeInfoKey(blockFeeInfoEpochToRemove, counter))
+          }
+          removeList.add(getBlockFeeInfoCounterKey(blockFeeInfoEpochToRemove))
+        }
+      case _ => // do nothing
     }
 
-   storage.update(version, updateList, removeList)
+    storage.update(version, updateList, removeList)
 
   }
 

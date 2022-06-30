@@ -35,7 +35,7 @@ class WithdrawalMsgProcessorIntegrationTest
 
     assertEquals("Wrong initial balance", java.math.BigInteger.ZERO, stateView.getBalance(WithdrawalMsgProcessor.fakeSmartContractAddress.address()).get)
     assertEquals("Wrong initial nonce", java.math.BigInteger.ZERO, stateView.stateDb.getNonce(WithdrawalMsgProcessor.fakeSmartContractAddress.address()))
-    assertNotNull("Wrong initial codehash", stateView.stateDb.getCodeHash(WithdrawalMsgProcessor.fakeSmartContractAddress.address()))
+    assertNotNull("Wrong initial code hash", stateView.stateDb.getCodeHash(WithdrawalMsgProcessor.fakeSmartContractAddress.address()))
 
     stateView.stateDb.close()
 
@@ -49,7 +49,7 @@ class WithdrawalMsgProcessorIntegrationTest
     WithdrawalMsgProcessor.init(stateView)
 
     val epochNum = 102
-    Mockito.when(metadataStorageView.getWithdrawalEpochInfo).thenReturn(Some(WithdrawalEpochInfo(epochNum, 1)))
+    Mockito.when(metadataStorageView.getWithdrawalEpochInfo).thenReturn(WithdrawalEpochInfo(epochNum, 1))
 
     // GetListOfWithdrawalRequest without withdrawal requests yet
 
