@@ -5,6 +5,7 @@ import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.block._
 import com.horizen.consensus.ForgingStakeInfo
+import com.horizen.evm.TrieHasher
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
@@ -138,6 +139,8 @@ object AccountBlock extends ScorexEncoding {
 
   def calculateTransactionsMerkleRootHash(sidechainTransactions: Seq[SidechainTypes#SCAT]): Array[Byte] = {
     // TODO: Use Eth friendly way to calculate merkle tree root.
-    Utils.ZEROS_HASH
+    // TODO: this assumes the binary representation of transactions exactly match the ethereum RLP encoding,
+    //  which is not true currently because the serializer prepends the payload with the length
+    TrieHasher.Root(sidechainTransactions.map(tx => tx.bytes).toArray)
   }
 }
