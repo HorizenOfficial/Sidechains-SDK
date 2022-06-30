@@ -201,4 +201,8 @@ final class LibEvm {
         var params = new EvmParams(handle, from, to, value, input, gasLimit, gasPrice, context);
         return invoke("EvmApply", params, EvmResult.class);
     }
+
+    public static byte[] hashRoot(byte[][] values) {
+        return invoke("HashRoot", new HashParams(values), Hash.class).toBytes();
+    }
 }
