@@ -9,7 +9,7 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
 from SidechainTestFramework.sc_forging_util import sc_create_forging_stake_mempool
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, assert_true, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain
+    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, COIN
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, is_mainchain_block_included_in_sc_block, check_box_balance, \
     check_mainchain_block_reference_info, check_wallet_coins_balance, check_box_balance, get_lib_separator, \
@@ -79,6 +79,10 @@ class SCEvmBootstrap(SidechainTestFramework):
         evm_address = ret["result"]["proposition"]["address"]
         print("pubkey = {}".format(evm_address))
 
+        # test the legacy wallet api
+        ret = sc_node.wallet_allPublicKeys()
+        pprint.pprint(ret)
+        
         ft_amount = Decimal("33.22")
 
         forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
@@ -117,10 +121,9 @@ class SCEvmBootstrap(SidechainTestFramework):
         sc_best_block = sc_node.block_best()["result"]
         pprint.pprint(sc_best_block)
 
+        # send an eth tx to mempool. Amount should be expressed in zennies
+        amount = int(round((12.34 * COIN)))
 
-
-        # send an eth tx to mempool
-        amount = 1
         recipientKeys = generate_account_proposition("seed3", 1)[0]
         print("Trying to send {} zen to address {}".format(amount, recipientKeys.proposition))
 
