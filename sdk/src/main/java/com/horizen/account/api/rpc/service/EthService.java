@@ -1,5 +1,6 @@
 package com.horizen.account.api.rpc.service;
 
+import com.horizen.SidechainSettings;
 import com.horizen.account.api.rpc.utils.Data;
 import com.horizen.account.api.rpc.utils.Quantity;
 import com.horizen.account.api.rpc.utils.ResponseObject;
@@ -8,6 +9,7 @@ import com.horizen.account.node.AccountNodeView;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.transaction.AccountTransaction;
 import com.horizen.account.transaction.EthereumTransaction;
+import com.horizen.params.NetworkParams;
 import com.horizen.proof.Proof;
 import com.horizen.proposition.Proposition;
 import org.web3j.crypto.RawTransaction;
@@ -17,15 +19,20 @@ import org.web3j.protocol.core.methods.response.TransactionReceipt;
 import org.web3j.utils.Numeric;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Optional;
 
 public class EthService extends RpcService {
     public final AccountNodeView nodeView;
+    public final NetworkParams networkParams;
+    public final SidechainSettings sidechainSettings;
 
-    public EthService(AccountNodeView view){
+    public EthService(AccountNodeView view, NetworkParams params, SidechainSettings settings){
         nodeView = view;
+        networkParams = params;
+        sidechainSettings = settings;
     }
 
     @RpcMethod("eth_getBlockByNumber")
@@ -56,7 +63,7 @@ public class EthService extends RpcService {
 
     @RpcMethod("eth_chainId")
     public Quantity chainId() {
-        return new Quantity("0x67D");
+        return new Quantity(Numeric.toHexStringWithPrefix(BigInteger.valueOf(networkParams.chainId())));
     }
 
     @RpcMethod("eth_getBalance")
@@ -66,13 +73,14 @@ public class EthService extends RpcService {
 
     @RpcMethod("eth_getTransactionCount")
     public Quantity getTransactionCount(Data address, Quantity tag) {
+        // return nonce of address
         // TODO: We need a function to return the transaction count of given address
         return new Quantity("0x5");
     }
 
     @RpcMethod("net_version")
     public String version() {
-        return (String) nodeView.getNodeState().version();
+        return sidechainSettings.genesisData().mcNetwork();
     }
 
     @RpcMethod("eth_estimateGas")
@@ -90,14 +98,38 @@ public class EthService extends RpcService {
     @RpcMethod("eth_getTransactionByHash")
     public ResponseObject getTransactionByHash(Data transactionHash) throws IOException {
         // TODO: Add a function to get transaction by hash instead of id
-        var tx = getTransaction(transactionHash);
-        if (tx.isEmpty()) return null;
-        var ethTx = getEthereumTransaction(tx);
+        //var tx = getTransaction(transactionHash);
+        //if (tx.isEmpty()) return null;
+        //var ethTx = getEthereumTransaction(tx);
 
-        return new ResponseObject(getTxObject(transactionHash, ethTx, tx));
+        //return new ResponseObject(getTxObject(transactionHash, ethTx, tx));
+        return new ResponseObject(getTxObject(transactionHash, null, null));
     }
 
     private Transaction getTxObject(Data transactionHash, EthereumTransaction ethTx, Optional<AccountTransaction<Proposition, Proof<Proposition>>> tx){
+        return new Transaction("0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                null, // TODO: creates contract hash
+                "0x0",
+                "0x0",
+                "0x0",
+                "0x0",
+                0,
+                "0x0",
+                "0x0",
+                "0x0",
+                Collections.emptyList() // TODO: access list
+        );/*
         return new Transaction(Numeric.toHexString(transactionHash.getValue()),
                 Numeric.toHexStringWithPrefix(tx.get().getNonce()),
                 String.valueOf(getBestBlock().hashCode()),
@@ -120,7 +152,7 @@ public class EthService extends RpcService {
                 Numeric.toHexStringWithPrefix(ethTx.getMaxFeePerGas()),
                 Numeric.toHexStringWithPrefix(ethTx.getMaxPriorityFeePerGas()),
                 Collections.emptyList() // TODO: access list
-        );
+        );*/
     }
 
     @RpcMethod("eth_getTransactionReceipt")
