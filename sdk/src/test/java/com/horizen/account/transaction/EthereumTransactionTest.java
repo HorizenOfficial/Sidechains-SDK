@@ -2,6 +2,7 @@ package com.horizen.account.transaction;
 
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
+import com.horizen.evm.TrieHasher;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.BytesUtils;
 import org.junit.Before;
@@ -351,5 +352,38 @@ public class EthereumTransactionTest {
         assertArrayEquals(toEthereumTransaction.getTo().address(), toProposition.address());
     }
 
+    private RawTransaction[] generateTransactions(int count) {
+        var to = "0x0000000000000000000000000000000000001337";
+        var data = "01020304050607080a";
+        var gas = BigInteger.valueOf(21000);
+        var gasPrice = BigInteger.valueOf(2000000000);
+        var txs = new RawTransaction[count];
+        for (int i = 0; i < txs.length; i++) {
+            var nonce = BigInteger.valueOf(i);
+            var value = BigInteger.valueOf(i).multiply(BigInteger.TEN.pow(18));
+//            if (i % 3 == 0) {
+            txs[i] = RawTransaction.createTransaction(nonce, gasPrice, gas, to, value, data);
+//            } else {
+//                txs[i] = RawTransaction.createTransaction(0, nonce, gas, to, value, data, gasPrice, gasPrice);
+//            }
+        }
+        return txs;
+    }
 
+    @Test
+    public void ethereumTransactionsRootHashTest() {
+        final var testCounts = new int[]{0, 1, 2, 3, 4, 10, 51, 1000, 126, 127, 128, 129, 130, 765};
+        for (var count : testCounts) {
+            var txs = generateTransactions(count);
+            var rlpTxs = Arrays
+                    .stream(txs)
+                    .map(tx -> TransactionEncoder.encode(
+                            tx,
+                            // make sure we also encode a signature, even if it is empty to make the results comparable to GETH
+                            new Sign.SignatureData(new byte[0], new byte[0], new byte[0])
+                    ))
+                    .toArray(byte[][]::new);
+            System.out.format("transactions root hash (%4d) %s%n", count, Numeric.toHexString(TrieHasher.Root(rlpTxs)));
+        }
+    }
 }
