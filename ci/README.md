@@ -3,7 +3,7 @@
 As of 2022/06/27 CI/CD pipeline adds functionality to build and publish multiple `DIGIT.DIGIT.DIGIT-SNAPSHOT` versions of `zendoo-sc-crypotolib` package
 with the help of set_version.sh script.
 
-`set_version.sh` script is located under **ci** directory and automates preparation steps for building/releasing a new
+`set_version.sh` script is located under **ci/devtools** directory and automates preparation steps for building/releasing a new
 version of the artifacts by setting the provided version for all the required dependencies across the configuration files.
 
 ---
@@ -33,7 +33,7 @@ and can be referred to inside the configuration files by providing the full vers
 ## Usage
 Before starting the build process use `set_version.sh` script if needed by providing two arguments in the following format:
 ```
- ./ci/set_version.sh --help
+ ./ci/devtools/set_version.sh --help
   Usage: Provide OLD and NEW versions as the 1st and 2nd arguments respectively.
          It has to match the following format:
          DIGIT.DIGIT.DIGIT or DIGIT.DIGIT.DIGIT-SNAPSHOT
