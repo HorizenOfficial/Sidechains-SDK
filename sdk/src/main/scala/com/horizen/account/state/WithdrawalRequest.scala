@@ -10,7 +10,7 @@ case class WithdrawalRequest(proposition: MCPublicKeyHashProposition, value: jav
 
   override def serializer: ScorexSerializer[WithdrawalRequest] = WithdrawalRequestSerializer
 
-  def valueInZennies: Long = ZenWeiConverter.convertWeiToZennies(value)
+  val valueInZennies: Long = ZenWeiConverter.convertWeiToZennies(value)
 }
 
 object WithdrawalRequestSerializer extends ScorexSerializer[WithdrawalRequest] {

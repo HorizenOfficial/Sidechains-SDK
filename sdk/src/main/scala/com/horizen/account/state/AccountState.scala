@@ -142,9 +142,9 @@ class AccountState(val params: NetworkParams,
 
     // Check that BTs are identical for both Cert and State
     topQualityCertificate.backwardTransferOutputs.zip(expectedWithdrawalRequests).foreach {
-      case (certOutput, expectedWithdrawalRequestBox) => {
-        if (certOutput.amount != expectedWithdrawalRequestBox.valueInZennies ||
-          !util.Arrays.equals(certOutput.pubKeyHash, expectedWithdrawalRequestBox.proposition.bytes())) {
+      case (certOutput, expectedWithdrawalRequest) => {
+        if (certOutput.amount != expectedWithdrawalRequest.valueInZennies ||
+          !util.Arrays.equals(certOutput.pubKeyHash, expectedWithdrawalRequest.proposition.bytes())) {
           throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate backward transfers " +
             s"data is different than expected. Node's active chain is the fork from MC perspective.")
         }
