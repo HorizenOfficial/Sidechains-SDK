@@ -73,7 +73,6 @@ case class AccountWalletApiRoute(override val settings: RESTApiSettings,
         if (body.address.isDefined) {
           val fromAddr = new AddressProposition(BytesUtils.fromHexString(body.address.get))
           val fromBalance = sidechainNodeView.getNodeState.getBalance(fromAddr.address())
-          println(fromBalance.get)
           ApiResponseUtil.toResponse(RespGetBalance(fromBalance.get.toString))
         } else {
           ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
