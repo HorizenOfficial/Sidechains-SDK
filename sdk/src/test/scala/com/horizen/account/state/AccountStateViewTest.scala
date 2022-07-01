@@ -73,7 +73,7 @@ class AccountStateViewTest
     (0 until maxNumOfWithdrawalReqs).foreach(index => {
       val wr = res(index)
       assertEquals("wrong address", destAddress, wr.proposition)
-      assertEquals("wrong amount", index + 1, wr.value)
+      assertEquals("wrong amount", index + 1, wr.valueInZennies)
     })
 
   }

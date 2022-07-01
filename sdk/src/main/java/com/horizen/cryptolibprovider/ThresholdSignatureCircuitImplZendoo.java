@@ -1,18 +1,14 @@
 package com.horizen.cryptolibprovider;
 
-import com.horizen.box.WithdrawalRequestBox;
-import com.horizen.librustsidechains.Constants;
+import com.horizen.certnative.BackwardTransfer;
+import com.horizen.certnative.CreateProofResult;
+import com.horizen.certnative.NaiveThresholdSigProof;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.schnorrnative.SchnorrPublicKey;
 import com.horizen.schnorrnative.SchnorrSignature;
-import com.horizen.certnative.BackwardTransfer;
-import com.horizen.certnative.NaiveThresholdSigProof;
-import com.horizen.certnative.CreateProofResult;
 import com.horizen.utils.Pair;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -23,10 +19,6 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     private static final int supportedSegmentSize = (1 << 17);
 
     private static final SchnorrSignature signaturePlaceHolder = new SchnorrSignature();
-
-    private static BackwardTransfer withdrawalRequestBoxToBackwardTransfer(WithdrawalRequestBox box) {
-        return new BackwardTransfer(box.proposition().bytes(), box.value());
-    }
 
     @Override
     public List<byte[]> splitUtxoMerkleTreeRoot(byte[] utxoMerkleTreeRoot) {
@@ -66,15 +58,14 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     }
 
     @Override
-    public byte[] generateMessageToBeSigned(List<WithdrawalRequestBox> bt,
+    public byte[] generateMessageToBeSigned(List<BackwardTransfer> bt,
                                             byte[] sidechainId,
                                             int epochNumber,
                                             byte[] endCumulativeScTxCommTreeRoot,
                                             long btrFee,
                                             long ftMinAmount,
                                             byte[] utxoMerkleTreeRoot) {
-        BackwardTransfer[] backwardTransfers =
-                bt.stream().map(ThresholdSignatureCircuitImplZendoo::withdrawalRequestBoxToBackwardTransfer).toArray(BackwardTransfer[]::new);
+        BackwardTransfer[] backwardTransfers = bt.toArray(BackwardTransfer[]::new);
 
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
@@ -93,7 +84,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     }
 
     @Override
-    public Pair<byte[], Long> createProof(List<WithdrawalRequestBox> bt,
+    public Pair<byte[], Long> createProof(List<BackwardTransfer> backwardTransfers,
                                           byte[] sidechainId,
                                           int epochNumber,
                                           byte[] endCumulativeScTxCommTreeRoot,
@@ -106,8 +97,6 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
                                           String provingKeyPath,
                                           boolean checkProvingKey,
                                           boolean zk) {  // TODO: what is zk
-        List<BackwardTransfer> backwardTransfers =
-                bt.stream().map(ThresholdSignatureCircuitImplZendoo::withdrawalRequestBoxToBackwardTransfer).collect(Collectors.toList());
 
         List<SchnorrSignature> signatures = schnorrSignatureBytesList
                                                 .stream()
@@ -137,7 +126,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     }
 
     @Override
-    public Boolean verifyProof(List<WithdrawalRequestBox> bt,
+    public Boolean verifyProof(List<BackwardTransfer> backwardTransfers,
                                byte[] sidechainId,
                                int epochNumber,
                                byte[] endCumulativeScTxCommTreeRoot,
@@ -149,8 +138,6 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
                                boolean checkProof,
                                String verificationKeyPath,
                                boolean checkVerificationKey) {
-        List<BackwardTransfer> backwardTransfers =
-                bt.stream().map(ThresholdSignatureCircuitImplZendoo::withdrawalRequestBoxToBackwardTransfer).collect(Collectors.toList());
 
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         FieldElement constantFe = FieldElement.deserialize(constant);

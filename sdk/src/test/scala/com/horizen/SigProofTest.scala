@@ -1,21 +1,19 @@
 package com.horizen
 
-import java.io.{BufferedReader, BufferedWriter, File, FileReader, FileWriter}
-import java.util.Optional
-import java.{lang, util}
-import com.horizen.box.WithdrawalRequestBox
-import com.horizen.box.data.WithdrawalRequestBoxData
+import com.google.common.io.Files
+import com.horizen.certnative.BackwardTransfer
 import com.horizen.cryptolibprovider.SchnorrFunctions.KeyType
 import com.horizen.cryptolibprovider.{CryptoLibProvider, SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitImplZendoo}
+import com.horizen.fixtures.FieldElementFixture
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.schnorrnative.SchnorrSecretKey
 import com.horizen.utils.BytesUtils
-import org.junit.Assert.{assertEquals, assertNotNull, assertTrue, fail}
+import org.junit.Assert.{assertEquals, assertTrue, fail}
 import org.junit.{After, Ignore, Test}
-import com.google.common.io.Files
-import com.horizen.fixtures.FieldElementFixture
-import com.horizen.librustsidechains.FieldElement
 
+import java.io._
+import java.util.Optional
+import java.{lang, util}
 import scala.collection.JavaConverters._
 import scala.util.Random
 
@@ -80,8 +78,9 @@ class SigProofTest {
     val sidechainId = FieldElementFixture.generateFieldElement()
     val utxoMerkleTreeRoot = FieldElementFixture.generateFieldElement()
 
-    val wb: util.List[WithdrawalRequestBox] = Seq(new WithdrawalRequestBox(new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte)), 2345), 42)).asJava
+    val wb: util.List[BackwardTransfer] = Seq(new BackwardTransfer((new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte))).bytes(), 2345)).asJava
 
+    println(s"withdrawalRequests=${wb.asScala.map( wr => s"[amount: ${wr.getAmount}, publicKeyHash: ${BytesUtils.toHexString(wr.getPublicKeyHash)}]" ).mkString("{",",", "}")}, ")
     val messageToBeSigned = sigCircuit.generateMessageToBeSigned(wb, sidechainId, epochNumber, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, utxoMerkleTreeRoot)
 
     val emptySigs = List.fill[Optional[Array[Byte]]](keyPairsLen - threshold)(Optional.empty[Array[Byte]]())

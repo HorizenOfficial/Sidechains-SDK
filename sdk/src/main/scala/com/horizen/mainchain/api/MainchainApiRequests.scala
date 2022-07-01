@@ -2,6 +2,7 @@ package com.horizen.mainchain.api
 
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.box.WithdrawalRequestBox
+import com.horizen.certnative.BackwardTransfer
 import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
 
@@ -45,7 +46,7 @@ object CertificateRequestCreator {
              endEpochCumCommTreeHash: Array[Byte],
              proofBytes: Array[Byte],
              quality: Long,
-             withdrawalRequestBoxes: Seq[WithdrawalRequestBox],
+             withdrawalRequestBoxes: Seq[BackwardTransfer],
              ftMinAmount: Long,
              btrFee: Long,
              utxoMerkleTreeRoot: Array[Byte],
@@ -60,8 +61,8 @@ object CertificateRequestCreator {
       quality,
       // Note: we should send BT entries public key hashes in reversed BE endianness.
       withdrawalRequestBoxes.map(wrb => {
-        val pubKeyAddress: String = BytesUtils.toHorizenPublicKeyAddress(wrb.proposition().bytes(), params)
-        BackwardTransferEntry(pubKeyAddress, new BigDecimal(wrb.value()).divide(ZEN_COINS_DIVISOR).toPlainString)
+        val pubKeyAddress: String = BytesUtils.toHorizenPublicKeyAddress(wrb.getPublicKeyHash, params)
+        BackwardTransferEntry(pubKeyAddress, new BigDecimal(wrb.getAmount()).divide(ZEN_COINS_DIVISOR).toPlainString)
       }),
       CryptoLibProvider.sigProofThresholdCircuitFunctions.splitUtxoMerkleTreeRoot(utxoMerkleTreeRoot).toSeq,
       Seq(), // No bitvectors support for Threshold signature proofs
