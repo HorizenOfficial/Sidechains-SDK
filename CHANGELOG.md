@@ -1,3 +1,18 @@
+**0.4.0**
+1. Memory pool improvements: upper bound size limit introduced (default 300Mb) altogether with cleanup strategy (the lowest fee rate transaction removed first).
+2. CSW is optional. Sidechains without CSW support are available now. Note: keep using CSW feature in real environment to have a possibility to withdraw coins in case of ceasing.
+3. API Authorization added to the coin critical endpoints, like keys management, transaction creation and submission, csw creation, etc.
+4. API freezing during node synchronization resolved.
+5. New API endpoints added for importing/exporting keys to/from the wallet.
+6. Forger is now sort transactions by fee rate instead of fee.
+7. Wallet: max fee check added for locally generated transactions to prevent absurdly high fees.
+8. Custom propositions wallet management improved: complex multi-key propositions are now recognized.
+9. Peers spam detection mechanism improved: "trash" data detection in the end of the block/transaction added.
+10. Bootstrapping tool: dlog keys multiple initialization prevented.
+11. Extra verbosity added to the API responses.
+12. Logging system improved. Application specific configs are allowed.
+13. FeePayments visibility bug fixed: wrongly added fee payments to the block info when there were no payment at all.
+
 **0.3.5**
 1. Snark keys generation fixed: circuit specific segment size added.
 
@@ -37,7 +52,7 @@
 **Beta changes**
 1. Mainchain synchronization: added backward transfer support with Withdrawal certificate with threshold signature zero-knowledge proof by using [zendoo-sc-cryptolib](https://github.com/HorizenOfficial/zendoo-sc-cryptolib)
 2. Added [Latus Proof-of-Stake consensus protocol](https://www.horizen.global/assets/files/Horizen-Sidechain-Zendoo-A_zk-SNARK-Verifiable-Cross-Chain-Transfer-Protocol.pdf)  for sidechain based on [Ouroboros Praos](https://eprint.iacr.org/2017/573.pdf) consensus protocol which supporting forks in Sidechain and Mainchain. Autoforging for Sidechain node is added as well.
-3. Reworked Transactions structure: introduced SidechainCoreTranscation, Boxes structure was improved/changed now three types of boxes are present by default: zen box, withdrawal request box and forger box. Forger box is used for consensus forger selection.
+3. Reworked Transactions structure: introduced SidechainCoreTransaction, Boxes structure was improved/changed now three types of boxes are present by default: zen box, withdrawal request box and forger box. Forger box is used for consensus forger selection.
 
 
 **Alpha features**
