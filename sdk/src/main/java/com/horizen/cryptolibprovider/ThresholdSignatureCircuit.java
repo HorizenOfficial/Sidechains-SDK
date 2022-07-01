@@ -1,6 +1,7 @@
 package com.horizen.cryptolibprovider;
 
 import com.horizen.box.WithdrawalRequestBox;
+import com.horizen.certnative.BackwardTransfer;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.utils.Pair;
 
@@ -8,7 +9,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ThresholdSignatureCircuit {
-    byte[] generateMessageToBeSigned(List<WithdrawalRequestBox> bt,
+    byte[] generateMessageToBeSigned(List<BackwardTransfer> bt,
                                      byte[] sidechainId,
                                      int epochNumber,
                                      byte[] endCumulativeScTxCommTreeRoot,
@@ -18,7 +19,7 @@ public interface ThresholdSignatureCircuit {
 
     //None elements for schnorrSignatureBytesList if no secret key available, thus schnorrSignatureBytesList.size() == schnorrPublicKeysBytesList.size()
     //threshold is the same as in generateSysDataConstant
-    Pair<byte[], Long> createProof(List<WithdrawalRequestBox> bt,
+    Pair<byte[], Long> createProof(List<BackwardTransfer> bt,
                                    byte[] sidechainId,
                                    int epochNumber,
                                    byte[] endCumulativeScTxCommTreeRoot,
@@ -32,7 +33,7 @@ public interface ThresholdSignatureCircuit {
                                    boolean checkProvingKey,
                                    boolean zk); // todo check name
 
-    Boolean verifyProof(List<WithdrawalRequestBox> bt,
+    Boolean verifyProof(List<BackwardTransfer> bt,
                         byte[] sidechainId,
                         int epochNumber,
                         byte[] endCumulativeScTxCommTreeRoot,

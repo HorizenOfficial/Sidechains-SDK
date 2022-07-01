@@ -1,16 +1,15 @@
 package com.horizen.certificatesubmitter
 
-import java.io.File
 import akka.actor.{Actor, ActorRef, Timers}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen._
 import com.horizen.block.{MainchainBlockReference, SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.InternalReceivableMessages.{LocallyGeneratedSignature, TryToGenerateCertificate, TryToScheduleCertificateGeneration}
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.ReceivableMessages.{DisableCertificateSigner, DisableSubmitter, EnableCertificateSigner, EnableSubmitter, GetCertificateGenerationState, GetSignaturesStatus, IsCertificateSigningEnabled, IsSubmitterEnabled, SignatureFromRemote}
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.ReceivableMessages._
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.Timers.CertificateGenerationTimer
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.{CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, CertificateSubmissionStarted, CertificateSubmissionStopped, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, SignaturesStatus, SubmissionWindowStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter._
+import com.horizen.certnative.BackwardTransfer
 import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.NetworkParams
@@ -29,6 +28,7 @@ import scorex.core.transaction.MemoryPool
 import scorex.core.transaction.state.MinimalState
 import scorex.util.ScorexLogging
 
+import java.io.File
 import java.util
 import java.util.Optional
 import scala.collection.JavaConverters.seqAsJavaListConverter
@@ -390,7 +390,7 @@ abstract class AbstractCertificateSubmitter[
     val history = sidechainNodeView.history
     val state = sidechainNodeView.state
 
-    val withdrawalRequests: Seq[WithdrawalRequestBox] = getWithdrawalRequests(state, status.referencedEpoch)
+    val withdrawalRequests: Seq[BackwardTransfer] = getWithdrawalRequests(state, status.referencedEpoch)
 
     val btrFee: Long = getBtrFee(status.referencedEpoch)
     val ftMinAmount: Long = getFtMinAmount(status.referencedEpoch)
@@ -497,14 +497,14 @@ abstract class AbstractCertificateSubmitter[
   }
 
   def getUtxoMerkleTreeRoot(state: MS, referencedEpochNumber: Int) : Array[Byte]
-  def getWithdrawalRequests(state: MS, referencedEpochNumber: Int) : Seq[WithdrawalRequestBox]
+  def getWithdrawalRequests(state: MS, referencedEpochNumber: Int) : Seq[BackwardTransfer]
 
   protected def getMessageToSign(referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
     def getMessage(sidechainNodeView: View): Array[Byte] = {
       val history = sidechainNodeView.history
       val state = sidechainNodeView.state
 
-      val withdrawalRequests: Seq[WithdrawalRequestBox] = getWithdrawalRequests(state, referencedWithdrawalEpochNumber)
+      val withdrawalRequests: Seq[BackwardTransfer] = getWithdrawalRequests(state, referencedWithdrawalEpochNumber)
 
       val btrFee: Long = getBtrFee (referencedWithdrawalEpochNumber)
       val ftMinAmount: Long = getFtMinAmount (referencedWithdrawalEpochNumber)
@@ -529,7 +529,7 @@ abstract class AbstractCertificateSubmitter[
 
   case class DataForProofGeneration(referencedEpochNumber: Int,
                                     sidechainId: Array[Byte],
-                                    withdrawalRequests: Seq[WithdrawalRequestBox],
+                                    withdrawalRequests: Seq[BackwardTransfer],
                                     endEpochCumCommTreeHash: Array[Byte],
                                     btrFee: Long,
                                     ftMinAmount: Long,
@@ -543,7 +543,7 @@ abstract class AbstractCertificateSubmitter[
 
     log.info(s"Start generating proof for ${dataForProofGeneration.referencedEpochNumber} withdrawal epoch number, " +
       s"with parameters: sidechainId LE = ${BytesUtils.toHexString(dataForProofGeneration.sidechainId)}, " +
-      s"withdrawalRequests=${dataForProofGeneration.withdrawalRequests.foreach(_.toString)}, " +
+      s"withdrawalRequests=${dataForProofGeneration.withdrawalRequests.map( wr => s"[amount: ${wr.getAmount}, publicKeyHash: ${BytesUtils.toHexString(wr.getPublicKeyHash)}]" ).mkString("{",",", "}")}, " +
       s"endEpochCumCommTreeHash=${BytesUtils.toHexString(dataForProofGeneration.endEpochCumCommTreeHash)}, " +
       s"utxoMerkleTreeRoot=${BytesUtils.toHexString(dataForProofGeneration.utxoMerkleTreeRoot)}, " +
       s"signersThreshold=${params.signersThreshold}. " +
