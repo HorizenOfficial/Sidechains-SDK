@@ -12,9 +12,14 @@ import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
-import java.security.*;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.SignatureException;
 import java.util.Arrays;
+import java.util.Map;
 
+import static java.util.Map.entry;
 import static org.junit.Assert.*;
 
 public class EthereumTransactionTest {
@@ -372,18 +377,33 @@ public class EthereumTransactionTest {
 
     @Test
     public void ethereumTransactionsRootHashTest() {
-        final var testCounts = new int[]{0, 1, 2, 3, 4, 10, 51, 1000, 126, 127, 128, 129, 130, 765};
-        for (var count : testCounts) {
-            var txs = generateTransactions(count);
-            var rlpTxs = Arrays
-                    .stream(txs)
-                    .map(tx -> TransactionEncoder.encode(
-                            tx,
-                            // make sure we also encode a signature, even if it is empty to make the results comparable to GETH
-                            new Sign.SignatureData(new byte[0], new byte[0], new byte[0])
-                    ))
-                    .toArray(byte[][]::new);
-            System.out.format("transactions root hash (%4d) %s%n", count, Numeric.toHexString(TrieHasher.Root(rlpTxs)));
+        // source of these hashes: TestHashRoot() at libevm/lib/service_hash_test.go:103
+        final var testCases =
+                Map.ofEntries(
+                        entry(0, "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"),
+                        entry(1, "0x3a7a98166e45e65843ba0ee347221fe4605eb87765675d1041a8b35c47d9daa9"),
+                        entry(2, "0x7723d5115e8991cd655cbc25b52c57404f0ec85fdc2c5fd74258dec7f7c65f5f"),
+                        entry(3, "0xc7ed4aa41206c45768399878e1b58fcdda6716b94678753378ffaa9a0a091a39"),
+                        entry(4, "0xb46ac0b787038ed05e5176b1c957b63254c3292634495bc93b96a8e1d91d680f"),
+                        entry(10, "0x4826a12ac6cc1a74be1ee0d1fbfdd18c4f1d0fe3ca295a4d1f15ee2e1ac5dc82"),
+                        entry(51, "0xf333fabbe32aafcba45a47392478ad34420222442a25b6342985ea12efd3cd3b"),
+                        entry(1000, "0x5bd20957d54171a32d9322a5c10de80613575daa7fc1eecaf08e37a7fa0de27a"),
+                        entry(126, "0xbee10338305eed034a9e27028e1c8146f932149feef02d0653a896f074f6d678"),
+                        entry(127, "0x362ed36adec0debb81fa47acdce2a2d00c1b0e54d6d294603609702fae5db61c"),
+                        entry(128, "0xb1fbaff3745dfd7bb90f7a0cd1445b150cedf185de9d6fc8db5eb48de1b399cc"),
+                        entry(129, "0x55387d947f5417b3a77bab638ae6cd55afa741a63c4a123c5ed747444b9eeb83"),
+                        entry(130, "0x0b25f104de56321cf444f41bb18504678967fd5e680e9a56adc78b6cbbe18bf3"),
+                        entry(765, "0x829b8081bf15bd0b201cf57d9033e51afb6117de92c051cb9ea7ddd1181642f5")
+                );
+        for (var testCase : testCases.entrySet()) {
+            final var txs = generateTransactions(testCase.getKey());
+            final var rlpTxs = Arrays.stream(txs).map(tx -> TransactionEncoder.encode(
+                    tx,
+                    // make sure we also encode a signature, even if it is empty to make the results comparable to GETH
+                    new Sign.SignatureData(new byte[0], new byte[0], new byte[0])
+            )).toArray(byte[][]::new);
+            final var actualHash = Numeric.toHexString(TrieHasher.Root(rlpTxs));
+            assertEquals("should match transaction root hash", testCase.getValue(), actualHash);
         }
     }
 }
