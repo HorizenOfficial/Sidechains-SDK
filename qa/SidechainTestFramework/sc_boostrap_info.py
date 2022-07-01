@@ -174,6 +174,21 @@ class VrfAccount(object):
         self.publicKey = publicKey
 
 """
+A Schnorr key.
+The JSON representation is only for documentation.
+
+SchnorrAccount : {
+    "schnorrSecret":
+    "schnorrPublicKey": "a public key"
+}
+"""
+class SchnorrAccount(object):
+
+    def __init__(self, secret, publicKey):
+        self.secret = secret
+        self.publicKey = publicKey
+
+"""
 Withdrawal certificate proof info  data .
 The JSON representation is only for documentation.
 
