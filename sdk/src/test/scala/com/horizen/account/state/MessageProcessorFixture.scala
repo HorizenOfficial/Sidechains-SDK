@@ -15,6 +15,7 @@ import scala.util.Random
 trait MessageProcessorFixture {
   var tempFolder = new TemporaryFolder
   val mcAddr =  new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte))
+  val metadataStorageView: AccountStateMetadataStorageView = mock[AccountStateMetadataStorageView]
 
   def getView: AccountStateView = {
     tempFolder.create()
@@ -22,7 +23,6 @@ trait MessageProcessorFixture {
     val hashNull = BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000000")
     val db = new LevelDBDatabase(databaseFolder.getAbsolutePath)
     val messageProcessors: Seq[MessageProcessor] = Seq()
-    val metadataStorageView: AccountStateMetadataStorageView = mock[AccountStateMetadataStorageView]
     val stateDb: StateDB = new StateDB(db, hashNull)
     new AccountStateView(metadataStorageView, stateDb, messageProcessors)
   }

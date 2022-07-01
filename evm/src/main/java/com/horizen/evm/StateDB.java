@@ -6,7 +6,7 @@ import com.horizen.evm.utils.Converter;
 import java.math.BigInteger;
 import java.util.Arrays;
 
-public class StateDB extends ResouceHandle {
+public class StateDB extends ResourceHandle {
     public static byte[] EMPTY_CODE_HASH =
             Converter.fromHexString("c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
 
