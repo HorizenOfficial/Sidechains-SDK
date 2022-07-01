@@ -1,7 +1,7 @@
 package com.horizen.state
 
 import com.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
-import com.horizen.box.{ForgerBox, WithdrawalRequestBox}
+import com.horizen.box.ForgerBox
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.transaction.Transaction
 import com.horizen.utils.{BlockFeeInfo, WithdrawalEpochInfo}
@@ -12,7 +12,7 @@ import scala.util.Try
 trait StateView[TX <: Transaction, SV <: StateView[TX, SV]] extends StateReader {
   view: SV =>
 
-  def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[SV]
+  def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[Unit]
   def applyTransaction(tx: TX): Try[SV]
 
   def addCertificate(cert: WithdrawalEpochCertificate): Try[SV]
@@ -23,7 +23,5 @@ trait StateView[TX <: Transaction, SV <: StateView[TX, SV]] extends StateReader 
   def updateConsensusEpochNumber(consensusEpochNum: ConsensusEpochNumber): Try[SV]
   def setCeased(): Try[SV]
 
-  def savepoint(): Unit
-  def rollbackToSavepoint(): Try[SV]
   def commit(version: VersionTag): Try[Unit] // todo
 }

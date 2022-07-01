@@ -6,7 +6,7 @@ import com.horizen.account.node.NodeAccountState
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.box.WithdrawalRequestBox
-import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, intToConsensusEpochNumber}
+import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.evm._
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
@@ -15,6 +15,7 @@ import scorex.core._
 import scorex.util.{ModifierId, ScorexLogging}
 
 import java.util
+import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.{Failure, Try}
 
 class AccountState(val params: NetworkParams,
@@ -36,7 +37,10 @@ class AccountState(val params: NetworkParams,
       processor.init(view)
     }
     // TODO: commit only StateDB part ???
-    // view.commit(initialVersion)
+    // If we commit only stateDb we will not be able to
+    // start a new view from the last rootHash
+    view.commit(initialVersion)
+    view.close()
     this
   }
 
@@ -105,8 +109,8 @@ class AccountState(val params: NetworkParams,
         throw new IllegalArgumentException(s"Block ${mod.id} has feePaymentsHash ${BytesUtils.toHexString(mod.feePaymentsHash)} defined when no fee payments expected.")
     }
 
-    for (mcBlockRefData <- mod.mainchainBlockReferencesData) {
-      stateView = stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
+    for(mcBlockRefData <- mod.mainchainBlockReferencesData) {
+      stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
     }
 
     for (tx <- mod.sidechainTransactions) {
@@ -117,12 +121,9 @@ class AccountState(val params: NetworkParams,
     // Note: we should save the total gas paid and the forgerAddress
     stateView.addFeeInfo(BlockFeeInfo(0L, mod.header.forgingStakeInfo.blockSignPublicKey)).get
 
-    //TODO:
-    stateView.updateAccountStateRoot(new Array[Byte](32))
-
     stateView.commit(idToVersion(mod.id)).get
 
-    this
+    new AccountState(params, idToVersion(mod.id), stateMetadataStorage, stateDbStorage, messageProcessors)
   }
 
   private def validateTopQualityCertificate(topQualityCertificate: WithdrawalEpochCertificate, stateView: AccountStateView): Unit = {
@@ -205,6 +206,9 @@ class AccountState(val params: NetworkParams,
     new AccountStateView(stateMetadataStorage.getView, statedb, messageProcessors)
   }
 
+  def getStateDbViewFromRoot(stateRoot: Array[Byte]) : AccountStateView =
+    new AccountStateView(stateMetadataStorage.getView, new StateDB(stateDbStorage, stateRoot), messageProcessors)
+
   // getters:
   override def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequestBox] = {
     log.error("TODO - needs to be implemented")
@@ -223,13 +227,31 @@ class AccountState(val params: NetworkParams,
 
   override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = getView.getConsensusEpochNumber
 
+  def getOrderedForgingStakesInfoSeq : Seq[ForgingStakeInfo] = {
+    val stateView: AccountStateView = getView
+    stateView.getOrderedForgingStakeInfoSeq
+  }
+
   // Returns lastBlockInEpoch and ConsensusEpochInfo for that epoch
   // Identical to the SidechainState.getCurrentConsensusEpochInfo method
+  // TODO this is common code with SidechainState
   def getConsensusEpochInfo: (ModifierId, ConsensusEpochInfo) = {
-    //TODO:
-    val tmpList = new java.util.ArrayList[Array[Byte]]()
-    tmpList.add(new Array[Byte](32))
-    (versionToId(version), ConsensusEpochInfo(ConsensusEpochNumber @@ 0, MerkleTree.createMerkleTree(tmpList), 0L))
+    val forgingStakes: Seq[ForgingStakeInfo] = getOrderedForgingStakesInfoSeq
+    if (forgingStakes.isEmpty) {
+      throw new IllegalStateException("ForgerStakes list can't be empty.")
+    }
+
+    getConsensusEpochNumber match {
+      case Some(consensusEpochNumber) =>
+        val lastBlockInEpoch = bytesToId(stateMetadataStorage.lastVersionId.get.data) // we use block id as version
+        val consensusEpochInfo = ConsensusEpochInfo(
+          consensusEpochNumber,
+          MerkleTree.createMerkleTree(forgingStakes.map(info => info.hash).asJava),
+          forgingStakes.map(_.stakeAmount).sum)
+        (lastBlockInEpoch, consensusEpochInfo)
+      case _ =>
+        throw new IllegalStateException("Can't retrieve Consensus Epoch related info form StateStorage.")
+    }
   }
 
   override def getBlockFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo] = getView.getBlockFeePayments(withdrawalEpochNumber)

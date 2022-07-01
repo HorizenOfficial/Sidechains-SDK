@@ -13,18 +13,18 @@ object EoaMessageProcessor extends MessageProcessor with ScorexLogging {
   //TODO: actual gas to be defined
   val GAS_USED: BigInteger = BigInteger.valueOf(21000L)
 
-  override def init(view: AccountStateView): Unit = {
+  override def init(view: BaseAccountStateView): Unit = {
     // No actions required for transferring coins during genesis state initialization.
   }
 
-  override def canProcess(msg: Message, view: AccountStateView): Boolean = {
+  override def canProcess(msg: Message, view: BaseAccountStateView): Boolean = {
     // Can process only EOA to EOA transfer, so when "to" is an EOA account:
     // There is no need to check "from" account because it can't be a smart contract one,
     // because there is no known private key to create a valid signature.
     view.isEoaAccount(msg.getTo.address())
   }
 
-  override def process(msg: Message, view: AccountStateView): ExecutionResult = {
+  override def process(msg: Message, view: BaseAccountStateView): ExecutionResult = {
     view.subBalance(msg.getFrom.address(), msg.getValue) match {
       case Failure(reason) =>
         log.error(s"Unable to subtract ${msg.getValue} wei from ${msg.getFrom}", reason)

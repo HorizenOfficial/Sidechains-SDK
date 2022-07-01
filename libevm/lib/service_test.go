@@ -4,9 +4,15 @@ import (
 	"bytes"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/trie"
+	"math/big"
 	"testing"
 )
+
+var nullHash = common.Hash{}
+var emptyHash = common.BytesToHash(crypto.Keccak256(nil))
 
 func checkValue(t *testing.T, expected []byte, actual []byte) {
 	if !bytes.Equal(expected, actual) {
@@ -235,7 +241,16 @@ func TestRawStateDB(t *testing.T) {
 	_, dbHandle := instance.OpenLevelDB(LevelDBParams{Path: t.TempDir()})
 	_, db := instance.databases.Get(dbHandle)
 	statedb, _ := state.New(common.Hash{}, db.database, nil)
+	initialCodeHash := statedb.GetCodeHash(addr)
+	if initialCodeHash != nullHash {
+		t.Errorf("code hash of non-existant account should be zero, got %v", initialCodeHash)
+	}
+	// set a non-empty value to the account to make sure it exists and is not "empty"
 	statedb.SetNonce(addr, 1)
+	emptyCodeHash := statedb.GetCodeHash(addr)
+	if emptyCodeHash != emptyHash {
+		t.Errorf("code hash of empty account should be hash of nil, got %v", emptyCodeHash)
+	}
 	revid := statedb.Snapshot()
 	statedb.SetState(addr, key, value)
 	retrievedValue := statedb.GetState(addr, key)
@@ -244,8 +259,7 @@ func TestRawStateDB(t *testing.T) {
 	}
 	statedb.RevertToSnapshot(revid)
 	revertedValue := statedb.GetState(addr, key)
-	emptyHash := common.Hash{}
-	if revertedValue != emptyHash {
+	if revertedValue != nullHash {
 		t.Error("snapshot rollback failed")
 	}
 	statedb.SetState(addr, key, value)
@@ -256,4 +270,68 @@ func TestRawStateDB(t *testing.T) {
 		t.Error("value not committed correctly")
 	}
 	_ = instance.CloseDatabase(DatabaseParams{DatabaseHandle: dbHandle})
+}
+
+func generateReceipts(count int) types.Receipts {
+	receipts := make(types.Receipts, 0)
+
+	for v := 0; v < count; v++ {
+		status := types.ReceiptStatusSuccessful
+		// mark a number of receipts as failed
+		if v%7 == 0 {
+			status = types.ReceiptStatusFailed
+		}
+		receipt := &types.Receipt{
+			// valid types are 0, 1 and 2
+			Type:              uint8(v % 3),
+			CumulativeGasUsed: uint64(v * 1000),
+			Status:            status,
+			TxHash:            crypto.Keccak256Hash(big.NewInt(int64(41271*count + v)).Bytes()),
+		}
+
+		// Set the receipt logs and create the bloom filter.
+		receipt.Logs = make([]*types.Log, 0)
+		receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
+		// These three are non-consensus fields:
+		//receipt.BlockHash
+		//receipt.BlockNumber
+		receipt.TransactionIndex = uint(v)
+		receipts = append(receipts, receipt)
+	}
+
+	return receipts
+}
+
+// compare root hash results to the original GETH implementation
+func TestHashRoot(t *testing.T) {
+	var (
+		testCounts = []int{0, 1, 2, 3, 4, 10, 51, 1000, 126, 127, 128, 129, 130, 765}
+		instance   = New()
+		valueBuf   = new(bytes.Buffer)
+	)
+	for _, count := range testCounts {
+		var (
+			receipts     = generateReceipts(count)
+			expectedRoot = types.DeriveSha(receipts, trie.NewStackTrie(nil))
+			values       = make([][]byte, 0)
+		)
+		// RLP encode receipts
+		for i := range receipts {
+			valueBuf.Reset()
+			receipts.EncodeIndex(i, valueBuf)
+			values = append(values, common.CopyBytes(valueBuf.Bytes()))
+		}
+		err, actualRoot := instance.HashRoot(HashParams{
+			Values: values,
+		})
+		if err != nil {
+			t.Errorf("error hashing: %v", err)
+		} else if actualRoot != expectedRoot {
+			t.Errorf("got wrong root hash: expected %v got %v", expectedRoot, actualRoot)
+		}
+		// explicitly make sure we get the empty root hash for an empty trie
+		if count == 0 && actualRoot != types.EmptyRootHash {
+			t.Errorf("got wrong root hash for empty trie: expected %v got %v", types.EmptyRootHash, actualRoot)
+		}
+	}
 }

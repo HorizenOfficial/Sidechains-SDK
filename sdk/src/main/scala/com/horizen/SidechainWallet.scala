@@ -65,6 +65,11 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     walletBoxStorage.getAll
   }
 
+  @Deprecated
+  override def scanPersistent(modifier: SidechainBlock): SidechainWallet = {
+    throw new UnsupportedOperationException()
+  }
+
   // Scan the modifier and:
   // 1) store wallet related data from it + some fee payments according to consensus rules;
   // 2) update CSW utxo metadata for all coin boxes in the end of WithdrawalEpoch (if utxoMerkleTreeViewOpt is defined)

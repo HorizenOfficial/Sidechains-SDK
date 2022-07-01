@@ -9,7 +9,6 @@ public class EvmParams extends HandleParams {
     public Address to;
     public BigInteger value;
     public byte[] input;
-    public BigInteger nonce; // uint64
     public BigInteger gasLimit; // uint64
     public BigInteger gasPrice;
 
@@ -19,22 +18,22 @@ public class EvmParams extends HandleParams {
     }
 
     public EvmParams(
-        int handle,
-        byte[] from,
-        byte[] to,
-        BigInteger value,
-        byte[] input,
-        BigInteger nonce,
-        BigInteger gasLimit,
-        BigInteger gasPrice
+            int handle,
+            byte[] from,
+            byte[] to,
+            BigInteger value,
+            byte[] input,
+            BigInteger gasLimit,
+            BigInteger gasPrice,
+            EvmContext context
     ) {
         super(handle);
         this.from = Address.FromBytes(from);
         this.to = Address.FromBytes(to);
         this.value = value;
         this.input = input;
-        this.nonce = nonce;
         this.gasLimit = gasLimit;
         this.gasPrice = gasPrice;
+        this.context = context;
     }
 }

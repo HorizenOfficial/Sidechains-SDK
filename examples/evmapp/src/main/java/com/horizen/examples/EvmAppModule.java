@@ -1,16 +1,11 @@
 package com.horizen.examples;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
-
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-
-import com.horizen.SidechainSettings;
 import com.horizen.ChainInfo;
+import com.horizen.SidechainSettings;
 import com.horizen.account.AccountAppModule;
+import com.horizen.account.state.EvmMessageProcessor;
 import com.horizen.account.state.MessageProcessor;
 import com.horizen.account.transaction.AccountTransaction;
 import com.horizen.api.http.ApplicationApiGroup;
@@ -22,8 +17,12 @@ import com.horizen.settings.SettingsReader;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.utils.Pair;
 
-public class EvmAppModule extends AccountAppModule
-{
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Optional;
+
+public class EvmAppModule extends AccountAppModule {
     private final SettingsReader settingsReader;
 
     public EvmAppModule(String userSettingsFileName) {
@@ -36,7 +35,8 @@ public class EvmAppModule extends AccountAppModule
         SidechainSettings sidechainSettings = this.settingsReader.getSidechainSettings();
 
         HashMap<Byte, SecretSerializer<Secret>> customSecretSerializers = new HashMap<>();
-        HashMap<Byte, TransactionSerializer<AccountTransaction<Proposition, Proof<Proposition>>>> customAccountTransactionSerializers = new HashMap<>();
+        HashMap<Byte, TransactionSerializer<AccountTransaction<Proposition, Proof<Proposition>>>>
+                customAccountTransactionSerializers = new HashMap<>();
 
         // Here I can add my custom rest api and/or override existing one
         List<ApplicationApiGroup> customApiGroups = new ArrayList<>();
@@ -46,11 +46,11 @@ public class EvmAppModule extends AccountAppModule
         // For example new Pair("wallet, "allBoxes");
         List<Pair<String, String>> rejectedApiPaths = new ArrayList<>();
 
-        ChainInfo chainInfo = new ChainInfo(1997, 1661,7331);
+        ChainInfo chainInfo = new ChainInfo(1997, 1661, 7331);
 
         // Here I can add my custom logic to manage EthereumTransaction content.
-        // TODO: EvmProcessor instance expected.
         List<MessageProcessor> customMessageProcessors = new ArrayList<>();
+        customMessageProcessors.add(new EvmMessageProcessor());
 
         bind(SidechainSettings.class)
                 .annotatedWith(Names.named("SidechainSettings"))
@@ -64,11 +64,11 @@ public class EvmAppModule extends AccountAppModule
                 .annotatedWith(Names.named("CustomAccountTransactionSerializers"))
                 .toInstance(customAccountTransactionSerializers);
 
-        bind(new TypeLiteral<List<ApplicationApiGroup>> () {})
+        bind(new TypeLiteral<List<ApplicationApiGroup>>() {})
                 .annotatedWith(Names.named("CustomApiGroups"))
                 .toInstance(customApiGroups);
 
-        bind(new TypeLiteral<List<Pair<String, String>>> () {})
+        bind(new TypeLiteral<List<Pair<String, String>>>() {})
                 .annotatedWith(Names.named("RejectedApiPaths"))
                 .toInstance(rejectedApiPaths);
 
@@ -76,7 +76,7 @@ public class EvmAppModule extends AccountAppModule
                 .annotatedWith(Names.named("ChainInfo"))
                 .toInstance(chainInfo);
 
-        bind(new TypeLiteral<List<MessageProcessor>> () {})
+        bind(new TypeLiteral<List<MessageProcessor>>() {})
                 .annotatedWith(Names.named("CustomMessageProcessors"))
                 .toInstance(customMessageProcessors);
     }

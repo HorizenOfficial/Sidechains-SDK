@@ -35,7 +35,7 @@ public class Address {
     public static class Serializer extends JsonSerializer<Address> {
         @Override
         public void serialize(
-            Address address, JsonGenerator jsonGenerator, SerializerProvider serializerProvider
+                Address address, JsonGenerator jsonGenerator, SerializerProvider serializerProvider
         ) throws IOException {
             jsonGenerator.writeString("0x" + Converter.toHexString(address.bytes));
         }
@@ -44,7 +44,7 @@ public class Address {
     public static class Deserializer extends JsonDeserializer<Address> {
         @Override
         public Address deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
-            throws IOException {
+                throws IOException {
             var text = jsonParser.getText();
             if (!text.startsWith("0x")) {
                 throw new IOException("address must be prefixed with 0x");

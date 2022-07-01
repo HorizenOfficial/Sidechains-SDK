@@ -82,11 +82,6 @@ abstract class AbstractWallet[
   // just do nothing, we don't need to care about offchain objects inside the wallet
   override def scanOffchain(txs: Seq[TX]): W = this
 
-  @Deprecated
-  override def scanPersistent(modifier: PM): W = {
-    throw new UnsupportedOperationException()
-  }
-
   override def secretByPublicKey(publicKey: Proposition): JOptional[Secret] = {
     secretStorage.get(publicKey) match {
       case Some(secret) => JOptional.of(secret)

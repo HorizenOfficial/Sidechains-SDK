@@ -10,7 +10,7 @@ import scorex.crypto.hash.Keccak256
 import scala.collection.JavaConverters.seqAsJavaListConverter
 
 trait WithdrawalRequestProvider {
-  private[horizen] def getListOfWithdrawalReqRecords(epochNum: Int, view: AccountStateView): Seq[WithdrawalRequest]
+  private[horizen] def getListOfWithdrawalReqRecords(epochNum: Int, view: BaseAccountStateView): Seq[WithdrawalRequest]
 }
 
 object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with WithdrawalRequestProvider {
@@ -34,7 +34,7 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
   val DustThresholdInWei: java.math.BigInteger = ZenWeiConverter.convertZenniesToWei(ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE))
 
 
-  override def process(msg: Message, view: AccountStateView): ExecutionResult = {
+  override def process(msg: Message, view: BaseAccountStateView): ExecutionResult = {
     //TODO: check errors in Ethereum, maybe for some kind of errors there a predefined types or codes
 
     try {
@@ -60,7 +60,7 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
 
   }
 
-  private def getWithdrawalEpochCounter(view: AccountStateView, epochNum: Int) = {
+  private def getWithdrawalEpochCounter(view: BaseAccountStateView, epochNum: Int) = {
     val key = getWithdrawalEpochCounterKey(epochNum)
     val wrCounterInBytesPadded = view.getAccountStorage(fakeSmartContractAddress.address(), key).get
     val wrCounterInBytes = wrCounterInBytesPadded.drop(wrCounterInBytesPadded.length - Ints.BYTES)
@@ -69,7 +69,7 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
     numOfWithdrawalReqs
   }
 
-  private[horizen] def setWithdrawalEpochCounter(view: AccountStateView, currentEpochNum: Int, nextNumOfWithdrawalReqs: Int): Unit = {
+  private[horizen] def setWithdrawalEpochCounter(view: BaseAccountStateView, currentEpochNum: Int, nextNumOfWithdrawalReqs: Int): Unit = {
     val nextNumOfWithdrawalReqsBytes = Ints.toByteArray(nextNumOfWithdrawalReqs)
     val paddedNextNumOfWithdrawalReqs = Bytes.concat(new Array[Byte](32 - nextNumOfWithdrawalReqsBytes.length), nextNumOfWithdrawalReqsBytes)
     val wrCounterKey = getWithdrawalEpochCounterKey(currentEpochNum)
@@ -78,7 +78,7 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
 
 
 
-  override private[horizen] def getListOfWithdrawalReqRecords(epochNum: Int, view: AccountStateView): Seq[WithdrawalRequest] = {
+  override private[horizen] def getListOfWithdrawalReqRecords(epochNum: Int, view: BaseAccountStateView): Seq[WithdrawalRequest] = {
     val numOfWithdrawalReqs: Int = getWithdrawalEpochCounter(view, epochNum)
 
     val listOfWithdrawalReqs = (1 to numOfWithdrawalReqs).map(index => {
@@ -88,7 +88,7 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
     listOfWithdrawalReqs
   }
 
-  protected def execGetListOfWithdrawalReqRecords(msg: Message, view: AccountStateView): ExecutionResult = {
+  protected def execGetListOfWithdrawalReqRecords(msg: Message, view: BaseAccountStateView): ExecutionResult = {
     try {
       require(msg.getData.length == OP_CODE_LENGTH + Ints.BYTES, s"Wrong data length ${msg.getData.length}")
       val epochNum = BytesUtils.getInt(msg.getData, OP_CODE_LENGTH)
@@ -110,7 +110,7 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
   }
 
 
-  private[horizen] def checkWithdrawalRequestValidity(msg: Message, view: AccountStateView): Unit = {
+  private[horizen] def checkWithdrawalRequestValidity(msg: Message, view: BaseAccountStateView): Unit = {
     val withdrawalAmount = msg.getValue
 
     if (msg.getData.length != OP_CODE_LENGTH + MCPublicKeyHashProposition.KEY_LENGTH) {
@@ -135,7 +135,7 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
 
   }
 
-  protected def execAddWithdrawalRequest(msg: Message, view: AccountStateView): ExecutionResult = {
+  protected def execAddWithdrawalRequest(msg: Message, view: BaseAccountStateView): ExecutionResult = {
     try {
       checkWithdrawalRequestValidity(msg, view)
       val currentEpochNum = view.getWithdrawalEpochInfo.epoch
