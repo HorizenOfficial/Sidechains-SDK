@@ -37,7 +37,12 @@ class EoaMessageProcessorIntegrationTest
     val codeHash: Array[Byte] = Keccak256.hash("abcd".getBytes())
     assertTrue("Smart contract account expected to be set", stateView.addAccount(toAddress.address(), codeHash).isSuccess)
     assertFalse("Processor expected to UNABLE to process message", EoaMessageProcessor.canProcess(msg, stateView))
-  }
+
+    // Test 4: "to" is null -> smart contract declaration case
+    val data: Array[Byte] = new Array[Byte](100)
+    val contractDeclarationMessage = getMessage(toAddress, value, data)
+    assertFalse("Processor expected to UNABLE to process message", EoaMessageProcessor.canProcess(contractDeclarationMessage, stateView))
+   }
 
   @Test
   def process(): Unit = {
@@ -57,8 +62,8 @@ class EoaMessageProcessorIntegrationTest
         assertEquals("Different gas found", EoaMessageProcessor.GAS_USED, es.gasUsed())
         assertArrayEquals("Different return data found", Array.emptyByteArray, es.returnData())
 
-        assertEquals("Different from account value found", fromInitialValue.subtract(msg.getValue), stateView.getBalance(msg.getFrom.address()).get)
-        assertEquals("Different to account value found", msg.getValue, stateView.getBalance(msg.getTo.address()).get)
+        assertEquals("Different from account value found", fromInitialValue.subtract(msg.getValue), stateView.getBalance(msg.getFrom.address()))
+        assertEquals("Different to account value found", msg.getValue, stateView.getBalance(msg.getTo.address()))
       case _: ExecutionFailed | _: InvalidMessage => fail("Execution failure received")
     }
 

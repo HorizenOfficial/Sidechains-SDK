@@ -57,7 +57,7 @@ class EoaMessageProcessorTest extends JUnitSuite
     assertTrue("Message for EoaMessageProcessor cannot be processed", EoaMessageProcessor.canProcess(msgWithData, mockStateView))
 
 
-    // Test 2: Failure: send to smart contract account
+    // Test 3: Failure: send to smart contract account
     Mockito.reset(mockStateView)
     Mockito.when(mockStateView.isEoaAccount(ArgumentMatchers.any[Array[Byte]])).thenAnswer(args => {
       val addressBytes: Array[Byte] = args.getArgument(0)
@@ -66,6 +66,12 @@ class EoaMessageProcessorTest extends JUnitSuite
     })
 
     assertFalse("Message for EoaMessageProcessor wrongly can be processed", EoaMessageProcessor.canProcess(msg, mockStateView))
+
+
+    // Test 4: Failure: to is null
+    Mockito.reset(mockStateView)
+    val contractDeclarationMessage: Message = getMessage(null, value, data)
+    assertFalse("Message for EoaMessageProcessor wrongly can be processed", EoaMessageProcessor.canProcess(contractDeclarationMessage, mockStateView))
   }
 
   @Test

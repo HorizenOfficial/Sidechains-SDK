@@ -2,6 +2,7 @@ package com.horizen.account.storage
 
 import com.google.common.primitives.Ints
 import com.horizen.SidechainTypes
+import com.horizen.account.storage.AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateFixture}
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
@@ -71,9 +72,12 @@ class AccountStateMetadataStorageViewTest
     assertFalse("Certificate is not present in view", storageView.getTopQualityCertificate(currentEpoch).isEmpty)
     assertTrue("Certificate is present in storage", stateMetadataStorage.getTopQualityCertificate(currentEpoch).isEmpty)
 
-    storageView.updateAccountStateRoot(getAccountStateRoot)
-    assertFalse("Account State not present in view", storageView.getAccountStateRoot.isEmpty)
-    assertTrue("Account State present in storage", stateMetadataStorage.getAccountStateRoot.isEmpty)
+    // Check state root of empty storage and view
+    assertArrayEquals("Non-default account state was set in the view", DEFAULT_ACCOUNT_STATE_ROOT, storageView.getAccountStateRoot)
+    val root = getRandomAccountStateRoot
+    storageView.updateAccountStateRoot(root)
+    assertArrayEquals("Default account state was set in the view", root, storageView.getAccountStateRoot)
+    assertArrayEquals("Non-default account state was set in the storage", DEFAULT_ACCOUNT_STATE_ROOT, stateMetadataStorage.getAccountStateRoot)
 
     val consensusEpochNum: ConsensusEpochNumber = intToConsensusEpochNumber(3)
     storageView.updateConsensusEpochNumber(consensusEpochNum)
@@ -87,8 +91,8 @@ class AccountStateMetadataStorageViewTest
     assertEquals("Withdrawal epoch info is different in view and in storage after a commit", storageView.getWithdrawalEpochInfo, stateMetadataStorage.getWithdrawalEpochInfo)
     assertEquals("Block fee info is different in view and in storage after a commit", storageView.getFeePayments(currentEpoch).size,
       stateMetadataStorage.getFeePayments(currentEpoch).size)
-    assertTrue("Account State root is different in view and in storage after a commit", java.util.Arrays.compare(storageView.getAccountStateRoot.get,
-      stateMetadataStorage.getAccountStateRoot.get) == 0)
+    assertArrayEquals("Account State root is different in view and in storage after a commit", storageView.getAccountStateRoot,
+      stateMetadataStorage.getAccountStateRoot)
     assertEquals("Certificate is different in view and in storage after a commit", storageView.getTopQualityCertificate(currentEpoch).get.epochNumber,
       stateMetadataStorage.getTopQualityCertificate(currentEpoch).get.epochNumber)
 
@@ -111,7 +115,7 @@ class AccountStateMetadataStorageViewTest
       storageView.updateWithdrawalEpochInfo(WithdrawalEpochInfo(epochNumber, 1))
       storageView.updateTopQualityCertificate(generateCertificateWithEpochNumber(epochNumber))
       storageView.addFeePayment(BlockFeeInfo(230, getPrivateKey25519("8333".getBytes()).publicImage()))
-      storageView.updateAccountStateRoot(getAccountStateRoot)
+      storageView.updateAccountStateRoot(getRandomAccountStateRoot)
       storageView.commit(bytesToVersion(getVersion.data()))
 
       assertTrue(storageView.getFeePayments(epochNumber).size == 1)
@@ -143,8 +147,8 @@ class AccountStateMetadataStorageViewTest
   }
 
 
-  def getAccountStateRoot: Array[Byte] = {
-    val value = new Array[Byte](valueSize)
+  def getRandomAccountStateRoot: Array[Byte] = {
+    val value = new Array[Byte](32)
     Random.nextBytes(value)
     value
   }

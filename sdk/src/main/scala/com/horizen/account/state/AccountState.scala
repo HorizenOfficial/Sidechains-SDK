@@ -36,9 +36,6 @@ class AccountState(val params: NetworkParams,
     for (processor <- messageProcessors) {
       processor.init(view)
     }
-    // TODO: commit only StateDB part ???
-    // If we commit only stateDb we will not be able to
-    // start a new view from the last rootHash
     view.commit(initialVersion)
     view.close()
     this
@@ -49,7 +46,7 @@ class AccountState(val params: NetworkParams,
     require(versionToBytes(version).sameElements(idToBytes(mod.parentId)),
       s"Incorrect state version!: ${mod.parentId} found, " + s"$version expected")
 
-    var stateView: AccountStateView = getView
+    val stateView: AccountStateView = getView
 
     if (stateView.hasCeased) {
       throw new IllegalStateException(s"Can't apply Block ${mod.id}, because the sidechain has ceased.")
@@ -59,6 +56,7 @@ class AccountState(val params: NetworkParams,
     for (tx <- mod.sidechainTransactions)
       tx.semanticValidity()
 
+    // TODO: keep McBlockRef validation in a view style, so in the applyMainchainBlockReferenceData method
     // Validate top quality certificate in the end of the submission window:
     // Reject block if it refers to the chain that conflicts with the top quality certificate content
     // Mark sidechain as ceased in case there is no certificate appeared within the submission window.
@@ -86,7 +84,7 @@ class AccountState(val params: NetworkParams,
     }
 
     // Update view with the block info
-    stateView.updateWithdrawalEpochInfo(modWithdrawalEpochInfo).get
+    stateView.updateWithdrawalEpochInfo(modWithdrawalEpochInfo)
 
     val consensusEpochNum: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)
     stateView.updateConsensusEpochNumber(consensusEpochNum)
@@ -98,7 +96,7 @@ class AccountState(val params: NetworkParams,
     if (isWithdrawalEpochFinished) {
       // Note: that current block fee info is already in the view
       // TODO: get the list of block info and recalculate the root of it
-      val feePayments = stateView.getBlockFeePayments(modWithdrawalEpochInfo.epoch)
+      val feePayments = stateView.getFeePayments(modWithdrawalEpochInfo.epoch)
       val feePaymentsHash: Array[Byte] = new Array[Byte](32) // TODO: analog of FeePaymentsUtils.calculateFeePaymentsHash(feePayments)
 
       if (!mod.feePaymentsHash.sameElements(feePaymentsHash))
@@ -114,12 +112,12 @@ class AccountState(val params: NetworkParams,
     }
 
     for (tx <- mod.sidechainTransactions) {
-      stateView = stateView.applyTransaction(tx).get
+      stateView.applyTransaction(tx).get
     }
 
     // TODO: calculate and update fee info.
     // Note: we should save the total gas paid and the forgerAddress
-    stateView.addFeeInfo(BlockFeeInfo(0L, mod.header.forgingStakeInfo.blockSignPublicKey)).get
+    stateView.addFeeInfo(BlockFeeInfo(0L, mod.header.forgingStakeInfo.blockSignPublicKey))
 
     stateView.commit(idToVersion(mod.id)).get
 
@@ -200,57 +198,52 @@ class AccountState(val params: NetworkParams,
   // View
   override def getView: AccountStateView = {
     // get state root
-    val stateRoot = stateMetadataStorage.getAccountStateRoot.getOrElse(new Array[Byte](32))
+    val stateRoot = stateMetadataStorage.getAccountStateRoot
     val statedb = new StateDB(stateDbStorage, stateRoot)
 
     new AccountStateView(stateMetadataStorage.getView, statedb, messageProcessors)
   }
 
-  def getStateDbViewFromRoot(stateRoot: Array[Byte]) : AccountStateView =
+  // TODO: stateMetadataStorage is kept as is.
+  def getStateDbViewFromRoot(stateRoot: Array[Byte]): AccountStateView =
     new AccountStateView(stateMetadataStorage.getView, new StateDB(stateDbStorage, stateRoot), messageProcessors)
 
-  // getters:
+  // Base getters
   override def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] = {
-    log.error("TODO - needs to be implemented")
-    Seq()
+    val stateView: AccountStateView = getView
+    val res = stateView.withdrawalRequests(withdrawalEpoch)
+    stateView.close()
+    res
   }
 
   override def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
-    val stateView: AccountStateView = getView
-    val res = stateView.certificate(referencedWithdrawalEpoch)
-    stateView.close()
-    res
+    stateMetadataStorage.getTopQualityCertificate(referencedWithdrawalEpoch)
   }
 
   override def certificateTopQuality(referencedWithdrawalEpoch: Int): Long = {
-    val stateView: AccountStateView = getView
-    val res = stateView.certificateTopQuality(referencedWithdrawalEpoch)
-    stateView.close()
-    res
+    stateMetadataStorage.getTopQualityCertificate(referencedWithdrawalEpoch) match {
+      case Some(certificate) => certificate.quality
+      case None => 0
+    }
   }
 
   override def getWithdrawalEpochInfo: WithdrawalEpochInfo = {
-    val stateView: AccountStateView = getView
-    val res = stateView.getWithdrawalEpochInfo
-    stateView.close()
-    res
+    stateMetadataStorage.getWithdrawalEpochInfo
   }
 
   override def hasCeased: Boolean = {
-    val stateView: AccountStateView = getView
-    val res = stateView.hasCeased
-    stateView.close()
-    res
+    stateMetadataStorage.hasCeased
   }
 
   override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = {
-    val stateView: AccountStateView = getView
-    val res = stateView.getConsensusEpochNumber
-    stateView.close()
-    res
+    stateMetadataStorage.getConsensusEpochNumber
   }
 
-  def getOrderedForgingStakesInfoSeq : Seq[ForgingStakeInfo] = {
+  override def getFeePayments(withdrawalEpoch: Int): Seq[BlockFeeInfo] = {
+    stateMetadataStorage.getFeePayments(withdrawalEpoch)
+  }
+
+  private def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = {
     val stateView: AccountStateView = getView
     val res = stateView.getOrderedForgingStakeInfoSeq
     stateView.close()
@@ -258,9 +251,8 @@ class AccountState(val params: NetworkParams,
   }
 
   // Returns lastBlockInEpoch and ConsensusEpochInfo for that epoch
-  // Identical to the SidechainState.getCurrentConsensusEpochInfo method
   // TODO this is common code with SidechainState
-  def getConsensusEpochInfo: (ModifierId, ConsensusEpochInfo) = {
+  def getCurrentConsensusEpochInfo: (ModifierId, ConsensusEpochInfo) = {
     val forgingStakes: Seq[ForgingStakeInfo] = getOrderedForgingStakesInfoSeq
     if (forgingStakes.isEmpty) {
       throw new IllegalStateException("ForgerStakes list can't be empty.")
@@ -279,29 +271,15 @@ class AccountState(val params: NetworkParams,
     }
   }
 
-  override def getBlockFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo] = {
-    val view = getView
-    val res = view.getBlockFeePayments(withdrawalEpochNumber)
-    view.close()
-    res
-  }
-
   // Account specific getters
-  override def getAccount(address: Array[Byte]): Account = getView.getAccount(address)
-
-  override def getBalance(address: Array[Byte]): Try[java.math.BigInteger] = {
+  override def getBalance(address: Array[Byte]): BigInteger = {
     val view = getView
     val res = view.getBalance(address)
     view.close()
     res
   }
 
-  override def getAccountStateRoot: Option[Array[Byte]] = {
-    val view = getView
-    val res = view.getAccountStateRoot
-    view.close()
-    res
-  }
+  override def getAccountStateRoot: Array[Byte] = stateMetadataStorage.getAccountStateRoot
 
   override def getCodeHash(address: Array[Byte]): Array[Byte] = {
     val view = getView

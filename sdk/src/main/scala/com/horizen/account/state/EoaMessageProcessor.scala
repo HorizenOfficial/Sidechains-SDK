@@ -21,7 +21,8 @@ object EoaMessageProcessor extends MessageProcessor with ScorexLogging {
     // Can process only EOA to EOA transfer, so when "to" is an EOA account:
     // There is no need to check "from" account because it can't be a smart contract one,
     // because there is no known private key to create a valid signature.
-    view.isEoaAccount(msg.getTo.address())
+    // Note: in case of smart contract declaration "to" is null.
+    msg.getTo != null && view.isEoaAccount(msg.getTo.address())
   }
 
   override def process(msg: Message, view: BaseAccountStateView): ExecutionResult = {

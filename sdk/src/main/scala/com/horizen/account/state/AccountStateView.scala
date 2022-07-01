@@ -8,13 +8,12 @@ import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput, WithdrawalEpochCertificate}
-import com.horizen.box.data.WithdrawalRequestBoxData
-import com.horizen.box.{ForgerBox, WithdrawalRequestBox}
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.evm.{StateDB, StateStorageStrategy}
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
-import com.horizen.evm.{ResourceHandle, StateDB, StateStorageStrategy}
+import com.horizen.evm.ResourceHandle
 import com.horizen.state.StateView
+import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.{BlockFeeInfo, BytesUtils, WithdrawalEpochInfo}
 import scorex.core.VersionTag
@@ -27,20 +26,16 @@ import scala.util.Try
 class AccountStateView(private val metadataStorageView: AccountStateMetadataStorageView,
                        val stateDb: StateDB,
                        messageProcessors: Seq[MessageProcessor])
-  extends StateView[SidechainTypes#SCAT, AccountStateView]
-  with BaseAccountStateView
-  with AutoCloseable
-  with ScorexLogging {
-  view: AccountStateView =>
-
-  override type NVCT = this.type
+  extends StateView[SidechainTypes#SCAT]
+    with BaseAccountStateView
+    with AutoCloseable
+    with ScorexLogging {
 
   lazy val withdrawalReqProvider: WithdrawalRequestProvider = messageProcessors.find(_.isInstanceOf[WithdrawalRequestProvider]).get.asInstanceOf[WithdrawalRequestProvider]
   lazy val forgerStakesProvider: ForgerStakesProvider = messageProcessors.find(_.isInstanceOf[ForgerStakesProvider]).get.asInstanceOf[ForgerStakesProvider]
 
   // modifiers
   override def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[Unit] = Try {
-
     refData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {
       aggTx.mc2scTransactionsOutputs().asScala.map {
         case sc: SidechainCreation =>
@@ -80,7 +75,7 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
             BigInteger.ONE.negate(), // a negative nonce value will rule out collision with real transactions
             data)
 
-          forgerStakesProvider.addScCreationForgerStake(message, view) match {
+          forgerStakesProvider.addScCreationForgerStake(message, this) match {
             case res: ExecutionFailed =>
               log.error(res.getReason.getMessage)
               throw new IllegalArgumentException(res.getReason)
@@ -103,44 +98,103 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
           val recipientProposition = new AddressProposition(BytesUtils.reverseBytes(ftOut.propositionBytes.take(com.horizen.account.utils.Account.ADDRESS_SIZE)))
 
           // stateDb will implicitly create account if not existing yet
-          view.addBalance(recipientProposition.address(), value)
+          addBalance(recipientProposition.address(), value)
           log.debug(s"added FT amount = $value to address=$recipientProposition")
       }
     })
   }
 
-  def getOrderedForgingStakeInfoSeq : Seq[ForgingStakeInfo] = {
-
+  def getOrderedForgingStakeInfoSeq: Seq[ForgingStakeInfo] = {
     val forgerStakeList = forgerStakesProvider.getListOfForgers(this)
 
     forgerStakeList.map {
-      item => ForgingStakeInfo(
-        item.forgerStakeData.forgerPublicKeys.blockSignPublicKey,
-        item.forgerStakeData.forgerPublicKeys.vrfPublicKey,
-        ZenWeiConverter.convertWeiToZennies(item.forgerStakeData.stakedAmount))
+      item =>
+        ForgingStakeInfo(
+          item.forgerStakeData.forgerPublicKeys.blockSignPublicKey,
+          item.forgerStakeData.forgerPublicKeys.vrfPublicKey,
+          ZenWeiConverter.convertWeiToZennies(item.forgerStakeData.stakedAmount))
     }.sorted(Ordering[ForgingStakeInfo].reverse)
   }
 
 
   def setupTxContext(tx: EthereumTransaction): Unit = {
-    // TODO
+    // TODO: set context for the created events/logs assignment
   }
 
-  override def applyTransaction(tx: SidechainTypes#SCAT): Try[AccountStateView] = Try {
-    if (tx.isInstanceOf[EthereumTransaction]) {
-      val ethTx = tx.asInstanceOf[EthereumTransaction]
-      setupTxContext(ethTx)
-      val message: Message = Message.fromTransaction(ethTx)
-      val processor = messageProcessors.find(_.canProcess(message, this)).getOrElse(
-        throw new IllegalArgumentException(s"Transaction ${ethTx.id} has no known processor.")
-      )
-      processor.process(message, this) match {
-        case success: ExecutionSucceeded => this // TODO
-        case failed: ExecutionFailed => this // TODO
-        case invalid: InvalidMessage => throw new Exception(s"Transaction ${ethTx.id} is invalid.", invalid.getReason)
-      }
-    } else
+  private def preCheck(tx: EthereumTransaction): BigInteger = {
+    // We are sure that transaction is semantically valid (so all the tx fields are valid)
+    // and was successfully verified by ChainIdBlockSemanticValidator
+
+    // Check signature
+    if (!tx.getSignature.isValid(tx.getFrom, tx.messageToSign()))
+      throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: signature is invalid")
+
+    // Check that "from" is EOA address
+    if(!isEoaAccount(tx.getFrom.address()))
+      throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: from account is not EOA")
+
+    // Check the nonce
+    val stateNonce: BigInteger = getNonce(tx.getFrom.address())
+    val txNonce: BigInteger = tx.getNonce
+    stateNonce.compareTo(txNonce) match {
+      case res if res > 0 =>
+        throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: nonce ${txNonce} is to high (expected nonce is $stateNonce)")
+      case res if res < 0 =>
+        throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: nonce ${txNonce} is to low (expected nonce is $stateNonce)")
+    }
+    if(txNonce.add(BigInteger.ONE).compareTo(txNonce) < 0)
+      throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: nonce ${txNonce} reached the max value")
+
+    // Check eip15159 fee relation
+    if(tx.isEIP1559) {
+      // TODO:  tx.getMaxFeePerGas().compareTo(block base fee) < 0 -> exception: max fee per gas less than block base fee"
+    }
+
+    // Check that from account has enough balance to pay max gas*price value
+    // and reserve this amount.
+    val bookedGasPrice: BigInteger = buyGas(tx)
+
+    // Check that it is enough balance to pay after gas was bought.
+    val txBalanceAfterGasPrepayment: BigInteger = getBalance(tx.getFrom.address())
+    if(txBalanceAfterGasPrepayment.compareTo(tx.getValue) < 0)
+      throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: not enough founds ${txBalanceAfterGasPrepayment} to pay ${tx.getValue}")
+
+    bookedGasPrice
+  }
+
+  private def buyGas(tx: EthereumTransaction): BigInteger = {
+    // TODO: implement gas prepayment strategy
+    // calc max possible payment
+    // subtract the balance
+    // return the used value
+    BigInteger.ZERO
+  }
+
+  override def applyTransaction(tx: SidechainTypes#SCAT): Try[Unit] = Try {
+    if (!tx.isInstanceOf[EthereumTransaction])
       throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
+
+    val ethTx = tx.asInstanceOf[EthereumTransaction]
+    // Do the checks and prepay gas
+    val bookedGasPrice: BigInteger = preCheck(ethTx)
+
+    setupTxContext(ethTx)
+    val revisionId: Int = stateDb.snapshot()
+    val message: Message = Message.fromTransaction(ethTx)
+    val processor = messageProcessors.find(_.canProcess(message, this)).getOrElse(
+      throw new IllegalArgumentException(s"Transaction ${ethTx.id} has no known processor.")
+    )
+    val gasUsed: BigInteger = processor.process(message, this) match {
+      case success: ExecutionSucceeded =>
+        success.gasUsed()
+      case failed: ExecutionFailed =>
+        stateDb.revertToSnapshot(revisionId)
+        failed.gasUsed()
+      case invalid: InvalidMessage =>
+        throw new Exception(s"Transaction ${ethTx.id} is invalid.", invalid.getReason)
+    }
+
+    // todo: refund gas: bookedGasPrice - actualGasPrice
   }
 
   override def isEoaAccount(address: Array[Byte]): Boolean = stateDb.isEoaAccount(address)
@@ -168,8 +222,6 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     stateDb.subBalance(address, amount)
   }
 
-  protected def updateAccountStorageRoot(address: Array[Byte], root: Array[Byte]): Try[AccountStateView] = ???
-
   override def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Try[Unit] = Try {
     stateDb.setStorage(address, key, value, StateStorageStrategy.RAW)
   }
@@ -178,63 +230,44 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     stateDb.setStorage(address, key, value, StateStorageStrategy.CHUNKED)
   }
 
-  override def getAccountStorage(address: Array[Byte], key: Array[Byte]): Try[Array[Byte]] =
-    Try {
-      stateDb.getStorage(address, key, StateStorageStrategy.RAW)
-    }
+  override def getAccountStorage(address: Array[Byte], key: Array[Byte]): Try[Array[Byte]] = Try {
+    stateDb.getStorage(address, key, StateStorageStrategy.RAW)
+  }
 
-  override def getAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Try[Array[Byte]] =
-    Try {
-      stateDb.getStorage(address, key, StateStorageStrategy.CHUNKED)
-    }
+  override def getAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Try[Array[Byte]] = Try {
+    stateDb.getStorage(address, key, StateStorageStrategy.CHUNKED)
+  }
 
-  override def removeAccountStorage(address: Array[Byte], key: Array[Byte]): Try[Unit] =
-    Try {
-      stateDb.removeStorage(address, key, StateStorageStrategy.RAW)
-    }
+  override def removeAccountStorage(address: Array[Byte], key: Array[Byte]): Try[Unit] = Try {
+    stateDb.removeStorage(address, key, StateStorageStrategy.RAW)
+  }
 
-  override def removeAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Try[Unit] =
-    Try {
-      stateDb.removeStorage(address, key, StateStorageStrategy.CHUNKED)
-    }
+  override def removeAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Try[Unit] = Try {
+    stateDb.removeStorage(address, key, StateStorageStrategy.CHUNKED)
+  }
 
   // log handling
   // def addLog(log: EvmLog) : Try[Unit] = ???
 
   // out-of-the-box helpers
-  override def addCertificate(cert: WithdrawalEpochCertificate): Try[AccountStateView] = Try {
+  override def addCertificate(cert: WithdrawalEpochCertificate): Unit = {
     metadataStorageView.updateTopQualityCertificate(cert)
-    new AccountStateView(metadataStorageView, stateDb, messageProcessors)
   }
 
-  override def delegateStake(fb: ForgerBox): Try[AccountStateView] = ???
-
-  override def spendStake(fb: ForgerBox): Try[AccountStateView] = ???
-
-  // note: probably must be "set" than "add". Because we allow it only once per "commit".
-  override def addFeeInfo(info: BlockFeeInfo): Try[AccountStateView] = Try {
+  override def addFeeInfo(info: BlockFeeInfo): Unit = {
     metadataStorageView.addFeePayment(info)
-    new AccountStateView(metadataStorageView, stateDb, messageProcessors)
   }
 
-  override def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo): Try[AccountStateView] = Try {
+  override def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo): Unit = {
     metadataStorageView.updateWithdrawalEpochInfo(withdrawalEpochInfo)
-    new AccountStateView(metadataStorageView, stateDb, messageProcessors)
   }
 
-  override def updateConsensusEpochNumber(consensusEpochNum: ConsensusEpochNumber): Try[AccountStateView] = Try {
+  override def updateConsensusEpochNumber(consensusEpochNum: ConsensusEpochNumber): Unit = {
     metadataStorageView.updateConsensusEpochNumber(consensusEpochNum)
-    new AccountStateView(metadataStorageView, stateDb, messageProcessors)
   }
 
-  def updateAccountStateRoot(accountStateRoot: Array[Byte]): Try[AccountStateView] = Try {
-    metadataStorageView.updateAccountStateRoot(accountStateRoot)
-    new AccountStateView(metadataStorageView, stateDb, messageProcessors)
-  }
-
-  override def setCeased(): Try[AccountStateView] = Try {
+  override def setCeased(): Unit = {
     metadataStorageView.setCeased()
-    new AccountStateView(metadataStorageView, stateDb, messageProcessors)
   }
 
 
@@ -244,11 +277,6 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     metadataStorageView.updateAccountStateRoot(rootHash)
     metadataStorageView.commit(version)
   }
-
-  // versions part
-  override def version: VersionTag = ???
-
-  override def maxRollbackDepth: Int = ???
 
   // getters
   override def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] =
@@ -273,14 +301,12 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
 
   override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = metadataStorageView.getConsensusEpochNumber
 
-  override def getBlockFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo] = {
-    metadataStorageView.getFeePayments(withdrawalEpochNumber)
+  override def getFeePayments(withdrawalEpoch: Int): Seq[BlockFeeInfo] = {
+    metadataStorageView.getFeePayments(withdrawalEpoch)
   }
 
   // account specific getters
-  override def getAccount(address: Array[Byte]): Account = ???
-
-  override def getBalance(address: Array[Byte]): Try[java.math.BigInteger] = Try {
+  override def getBalance(address: Array[Byte]): BigInteger = {
     stateDb.getBalance(address)
   }
 
@@ -293,9 +319,9 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     stateDb.getNonce(address)
   }
 
-  override def getAccountStateRoot: Option[Array[Byte]] = metadataStorageView.getAccountStateRoot
+  override def getAccountStateRoot: Array[Byte] = metadataStorageView.getAccountStateRoot
 
-  override def close() : Unit = {
+  override def close(): Unit = {
     // when a method is called on a closed handle, LibEvm throws an exception
     stateDb.close()
   }

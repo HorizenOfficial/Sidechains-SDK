@@ -109,7 +109,7 @@ class WithdrawalMsgProcessorTest
     //Invalid zen amount
     withdrawalAmount = java.math.BigInteger.valueOf(50)
     val msgInvalidAmount = getAddWithdrawalRequestMessage(withdrawalAmount)
-    Mockito.when(mockStateView.getBalance(from.address())).thenReturn(Success(ZenWeiConverter.convertZenniesToWei(30)))
+    Mockito.when(mockStateView.getBalance(from.address())).thenReturn(ZenWeiConverter.convertZenniesToWei(30))
     res = WithdrawalMsgProcessor.process(msgInvalidAmount, mockStateView)
     assertEquals("Withdrawal request with invalid zen amount should result in ExecutionFailed", classOf[ExecutionFailed], res.getClass)
     assertEquals(classOf[IllegalArgumentException], res.asInstanceOf[ExecutionFailed].getReason.getClass)
@@ -118,7 +118,7 @@ class WithdrawalMsgProcessorTest
     withdrawalAmount = ZenWeiConverter.convertZenniesToWei(50)
     val msgBalance = getAddWithdrawalRequestMessage(withdrawalAmount)
 
-    Mockito.when(mockStateView.getBalance(from.address())).thenReturn(Success(ZenWeiConverter.convertZenniesToWei(30)))
+    Mockito.when(mockStateView.getBalance(from.address())).thenReturn(ZenWeiConverter.convertZenniesToWei(30))
     res = WithdrawalMsgProcessor.process(msgBalance, mockStateView)
     assertEquals("Withdrawal request with insufficient balance should result in ExecutionFailed", classOf[ExecutionFailed], res.getClass)
     assertEquals(classOf[IllegalArgumentException], res.asInstanceOf[ExecutionFailed].getReason.getClass)
@@ -129,7 +129,7 @@ class WithdrawalMsgProcessorTest
     val msgUnderDustThres = getAddWithdrawalRequestMessage(withdrawalAmountUnderDustThreshold)
 
 
-    Mockito.when(mockStateView.getBalance(from.address())).thenReturn(Success(ZenWeiConverter.convertZenniesToWei(1300)))
+    Mockito.when(mockStateView.getBalance(from.address())).thenReturn(ZenWeiConverter.convertZenniesToWei(1300))
     res = WithdrawalMsgProcessor.process(msgUnderDustThres, mockStateView)
     assertEquals("Withdrawal request under dust threshold processing should result in ExecutionFailed", classOf[ExecutionFailed], res.getClass)
     assertEquals(classOf[IllegalArgumentException], res.asInstanceOf[ExecutionFailed].getReason.getClass)
@@ -137,7 +137,7 @@ class WithdrawalMsgProcessorTest
     //Max number of Withdrawal Requests reached
     withdrawalAmount = ZenWeiConverter.convertZenniesToWei(60)
     msg = getAddWithdrawalRequestMessage(withdrawalAmount)
-    Mockito.when(mockStateView.getBalance(from.address())).thenReturn(Success(ZenWeiConverter.convertZenniesToWei(1300)))
+    Mockito.when(mockStateView.getBalance(from.address())).thenReturn(ZenWeiConverter.convertZenniesToWei(1300))
     val epochNum = 102
     Mockito.when(mockStateView.getWithdrawalEpochInfo).thenReturn(WithdrawalEpochInfo(epochNum, 1))
     val key = WithdrawalMsgProcessor.getWithdrawalEpochCounterKey(epochNum)
