@@ -127,7 +127,7 @@ class SCEvmBootstrap(SidechainTestFramework):
 
         # balance is in wei
         initial_balance = sc_node.wallet_getBalance(balance_request)["result"]["balance"]
-        assert_equal(str(ft_amount_in_wei), initial_balance )
+        assert_equal(ft_amount_in_wei, initial_balance )
 
         # Create an EOA to EOA transaction moving some fund to a new address not known by wallet.
         # Amount should be expressed in zennies
@@ -171,7 +171,7 @@ class SCEvmBootstrap(SidechainTestFramework):
         pprint.pprint(sc_best_block)
 
         final_balance = sc_node.wallet_getBalance(balance_request)["result"]["balance"]
-        assert_equal(int(initial_balance) - transferred_amount_in_wei, int(final_balance) )
+        assert_equal(initial_balance - transferred_amount_in_wei, final_balance )
 
 if __name__ == "__main__":
     SCEvmBootstrap().main()

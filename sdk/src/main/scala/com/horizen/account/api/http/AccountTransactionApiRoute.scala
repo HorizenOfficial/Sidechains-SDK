@@ -11,7 +11,6 @@ import com.horizen.account.api.http.AccountTransactionRestScheme._
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
-import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.transaction.{EthereumTransaction, EthereumTransactionSerializer}
@@ -445,7 +444,7 @@ object AccountTransactionErrorResponse {
   }
 
   case class ErrorInsufficientBalance(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
-    override val code: String = "0301"
+    override val code: String = "0205"
   }
 
 }
