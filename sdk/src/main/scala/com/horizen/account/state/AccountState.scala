@@ -5,7 +5,6 @@ import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountState
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.block.WithdrawalEpochCertificate
-import com.horizen.box.WithdrawalRequestBox
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.evm._
 import com.horizen.params.NetworkParams
@@ -144,9 +143,9 @@ class AccountState(val params: NetworkParams,
 
     // Check that BTs are identical for both Cert and State
     topQualityCertificate.backwardTransferOutputs.zip(expectedWithdrawalRequests).foreach {
-      case (certOutput, expectedWithdrawalRequestBox) => {
-        if (certOutput.amount != expectedWithdrawalRequestBox.value() ||
-          !util.Arrays.equals(certOutput.pubKeyHash, expectedWithdrawalRequestBox.proposition().bytes())) {
+      case (certOutput, expectedWithdrawalRequest) => {
+        if (certOutput.amount != expectedWithdrawalRequest.valueInZennies ||
+          !util.Arrays.equals(certOutput.pubKeyHash, expectedWithdrawalRequest.proposition.bytes())) {
           throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate backward transfers " +
             s"data is different than expected. Node's active chain is the fork from MC perspective.")
         }
@@ -211,7 +210,7 @@ class AccountState(val params: NetworkParams,
     new AccountStateView(stateMetadataStorage.getView, new StateDB(stateDbStorage, stateRoot), messageProcessors)
 
   // getters:
-  override def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequestBox] = {
+  override def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] = {
     log.error("TODO - needs to be implemented")
     Seq()
   }
