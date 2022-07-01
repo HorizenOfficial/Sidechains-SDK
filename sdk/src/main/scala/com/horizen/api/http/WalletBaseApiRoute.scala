@@ -5,8 +5,8 @@ import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.SidechainWalletErrorResponse.ErrorSecretNotAdded
-import com.horizen.api.http.SidechainWalletRestScheme._
+import com.horizen.api.http.WalletBaseErrorResponse.ErrorSecretNotAdded
+import com.horizen.api.http.WalletBaseRestScheme.{ReqAllPropositions, RespAllPublicKeys, RespCreatePrivateKey25519, RespCreateVrfSecret}
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.node._
 import com.horizen.proposition.{Proposition, VrfPublicKey}
@@ -34,12 +34,6 @@ abstract class WalletBaseApiRoute[
                                    sidechainNodeViewHolderRef: ActorRef)(implicit val context: ActorRefFactory, override val ec: ExecutionContext, override val tag: ClassTag[NV])
   extends SidechainApiRoute[TX, H, PM, NH, NS, NW, NP, NV] {
 
-  /*
-  override val route: Route = pathPrefix("wallet") {
-    createPrivateKey25519 ~ createVrfSecret ~ allPublicKeys
-  }
-
-   */
 
   /**
    * Create new Vrf secret and return corresponding public key
@@ -112,10 +106,9 @@ object WalletBaseRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespCreateVrfSecret(proposition: VrfPublicKey) extends SuccessResponse
-/*
+
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqAllPropositions(proptype: Option[String])
- */
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespAllPublicKeys(propositions: Seq[Proposition]) extends SuccessResponse

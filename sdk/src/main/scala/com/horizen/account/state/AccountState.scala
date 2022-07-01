@@ -217,20 +217,45 @@ class AccountState(val params: NetworkParams,
   }
 
   override def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
-    getView.certificate(referencedWithdrawalEpoch)
+    val stateView: AccountStateView = getView
+    val res = stateView.certificate(referencedWithdrawalEpoch)
+    stateView.close()
+    res
   }
 
-  override def certificateTopQuality(referencedWithdrawalEpoch: Int): Long = getView.certificateTopQuality(referencedWithdrawalEpoch)
+  override def certificateTopQuality(referencedWithdrawalEpoch: Int): Long = {
+    val stateView: AccountStateView = getView
+    val res = stateView.certificateTopQuality(referencedWithdrawalEpoch)
+    stateView.close()
+    res
+  }
 
-  override def getWithdrawalEpochInfo: WithdrawalEpochInfo = getView.getWithdrawalEpochInfo
+  override def getWithdrawalEpochInfo: WithdrawalEpochInfo = {
+    val stateView: AccountStateView = getView
+    val res = stateView.getWithdrawalEpochInfo
+    stateView.close()
+    res
+  }
 
-  override def hasCeased: Boolean = getView.hasCeased
+  override def hasCeased: Boolean = {
+    val stateView: AccountStateView = getView
+    val res = stateView.hasCeased
+    stateView.close()
+    res
+  }
 
-  override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = getView.getConsensusEpochNumber
+  override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = {
+    val stateView: AccountStateView = getView
+    val res = stateView.getConsensusEpochNumber
+    stateView.close()
+    res
+  }
 
   def getOrderedForgingStakesInfoSeq : Seq[ForgingStakeInfo] = {
     val stateView: AccountStateView = getView
-    stateView.getOrderedForgingStakeInfoSeq
+    val res = stateView.getOrderedForgingStakeInfoSeq
+    stateView.close()
+    res
   }
 
   // Returns lastBlockInEpoch and ConsensusEpochInfo for that epoch
@@ -255,19 +280,43 @@ class AccountState(val params: NetworkParams,
     }
   }
 
-  override def getBlockFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo] = getView.getBlockFeePayments(withdrawalEpochNumber)
+  override def getBlockFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo] = {
+    val view = getView
+    val res = view.getBlockFeePayments(withdrawalEpochNumber)
+    view.close()
+    res
+  }
 
   // Account specific getters
   override def getAccount(address: Array[Byte]): Account = getView.getAccount(address)
 
-  override def getBalance(address: Array[Byte]): Try[java.math.BigInteger] = getView.getBalance(address)
+  override def getBalance(address: Array[Byte]): Try[java.math.BigInteger] = {
+    val view = getView
+    val res = view.getBalance(address)
+    view.close()
+    res
+  }
 
-  override def getAccountStateRoot: Option[Array[Byte]] = getView.getAccountStateRoot
+  override def getAccountStateRoot: Option[Array[Byte]] = {
+    val view = getView
+    val res = view.getAccountStateRoot
+    view.close()
+    res
+  }
 
-  override def getCodeHash(address: Array[Byte]): Array[Byte] = getView.getCodeHash(address)
+  override def getCodeHash(address: Array[Byte]): Array[Byte] = {
+    val view = getView
+    val res = view.getCodeHash(address)
+    view.close()
+    res
+  }
 
-  override def getNonce(address: Array[Byte]): BigInteger = getView.getNonce(address)
-
+  override def getNonce(address: Array[Byte]): BigInteger = {
+    val view = getView
+    val res = view.getNonce(address)
+    view.close()
+    res
+  }
 
 }
 

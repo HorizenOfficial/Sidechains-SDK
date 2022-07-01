@@ -11,15 +11,13 @@ import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.secret.PrivateKeySecp256k1Creator
-import com.horizen.api.http.SidechainWalletErrorResponse.ErrorSecretNotAdded
-import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse, WalletBaseApiRoute}
+import com.horizen.api.http.WalletBaseErrorResponse.ErrorSecretNotAdded
+import com.horizen.api.http.{ApiResponseUtil, SuccessResponse, WalletBaseApiRoute}
 import com.horizen.node.NodeWalletBase
 import com.horizen.proposition.Proposition
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 
-import java.math.BigInteger
-//import io.circe.generic.decoding.DerivedDecoder.{decodeIncompleteCaseClass, deriveDecoder}
 import scorex.core.settings.RESTApiSettings
 
 import java.util.{Optional => JOptional}
@@ -31,7 +29,7 @@ import com.horizen.api.http.JacksonSupport._
 
 
 case class AccountWalletApiRoute(override val settings: RESTApiSettings,
-                                 override val sidechainNodeViewHolderRef: ActorRef)(implicit override val context: ActorRefFactory, override val ec: ExecutionContext)
+                                 sidechainNodeViewHolderRef: ActorRef)(implicit override val context: ActorRefFactory, override val ec: ExecutionContext)
   extends WalletBaseApiRoute[
     SidechainTypes#SCAT,
     AccountBlockHeader,
@@ -71,9 +69,7 @@ case class AccountWalletApiRoute(override val settings: RESTApiSettings,
    */
   def getBalance: Route = (post & path("getBalance")) {
     entity(as[ReqGetBalance]) { body =>
-
       applyOnNodeView { sidechainNodeView =>
-
         if (body.address.isDefined) {
           val fromAddr = new AddressProposition(BytesUtils.fromHexString(body.address.get))
           val fromBalance = sidechainNodeView.getNodeState.getBalance(fromAddr.address())
@@ -83,13 +79,10 @@ case class AccountWalletApiRoute(override val settings: RESTApiSettings,
           ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
 
         }
-
-
-
       }
     }
   }
- }
+}
 
 object AccountWalletRestScheme {
   @JsonView(Array(classOf[Views.Default]))
@@ -102,12 +95,4 @@ object AccountWalletRestScheme {
   private[api] case class ReqGetBalance(address: Option[String]) {
     require(address.nonEmpty, "Empty address")
   }
-}
-
-object SidechainWalletErrorResponse {
-
-  case class ErrorNotImplemented(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
-    override val code: String = "0301"
-  }
-
 }
