@@ -11,6 +11,7 @@ import com.horizen.account.api.http.AccountTransactionRestScheme._
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
+import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.transaction.{EthereumTransaction, EthereumTransactionSerializer}
@@ -21,10 +22,9 @@ import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
 import com.horizen.transaction.Transaction
-import org.web3j.crypto.{Keys, RawTransaction, Sign, SignedRawTransaction}
+import org.web3j.crypto.SignedRawTransaction
 import scorex.core.settings.RESTApiSettings
 import org.web3j.crypto.Sign.SignatureData
-import com.horizen.account.wallet.AccountWallet
 import com.horizen.utils.BytesUtils
 
 import java.math.BigInteger
@@ -86,7 +86,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           .getOrElse(BigInteger.valueOf(0)).compareTo(txValueInWei) >= 0// TODO account for gas
     )
 
-    if (secret.nonEmpty) Option.apply(secret.asInstanceOf[PrivateKeySecp256k1])
+    if (secret.nonEmpty) Option.apply(secret.get.asInstanceOf[PrivateKeySecp256k1])
     else Option.empty[PrivateKeySecp256k1]
   }
 
@@ -96,7 +96,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     new EthereumTransaction(
       new SignedRawTransaction(
         tx.getTransaction.getTransaction,
-        new SignatureData(msgSignature.getV, msgSignature.getR, msgSignature.getV)
+        new SignatureData(msgSignature.getV, msgSignature.getR, msgSignature.getS)
       )
     )
   }
@@ -118,8 +118,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         val secret = getFittingSecret(sidechainNodeView, body.from, valueInWei)
         secret match {
           case Some(secret) =>
-            val nonce = BigInteger.valueOf(
-              sidechainNodeView.getNodeState.getAccount(secret.publicImage.address).nonce)
+            val nonce = sidechainNodeView.getNodeState.getNonce(secret.publicImage.address)
             val tmpTx = new EthereumTransaction(
               destAddress,
               nonce,

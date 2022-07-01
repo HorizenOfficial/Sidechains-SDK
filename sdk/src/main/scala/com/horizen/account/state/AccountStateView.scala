@@ -289,6 +289,10 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     stateDb.getCodeHash(address)
   }
 
+  override def getNonce(address: Array[Byte]): BigInteger = {
+    stateDb.getNonce(address)
+  }
+
   override def getAccountStateRoot: Option[Array[Byte]] = metadataStorageView.getAccountStateRoot
 
   override def close() : Unit = {

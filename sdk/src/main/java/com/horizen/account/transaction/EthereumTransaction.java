@@ -120,8 +120,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         if (this.isSigned()) {
             if (this.getFrom().address().length != Account.ADDRESS_SIZE)
                 throw new TransactionSemanticValidityException("Cannot create signed transaction without valid from address");
-            if (!this.getSignature().isValid(this.getFrom(),
-                    "test".getBytes(StandardCharsets.UTF_8)))
+            if (!this.getSignature().isValid(this.getFrom(), this.messageToSign()))
                 throw new TransactionSemanticValidityException("Cannot create signed transaction with invalid " +
                         "signature");
 
