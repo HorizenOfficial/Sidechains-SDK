@@ -29,7 +29,7 @@ public class EthService extends RpcService {
     public final NetworkParams networkParams;
     public final SidechainSettings sidechainSettings;
 
-    public EthService(AccountNodeView view, NetworkParams params, SidechainSettings settings){
+    public EthService(AccountNodeView view, NetworkParams params, SidechainSettings settings) {
         nodeView = view;
         networkParams = params;
         sidechainSettings = settings;
@@ -52,7 +52,7 @@ public class EthService extends RpcService {
     @RpcMethod("eth_call")
     public Data call(RawTransaction transaction, Quantity tag) {
         // Executes a new message call immediately without creating a transaction on the block chain
-        // TODO: add direct evm execution
+        // TODO: add read-only evm execution
         return new Data(new byte[0]);
     }
 
@@ -74,7 +74,6 @@ public class EthService extends RpcService {
     @RpcMethod("eth_getTransactionCount")
     public Quantity getTransactionCount(Data address, Quantity tag) {
         // return nonce of address
-        // TODO: We need a function to return the transaction count of given address
         return new Quantity("0x5");
     }
 
@@ -96,40 +95,14 @@ public class EthService extends RpcService {
     }
 
     @RpcMethod("eth_getTransactionByHash")
-    public ResponseObject getTransactionByHash(Data transactionHash) throws IOException {
-        // TODO: Add a function to get transaction by hash instead of id
-        //var tx = getTransaction(transactionHash);
-        //if (tx.isEmpty()) return null;
-        //var ethTx = getEthereumTransaction(tx);
-
-        //return new ResponseObject(getTxObject(transactionHash, ethTx, tx));
-        return new ResponseObject(getTxObject(transactionHash, null, null));
+    public ResponseObject getTransactionByHash(Data transactionHash) {
+        var tx = getTransaction(transactionHash);
+        if (tx.isEmpty()) return null;
+        var ethTx = getEthereumTransaction(tx);
+        return new ResponseObject(getTxObject(transactionHash, ethTx, tx));
     }
 
-    private Transaction getTxObject(Data transactionHash, EthereumTransaction ethTx, Optional<AccountTransaction<Proposition, Proof<Proposition>>> tx){
-        return new Transaction("0x0",
-                "0x0",
-                "0x0",
-                "0x0",
-                "0x0",
-                "0x0",
-                "0x0",
-                "0x0",
-                "0x0",
-                "0x0",
-                "0x0",
-                "0x0",
-                null, // TODO: creates contract hash
-                "0x0",
-                "0x0",
-                "0x0",
-                "0x0",
-                0,
-                "0x0",
-                "0x0",
-                "0x0",
-                Collections.emptyList() // TODO: access list
-        );/*
+    private Transaction getTxObject(Data transactionHash, EthereumTransaction ethTx, Optional<AccountTransaction<Proposition, Proof<Proposition>>> tx) {
         return new Transaction(Numeric.toHexString(transactionHash.getValue()),
                 Numeric.toHexStringWithPrefix(tx.get().getNonce()),
                 String.valueOf(getBestBlock().hashCode()),
@@ -152,7 +125,7 @@ public class EthService extends RpcService {
                 Numeric.toHexStringWithPrefix(ethTx.getMaxFeePerGas()),
                 Numeric.toHexStringWithPrefix(ethTx.getMaxPriorityFeePerGas()),
                 Collections.emptyList() // TODO: access list
-        );*/
+        );
     }
 
     @RpcMethod("eth_getTransactionReceipt")
@@ -177,31 +150,32 @@ public class EthService extends RpcService {
         );
     }
 
-    private String getBalance(String address, Quantity tag){
+    private String getBalance(String address, Quantity tag) {
         // TODO: Add blockNumberOrTag handling
         var balance = nodeView.getNodeState().getBalance(Numeric.hexStringToByteArray(address));
         if (balance.isFailure())
             return "0x0";
         return Numeric.toHexStringWithPrefix(balance.get());
     }
-    private Optional<AccountTransaction<Proposition, Proof<Proposition>>> getTransaction(Data transactionHash){
+
+    private Optional<AccountTransaction<Proposition, Proof<Proposition>>> getTransaction(Data transactionHash) {
         var transactionId = Numeric.toHexString(transactionHash.getValue());
         return nodeView.getNodeHistory().searchTransactionInsideBlockchain(transactionId);
     }
 
-    private EthereumTransaction getEthereumTransaction(Optional<AccountTransaction<Proposition, Proof<Proposition>>> tx){
+    private EthereumTransaction getEthereumTransaction(Optional<AccountTransaction<Proposition, Proof<Proposition>>> tx) {
         return (EthereumTransaction) tx.get().getSignature();
     }
 
-    private AddressProposition getFrom(Optional<AccountTransaction<Proposition, Proof<Proposition>>> tx){
+    private AddressProposition getFrom(Optional<AccountTransaction<Proposition, Proof<Proposition>>> tx) {
         return (AddressProposition) tx.get().getFrom();
     }
 
-    private AddressProposition getTo(Optional<AccountTransaction<Proposition, Proof<Proposition>>> tx){
+    private AddressProposition getTo(Optional<AccountTransaction<Proposition, Proof<Proposition>>> tx) {
         return (AddressProposition) tx.get().getTo();
     }
 
-    private AccountBlock getBestBlock(){
+    private AccountBlock getBestBlock() {
         return nodeView.getNodeHistory().getBestBlock();
     }
 }
