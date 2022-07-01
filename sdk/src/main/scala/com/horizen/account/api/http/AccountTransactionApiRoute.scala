@@ -22,10 +22,9 @@ import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
 import com.horizen.transaction.Transaction
-import org.web3j.crypto.{Keys, RawTransaction, Sign, SignedRawTransaction}
+import org.web3j.crypto.SignedRawTransaction
 import scorex.core.settings.RESTApiSettings
 import org.web3j.crypto.Sign.SignatureData
-import com.horizen.account.wallet.AccountWallet
 import com.horizen.utils.BytesUtils
 
 import java.math.BigInteger
@@ -116,15 +115,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         val gasPrice = BigInteger.valueOf(1) // TODO actual gas implementation
         val gasLimit = BigInteger.valueOf(1) // TODO actual gas implementation
         // check if the fromAddress is either empty or it fits and the value is high enough
-        // TEST, remove it
-        if (body.from.isDefined) {
-          val fromAddr = new AddressProposition(BytesUtils.fromHexString(body.from.get))
-          val fromBalance = sidechainNodeView.getNodeState.getBalance(fromAddr.address())
-          println(fromBalance.get)
-          println(valueInWei.toString)
-          println(body.value.toString)
-        }
-
         val secret = getFittingSecret(sidechainNodeView, body.from, valueInWei)
         secret match {
           case Some(secret) =>

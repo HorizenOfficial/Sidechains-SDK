@@ -1047,13 +1047,15 @@ def create_certificate_for_alien_sc(mcTest, scid, mc_node, fePatternArray):
     assert_equal(True, cert in mc_node.getrawmempool())
     return cert
 
-ZENNY_TO_WEI_MULTIPLIER = 10000000000
+# 10 ^ 10
+ZENNY_TO_WEI_MULTIPLIER = 10**10
 
+# 10^8
+from test_framework.util import COIN
+
+def convertZenToZennies(valueInZen):
+    return int(round(valueInZen * COIN))
 
 def convertZenniesToWei(valueInZennies):
     return int(round(ZENNY_TO_WEI_MULTIPLIER * valueInZennies))
 
-
-def convertWeiToZennies(valueInWei):
-    # TODO check rounding error if needed
-    return int(round(valueInWei / ZENNY_TO_WEI_MULTIPLIER))
