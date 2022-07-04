@@ -33,16 +33,10 @@ class WithdrawalMsgProcessorTest
 
     val mockStateView: AccountStateView = mock[AccountStateView]
     Mockito.when(mockStateView.addAccount(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[Array[Byte]])).
-      thenAnswer(answer => {
-        Try {
-          require(util.Arrays.equals(answer.getArgument(0), WithdrawalMsgProcessor.fakeSmartContractAddress.address()))
-          val account: Account = answer.getArgument(1).asInstanceOf[Account]
-          require(account.nonce == 0)
-          require(account.balance == 0)
-          require(account.codeHash != null)
-          require(account.storageRoot != null)
-          mockStateView
-        }
+      thenAnswer(args => {
+        assertArrayEquals("Different address expected.", args.getArgument(0), WithdrawalMsgProcessor.fakeSmartContractAddress.address())
+        assertArrayEquals("Different code hash expected.", args.getArgument(1), WithdrawalMsgProcessor.fakeSmartContractCodeHash)
+        Success[Unit]()
       })
 
     WithdrawalMsgProcessor.init(mockStateView)
