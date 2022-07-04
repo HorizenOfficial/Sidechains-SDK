@@ -651,7 +651,6 @@ public class CommandProcessor {
                         block_version,
                         timestamp,
                         scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.data())).asScala().toSeq(),
-                       // scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, Box<Proposition>>>()).asScala().toSeq(),
                         scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<BoxTransaction<Proposition, Box<Proposition>>>()).asScala().toSeq(),
                         scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.header())).asScala().toSeq(),
                         scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer<SidechainBlockHeader>>()).asScala().toSeq(),
