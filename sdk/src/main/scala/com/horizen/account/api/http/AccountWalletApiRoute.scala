@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.account.api.http.AccountTransactionErrorResponse.ErrorInsufficientBalance
+import com.horizen.account.api.http.AccountWalletErrorResponse.ErrorCouldNotGetBalance
 import com.horizen.account.api.http.AccountWalletRestScheme.{ReqGetBalance, RespCreatePrivateKeySecp256k1, RespGetBalance}
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainTypes}
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
@@ -12,20 +12,20 @@ import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccoun
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.secret.PrivateKeySecp256k1Creator
 import com.horizen.api.http.WalletBaseErrorResponse.ErrorSecretNotAdded
-import com.horizen.api.http.{ApiResponseUtil, SuccessResponse, WalletBaseApiRoute}
+import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse, WalletBaseApiRoute}
 import com.horizen.node.NodeWalletBase
 import com.horizen.proposition.Proposition
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
-
 import scorex.core.settings.RESTApiSettings
 
 import java.util.{Optional => JOptional}
 import scala.concurrent.{Await, ExecutionContext}
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
-
 import com.horizen.api.http.JacksonSupport._
+
+import java.math.BigInteger
 
 
 case class AccountWalletApiRoute(override val settings: RESTApiSettings,
@@ -71,13 +71,15 @@ case class AccountWalletApiRoute(override val settings: RESTApiSettings,
   def getBalance: Route = (post & path("getBalance")) {
     entity(as[ReqGetBalance]) { body =>
       applyOnNodeView { sidechainNodeView =>
-        if (body.address.isDefined) {
+        try {
           val fromAddr = new AddressProposition(BytesUtils.fromHexString(body.address.get))
           val fromBalance = sidechainNodeView.getNodeState.getBalance(fromAddr.address())
-          ApiResponseUtil.toResponse(RespGetBalance(fromBalance.toString))
-        } else {
-          ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
-
+          ApiResponseUtil.toResponse(RespGetBalance(fromBalance))
+        }
+        catch
+        {
+          case e: Exception =>
+            ApiResponseUtil.toResponse(ErrorCouldNotGetBalance("Could not get balance", JOptional.of(e)))
         }
       }
     }
@@ -89,10 +91,16 @@ object AccountWalletRestScheme {
   private[api] case class RespCreatePrivateKeySecp256k1(proposition: Proposition) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespGetBalance(balance: String) extends SuccessResponse
+  private[api] case class RespGetBalance(balance: BigInteger) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqGetBalance(address: Option[String]) {
     require(address.nonEmpty, "Empty address")
+  }
+}
+
+object AccountWalletErrorResponse {
+  case class ErrorCouldNotGetBalance(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
+    override val code: String = "0302"
   }
 }

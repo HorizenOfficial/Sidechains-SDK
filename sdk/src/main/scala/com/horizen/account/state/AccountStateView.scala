@@ -323,7 +323,6 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     stateDb.getBalance(address)
   }
 
-
   override def getCodeHash(address: Array[Byte]): Array[Byte] = {
     stateDb.getCodeHash(address)
   }

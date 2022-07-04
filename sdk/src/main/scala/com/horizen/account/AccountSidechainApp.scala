@@ -169,7 +169,7 @@ class AccountSidechainApp @Inject()
     //SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
     AccountWalletApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef),
-    AccountEthRpcRoute(settings.restApi, nodeViewHolderRef)
+    AccountEthRpcRoute(settings.restApi, nodeViewHolderRef, sidechainSettings, params)
   )
 
   // In order to provide the feature to override core api and exclude some other apis,

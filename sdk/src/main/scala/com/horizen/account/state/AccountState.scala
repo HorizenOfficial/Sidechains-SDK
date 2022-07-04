@@ -294,7 +294,6 @@ class AccountState(val params: NetworkParams,
     view.close()
     res
   }
-
 }
 
 

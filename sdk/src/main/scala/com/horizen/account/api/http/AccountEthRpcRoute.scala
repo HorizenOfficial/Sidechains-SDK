@@ -3,7 +3,7 @@ package com.horizen.account.api.http
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
-import com.horizen.SidechainTypes
+import com.horizen.{SidechainSettings, SidechainTypes}
 import com.horizen.account.api.rpc.handler.RpcHandler
 import com.horizen.account.api.rpc.request.RpcRequest
 import com.horizen.account.api.rpc.service.EthService
@@ -12,12 +12,17 @@ import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccoun
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.{ApiResponse, ApiResponseUtil, ErrorResponse, SidechainApiResponse, SidechainApiRoute, SuccessResponse}
 import com.horizen.node.NodeWalletBase
+import com.horizen.params.NetworkParams
 import scorex.core.settings.RESTApiSettings
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.reflect.ClassTag
 
-case class AccountEthRpcRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
+case class AccountEthRpcRoute(override val settings: RESTApiSettings,
+                              sidechainNodeViewHolderRef: ActorRef,
+                              sidechainSettings: SidechainSettings,
+                              params: NetworkParams
+                             )
                                      (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute[
     SidechainTypes#SCAT,
@@ -43,7 +48,7 @@ case class AccountEthRpcRoute(override val settings: RESTApiSettings, sidechainN
     entity(as[JsonNode])
     { body =>
       withNodeView { view =>
-        var rpcHandler = new RpcHandler(new EthService(view));
+        var rpcHandler = new RpcHandler(new EthService(view, params, sidechainSettings));
         ApiResponseUtil.toResponseWithoutResultWrapper(rpcHandler.apply(new RpcRequest(body)));
       }
     }
