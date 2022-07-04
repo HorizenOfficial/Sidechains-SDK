@@ -9,7 +9,7 @@ import com.horizen.evm.TrieHasher
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
-import com.horizen.utils.MerklePath
+import com.horizen.utils.{MerklePath, Utils}
 import com.horizen.validation.InconsistentSidechainBlockDataException
 import com.horizen.{ScorexEncoding, SidechainTypes, account}
 import scorex.core.block.Block
@@ -39,7 +39,9 @@ class AccountBlock(override val header: AccountBlockHeader,
     // verify Ethereum friendly transaction root hash
     val txRootHash = TrieHasher.Root(sidechainTransactions.map(tx => tx.bytes).toArray)
     if (!java.util.Arrays.equals(txRootHash, header.sidechainTransactionsMerkleRootHash)) {
-      throw new InconsistentSidechainBlockDataException("invalid transaction root hash")
+      log.error("CHECK IS DISABLED: update forger & bootstrapping tool first!")
+      // TODO: uncomment when ready
+      //throw new InconsistentSidechainBlockDataException("invalid transaction root hash")
     }
   }
 
@@ -144,6 +146,8 @@ object AccountBlock extends ScorexEncoding {
     // calculate Ethereum friendly transaction root hash
     // TODO: this assumes the binary representation of transactions exactly match the ethereum RLP encoding,
     //  which is not true currently because the serializer prepends the payload with the length
-    TrieHasher.Root(sidechainTransactions.map(tx => tx.bytes).toArray)
+    Utils.ZEROS_HASH
+    // TODO: uncomment this when ready. Note: case with no txs.
+    //TrieHasher.Root(sidechainTransactions.map(tx => tx.bytes).toArray)
   }
 }
