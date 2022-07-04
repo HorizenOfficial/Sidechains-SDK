@@ -1,1 +1,2 @@
 eth_abi
+pycryptodome
