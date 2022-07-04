@@ -9,6 +9,7 @@ import com.horizen.api.http.SidechainBlockErrorResponse._
 import com.horizen.api.http.SidechainBlockRestSchema._
 import com.horizen.block.SidechainBlock
 import com.horizen.box.ZenBox
+import com.horizen.chain.SidechainBlockInfo
 import com.horizen.consensus.{intToConsensusEpochNumber, intToConsensusSlotNumber}
 import com.horizen.forge.Forger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
 import com.horizen.forge.ForgingInfo
@@ -17,32 +18,36 @@ import com.horizen.utils.BytesUtils
 import scorex.core.settings.RESTApiSettings
 import scorex.util.ModifierId
 
+import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
-import java.util.{Optional => JOptional}
 
 case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, sidechainBlockActorRef: ActorRef, forgerRef: ActorRef)
                                  (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute {
 
   override val route: Route = pathPrefix("block") {
-    findById ~ findLastIds ~ findIdByHeight ~ getBestBlockInfo ~ getFeePayments ~ startForging ~ stopForging ~ generateBlockForEpochNumberAndSlot ~ getForgingInfo
+
+    findById ~ findLastIds ~ findIdByHeight ~ getBestBlockInfo ~ getFeePayments ~ findBlockInfoById ~ startForging ~ stopForging ~ generateBlockForEpochNumberAndSlot ~ getForgingInfo
   }
 
   /**
-    * The sidechain block by its id.
+    * Returns the sidechain block and its height for given block id.
     */
   def findById: Route = (post & path("findById")) {
     entity(as[ReqFindById]) { body =>
       withNodeView { sidechainNodeView =>
-        var optionSidechainBlock = sidechainNodeView.getNodeHistory.getBlockById(body.blockId)
+        val sidechainHistory = sidechainNodeView.getNodeHistory
+        val optionSidechainBlock = sidechainHistory.getBlockById(body.blockId)
 
         if (optionSidechainBlock.isPresent) {
-          var sblock = optionSidechainBlock.get()
-          var sblock_serialized = sblock.serializer.toBytes(sblock)
-          ApiResponseUtil.toResponse(RespFindById(BytesUtils.toHexString(sblock_serialized), sblock))
+          val sblock = optionSidechainBlock.get()
+          val sblock_serialized = sblock.serializer.toBytes(sblock)
+          val height = sidechainHistory.getBlockHeightById(body.blockId).get
+
+          ApiResponseUtil.toResponse(RespFindById(BytesUtils.toHexString(sblock_serialized), sblock, height))
         }
         else
           ApiResponseUtil.toResponse(ErrorInvalidBlockId(s"Invalid id: ${body.blockId}", JOptional.empty()))
@@ -56,8 +61,8 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
   def findLastIds: Route = (post & path("findLastIds")) {
     entity(as[ReqLastIds]) { body =>
       withNodeView { sidechainNodeView =>
-        var sidechainHistory = sidechainNodeView.getNodeHistory
-        var blockIds = sidechainHistory.getLastBlockIds(body.number)
+        val sidechainHistory = sidechainNodeView.getNodeHistory
+        val blockIds = sidechainHistory.getLastBlockIds(body.number)
         ApiResponseUtil.toResponse(RespLastIds(blockIds.asScala))
       }
     }
@@ -69,10 +74,11 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
   def findIdByHeight: Route = (post & path("findIdByHeight")) {
     entity(as[ReqFindIdByHeight]) { body =>
       withNodeView { sidechainNodeView =>
-        var sidechainHistory = sidechainNodeView.getNodeHistory
+        val sidechainHistory = sidechainNodeView.getNodeHistory
         val blockIdOptional = sidechainHistory.getBlockIdByHeight(body.height)
-        if (blockIdOptional.isPresent)
+        if (blockIdOptional.isPresent) {
           ApiResponseUtil.toResponse(RespFindIdByHeight(blockIdOptional.get()))
+        }
         else
           ApiResponseUtil.toResponse(ErrorInvalidBlockHeight(s"Invalid height: ${body.height}", JOptional.empty()))
       }
@@ -90,7 +96,7 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
         if (height > 0)
           ApiResponseUtil.toResponse(RespBest(sidechainHistory.getBestBlock, height))
         else
-          ApiResponseUtil.toResponse(ErrorInvalidBlockHeight(s"Invalid height: ${height}", JOptional.empty()))
+          ApiResponseUtil.toResponse(ErrorInvalidBlockHeight(s"Invalid height: $height", JOptional.empty()))
     }
   }
 
@@ -98,12 +104,33 @@ case class SidechainBlockApiRoute(override val settings: RESTApiSettings, sidech
    * Return the list of forgers fee payments paid after the given block was applied.
    * Return empty list in case no fee payments were paid.
    */
-    def getFeePayments: Route = (post & path("getFeePayments")) {
+  def getFeePayments: Route = (post & path("getFeePayments")) {
     entity(as[ReqFeePayments]) { body =>
       applyOnNodeView { sidechainNodeView =>
         val sidechainHistory = sidechainNodeView.getNodeHistory
         val feePayments = sidechainHistory.getFeePaymentsInfo(body.blockId).asScala.map(_.transaction.newBoxes().asScala).getOrElse(Seq())
         ApiResponseUtil.toResponse(RespFeePayments(feePayments))
+      }
+    }
+  }
+
+   /**
+   * Returns SidechainBlockInfo by its id and if the block is in the active chain or not.
+   */
+  def findBlockInfoById: Route = (post & path("findBlockInfoById")) {
+    entity(as[ReqFindBlockInfoById]) { body =>
+      withNodeView { sidechainNodeView =>
+        val sidechainHistory = sidechainNodeView.getNodeHistory
+        val optionSidechainBlock = sidechainHistory.getBlockInfoById(body.blockId)
+
+        if (optionSidechainBlock.isPresent) {
+          val sblock = optionSidechainBlock.get()
+          val isInActiveChain = sidechainHistory.isInActiveChain(body.blockId)
+
+          ApiResponseUtil.toResponse(RespFindBlockInfoById(sblock, isInActiveChain))
+        }
+        else
+          ApiResponseUtil.toResponse(ErrorInvalidBlockId(s"Invalid id: ${body.blockId}", JOptional.empty()))
       }
     }
   }
@@ -167,11 +194,11 @@ object SidechainBlockRestSchema {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqFindById(blockId: String) {
-    require(blockId.length == 64, s"Invalid id $blockId. Id length must be 64")
+    require(blockId.length == SidechainBlock.BlockIdHexStringLength, s"Invalid id $blockId. Id length must be ${SidechainBlock.BlockIdHexStringLength}")
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespFindById(blockHex: String, block: SidechainBlock) extends SuccessResponse
+  private[api] case class RespFindById(blockHex: String, block: SidechainBlock, height: Int) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqLastIds(number: Int) {
@@ -202,6 +229,14 @@ object SidechainBlockRestSchema {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespBest(block: SidechainBlock, height: Int) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqFindBlockInfoById(blockId: String) {
+    require(blockId.length == SidechainBlock.BlockIdHexStringLength, s"Invalid id $blockId. Id length must be ${SidechainBlock.BlockIdHexStringLength}")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespFindBlockInfoById(blockInfo: SidechainBlockInfo, isInActiveChain: Boolean) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] object RespStartForging extends SuccessResponse

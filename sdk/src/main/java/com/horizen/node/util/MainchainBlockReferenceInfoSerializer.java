@@ -1,6 +1,6 @@
 package com.horizen.node.util;
 
-import com.horizen.CommonParams;
+import com.horizen.params.CommonParams;
 import scorex.core.serialization.ScorexSerializer;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;

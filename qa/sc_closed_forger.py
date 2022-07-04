@@ -12,7 +12,7 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
     Setup 1 SC Node with a closed list of forger. Try to stake money with invalid forger info and verify that we are not allowed to stake.
 """
 class SidechainClosedForgerTest(SidechainTestFramework):
-    number_of_mc_nodes = 3
+    number_of_mc_nodes = 1
     number_of_sidechain_nodes = 1
     allowed_forger_proposition = generate_secrets("seed", 1)[0].publicKey
     allowed_forger_vrf_public_key = generate_vrf_secrets("seed", 1)[0].publicKey
@@ -23,12 +23,10 @@ class SidechainClosedForgerTest(SidechainTestFramework):
     def setup_network(self, split = False):
         # Setup nodes and connect them
         self.nodes = self.setup_nodes()
-        connect_nodes_bi(self.nodes, 0, 1)
-        connect_nodes_bi(self.nodes, 0, 2)
         self.sync_all()
 
     def setup_nodes(self):
-        # Start 3 MC nodes
+        # Start 1 MC nodes
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
 
     def sc_setup_chain(self):

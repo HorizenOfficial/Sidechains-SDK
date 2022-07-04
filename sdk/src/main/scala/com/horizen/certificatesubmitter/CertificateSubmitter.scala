@@ -1,15 +1,13 @@
 package com.horizen.certificatesubmitter
 
 
-import java.io.File
-import java.util.Optional
 import akka.actor.{Actor, ActorRef, ActorSystem, Props, Timers}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen._
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.WithdrawalRequestBox
-import com.horizen.certificatesubmitter.CertificateSubmitter.{CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, CertificateSubmissionStarted, CertificateSubmissionStopped, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, SignaturesStatus, SubmissionWindowStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
+import com.horizen.certificatesubmitter.CertificateSubmitter._
 import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.NetworkParams
@@ -23,13 +21,14 @@ import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 import scorex.util.ScorexLogging
-
+import java.io.File
 import java.util
+import java.util.Optional
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.Platform.EOL
 import scala.compat.java8.OptionConverters._
-import scala.concurrent.duration.{DurationInt, FiniteDuration, SECONDS}
+import scala.concurrent.duration.{FiniteDuration, SECONDS}
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Random, Success, Try}
@@ -43,8 +42,8 @@ class CertificateSubmitter(settings: SidechainSettings,
                            sidechainNodeViewHolderRef: ActorRef,
                            params: NetworkParams,
                            mainchainChannel: MainchainNodeChannel)
-  (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging
-{
+                          (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging {
+
   import CertificateSubmitter.InternalReceivableMessages._
   import CertificateSubmitter.ReceivableMessages._
   import CertificateSubmitter.Timers._
@@ -119,7 +118,7 @@ class CertificateSubmitter(settings: SidechainSettings,
   protected def checkSubmitter: Receive = {
     case SidechainAppEvents.SidechainApplicationStart =>
       val checkAsFuture = (sidechainNodeViewHolderRef ? GetDataFromCurrentView(checkSubmitterMessage)).asInstanceOf[Future[Try[Unit]]]
-      checkAsFuture.onComplete{
+      checkAsFuture.onComplete {
         case Success(Success(_)) =>
           log.info(s"Backward transfer certificate submitter was successfully started.")
           context.become(workingCycle)
@@ -138,7 +137,7 @@ class CertificateSubmitter(settings: SidechainSettings,
     val actualSysDataConstant = params.calculatedSysDataConstant
     val expectedSysDataConstantOpt = getSidechainCreationTransaction(sidechainNodeView.history).getGenSysConstantOpt.asScala
 
-    if(expectedSysDataConstantOpt.isEmpty || actualSysDataConstant.deep != expectedSysDataConstantOpt.get.deep) {
+    if (expectedSysDataConstantOpt.isEmpty || actualSysDataConstant.deep != expectedSysDataConstantOpt.get.deep) {
       throw new IllegalStateException("Incorrect configuration for backward transfer, expected SysDataConstant " +
         s"'${BytesUtils.toHexString(expectedSysDataConstantOpt.getOrElse(Array.emptyByteArray))}' but actual is '${BytesUtils.toHexString(actualSysDataConstant)}'")
     }
@@ -193,7 +192,7 @@ class CertificateSubmitter(settings: SidechainSettings,
     case SemanticallySuccessfulModifier(block: SidechainBlock) =>
       getSubmissionWindowStatus(block) match {
         case Success(submissionWindowStatus) =>
-          if(submissionWindowStatus.isInWindow) {
+          if (submissionWindowStatus.isInWindow) {
             signaturesStatus match {
               case Some(_) => // do nothing
               case None =>
@@ -203,7 +202,7 @@ class CertificateSubmitter(settings: SidechainSettings,
                     signaturesStatus = Some(SignaturesStatus(referencedWithdrawalEpochNumber, messageToSign, ArrayBuffer()))
 
                     // Try to calculate signatures if signing is enabled
-                    if(certificateSigningEnabled) {
+                    if (certificateSigningEnabled) {
                       calculateSignatures(messageToSign) match {
                         case Success(signaturesInfo) =>
                           signaturesInfo.foreach(sigInfo => {
@@ -220,7 +219,7 @@ class CertificateSubmitter(settings: SidechainSettings,
                 }
             }
           } else {
-            if(timers.isTimerActive(CertificateGenerationTimer)) {
+            if (timers.isTimerActive(CertificateGenerationTimer)) {
               timers.cancel(CertificateGenerationTimer)
               log.info("Cancel the scheduled Certificate generation due to the Submission Window end")
               context.system.eventStream.publish(CertificateSubmissionStopped)
@@ -258,17 +257,26 @@ class CertificateSubmitter(settings: SidechainSettings,
 
       val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(referencedWithdrawalEpochNumber)
 
-      val btrFee: Long = getBtrFee (referencedWithdrawalEpochNumber)
-      val ftMinAmount: Long = getFtMinAmount (referencedWithdrawalEpochNumber)
+      val btrFee: Long = getBtrFee(referencedWithdrawalEpochNumber)
+      val ftMinAmount: Long = getFtMinAmount(referencedWithdrawalEpochNumber)
 
       val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
       val sidechainId = params.sidechainId
 
-      val utxoMerkleTreeRoot = state.utxoMerkleTreeRoot(referencedWithdrawalEpochNumber).getOrElse(
-        throw new Exception("CertificateSubmitter is too late against the State. " +
-          s"No utxo merkle tree root for requested epoch $referencedWithdrawalEpochNumber. " +
-          s"Current epoch is ${state.getWithdrawalEpochInfo.epoch}")
-      )
+      val utxoMerkleTreeRoot: Optional[Array[Byte]] = {
+        Try {
+          getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber, state)
+        } match {
+          case Failure(e: IllegalStateException) =>
+            throw new Exception("CertificateSubmitter is too late against the State. " +
+              s"No utxo merkle tree root for requested epoch $referencedWithdrawalEpochNumber. " +
+              s"Current epoch is ${state.getWithdrawalEpochInfo.epoch}")
+          case Failure(exception) => log.error("Exception while getting utxoMerkleTreeRoot", exception)
+            throw new Exception(exception)
+          case Success(value) => value
+        }
+      }
+
 
       CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(
         withdrawalRequests.asJava,
@@ -281,6 +289,20 @@ class CertificateSubmitter(settings: SidechainSettings,
     }
 
     Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getMessage), timeoutDuration).asInstanceOf[Try[Array[Byte]]].get
+  }
+
+  private def getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber: Int, state: SidechainState): Optional[Array[Byte]] = {
+    if (params.isCSWEnabled) {
+      state.utxoMerkleTreeRoot(referencedWithdrawalEpochNumber) match {
+        case x: Some[Array[Byte]] => x.asJava
+        case None =>
+          log.error("UtxoMerkleTreeRoot is not defined even if CSW is enabled")
+          throw new IllegalStateException("UtxoMerkleTreeRoot is not defined")
+      }
+    }
+    else {
+      Optional.empty()
+    }
   }
 
   private def calculateSignatures(messageToSign: Array[Byte]): Try[Seq[CertificateSignatureInfo]] = Try {
@@ -303,9 +325,11 @@ class CertificateSubmitter(settings: SidechainSettings,
     case LocallyGeneratedSignature(info: CertificateSignatureInfo) =>
       signaturesStatus match {
         case Some(status) =>
-          log.debug(s"Locally generated Certificate signature for pub key index ${info.pubKeyIndex} retrieved.")
-          if(status.knownSigs.exists(item => item.pubKeyIndex == info.pubKeyIndex))
-              log.error("Locally generated signature already presents")
+          log.debug(s"Locally generated Certificate signature for pub key index ${
+            info.pubKeyIndex
+          } retrieved.")
+          if (status.knownSigs.exists(item => item.pubKeyIndex == info.pubKeyIndex))
+            log.error("Locally generated signature already presents")
           else {
             status.knownSigs.append(info)
             val infoToRemote = CertificateSignatureFromRemoteInfo(info.pubKeyIndex, status.messageToSign, info.signature)
@@ -321,14 +345,16 @@ class CertificateSubmitter(settings: SidechainSettings,
     case SignatureFromRemote(remoteSigInfo: CertificateSignatureFromRemoteInfo) =>
       signaturesStatus match {
         case Some(status) =>
-          log.debug(s"Certificate signature for pub key index ${remoteSigInfo.pubKeyIndex} retrieved from remote.")
-          if(!util.Arrays.equals(status.messageToSign, remoteSigInfo.messageToSign)) {
+          log.debug(s"Certificate signature for pub key index ${
+            remoteSigInfo.pubKeyIndex
+          } retrieved from remote.")
+          if (!util.Arrays.equals(status.messageToSign, remoteSigInfo.messageToSign)) {
             sender() ! DifferentMessageToSign
-          } else if(remoteSigInfo.pubKeyIndex < 0 || remoteSigInfo.pubKeyIndex >= params.signersPublicKeys.size) {
+          } else if (remoteSigInfo.pubKeyIndex < 0 || remoteSigInfo.pubKeyIndex >= params.signersPublicKeys.size) {
             sender() ! InvalidPublicKeyIndex
-          } else if(!remoteSigInfo.signature.isValid(params.signersPublicKeys(remoteSigInfo.pubKeyIndex), remoteSigInfo.messageToSign)) {
+          } else if (!remoteSigInfo.signature.isValid(params.signersPublicKeys(remoteSigInfo.pubKeyIndex), remoteSigInfo.messageToSign)) {
             sender() ! InvalidSignature
-          } else if(!status.knownSigs.exists(item => item.pubKeyIndex == remoteSigInfo.pubKeyIndex)) {
+          } else if (!status.knownSigs.exists(item => item.pubKeyIndex == remoteSigInfo.pubKeyIndex)) {
             status.knownSigs.append(CertificateSignatureInfo(remoteSigInfo.pubKeyIndex, remoteSigInfo.signature))
             sender() ! ValidSignature
             self ! TryToScheduleCertificateGeneration
@@ -337,23 +363,26 @@ class CertificateSubmitter(settings: SidechainSettings,
             sender() ! KnownSignature
           }
         case None =>
-            sender() ! SubmitterIsOutsideSubmissionWindow
+          sender() ! SubmitterIsOutsideSubmissionWindow
       }
   }
 
   private def getCertificateTopQuality(epoch: Int): Try[Long] = {
     mainchainChannel.getTopQualityCertificates(BytesUtils.toHexString(BytesUtils.reverseBytes(params.sidechainId)))
       .map(topQualityCertificates => {
-        topQualityCertificates.mempoolCertInfo match {
+        (topQualityCertificates.mempoolCertInfo, topQualityCertificates.chainCertInfo) match {
           // case we have mempool cert for the given epoch return its quality.
-          case Some(mempoolInfo) if (mempoolInfo.epoch == epoch) => mempoolInfo.quality
-          // else look for inchain cert
-          case _ => topQualityCertificates.chainCertInfo match {
-            // case we have chain cert for the given epoch return its quality.
-            case Some(chainInfo) if (chainInfo.epoch == epoch) => chainInfo.quality
-            // no known certs
-            case _ => 0
-          }
+          case (Some(mempoolInfo), _) if mempoolInfo.epoch == epoch => mempoolInfo.quality
+          // case the mempool certificate epoch is a newer than submitter epoch thrown an exception
+          case (Some(mempoolInfo), _) if mempoolInfo.epoch > epoch =>
+          throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + mempoolInfo.quality)
+          // case we have chain cert for the given epoch return its quality.
+          case (_, Some(chainInfo)) if chainInfo.epoch == epoch => chainInfo.quality
+          // case the chain certificate epoch is a newer than submitter epoch thrown an exception
+          case (_, Some(chainInfo)) if chainInfo.epoch > epoch =>
+          throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + chainInfo.quality)
+          // no known certs
+          case _ => 0
         }
       })
   }
@@ -371,6 +400,10 @@ class CertificateSubmitter(settings: SidechainSettings,
             // So we don't know the result
             // Return true to keep submitter going and prevent SC ceasing
             return true
+          // May happen during node synchronization and node behind for one epoch or more
+          case ex: ObsoleteWithdrawalEpochException =>
+            log.info("Sidechain is behind the Mainchain(" + ex + ")")
+            return false
           // May happen if MC and SDK websocket protocol is inconsistent.
           // Should never happen in production.
           case ex: WebsocketInvalidErrorMessageException =>
@@ -397,14 +430,14 @@ class CertificateSubmitter(settings: SidechainSettings,
     case TryToScheduleCertificateGeneration =>
       signaturesStatus match {
         case Some(status) =>
-          if(checkQuality(status)) {
+          if (checkQuality(status)) {
             val delay = Random.nextInt(15) + 5 // random delay from 5 to 20 seconds
             log.info(s"Scheduling Certificate generation in $delay seconds")
             timers.startSingleTimer(CertificateGenerationTimer, TryToGenerateCertificate, FiniteDuration(delay, SECONDS))
             context.system.eventStream.publish(CertificateSubmissionStarted)
           }
         case None =>
-          log.error("Trying to schedule certificate generation being outside Certificate submission window.")
+          log.warn("Trying to schedule certificate generation being outside Certificate submission window.")
       }
   }
 
@@ -446,7 +479,13 @@ class CertificateSubmitter(settings: SidechainSettings,
                   certificateFee,
                   params)
 
-                log.info(s"Backward transfer certificate request was successfully created for epoch number ${certificateRequest.epochNumber}, with proof ${BytesUtils.toHexString(proofWithQuality.getKey)} with quality ${proofWithQuality.getValue} try to send it to mainchain")
+                log.info(s"Backward transfer certificate request was successfully created for epoch number ${
+                  certificateRequest.epochNumber
+                }, with proof ${
+                  BytesUtils.toHexString(proofWithQuality.getKey)
+                } with quality ${
+                  proofWithQuality.getValue
+                } try to send it to mainchain")
 
                 mainchainChannel.sendCertificate(certificateRequest) match {
                   case Success(certificate) =>
@@ -479,8 +518,22 @@ class CertificateSubmitter(settings: SidechainSettings,
                                     endEpochCumCommTreeHash: Array[Byte],
                                     btrFee: Long,
                                     ftMinAmount: Long,
-                                    utxoMerkleTreeRoot: Array[Byte],
-                                    schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])])
+                                    utxoMerkleTreeRoot: Optional[Array[Byte]],
+                                    schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])]) {
+
+    override def toString: String = {
+      val utxoMerkleTreeRootString = if (utxoMerkleTreeRoot.isPresent) BytesUtils.toHexString(utxoMerkleTreeRoot.get()) else "None"
+      "DataForProofGeneration(" +
+        s"referencedEpochNumber = $referencedEpochNumber, " +
+        s"sidechainId = $sidechainId, " +
+        s"withdrawalRequests = {${withdrawalRequests.mkString(",")}}, " +
+        s"endEpochCumCommTreeHash = ${BytesUtils.toHexString(endEpochCumCommTreeHash)}, " +
+        s"btrFee = $btrFee, " +
+        s"ftMinAmount = $ftMinAmount, " +
+        s"utxoMerkleTreeRoot = ${utxoMerkleTreeRootString}, " +
+        s"number of schnorrKeyPairs = ${schnorrKeyPairs.size})"
+    }
+  }
 
   private def buildDataForProofGeneration(sidechainNodeView: View, status: SignaturesStatus): DataForProofGeneration = {
     val history = sidechainNodeView.history
@@ -492,9 +545,10 @@ class CertificateSubmitter(settings: SidechainSettings,
     val ftMinAmount: Long = getFtMinAmount(status.referencedEpoch)
     val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, status.referencedEpoch)
     val sidechainId = params.sidechainId
-    val utxoMerkleTreeRoot = state.utxoMerkleTreeRoot(status.referencedEpoch).get
+    val utxoMerkleTreeRoot: Optional[Array[Byte]] = getUtxoMerkleTreeRoot(status.referencedEpoch, state)
 
-    val signersPublicKeyWithSignatures = params.signersPublicKeys.zipWithIndex.map{
+
+    val signersPublicKeyWithSignatures = params.signersPublicKeys.zipWithIndex.map {
       case (pubKey, pubKeyIndex) =>
         (pubKey, status.knownSigs.find(info => info.pubKeyIndex == pubKeyIndex).map(_.signature))
     }
@@ -513,12 +567,14 @@ class CertificateSubmitter(settings: SidechainSettings,
   private def lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): Array[Byte] = {
     val mcBlockHash = withdrawalEpochNumber match {
       case -1 => params.parentHashOfGenesisMainchainBlock
-      case _  => {
+      case _ => {
         val mcHeight = params.mainchainCreationBlockHeight + (withdrawalEpochNumber + 1) * params.withdrawalEpochLength - 1
         history.getMainchainBlockReferenceInfoByMainchainBlockHeight(mcHeight).asScala.map(_.getMainchainHeaderHash).getOrElse(throw new IllegalStateException("Information for Mc is missed"))
       }
     }
-    log.debug(s"Last MC block hash for withdrawal epoch number $withdrawalEpochNumber is ${BytesUtils.toHexString(mcBlockHash)}")
+    log.debug(s"Last MC block hash for withdrawal epoch number $withdrawalEpochNumber is ${
+      BytesUtils.toHexString(mcBlockHash)
+    }")
 
     val headerInfo = history.mainchainHeaderInfoByHash(mcBlockHash).getOrElse(throw new IllegalStateException("Missed MC Cumulative Hash"))
 
@@ -527,14 +583,16 @@ class CertificateSubmitter(settings: SidechainSettings,
 
   private def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
     val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
-      dataForProofGeneration.schnorrKeyPairs.map{case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)}.unzip
+      dataForProofGeneration.schnorrKeyPairs.map {
+        case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)
+      }.unzip
 
-    log.info(s"Start generating proof for ${dataForProofGeneration.referencedEpochNumber} withdrawal epoch number, " +
-      s"with parameters: sidechainId LE = ${BytesUtils.toHexString(dataForProofGeneration.sidechainId)}, " +
-      s"withdrawalRequests=${dataForProofGeneration.withdrawalRequests.foreach(_.toString)}, " +
-      s"endEpochCumCommTreeHash=${BytesUtils.toHexString(dataForProofGeneration.endEpochCumCommTreeHash)}, " +
-      s"utxoMerkleTreeRoot=${BytesUtils.toHexString(dataForProofGeneration.utxoMerkleTreeRoot)}, " +
-      s"signersThreshold=${params.signersThreshold}. " +
+    log.info(s"Start generating proof with parameters: dataForProofGeneration = ${
+      dataForProofGeneration
+    }, " +
+      s"signersThreshold = ${
+        params.signersThreshold
+      }. " +
       s"It can take a while.")
 
     //create and return proof with quality
@@ -580,7 +638,9 @@ object CertificateSubmitter {
 
   // Certificate submission status events
   sealed trait CertificateSubmissionEvent extends SubmitterEvent
+
   case object CertificateSubmissionStarted extends CertificateSubmissionEvent
+
   case object CertificateSubmissionStopped extends CertificateSubmissionEvent
 
   // Certificate signature broadcasting events
@@ -589,11 +649,17 @@ object CertificateSubmitter {
 
   // Response for SignatureFromRemote message
   sealed trait SignatureProcessingStatus
+
   case object ValidSignature extends SignatureProcessingStatus
+
   case object KnownSignature extends SignatureProcessingStatus
+
   case object DifferentMessageToSign extends SignatureProcessingStatus
+
   case object InvalidPublicKeyIndex extends SignatureProcessingStatus
+
   case object InvalidSignature extends SignatureProcessingStatus
+
   case object SubmitterIsOutsideSubmissionWindow extends SignatureProcessingStatus
 
   // Data
@@ -608,6 +674,9 @@ object CertificateSubmitter {
     require(messageToSign.length == FieldElementUtils.fieldElementLength(), "messageToSign has invalid length")
   }
 
+  case class ObsoleteWithdrawalEpochException(message: String = "", cause: Option[Throwable] = None)
+    extends RuntimeException(message, cause.orNull)
+
   // Internal interface
   private[certificatesubmitter] object Timers {
     object CertificateGenerationTimer
@@ -615,7 +684,9 @@ object CertificateSubmitter {
 
   private[certificatesubmitter] object InternalReceivableMessages {
     case class LocallyGeneratedSignature(info: CertificateSignatureInfo)
+
     case object TryToScheduleCertificateGeneration
+
     case object TryToGenerateCertificate
 
   }
@@ -623,15 +694,23 @@ object CertificateSubmitter {
   // Public interface
   object ReceivableMessages {
     case class SignatureFromRemote(remoteSigInfo: CertificateSignatureFromRemoteInfo)
+
     case object GetCertificateGenerationState
+
     case object GetSignaturesStatus
+
     // messages to set/check submitter
     case object EnableSubmitter
+
     case object DisableSubmitter
+
     case object IsSubmitterEnabled
+
     // messages to set/check certificate signer
     case object EnableCertificateSigner
+
     case object DisableCertificateSigner
+
     case object IsCertificateSigningEnabled
   }
 }
@@ -639,16 +718,16 @@ object CertificateSubmitter {
 object CertificateSubmitterRef {
   def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
-           (implicit ec: ExecutionContext) : Props =
-    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel))
+           (implicit ec: ExecutionContext): Props =
+    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel)).withMailbox("akka.actor.deployment.submitter-prio-mailbox")
 
   def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel))
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel).withMailbox("akka.actor.deployment.submitter-prio-mailbox"))
 
   def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel), name)
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel).withMailbox("akka.actor.deployment.submitter-prio-mailbox"), name)
 }

@@ -41,8 +41,11 @@ case class ForgerSettings(automaticForging: Boolean = false,
                           restrictForgers: Boolean = false,
                           allowedForgersList: Seq[ForgerKeysData] = Seq())
 
+case class MempoolSettings(maxSize: Int = 300, minFeeRate: Long = 0)
+
 case class WalletSettings(seed: String,
-                          genesisSecrets: Seq[String])
+                          genesisSecrets: Seq[String],
+                          maxTxFee: Long = 10000000)
 
 case class CeasedSidechainWithdrawalSettings(cswProvingKeyFilePath: String,
                                              cswVerificationKeyFilePath: String)
@@ -56,6 +59,7 @@ case class SidechainSettings(
                               genesisData: GenesisDataSettings,
                               websocket: WebSocketSettings,
                               withdrawalEpochCertificateSettings: WithdrawalEpochCertificateSettings,
+                              mempool: MempoolSettings,
                               wallet: WalletSettings,
                               forger: ForgerSettings,
                               csw: CeasedSidechainWithdrawalSettings,

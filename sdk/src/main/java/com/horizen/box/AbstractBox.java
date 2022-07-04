@@ -77,7 +77,7 @@ public abstract class AbstractBox<P extends Proposition, BD extends AbstractBoxD
 
     @Override
     public String toString() {
-        return String.format("%s(id: %s, proposition: %s, value: %d, nonce: %d)", this.getClass().toString(), encoder().encode(id()), proposition(), value(), nonce());
+        return String.format("%s(id: %s, proposition: %s, value: %d, nonce: %d)", this.getClass().getSimpleName(), encoder().encode(id()), proposition(), value(), nonce());
     }
 
     @Override

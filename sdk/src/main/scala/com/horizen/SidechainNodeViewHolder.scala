@@ -9,22 +9,23 @@ import com.horizen.node.SidechainNodeView
 import com.horizen.params.NetworkParams
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
+import com.horizen.utils.SDKModifiersCache
 import com.horizen.utils.BytesUtils
 import com.horizen.validation._
 import com.horizen.wallet.ApplicationWallet
 import scorex.core.NodeViewHolder.DownloadRequest
+import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import scorex.core.consensus.History.ProgressInfo
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages._
 import scorex.core.settings.ScorexSettings
+import scorex.core.transaction.Transaction
+import scorex.core.transaction.state.TransactionValidation
 import scorex.core.utils.NetworkTimeProvider
-import scorex.core.{bytesToVersion, idToVersion, versionToId}
-import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
+import scorex.core.{ModifiersCache, idToVersion, versionToId}
+import scorex.core.{idToVersion, versionToId}
+import scorex.util.{ModifierId, ScorexLogging}
 
-import java.util
 import scala.annotation.tailrec
-import scala.collection.JavaConverters.asScalaBufferConverter
-import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
 class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
@@ -32,12 +33,12 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                               consensusDataStorage: ConsensusDataStorage,
                               stateStorage: SidechainStateStorage,
                               forgerBoxStorage: SidechainStateForgerBoxStorage,
-                              utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
+                              utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
                               walletBoxStorage: SidechainWalletBoxStorage,
                               secretStorage: SidechainSecretStorage,
                               walletTransactionStorage: SidechainWalletTransactionStorage,
                               forgingBoxesInfoStorage: ForgingBoxesInfoStorage,
-                              cswDataStorage: SidechainWalletCswDataStorage,
+                              cswDataProvider: SidechainWalletCswDataProvider,
                               backupStorage: BackupStorage,
                               params: NetworkParams,
                               timeProvider: NetworkTimeProvider,
@@ -62,11 +63,14 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                             suffix: IndexedSeq[SidechainBlock])
 
   override val scorexSettings: ScorexSettings = sidechainSettings.scorexSettings
+  private var applyingBlock: Boolean = false
 
   lazy val listOfStorageInfo : Seq[SidechainStorageInfo] = Seq[SidechainStorageInfo](
     historyStorage, consensusDataStorage,
-    utxoMerkleTreeStorage, stateStorage, forgerBoxStorage,
-    secretStorage, walletBoxStorage, walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage)
+    utxoMerkleTreeProvider, stateStorage, forgerBoxStorage,
+    secretStorage, walletBoxStorage, walletTransactionStorage, forgingBoxesInfoStorage, cswDataProvider)
+
+  val maxTxFee = sidechainSettings.wallet.maxTxFee
 
   private def semanticBlockValidators(params: NetworkParams): Seq[SemanticBlockValidator] = Seq(new SidechainBlockSemanticValidator(params))
   private def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator] = Seq(
@@ -75,6 +79,12 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     new MainchainBlockReferenceValidator(params),
     new ConsensusValidator(timeProvider)
   )
+
+  /**
+   * Cache for modifiers. If modifiers are coming out-of-order, they are to be stored in this cache.
+   */
+  protected override lazy val modifiersCache: ModifiersCache[SidechainBlock, HIS] =
+    new SDKModifiersCache[SidechainBlock, HIS](scorexSettings.network.maxModifiersCacheSize)
 
   // this method is called at the startup after the load of the storages from the persistent db. It might happen that the node was not
   // stopped gracefully and therefore the consistency among storages might not be ensured. This method tries to recover this situation
@@ -192,10 +202,10 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     log.info("Restoring persistent state from storage...")
     val restoredData = for {
       history <- SidechainHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
-      state <- SidechainState.restoreState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, applicationState)
+      state <- SidechainState.restoreState(stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, params, applicationState)
       wallet <- SidechainWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes, walletBoxStorage, secretStorage,
-        walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, params, applicationWallet)
-      pool <- Some(SidechainMemoryPool.emptyPool)
+        walletTransactionStorage, forgingBoxesInfoStorage, cswDataProvider, params, applicationWallet)
+      pool <- Some(SidechainMemoryPool.createEmptyMempool(sidechainSettings.mempool))
     } yield (history, state, wallet, pool)
 
     val result = checkAndRecoverStorages(restoredData)
@@ -215,7 +225,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   def getStorageVersions: Map[String, String] =
     listOfStorageInfo.map(x => {
-      x.getClass.getSimpleName -> x.lastVersionId.map(value => BytesUtils.toHexString(value.data())).getOrElse("")
+      x.getStorageName -> x.lastVersionId.map(value => BytesUtils.toHexString(value.data())).getOrElse("")
     }).toMap
 
 
@@ -226,19 +236,19 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   override protected def genesisState: (HIS, MS, VL, MP) = {
     val result = for {
-      state <- SidechainState.createGenesisState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, backupStorage, params, applicationState, genesisBlock)
+      state <- SidechainState.createGenesisState(stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, backupStorage, params, applicationState, genesisBlock)
 
       (_: ModifierId, consensusEpochInfo: ConsensusEpochInfo) <- Success(state.getCurrentConsensusEpochInfo)
       withdrawalEpochNumber: Int <- Success(state.getWithdrawalEpochInfo.epoch)
 
       wallet <- SidechainWallet.createGenesisWallet(sidechainSettings.wallet.seed.getBytes, walletBoxStorage, secretStorage,
-        walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, backupStorage, params, applicationWallet,
+        walletTransactionStorage, forgingBoxesInfoStorage, cswDataProvider, backupStorage, params, applicationWallet,
         genesisBlock, withdrawalEpochNumber, consensusEpochInfo)
 
       history <- SidechainHistory.createGenesisHistory(historyStorage, consensusDataStorage, params, genesisBlock, semanticBlockValidators(params),
         historyBlockValidators(params), StakeConsensusEpochInfo(consensusEpochInfo.forgingStakeInfoTree.rootHash(), consensusEpochInfo.forgersStake))
 
-      pool <- Success(SidechainMemoryPool.emptyPool)
+      pool <- Success(SidechainMemoryPool.createEmptyMempool(sidechainSettings.mempool))
     } yield (history, state, wallet, pool)
 
     result.get
@@ -282,12 +292,68 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       }
   }
 
+
+  protected def processGetStorageVersions: Receive = {
+    case SidechainNodeViewHolder.ReceivableMessages.GetStorageVersions =>
+      sender() ! getStorageVersions
+  }
+
+  protected def processLocallyGeneratedTransaction: Receive = {
+    case newTxs: LocallyGeneratedTransaction[SidechainTypes#SCBT] =>
+      newTxs.txs.foreach(tx => {
+        if(tx.fee() > maxTxFee)
+          context.system.eventStream.publish(FailedTransaction(tx.asInstanceOf[Transaction].id, new IllegalArgumentException(s"Transaction ${tx.id()} with fee of ${tx.fee()} exceed the predefined MaxFee of ${maxTxFee}"),
+            immediateFailure = true))
+        else
+          txModify(tx)
+
+      })
+  }
+
   override def receive: Receive = {
       applyFunctionOnNodeView orElse
       applyBiFunctionOnNodeView orElse
       getCurrentSidechainNodeViewInfo orElse
       processLocallyGeneratedSecret orElse
+      processRemoteModifiers orElse
+      applyModifier orElse
+      processGetStorageVersions orElse
+      processLocallyGeneratedTransaction orElse
       super.receive
+  }
+
+  /**
+   * Process new modifiers from remote.
+   * Put all candidates to modifiersCache and then try to apply as much modifiers from cache as possible.
+   * Clear cache if it's size exceeds size limit.
+   * Publish `ModifiersProcessingResult` message with all just applied and removed from cache modifiers.
+   */
+  override protected def processRemoteModifiers: Receive = {
+    case scorex.core.NodeViewHolder.ReceivableMessages.ModifiersFromRemote(mods: Seq[SidechainBlock]) =>
+      mods.foreach(m => modifiersCache.put(m.id, m))
+
+      log.debug(s"Cache size before: ${modifiersCache.size}")
+
+      if (!applyingBlock) {
+        applyingBlock = true
+        self ! SidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(Seq())
+      }
+  }
+
+  def applyModifier: Receive = {
+    case SidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(applied: Seq[SidechainBlock]) => {
+      modifiersCache.popCandidate(history()) match {
+        case Some(mod) =>
+          pmodModify(mod)
+          self ! SidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(mod +: applied)
+        case None => {
+          val cleared = modifiersCache.cleanOverfull()
+          context.system.eventStream.publish(ModifiersProcessingResult(applied, cleared))
+          applyingBlock = false
+          log.debug(s"Cache size after: ${modifiersCache.size}")
+        }
+      }
+    }
   }
 
   // This method is actually a copy-paste of parent NodeViewHolder.pmodModify method.
@@ -316,7 +382,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                 log.info(s"Persistent modifier ${pmod.encodedId} applied successfully, now updating node view")
                 updateNodeView(Some(newHistory), Some(newState), Some(newWallet), Some(newMemPool))
 
-
+                log.debug(s"Current mempool size: ${newMemPool.getSize} transactions - ${newMemPool.usedSizeKBytes}kb (${newMemPool.usedPercentage}%)")
               case Failure(e) =>
                 log.warn(s"Can`t apply persistent modifier (id: ${pmod.encodedId}, contents: $pmod) to minimal state", e)
                 updateNodeView(updatedHistory = Some(newHistory))
@@ -442,7 +508,10 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
             val stateWithdrawalEpochNumber: Int = stateAfterApply.getWithdrawalEpochInfo.epoch
             val (historyResult, walletResult) = if (stateAfterApply.isWithdrawalEpochLastIndex) {
               val feePayments = stateAfterApply.getFeePayments(stateWithdrawalEpochNumber)
-              val historyAfterUpdateFee = newHistory.updateFeePaymentsInfo(modToApply.id, FeePaymentsInfo(feePayments))
+              var historyAfterUpdateFee = newHistory
+              if (feePayments.nonEmpty) {
+                historyAfterUpdateFee = newHistory.updateFeePaymentsInfo(modToApply.id, FeePaymentsInfo(feePayments))
+              }
 
               val walletAfterApply: SidechainWallet = newWallet.scanPersistent(modToApply, stateWithdrawalEpochNumber, feePayments, Some(stateAfterApply))
               (historyAfterUpdateFee, walletAfterApply)
@@ -472,11 +541,23 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 }
 
 object SidechainNodeViewHolder /*extends ScorexLogging with ScorexEncoding*/ {
-  object ReceivableMessages{
+  object ReceivableMessages {
     case class GetDataFromCurrentSidechainNodeView[HIS, MS, VL, MP, A](f: SidechainNodeView => A)
     case class ApplyFunctionOnNodeView[HIS, MS, VL, MP, A](f: java.util.function.Function[SidechainNodeView, A])
     case class ApplyBiFunctionOnNodeView[HIS, MS, VL, MP, T, A](f: java.util.function.BiFunction[SidechainNodeView, T, A], functionParameter: T)
     case class LocallyGeneratedSecret[S <: SidechainTypes#SCS](secret: S)
+    case object GetStorageVersions
+  }
+
+  private[horizen] object InternalReceivableMessages {
+    case class ApplyModifier(applied: Seq[SidechainBlock])
+    sealed trait NewLocallyGeneratedTransactions[TX <: Transaction]{
+      val txs: Iterable[TX]
+    }
+
+    case class LocallyGeneratedTransaction[TX <: Transaction](tx: TX) extends NewLocallyGeneratedTransactions[TX] {
+      override val txs: Iterable[TX] = Iterable(tx)
+    }
   }
 }
 
@@ -487,32 +568,32 @@ object SidechainNodeViewHolderRef {
             consensusDataStorage: ConsensusDataStorage,
             stateStorage: SidechainStateStorage,
             forgerBoxStorage: SidechainStateForgerBoxStorage,
-            utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
+            utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
             walletBoxStorage: SidechainWalletBoxStorage,
             secretStorage: SidechainSecretStorage,
             walletTransactionStorage: SidechainWalletTransactionStorage,
             forgingBoxesInfoStorage: ForgingBoxesInfoStorage,
-            cswDataStorage: SidechainWalletCswDataStorage,
+            cswDataProvider: SidechainWalletCswDataProvider,
             backupStorage: BackupStorage,
             params: NetworkParams,
             timeProvider: NetworkTimeProvider,
             applicationWallet: ApplicationWallet,
             applicationState: ApplicationState,
             genesisBlock: SidechainBlock): Props =
-    Props(new SidechainNodeViewHolder(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, backupStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock))
+    Props(new SidechainNodeViewHolder(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, walletBoxStorage, secretStorage,
+      walletTransactionStorage, forgingBoxesInfoStorage, cswDataProvider, backupStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock)).withMailbox("akka.actor.deployment.prio-mailbox")
 
   def apply(sidechainSettings: SidechainSettings,
             historyStorage: SidechainHistoryStorage,
             consensusDataStorage: ConsensusDataStorage,
             stateStorage: SidechainStateStorage,
             forgerBoxStorage: SidechainStateForgerBoxStorage,
-            utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
+            utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
             walletBoxStorage: SidechainWalletBoxStorage,
             secretStorage: SidechainSecretStorage,
             walletTransactionStorage: SidechainWalletTransactionStorage,
             forgingBoxesInfoStorage: ForgingBoxesInfoStorage,
-            cswDataStorage: SidechainWalletCswDataStorage,
+            cswDataProvider: SidechainWalletCswDataProvider,
             backupStorage: BackupStorage,
             params: NetworkParams,
             timeProvider: NetworkTimeProvider,
@@ -520,8 +601,8 @@ object SidechainNodeViewHolderRef {
             applicationState: ApplicationState,
             genesisBlock: SidechainBlock)
            (implicit system: ActorSystem): ActorRef =
-    system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, backupStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock))
+    system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, walletBoxStorage, secretStorage,
+      walletTransactionStorage, forgingBoxesInfoStorage, cswDataProvider, backupStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock).withMailbox("akka.actor.deployment.prio-mailbox"))
 
   def apply(name: String,
             sidechainSettings: SidechainSettings,
@@ -529,12 +610,12 @@ object SidechainNodeViewHolderRef {
             consensusDataStorage: ConsensusDataStorage,
             stateStorage: SidechainStateStorage,
             forgerBoxStorage: SidechainStateForgerBoxStorage,
-            utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
+            utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
             walletBoxStorage: SidechainWalletBoxStorage,
             secretStorage: SidechainSecretStorage,
             walletTransactionStorage: SidechainWalletTransactionStorage,
             forgingBoxesInfoStorage: ForgingBoxesInfoStorage,
-            cswDataStorage: SidechainWalletCswDataStorage,
+            cswDataProvider: SidechainWalletCswDataProvider,
             backupStorage: BackupStorage,
             params: NetworkParams,
             timeProvider: NetworkTimeProvider,
@@ -542,6 +623,6 @@ object SidechainNodeViewHolderRef {
             applicationState: ApplicationState,
             genesisBlock: SidechainBlock)
            (implicit system: ActorSystem): ActorRef =
-    system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, walletBoxStorage, secretStorage,
-      walletTransactionStorage, forgingBoxesInfoStorage, cswDataStorage, backupStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock), name)
+    system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, walletBoxStorage, secretStorage,
+      walletTransactionStorage, forgingBoxesInfoStorage, cswDataProvider, backupStorage, params, timeProvider, applicationWallet, applicationState, genesisBlock).withMailbox("akka.actor.deployment.prio-mailbox"), name)
 }

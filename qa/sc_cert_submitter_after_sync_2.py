@@ -4,7 +4,7 @@ import time
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import fail, assert_false, assert_true, start_nodes, \
+from test_framework.util import start_nodes, \
     websocket_port_by_mc_node_index
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, generate_next_block, connect_sc_nodes, sync_sc_blocks
@@ -58,7 +58,7 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
         )
 
         network = SCNetworkConfiguration(
-            SCCreationInfo(mc_node, self.sc_creation_amount, self.sc_withdrawal_epoch_length),
+            SCCreationInfo(mc_node, self.sc_creation_amount, self.sc_withdrawal_epoch_length, csw_enabled=True),
             sc_node_1_configuration,
             sc_node_2_configuration)
 
@@ -71,7 +71,7 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
     def do_cert_cycle(self, mc_node, sc_forger_node, sc_submitter_node, mc_blocks_in_epoch_left, additional_sc_blocks):
         # Generate MC blocks to reach one block before the end of the withdrawal epoch (WE)
         # 1 SC block contains MC block
-        for i in range(mc_blocks_in_epoch_left):
+        for i in range(mc_blocks_in_epoch_left - 1):
             mc_node.generate(1)
             generate_next_block(sc_forger_node, "node")
 
@@ -87,7 +87,12 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
         generate_next_block(sc_forger_node, "second node")  # 1 MC block to trigger Submitter logic
 
         # Wait for Certificates appearance
-        time.sleep(10)
+        time.sleep(5)
+        print("Waiting to start certificate generation.")
+        # The following line also checks Certificate Submitter Api during the node synchronization
+        while not sc_submitter_node.submitter_isCertGenerationActive()["result"]["state"]:
+            time.sleep(1)
+
         while mc_node.getmempoolinfo()["size"] < 1 and sc_submitter_node.submitter_isCertGenerationActive()["result"]["state"]:
             print("Wait for certificates in the MC mempool...")
             if sc_submitter_node.submitter_isCertGenerationActive()["result"]["state"]:
@@ -108,9 +113,11 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
         connect_sc_nodes(sc_node1, 1)  # Connect SC nodes
 
         print("Starting synchronization...")
-        time.sleep(100)
-        # TODO: use sync blocks instead of timeout above as soon as an api calls on sync will work.
-        #sync_sc_blocks(self.sc_nodes, 100)
+        time.sleep(20)
+        # The following lines checks Certificate Submitter Api during the node synchronization
+        assert_equal(True, sc_node2.submitter_isCertificateSubmitterEnabled()["result"]["enabled"])
+        assert_equal(True, sc_node2.submitter_isCertificateSubmitterEnabled()["result"]["enabled"])
+        sync_sc_blocks(self.sc_nodes, 500, True)
         print("Synchronization finished.")
 
         # Disable sc node 1 submitter

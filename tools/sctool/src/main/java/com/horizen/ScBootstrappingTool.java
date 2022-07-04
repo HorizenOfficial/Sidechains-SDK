@@ -8,6 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class ScBootstrappingTool {
+
     public static void main(String args[]) {
 
         // initialize log properties since this app uses log4j from sdk libraries
