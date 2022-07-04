@@ -14,3 +14,4 @@ qa/tmp
 hs_err*
 log
 *.bkp*
+**/contracts/compiled/**
