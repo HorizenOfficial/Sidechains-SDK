@@ -169,6 +169,8 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     }
 
     val forgingStakeInfoSeq : Seq[ForgingStakeInfo] = stateViewFromRoot.getOrderedForgingStakeInfoSeq
+    // release resources
+    stateViewFromRoot.close()
 
     // 3. using wallet secrets, filter out the not-mine forging stakes
     val secrets : Seq[Secret] = wallet.allSecrets().asScala

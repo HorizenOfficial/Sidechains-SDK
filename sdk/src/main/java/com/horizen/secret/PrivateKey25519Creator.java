@@ -3,6 +3,7 @@ package com.horizen.secret;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.node.NodeWallet;
+import com.horizen.node.NodeWalletBase;
 import com.horizen.utils.Ed25519;
 import com.horizen.utils.Pair;
 import scorex.crypto.hash.Blake2b256;
@@ -32,7 +33,7 @@ public final class PrivateKey25519Creator implements SecretCreator<PrivateKey255
     }
 
     @Override
-    public PrivateKey25519 generateNextSecret(NodeWallet wallet) {
+    public PrivateKey25519 generateNextSecret(NodeWalletBase wallet) {
         List<Secret> prevSecrets = wallet.secretsOfType(PrivateKey25519.class);
         byte[] nonce = Ints.toByteArray(prevSecrets.size());
         byte[] seed = Blake2b256.hash(Bytes.concat(wallet.walletSeed(), nonce));
