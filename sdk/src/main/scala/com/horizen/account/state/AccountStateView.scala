@@ -175,12 +175,20 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
       throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
 
     val ethTx = tx.asInstanceOf[EthereumTransaction]
+
     // Do the checks and prepay gas
     val bookedGasPrice: BigInteger = preCheck(ethTx)
 
+    // Set Tx context for stateDB, to know where to keep EvmLogs
     setupTxContext(ethTx)
-    val revisionId: Int = stateDb.snapshot()
     val message: Message = Message.fromTransaction(ethTx)
+
+    // Increase the nonce by 1
+    increaseNonce(message.getFrom.address())
+
+    // Create a snapshot to know where to rollback in case of Message processing failure
+    val revisionId: Int = stateDb.snapshot()
+
     val processor = messageProcessors.find(_.canProcess(message, this)).getOrElse(
       throw new IllegalArgumentException(s"Transaction ${ethTx.id} has no known processor.")
     )
@@ -220,6 +228,11 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     require(balance.compareTo(amount) >= 0)
 
     stateDb.subBalance(address, amount)
+  }
+
+  override def increaseNonce(address: Array[Byte]): Try[Unit] = Try {
+    val currentNonce: BigInteger = getNonce(address)
+    stateDb.setNonce(address, currentNonce.add(BigInteger.ONE))
   }
 
   override def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Try[Unit] = Try {

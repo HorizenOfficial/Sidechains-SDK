@@ -14,6 +14,8 @@ trait BaseAccountStateView extends AccountStateReader {
 
   def subBalance(address: Array[Byte], amount: BigInteger): Try[Unit]
 
+  def increaseNonce(address: Array[Byte]): Try[Unit]
+
   def isSmartContractAccount(address: Array[Byte]): Boolean
 
   def getAccountStorage(address: Array[Byte], key: Array[Byte]): Try[Array[Byte]]
