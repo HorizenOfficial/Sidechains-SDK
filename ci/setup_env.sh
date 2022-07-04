@@ -37,7 +37,6 @@ function check_signed_tag() {
     echo "${1} is a valid signed tag"
   else
     echo "Git tag's = ${1} gpg signature is NOT valid. The build is not going to be released..."
-    return 99
   fi
 }
 
@@ -48,17 +47,14 @@ if [ -n "${TRAVIS_TAG}" ]; then
   # checking if MAINTAINER_KEYS is set
   if [ -z "${MAINTAINER_KEYS}" ]; then
     echo "MAINTAINER_KEYS variable is not set. Make sure to set it up for release build!!!"
-    exit 1
   fi
 
+  # shellcheck disable=SC2155
   export GNUPGHOME="$(mktemp -d 2>/dev/null || mktemp -d -t 'GNUPGHOME')"
-  # shellcheck disable=SC2086
-  import_gpg_keys ${MAINTAINER_KEYS}
+  import_gpg_keys "${MAINTAINER_KEYS}"
 
   # Checking git tag gpg signature requirement
   if (check_signed_tag "${TRAVIS_TAG}"); then
-    echo "" && echo "=== Release build ===" && echo ""
-
     if [ "${pom_version}" != "$simpleapp_version" ] || [ "${pom_version}" != "$sdk_version" ] || [ "${pom_version}" != "$sctool_version" ]; then
       echo "Aborting, mismatch in at least one of the pom.xml version number."
       exit 1
@@ -71,6 +67,7 @@ if [ -n "${TRAVIS_TAG}" ]; then
       echo "Aborting, tag format differs from the pom file."
       exit 1
     else
+      echo "" && echo "=== Release build ===" && echo ""
       export CONTAINER_PUBLISH="true"
       echo "Fetching maven gpg signing keys."
       curl -sLH "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3.raw" "${MAVEN_KEY_ARCHIVE_URL}" |
