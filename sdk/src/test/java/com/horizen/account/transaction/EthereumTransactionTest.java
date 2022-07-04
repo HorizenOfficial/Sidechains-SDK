@@ -243,8 +243,10 @@ public class EthereumTransactionTest {
             throw new RuntimeException(e);
         }
 
+        /* semantic validity now works
         assertThrows("Semantic validity should fail", TransactionSemanticValidityException.class,
                 ethereumTransaction::semanticValidity);
+         */
 
         // Test 4: ethereum transaction object returns transaction type id correctly
         assertEquals((byte) 2, ethereumTransaction.transactionTypeId());

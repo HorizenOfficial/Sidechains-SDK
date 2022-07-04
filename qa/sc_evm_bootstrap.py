@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
 import json
 import pprint
+from decimal import Decimal
 
 import test_framework.util
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, Account, LARGE_WITHDRAWAL_EPOCH_LENGTH
+from SidechainTestFramework.sc_forging_util import sc_create_forging_stake_mempool
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, assert_true, start_nodes, \
-    websocket_port_by_mc_node_index
+    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, COIN
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, is_mainchain_block_included_in_sc_block, check_box_balance, \
     check_mainchain_block_reference_info, check_wallet_coins_balance, check_box_balance, get_lib_separator, \
-    AccountModelBlockVersion, EVM_APP_BINARY, generate_next_blocks, generate_next_block
+    AccountModelBlockVersion, EVM_APP_BINARY, generate_next_blocks, generate_next_block, generate_account_proposition, \
+    convertZenniesToWei, convertZenToZennies
 
 """
 Check the EVM bootstrap feature.
@@ -69,30 +72,76 @@ class SCEvmBootstrap(SidechainTestFramework):
             check_mainchain_block_reference_info(sc_mc_best_block_ref_info, mc_block),
             "The mainchain block is not included inside SC block reference info.")
 
+        mc_return_address = self.nodes[0].getnewaddress()
+        #evm_address = generate_account_proposition("seed2", 1)[0]
+
+        ret = sc_node.wallet_createPrivateKeySecp256k1()
+        pprint.pprint(ret)
+        evm_address = ret["result"]["proposition"]["address"]
+        print("pubkey = {}".format(evm_address))
+
+        # call a legacy wallet api
+        ret = sc_node.wallet_allPublicKeys()
+        pprint.pprint(ret)
+
+        ft_amount_in_zen = Decimal("33.22")
+        ft_amount_in_zennies = convertZenToZennies(ft_amount_in_zen)
+        ft_amount_in_wei = convertZenniesToWei(ft_amount_in_zennies)
+
+        # transfer some fund from MC to SC using the evm address created before
+        forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
+                                      self.nodes[0],
+                                      evm_address,
+                                      ft_amount_in_zen,
+                                      mc_return_address)
+
         #input("\n\t======> Enter any input to continue generating a new sc block...")
-        generate_next_blocks(sc_node, "first node", 1)[0]
+        generate_next_blocks(sc_node, "first node", 1)
         self.sc_sync_all()
         sc_best_block = sc_node.block_best()["result"]
         assert_equal(sc_best_block["height"], 2, "The best block has not the specified height.")
+        pprint.pprint(sc_best_block)
+        pprint.pprint(sc_node.rpc_eth_getBalance(str(evm_address), "1"))
+
+        '''
+        # TODO
+        # Make and activate forging stake for the SC node 1
+        stake_amount = 1.234
+        sc_create_forging_stake_mempool(sc_node, stake_amount)
+        self.sc_sync_all()  # Sync SC nodes mempools
+        # Generate SC block with ForgerStake creation TX
+        generate_next_block(sc_node, "first node")
+        '''
 
         #input("\n\t======> Enter any input to continue generating blocks till next consensus epoch...")
         # Generate SC block on SC node 1 for the next consensus epoch
         generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
         self.sc_sync_all()
 
-        #input("\n\t======> Enter any input to continue generating blocks till next consensus epoch...")
-        # Generate SC block on SC node 1 for the next consensus epoch
-        generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
-        self.sc_sync_all()
 
         sc_best_block = sc_node.block_best()["result"]
         pprint.pprint(sc_best_block)
 
-        # send an eth tx to mempool
-        amount = 1000
+        j = {"address": str(evm_address)}
+        balance_request = json.dumps(j)
+
+        # balance is in wei
+        initial_balance = sc_node.wallet_getBalance(balance_request)["result"]["balance"]
+        assert_equal(ft_amount_in_wei, initial_balance )
+
+        # Create an EOA to EOA transaction moving some fund to a new address not known by wallet.
+        # Amount should be expressed in zennies
+        transferred_amount = Decimal(12.34)
+        transferred_amount_in_zennies = convertZenToZennies(transferred_amount)
+        transferred_amount_in_wei = convertZenniesToWei(transferred_amount_in_zennies)
+
+        recipientKeys = generate_account_proposition("seed3", 1)[0]
+        print("Trying to send {} zen to address {}".format(transferred_amount, recipientKeys.proposition))
+
         j = {
-            "to": "abcdeabcdeabcdeabcdeabcdeabcdeabcdeabcde", # must be 20 bytes
-            "value": amount
+            "from": str(evm_address),
+            "to": recipientKeys.proposition,
+            "value": transferred_amount_in_zennies
         }
         request = json.dumps(j)
         response = sc_node.transaction_sendCoinsToAddress(request)
@@ -104,15 +153,25 @@ class SCEvmBootstrap(SidechainTestFramework):
         print("mempool contents:")
         pprint.pprint(response)
 
+        # tx json repr has amount in wei
+        tx_amount_in_wei = response["result"]["transactions"][0]["value"]
+        assert_equal(str(tx_amount_in_wei), str(transferred_amount_in_wei))
+
         # request chainId via rpc route
         print("rpc response:")
         pprint.pprint(sc_node.rpc_eth_chainId())
 
         # request getBalance via rpc route
         print("rpc response:")
-        pprint.pprint(sc_node.rpc_eth_getBalance("0x0", "1"))
+        pprint.pprint(sc_node.rpc_eth_getBalance(str(evm_address), "1"))
 
+        generate_next_blocks(sc_node, "first node", 1)
+        self.sc_sync_all()
+        sc_best_block = sc_node.block_best()["result"]
+        pprint.pprint(sc_best_block)
 
+        final_balance = sc_node.wallet_getBalance(balance_request)["result"]["balance"]
+        assert_equal(initial_balance - transferred_amount_in_wei, final_balance )
 
 if __name__ == "__main__":
     SCEvmBootstrap().main()

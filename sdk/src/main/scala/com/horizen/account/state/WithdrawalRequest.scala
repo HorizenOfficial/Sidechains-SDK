@@ -1,5 +1,6 @@
 package com.horizen.account.state
 
+import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.proposition.{MCPublicKeyHashProposition, MCPublicKeyHashPropositionSerializer}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
@@ -8,6 +9,8 @@ case class WithdrawalRequest(proposition: MCPublicKeyHashProposition, value: jav
   override type M = WithdrawalRequest
 
   override def serializer: ScorexSerializer[WithdrawalRequest] = WithdrawalRequestSerializer
+
+  val valueInZennies: Long = ZenWeiConverter.convertWeiToZennies(value)
 }
 
 object WithdrawalRequestSerializer extends ScorexSerializer[WithdrawalRequest] {

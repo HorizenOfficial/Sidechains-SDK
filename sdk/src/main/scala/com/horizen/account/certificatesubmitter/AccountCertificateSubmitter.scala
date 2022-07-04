@@ -7,9 +7,11 @@ import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.state.AccountState
 import com.horizen.account.storage.AccountHistoryStorage
+import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter
+import com.horizen.certnative.BackwardTransfer
 import com.horizen.params.NetworkParams
 import com.horizen.websocket.client.MainchainNodeChannel
 
@@ -49,8 +51,9 @@ class AccountCertificateSubmitter(settings: SidechainSettings,
   override def getUtxoMerkleTreeRoot(state: AccountState, referencedEpoch: Int): Array[Byte] =
     new Array[Byte](0)
 
-  override def getWithdrawalRequests(state: AccountState, referencedEpochNumber: Int): Seq[WithdrawalRequestBox] =
-    state.withdrawalRequests(referencedEpochNumber)
+  override def getWithdrawalRequests(state: AccountState, referencedEpochNumber: Int): Seq[BackwardTransfer] =
+    state.withdrawalRequests(referencedEpochNumber).map(request => new BackwardTransfer(request.proposition.bytes, request.valueInZennies))
+
 }
 
 object AccountCertificateSubmitterRef {
