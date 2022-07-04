@@ -136,11 +136,11 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     // Check the nonce
     val stateNonce: BigInteger = getNonce(tx.getFrom.address())
     val txNonce: BigInteger = tx.getNonce
-    stateNonce.compareTo(txNonce) match {
-      case res if res > 0 =>
-        throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: nonce ${txNonce} is to high (expected nonce is $stateNonce)")
-      case res if res < 0 =>
-        throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: nonce ${txNonce} is to low (expected nonce is $stateNonce)")
+    val result = stateNonce.compareTo(txNonce)
+    if (result > 0) {
+      throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: nonce ${txNonce} is to high (expected nonce is $stateNonce)")
+    } else if (result < 0) {
+      throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: nonce ${txNonce} is to low (expected nonce is $stateNonce)")
     }
     if(txNonce.add(BigInteger.ONE).compareTo(txNonce) < 0)
       throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: nonce ${txNonce} reached the max value")
