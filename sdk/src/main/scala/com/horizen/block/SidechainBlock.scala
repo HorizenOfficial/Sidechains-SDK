@@ -24,7 +24,7 @@ import scala.util.Try
 @JsonView(Array(classOf[Views.Default]))
 @JsonIgnoreProperties(Array("messageToSign", "transactions", "version", "serializer", "modifierTypeId", "encoder", "companion", "feeInfo", "forgerPublicKey"))
 class SidechainBlock(override val header: SidechainBlockHeader,
-                     override val sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]],
+                     override val sidechainTransactions: Seq[SidechainTypes#SCBT],
                      override val mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
                      override val mainchainHeaders: Seq[MainchainHeader],
                      override val ommers: Seq[Ommer[SidechainBlockHeader]],
@@ -74,7 +74,7 @@ object SidechainBlock extends ScorexEncoding {
              blockVersion: Block.Version,
              timestamp: Block.Timestamp,
              mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-             sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]],
+             sidechainTransactions: Seq[SidechainTypes#SCBT],
              mainchainHeaders: Seq[MainchainHeader],
              ommers: Seq[Ommer[SidechainBlockHeader]],
              ownerPrivateKey: PrivateKey25519,
@@ -150,7 +150,7 @@ object SidechainBlock extends ScorexEncoding {
     block
   }
 
-  def calculateTransactionsMerkleRootHash(sidechainTransactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]]): Array[Byte] = {
+  def calculateTransactionsMerkleRootHash(sidechainTransactions: Seq[SidechainTypes#SCBT]): Array[Byte] = {
     if(sidechainTransactions.nonEmpty)
       MerkleTree.createMerkleTree(sidechainTransactions.map(tx => idToBytes(ModifierId @@ tx.id)).asJava).rootHash()
     else
@@ -187,8 +187,7 @@ class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extend
     require(r.remaining <= SidechainBlockBase.MAX_BLOCK_SIZE)
 
     val sidechainBlockHeader: SidechainBlockHeader = SidechainBlockHeaderSerializer.parse(r)
-    val sidechainTransactions = sidechainTransactionsSerializer.parse(r)
-      .asScala.map(t => t.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]])
+    val sidechainTransactions = sidechainTransactionsSerializer.parse(r).asScala
     val mainchainBlockReferencesData = mcBlocksDataSerializer.parse(r).asScala
     val mainchainHeaders = mainchainHeadersSerializer.parse(r).asScala
     val ommers = ommersSerializer.parse(r).asScala

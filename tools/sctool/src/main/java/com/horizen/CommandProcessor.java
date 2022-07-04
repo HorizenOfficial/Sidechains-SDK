@@ -31,6 +31,7 @@ import com.horizen.proof.VrfProof;
 import com.horizen.proposition.Proposition;
 import com.horizen.proposition.PropositionSerializer;
 import com.horizen.secret.*;
+import com.horizen.transaction.BoxTransaction;
 import com.horizen.transaction.SidechainTransaction;
 import com.horizen.transaction.mainchain.SidechainCreation;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
@@ -650,7 +651,8 @@ public class CommandProcessor {
                         block_version,
                         timestamp,
                         scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.data())).asScala().toSeq(),
-                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, Box<Proposition>>>()).asScala().toSeq(),
+                       // scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, Box<Proposition>>>()).asScala().toSeq(),
+                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<BoxTransaction<Proposition, Box<Proposition>>>()).asScala().toSeq(),
                         scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.header())).asScala().toSeq(),
                         scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer<SidechainBlockHeader>>()).asScala().toSeq(),
                         key,

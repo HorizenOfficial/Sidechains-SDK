@@ -1,6 +1,5 @@
 package com.horizen.forge
 
-import akka.util.Timeout
 import com.horizen.block._
 import com.horizen.box.Box
 import com.horizen.companion.SidechainTransactionsCompanion
@@ -10,16 +9,14 @@ import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.SidechainHistoryStorage
-import com.horizen.transaction.{SidechainTransaction, Transaction, TransactionSerializer}
+import com.horizen.transaction.{SidechainTransaction, TransactionSerializer}
 import com.horizen.utils.{DynamicTypedSerializer, FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree}
-import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainTypes, SidechainWallet}
-import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
-import scorex.util.{ModifierId}
-
-import scala.collection.JavaConverters._
+import com.horizen._
 import scorex.core.NodeViewModifier
 import scorex.core.block.Block.{BlockId, Timestamp}
+import scorex.util.ModifierId
 
+import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
 class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
@@ -30,8 +27,8 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     SidechainTypes#SCBT,
     SidechainBlockHeader,
     SidechainBlock](
-  mainchainSynchronizer, companion, params, allowNoWebsocketConnectionInRegtest
-) {
+    mainchainSynchronizer, companion, params, allowNoWebsocketConnectionInRegtest
+  ) {
   type HSTOR = SidechainHistoryStorage
   type VL = SidechainWallet
   type HIS = SidechainHistory
@@ -39,23 +36,22 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   type MP = SidechainMemoryPool
 
   override def createNewBlock(
-                 nodeView: View,
-                 branchPointInfo: BranchPointInfo,
-                 isWithdrawalEpochLastBlock: Boolean,
-                 parentId: BlockId,
-                 timestamp: Timestamp,
-                 mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-                 sidechainTransactions: Seq[Transaction],
-                 mainchainHeaders: Seq[MainchainHeader],
-                 ommers: Seq[Ommer[SidechainBlockHeader]],
-                 ownerPrivateKey: PrivateKey25519,
-                 forgingStakeInfo: ForgingStakeInfo,
-                 vrfProof: VrfProof,
-                 forgingStakeInfoMerklePath: MerklePath,
-                 companion: DynamicTypedSerializer[SidechainTypes#SCBT, TransactionSerializer[SidechainTypes#SCBT]],
-                 signatureOption: Option[Signature25519]) : Try[SidechainBlockBase[SidechainTypes#SCBT, SidechainBlockHeader]] =
-  {
-    val feePayments = if(isWithdrawalEpochLastBlock) {
+                               nodeView: View,
+                               branchPointInfo: BranchPointInfo,
+                               isWithdrawalEpochLastBlock: Boolean,
+                               parentId: BlockId,
+                               timestamp: Timestamp,
+                               mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
+                               sidechainTransactions: Seq[SidechainTypes#SCBT],
+                               mainchainHeaders: Seq[MainchainHeader],
+                               ommers: Seq[Ommer[SidechainBlockHeader]],
+                               ownerPrivateKey: PrivateKey25519,
+                               forgingStakeInfo: ForgingStakeInfo,
+                               vrfProof: VrfProof,
+                               forgingStakeInfoMerklePath: MerklePath,
+                               companion: DynamicTypedSerializer[SidechainTypes#SCBT, TransactionSerializer[SidechainTypes#SCBT]],
+                               signatureOption: Option[Signature25519]): Try[SidechainBlockBase[SidechainTypes#SCBT, SidechainBlockHeader]] = {
+    val feePayments = if (isWithdrawalEpochLastBlock) {
       // Current block is expect to be the continuation of the current tip, so there are no ommers.
       require(nodeView.history.bestBlockId == branchPointInfo.branchPointId, "Last block of the withdrawal epoch expect to be a continuation of the tip.")
       require(ommers.isEmpty, "No Ommers allowed for the last block of the withdrawal epoch.")
@@ -67,9 +63,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
         SidechainBlock.BLOCK_VERSION,
         timestamp,
         mainchainBlockReferencesData,
-        // TODO check, why this works?
-        //  sidechainTransactions.map(asInstanceOf),
-        sidechainTransactions.map(x => x.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]),
+        sidechainTransactions,
         mainchainHeaders,
         ommers,
         ownerPrivateKey,
@@ -137,8 +131,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     header.bytes.length
   }
 
-  override def collectTransactionsFromMemPool(nodeView: View, isWithdrawalEpochLastBlock: Boolean, blockSizeIn: Int): Seq[SidechainTypes#SCBT] =
-  {
+  override def collectTransactionsFromMemPool(nodeView: View, isWithdrawalEpochLastBlock: Boolean, blockSizeIn: Int): Seq[SidechainTypes#SCBT] = {
     var blockSize: Int = blockSizeIn
     if (isWithdrawalEpochLastBlock) { // SC block is going to become the last block of the withdrawal epoch
       Seq() // no SC Txs allowed
@@ -163,7 +156,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   }
 
   override def getForgingStakeMerklePathInfo(nextConsensusEpochNumber: ConsensusEpochNumber, wallet: SidechainWallet, history: SidechainHistory, state: SidechainState, branchPointInfo: BranchPointInfo, nextBlockTimestamp: Long): Seq[ForgingStakeMerklePathInfo] =
-     wallet.getForgingStakeMerklePathInfoOpt(nextConsensusEpochNumber).getOrElse(Seq())
+    wallet.getForgingStakeMerklePathInfoOpt(nextConsensusEpochNumber).getOrElse(Seq())
 
 }
 

@@ -8,7 +8,8 @@ import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
-import com.horizen.utils.{MerklePath, Utils}
+import com.horizen.transaction.TransactionSerializer
+import com.horizen.utils.{DynamicTypedSerializer, MerklePath, Utils}
 import com.horizen.validation.InconsistentSidechainBlockDataException
 import com.horizen.{ScorexEncoding, SidechainTypes, account}
 import scorex.core.block.Block
