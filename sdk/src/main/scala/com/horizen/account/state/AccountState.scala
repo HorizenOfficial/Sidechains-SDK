@@ -264,6 +264,8 @@ class AccountState(val params: NetworkParams,
   override def getAccountStateRoot: Option[Array[Byte]] = getView.getAccountStateRoot
 
   override def getCodeHash(address: Array[Byte]): Array[Byte] = getView.getCodeHash(address)
+
+  override def getNonce(address: Array[Byte]): Try[java.math.BigInteger] = ???
 }
 
 

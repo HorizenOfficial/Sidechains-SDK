@@ -18,7 +18,6 @@ import org.web3j.protocol.core.methods.response.Transaction;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
 import org.web3j.utils.Numeric;
 
-import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -38,7 +37,7 @@ public class EthService extends RpcService {
     @RpcMethod("eth_getBlockByNumber")
     public EthBlock.Block getBlockByNumber(Quantity tag, Boolean rtnTxObj) {
         //TODO: Implement getting block information
-        nodeView.getNodeHistory().getBlockById(tag.getValue());
+        //nodeView.getNodeHistory().getBlockById(tag.getValue());
         return new EthBlock.Block("0x1", "0x56",
                 "0x57", "0x58", "0x59",
                 "0x0", "0x0",
@@ -58,7 +57,7 @@ public class EthService extends RpcService {
 
     @RpcMethod("eth_blockNumber")
     public Quantity blockNumber() {
-        return new Quantity(String.valueOf(getBestBlock().header().id()));
+        return new Quantity(String.valueOf(getBlockHeight()));
     }
 
     @RpcMethod("eth_chainId")
@@ -73,8 +72,9 @@ public class EthService extends RpcService {
 
     @RpcMethod("eth_getTransactionCount")
     public Quantity getTransactionCount(Data address, Quantity tag) {
-        // return nonce of address
-        return new Quantity("0x5");
+        if (!nodeView.getNodeState().getNonce(address.getValue()).isFailure())
+            return new Quantity(Numeric.toHexStringWithPrefix(nodeView.getNodeState().getNonce(address.getValue()).get()));
+        return new Quantity("0x0");
     }
 
     @RpcMethod("net_version")
@@ -173,6 +173,10 @@ public class EthService extends RpcService {
 
     private AddressProposition getTo(Optional<AccountTransaction<Proposition, Proof<Proposition>>> tx) {
         return (AddressProposition) tx.get().getTo();
+    }
+
+    private int getBlockHeight() {
+        return nodeView.getNodeHistory().getCurrentHeight();
     }
 
     private AccountBlock getBestBlock() {
