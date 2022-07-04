@@ -72,9 +72,8 @@ public class EthService extends RpcService {
 
     @RpcMethod("eth_getTransactionCount")
     public Quantity getTransactionCount(Data address, Quantity tag) {
-        if (!nodeView.getNodeState().getNonce(address.getValue()).isFailure())
-            return new Quantity(Numeric.toHexStringWithPrefix(nodeView.getNodeState().getNonce(address.getValue()).get()));
-        return new Quantity("0x0");
+        BigInteger nonce = nodeView.getNodeState().getNonce(address.getValue());
+        return new Quantity(Numeric.toHexStringWithPrefix(nonce));
     }
 
     @RpcMethod("net_version")

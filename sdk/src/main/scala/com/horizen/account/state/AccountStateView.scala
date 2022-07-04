@@ -251,13 +251,8 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
   override def maxRollbackDepth: Int = ???
 
   // getters
-  override def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequestBox] = {
-    val listOfWr = withdrawalReqProvider.getListOfWithdrawalReqRecords(withdrawalEpoch, this)
-    listOfWr.map(wr => {
-      val boxData = new WithdrawalRequestBoxData(wr.proposition, ZenWeiConverter.convertWeiToZennies(wr.value))
-      new WithdrawalRequestBox(boxData, 0)
-    })
-  }
+  override def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] =
+    withdrawalReqProvider.getListOfWithdrawalReqRecords(withdrawalEpoch, this)
 
   override def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
     metadataStorageView.getTopQualityCertificate(referencedWithdrawalEpoch)
@@ -289,13 +284,12 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     stateDb.getBalance(address)
   }
 
-  override def getNonce(address: Array[Byte]): Try[java.math.BigInteger] = Try {
-    stateDb.getNonce(address);
-  }
-
-
   override def getCodeHash(address: Array[Byte]): Array[Byte] = {
     stateDb.getCodeHash(address)
+  }
+
+  override def getNonce(address: Array[Byte]): BigInteger = {
+    stateDb.getNonce(address)
   }
 
   override def getAccountStateRoot: Option[Array[Byte]] = metadataStorageView.getAccountStateRoot

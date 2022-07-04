@@ -5,6 +5,7 @@ import com.google.common.primitives.Ints;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
 import com.horizen.cryptolibprovider.SchnorrFunctions.KeyType;
 import com.horizen.node.NodeWallet;
+import com.horizen.node.NodeWalletBase;
 import scorex.crypto.hash.Blake2b256;
 
 import java.util.EnumMap;
@@ -33,7 +34,7 @@ public class SchnorrKeyGenerator implements SecretCreator<SchnorrSecret> {
     }
 
     @Override
-    public SchnorrSecret generateNextSecret(NodeWallet wallet) {
+    public SchnorrSecret generateNextSecret(NodeWalletBase wallet) {
         List<Secret> prevSecrets = wallet.secretsOfType(SchnorrSecret.class);
         byte[] nonce = Ints.toByteArray(prevSecrets.size());
         byte[] seed = Blake2b256.hash(Bytes.concat(wallet.walletSeed(), nonce));

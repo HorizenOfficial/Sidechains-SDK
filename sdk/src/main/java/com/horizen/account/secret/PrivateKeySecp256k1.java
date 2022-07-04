@@ -17,7 +17,7 @@ import java.util.Arrays;
 import static com.horizen.account.secret.SecretsIdsEnum.PrivateKeySecp256k1SecretId;
 
 public final class PrivateKeySecp256k1 implements Secret {
-    private static final byte privateKey25519SecretId = PrivateKeySecp256k1SecretId.id();
+    private static final byte privateKeySecp256k1SecretId = PrivateKeySecp256k1SecretId.id();
 
     private final byte[] privateKey;
 
@@ -34,7 +34,7 @@ public final class PrivateKeySecp256k1 implements Secret {
 
     @Override
     public byte secretTypeId() {
-        return privateKey25519SecretId;
+        return privateKeySecp256k1SecretId;
     }
 
     @Override

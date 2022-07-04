@@ -4,6 +4,7 @@ import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.horizen.node.NodeWallet;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
+import com.horizen.node.NodeWalletBase;
 import scorex.crypto.hash.Blake2b256;
 import com.horizen.cryptolibprovider.VrfFunctions.KeyType;
 import java.util.EnumMap;
@@ -32,7 +33,7 @@ public class VrfKeyGenerator implements SecretCreator<VrfSecretKey> {
     }
 
     @Override
-    public VrfSecretKey generateNextSecret(NodeWallet wallet) {
+    public VrfSecretKey generateNextSecret(NodeWalletBase wallet) {
         List<Secret> prevSecrets = wallet.secretsOfType(VrfSecretKey.class);
         byte[] nonce = Ints.toByteArray(prevSecrets.size());
         byte[] seed = Blake2b256.hash(Bytes.concat(wallet.walletSeed(), nonce));

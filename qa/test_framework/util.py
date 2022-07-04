@@ -25,7 +25,7 @@ import re
 
 from test_framework.authproxy import AuthServiceProxy
 
-COIN = 100000000 # 1 zen in zatoshis
+COIN = 100000000 # 1 zen in zatoshis, aka zennies
 
 def p2p_port(n):
     return 11000 + n + os.getpid()%999
