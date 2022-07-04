@@ -5,6 +5,7 @@ import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.block._
 import com.horizen.consensus.ForgingStakeInfo
+import com.horizen.evm.TrieHasher
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
@@ -24,8 +25,7 @@ class AccountBlock(override val header: AccountBlockHeader,
                    override val mainchainHeaders: Seq[MainchainHeader],
                    override val ommers: Seq[Ommer[AccountBlockHeader]],
                    companion: SidechainAccountTransactionsCompanion)
-  extends SidechainBlockBase[SidechainTypes#SCAT, AccountBlockHeader] with ScorexLogging
-{
+  extends SidechainBlockBase[SidechainTypes#SCAT, AccountBlockHeader] with ScorexLogging {
   override type M = AccountBlock
 
   override lazy val serializer = new AccountBlockSerializer(companion)
@@ -36,7 +36,13 @@ class AccountBlock(override val header: AccountBlockHeader,
 
   @throws(classOf[InconsistentSidechainBlockDataException])
   override def verifyTransactionsDataConsistency(): Unit = {
-    // TODO: use Ethereum friendly merkle tree implementation
+    // verify Ethereum friendly transaction root hash
+    val txRootHash = TrieHasher.Root(sidechainTransactions.map(tx => tx.bytes).toArray)
+    if (!java.util.Arrays.equals(txRootHash, header.sidechainTransactionsMerkleRootHash)) {
+      log.error("CHECK IS DISABLED: update forger & bootstrapping tool first!")
+      // TODO: uncomment when ready
+      //throw new InconsistentSidechainBlockDataException("invalid transaction root hash")
+    }
   }
 
   override def versionIsValid(): Boolean = version == AccountBlock.ACCOUNT_BLOCK_VERSION
@@ -137,7 +143,11 @@ object AccountBlock extends ScorexEncoding {
   }
 
   def calculateTransactionsMerkleRootHash(sidechainTransactions: Seq[SidechainTypes#SCAT]): Array[Byte] = {
-    // TODO: Use Eth friendly way to calculate merkle tree root.
+    // calculate Ethereum friendly transaction root hash
+    // TODO: this assumes the binary representation of transactions exactly match the ethereum RLP encoding,
+    //  which is not true currently because the serializer prepends the payload with the length
     Utils.ZEROS_HASH
+    // TODO: uncomment this when ready. Note: case with no txs.
+    //TrieHasher.Root(sidechainTransactions.map(tx => tx.bytes).toArray)
   }
 }
