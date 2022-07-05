@@ -102,7 +102,6 @@ class SCNodeConfiguration(object):
                  mempool_min_fee_rate = 0,
                  api_key=DEFAULT_API_KEY,
                  max_fee=10000000,
-                 forger_options = SCForgerConfiguration(),
                  initial_private_keys = []):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))

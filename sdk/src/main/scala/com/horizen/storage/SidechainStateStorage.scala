@@ -36,7 +36,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
   private[horizen] val ceasingStateKey = Utils.calculateKey("ceasingStateKey".getBytes)
 
-  private[horizen] val forgerListIndexKey = calculateKey("forgerListIndexKey".getBytes)
+  private[horizen] val forgerListIndexKey = Utils.calculateKey("forgerListIndexKey".getBytes)
 
   private val undefinedWithdrawalEpochCounter: Int = -1
   private[horizen] def getWithdrawalEpochCounterKey(withdrawalEpoch: Int): ByteArrayWrapper = {

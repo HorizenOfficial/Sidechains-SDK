@@ -1,6 +1,6 @@
 import json
 #execute a transaction/createopenStakeTransaction call
-def createOpenStakeTransaction(sidechain_node, boxid, address, forger_index, fee, format = False, automatic_send = False):
+def createOpenStakeTransaction(sidechain_node, boxid, address, forger_index, fee = 0, format = False, automatic_send = False):
       j = { 
             "transactionInput": 
             { 

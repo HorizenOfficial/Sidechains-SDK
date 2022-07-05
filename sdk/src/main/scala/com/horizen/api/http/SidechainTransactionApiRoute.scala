@@ -474,37 +474,41 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
   }
 
   def createOpenStakeTransaction: Route = (post & path("createOpenStakeTransaction")) {
-    entity(as[ReqOpenStake]) { body =>
-      buildOpenStakeTransaction(body) match {
-        case Success(tx) =>
-          if (body.automaticSend.getOrElse(true)) {
-            validateAndSendTransaction(tx.asInstanceOf[SidechainTypes#SCBT])
-          } else {
-            if (body.format.getOrElse(false))
-              ApiResponseUtil.toResponse(TransactionDTO(tx.asInstanceOf[SCBT]))
-            else
-              ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(tx.asInstanceOf[SCBT]))))
-          }
-        case Failure(exception) =>
-          ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exception)))
+    withAuth {
+      entity(as[ReqOpenStake]) { body =>
+        buildOpenStakeTransaction(body) match {
+          case Success(tx) =>
+            if (body.automaticSend.getOrElse(true)) {
+              validateAndSendTransaction(tx.asInstanceOf[SidechainTypes#SCBT])
+            } else {
+              if (body.format.getOrElse(false))
+                ApiResponseUtil.toResponse(TransactionDTO(tx.asInstanceOf[SCBT]))
+              else
+                ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(tx.asInstanceOf[SCBT]))))
+            }
+          case Failure(exception) =>
+            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exception)))
+        }
       }
     }
   }
 
   def createOpenStakeTransactionSimplified: Route = (post & path("createOpenStakeTransactionSimplified")) {
-    entity(as[ReqOpenStakeSimplified]) { body =>
-     buildOpenStakeTransactionSimplified(body) match {
-       case Success(tx) =>
-         if (body.automaticSend.getOrElse(true)) {
-           validateAndSendTransaction(tx.asInstanceOf[SidechainTypes#SCBT])
-         } else {
-           if (body.format.getOrElse(false))
-             ApiResponseUtil.toResponse(TransactionDTO(tx.asInstanceOf[SCBT]))
-           else
-             ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(tx.asInstanceOf[SCBT]))))
-         }
-       case Failure(exception) =>
-         ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exception)))     }
+    withAuth {
+      entity(as[ReqOpenStakeSimplified]) { body =>
+        buildOpenStakeTransactionSimplified(body) match {
+          case Success(tx) =>
+            if (body.automaticSend.getOrElse(true)) {
+              validateAndSendTransaction(tx.asInstanceOf[SidechainTypes#SCBT])
+            } else {
+              if (body.format.getOrElse(false))
+                ApiResponseUtil.toResponse(TransactionDTO(tx.asInstanceOf[SCBT]))
+              else
+                ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(tx.asInstanceOf[SCBT]))))
+            }
+          case Failure(exception) =>
+            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exception)))     }
+      }
     }
   }
 
@@ -518,7 +522,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
           && box.value() >= body.fee.getOrElse(0L)) match {
         case Some(inputBox) =>
           //Collect input private key
-          val inputPrivateKey = wallet.secretByPublicKey(inputBox.proposition()).get().asInstanceOf[PrivateKey25519]
+          val inputPrivateKey = wallet.secretByPublicKey25519Proposition(inputBox.proposition().asInstanceOf[PublicKey25519Proposition]).get().asInstanceOf[PrivateKey25519]
           //Create openStakeTransaction
           createAndSignOpenStakeTransaction(inputBox, inputPrivateKey, body.forgerProposition, body.forgerIndex, body.fee)
         case None =>
@@ -540,7 +544,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
         .find(box => BytesUtils.toHexString(box.id()).equals(body.transactionInput.boxId)) match {
         case Some(inputBox) =>
           //Collect input private key
-          val inputPrivateKey = wallet.secretByPublicKey(inputBox.proposition()).get().asInstanceOf[PrivateKey25519]
+          val inputPrivateKey = wallet.secretByPublicKey25519Proposition(inputBox.proposition().asInstanceOf[PublicKey25519Proposition]).get().asInstanceOf[PrivateKey25519]
           //Create openStakeTransaction
           createAndSignOpenStakeTransaction(inputBox, inputPrivateKey, body.regularOutputProposition, body.forgerIndex, body.fee)
         case None =>

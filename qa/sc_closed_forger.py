@@ -48,7 +48,8 @@ class SidechainClosedForgerTest(SidechainTestFramework):
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0))),
             forger_options = forger_configuration,
-            initial_private_keys=list(map(lambda forger: forger.secret,self.allowed_forger_propositions))
+            initial_private_keys=list(map(lambda forger: forger.secret,self.allowed_forger_propositions)),
+            max_fee=10000000000000
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, LARGE_WITHDRAWAL_EPOCH_LENGTH),
                                          sc_node_1_configuration)

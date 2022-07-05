@@ -728,12 +728,12 @@ class SidechainStateTest
 
     Mockito.when(mockedStateForgerBoxStorage.lastVersionId).thenReturn(Some(stateVersion.last))
 
-    Mockito.when(mockedStateUtxoMerkleTreeStorage.lastVersionId).thenReturn(Some(stateVersion.last))
+    Mockito.when(mockedStateUtxoMerkleTreeProvider.lastVersionId).thenReturn(Some(stateVersion.last))
 
     val mockedParams = mock[MainNetParams]
     Mockito.when(mockedParams.restrictForgers).thenReturn(true)
 
-    val sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeStorage,
+    val sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeProvider,
       mockedParams, bytesToVersion(stateVersion.last.data), mockedApplicationState)
 
     val forgerList = Seq(
