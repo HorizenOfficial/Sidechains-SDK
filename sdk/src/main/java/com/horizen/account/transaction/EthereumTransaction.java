@@ -220,7 +220,12 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public AddressProposition getTo() {
-        var to = Numeric.hexStringToByteArray(this.getToAddress());
+        String address = getToAddress();
+        // In case of smart contract declaration
+        if(address == null || address.length() == 0)
+            return null;
+
+        var to = Numeric.hexStringToByteArray(address);
         if (to.length == Account.ADDRESS_SIZE)
             return new AddressProposition(to);
         return null;
