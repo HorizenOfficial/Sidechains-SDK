@@ -114,6 +114,7 @@ class AccountState(val params: NetworkParams,
     }
 
     // TODO get also list of receipts consensus data, useful for computing the receiptRoot hash
+    val receiptList = Seq()
     for (tx <- mod.sidechainTransactions) {
       stateView = stateView.applyTransaction(tx).get
     }
@@ -122,8 +123,10 @@ class AccountState(val params: NetworkParams,
     // Note: we should save the total gas paid and the forgerAddress
     stateView.addFeeInfo(BlockFeeInfo(0L, mod.header.forgingStakeInfo.blockSignPublicKey)).get
 
-    // TODO get block hash and update receipts derived data (we used only consensus data for getting the receiptsRoot)
     // check stateRoot and receiptRoot against block header
+    mod.verifyReceiptDataConsistency(receiptList)
+
+    // TODO get block hash and update receipts derived data (we used only consensus data for getting the receiptsRoot)
     // eventually, store full receipts in the metaDataStorage indexed by txid
 
     stateView.commit(idToVersion(mod.id)).get
