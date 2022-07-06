@@ -20,8 +20,8 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
   override val fakeSmartContractCodeHash: Array[Byte] =
     Keccak256.hash("WithdrawalRequestSmartContractCodeHash")
 
-  val GetListOfWithdrawalReqsCmdSig: String = "00"
-  val AddNewWithdrawalReqCmdSig: String = "01"
+  val GetListOfWithdrawalReqsCmdSig: String = "251b7baa" //getWithdrawalRequests(uint32)
+  val AddNewWithdrawalReqCmdSig: String = "ba82dc8c" //submitWithdrawalRequests(bytes20)
 
   //TODO Define a proper amount of gas spent for each operation
   val GasSpentForGetListOfWithdrawalReqsCmd: java.math.BigInteger = java.math.BigInteger.ONE
