@@ -42,5 +42,5 @@ class AccountStateMetadataStorage(storage: Storage) extends AccountStateMetadata
 
   override def getHeight: Int = getView.getHeight
 
-  override def getAccountStateRoot: Option[Array[Byte]] = getView.getAccountStateRoot
+  override def getAccountStateRoot: Array[Byte] = getView.getAccountStateRoot
 }

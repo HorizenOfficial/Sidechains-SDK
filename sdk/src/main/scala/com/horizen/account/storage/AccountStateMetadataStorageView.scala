@@ -1,6 +1,7 @@
 package com.horizen.account.storage
 
 import com.google.common.primitives.{Bytes, Ints}
+import com.horizen.account.storage.AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.storage.Storage
@@ -137,11 +138,8 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     storage.get(accountStateRootKey).asScala.map(_.data)
   }
 
-  override def getAccountStateRoot: Option[Array[Byte]] = {
-    accountStateRootOpt match {
-      case Some(_) => accountStateRootOpt
-      case _ => getAccountStateRootFromStorage
-    }
+  override def getAccountStateRoot: Array[Byte] = {
+    accountStateRootOpt.orElse(getAccountStateRootFromStorage).getOrElse(DEFAULT_ACCOUNT_STATE_ROOT)
   }
 
   // put in memory cache and mark the entry as "dirty"
@@ -152,7 +150,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     topQualityCertificateOpt = Some(topQualityCertificate)
 
   def addFeePayment(blockFeeInfo: BlockFeeInfo): Unit = {
-    require(withdrawalEpochInfoOpt.nonEmpty, "WithdrawalEpochInfo must be set before adding fee info.")
     blockFeeInfoOpt = Some(blockFeeInfo)
   }
 
@@ -290,7 +287,9 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private[horizen] def getBlockFeeInfoKey(withdrawalEpochNumber: Int, counter: Int): ByteArrayWrapper = {
     calculateKey(Bytes.concat("blockFeeInfo".getBytes, Ints.toByteArray(withdrawalEpochNumber), Ints.toByteArray(counter)))
   }
+}
 
-
+object AccountStateMetadataStorageView {
+  val DEFAULT_ACCOUNT_STATE_ROOT: Array[Byte] = new Array[Byte](32)
 }
 

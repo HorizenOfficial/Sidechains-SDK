@@ -2,17 +2,13 @@ package com.horizen.state
 
 import com.horizen.transaction.Transaction
 import scorex.core.PersistentNodeViewModifier
-import scorex.core.transaction.state.MinimalState
+import scorex.core.transaction.state.{MinimalState, StateReader}
 
-trait State[TX <: Transaction, PMOD <: PersistentNodeViewModifier, SV <: StateView[TX, SV], S <: State[TX, PMOD, SV, S]]
+trait State[TX <: Transaction, PMOD <: PersistentNodeViewModifier, SV <: StateView[TX], S <: State[TX, PMOD, SV, S]]
   extends MinimalState[PMOD, S]
+    with BaseStateReader
     with StateReader {
   self: S =>
-
-  // MinimalState:
-  // def applyModifier(mod: M): Try[MS]
-  // def rollbackTo(version: VersionTag): Try[MS]
-  // def getReader: StateReader = this
 
   def getView: SV
 }

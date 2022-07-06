@@ -65,7 +65,8 @@ case class AccountWalletApiRoute(override val settings: RESTApiSettings,
   }
 
   /**
-   * Create new secret and return corresponding address (public key)
+   * Check balance of the account.
+   * Return 0 if account doesn't exist.
    */
   def getBalance: Route = (post & path("getBalance")) {
     entity(as[ReqGetBalance]) { body =>
@@ -73,12 +74,7 @@ case class AccountWalletApiRoute(override val settings: RESTApiSettings,
         try {
           val fromAddr = new AddressProposition(BytesUtils.fromHexString(body.address.get))
           val fromBalance = sidechainNodeView.getNodeState.getBalance(fromAddr.address())
-          fromBalance match {
-            case Success(balance) =>
-              ApiResponseUtil.toResponse(RespGetBalance(balance))
-            case Failure(e) =>
-              ApiResponseUtil.toResponse(ErrorCouldNotGetBalance("Failed to get balance", JOptional.of(e)))
-          }
+          ApiResponseUtil.toResponse(RespGetBalance(fromBalance))
         }
         catch
         {

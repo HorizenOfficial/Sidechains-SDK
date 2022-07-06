@@ -37,9 +37,9 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
   )
 
   // TODO set proper values
-  val GetListOfForgersGasPaidValue : BigInteger = java.math.BigInteger.ONE
-  val AddNewStakeGasPaidValue : BigInteger      = java.math.BigInteger.ONE
-  val RemoveStakeGasPaidValue : BigInteger      = java.math.BigInteger.ONE
+  val GetListOfForgersGasPaidValue: BigInteger = BigInteger.ONE
+  val AddNewStakeGasPaidValue: BigInteger      = BigInteger.ONE
+  val RemoveStakeGasPaidValue: BigInteger      = BigInteger.ONE
 
   val networkParams : NetworkParams = params
 
