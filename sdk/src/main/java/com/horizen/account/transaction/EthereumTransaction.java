@@ -222,13 +222,19 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     public AddressProposition getTo() {
         String address = getToAddress();
         // In case of smart contract declaration
-        if(address == null || address.length() == 0)
+        if(address == null)
             return null;
 
+        // TODO: do we really need the checks below? can we have address of different length? Add more UTs for this tx type.
+        // TODO: proabaly we need more checks in semantic validity method
         var to = Numeric.hexStringToByteArray(address);
+        if(to.length == 0)
+            return null;
+
         if (to.length == Account.ADDRESS_SIZE)
             return new AddressProposition(to);
-        return null;
+
+        throw new RuntimeException(String.format("Invalid to address length %d", to.length));
     }
 
     public String getToAddress() {
