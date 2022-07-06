@@ -47,7 +47,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   def computeReceiptRoot(receiptList: Seq[EthereumReceipt]) : Array[Byte] = {
     // 1. for each receipt item in list rlp encode and append to a new leaf list
     // 2. compute hash
-    TrieHasher.Root(receiptList.map(r => r.RLP_encode()).toArray)
+    TrieHasher.Root(receiptList.map(r => EthereumReceipt.rlpEncode(r)).toArray)
   }
 
   def computeStateRoot(view: AccountStateView, sidechainTransactions: Seq[Transaction]) : (Array[Byte], Seq[EthereumReceipt]) = {

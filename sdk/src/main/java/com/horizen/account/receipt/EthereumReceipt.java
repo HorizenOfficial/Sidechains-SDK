@@ -1,11 +1,16 @@
 package com.horizen.account.receipt;
 
 import com.fasterxml.jackson.annotation.*;
-import com.google.common.primitives.Bytes;
-import com.google.common.primitives.Longs;
+import com.horizen.evm.interop.EvmLog;
 import com.horizen.serialization.Views;
-import org.web3j.protocol.core.methods.response.Log;
+import com.horizen.utils.BytesUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.web3j.rlp.*;
+
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -13,6 +18,8 @@ import java.util.List;
 
 @JsonView(Views.Default.class)
 public class EthereumReceipt {
+
+    private static final Logger log = LogManager.getLogger(EthereumReceipt.class);
 
     public enum ReceiptStatus { FAILED, SUCCESSFUL}
     public enum ReceiptTxType {LegacyTxType, AccessListTxType, DynamicFeeTxType}
@@ -29,10 +36,10 @@ public class EthereumReceipt {
     int transactionType;
     int status;
     BigInteger cumulativeGasUsed;
-    List<Log> logs;
+    List<EvmLog> logs;
     byte[] logsBloom;
 
-    // derived types (not part of the patricia trie)
+    // derived types (not part of the rlp encoding for receipt hash root)
     byte[] transactionHash;
     BigInteger transactionIndex;
     byte[] blockHash;
@@ -44,15 +51,16 @@ public class EthereumReceipt {
             int transactionType,
             int status,
             BigInteger cumulativeGasUsed,
-            List<Log> logs,
+            List<EvmLog> logs,
             byte[] logsBloom
     ) {
         this.transactionType = transactionType;
         this.status = status;
         this.cumulativeGasUsed = cumulativeGasUsed;
         this.logs = logs;
-        this.logsBloom = Arrays.copyOf(logsBloom, logsBloom.length);
 
+        // we should derive blooms from logs via createLogsBloom()
+        this.logsBloom = Arrays.copyOf(logsBloom, logsBloom.length);
 
         this.transactionHash = null;
         this.transactionIndex = BigInteger.valueOf(-1);
@@ -130,10 +138,10 @@ public class EthereumReceipt {
         return null;
     }
 
-    public List<Log> getLogs() {
+    public List<EvmLog> getLogs() {
         return this.logs;
     }
-    public void setLogs(List<Log> logs) {
+    public void setLogs(List<EvmLog> logs) {
         this.logs = logs;
     }
 
@@ -144,15 +152,159 @@ public class EthereumReceipt {
         this.logsBloom = Arrays.copyOf(logsBloom, logsBloom.length);
     }
 
-    public byte[] RLP_encode() {
-        // TODO do the real encoding
-        // encode only consensus data
-        // Note: depends on transactionType
-        // https://github.com/ethereum/go-ethereum/blob/master/core/types/receipt.go
-        // https://github.com/ethereumj/ethereumj/blob/master/ethereumj-core/src/main/java/org/ethereum/util/RLP.java
-        return Bytes.concat(
-        BigInteger.valueOf(transactionType).toByteArray(),
-                BigInteger.valueOf(status).toByteArray(),
-                cumulativeGasUsed.toByteArray());
+    public static byte[] rlpEncode(EthereumReceipt r) {
+        List<RlpType> values = asRlpValues(r);
+        RlpList rlpList = new RlpList(values);
+        byte[] encoded = RlpEncoder.encode(rlpList);
+
+        if (!r.getTxType().equals(ReceiptTxType.LegacyTxType) ) {
+            // add byte for versioned type support
+            return ByteBuffer.allocate(encoded.length + 1)
+                    .put((byte)r.getTxType().ordinal())
+                    .put(encoded)
+                    .array();
+        }
+        return encoded;
+    }
+
+    public static EthereumReceipt rlpDecode(byte[] rlpData) {
+        if (rlpData == null || rlpData.length == 0) {
+            log.error("Invalid rlp data");
+            return null;
+        }
+
+        // handle tx type
+        int b0 = (int)rlpData[0];
+
+        if (b0 == 1 || b0 == 2) {
+            ReceiptTxType rt = ReceiptTxType.values()[b0];
+            return decodeTyped(rt, Arrays.copyOfRange(rlpData, 1, rlpData.length));
+        } else {
+            return decodeLegacy(rlpData);
+        }
+    }
+
+    public static EthereumReceipt decodeTyped(ReceiptTxType rt, byte[] rlpData) {
+        EthereumReceipt receipt = decodeLegacy(rlpData);
+        if (receipt != null)
+            receipt.setTransactionType(rt.ordinal());
+        return receipt;
+    }
+
+    public static EthereumReceipt decodeLegacy(byte[] rlpData) {
+
+        RlpList rlpList = RlpDecoder.decode(rlpData);
+        RlpList values = (RlpList) rlpList.getValues().get(0);
+
+        byte[] postTxState = ((RlpString) values.getValues().get(0)).getBytes();
+        int status;
+        if (postTxState.length == 0) {
+            status = 0;
+        } else {
+            if (postTxState.length != 1 || postTxState[0] != (int)1) {
+                log.error("Invalid rlp postTxState data");
+                return null;
+            }
+            status = 1;
+        }
+
+        BigInteger cumulativeGasUsed = ((RlpString) values.getValues().get(1)).asPositiveBigInteger();
+
+        // TODO blooms
+        byte[] logsBloom = ((RlpString) values.getValues().get(2)).getBytes();
+
+        // TODO logs
+        RlpList logList = ((RlpList) values.getValues().get(3));
+
+        List<EvmLog> logs = new ArrayList<>(0);
+
+        int logsListSize = logList.getValues().size();
+        if (logsListSize > 0) {
+            // loop on list and decode all logs
+            for (int i = 0; i <= logsListSize; ++i) {
+                byte[] logRpl = ((RlpString) logList.getValues().get(i)).getBytes();
+                // TODO
+                // EvmLog log = EvmLog.decode(logRpl);
+                // logs.add(log);
+            }
+        }
+
+        return new EthereumReceipt(ReceiptTxType.LegacyTxType.ordinal(), status, cumulativeGasUsed, logs, logsBloom);
+    }
+
+    public static List<RlpType> asRlpValues(EthereumReceipt r) {
+        List<RlpType> result = new ArrayList<>();
+        RlpList logs = new RlpList();
+
+        byte[] postTxState = r.status == 1 ? new byte[]{1} : new byte[0];
+
+        result.add(RlpString.create(postTxState));
+        result.add(RlpString.create(r.getCumulativeGasUsed()));
+        // TODO bloom filters
+        result.add(RlpString.create(new byte[256]));
+        // TODO logs
+        result.add(logs);
+
+        return result;
+    }
+
+    public byte[] createLogsBloom() {
+        // we can create bloom filter out of a log or out of a receipt (taking its log set)
+
+    /* see: https://github.com/ethereum/go-ethereum/blob/55f914a1d764dac4bd37a48173092b1f5c3b186d/core/types/bloom9.go
+
+        // CreateBloom creates a bloom filter out of the give Receipts (+Logs)
+        func CreateBloom(receipts Receipts) Bloom {
+            buf := make([]byte, 6)
+            var bin Bloom
+            for _, receipt := range receipts {
+                for _, log := range receipt.Logs {
+                    bin.add(log.Address.Bytes(), buf)
+                    for _, b := range log.Topics {
+                        bin.add(b[:], buf)
+                    }
+                }
+            }
+            return bin
+        }
+
+        // add is internal version of Add, which takes a scratch buffer for reuse (needs to be at least 6 bytes)
+        func (b *Bloom) add(d []byte, buf []byte) {
+            i1, v1, i2, v2, i3, v3 := bloomValues(d, buf)
+            b[i1] |= v1
+            b[i2] |= v2
+            b[i3] |= v3
+        }
+
+        // bloomValues returns the bytes (index-value pairs) to set for the given data
+        func bloomValues(data []byte, hashbuf []byte) (uint, byte, uint, byte, uint, byte) {
+            sha := hasherPool.Get().(crypto.KeccakState)
+            sha.Reset()
+            sha.Write(data)
+            sha.Read(hashbuf)
+            hasherPool.Put(sha)
+            // The actual bits to flip
+            v1 := byte(1 << (hashbuf[1] & 0x7))
+            v2 := byte(1 << (hashbuf[3] & 0x7))
+            v3 := byte(1 << (hashbuf[5] & 0x7))
+            // The indices for the bytes to OR in
+            i1 := BloomByteLength - uint((binary.BigEndian.Uint16(hashbuf)&0x7ff)>>3) - 1
+            i2 := BloomByteLength - uint((binary.BigEndian.Uint16(hashbuf[2:])&0x7ff)>>3) - 1
+            i3 := BloomByteLength - uint((binary.BigEndian.Uint16(hashbuf[4:])&0x7ff)>>3) - 1
+
+            return i1, v1, i2, v2, i3, v3
+        }
+
+     */
+        // TODO shall we use libevm implementation?
+        return new byte[0];
+    }
+
+    @Override
+    public String toString() {
+        return String.format(
+                "EthereumReceipt{txType=%s, status=%d, cumGasUsed=%s, logs=%s, logsBloom=%s}",
+                getTxType().toString(), status, getCumulativeGasUsed().toString(),
+                getLogs(), BytesUtils.toHexString(getLogsBloom()));
     }
 }

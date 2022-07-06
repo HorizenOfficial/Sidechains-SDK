@@ -48,7 +48,7 @@ class AccountBlock(override val header: AccountBlockHeader,
 
   @throws(classOf[InconsistentSidechainBlockDataException])
   def verifyReceiptDataConsistency(receiptList: Seq[EthereumReceipt]): Unit = {
-    val receiptRootHash = TrieHasher.Root(receiptList.map(r => r.RLP_encode()).toArray)
+    val receiptRootHash = TrieHasher.Root(receiptList.map(r => EthereumReceipt.rlpEncode(r)).toArray)
     if (!java.util.Arrays.equals(receiptRootHash, header.receiptsRoot)) {
       log.error("CHECK IS DISABLED: update forger & bootstrapping tool first!")
       // TODO: uncomment when ready
