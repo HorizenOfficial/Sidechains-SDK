@@ -45,6 +45,7 @@ case class SidechainWalletCswDataProviderCSWEnabled(private val sidechainWalletC
                       params: NetworkParams,
                       wallet: SidechainWallet,
                       utxoMerkleTreeViewOpt: Option[UtxoMerkleTreeView]): Try[SidechainWalletCswDataProvider] = Try {
+    //Here we already updated the wallet with the newBoxes inside the SidechainBlock, so we also include FeePaymentBoxes in the CSW calculation
     val utxoCswData: Seq[CswData] = utxoMerkleTreeViewOpt.map(view => calculateUtxoCswData(view, wallet.boxes())).getOrElse(Seq())
     val ftCswData = calculateForwardTransferCswData(modifier.mainchainBlockReferencesData, wallet.publicKeys(), params)
 
