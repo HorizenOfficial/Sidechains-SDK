@@ -153,13 +153,14 @@ class ScCSWInFeePaymentTest(SidechainTestFramework):
 
         fee_payments = http_block_getFeePayments(sc_node, sc_block_id)
         assert_equal(len(fee_payments["feePayments"]), 1)
+        fee_payment_box_id = fee_payments["feePayments"][0]["id"]
 
         all_boxes = http_wallet_allBoxes(sc_node)
-        fee_payment_box_id = ""
+        found = False
         for box in all_boxes:
-            if (box["value"] == self.FEE*2):
-                fee_payment_box_id = box["id"]
-        assert_true(fee_payment_box_id != "")
+            if (box["id"] == fee_payment_box_id):
+                found = True
+        assert_true(found)
 
         # ******************** EPOCH 1 START ********************
 
