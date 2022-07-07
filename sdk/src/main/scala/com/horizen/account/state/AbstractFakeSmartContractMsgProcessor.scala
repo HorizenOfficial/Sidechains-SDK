@@ -2,6 +2,8 @@ package com.horizen.account.state
 
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.utils.BytesUtils
+import org.web3j.crypto.Hash
+import org.web3j.utils.Numeric
 import scorex.util.ScorexLogging
 
 abstract class AbstractFakeSmartContractMsgProcessor extends MessageProcessor with ScorexLogging {
@@ -42,6 +44,8 @@ abstract class AbstractFakeSmartContractMsgProcessor extends MessageProcessor wi
     require(data.length >= OP_CODE_LENGTH, s"Data length ${data.length} must be >= $OP_CODE_LENGTH")
     data.drop(OP_CODE_LENGTH)
   }
+
+  protected def getABIMethodId(methodSig: String) : String = Numeric.toHexString(Hash.sha3(methodSig.getBytes)).substring(2, 10)
  }
 
 

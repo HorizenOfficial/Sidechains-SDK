@@ -8,6 +8,7 @@ import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
 import com.horizen.account.proof.{SignatureSecp256k1, SignatureSecp256k1Serializer}
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress, GetListOfForgersCmd, LinkedListNullValue, LinkedListTipKey, RemoveStakeCmd}
+import com.horizen.account.state.WithdrawalMsgProcessor.getABIMethodId
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
@@ -462,9 +463,9 @@ object ForgerStakeMsgProcessor {
   val LinkedListTipKey : Array[Byte] = Blake2b256.hash("Tip")
   val LinkedListNullValue : Array[Byte] = Blake2b256.hash("Null")
 
-  val GetListOfForgersCmd: String = "f6ad3c23" //getAllForgersStakes
-  val AddNewStakeCmd: String =      "d05d3ad2" //delegate(bytes32,bytes32[2],address)
-  val RemoveStakeCmd: String =      "a9dda4d6" //withdraw(bytes32,bytes32[2])
+  val GetListOfForgersCmd: String =  getABIMethodId("submitWithdrawalRequests(bytes20)")
+  val AddNewStakeCmd: String =       getABIMethodId("delegate(bytes32,bytes32[2],address)")
+  val RemoveStakeCmd: String =       getABIMethodId("withdraw(bytes32,bytes32[2])")
 
   val ForgerStakeSmartContractAddress = new AddressProposition(BytesUtils.fromHexString("0000000000000000000022222222222222222222"))
 }

@@ -5,6 +5,8 @@ import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.utils.{BytesUtils, ListSerializer, ZenCoinsUtils}
+import org.web3j.crypto.Hash
+import org.web3j.utils.Numeric
 import scorex.crypto.hash.Keccak256
 
 import scala.collection.JavaConverters.seqAsJavaListConverter
@@ -20,8 +22,9 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
   override val fakeSmartContractCodeHash: Array[Byte] =
     Keccak256.hash("WithdrawalRequestSmartContractCodeHash")
 
-  val GetListOfWithdrawalReqsCmdSig: String = "251b7baa" //getWithdrawalRequests(uint32)
-  val AddNewWithdrawalReqCmdSig: String = "ba82dc8c" //submitWithdrawalRequests(bytes20)
+ // val GetListOfWithdrawalReqsCmdSig: String = "251b7baa" //Keccak256.hash of getWithdrawalRequests(uint32)
+  val GetListOfWithdrawalReqsCmdSig: String = getABIMethodId("getWithdrawalRequests(uint32)")
+  val AddNewWithdrawalReqCmdSig: String = getABIMethodId("submitWithdrawalRequests(bytes20)")
 
   //TODO Define a proper amount of gas spent for each operation
   val GasSpentForGetListOfWithdrawalReqsCmd: java.math.BigInteger = java.math.BigInteger.ONE
