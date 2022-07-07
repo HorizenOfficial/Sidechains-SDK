@@ -7,6 +7,7 @@ import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.utils.{BytesUtils, ListSerializer, ZenCoinsUtils}
 import scorex.crypto.hash.Keccak256
 
+import java.math.BigInteger
 import scala.collection.JavaConverters.seqAsJavaListConverter
 
 trait WithdrawalRequestProvider {
@@ -24,14 +25,14 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
   val AddNewWithdrawalReqCmdSig: String = "01"
 
   //TODO Define a proper amount of gas spent for each operation
-  val GasSpentForGetListOfWithdrawalReqsCmd: java.math.BigInteger = java.math.BigInteger.ONE
-  val GasSpentForGetListOfWithdrawalReqsFailure: java.math.BigInteger = java.math.BigInteger.ONE
-  val GasSpentForAddNewWithdrawalReqCmd: java.math.BigInteger = java.math.BigInteger.ONE
-  val GasSpentForAddNewWithdrawalReqFailure: java.math.BigInteger = java.math.BigInteger.ONE
-  val GasSpentForGenericFailure: java.math.BigInteger = java.math.BigInteger.ONE
+  val GasSpentForGetListOfWithdrawalReqsCmd: BigInteger = BigInteger.ONE
+  val GasSpentForGetListOfWithdrawalReqsFailure: BigInteger = BigInteger.ONE
+  val GasSpentForAddNewWithdrawalReqCmd: BigInteger = BigInteger.ONE
+  val GasSpentForAddNewWithdrawalReqFailure: BigInteger = BigInteger.ONE
+  val GasSpentForGenericFailure: BigInteger = BigInteger.ONE
 
   val MaxWithdrawalReqsNumPerEpoch = 3999
-  val DustThresholdInWei: java.math.BigInteger = ZenWeiConverter.convertZenniesToWei(ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE))
+  val DustThresholdInWei: BigInteger = ZenWeiConverter.convertZenniesToWei(ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE))
 
 
   override def process(msg: Message, view: BaseAccountStateView): ExecutionResult = {
@@ -125,14 +126,6 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
       log.error(s"Withdrawal amount is under the dust threshold: $withdrawalAmount")
       throw new IllegalArgumentException("Withdrawal amount is under the dust threshold")
     }
-    else {
-      val balance = view.getBalance(msg.getFrom.address()).get
-      if (balance.compareTo(withdrawalAmount) < 0) {
-        log.error(s"Insufficient balance amount: balance: $balance, requested withdrawal amount: $withdrawalAmount")
-        throw new IllegalArgumentException("Insufficient balance amount")
-      }
-    }
-
   }
 
   protected def execAddWithdrawalRequest(msg: Message, view: BaseAccountStateView): ExecutionResult = {

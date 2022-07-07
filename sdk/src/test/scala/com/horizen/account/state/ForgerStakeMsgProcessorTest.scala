@@ -228,8 +228,8 @@ class ForgerStakeMsgProcessorTest
     }
 
     // verify we added the amount to smart contract and we charge the sender
-    assertTrue(stateView.getBalance(forgerStakeMessageProcessor.fakeSmartContractAddress.address()).get == validWeiAmount)
-    assertTrue(stateView.getBalance(senderProposition.address()).get == initialAmount.subtract(validWeiAmount))
+    assertTrue(stateView.getBalance(forgerStakeMessageProcessor.fakeSmartContractAddress.address()) == validWeiAmount)
+    assertTrue(stateView.getBalance(senderProposition.address()) == initialAmount.subtract(validWeiAmount))
 
     // try processing a msg with the same stake (same msg), should fail
     forgerStakeMessageProcessor.process(msg, stateView) match {
@@ -253,8 +253,8 @@ class ForgerStakeMsgProcessorTest
     }
 
     // verify we added the amount to smart contract and we charge the sender
-    assertTrue(stateView.getBalance(forgerStakeMessageProcessor.fakeSmartContractAddress.address()).get == validWeiAmount.multiply(BigInteger.TWO))
-    assertTrue(stateView.getBalance(senderProposition.address()).get == initialAmount.subtract(validWeiAmount.multiply(BigInteger.TWO)))
+    assertTrue(stateView.getBalance(forgerStakeMessageProcessor.fakeSmartContractAddress.address()) == validWeiAmount.multiply(BigInteger.TWO))
+    assertTrue(stateView.getBalance(senderProposition.address()) == initialAmount.subtract(validWeiAmount.multiply(BigInteger.TWO)))
 
     // remove first stake id
 
@@ -285,9 +285,9 @@ class ForgerStakeMsgProcessorTest
     }
 
     // verify we removed the amount from smart contract and we added it to owner (sender is not concerned)
-    assertTrue(stateView.getBalance(forgerStakeMessageProcessor.fakeSmartContractAddress.address()).get == validWeiAmount)
-    assertTrue(stateView.getBalance(senderProposition.address()).get == initialAmount.subtract(validWeiAmount.multiply(BigInteger.TWO)))
-    assertTrue(stateView.getBalance(ownerAddressProposition.address()).get == validWeiAmount)
+    assertTrue(stateView.getBalance(forgerStakeMessageProcessor.fakeSmartContractAddress.address()) == validWeiAmount)
+    assertTrue(stateView.getBalance(senderProposition.address()) == initialAmount.subtract(validWeiAmount.multiply(BigInteger.TWO)))
+    assertTrue(stateView.getBalance(ownerAddressProposition.address()) == validWeiAmount)
 
     // try getting the list of stakes, no command arguments here, just op code
     val data4: Array[Byte] = new Array[Byte](0)

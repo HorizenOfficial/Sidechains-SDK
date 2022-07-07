@@ -81,8 +81,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       a => (fromAddress.isEmpty ||
         BytesUtils.toHexString(a.asInstanceOf[PrivateKeySecp256k1].publicImage
           .address) == fromAddress.get) &&
-        nodeView.getNodeState.getBalance(a.asInstanceOf[PrivateKeySecp256k1].publicImage.address)
-          .getOrElse(BigInteger.valueOf(0)).compareTo(txValueInWei) >= 0// TODO account for gas
+        nodeView.getNodeState.getBalance(a.asInstanceOf[PrivateKeySecp256k1].publicImage.address).compareTo(txValueInWei) >= 0// TODO account for gas
     )
 
     if (secret.nonEmpty) Option.apply(secret.get.asInstanceOf[PrivateKeySecp256k1])

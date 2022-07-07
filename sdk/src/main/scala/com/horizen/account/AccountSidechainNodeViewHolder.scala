@@ -8,6 +8,7 @@ import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccoun
 import com.horizen.account.state.{AccountState, EoaMessageProcessor, ForgerStakeMsgProcessor, MessageProcessor, WithdrawalMsgProcessor}
 import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
 import com.horizen.account.transaction.AccountTransaction
+import com.horizen.account.validation.ChainIdBlockSemanticValidator
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.consensus._
 import com.horizen.evm.Database
@@ -16,6 +17,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.proof.Proof
 import com.horizen.proposition.Proposition
 import com.horizen.storage.SidechainSecretStorage
+import com.horizen.validation.SemanticBlockValidator
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ModifierId
@@ -49,6 +51,10 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     ) ++ customMessageProcessors
   }
 
+  override def semanticBlockValidators(params: NetworkParams): Seq[SemanticBlockValidator[AccountBlock]] = {
+    ChainIdBlockSemanticValidator(params) +: super.semanticBlockValidators(params)
+  }
+
   override def restoreState(): Option[(HIS, MS, VL, MP)] = for {
     history <- AccountHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
     state <- AccountState.restoreState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params)
@@ -60,7 +66,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     val result = for {
       state <- AccountState.createGenesisState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, genesisBlock)
 
-      (_: ModifierId, consensusEpochInfo: ConsensusEpochInfo) <- Success(state.getConsensusEpochInfo)
+      (_: ModifierId, consensusEpochInfo: ConsensusEpochInfo) <- Success(state.getCurrentConsensusEpochInfo)
 
       history <- AccountHistory.createGenesisHistory(historyStorage, consensusDataStorage, params, genesisBlock, semanticBlockValidators(params),
         historyBlockValidators(params), StakeConsensusEpochInfo(consensusEpochInfo.forgingStakeInfoTree.rootHash(), consensusEpochInfo.forgersStake))
@@ -80,7 +86,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   // to get all necessary information from the State.
   override protected def applyConsensusEpochInfo(history: HIS, state: MS, wallet: VL, modToApply: AccountBlock): (HIS, VL) = {
      val historyAfterConsensusInfoApply = if (state.isSwitchingConsensusEpoch(modToApply)) {
-      val (lastBlockInEpoch: ModifierId, consensusEpochInfo: ConsensusEpochInfo) = state.getConsensusEpochInfo
+      val (lastBlockInEpoch: ModifierId, consensusEpochInfo: ConsensusEpochInfo) = state.getCurrentConsensusEpochInfo
       val nonceConsensusEpochInfo = history.calculateNonceForEpoch(blockIdToEpochId(lastBlockInEpoch))
       val stakeConsensusEpochInfo = StakeConsensusEpochInfo(consensusEpochInfo.forgingStakeInfoTree.rootHash(), consensusEpochInfo.forgersStake)
 

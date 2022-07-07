@@ -152,9 +152,7 @@ public class EthService extends RpcService {
     private String getBalance(String address, Quantity tag) {
         // TODO: Add blockNumberOrTag handling
         var balance = nodeView.getNodeState().getBalance(Numeric.hexStringToByteArray(address));
-        if (balance.isFailure())
-            return "0x0";
-        return Numeric.toHexStringWithPrefix(balance.get());
+        return Numeric.toHexStringWithPrefix(balance);
     }
 
     private Optional<AccountTransaction<Proposition, Proof<Proposition>>> getTransaction(Data transactionHash) {

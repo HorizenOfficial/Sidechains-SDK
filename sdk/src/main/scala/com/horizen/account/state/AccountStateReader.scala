@@ -1,18 +1,13 @@
 package com.horizen.account.state
 
-import com.horizen.state.StateReader
+import com.horizen.state.BaseStateReader
 
 import java.math.BigInteger
 import scala.util.Try
 
-trait AccountStateReader extends StateReader {
-
-  def getAccount(address: Array[Byte]): Account
+trait AccountStateReader extends BaseStateReader {
   def getCodeHash(address: Array[Byte]): Array[Byte]
-  def getBalance(address: Array[Byte]): Try[java.math.BigInteger]
+  def getBalance(address: Array[Byte]): BigInteger
   def getNonce(address: Array[Byte]): BigInteger
-  // etc.
-
-  def getAccountStateRoot: Option[Array[Byte]] // 32 bytes, kessack hash
-
+  def getAccountStateRoot: Array[Byte] // 32 bytes, kessack hash
 }

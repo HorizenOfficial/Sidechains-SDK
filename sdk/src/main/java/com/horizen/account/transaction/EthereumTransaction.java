@@ -115,16 +115,52 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public void semanticValidity() throws TransactionSemanticValidityException {
+        if (getValue().signum() < 0)
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "negative value", id()));
+        if (getNonce().signum() < 0)
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "negative nonce", id()));
         if (getGasLimit().signum() <= 0)
-            throw new TransactionSemanticValidityException("Cannot create transaction with zero gas limit");
-        if (this.isSigned()) {
-            if (this.getFrom().address().length != Account.ADDRESS_SIZE)
-                throw new TransactionSemanticValidityException("Cannot create signed transaction without valid from address");
-            if (!this.getSignature().isValid(this.getFrom(), this.messageToSign()))
-                throw new TransactionSemanticValidityException("Cannot create signed transaction with invalid " +
-                        "signature");
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "non-positive gas limit", id()));
+        if (getTo() == null && getData().length == 0)
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "smart contract declaration transaction without data", id()));
 
+        if(isEIP1559()) {
+            if (getMaxFeePerGas().signum() < 0)
+                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                        "eip1559 transaction with negative maxFeePerGas", id()));
+            if (getMaxPriorityFeePerGas().signum() < 0)
+                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                        "eip1559 transaction with negative maxPriorityFeePerGas", id()));
+            if (getMaxFeePerGas().bitCount() > 256)
+                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                        "eip1559 transaction maxFeePerGas bit length [%d] is too high", id(), getMaxFeePerGas().bitCount()));
+
+            if (getMaxPriorityFeePerGas().bitCount() > 256)
+                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                        "eip1559 transaction maxPriorityFeePerGas bit length [%d] is too high", id(), getMaxPriorityFeePerGas().bitCount()));
+
+            if (getMaxFeePerGas().compareTo(getMaxPriorityFeePerGas()) < 0)
+                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                        "eip1559 transaction max priority fee per gas [%s] higher than max fee per gas [%s]",
+                        id(), getMaxPriorityFeePerGas(), getMaxFeePerGas()));
+        } else { // legacy transaction
+            if (getGasPrice().signum() < 0)
+                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                        "legacy transaction with negative gasPrice", id()));
         }
+
+
+
+        // remove
+        if (this.getFrom().address().length != Account.ADDRESS_SIZE)
+            throw new TransactionSemanticValidityException("Cannot create signed transaction without valid from address");
+        if (!this.getSignature().isValid(this.getFrom(), this.messageToSign()))
+            throw new TransactionSemanticValidityException("Cannot create signed transaction with invalid " +
+                    "signature");
     }
 
     @Override
@@ -184,10 +220,21 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     @Override
     public AddressProposition getTo() {
-        var to = Numeric.hexStringToByteArray(this.getToAddress());
+        String address = getToAddress();
+        // In case of smart contract declaration
+        if(address == null)
+            return null;
+
+        // TODO: do we really need the checks below? can we have address of different length? Add more UTs for this tx type.
+        // TODO: proabaly we need more checks in semantic validity method
+        var to = Numeric.hexStringToByteArray(address);
+        if(to.length == 0)
+            return null;
+
         if (to.length == Account.ADDRESS_SIZE)
             return new AddressProposition(to);
-        return null;
+
+        throw new RuntimeException(String.format("Invalid to address length %d", to.length));
     }
 
     public String getToAddress() {
