@@ -11,6 +11,8 @@ import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, Forger
 import com.horizen.account.state.WithdrawalMsgProcessor.getABIMethodId
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
+import org.web3j.crypto.Hash
+import org.web3j.utils.Numeric
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.crypto.hash.{Blake2b256, Keccak256}
 import scorex.util.serialization.{Reader, Writer}
@@ -460,6 +462,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
 }
 
 object ForgerStakeMsgProcessor {
+
+  protected def getABIMethodId(methodSig: String) : String = Numeric.toHexString(Hash.sha3(methodSig.getBytes)).substring(2, 10)
   val LinkedListTipKey : Array[Byte] = Blake2b256.hash("Tip")
   val LinkedListNullValue : Array[Byte] = Blake2b256.hash("Null")
 

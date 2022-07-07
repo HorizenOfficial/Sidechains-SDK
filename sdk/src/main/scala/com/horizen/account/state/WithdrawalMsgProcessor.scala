@@ -37,6 +37,8 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
   val DustThresholdInWei: java.math.BigInteger = ZenWeiConverter.convertZenniesToWei(ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE))
 
 
+  protected def getABIMethodId(methodSig: String) : String = Numeric.toHexString(Hash.sha3(methodSig.getBytes)).substring(2, 10)
+
   override def process(msg: Message, view: BaseAccountStateView): ExecutionResult = {
     //TODO: check errors in Ethereum, maybe for some kind of errors there a predefined types or codes
 
