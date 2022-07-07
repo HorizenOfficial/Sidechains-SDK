@@ -332,12 +332,10 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         resJson.put("genSysConstant", genSysConstant);
         resJson.put("verificationKey", verificationKey);
 
-        ArrayNode keyArrayNode = resJson.putArray("schnorrKeys");
+        ArrayNode keyArrayNode = resJson.putArray("schnorrPublicKeys");
 
         for (String publicKeyStr : publicKeys) {
-            ObjectNode keyNode = mapper.createObjectNode();
-            keyNode.put("schnorrPublicKey", publicKeyStr);
-            keyArrayNode.add(keyNode);
+            keyArrayNode.add(publicKeyStr);
         }
 
         String res = resJson.toString();
