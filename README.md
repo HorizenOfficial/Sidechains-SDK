@@ -60,6 +60,22 @@ The project has a Maven module structure and consists of 4 modules:
 3) [Simple App](examples/simpleapp/README.md) - An example application without any specific custom logic that runs a node. The node can be connected to the mainchain network or isolated from it
 4) Q/A - [Sidechain Test Framework](qa/README.md) for sidechain testing via RPC/REST commands
 
+**Configuration**
+
+If you need to run the sidechain node as a **docker container** or behind a **NAT** the hostname and port pair that the node binds to will be different from the “logical” host name and port pair that is used to connect to the system from the outside. This requires special configuration that sets both the logical and the bind pairs for remoting.
+You need to set the *declaredAddress* field with the host machine's address.
+```
+scorex {
+    dataDir = /tmp/scorex/data/blockchain
+    logDir = /tmp/scorex/data/log
+	...
+    network {
+        nodeName = "node name"
+        bindAddress = "127.0.0.1:9084"
+        declaredAddress = "45.123.0.0:9084"
+    }
+```
+
 **Examples**
 
 You can find an example of a sidechain implementation without any custom business logic here: [Simple App](examples/simpleapp/README.md). A detailed description of how to set up and run a sidechain node with a connection to the mainchain [can be found here](examples/simpleapp/mc_sc_workflow_example.md).
