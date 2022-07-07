@@ -238,6 +238,9 @@ class SidechainMemoryPoolTest
 
     //now the tx with lowest fee is secondLowestFeeTx: we try to add another tx with the same feerate
     var aNewTx = getRegularRandomTransaction(20, 1)
+    while (aNewTx.size() != secondLowestFeeTx.size()) {
+      aNewTx = getRegularRandomTransaction(20, 1)
+    }
     assertEquals("Put tx operation must be success.", true, memoryPool.put(aNewTx).isSuccess)
     assertEquals("MemoryPool must have correct size ", list.size-1, memoryPool.size)
     assertEquals("Old lowest fee transaction must not be present ", false, memoryPool.getTransactionById(secondLowestFeeTx.id()).isPresent)
