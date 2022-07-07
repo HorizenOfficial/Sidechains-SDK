@@ -2,6 +2,7 @@ package com.horizen.account.receipt;
 
 import com.fasterxml.jackson.annotation.*;
 import com.horizen.evm.interop.EvmLog;
+import com.horizen.evm.utils.Hash;
 import com.horizen.serialization.Views;
 import com.horizen.utils.BytesUtils;
 import org.apache.logging.log4j.LogManager;
@@ -36,7 +37,7 @@ public class EthereumReceipt {
     int transactionType;
     int status;
     BigInteger cumulativeGasUsed;
-    List<EvmLog> logs;
+    List<EthereumLog> logs;
     byte[] logsBloom;
 
     // derived types (not part of the rlp encoding for receipt hash root)
@@ -51,7 +52,7 @@ public class EthereumReceipt {
             int transactionType,
             int status,
             BigInteger cumulativeGasUsed,
-            List<EvmLog> logs,
+            List<EthereumLog> logs,
             byte[] logsBloom
     ) {
         this.transactionType = transactionType;
@@ -138,10 +139,10 @@ public class EthereumReceipt {
         return null;
     }
 
-    public List<EvmLog> getLogs() {
+    public List<EthereumLog> getLogs() {
         return this.logs;
     }
-    public void setLogs(List<EvmLog> logs) {
+    public void setLogs(List<EthereumLog> logs) {
         this.logs = logs;
     }
 
@@ -216,95 +217,109 @@ public class EthereumReceipt {
         // TODO logs
         RlpList logList = ((RlpList) values.getValues().get(3));
 
-        List<EvmLog> logs = new ArrayList<>(0);
+        List<EthereumLog> logs = new ArrayList<>(0);
 
         int logsListSize = logList.getValues().size();
         if (logsListSize > 0) {
             // loop on list and decode all logs
-            for (int i = 0; i <= logsListSize; ++i) {
-                byte[] logRpl = ((RlpString) logList.getValues().get(i)).getBytes();
-                // TODO
-                // EvmLog log = EvmLog.decode(logRpl);
-                // logs.add(log);
+            for (int i = 0; i < logsListSize; ++i) {
+                byte[] logRlp = RlpEncoder.encode(logList.getValues().get(i));
+                var log = EthereumLog.rlpDecode(logRlp);
+                logs.add(new EthereumLog(log.consensusLogData));
             }
         }
 
-        return new EthereumReceipt(ReceiptTxType.LegacyTxType.ordinal(), status, cumulativeGasUsed, logs, logsBloom);
+        return new EthereumReceipt(ReceiptTxType.LegacyTxType.ordinal(), status, cumulativeGasUsed,
+                logs, logsBloom);
     }
 
     public static List<RlpType> asRlpValues(EthereumReceipt r) {
         List<RlpType> result = new ArrayList<>();
-        RlpList logs = new RlpList();
 
         byte[] postTxState = r.status == 1 ? new byte[]{1} : new byte[0];
 
         result.add(RlpString.create(postTxState));
         result.add(RlpString.create(r.getCumulativeGasUsed()));
-        // TODO bloom filters
-        result.add(RlpString.create(new byte[256]));
-        // TODO logs
-        result.add(logs);
 
+        //bloom filters
+        result.add(RlpString.create(r.getLogsBloom()));
+
+        // logs
+        List<RlpType> rlpLogs = new ArrayList<>();
+        for (int i = 0; i < r.getLogs().size(); i++)
+        {
+            var log = r.getLogs().get(i);
+            rlpLogs.add(new RlpList(EthereumLog.asRlpValues(log)));
+        }
+
+        result.add(new RlpList(rlpLogs));
         return result;
     }
 
     public byte[] createLogsBloom() {
         // we can create bloom filter out of a log or out of a receipt (taking its log set)
 
-    /* see: https://github.com/ethereum/go-ethereum/blob/55f914a1d764dac4bd37a48173092b1f5c3b186d/core/types/bloom9.go
+        /* see: https://github.com/ethereum/go-ethereum/blob/55f914a1d764dac4bd37a48173092b1f5c3b186d/core/types/bloom9.go
 
-        // CreateBloom creates a bloom filter out of the give Receipts (+Logs)
-        func CreateBloom(receipts Receipts) Bloom {
-            buf := make([]byte, 6)
-            var bin Bloom
-            for _, receipt := range receipts {
-                for _, log := range receipt.Logs {
-                    bin.add(log.Address.Bytes(), buf)
-                    for _, b := range log.Topics {
-                        bin.add(b[:], buf)
+            // CreateBloom creates a bloom filter out of the give Receipts (+Logs)
+            func CreateBloom(receipts Receipts) Bloom {
+                buf := make([]byte, 6)
+                var bin Bloom
+                for _, receipt := range receipts {
+                    for _, log := range receipt.Logs {
+                        bin.add(log.Address.Bytes(), buf)
+                        for _, b := range log.Topics {
+                            bin.add(b[:], buf)
+                        }
                     }
                 }
+                return bin
             }
-            return bin
-        }
 
-        // add is internal version of Add, which takes a scratch buffer for reuse (needs to be at least 6 bytes)
-        func (b *Bloom) add(d []byte, buf []byte) {
-            i1, v1, i2, v2, i3, v3 := bloomValues(d, buf)
-            b[i1] |= v1
-            b[i2] |= v2
-            b[i3] |= v3
-        }
+            // add is internal version of Add, which takes a scratch buffer for reuse (needs to be at least 6 bytes)
+            func (b *Bloom) add(d []byte, buf []byte) {
+                i1, v1, i2, v2, i3, v3 := bloomValues(d, buf)
+                b[i1] |= v1
+                b[i2] |= v2
+                b[i3] |= v3
+            }
 
-        // bloomValues returns the bytes (index-value pairs) to set for the given data
-        func bloomValues(data []byte, hashbuf []byte) (uint, byte, uint, byte, uint, byte) {
-            sha := hasherPool.Get().(crypto.KeccakState)
-            sha.Reset()
-            sha.Write(data)
-            sha.Read(hashbuf)
-            hasherPool.Put(sha)
-            // The actual bits to flip
-            v1 := byte(1 << (hashbuf[1] & 0x7))
-            v2 := byte(1 << (hashbuf[3] & 0x7))
-            v3 := byte(1 << (hashbuf[5] & 0x7))
-            // The indices for the bytes to OR in
-            i1 := BloomByteLength - uint((binary.BigEndian.Uint16(hashbuf)&0x7ff)>>3) - 1
-            i2 := BloomByteLength - uint((binary.BigEndian.Uint16(hashbuf[2:])&0x7ff)>>3) - 1
-            i3 := BloomByteLength - uint((binary.BigEndian.Uint16(hashbuf[4:])&0x7ff)>>3) - 1
+            // bloomValues returns the bytes (index-value pairs) to set for the given data
+            func bloomValues(data []byte, hashbuf []byte) (uint, byte, uint, byte, uint, byte) {
+                sha := hasherPool.Get().(crypto.KeccakState)
+                sha.Reset()
+                sha.Write(data)
+                sha.Read(hashbuf)
+                hasherPool.Put(sha)
+                // The actual bits to flip
+                v1 := byte(1 << (hashbuf[1] & 0x7))
+                v2 := byte(1 << (hashbuf[3] & 0x7))
+                v3 := byte(1 << (hashbuf[5] & 0x7))
+                // The indices for the bytes to OR in
+                i1 := BloomByteLength - uint((binary.BigEndian.Uint16(hashbuf)&0x7ff)>>3) - 1
+                i2 := BloomByteLength - uint((binary.BigEndian.Uint16(hashbuf[2:])&0x7ff)>>3) - 1
+                i3 := BloomByteLength - uint((binary.BigEndian.Uint16(hashbuf[4:])&0x7ff)>>3) - 1
 
-            return i1, v1, i2, v2, i3, v3
-        }
+                return i1, v1, i2, v2, i3, v3
+            }
 
-     */
+         */
         // TODO shall we use libevm implementation?
         return new byte[0];
     }
 
     @Override
     public String toString() {
+
+        String logsString = "logs{";
+        List<EthereumLog> logList = getLogs();
+        for (int i = 0; i < logList.size(); i++) {
+            logsString = logsString.concat(" " + logList.get(i).toString());
+        }
+        logsString = logsString.concat("}");
         return String.format(
                 "EthereumReceipt{txType=%s, status=%d, cumGasUsed=%s, logs=%s, logsBloom=%s}",
                 getTxType().toString(), status, getCumulativeGasUsed().toString(),
-                getLogs(), BytesUtils.toHexString(getLogsBloom()));
+                logsString, BytesUtils.toHexString(getLogsBloom()));
     }
 }
