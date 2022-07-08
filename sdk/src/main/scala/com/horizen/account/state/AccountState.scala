@@ -211,8 +211,10 @@ class AccountState(val params: NetworkParams,
 
   // getters:
   override def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] = {
-    log.error("TODO - needs to be implemented")
-    Seq()
+    val stateView: AccountStateView = getView
+    val res = stateView.withdrawalRequests(withdrawalEpoch)
+    stateView.close()
+    res
   }
 
   override def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
