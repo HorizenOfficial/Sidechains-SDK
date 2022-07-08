@@ -7,7 +7,7 @@ import akka.util.Timeout
 import com.horizen.{SidechainSettings, SidechainTypes}
 import com.horizen.account.api.http.AccountTransactionErrorResponse.{ErrorInsufficientBalance, GenericTransactionError}
 import com.horizen.account.api.http.AccountTransactionRestScheme.TransactionIdDTO
-import com.horizen.account.api.rpc.utils.{Data, EthCallReq, Quantity, ResponseObject}
+import com.horizen.account.api.rpc.utils.{Data, Quantity, ResponseObject}
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.{AccountStateView, EvmMessageProcessor, ExecutionResult, ExecutionSucceeded, Message}
