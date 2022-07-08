@@ -14,14 +14,14 @@ import com.horizen.api.http.{ApiResponse, ApiResponseUtil, ErrorResponse, Sidech
 import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
 import scorex.core.settings.RESTApiSettings
-
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.reflect.ClassTag
 
 case class AccountEthRpcRoute(override val settings: RESTApiSettings,
                               sidechainNodeViewHolderRef: ActorRef,
                               sidechainSettings: SidechainSettings,
-                              params: NetworkParams
+                              params: NetworkParams,
+                              sidechainTransactionActorRef: ActorRef,
                              )
                                      (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute[
@@ -48,7 +48,7 @@ case class AccountEthRpcRoute(override val settings: RESTApiSettings,
     entity(as[JsonNode])
     { body =>
       withNodeView { view =>
-        var rpcHandler = new RpcHandler(new EthService(view, params, sidechainSettings));
+        var rpcHandler = new RpcHandler(new EthService(view, params, sidechainSettings, sidechainTransactionActorRef));
         ApiResponseUtil.toResponseWithoutResultWrapper(rpcHandler.apply(new RpcRequest(body)));
       }
     }

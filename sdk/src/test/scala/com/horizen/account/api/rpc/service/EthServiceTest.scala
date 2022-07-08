@@ -1,39 +1,35 @@
 package com.horizen.account.api.rpc.service
 
+import akka.actor.TypedActor.dispatcher
 import akka.actor.{ActorRef, ActorSystem}
-import akka.testkit.TestProbe
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
-import com.horizen.SidechainSettings
-import com.horizen.account.api.http.AccountNodeViewUtilMocks
+import com.horizen.{SidechainHistory, SidechainSettings}
 import com.horizen.account.api.rpc.request.RpcRequest
 import com.horizen.account.api.rpc.response.RpcResponseError
 import com.horizen.account.api.rpc.utils.Quantity
-import com.horizen.account.block.AccountBlock
-import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.node.AccountNodeView
 import com.horizen.account.state.{AccountState, AccountStateView}
-import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.account.wallet.AccountWallet
-import com.horizen.api.http.SidechainApiMockConfiguration
-import com.horizen.fixtures.FieldElementFixture
+import com.horizen.api.http.{SidechainApiMockConfiguration, SidechainTransactionActorRef}
+import com.horizen.fixtures.{FieldElementFixture, MockedSidechainNodeViewHolderFixture}
 import com.horizen.params.{NetworkParams, RegTestParams}
 import org.junit.Assert.{assertEquals, assertFalse}
 import org.junit.{Before, Test}
-import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import org.web3j.protocol.core.methods.response.EthBlock
 import org.web3j.utils.Numeric
 
 import java.math.BigInteger
 
-class EthServiceTest extends JUnitSuite with MockitoSugar {
+class EthServiceTest extends JUnitSuite
+  with MockitoSugar
+  with MockedSidechainNodeViewHolderFixture {
   var nodeView: AccountNodeView = _
   var ethService: EthService = _
   var params: NetworkParams = _
+  var transactionActorRef: ActorRef = _
 
   implicit val actorSystem: ActorSystem = ActorSystem("sc_nvh_mocked")
   var mockedNodeViewHolderRef: ActorRef = _
@@ -46,8 +42,10 @@ class EthServiceTest extends JUnitSuite with MockitoSugar {
     var mempool = mock[AccountMemoryPool]
     var settings = mock[SidechainSettings]
     params = RegTestParams(initialCumulativeCommTreeHash = FieldElementFixture.generateFieldElement())
+    mockedNodeViewHolderRef = mock[ActorRef]; //getMockedSidechainNodeViewHolderRef((SidechainHistory) history, state, wallet, mempool)
+    transactionActorRef = SidechainTransactionActorRef(mockedNodeViewHolderRef)
     nodeView = new AccountNodeView(history, state, wallet, mempool)
-    ethService = new EthService(nodeView, params, settings)
+    ethService = new EthService(nodeView, params, settings, transactionActorRef)
   }
 
   @Test
