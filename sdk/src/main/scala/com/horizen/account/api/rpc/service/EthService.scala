@@ -7,11 +7,10 @@ import akka.util.Timeout
 import com.horizen.{SidechainSettings, SidechainTypes}
 import com.horizen.account.api.http.AccountTransactionErrorResponse.{ErrorInsufficientBalance, GenericTransactionError}
 import com.horizen.account.api.http.AccountTransactionRestScheme.TransactionIdDTO
-import com.horizen.account.api.rpc.utils.Data
-import com.horizen.account.api.rpc.utils.Quantity
-import com.horizen.account.api.rpc.utils.ResponseObject
-import com.horizen.account.node.AccountNodeView
+import com.horizen.account.api.rpc.utils.{Data, EthCallReq, Quantity, ResponseObject}
+import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.account.proposition.AddressProposition
+import com.horizen.account.state.{AccountStateView, EvmMessageProcessor, ExecutionResult, ExecutionSucceeded, Message}
 import com.horizen.account.transaction.AccountTransaction
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.api.http.{ApiResponseUtil, SidechainTransactionActor, SuccessResponse}
@@ -22,9 +21,10 @@ import com.horizen.proposition.Proposition
 import com.horizen.transaction.Transaction
 import org.web3j.crypto.{RawTransaction, SignedRawTransaction, TransactionDecoder}
 import org.web3j.crypto.transaction.`type`.TransactionType
-import org.web3j.protocol.core.methods.response.{EthBlock, Log, TransactionReceipt, Transaction => Web3jTransaction}
+import org.web3j.protocol.core.methods.response.{EthBlock, EthCall, Log, TransactionReceipt, Transaction => Web3jTransaction}
 import org.web3j.utils.Numeric
 import scorex.crypto.hash.Keccak256
+
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 import scala.util.{Failure, Success}
@@ -34,15 +34,32 @@ import java.math.BigInteger
 import java.util
 import java.util.{ArrayList, Collections, Optional}
 
-class EthService(val nodeView: AccountNodeView, val networkParams: NetworkParams, val sidechainSettings: SidechainSettings, val sidechainTransactionActorRef: ActorRef) extends RpcService {
+
+class EthService(val stateView: AccountStateView, val nodeView: AccountNodeView, val networkParams: NetworkParams, val sidechainSettings: SidechainSettings, val sidechainTransactionActorRef: ActorRef) extends RpcService {
   @RpcMethod("eth_getBlockByNumber") def getBlockByNumber(tag: Quantity, rtnTxObj: Boolean): EthBlock.Block = { //TODO: Implement getting block information
-    //nodeView.getNodeHistory().getBlockById(tag.getValue());
     new EthBlock.Block("0x1", "0x56", "0x57", "0x58", "0x59", "0x0", "0x0", "0x0", "0x0", "0", "0", "0", "0", "0", "0", "1", "3000", "2000", "22", new util.ArrayList[EthBlock.TransactionResult[_]], new util.ArrayList[String], new util.ArrayList[String], "")
   }
 
-  @RpcMethod("eth_call") def call(transaction: RawTransaction, tag: Quantity): Data = { // Executes a new message call immediately without creating a transaction on the block chain
-    // TODO: add read-only evm execution
-    new Data(new Array[Byte](0))
+
+  @RpcMethod("eth_call") def call(ethCall: util.LinkedHashMap[String, String], tag: Quantity): Data = { // Executes a new message call immediately without creating a transaction on the block chain
+    // TODO: add read-only evm execution and cleanup here
+    var processor = new EvmMessageProcessor();
+    val msg = new Message(
+      new AddressProposition(Numeric.hexStringToByteArray("0xA83035b4E719827f146C91b119508ea452c77F35")),
+      new AddressProposition(Numeric.hexStringToByteArray(ethCall.get("to"))),
+      BigInteger.ZERO,
+      BigInteger.ZERO,
+      BigInteger.ZERO,
+      BigInteger.ZERO,
+      BigInteger.ZERO,
+      BigInteger.ZERO,
+      Numeric.hexStringToByteArray(ethCall.get("data")))
+    if (processor.canProcess(msg, stateView)) {
+      var result = processor.process(msg, stateView)
+      if (!result.isFailed)
+        return new Data(result.asInstanceOf[ExecutionSucceeded].returnData())
+    }
+    return new Data(null)
   }
 
   @RpcMethod("eth_blockNumber") def blockNumber = new Quantity(String.valueOf(getBlockHeight))
