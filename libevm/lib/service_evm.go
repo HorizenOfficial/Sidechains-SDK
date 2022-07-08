@@ -2,6 +2,10 @@ package lib
 
 import (
 	"fmt"
+	"math"
+	"math/big"
+	"time"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
@@ -9,9 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
-	"math"
-	"math/big"
-	"time"
 )
 
 type EvmContext struct {
@@ -188,6 +189,75 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 	}
 
 	// no error means successful transaction, otherwise failure
+	evmError := ""
+	if vmerr != nil {
+		evmError = vmerr.Error()
+	}
+
+	return nil, &EvmResult{
+		UsedGas:         uint64(params.GasLimit) - gas,
+		EvmError:        evmError,
+		ReturnData:      returnData,
+		ContractAddress: contractAddress,
+	}
+}
+
+// quick implementation
+// TODO clean up
+func (s *Service) EvmStaticCall(params EvmParams) (error, *EvmResult) {
+	err, statedb := s.statedbs.Get(params.Handle)
+	if err != nil {
+		return err, nil
+	}
+
+	params.setDefaults()
+
+	var (
+		txContext = vm.TxContext{
+			Origin:   params.From,
+			GasPrice: new(big.Int).Set(params.GasPrice.ToInt()),
+		}
+		blockContext = params.getBlockContext()
+		chainConfig  = defaultChainConfig()
+		evmConfig    = vm.Config{
+			Debug:                   false,
+			Tracer:                  nil,
+			NoBaseFee:               false,
+			EnablePreimageRecording: false,
+			JumpTable:               nil,
+			ExtraEips:               nil,
+		}
+		evm              = vm.NewEVM(blockContext, txContext, statedb, chainConfig, evmConfig)
+		sender           = vm.AccountRef(params.From)
+		gas              = uint64(params.GasLimit)
+		contractCreation = params.To == nil
+		homestead        = evm.ChainConfig().IsHomestead(evm.Context.BlockNumber)
+		istanbul         = evm.ChainConfig().IsIstanbul(evm.Context.BlockNumber)
+	)
+
+	statedb.Prepare(params.Context.TxHash, params.Context.TxIndex)
+
+	intrinsicGas, err := core.IntrinsicGas(params.Input, params.AccessList, contractCreation, homestead, istanbul)
+	if err != nil {
+		return err, nil
+	}
+	if gas < intrinsicGas {
+		return fmt.Errorf("%w: have %d, want %d", core.ErrIntrinsicGas, gas, intrinsicGas), nil
+	}
+	gas -= intrinsicGas
+
+	if rules := evm.ChainConfig().Rules(evm.Context.BlockNumber, evm.Context.Random != nil); rules.IsBerlin {
+		statedb.PrepareAccessList(params.From, params.To, vm.ActivePrecompiles(rules), params.AccessList)
+	}
+
+	var (
+		returnData      []byte
+		vmerr           error
+		contractAddress *common.Address
+	)
+
+	returnData, gas, vmerr = evm.StaticCall(sender, *params.To, params.Input, gas)
+
 	evmError := ""
 	if vmerr != nil {
 		evmError = vmerr.Error()
