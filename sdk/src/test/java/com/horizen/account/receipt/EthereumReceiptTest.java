@@ -21,6 +21,28 @@ public class EthereumReceiptTest {
     // test vectors encoded by go lib have been produced via:
     //     libevm/lib/service_hash_test.go
 
+
+    static public EthereumReceipt createTestEthereumReceipt() {
+        List<EthereumLog> logs = new ArrayList<>();
+        logs.add(createTestEthereumLog());
+        logs.add(createTestEthereumLog());
+
+        EthereumReceipt receipt = new EthereumReceipt(
+                EthereumReceipt.ReceiptTxType.DynamicFeeTxType.ordinal(),
+                1,
+                BigInteger.valueOf(1000),
+                logs,
+                new byte[256]
+        );
+        receipt.setGasUsed(BigInteger.valueOf(123456));
+        receipt.setTransactionHash((byte[]) Keccak256.hash("txhash".getBytes()));
+        receipt.setTransactionIndex(33);
+        receipt.setBlockHash((byte[]) Keccak256.hash("blockhash".getBytes()));
+        receipt.setBlockNumber(22);
+        receipt.setContractAddress(BytesUtils.fromHexString("1122334455667788990011223344556677889900"));
+        return receipt;
+    }
+
     @Test
     public void receiptSimpleEncodeDecodeLegacyTest() {
 

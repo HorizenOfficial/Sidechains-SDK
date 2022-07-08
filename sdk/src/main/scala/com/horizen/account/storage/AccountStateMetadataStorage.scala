@@ -1,5 +1,6 @@
 package com.horizen.account.storage
 
+import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.storage.Storage
@@ -43,4 +44,6 @@ class AccountStateMetadataStorage(storage: Storage) extends AccountStateMetadata
   override def getHeight: Int = getView.getHeight
 
   override def getAccountStateRoot: Array[Byte] = getView.getAccountStateRoot
+
+  override def getTransactionReceipt(txHash: Array[Byte]): Option[EthereumReceipt] = getView.getTransactionReceipt(txHash)
 }

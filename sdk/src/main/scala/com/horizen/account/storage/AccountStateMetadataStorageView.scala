@@ -3,6 +3,7 @@ package com.horizen.account.storage
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.account.receipt.{EthereumReceipt, EthereumReceiptSerializer}
 import com.horizen.account.storage.AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT
+import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.storage.Storage
@@ -142,6 +143,26 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
 
   override def getAccountStateRoot: Array[Byte] = {
     accountStateRootOpt.orElse(getAccountStateRootFromStorage).getOrElse(DEFAULT_ACCOUNT_STATE_ROOT)
+  }
+
+  private[horizen] def getTransactionReceiptFromStorage(txHash: Array[Byte]): Option[EthereumReceipt] = {
+    storage.get(txHash).asScala match {
+      case Some(serData) => {
+        val decodedReceipt: EthereumReceipt = EthereumReceiptSerializer.getSerializer.parseBytes(serData)
+        Some(decodedReceipt)
+      }
+      case None => None
+    }
+  }
+
+  override def getTransactionReceipt(txHash: Array[Byte]): Option[EthereumReceipt] = {
+    val bawTxHash = new ByteArrayWrapper(txHash)
+    receiptsOpt match {
+      case Some(receipts) => {
+        receipts.find(r => new ByteArrayWrapper(r.getTransactionHash) == bawTxHash)
+      }
+      case None => getTransactionReceiptFromStorage(txHash)
+    }
   }
 
   // put in memory cache and mark the entry as "dirty"
@@ -302,6 +323,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private[horizen] def getBlockFeeInfoKey(withdrawalEpochNumber: Int, counter: Int): ByteArrayWrapper = {
     calculateKey(Bytes.concat("blockFeeInfo".getBytes, Ints.toByteArray(withdrawalEpochNumber), Ints.toByteArray(counter)))
   }
+
 }
 
 object AccountStateMetadataStorageView {

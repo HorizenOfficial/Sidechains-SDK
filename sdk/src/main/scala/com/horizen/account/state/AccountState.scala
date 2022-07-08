@@ -113,8 +113,9 @@ class AccountState(val params: NetworkParams,
       stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
     }
 
-    // TODO get also list of receipts consensus data, useful for computing the receiptRoot hash
-    val receiptList :Seq[EthereumReceipt] = Seq()
+    // get also list of receipts, useful for computing the receiptRoot hash
+    // TODO do it a val.
+    var receiptList :Seq[EthereumReceipt] = Seq()
     var cumGasUsed : BigInteger = BigInteger.ZERO
 
     for ((tx, txIndex) <- mod.sidechainTransactions.zipWithIndex) {
@@ -129,7 +130,7 @@ class AccountState(val params: NetworkParams,
 
           log.debug(s"Adding to receipt list: ${receipt.toString(true)}")
 
-          receiptList :+ receipt
+          receiptList = receiptList :+ receipt
 
         case Failure(e) =>
           log.error("Could not apply tx", e)
