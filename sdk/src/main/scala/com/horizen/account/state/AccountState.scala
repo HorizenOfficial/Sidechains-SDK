@@ -3,10 +3,12 @@ package com.horizen.account.state
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountState
+import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.evm._
+import com.horizen.evm.interop.EvmLog
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
@@ -16,7 +18,7 @@ import scorex.util.{ModifierId, ScorexLogging}
 import java.math.BigInteger
 import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
-import scala.util.{Failure, Try}
+import scala.util.{Failure, Success, Try}
 
 class AccountState(val params: NetworkParams,
                    override val version: VersionTag,
@@ -112,9 +114,27 @@ class AccountState(val params: NetworkParams,
     }
 
     // TODO get also list of receipts consensus data, useful for computing the receiptRoot hash
-    val receiptList = Seq()
-    for (tx <- mod.sidechainTransactions) {
-      stateView.applyTransaction(tx).get
+    val receiptList :Seq[EthereumReceipt] = Seq()
+    var cumGasUsed : BigInteger = BigInteger.ZERO
+
+    for ((tx, txIndex) <- mod.sidechainTransactions.zipWithIndex) {
+      stateView.applyTransaction(tx, cumGasUsed) match {
+        case Success(receipt) =>
+          // update cumulative gas used so far
+          cumGasUsed = cumGasUsed.add(receipt.getGasUsed)
+          // update block related data in receipt
+          receipt.setTransactionIndex(txIndex)
+          receipt.setBlockHash(idToBytes(mod.id))
+          receipt.setBlockNumber(stateView.getHeight)
+
+          log.debug(s"Adding to receipt list: ${receipt.toString(true)}")
+
+          receiptList :+ receipt
+
+        case Failure(e) =>
+          log.error("Could not apply tx", e)
+          throw new IllegalArgumentException(e)
+      }
     }
 
     // TODO: calculate and update fee info.
@@ -124,8 +144,8 @@ class AccountState(val params: NetworkParams,
     // check stateRoot and receiptRoot against block header
     mod.verifyReceiptDataConsistency(receiptList)
 
-    // TODO get block hash and update receipts derived data (we used only consensus data for getting the receiptsRoot)
     // eventually, store full receipts in the metaDataStorage indexed by txid
+    stateView.updateTransactionReceipts(receiptList)
 
     stateView.commit(idToVersion(mod.id)).get
 
@@ -251,6 +271,11 @@ class AccountState(val params: NetworkParams,
     stateMetadataStorage.getFeePayments(withdrawalEpoch)
   }
 
+  override def getHeight: Int = {
+    stateMetadataStorage.getHeight
+  }
+
+
   private def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = {
     val stateView: AccountStateView = getView
     val res = stateView.getOrderedForgingStakeInfoSeq
@@ -302,6 +327,14 @@ class AccountState(val params: NetworkParams,
     view.close()
     res
   }
+
+  override def getLogs(txHash: Array[Byte]): Array[EvmLog] = {
+    val view = getView
+    val res = view.getLogs(txHash)
+    view.close()
+    res
+  }
+
 }
 
 

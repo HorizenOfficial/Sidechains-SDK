@@ -9,47 +9,50 @@ import com.horizen.utils.BytesUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.web3j.rlp.*;
+import scorex.core.serialization.BytesSerializable;
+import scorex.core.serialization.ScorexSerializer;
 
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 
 @JsonView(Views.Default.class)
-public class EthereumLog {
+public class EthereumLog implements BytesSerializable {
 
     private static final Logger log = LogManager.getLogger(EthereumLog.class);
 
     // consensus data
     EvmLog consensusLogData;
 
-    // Derived fields. These fields are filled in by the node
-    // but not secured by consensus.
+    // Derived fields.
+
     // block in which the transaction was included
-    BigInteger blockNumber;
+    Integer blockNumber;
     // hash of the transaction
     byte[] transactionHash;
     // index of the transaction in the block
-    BigInteger transactionIndex;
+    Integer transactionIndex;
     // hash of the block in which the transaction was included
     byte[] blockHash;
+
     // index of the log in the block logs
-    int logIndex;
+    Integer logIndex;
 
     // The Removed field is true if this log was reverted due to a chain reorganisation.
     // You must pay attention to this field if you receive logs through a filter query.
-    Boolean removed;
+    int removed;
 
 
     public EthereumLog(EvmLog log) {
         this.consensusLogData = log;
 
-        this.blockNumber = BigInteger.valueOf(-1);
-        this.transactionHash = null;
-        this.transactionIndex = BigInteger.valueOf(-1);
-        this.blockHash = null;
+        this.blockNumber = -1;
+        this.transactionHash = new byte[32];
+        this.transactionIndex = -1;
+        this.blockHash = new byte[32];
         this.logIndex = -1;
+        this.removed = 0;
     }
 
     public byte[] getTransactionHash() {
@@ -59,8 +62,8 @@ public class EthereumLog {
         this.transactionHash = Arrays.copyOf(transactionHash, transactionHash.length);
     }
 
-    public BigInteger getTransactionIndex() { return this.transactionIndex; }
-    public void setTransactionIndex(BigInteger transactionIndex) {
+    public Integer getTransactionIndex() { return this.transactionIndex; }
+    public void setTransactionIndex(Integer transactionIndex) {
         this.transactionIndex = transactionIndex;
     }
 
@@ -71,9 +74,19 @@ public class EthereumLog {
         this.blockHash = Arrays.copyOf(blockHash, blockHash.length);
     }
 
-    public BigInteger getBlockNumber() { return this.blockNumber;}
-    public void setBlockNumber(BigInteger blockNumber) {
+    public Integer getBlockNumber() { return this.blockNumber;}
+    public void setBlockNumber(Integer blockNumber) {
         this.blockNumber = blockNumber;
+    }
+
+    public Integer getLogIndex() { return this.logIndex;}
+    public void setLogIndex(Integer idx) {
+        this.logIndex = idx;
+    }
+
+    public int getRemoved() { return this.removed;}
+    public void setRemoved(int flag) {
+        this.removed = flag;
     }
 
     public EvmLog getConsensusLogData() {
@@ -89,9 +102,11 @@ public class EthereumLog {
     }
 
     public static EthereumLog rlpDecode(byte[] rlpData) {
+        RlpList rlpList = (RlpList) RlpDecoder.decode(rlpData).getValues().get(0);
+        return new EthereumLog(rlpDecode(rlpList));
+    }
 
-        RlpList rlpList = RlpDecoder.decode(rlpData);
-        RlpList values = (RlpList) rlpList.getValues().get(0);
+    public static EvmLog rlpDecode(RlpList values) {
 
         EvmLog decodedLog = new EvmLog();
 
@@ -112,7 +127,7 @@ public class EthereumLog {
 
         decodedLog.data = ((RlpString) values.getValues().get(2)).getBytes();
 
-        return new EthereumLog(decodedLog);
+        return decodedLog;
     }
 
     public static List<RlpType> asRlpValues(EthereumLog log) {
@@ -186,17 +201,21 @@ public class EthereumLog {
 
     @Override
     public String toString() {
-        String topicsStr = "topics{";
-        Hash[] topics = getConsensusLogData().topics;
-        for (int i = 0; i < topics.length; i++) {
-            topicsStr = topicsStr.concat(" " + BytesUtils.toHexString(topics[i].toBytes()));
-        }
-        topicsStr = topicsStr.concat("}");
-
+        // TODO add other info
         return String.format(
-                "EthereumLog{address=%s, topics=%s, data=%s}",
-                BytesUtils.toHexString(consensusLogData.address.toBytes()),
-                topicsStr,
-                BytesUtils.toHexString(consensusLogData.data));
+                "EthereumLog{consensusData=%s}",
+                getConsensusLogData().toString());
     }
+
+    @Override
+    public byte[] bytes() {
+        return BytesSerializable.super.bytes();
+    }
+
+    @Override
+    public ScorexSerializer<BytesSerializable> serializer() {
+        return EthereumLogSerializer.getSerializer();
+    }
+
+
 }

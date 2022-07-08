@@ -1,6 +1,7 @@
 package com.horizen.account.storage
 
 import com.google.common.primitives.{Bytes, Ints}
+import com.horizen.account.receipt.{EthereumReceipt, EthereumReceiptSerializer}
 import com.horizen.account.storage.AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
@@ -34,6 +35,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private[horizen] var blockFeeInfoOpt: Option[BlockFeeInfo] = None
   private[horizen] var consensusEpochOpt: Option[ConsensusEpochNumber] = None
   private[horizen] var accountStateRootOpt: Option[Array[Byte]] = None
+  private[horizen] var receiptsOpt: Option[Seq[EthereumReceipt]] = None
 
   // all getters same as in StateMetadataStorage, but looking first in the cached/dirty entries in memory
 
@@ -149,6 +151,10 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   def updateTopQualityCertificate(topQualityCertificate: WithdrawalEpochCertificate): Unit =
     topQualityCertificateOpt = Some(topQualityCertificate)
 
+  def updateTransactinReceipts(receipts: Seq[EthereumReceipt]): Unit = {
+    receiptsOpt = Some(receipts)
+  }
+
   def addFeePayment(blockFeeInfo: BlockFeeInfo): Unit = {
     blockFeeInfoOpt = Some(blockFeeInfo)
   }
@@ -184,6 +190,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     blockFeeInfoOpt = None
     consensusEpochOpt = None
     accountStateRootOpt = None
+    receiptsOpt = None
   }
 
   private[horizen] def saveToStorage(version: ByteArrayWrapper): Unit = {
@@ -255,6 +262,14 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
         }
       case _ => // do nothing
     }
+
+    receiptsOpt.foreach(receipts => {
+        for (r <- receipts) {
+          val key = r.getTransactionHash
+          val value = new ByteArrayWrapper(EthereumReceiptSerializer.getSerializer.toBytes(r))
+          updateList.add(new JPair(key, value))
+        }
+    })
 
     storage.update(version, updateList, removeList)
 

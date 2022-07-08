@@ -3,6 +3,7 @@ package com.horizen.account.state
 import com.google.common.primitives.Bytes
 import com.horizen.SidechainTypes
 import com.horizen.account.proposition.AddressProposition
+import com.horizen.account.receipt.{EthereumLog, EthereumReceipt}
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress}
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.transaction.EthereumTransaction
@@ -12,15 +13,16 @@ import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.evm.{StateDB, StateStorageStrategy}
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.evm.ResourceHandle
+import com.horizen.evm.interop.EvmLog
 import com.horizen.state.StateView
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.{BlockFeeInfo, BytesUtils, WithdrawalEpochInfo}
 import scorex.core.VersionTag
-import scorex.util.ScorexLogging
+import scorex.util.{ScorexLogging, idToBytes}
 
 import java.math.BigInteger
-import scala.collection.JavaConverters.collectionAsScalaIterableConverter
+import scala.collection.JavaConverters.{collectionAsScalaIterableConverter, seqAsJavaListConverter}
 import scala.util.Try
 
 class AccountStateView(private val metadataStorageView: AccountStateMetadataStorageView,
@@ -170,11 +172,12 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     BigInteger.ZERO
   }
 
-  override def applyTransaction(tx: SidechainTypes#SCAT): Try[Unit] = Try {
+  override def applyTransaction(tx: SidechainTypes#SCAT, prevCumGasUsed: BigInteger): Try[EthereumReceipt] = Try {
     if (!tx.isInstanceOf[EthereumTransaction])
       throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
 
     val ethTx = tx.asInstanceOf[EthereumTransaction]
+    val txHash = idToBytes(ethTx.id)
 
     // Do the checks and prepay gas
     val bookedGasPrice: BigInteger = preCheck(ethTx)
@@ -192,17 +195,38 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     val processor = messageProcessors.find(_.canProcess(message, this)).getOrElse(
       throw new IllegalArgumentException(s"Transaction ${ethTx.id} has no known processor.")
     )
+
+    val receipt = new EthereumReceipt()
+    receipt.setTransactionType(ethTx.version())
+    receipt.setTransactionHash(txHash)
+
+    if (!isEoaAccount(ethTx.getTo.address()) )
+      receipt.setContractAddress(ethTx.getTo.address())
+
     val gasUsed: BigInteger = processor.process(message, this) match {
       case success: ExecutionSucceeded =>
+        receipt.setStatus(EthereumReceipt.ReceiptStatus.SUCCESSFUL.ordinal())
+        val evmLogs = getLogs(txHash)
+        receipt.setLogs(evmLogs.map(new EthereumLog(_)).toList.asJava)
         success.gasUsed()
+
       case failed: ExecutionFailed =>
+        receipt.setStatus(EthereumReceipt.ReceiptStatus.FAILED.ordinal())
+        val evmLogs = getLogs(txHash)
+        receipt.setLogs(evmLogs.map(new EthereumLog(_)).toList.asJava)
         stateDb.revertToSnapshot(revisionId)
         failed.gasUsed()
+
       case invalid: InvalidMessage =>
         throw new Exception(s"Transaction ${ethTx.id} is invalid.", invalid.getReason)
     }
 
     // todo: refund gas: bookedGasPrice - actualGasPrice
+    receipt.setCumulativeGasUsed(prevCumGasUsed.add(gasUsed))
+    receipt.setGasUsed(gasUsed)
+
+    log.debug(s"Returning receipt: ${receipt.toString(true)}")
+    receipt
   }
 
   override def isEoaAccount(address: Array[Byte]): Boolean = stateDb.isEoaAccount(address)
@@ -279,6 +303,11 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     metadataStorageView.updateConsensusEpochNumber(consensusEpochNum)
   }
 
+  override def updateTransactionReceipts(receipts: Seq[EthereumReceipt]): Unit = {
+    metadataStorageView.updateTransactinReceipts(receipts)
+  }
+
+
   override def setCeased(): Unit = {
     metadataStorageView.setCeased()
   }
@@ -318,6 +347,10 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     metadataStorageView.getFeePayments(withdrawalEpoch)
   }
 
+  override def getAccountStateRoot: Array[Byte] = metadataStorageView.getAccountStateRoot
+
+  override def getHeight: Int = metadataStorageView.getHeight
+
   // account specific getters
   override def getBalance(address: Array[Byte]): BigInteger = {
     stateDb.getBalance(address)
@@ -331,7 +364,9 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     stateDb.getNonce(address)
   }
 
-  override def getAccountStateRoot: Array[Byte] = metadataStorageView.getAccountStateRoot
+  override def getLogs(txHash: Array[Byte]): Array[EvmLog] = {
+    stateDb.getLogs(txHash)
+  }
 
   override def close(): Unit = {
     // when a method is called on a closed handle, LibEvm throws an exception
@@ -339,4 +374,5 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
   }
 
   override def getStateDbHandle: ResourceHandle = stateDb
+
 }

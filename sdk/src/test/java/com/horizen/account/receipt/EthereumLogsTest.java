@@ -1,27 +1,17 @@
 package com.horizen.account.receipt;
 
-import com.horizen.evm.TrieHasher;
 import com.horizen.evm.interop.EvmLog;
 import com.horizen.evm.utils.Address;
 import com.horizen.evm.utils.Hash;
 import com.horizen.utils.BytesUtils;
 import org.junit.Test;
-import org.web3j.utils.Numeric;
+import scorex.crypto.hash.Keccak256;
 
-import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-
-import static java.util.Map.entry;
 import static org.junit.Assert.assertEquals;
 
 public class EthereumLogsTest {
 
-    @Test
-    public void receiptSimpleEncodeDecodeTest() {
-
+    public static EthereumLog createTestEthereumLog() {
         EvmLog evmLog = new EvmLog();
         evmLog.address = Address.FromBytes(BytesUtils.fromHexString("1122334455667788990011223344556677889900"));
         evmLog.topics = new Hash[4];
@@ -31,7 +21,23 @@ public class EthereumLogsTest {
         evmLog.topics[3] = Hash.FromBytes(BytesUtils.fromHexString("3333333333333333333333333333333333333333333333333333333333333333"));
         evmLog.data = BytesUtils.fromHexString("aabbccddeeff");
 
-        EthereumLog ethereumLog = new EthereumLog(evmLog);
+        // add also non consensus data info, not rlp handled
+        EthereumLog log = new EthereumLog(evmLog);
+        log.setTransactionHash((byte[]) Keccak256.hash("txhash".getBytes()));
+        log.setTransactionIndex(1);
+        log.setBlockHash((byte[]) Keccak256.hash("blockhash".getBytes()));
+        log.setBlockNumber(100);
+        log.setLogIndex(1);
+        log.setRemoved(0);
+
+        return log;
+
+    }
+
+    @Test
+    public void receiptSimpleEncodeDecodeTest() {
+
+        EthereumLog ethereumLog = createTestEthereumLog();
         System.out.println(ethereumLog);
 
 

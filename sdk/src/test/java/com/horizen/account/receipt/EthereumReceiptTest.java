@@ -1,10 +1,10 @@
 package com.horizen.account.receipt;
 
 import com.horizen.evm.TrieHasher;
-import com.horizen.evm.interop.EvmLog;
 import com.horizen.utils.BytesUtils;
 import org.junit.Test;
 import org.web3j.utils.Numeric;
+import scorex.crypto.hash.Keccak256;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -12,6 +12,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import static com.horizen.account.receipt.EthereumLogsTest.createTestEthereumLog;
 import static java.util.Map.entry;
 import static org.junit.Assert.*;
 
@@ -35,8 +36,7 @@ public class EthereumReceiptTest {
         //System.out.println(BytesUtils.toHexString(encodedReceipt));
 
         // read what you write
-        byte[] dataBytes = encodedReceipt;
-        EthereumReceipt decodedReceipt = EthereumReceipt.rlpDecode(dataBytes);
+        EthereumReceipt decodedReceipt = EthereumReceipt.rlpDecode(encodedReceipt);
         //System.out.println(decodedReceipt);
 
         assertEquals(receipt.getTxType(), decodedReceipt.getTxType());
@@ -211,5 +211,41 @@ public class EthereumReceiptTest {
              */
             assertEquals("should match transaction root hash", testCase.getValue(), actualHash);
         }
+    }
+
+    @Test
+    public void receiptSimpleSerializeUnserialize() {
+
+        List<EthereumLog> logs = new ArrayList<>();
+        logs.add(createTestEthereumLog());
+        logs.add(createTestEthereumLog());
+
+        EthereumReceipt receipt = new EthereumReceipt(
+                EthereumReceipt.ReceiptTxType.DynamicFeeTxType.ordinal(),
+                1,
+                BigInteger.valueOf(1000),
+                //new ArrayList<>(),
+                logs,
+                new byte[256]
+        );
+        receipt.setGasUsed(BigInteger.valueOf(123456));
+        receipt.setTransactionHash((byte[]) Keccak256.hash("txhash".getBytes()));
+        receipt.setTransactionIndex(33);
+        receipt.setBlockHash((byte[]) Keccak256.hash("blockhash".getBytes()));
+        receipt.setBlockNumber(22);
+        receipt.setContractAddress(BytesUtils.fromHexString("1122334455667788990011223344556677889900"));
+
+        String r1 = receipt.toString(true);
+        System.out.println(r1);
+
+        byte[] serializedBytes = EthereumReceiptSerializer.getSerializer().toBytes(receipt);
+        System.out.println(BytesUtils.toHexString(serializedBytes));
+
+        EthereumReceipt decodedReceipt = EthereumReceiptSerializer.getSerializer().parseBytes(serializedBytes);
+        String r2 = decodedReceipt.toString(true);
+        System.out.println(r2);
+
+        assertEquals(r1, r2);
+
     }
 }

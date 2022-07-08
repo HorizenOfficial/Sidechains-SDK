@@ -1,8 +1,6 @@
 package com.horizen.account.receipt;
 
 import com.fasterxml.jackson.annotation.*;
-import com.horizen.evm.interop.EvmLog;
-import com.horizen.evm.utils.Hash;
 import com.horizen.serialization.Views;
 import com.horizen.utils.BytesUtils;
 import org.apache.logging.log4j.LogManager;
@@ -20,9 +18,14 @@ import java.util.List;
 @JsonView(Views.Default.class)
 public class EthereumReceipt {
 
+    // TODO wrap consensus data into a separate class and move these impl to scala
+
     private static final Logger log = LogManager.getLogger(EthereumReceipt.class);
 
-    public enum ReceiptStatus { FAILED, SUCCESSFUL}
+    public enum ReceiptStatus {FAILED, SUCCESSFUL}
+
+    // all these versions are supported by go eth; but in w3j apparently only 0 and 2:
+    //   org/web3j/crypto/transaction/type/TransactionType.java
     public enum ReceiptTxType {LegacyTxType, AccessListTxType, DynamicFeeTxType}
 
     // consensus data
@@ -40,13 +43,18 @@ public class EthereumReceipt {
     List<EthereumLog> logs;
     byte[] logsBloom;
 
+
     // derived types (not part of the rlp encoding for receipt hash root)
     byte[] transactionHash;
-    BigInteger transactionIndex;
+    Integer transactionIndex;
     byte[] blockHash;
-    BigInteger blockNumber;
+    Integer blockNumber;
     BigInteger gasUsed;
     byte[] contractAddress;
+
+    public EthereumReceipt() {
+        this(0, 0, BigInteger.valueOf(-1), new ArrayList<>(), new byte[256]);
+    }
 
     public EthereumReceipt(
             int transactionType,
@@ -61,14 +69,16 @@ public class EthereumReceipt {
         this.logs = logs;
 
         // we should derive blooms from logs via createLogsBloom()
-        this.logsBloom = Arrays.copyOf(logsBloom, logsBloom.length);
+        if (logsBloom != null) {
+            this.logsBloom = Arrays.copyOf(logsBloom, logsBloom.length);
+        }
 
-        this.transactionHash = null;
-        this.transactionIndex = BigInteger.valueOf(-1);
-        this.blockHash = null;
-        this.blockNumber = BigInteger.valueOf(-1);;
-        this.gasUsed = BigInteger.valueOf(-1);;
-        this.contractAddress = null;
+        this.transactionHash = new byte[32];
+        this.transactionIndex = -1;
+        this.blockHash = new byte[32];
+        this.blockNumber = -1;
+        this.gasUsed = BigInteger.valueOf(-1);
+        this.contractAddress = new byte[20];
     }
 
     public int getTransactionType() { return transactionType; }
@@ -83,8 +93,8 @@ public class EthereumReceipt {
         this.transactionHash = Arrays.copyOf(transactionHash, transactionHash.length);
     }
 
-    public BigInteger getTransactionIndex() { return this.transactionIndex; }
-    public void setTransactionIndex(BigInteger transactionIndex) {
+    public Integer getTransactionIndex() { return this.transactionIndex; }
+    public void setTransactionIndex(Integer transactionIndex) {
         this.transactionIndex = transactionIndex;
     }
 
@@ -95,8 +105,8 @@ public class EthereumReceipt {
         this.blockHash = Arrays.copyOf(blockHash, blockHash.length);
     }
 
-    public BigInteger getBlockNumber() { return this.blockNumber;}
-    public void setBlockNumber(BigInteger blockNumber) {
+    public Integer getBlockNumber() { return this.blockNumber;}
+    public void setBlockNumber(Integer blockNumber) {
         this.blockNumber = blockNumber;
     }
 
@@ -136,7 +146,8 @@ public class EthereumReceipt {
             case 1:   return ReceiptTxType.AccessListTxType;
             case 2:   return ReceiptTxType.DynamicFeeTxType;
         }
-        return null;
+        // TODO assert transaction type is in valid range
+        throw new IllegalArgumentException("invalid transaction type:" + transactionType);
     }
 
     public List<EthereumLog> getLogs() {
@@ -151,6 +162,10 @@ public class EthereumReceipt {
     }
     public void setLogsBloom(byte[] logsBloom) {
         this.logsBloom = Arrays.copyOf(logsBloom, logsBloom.length);
+    }
+    public void setLogsBloom() {
+        // creates blooms out of logs content
+        this.logsBloom = createLogsBloom();
     }
 
     public static byte[] rlpEncode(EthereumReceipt r) {
@@ -175,7 +190,7 @@ public class EthereumReceipt {
         }
 
         // handle tx type
-        int b0 = (int)rlpData[0];
+        int b0 = rlpData[0];
 
         if (b0 == 1 || b0 == 2) {
             ReceiptTxType rt = ReceiptTxType.values()[b0];
@@ -202,7 +217,7 @@ public class EthereumReceipt {
         if (postTxState.length == 0) {
             status = 0;
         } else {
-            if (postTxState.length != 1 || postTxState[0] != (int)1) {
+            if (postTxState.length != 1 || postTxState[0] != 1) {
                 log.error("Invalid rlp postTxState data");
                 return null;
             }
@@ -211,21 +226,16 @@ public class EthereumReceipt {
 
         BigInteger cumulativeGasUsed = ((RlpString) values.getValues().get(1)).asPositiveBigInteger();
 
-        // TODO blooms
         byte[] logsBloom = ((RlpString) values.getValues().get(2)).getBytes();
 
-        // TODO logs
         RlpList logList = ((RlpList) values.getValues().get(3));
-
         List<EthereumLog> logs = new ArrayList<>(0);
-
         int logsListSize = logList.getValues().size();
         if (logsListSize > 0) {
             // loop on list and decode all logs
             for (int i = 0; i < logsListSize; ++i) {
-                byte[] logRlp = RlpEncoder.encode(logList.getValues().get(i));
-                var log = EthereumLog.rlpDecode(logRlp);
-                logs.add(new EthereumLog(log.consensusLogData));
+                var log = EthereumLog.rlpDecode((RlpList) logList.getValues().get(i));
+                logs.add(new EthereumLog(log));
             }
         }
 
@@ -313,13 +323,63 @@ public class EthereumReceipt {
 
         String logsString = "logs{";
         List<EthereumLog> logList = getLogs();
-        for (int i = 0; i < logList.size(); i++) {
-            logsString = logsString.concat(" " + logList.get(i).toString());
+        for (EthereumLog ethereumLog : logList) {
+            logsString = logsString.concat(" " + ethereumLog.toString());
         }
         logsString = logsString.concat("}");
+
+        String logsBloomStr;
+        byte[] blooms = getLogsBloom();
+        if (blooms != null) {
+            logsBloomStr = BytesUtils.toHexString(getLogsBloom());
+        } else {
+            logsBloomStr="null";
+        }
+
         return String.format(
-                "EthereumReceipt{txType=%s, status=%d, cumGasUsed=%s, logs=%s, logsBloom=%s}",
+                "EthereumReceipt (consensus data) { txType=%s, status=%d, cumGasUsed=%s, logs=%s, logsBloom=%s}",
                 getTxType().toString(), status, getCumulativeGasUsed().toString(),
-                logsString, BytesUtils.toHexString(getLogsBloom()));
+                logsString, logsBloomStr);
+    }
+
+    public String toString(Boolean withNonConsensusData) {
+        String infoString = toString();
+        if (withNonConsensusData) {
+
+            String txHashStr;
+            byte[] txHash = getTransactionHash();
+            if (txHash != null) {
+                txHashStr = BytesUtils.toHexString(txHash);
+            } else {
+                txHashStr="null";
+            }
+
+            String blockHashStr;
+            byte[] blockHash = getBlockHash();
+            if (blockHash != null) {
+                blockHashStr = BytesUtils.toHexString(blockHash);
+            } else {
+                blockHashStr="null";
+            }
+
+            String contractAddressStr;
+            byte[] cAddr = getContractAddress();
+            if (cAddr != null) {
+                contractAddressStr = BytesUtils.toHexString(cAddr);
+            } else {
+                contractAddressStr="null";
+            }
+
+            byte[] contractAddress;
+
+            String infoNonConsensusStr = String.format(
+                    " - (non consensus data) {txHash=%s, txIndex=%d, blockHash=%s, blockNumber=%d, gasUsed=%s, contractAddress=%s}",
+                    txHashStr, getTransactionIndex(), blockHashStr, getBlockNumber(), getGasUsed().toString(), contractAddressStr);
+
+            infoString = infoString.concat(infoNonConsensusStr);
+        }
+
+        return infoString;
     }
 }
+
