@@ -21,6 +21,7 @@ import java.lang.Thread.sleep
 import java.net.{InetAddress, InetSocketAddress}
 import java.util.{Optional => JOptional}
 import scala.concurrent.{Await, ExecutionContext}
+import scala.util.{Failure, Success, Try}
 
 case class SidechainNodeApiRoute(peerManager: ActorRef,
                                  networkController: ActorRef,
@@ -39,7 +40,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
     try {
       val result = askActor[Map[InetSocketAddress, PeerInfo]](peerManager, GetAllPeers).map {
         _.map { case (address, peerInfo) =>
-          SidechainPeerNode(address.toString, peerInfo.lastSeen, peerInfo.peerSpec.nodeName, peerInfo.connectionType.map(_.toString))
+          SidechainPeerNode(address.toString, peerInfo.lastHandshake, peerInfo.peerSpec.nodeName, peerInfo.connectionType.map(_.toString))
         }
       }
       val resultList = Await.result(result, settings.timeout).toList
@@ -55,7 +56,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
         _.map { peerInfo =>
           SidechainPeerNode(
             address = peerInfo.peerSpec.address.map(_.toString).getOrElse(""),
-            lastSeen = peerInfo.lastSeen,
+            lastSeen = peerInfo.lastHandshake,
             name = peerInfo.peerSpec.nodeName,
             connectionType = peerInfo.connectionType.map(_.toString)
           )
@@ -77,10 +78,13 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
           case None =>
             ApiResponseUtil.toResponse(ErrorInvalidHost("Incorrect host and/or port.", JOptional.empty()))
           case Some(addressAndPort) =>
-            val host = InetAddress.getByName(addressAndPort.group(1))
-            val port = addressAndPort.group(2).toInt
-            networkController ! ConnectTo(PeerInfo.fromAddress(new InetSocketAddress(host, port)))
-            ApiResponseUtil.toResponse(RespConnect(host + ":" + port))
+            Try(InetAddress.getByName(addressAndPort.group(1))) match {
+              case Failure(exception) =>  SidechainApiError(exception)
+              case Success(host) =>
+                val port = addressAndPort.group(2).toInt
+                networkController ! ConnectTo(PeerInfo.fromAddress(new InetSocketAddress(host, port)))
+                ApiResponseUtil.toResponse(RespConnect(host + ":" + port))
+            }
         }
     }
   }

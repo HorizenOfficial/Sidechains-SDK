@@ -1,7 +1,6 @@
 package com.horizen
 
 import java.util
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestProbe
 import akka.util.Timeout
@@ -29,7 +28,7 @@ import scorex.util.ModifierId
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 class SidechainNodeViewHolderTest extends JUnitSuite
   with MockedSidechainNodeViewHolderFixture
@@ -75,7 +74,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     // Mock history to add the incoming block to the ProgressInfo append list
     Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer( answer =>
       Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(answer.getArgument(0).asInstanceOf[SidechainBlock]), Seq())))
-    Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenReturn(history)
+    Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenReturn(Try(history))
     // Mock state to notify that any incoming block to append will lead to chain switch
     Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[SidechainBlock])).thenReturn(true)
     // Mock state to apply incoming block successfully
@@ -348,7 +347,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     // Mock history to add the incoming block to the ProgressInfo append list
     Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer( answer =>
       Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(answer.getArgument(0).asInstanceOf[SidechainBlock]), Seq())))
-    Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenReturn(history)
+    Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenReturn(Try(history))
     // Mock state to notify that any incoming block to append will NOT lead to chain switch
     Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[SidechainBlock])).thenReturn(false)
     // Mock state to apply incoming block successfully
@@ -408,7 +407,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     // Mock history to add the incoming block to the ProgressInfo append list
     Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer( answer =>
       Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(answer.getArgument(0).asInstanceOf[SidechainBlock]), Seq())))
-    Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenReturn(history)
+    Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenReturn(Try(history))
     Mockito.when(history.updateFeePaymentsInfo(ArgumentMatchers.any[ModifierId],ArgumentMatchers.any[FeePaymentsInfo])).thenReturn(history)
     // Mock state to notify that any incoming block to append will NOT lead to chain switch
     Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[SidechainBlock])).thenReturn(false)

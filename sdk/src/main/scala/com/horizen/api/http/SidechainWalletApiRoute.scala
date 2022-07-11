@@ -12,7 +12,7 @@ import com.horizen.api.http.SidechainWalletErrorResponse.{ErrorFailedToParseSecr
 import com.horizen.api.http.SidechainWalletRestScheme.{ReqDumpWallet, ReqExportSecret, ReqImportSecret, RespDumpSecrets, RespExportSecret, RespImportSecrets, _}
 import com.horizen.box.Box
 import com.horizen.companion.SidechainSecretsCompanion
-import com.horizen.proposition.{Proposition, PublicKey25519PropositionSerializer, VrfPublicKey}
+import com.horizen.proposition.{Proposition, VrfPublicKey}
 import com.horizen.secret.{PrivateKey25519Creator, Secret, VrfKeyGenerator}
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
@@ -49,9 +49,12 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
             val closedBoxesJson = wallet.allBoxes(idsOfBoxesToExclude.asJava).asScala.toList
             ApiResponseUtil.toResponse(RespAllBoxes(closedBoxesJson))
           } else {
-            val clazz: java.lang.Class[_ <: SidechainTypes#SCB] = getClassByBoxClassName(optBoxTypeClass.get)
-            val allClosedBoxesByType = wallet.boxesOfType(clazz, idsOfBoxesToExclude.asJava).asScala.toList
-            ApiResponseUtil.toResponse(RespAllBoxes(allClosedBoxesByType))
+            getClassByBoxClassName(optBoxTypeClass.get) match {
+              case Failure(exception) => SidechainApiError(exception)
+              case Success(clazz) =>
+                val allClosedBoxesByType = wallet.boxesOfType(clazz, idsOfBoxesToExclude.asJava).asScala.toList
+                ApiResponseUtil.toResponse(RespAllBoxes(allClosedBoxesByType))
+            }
           }
         }
       }
@@ -79,9 +82,12 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
       entity(as[ReqBalance]) { body =>
         withNodeView { sidechainNodeView =>
           val wallet = sidechainNodeView.getNodeWallet
-          val clazz: java.lang.Class[_ <: SidechainTypes#SCB] = getClassByBoxClassName(body.boxType)
-          val balance = wallet.boxesBalance(clazz)
-          ApiResponseUtil.toResponse(RespBalance(balance))
+          getClassByBoxClassName(body.boxType) match {
+            case Failure(exception) => SidechainApiError(exception)
+            case Success(clazz) =>
+              val balance = wallet.boxesBalance(clazz)
+              ApiResponseUtil.toResponse(RespBalance(balance))
+          }
         }
       }
     }
@@ -141,10 +147,13 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
               s.publicImage().asInstanceOf[SidechainTypes#SCP])
             ApiResponseUtil.toResponse(RespAllPublicKeys(listOfPropositions))
           } else {
-            val clazz: java.lang.Class[_ <: SidechainTypes#SCS] = getClassBySecretClassName(optPropType.get)
-            val listOfPropositions = wallet.secretsOfType(clazz).asScala.map(secret =>
-              secret.publicImage().asInstanceOf[SidechainTypes#SCP])
-            ApiResponseUtil.toResponse(RespAllPublicKeys(listOfPropositions))
+            getClassBySecretClassName(optPropType.get) match {
+              case Failure(exception) => SidechainApiError(exception)
+              case Success(clazz) =>
+                val listOfPropositions = wallet.secretsOfType(clazz).asScala.map(secret =>
+                  secret.publicImage().asInstanceOf[SidechainTypes#SCP])
+                ApiResponseUtil.toResponse(RespAllPublicKeys(listOfPropositions))
+            }
           }
         }
       }
@@ -266,14 +275,14 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
     }
   }
 
-  def getClassBySecretClassName(className: String): java.lang.Class[_ <: SidechainTypes#SCS] = {
-    Try{Class.forName(className).asSubclass(classOf[SidechainTypes#SCS])}.
-      getOrElse(Class.forName("com.horizen.secret." + className).asSubclass(classOf[SidechainTypes#SCS]))
+  def getClassBySecretClassName(className: String): Try[java.lang.Class[_ <: SidechainTypes#SCS]] = {
+    Try(Class.forName(className).asSubclass(classOf[SidechainTypes#SCS])) orElse
+      Try(Class.forName("com.horizen.secret." + className).asSubclass(classOf[SidechainTypes#SCS]))
   }
 
-  def getClassByBoxClassName(className: String): java.lang.Class[_ <: SidechainTypes#SCB] = {
-    Try{Class.forName(className).asSubclass(classOf[SidechainTypes#SCB])}.
-      getOrElse(Class.forName("com.horizen.box." + className).asSubclass(classOf[SidechainTypes#SCB]))
+  def getClassByBoxClassName(className: String): Try[java.lang.Class[_ <: SidechainTypes#SCB]] = {
+    Try(Class.forName(className).asSubclass(classOf[SidechainTypes#SCB])) orElse
+      Try(Class.forName("com.horizen.box." + className).asSubclass(classOf[SidechainTypes#SCB]))
   }
 }
 

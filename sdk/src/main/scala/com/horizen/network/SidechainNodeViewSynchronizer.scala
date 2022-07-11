@@ -1,17 +1,15 @@
 package com.horizen.network
 
 import java.nio.ByteBuffer
-
 import akka.actor.{ActorRef, ActorRefFactory, Props}
 import com.horizen._
 import com.horizen.block.SidechainBlock
 import com.horizen.validation.{BlockInFutureException, InconsistentDataException}
 import scorex.core.NodeViewHolder.ReceivableMessages.{ModifiersFromRemote, TransactionsFromRemote}
 import scorex.core.network.ModifiersStatus.Requested
-import scorex.core.network.NetworkControllerSharedMessages.ReceivableMessages.DataFromPeer
 import scorex.core.network.{ConnectedPeer, NodeViewSynchronizer}
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SyntacticallyFailedModification
-import scorex.core.network.message.{ModifiersData, ModifiersSpec}
+import scorex.core.network.message.{Message, ModifiersData, ModifiersSpec}
 import scorex.core.serialization.ScorexSerializer
 import scorex.core.settings.NetworkSettings
 import scorex.core.transaction.Transaction
@@ -96,10 +94,7 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
    * parse modifiers and send valid modifiers to NodeViewHolder
    */
   @Override
-  override protected def modifiersFromRemote: Receive = {
-    case DataFromPeer(spec, data: ModifiersData@unchecked, remote)
-      if spec.messageCode == ModifiersSpec.MessageCode =>
-
+  override protected def modifiersFromRemote(data: ModifiersData, remote: ConnectedPeer): Unit = {
       val typeId = data.typeId
       val modifiers = data.modifiers
       log.info(s"Got ${modifiers.size} modifiers of type $typeId from remote connected peer: $remote")
@@ -175,10 +170,9 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
     requested
   }
 
-  override protected def viewHolderEvents: Receive = {onSyntacticallyFailedModifier orElse
-    modifiersFromRemote orElse
-    super.viewHolderEvents}
-
+  override protected def viewHolderEvents: Receive =
+    onSyntacticallyFailedModifier orElse
+      super.viewHolderEvents
 }
 
 

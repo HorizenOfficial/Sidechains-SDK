@@ -114,7 +114,7 @@ class SidechainHistoryTest extends JUnitSuite
     assertEquals("Different progress info expected.", ProgressInfo[SidechainBlock](None, Seq(), Seq(blockB2), Seq()), progressInfo)
 
     // notify history that appended block is valid
-    history = history.reportModifierIsValid(blockB2)
+    history = history.reportModifierIsValid(blockB2).get
 
     // check
     assertEquals("Expected to have updated height, best block was changed.", 2 , history.height)
@@ -138,7 +138,7 @@ class SidechainHistoryTest extends JUnitSuite
     assertEquals("Different progress info expected.", ProgressInfo[SidechainBlock](None, Seq(), Seq(blockB3), Seq()), progressInfo)
 
     // notify history that appended block is valid
-    history = history.reportModifierIsValid(blockB3)
+    history = history.reportModifierIsValid(blockB3).get
 
     // check
     assertEquals("Expected to have updated height, best block was changed.", 3 , history.height)
@@ -239,9 +239,9 @@ class SidechainHistoryTest extends JUnitSuite
 
 
     // notify history that appended block is valid
-    history = history.reportModifierIsValid(forkBlockb2)
-    history = history.reportModifierIsValid(forkBlockb3)
-    history = history.reportModifierIsValid(forkBlockb4)
+    history = history.reportModifierIsValid(forkBlockb2).get
+    history = history.reportModifierIsValid(forkBlockb3).get
+    history = history.reportModifierIsValid(forkBlockb4).get
 
     // check
     assertEquals("Expected to have updated height, best block was changed.", 4, history.height)
@@ -279,7 +279,7 @@ class SidechainHistoryTest extends JUnitSuite
 
     // notify history that appended block is invalid
     history.reportModifierIsInvalid(blockB4, progressInfo) match {
-      case (hist, prog) =>
+      case Success((hist, prog)) =>
         history = hist
         progressInfo = prog
     }
@@ -340,7 +340,7 @@ class SidechainHistoryTest extends JUnitSuite
         case Failure(e) => assertFalse("Unexpected Exception occurred during block appending: %s".format(e.getMessage), true)
       }
       // notify history that appended block is valid
-      history = history.reportModifierIsValid(block)
+      history = history.reportModifierIsValid(block).get
 
       blockSeq = blockSeq :+ block
       blocksToAppend -= 1
@@ -460,7 +460,7 @@ class SidechainHistoryTest extends JUnitSuite
         case Failure(e) => assertFalse("Unexpected Exception occurred during block appending: %s".format(e.getMessage), true)
       }
       // notify history that appended block is valid
-      history1 = history1.reportModifierIsValid(block)
+      history1 = history1.reportModifierIsValid(block).get
 
       history1blockSeq = history1blockSeq :+ block
       blocksToAppend -= 1
@@ -484,7 +484,7 @@ class SidechainHistoryTest extends JUnitSuite
         case Failure(e) => assertFalse("Unexpected Exception occurred during block appending: %s".format(e.getMessage), true)
       }
       // notify history that appended block is valid
-      history2 = history2.reportModifierIsValid(block)
+      history2 = history2.reportModifierIsValid(block).get
     }
     assertEquals("Expected to have different height", 19, history2.height)
 
@@ -537,7 +537,7 @@ class SidechainHistoryTest extends JUnitSuite
       case Failure(e) => assertFalse("Unexpected Exception occurred during block appending: %s".format(e.getMessage), true)
     }
     // notify history that appended block is valid
-    history2 = history2.reportModifierIsValid(forkBlock)
+    history2 = history2.reportModifierIsValid(forkBlock).get
 
 
     // Test 4: compare history1 syncInfo with history2, they have fork on lasts block, height is the same.
@@ -586,7 +586,7 @@ class SidechainHistoryTest extends JUnitSuite
     assertEquals(2, TimeToEpochUtils.timeStampToEpochNumber(testParams, block1.timestamp))
 
     history = history.append(block1).get._1
-    history = history.reportModifierIsValid(block1)
+    history = history.reportModifierIsValid(block1).get
     val block1Info = history.bestBlockInfo
     assertEquals(genesisBlock.id, block1Info.lastBlockInPreviousConsensusEpoch)
     assertEquals(history.blockToBlockInfo(block1).get.copy(semanticValidity = ModifierSemanticValidity.Valid, vrfOutputOpt = firstBlockVrfOutputOpt), block1Info) //Sidechain block Info creation doesn't fill semantic validity
@@ -595,14 +595,14 @@ class SidechainHistoryTest extends JUnitSuite
     history = Mockito.spy(history)
     Mockito.doAnswer(_ => secondBlockVrfOutputOpt).when(history).getVrfOutput(ArgumentMatchers.any[SidechainBlockHeader], ArgumentMatchers.any[NonceConsensusEpochInfo])
     history = history.append(block2).get._1
-    history = history.reportModifierIsValid(block2)
+    history = history.reportModifierIsValid(block2).get
     val block2Info = history.bestBlockInfo
     assertEquals(genesisBlock.id, block2Info.lastBlockInPreviousConsensusEpoch)
 
     val block3 = generateNextSidechainBlock(block2, sidechainTransactionsCompanion, testParams)
     assertEquals(3, TimeToEpochUtils.timeStampToEpochNumber(testParams, block3.timestamp))
     history = history.append(block3).get._1
-    history = history.reportModifierIsValid(block3)
+    history = history.reportModifierIsValid(block3).get
     val block3Info = history.bestBlockInfo
     assertEquals(block2.id, block3Info.lastBlockInPreviousConsensusEpoch)
   }

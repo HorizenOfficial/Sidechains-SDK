@@ -9,7 +9,6 @@ import com.horizen.certificatesubmitter.CertificateSubmitter.{BroadcastLocallyGe
 import com.horizen.certificatesubmitter.network.CertificateSignaturesManager.InternalReceivableMessages.TryToSendGetCertificateSignatures
 import com.horizen.params.NetworkParams
 import scorex.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, SendToNetwork}
-import scorex.core.network.NetworkControllerSharedMessages.ReceivableMessages.DataFromPeer
 import scorex.core.network.{Broadcast, BroadcastExceptOf, ConnectedPeer, SendToPeer, SendToRandom}
 import scorex.core.network.message.Message
 import scorex.core.network.peer.PenaltyType
@@ -118,7 +117,7 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
   }
 
   private def getCertificateSignatures: Receive = {
-    case DataFromPeer(spec, unknownSignatures: InvUnknownSignatures@unchecked, peer)
+    case Message(spec, unknownSignatures: InvUnknownSignatures@unchecked, Some(peer))
         if spec.messageCode == GetCertificateSignaturesSpec.messageCode && unknownSignatures.cast[InvUnknownSignatures].isDefined =>
 
       Try {
@@ -142,7 +141,7 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
   }
 
   private def certificateSignatures: Receive = {
-    case DataFromPeer(spec, knownSignatures: KnownSignatures@unchecked, peer)
+    case Message(spec, knownSignatures: KnownSignatures@unchecked, Some(peer))
         if spec.messageCode == CertificateSignaturesSpec.messageCode && knownSignatures.cast[KnownSignatures].isDefined =>
 
       val signaturesToBroadcast: ArrayBuffer[CertificateSignatureInfo] = ArrayBuffer()

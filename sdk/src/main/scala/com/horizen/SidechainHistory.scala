@@ -221,13 +221,13 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     Some(acc)
   }
 
-  override def reportModifierIsValid(block: SidechainBlock): SidechainHistory = {
-      var newStorage = storage.updateSemanticValidity(block, ModifierSemanticValidity.Valid).get
-      newStorage = newStorage.setAsBestBlock(block, storage.blockInfoById(block.id)).get
-      new SidechainHistory(newStorage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
+  override def reportModifierIsValid(block: SidechainBlock): Try[SidechainHistory] = {
+    storage.updateSemanticValidity(block, ModifierSemanticValidity.Valid)
+      .flatMap(_.setAsBestBlock(block, storage.blockInfoById(block.id)))
+      .map(newStorage => new SidechainHistory(newStorage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators))
   }
 
-  override def reportModifierIsInvalid(modifier: SidechainBlock, progressInfo: History.ProgressInfo[SidechainBlock]): (SidechainHistory, History.ProgressInfo[SidechainBlock]) = { // to do
+  override def reportModifierIsInvalid(modifier: SidechainBlock, progressInfo: History.ProgressInfo[SidechainBlock]): Try[(SidechainHistory, History.ProgressInfo[SidechainBlock])] = Try { // to do
     val newHistory: SidechainHistory = Try {
       val newStorage = storage.updateSemanticValidity(modifier, ModifierSemanticValidity.Invalid).get
       new SidechainHistory(newStorage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
@@ -627,7 +627,10 @@ object SidechainHistory
     if (historyStorage.isEmpty) {
       val nonceEpochInfo = ConsensusDataProvider.calculateNonceForGenesisBlock(params)
       new SidechainHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
-        .append(genesisBlock).map(_._1).get.reportModifierIsValid(genesisBlock).applyFullConsensusInfo(genesisBlock.id, FullConsensusEpochInfo(stakeEpochInfo, nonceEpochInfo))
+        .append(genesisBlock).map(_._1).get.reportModifierIsValid(genesisBlock) match {
+        case Failure(exception) => ???
+        case Success(value) => value.applyFullConsensusInfo(genesisBlock.id, FullConsensusEpochInfo(stakeEpochInfo, nonceEpochInfo))
+      }
     }
     else
       throw new RuntimeException("History storage is not empty!")

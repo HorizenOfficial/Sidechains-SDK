@@ -402,7 +402,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   }
 
   // This method is actually a copy-paste of parent NodeViewHolder.requestDownloads method.
-  protected def requestDownloads(pi: ProgressInfo[SidechainBlock]): Unit = {
+  override protected def requestDownloads(pi: ProgressInfo[SidechainBlock]): Unit = {
     pi.toDownload.foreach { case (tid, id) =>
       context.system.eventStream.publish(DownloadRequest(tid, id))
     }
@@ -523,17 +523,24 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
             // as a final step update the history (validity and best block info), in this way we can check
             // at the startup the consistency of state and history storage versions and be sure that also intermediate steps
             // are consistent
-            val historyAfterApply = historyResult.reportModifierIsValid(modToApply)
-            log.debug("success: modifier applied to history, blockInfo " + historyAfterApply.blockInfoById(modToApply.id))
+            historyResult.reportModifierIsValid(modToApply) match {
+              case Failure(exception) => ???
+              case Success(value) =>
+                log.debug("success: modifier applied to history, blockInfo " + value.blockInfoById(modToApply.id))
 
-            SidechainNodeUpdateInformation(historyAfterApply, stateAfterApply, walletResult, None, None, updateInfo.suffix :+ modToApply)
+                SidechainNodeUpdateInformation(value, stateAfterApply, walletResult, None, None, updateInfo.suffix :+ modToApply)
+            }
+
           }
           case Failure(e) => {
             log.error(s"Could not apply modifier ${modToApply.id}, exception:" + e)
-            val (historyAfterApply, newProgressInfo) = newHistory.reportModifierIsInvalid(modToApply, progressInfo)
-            context.system.eventStream.publish(SemanticallyFailedModification(modToApply, e))
-            SidechainNodeUpdateInformation(historyAfterApply, updateInfo.state, newWallet, Some(modToApply), Some(newProgressInfo), updateInfo.suffix)
-          }
+            newHistory.reportModifierIsInvalid(modToApply, progressInfo) match {
+              case Failure(exception) => ???
+              case Success((historyAfterApply, newProgressInfo)) =>
+                context.system.eventStream.publish(SemanticallyFailedModification(modToApply, e))
+                SidechainNodeUpdateInformation(historyAfterApply, updateInfo.state, newWallet, Some(modToApply), Some(newProgressInfo), updateInfo.suffix)
+            }
+         }
         }
       } else updateInfo
     }

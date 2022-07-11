@@ -46,7 +46,7 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
         assertEquals(1, result.elements().asScala.length)
         assertTrue(result.get("peers").isArray)
         assertEquals(3, result.get("peers").elements().asScala.length)
-        val elems: Array[SidechainPeerNode] = peers.map(p => SidechainPeerNode(p._1.toString, p._2.lastSeen, p._2.peerSpec.nodeName, p._2.connectionType.map(_.toString))).toArray
+        val elems: Array[SidechainPeerNode] = peers.map(p => SidechainPeerNode(p._1.toString, p._2.lastHandshake, p._2.peerSpec.nodeName, p._2.connectionType.map(_.toString))).toArray
         val nodes = result.get("peers").elements().asScala.toArray
 
         val first: JsonNode = nodes(0)
@@ -87,7 +87,7 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
         assertEquals(1, result.elements().asScala.length)
         assertTrue(result.get("peers").isArray)
         assertEquals(2, result.get("peers").elements().asScala.length)
-        val elems: Array[SidechainPeerNode] = connectedPeers.map(p => SidechainPeerNode(p.peerSpec.address.map(_.toString).getOrElse(""), p.lastSeen, p.peerSpec.nodeName, p.connectionType.map(_.toString))).toArray
+        val elems: Array[SidechainPeerNode] = connectedPeers.map(p => SidechainPeerNode(p.peerSpec.address.map(_.toString).getOrElse(""), p.lastHandshake, p.peerSpec.nodeName, p.connectionType.map(_.toString))).toArray
         val nodes = result.get("peers").elements().asScala.toArray
         val first: JsonNode = nodes(0)
         assertEquals(first.get("address").textValue(), elems(0).address)
