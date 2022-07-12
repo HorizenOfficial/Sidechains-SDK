@@ -3,7 +3,7 @@ package com.horizen.account.state
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountState
-import com.horizen.account.receipt.EthereumReceipt
+import com.horizen.account.receipt.EthereumReceiptJava
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
@@ -115,7 +115,7 @@ class AccountState(val params: NetworkParams,
 
     // get also list of receipts, useful for computing the receiptRoot hash
     // TODO do it a val.
-    var receiptList :Seq[EthereumReceipt] = Seq()
+    var receiptList :Seq[EthereumReceiptJava] = Seq()
     var cumGasUsed : BigInteger = BigInteger.ZERO
 
     for ((tx, txIndex) <- mod.sidechainTransactions.zipWithIndex) {

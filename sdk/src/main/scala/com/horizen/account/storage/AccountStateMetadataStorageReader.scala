@@ -1,6 +1,6 @@
 package com.horizen.account.storage
 
-import com.horizen.account.receipt.EthereumReceipt
+import com.horizen.account.receipt.EthereumReceiptJava
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.utils.{BlockFeeInfo, WithdrawalEpochInfo}
@@ -16,7 +16,7 @@ trait AccountStateMetadataStorageReader {
 
   def getConsensusEpochNumber: Option[ConsensusEpochNumber]
 
-  def getTransactionReceipt(txHash: Array[Byte]) : Option[EthereumReceipt]
+  def getTransactionReceipt(txHash: Array[Byte]) : Option[EthereumReceiptJava]
 
   def hasCeased: Boolean
 

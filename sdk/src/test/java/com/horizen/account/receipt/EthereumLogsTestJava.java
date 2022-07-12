@@ -9,9 +9,9 @@ import scorex.crypto.hash.Keccak256;
 
 import static org.junit.Assert.assertEquals;
 
-public class EthereumLogsTest {
+public class EthereumLogsTestJava {
 
-    public static EthereumLog createTestEthereumLog() {
+    public static EthereumLogJava createTestEthereumLogJava() {
         EvmLog evmLog = new EvmLog();
         evmLog.address = Address.FromBytes(BytesUtils.fromHexString("1122334455667788990011223344556677889900"));
         evmLog.topics = new Hash[4];
@@ -22,7 +22,7 @@ public class EthereumLogsTest {
         evmLog.data = BytesUtils.fromHexString("aabbccddeeff");
 
         // add also non consensus data info, not rlp handled
-        EthereumLog log = new EthereumLog(evmLog);
+        EthereumLogJava log = new EthereumLogJava(evmLog);
         log.setTransactionHash((byte[]) Keccak256.hash("txhash".getBytes()));
         log.setTransactionIndex(1);
         log.setBlockHash((byte[]) Keccak256.hash("blockhash".getBytes()));
@@ -37,16 +37,16 @@ public class EthereumLogsTest {
     @Test
     public void receiptSimpleEncodeDecodeTest() {
 
-        EthereumLog ethereumLog = createTestEthereumLog();
+        EthereumLogJava ethereumLog = createTestEthereumLogJava();
         System.out.println(ethereumLog);
 
 
-        byte[] encodedLog = EthereumLog.rlpEncode(ethereumLog);
+        byte[] encodedLog = EthereumLogJava.rlpEncode(ethereumLog);
         System.out.println(BytesUtils.toHexString(encodedLog));
 
         // read what you write
         byte[] dataBytes = encodedLog;
-        EthereumLog decodedLog = EthereumLog.rlpDecode(dataBytes);
+        EthereumLogJava decodedLog = EthereumLogJava.rlpDecode(dataBytes);
         System.out.println(decodedLog);
 
         assertEquals(

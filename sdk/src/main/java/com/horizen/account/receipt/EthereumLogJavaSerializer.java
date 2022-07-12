@@ -9,24 +9,24 @@ import scorex.util.serialization.Writer;
 
 import java.util.ArrayList;
 
-public class EthereumLogSerializer<T extends EthereumLog> implements ScorexSerializer<T> {
+public class EthereumLogJavaSerializer<T extends EthereumLogJava> implements ScorexSerializer<T> {
 
-    private static final EthereumLogSerializer serializer;
+    private static final EthereumLogJavaSerializer serializer;
 
     static {
-        serializer = new EthereumLogSerializer();
+        serializer = new EthereumLogJavaSerializer();
     }
 
-    private EthereumLogSerializer() {
+    private EthereumLogJavaSerializer() {
         super();
     }
 
-    public static EthereumLogSerializer getSerializer() {
+    public static EthereumLogJavaSerializer getSerializer() {
         return serializer;
     }
 
     @Override
-    public void serialize(EthereumLog log, Writer writer) {
+    public void serialize(EthereumLogJava log, Writer writer) {
         // consensus data
         writer.putBytes(log.getConsensusLogData().address.toBytes());
 
@@ -81,7 +81,7 @@ public class EthereumLogSerializer<T extends EthereumLog> implements ScorexSeria
         int logIndex = reader.getInt();
         int removed = reader.getInt();
 
-        EthereumLog log = new EthereumLog(consensusDataLog);
+        EthereumLogJava log = new EthereumLogJava(consensusDataLog);
 
         log.setTransactionHash(txHash);
         log.setTransactionIndex(txIndex);

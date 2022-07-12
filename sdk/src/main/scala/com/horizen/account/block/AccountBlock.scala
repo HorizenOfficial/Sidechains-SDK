@@ -3,7 +3,7 @@ package com.horizen.account.block
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.EthereumReceipt
+import com.horizen.account.receipt.EthereumReceiptJava
 import com.horizen.block._
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.evm.TrieHasher
@@ -47,8 +47,8 @@ class AccountBlock(override val header: AccountBlockHeader,
   }
 
   @throws(classOf[InconsistentSidechainBlockDataException])
-  def verifyReceiptDataConsistency(receiptList: Seq[EthereumReceipt]): Unit = {
-    val receiptRootHash = TrieHasher.Root(receiptList.map(r => EthereumReceipt.rlpEncode(r)).toArray)
+  def verifyReceiptDataConsistency(receiptList: Seq[EthereumReceiptJava]): Unit = {
+    val receiptRootHash = TrieHasher.Root(receiptList.map(r => EthereumReceiptJava.rlpEncode(r)).toArray)
     if (!java.util.Arrays.equals(receiptRootHash, header.receiptsRoot)) {
       log.error("CHECK IS DISABLED: update forger & bootstrapping tool first!")
       // TODO: uncomment when ready

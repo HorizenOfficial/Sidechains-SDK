@@ -12,23 +12,23 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import static com.horizen.account.receipt.EthereumLogsTest.createTestEthereumLog;
+import static com.horizen.account.receipt.EthereumLogsTestJava.createTestEthereumLogJava;
 import static java.util.Map.entry;
 import static org.junit.Assert.*;
 
-public class EthereumReceiptTest {
+public class EthereumReceiptJavaTest {
 
     // test vectors encoded by go lib have been produced via:
     //     libevm/lib/service_hash_test.go
 
 
-    static public EthereumReceipt createTestEthereumReceipt() {
-        List<EthereumLog> logs = new ArrayList<>();
-        logs.add(createTestEthereumLog());
-        logs.add(createTestEthereumLog());
+    static public EthereumReceiptJava createTestEthereumReceiptJava() {
+        List<EthereumLogJava> logs = new ArrayList<>();
+        logs.add(createTestEthereumLogJava());
+        logs.add(createTestEthereumLogJava());
 
-        EthereumReceipt receipt = new EthereumReceipt(
-                EthereumReceipt.ReceiptTxType.DynamicFeeTxType.ordinal(),
+        EthereumReceiptJava receipt = new EthereumReceiptJava(
+                EthereumReceiptJava.ReceiptTxType.DynamicFeeTxType.ordinal(),
                 1,
                 BigInteger.valueOf(1000),
                 logs,
@@ -46,19 +46,19 @@ public class EthereumReceiptTest {
     @Test
     public void receiptSimpleEncodeDecodeLegacyTest() {
 
-        EthereumReceipt receipt = new EthereumReceipt(
-                EthereumReceipt.ReceiptTxType.LegacyTxType.ordinal(),
+        EthereumReceiptJava receipt = new EthereumReceiptJava(
+                EthereumReceiptJava.ReceiptTxType.LegacyTxType.ordinal(),
                 1,
                 BigInteger.valueOf(123456),
                 new ArrayList<>(),
                 new byte[0]
         );
 
-        byte[] encodedReceipt = EthereumReceipt.rlpEncode(receipt);
+        byte[] encodedReceipt = EthereumReceiptJava.rlpEncode(receipt);
         //System.out.println(BytesUtils.toHexString(encodedReceipt));
 
         // read what you write
-        EthereumReceipt decodedReceipt = EthereumReceipt.rlpDecode(encodedReceipt);
+        EthereumReceiptJava decodedReceipt = EthereumReceiptJava.rlpDecode(encodedReceipt);
         //System.out.println(decodedReceipt);
 
         assertEquals(receipt.getTxType(), decodedReceipt.getTxType());
@@ -69,20 +69,20 @@ public class EthereumReceiptTest {
     @Test
     public void receiptSimpleEncodeDecodeType1Test() {
 
-        EthereumReceipt receipt = new EthereumReceipt(
-                EthereumReceipt.ReceiptTxType.AccessListTxType.ordinal(),
+        EthereumReceiptJava receipt = new EthereumReceiptJava(
+                EthereumReceiptJava.ReceiptTxType.AccessListTxType.ordinal(),
                 1,
                 BigInteger.valueOf(1000),
                 new ArrayList<>(),
                 new byte[256]
         );
 
-        byte[] encodedReceipt = EthereumReceipt.rlpEncode(receipt);
+        byte[] encodedReceipt = EthereumReceiptJava.rlpEncode(receipt);
         //System.out.println(BytesUtils.toHexString(encodedReceipt));
 
         // read what you write
         byte[] dataBytes = encodedReceipt;
-        EthereumReceipt decodedReceipt = EthereumReceipt.rlpDecode(dataBytes);
+        EthereumReceiptJava decodedReceipt = EthereumReceiptJava.rlpDecode(dataBytes);
         //System.out.println(decodedReceipt);
 
         assertEquals(receipt.getTxType(), decodedReceipt.getTxType());
@@ -93,20 +93,20 @@ public class EthereumReceiptTest {
     @Test
     public void receiptSimpleEncodeDecodeType2Test() {
 
-        EthereumReceipt receipt = new EthereumReceipt(
-                EthereumReceipt.ReceiptTxType.DynamicFeeTxType.ordinal(),
+        EthereumReceiptJava receipt = new EthereumReceiptJava(
+                EthereumReceiptJava.ReceiptTxType.DynamicFeeTxType.ordinal(),
                 1,
                 BigInteger.valueOf(1000),
                 new ArrayList<>(),
                 new byte[256]
         );
 
-        byte[] encodedReceipt = EthereumReceipt.rlpEncode(receipt);
+        byte[] encodedReceipt = EthereumReceiptJava.rlpEncode(receipt);
         //System.out.println(BytesUtils.toHexString(encodedReceipt));
 
         // read what you write
         byte[] dataBytes = encodedReceipt;
-        EthereumReceipt decodedReceipt = EthereumReceipt.rlpDecode(dataBytes);
+        EthereumReceiptJava decodedReceipt = EthereumReceiptJava.rlpDecode(dataBytes);
         //System.out.println(decodedReceipt);
 
         assertEquals(receipt.getTxType(), decodedReceipt.getTxType());
@@ -120,12 +120,12 @@ public class EthereumReceiptTest {
         String dataStrType1 = "01f90108018203e8b9010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0";
         byte[] dataBytes = BytesUtils.fromHexString(dataStrType1);
 
-        EthereumReceipt decodedReceipt = EthereumReceipt.rlpDecode(dataBytes);
+        EthereumReceiptJava decodedReceipt = EthereumReceiptJava.rlpDecode(dataBytes);
         //System.out.println(decodedReceipt);
-        assertEquals(decodedReceipt.getTxType(), EthereumReceipt.ReceiptTxType.AccessListTxType);
+        assertEquals(decodedReceipt.getTxType(), EthereumReceiptJava.ReceiptTxType.AccessListTxType);
 
         // encode and check we are the same as the original
-        byte[] encodedReceipt = EthereumReceipt.rlpEncode(decodedReceipt);
+        byte[] encodedReceipt = EthereumReceiptJava.rlpEncode(decodedReceipt);
         System.out.println(BytesUtils.toHexString(encodedReceipt));
         assertEquals(BytesUtils.toHexString(encodedReceipt), dataStrType1);
     }
@@ -136,12 +136,12 @@ public class EthereumReceiptTest {
         String dataStrType2 = "02f9010901830b90f0b9010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0";
         byte[] dataBytes = BytesUtils.fromHexString(dataStrType2);
 
-        EthereumReceipt decodedReceipt = EthereumReceipt.rlpDecode(dataBytes);
+        EthereumReceiptJava decodedReceipt = EthereumReceiptJava.rlpDecode(dataBytes);
         //System.out.println(decodedReceipt);
-        assertEquals(decodedReceipt.getTxType(), EthereumReceipt.ReceiptTxType.DynamicFeeTxType);
+        assertEquals(decodedReceipt.getTxType(), EthereumReceiptJava.ReceiptTxType.DynamicFeeTxType);
 
         // encode and check we are the same as the original
-        byte[] encodedReceipt = EthereumReceipt.rlpEncode(decodedReceipt);
+        byte[] encodedReceipt = EthereumReceiptJava.rlpEncode(decodedReceipt);
         System.out.println(BytesUtils.toHexString(encodedReceipt));
         assertEquals(BytesUtils.toHexString(encodedReceipt), dataStrType2);
     }
@@ -152,12 +152,12 @@ public class EthereumReceiptTest {
         String dataStrType0 = "f9010801820bb8b9010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0";
         byte[] dataBytes = BytesUtils.fromHexString(dataStrType0);
 
-        EthereumReceipt decodedReceipt = EthereumReceipt.rlpDecode(dataBytes);
+        EthereumReceiptJava decodedReceipt = EthereumReceiptJava.rlpDecode(dataBytes);
         System.out.println(decodedReceipt);
-        assertEquals(decodedReceipt.getTxType(), EthereumReceipt.ReceiptTxType.LegacyTxType);
+        assertEquals(decodedReceipt.getTxType(), EthereumReceiptJava.ReceiptTxType.LegacyTxType);
 
         // encode and check we are the same as the original
-        byte[] encodedReceipt = EthereumReceipt.rlpEncode(decodedReceipt);
+        byte[] encodedReceipt = EthereumReceiptJava.rlpEncode(decodedReceipt);
         System.out.println(BytesUtils.toHexString(encodedReceipt));
         assertEquals(BytesUtils.toHexString(encodedReceipt), dataStrType0);
     }
@@ -168,20 +168,20 @@ public class EthereumReceiptTest {
         String dataStrType0 = "f901458080b9010000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000400000000000000000000000000000000000000000000000080000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000f83ef83c941122334455667788990011223344556677889900e1a040eed0325a12c6c6af8db2ea05450bfe21d6343b6fe955bff65045b67d9d5fe684aabbccdd";
         byte[] dataBytes = BytesUtils.fromHexString(dataStrType0);
 
-        EthereumReceipt decodedReceipt = EthereumReceipt.rlpDecode(dataBytes);
+        EthereumReceiptJava decodedReceipt = EthereumReceiptJava.rlpDecode(dataBytes);
         System.out.println(decodedReceipt);
-        assertEquals(decodedReceipt.getTxType(), EthereumReceipt.ReceiptTxType.LegacyTxType);
+        assertEquals(decodedReceipt.getTxType(), EthereumReceiptJava.ReceiptTxType.LegacyTxType);
 
         // encode and check we are the same as the original
-        byte[] encodedReceipt = EthereumReceipt.rlpEncode(decodedReceipt);
+        byte[] encodedReceipt = EthereumReceiptJava.rlpEncode(decodedReceipt);
         System.out.println(BytesUtils.toHexString(encodedReceipt));
         assertEquals(BytesUtils.toHexString(encodedReceipt), dataStrType0);
     }
 
     // compatible with analogous go code in libevm/lib/service_hash_test.go
-    private EthereumReceipt[] generateReceipt(int count) {
+    private EthereumReceiptJava[] generateReceipt(int count) {
 
-        var receipts = new EthereumReceipt[count];
+        var receipts = new EthereumReceiptJava[count];
         for (int i = 0; i < receipts.length; i++) {
             int status = 1;
             if (i%7 == 0) {
@@ -194,8 +194,8 @@ public class EthereumReceiptTest {
             var cumGas = BigInteger.valueOf(i).multiply(BigInteger.TEN.pow(3));
             //System.out.println("cumGas =" + cumGas.toString());
             byte[] logsBloom = new byte[256];
-            List<EthereumLog> logs =  new ArrayList<>();
-            receipts[i] = new EthereumReceipt(txType, status, cumGas, logs, logsBloom);
+            List<EthereumLogJava> logs =  new ArrayList<>();
+            receipts[i] = new EthereumReceiptJava(txType, status, cumGas, logs, logsBloom);
             //System.out.println("i=" + i + receipts[i].toString());
         }
         return receipts;
@@ -224,7 +224,7 @@ public class EthereumReceiptTest {
         for (var testCase : testCases.entrySet()) {
             final var receipts = generateReceipt(testCase.getKey());
             final var rlpReceipts = Arrays.stream(receipts).map(
-                    r -> EthereumReceipt.rlpEncode(r)).toArray(byte[][]::new);
+                    r -> EthereumReceiptJava.rlpEncode(r)).toArray(byte[][]::new);
             final var actualHash = Numeric.toHexString(TrieHasher.Root(rlpReceipts));
             /*
             System.out.println("i: " + testCase.getKey() +
@@ -238,12 +238,12 @@ public class EthereumReceiptTest {
     @Test
     public void receiptSimpleSerializeUnserialize() {
 
-        List<EthereumLog> logs = new ArrayList<>();
-        logs.add(createTestEthereumLog());
-        logs.add(createTestEthereumLog());
+        List<EthereumLogJava> logs = new ArrayList<>();
+        logs.add(createTestEthereumLogJava());
+        logs.add(createTestEthereumLogJava());
 
-        EthereumReceipt receipt = new EthereumReceipt(
-                EthereumReceipt.ReceiptTxType.DynamicFeeTxType.ordinal(),
+        EthereumReceiptJava receipt = new EthereumReceiptJava(
+                EthereumReceiptJava.ReceiptTxType.DynamicFeeTxType.ordinal(),
                 1,
                 BigInteger.valueOf(1000),
                 //new ArrayList<>(),
@@ -260,10 +260,10 @@ public class EthereumReceiptTest {
         String r1 = receipt.toString(true);
         System.out.println(r1);
 
-        byte[] serializedBytes = EthereumReceiptSerializer.getSerializer().toBytes(receipt);
+        byte[] serializedBytes = EthereumReceiptJavaSerializer.getSerializer().toBytes(receipt);
         System.out.println(BytesUtils.toHexString(serializedBytes));
 
-        EthereumReceipt decodedReceipt = EthereumReceiptSerializer.getSerializer().parseBytes(serializedBytes);
+        EthereumReceiptJava decodedReceipt = EthereumReceiptJavaSerializer.getSerializer().parseBytes(serializedBytes);
         String r2 = decodedReceipt.toString(true);
         System.out.println(r2);
 

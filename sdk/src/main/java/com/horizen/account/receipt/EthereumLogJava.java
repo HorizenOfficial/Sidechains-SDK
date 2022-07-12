@@ -5,7 +5,6 @@ import com.horizen.evm.interop.EvmLog;
 import com.horizen.evm.utils.Address;
 import com.horizen.evm.utils.Hash;
 import com.horizen.serialization.Views;
-import com.horizen.utils.BytesUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.web3j.rlp.*;
@@ -18,9 +17,9 @@ import java.util.List;
 
 
 @JsonView(Views.Default.class)
-public class EthereumLog implements BytesSerializable {
+public class EthereumLogJava implements BytesSerializable {
 
-    private static final Logger log = LogManager.getLogger(EthereumLog.class);
+    private static final Logger log = LogManager.getLogger(EthereumLogJava.class);
 
     // consensus data
     EvmLog consensusLogData;
@@ -44,7 +43,7 @@ public class EthereumLog implements BytesSerializable {
     int removed;
 
 
-    public EthereumLog(EvmLog log) {
+    public EthereumLogJava(EvmLog log) {
         this.consensusLogData = log;
 
         this.blockNumber = -1;
@@ -94,16 +93,16 @@ public class EthereumLog implements BytesSerializable {
     }
     public void setConsensusLogData(EvmLog log) { this.consensusLogData = log; }
 
-    public static byte[] rlpEncode(EthereumLog r) {
+    public static byte[] rlpEncode(EthereumLogJava r) {
         List<RlpType> values = asRlpValues(r);
         RlpList rlpList = new RlpList(values);
         byte[] encoded = RlpEncoder.encode(rlpList);
         return encoded;
     }
 
-    public static EthereumLog rlpDecode(byte[] rlpData) {
+    public static EthereumLogJava rlpDecode(byte[] rlpData) {
         RlpList rlpList = (RlpList) RlpDecoder.decode(rlpData).getValues().get(0);
-        return new EthereumLog(rlpDecode(rlpList));
+        return new EthereumLogJava(rlpDecode(rlpList));
     }
 
     public static EvmLog rlpDecode(RlpList values) {
@@ -130,7 +129,7 @@ public class EthereumLog implements BytesSerializable {
         return decodedLog;
     }
 
-    public static List<RlpType> asRlpValues(EthereumLog log) {
+    public static List<RlpType> asRlpValues(EthereumLogJava log) {
         List<RlpType> result = new ArrayList<>();
         List<RlpType> rlpTopics = new ArrayList<>();
 
@@ -214,7 +213,7 @@ public class EthereumLog implements BytesSerializable {
 
     @Override
     public ScorexSerializer<BytesSerializable> serializer() {
-        return EthereumLogSerializer.getSerializer();
+        return EthereumLogJavaSerializer.getSerializer();
     }
 
 

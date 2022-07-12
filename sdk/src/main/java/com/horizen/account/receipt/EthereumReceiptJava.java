@@ -16,11 +16,11 @@ import java.util.List;
 
 
 @JsonView(Views.Default.class)
-public class EthereumReceipt {
+public class EthereumReceiptJava {
 
     // TODO wrap consensus data into a separate class and move these impl to scala
 
-    private static final Logger log = LogManager.getLogger(EthereumReceipt.class);
+    private static final Logger log = LogManager.getLogger(EthereumReceiptJava.class);
 
     public enum ReceiptStatus {FAILED, SUCCESSFUL}
 
@@ -40,7 +40,7 @@ public class EthereumReceipt {
     int transactionType;
     int status;
     BigInteger cumulativeGasUsed;
-    List<EthereumLog> logs;
+    List<EthereumLogJava> logs;
     byte[] logsBloom;
 
 
@@ -52,15 +52,15 @@ public class EthereumReceipt {
     BigInteger gasUsed;
     byte[] contractAddress;
 
-    public EthereumReceipt() {
+    public EthereumReceiptJava() {
         this(0, 0, BigInteger.valueOf(-1), new ArrayList<>(), new byte[256]);
     }
 
-    public EthereumReceipt(
+    public EthereumReceiptJava(
             int transactionType,
             int status,
             BigInteger cumulativeGasUsed,
-            List<EthereumLog> logs,
+            List<EthereumLogJava> logs,
             byte[] logsBloom
     ) {
         this.transactionType = transactionType;
@@ -150,10 +150,10 @@ public class EthereumReceipt {
         throw new IllegalArgumentException("invalid transaction type:" + transactionType);
     }
 
-    public List<EthereumLog> getLogs() {
+    public List<EthereumLogJava> getLogs() {
         return this.logs;
     }
-    public void setLogs(List<EthereumLog> logs) {
+    public void setLogs(List<EthereumLogJava> logs) {
         this.logs = logs;
     }
 
@@ -168,7 +168,7 @@ public class EthereumReceipt {
         this.logsBloom = createLogsBloom();
     }
 
-    public static byte[] rlpEncode(EthereumReceipt r) {
+    public static byte[] rlpEncode(EthereumReceiptJava r) {
         List<RlpType> values = asRlpValues(r);
         RlpList rlpList = new RlpList(values);
         byte[] encoded = RlpEncoder.encode(rlpList);
@@ -183,7 +183,7 @@ public class EthereumReceipt {
         return encoded;
     }
 
-    public static EthereumReceipt rlpDecode(byte[] rlpData) {
+    public static EthereumReceiptJava rlpDecode(byte[] rlpData) {
         if (rlpData == null || rlpData.length == 0) {
             log.error("Invalid rlp data");
             return null;
@@ -200,14 +200,14 @@ public class EthereumReceipt {
         }
     }
 
-    public static EthereumReceipt decodeTyped(ReceiptTxType rt, byte[] rlpData) {
-        EthereumReceipt receipt = decodeLegacy(rlpData);
+    public static EthereumReceiptJava decodeTyped(ReceiptTxType rt, byte[] rlpData) {
+        EthereumReceiptJava receipt = decodeLegacy(rlpData);
         if (receipt != null)
             receipt.setTransactionType(rt.ordinal());
         return receipt;
     }
 
-    public static EthereumReceipt decodeLegacy(byte[] rlpData) {
+    public static EthereumReceiptJava decodeLegacy(byte[] rlpData) {
 
         RlpList rlpList = RlpDecoder.decode(rlpData);
         RlpList values = (RlpList) rlpList.getValues().get(0);
@@ -229,21 +229,21 @@ public class EthereumReceipt {
         byte[] logsBloom = ((RlpString) values.getValues().get(2)).getBytes();
 
         RlpList logList = ((RlpList) values.getValues().get(3));
-        List<EthereumLog> logs = new ArrayList<>(0);
+        List<EthereumLogJava> logs = new ArrayList<>(0);
         int logsListSize = logList.getValues().size();
         if (logsListSize > 0) {
             // loop on list and decode all logs
             for (int i = 0; i < logsListSize; ++i) {
-                var log = EthereumLog.rlpDecode((RlpList) logList.getValues().get(i));
-                logs.add(new EthereumLog(log));
+                var log = EthereumLogJava.rlpDecode((RlpList) logList.getValues().get(i));
+                logs.add(new EthereumLogJava(log));
             }
         }
 
-        return new EthereumReceipt(ReceiptTxType.LegacyTxType.ordinal(), status, cumulativeGasUsed,
+        return new EthereumReceiptJava(ReceiptTxType.LegacyTxType.ordinal(), status, cumulativeGasUsed,
                 logs, logsBloom);
     }
 
-    public static List<RlpType> asRlpValues(EthereumReceipt r) {
+    public static List<RlpType> asRlpValues(EthereumReceiptJava r) {
         List<RlpType> result = new ArrayList<>();
 
         byte[] postTxState = r.status == 1 ? new byte[]{1} : new byte[0];
@@ -259,7 +259,7 @@ public class EthereumReceipt {
         for (int i = 0; i < r.getLogs().size(); i++)
         {
             var log = r.getLogs().get(i);
-            rlpLogs.add(new RlpList(EthereumLog.asRlpValues(log)));
+            rlpLogs.add(new RlpList(EthereumLogJava.asRlpValues(log)));
         }
 
         result.add(new RlpList(rlpLogs));
@@ -315,15 +315,15 @@ public class EthereumReceipt {
 
          */
         // TODO shall we use libevm implementation?
-        return new byte[0];
+        return new byte[256];
     }
 
     @Override
     public String toString() {
 
         String logsString = "logs{";
-        List<EthereumLog> logList = getLogs();
-        for (EthereumLog ethereumLog : logList) {
+        List<EthereumLogJava> logList = getLogs();
+        for (EthereumLogJava ethereumLog : logList) {
             logsString = logsString.concat(" " + ethereumLog.toString());
         }
         logsString = logsString.concat("}");

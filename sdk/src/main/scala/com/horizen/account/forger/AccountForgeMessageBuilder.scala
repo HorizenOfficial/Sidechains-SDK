@@ -13,7 +13,7 @@ import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.EthereumReceipt
+import com.horizen.account.receipt.EthereumReceiptJava
 import com.horizen.account.state.{AccountState, AccountStateView}
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.utils.Account
@@ -44,13 +44,13 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   type MS = AccountState
   type MP = AccountMemoryPool
 
-  def computeReceiptRoot(receiptList: Seq[EthereumReceipt]) : Array[Byte] = {
+  def computeReceiptRoot(receiptList: Seq[EthereumReceiptJava]) : Array[Byte] = {
     // 1. for each receipt item in list rlp encode and append to a new leaf list
     // 2. compute hash
-    TrieHasher.Root(receiptList.map(r => EthereumReceipt.rlpEncode(r)).toArray)
+    TrieHasher.Root(receiptList.map(r => EthereumReceiptJava.rlpEncode(r)).toArray)
   }
 
-  def computeStateRoot(view: AccountStateView, sidechainTransactions: Seq[Transaction]) : (Array[Byte], Seq[EthereumReceipt]) = {
+  def computeStateRoot(view: AccountStateView, sidechainTransactions: Seq[Transaction]) : (Array[Byte], Seq[EthereumReceiptJava]) = {
     // TODO
     (new Array[Byte](MerkleTree.ROOT_HASH_LENGTH), Seq())
   }
@@ -84,7 +84,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     //   - Logs
     val dummyView = nodeView.state.getView
 
-    val (stateRoot, receiptList) : (Array[Byte], Seq[EthereumReceipt]) = computeStateRoot(dummyView, sidechainTransactions)
+    val (stateRoot, receiptList) : (Array[Byte], Seq[EthereumReceiptJava]) = computeStateRoot(dummyView, sidechainTransactions)
 
     // 2. Compute the receipt root
     val receiptsRoot: Array[Byte] = computeReceiptRoot(receiptList)

@@ -3,7 +3,7 @@ package com.horizen.account.state
 import com.google.common.primitives.Bytes
 import com.horizen.SidechainTypes
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.{EthereumLog, EthereumReceipt}
+import com.horizen.account.receipt.{EthereumLogJava, EthereumReceiptJava}
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress}
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.transaction.EthereumTransaction
@@ -172,7 +172,7 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     BigInteger.ZERO
   }
 
-  override def applyTransaction(tx: SidechainTypes#SCAT, prevCumGasUsed: BigInteger): Try[EthereumReceipt] = Try {
+  override def applyTransaction(tx: SidechainTypes#SCAT, prevCumGasUsed: BigInteger): Try[EthereumReceiptJava] = Try {
     if (!tx.isInstanceOf[EthereumTransaction])
       throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
 
@@ -196,7 +196,7 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
       throw new IllegalArgumentException(s"Transaction ${ethTx.id} has no known processor.")
     )
 
-    val receipt = new EthereumReceipt()
+    val receipt = new EthereumReceiptJava()
     receipt.setTransactionType(ethTx.version())
     receipt.setTransactionHash(txHash)
 
@@ -205,15 +205,15 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
 
     val gasUsed: BigInteger = processor.process(message, this) match {
       case success: ExecutionSucceeded =>
-        receipt.setStatus(EthereumReceipt.ReceiptStatus.SUCCESSFUL.ordinal())
+        receipt.setStatus(EthereumReceiptJava.ReceiptStatus.SUCCESSFUL.ordinal())
         val evmLogs = getLogs(txHash)
-        receipt.setLogs(evmLogs.map(new EthereumLog(_)).toList.asJava)
+        receipt.setLogs(evmLogs.map(new EthereumLogJava(_)).toList.asJava)
         success.gasUsed()
 
       case failed: ExecutionFailed =>
-        receipt.setStatus(EthereumReceipt.ReceiptStatus.FAILED.ordinal())
+        receipt.setStatus(EthereumReceiptJava.ReceiptStatus.FAILED.ordinal())
         val evmLogs = getLogs(txHash)
-        receipt.setLogs(evmLogs.map(new EthereumLog(_)).toList.asJava)
+        receipt.setLogs(evmLogs.map(new EthereumLogJava(_)).toList.asJava)
         stateDb.revertToSnapshot(revisionId)
         failed.gasUsed()
 
@@ -303,7 +303,7 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     metadataStorageView.updateConsensusEpochNumber(consensusEpochNum)
   }
 
-  override def updateTransactionReceipts(receipts: Seq[EthereumReceipt]): Unit = {
+  override def updateTransactionReceipts(receipts: Seq[EthereumReceiptJava]): Unit = {
     metadataStorageView.updateTransactinReceipts(receipts)
   }
 

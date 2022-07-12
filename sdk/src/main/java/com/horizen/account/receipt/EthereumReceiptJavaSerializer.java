@@ -8,26 +8,26 @@ import scorex.util.serialization.Writer;
 import java.math.BigInteger;
 import java.util.List;
 
-public class EthereumReceiptSerializer implements ScorexSerializer<EthereumReceipt> {
+public class EthereumReceiptJavaSerializer implements ScorexSerializer<EthereumReceiptJava> {
 
-    private static final EthereumReceiptSerializer serializer;
+    private static final EthereumReceiptJavaSerializer serializer;
 
     static {
-        serializer = new EthereumReceiptSerializer();
+        serializer = new EthereumReceiptJavaSerializer();
     }
-    static ListSerializer<EthereumLog> logsSerializer =
-            new ListSerializer<>(EthereumLogSerializer.getSerializer());
+    static ListSerializer<EthereumLogJava> logsSerializer =
+            new ListSerializer<>(EthereumLogJavaSerializer.getSerializer());
 
-    private EthereumReceiptSerializer() {
+    private EthereumReceiptJavaSerializer() {
         super();
     }
 
-    public static EthereumReceiptSerializer getSerializer() {
+    public static EthereumReceiptJavaSerializer getSerializer() {
         return serializer;
     }
 
     @Override
-    public void serialize(EthereumReceipt receipt, Writer writer) {
+    public void serialize(EthereumReceiptJava receipt, Writer writer) {
         // consensus data
         writer.putInt(receipt.getTransactionType());
 
@@ -37,8 +37,8 @@ public class EthereumReceiptSerializer implements ScorexSerializer<EthereumRecei
         writer.putInt(cumGasUsedBytes.length);
         writer.putBytes(cumGasUsedBytes);
 
-        ListSerializer<EthereumLog> logsSerializer =
-                new ListSerializer<>(EthereumLogSerializer.getSerializer());
+        ListSerializer<EthereumLogJava> logsSerializer =
+                new ListSerializer<>(EthereumLogJavaSerializer.getSerializer());
         logsSerializer.serialize(receipt.getLogs(), writer);
 
         byte[] bloomBytes = receipt.getLogsBloom();
@@ -59,7 +59,7 @@ public class EthereumReceiptSerializer implements ScorexSerializer<EthereumRecei
     }
 
     @Override
-    public EthereumReceipt parse(Reader reader) {
+    public EthereumReceiptJava parse(Reader reader) {
 
         int transactionType = reader.getInt();
         int status = reader.getInt();
@@ -69,12 +69,12 @@ public class EthereumReceiptSerializer implements ScorexSerializer<EthereumRecei
 
         // TODO logs
 
-        List<EthereumLog> logs = logsSerializer.parse(reader);
+        List<EthereumLogJava> logs = logsSerializer.parse(reader);
 
         int bloomsLength = reader.getInt();
         byte[] blooms = reader.getBytes(bloomsLength);
 
-        EthereumReceipt receipt = new EthereumReceipt(transactionType, status, cumGasUsed, logs, blooms);
+        EthereumReceiptJava receipt = new EthereumReceiptJava(transactionType, status, cumGasUsed, logs, blooms);
 
         byte[] txHash = reader.getBytes(32);
         int txIndex = reader.getInt();

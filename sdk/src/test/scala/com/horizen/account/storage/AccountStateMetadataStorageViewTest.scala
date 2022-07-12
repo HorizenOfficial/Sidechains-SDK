@@ -2,8 +2,8 @@ package com.horizen.account.storage
 
 import com.google.common.primitives.Ints
 import com.horizen.SidechainTypes
-import com.horizen.account.receipt.EthereumReceipt
-import com.horizen.account.receipt.EthereumReceiptTest.createTestEthereumReceipt
+import com.horizen.account.receipt.EthereumReceiptJava
+import com.horizen.account.receipt.EthereumReceiptJavaTest.createTestEthereumReceiptJava
 import com.horizen.account.storage.AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateFixture}
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
@@ -88,9 +88,9 @@ class AccountStateMetadataStorageViewTest
     assertTrue("Consensus epoch number should be defined in view", storageView.getConsensusEpochNumber.isDefined)
     assertTrue("Consensus epoch number should be empty in storage", stateMetadataStorage.getConsensusEpochNumber.isEmpty)
 
-    val receipts = new ListBuffer[EthereumReceipt]()
-    val receipt1 = createTestEthereumReceipt()
-    val receipt2 = createTestEthereumReceipt()
+    val receipts = new ListBuffer[EthereumReceiptJava]()
+    val receipt1 = createTestEthereumReceiptJava()
+    val receipt2 = createTestEthereumReceiptJava()
     receipt2.setTransactionHash(Keccak256.hash("dummy".getBytes))
     receipt2.setBlockNumber(55)
     receipts += receipt1
