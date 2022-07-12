@@ -5,6 +5,7 @@ import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
 import java.math.BigInteger
+import scala.collection.JavaConverters.{iterableAsScalaIterableConverter, seqAsJavaListConverter}
 
 case class EthereumReceipt(
                              consensusDataReceipt: EthereumConsensusDataReceipt,
@@ -18,6 +19,34 @@ case class EthereumReceipt(
 
   override def serializer: ScorexSerializer[EthereumReceipt] = EthereumReceiptSerializer
 
+  // set a default value for non consensus data, they will be updated by a suited method call
+  def this(consensusDataReceipt: EthereumConsensusDataReceipt) {
+    this(consensusDataReceipt,
+      new Array[Byte](32), -1, new Array[Byte](32), -1, BigInteger.valueOf(-1), new Array[Byte](20))
+  }
+
+  def update( txHash : Array[Byte],
+              txIndex: Int,
+              blHash: Array[Byte],
+              blNumber: Int,
+              gasUsed : BigInteger,
+              contractAddress: Array[Byte]): EthereumReceipt = {
+    // update logs adding non consensus data
+    val logs = this.consensusDataReceipt.logs.asScala.toSeq
+    val logsFull = logs.zipWithIndex.map{
+      case (log, idx) => log.update(txHash, txIndex, blHash, blNumber, idx)
+    }
+
+    EthereumReceipt(
+      EthereumConsensusDataReceipt(
+        this.consensusDataReceipt.transactionType,
+        this.consensusDataReceipt.status,
+        this.consensusDataReceipt.cumulativeGasUsed,
+        logsFull.asJava,
+        this.consensusDataReceipt.logsBloom
+      ),
+      txHash, txIndex, blHash, blNumber, gasUsed, contractAddress)
+  }
 
 
   override def toString: String = {

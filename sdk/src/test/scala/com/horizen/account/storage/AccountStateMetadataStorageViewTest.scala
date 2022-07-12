@@ -2,8 +2,9 @@ package com.horizen.account.storage
 
 import com.google.common.primitives.Ints
 import com.horizen.SidechainTypes
-import com.horizen.account.receipt.EthereumReceiptJava
+import com.horizen.account.receipt.{EthereumReceipt, EthereumReceiptJava}
 import com.horizen.account.receipt.EthereumReceiptJavaTest.createTestEthereumReceiptJava
+import com.horizen.account.receipt.EthereumReceiptTest.createTestEthereumReceipt
 import com.horizen.account.storage.AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateFixture}
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
@@ -88,16 +89,15 @@ class AccountStateMetadataStorageViewTest
     assertTrue("Consensus epoch number should be defined in view", storageView.getConsensusEpochNumber.isDefined)
     assertTrue("Consensus epoch number should be empty in storage", stateMetadataStorage.getConsensusEpochNumber.isEmpty)
 
-    val receipts = new ListBuffer[EthereumReceiptJava]()
-    val receipt1 = createTestEthereumReceiptJava()
-    val receipt2 = createTestEthereumReceiptJava()
-    receipt2.setTransactionHash(Keccak256.hash("dummy".getBytes))
-    receipt2.setBlockNumber(55)
+    val receipts = new ListBuffer[EthereumReceipt]()
+    val receipt1 = createTestEthereumReceipt(0)
+    val receipt2 = createTestEthereumReceipt(1)
+
     receipts += receipt1
     receipts += receipt2
-    storageView.updateTransactinReceipts(receipts)
-    assertTrue("receipts should be defined in view", storageView.getTransactionReceipt(receipt1.getTransactionHash).isDefined)
-    assertTrue("receipts should not be in storage", stateMetadataStorage.getTransactionReceipt(receipt1.getTransactionHash).isEmpty)
+    storageView.updateTransactionReceipts(receipts)
+    assertTrue("receipts should be defined in view", storageView.getTransactionReceipt(receipt1.transactionHash).isDefined)
+    assertTrue("receipts should not be in storage", stateMetadataStorage.getTransactionReceipt(receipt1.transactionHash).isEmpty)
 
 
     storageView.commit(bytesToVersion(getVersion.data()))
@@ -117,8 +117,8 @@ class AccountStateMetadataStorageViewTest
     assertEquals("Wrong Consensus epoch number in view after commit", consensusEpochNum, storageView.getConsensusEpochNumber.get)
     assertEquals("Wrong Consensus epoch number in storage after commit", consensusEpochNum, stateMetadataStorage.getConsensusEpochNumber.get)
 
-    assertEquals("Wrong receipts in view after commit", receipt1.getBlockNumber, storageView.getTransactionReceipt(receipt1.getTransactionHash).get.getBlockNumber)
-    assertEquals("receipts should not be in storage", receipt1.getBlockNumber, stateMetadataStorage.getTransactionReceipt(receipt1.getTransactionHash).get.getBlockNumber)
+    assertEquals("Wrong receipts in view after commit", receipt1.blockNumber, storageView.getTransactionReceipt(receipt1.transactionHash).get.blockNumber)
+    assertEquals("receipts should not be in storage", receipt1.blockNumber, stateMetadataStorage.getTransactionReceipt(receipt1.transactionHash).get.blockNumber)
 
   }
 

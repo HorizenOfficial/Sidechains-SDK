@@ -3,8 +3,9 @@ package com.horizen.account.state
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountState
-import com.horizen.account.receipt.EthereumReceiptJava
+import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.storage.AccountStateMetadataStorage
+import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.evm._
@@ -18,6 +19,7 @@ import scorex.util.{ModifierId, ScorexLogging}
 import java.math.BigInteger
 import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
+import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
 class AccountState(val params: NetworkParams,
@@ -114,23 +116,34 @@ class AccountState(val params: NetworkParams,
     }
 
     // get also list of receipts, useful for computing the receiptRoot hash
-    // TODO do it a val.
-    var receiptList :Seq[EthereumReceiptJava] = Seq()
+    val receiptList = new ListBuffer[EthereumReceipt]()
+    val blockNumber = stateView.getHeight
+    val blockHash = idToBytes(mod.id)
     var cumGasUsed : BigInteger = BigInteger.ZERO
 
     for ((tx, txIndex) <- mod.sidechainTransactions.zipWithIndex) {
       stateView.applyTransaction(tx, cumGasUsed) match {
         case Success(receipt) =>
+          val txGasUsed = receipt.consensusDataReceipt.cumulativeGasUsed.subtract(cumGasUsed)
           // update cumulative gas used so far
-          cumGasUsed = cumGasUsed.add(receipt.getGasUsed)
-          // update block related data in receipt
-          receipt.setTransactionIndex(txIndex)
-          receipt.setBlockHash(idToBytes(mod.id))
-          receipt.setBlockNumber(stateView.getHeight)
+          cumGasUsed = receipt.consensusDataReceipt.cumulativeGasUsed
+          val ethTx = tx.asInstanceOf[EthereumTransaction]
 
-          log.debug(s"Adding to receipt list: ${receipt.toString(true)}")
+          val txHash = idToBytes(ethTx.id)
 
-          receiptList = receiptList :+ receipt
+          val contractAddress = if (!stateView.isEoaAccount(ethTx.getTo.address()) ) {
+            ethTx.getTo.address()
+          } else {
+            new Array[Byte](0)
+          }
+
+          // update non consensus data in receipt
+          val fullReceipt = receipt.update(
+            txHash, txIndex, blockHash, blockNumber, txGasUsed, contractAddress)
+
+          log.debug(s"Adding to receipt list: ${fullReceipt.toString()}")
+
+          receiptList += fullReceipt
 
         case Failure(e) =>
           log.error("Could not apply tx", e)

@@ -1,6 +1,6 @@
 package com.horizen.state
 
-import com.horizen.account.receipt.EthereumReceiptJava
+import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.transaction.Transaction
@@ -12,13 +12,13 @@ import scala.util.Try
 
 trait StateView[TX <: Transaction] extends BaseStateReader {
   def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[Unit]
-  def applyTransaction(tx: TX, cumGasUsed: BigInteger): Try[EthereumReceiptJava]
+  def applyTransaction(tx: TX, cumGasUsed: BigInteger): Try[EthereumReceipt]
 
   def addCertificate(cert: WithdrawalEpochCertificate): Unit
   def addFeeInfo(info: BlockFeeInfo): Unit
   def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo): Unit
   def updateConsensusEpochNumber(consensusEpochNum: ConsensusEpochNumber): Unit
-  def updateTransactionReceipts(receipts: Seq[EthereumReceiptJava]): Unit
+  def updateTransactionReceipts(receipts: Seq[EthereumReceipt]): Unit
   def setCeased(): Unit
 
   def commit(version: VersionTag): Try[Unit]

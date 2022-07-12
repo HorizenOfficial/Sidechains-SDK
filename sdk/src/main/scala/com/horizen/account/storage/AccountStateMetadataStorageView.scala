@@ -1,9 +1,8 @@
 package com.horizen.account.storage
 
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.account.receipt.{EthereumReceiptJava, EthereumReceiptJavaSerializer}
+import com.horizen.account.receipt.{EthereumReceipt, EthereumReceiptSerializer}
 import com.horizen.account.storage.AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT
-import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.storage.Storage
@@ -36,7 +35,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private[horizen] var blockFeeInfoOpt: Option[BlockFeeInfo] = None
   private[horizen] var consensusEpochOpt: Option[ConsensusEpochNumber] = None
   private[horizen] var accountStateRootOpt: Option[Array[Byte]] = None
-  private[horizen] var receiptsOpt: Option[Seq[EthereumReceiptJava]] = None
+  private[horizen] var receiptsOpt: Option[Seq[EthereumReceipt]] = None
 
   // all getters same as in StateMetadataStorage, but looking first in the cached/dirty entries in memory
 
@@ -145,21 +144,21 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     accountStateRootOpt.orElse(getAccountStateRootFromStorage).getOrElse(DEFAULT_ACCOUNT_STATE_ROOT)
   }
 
-  private[horizen] def getTransactionReceiptFromStorage(txHash: Array[Byte]): Option[EthereumReceiptJava] = {
+  private[horizen] def getTransactionReceiptFromStorage(txHash: Array[Byte]): Option[EthereumReceipt] = {
     storage.get(txHash).asScala match {
       case Some(serData) => {
-        val decodedReceipt: EthereumReceiptJava = EthereumReceiptJavaSerializer.getSerializer.parseBytes(serData)
+        val decodedReceipt: EthereumReceipt = EthereumReceiptSerializer.parseBytes(serData)
         Some(decodedReceipt)
       }
       case None => None
     }
   }
 
-  override def getTransactionReceipt(txHash: Array[Byte]): Option[EthereumReceiptJava] = {
+  override def getTransactionReceipt(txHash: Array[Byte]): Option[EthereumReceipt] = {
     val bawTxHash = new ByteArrayWrapper(txHash)
     receiptsOpt match {
       case Some(receipts) => {
-        receipts.find(r => new ByteArrayWrapper(r.getTransactionHash) == bawTxHash)
+        receipts.find(r => new ByteArrayWrapper(r.transactionHash) == bawTxHash)
       }
       case None => getTransactionReceiptFromStorage(txHash)
     }
@@ -172,7 +171,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   def updateTopQualityCertificate(topQualityCertificate: WithdrawalEpochCertificate): Unit =
     topQualityCertificateOpt = Some(topQualityCertificate)
 
-  def updateTransactinReceipts(receipts: Seq[EthereumReceiptJava]): Unit = {
+  def updateTransactionReceipts(receipts: Seq[EthereumReceipt]): Unit = {
     receiptsOpt = Some(receipts)
   }
 
@@ -286,8 +285,8 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
 
     receiptsOpt.foreach(receipts => {
         for (r <- receipts) {
-          val key = r.getTransactionHash
-          val value = new ByteArrayWrapper(EthereumReceiptJavaSerializer.getSerializer.toBytes(r))
+          val key = r.transactionHash
+          val value = new ByteArrayWrapper(EthereumReceiptSerializer.toBytes(r))
           updateList.add(new JPair(key, value))
         }
     })

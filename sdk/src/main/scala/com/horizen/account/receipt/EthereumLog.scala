@@ -5,7 +5,6 @@ import com.horizen.utils.BytesUtils
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
-import java.math.BigInteger
 import java.util
 
 case class EthereumLog(
@@ -26,6 +25,9 @@ case class EthereumLog(
   def this(consensusDataLog : EthereumConsensusDataLog) {
     this(consensusDataLog, new Array[Byte](0), -1, new Array[Byte](0), -1, -1, -1)
   }
+
+  def update(txHash: Array[Byte], txIndex: Int, blHash: Array[Byte], blNumber: Int, idx: Int): EthereumLog =
+    EthereumLog(this.consensusDataLog, txHash, txIndex, blHash, blockNumber, idx, removed=0)
 
   override def toString: String = {
 
@@ -63,7 +65,7 @@ object EthereumLogSerializer extends ScorexSerializer[EthereumLog]{
     writer.putBytes(data)
 
     // derived
-    // TODO (shall we put these 4? They are the same as belonginh receipt
+    // TODO (shall we put these 4? They are the same as belonging receipt
     writer.putBytes(log.transactionHash)
     writer.putInt(log.transactionIndex)
     writer.putBytes(log.blockHash)
@@ -79,7 +81,7 @@ object EthereumLogSerializer extends ScorexSerializer[EthereumLog]{
 
     val topicsArraySize: Int = reader.getInt
     val topics: util.ArrayList[Hash] = new util.ArrayList[Hash]
-    for (i <- 0 until topicsArraySize) {
+    for (_ <- 0 until topicsArraySize) {
       topics.add(Hash.FromBytes(reader.getBytes(Hash.LENGTH)))
     }
 

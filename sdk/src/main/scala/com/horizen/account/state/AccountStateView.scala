@@ -3,7 +3,8 @@ package com.horizen.account.state
 import com.google.common.primitives.Bytes
 import com.horizen.SidechainTypes
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.{EthereumLogJava, EthereumReceiptJava}
+import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus
+import com.horizen.account.receipt.{EthereumConsensusDataLog, EthereumConsensusDataReceipt, EthereumLog, EthereumReceipt}
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress}
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.transaction.EthereumTransaction
@@ -172,7 +173,7 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     BigInteger.ZERO
   }
 
-  override def applyTransaction(tx: SidechainTypes#SCAT, prevCumGasUsed: BigInteger): Try[EthereumReceiptJava] = Try {
+  override def applyTransaction(tx: SidechainTypes#SCAT, prevCumGasUsed: BigInteger): Try[EthereumReceipt] = Try {
     if (!tx.isInstanceOf[EthereumTransaction])
       throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
 
@@ -196,36 +197,35 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
       throw new IllegalArgumentException(s"Transaction ${ethTx.id} has no known processor.")
     )
 
-    val receipt = new EthereumReceiptJava()
-    receipt.setTransactionType(ethTx.version())
-    receipt.setTransactionHash(txHash)
-
-    if (!isEoaAccount(ethTx.getTo.address()) )
-      receipt.setContractAddress(ethTx.getTo.address())
-
-    val gasUsed: BigInteger = processor.process(message, this) match {
+    val (gasUsed: BigInteger, consensusDataReceipt : EthereumConsensusDataReceipt) = processor.process(message, this) match {
       case success: ExecutionSucceeded =>
-        receipt.setStatus(EthereumReceiptJava.ReceiptStatus.SUCCESSFUL.ordinal())
         val evmLogs = getLogs(txHash)
-        receipt.setLogs(evmLogs.map(new EthereumLogJava(_)).toList.asJava)
-        success.gasUsed()
+        val logs = evmLogs.map(element => new EthereumLog(
+          new EthereumConsensusDataLog(element))).toList.asJava
+        val gasUsed = success.gasUsed()
+        val consensusDataReceipt = new EthereumConsensusDataReceipt(
+          ethTx.version(), ReceiptStatus.SUCCESSFUL.id, prevCumGasUsed.add(gasUsed), logs, new Array[Byte](256))
+        (gasUsed, consensusDataReceipt)
 
       case failed: ExecutionFailed =>
-        receipt.setStatus(EthereumReceiptJava.ReceiptStatus.FAILED.ordinal())
         val evmLogs = getLogs(txHash)
-        receipt.setLogs(evmLogs.map(new EthereumLogJava(_)).toList.asJava)
+        val logs = evmLogs.map(element => new EthereumLog(
+          new EthereumConsensusDataLog(element))).toList.asJava
         stateDb.revertToSnapshot(revisionId)
-        failed.gasUsed()
+        val gasUsed = failed.gasUsed()
+        val consensusDataReceipt = new EthereumConsensusDataReceipt(
+          ethTx.version(), ReceiptStatus.FAILED.id, prevCumGasUsed.add(gasUsed), logs, new Array[Byte](256))
+        (gasUsed, consensusDataReceipt)
+
 
       case invalid: InvalidMessage =>
         throw new Exception(s"Transaction ${ethTx.id} is invalid.", invalid.getReason)
     }
 
     // todo: refund gas: bookedGasPrice - actualGasPrice
-    receipt.setCumulativeGasUsed(prevCumGasUsed.add(gasUsed))
-    receipt.setGasUsed(gasUsed)
 
-    log.debug(s"Returning receipt: ${receipt.toString(true)}")
+    val receipt = new EthereumReceipt(consensusDataReceipt)
+    log.debug(s"Returning receipt: ${receipt.toString()}")
     receipt
   }
 
@@ -303,8 +303,8 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     metadataStorageView.updateConsensusEpochNumber(consensusEpochNum)
   }
 
-  override def updateTransactionReceipts(receipts: Seq[EthereumReceiptJava]): Unit = {
-    metadataStorageView.updateTransactinReceipts(receipts)
+  override def updateTransactionReceipts(receipts: Seq[EthereumReceipt]): Unit = {
+    metadataStorageView.updateTransactionReceipts(receipts)
   }
 
 

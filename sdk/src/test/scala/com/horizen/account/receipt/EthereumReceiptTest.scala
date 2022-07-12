@@ -1,8 +1,8 @@
 package com.horizen.account.receipt
 
 
+import com.horizen.account.receipt.EthereumReceiptTest.createTestEthereumReceipt
 import com.horizen.evm.TrieHasher
-
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 import org.junit._
@@ -15,6 +15,7 @@ import java.math.BigInteger
 import java.util
 import java.util.Map.entry
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
+import scala.util.Random
 
 
 class EthereumReceiptTest
@@ -25,13 +26,7 @@ class EthereumReceiptTest
   // test vectors encoded by go lib have been produced via:
   //     libevm/lib/service_hash_test.go
 
-  def createTestEthereumReceipt(`type`: Integer): EthereumReceipt = {
-    val logs = new util.ArrayList[EthereumLog]
-    logs.add(EthereumLogTest.createTestEthereumLog)
-    logs.add(EthereumLogTest.createTestEthereumLog)
-    val consensusDataReceipt = new EthereumConsensusDataReceipt(`type`, 1, BigInteger.valueOf(1000), logs, new Array[Byte](256))
-    EthereumReceipt(consensusDataReceipt, Keccak256.hash("txhash".getBytes).asInstanceOf[Array[Byte]], 33, Keccak256.hash("blockhash".getBytes).asInstanceOf[Array[Byte]], 22, BigInteger.valueOf(1234567), BytesUtils.fromHexString("1122334455667788990011223344556677889900"))
-  }
+
 
   @Test
   def qqqTest(): Unit = {
@@ -171,6 +166,16 @@ class EthereumReceiptTest
       assertEquals("should match transaction root hash", testCase.getValue, actualHash)
     }
   }
+}
 
-
+object EthereumReceiptTest {
+  def createTestEthereumReceipt(`type`: Integer): EthereumReceipt = {
+    val txHash = new Array[Byte](32)
+    Random.nextBytes(txHash)
+    val logs = new util.ArrayList[EthereumLog]
+    logs.add(EthereumLogTest.createTestEthereumLog)
+    logs.add(EthereumLogTest.createTestEthereumLog)
+    val consensusDataReceipt = new EthereumConsensusDataReceipt(`type`, 1, BigInteger.valueOf(1000), logs, new Array[Byte](256))
+    EthereumReceipt(consensusDataReceipt, txHash, 33, Keccak256.hash("blockhash".getBytes).asInstanceOf[Array[Byte]], 22, BigInteger.valueOf(1234567), BytesUtils.fromHexString("1122334455667788990011223344556677889900"))
+  }
 }
