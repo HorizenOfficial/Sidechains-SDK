@@ -2,8 +2,7 @@ package com.horizen.account.storage
 
 import com.google.common.primitives.Ints
 import com.horizen.SidechainTypes
-import com.horizen.account.receipt.{EthereumReceipt, EthereumReceiptJava}
-import com.horizen.account.receipt.EthereumReceiptJavaTest.createTestEthereumReceiptJava
+import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.receipt.EthereumReceiptTest.createTestEthereumReceipt
 import com.horizen.account.storage.AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateFixture}
@@ -15,9 +14,7 @@ import org.junit._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import scorex.core._
-import scorex.crypto.hash.Keccak256
 
-import scala.::
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.io.Source
 import scala.util.Random
