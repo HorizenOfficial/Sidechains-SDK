@@ -25,16 +25,11 @@ case class EthereumReceipt(
       new Array[Byte](32), -1, new Array[Byte](32), -1, BigInteger.valueOf(-1), new Array[Byte](20))
   }
 
-  def update( txHash : Array[Byte],
-              txIndex: Int,
-              blHash: Array[Byte],
-              blNumber: Int,
-              gasUsed : BigInteger,
-              contractAddress: Array[Byte]): EthereumReceipt = {
+  def updateLogs(): EthereumReceipt = {
     // update logs adding non consensus data
     val logs = this.consensusDataReceipt.logs.asScala.toSeq
     val logsFull = logs.zipWithIndex.map{
-      case (log, idx) => log.update(txHash, txIndex, blHash, blNumber, idx)
+      case (log, idx) => log.update(transactionHash, transactionIndex, blockHash, blockNumber, idx)
     }
 
     EthereumReceipt(
@@ -45,7 +40,8 @@ case class EthereumReceipt(
         logsFull.asJava,
         this.consensusDataReceipt.logsBloom
       ),
-      txHash, txIndex, blHash, blNumber, gasUsed, contractAddress)
+      this.transactionHash, this.transactionIndex, this.blockHash, this.blockNumber,
+      this.gasUsed, this.contractAddress)
   }
 
 
@@ -65,7 +61,7 @@ case class EthereumReceipt(
       contractAddressStr = BytesUtils.toHexString(contractAddress)
 
     val infoNonConsensusStr : String =
-      String.format(s" - (non consensus data) {txHash=$txHashStr, txIndex=$transactionIndex, blockHash=$blockHashStr, blockNumber=$blockNumber, gasUsed=${gasUsed.toString()}, contractAddress=$contractAddressStr}")
+      String.format(s" - (receipt non consensus data) {txHash=$txHashStr, txIndex=$transactionIndex, blockHash=$blockHashStr, blockNumber=$blockNumber, gasUsed=${gasUsed.toString()}, contractAddress=$contractAddressStr}")
 
      consensusDataReceipt.toString.concat(infoNonConsensusStr)
   }

@@ -1,7 +1,7 @@
 package com.horizen.account.receipt
 
 
-import com.horizen.account.receipt.EthereumReceiptTest.createTestEthereumReceipt
+import com.horizen.account.receipt.EthereumReceiptTest.{createTestEthereumConsensusDataReceipt, createTestEthereumReceipt}
 import com.horizen.evm.TrieHasher
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
@@ -29,7 +29,7 @@ class EthereumReceiptTest
 
 
   @Test
-  def qqqTest(): Unit = {
+  def receiptSimpleSerDeser(): Unit = {
     val receipt: EthereumReceipt = createTestEthereumReceipt(ReceiptTxType.DynamicFeeTxType.id)
     val r1: String = receipt.toString
     System.out.println(r1)
@@ -42,6 +42,39 @@ class EthereumReceiptTest
     System.out.println(r2)
 
     assertEquals(r1, r2)
+  }
+
+  @Test
+  def receiptTestUpdateNonConsensusData() : Unit = {
+    val consensusDataReceipt = createTestEthereumConsensusDataReceipt(ReceiptTxType.DynamicFeeTxType.id)
+    val txHash = new Array[Byte](32)
+    Random.nextBytes(txHash)
+
+    val receipt1 = EthereumReceipt(consensusDataReceipt, txHash, transactionIndex = 1,
+      Keccak256.hash("blockhash".getBytes).asInstanceOf[Array[Byte]], 22, BigInteger.valueOf(1234567), BytesUtils.fromHexString("1122334455667788990011223344556677889900"))
+    // println(receipt1)
+
+    // we have just default values (null) in logs for non consensus data
+    val logs = receipt1.consensusDataReceipt.logs
+    assertEquals(logs.size(), 2)
+    assertEquals(logs.get(0).logIndex, -1)
+    assertEquals(logs.get(1).logIndex, -1)
+    assertEquals(logs.get(0).blockNumber, -1)
+    assertEquals(logs.get(1).blockNumber, -1)
+
+    val receipt2 = receipt1.updateLogs()
+    //println(receipt2)
+
+    // after updating logs we have log index and the same non consensus data as the former parent receipt
+    val logsUpdated = receipt2.consensusDataReceipt.logs
+    assertEquals(logsUpdated.size(), 2)
+    assertEquals(logsUpdated.get(0).logIndex, 0)
+    assertEquals(logsUpdated.get(1).logIndex, 1)
+    assertEquals(logsUpdated.get(0).blockNumber, receipt1.blockNumber)
+    assertEquals(logsUpdated.get(1).blockNumber, receipt1.blockNumber)
+
+
+
   }
 
   @Test def receiptSimpleEncodeDecodeType0Test(): Unit = {
@@ -169,13 +202,27 @@ class EthereumReceiptTest
 }
 
 object EthereumReceiptTest {
-  def createTestEthereumReceipt(`type`: Integer): EthereumReceipt = {
+  def createTestEthereumReceipt(txType: Integer): EthereumReceipt = {
     val txHash = new Array[Byte](32)
     Random.nextBytes(txHash)
     val logs = new util.ArrayList[EthereumLog]
     logs.add(EthereumLogTest.createTestEthereumLog)
     logs.add(EthereumLogTest.createTestEthereumLog)
-    val consensusDataReceipt = new EthereumConsensusDataReceipt(`type`, 1, BigInteger.valueOf(1000), logs, new Array[Byte](256))
-    EthereumReceipt(consensusDataReceipt, txHash, 33, Keccak256.hash("blockhash".getBytes).asInstanceOf[Array[Byte]], 22, BigInteger.valueOf(1234567), BytesUtils.fromHexString("1122334455667788990011223344556677889900"))
+    val consensusDataReceipt = new EthereumConsensusDataReceipt(txType, 1, BigInteger.valueOf(1000), logs, new Array[Byte](256))
+    val receipt = EthereumReceipt(consensusDataReceipt,
+      txHash, 33, Keccak256.hash("blockhash".getBytes).asInstanceOf[Array[Byte]], 22,
+      BigInteger.valueOf(1234567), BytesUtils.fromHexString("1122334455667788990011223344556677889900"))
+    // update logs with non consensus data
+    receipt.updateLogs()
+  }
+
+  def createTestEthereumConsensusDataReceipt(txType: Integer): EthereumConsensusDataReceipt = {
+    val txHash = new Array[Byte](32)
+    Random.nextBytes(txHash)
+    val logs = new util.ArrayList[EthereumLog]
+    logs.add(new EthereumLog(EthereumLogTest.createTestEthereumConsensusDataLog))
+    logs.add(new EthereumLog(EthereumLogTest.createTestEthereumConsensusDataLog))
+    new EthereumConsensusDataReceipt(
+      txType, 1, BigInteger.valueOf(1000), logs, new Array[Byte](256))
   }
 }

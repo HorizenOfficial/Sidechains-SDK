@@ -123,10 +123,10 @@ class AccountState(val params: NetworkParams,
 
     for ((tx, txIndex) <- mod.sidechainTransactions.zipWithIndex) {
       stateView.applyTransaction(tx, cumGasUsed) match {
-        case Success(receipt) =>
-          val txGasUsed = receipt.consensusDataReceipt.cumulativeGasUsed.subtract(cumGasUsed)
+        case Success(consensusDataReceipt) =>
+          val txGasUsed = consensusDataReceipt.cumulativeGasUsed.subtract(cumGasUsed)
           // update cumulative gas used so far
-          cumGasUsed = receipt.consensusDataReceipt.cumulativeGasUsed
+          cumGasUsed = consensusDataReceipt.cumulativeGasUsed
           val ethTx = tx.asInstanceOf[EthereumTransaction]
 
           val txHash = idToBytes(ethTx.id)
@@ -137,9 +137,9 @@ class AccountState(val params: NetworkParams,
             new Array[Byte](0)
           }
 
-          // update non consensus data in receipt
-          val fullReceipt = receipt.update(
-            txHash, txIndex, blockHash, blockNumber, txGasUsed, contractAddress)
+          // get a receipt obj with non consensus data too
+          val fullReceipt = EthereumReceipt(consensusDataReceipt,
+                      txHash, txIndex, blockHash, blockNumber, txGasUsed, contractAddress).updateLogs()
 
           log.debug(s"Adding to receipt list: ${fullReceipt.toString()}")
 

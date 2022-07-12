@@ -34,7 +34,7 @@ case class EthereumConsensusDataLog(
     }
     topicsStr = topicsStr.concat("}")
     String.format(
-      s"EvmLog{address=${BytesUtils.toHexString(address.toBytes)}, topics=$topicsStr, data=${BytesUtils.toHexString(data)}}"
+      s"EthereumLog (log consensus data) { address=${BytesUtils.toHexString(address.toBytes)}, topics=$topicsStr, data=${BytesUtils.toHexString(data)}}"
     )
   }
 }

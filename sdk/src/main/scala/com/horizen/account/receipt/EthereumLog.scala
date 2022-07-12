@@ -27,7 +27,7 @@ case class EthereumLog(
   }
 
   def update(txHash: Array[Byte], txIndex: Int, blHash: Array[Byte], blNumber: Int, idx: Int): EthereumLog =
-    EthereumLog(this.consensusDataLog, txHash, txIndex, blHash, blockNumber, idx, removed=0)
+    EthereumLog(this.consensusDataLog, txHash, txIndex, blHash, blNumber, idx, removed=0)
 
   override def toString: String = {
 
@@ -41,7 +41,7 @@ case class EthereumLog(
       blockHashStr = BytesUtils.toHexString(blockHash)
 
     val infoNonConsensusStr : String =
-      String.format(s" - (non consensus data) {txHash=$txHashStr, txIndex=$transactionIndex, blockHash=$blockHashStr, blockNumber=$blockNumber, logIndex=$logIndex, removed=$removed}")
+      String.format(s" - (log non consensus data) {txHash=$txHashStr, txIndex=$transactionIndex, blockHash=$blockHashStr, blockNumber=$blockNumber, logIndex=$logIndex, removed=$removed}")
 
     consensusDataLog.toString.concat(infoNonConsensusStr)
   }

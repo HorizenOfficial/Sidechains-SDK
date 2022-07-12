@@ -173,7 +173,7 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     BigInteger.ZERO
   }
 
-  override def applyTransaction(tx: SidechainTypes#SCAT, prevCumGasUsed: BigInteger): Try[EthereumReceipt] = Try {
+  override def applyTransaction(tx: SidechainTypes#SCAT, prevCumGasUsed: BigInteger): Try[EthereumConsensusDataReceipt] = Try {
     if (!tx.isInstanceOf[EthereumTransaction])
       throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
 
@@ -197,15 +197,15 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
       throw new IllegalArgumentException(s"Transaction ${ethTx.id} has no known processor.")
     )
 
-    val (gasUsed: BigInteger, consensusDataReceipt : EthereumConsensusDataReceipt) = processor.process(message, this) match {
+    val consensusDataReceipt : EthereumConsensusDataReceipt = processor.process(message, this) match {
       case success: ExecutionSucceeded =>
         val evmLogs = getLogs(txHash)
         val logs = evmLogs.map(element => new EthereumLog(
           new EthereumConsensusDataLog(element))).toList.asJava
         val gasUsed = success.gasUsed()
-        val consensusDataReceipt = new EthereumConsensusDataReceipt(
-          ethTx.version(), ReceiptStatus.SUCCESSFUL.id, prevCumGasUsed.add(gasUsed), logs, new Array[Byte](256))
-        (gasUsed, consensusDataReceipt)
+        new EthereumConsensusDataReceipt(
+          ethTx.version(), ReceiptStatus.SUCCESSFUL.id, prevCumGasUsed.add(gasUsed), logs)
+
 
       case failed: ExecutionFailed =>
         val evmLogs = getLogs(txHash)
@@ -213,9 +213,8 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
           new EthereumConsensusDataLog(element))).toList.asJava
         stateDb.revertToSnapshot(revisionId)
         val gasUsed = failed.gasUsed()
-        val consensusDataReceipt = new EthereumConsensusDataReceipt(
-          ethTx.version(), ReceiptStatus.FAILED.id, prevCumGasUsed.add(gasUsed), logs, new Array[Byte](256))
-        (gasUsed, consensusDataReceipt)
+        new EthereumConsensusDataReceipt(
+          ethTx.version(), ReceiptStatus.FAILED.id, prevCumGasUsed.add(gasUsed), logs)
 
 
       case invalid: InvalidMessage =>
@@ -223,10 +222,8 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     }
 
     // todo: refund gas: bookedGasPrice - actualGasPrice
-
-    val receipt = new EthereumReceipt(consensusDataReceipt)
-    log.debug(s"Returning receipt: ${receipt.toString()}")
-    receipt
+    log.debug(s"Returning consensus data receipt: ${consensusDataReceipt.toString()}")
+    consensusDataReceipt
   }
 
   override def isEoaAccount(address: Array[Byte]): Boolean = stateDb.isEoaAccount(address)
