@@ -10,6 +10,7 @@ import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.evm._
 import com.horizen.evm.interop.EvmLog
+import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
@@ -131,13 +132,13 @@ class AccountState(val params: NetworkParams,
 
           val txHash = idToBytes(ethTx.id)
 
-          val contractAddress = if (!stateView.isEoaAccount(ethTx.getTo.address()) ) {
+          val contractAddress = if (ethTx.getTo != null && !stateView.isEoaAccount(ethTx.getTo.address()) ) {
             ethTx.getTo.address()
           } else {
-            new Array[Byte](0)
+            new Array[Byte](Address.LENGTH)
           }
 
-          // get a receipt obj with non consensus data too
+          // get a receipt obj with non consensus data too (logs updated too)
           val fullReceipt = EthereumReceipt(consensusDataReceipt,
                       txHash, txIndex, blockHash, blockNumber, txGasUsed, contractAddress).updateLogs()
 
