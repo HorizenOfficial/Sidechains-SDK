@@ -1,7 +1,6 @@
 package com.horizen.account.receipt
 
 import com.horizen.account.receipt.EthereumLogTest.createTestEthereumConsensusDataLog
-import com.horizen.evm.interop.EvmLog
 import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
