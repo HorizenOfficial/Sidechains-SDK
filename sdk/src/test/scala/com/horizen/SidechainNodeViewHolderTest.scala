@@ -139,7 +139,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
       Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(blockToAppend), Seq()))
     })
     // History semantic validity check
-    Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenAnswer( answer => {
+    Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenAnswer( answer => Try {
       val validBlock: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
       assertEquals("History received semantically valid notification about different block.", block.id, validBlock.id)
       history
@@ -203,7 +203,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     })
     // History semantic validity check for fork blocks - one by one.
     Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock]))
-      .thenAnswer( answer => {
+      .thenAnswer( answer => Try {
       val validBlock: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
       assertEquals("History received semantically valid notification about different block. First fork block expected.",
         firstBlockInFork.id, validBlock.id)
@@ -299,7 +299,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
       Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq(SidechainBlock.ModifierTypeId -> blockIdToDownload)))
     })
     // History semantic validity check
-    Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenAnswer( _ => {
+    Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenAnswer( _ => Try {
       fail("History should NOT receive semantically valid notifications.")
       history
     })

@@ -5,23 +5,22 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen.SidechainAppEvents
 import com.horizen.certificatesubmitter.CertificateSubmitter.ReceivableMessages.{GetSignaturesStatus, SignatureFromRemote}
-import com.horizen.certificatesubmitter.CertificateSubmitter.{BroadcastLocallyGeneratedSignature, CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, SignatureProcessingStatus, SignaturesStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
+import com.horizen.certificatesubmitter.CertificateSubmitter._
 import com.horizen.certificatesubmitter.network.CertificateSignaturesManager.InternalReceivableMessages.TryToSendGetCertificateSignatures
 import com.horizen.params.NetworkParams
 import scorex.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, SendToNetwork}
-import scorex.core.network.{Broadcast, BroadcastExceptOf, ConnectedPeer, SendToPeer, SendToRandom}
-import scorex.core.network.message.Message
+import scorex.core.network.message.{Message, MessageSpec}
 import scorex.core.network.peer.PenaltyType
+import scorex.core.network._
 import scorex.core.settings.NetworkSettings
 import scorex.util.ScorexLogging
-import shapeless.syntax.typeable.typeableOps
 
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.{Await, ExecutionContext}
 import scala.language.postfixOps
-import scala.util.{Failure, Success, Try}
 import scala.util.control.Breaks.{break, breakable}
+import scala.util.{Failure, Success, Try}
 
 /**
  * Certificate signatures manager is a mediator between `CertificateSubmitter` and P2P network.
@@ -33,7 +32,7 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
                                    certificateSubmitterRef: ActorRef,
                                    params: NetworkParams,
                                    settings: NetworkSettings)
-  (implicit ec: ExecutionContext) extends Actor with ScorexLogging
+  (implicit ec: ExecutionContext) extends Actor with Synchronizer with ScorexLogging
 {
 
   private implicit val timeout: Timeout = Timeout(settings.syncTimeout.getOrElse(5 seconds))
@@ -44,6 +43,11 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
   private val signaturesLimit = params.signersPublicKeys.size
   private val getCertificateSignaturesSpec = new GetCertificateSignaturesSpec(signaturesLimit)
   private val certificateSignaturesSpec = new CertificateSignaturesSpec(signaturesLimit)
+
+  protected val msgHandlers: PartialFunction[(MessageSpec[_], _, ConnectedPeer), Unit] = {
+    case (_: GetCertificateSignaturesSpec, data: InvUnknownSignatures@unchecked, remote) => getCertificateSignatures(data, remote)
+    case (_: CertificateSignaturesSpec, data: KnownSignatures@unchecked, remote)         => certificateSignatures(data, remote)
+  }
 
   override def preStart: Unit = {
     super.preStart()
@@ -66,11 +70,18 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
 
   override def receive: Receive = {
     onSidechainApplicationStart orElse
-    tryToSendGetCertificateSignatures orElse
-    getCertificateSignatures orElse
-    certificateSignatures orElse
-    broadcastSignature orElse
-    reportStrangeInput
+      tryToSendGetCertificateSignatures orElse
+      processDataFromPeer orElse
+      broadcastSignature orElse
+      reportStrangeInput
+  }
+
+  def processDataFromPeer: Receive = {
+    case Message(spec, Left(msgBytes), Some(source)) => parseAndHandle(spec, msgBytes, source)
+  }
+
+  override protected def penalizeMaliciousPeer(peer: ConnectedPeer): Unit = {
+    networkControllerRef ! PenalizePeer(peer.connectionId.remoteAddress, PenaltyType.PermanentPenalty)
   }
 
   private def reportStrangeInput: Receive = {
@@ -86,7 +97,7 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
     networkControllerRef ! RegisterMessageSpecs(Seq(getCertificateSignaturesSpec, certificateSignaturesSpec), self)
 
     // Schedule a periodic known signatures synchronization
-    context.system.scheduler.schedule(getCertificateSignaturesInterval, getCertificateSignaturesInterval)(self ! TryToSendGetCertificateSignatures)
+    context.system.scheduler.scheduleAtFixedRate(getCertificateSignaturesInterval, getCertificateSignaturesInterval, self, TryToSendGetCertificateSignatures)
   }
 
   protected def onSidechainApplicationStart: Receive = {
@@ -116,10 +127,7 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
       }
   }
 
-  private def getCertificateSignatures: Receive = {
-    case Message(spec, unknownSignatures: InvUnknownSignatures@unchecked, Some(peer))
-        if spec.messageCode == GetCertificateSignaturesSpec.messageCode && unknownSignatures.cast[InvUnknownSignatures].isDefined =>
-
+  private def getCertificateSignatures(unknownSignatures: InvUnknownSignatures, peer: ConnectedPeer): Unit = {
       Try {
         Await.result(certificateSubmitterRef ? GetSignaturesStatus, timeout.duration).asInstanceOf[Option[SignaturesStatus]] match {
           case Some(status) =>
@@ -140,10 +148,7 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
       }
   }
 
-  private def certificateSignatures: Receive = {
-    case Message(spec, knownSignatures: KnownSignatures@unchecked, Some(peer))
-        if spec.messageCode == CertificateSignaturesSpec.messageCode && knownSignatures.cast[KnownSignatures].isDefined =>
-
+  private def certificateSignatures(knownSignatures: KnownSignatures, peer: ConnectedPeer): Unit = {
       val signaturesToBroadcast: ArrayBuffer[CertificateSignatureInfo] = ArrayBuffer()
       breakable {
         // Try to apply the signatures one by one and break the loop on critical error.
