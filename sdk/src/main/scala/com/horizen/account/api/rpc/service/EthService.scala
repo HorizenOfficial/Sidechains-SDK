@@ -98,11 +98,10 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
     new ResponseObject(getTxObject(transactionHash, ethTx, tx))
   }
 
-  @RpcMethod("eth_sendRawTransaction") def sendRawTransaction(signedTxData: String): Data = {
+  @RpcMethod("eth_sendRawTransaction") def sendRawTransaction(signedTxData: String): Quantity = {
     val tx = new EthereumTransaction(TransactionDecoder.decode(signedTxData))
     validateAndSendTransaction(tx)
-    if (tx.getTransaction.getType() == TransactionType.LEGACY) return new Data(Keccak256.hash(signedTxData));
-    else return new Data(Keccak256.prefixedHash(tx.version(), Numeric.hexStringToByteArray(signedTxData)));
+    new Quantity(tx.transactionHash())
   }
 
   //function which describes default transaction representation for answer after adding the transaction to a memory pool
@@ -115,7 +114,7 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
     implicit val timeout: Timeout = 5 seconds
     val barrier = Await.result(sidechainTransactionActorRef ? BroadcastTransaction(transaction), timeout.duration).asInstanceOf[Future[Unit]]
     onComplete(barrier) {
-          // TODO: add correct responses
+      // TODO: add correct responses
       case Success(_) =>
         ApiResponseUtil.toResponse(transactionResponseRepresentation(transaction))
       case Failure(exp) =>
@@ -128,23 +127,33 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
     Numeric.toHexString(getFrom(tx).pubKeyBytes), Numeric.toHexString(ethTx.getData), Numeric.toHexString(ethTx.getSignature.getR), Numeric.toHexString(ethTx.getSignature.getS), Numeric.toBigInt(getEthereumTransaction(tx).getSignature.getV).longValue(), String.valueOf(getEthereumTransaction(tx).version), Numeric.toHexStringWithPrefix(ethTx.getMaxFeePerGas), Numeric.toHexStringWithPrefix(ethTx.getMaxPriorityFeePerGas), new util.ArrayList[Any]()) // TODO: access list)
 
   @RpcMethod("eth_getTransactionReceipt")
-  def getTransactionReceipt(transactionHash: Data): TransactionReceipt = { // TODO: Receipts will be supported later on
-    new TransactionReceipt(Numeric.toHexString(transactionHash.getValue), "0x0", // TODO: get transaction index
-      "0x0", // get block hash
-      "0x0", // get block number
-      "0x0", // get cumulative gas used
-      "0x0", // get gas used
-      "null", // return contract address if one is created
-      "null", // return root
-      "0x1", // return status
-      "0x0", // add from
-      "0x0", // add to
+  def getTransactionReceipt(transactionHash: String): String = { // TODO: Receipts will be supported later on
+    return "{\"transactionHash\": " + transactionHash + "," +
+      "\"transactionIndex\":  \"0x1\"," +
+      "\"blockNumber\": \"0xb\"," +
+      "\"blockHash\": \"0xc6ef2fc5426d6ad6fd9e2a26abeab0aa2411b7ab17f30a99d3cb96aed1d1055b\"," +
+      "\"cumulativeGasUsed\": \"0x33bc\"," +
+      "\"gasUsed\": \"0x4dc\"," +
+      "\"contractAddress\": \"0xb60e8dd61c5d32be8058bb8eb970870f07233155\"," +
+      "\"logs\": []," +
+      "\"logsBloom\": \"0x0\"," +
+      "\"status\": " + 0x1 + "}"
+    /*new TransactionReceipt(transactionHash, "", // TODO: get transaction index
+      "", // get block hash
+      "", // get block number
+      "", // get cumulative gas used
+      "", // get gas used
+      "", // return contract address if one is created
+      "", // return root
+      "1", // return status
+      "", // add from
+      "", // add to
       new util.ArrayList[Log](),// return logs
-      "0x0", // return logsBloom
-      "0x0", // insert revert reason
-      "0x0", // insert tx type
-      "0x0" // insert effective gas price
-    )
+      "", // return logsBloom
+      "", // insert revert reason
+      "", // insert tx type
+      "" // insert effective gas price*/
+    //)
   }
 
   @RpcMethod("eth_getCode") def getCode(address: String, tag: Quantity): String = { // TODO: return bytecode of given address or empty
