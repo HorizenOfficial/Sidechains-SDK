@@ -78,8 +78,8 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             case "generateVrfKey":
                 processGenerateVrfKey(command.data());
                 break;
-            case "generateSchnorrKey":
-                processGenerateSchnorrKey(command.data());
+            case "generateCertificateSignerKey":
+                processGenerateCertificateSignerKey(command.data());
                 break;
             case "generateCertProofInfo":
                 processGenerateCertProofInfo(command.data());
@@ -150,7 +150,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                       "\thelp\n" +
                       "\tgeneratekey <arguments>\n" +
                       "\tgenerateVrfKey <arguments>\n" +
-                      "\tgenerateSchnorrKey <arguments>\n" +
+                      "\tgenerateCertificateSignerKey <arguments>\n" +
                       "\tgenerateCertProofInfo <arguments>\n" +
                       "\tgenerateCswProofInfo <arguments>\n" +
                       "\tgenesisinfo <arguments>\n" +
@@ -207,15 +207,15 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         printer.print(res);
     }
 
-    private void printGenerateSchnorrKeyUsageMsg(String error) {
+    private void printGenerateCertificateSignerKey(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                "\tgenerateSchnorrKey {\"seed\":\"my seed\"}");
+                    "\tgenerateCertificateSignerKey {\"seed\":\"my seed\"}");
     }
 
-    private void processGenerateSchnorrKey(JsonNode json) {
+    private void processGenerateCertificateSignerKey(JsonNode json) {
         if(!json.has("seed") || !json.get("seed").isTextual()) {
-            printGenerateSchnorrKeyUsageMsg("seed is not specified or has invalid format.");
+            printGenerateCertificateSignerKey("seed is not specified or has invalid format.");
             return;
         }
 
@@ -226,8 +226,8 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         ObjectNode resJson = mapper.createObjectNode();
         SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
 
-        resJson.put("schnorrSecret", BytesUtils.toHexString(secretsCompanion.toBytes(secretKey)));
-        resJson.put("schnorrPublicKey", BytesUtils.toHexString(secretKey.getPublicBytes()));
+        resJson.put("signerSecret", BytesUtils.toHexString(secretsCompanion.toBytes(secretKey)));
+        resJson.put("signerPublicKey", BytesUtils.toHexString(secretKey.getPublicBytes()));
 
         String res = resJson.toString();
         printer.print(res);
@@ -245,14 +245,14 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     }
 
     private void processGenerateCertProofInfo(JsonNode json) {
-        if (!json.has("pks") || !json.get("pks").isArray()) {
+        if (!json.has("signersPublicKeys") || !json.get("signersPublicKeys").isArray()) {
             printGenerateCertProofInfoUsageMsg("wrong public keys");
             return;
         }
 
         List<String> publicKeys = new ArrayList<String>();
 
-        Iterator<JsonNode> pksIterator = json.get("pks").elements();
+        Iterator<JsonNode> pksIterator = json.get("signersPublicKeys").elements();
         while (pksIterator.hasNext()) {
             JsonNode pkNode = pksIterator.next();
 

@@ -229,23 +229,23 @@ def generate_vrf_secrets(seed, number_of_vrf_keys):
 
 
 """
-Generate Schnorr keys by calling ScBootstrappingTools with command "generateSchnorrKey"
+Generate Schnorr keys by calling ScBootstrappingTools with command "generateCertificateSignerKey"
 Parameters:
  - seed
  - number_of_accounts: the number of keys to be generated
 
 Output: an array of instances of SchnorrKey (see sc_bootstrap_info.py).
 """
-def generate_schorr_secrets(seed, number_of_schnorr_keys):
+def generate_cert_signer_secrets(seed, number_of_schnorr_keys):
     schnorr_keys = []
     secrets = []
     for i in range(number_of_schnorr_keys):
         jsonParameters = {"seed": "{0}_{1}".format(seed, i + 1)}
-        secrets.append(launch_bootstrap_tool("generateSchnorrKey", jsonParameters))
+        secrets.append(launch_bootstrap_tool("generateCertificateSignerKey", jsonParameters))
 
     for i in range(len(secrets)):
         secret = secrets[i]
-        schnorr_keys.append(SchnorrAccount(secret["schnorrSecret"], secret["schnorrPublicKey"]))
+        schnorr_keys.append(SchnorrAccount(secret["signerSecret"], secret["signerPublicKey"]))
     return schnorr_keys
 
 
@@ -255,7 +255,7 @@ def generate_schorr_secrets(seed, number_of_schnorr_keys):
 Generate withdrawal certificate proof info calling ScBootstrappingTools with command "generateProofInfo"
 Parameters:
  - seed
- - number_of_schnorr_keys: the number of schnorr keys to be generated
+ - number_of_signer_keys: the number of schnorr keys to be generated
  - threshold: the minimum set of the participants required for a valid proof creation
  - keys_paths: instance of ProofKeysPaths. Contains paths to load/generate Coboundary Marlin snark keys
  - isCSWEnabled: if ceased sidechain withdrawal is enabled or not
@@ -264,18 +264,18 @@ Output: CertificateProofInfo (see sc_bootstrap_info.py).
 """
 
 
-def generate_certificate_proof_info(seed, number_of_schnorr_keys, threshold, keys_paths, is_csw_enabled):
-    schnorr_keys = generate_schorr_secrets(seed, number_of_schnorr_keys)
+def generate_certificate_proof_info(seed, number_of_signer_keys, threshold, keys_paths, is_csw_enabled):
+    signer_keys = generate_cert_signer_secrets(seed, number_of_signer_keys)
 
-    schnorr_secrets = []
-    schnorr_public_keys = []
-    for i in range(len(schnorr_keys)):
-        keys = schnorr_keys[i]
-        schnorr_secrets.append(keys.secret)
-        schnorr_public_keys.append(keys.publicKey)
+    signer_secrets = []
+    signer_public_keys = []
+    for i in range(len(signer_keys)):
+        keys = signer_keys[i]
+        signer_secrets.append(keys.secret)
+        signer_public_keys.append(keys.publicKey)
 
     json_parameters = {
-        "pks": schnorr_public_keys,
+        "signersPublicKeys": signer_public_keys,
         "threshold": threshold,
         "provingKeyPath": keys_paths.proving_key_path,
         "verificationKeyPath": keys_paths.verification_key_path,
@@ -287,8 +287,8 @@ def generate_certificate_proof_info(seed, number_of_schnorr_keys, threshold, key
     verification_key = output["verificationKey"]
     gen_sys_constant = output["genSysConstant"]
 
-    certificate_proof_info = CertificateProofInfo(threshold, gen_sys_constant, verification_key, schnorr_secrets,
-                                                  schnorr_public_keys)
+    certificate_proof_info = CertificateProofInfo(threshold, gen_sys_constant, verification_key, signer_secrets,
+                                                  signer_public_keys)
     return certificate_proof_info
 
 
