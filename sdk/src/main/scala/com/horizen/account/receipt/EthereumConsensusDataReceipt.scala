@@ -3,6 +3,7 @@ package com.horizen.account.receipt
 import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus.ReceiptStatus
 import com.horizen.account.receipt.EthereumConsensusDataReceipt.{ReceiptStatus, createLogsBloom}
 import com.horizen.account.receipt.ReceiptTxType.ReceiptTxType
+import com.horizen.evm.interop.EvmLog
 import com.horizen.utils.BytesUtils
 import org.web3j.rlp._
 
@@ -11,7 +12,11 @@ import java.nio.ByteBuffer
 import java.util
 import scala.collection.mutable.ListBuffer
 
-case class EthereumConsensusDataReceipt(transactionType: Int, status: Int, cumulativeGasUsed: BigInteger, logs: Seq[EthereumLog], logsBloom: Array[Byte]) {
+case class EthereumConsensusDataReceipt(
+                                         transactionType: Int,
+                                         status: Int,
+                                         cumulativeGasUsed: BigInteger,
+                                         logs: Seq[EvmLog], logsBloom: Array[Byte]) {
 
   /*  From yellow paper
       ----------------------
@@ -25,7 +30,7 @@ case class EthereumConsensusDataReceipt(transactionType: Int, status: Int, cumul
   def this(transactionType: Int,
            status: Int,
            cumulativeGasUsed: BigInteger,
-           logs: Seq[EthereumLog]) {
+           logs: Seq[EvmLog]) {
 
     this(transactionType, status, cumulativeGasUsed, logs, createLogsBloom(logs))
   }
@@ -52,12 +57,6 @@ case class EthereumConsensusDataReceipt(transactionType: Int, status: Int, cumul
   }
 
   def isStatusOK: Boolean = status == ReceiptStatus.SUCCESSFUL.id
-
-  def setLogsBloom(): EthereumConsensusDataReceipt = {
-    // creates blooms out of logs content
-    val logsBloom = createLogsBloom(this.logs)
-    new EthereumConsensusDataReceipt(transactionType, status, cumulativeGasUsed, logs, logsBloom)
-  }
 
   override def toString: String = {
     var logsString = "logs{"
@@ -105,13 +104,13 @@ object EthereumConsensusDataReceipt{
     val cumulativeGasUsed = values.getValues.get(1).asInstanceOf[RlpString].asPositiveBigInteger
     val logsBloom = values.getValues.get(2).asInstanceOf[RlpString].getBytes
     val logList = values.getValues.get(3).asInstanceOf[RlpList]
-    val logs = new ListBuffer[EthereumLog]
+    val logs = new ListBuffer[EvmLog]
     val logsListSize = logList.getValues.size
     if (logsListSize > 0) {
       // loop on list and decode all logs
       for (i <- 0 until logsListSize) {
         val log = EthereumConsensusDataLog.rlpDecode(logList.getValues.get(i).asInstanceOf[RlpList])
-        logs += new EthereumLog(log)
+        logs += log
       }
     }
     EthereumConsensusDataReceipt(ReceiptTxType.LegacyTxType.id, status, cumulativeGasUsed, logs, logsBloom)
@@ -160,13 +159,13 @@ object EthereumConsensusDataReceipt{
     // logs
     val rlpLogs = new util.ArrayList[RlpType]
     for (log <- r.logs) {
-      rlpLogs.add(new RlpList(EthereumConsensusDataLog.asRlpValues(log.consensusDataLog)))
+      rlpLogs.add(new RlpList(EthereumConsensusDataLog.asRlpValues(log)))
     }
     result.add(new RlpList(rlpLogs))
     result
   }
 
-  def createLogsBloom(receipt : Seq[EthereumLog]): Array[Byte] = {
+  def createLogsBloom(receipt : Seq[EvmLog]): Array[Byte] = {
     // we can create bloom filter out of a log or out of a receipt log list 
     /* see: https://github.com/ethereum/go-ethereum/blob/55f914a1d764dac4bd37a48173092b1f5c3b186d/core/types/bloom9.go
 

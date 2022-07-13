@@ -200,21 +200,17 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     val consensusDataReceipt : EthereumConsensusDataReceipt = processor.process(message, this) match {
       case success: ExecutionSucceeded =>
         val evmLogs = getLogs(txHash)
-        val logs = evmLogs.map(element => new EthereumLog(
-          new EthereumConsensusDataLog(element)))
         val gasUsed = success.gasUsed()
         new EthereumConsensusDataReceipt(
-          ethTx.version(), ReceiptStatus.SUCCESSFUL.id, prevCumGasUsed.add(gasUsed), logs)
+          ethTx.version(), ReceiptStatus.SUCCESSFUL.id, prevCumGasUsed.add(gasUsed), evmLogs)
 
 
       case failed: ExecutionFailed =>
         val evmLogs = getLogs(txHash)
-        val logs = evmLogs.map(element => new EthereumLog(
-          new EthereumConsensusDataLog(element)))
         stateDb.revertToSnapshot(revisionId)
         val gasUsed = failed.gasUsed()
         new EthereumConsensusDataReceipt(
-          ethTx.version(), ReceiptStatus.FAILED.id, prevCumGasUsed.add(gasUsed), logs)
+          ethTx.version(), ReceiptStatus.FAILED.id, prevCumGasUsed.add(gasUsed), evmLogs)
 
 
       case invalid: InvalidMessage =>

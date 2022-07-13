@@ -145,11 +145,11 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   }
 
   private[horizen] def getTransactionReceiptFromStorage(txHash: Array[Byte]): Option[EthereumReceipt] = {
-    storage.get(txHash).asScala match {
-      case Some(serData) => {
+    storage.get(getReceiptKey(txHash)).asScala match {
+      case Some(serData) =>
         val decodedReceipt: EthereumReceipt = EthereumReceiptSerializer.parseBytes(serData)
         Some(decodedReceipt)
-      }
+
       case None => None
     }
   }
@@ -157,9 +157,9 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   override def getTransactionReceipt(txHash: Array[Byte]): Option[EthereumReceipt] = {
     val bawTxHash = new ByteArrayWrapper(txHash)
     receiptsOpt match {
-      case Some(receipts) => {
+      case Some(receipts) =>
         receipts.find(r => new ByteArrayWrapper(r.transactionHash) == bawTxHash)
-      }
+
       case None => getTransactionReceiptFromStorage(txHash)
     }
   }
@@ -285,7 +285,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
 
     receiptsOpt.foreach(receipts => {
         for (r <- receipts) {
-          val key = r.transactionHash
+          val key = getReceiptKey(r.transactionHash)
           val value = new ByteArrayWrapper(EthereumReceiptSerializer.toBytes(r))
           updateList.add(new JPair(key, value))
         }
@@ -321,6 +321,10 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
 
   private[horizen] def getBlockFeeInfoKey(withdrawalEpochNumber: Int, counter: Int): ByteArrayWrapper = {
     calculateKey(Bytes.concat("blockFeeInfo".getBytes, Ints.toByteArray(withdrawalEpochNumber), Ints.toByteArray(counter)))
+  }
+
+  private[horizen] def getReceiptKey(txHash : Array[Byte]): ByteArrayWrapper = {
+    calculateKey(Bytes.concat("receipt".getBytes, txHash))
   }
 
 }

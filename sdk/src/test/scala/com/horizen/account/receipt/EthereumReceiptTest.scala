@@ -3,6 +3,7 @@ package com.horizen.account.receipt
 
 import com.horizen.account.receipt.EthereumReceiptTest.{createTestEthereumConsensusDataReceipt, createTestEthereumReceipt}
 import com.horizen.evm.TrieHasher
+import com.horizen.evm.interop.EvmLog
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 import org.junit._
@@ -33,58 +34,59 @@ class EthereumReceiptTest
   def receiptSimpleSerDeser(): Unit = {
     val receipt: EthereumReceipt = createTestEthereumReceipt(ReceiptTxType.DynamicFeeTxType.id)
     val r1: String = receipt.toString
-    System.out.println(r1)
+    println(r1)
 
     val serializedBytes: Array[Byte] = EthereumReceiptSerializer.toBytes(receipt)
-    System.out.println(BytesUtils.toHexString(serializedBytes))
+    println(BytesUtils.toHexString(serializedBytes))
 
     val decodedReceipt: EthereumReceipt = EthereumReceiptSerializer.parseBytes(serializedBytes)
     val r2: String = decodedReceipt.toString
-    System.out.println(r2)
+    println(r2)
 
     assertEquals(r1, r2)
   }
 
   @Test
-  def receiptTestUpdateNonConsensusData() : Unit = {
-    val consensusDataReceipt = createTestEthereumConsensusDataReceipt(ReceiptTxType.DynamicFeeTxType.id)
+  def receiptTestDeriveNonConsensusDataLogs() : Unit = {
+    val NUM_LOGS = 2
+    val consensusDataReceipt = createTestEthereumConsensusDataReceipt(ReceiptTxType.DynamicFeeTxType.id, NUM_LOGS)
     val txHash = new Array[Byte](32)
     Random.nextBytes(txHash)
 
-    val receipt1 = EthereumReceipt(consensusDataReceipt, txHash, transactionIndex = 1,
+    val ethereumReceipt = EthereumReceipt(consensusDataReceipt, txHash, transactionIndex = 1,
       Keccak256.hash("blockhash".getBytes).asInstanceOf[Array[Byte]], 22, BigInteger.valueOf(1234567), BytesUtils.fromHexString("1122334455667788990011223344556677889900"))
     // println(receipt1)
 
-    // we have just default values (null) in logs for non consensus data
-    val logs = receipt1.consensusDataReceipt.logs
+    // we have just consensus data in logs
+    val logs = ethereumReceipt.consensusDataReceipt.logs
     assertEquals(logs.size, 2)
-    assertEquals(logs(0).logIndex, -1)
-    assertEquals(logs(1).logIndex, -1)
-    assertEquals(logs(0).blockNumber, -1)
-    assertEquals(logs(1).blockNumber, -1)
 
-    val receipt2 = receipt1.updateLogs()
+    val fullLogs = ethereumReceipt.deriveFullLogs()
     //println(receipt2)
 
-    // after updating logs we have log index and the same non consensus data as the former parent receipt
-    val logsUpdated = receipt2.consensusDataReceipt.logs
-    assertEquals(logsUpdated.size, 2)
-    assertEquals(logsUpdated(0).logIndex, 0)
-    assertEquals(logsUpdated(1).logIndex, 1)
-    assertEquals(logsUpdated(0).blockNumber, receipt1.blockNumber)
-    assertEquals(logsUpdated(1).blockNumber, receipt1.blockNumber)
+    // after deriving logs we have log index and the same non consensus data as the parent receipt
+    assertEquals(fullLogs.size, logs.size)
+    assertEquals(BytesUtils.toHexString(fullLogs(0).consensusDataLog.address.toBytes), BytesUtils.toHexString(logs(0).address.toBytes))
+    assertEquals(BytesUtils.toHexString(fullLogs(1).consensusDataLog.address.toBytes), BytesUtils.toHexString(logs(1).address.toBytes))
 
+    assertEquals(fullLogs(0).logIndex, 0)
+    assertEquals(fullLogs(1).logIndex, 1)
 
+    assertEquals(BytesUtils.toHexString(fullLogs(0).transactionHash), BytesUtils.toHexString(ethereumReceipt.transactionHash))
+    assertEquals(BytesUtils.toHexString(fullLogs(1).transactionHash), BytesUtils.toHexString(ethereumReceipt.transactionHash))
+
+    assertEquals(fullLogs(0).blockNumber, ethereumReceipt.blockNumber)
+    assertEquals(fullLogs(1).blockNumber, ethereumReceipt.blockNumber)
 
   }
 
   @Test def receiptSimpleEncodeDecodeType0Test(): Unit = {
     val receipt = createTestEthereumReceipt(ReceiptTxType.LegacyTxType.id)
     val encodedReceipt = EthereumConsensusDataReceipt.rlpEncode(receipt.consensusDataReceipt)
-    //println(BytesUtils.toHexString(encodedReceipt));
+    //println(BytesUtils.toHexString(encodedReceipt))
     // read what you write
     val decodedReceipt = EthereumConsensusDataReceipt.rlpDecode(encodedReceipt)
-    //println(decodedReceipt);
+    //println(decodedReceipt)
     assertEquals(receipt.consensusDataReceipt.getTxType, decodedReceipt.getTxType)
     assertEquals(receipt.consensusDataReceipt.getStatus, decodedReceipt.getStatus)
     assertEquals(receipt.consensusDataReceipt.cumulativeGasUsed.toString, decodedReceipt.cumulativeGasUsed.toString)
@@ -94,10 +96,10 @@ class EthereumReceiptTest
   @Test def receiptSimpleEncodeDecodeType1Test(): Unit = {
     val receipt = createTestEthereumReceipt(ReceiptTxType.AccessListTxType.id)
     val encodedReceipt = EthereumConsensusDataReceipt.rlpEncode(receipt.consensusDataReceipt)
-    //println(BytesUtils.toHexString(encodedReceipt));
+    //println(BytesUtils.toHexString(encodedReceipt))
     // read what you write
     val decodedReceipt = EthereumConsensusDataReceipt.rlpDecode(encodedReceipt)
-    //println(decodedReceipt);
+    //println(decodedReceipt)
     assertEquals(receipt.consensusDataReceipt.getTxType, decodedReceipt.getTxType)
     assertEquals(receipt.consensusDataReceipt.getStatus, decodedReceipt.getStatus)
     assertEquals(receipt.consensusDataReceipt.cumulativeGasUsed.toString, decodedReceipt.cumulativeGasUsed.toString)
@@ -106,10 +108,10 @@ class EthereumReceiptTest
   @Test def receiptSimpleEncodeDecodeType2Test(): Unit = {
     val receipt = createTestEthereumReceipt(ReceiptTxType.DynamicFeeTxType.id)
     val encodedReceipt = EthereumConsensusDataReceipt.rlpEncode(receipt.consensusDataReceipt)
-    //println(BytesUtils.toHexString(encodedReceipt));
+    //println(BytesUtils.toHexString(encodedReceipt))
     // read what you write
     val decodedReceipt = EthereumConsensusDataReceipt.rlpDecode(encodedReceipt)
-    //println(decodedReceipt);
+    //println(decodedReceipt)
     assertEquals(receipt.consensusDataReceipt.getTxType, decodedReceipt.getTxType)
     assertEquals(receipt.consensusDataReceipt.getStatus, decodedReceipt.getStatus)
     assertEquals(receipt.consensusDataReceipt.cumulativeGasUsed.toString, decodedReceipt.cumulativeGasUsed.toString)
@@ -161,11 +163,11 @@ class EthereumReceiptTest
       }
       val txType = i % 3
       val cumGas = BigInteger.valueOf(i).multiply(BigInteger.TEN.pow(3))
-      //System.out.println("cumGas =" + cumGas.toString());
+      //println("cumGas =" + cumGas.toString())
       val logsBloom = new Array[Byte](256)
-      val logs = new ListBuffer[EthereumLog]
+      val logs = new ListBuffer[EvmLog]
       receipts(i) = new EthereumConsensusDataReceipt(txType, status, cumGas, logs, logsBloom)
-      //System.out.println("i=" + i + receipts[i].toString());
+      //println("i=" + i + receipts[i].toString())
     }
     receipts.toSeq
   }
@@ -193,9 +195,9 @@ class EthereumReceiptTest
       val rlpReceipts = receipts.map(r => EthereumConsensusDataReceipt.rlpEncode(r)).toList
       val actualHash = Numeric.toHexString(TrieHasher.Root(rlpReceipts.toArray))
       /*
-        System.out.println("i: " + testCase.getKey() +
+        println("i: " + testCase.getKey() +
                 ", value: " + testCase.getValue().toString() +
-                ", actual: "+ actualHash.toString());
+                ", actual: "+ actualHash.toString())
        */
       assertEquals("should match transaction root hash", testCase.getValue, actualHash)
     }
@@ -206,23 +208,22 @@ object EthereumReceiptTest {
   def createTestEthereumReceipt(txType: Integer): EthereumReceipt = {
     val txHash = new Array[Byte](32)
     Random.nextBytes(txHash)
-    val logs = new ListBuffer[EthereumLog]()
-    logs += EthereumLogTest.createTestEthereumLog
-    logs += EthereumLogTest.createTestEthereumLog
+    val logs = new ListBuffer[EvmLog]()
+    logs += EthereumLogTest.createTestEthereumConsensusDataLog
+    logs += EthereumLogTest.createTestEthereumConsensusDataLog
     val consensusDataReceipt = new EthereumConsensusDataReceipt(txType, 1, BigInteger.valueOf(1000), logs, new Array[Byte](256))
     val receipt = EthereumReceipt(consensusDataReceipt,
       txHash, 33, Keccak256.hash("blockhash".getBytes).asInstanceOf[Array[Byte]], 22,
       BigInteger.valueOf(1234567), BytesUtils.fromHexString("1122334455667788990011223344556677889900"))
-    // update logs with non consensus data
-    receipt.updateLogs()
+    receipt
   }
 
-  def createTestEthereumConsensusDataReceipt(txType: Integer): EthereumConsensusDataReceipt = {
+  def createTestEthereumConsensusDataReceipt(txType: Integer, num_logs: Integer): EthereumConsensusDataReceipt = {
     val txHash = new Array[Byte](32)
     Random.nextBytes(txHash)
-    val logs = new ListBuffer[EthereumLog]
-    logs += new EthereumLog(EthereumLogTest.createTestEthereumConsensusDataLog)
-    logs += new EthereumLog(EthereumLogTest.createTestEthereumConsensusDataLog)
+    val logs = new ListBuffer[EvmLog]
+    for (_ <- 1 to num_logs)
+      logs += EthereumLogTest.createTestEthereumConsensusDataLog
     new EthereumConsensusDataReceipt(txType, 1, BigInteger.valueOf(1000), logs, new Array[Byte](256))
   }
 }

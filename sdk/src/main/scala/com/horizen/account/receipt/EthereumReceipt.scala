@@ -1,11 +1,12 @@
 package com.horizen.account.receipt
 
-import com.horizen.utils.{BytesUtils, ListSerializer}
+import com.horizen.evm.interop.EvmLog
+import com.horizen.utils.BytesUtils
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
 import java.math.BigInteger
-import scala.collection.JavaConverters.{iterableAsScalaIterableConverter, seqAsJavaListConverter}
+import scala.collection.mutable.ListBuffer
 
 case class EthereumReceipt(
                              consensusDataReceipt: EthereumConsensusDataReceipt,
@@ -25,21 +26,12 @@ case class EthereumReceipt(
       new Array[Byte](32), -1, new Array[Byte](32), -1, BigInteger.valueOf(-1), new Array[Byte](20))
   }
 
-  def updateLogs(): EthereumReceipt = {
-    // update logs adding non consensus data
+  def deriveFullLogs() : Seq[EthereumLog] = {
     val logs = this.consensusDataReceipt.logs
-    val logsFull = logs.zipWithIndex.map{
-      case (log, idx) => log.update(transactionHash, transactionIndex, blockHash, blockNumber, idx)
+    logs.zipWithIndex.map{
+      case (log, idx) => EthereumLog.derive(log, transactionHash, transactionIndex, blockHash, blockNumber, idx)
     }
-
-    EthereumReceipt(
-      EthereumConsensusDataReceipt(
-        this.consensusDataReceipt.transactionType, this.consensusDataReceipt.status,
-        this.consensusDataReceipt.cumulativeGasUsed, logsFull, this.consensusDataReceipt.logsBloom),
-      this.transactionHash, this.transactionIndex, this.blockHash, this.blockNumber,
-      this.gasUsed, this.contractAddress)
   }
-
 
   override def toString: String = {
 
@@ -65,8 +57,6 @@ case class EthereumReceipt(
 
 object EthereumReceiptSerializer extends ScorexSerializer[EthereumReceipt]{
 
-  lazy val logsSerializer: ListSerializer[EthereumLog] = new ListSerializer[EthereumLog](EthereumLogSerializer)
-
   override def serialize(receipt: EthereumReceipt, writer: Writer): Unit = {
     // consensus data
     writer.putInt(receipt.consensusDataReceipt.transactionType)
@@ -77,7 +67,10 @@ object EthereumReceiptSerializer extends ScorexSerializer[EthereumReceipt]{
     writer.putInt(cumGasUsedBytes.length)
     writer.putBytes(cumGasUsedBytes)
 
-    logsSerializer.serialize(receipt.consensusDataReceipt.logs.asJava, writer)
+    val numberOfLogs = receipt.consensusDataReceipt.logs.size
+    writer.putInt(numberOfLogs)
+    for (log <- receipt.consensusDataReceipt.logs)
+      EvmLogSerializer.serialize(log, writer)
 
     val bloomBytes: Array[Byte] = receipt.consensusDataReceipt.logsBloom
     writer.putInt(bloomBytes.length)
@@ -104,7 +97,10 @@ object EthereumReceiptSerializer extends ScorexSerializer[EthereumReceipt]{
     val cumGasUsedLength: Int = reader.getInt
     val cumGasUsed: BigInteger = new BigInteger(reader.getBytes(cumGasUsedLength))
 
-    val logs = logsSerializer.parse(reader).asScala.toSeq
+    val logs = ListBuffer[EvmLog]()
+    val numberOfLogs = reader.getInt
+    for (_ <- 0 until numberOfLogs)
+      logs += EvmLogSerializer.parse(reader)
 
     val bloomsLength: Int = reader.getInt
     val blooms: Array[Byte] = reader.getBytes(bloomsLength)
