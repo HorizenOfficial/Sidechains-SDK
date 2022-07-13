@@ -9,13 +9,9 @@ import org.web3j.rlp._
 import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.util
-import scala.collection.JavaConverters.iterableAsScalaIterableConverter
+import scala.collection.mutable.ListBuffer
 
-case class EthereumConsensusDataReceipt(transactionType: Int,
-                                        status: Int,
-                                        cumulativeGasUsed: BigInteger,
-                                        logs: util.List[EthereumLog],
-                                        logsBloom: Array[Byte]) {
+case class EthereumConsensusDataReceipt(transactionType: Int, status: Int, cumulativeGasUsed: BigInteger, logs: Seq[EthereumLog], logsBloom: Array[Byte]) {
 
   /*  From yellow paper
       ----------------------
@@ -29,7 +25,7 @@ case class EthereumConsensusDataReceipt(transactionType: Int,
   def this(transactionType: Int,
            status: Int,
            cumulativeGasUsed: BigInteger,
-           logs: util.List[EthereumLog]) {
+           logs: Seq[EthereumLog]) {
 
     this(transactionType, status, cumulativeGasUsed, logs, createLogsBloom(logs))
   }
@@ -65,7 +61,7 @@ case class EthereumConsensusDataReceipt(transactionType: Int,
 
   override def toString: String = {
     var logsString = "logs{"
-    for (log <- logs.asScala) {
+    for (log <- logs) {
       logsString = logsString.concat(" " + log.toString)
     }
     logsString = logsString.concat("}")
@@ -109,13 +105,13 @@ object EthereumConsensusDataReceipt{
     val cumulativeGasUsed = values.getValues.get(1).asInstanceOf[RlpString].asPositiveBigInteger
     val logsBloom = values.getValues.get(2).asInstanceOf[RlpString].getBytes
     val logList = values.getValues.get(3).asInstanceOf[RlpList]
-    val logs = new util.ArrayList[EthereumLog](0)
+    val logs = new ListBuffer[EthereumLog]
     val logsListSize = logList.getValues.size
     if (logsListSize > 0) {
       // loop on list and decode all logs
       for (i <- 0 until logsListSize) {
         val log = EthereumConsensusDataLog.rlpDecode(logList.getValues.get(i).asInstanceOf[RlpList])
-        logs.add(new EthereumLog(log))
+        logs += new EthereumLog(log)
       }
     }
     EthereumConsensusDataReceipt(ReceiptTxType.LegacyTxType.id, status, cumulativeGasUsed, logs, logsBloom)
@@ -163,15 +159,14 @@ object EthereumConsensusDataReceipt{
     result.add(RlpString.create(r.logsBloom))
     // logs
     val rlpLogs = new util.ArrayList[RlpType]
-    for (i <- 0 until r.logs.size) {
-      val log = r.logs.get(i)
+    for (log <- r.logs) {
       rlpLogs.add(new RlpList(EthereumConsensusDataLog.asRlpValues(log.consensusDataLog)))
     }
     result.add(new RlpList(rlpLogs))
     result
   }
 
-  def createLogsBloom(receipt : util.List[EthereumLog]): Array[Byte] = {
+  def createLogsBloom(receipt : Seq[EthereumLog]): Array[Byte] = {
     // we can create bloom filter out of a log or out of a receipt log list 
     /* see: https://github.com/ethereum/go-ethereum/blob/55f914a1d764dac4bd37a48173092b1f5c3b186d/core/types/bloom9.go
 

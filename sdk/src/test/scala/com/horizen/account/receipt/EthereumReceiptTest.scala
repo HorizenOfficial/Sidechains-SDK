@@ -15,6 +15,7 @@ import java.math.BigInteger
 import java.util
 import java.util.Map.entry
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
+import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
 
@@ -56,22 +57,22 @@ class EthereumReceiptTest
 
     // we have just default values (null) in logs for non consensus data
     val logs = receipt1.consensusDataReceipt.logs
-    assertEquals(logs.size(), 2)
-    assertEquals(logs.get(0).logIndex, -1)
-    assertEquals(logs.get(1).logIndex, -1)
-    assertEquals(logs.get(0).blockNumber, -1)
-    assertEquals(logs.get(1).blockNumber, -1)
+    assertEquals(logs.size, 2)
+    assertEquals(logs(0).logIndex, -1)
+    assertEquals(logs(1).logIndex, -1)
+    assertEquals(logs(0).blockNumber, -1)
+    assertEquals(logs(1).blockNumber, -1)
 
     val receipt2 = receipt1.updateLogs()
     //println(receipt2)
 
     // after updating logs we have log index and the same non consensus data as the former parent receipt
     val logsUpdated = receipt2.consensusDataReceipt.logs
-    assertEquals(logsUpdated.size(), 2)
-    assertEquals(logsUpdated.get(0).logIndex, 0)
-    assertEquals(logsUpdated.get(1).logIndex, 1)
-    assertEquals(logsUpdated.get(0).blockNumber, receipt1.blockNumber)
-    assertEquals(logsUpdated.get(1).blockNumber, receipt1.blockNumber)
+    assertEquals(logsUpdated.size, 2)
+    assertEquals(logsUpdated(0).logIndex, 0)
+    assertEquals(logsUpdated(1).logIndex, 1)
+    assertEquals(logsUpdated(0).blockNumber, receipt1.blockNumber)
+    assertEquals(logsUpdated(1).blockNumber, receipt1.blockNumber)
 
 
 
@@ -130,7 +131,7 @@ class EthereumReceiptTest
     val dataStrType1 = "01f90108018203e8b9010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0"
     val dataBytes = BytesUtils.fromHexString(dataStrType1)
     val decodedReceipt = EthereumConsensusDataReceipt.rlpDecode(dataBytes)
-    println(decodedReceipt);
+    println(decodedReceipt)
     assertEquals(decodedReceipt.getTxType, ReceiptTxType.AccessListTxType)
     // encode and check we are the same as the original
     val encodedReceipt = EthereumConsensusDataReceipt.rlpEncode(decodedReceipt)
@@ -142,7 +143,7 @@ class EthereumReceiptTest
     val dataStrType2 = "02f9010901830b90f0b9010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0"
     val dataBytes = BytesUtils.fromHexString(dataStrType2)
     val decodedReceipt = EthereumConsensusDataReceipt.rlpDecode(dataBytes)
-    println(decodedReceipt);
+    println(decodedReceipt)
     assertEquals(decodedReceipt.getTxType, ReceiptTxType.DynamicFeeTxType)
     // encode and check we are the same as the original
     val encodedReceipt = EthereumConsensusDataReceipt.rlpEncode(decodedReceipt)
@@ -153,7 +154,7 @@ class EthereumReceiptTest
   // compatible with analogous go code in libevm/lib/service_hash_test.go
   private def generateReceipts(count: Int) : scala.Seq[EthereumConsensusDataReceipt] = {
     val receipts = new Array[EthereumConsensusDataReceipt](count)
-    for (i <- 0 until receipts.length) {
+    for (i <- receipts.indices) {
       var status = 1
       if (i % 7 == 0) { // mark a number of receipts as failed
         status = 0
@@ -162,7 +163,7 @@ class EthereumReceiptTest
       val cumGas = BigInteger.valueOf(i).multiply(BigInteger.TEN.pow(3))
       //System.out.println("cumGas =" + cumGas.toString());
       val logsBloom = new Array[Byte](256)
-      val logs = new util.ArrayList[EthereumLog]
+      val logs = new ListBuffer[EthereumLog]
       receipts(i) = new EthereumConsensusDataReceipt(txType, status, cumGas, logs, logsBloom)
       //System.out.println("i=" + i + receipts[i].toString());
     }
@@ -205,9 +206,9 @@ object EthereumReceiptTest {
   def createTestEthereumReceipt(txType: Integer): EthereumReceipt = {
     val txHash = new Array[Byte](32)
     Random.nextBytes(txHash)
-    val logs = new util.ArrayList[EthereumLog]
-    logs.add(EthereumLogTest.createTestEthereumLog)
-    logs.add(EthereumLogTest.createTestEthereumLog)
+    val logs = new ListBuffer[EthereumLog]()
+    logs += EthereumLogTest.createTestEthereumLog
+    logs += EthereumLogTest.createTestEthereumLog
     val consensusDataReceipt = new EthereumConsensusDataReceipt(txType, 1, BigInteger.valueOf(1000), logs, new Array[Byte](256))
     val receipt = EthereumReceipt(consensusDataReceipt,
       txHash, 33, Keccak256.hash("blockhash".getBytes).asInstanceOf[Array[Byte]], 22,
@@ -219,10 +220,9 @@ object EthereumReceiptTest {
   def createTestEthereumConsensusDataReceipt(txType: Integer): EthereumConsensusDataReceipt = {
     val txHash = new Array[Byte](32)
     Random.nextBytes(txHash)
-    val logs = new util.ArrayList[EthereumLog]
-    logs.add(new EthereumLog(EthereumLogTest.createTestEthereumConsensusDataLog))
-    logs.add(new EthereumLog(EthereumLogTest.createTestEthereumConsensusDataLog))
-    new EthereumConsensusDataReceipt(
-      txType, 1, BigInteger.valueOf(1000), logs, new Array[Byte](256))
+    val logs = new ListBuffer[EthereumLog]
+    logs += new EthereumLog(EthereumLogTest.createTestEthereumConsensusDataLog)
+    logs += new EthereumLog(EthereumLogTest.createTestEthereumConsensusDataLog)
+    new EthereumConsensusDataReceipt(txType, 1, BigInteger.valueOf(1000), logs, new Array[Byte](256))
   }
 }

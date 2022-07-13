@@ -201,7 +201,7 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
       case success: ExecutionSucceeded =>
         val evmLogs = getLogs(txHash)
         val logs = evmLogs.map(element => new EthereumLog(
-          new EthereumConsensusDataLog(element))).toList.asJava
+          new EthereumConsensusDataLog(element)))
         val gasUsed = success.gasUsed()
         new EthereumConsensusDataReceipt(
           ethTx.version(), ReceiptStatus.SUCCESSFUL.id, prevCumGasUsed.add(gasUsed), logs)
@@ -210,7 +210,7 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
       case failed: ExecutionFailed =>
         val evmLogs = getLogs(txHash)
         val logs = evmLogs.map(element => new EthereumLog(
-          new EthereumConsensusDataLog(element))).toList.asJava
+          new EthereumConsensusDataLog(element)))
         stateDb.revertToSnapshot(revisionId)
         val gasUsed = failed.gasUsed()
         new EthereumConsensusDataReceipt(
