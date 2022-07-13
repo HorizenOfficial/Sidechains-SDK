@@ -1,16 +1,24 @@
 package com.horizen.account.state
 
+import com.horizen.account.abi.ABIEncodable
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.proposition.{MCPublicKeyHashProposition, MCPublicKeyHashPropositionSerializer}
+import org.web3j.abi.datatypes.StaticStruct
+import org.web3j.abi.datatypes.generated.{Bytes20, Uint256}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
-case class WithdrawalRequest(proposition: MCPublicKeyHashProposition, value: java.math.BigInteger) extends BytesSerializable {
+case class WithdrawalRequest(proposition: MCPublicKeyHashProposition, value: java.math.BigInteger) extends BytesSerializable with ABIEncodable {
   override type M = WithdrawalRequest
 
   override def serializer: ScorexSerializer[WithdrawalRequest] = WithdrawalRequestSerializer
 
   val valueInZennies: Long = ZenWeiConverter.convertWeiToZennies(value)
+
+  private[horizen] def asABIType(): StaticStruct = {
+    new StaticStruct(new Bytes20(proposition.bytes), new Uint256(value))
+  }
+
 }
 
 object WithdrawalRequestSerializer extends ScorexSerializer[WithdrawalRequest] {

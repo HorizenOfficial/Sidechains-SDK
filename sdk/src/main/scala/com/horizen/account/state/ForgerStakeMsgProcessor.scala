@@ -1,28 +1,33 @@
 package com.horizen.account.state
 
 import com.google.common.primitives.Bytes
-import com.horizen.utils.{BytesUtils, ListSerializer}
-
-import java.math.BigInteger
-import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
-import com.horizen.account.proof.{SignatureSecp256k1, SignatureSecp256k1Serializer}
+import com.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
+import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
-import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress, GetListOfForgersCmd, LinkedListNullValue, LinkedListTipKey, RemoveStakeCmd}
-import com.horizen.account.state.WithdrawalMsgProcessor.getABIMethodId
+import com.horizen.account.state.ForgerStakeMsgProcessor._
+import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
+import com.horizen.utils.{BytesUtils, ListSerializer}
+import com.horizen.account.abi.ABIDecoder.{OP_CODE_LENGTH, getOpCodeFromData, getArgumentsFromData}
+import com.horizen.account.state.AbstractFakeSmartContractMsgProcessor.getABIMethodId
+import org.web3j.abi.TypeReference
+import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint256}
+import org.web3j.abi.datatypes.{Address, StaticStruct, Type}
 import org.web3j.crypto.Hash
 import org.web3j.utils.Numeric
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.crypto.hash.{Blake2b256, Keccak256}
 import scorex.util.serialization.{Reader, Writer}
 
+import java.math.BigInteger
 import java.util
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.util.{Failure, Success}
 
 trait ForgerStakesProvider {
   private[horizen] def getListOfForgers(view: BaseAccountStateView): Seq[AccountForgingStakeInfo]
+
   private[horizen] def addScCreationForgerStake(msg: Message, view: BaseAccountStateView): ExecutionResult
 }
 
@@ -34,17 +39,17 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
 
   // ensure we have strings consistent with size of opcode
   require(
-    GetListOfForgersCmd.length == 2*OP_CODE_LENGTH &&
-    AddNewStakeCmd.length == 2*OP_CODE_LENGTH &&
-    RemoveStakeCmd.length == 2*OP_CODE_LENGTH
+    GetListOfForgersCmd.length == 2 * OP_CODE_LENGTH &&
+      AddNewStakeCmd.length == 2 * OP_CODE_LENGTH &&
+      RemoveStakeCmd.length == 2 * OP_CODE_LENGTH
   )
 
   // TODO set proper values
-  val GetListOfForgersGasPaidValue : BigInteger = java.math.BigInteger.ONE
-  val AddNewStakeGasPaidValue : BigInteger      = java.math.BigInteger.ONE
-  val RemoveStakeGasPaidValue : BigInteger      = java.math.BigInteger.ONE
+  val GetListOfForgersGasPaidValue: BigInteger = java.math.BigInteger.ONE
+  val AddNewStakeGasPaidValue: BigInteger = java.math.BigInteger.ONE
+  val RemoveStakeGasPaidValue: BigInteger = java.math.BigInteger.ONE
 
-  val networkParams : NetworkParams = params
+  val networkParams: NetworkParams = params
 
   def getStakeId(msg: Message): Array[Byte] = {
     Keccak256.hash(Bytes.concat(
@@ -63,7 +68,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
 
     // getting a not existing key from state DB using RAW strategy as the api is doing
     // gives 32 bytes filled with 0 (CHUNK strategy gives an empty array instead
-    require (BytesUtils.toHexString(initialTip) == NULL_HEX_STRING_32)
+    require(BytesUtils.toHexString(initialTip) == NULL_HEX_STRING_32)
 
     view.updateAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey, LinkedListNullValue)
   }
@@ -88,32 +93,32 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
   }
 
   def findStakeData(view: BaseAccountStateView, stakeId: Array[Byte]): Option[ForgerStakeData] = {
-      view.getAccountStorageBytes(fakeSmartContractAddress.address(), stakeId) match {
-        case Success(data) =>
-          if(data.length == 0) {
-            // getting a not existing key from state DB using RAW strategy
-            // gives an array of 32 bytes filled with 0, while using CHUNK strategy, as the api is doing here
-            // gives an empty array instead
-            None
-          } else {
-            ForgerStakeDataSerializer.parseBytesTry(data) match {
-              case Success(obj) => Some(obj)
-              case Failure(exception) =>
-                log.error("Error while parsing forger data.", exception)
-                throw exception
-            }
+    view.getAccountStorageBytes(fakeSmartContractAddress.address(), stakeId) match {
+      case Success(data) =>
+        if (data.length == 0) {
+          // getting a not existing key from state DB using RAW strategy
+          // gives an array of 32 bytes filled with 0, while using CHUNK strategy, as the api is doing here
+          // gives an empty array instead
+          None
+        } else {
+          ForgerStakeDataSerializer.parseBytesTry(data) match {
+            case Success(obj) => Some(obj)
+            case Failure(exception) =>
+              log.error("Error while parsing forger data.", exception)
+              throw exception
           }
+        }
 
-        case Failure(e) =>
-          log.error("Failure in getting value from state DB", e)
-          throw new Exception(e)
-      }
+      case Failure(e) =>
+        log.error("Failure in getting value from state DB", e)
+        throw new Exception(e)
+    }
   }
 
   def findLinkedListNode(view: BaseAccountStateView, nodeId: Array[Byte]): Option[LinkedListNode] = {
     view.getAccountStorageBytes(fakeSmartContractAddress.address(), nodeId) match {
       case Success(data) =>
-        if(data.length == 0) {
+        if (data.length == 0) {
           // getting a not existing key from state DB using RAW strategy
           // gives an array of 32 bytes filled with 0, while using CHUNK strategy, as the api is doing here
           // gives an empty array instead
@@ -133,15 +138,13 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     }
   }
 
-  def addNewNodeToList(view: BaseAccountStateView, stakeId: Array[Byte]) : Unit =
-  {
+  def addNewNodeToList(view: BaseAccountStateView, stakeId: Array[Byte]): Unit = {
     val oldTip = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey).get
 
     val newTip = Blake2b256.hash(stakeId)
 
     // modify previous node (if any) to point at this one
-    if (!linkedListNodeRefIsNull(oldTip))
-    {
+    if (!linkedListNodeRefIsNull(oldTip)) {
       val previousNode = findLinkedListNode(view, oldTip).get
 
       val modPreviousNode = LinkedListNode(
@@ -168,8 +171,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
                      blockSignProposition: PublicKey25519Proposition,
                      vrfPublicKey: VrfPublicKey,
                      ownerPublicKey: AddressProposition,
-                     stakedAmount: BigInteger): Unit =
-  {
+                     stakedAmount: BigInteger): Unit = {
 
     // add a new node to the linked list pointing to this forger stake data
     addNewNodeToList(view, stakeId)
@@ -177,13 +179,12 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     val forgerStakeData = ForgerStakeData(
       ForgerPublicKeys(blockSignProposition, vrfPublicKey), ownerPublicKey, stakedAmount)
 
-     // store the forger stake data
+    // store the forger stake data
     view.updateAccountStorageBytes(fakeSmartContractAddress.address(), stakeId,
       ForgerStakeDataSerializer.toBytes(forgerStakeData))
   }
 
-  def removeForgerStake(view: BaseAccountStateView, stakeId: Array[Byte]): Unit=
-  {
+  def removeForgerStake(view: BaseAccountStateView, stakeId: Array[Byte]): Unit = {
     val nodeToRemoveId = Blake2b256.hash(stakeId)
 
     // we assume that the caller have checked that the forger stake really exists in the stateDb.
@@ -191,15 +192,14 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     val nodeToRemove = findLinkedListNode(view, nodeToRemoveId).get
 
     // modify previous node if any
-    if (!linkedListNodeRefIsNull(nodeToRemove.previousNodeKey))
-    {
+    if (!linkedListNodeRefIsNull(nodeToRemove.previousNodeKey)) {
       val prevNodeId = nodeToRemove.previousNodeKey
       val previousNode = findLinkedListNode(view, prevNodeId).get
 
       val modPreviousNode = LinkedListNode(
-       previousNode.dataKey,
-       previousNode.previousNodeKey,
-       nodeToRemove.nextNodeKey)
+        previousNode.dataKey,
+        previousNode.previousNodeKey,
+        nodeToRemove.nextNodeKey)
 
       // store the modified previous node
       view.updateAccountStorageBytes(fakeSmartContractAddress.address(), prevNodeId,
@@ -207,8 +207,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     }
 
     // modify next node if any
-    if (!linkedListNodeRefIsNull(nodeToRemove.nextNodeKey))
-    {
+    if (!linkedListNodeRefIsNull(nodeToRemove.nextNodeKey)) {
       val nextNodeId = nodeToRemove.nextNodeKey
       val nextNode = findLinkedListNode(view, nextNodeId).get
 
@@ -232,9 +231,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     view.removeAccountStorageBytes(fakeSmartContractAddress.address(), nodeToRemoveId)
   }
 
-  def getListItem(view: BaseAccountStateView, tip: Array[Byte]) : (AccountForgingStakeInfo, Array[Byte]) = {
-    if (!linkedListNodeRefIsNull(tip))
-    {
+  def getListItem(view: BaseAccountStateView, tip: Array[Byte]): (AccountForgingStakeInfo, Array[Byte]) = {
+    if (!linkedListNodeRefIsNull(tip)) {
       val node = findLinkedListNode(view, tip).get
       val stakeData = findStakeData(view, node.dataKey).get
       val listItem = AccountForgingStakeInfo(
@@ -251,29 +249,29 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     }
   }
 
-  def linkedListNodeRefIsNull(ref: Array[Byte]) : Boolean =
+  def linkedListNodeRefIsNull(ref: Array[Byte]): Boolean =
     BytesUtils.toHexString(ref).equals(BytesUtils.toHexString(LinkedListNullValue))
 
   override def addScCreationForgerStake(msg: Message, view: BaseAccountStateView): ExecutionResult =
     doAddNewStakeCmd(msg, view, isGenesisScCreation = true)
 
-  def doAddNewStakeCmd(msg: Message, view: BaseAccountStateView, isGenesisScCreation: Boolean = false) : ExecutionResult = {
+  def doAddNewStakeCmd(msg: Message, view: BaseAccountStateView, isGenesisScCreation: Boolean = false): ExecutionResult = {
 
     // first of all check msg.value, it must be a legal wei amount convertible in satoshi without any remainder
     if (!isValidZenAmount(msg.getValue)) {
-      val msgStr =s"Value is not a legal wei amount: ${msg.getValue.toString()}"
+      val msgStr = s"Value is not a legal wei amount: ${msg.getValue.toString()}"
       log.debug(msgStr)
       return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(msgStr))
     }
 
     // check also that sender account exists (unless we are staking in the sc creation phase)
     if (!isGenesisScCreation && !view.accountExists(msg.getFrom.address())) {
-      val msgStr =s"Sender account does not exist: ${msg.getFrom.toString}"
+      val msgStr = s"Sender account does not exist: ${msg.getFrom.toString}"
       log.debug(msgStr)
       return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(msgStr))
     }
 
-    val cmdInput = AddNewStakeCmdInputSerializer.parseBytesTry(getArgumentsFromData(msg.getData)) match {
+    val cmdInput = AddNewStakeCmdInputDecoder.decode(msg.getData) match {
       case Success(obj) => obj
       case Failure(exception) =>
         val msgStr = "Error while parsing cmd input"
@@ -281,9 +279,9 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
         return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(msgStr))
     }
 
-    val blockSignPublicKey : PublicKey25519Proposition = cmdInput.forgerPublicKeys.blockSignPublicKey
-    val vrfPublicKey :VrfPublicKey                     = cmdInput.forgerPublicKeys.vrfPublicKey
-    val ownerAddress: AddressProposition               = cmdInput.ownerAddress
+    val blockSignPublicKey: PublicKey25519Proposition = cmdInput.forgerPublicKeys.blockSignPublicKey
+    val vrfPublicKey: VrfPublicKey = cmdInput.forgerPublicKeys.vrfPublicKey
+    val ownerAddress: AddressProposition = cmdInput.ownerAddress
 
     if (networkParams.restrictForgers) {
       // check that the delegation arguments satisfy the restricted list of forgers.
@@ -342,34 +340,32 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     }
   }
 
-  override def getListOfForgers(view: BaseAccountStateView) : Seq[AccountForgingStakeInfo] = {
+  override def getListOfForgers(view: BaseAccountStateView): Seq[AccountForgingStakeInfo] = {
     doUncheckedGetListOfForgersCmd(view) match {
-      case res : ExecutionSucceeded =>
+      case res: ExecutionSucceeded =>
         forgingInfoSerializer.parseBytesTry(res.returnData()).get.asScala
 
       case _ => Seq()
     }
   }
 
-  def doUncheckedGetListOfForgersCmd(view: BaseAccountStateView) : ExecutionResult = {
+  def doUncheckedGetListOfForgersCmd(view: BaseAccountStateView): ExecutionResult = {
     val stakeList = new util.ArrayList[AccountForgingStakeInfo]()
     var nodeReference = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey).get
 
-    while (!linkedListNodeRefIsNull(nodeReference))
-    {
-      val (item : AccountForgingStakeInfo, prevNodeReference: Array[Byte]) = getListItem(view, nodeReference)
+    while (!linkedListNodeRefIsNull(nodeReference)) {
+      val (item: AccountForgingStakeInfo, prevNodeReference: Array[Byte]) = getListItem(view, nodeReference)
       stakeList.add(item)
       nodeReference = prevNodeReference
     }
 
-    val listOfForgers : Array[Byte] = forgingInfoSerializer.toBytes(stakeList)
-
+    val listOfForgers = AccountForgingStakeInfoListEncoder.encode(stakeList.asScala)
     new ExecutionSucceeded(GetListOfForgersGasPaidValue, listOfForgers)
   }
 
-  def doGetListOfForgersCmd(msg: Message, view: BaseAccountStateView) : ExecutionResult = {
+  def doGetListOfForgersCmd(msg: Message, view: BaseAccountStateView): ExecutionResult = {
     try {
-        checkGetListOfForgersCmd(msg)
+      checkGetListOfForgersCmd(msg)
     }
     catch {
       case e: Exception =>
@@ -380,8 +376,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     doUncheckedGetListOfForgersCmd(view)
   }
 
-  def doRemoveStakeCmd(msg: Message, view: BaseAccountStateView) : ExecutionResult = {
-    val cmdInput = RemoveStakeCmdInputSerializer.parseBytesTry(getArgumentsFromData(msg.getData)) match {
+  def doRemoveStakeCmd(msg: Message, view: BaseAccountStateView): ExecutionResult = {
+    val cmdInput = RemoveStakeCmdInputDecoder.decode(msg.getData) match {
       case Success(obj) => obj
       case Failure(exception) =>
         val msgStr = "Error while parsing cmd input"
@@ -389,8 +385,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
         return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(exception))
     }
 
-    val stakeId : Array[Byte]          = cmdInput.stakeId
-    val signature : SignatureSecp256k1 = cmdInput.signature
+    val stakeId: Array[Byte] = cmdInput.stakeId
+    val signature: SignatureSecp256k1 = cmdInput.signature
 
     // get the forger stake data to remove
     val stakeData = findStakeData(view, stakeId) match {
@@ -453,7 +449,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
       }
     }
     catch {
-      case e : Exception =>
+      case e: Exception =>
         val msgStr = s"Exception while processing message: $msg"
         log.debug(msgStr)
         new ExecutionFailed(RemoveStakeGasPaidValue, new IllegalArgumentException(e))
@@ -463,13 +459,12 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
 
 object ForgerStakeMsgProcessor {
 
-  protected def getABIMethodId(methodSig: String) : String = Numeric.toHexString(Hash.sha3(methodSig.getBytes)).substring(2, 10)
-  val LinkedListTipKey : Array[Byte] = Blake2b256.hash("Tip")
-  val LinkedListNullValue : Array[Byte] = Blake2b256.hash("Null")
+  val LinkedListTipKey: Array[Byte] = Blake2b256.hash("Tip")
+  val LinkedListNullValue: Array[Byte] = Blake2b256.hash("Null")
 
-  val GetListOfForgersCmd: String =  getABIMethodId("submitWithdrawalRequests(bytes20)")
-  val AddNewStakeCmd: String =       getABIMethodId("delegate(bytes32,bytes32[2],address)")
-  val RemoveStakeCmd: String =       getABIMethodId("withdraw(bytes32,bytes32[2])")
+  val GetListOfForgersCmd: String = getABIMethodId("submitWithdrawalRequests(bytes20)")
+  val AddNewStakeCmd: String = getABIMethodId("delegate(bytes32,bytes32[2],address)")
+  val RemoveStakeCmd: String = getABIMethodId("withdraw(bytes32,bytes32[2])")
 
   val ForgerStakeSmartContractAddress = new AddressProposition(BytesUtils.fromHexString("0000000000000000000022222222222222222222"))
 }
@@ -479,7 +474,7 @@ object ForgerStakeMsgProcessor {
 case class AccountForgingStakeInfo(
                                     stakeId: Array[Byte],
                                     forgerStakeData: ForgerStakeData)
-  extends BytesSerializable  {
+  extends BytesSerializable with ABIEncodable {
 
   override type M = AccountForgingStakeInfo
 
@@ -487,9 +482,25 @@ case class AccountForgingStakeInfo(
 
   override def toString: String = "%s(stakeId: %s, forgerStakeData: %s)"
     .format(this.getClass.toString, BytesUtils.toHexString(stakeId), forgerStakeData)
+
+  private[horizen] def asABIType(): StaticStruct = {
+
+    val forgerPublicKeysParams: util.List[Type[_]] = forgerStakeData.forgerPublicKeys.asABIType().getValue.asInstanceOf[util.List[Type[_]]]
+    val listOfParams: util.List[Type[_]] = new util.ArrayList[Type[_]]()
+
+    listOfParams.add(new Bytes32(stakeId))
+    listOfParams.add(new Uint256(forgerStakeData.stakedAmount))
+    listOfParams.add(new Address(Numeric.toHexString(forgerStakeData.ownerPublicKey.address())))
+
+    listOfParams.addAll(forgerPublicKeysParams)
+
+    new StaticStruct(listOfParams)
+  }
 }
 
-object AccountForgingStakeInfoSerializer extends ScorexSerializer[AccountForgingStakeInfo]{
+object AccountForgingStakeInfoListEncoder extends ABIListEncoder[AccountForgingStakeInfo]
+
+object AccountForgingStakeInfoSerializer extends ScorexSerializer[AccountForgingStakeInfo] {
 
   override def serialize(s: AccountForgingStakeInfo, w: Writer): Unit = {
     w.putBytes(s.stakeId)
@@ -506,10 +517,27 @@ object AccountForgingStakeInfoSerializer extends ScorexSerializer[AccountForging
 
 
 case class ForgerPublicKeys(
-                              blockSignPublicKey: PublicKey25519Proposition,
-                              vrfPublicKey: VrfPublicKey)
-  extends BytesSerializable {
+                             blockSignPublicKey: PublicKey25519Proposition,
+                             vrfPublicKey: VrfPublicKey)
+  extends BytesSerializable with ABIEncodable {
   override type M = ForgerPublicKeys
+
+  private[horizen] def vrfPublicKeyToAbi(vrfPublicKey: Array[Byte]): (Bytes32, Bytes1) = {
+    val vrfPublicKeyFirst32Bytes = new Bytes32(util.Arrays.copyOfRange(vrfPublicKey, 0, 32))
+    val vrfPublicKeyLastByte = new Bytes1(Array[Byte](vrfPublicKey(32)))
+    (vrfPublicKeyFirst32Bytes, vrfPublicKeyLastByte)
+  }
+
+  override def asABIType(): StaticStruct = {
+
+    val vrfPublicKeyBytes = vrfPublicKeyToAbi(vrfPublicKey.pubKeyBytes())
+
+    new StaticStruct(
+      new Bytes32(blockSignPublicKey.bytes()),
+      vrfPublicKeyBytes._1,
+      vrfPublicKeyBytes._2
+    )
+  }
 
   override def serializer: ScorexSerializer[ForgerPublicKeys] = ForgerPublicKeysSerializer
 }
@@ -531,69 +559,91 @@ object ForgerPublicKeysSerializer extends ScorexSerializer[ForgerPublicKeys] {
 
 case class AddNewStakeCmdInput(
                                 forgerPublicKeys: ForgerPublicKeys,
-                                ownerAddress: AddressProposition)
+                                ownerAddress: AddressProposition) extends ABIEncodable {
 
-  extends BytesSerializable  {
 
   override type M = AddNewStakeCmdInput
 
-  override def serializer: ScorexSerializer[AddNewStakeCmdInput] = AddNewStakeCmdInputSerializer
+  override def asABIType(): StaticStruct = {
+    val forgerPublicKeysAbi = forgerPublicKeys.asABIType()
+    val listOfParams: util.List[Type[_]] = new util.ArrayList(forgerPublicKeysAbi.getValue.asInstanceOf[util.List[Type[_]]])
+    listOfParams.add(new Address(Numeric.toHexString(ownerAddress.address())))
+    new StaticStruct(listOfParams)
+
+  }
 
   override def toString: String = "%s(forgerPubKeys: %s, ownerAddress: %s)"
     .format(this.getClass.toString, forgerPublicKeys, ownerAddress)
 
 }
 
-object AddNewStakeCmdInputSerializer extends ScorexSerializer[AddNewStakeCmdInput]{
+object AddNewStakeCmdInputDecoder extends ABIDecoder[AddNewStakeCmdInput] {
 
+  override val ListOfABIParamTypes = org.web3j.abi.Utils.convert(util.Arrays.asList(new TypeReference[Bytes32]() {},
+    new TypeReference[Bytes32]() {},
+    new TypeReference[Bytes1]() {},
+    new TypeReference[Address]() {}))
 
-  override def serialize(s: AddNewStakeCmdInput, w: Writer): Unit = {
-    ForgerPublicKeysSerializer.serialize(s.forgerPublicKeys, w)
-    AddressPropositionSerializer.getSerializer.serialize(s.ownerAddress, w)
-  }
+   override def createType(listOfParams: util.List[Type[_]]): AddNewStakeCmdInput = {
+    val forgerPublicKey = new PublicKey25519Proposition(listOfParams.get(0).asInstanceOf[Bytes32].getValue)
+    val vrfKey = decodeVrfKey(listOfParams.get(1).asInstanceOf[Bytes32], listOfParams.get(2).asInstanceOf[Bytes1])
+    val forgerPublicKeys = ForgerPublicKeys(forgerPublicKey, vrfKey)
+    val ownerPublicKey = new AddressProposition(org.web3j.utils.Numeric.hexStringToByteArray(listOfParams.get(3).asInstanceOf[Address].getValue))
 
-  override def parse(r: Reader): AddNewStakeCmdInput = {
-    val forgerPublicKeys = ForgerPublicKeysSerializer.parse(r)
-    val ownerPublicKey = AddressPropositionSerializer.getSerializer.parse(r)
     AddNewStakeCmdInput(forgerPublicKeys, ownerPublicKey)
 
+  }
+
+  private[horizen] def decodeVrfKey(vrfFirst32Bytes: Bytes32, vrfLastByte: Bytes1): VrfPublicKey = {
+    val vrfinBytes = vrfFirst32Bytes.getValue ++ vrfLastByte.getValue
+    new VrfPublicKey(vrfinBytes)
   }
 }
 
 
 case class RemoveStakeCmdInput(
-                             stakeId: Array[Byte],
-                             signature: SignatureSecp256k1)
-  extends BytesSerializable  {
+                                stakeId: Array[Byte],
+                                signature: SignatureSecp256k1)
+  extends ABIEncodable {
 
   override type M = RemoveStakeCmdInput
 
-  override def serializer: ScorexSerializer[RemoveStakeCmdInput] = RemoveStakeCmdInputSerializer
+  override def asABIType(): StaticStruct = {
+    val listOfParams: util.List[Type[_]] = util.Arrays.asList(new Bytes32(stakeId), new Bytes1(signature.getV), new Bytes32(signature.getR), new Bytes32(signature.getS))
+    new StaticStruct(listOfParams)
+
+  }
 
   override def toString: String = "%s(stakeId: %s, signature: %s)"
     .format(this.getClass.toString, BytesUtils.toHexString(stakeId), signature)
 }
 
-object RemoveStakeCmdInputSerializer extends ScorexSerializer[RemoveStakeCmdInput]{
-  override def serialize(s: RemoveStakeCmdInput, w: Writer): Unit = {
-    w.putBytes(s.stakeId)
-    SignatureSecp256k1Serializer.getSerializer.serialize(s.signature, w)
-  }
+object RemoveStakeCmdInputDecoder extends ABIDecoder[RemoveStakeCmdInput] {
 
-  override def parse(r: Reader): RemoveStakeCmdInput = {
-    val stakeId = r.getBytes(32)
-    val signature = SignatureSecp256k1Serializer.getSerializer.parse(r)
+  override val ListOfABIParamTypes = org.web3j.abi.Utils.convert(util.Arrays.asList(new TypeReference[Bytes32]() {},
+    new TypeReference[Bytes1]() {},
+    new TypeReference[Bytes32]() {},
+    new TypeReference[Bytes32]() {}))
+
+  override def createType(listOfParams: util.List[Type[_]]): RemoveStakeCmdInput = {
+    val stakeId = listOfParams.get(0).asInstanceOf[Bytes32].getValue
+    val signature = decodeSignature(listOfParams.get(1).asInstanceOf[Bytes1], listOfParams.get(2).asInstanceOf[Bytes32], listOfParams.get(3).asInstanceOf[Bytes32])
 
     RemoveStakeCmdInput(stakeId, signature)
   }
+
+  private[horizen] def decodeSignature(v: Bytes1, r: Bytes32, s: Bytes32): SignatureSecp256k1 = {
+    new SignatureSecp256k1(v.getValue, r.getValue, s.getValue)
+  }
+
 }
 
 // the forger stake data record, stored in stateDb as: key=stakeId / value=data
 case class ForgerStakeData(
-                           forgerPublicKeys: ForgerPublicKeys,
-                           ownerPublicKey: AddressProposition,
-                           stakedAmount: BigInteger)
-  extends BytesSerializable  {
+                            forgerPublicKeys: ForgerPublicKeys,
+                            ownerPublicKey: AddressProposition,
+                            stakedAmount: BigInteger)
+  extends BytesSerializable {
 
   require(stakedAmount.signum() != -1, "stakeAmount expected to be non negative.")
 
@@ -605,7 +655,7 @@ case class ForgerStakeData(
     .format(this.getClass.toString, forgerPublicKeys, ownerPublicKey, stakedAmount)
 }
 
-object ForgerStakeDataSerializer extends ScorexSerializer[ForgerStakeData]{
+object ForgerStakeDataSerializer extends ScorexSerializer[ForgerStakeData] {
   override def serialize(s: ForgerStakeData, w: Writer): Unit = {
     ForgerPublicKeysSerializer.serialize(s.forgerPublicKeys, w)
     AddressPropositionSerializer.getSerializer.serialize(s.ownerPublicKey, w)
@@ -673,7 +723,7 @@ TIP                            NULL
  */
 
 case class LinkedListNode(dataKey: Array[Byte], previousNodeKey: Array[Byte], nextNodeKey: Array[Byte])
-  extends BytesSerializable  {
+  extends BytesSerializable {
 
   require(dataKey.length == 32, "data key size should be 32")
   require(previousNodeKey.length == 32, "next node key size should be 32")
@@ -688,7 +738,7 @@ case class LinkedListNode(dataKey: Array[Byte], previousNodeKey: Array[Byte], ne
       BytesUtils.toHexString(previousNodeKey), BytesUtils.toHexString(nextNodeKey))
 }
 
-object LinkedListNodeSerializer extends ScorexSerializer[LinkedListNode]{
+object LinkedListNodeSerializer extends ScorexSerializer[LinkedListNode] {
   override def serialize(s: LinkedListNode, w: Writer): Unit = {
     w.putBytes(s.dataKey)
     w.putBytes(s.previousNodeKey)

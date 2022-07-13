@@ -62,12 +62,12 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
 
           val cmdInput = AddNewStakeCmdInput(
             ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
-            ownerAddressProposition,
+            ownerAddressProposition
           )
 
           val data: Array[Byte] = Bytes.concat(
             BytesUtils.fromHexString(AddNewStakeCmd),
-            AddNewStakeCmdInputSerializer.toBytes(cmdInput))
+            cmdInput.encode())
 
           val message = new Message(
             ownerAddressProposition,

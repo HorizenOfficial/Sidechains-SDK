@@ -18,7 +18,7 @@ import scala.util.{Random, Success, Try}
 class WithdrawalMsgProcessorTest
   extends JUnitSuite
     with MockitoSugar
-    with MessageProcessorFixture {
+    with WithdrawalMsgProcessorFixture {
 
   val fakeAddress = new AddressProposition(BytesUtils.fromHexString("35fdd51e73221f467b40946c97791a3e19799bea"))
   val from: AddressProposition = new AddressProposition(BytesUtils.fromHexString("00aabbcc9900aabbcc9900aabbcc9900aabbcc99"))

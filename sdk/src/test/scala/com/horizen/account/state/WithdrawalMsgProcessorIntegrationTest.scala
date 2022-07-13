@@ -12,7 +12,7 @@ import org.scalatestplus.mockito._
 class WithdrawalMsgProcessorIntegrationTest
   extends JUnitSuite
     with MockitoSugar
-    with MessageProcessorFixture {
+    with WithdrawalMsgProcessorFixture {
 
 
   @Before
@@ -54,7 +54,6 @@ class WithdrawalMsgProcessorIntegrationTest
     assertTrue("Missing return data for GetListOfWithdrawalRequest", res.asInstanceOf[ExecutionSucceeded].hasReturnData)
     var wrListInBytes = res.asInstanceOf[ExecutionSucceeded].returnData()
 
-  //  var listOfWR = deserializeListOfWithdrawalRequest(wrListInBytes)
     var listOfWR = decodeListOfWithdrawalRequest(wrListInBytes)
 
     assertTrue("The list of withdrawal requests is not empty", listOfWR.isEmpty)
