@@ -20,9 +20,10 @@ import org.junit.{Before, Test}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import org.web3j.utils.Numeric
+import scorex.core.NodeViewHolder.CurrentView
 
 import java.math.BigInteger
-
+// TODO: we need full coverage of eth rpc service. Every method with both success and fail cases
 class EthServiceTest extends JUnitSuite
   with MockitoSugar
   with MockedSidechainNodeViewHolderFixture {
@@ -32,20 +33,15 @@ class EthServiceTest extends JUnitSuite
   var transactionActorRef: ActorRef = _
 
   implicit val actorSystem: ActorSystem = ActorSystem("sc_nvh_mocked")
-  var mockedNodeViewHolderRef: ActorRef = _
 
   @Before
   def setUp(): Unit = {
-    var history = mock[AccountHistory]
-    var state = mock[AccountState]
-    var wallet = mock[AccountWallet]
-    var mempool = mock[AccountMemoryPool]
-    var settings = mock[SidechainSettings]
+    val settings = mock[SidechainSettings]
     params = RegTestParams(initialCumulativeCommTreeHash = FieldElementFixture.generateFieldElement())
-    mockedNodeViewHolderRef = mock[ActorRef]; //getMockedSidechainNodeViewHolderRef((SidechainHistory) history, state, wallet, mempool)
-    transactionActorRef = SidechainTransactionActorRef(mockedNodeViewHolderRef)
-    nodeView = new AccountNodeView(history, state, wallet, mempool)
-    ethService = new EthService(nodeView, params, settings, transactionActorRef)
+    transactionActorRef = mock[ActorRef]
+    val nodeView = mock[CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]]
+    val stateView = mock[AccountStateView]
+    ethService = new EthService(stateView, nodeView, params, settings, transactionActorRef)
   }
 
   @Test
