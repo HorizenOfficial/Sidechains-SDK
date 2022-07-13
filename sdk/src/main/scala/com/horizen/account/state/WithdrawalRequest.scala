@@ -7,6 +7,7 @@ import org.web3j.abi.datatypes.StaticStruct
 import org.web3j.abi.datatypes.generated.{Bytes20, Uint256}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
+import java.math.BigInteger
 
 case class WithdrawalRequest(proposition: MCPublicKeyHashProposition, value: java.math.BigInteger) extends BytesSerializable with ABIEncodable {
   override type M = WithdrawalRequest
@@ -32,7 +33,7 @@ object WithdrawalRequestSerializer extends ScorexSerializer[WithdrawalRequest] {
   override def parse(reader: Reader): WithdrawalRequest = {
     val proposition = MCPublicKeyHashPropositionSerializer.getSerializer.parse(reader)
     val valueByteArrayLength = reader.getUInt().toInt
-    val value = new java.math.BigInteger(reader.getBytes(valueByteArrayLength))
+    val value = new BigInteger(reader.getBytes(valueByteArrayLength))
     WithdrawalRequest(proposition, value)
 
   }

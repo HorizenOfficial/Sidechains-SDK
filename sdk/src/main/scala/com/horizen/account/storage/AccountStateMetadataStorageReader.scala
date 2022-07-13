@@ -20,6 +20,6 @@ trait AccountStateMetadataStorageReader {
   // tip height
   def getHeight: Int
 
-  // None only when the state is empty
-  def getAccountStateRoot: Option[Array[Byte]] // 32 bytes, kessack hash
+  // zero bytes when storage is empty
+  def getAccountStateRoot: Array[Byte] // 32 bytes, kessack hash
 }

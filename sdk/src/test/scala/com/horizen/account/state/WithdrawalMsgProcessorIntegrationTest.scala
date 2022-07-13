@@ -27,7 +27,7 @@ class WithdrawalMsgProcessorIntegrationTest
 
     assertTrue("Account doesn't exist after init", stateView.accountExists(WithdrawalMsgProcessor.fakeSmartContractAddress.address()))
 
-    assertEquals("Wrong initial balance", java.math.BigInteger.ZERO, stateView.getBalance(WithdrawalMsgProcessor.fakeSmartContractAddress.address()).get)
+    assertEquals("Wrong initial balance", java.math.BigInteger.ZERO, stateView.getBalance(WithdrawalMsgProcessor.fakeSmartContractAddress.address()))
     assertEquals("Wrong initial nonce", java.math.BigInteger.ZERO, stateView.stateDb.getNonce(WithdrawalMsgProcessor.fakeSmartContractAddress.address()))
     assertNotNull("Wrong initial code hash", stateView.stateDb.getCodeHash(WithdrawalMsgProcessor.fakeSmartContractAddress.address()))
 
@@ -88,7 +88,7 @@ class WithdrawalMsgProcessorIntegrationTest
     assertArrayEquals("Wrong destination address", mcAddr.bytes(), wt.addr.getValue)
     assertEquals("Wrong amount", withdrawalAmount1, wt.amount.getValue)
 
-    val newBalance = stateView.getBalance(msg.getFrom.address()).get
+    val newBalance = stateView.getBalance(msg.getFrom.address())
     assertEquals("Wrong value in account balance", 1177, ZenWeiConverter.convertWeiToZennies(newBalance))
 
     // GetListOfWithdrawalRequest after first withdrawal request creation
@@ -118,7 +118,7 @@ class WithdrawalMsgProcessorIntegrationTest
     assertEquals("Wrong amount", withdrawalAmount2, wt.amount.getValue)
 
 
-    val newBalanceAfterSecondWR = stateView.getBalance(msg.getFrom.address()).get
+    val newBalanceAfterSecondWR = stateView.getBalance(msg.getFrom.address())
     val expectedBalance = newBalance.subtract(withdrawalAmount2)
     assertEquals("Wrong value in account balance", expectedBalance, newBalanceAfterSecondWR)
 
