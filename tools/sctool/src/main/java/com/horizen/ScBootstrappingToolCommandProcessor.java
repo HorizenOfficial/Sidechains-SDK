@@ -236,7 +236,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     private void printGenerateCertProofInfoUsageMsg(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                "\tgenerateCertProofInfo {\"pks:\":\"[pk1, pk2, ...]]\", \"threshold\":5, " +
+                "\tgenerateCertProofInfo {\"signersPublicKeys:\":\"[pk1, pk2, ...]\", \"threshold\":5, " +
                 "\"provingKeyPath\": \"/tmp/sidechain/snark_proving_key\", " +
                 "\"verificationKeyPath\": \"/tmp/sidechain/snark_verification_key\", "+
                 "\"isCSWEnabled\": true}" +
