@@ -2,8 +2,7 @@ package com.horizen.account.storage
 
 import com.google.common.primitives.Ints
 import com.horizen.SidechainTypes
-import com.horizen.account.receipt.EthereumReceipt
-import com.horizen.account.receipt.EthereumReceiptTest.createTestEthereumReceipt
+import com.horizen.account.receipt.{EthereumReceipt, ReceiptFixture}
 import com.horizen.account.storage.AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateFixture}
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
@@ -26,7 +25,8 @@ class AccountStateMetadataStorageViewTest
     with StoreFixture
     with MockitoSugar
     with SidechainTypes
-    with WithdrawalEpochCertificateFixture {
+    with WithdrawalEpochCertificateFixture
+    with ReceiptFixture {
 
   val stateMetadataStorage = new AccountStateMetadataStorage(getStorage())
 

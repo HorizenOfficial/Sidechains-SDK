@@ -123,7 +123,7 @@ class AccountState(val params: NetworkParams,
     var cumGasUsed : BigInteger = BigInteger.ZERO
 
     for ((tx, txIndex) <- mod.sidechainTransactions.zipWithIndex) {
-      stateView.applyTransaction(tx, cumGasUsed) match {
+      stateView.applyTransaction(tx, txIndex, cumGasUsed) match {
         case Success(consensusDataReceipt) =>
           val txGasUsed = consensusDataReceipt.cumulativeGasUsed.subtract(cumGasUsed)
           // update cumulative gas used so far

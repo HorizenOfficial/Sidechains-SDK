@@ -86,6 +86,8 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     val (stateRoot, receiptList) : (Array[Byte], Seq[EthereumReceipt]) = computeStateRoot(dummyView, sidechainTransactions)
 
+    dummyView.close()
+
     // 2. Compute the receipt root
     val receiptsRoot: Array[Byte] = computeReceiptRoot(receiptList)
 
@@ -145,7 +147,8 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
   override def collectTransactionsFromMemPool(nodeView: View, isWithdrawalEpochLastBlock: Boolean, blockSizeIn: Int): Seq[SidechainTypes#SCAT] =
   {
-    // we must ensure that all the tx we get from mmpool are applicable to current state view
+    // we must ensure that all the tx we get from mempool are applicable to current state view
+    //val dummyView = nodeView.state.getView
 
 
     // and we must be below the max gas block limit threshold

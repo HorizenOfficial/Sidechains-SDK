@@ -1,7 +1,6 @@
 package com.horizen.account.receipt
 
 
-import com.horizen.account.receipt.EthereumReceiptTest.{createTestEthereumConsensusDataReceipt, createTestEthereumReceipt}
 import com.horizen.evm.TrieHasher
 import com.horizen.evm.interop.EvmLog
 import com.horizen.utils.BytesUtils
@@ -23,6 +22,7 @@ import scala.util.Random
 class EthereumReceiptTest
   extends JUnitSuite
     with MockitoSugar
+    with ReceiptFixture
 {
 
   // test vectors encoded by go lib have been produced via:
@@ -34,16 +34,18 @@ class EthereumReceiptTest
   def receiptSimpleSerDeser(): Unit = {
     val receipt: EthereumReceipt = createTestEthereumReceipt(ReceiptTxType.DynamicFeeTxType.id)
     val r1: String = receipt.toString
-    println(r1)
+    //println(r1)
 
     val serializedBytes: Array[Byte] = EthereumReceiptSerializer.toBytes(receipt)
     println(BytesUtils.toHexString(serializedBytes))
 
     val decodedReceipt: EthereumReceipt = EthereumReceiptSerializer.parseBytes(serializedBytes)
     val r2: String = decodedReceipt.toString
-    println(r2)
+    //println(r2)
 
     assertEquals(r1, r2)
+    assertEquals(receipt, decodedReceipt)
+    assertEquals(receipt.hashCode(), decodedReceipt.hashCode())
   }
 
   @Test
@@ -87,9 +89,8 @@ class EthereumReceiptTest
     // read what you write
     val decodedReceipt = EthereumConsensusDataReceipt.rlpDecode(encodedReceipt)
     //println(decodedReceipt)
-    assertEquals(receipt.consensusDataReceipt.getTxType, decodedReceipt.getTxType)
-    assertEquals(receipt.consensusDataReceipt.getStatus, decodedReceipt.getStatus)
-    assertEquals(receipt.consensusDataReceipt.cumulativeGasUsed.toString, decodedReceipt.cumulativeGasUsed.toString)
+    assertEquals(receipt.consensusDataReceipt, decodedReceipt)
+    assertEquals(receipt.consensusDataReceipt.hashCode, decodedReceipt.hashCode)
   }
 
 
@@ -100,9 +101,8 @@ class EthereumReceiptTest
     // read what you write
     val decodedReceipt = EthereumConsensusDataReceipt.rlpDecode(encodedReceipt)
     //println(decodedReceipt)
-    assertEquals(receipt.consensusDataReceipt.getTxType, decodedReceipt.getTxType)
-    assertEquals(receipt.consensusDataReceipt.getStatus, decodedReceipt.getStatus)
-    assertEquals(receipt.consensusDataReceipt.cumulativeGasUsed.toString, decodedReceipt.cumulativeGasUsed.toString)
+    assertEquals(receipt.consensusDataReceipt, decodedReceipt)
+    assertEquals(receipt.consensusDataReceipt.hashCode, decodedReceipt.hashCode)
   }
 
   @Test def receiptSimpleEncodeDecodeType2Test(): Unit = {
@@ -112,20 +112,19 @@ class EthereumReceiptTest
     // read what you write
     val decodedReceipt = EthereumConsensusDataReceipt.rlpDecode(encodedReceipt)
     //println(decodedReceipt)
-    assertEquals(receipt.consensusDataReceipt.getTxType, decodedReceipt.getTxType)
-    assertEquals(receipt.consensusDataReceipt.getStatus, decodedReceipt.getStatus)
-    assertEquals(receipt.consensusDataReceipt.cumulativeGasUsed.toString, decodedReceipt.cumulativeGasUsed.toString)
+    assertEquals(receipt.consensusDataReceipt, decodedReceipt)
+    assertEquals(receipt.consensusDataReceipt.hashCode, decodedReceipt.hashCode)
   }
 
   @Test def receiptDecodeGoEncodedType0NoLogsTest(): Unit = {
     val dataStrType0 = "f9010801820bb8b9010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0"
     val dataBytes = BytesUtils.fromHexString(dataStrType0)
     val decodedReceipt = EthereumConsensusDataReceipt.rlpDecode(dataBytes)
-    println(decodedReceipt)
+    //println(decodedReceipt)
     assertEquals(decodedReceipt.getTxType, ReceiptTxType.LegacyTxType)
     // encode and check we are the same as the original
     val encodedReceipt = EthereumConsensusDataReceipt.rlpEncode(decodedReceipt)
-    println(BytesUtils.toHexString(encodedReceipt))
+    //println(BytesUtils.toHexString(encodedReceipt))
     assertEquals(BytesUtils.toHexString(encodedReceipt), dataStrType0)
   }
 
@@ -133,11 +132,11 @@ class EthereumReceiptTest
     val dataStrType1 = "01f90108018203e8b9010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0"
     val dataBytes = BytesUtils.fromHexString(dataStrType1)
     val decodedReceipt = EthereumConsensusDataReceipt.rlpDecode(dataBytes)
-    println(decodedReceipt)
+    //println(decodedReceipt)
     assertEquals(decodedReceipt.getTxType, ReceiptTxType.AccessListTxType)
     // encode and check we are the same as the original
     val encodedReceipt = EthereumConsensusDataReceipt.rlpEncode(decodedReceipt)
-    println(BytesUtils.toHexString(encodedReceipt))
+    //println(BytesUtils.toHexString(encodedReceipt))
     assertEquals(BytesUtils.toHexString(encodedReceipt), dataStrType1)
   }
 
@@ -145,11 +144,11 @@ class EthereumReceiptTest
     val dataStrType2 = "02f9010901830b90f0b9010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0"
     val dataBytes = BytesUtils.fromHexString(dataStrType2)
     val decodedReceipt = EthereumConsensusDataReceipt.rlpDecode(dataBytes)
-    println(decodedReceipt)
+    //println(decodedReceipt)
     assertEquals(decodedReceipt.getTxType, ReceiptTxType.DynamicFeeTxType)
     // encode and check we are the same as the original
     val encodedReceipt = EthereumConsensusDataReceipt.rlpEncode(decodedReceipt)
-    println(BytesUtils.toHexString(encodedReceipt))
+    //println(BytesUtils.toHexString(encodedReceipt))
     assertEquals(BytesUtils.toHexString(encodedReceipt), dataStrType2)
   }
 
@@ -204,26 +203,3 @@ class EthereumReceiptTest
   }
 }
 
-object EthereumReceiptTest {
-  def createTestEthereumReceipt(txType: Integer): EthereumReceipt = {
-    val txHash = new Array[Byte](32)
-    Random.nextBytes(txHash)
-    val logs = new ListBuffer[EvmLog]()
-    logs += EthereumLogTest.createTestEthereumConsensusDataLog
-    logs += EthereumLogTest.createTestEthereumConsensusDataLog
-    val consensusDataReceipt = new EthereumConsensusDataReceipt(txType, 1, BigInteger.valueOf(1000), logs, new Array[Byte](256))
-    val receipt = EthereumReceipt(consensusDataReceipt,
-      txHash, 33, Keccak256.hash("blockhash".getBytes).asInstanceOf[Array[Byte]], 22,
-      BigInteger.valueOf(1234567), BytesUtils.fromHexString("1122334455667788990011223344556677889900"))
-    receipt
-  }
-
-  def createTestEthereumConsensusDataReceipt(txType: Integer, num_logs: Integer): EthereumConsensusDataReceipt = {
-    val txHash = new Array[Byte](32)
-    Random.nextBytes(txHash)
-    val logs = new ListBuffer[EvmLog]
-    for (_ <- 1 to num_logs)
-      logs += EthereumLogTest.createTestEthereumConsensusDataLog
-    new EthereumConsensusDataReceipt(txType, 1, BigInteger.valueOf(1000), logs, new Array[Byte](256))
-  }
-}

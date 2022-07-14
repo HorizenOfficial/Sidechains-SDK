@@ -3,14 +3,14 @@ package lib
 import (
 	"bytes"
 	"encoding/json"
-//	"fmt"
+	//	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	"github.com/ethereum/go-ethereum/trie"
-//	"github.com/tmthrgd/go-hex"
+	//	"github.com/tmthrgd/go-hex"
 	"math/big"
 	"testing"
 )
@@ -59,7 +59,6 @@ func generateReceipts(count int) types.Receipts {
 			Type:              uint8(v % 3),
 			CumulativeGasUsed: uint64(v * 1000),
 			Status:            status,
-			//TxHash:            crypto.Keccak256Hash(big.NewInt(int64(41271*count + v)).Bytes()),
 		}
 		// Set the receipt logs and create the bloom filter.
 		receipt.Logs = make([]*types.Log, 1)
@@ -73,9 +72,10 @@ func generateReceipts(count int) types.Receipts {
 		}
 		receipt.Logs[0] = log
 		receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
-		// These three are non-consensus fields:
+		// These four are non-consensus fields:
 		//receipt.BlockHash
 		//receipt.BlockNumber
+		//receipt.TxHash = crypto.Keccak256Hash(big.NewInt(int64(41271*count + v)).Bytes())
 		//receipt.TransactionIndex = uint(v)
 		//fmt.Printf("receipt cumGas %d\n", receipt.CumulativeGasUsed)
 

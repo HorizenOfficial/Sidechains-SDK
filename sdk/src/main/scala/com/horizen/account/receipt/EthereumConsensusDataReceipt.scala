@@ -58,6 +58,27 @@ case class EthereumConsensusDataReceipt(
 
   def isStatusOK: Boolean = status == ReceiptStatus.SUCCESSFUL.id
 
+  override def equals(obj: Any): Boolean = {
+    obj match {
+      case other: EthereumConsensusDataReceipt =>
+        transactionType == other.transactionType &&
+          status == other.status &&
+        cumulativeGasUsed.equals(other.cumulativeGasUsed) &&
+          logs.toSet == other.logs.toSet
+
+      case _ => false
+    }
+  }
+
+  override def hashCode: Int =  {
+    var result = Integer.hashCode(transactionType)
+    result = 31 * result + Integer.hashCode(status)
+    result = 31 * result + cumulativeGasUsed.hashCode()
+    for (log <- logs)
+      result = 31 * result + log.hashCode()
+    result
+  }
+
   override def toString: String = {
     var logsString = "logs{"
     for (log <- logs) {

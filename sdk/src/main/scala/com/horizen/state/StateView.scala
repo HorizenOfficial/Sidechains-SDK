@@ -12,7 +12,7 @@ import scala.util.Try
 
 trait StateView[TX <: Transaction] extends BaseStateReader {
   def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[Unit]
-  def applyTransaction(tx: TX, cumGasUsed: BigInteger): Try[EthereumConsensusDataReceipt]
+  def applyTransaction(tx: TX, txIndex: Int, cumGasUsed: BigInteger): Try[EthereumConsensusDataReceipt]
 
   def addCertificate(cert: WithdrawalEpochCertificate): Unit
   def addFeeInfo(info: BlockFeeInfo): Unit

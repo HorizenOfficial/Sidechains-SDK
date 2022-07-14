@@ -1,11 +1,13 @@
 package com.horizen.account.receipt
 
 import com.horizen.evm.interop.EvmLog
-import com.horizen.utils.BytesUtils
+import com.horizen.evm.utils.Address
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
 import java.math.BigInteger
+import java.util
 import scala.collection.mutable.ListBuffer
 
 case class EthereumReceipt(
@@ -20,17 +22,12 @@ case class EthereumReceipt(
 
   override def serializer: ScorexSerializer[EthereumReceipt] = EthereumReceiptSerializer
 
-  // set a default value for non consensus data, they will be updated by a suited method call
-  def this(consensusDataReceipt: EthereumConsensusDataReceipt) {
-    this(consensusDataReceipt,
-      new Array[Byte](32), -1, new Array[Byte](32), -1, BigInteger.valueOf(-1), new Array[Byte](20))
+  private lazy val fullLogs = this.consensusDataReceipt.logs.zipWithIndex.map{
+    case (log, idx) => EthereumLog.derive(log, transactionHash, transactionIndex, blockHash, blockNumber, idx)
   }
 
   def deriveFullLogs() : Seq[EthereumLog] = {
-    val logs = this.consensusDataReceipt.logs
-    logs.zipWithIndex.map{
-      case (log, idx) => EthereumLog.derive(log, transactionHash, transactionIndex, blockHash, blockNumber, idx)
-    }
+    fullLogs
   }
 
   override def toString: String = {
@@ -52,6 +49,33 @@ case class EthereumReceipt(
       String.format(s" - (receipt non consensus data) {txHash=$txHashStr, txIndex=$transactionIndex, blockHash=$blockHashStr, blockNumber=$blockNumber, gasUsed=${gasUsed.toString()}, contractAddress=$contractAddressStr}")
 
      consensusDataReceipt.toString.concat(infoNonConsensusStr)
+  }
+
+  override def equals(obj: Any): Boolean = {
+    obj match {
+      case other: EthereumReceipt =>
+        consensusDataReceipt.equals(other.consensusDataReceipt) &&
+          new ByteArrayWrapper(transactionHash).equals(new ByteArrayWrapper(other.transactionHash)) &&
+          transactionIndex.equals(other.transactionIndex) &&
+          new ByteArrayWrapper(blockHash).equals(new ByteArrayWrapper(other.blockHash)) &&
+          blockNumber.equals(other.blockNumber) &&
+          gasUsed.equals(other.gasUsed) &&
+          new ByteArrayWrapper(contractAddress).equals(new ByteArrayWrapper(other.contractAddress))
+
+      case _ => false
+    }
+  }
+
+  override def hashCode: Int =  {
+    var result = consensusDataReceipt.hashCode()
+    result = 31 * result + util.Arrays.hashCode(transactionHash)
+    result = 31 * result + Integer.hashCode(transactionIndex)
+    result = 31 * result + util.Arrays.hashCode(blockHash)
+    result = 31 * result + Integer.hashCode(blockNumber)
+    result = 31 * result + gasUsed.hashCode()
+    result = 31 * result + util.Arrays.hashCode(contractAddress)
+
+    result
   }
 }
 
@@ -76,7 +100,7 @@ object EthereumReceiptSerializer extends ScorexSerializer[EthereumReceipt]{
     writer.putInt(bloomBytes.length)
     writer.putBytes(bloomBytes)
 
-    // derived
+    // non consensus data
     writer.putBytes(receipt.transactionHash)
     writer.putInt(receipt.transactionIndex)
     writer.putBytes(receipt.blockHash)
@@ -87,7 +111,6 @@ object EthereumReceiptSerializer extends ScorexSerializer[EthereumReceipt]{
     writer.putBytes(gasUsedBytes)
 
     writer.putBytes(receipt.contractAddress)
-
   }
 
   override def parse(reader: Reader): EthereumReceipt = {
@@ -115,7 +138,7 @@ object EthereumReceiptSerializer extends ScorexSerializer[EthereumReceipt]{
     val gasUsedLength: Int = reader.getInt
     val gasUsed: BigInteger = new BigInteger(reader.getBytes(gasUsedLength))
 
-    val contractAddress: Array[Byte] = reader.getBytes(20)
+    val contractAddress: Array[Byte] = reader.getBytes(Address.LENGTH)
 
     EthereumReceipt(receipt, txHash, txIndex, blockHash, blockNumber, gasUsed, contractAddress)
   }

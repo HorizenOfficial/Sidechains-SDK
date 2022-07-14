@@ -120,8 +120,9 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
   }
 
 
-  def setupTxContext(tx: EthereumTransaction): Unit = {
-    // TODO: set context for the created events/logs assignment
+  def setupTxContext(tx: EthereumTransaction, idx: Integer): Unit = {
+    // set context for the created events/logs assignment
+    stateDb.setTxContext(idToBytes(tx.id), idx)
   }
 
   private def preCheck(tx: EthereumTransaction): BigInteger = {
@@ -173,7 +174,7 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     BigInteger.ZERO
   }
 
-  override def applyTransaction(tx: SidechainTypes#SCAT, prevCumGasUsed: BigInteger): Try[EthereumConsensusDataReceipt] = Try {
+  override def applyTransaction(tx: SidechainTypes#SCAT, txIndex: Int, prevCumGasUsed: BigInteger): Try[EthereumConsensusDataReceipt] = Try {
     if (!tx.isInstanceOf[EthereumTransaction])
       throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
 
@@ -184,7 +185,8 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     val bookedGasPrice: BigInteger = preCheck(ethTx)
 
     // Set Tx context for stateDB, to know where to keep EvmLogs
-    setupTxContext(ethTx)
+    setupTxContext(ethTx, txIndex)
+
     val message: Message = Message.fromTransaction(ethTx)
 
     // Increase the nonce by 1
