@@ -462,9 +462,9 @@ object ForgerStakeMsgProcessor {
   val LinkedListTipKey: Array[Byte] = Blake2b256.hash("Tip")
   val LinkedListNullValue: Array[Byte] = Blake2b256.hash("Null")
 
-  val GetListOfForgersCmd: String = getABIMethodId("submitWithdrawalRequests(bytes20)")
-  val AddNewStakeCmd: String = getABIMethodId("delegate(bytes32,bytes32[2],address)")
-  val RemoveStakeCmd: String = getABIMethodId("withdraw(bytes32,bytes32[2])")
+  val GetListOfForgersCmd: String = getABIMethodId("getAllForgersStakes")
+  val AddNewStakeCmd: String = getABIMethodId("delegate(bytes32,bytes32,bytes1,address)")
+  val RemoveStakeCmd: String = getABIMethodId("withdraw(bytes32,bytes1,bytes32,bytes32)")
 
   val ForgerStakeSmartContractAddress = new AddressProposition(BytesUtils.fromHexString("0000000000000000000022222222222222222222"))
 }
