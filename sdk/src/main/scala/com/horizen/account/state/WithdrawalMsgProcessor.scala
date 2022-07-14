@@ -29,7 +29,7 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
     Keccak256.hash("WithdrawalRequestSmartContractCodeHash")
 
   val GetListOfWithdrawalReqsCmdSig: String = getABIMethodId("getWithdrawalRequests(uint32)")
-  val AddNewWithdrawalReqCmdSig: String = getABIMethodId("submitWithdrawalRequests(bytes20)")
+  val AddNewWithdrawalReqCmdSig: String = getABIMethodId("submitWithdrawalRequest(bytes20)")
 
   //TODO Define a proper amount of gas spent for each operation
   val GasSpentForGetListOfWithdrawalReqsCmd: BigInteger = BigInteger.ONE
