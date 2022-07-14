@@ -9,7 +9,7 @@ base_dir="$( dirname "${current_dir%/*}" )"
 
 DOCKER_ORG="${DOCKER_ORG:-zencash}"
 IMAGE_NAME="${IMAGE_NAME:-sc-ci-base}"
-IMAGE_TAG="${IMAGE_TAG:-bionic_rust-1.51.0_jdk-11_latest}"
+IMAGE_TAG="${IMAGE_TAG:-bionic_jdk-11_latest}"
 image="${DOCKER_ORG}/${IMAGE_NAME}:${IMAGE_TAG}"
 
 have_docker="false"
@@ -24,32 +24,33 @@ define execute << SCRIPT
 
 set -euo pipefail
 
-# Get the directory of the currently executing script and its parent dir
-base_dir=\$( cd \$( dirname ${BASH_SOURCE[0]} ) >/dev/null 2>&1 && pwd )/../..;
+# Get the directory of the currently executing script and base directory
+current_dir=\$(pwd)
+if [ "\${current_dir}" == '/build' ]; then
+  base_dir='/build'
+else
+  base_dir="$base_dir"
+fi
 
-# pom xml file locations
-pom_xml_location=\${base_dir}
-sdk_xml_location=\${base_dir}/sdk
-dbtool_xml_location=\${base_dir}/tools/dbtool
-simpleapp_xml_location=\${base_dir}/examples/simpleapp
-sctool_xml_location=\${base_dir}/tools/sctool
+# Super POM xml file location
+super_pom_xml_location="\${base_dir}"
 
 # .sh file(s)
-run_sc_file=\${base_dir}/ci/run_sc.sh
+run_sc_file="\${base_dir}/ci/run_sc.sh"
 
 # python file(s)
-scutil_file=\${base_dir}/qa/SidechainTestFramework/scutil.py
-sc_test_framework_file=\${base_dir}/qa/SidechainTestFramework/sc_test_framework.py
+scutil_file="\${base_dir}/qa/SidechainTestFramework/scutil.py"
+sc_test_framework_file="\${base_dir}/qa/SidechainTestFramework/sc_test_framework.py"
 
 # .md files
-mc_sc_workflow_file=\${base_dir}/examples/simpleapp/mc_sc_workflow_example.md
-simpleapp_readme_file=\${base_dir}/examples/simpleapp/README.md
-main_readme_file=\${base_dir}/README.md
+mc_sc_workflow_file="\${base_dir}/examples/simpleapp/mc_sc_workflow_example.md"
+simpleapp_readme_file="\${base_dir}/examples/simpleapp/README.md"
+main_readme_file="\${base_dir}/README.md"
 
 # Functions
 function fn_die() {
-  echo -e \${1} >&2
-  exit \${2:-1}
+  echo -e "\${1}" >&2
+  exit "\${2:-1}"
 }
 
 function usage() {
@@ -74,11 +75,11 @@ else
 fi
 
 # Checking the format of the versions
-if ! [[ \${version_old} =~ ^[0-9]+\.[0-9]+\.[0-9]+(-SNAPSHOT)?$ ]]; then
+if ! [[ "\${version_old}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-SNAPSHOT)?$ ]]; then
   usage
 fi
 
-if ! [[ \${version_new} =~ ^[0-9]+\.[0-9]+\.[0-9]+(-SNAPSHOT)?$ ]]; then
+if ! [[ "\${version_new}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-SNAPSHOT)?$ ]]; then
   usage
 fi
 
@@ -88,45 +89,36 @@ if ! command -v mvn >/dev/null; then
   fn_die "Refer to the official Apache Maven Project: https://maven.apache.org/install.html\nExiting ..."
 fi
 
-## Changing version numbers under pom.xml file(s)
-for dir in \${pom_xml_location} \${sdk_xml_location} \${dbtool_xml_location} \${simpleapp_xml_location} \${sctool_xml_location}; do
-# Checking if OLD version matches with the CURRENT version in pom file(s)
-  cd \${dir}
-  current_pom_version=\$(mvn help:evaluate -q -Dexpression=project.version -DforceStdout 2>/dev/null)
-  if [ \${version_old} != \${current_pom_version} ]; then
-    fn_die "Fix it! The OLD version does not match with CURRENT version under \${dir}/pom.xml file\nCurrent version is: \${current_pom_version}. \nExiting ..."
-  fi
+# Changing version numbers under all pom.xml file(s) using Super POM xml file
+cd "\${super_pom_xml_location}"
+current_pom_version="\$(mvn help:evaluate -q -Dexpression=project.version -DforceStdout 2>/dev/null)"
+if [ "\${version_old}" != "\${current_pom_version}" ]; then
+  fn_die "Fix it! The OLD version does not match with CURRENT version set under Super POM xml file\nCurrent version is: \${current_pom_version}. \nExiting ..."
+fi
 
-  echo "" && echo "=== Modifying pom file under \${dir} location ===" && echo ""
-
-  mvn versions:set -DnewVersion=\${version_new}
-
-  # shellcheck disable=SC1014
-  if grep -cq '<artifactId>sidechains-sdk</artifactIds>' \${dir}/pom.xml; then
-    mvn versions:use-dep-version -Dincludes=io.horizen:sidechains-sdk -DdepVersion=\${version_new} -DforceVersion=true
-  fi
-done
+echo "" && echo "=== Modifying all pom.xml file(s) through Super POM xml file ===" && echo ""
+mvn versions:set -DprocessAllModules=true -DoldVersion="\${version_old}" -DnewVersion="\${version_new}"
 
 # Changing version under other file(s)
 # shellcheck disable=SC2001
-version_old_dot_escaped=\$(sed -e 's/\./\\\./g' <<< \${version_old})
+version_old_dot_escaped="\$(sed -e 's/\./\\\./g' <<< \${version_old})"
 
-for file in \${scutil_file} \${sc_test_framework_file} \${mc_sc_workflow_file} \${simpleapp_readme_file} \${main_readme_file} \${run_sc_file}; do
+for file in "\${scutil_file}" "\${sc_test_framework_file}" "\${mc_sc_workflow_file}" "\${simpleapp_readme_file}" "\${main_readme_file}" "\${run_sc_file}"; do
   # Checking if OLD version matches with the CURRENT version in pom file(s)
-  if [ \${file} != \${run_sc_file} ]; then
-    if ! grep -cq sidechains.*\${version_old} \${file}; then
-      current_jar_version=\$(grep -Eoh 'sidechains-sdk.*[0-9]+\.[0-9]+\.[0-9]+(-SNAPSHOT)?' \${file} | cut -d '-' -f4- | head -n1)
+  if [ "\${file}" != "\${run_sc_file}" ]; then
+    if ! grep -cq "sidechains.*\${version_old}" "\${file}"; then
+      current_jar_version="\$(grep -Eoh 'sidechains-sdk.*[0-9]+\.[0-9]+\.[0-9]+(-SNAPSHOT)?' "\${file}" | cut -d '-' -f4- | head -n1)"
       fn_die "Fix it! The OLD version does not match with CURRENT version under \${file} file\nCurrent version is: \${current_jar_version}"
     fi
-  elif [ \${file} = \${run_sc_file} ];then
-    if ! grep -cq SIMPLE_APP_VERSION:-\${version_old} \${file}; then
-      current_jar_version=\$(grep -Eioh 'SIMPLE_APP_VERSION:-[0-9]+\.[0-9]+\.[0-9]+(-SNAPSHOT)?' \${file} | cut -d '-' -f2-)
+  elif [ "\${file}" = "\${run_sc_file}" ];then
+    if ! grep -cq "SIMPLE_APP_VERSION:-\${version_old}" "\${file}"; then
+      current_jar_version="\$(grep -Eioh 'SIMPLE_APP_VERSION:-[0-9]+\.[0-9]+\.[0-9]+(-SNAPSHOT)?' "\${file}" | cut -d '-' -f2-)"
       fn_die "Fix it! The OLD version does not match with CURRENT version under \${file} file\nCurrent version is: \${current_jar_version}"
     fi
   fi
 
   echo "" && echo "=== Modifying \${file} file ===" && echo ""
-  sed -i s/\${version_old_dot_escaped}/\${version_new}/g \${file}
+  sed -i "s/\${version_old_dot_escaped}/\${version_new}/g" "\${file}"
 done
 
 echo "" && echo "=== DONE ===" && echo ""

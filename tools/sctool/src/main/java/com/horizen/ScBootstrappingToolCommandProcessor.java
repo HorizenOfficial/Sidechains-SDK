@@ -78,6 +78,9 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             case "generateVrfKey":
                 processGenerateVrfKey(command.data());
                 break;
+            case "generateCertificateSignerKey":
+                processGenerateCertificateSignerKey(command.data());
+                break;
             case "generateCertProofInfo":
                 processGenerateCertProofInfo(command.data());
                 break;
@@ -147,6 +150,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                       "\thelp\n" +
                       "\tgeneratekey <arguments>\n" +
                       "\tgenerateVrfKey <arguments>\n" +
+                      "\tgenerateCertificateSignerKey <arguments>\n" +
                       "\tgenerateCertProofInfo <arguments>\n" +
                       "\tgenerateCswProofInfo <arguments>\n" +
                       "\tgenesisinfo <arguments>\n" +
@@ -203,36 +207,61 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         printer.print(res);
     }
 
-    private void printGenerateCertProofInfoUsageMsg(String error) {
+    private void printGenerateCertificateSignerKey(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                      "\tgenerateCertProofInfo {\"seed\":\"my seed\", \"maxPks\":7, \"threshold\":5, " +
-                      "\"provingKeyPath\": \"/tmp/sidechain/snark_proving_key\", " +
-                      "\"verificationKeyPath\": \"/tmp/sidechain/snark_verification_key\", "+
-                      "\"isCSWEnabled\": true}" +
-                      "\n\t - threshold parameter should be less or equal to keyCount." +
-                      "\n\t - isCSWEnabled parameter could be true or false."  );
+                    "\tgenerateCertificateSignerKey {\"seed\":\"my seed\"}");
     }
 
-    private void processGenerateCertProofInfo(JsonNode json) {
-
+    private void processGenerateCertificateSignerKey(JsonNode json) {
         if(!json.has("seed") || !json.get("seed").isTextual()) {
-            printGenerateCertProofInfoUsageMsg("seed is not specified or has invalid format.");
+            printGenerateCertificateSignerKey("seed is not specified or has invalid format.");
             return;
         }
 
         byte[] seed = json.get("seed").asText().getBytes();
+        SchnorrSecret secretKey = SchnorrKeyGenerator.getInstance().generateSecret(seed);
 
-        if (!json.has("maxPks") || !json.get("maxPks").isInt()) {
-            printGenerateCertProofInfoUsageMsg("wrong maxPks");
+        ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+        ObjectNode resJson = mapper.createObjectNode();
+        SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
+
+        resJson.put("signerSecret", BytesUtils.toHexString(secretsCompanion.toBytes(secretKey)));
+        resJson.put("signerPublicKey", BytesUtils.toHexString(secretKey.getPublicBytes()));
+
+        String res = resJson.toString();
+        printer.print(res);
+    }
+
+    private void printGenerateCertProofInfoUsageMsg(String error) {
+        printer.print("Error: " + error);
+        printer.print("Usage:\n" +
+                "\tgenerateCertProofInfo {\"pks:\":\"[pk1, pk2, ...]]\", \"threshold\":5, " +
+                "\"provingKeyPath\": \"/tmp/sidechain/snark_proving_key\", " +
+                "\"verificationKeyPath\": \"/tmp/sidechain/snark_verification_key\", "+
+                "\"isCSWEnabled\": true}" +
+                "\n\t - threshold parameter should be less or equal to keyCount." +
+                "\n\t - isCSWEnabled parameter could be true or false."  );
+    }
+
+    private void processGenerateCertProofInfo(JsonNode json) {
+        if (!json.has("signersPublicKeys") || !json.get("signersPublicKeys").isArray()) {
+            printGenerateCertProofInfoUsageMsg("wrong public keys");
             return;
         }
 
-        int maxPks = json.get("maxPks").asInt();
+        List<String> publicKeys = new ArrayList<String>();
 
-        if (maxPks <= 0) {
-            printGenerateCertProofInfoUsageMsg("wrong max keys number: " + maxPks);
-            return;
+        Iterator<JsonNode> pksIterator = json.get("signersPublicKeys").elements();
+        while (pksIterator.hasNext()) {
+            JsonNode pkNode = pksIterator.next();
+
+            if (!pkNode.isTextual()) {
+                printGenerateCertProofInfoUsageMsg("wrong public key format");
+                return;
+            }
+
+            publicKeys.add(pkNode.asText());
         }
 
         if (!json.has("threshold") || !json.get("threshold").isInt()) {
@@ -242,7 +271,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
         int threshold = json.get("threshold").asInt();
 
-        if (threshold <= 0 || threshold > maxPks) {
+        if (threshold <= 0 || threshold > publicKeys.size()) {
             printGenerateCertProofInfoUsageMsg("wrong threshold: " + threshold);
             return;
         }
@@ -280,7 +309,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             if (isCSWEnabled){
                 numOfCustomFields = CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW;
             }
-            if (!CryptoLibProvider.sigProofThresholdCircuitFunctions().generateCoboundaryMarlinSnarkKeys(maxPks, provingKeyPath, verificationKeyPath, numOfCustomFields)) {
+            if (!CryptoLibProvider.sigProofThresholdCircuitFunctions().generateCoboundaryMarlinSnarkKeys(publicKeys.size(), provingKeyPath, verificationKeyPath, numOfCustomFields)) {
                 printer.print("Error occurred during snark keys generation.");
                 return;
             }
@@ -292,37 +321,26 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             return;
         }
 
-        List<SchnorrSecret> secretKeys = new ArrayList<>();
-
-        for (int i = 0; i < maxPks; i++ ) {
-            secretKeys.add(SchnorrKeyGenerator.getInstance()
-                    .generateSecret(Bytes.concat(seed, Ints.toByteArray(i))));
-        }
-
-        List<byte[]> publicKeysBytes = secretKeys.stream().map(SchnorrSecret::getPublicBytes).collect(Collectors.toList());
+        List<byte[]> publicKeysBytes = publicKeys.stream().map(pk -> BytesUtils.fromHexString(pk)).collect(Collectors.toList());
         String genSysConstant = BytesUtils.toHexString(CryptoLibProvider.sigProofThresholdCircuitFunctions().generateSysDataConstant(publicKeysBytes, threshold));
 
         ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
         ObjectNode resJson = mapper.createObjectNode();
 
-        resJson.put("maxPks", maxPks);
+        resJson.put("maxPks", publicKeys.size());
         resJson.put("threshold", threshold);
         resJson.put("genSysConstant", genSysConstant);
         resJson.put("verificationKey", verificationKey);
 
-        ArrayNode keyArrayNode = resJson.putArray("schnorrKeys");
+        ArrayNode keyArrayNode = resJson.putArray("schnorrPublicKeys");
 
-        for (SchnorrSecret secretKey : secretKeys) {
-            ObjectNode keyNode = mapper.createObjectNode();
-            keyNode.put("schnorrSecret", BytesUtils.toHexString(secretsCompanion.toBytes(secretKey)));
-            keyNode.put("schnorrPublicKey", BytesUtils.toHexString(secretKey.getPublicBytes()));
-            keyArrayNode.add(keyNode);
+        for (String publicKeyStr : publicKeys) {
+            keyArrayNode.add(publicKeyStr);
         }
 
         String res = resJson.toString();
         printer.print(res);
     }
-
 
     private void printGenerateCswProofInfoUsageMsg(String error) {
         printer.print("Error: " + error);
