@@ -14,6 +14,7 @@ import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import org.web3j.crypto.ContractUtils.generateContractAddress
 import scorex.core._
 import scorex.util.{ModifierId, ScorexLogging}
 
@@ -118,7 +119,7 @@ class AccountState(val params: NetworkParams,
 
     // get also list of receipts, useful for computing the receiptRoot hash
     val receiptList = new ListBuffer[EthereumReceipt]()
-    val blockNumber = stateView.getHeight
+    val blockNumber = stateView.getHeight + 1
     val blockHash = idToBytes(mod.id)
     var cumGasUsed : BigInteger = BigInteger.ZERO
 
@@ -132,9 +133,14 @@ class AccountState(val params: NetworkParams,
 
           val txHash = idToBytes(ethTx.id)
 
-          val contractAddress = if (ethTx.getTo != null && !stateView.isEoaAccount(ethTx.getTo.address()) ) {
-            ethTx.getTo.address()
+          // The contract address created, if the transaction was a contract creation
+          val contractAddress = if (ethTx.getTo == null) {
+            // this w3j util method is equivalent to the createAddress() in geth triggered also by CREATE opcode.
+            // Note: geth has also a CREATE2 opcode which may be optionally used in a smart contract solidity implementation
+            // to deploy another contract with a predefined address.
+            generateContractAddress(ethTx.getFrom.address, ethTx.getNonce)
           } else {
+            // otherwise a zero filled address
             new Array[Byte](Address.LENGTH)
           }
 

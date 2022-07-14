@@ -4,7 +4,7 @@ import com.google.common.primitives.Bytes
 import com.horizen.SidechainTypes
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus
-import com.horizen.account.receipt.{EthereumConsensusDataLog, EthereumConsensusDataReceipt, EthereumLog, EthereumReceipt}
+import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceipt}
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress}
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.transaction.EthereumTransaction
@@ -23,7 +23,7 @@ import scorex.core.VersionTag
 import scorex.util.{ScorexLogging, idToBytes}
 
 import java.math.BigInteger
-import scala.collection.JavaConverters.{collectionAsScalaIterableConverter, seqAsJavaListConverter}
+import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 import scala.util.Try
 
 class AccountStateView(private val metadataStorageView: AccountStateMetadataStorageView,

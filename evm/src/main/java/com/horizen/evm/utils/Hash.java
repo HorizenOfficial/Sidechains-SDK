@@ -37,12 +37,12 @@ public class Hash {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Hash h = (Hash) o;
-        return Arrays.equals(this.toBytes(), h.toBytes());
+        return Arrays.equals(this.bytes, h.bytes);
     }
 
     @Override
     public int hashCode() {
-        return Arrays.hashCode(toBytes());
+        return Arrays.hashCode(bytes);
     }
 
     public static class Serializer extends JsonSerializer<Hash> {

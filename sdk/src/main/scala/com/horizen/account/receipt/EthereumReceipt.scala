@@ -22,12 +22,8 @@ case class EthereumReceipt(
 
   override def serializer: ScorexSerializer[EthereumReceipt] = EthereumReceiptSerializer
 
-  private lazy val fullLogs = this.consensusDataReceipt.logs.zipWithIndex.map{
-    case (log, idx) => EthereumLog.derive(log, transactionHash, transactionIndex, blockHash, blockNumber, idx)
-  }
-
-  def deriveFullLogs() : Seq[EthereumLog] = {
-    fullLogs
+  lazy val deriveFullLogs: Seq[EthereumLog] = this.consensusDataReceipt.logs.zipWithIndex.map{
+    case (log, idx) => EthereumLog(log, transactionHash, transactionIndex, blockHash, blockNumber, idx)
   }
 
   override def toString: String = {
@@ -94,7 +90,7 @@ object EthereumReceiptSerializer extends ScorexSerializer[EthereumReceipt]{
     val numberOfLogs = receipt.consensusDataReceipt.logs.size
     writer.putInt(numberOfLogs)
     for (log <- receipt.consensusDataReceipt.logs)
-      EvmLogSerializer.serialize(log, writer)
+      EvmLogUtils.serialize(log, writer)
 
     val bloomBytes: Array[Byte] = receipt.consensusDataReceipt.logsBloom
     writer.putInt(bloomBytes.length)
@@ -123,7 +119,7 @@ object EthereumReceiptSerializer extends ScorexSerializer[EthereumReceipt]{
     val logs = ListBuffer[EvmLog]()
     val numberOfLogs = reader.getInt
     for (_ <- 0 until numberOfLogs)
-      logs += EvmLogSerializer.parse(reader)
+      logs += EvmLogUtils.parse(reader)
 
     val bloomsLength: Int = reader.getInt
     val blooms: Array[Byte] = reader.getBytes(bloomsLength)

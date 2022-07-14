@@ -63,7 +63,7 @@ class EthereumReceiptTest
     val logs = ethereumReceipt.consensusDataReceipt.logs
     assertEquals(logs.size, 2)
 
-    val fullLogs = ethereumReceipt.deriveFullLogs()
+    val fullLogs = ethereumReceipt.deriveFullLogs
     //println(receipt2)
 
     // after deriving logs we have log index and the same non consensus data as the parent receipt

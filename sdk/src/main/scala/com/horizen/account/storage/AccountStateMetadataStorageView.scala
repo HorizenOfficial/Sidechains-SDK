@@ -254,9 +254,12 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
 
     // If sidechain has ceased set the flag
     hasCeasedOpt.foreach(_ => updateList.add(new JPair(ceasingStateKey, new ByteArrayWrapper(Array.emptyByteArray))))
-    //update the height
-    val nextHeight = getHeight + 1
-    updateList.add(new JPair(heightKey, new ByteArrayWrapper(Ints.toByteArray(nextHeight))))
+
+    // update the height unless we have the very first version of the db
+    if (!version.equals(new ByteArrayWrapper(Utils.ZEROS_HASH))) {
+      val nextHeight = getHeight + 1
+      updateList.add(new JPair(heightKey, new ByteArrayWrapper(Ints.toByteArray(nextHeight))))
+    }
 
 
     // If withdrawal epoch switched to the next one, then perform some database clean-up:
