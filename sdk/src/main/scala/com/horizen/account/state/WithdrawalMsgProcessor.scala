@@ -9,12 +9,11 @@ import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.utils.{BytesUtils, ZenCoinsUtils}
 import org.web3j.abi.TypeReference
+import org.web3j.abi.datatypes.generated.{Bytes20, Uint32}
 import org.web3j.abi.datatypes.{StaticStruct, Type}
-import org.web3j.abi.datatypes.generated.{Bytes20, Bytes32, Uint32}
 import scorex.crypto.hash.Keccak256
 
 import java.math.BigInteger
-import scala.collection.JavaConverters.seqAsJavaListConverter
 import java.util
 
 trait WithdrawalRequestProvider {
