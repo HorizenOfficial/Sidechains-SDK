@@ -94,7 +94,9 @@ case class EthereumConsensusDataReceipt(
   }
 }
 
-// all these versions are supported by go eth; but in w3j apparently only 0 and 2:
+// TODO check this:
+//  The 3 versions of ReceiptTxType are supported by go eth and we have test vectors generated using all of them
+//  We are using elsewhere the enum from w3j, which just supports 0 and 2:
 //   org/web3j/crypto/transaction/type/TransactionType.java
 object ReceiptTxType extends Enumeration {
   type ReceiptTxType = Value

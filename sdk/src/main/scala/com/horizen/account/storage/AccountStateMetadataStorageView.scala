@@ -256,11 +256,11 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     hasCeasedOpt.foreach(_ => updateList.add(new JPair(ceasingStateKey, new ByteArrayWrapper(Array.emptyByteArray))))
 
     // update the height unless we have the very first version of the db
+    // TODO improve this: we are assuming that the saveToStorage() is call on a per-block base, this is an exception, is it the only one?
     if (!version.equals(new ByteArrayWrapper(Utils.ZEROS_HASH))) {
       val nextHeight = getHeight + 1
       updateList.add(new JPair(heightKey, new ByteArrayWrapper(Ints.toByteArray(nextHeight))))
     }
-
 
     // If withdrawal epoch switched to the next one, then perform some database clean-up:
     // 1) remove outdated topQualityCertificate retrieved 3 epochs before and referenced to the 4 epochs before.
