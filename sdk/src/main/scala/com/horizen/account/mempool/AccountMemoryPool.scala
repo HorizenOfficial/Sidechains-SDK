@@ -2,8 +2,6 @@ package com.horizen.account.mempool
 
 import com.horizen.SidechainTypes
 import com.horizen.account.node.NodeAccountMemoryPool
-import com.horizen.account.transaction.AccountTransaction
-import com.horizen.utils.ByteArrayWrapper
 import scorex.core.transaction.MempoolReader
 import scorex.util.ModifierId
 

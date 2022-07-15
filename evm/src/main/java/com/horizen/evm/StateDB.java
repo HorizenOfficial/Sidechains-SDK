@@ -255,6 +255,16 @@ public class StateDB extends ResourceHandle {
         return LibEvm.stateGetLogs(handle, txHash);
     }
 
+    /**
+     * Set tx context, used when the EVM emits new state logs.
+     *
+     * @param txHash the hash of the transaction to be set in context
+     * @param txIndex the index of the transaction in the block
+     */
+    public void setTxContext(byte[] txHash, int txIndex) {
+        LibEvm.stateSetTxContext(handle, txHash, txIndex);
+    }
+
     @Override
     public String toString() {
         return String.format("StateDB{handle=%d}", handle);

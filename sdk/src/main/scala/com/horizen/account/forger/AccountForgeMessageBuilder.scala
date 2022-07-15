@@ -13,18 +13,20 @@ import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.state.AccountState
+import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceipt}
+import com.horizen.account.state.{AccountState, AccountStateView}
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.utils.Account
 import com.horizen.account.wallet.AccountWallet
-import com.horizen.forge.{AbstractForgeMessageBuilder, ForgeFailed, MainchainSynchronizer}
+import com.horizen.evm.TrieHasher
+import com.horizen.forge.{AbstractForgeMessageBuilder, MainchainSynchronizer}
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import scorex.core.NodeViewModifier
 import scorex.core.block.Block.{BlockId, Timestamp}
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.collection.JavaConverters._
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                                  companion: SidechainAccountTransactionsCompanion,
@@ -41,6 +43,17 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   type HIS = AccountHistory
   type MS = AccountState
   type MP = AccountMemoryPool
+
+  def computeReceiptRoot(receiptList: Seq[EthereumReceipt]) : Array[Byte] = {
+    // 1. for each receipt item in list rlp encode and append to a new leaf list
+    // 2. compute hash
+    TrieHasher.Root(receiptList.map(r => EthereumConsensusDataReceipt.rlpEncode(r.consensusDataReceipt)).toArray)
+  }
+
+  def computeStateRoot(view: AccountStateView, sidechainTransactions: Seq[Transaction]) : (Array[Byte], Seq[EthereumReceipt]) = {
+    // TODO
+    (new Array[Byte](MerkleTree.ROOT_HASH_LENGTH), Seq())
+  }
 
   override def createNewBlock(
                  nodeView: View,
@@ -62,11 +75,25 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     val feePaymentsHash: Array[Byte] = new Array[Byte](MerkleTree.ROOT_HASH_LENGTH)
 
-    val stateRoot: Array[Byte] = new Array[Byte](MerkleTree.ROOT_HASH_LENGTH)
-    val receiptsRoot: Array[Byte] = new Array[Byte](MerkleTree.ROOT_HASH_LENGTH)
+    // 1. create a view and apply all transactions in the list.
+    // (see also comments in collectTransactionsFromMemPool)
+    // At the end we will have the stateRoot to be stored in the block header
+    //  Also, for every processed tx, store in a list the receipt consensus data, they will be used for build the receiptsRoot:
+    //   - cumulative Gas Used
+    //   - Status (success or failed)
+    //   - Logs
+    val dummyView = nodeView.state.getView
+
+    val (stateRoot, receiptList) : (Array[Byte], Seq[EthereumReceipt]) = computeStateRoot(dummyView, sidechainTransactions)
+
+    dummyView.close()
+
+    // 2. Compute the receipt root
+    val receiptsRoot: Array[Byte] = computeReceiptRoot(receiptList)
+
     val forgerAddress: AddressProposition = new AddressProposition(new Array[Byte](Account.ADDRESS_SIZE))
 
-    AccountBlock.create(
+    val block = AccountBlock.create(
       parentId,
       AccountBlock.ACCOUNT_BLOCK_VERSION,
       timestamp,
@@ -87,6 +114,8 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       // TODO check, why this works?
       //companion.asInstanceOf)
       companion.asInstanceOf[SidechainAccountTransactionsCompanion])
+
+    block
   }
 
   override def precalculateBlockHeaderSize(parentId: ModifierId,
@@ -118,6 +147,12 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
   override def collectTransactionsFromMemPool(nodeView: View, isWithdrawalEpochLastBlock: Boolean, blockSizeIn: Int): Seq[SidechainTypes#SCAT] =
   {
+    // we must ensure that all the tx we get from mempool are applicable to current state view
+    //val dummyView = nodeView.state.getView
+
+
+    // and we must be below the max gas block limit threshold
+
     var blockSize: Int = blockSizeIn
     if (isWithdrawalEpochLastBlock) { // SC block is going to become the last block of the withdrawal epoch
       Seq() // no SC Txs allowed

@@ -32,6 +32,19 @@ public class Hash {
         return Arrays.copyOf(bytes, LENGTH);
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Hash h = (Hash) o;
+        return Arrays.equals(this.bytes, h.bytes);
+    }
+
+    @Override
+    public int hashCode() {
+        return Arrays.hashCode(bytes);
+    }
+
     public static class Serializer extends JsonSerializer<Hash> {
         @Override
         public void serialize(
