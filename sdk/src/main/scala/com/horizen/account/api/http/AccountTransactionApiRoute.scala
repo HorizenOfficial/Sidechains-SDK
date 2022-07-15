@@ -5,26 +5,33 @@ import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import com.google.common.primitives.Bytes
 import com.horizen.SidechainTypes
 import com.horizen.account.api.http.AccountTransactionErrorResponse._
 import com.horizen.account.api.http.AccountTransactionRestScheme._
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
-import com.horizen.account.utils.ZenWeiConverter
+import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.secret.PrivateKeySecp256k1
+import com.horizen.account.state.{AddNewStakeCmdInput, ForgerPublicKeys, ForgerStakeMsgProcessor}
 import com.horizen.account.transaction.{EthereumTransaction, EthereumTransactionSerializer}
+import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
+import com.horizen.api.http.SidechainTransactionErrorResponse.GenericTransactionError
 import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SidechainApiRoute, SuccessResponse}
+import com.horizen.box.ZenBox
 import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
+import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.serialization.Views
 import com.horizen.transaction.Transaction
+import com.horizen.utils.BytesUtils
+import org.web3j.crypto.Sign.SignatureData
 import org.web3j.crypto.SignedRawTransaction
 import scorex.core.settings.RESTApiSettings
-import org.web3j.crypto.Sign.SignatureData
-import com.horizen.utils.BytesUtils
+import scorex.core.transaction.box.proposition
 
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
@@ -54,7 +61,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
 
   override val route: Route = (pathPrefix("transaction")) {
-    allTransactions ~ sendCoinsToAddress ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendRawTransaction ~ signTransaction
+    allTransactions ~ sendCoinsToAddress ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendRawTransaction ~ signTransaction ~ makeForgerStake
   }
 
   /**
@@ -81,7 +88,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       a => (fromAddress.isEmpty ||
         BytesUtils.toHexString(a.asInstanceOf[PrivateKeySecp256k1].publicImage
           .address) == fromAddress.get) &&
-        nodeView.getNodeState.getBalance(a.asInstanceOf[PrivateKeySecp256k1].publicImage.address).compareTo(txValueInWei) >= 0// TODO account for gas
+        nodeView.getNodeState.getBalance(a.asInstanceOf[PrivateKeySecp256k1].publicImage.address).compareTo(txValueInWei) >= 0 // TODO account for gas
     )
 
     if (secret.nonEmpty) Option.apply(secret.get.asInstanceOf[PrivateKeySecp256k1])
@@ -158,7 +165,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               body.signature_s.get)
           else
             null
-        );
+        )
         if (!signedTx.isSigned) {
           val secret =
             getFittingSecret(sidechainNodeView, body.from, signedTx.getValue)
@@ -253,6 +260,55 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     }
   }
 
+  def makeForgerStake: Route = (post & path("makeForgerStake")) {
+    entity(as[ReqCreateForgerStake]) { body =>
+      // lock the view and try to create CoreTransaction
+      applyOnNodeView { sidechainNodeView =>
+        val valueInWei = ZenWeiConverter.convertZenniesToWei(body.forgerStakeInfo.value)
+        val secret = getFittingSecret(sidechainNodeView, None, valueInWei)
+        secret match {
+          case Some(secret) =>
+            // TODO actual gas implementation
+            var maxFeePerGas = BigInteger.ONE
+            var maxPriorityFeePerGas = BigInteger.ONE
+            var gasLimit = BigInteger.ONE
+            if (body.gasInfo.isDefined) {
+              maxFeePerGas = body.gasInfo.get.maxFeePerGas
+              maxPriorityFeePerGas = body.gasInfo.get.maxPriorityFeePerGas
+              gasLimit = body.gasInfo.get.gasLimit
+            }
+
+            val to = BytesUtils.toHexString(ForgerStakeMsgProcessor.ForgerStakeSmartContractAddress.address())
+            val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
+            val data = encodeAddNewStakeCmdRequest(body.forgerStakeInfo)
+            val tmpTx: EthereumTransaction = new EthereumTransaction(
+              body.chainId,
+              to,
+              nonce,
+              gasLimit,
+              maxPriorityFeePerGas,
+              maxFeePerGas,
+              valueInWei,
+              data,
+              null
+            );
+            validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
+          case None =>
+            ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
+        }
+
+      }
+    }
+  }
+
+  def encodeAddNewStakeCmdRequest(forgerStakeInfo: TransactionForgerOutput): String = {
+    val blockSignPublicKey = new PublicKey25519Proposition(BytesUtils.fromHexString(forgerStakeInfo.blockSignPublicKey.getOrElse(forgerStakeInfo.ownerAddress)))
+    val vrfPubKey = new VrfPublicKey(BytesUtils.fromHexString(forgerStakeInfo.vrfPubKey))
+    val addForgerStakeInput = AddNewStakeCmdInput(ForgerPublicKeys(blockSignPublicKey, vrfPubKey), new AddressProposition(BytesUtils.fromHexString(forgerStakeInfo.ownerAddress)))
+    val data = BytesUtils.toHexString(Bytes.concat(BytesUtils.fromHexString(ForgerStakeMsgProcessor.AddNewStakeCmd),addForgerStakeInput.encode()))
+    data
+  }
+
 
   //function which describes default transaction representation for answer after adding the transaction to a memory pool
   val defaultTransactionResponseRepresentation: (Transaction => SuccessResponse) = {
@@ -314,7 +370,14 @@ object AccountTransactionRestScheme {
   private[api] case class TransactionWithdrawalRequestOutput(mainchainAddress: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class TransactionForgerOutput(publicKey: String, blockSignPublicKey: Option[String], vrfPubKey: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)
+  private[api] case class TransactionForgerOutput(ownerAddress: String, blockSignPublicKey: Option[String], vrfPubKey: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class EIP1559GasInfo(gasLimit: BigInteger, maxPriorityFeePerGas: BigInteger, maxFeePerGas: BigInteger) {
+    require(gasLimit.signum() > 0, "Gas limit can not be 0")
+    require(maxPriorityFeePerGas.signum() > 0, "MaxPriorityFeePerGas must be greater than 0")
+    require(maxFeePerGas.signum() > 0, "MaxFeePerGas must be greater than 0")
+  }
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqCreateCoreTransaction(transactionInputs: List[TransactionInput],
@@ -352,10 +415,13 @@ object AccountTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqCreateForgerStake(outputs: List[TransactionForgerOutput],
-                                               @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
-    require(outputs.nonEmpty, "Empty outputs list")
-    require(fee.getOrElse(0L) >= 0, "Negative fee. Fee must be >= 0")
+  private[api] case class ReqCreateForgerStake(chainId: Long,
+                                               nonce: Option[BigInteger],
+                                               forgerStakeInfo: TransactionForgerOutput,
+                                               gasInfo: Option[EIP1559GasInfo]
+                                              ){
+    require(chainId > 0, "ChainId must be positive")
+    require(forgerStakeInfo != null, "Forger stake info must be provided")
   }
 
   @JsonView(Array(classOf[Views.Default]))

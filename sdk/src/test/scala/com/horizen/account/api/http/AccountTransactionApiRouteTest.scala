@@ -44,6 +44,16 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
+      Post(basePath + "makeForgerStake") ~> sidechainTransactionApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+      }
+      Post(basePath + "makeForgerStake").withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+      }
+      Post(basePath + "makeForgerStake") ~> Route.seal(sidechainTransactionApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.BadRequest.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
     }
 
     "reply at /allTransactions" in {
