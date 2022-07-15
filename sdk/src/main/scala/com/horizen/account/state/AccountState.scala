@@ -294,6 +294,14 @@ class AccountState(val params: NetworkParams,
     view.close()
     res
   }
+
+  override def getListOfForgerStakes: Seq[AccountForgingStakeInfo] = {
+    val stateView: AccountStateView = getView
+    val res = stateView.getListOfForgerStakes
+    stateView.close()
+    res
+  }
+
 }
 
 

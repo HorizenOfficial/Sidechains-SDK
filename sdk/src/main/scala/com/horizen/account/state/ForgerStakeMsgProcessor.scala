@@ -1,5 +1,6 @@
 package com.horizen.account.state
 
+import com.fasterxml.jackson.annotation.JsonView
 import com.google.common.primitives.Bytes
 import com.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
 import com.horizen.account.proof.SignatureSecp256k1
@@ -9,8 +10,9 @@ import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
 import com.horizen.utils.{BytesUtils, ListSerializer}
-import com.horizen.account.abi.ABIDecoder.{OP_CODE_LENGTH, getOpCodeFromData, getArgumentsFromData}
+import com.horizen.account.abi.ABIDecoder.{OP_CODE_LENGTH, getArgumentsFromData, getOpCodeFromData}
 import com.horizen.account.state.AbstractFakeSmartContractMsgProcessor.getABIMethodId
+import com.horizen.serialization.Views
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint256}
 import org.web3j.abi.datatypes.{Address, StaticStruct, Type}
@@ -469,7 +471,7 @@ object ForgerStakeMsgProcessor {
   val ForgerStakeSmartContractAddress = new AddressProposition(BytesUtils.fromHexString("0000000000000000000022222222222222222222"))
 }
 
-//@JsonView(Array(classOf[Views.Default]))
+@JsonView(Array(classOf[Views.Default]))
 // used as element of the list to return when getting all forger stakes via msg processor
 case class AccountForgingStakeInfo(
                                     stakeId: Array[Byte],
@@ -515,7 +517,7 @@ object AccountForgingStakeInfoSerializer extends ScorexSerializer[AccountForging
   }
 }
 
-
+@JsonView(Array(classOf[Views.Default]))
 case class ForgerPublicKeys(
                              blockSignPublicKey: PublicKey25519Proposition,
                              vrfPublicKey: VrfPublicKey)
@@ -639,6 +641,7 @@ object RemoveStakeCmdInputDecoder extends ABIDecoder[RemoveStakeCmdInput] {
 }
 
 // the forger stake data record, stored in stateDb as: key=stakeId / value=data
+@JsonView(Array(classOf[Views.Default]))
 case class ForgerStakeData(
                             forgerPublicKeys: ForgerPublicKeys,
                             ownerPublicKey: AddressProposition,

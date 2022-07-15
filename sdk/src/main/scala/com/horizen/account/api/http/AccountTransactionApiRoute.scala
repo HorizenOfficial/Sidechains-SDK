@@ -60,7 +60,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
 
   override val route: Route = (pathPrefix("transaction")) {
-    allTransactions ~ sendCoinsToAddress ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendRawTransaction ~ signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract
+    allTransactions ~ sendCoinsToAddress ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendRawTransaction ~ signTransaction ~ makeForgerStake ~
+      withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~ allForgingStakes
   }
 
   /**
@@ -351,6 +352,14 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     }
   }
 
+  def allForgingStakes: Route = (post & path("allForgingStakes")) {
+    withNodeView { sidechainNodeView =>
+      val accountState = sidechainNodeView.getNodeState
+      val listOfWithdrawalRequests = accountState.getListOfForgerStakes
+      ApiResponseUtil.toResponse(RespAllForgerStakes(listOfWithdrawalRequests.toList))
+    }
+  }
+
 
   def withdrawCoins: Route = (post & path("withdrawCoins")) {
     entity(as[ReqWithdrawCoins]) { body =>
@@ -392,6 +401,16 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
             ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
         }
 
+      }
+    }
+  }
+
+  def allWithdrawalRequests: Route = (post & path("allWithdrawalRequests")) {
+    entity(as[ReqAllWithdrawalRequests]) { body =>
+      withNodeView { sidechainNodeView =>
+        val accountState = sidechainNodeView.getNodeState
+        val listOfWithdrawalRequests = accountState.withdrawalRequests(body.epochNum)
+        ApiResponseUtil.toResponse(RespAllWithdrawalRequests(listOfWithdrawalRequests.toList))
       }
     }
   }
@@ -501,6 +520,12 @@ object AccountTransactionRestScheme {
   private[api] case class RespAllTransactionIds(transactionIds: List[String]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespAllWithdrawalRequests(listOfWR: List[WithdrawalRequest]) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespAllForgerStakes(listOStakes: List[AccountForgingStakeInfo]) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqFindById(transactionId: String, blockHash: Option[String], transactionIndex: Option[Boolean], format: Option[Boolean])
 
   @JsonView(Array(classOf[Views.Default]))
@@ -577,6 +602,12 @@ object AccountTransactionRestScheme {
     require(chainId > 0, "ChainId must be positive")
     require(withdrawalRequest != null, "Withdrawal request info must be provided")
   }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqAllWithdrawalRequests(epochNum: Int) {
+    require(epochNum > 0, "Epoch number must be positive")
+  }
+
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqCreateForgerStake(chainId: Long,

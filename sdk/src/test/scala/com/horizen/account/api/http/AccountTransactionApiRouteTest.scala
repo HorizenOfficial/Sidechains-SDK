@@ -138,5 +138,25 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
       }
     }
 
+
+    "reply at /allForgingStakes" in {
+      Post(basePath + "allForgingStakes") ~> sidechainTransactionApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        println(result)
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("listOStakes").isArray)
+        assertEquals(1, result.get("listOStakes").elements().asScala.length)
+        val stakesJsonNode = result.get("listOStakes").elements().asScala.toList
+        for (i <- 0 to stakesJsonNode.size - 1)
+          jsonChecker.assertsOnAccountStakeInfoJson(stakesJsonNode(i), utilMocks.listOfStakes(i))
+      }
+    }
+
+
   }
 }

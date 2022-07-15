@@ -10,4 +10,5 @@ trait AccountStateReader extends BaseStateReader {
   def getBalance(address: Array[Byte]): BigInteger
   def getNonce(address: Array[Byte]): BigInteger
   def getAccountStateRoot: Array[Byte] // 32 bytes, kessack hash
+  def getListOfForgerStakes: Seq[AccountForgingStakeInfo]
 }

@@ -104,6 +104,11 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     })
   }
 
+  override def getListOfForgerStakes: Seq[AccountForgingStakeInfo] = {
+    forgerStakesProvider.getListOfForgers(this)
+  }
+
+
   def getOrderedForgingStakeInfoSeq: Seq[ForgingStakeInfo] = {
     val forgerStakeList = forgerStakesProvider.getListOfForgers(this)
 
@@ -339,4 +344,5 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
   }
 
   override def getStateDbHandle: ResourceHandle = stateDb
-}
+
+ }
