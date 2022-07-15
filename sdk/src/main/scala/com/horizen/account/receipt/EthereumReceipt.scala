@@ -20,6 +20,9 @@ case class EthereumReceipt(
                              contractAddress: Array[Byte]) extends BytesSerializable  {
   override type M = EthereumReceipt
 
+  // optional field
+  require(contractAddress.length == 0 || contractAddress.length == Address.LENGTH)
+
   override def serializer: ScorexSerializer[EthereumReceipt] = EthereumReceiptSerializer
 
   lazy val deriveFullLogs: Seq[EthereumLog] = this.consensusDataReceipt.logs.zipWithIndex.map{
@@ -106,6 +109,8 @@ object EthereumReceiptSerializer extends ScorexSerializer[EthereumReceipt]{
     writer.putInt(gasUsedBytes.length)
     writer.putBytes(gasUsedBytes)
 
+    //optional field
+    writer.putInt(receipt.contractAddress.length)
     writer.putBytes(receipt.contractAddress)
   }
 
@@ -134,7 +139,9 @@ object EthereumReceiptSerializer extends ScorexSerializer[EthereumReceipt]{
     val gasUsedLength: Int = reader.getInt
     val gasUsed: BigInteger = new BigInteger(reader.getBytes(gasUsedLength))
 
-    val contractAddress: Array[Byte] = reader.getBytes(Address.LENGTH)
+    //optional field
+    val contractAddressLength = reader.getInt
+    val contractAddress: Array[Byte] = reader.getBytes(contractAddressLength)
 
     EthereumReceipt(receipt, txHash, txIndex, blockHash, blockNumber, gasUsed, contractAddress)
   }

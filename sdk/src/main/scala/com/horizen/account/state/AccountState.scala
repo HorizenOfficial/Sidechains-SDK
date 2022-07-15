@@ -382,11 +382,12 @@ object AccountState extends ScorexLogging {
           val contractAddress = if (ethTx.getTo == null) {
             // this w3j util method is equivalent to the createAddress() in geth triggered also by CREATE opcode.
             // Note: geth has also a CREATE2 opcode which may be optionally used in a smart contract solidity implementation
-            // to deploy another contract with a predefined address.
+            // in order to deploy another (deeper) smart contract with an address that is pre-determined before deploying it.
+            // This does not impact our case since the CREATE2 result would not be part of the receipt.
             generateContractAddress(ethTx.getFrom.address, ethTx.getNonce)
           } else {
-            // otherwise a zero filled address
-            new Array[Byte](Address.LENGTH)
+            // otherwise a zero-byte field
+            new Array[Byte](0)
           }
 
           // get a receipt obj with non consensus data too (logs updated too)

@@ -107,10 +107,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     entity(as[ReqSendCoinsToAddress]) { body =>
       // lock the view and try to create EvmTransaction
       // TODO also account for gas fees
-
-      // TEST TEST -  remove it
-      var localNonce = StaticIntVar()
-
       applyOnNodeView { sidechainNodeView =>
         val valueInWei = ZenWeiConverter.convertZenniesToWei(body.value)
         val destAddress = body.to
@@ -120,9 +116,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         val secret = getFittingSecret(sidechainNodeView, body.from, valueInWei)
         secret match {
           case Some(secret) =>
-            //val nonce = sidechainNodeView.getNodeState.getNonce(secret.publicImage.address)
-            val nonce = BigInteger.valueOf(localNonce)
-
+            val nonce = sidechainNodeView.getNodeState.getNonce(secret.publicImage.address)
             val tmpTx = new EthereumTransaction(
               destAddress,
               nonce,
@@ -452,12 +446,4 @@ object AccountTransactionErrorResponse {
     override val code: String = "0205"
   }
 
-}
-
-object StaticIntVar extends Function0[Int] {
-  var x = -1
-  def apply = {
-    x = x + 1
-    x
-  }
 }

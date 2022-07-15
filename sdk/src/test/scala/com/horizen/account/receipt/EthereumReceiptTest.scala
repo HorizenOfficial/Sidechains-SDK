@@ -3,6 +3,7 @@ package com.horizen.account.receipt
 
 import com.horizen.evm.TrieHasher
 import com.horizen.evm.interop.EvmLog
+import com.horizen.evm.utils.Address
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 import org.junit._
@@ -33,11 +34,32 @@ class EthereumReceiptTest
   @Test
   def receiptSimpleSerDeser(): Unit = {
     val receipt: EthereumReceipt = createTestEthereumReceipt(ReceiptTxType.DynamicFeeTxType.id)
+    assertEquals(receipt.contractAddress.length, Address.LENGTH)
     val r1: String = receipt.toString
     //println(r1)
 
     val serializedBytes: Array[Byte] = EthereumReceiptSerializer.toBytes(receipt)
-    println(BytesUtils.toHexString(serializedBytes))
+    //println(BytesUtils.toHexString(serializedBytes))
+
+    val decodedReceipt: EthereumReceipt = EthereumReceiptSerializer.parseBytes(serializedBytes)
+    val r2: String = decodedReceipt.toString
+    //println(r2)
+
+    assertEquals(r1, r2)
+    assertEquals(receipt, decodedReceipt)
+    assertEquals(receipt.hashCode(), decodedReceipt.hashCode())
+  }
+
+
+  @Test
+  def receiptSimpleSerDeserWithoutContractAddress(): Unit = {
+    val receipt: EthereumReceipt = createTestEthereumReceipt(ReceiptTxType.DynamicFeeTxType.id, contractAddressPresence = false)
+    assertEquals(receipt.contractAddress.length, 0)
+    val r1: String = receipt.toString
+    //println(r1)
+
+    val serializedBytes: Array[Byte] = EthereumReceiptSerializer.toBytes(receipt)
+    //println(BytesUtils.toHexString(serializedBytes))
 
     val decodedReceipt: EthereumReceipt = EthereumReceiptSerializer.parseBytes(serializedBytes)
     val r2: String = decodedReceipt.toString
