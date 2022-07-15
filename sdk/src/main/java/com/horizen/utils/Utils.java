@@ -110,6 +110,4 @@ public final class Utils
                 ((bytes[offset + 2] & 0xffl) << 8) |
                 (bytes[offset + 3] & 0xffl);
     }
-
-
 }

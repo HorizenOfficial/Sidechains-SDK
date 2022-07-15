@@ -7,7 +7,7 @@ import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.{ByteArrayWrapper, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree}
-import com.horizen._
+import com.horizen.{SidechainTypes, _}
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.history.AccountHistory
@@ -26,6 +26,7 @@ import scorex.core.NodeViewModifier
 import scorex.core.block.Block.{BlockId, Timestamp}
 import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 
+import java.math.BigInteger
 import scala.collection.JavaConverters._
 import scala.util.Try
 
@@ -56,9 +57,9 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                        mainchainBlockReferencesData: Seq[MainchainBlockReferenceData]
                       ): (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT]) = {
 
-    val receiptList = applyAndGetReceipts(view,
-      mainchainBlockReferencesData,
-      sidechainTransactions).get
+    // we must ensure that all the tx we get from mempool are applicable to current state view
+    // and we must stay below the block gas limit threshold, therefore we might have a subset of the input transactions
+    val receiptList = applyAndGetReceipts(view, mainchainBlockReferencesData, sidechainTransactions).get
 
     val listOfAppliedTxHash = receiptList.map(r => new ByteArrayWrapper(r.transactionHash))
 
@@ -93,19 +94,18 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     val feePaymentsHash: Array[Byte] = new Array[Byte](MerkleTree.ROOT_HASH_LENGTH)
 
-    // 1. create a view and apply all transactions in the list.
-    // (see also comments in collectTransactionsFromMemPool)
-    // At the end we will have the stateRoot to be stored in the block header
-    //  Also, for every processed tx, store in a list the receipt consensus data, they will be used for build the receiptsRoot:
-    //   - cumulative Gas Used
-    //   - Status (success or failed)
-    //   - Logs
+    // 1. create a view and try to apply all transactions in the list.
     val dummyView = nodeView.state.getView
 
+    // the outputs will be:
+    // - the resulting stateRoot
+    // - the list of receipt of the transactions succesfully applied ---> for getting the receiptsRoot
+    // - the list of transactions succesfully applied to the state ---> to be included in the forged block
     val (stateRoot, receiptList, appliedTxList)
     : (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT]) =
       computeStateRoot(dummyView, sidechainTransactions, mainchainBlockReferencesData)
 
+    // dispose of the view
     dummyView.close()
 
     // 2. Compute the receipt root
@@ -165,27 +165,13 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
   override def collectTransactionsFromMemPool(nodeView: View, isWithdrawalEpochLastBlock: Boolean, blockSizeIn: Int): Seq[SidechainTypes#SCAT] =
   {
-    // we must ensure that all the tx we get from mempool are applicable to current state view
-    //val dummyView = nodeView.state.getView
-
-
-    // and we must be below the max gas block limit threshold
-
     var blockSize: Int = blockSizeIn
     if (isWithdrawalEpochLastBlock) { // SC block is going to become the last block of the withdrawal epoch
       Seq() // no SC Txs allowed
     } else { // SC block is in the middle of the epoch
-      var txsCounter: Int = 0
-      nodeView.pool.take(nodeView.pool.size).filter(tx => {
-        val txSize = tx.bytes.length + 4 // placeholder for Tx length
-        txsCounter += 1
-        if (txsCounter > SidechainBlockBase.MAX_SIDECHAIN_TXS_NUMBER || blockSize + txSize > SidechainBlockBase.MAX_BLOCK_SIZE)
-          false // stop data collection
-        else {
-          blockSize += txSize
-          true // continue data collection
-        }
-      }).toSeq
+      // no checks of the block size here, these txes are the candidates and their inclusion
+      // will be attempted by forger
+      nodeView.pool.take(nodeView.pool.size).toSeq
     }
   }
 

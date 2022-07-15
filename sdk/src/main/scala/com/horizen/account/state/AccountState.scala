@@ -7,11 +7,10 @@ import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.state.AccountState.applyAndGetReceipts
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificate}
+import com.horizen.block.{MainchainBlockReferenceData, SidechainBlockBase, WithdrawalEpochCertificate}
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.evm._
 import com.horizen.evm.interop.EvmLog
-import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, Utils, WithdrawalEpochInfo, WithdrawalEpochUtils}
@@ -114,9 +113,7 @@ class AccountState(val params: NetworkParams,
         throw new IllegalArgumentException(s"Block ${mod.id} has feePaymentsHash ${BytesUtils.toHexString(mod.feePaymentsHash)} defined when no fee payments expected.")
     }
 
-    val receiptList = applyAndGetReceipts(stateView,
-      mod.mainchainBlockReferencesData,
-      mod.sidechainTransactions, idToBytes(mod.id)).get
+    val receiptList = applyAndGetReceipts(stateView, mod.mainchainBlockReferencesData, mod.sidechainTransactions, Some(idToBytes(mod.id))).get
 
     // TODO: calculate and update fee info.
     // Note: we should save the total gas paid and the forgerAddress
@@ -134,7 +131,6 @@ class AccountState(val params: NetworkParams,
 
     new AccountState(params, idToVersion(mod.id), stateMetadataStorage, stateDbStorage, messageProcessors)
   }
-
 
   private def validateTopQualityCertificate(topQualityCertificate: WithdrawalEpochCertificate, stateView: AccountStateView): Unit = {
     val certReferencedEpochNumber: Int = topQualityCertificate.epochNumber
@@ -349,15 +345,35 @@ object AccountState extends ScorexLogging {
       throw new RuntimeException("State metadata storage is not empty!")
   }
 
+  def blockGasLimitExceeded(cumGasUsed: BigInteger): Boolean = {
+    // TODO
+    false
+  }
+
+  def blockSizeExceeded(blockSize: Int, txCounter: Int): Boolean = {
+    if (txCounter > SidechainBlockBase.MAX_SIDECHAIN_TXS_NUMBER || blockSize > SidechainBlockBase.MAX_BLOCK_SIZE)
+      true // stop data collection
+    else {
+      false // continue data collection
+    }
+  }
+
   def applyAndGetReceipts(stateView: AccountStateView,
                           mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
                           sidechainTransactions: Seq[SidechainTypes#SCAT],
-                          blockHash: Array[Byte] = Utils.ZEROS_HASH) : Try[Seq[EthereumReceipt]] = Try {
+                          blockHashOpt: Option[Array[Byte]] = None): Try[Seq[EthereumReceipt]] = Try {
 
-    val blockNumber = if (Utils.isZerosHash(blockHash)) {
-        -1
+    // this function can be called when forging a block or when processing a received block
+    // In the former case:
+    //   1. we do not have (and do not need) the height and the block hash
+    //   2. we must skip tx not applicable to the current state
+    //   3. we must include tx up to the block gas limit threshold
+    val isForging = blockHashOpt.isEmpty
+
+    val (blockNumber, blockHash) = if (isForging) {
+      (-1, Utils.ZEROS_HASH)
     } else {
-      stateView.getHeight + 1
+      (stateView.getHeight + 1, blockHashOpt.get)
     }
 
     for(mcBlockRefData <- mainchainBlockReferencesData) {
@@ -367,13 +383,29 @@ object AccountState extends ScorexLogging {
     val receiptList = new ListBuffer[EthereumReceipt]()
 
     var cumGasUsed : BigInteger = BigInteger.ZERO
+    var txsCounter: Int = 0
+    var blockSize: Int = 0 // TODO we do not start from zero, get the starting size somehow
 
     for ((tx, txIndex) <- sidechainTransactions.zipWithIndex) {
+
       stateView.applyTransaction(tx, txIndex, cumGasUsed) match {
         case Success(consensusDataReceipt) =>
           val txGasUsed = consensusDataReceipt.cumulativeGasUsed.subtract(cumGasUsed)
           // update cumulative gas used so far
           cumGasUsed = consensusDataReceipt.cumulativeGasUsed
+
+          // TODO shall we check these also when applying modifier?
+          if (isForging) {
+            blockSize = blockSize + tx.bytes.length + 4 // placeholder for Tx length
+            txsCounter += 1
+
+            if (blockSizeExceeded(blockSize, txsCounter))
+              return Success(receiptList)
+
+            if (blockGasLimitExceeded(cumGasUsed))
+              return Success(receiptList)
+          }
+
           val ethTx = tx.asInstanceOf[EthereumTransaction]
 
           val txHash = idToBytes(ethTx.id)
@@ -399,7 +431,7 @@ object AccountState extends ScorexLogging {
           receiptList += fullReceipt
 
         case Failure(e) =>
-          if (Utils.isZerosHash(blockHash)) {
+          if (isForging) {
             // do not throw anything and just skip this tx
             log.info("Could not apply tx, reason: " + e.getMessage)
           } else {
