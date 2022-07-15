@@ -622,15 +622,13 @@ object SidechainHistory
                                       genesisBlock: SidechainBlock,
                                       semanticBlockValidators: Seq[SemanticBlockValidator],
                                       historyBlockValidators: Seq[HistoryBlockValidator],
-                                      stakeEpochInfo: StakeConsensusEpochInfo) : Try[SidechainHistory] = Try {
+                                      stakeEpochInfo: StakeConsensusEpochInfo) : Try[SidechainHistory] = {
 
     if (historyStorage.isEmpty) {
       val nonceEpochInfo = ConsensusDataProvider.calculateNonceForGenesisBlock(params)
       new SidechainHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
-        .append(genesisBlock).map(_._1).get.reportModifierIsValid(genesisBlock) match {
-        case Failure(exception) => ???
-        case Success(value) => value.applyFullConsensusInfo(genesisBlock.id, FullConsensusEpochInfo(stakeEpochInfo, nonceEpochInfo))
-      }
+        .append(genesisBlock).map(_._1).get.reportModifierIsValid(genesisBlock)
+        .map(_.applyFullConsensusInfo(genesisBlock.id, FullConsensusEpochInfo(stakeEpochInfo, nonceEpochInfo)))
     }
     else
       throw new RuntimeException("History storage is not empty!")

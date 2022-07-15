@@ -44,7 +44,7 @@ class CertificateSignaturesManager(networkControllerRef: ActorRef,
   private val getCertificateSignaturesSpec = new GetCertificateSignaturesSpec(signaturesLimit)
   private val certificateSignaturesSpec = new CertificateSignaturesSpec(signaturesLimit)
 
-  protected val msgHandlers: PartialFunction[(MessageSpec[_], _, ConnectedPeer), Unit] = {
+  override protected val msgHandlers: PartialFunction[(MessageSpec[_], _, ConnectedPeer), Unit] = {
     case (_: GetCertificateSignaturesSpec, data: InvUnknownSignatures@unchecked, remote) => getCertificateSignatures(data, remote)
     case (_: CertificateSignaturesSpec, data: KnownSignatures@unchecked, remote)         => certificateSignatures(data, remote)
   }

@@ -324,10 +324,7 @@ class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
       case Right(knownSignatures: KnownSignatures) =>
         assertArrayEquals("Invalid message to sign.", messageToSign, knownSignatures.messageToSign)
         assertEquals("Different known signatures entries found.", newSignaturesNumber, knownSignatures.signaturesInfo.size)
-        assertTrue("Different signatures indexes found.",
-          knownSignatures.signaturesInfo.exists(s => s.signature.bytes() sameElements signaturesInfo(0).signature.bytes()) &&
-          knownSignatures.signaturesInfo.exists(s => s.signature.bytes() sameElements signaturesInfo(1).signature.bytes())
-        )
+        assertEquals("Different signatures indexes found.", signaturesInfo.take(newSignaturesNumber), knownSignatures.signaturesInfo)
       case _ =>
         Assert.fail("Invalid message data")
     }

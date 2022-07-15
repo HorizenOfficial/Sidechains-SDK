@@ -537,17 +537,17 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
 
   private def checkStaticResponseFields(json: JsonNode, msgType: Int, requestId: Int, answerType: Int): Unit = {
     if (requestId == -1) {
-      assertTrue(json.has("msgType"))
-      assertEquals(msgType, json.get("msgType").asInt())
-      assertTrue(json.has("answerType"))
-      assertEquals(answerType, json.get("answerType").asInt())
+      assertTrue("Json is missing a required field msgType", json.has("msgType"))
+      assertEquals("Json field msgType value is incorrect", msgType, json.get("msgType").asInt())
+      assertTrue("Json is missing a required field answerType", json.has("answerType"))
+      assertEquals("Json field answerType value is incorrect", answerType, json.get("answerType").asInt())
     } else {
-      assertTrue(json.has("msgType"))
-      assertEquals(msgType, json.get("msgType").asInt())
-      assertTrue(json.has("requestId"))
-      assertEquals(requestId, json.get("requestId").asInt())
-      assertTrue(json.has("answerType"))
-      assertEquals(answerType, json.get("answerType").asInt())
+      assertTrue("Json is missing a required field msgType", json.has("msgType"))
+      assertEquals("Json field msgType value is incorrect", msgType, json.get("msgType").asInt())
+      assertTrue("Json is missing a required field requestId", json.has("requestId"))
+      assertEquals("Json field requestId value is incorrect", requestId, json.get("requestId").asInt())
+      assertTrue("Json is missing a required field answerType", json.has("answerType"))
+      assertEquals("Json field answerType value is incorrect", answerType, json.get("answerType").asInt())
     }
   }
 }
