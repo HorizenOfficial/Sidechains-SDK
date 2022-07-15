@@ -94,7 +94,7 @@ object AccountWalletRestScheme {
   private[api] case class RespGetBalance(balance: BigInteger) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqGetBalance(address: Option[String]) {
+  private[api] case class ReqGetBalance(address: String) {
     require(address.nonEmpty, "Empty address")
   }
 }
