@@ -77,6 +77,16 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
       }
 
+      Post(basePath + "createSmartContract") ~> sidechainTransactionApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+      }
+      Post(basePath + "createSmartContract").withEntity("maybe_a_json") ~> sidechainTransactionApiRoute ~> check {
+        rejection.getClass.getCanonicalName.contains(MalformedRequestContentRejection.getClass.getCanonicalName.toString)
+      }
+      Post(basePath + "createSmartContract") ~> Route.seal(sidechainTransactionApiRoute) ~> check {
+        status.intValue() shouldBe StatusCodes.BadRequest.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+      }
     }
 
     "reply at /allTransactions" in {
@@ -120,7 +130,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
       sidechainApiMockConfiguration.setShould_history_getTransactionsSortedByFee_return_value(true)
       Post(basePath + "sendCoinsToAddress")
         .withEntity(
-          SerializationUtil.serialize(ReqSendCoinsToAddress(Option.empty[String],
+          SerializationUtil.serialize(ReqSendCoinsToAddress(Option.empty[String],None,
             "00112233445566778899AABBCCDDEEFF01020304", 10))
         ) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue

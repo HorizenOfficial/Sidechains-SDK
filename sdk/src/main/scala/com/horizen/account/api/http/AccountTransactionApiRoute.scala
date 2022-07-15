@@ -38,7 +38,7 @@ import scala.collection.JavaConverters._
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.reflect.ClassTag
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                                       sidechainNodeViewHolderRef: ActorRef,
@@ -60,7 +60,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
 
   override val route: Route = (pathPrefix("transaction")) {
-    allTransactions ~ sendCoinsToAddress ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendRawTransaction ~ signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake
+    allTransactions ~ sendCoinsToAddress ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendRawTransaction ~ signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract
   }
 
   /**
@@ -277,7 +277,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         }
         //TODO Probably getFittingSecret would need to take into account also gas
         val secret = getFittingSecret(sidechainNodeView, None, valueInWei)
-       secret match {
+        secret match {
           case Some(secret) =>
 
             val to = BytesUtils.toHexString(ForgerStakeMsgProcessor.ForgerStakeSmartContractAddress.address())
@@ -387,6 +387,47 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               data,
               null
             );
+            validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
+          case None =>
+            ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
+        }
+
+      }
+    }
+  }
+
+  def createSmartContract: Route = (post & path("createSmartContract")) {
+    entity(as[ReqCreateContract]) { body =>
+      // lock the view and try to create CoreTransaction
+      applyOnNodeView { sidechainNodeView =>
+        val valueInWei = BigInteger.ZERO
+        // TODO actual gas implementation
+        var maxFeePerGas = BigInteger.ONE
+        var maxPriorityFeePerGas = BigInteger.ONE
+        var gasLimit = BigInteger.ONE
+        if (body.gasInfo.isDefined) {
+          maxFeePerGas = body.gasInfo.get.maxFeePerGas
+          maxPriorityFeePerGas = body.gasInfo.get.maxPriorityFeePerGas
+          gasLimit = body.gasInfo.get.gasLimit
+        }
+        //TODO Probably getFittingSecret would need to take into account also gas
+        val secret = getFittingSecret(sidechainNodeView, None, valueInWei)
+        secret match {
+          case Some(secret) =>
+            val to = null
+            val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
+            val data = body.contractCode
+            val tmpTx: EthereumTransaction = new EthereumTransaction(
+              body.chainId,
+              to,
+              nonce,
+              gasLimit,
+              maxPriorityFeePerGas,
+              maxFeePerGas,
+              valueInWei,
+              data,
+              null
+            )
             validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
           case None =>
             ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
@@ -521,6 +562,7 @@ object AccountTransactionRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqSendCoinsToAddress(from: Option[String],
+                                                nonce: Option[BigInteger],
                                                 to: String,
                                                 @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long) {
     require(to.nonEmpty, "Empty destination address")
@@ -548,6 +590,16 @@ object AccountTransactionRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqSendTransactionPost(transactionBytes: String)
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqCreateContract(chainId: Long,
+                                            nonce: Option[BigInteger],
+                                            contractCode: String,
+                                            gasInfo: Option[EIP1559GasInfo]) {
+    require(chainId > 0, "ChainId must be positive")
+    require(contractCode.nonEmpty, "Contract code must be provided")
+  }
+
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class TransactionIdDTO(transactionId: String) extends SuccessResponse
