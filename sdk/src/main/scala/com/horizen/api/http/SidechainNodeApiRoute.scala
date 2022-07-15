@@ -11,6 +11,7 @@ import com.horizen.api.http.SidechainNodeRestSchema._
 import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
+import scorex.core.network.ConnectedPeer
 import scorex.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
 import scorex.core.network.peer.PeerInfo
 import scorex.core.network.peer.PeerManager.ReceivableMessages.{Blacklisted, GetAllPeers, GetBlacklistedPeers, RemovePeer}
@@ -52,15 +53,16 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
 
   def connectedPeers: Route = (path("connectedPeers") & post) {
     try {
-      val result = askActor[Seq[PeerInfo]](networkController, GetConnectedPeers).map {
-        _.map { peerInfo =>
-          SidechainPeerNode(
-            address = peerInfo.peerSpec.address.map(_.toString).getOrElse(""),
-            lastSeen = peerInfo.lastHandshake,
-            name = peerInfo.peerSpec.nodeName,
-            connectionType = peerInfo.connectionType.map(_.toString)
-          )
-        }
+      val result = askActor[Seq[ConnectedPeer]](networkController, GetConnectedPeers).map {
+        _.flatMap(_.peerInfo)
+          .map { peerInfo =>
+            SidechainPeerNode(
+              address = peerInfo.peerSpec.address.map(_.toString).getOrElse(""),
+              lastSeen = peerInfo.lastHandshake,
+              name = peerInfo.peerSpec.nodeName,
+              connectionType = peerInfo.connectionType.map(_.toString)
+            )
+          }
       }
       val resultList = Await.result(result, settings.timeout).toList
       ApiResponseUtil.toResponse(RespAllPeers(resultList))
@@ -79,7 +81,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
             ApiResponseUtil.toResponse(ErrorInvalidHost("Incorrect host and/or port.", JOptional.empty()))
           case Some(addressAndPort) =>
             Try(InetAddress.getByName(addressAndPort.group(1))) match {
-              case Failure(exception) =>  SidechainApiError(exception)
+              case Failure(exception) => SidechainApiError(exception)
               case Success(host) =>
                 val port = addressAndPort.group(2).toInt
                 networkController ! ConnectTo(PeerInfo.fromAddress(new InetSocketAddress(host, port)))
@@ -124,11 +126,11 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
   }
 
   def stop: Route = (post & path("stop")) {
-    if (app.stopAllInProgress.compareAndSet(false, true) ) {
+    if (app.stopAllInProgress.compareAndSet(false, true)) {
       try {
         // we are stopping the node, and since we will shortly be closing network services lets do in a separate thread
         // and give some time to the HTTP reply to be transmitted immediately in this thread
-        new Thread( new Runnable() {
+        new Thread(new Runnable() {
           override def run(): Unit = {
             log.info("Stop command triggered...")
             sleep(500)
@@ -136,7 +138,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
             app.sidechainStopAll()
             log.info("... core application stop returned")
           }
-        } ).start()
+        }).start()
 
         ApiResponseUtil.toResponse(RespStop())
 
@@ -151,7 +153,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
 
   def getNodeStorageVersions: Route = (post & path("storageVersions")) {
     try {
-      val result = askActor[Map[String,String]](sidechainNodeViewHolderRef, GetStorageVersions)
+      val result = askActor[Map[String, String]](sidechainNodeViewHolderRef, GetStorageVersions)
         .map(x => RespGetNodeStorageVersions(x))
       val listOfVersions = Await.result(result, settings.timeout)
       ApiResponseUtil.toResponse(listOfVersions)
@@ -165,7 +167,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
       val sidechainId = BytesUtils.toHexString(BytesUtils.reverseBytes(params.sidechainId))
       ApiResponseUtil.toResponse(RespGetSidechainId(sidechainId))
     } catch {
-      case e: Throwable =>  SidechainApiError(e)
+      case e: Throwable => SidechainApiError(e)
     }
   }
 
@@ -198,7 +200,7 @@ object SidechainNodeRestSchema {
   private[api] case class ReqStop()
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespGetNodeStorageVersions(listOfVersions: Map[String,String]) extends SuccessResponse
+  private[api] case class RespGetNodeStorageVersions(listOfVersions: Map[String, String]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespStop() extends SuccessResponse

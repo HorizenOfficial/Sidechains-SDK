@@ -87,7 +87,13 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
         assertEquals(1, result.elements().asScala.length)
         assertTrue(result.get("peers").isArray)
         assertEquals(2, result.get("peers").elements().asScala.length)
-        val elems: Array[SidechainPeerNode] = connectedPeers.map(p => SidechainPeerNode(p.peerSpec.address.map(_.toString).getOrElse(""), p.lastHandshake, p.peerSpec.nodeName, p.connectionType.map(_.toString))).toArray
+        val elems: Array[SidechainPeerNode] = connectedPeers.flatMap(_.peerInfo)
+          .map(p => SidechainPeerNode(
+            p.peerSpec.address.map(_.toString).getOrElse(""),
+            p.lastHandshake,
+            p.peerSpec.nodeName,
+            p.connectionType.map(_.toString))
+          ).toArray
         val nodes = result.get("peers").elements().asScala.toArray
         val first: JsonNode = nodes(0)
         assertEquals(first.get("address").textValue(), elems(0).address)
@@ -189,7 +195,7 @@ class SidechainNodeApiRouteTest extends SidechainApiRouteTest {
         assertEquals(1, result.elements.asScala.length)
         assertTrue(result.get("sidechainId").isTextual)
         assertEquals(sidechainId, result.get("sidechainId").asText())
-     }
+      }
 
     }
 
