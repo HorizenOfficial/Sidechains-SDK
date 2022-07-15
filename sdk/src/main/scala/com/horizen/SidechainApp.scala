@@ -5,6 +5,7 @@ import akka.http.scaladsl.Http
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
 import java.util.{HashMap => JHashMap, List => JList}
+
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
@@ -49,11 +50,11 @@ import scorex.core.settings.ScorexSettings
 import scorex.core.transaction.Transaction
 import scorex.core.{ModifierTypeId, NodeViewModifier}
 import scorex.util.ScorexLogging
-
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.{HashMap => JHashMap, List => JList}
+
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.io.{Codec, Source}
@@ -63,8 +64,9 @@ import com.horizen.websocket.server.WebSocketServerRef
 import com.horizen.serialization.JsonHorizenPublicKeyHashSerializer
 import com.horizen.transaction.mainchain.SidechainCreation
 import scorex.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
-
 import java.util.concurrent.atomic.AtomicBoolean
+
+import com.horizen.fork.{ForkConfigurator, ForkManager}
 
 import scala.util.{Failure, Success, Try}
 
@@ -89,7 +91,8 @@ class SidechainApp @Inject()
    @Named("BackupStorage") val backUpStorage: Storage,
    @Named("CustomApiGroups") val customApiGroups: JList[ApplicationApiGroup],
    @Named("RejectedApiPaths") val rejectedApiPaths : JList[Pair[String, String]],
-   @Named("ApplicationStopper") val applicationStopper : SidechainAppStopper
+   @Named("ApplicationStopper") val applicationStopper : SidechainAppStopper,
+   @Named("ForkConfiguration") val forkConfigurator : ForkConfigurator
   )
   extends Application  with ScorexLogging
 {
@@ -368,6 +371,12 @@ class SidechainApp @Inject()
   //Websocket server for the Explorer
   if(sidechainSettings.websocket.wsServer) {
     val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocket.wsServerPort)
+  }
+
+  // Init ForkManager
+  forkConfigurator.check() match {
+    case Success(_) => ForkManager.init(forkConfigurator, sidechainSettings.genesisData.mcNetwork)
+    case Failure(exception) => throw exception
   }
 
   // Init API

@@ -1,0 +1,39 @@
+package com.horizen.fork
+
+import org.junit.Assert.{assertEquals, assertNotEquals}
+import org.junit.Test
+import org.scalatestplus.junit.JUnitSuite
+
+class ForkManagerTest extends JUnitSuite {
+  @Test
+  def ForkmangerTest: Unit = {
+    val simpleForkConfigurator = new SimpleForkConfigurator
+
+    var res = ForkManager.init(simpleForkConfigurator, "wrongname")
+    assertEquals("Expected failure on ForkManger initialization", true, res.isFailure)
+
+    res = ForkManager.init(new BadForkConfigurator, "regtest")
+    assertEquals("Expected failure on ForkManger initialization", true, res.isFailure)
+
+    res = ForkManager.init(simpleForkConfigurator, "regtest")
+    assertEquals("Expected successed ForkManger initialization", true, res.isSuccess)
+
+    res = ForkManager.init(simpleForkConfigurator, "regtest")
+    assertEquals("Expected failure on ForkManger initialization", true, res.isFailure)
+
+    val mainchainFork1 = ForkManager.getMainchainHeightFork(419)
+    assertEquals("Expected not to get mainchain fork", null, mainchainFork1)
+
+    val mainchainFork2 = ForkManager.getMainchainHeightFork(420)
+    assertNotEquals("Expected to get mainchain fork", null, mainchainFork2)
+
+    val sidechainConsensusFork1 = ForkManager.getSidechainConsensusEpochFork(9)
+    assertEquals("Expected not to get sidechain fork", null, sidechainConsensusFork1)
+
+    val sidechainConsensusFork2 = ForkManager.getSidechainConsensusEpochFork(10)
+    assertNotEquals("Expected to get sidechain fork", null, sidechainConsensusFork2)
+
+    val sidechainConsensusFork3 = ForkManager.getSidechainConsensusEpochFork(11)
+    assertNotEquals("Expected to get sidechain fork", null, sidechainConsensusFork3)
+  }
+}
