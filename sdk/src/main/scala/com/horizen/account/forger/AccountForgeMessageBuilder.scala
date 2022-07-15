@@ -5,7 +5,7 @@ import com.horizen.consensus._
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.{PrivateKey25519, Secret}
-import com.horizen.transaction.{Transaction, TransactionSerializer}
+import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.{ByteArrayWrapper, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree}
 import com.horizen._
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
@@ -14,6 +14,7 @@ import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceipt}
+import com.horizen.account.state.AccountState.applyAndGetReceipts
 import com.horizen.account.state.{AccountState, AccountStateView}
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.utils.Account
@@ -23,7 +24,7 @@ import com.horizen.forge.{AbstractForgeMessageBuilder, MainchainSynchronizer}
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import scorex.core.NodeViewModifier
 import scorex.core.block.Block.{BlockId, Timestamp}
-import scorex.util.{ModifierId, ScorexLogging}
+import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 
 import scala.collection.JavaConverters._
 import scala.util.Try
@@ -44,15 +45,32 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   type MS = AccountState
   type MP = AccountMemoryPool
 
-  def computeReceiptRoot(receiptList: Seq[EthereumReceipt]) : Array[Byte] = {
+  def computeReceiptRoot(receiptList: Seq[EthereumConsensusDataReceipt]) : Array[Byte] = {
     // 1. for each receipt item in list rlp encode and append to a new leaf list
     // 2. compute hash
-    TrieHasher.Root(receiptList.map(r => EthereumConsensusDataReceipt.rlpEncode(r.consensusDataReceipt)).toArray)
+    TrieHasher.Root(receiptList.map(EthereumConsensusDataReceipt.rlpEncode).toArray)
   }
 
-  def computeStateRoot(view: AccountStateView, sidechainTransactions: Seq[Transaction]) : (Array[Byte], Seq[EthereumReceipt]) = {
-    // TODO
-    (new Array[Byte](MerkleTree.ROOT_HASH_LENGTH), Seq())
+  def computeStateRoot(view: AccountStateView,
+                       sidechainTransactions:  Seq[SidechainTypes#SCAT],
+                       mainchainBlockReferencesData: Seq[MainchainBlockReferenceData]
+                      ): (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT]) = {
+
+    val receiptList = applyAndGetReceipts(view,
+      mainchainBlockReferencesData,
+      sidechainTransactions).get
+
+    val listOfAppliedTxHash = receiptList.map(r => new ByteArrayWrapper(r.transactionHash))
+
+    // get only the transactions for which we got a receipt
+    val appliedTransactions = sidechainTransactions.filter{
+      t => {
+        val txHash = idToBytes(t.id)
+        listOfAppliedTxHash.contains(new ByteArrayWrapper(txHash))
+      }
+    }
+
+    (view.stateDb.getIntermediateRoot, receiptList.map(_.consensusDataReceipt), appliedTransactions)
   }
 
   override def createNewBlock(
@@ -62,7 +80,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                  parentId: BlockId,
                  timestamp: Timestamp,
                  mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-                 sidechainTransactions: Seq[Transaction],
+                 sidechainTransactions: Seq[SidechainTypes#SCAT],
                  mainchainHeaders: Seq[MainchainHeader],
                  ommers: Seq[Ommer[ AccountBlockHeader]],
                  ownerPrivateKey: PrivateKey25519,
@@ -84,7 +102,9 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     //   - Logs
     val dummyView = nodeView.state.getView
 
-    val (stateRoot, receiptList) : (Array[Byte], Seq[EthereumReceipt]) = computeStateRoot(dummyView, sidechainTransactions)
+    val (stateRoot, receiptList, appliedTxList)
+    : (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT]) =
+      computeStateRoot(dummyView, sidechainTransactions, mainchainBlockReferencesData)
 
     dummyView.close()
 
@@ -98,9 +118,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       AccountBlock.ACCOUNT_BLOCK_VERSION,
       timestamp,
       mainchainBlockReferencesData,
-      // TODO check, why this works?
-      //  sidechainTransactions.map(asInstanceOf),
-      sidechainTransactions.map(x => x.asInstanceOf[SidechainTypes#SCAT]),
+      appliedTxList,
       mainchainHeaders,
       ommers,
       ownerPrivateKey,

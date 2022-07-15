@@ -47,8 +47,8 @@ class AccountBlock(override val header: AccountBlockHeader,
   }
 
   @throws(classOf[InconsistentSidechainBlockDataException])
-  def verifyReceiptDataConsistency(receiptList: Seq[EthereumReceipt]): Unit = {
-    val receiptRootHash = TrieHasher.Root(receiptList.map(r => EthereumConsensusDataReceipt.rlpEncode(r.consensusDataReceipt)).toArray)
+  def verifyReceiptDataConsistency(receiptList: Seq[EthereumConsensusDataReceipt]): Unit = {
+    val receiptRootHash = TrieHasher.Root(receiptList.map(EthereumConsensusDataReceipt.rlpEncode).toArray)
     if (!java.util.Arrays.equals(receiptRootHash, header.receiptsRoot)) {
       log.error("CHECK IS DISABLED: update forger & bootstrapping tool first!")
       // TODO: uncomment when ready
@@ -56,6 +56,14 @@ class AccountBlock(override val header: AccountBlockHeader,
     }
   }
 
+  @throws(classOf[InconsistentSidechainBlockDataException])
+  def verifyStateRootDataConsistency(stateRoot: Array[Byte]): Unit = {
+    if (!java.util.Arrays.equals(stateRoot, header.stateRoot)) {
+      log.error("CHECK IS DISABLED: update forger & bootstrapping tool first!")
+      // TODO: uncomment when ready
+      //throw new InconsistentSidechainBlockDataException("invalid receipt root hash")
+    }
+  }
   override def versionIsValid(): Boolean = version == AccountBlock.ACCOUNT_BLOCK_VERSION
 }
 
@@ -159,6 +167,7 @@ object AccountBlock extends ScorexEncoding {
     //  which is not true currently because the serializer prepends the payload with the length
     Utils.ZEROS_HASH
     // TODO: uncomment this when ready. Note: case with no txs.
+    // Note: bootstrapping tool as of now will fail when called from py stf, since libevm traces are printed on stdout
     //TrieHasher.Root(sidechainTransactions.map(tx => tx.bytes).toArray)
   }
 }

@@ -323,7 +323,7 @@ abstract class AbstractForgeMessageBuilder[
                      parentBlockId: Block.BlockId,
                      timestamp: Block.Timestamp,
                      mainchainReferenceData: Seq[MainchainBlockReferenceData],
-                     sidechainTransactions: Seq[Transaction],
+                     sidechainTransactions: Seq[TX],
                      mainchainHeaders: Seq[MainchainHeader],
                      ommers: Seq[Ommer[H]],
                      blockSignPrivateKey: PrivateKey25519,
