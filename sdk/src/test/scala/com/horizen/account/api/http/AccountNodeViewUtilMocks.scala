@@ -2,26 +2,28 @@ package com.horizen.account.api.http
 
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.state.{AccountForgingStakeInfo, ForgerPublicKeys, ForgerStakeData}
+import com.horizen.account.state.{AccountForgingStakeInfo, ForgerPublicKeys, ForgerStakeData, WithdrawalRequest}
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.api.http.SidechainApiMockConfiguration
 import com.horizen.fixtures._
 import com.horizen.node.NodeWalletBase
-import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
+import com.horizen.proposition.{MCPublicKeyHashProposition, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.utils.BytesUtils
-import org.mockito.Mockito
+import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
 import org.web3j.crypto.{Keys, RawTransaction, Sign, SignedRawTransaction}
 
 import java.math.BigInteger
-import scala.collection.JavaConverters._
 import java.util
+import scala.collection.JavaConverters._
+import scala.util.Random
 
 class AccountNodeViewUtilMocks extends MockitoSugar with BoxFixture with CompanionsFixture {
 
   val transactionList: util.List[EthereumTransaction] = getTransactionList
   val listOfStakes: Seq[AccountForgingStakeInfo] = getListOfStakes
+  val listOfWithdrawalRequests: Seq[WithdrawalRequest] = getListOfWithdrawalRequests
 
   def getNodeHistoryMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeAccountHistory = {
     val history: NodeAccountHistory = mock[NodeAccountHistory]
@@ -32,6 +34,7 @@ class AccountNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compani
   def getNodeStateMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeAccountState = {
     val accountState = mock[NodeAccountState]
     Mockito.when(accountState.getListOfForgerStakes).thenAnswer(_ => listOfStakes)
+    Mockito.when(accountState.withdrawalRequests(ArgumentMatchers.anyInt())).thenAnswer(_ => listOfWithdrawalRequests)
 
     accountState
   }
@@ -60,7 +63,6 @@ class AccountNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compani
     list
   }
 
-  getListOfStakes
   def getListOfStakes: Seq[AccountForgingStakeInfo] = {
     val list: util.List[AccountForgingStakeInfo] = new util.ArrayList[AccountForgingStakeInfo]()
     val owner: AddressProposition = new AddressProposition(BytesUtils.fromHexString("00aabbcc9900aabbcc9900aabbcc9900aabbcc99"))
@@ -68,10 +70,22 @@ class AccountNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compani
     val vrfPublicKey = new VrfPublicKey(BytesUtils.fromHexString("aabbccddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff001234")) // 33 bytes
 
     val forgerKeys = new ForgerPublicKeys(blockSignerProposition, vrfPublicKey)
-    val forgingStakeData = new ForgerStakeData(forgerKeys,owner, BigInteger.ONE)
-    val stake = new AccountForgingStakeInfo(new Array[Byte](32),forgingStakeData)
+    val forgingStakeData = new ForgerStakeData(forgerKeys, owner, BigInteger.ONE)
+    val stake = new AccountForgingStakeInfo(new Array[Byte](32), forgingStakeData)
     list.add(stake)
     list.asScala
+  }
+
+
+  def getListOfWithdrawalRequests: Seq[WithdrawalRequest] = {
+    val list: util.List[WithdrawalRequest] = new util.ArrayList[WithdrawalRequest]()
+    val mcAddr = new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte))
+    println(s"Proposition ${mcAddr.bytes()}")
+    val valueInWei = ZenWeiConverter.convertZenniesToWei(123)
+    val request = new WithdrawalRequest(mcAddr, valueInWei)
+    list.add(request)
+    list.asScala
+
   }
 
   def getNodeMemoryPoolMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeAccountMemoryPool = {

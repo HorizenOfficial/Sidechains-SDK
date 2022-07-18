@@ -138,6 +138,26 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
       }
     }
 
+    "reply at /allWithdrawalRequests" in {
+      val epochNum = 102
+      Post(basePath + "allWithdrawalRequests").withEntity(SerializationUtil.serialize(ReqAllWithdrawalRequests(epochNum)))~> sidechainTransactionApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        println(result)
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("listOfWR").isArray)
+        assertEquals(1, result.get("listOfWR").elements().asScala.length)
+        val stakesJsonNode = result.get("listOfWR").elements().asScala.toList
+        for (i <- 0 to stakesJsonNode.size - 1)
+          jsonChecker.assertsOnWithdrawalRequestJson(stakesJsonNode(i), utilMocks.listOfWithdrawalRequests(i))
+     }
+    }
+
+
 
     "reply at /allForgingStakes" in {
       Post(basePath + "allForgingStakes") ~> sidechainTransactionApiRoute ~> check {
@@ -150,7 +170,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
 
         assertEquals(1, result.elements().asScala.length)
         assertTrue(result.get("listOStakes").isArray)
-        assertEquals(1, result.get("listOStakes").elements().asScala.length)
+        assertEquals(utilMocks.listOfStakes.size, result.get("listOStakes").elements().asScala.length)
         val stakesJsonNode = result.get("listOStakes").elements().asScala.toList
         for (i <- 0 to stakesJsonNode.size - 1)
           jsonChecker.assertsOnAccountStakeInfoJson(stakesJsonNode(i), utilMocks.listOfStakes(i))

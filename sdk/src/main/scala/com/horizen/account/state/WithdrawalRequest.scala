@@ -1,14 +1,19 @@
 package com.horizen.account.state
 
+import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.account.abi.ABIEncodable
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.proposition.{MCPublicKeyHashProposition, MCPublicKeyHashPropositionSerializer}
+import com.horizen.serialization.Views
 import org.web3j.abi.datatypes.StaticStruct
 import org.web3j.abi.datatypes.generated.{Bytes20, Uint256}
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
+
 import java.math.BigInteger
 
+@JsonView(Array(classOf[Views.Default]))
+@JsonIgnoreProperties(Array("valueInZennies"))
 case class WithdrawalRequest(proposition: MCPublicKeyHashProposition, value: java.math.BigInteger) extends BytesSerializable with ABIEncodable {
   override type M = WithdrawalRequest
 

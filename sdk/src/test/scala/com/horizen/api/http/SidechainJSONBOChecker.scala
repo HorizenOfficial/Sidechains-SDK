@@ -1,7 +1,7 @@
 package com.horizen.api.http
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.horizen.account.state.AccountForgingStakeInfo
+import com.horizen.account.state.{AccountForgingStakeInfo, WithdrawalRequest}
 import com.horizen.account.transaction.AccountTransaction
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlock}
 import com.horizen.box.{Box, BoxUnlocker}
@@ -92,6 +92,13 @@ class SidechainJSONBOChecker {
     assertTrue(json.get("stakeId").isTextual)
     assertEquals(BytesUtils.toHexString(stakeInfo.stakeId), json.get("stakeId").asText())
     assertEquals(3,json.get("forgerStakeData").elements().asScala.length)
+  }
+
+  def assertsOnWithdrawalRequestJson(json: JsonNode, request: WithdrawalRequest): Unit = {
+    assertEquals(2, json.elements().asScala.length)
+    assertTrue(json.get("proposition").get("mainchainAddress").isTextual)
+    assertTrue(json.get("value").isNumber)
+    assertEquals(request.value, json.get("value").bigIntegerValue())
   }
 
   def assertsOnBoxUnlockerJson(json: JsonNode, boxUnlocker: BoxUnlocker[_]): Unit = {
