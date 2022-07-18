@@ -64,6 +64,7 @@ class AccountBlock(override val header: AccountBlockHeader,
       //throw new InconsistentSidechainBlockDataException("invalid receipt root hash")
     }
   }
+
   override def versionIsValid(): Boolean = version == AccountBlock.ACCOUNT_BLOCK_VERSION
 }
 

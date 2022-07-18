@@ -171,6 +171,8 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     } else { // SC block is in the middle of the epoch
       // no checks of the block size here, these txes are the candidates and their inclusion
       // will be attempted by forger
+
+      // TODO sort by address and nonce, and then preserving nonce ordering, sort by gas limit
       nodeView.pool.take(nodeView.pool.size).toSeq
     }
   }

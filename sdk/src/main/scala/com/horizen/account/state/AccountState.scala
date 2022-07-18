@@ -121,6 +121,7 @@ class AccountState(val params: NetworkParams,
 
     // check stateRoot and receiptRoot against block header
     mod.verifyReceiptDataConsistency(receiptList.map(_.consensusDataReceipt))
+
     val stateRoot = stateView.stateDb.getIntermediateRoot
     mod.verifyStateRootDataConsistency(stateRoot)
 
@@ -365,7 +366,7 @@ object AccountState extends ScorexLogging {
 
     // this function can be called when forging a block or when processing a received block
     // In the former case:
-    //   1. we do not have (and do not need) the height and the block hash
+    //   1. we do not have (and do not need) height and the block hash
     //   2. we must skip tx not applicable to the current state
     //   3. we must include tx up to the block gas limit threshold
     val isForging = blockHashOpt.isEmpty
