@@ -42,6 +42,7 @@ public class EthereumEvent {
         if (methods.length > 0) {
             for (var method : methods) {
                 if (method.getAnnotation(Parameter.class) == null) continue;
+                if(!method.canAccess(eventInstance)) throw new IllegalAccessException("Error: No access to method, check access modifiers");
                 var indexed = method.getAnnotation(Indexed.class) == null ? false : true;
                 annotatedParams.put(method.getAnnotation(Parameter.class).value(), new EventParameterData(indexed, method.getReturnType(), method.invoke(eventInstance)));
             }
@@ -49,10 +50,12 @@ public class EthereumEvent {
             Field[] fields = eventInstance.getClass().getDeclaredFields();
             for (var field : fields) {
                 if (field.getAnnotation(Parameter.class) == null) continue;
+                if(!field.canAccess(eventInstance)) throw new IllegalAccessException("Error: No access to field, check access modifiers");
                 var indexed = field.getAnnotation(Indexed.class) == null ? false : true;
                 annotatedParams.put(field.getAnnotation(Parameter.class).value(), new EventParameterData(indexed, field.getType(), field.get(eventInstance)));
             }
         }
+        if (annotatedParams.size() <= 0) throw new IllegalArgumentException("Error while trying the get the parameter data: No annotated methods or fields found while given class contains methods or fields");
         return annotatedParams;
     }
 
@@ -69,7 +72,7 @@ public class EthereumEvent {
         List<Hash> topics = new ArrayList<>();
         ByteArrayOutputStream dataOutputStream = new ByteArrayOutputStream();
 
-        if (anonymous)
+        if (!anonymous)
             topics.add(Hash.FromBytes(Numeric.hexStringToByteArray(EventEncoder.encode(new Event(eventFunction.getName(), new ArrayList<>(eventFunction.getOutputParameters()))))));
 
         for (var i = 0; i < eventFunction.getOutputParameters().size(); i++) {
@@ -82,6 +85,7 @@ public class EthereumEvent {
                 dataOutputStream.write(encodedValue);
             }
         }
+        if (topics.size() > 4) throw new IllegalArgumentException("Error: More than four topics defined - defined topics: " + topics.size());
         return new EvmLog(address, topics.toArray(new Hash[topics.size()]), dataOutputStream.toByteArray());
     }
 
