@@ -1,14 +1,27 @@
 package com.horizen.account.event;
 
+import com.horizen.evm.interop.EvmLog;
 import org.junit.Before;
 import org.junit.Test;
+import org.web3j.abi.EventEncoder;
 import org.web3j.abi.datatypes.Address;
+import org.web3j.abi.datatypes.Event;
 import org.web3j.abi.datatypes.generated.Uint256;
+import org.web3j.rlp.RlpEncoder;
+import org.web3j.rlp.RlpList;
+import org.web3j.rlp.RlpString;
+import org.web3j.rlp.RlpType;
+import org.web3j.utils.Numeric;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.List;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 public class EthereumEventTest {
@@ -46,18 +59,18 @@ public class EthereumEventTest {
 
         @Parameter(1)
         @Indexed
-        public Address getFrom(){
+        public Address getFrom() {
             return this.from;
         }
 
         @Parameter(2)
         @Indexed
-        public Address getTo(){
+        public Address getTo() {
             return this.to;
         }
 
         @Parameter(3)
-        public Uint256 getValue(){
+        public Uint256 getValue() {
             return this.value;
         }
     }
@@ -67,25 +80,34 @@ public class EthereumEventTest {
     }
 
     @Test
-    public void ethereumEventTest() throws ClassNotFoundException, IOException, IllegalAccessException, InvocationTargetException, InstantiationException, NoSuchMethodException {
+    public void ethereumEventTest() throws ClassNotFoundException, IOException, IllegalAccessException, InvocationTargetException {
         MyEvent1 event1 = new MyEvent1(new Address(BigInteger.TEN), new Address(BigInteger.ONE), new Uint256(BigInteger.TWO));
-        var expectedLog = "EvmLog (log consensus data) {address=1122334455667788990011223344556677889900, topics=topics{ 000000000000000000000000000000000000000000000000000000000000000a 0000000000000000000000000000000000000000000000000000000000000001}, data=0000000000000000000000000000000000000000000000000000000000000002}";
-        assertEquals(EthereumEvent.getEvmLog(new Address("1122334455667788990011223344556677889900"), event1).toString(), expectedLog);
+        checkEvmLog(EthereumEvent.getEvmLog(new Address("1122334455667788990011223344556677889900"), event1),
+                Numeric.hexStringToByteArray("0xf878941122334455667788990011223344556677889900a0000000000000000000000000000000000000000000000000000000000000000aa00000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000000000000000000000000000000000000000000002"));
 
         MyEvent2 event2 = new MyEvent2(new Address(BigInteger.TEN), new Address(BigInteger.ONE), new Uint256(BigInteger.TWO));
-        expectedLog = "EvmLog (log consensus data) {address=1122334455667788990011223344556677889900, topics=topics{ 38402c0f573a9575ada72aeb0f435fc33c403a134bf3136bb289f2d9ffa334a0 000000000000000000000000000000000000000000000000000000000000000a 0000000000000000000000000000000000000000000000000000000000000001}, data=0000000000000000000000000000000000000000000000000000000000000002}";
-        assertEquals(EthereumEvent.getEvmLog(new Address("1122334455667788990011223344556677889900"), event2).toString(), expectedLog);
+        checkEvmLog(EthereumEvent.getEvmLog(new Address("1122334455667788990011223344556677889900"), event2),
+                Numeric.hexStringToByteArray("0xf899941122334455667788990011223344556677889900a038402c0f573a9575ada72aeb0f435fc33c403a134bf3136bb289f2d9ffa334a0a0000000000000000000000000000000000000000000000000000000000000000aa00000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000000000000000000000000000000000000000000002"));
 
         CaseClassTestEvent1 event3 = new CaseClassTestEvent1(new Address(BigInteger.ONE), new Uint256(BigInteger.TWO));
-        expectedLog = "EvmLog (log consensus data) {address=1122334455667788990011223344556677889900, topics=topics{ 0000000000000000000000000000000000000000000000000000000000000001}, data=0000000000000000000000000000000000000000000000000000000000000002}";
-        assertEquals(EthereumEvent.getEvmLog(new Address("1122334455667788990011223344556677889900"), event3).toString(), expectedLog);
+        checkEvmLog(EthereumEvent.getEvmLog(new Address("1122334455667788990011223344556677889900"), event3),
+                Numeric.hexStringToByteArray("0xf857941122334455667788990011223344556677889900a00000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000000000000000000000000000000000000000000002"));
 
         CaseClassTestEvent2 event4 = new CaseClassTestEvent2(new Address(BigInteger.ONE), new Uint256(BigInteger.TWO));
-        expectedLog = "EvmLog (log consensus data) {address=1122334455667788990011223344556677889900, topics=topics{ 0000000000000000000000000000000000000000000000000000000000000002}, data=0000000000000000000000000000000000000000000000000000000000000001}";
-        assertEquals(EthereumEvent.getEvmLog(new Address("1122334455667788990011223344556677889900"), event4).toString(), expectedLog);
+        checkEvmLog(EthereumEvent.getEvmLog(new Address("1122334455667788990011223344556677889900"), event4),
+                Numeric.hexStringToByteArray("0xf857941122334455667788990011223344556677889900a00000000000000000000000000000000000000000000000000000000000000002a00000000000000000000000000000000000000000000000000000000000000001"));
+
     }
 
-
+    private void checkEvmLog(EvmLog log, byte[] expected) {
+        List<RlpType> list = new ArrayList();
+        list.add(RlpString.create(log.address.toBytes()));
+        for (var topic : log.topics) {
+            list.add(RlpString.create(topic.toBytes()));
+        }
+        list.add(RlpString.create(log.data));
+        assertArrayEquals(RlpEncoder.encode(new RlpList(list)), expected);
+    }
 
     /*
     Example 1:
