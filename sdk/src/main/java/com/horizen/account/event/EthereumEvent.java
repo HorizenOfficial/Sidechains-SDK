@@ -3,31 +3,25 @@ package com.horizen.account.event;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.horizen.evm.interop.EvmLog;
 import com.horizen.evm.utils.Hash;
-import org.web3j.abi.*;
-import org.web3j.abi.datatypes.*;
+import org.web3j.abi.EventEncoder;
+import org.web3j.abi.TypeEncoder;
+import org.web3j.abi.TypeReference;
+import org.web3j.abi.datatypes.Address;
+import org.web3j.abi.datatypes.Event;
+import org.web3j.abi.datatypes.Function;
 import org.web3j.abi.datatypes.Type;
 import org.web3j.utils.Numeric;
 import scorex.crypto.hash.Keccak256;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.lang.reflect.*;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.*;
 
 public class EthereumEvent {
     public EthereumEvent() {
-    }
-
-    private static class EventParameterData {
-        Boolean indexed;
-        Object annotatedParam;
-        Object value;
-
-        public EventParameterData(Boolean indexed, Object annotatedParam, Object value) {
-            this.indexed = indexed;
-            this.annotatedParam = annotatedParam;
-            this.value = value;
-        }
     }
 
     /**
@@ -42,20 +36,23 @@ public class EthereumEvent {
         if (methods.length > 0) {
             for (var method : methods) {
                 if (method.getAnnotation(Parameter.class) == null) continue;
-                if(!method.canAccess(eventInstance)) throw new IllegalAccessException("Error: No access to method, check access modifiers");
-                var indexed = method.getAnnotation(Indexed.class) == null ? false : true;
+                if (!method.canAccess(eventInstance))
+                    throw new IllegalAccessException("Error: No access to method, check access modifiers");
+                var indexed = method.getAnnotation(Indexed.class) != null;
                 annotatedParams.put(method.getAnnotation(Parameter.class).value(), new EventParameterData(indexed, method.getReturnType(), method.invoke(eventInstance)));
             }
         } else {
             Field[] fields = eventInstance.getClass().getDeclaredFields();
             for (var field : fields) {
                 if (field.getAnnotation(Parameter.class) == null) continue;
-                if(!field.canAccess(eventInstance)) throw new IllegalAccessException("Error: No access to field, check access modifiers");
-                var indexed = field.getAnnotation(Indexed.class) == null ? false : true;
+                if (!field.canAccess(eventInstance))
+                    throw new IllegalAccessException("Error: No access to field, check access modifiers");
+                var indexed = field.getAnnotation(Indexed.class) != null;
                 annotatedParams.put(field.getAnnotation(Parameter.class).value(), new EventParameterData(indexed, field.getType(), field.get(eventInstance)));
             }
         }
-        if (annotatedParams.size() <= 0) throw new IllegalArgumentException("Error while trying the get the parameter data: No annotated methods or fields found while given class contains methods or fields");
+        if (annotatedParams.size() <= 0)
+            throw new IllegalArgumentException("Error while trying the get the parameter data: No annotated methods or fields found while given class contains methods or fields");
         return annotatedParams;
     }
 
@@ -85,7 +82,8 @@ public class EthereumEvent {
                 dataOutputStream.write(encodedValue);
             }
         }
-        if (topics.size() > 4) throw new IllegalArgumentException("Error: More than four topics defined - defined topics: " + topics.size());
+        if (topics.size() > 4)
+            throw new IllegalArgumentException("Error: More than four topics defined - defined topics: " + topics.size());
         return new EvmLog(address, topics.toArray(new Hash[topics.size()]), dataOutputStream.toByteArray());
     }
 
@@ -125,5 +123,17 @@ public class EthereumEvent {
         Function transfer = new Function(classRef.getSimpleName(), convertedParams, parametersTypeRef);
 
         return createEvmLog(contractAddress, transfer, classRef);
+    }
+
+    private static class EventParameterData {
+        Boolean indexed;
+        Object annotatedParam;
+        Object value;
+
+        public EventParameterData(Boolean indexed, Object annotatedParam, Object value) {
+            this.indexed = indexed;
+            this.annotatedParam = annotatedParam;
+            this.value = value;
+        }
     }
 }

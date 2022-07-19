@@ -1,7 +1,6 @@
 package com.horizen.account.event;
 
 import com.horizen.evm.interop.EvmLog;
-import com.horizen.evm.utils.Hash;
 import org.junit.Test;
 import org.web3j.abi.TypeEncoder;
 import org.web3j.abi.datatypes.Address;
@@ -23,160 +22,6 @@ import java.util.List;
 import static org.junit.Assert.*;
 
 public class EthereumEventTest {
-
-    private class ClassTestEvent1 {
-        @Indexed
-        @Parameter(1)
-        public final Address from;
-
-        @Indexed
-        @Parameter(3)
-        public final Address to;
-
-        @Parameter(2)
-        public final Uint256 value;
-
-        public ClassTestEvent1(Address from, Address to, Uint256 value) {
-            this.from = from;
-            this.to = to;
-            this.value = value;
-        }
-    }
-
-    @Anonymous
-    private class ClassTestEvent2 {
-        private Address from;
-        private Address to;
-        private Uint256 value;
-
-        public ClassTestEvent2(Address from, Address to, Uint256 value) {
-            this.from = from;
-            this.to = to;
-            this.value = value;
-        }
-
-        @Parameter(1)
-        @Indexed
-        public Address getFrom() {
-            return this.from;
-        }
-
-        @Parameter(2)
-        @Indexed
-        public Address getTo() {
-            return this.to;
-        }
-
-        @Parameter(3)
-        public Uint256 getValue() {
-            return this.value;
-        }
-    }
-
-    @Anonymous
-    private class ClassTestEvent3 {
-        private Address from;
-        private Address to;
-        private Uint256 value;
-
-        public ClassTestEvent3(Address from, Address to, Uint256 value) {
-            this.from = from;
-            this.to = to;
-            this.value = value;
-        }
-
-        public Address getFrom() {
-            return this.from;
-        }
-
-        public Address getTo() {
-            return this.to;
-        }
-
-        public Uint256 getValue() {
-            return this.value;
-        }
-    }
-
-    private class ClassTestEvent4 {
-        @Indexed
-        @Parameter(1)
-        public final Address from;
-        @Indexed
-        @Parameter(2)
-        public final Address to;
-        @Indexed
-        @Parameter(3)
-        public final Address oldOwner;
-        @Indexed
-        @Parameter(4)
-        public final Address newOwner;
-        @Parameter(5)
-        public final Uint256 value;
-
-        public ClassTestEvent4(Address from, Address to, Address oldOwner, Address newOwner, Uint256 value) {
-            this.from = from;
-            this.to = to;
-            this.oldOwner = oldOwner;
-            this.newOwner = newOwner;
-            this.value = value;
-        }
-    }
-
-    private class ClassTestEvent5 {
-        @Indexed
-        @Parameter(1)
-        public final Address from;
-        @Indexed
-        @Parameter(2)
-        private final Address to;
-        @Parameter(5)
-        public final Uint256 value;
-
-        public ClassTestEvent5(Address from, Address to, Uint256 value) {
-            this.from = from;
-            this.to = to;
-            this.value = value;
-        }
-    }
-
-    /*
-     Example 1: https://etherscan.io/tx/0xb55697d90702908180be9efb78ff556e2caffeda17d06d84d21b6ffa9bc86450#eventlog
-
-     Function: Transfer(indexed address, indexed address, uint256)
-
-     {
-       "topics": [
-         "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-         "0x000000000000000000000000c12e077934a3c783d7a42dc5f6d6435ef3d04705",
-         "0x00000000000000000000000027239549dd40e1d60f5b80b0c4196923745b1fd2"
-       ],
-       "blockNumber": "0xe76dbb",
-       "transactionHash": "0xb55697d90702908180be9efb78ff556e2caffeda17d06d84d21b6ffa9bc86450",
-       "transactionIndex": "0x145",
-       "address": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-       "data": "0x000000000000000000000000000000000000000000000000016345785d8a0000",
-       "blockHash": "0xdb0aa07aff2008b0eac1e23d12d62b12f000957967667e08165ab6d3e541639e",
-       "logIndex": "0x251",
-       "removed": false
-     }
-    */
-    private class Transfer {
-        @Indexed
-        @Parameter(1)
-        public final Address from;
-        @Indexed
-        @Parameter(2)
-        public final Address to;
-        @Parameter(3)
-        public final Uint256 value;
-
-        private Transfer(Address from, Address to, Uint256 value) {
-            this.from = from;
-            this.to = to;
-            this.value = value;
-        }
-    }
 
     @Test
     public void ethereumEventTest() throws ClassNotFoundException, IOException, IllegalAccessException, InvocationTargetException {
@@ -250,5 +95,159 @@ public class EthereumEventTest {
         assertArrayEquals(Numeric.hexStringToByteArray("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"), log.address.toBytes());
         assertArrayEquals(Numeric.hexStringToByteArray("0x000000000000000000000000000000000000000000000000016345785d8a0000"), log.data);
         checkEvmLog(log, Numeric.hexStringToByteArray("0xf89994c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2a0ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3efa0000000000000000000000000c12e077934a3c783d7a42dc5f6d6435ef3d04705a000000000000000000000000027239549dd40e1d60f5b80b0c4196923745b1fd2a0000000000000000000000000000000000000000000000000016345785d8a0000"));
+    }
+
+    private class ClassTestEvent1 {
+        @Indexed
+        @Parameter(1)
+        public final Address from;
+
+        @Indexed
+        @Parameter(3)
+        public final Address to;
+
+        @Parameter(2)
+        public final Uint256 value;
+
+        public ClassTestEvent1(Address from, Address to, Uint256 value) {
+            this.from = from;
+            this.to = to;
+            this.value = value;
+        }
+    }
+
+    @Anonymous
+    private class ClassTestEvent2 {
+        private final Address from;
+        private final Address to;
+        private final Uint256 value;
+
+        public ClassTestEvent2(Address from, Address to, Uint256 value) {
+            this.from = from;
+            this.to = to;
+            this.value = value;
+        }
+
+        @Parameter(1)
+        @Indexed
+        public Address getFrom() {
+            return this.from;
+        }
+
+        @Parameter(2)
+        @Indexed
+        public Address getTo() {
+            return this.to;
+        }
+
+        @Parameter(3)
+        public Uint256 getValue() {
+            return this.value;
+        }
+    }
+
+    @Anonymous
+    private class ClassTestEvent3 {
+        private final Address from;
+        private final Address to;
+        private final Uint256 value;
+
+        public ClassTestEvent3(Address from, Address to, Uint256 value) {
+            this.from = from;
+            this.to = to;
+            this.value = value;
+        }
+
+        public Address getFrom() {
+            return this.from;
+        }
+
+        public Address getTo() {
+            return this.to;
+        }
+
+        public Uint256 getValue() {
+            return this.value;
+        }
+    }
+
+    private class ClassTestEvent4 {
+        @Indexed
+        @Parameter(1)
+        public final Address from;
+        @Indexed
+        @Parameter(2)
+        public final Address to;
+        @Indexed
+        @Parameter(3)
+        public final Address oldOwner;
+        @Indexed
+        @Parameter(4)
+        public final Address newOwner;
+        @Parameter(5)
+        public final Uint256 value;
+
+        public ClassTestEvent4(Address from, Address to, Address oldOwner, Address newOwner, Uint256 value) {
+            this.from = from;
+            this.to = to;
+            this.oldOwner = oldOwner;
+            this.newOwner = newOwner;
+            this.value = value;
+        }
+    }
+
+    private class ClassTestEvent5 {
+        @Indexed
+        @Parameter(1)
+        public final Address from;
+        @Parameter(5)
+        public final Uint256 value;
+        @Indexed
+        @Parameter(2)
+        private final Address to;
+
+        public ClassTestEvent5(Address from, Address to, Uint256 value) {
+            this.from = from;
+            this.to = to;
+            this.value = value;
+        }
+    }
+
+    /*
+     Example 1: https://etherscan.io/tx/0xb55697d90702908180be9efb78ff556e2caffeda17d06d84d21b6ffa9bc86450#eventlog
+
+     Function: Transfer(indexed address, indexed address, uint256)
+
+     {
+       "topics": [
+         "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+         "0x000000000000000000000000c12e077934a3c783d7a42dc5f6d6435ef3d04705",
+         "0x00000000000000000000000027239549dd40e1d60f5b80b0c4196923745b1fd2"
+       ],
+       "blockNumber": "0xe76dbb",
+       "transactionHash": "0xb55697d90702908180be9efb78ff556e2caffeda17d06d84d21b6ffa9bc86450",
+       "transactionIndex": "0x145",
+       "address": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+       "data": "0x000000000000000000000000000000000000000000000000016345785d8a0000",
+       "blockHash": "0xdb0aa07aff2008b0eac1e23d12d62b12f000957967667e08165ab6d3e541639e",
+       "logIndex": "0x251",
+       "removed": false
+     }
+    */
+    private class Transfer {
+        @Indexed
+        @Parameter(1)
+        public final Address from;
+        @Indexed
+        @Parameter(2)
+        public final Address to;
+        @Parameter(3)
+        public final Uint256 value;
+
+        private Transfer(Address from, Address to, Uint256 value) {
+            this.from = from;
+            this.to = to;
+            this.value = value;
+        }
     }
 }
