@@ -75,7 +75,7 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
 //  val mainchainBlockReferenceInfoRef = utilMocks.mainchainBlockReferenceInfoRef
 //
   val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
-  Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 100 seconds)
+  Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 1 seconds)
 
 //  val mockedSidechainSettings: SidechainSettings = mock[SidechainSettings]
 //  Mockito.when(mockedSidechainSettings.scorexSettings).thenAnswer(_ => {

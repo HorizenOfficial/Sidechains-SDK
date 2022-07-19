@@ -95,10 +95,12 @@ class SidechainJSONBOChecker {
   }
 
   def assertsOnWithdrawalRequestJson(json: JsonNode, request: WithdrawalRequest): Unit = {
-    assertEquals(2, json.elements().asScala.length)
+    assertEquals(3, json.elements().asScala.length)
     assertTrue(json.get("proposition").get("mainchainAddress").isTextual)
     assertTrue(json.get("value").isNumber)
     assertEquals(request.value, json.get("value").bigIntegerValue())
+    assertTrue(json.get("valueInZennies").isNumber)
+    assertEquals(request.valueInZennies, json.get("valueInZennies").asLong())
   }
 
   def assertsOnBoxUnlockerJson(json: JsonNode, boxUnlocker: BoxUnlocker[_]): Unit = {
