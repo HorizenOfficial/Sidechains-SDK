@@ -91,7 +91,6 @@ class AccountNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compani
   def getListOfWithdrawalRequests: Seq[WithdrawalRequest] = {
     val list: util.List[WithdrawalRequest] = new util.ArrayList[WithdrawalRequest]()
     val mcAddr = new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte))
-    println(s"Proposition ${mcAddr.bytes()}")
     val valueInWei = ZenWeiConverter.convertZenniesToWei(123)
     val request = new WithdrawalRequest(mcAddr, valueInWei)
     list.add(request)

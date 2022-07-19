@@ -146,7 +146,6 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
-        println(result)
         if (result == null)
           fail("Serialization failed for object SidechainApiResponseBody")
 
@@ -159,12 +158,28 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
       }
     }
 
+    "reply at /withdrawCoins" in {
+      val amountInZennies = 32
+
+      Post(basePath + "withdrawCoins").withEntity(SerializationUtil.serialize(ReqWithdrawCoins(1, Some(BigInteger.ONE),
+        TransactionWithdrawalRequest(utilMocks.getMCPublicKeyHashProposition.toString,amountInZennies), None))) ~> sidechainTransactionApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("transactionId").isTextual)
+      }
+    }
+
+
     "reply at /allForgingStakes" in {
       Post(basePath + "allForgingStakes") ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
-        println(result)
         if (result == null)
           fail("Serialization failed for object SidechainApiResponseBody")
 
@@ -185,7 +200,6 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
-        println(result)
         if (result == null)
           fail("Serialization failed for object SidechainApiResponseBody")
 
@@ -208,7 +222,6 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
-        println(result)
         if (result == null)
           fail("Serialization failed for object SidechainApiResponseBody")
 
@@ -221,7 +234,6 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
-        println(result)
         if (result == null)
           fail("Serialization failed for object SidechainApiResponseBody")
 
