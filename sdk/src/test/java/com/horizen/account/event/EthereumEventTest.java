@@ -1,6 +1,5 @@
 package com.horizen.account.event;
 
-import com.horizen.account.MyEvent3;
 import org.junit.Before;
 import org.junit.Test;
 import org.web3j.abi.datatypes.Address;
@@ -77,9 +76,13 @@ public class EthereumEventTest {
         expectedLog = "EvmLog (log consensus data) {address=1122334455667788990011223344556677889900, topics=topics{ 38402c0f573a9575ada72aeb0f435fc33c403a134bf3136bb289f2d9ffa334a0 000000000000000000000000000000000000000000000000000000000000000a 0000000000000000000000000000000000000000000000000000000000000001}, data=0000000000000000000000000000000000000000000000000000000000000002}";
         assertEquals(EthereumEvent.getEvmLog(new Address("1122334455667788990011223344556677889900"), event2).toString(), expectedLog);
 
-        MyEvent3 event3 = new MyEvent3(new Address(BigInteger.ONE), new Uint256(BigInteger.TWO));
+        CaseClassTestEvent1 event3 = new CaseClassTestEvent1(new Address(BigInteger.ONE), new Uint256(BigInteger.TWO));
         expectedLog = "EvmLog (log consensus data) {address=1122334455667788990011223344556677889900, topics=topics{ 0000000000000000000000000000000000000000000000000000000000000001}, data=0000000000000000000000000000000000000000000000000000000000000002}";
         assertEquals(EthereumEvent.getEvmLog(new Address("1122334455667788990011223344556677889900"), event3).toString(), expectedLog);
+
+        CaseClassTestEvent2 event4 = new CaseClassTestEvent2(new Address(BigInteger.ONE), new Uint256(BigInteger.TWO));
+        expectedLog = "EvmLog (log consensus data) {address=1122334455667788990011223344556677889900, topics=topics{ 0000000000000000000000000000000000000000000000000000000000000002}, data=0000000000000000000000000000000000000000000000000000000000000001}";
+        assertEquals(EthereumEvent.getEvmLog(new Address("1122334455667788990011223344556677889900"), event4).toString(), expectedLog);
     }
 
 

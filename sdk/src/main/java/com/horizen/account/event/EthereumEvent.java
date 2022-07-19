@@ -100,6 +100,7 @@ public class EthereumEvent {
         List<Boolean> parameterIndexed = new ArrayList<>();
         List<Object> parameterValues = new ArrayList<>();
         List<TypeReference<?>> parametersTypeRef = new ArrayList<>();
+        List<Type> convertedParams = new ArrayList<>();
         var mapper = new ObjectMapper();
         var annotatedParameters = getEventParameterData(eventInstance);
         var keys = new TreeSet<>(annotatedParameters.keySet());
@@ -111,19 +112,13 @@ public class EthereumEvent {
             parameterValues.add(annotatedParameters.get(key).value);
         }
 
-        Class<?>[] parameters = parameterTypes.toArray(new Class[parameterTypes.size()]);
-
-        Type[] convertedParams = new Type[parameters.length];
-
-        for (int i = 0; i < parameters.length; i++) {
-            convertedParams[i] = (Type) mapper.convertValue(parameterValues.get(i), parameters[i]);
-            parametersTypeRef.add(TypeReference.makeTypeReference(convertedParams[i].getTypeAsString(), parameterIndexed.get(i), false));
+        for (int i = 0; i < parameterTypes.size(); i++) {
+            convertedParams.add((Type) mapper.convertValue(parameterValues.get(i), (Class<?>) parameterTypes.get(i)));
+            parametersTypeRef.add(TypeReference.makeTypeReference(convertedParams.get(i).getTypeAsString(), parameterIndexed.get(i), false));
         }
 
-        List<Type> params = Arrays.asList(convertedParams);
-
         // build Function instance containing function name, parameter values and type references
-        Function transfer = new Function(classRef.getSimpleName(), params, parametersTypeRef);
+        Function transfer = new Function(classRef.getSimpleName(), convertedParams, parametersTypeRef);
 
         return createEvmLog(contractAddress, transfer, classRef);
     }
