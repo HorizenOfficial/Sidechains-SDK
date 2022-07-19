@@ -10,6 +10,7 @@ import org.junit.Assert._
 import java.math.BigInteger
 import scala.Console.println
 import scala.collection.JavaConverters.asScalaIteratorConverter
+import scala.util.Random
 
 class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
 
@@ -242,6 +243,22 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
       }
     }
 
+    "reply at /createSmartContract" in {
+      val contractCodeBytes = new Array[Byte](100)
+      Random.nextBytes(contractCodeBytes)
+      val contractCode = BytesUtils.toHexString(contractCodeBytes)
+      Post(basePath + "createSmartContract").withEntity(SerializationUtil.serialize(ReqCreateContract(1, Some(BigInteger.ONE),
+        contractCode, None))) ~> sidechainTransactionApiRoute ~> check {
+        status.intValue() shouldBe StatusCodes.OK.intValue
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        val result = mapper.readTree(entityAs[String]).get("result")
+        if (result == null)
+          fail("Serialization failed for object SidechainApiResponseBody")
+
+        assertEquals(1, result.elements().asScala.length)
+        assertTrue(result.get("transactionId").isTextual)
+      }
+    }
 
   }
 }
