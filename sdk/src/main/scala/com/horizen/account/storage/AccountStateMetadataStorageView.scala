@@ -1,6 +1,7 @@
 package com.horizen.account.storage
 
 import com.google.common.primitives.{Bytes, Ints}
+import com.horizen.account.receipt.{EthereumReceipt, EthereumReceiptSerializer}
 import com.horizen.account.storage.AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
@@ -34,6 +35,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private[horizen] var blockFeeInfoOpt: Option[BlockFeeInfo] = None
   private[horizen] var consensusEpochOpt: Option[ConsensusEpochNumber] = None
   private[horizen] var accountStateRootOpt: Option[Array[Byte]] = None
+  private[horizen] var receiptsOpt: Option[Seq[EthereumReceipt]] = None
 
   // all getters same as in StateMetadataStorage, but looking first in the cached/dirty entries in memory
 
@@ -142,12 +144,36 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     accountStateRootOpt.orElse(getAccountStateRootFromStorage).getOrElse(DEFAULT_ACCOUNT_STATE_ROOT)
   }
 
+  private[horizen] def getTransactionReceiptFromStorage(txHash: Array[Byte]): Option[EthereumReceipt] = {
+    storage.get(getReceiptKey(txHash)).asScala match {
+      case Some(serData) =>
+        val decodedReceipt: EthereumReceipt = EthereumReceiptSerializer.parseBytes(serData)
+        Some(decodedReceipt)
+
+      case None => None
+    }
+  }
+
+  override def getTransactionReceipt(txHash: Array[Byte]): Option[EthereumReceipt] = {
+    val bawTxHash = new ByteArrayWrapper(txHash)
+    receiptsOpt match {
+      case Some(receipts) =>
+        receipts.find(r => new ByteArrayWrapper(r.transactionHash) == bawTxHash)
+
+      case None => getTransactionReceiptFromStorage(txHash)
+    }
+  }
+
   // put in memory cache and mark the entry as "dirty"
   def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo): Unit =
     withdrawalEpochInfoOpt = Some(withdrawalEpochInfo)
 
   def updateTopQualityCertificate(topQualityCertificate: WithdrawalEpochCertificate): Unit =
     topQualityCertificateOpt = Some(topQualityCertificate)
+
+  def updateTransactionReceipts(receipts: Seq[EthereumReceipt]): Unit = {
+    receiptsOpt = Some(receipts)
+  }
 
   def addFeePayment(blockFeeInfo: BlockFeeInfo): Unit = {
     blockFeeInfoOpt = Some(blockFeeInfo)
@@ -184,6 +210,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     blockFeeInfoOpt = None
     consensusEpochOpt = None
     accountStateRootOpt = None
+    receiptsOpt = None
   }
 
   private[horizen] def saveToStorage(version: ByteArrayWrapper): Unit = {
@@ -227,10 +254,13 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
 
     // If sidechain has ceased set the flag
     hasCeasedOpt.foreach(_ => updateList.add(new JPair(ceasingStateKey, new ByteArrayWrapper(Array.emptyByteArray))))
-    //update the height
-    val nextHeight = getHeight + 1
-    updateList.add(new JPair(heightKey, new ByteArrayWrapper(Ints.toByteArray(nextHeight))))
 
+    // update the height unless we have the very first version of the db
+    // TODO improve this: we are assuming that the saveToStorage() is call on a per-block base, this is an exception, is it the only one?
+    if (!version.equals(new ByteArrayWrapper(Utils.ZEROS_HASH))) {
+      val nextHeight = getHeight + 1
+      updateList.add(new JPair(heightKey, new ByteArrayWrapper(Ints.toByteArray(nextHeight))))
+    }
 
     // If withdrawal epoch switched to the next one, then perform some database clean-up:
     // 1) remove outdated topQualityCertificate retrieved 3 epochs before and referenced to the 4 epochs before.
@@ -255,6 +285,14 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
         }
       case _ => // do nothing
     }
+
+    receiptsOpt.foreach(receipts => {
+        for (r <- receipts) {
+          val key = getReceiptKey(r.transactionHash)
+          val value = new ByteArrayWrapper(EthereumReceiptSerializer.toBytes(r))
+          updateList.add(new JPair(key, value))
+        }
+    })
 
     storage.update(version, updateList, removeList)
 
@@ -287,6 +325,11 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private[horizen] def getBlockFeeInfoKey(withdrawalEpochNumber: Int, counter: Int): ByteArrayWrapper = {
     calculateKey(Bytes.concat("blockFeeInfo".getBytes, Ints.toByteArray(withdrawalEpochNumber), Ints.toByteArray(counter)))
   }
+
+  private[horizen] def getReceiptKey(txHash : Array[Byte]): ByteArrayWrapper = {
+    calculateKey(Bytes.concat("receipt".getBytes, txHash))
+  }
+
 }
 
 object AccountStateMetadataStorageView {
