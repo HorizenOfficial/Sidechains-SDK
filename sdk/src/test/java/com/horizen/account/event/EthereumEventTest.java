@@ -1,14 +1,18 @@
 package com.horizen.account.event;
 
 import com.horizen.evm.interop.EvmLog;
+import com.horizen.evm.utils.Hash;
 import org.junit.Test;
+import org.web3j.abi.TypeEncoder;
 import org.web3j.abi.datatypes.Address;
+import org.web3j.abi.datatypes.Utf8String;
 import org.web3j.abi.datatypes.generated.Uint256;
 import org.web3j.rlp.RlpEncoder;
 import org.web3j.rlp.RlpList;
 import org.web3j.rlp.RlpString;
 import org.web3j.rlp.RlpType;
 import org.web3j.utils.Numeric;
+import scorex.crypto.hash.Keccak256;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -176,10 +180,12 @@ public class EthereumEventTest {
 
     @Test
     public void ethereumEventTest() throws ClassNotFoundException, IOException, IllegalAccessException, InvocationTargetException {
+        // Test 1: Test usage of EVM log creation utility with java class, annotated fields, any order
         ClassTestEvent1 event1 = new ClassTestEvent1(new Address(BigInteger.TEN), new Address(BigInteger.ONE), new Uint256(BigInteger.TWO));
         checkEvmLog(EthereumEvent.getEvmLog(new Address("1122334455667788990011223344556677889900"), event1),
                 Numeric.hexStringToByteArray("0xf899941122334455667788990011223344556677889900a0e08885b895621acf4890c3c582ae58fff9a23a95e827c7128ef8632f2dc74541a0000000000000000000000000000000000000000000000000000000000000000aa00000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000000000000000000000000000000000000000000002"));
 
+        // Test 2: Test usage of EVM log creation utility with java class, annotated methods, anonymous class
         ClassTestEvent2 event2 = new ClassTestEvent2(new Address(BigInteger.TEN), new Address(BigInteger.ONE), new Uint256(BigInteger.TWO));
         checkEvmLog(EthereumEvent.getEvmLog(new Address("1122334455667788990011223344556677889900"), event2),
                 Numeric.hexStringToByteArray("0xf878941122334455667788990011223344556677889900a0000000000000000000000000000000000000000000000000000000000000000aa00000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000000000000000000000000000000000000000000002"));
@@ -193,23 +199,37 @@ public class EthereumEventTest {
         ClassTestEvent5 event5 = new ClassTestEvent5(new Address(BigInteger.TEN), new Address(BigInteger.ONE), new Uint256(BigInteger.TWO));
         assertThrows("Test5: Exception expected, because one access modifier is private", IllegalAccessException.class, () -> EthereumEvent.getEvmLog(new Address("1122334455667788990011223344556677889900"), event5));
 
+        // Test 6: Compare EVM log creation output with an example from etherscan
         Transfer event6 = new Transfer(new Address("0xc12e077934a3c783d7a42dc5f6d6435ef3d04705"), new Address("0x27239549dd40e1d60f5b80b0c4196923745b1fd2"), new Uint256(Numeric.toBigInt("0x000000000000000000000000000000000000000000000000016345785d8a0000")));
         compareToExample(EthereumEvent.getEvmLog(new Address("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"), event6));
 
+        // Test 7: Test usage of EVM log creation utility with scala case class, annotated getters
         CaseClassTestEvent1 event7 = new CaseClassTestEvent1(new Address(BigInteger.ONE), new Uint256(BigInteger.TWO));
         checkEvmLog(EthereumEvent.getEvmLog(new Address("1122334455667788990011223344556677889900"), event7),
                 Numeric.hexStringToByteArray("0xf878941122334455667788990011223344556677889900a02ec7ce51ad15e07ca73fd7cacb9d67d2f3869c36c815c3dd948ec2814de887c1a00000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000000000000000000000000000000000000000000002"));
 
+        // Test 8: Test usage of EVM log creation utility with scala case class, annotated getters
         CaseClassTestEvent2 event8 = new CaseClassTestEvent2(new Address(BigInteger.ONE), new Uint256(BigInteger.TWO));
         checkEvmLog(EthereumEvent.getEvmLog(new Address("1122334455667788990011223344556677889900"), event8),
                 Numeric.hexStringToByteArray("0xf878941122334455667788990011223344556677889900a03406a59be3144bab7c05565c85f764c00ef56d2414a74347872befcb0df971d7a00000000000000000000000000000000000000000000000000000000000000002a00000000000000000000000000000000000000000000000000000000000000001"));
 
+        // Test 9: Test usage of EVM log creation utility with scala class, annotations for getters
         ScalaClassTestEvent1 event9 = new ScalaClassTestEvent1(new Address(BigInteger.TEN), new Uint256(BigInteger.ONE));
         checkEvmLog(EthereumEvent.getEvmLog(new Address("1122334455667788990011223344556677889900"), event9),
                 Numeric.hexStringToByteArray("0xf878941122334455667788990011223344556677889900a07796b5efadd2f87e4c76de571ddbcd862cb6bab4d92c875069ea9c9f1b129291a0000000000000000000000000000000000000000000000000000000000000000aa00000000000000000000000000000000000000000000000000000000000000001"));
 
         ScalaClassTestEvent2 event10 = new ScalaClassTestEvent2(new Address(BigInteger.TEN), new Uint256(BigInteger.ONE));
-        assertThrows("Test: Exception expected, because given class has fields and methods, but no annotations", IllegalArgumentException.class, () -> EthereumEvent.getEvmLog(new Address("1122334455667788990011223344556677889900"), event10));
+        assertThrows("Test10: Exception expected, because given class has fields and methods, but no annotations", IllegalArgumentException.class, () -> EthereumEvent.getEvmLog(new Address("1122334455667788990011223344556677889900"), event10));
+
+        ScalaClassTestEvent3 event11 = new ScalaClassTestEvent3(0.412F, new Uint256(BigInteger.ONE));
+        assertThrows("Test11: Exception expected, because bit size must be 8 bit aligned and in range 0 < bitSize <= 256", UnsupportedOperationException.class, () -> EthereumEvent.getEvmLog(new Address("1122334455667788990011223344556677889900123123"), event11));
+
+        // Test 12: Test that encoded topics are hashed, if size > 32 byte
+        var inputString = new Utf8String("0xf878941122334455667788990011223344556677889900a07796b5efadd2f87e4c76de571ddbcd862cb6bab4d92c875069ea9c9f1b129291a0000000000000000000000000000000000000000000000000000000000000000aa00000000000000000000000000000000000000000000000000000000000000001");
+        ScalaClassTestEvent4 event12 = new ScalaClassTestEvent4(inputString, new Uint256(BigInteger.ONE));
+        EvmLog event12Log = EthereumEvent.getEvmLog(new Address("1122334455667788990011223344556677889900"), event12);
+        assertArrayEquals((byte[]) Keccak256.hash(Numeric.hexStringToByteArray(TypeEncoder.encode(inputString))), event12Log.topics[1].toBytes());
+        checkEvmLog(event12Log, Numeric.hexStringToByteArray("0xf878941122334455667788990011223344556677889900a0dcb8fdd491a45d818e875a4dc5db01c363eaecb7966131523424f03cc6762e72a062912b66659d157808f00d13d948a2149f644a16d1aaf0468dce8cd47d1d5fc7a00000000000000000000000000000000000000000000000000000000000000001"));
     }
 
     private void checkEvmLog(EvmLog log, byte[] expected) {
