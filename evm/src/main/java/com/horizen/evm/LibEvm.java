@@ -1,46 +1,74 @@
 package com.horizen.evm;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.horizen.evm.interop.*;
 import com.horizen.evm.utils.Hash;
-import com.sun.jna.Library;
+import com.sun.jna.Callback;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.math.BigInteger;
+import java.util.HashMap;
 
 final class LibEvm {
-    private interface LibEvmInterface extends Library {
-        void Free(Pointer ptr);
-
-        JsonPointer Invoke(String method, JsonPointer args);
+    private interface LibEvmLogCallback extends Callback {
+        void callback(Pointer message);
     }
 
-    /**
-     * Singleton instance of the native library.
-     */
-    private static final LibEvmInterface instance;
+    static native void Free(Pointer ptr);
+
+    private static native JsonPointer Invoke(String method, JsonPointer args);
+
+    private static native void RegisterLogCallback(LibEvmLogCallback callback);
+
+    static String getOSLibExtension() {
+        var os = System.getProperty("os.name").toLowerCase();
+        if (os.contains("mac os")) {
+            return "dylib";
+        } else if (os.contains("windows")) {
+            return "dll";
+        }
+        // default to linux file extension
+        return "so";
+    }
+
+    private static Level gloglevelToLog4jLevel(String glogLevel) {
+        switch (glogLevel) {
+            case "trce": return Level.TRACE;
+            default:
+            case "dbug": return Level.DEBUG;
+            case "info": return Level.INFO;
+            case "warn": return Level.WARN;
+            case "eror": return Level.ERROR;
+            case "crit": return Level.FATAL;
+        }
+    }
 
     static {
-        var os = System.getProperty("os.name").toLowerCase();
-        String libExtension;
-        if (os.contains("mac os")) {
-            libExtension = "dylib";
-        } else if (os.contains("windows")) {
-            libExtension = "dll";
-        } else {
-            libExtension = "so";
-        }
-        var lib = "libevm." + libExtension;
-        instance = Native.load(lib, LibEvmInterface.class);
+        Native.register("libevm." + getOSLibExtension());
+        var mapper = new ObjectMapper();
+        Logger logger = LogManager.getLogger(LibEvm.class);
+        RegisterLogCallback(message -> {
+            try {
+                var json = message.getString(0);
+                var parsed = mapper.readValue(json, HashMap.class);
+                var lvl = parsed.remove("lvl");
+                var msg = parsed.remove("msg");
+                parsed.remove("t");
+                logger.log(gloglevelToLog4jLevel((String) lvl), String.format("%s %s", msg, parsed));
+            } catch (Exception e) {
+                // make sure we do not throw any exception here because this callback is called by native code
+                logger.warn("received invalid log message data from libevm");
+            }
+        });
     }
 
     private LibEvm() {
         // prevent instantiation of this class
-    }
-
-    static void Free(Pointer ptr) {
-        instance.Free(ptr);
     }
 
     private static class InteropResult<R> {
@@ -61,7 +89,7 @@ final class LibEvm {
     }
 
     private static <R> R invoke(String method, JsonPointer args, Class<R> responseType) {
-        var json = instance.Invoke(method, args);
+        var json = Invoke(method, args);
         // build type information to deserialize to generic type InteropResult<R>
         var type = TypeFactory.defaultInstance().constructParametricType(InteropResult.class, responseType);
         InteropResult<R> response = json.deserialize(type);
