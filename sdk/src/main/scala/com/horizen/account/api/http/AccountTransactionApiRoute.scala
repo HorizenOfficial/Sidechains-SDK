@@ -466,9 +466,9 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   }
 
   def encodeSpendStakeCmdRequest(spendForgerStake: TransactionSpendForgerStake): String = {
-    val signature = new SignatureSecp256k1(spendForgerStake.signatureData.getV,
-      spendForgerStake.signatureData.getR,
-      spendForgerStake.signatureData.getS)
+    val signature = new SignatureSecp256k1(BytesUtils.fromHexString(spendForgerStake.v),
+      BytesUtils.fromHexString(spendForgerStake.r),
+      BytesUtils.fromHexString(spendForgerStake.r))
     val spendForgerStakeInput = RemoveStakeCmdInput(BytesUtils.fromHexString(spendForgerStake.stakeId), signature)
     val data = BytesUtils.toHexString(Bytes.concat(BytesUtils.fromHexString(ForgerStakeMsgProcessor.RemoveStakeCmd), spendForgerStakeInput.encode()))
     data
@@ -488,8 +488,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   }
 
 
-  //  private def validateAndSendTransaction(transaction: Transaction,
-  //                                         transactionResponseRepresentation: (Transaction => SuccessResponse) = defaultTransactionResponseRepresentation) = {
   private def validateAndSendTransaction(transaction: SidechainTypes#SCAT,
                                          transactionResponseRepresentation: (SidechainTypes#SCAT => SuccessResponse) = defaultTransactionResponseRepresentation) = {
 
@@ -500,9 +498,9 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       case Success(_) =>
         ApiResponseUtil.toResponse(transactionResponseRepresentation(transaction))
       case Failure(exp) =>
-        ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exp))
-        )
+        ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exp)))
     }
+
   }
 
 }
@@ -553,9 +551,11 @@ object AccountTransactionRestScheme {
   private[api] case class TransactionForgerOutput(ownerAddress: String, blockSignPublicKey: Option[String], vrfPubKey: String, value: Long)
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class TransactionSpendForgerStake(stakeId: String, signatureData: SignatureData) {
+  private[api] case class TransactionSpendForgerStake(stakeId: String, v: String, r: String, s: String) {
     require(stakeId.nonEmpty, "Stake Id is missing")
-    require(signatureData != null, "Signature data is missing")
+    require(v.nonEmpty, "Signature v data is missing")
+    require(r.nonEmpty, "Signature r data is missing")
+    require(s.nonEmpty, "Signature s data is missing")
   }
 
   @JsonView(Array(classOf[Views.Default]))

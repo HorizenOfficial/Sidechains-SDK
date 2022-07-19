@@ -2,6 +2,7 @@ package com.horizen.account.api.http
 
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.account.proposition.AddressProposition
+import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state.{AccountForgingStakeInfo, ForgerPublicKeys, ForgerStakeData, WithdrawalRequest}
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.ZenWeiConverter
@@ -19,11 +20,17 @@ import java.util
 import scala.collection.JavaConverters._
 import scala.util.Random
 
-class AccountNodeViewUtilMocks extends MockitoSugar with BoxFixture with CompanionsFixture {
+class AccountNodeViewUtilMocks extends MockitoSugar with BoxFixture with CompanionsFixture with SecretFixture{
 
   val transactionList: util.List[EthereumTransaction] = getTransactionList
   val listOfStakes: Seq[AccountForgingStakeInfo] = getListOfStakes
   val listOfWithdrawalRequests: Seq[WithdrawalRequest] = getListOfWithdrawalRequests
+
+  val ownerString = "00ddbbcc9900aabbcc9900aabbcc9900aabbcc99"
+  val blockSignerPropositionString = "1122334455669988112233445566778811223344556677881122334455667788"
+  val vrfPublicKeyString = "aabbddddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff001234"
+  val fittingSecret =  getPrivateKeySecp256k1(10344)
+
 
   def getNodeHistoryMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeAccountHistory = {
     val history: NodeAccountHistory = mock[NodeAccountHistory]
@@ -35,12 +42,16 @@ class AccountNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compani
     val accountState = mock[NodeAccountState]
     Mockito.when(accountState.getListOfForgerStakes).thenAnswer(_ => listOfStakes)
     Mockito.when(accountState.withdrawalRequests(ArgumentMatchers.anyInt())).thenAnswer(_ => listOfWithdrawalRequests)
+    Mockito.when(accountState.getBalance(ArgumentMatchers.any[Array[Byte]])).thenAnswer(_ => ZenWeiConverter.MAX_MONEY_IN_WEI)//It has always enough money
+    Mockito.when(accountState.getNonce(ArgumentMatchers.any[Array[Byte]])).thenAnswer(_ => BigInteger.ONE)//It has always enough money
 
     accountState
   }
 
   def getNodeWalletMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeWalletBase = {
     val wallet: NodeWalletBase = mock[NodeWalletBase]
+    Mockito.when(wallet.secretsOfType(classOf[PrivateKeySecp256k1])).thenAnswer(_ => util.Arrays.asList(fittingSecret))
+
     wallet
   }
 

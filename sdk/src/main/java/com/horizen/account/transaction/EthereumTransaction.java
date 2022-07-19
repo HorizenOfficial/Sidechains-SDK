@@ -314,7 +314,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
      */
     @Override
     public byte[] messageToSign() {
-        if (this.isSigned())
+        if (this.transaction.getType().isLegacy() && this.isSigned())
             return ((SignedRawTransaction) this.transaction).getEncodedTransaction(this.getChainId());
         return TransactionEncoder.encode(this.transaction);
     }
