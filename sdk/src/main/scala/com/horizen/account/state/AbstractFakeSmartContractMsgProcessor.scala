@@ -37,9 +37,4 @@ abstract class AbstractFakeSmartContractMsgProcessor extends MessageProcessor wi
  }
 
 
-object AbstractFakeSmartContractMsgProcessor {
-  def getABIMethodId(methodSig: String): String = Numeric.toHexString(Hash.sha3(methodSig.getBytes)).substring(2, 10)
-
-}
-
 

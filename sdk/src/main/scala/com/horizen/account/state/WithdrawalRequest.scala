@@ -9,7 +9,7 @@ import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 import java.math.BigInteger
 
-case class WithdrawalRequest(proposition: MCPublicKeyHashProposition, value: java.math.BigInteger) extends BytesSerializable with ABIEncodable {
+case class WithdrawalRequest(proposition: MCPublicKeyHashProposition, value: java.math.BigInteger) extends BytesSerializable with ABIEncodable[StaticStruct] {
   override type M = WithdrawalRequest
 
   override def serializer: ScorexSerializer[WithdrawalRequest] = WithdrawalRequestSerializer
