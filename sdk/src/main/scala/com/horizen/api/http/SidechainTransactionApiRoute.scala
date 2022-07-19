@@ -505,7 +505,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
     withdrawalRequestBoxDataList.foreach(element => {
       if(element.value < ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE))
-        throw new IllegalArgumentException("Withdrawal transaction amount is below the MC dust threshold value.")
+        throw new IllegalArgumentException(s"Withdrawal transaction amount ${element.value} is below the MC dust threshold value: ${ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE)}")
 
       outputs.add(new WithdrawalRequestBoxData(
         // Keep in mind that check MC rpc `getnewaddress` returns standard address with hash inside in LE

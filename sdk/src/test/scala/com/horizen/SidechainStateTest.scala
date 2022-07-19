@@ -2,7 +2,7 @@ package com.horizen
 
 import java.util.{ArrayList => JArrayList, List => JList}
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, WithdrawalEpochCertificate}
-import com.horizen.box.data.{BoxData, ForgerBoxData, ZenBoxData}
+import com.horizen.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
 import com.horizen.box._
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.cryptolibprovider.FieldElementUtils
@@ -53,9 +53,10 @@ class SidechainStateTest
 
   def getRegularTransaction(regularOutputsCount: Int,
                             forgerOutputsCount: Int,
+                            withdrawalOutputsCount: Int,
                             boxesWithSecretToOpen: Seq[(ZenBox,PrivateKey25519)],
                             maxInputs: Int): RegularTransaction = {
-    val outputsCount = regularOutputsCount + forgerOutputsCount
+    val outputsCount = regularOutputsCount + forgerOutputsCount + withdrawalOutputsCount
 
     val from: JList[JPair[ZenBox,PrivateKey25519]] = new JArrayList[JPair[ZenBox,PrivateKey25519]]()
     from.addAll(boxesWithSecretToOpen.map{case (box, secret) => new JPair[ZenBox,PrivateKey25519](box, secret)}.asJava)
@@ -86,6 +87,12 @@ class SidechainStateTest
       totalTo += value
     }
 
+    for(s <- getMCPublicKeyHashPropositionList(withdrawalOutputsCount).asScala) {
+      val value = maxTo / outputsCount
+      to.add(new WithdrawalRequestBoxData(s, value))
+      totalTo += value
+    }
+
     val fee = totalFrom - totalTo
 
     RegularTransaction.create(from, to, fee)
@@ -102,7 +109,7 @@ class SidechainStateTest
     stateVersion.clear()
     stateVersion += getVersion
     transactionList.clear()
-    transactionList += getRegularTransaction(1, 0, Seq(), 5)
+    transactionList += getRegularTransaction(1, 0, 0, Seq(), 5)
 
     // Mock get and update methods of StateStorage
     Mockito.when(mockedStateStorage.lastVersionId).thenReturn(Some(stateVersion.last))
@@ -114,6 +121,9 @@ class SidechainStateTest
       })
 
     Mockito.when(mockedStateStorage.getWithdrawalEpochInfo).thenReturn(None)
+
+    Mockito.when(mockedStateStorage.getWithdrawalRequests(ArgumentMatchers.any[Int]())).thenReturn(Seq())
+
     // Mock get and update methods of StateForgerBoxStorage
     Mockito.when(mockedStateForgerBoxStorage.lastVersionId).thenReturn(Some(stateVersion.last))
 
@@ -206,7 +216,7 @@ class SidechainStateTest
     val boxAndSecret = Seq((getZenBox(secret.publicImage(), 1, Random.nextInt(100)), secret))
     Mockito.when(mutualityMockedBlock.transactions)
       .thenReturn(transactionList.toList ++ transactionList)
-      .thenReturn(List(getRegularTransaction(1, 0, boxAndSecret, 1), getRegularTransaction(1, 0, boxAndSecret, 1)))
+      .thenReturn(List(getRegularTransaction(1, 0, 0, boxAndSecret, 1), getRegularTransaction(1, 0, 0, boxAndSecret, 1)))
 
     val sameTransactionsCheckTry = sidechainState.validate(mutualityMockedBlock)
     assertTrue(s"Block validation must be failed with message. But result is - $sameTransactionsCheckTry",
@@ -226,7 +236,7 @@ class SidechainStateTest
     val boxAndSecret2: Seq[(ZenBox,PrivateKey25519)] = Seq((boxList.last.asInstanceOf[ZenBox], secretList.last))
 
     Mockito.when(doubleSpendTransactionMockedBlock.transactions)
-      .thenReturn(List(getRegularTransaction(0, 0, boxAndSecret2 ++ boxAndSecret2, 1)))
+      .thenReturn(List(getRegularTransaction(0, 0, 0, boxAndSecret2 ++ boxAndSecret2, 1)))
 
     val doubleSpendInTransaction = sidechainState.validate(doubleSpendTransactionMockedBlock)
     assertTrue(s"Block validation must be failed with message. But result is - $doubleSpendInTransaction",
@@ -252,7 +262,7 @@ class SidechainStateTest
     stateVersion.clear()
     stateVersion += getVersion
     transactionList.clear()
-    transactionList += getRegularTransaction(2, 2, Seq(), 2)
+    transactionList += getRegularTransaction(2, 2, 0, Seq(), 2)
     val forgerBoxes = transactionList.head.newBoxes().asScala
       .view
       .filter(_.isInstanceOf[ForgerBox])
@@ -319,6 +329,8 @@ class SidechainStateTest
       })
 
     Mockito.when(mockedStateStorage.getWithdrawalEpochInfo).thenReturn(None)
+
+    Mockito.when(mockedStateStorage.getWithdrawalRequests(ArgumentMatchers.any[Int]())).thenReturn(Seq())
 
     Mockito.when(mockedStateForgerBoxStorage.lastVersionId).thenAnswer(_ => Some(stateVersion.last))
 
@@ -561,7 +573,7 @@ class SidechainStateTest
     stateVersion.clear()
     stateVersion += getVersion
     transactionList.clear()
-    transactionList += getRegularTransaction(1, 1, Seq(), 5)
+    transactionList += getRegularTransaction(1, 1, 0, Seq(), 5)
     val stakeTransaction = transactionList.head
     val allowedBlockSignProposition = stakeTransaction.newBoxes().get(1).blockSignProposition()
     val allowedVrfPublicKey = stakeTransaction.newBoxes().get(1).vrfPubKey()
@@ -618,5 +630,233 @@ class SidechainStateTest
     tryValidate = sidechainState.validate(stakeTransaction)
     assertTrue("Transaction validation must fail.",
       tryValidate.isSuccess)
+  }
+
+  @Test
+  def maxBTsPerTransactionTest(): Unit = {
+    // Set base Secrets data
+    secretList.clear()
+    secretList ++= getPrivateKey25519List(10).asScala
+    // Set base Box data
+    boxList.clear()
+    boxList ++= getZenBoxList(secretList.asJava).asScala.toList
+    stateVersion.clear()
+    stateVersion += getVersion
+    val belowTresholdTransaction = getRegularTransaction(1, 0, 98, Seq(), 10)
+    val tresholdTransaction = getRegularTransaction(1, 0, 99, Seq(), 10)
+    val aboveTresholdTransaction = getRegularTransaction(1, 0, 100, Seq(), 10)
+
+    Mockito.when(mockedStateStorage.lastVersionId).thenReturn(Some(stateVersion.last))
+
+    Mockito.when(mockedStateStorage.getBox(ArgumentMatchers.any[Array[Byte]]()))
+      .thenAnswer(answer => {
+        val boxId = answer.getArgument(0).asInstanceOf[Array[Byte]]
+        boxList.find(_.id().sameElements(boxId))
+      })
+
+    Mockito.when(mockedStateForgerBoxStorage.lastVersionId).thenReturn(Some(stateVersion.last))
+
+    Mockito.when(mockedStateUtxoMerkleTreeProvider.lastVersionId).thenReturn(Some(stateVersion.last))
+
+    val mockedParams = mock[MainNetParams]
+    Mockito.when(mockedParams.maxWBsAllowed).thenReturn(99)
+
+    val sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeProvider,
+      mockedParams, bytesToVersion(stateVersion.last.data), mockedApplicationState)
+
+    //Test validate(Transaction) with a number of WithdrawalBoxes < maxWBsAllowed
+    var tryValidate = sidechainState.validate(belowTresholdTransaction)
+    assertTrue("Transaction validation must be successful.",
+      tryValidate.isSuccess)
+
+    //Test validate(Transaction) with a number of WithdrawalBoxes = maxWBsAllowed
+    tryValidate = sidechainState.validate(tresholdTransaction)
+    assertTrue("Transaction validation must be successful.",
+      tryValidate.isSuccess)
+
+    //Test validate(Transaction) with a number of WithdrawalBoxes > maxWBsAllowed
+    tryValidate = sidechainState.validate(aboveTresholdTransaction)
+    assertFalse("Transaction validation must fail.",
+      tryValidate.isSuccess)
+    assertTrue(tryValidate.failed.get.getMessage.equals("Exceed the maximum withdrawal request boxes per epoch (100 out of 99)"))
+  }
+
+  @Test
+  def maxBTsPerBlockTest(): Unit = {
+    // Set base Secrets data
+    secretList.clear()
+    secretList ++= getPrivateKey25519List(10).asScala
+    // Set base Box data
+    boxList.clear()
+    boxList ++= getZenBoxList(secretList.asJava).asScala.toList
+    stateVersion.clear()
+    stateVersion += getVersion
+    transactionList.clear()
+    transactionList += getRegularTransaction(1, 0, 1, Seq(), 10)
+
+    // Max Withdrawal Boxes per epoch = 100
+    // Withdrawal epoch length = 10
+    // Withdrawal Boxes allowed per mainchain block reference data = 100/ (11 - 1) = 10
+    val mockedParams = mock[MainNetParams]
+    Mockito.when(mockedParams.maxWBsAllowed).thenReturn(100)
+    Mockito.when(mockedParams.withdrawalEpochLength).thenReturn(11)
+
+    Mockito.when(mockedStateStorage.lastVersionId).thenReturn(Some(stateVersion.last))
+
+    Mockito.when(mockedStateStorage.getBox(ArgumentMatchers.any[Array[Byte]]()))
+      .thenAnswer(answer => {
+        val boxId = answer.getArgument(0).asInstanceOf[Array[Byte]]
+        boxList.find(_.id().sameElements(boxId))
+      })
+
+    Mockito.when(mockedStateStorage.getWithdrawalEpochInfo).thenReturn(None)
+
+    Mockito.when(mockedStateStorage.getWithdrawalRequests(ArgumentMatchers.any[Int]())).thenReturn(Seq())
+
+    Mockito.when(mockedStateForgerBoxStorage.lastVersionId).thenReturn(Some(stateVersion.last))
+
+    Mockito.when(mockedStateUtxoMerkleTreeProvider.lastVersionId).thenReturn(Some(stateVersion.last))
+
+    //Test validate block with no empty WB slots accumulated, no new mainchain block references and a transaction with 1 WB
+    val mockedBlock = mock[SidechainBlock]
+
+    Mockito.when(mockedBlock.topQualityCertificateOpt).thenReturn(None)
+
+    Mockito.when(mockedBlock.transactions)
+      .thenReturn(transactionList.toList)
+
+    Mockito.when(mockedBlock.mainchainBlockReferencesData).thenReturn(Seq())
+
+    Mockito.when(mockedBlock.feePaymentsHash).thenReturn(FeePaymentsUtils.DEFAULT_FEE_PAYMENTS_HASH)
+
+    Mockito.when(mockedBlock.parentId)
+      .thenReturn(bytesToId(stateVersion.last.data))
+      .thenReturn(bytesToId(stateVersion.last.data))
+      .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
+
+
+    Mockito.doNothing().when(mockedApplicationState).validate(ArgumentMatchers.any[SidechainStateReader](),
+      ArgumentMatchers.any[SidechainBlock]())
+
+    val sidechainState: SidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeProvider,
+      mockedParams, bytesToVersion(stateVersion.last.data), mockedApplicationState)
+
+    var validateTry = sidechainState.validate(mockedBlock)
+    assertFalse("Block validation must fail.",
+      validateTry.isSuccess)
+    assertTrue(validateTry.failed.get.getMessage.equals("Exceeded the maximum number of WithdrawalBoxes allowed!"))
+
+
+    //Test validate block with no empty WB slots accumulated, 1 new mainchain block reference and a transaction with 10 WBs
+    val emptyRefData: MainchainBlockReferenceData = MainchainBlockReferenceData(null, sidechainRelatedAggregatedTransaction = None, None, None, Seq(), None)
+    Mockito.when(mockedBlock.mainchainBlockReferencesData).thenReturn(Seq(emptyRefData))
+
+    transactionList.clear()
+    transactionList += getRegularTransaction(1, 0, 10, Seq(), 10)
+
+    Mockito.when(mockedBlock.transactions)
+      .thenReturn(transactionList.toList)
+
+    Mockito.when(mockedBlock.parentId)
+      .thenReturn(bytesToId(stateVersion.last.data))
+      .thenReturn(bytesToId(stateVersion.last.data))
+      .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
+
+    validateTry = sidechainState.validate(mockedBlock)
+    assertTrue("Block validation must be successful.",
+      validateTry.isSuccess)
+
+    //Test validate block with no empty WB slots accumulated, 1 new mainchain block reference and a transaction with 20 WBs
+    transactionList.clear()
+    transactionList += getRegularTransaction(1, 0, 20, Seq(), 10)
+
+    Mockito.when(mockedBlock.transactions)
+      .thenReturn(transactionList.toList)
+
+    Mockito.when(mockedBlock.parentId)
+      .thenReturn(bytesToId(stateVersion.last.data))
+      .thenReturn(bytesToId(stateVersion.last.data))
+      .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
+
+    validateTry = sidechainState.validate(mockedBlock)
+    assertFalse("Block validation must fail.",
+      validateTry.isSuccess)
+    assertTrue(validateTry.failed.get.getMessage.equals("Exceeded the maximum number of WithdrawalBoxes allowed!"))
+
+    //Test validate block with no empty WB slots accumulated, 1 new mainchain block reference and 1 transaction with 10 WBs and 1 transaction with 5 WBs
+    transactionList.clear()
+
+    transactionList += getRegularTransaction(1, 0, 10, Seq((boxList.head.asInstanceOf[ZenBox], secretList.head)), 1)
+    transactionList += getRegularTransaction(1, 0, 5, Seq((boxList.last.asInstanceOf[ZenBox], secretList.last)), 1)
+
+    Mockito.when(mockedBlock.transactions)
+      .thenReturn(transactionList.toList)
+
+    Mockito.when(mockedBlock.parentId)
+      .thenReturn(bytesToId(stateVersion.last.data))
+      .thenReturn(bytesToId(stateVersion.last.data))
+      .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
+
+    validateTry = sidechainState.validate(mockedBlock)
+    assertFalse("Block validation must fail.",
+      validateTry.isSuccess)
+    assertTrue(validateTry.failed.get.getMessage.equals("Exceeded the maximum number of WithdrawalBoxes allowed!"))
+
+    //Test validate block with no empty WB slots accumulated, 2 new mainchain block reference and 1 transaction with 10 WBs and 1 transaction with 5 WBs
+    Mockito.when(mockedBlock.mainchainBlockReferencesData).thenReturn(Seq(emptyRefData, emptyRefData))
+    validateTry = sidechainState.validate(mockedBlock)
+    assertTrue("Block validation must be successful.",
+      validateTry.isSuccess)
+
+    //Test validate block with 1 empty WB slots accumulated, 1 new mainchain block reference and 1 transaction with 10 WBs and 1 transaction with 5 WBs
+    val mockedWithdrawalEpochInfo: WithdrawalEpochInfo = WithdrawalEpochInfo(0, 1)
+    Mockito.when(mockedStateStorage.getWithdrawalEpochInfo).thenReturn(Some(mockedWithdrawalEpochInfo))
+
+    Mockito.when(mockedBlock.mainchainBlockReferencesData).thenReturn(Seq(emptyRefData))
+
+    Mockito.when(mockedBlock.parentId)
+      .thenReturn(bytesToId(stateVersion.last.data))
+      .thenReturn(bytesToId(stateVersion.last.data))
+      .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
+
+    validateTry = sidechainState.validate(mockedBlock)
+    assertTrue("Block validation must be successful.",
+      validateTry.isSuccess)
+
+    //Test validate block with 1 empty WB slots accumulated, 1 new mainchain block reference, 5 already mined WBS and 1 transaction with 10 WBs and 1 transaction with 5 WBs
+    val wbs: JList[WithdrawalRequestBox] = new JArrayList()
+    for(s <- getMCPublicKeyHashPropositionList(5).asScala) {
+      wbs.add(new WithdrawalRequestBox(new WithdrawalRequestBoxData(s, 54), 0L))
+    }
+
+    Mockito.when(mockedStateStorage.getWithdrawalRequests(ArgumentMatchers.any[Int]())).thenReturn(wbs.asScala.toList)
+
+    Mockito.when(mockedBlock.parentId)
+      .thenReturn(bytesToId(stateVersion.last.data))
+      .thenReturn(bytesToId(stateVersion.last.data))
+      .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
+
+    validateTry = sidechainState.validate(mockedBlock)
+    assertTrue("Block validation must be successful.",
+      validateTry.isSuccess)
+
+    //Test validate block with 1 empty WB slots accumulated, 1 new mainchain block reference, 5 already mined WBS and 2 transaction with 10 WBs
+    transactionList.clear()
+
+    transactionList += getRegularTransaction(1, 0, 10, Seq((boxList.head.asInstanceOf[ZenBox], secretList.head)), 1)
+    transactionList += getRegularTransaction(1, 0, 10, Seq((boxList.last.asInstanceOf[ZenBox], secretList.last)), 1)
+
+    Mockito.when(mockedBlock.transactions)
+      .thenReturn(transactionList.toList)
+
+    Mockito.when(mockedBlock.parentId)
+      .thenReturn(bytesToId(stateVersion.last.data))
+      .thenReturn(bytesToId(stateVersion.last.data))
+      .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
+
+    validateTry = sidechainState.validate(mockedBlock)
+    assertFalse("Block validation must fail.",
+      validateTry.isSuccess)
+    assertTrue(validateTry.failed.get.getMessage.equals("Exceeded the maximum number of WithdrawalBoxes allowed!"))
   }
 }

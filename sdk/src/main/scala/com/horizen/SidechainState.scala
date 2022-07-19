@@ -177,6 +177,37 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     if (allInputBoxesIds.size != allInputBoxesIds.toSet.size) {
       throw new IllegalArgumentException(s"Block ${mod.id} contains duplicated input boxes to open")
     }
+
+    checkWithdrawalBoxesAllowed(mod)
+  }
+
+  private def checkWithdrawalBoxesAllowed(mod: SidechainBlock): Unit = {
+    val alreadyMinedWBs = getAlreadyMinedWithdrawalRequestBoxesInCurrentEpoch
+    val mainchainBlockReferenceInBlock = mod.mainchainBlockReferencesData.size
+    val allowedWBs = getAllowedWithdrawalRequestBoxes(mainchainBlockReferenceInBlock)
+    var blockWBs = alreadyMinedWBs
+    mod.transactions.foreach(tx => {
+      blockWBs += tx.newBoxes().asScala.count(box => box.isInstanceOf[WithdrawalRequestBox])
+      if (blockWBs > allowedWBs) {
+        throw new IllegalStateException(s"Exceeded the maximum number of WithdrawalBoxes allowed!")
+      }
+    })
+  }
+
+  def getOrElseWithdrawalEpochInfo(): WithdrawalEpochInfo = {
+    stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0))
+  }
+
+  def getAllowedWithdrawalRequestBoxesPerBlock: Int = {
+    params.maxWBsAllowed / (params.withdrawalEpochLength - 1)
+  }
+
+  def getAlreadyMinedWithdrawalRequestBoxesInCurrentEpoch: Int = {
+    stateStorage.getWithdrawalRequests(getOrElseWithdrawalEpochInfo().epoch).size
+  }
+
+  def getAllowedWithdrawalRequestBoxes(numberOfMainchainBlockReferenceInBlock: Int): Int = {
+    getAllowedWithdrawalRequestBoxesPerBlock * (getOrElseWithdrawalEpochInfo().lastEpochIndex + numberOfMainchainBlockReferenceInBlock)
   }
 
   private def validateTopQualityCertificate(topQualityCertificate: WithdrawalEpochCertificate, certReferencedEpochNumber: Int): Unit = {
@@ -277,6 +308,10 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           }
         })
 
+      val numberOfWithdrawalRequestBoxes = newBoxes.count(box => box.isInstanceOf[WithdrawalRequestBox])
+      if (numberOfWithdrawalRequestBoxes > params.maxWBsAllowed) {
+        throw new Exception(s"Exceed the maximum withdrawal request boxes per epoch (${numberOfWithdrawalRequestBoxes} out of ${params.maxWBsAllowed})")
+      }
     }
 
     applicationState.validate(this, tx)
