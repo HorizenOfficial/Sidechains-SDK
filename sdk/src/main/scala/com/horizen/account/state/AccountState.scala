@@ -113,7 +113,7 @@ class AccountState(val params: NetworkParams,
         throw new IllegalArgumentException(s"Block ${mod.id} has feePaymentsHash ${BytesUtils.toHexString(mod.feePaymentsHash)} defined when no fee payments expected.")
     }
 
-    val receiptList = applyAndGetReceipts(stateView, mod.mainchainBlockReferencesData, mod.sidechainTransactions, Some(idToBytes(mod.id))).get
+    val receiptList = applyAndGetReceipts(stateView, mod.mainchainBlockReferencesData, mod.sidechainTransactions, blockHashOpt = Some(idToBytes(mod.id))).get
 
     // TODO: calculate and update fee info.
     // Note: we should save the total gas paid and the forgerAddress
@@ -362,6 +362,7 @@ object AccountState extends ScorexLogging {
   def applyAndGetReceipts(stateView: AccountStateView,
                           mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
                           sidechainTransactions: Seq[SidechainTypes#SCAT],
+                          inputBlockSize: Int = 0,
                           blockHashOpt: Option[Array[Byte]] = None): Try[Seq[EthereumReceipt]] = Try {
 
     // this function can be called when forging a block or when processing a received block
@@ -385,7 +386,7 @@ object AccountState extends ScorexLogging {
 
     var cumGasUsed : BigInteger = BigInteger.ZERO
     var txsCounter: Int = 0
-    var blockSize: Int = 0 // TODO we do not start from zero, get the starting size somehow
+    var blockSize: Int = inputBlockSize
 
     for ((tx, txIndex) <- sidechainTransactions.zipWithIndex) {
 
@@ -395,16 +396,21 @@ object AccountState extends ScorexLogging {
           // update cumulative gas used so far
           cumGasUsed = consensusDataReceipt.cumulativeGasUsed
 
-          // TODO shall we check these also when applying modifier?
           if (isForging) {
             blockSize = blockSize + tx.bytes.length + 4 // placeholder for Tx length
             txsCounter += 1
 
             if (blockSizeExceeded(blockSize, txsCounter))
               return Success(receiptList)
+          }
 
-            if (blockGasLimitExceeded(cumGasUsed))
+          if (blockGasLimitExceeded(cumGasUsed)) {
+            if (isForging) {
               return Success(receiptList)
+            } else {
+              log.error("Could not apply tx, block gas limit exceeded")
+              throw new IllegalArgumentException("Could not apply tx, block gas limit exceeded")
+            }
           }
 
           val ethTx = tx.asInstanceOf[EthereumTransaction]

@@ -60,6 +60,7 @@ class SCEvmBootstrap(SidechainTestFramework):
         print("SC genesis mc block hex = " + mc_block_hex)
 
         sc_best_block = sc_node.block_best()["result"]
+        pprint.pprint(sc_best_block)
 
         assert_equal(sc_best_block["height"], 1, "The best block has not the specified height.")
 

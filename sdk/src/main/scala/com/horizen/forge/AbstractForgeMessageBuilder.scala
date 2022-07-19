@@ -11,7 +11,7 @@ import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.{Transaction, TransactionSerializer}
 import com.horizen.utils.{DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, TimeToEpochUtils}
 import com.horizen.vrf.VrfOutput
-import com.horizen.{AbstractHistory, AbstractWallet, consensus}
+import com.horizen.{AbstractHistory, AbstractWallet}
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.block.Block
@@ -308,7 +308,8 @@ abstract class AbstractForgeMessageBuilder[
       forgingStakeMerklePathInfo.forgingStakeInfo,
       vrfProof,
       forgingStakeMerklePathInfo.merklePath,
-      companion)
+      companion,
+      blockSize)
 
     tryBlock match {
       case Success(block) => ForgeSuccess(block)
@@ -331,6 +332,7 @@ abstract class AbstractForgeMessageBuilder[
                      vrfProof: VrfProof,
                      forgingStakeInfoMerklePath: MerklePath,
                      companion: DynamicTypedSerializer[TX,  TransactionSerializer[TX]],
+                     inputBlockSize: Int,
                      signatureOption: Option[Signature25519] = None
                     ): Try[SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase]]
 

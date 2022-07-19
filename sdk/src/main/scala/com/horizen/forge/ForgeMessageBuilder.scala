@@ -53,6 +53,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                  vrfProof: VrfProof,
                  forgingStakeInfoMerklePath: MerklePath,
                  companion: DynamicTypedSerializer[SidechainTypes#SCBT, TransactionSerializer[SidechainTypes#SCBT]],
+                 inputBlockSize: Int,
                  signatureOption: Option[Signature25519]) : Try[SidechainBlockBase[SidechainTypes#SCBT, SidechainBlockHeader]] =
   {
     val feePayments = if(isWithdrawalEpochLastBlock) {

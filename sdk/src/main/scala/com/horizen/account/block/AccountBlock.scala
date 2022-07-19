@@ -3,14 +3,14 @@ package com.horizen.account.block
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceipt}
+import com.horizen.account.receipt.EthereumConsensusDataReceipt
 import com.horizen.block._
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.evm.TrieHasher
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
-import com.horizen.utils.{MerklePath, Utils}
+import com.horizen.utils.MerklePath
 import com.horizen.validation.InconsistentSidechainBlockDataException
 import com.horizen.{ScorexEncoding, SidechainTypes, account}
 import scorex.core.block.Block
@@ -40,7 +40,7 @@ class AccountBlock(override val header: AccountBlockHeader,
     // verify Ethereum friendly transaction root hash
     val txRootHash = TrieHasher.Root(sidechainTransactions.map(tx => tx.bytes).toArray)
     if (!java.util.Arrays.equals(txRootHash, header.sidechainTransactionsMerkleRootHash)) {
-      log.error("CHECK IS DISABLED: update forger & bootstrapping tool first!")
+      log.error("invalid transaction root hash, CHECK IS DISABLED: update forger & bootstrapping tool first!")
       // TODO: uncomment when ready
       //throw new InconsistentSidechainBlockDataException("invalid transaction root hash")
     }
@@ -50,18 +50,16 @@ class AccountBlock(override val header: AccountBlockHeader,
   def verifyReceiptDataConsistency(receiptList: Seq[EthereumConsensusDataReceipt]): Unit = {
     val receiptRootHash = TrieHasher.Root(receiptList.map(EthereumConsensusDataReceipt.rlpEncode).toArray)
     if (!java.util.Arrays.equals(receiptRootHash, header.receiptsRoot)) {
-      log.error("CHECK IS DISABLED: update forger & bootstrapping tool first!")
-      // TODO: uncomment when ready
-      //throw new InconsistentSidechainBlockDataException("invalid receipt root hash")
+      log.error("Invalid receipts root hash")
+      throw new InconsistentSidechainBlockDataException("invalid receipt root hash")
     }
   }
 
   @throws(classOf[InconsistentSidechainBlockDataException])
   def verifyStateRootDataConsistency(stateRoot: Array[Byte]): Unit = {
     if (!java.util.Arrays.equals(stateRoot, header.stateRoot)) {
-      log.error("CHECK IS DISABLED: update forger & bootstrapping tool first!")
-      // TODO: uncomment when ready
-      //throw new InconsistentSidechainBlockDataException("invalid receipt root hash")
+      log.error("invalid state root hash")
+      throw new InconsistentSidechainBlockDataException("invalid state root hash")
     }
   }
 
@@ -164,11 +162,12 @@ object AccountBlock extends ScorexEncoding {
 
   def calculateTransactionsMerkleRootHash(sidechainTransactions: Seq[SidechainTypes#SCAT]): Array[Byte] = {
     // calculate Ethereum friendly transaction root hash
-    // TODO: this assumes the binary representation of transactions exactly match the ethereum RLP encoding,
-    //  which is not true currently because the serializer prepends the payload with the length
-    Utils.ZEROS_HASH
-    // TODO: uncomment this when ready. Note: case with no txs.
-    // Note: bootstrapping tool as of now will fail when called from py stf, since libevm traces are printed on stdout
-    //TrieHasher.Root(sidechainTransactions.map(tx => tx.bytes).toArray)
+    // TODO: bootstrapping tool as of now would fail when called from py stf becouse json results are
+    //       printed on stdout and libevm traces are printed on stdout too
+    //       for the time being therefore it has been necessary to comment out logging lines:
+    //          (to be uncommented as soon as dev_evm has log4j2 support)
+    //          libevm/interop/invoke.go
+    //          libevm/lib/service_database.go
+    TrieHasher.Root(sidechainTransactions.map(tx => tx.bytes).toArray)
   }
 }

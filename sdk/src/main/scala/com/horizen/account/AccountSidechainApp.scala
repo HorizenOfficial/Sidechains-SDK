@@ -122,7 +122,7 @@ class AccountSidechainApp @Inject()
     consensusDataStorage,
     stateMetadataStorage,
     stateDbStorage,
-    customMessageProcessors.asScala,
+    customMessageProcessors,
     sidechainSecretStorage,
     params,
     timeProvider,

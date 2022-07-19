@@ -11,9 +11,9 @@ import com.horizen.account.block.AccountBlock;
 import com.horizen.account.block.AccountBlockHeader;
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion;
 import com.horizen.account.proposition.AddressProposition;
-import com.horizen.account.secret.PrivateKeySecp256k1;
+import com.horizen.account.state.*;
+import com.horizen.account.storage.AccountStateMetadataStorageView;
 import com.horizen.account.transaction.AccountTransaction;
-import com.horizen.account.utils.Account;
 import com.horizen.account.utils.Secp256k1;
 import com.horizen.block.*;
 import com.horizen.box.Box;
@@ -22,6 +22,8 @@ import com.horizen.companion.SidechainSecretsCompanion;
 import com.horizen.companion.SidechainTransactionsCompanion;
 import com.horizen.consensus.ForgingStakeInfo;
 import com.horizen.cryptolibprovider.CryptoLibProvider;
+import com.horizen.evm.MemoryDatabase;
+import com.horizen.evm.StateDB;
 import com.horizen.params.MainNetParams;
 import com.horizen.params.NetworkParams;
 import com.horizen.params.RegTestParams;
@@ -29,7 +31,6 @@ import com.horizen.params.TestNetParams;
 import com.horizen.proof.Proof;
 import com.horizen.proof.VrfProof;
 import com.horizen.proposition.Proposition;
-import com.horizen.proposition.PropositionSerializer;
 import com.horizen.secret.*;
 import com.horizen.transaction.SidechainTransaction;
 import com.horizen.transaction.mainchain.SidechainCreation;
@@ -38,6 +39,7 @@ import com.horizen.utils.*;
 import org.web3j.crypto.Keys;
 import scala.Enumeration;
 import org.web3j.crypto.ECKeyPair;
+import scala.collection.Seq;
 
 
 import java.io.*;
@@ -571,6 +573,10 @@ public class CommandProcessor {
 
             MainchainBlockReference mcRef = MainchainBlockReference.create(mcBlockBytes, params, versionsManager).get();
 
+            // TODO for the time being we have the sc creation only, but we might support also FT
+            List<MainchainBlockReferenceData> mainchainBlockReferencesData = Collections.singletonList(mcRef.data());
+            List<MainchainHeader> mainchainHeadersData = Collections.singletonList(mcRef.header());
+
             //Find Sidechain creation information
             SidechainCreation sidechainCreation = null;
             if (mcRef.data().sidechainRelatedAggregatedTransaction().isEmpty())
@@ -598,12 +604,25 @@ public class CommandProcessor {
             int withdrawalEpochLength;
             String sidechainBlockHex;
 
-            // are we building a utxo or account model based block?
-            if (block_version == AccountBlock.ACCOUNT_BLOCK_VERSION()){
 
-                byte[] stateRoot = new byte[MerkleTree.ROOT_HASH_LENGTH];
-                byte[] receiptsRoot = new byte[MerkleTree.ROOT_HASH_LENGTH];
-                AddressProposition forgerAddress = new AddressProposition(new byte[Account.ADDRESS_SIZE]);
+            // are we building a utxo or account model based block?
+            if (block_version == AccountBlock.ACCOUNT_BLOCK_VERSION()) {
+
+                byte[] stateRoot;
+                try {
+                    stateRoot = getGenesisStateRoot(mainchainBlockReferencesData, params);
+                }
+                catch (Exception e) {
+                    printer.print(String.format("Error: 'Could not get genesis state root: %s", e.getMessage()));
+                    return;
+                }
+
+                byte[] receiptsRoot = StateDB.EMPTY_ROOT_HASH; // empty root hash (no receipts)
+
+                AddressProposition forgerAddress =
+                  new AddressProposition(Arrays.copyOf(
+                          sidechainCreation.getScCrOutput().address(),
+                          com.horizen.account.utils.Account.ADDRESS_SIZE)); // taken from the creation
 
                 SidechainAccountTransactionsCompanion sidechainTransactionsCompanion = new SidechainAccountTransactionsCompanion(new HashMap<>());
 
@@ -613,9 +632,9 @@ public class CommandProcessor {
                         params.sidechainGenesisBlockParentId(),
                         block_version,
                         timestamp,
-                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.data())).asScala().toSeq(),
+                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(mainchainBlockReferencesData).asScala().toSeq(),
                         scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<AccountTransaction<Proposition, Proof<Proposition>>>()).asScala().toSeq(),
-                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.header())).asScala().toSeq(),
+                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(mainchainHeadersData).asScala().toSeq(),
                         scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer<AccountBlockHeader>>()).asScala().toSeq(),
                         key,
                         forgingStakeInfo,
@@ -649,9 +668,9 @@ public class CommandProcessor {
                         params.sidechainGenesisBlockParentId(),
                         block_version,
                         timestamp,
-                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.data())).asScala().toSeq(),
+                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(mainchainBlockReferencesData).asScala().toSeq(),
                         scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<SidechainTransaction<Proposition, Box<Proposition>>>()).asScala().toSeq(),
-                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(Collections.singletonList(mcRef.header())).asScala().toSeq(),
+                        scala.collection.JavaConverters.collectionAsScalaIterableConverter(mainchainHeadersData).asScala().toSeq(),
                         scala.collection.JavaConverters.collectionAsScalaIterableConverter(new ArrayList<Ommer<SidechainBlockHeader>>()).asScala().toSeq(),
                         key,
                         forgingStakeInfo,
@@ -702,6 +721,37 @@ public class CommandProcessor {
         }
     }
 
+    private AccountStateView getStateView(scala.collection.Seq<MessageProcessor> mps) {
+        var dbm = new MemoryDatabase();
+        StateDB stateDb = new StateDB(dbm, AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT());
+        return new AccountStateView(null, stateDb, mps);
+    }
+
+    private byte[] getGenesisStateRoot(List<MainchainBlockReferenceData> mainchainBlockReferencesData, NetworkParams params) throws MessageProcessorInitializationException {
+        // TODO customMessageProcessors - for the time being we do not handle them in the bootstrapping tool.
+        // If needed they should be somehow passed as parameters and added here
+        java.util.List<MessageProcessor> customMessageProcessors = new ArrayList<>();
+
+        Seq<MessageProcessor> messageProcessorSeq = MessageProcessorUtil.getMessageProcessorSeq(params, customMessageProcessors);
+
+        AccountStateView view = getStateView(messageProcessorSeq);
+
+        // init all the message processors
+        scala.collection.Iterator iter = messageProcessorSeq.iterator();
+        while (iter.hasNext()) {
+            ((MessageProcessor)iter.next()).init(view);
+        }
+
+        // apply sc creation output, this will call forger stake msg processor
+        for(MainchainBlockReferenceData mcBlockRefData : mainchainBlockReferencesData) {
+            view.applyMainchainBlockReferenceData(mcBlockRefData).get();
+        }
+
+        // get the state root after all state-changing operations
+        byte[] stateRoot = view.stateDb().getIntermediateRoot();
+        view.close();
+        return stateRoot;
+    }
 
     private String getNetworkName(byte network) {
         switch(network) {

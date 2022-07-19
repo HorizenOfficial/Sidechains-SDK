@@ -7,13 +7,13 @@ import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.{ByteArrayWrapper, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree}
-import com.horizen.{SidechainTypes, _}
+import com.horizen.SidechainTypes
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceipt}
+import com.horizen.account.receipt.EthereumConsensusDataReceipt
 import com.horizen.account.state.AccountState.applyAndGetReceipts
 import com.horizen.account.state.{AccountState, AccountStateView}
 import com.horizen.account.storage.AccountHistoryStorage
@@ -21,12 +21,10 @@ import com.horizen.account.utils.Account
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.evm.TrieHasher
 import com.horizen.forge.{AbstractForgeMessageBuilder, MainchainSynchronizer}
-import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
 import scorex.core.NodeViewModifier
 import scorex.core.block.Block.{BlockId, Timestamp}
 import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 
-import java.math.BigInteger
 import scala.collection.JavaConverters._
 import scala.util.Try
 
@@ -52,14 +50,13 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     TrieHasher.Root(receiptList.map(EthereumConsensusDataReceipt.rlpEncode).toArray)
   }
 
-  def computeStateRoot(view: AccountStateView,
-                       sidechainTransactions:  Seq[SidechainTypes#SCAT],
-                       mainchainBlockReferencesData: Seq[MainchainBlockReferenceData]
-                      ): (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT]) = {
+  def computeStateRoot(view: AccountStateView, sidechainTransactions: Seq[SidechainTypes#SCAT],
+                       mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
+                       inputBlockSize: Int): (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT]) = {
 
     // we must ensure that all the tx we get from mempool are applicable to current state view
     // and we must stay below the block gas limit threshold, therefore we might have a subset of the input transactions
-    val receiptList = applyAndGetReceipts(view, mainchainBlockReferencesData, sidechainTransactions).get
+    val receiptList = applyAndGetReceipts(view, mainchainBlockReferencesData, sidechainTransactions, inputBlockSize).get
 
     val listOfAppliedTxHash = receiptList.map(r => new ByteArrayWrapper(r.transactionHash))
 
@@ -89,6 +86,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                  vrfProof: VrfProof,
                  forgingStakeInfoMerklePath: MerklePath,
                  companion: DynamicTypedSerializer[SidechainTypes#SCAT, TransactionSerializer[SidechainTypes#SCAT]],
+                 inputBlockSize: Int,
                  signatureOption: Option[Signature25519]) : Try[SidechainBlockBase[SidechainTypes#SCAT,  AccountBlockHeader]] =
   {
 
@@ -103,7 +101,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     // - the list of transactions succesfully applied to the state ---> to be included in the forged block
     val (stateRoot, receiptList, appliedTxList)
     : (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT]) =
-      computeStateRoot(dummyView, sidechainTransactions, mainchainBlockReferencesData)
+      computeStateRoot(dummyView, sidechainTransactions, mainchainBlockReferencesData, inputBlockSize)
 
     // dispose of the view
     dummyView.close()
@@ -111,7 +109,16 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     // 2. Compute the receipt root
     val receiptsRoot: Array[Byte] = computeReceiptRoot(receiptList)
 
-    val forgerAddress: AddressProposition = new AddressProposition(new Array[Byte](Account.ADDRESS_SIZE))
+    // 3. As forger address take first address from the wallet
+    val firstAddress = nodeView.vault.allSecrets().asScala
+      .find(s => s.publicImage().isInstanceOf[AddressProposition])
+      .map(_.publicImage().asInstanceOf[AddressProposition])
+
+    val forgerAddress: AddressProposition = firstAddress match {
+      case Some(address) => address
+      case None =>
+        throw new IllegalArgumentException("No addresses in wallet!")
+    }
 
     val block = AccountBlock.create(
       parentId,
@@ -129,8 +136,6 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       stateRoot,
       receiptsRoot,
       forgerAddress,
-      // TODO check, why this works?
-      //companion.asInstanceOf)
       companion.asInstanceOf[SidechainAccountTransactionsCompanion])
 
     block
@@ -165,7 +170,6 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
   override def collectTransactionsFromMemPool(nodeView: View, isWithdrawalEpochLastBlock: Boolean, blockSizeIn: Int): Seq[SidechainTypes#SCAT] =
   {
-    var blockSize: Int = blockSizeIn
     if (isWithdrawalEpochLastBlock) { // SC block is going to become the last block of the withdrawal epoch
       Seq() // no SC Txs allowed
     } else { // SC block is in the middle of the epoch
@@ -202,13 +206,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val stateRoot = getStateRoot(history, nextBlockTimestamp, branchPointInfo)
 
     // 2. get from stateDb using root above the collection of all forger stakes (ordered)
-    val stateViewFromRoot = if (ByteUtils.toHexString(stateRoot) == ByteUtils.toHexString(getGenesisBlockRootHash)) {
-      // in case of genesis block
-      state.getView
-    } else {
-      state.getStateDbViewFromRoot(stateRoot)
-    }
-
+    val stateViewFromRoot = state.getStateDbViewFromRoot(stateRoot)
     val forgingStakeInfoSeq : Seq[ForgingStakeInfo] = stateViewFromRoot.getOrderedForgingStakeInfoSeq
     // release resources
     stateViewFromRoot.close()
