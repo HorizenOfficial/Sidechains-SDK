@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" monitorInterval="30">
+
+    <Properties>
+        <Property name="LOG_PATTERN">[%-5level] %d{yyyy-MM-dd HH:mm:ss:SSS Z} [%28F:%-4L] [%t] %c - %msg%n</Property>
+    </Properties>
+
+    <Appenders>
+
+        <Console name="Console" target="SYSTEM_OUT" follow="true">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+        </Console>
+
+        <RollingFile name="errorLog" fileName="log/ut_test.log"
+                     filePattern="log/ut_test.log-%d{yyyy-MM-dd}-%i.log" >
+            <ThresholdFilter level="all" onMatch="ACCEPT" onMismatch="DENY"/>
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="50 MB" />
+            </Policies>
+            <DefaultRolloverStrategy max="10"/>
+        </RollingFile>
+
+    </Appenders>
+
+    <Loggers>
+
+        <!-- Specify this if some class need special handling-->
+        <!---Logger name="io.horizen.simpleapp" additivity="false">
+            <AppenderRef ref="debugLog" />
+            <AppenderRef ref="Console"/>
+        </Logger-->
+
+        <Root level="all">
+           <AppenderRef ref="errorLog" level="ALL"/>
+           <AppenderRef ref="Console" level="DEBUG"/>
+        </Root>
+
+    </Loggers>
+
+</Configuration>
