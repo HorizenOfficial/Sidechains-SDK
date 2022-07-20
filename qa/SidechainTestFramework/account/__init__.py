@@ -1,1 +1,1 @@
-from ac_smart_contract_compile import prepare_resources
+
