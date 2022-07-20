@@ -1,53 +1,47 @@
 package com.horizen.account.api.rpc.service
 
+import akka.actor.TypedActor.dispatcher
 import akka.actor.{ActorRef, ActorSystem}
-import akka.testkit.TestProbe
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
-import com.horizen.SidechainSettings
-import com.horizen.account.api.http.AccountNodeViewUtilMocks
+import com.horizen.{SidechainHistory, SidechainSettings}
 import com.horizen.account.api.rpc.request.RpcRequest
 import com.horizen.account.api.rpc.response.RpcResponseError
 import com.horizen.account.api.rpc.utils.Quantity
-import com.horizen.account.block.AccountBlock
-import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.node.AccountNodeView
 import com.horizen.account.state.{AccountState, AccountStateView}
-import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.account.wallet.AccountWallet
-import com.horizen.api.http.SidechainApiMockConfiguration
-import com.horizen.fixtures.FieldElementFixture
+import com.horizen.api.http.{SidechainApiMockConfiguration, SidechainTransactionActorRef}
+import com.horizen.fixtures.{FieldElementFixture, MockedSidechainNodeViewHolderFixture}
 import com.horizen.params.{NetworkParams, RegTestParams}
 import org.junit.Assert.{assertEquals, assertFalse}
 import org.junit.{Before, Test}
-import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import org.web3j.protocol.core.methods.response.EthBlock
 import org.web3j.utils.Numeric
+import scorex.core.NodeViewHolder.CurrentView
 
 import java.math.BigInteger
-
-class EthServiceTest extends JUnitSuite with MockitoSugar {
+// TODO: we need full coverage of eth rpc service. Every method with both success and fail cases
+class EthServiceTest extends JUnitSuite
+  with MockitoSugar
+  with MockedSidechainNodeViewHolderFixture {
   var nodeView: AccountNodeView = _
   var ethService: EthService = _
   var params: NetworkParams = _
+  var transactionActorRef: ActorRef = _
 
   implicit val actorSystem: ActorSystem = ActorSystem("sc_nvh_mocked")
-  var mockedNodeViewHolderRef: ActorRef = _
 
   @Before
   def setUp(): Unit = {
-    var history = mock[AccountHistory]
-    var state = mock[AccountState]
-    var wallet = mock[AccountWallet]
-    var mempool = mock[AccountMemoryPool]
-    var settings = mock[SidechainSettings]
+    val settings = mock[SidechainSettings]
     params = RegTestParams(initialCumulativeCommTreeHash = FieldElementFixture.generateFieldElement())
-    nodeView = new AccountNodeView(history, state, wallet, mempool)
-    ethService = new EthService(nodeView, params, settings)
+    transactionActorRef = mock[ActorRef]
+    val nodeView = mock[CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]]
+    val stateView = mock[AccountStateView]
+    ethService = new EthService(stateView, nodeView, params, settings, transactionActorRef)
   }
 
   @Test

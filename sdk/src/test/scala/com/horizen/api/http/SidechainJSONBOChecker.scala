@@ -78,7 +78,7 @@ class SidechainJSONBOChecker {
   def assertsOnAccountTransactionJson(json: JsonNode, transaction: AccountTransaction[_, _]): Unit = {
     assertTrue(json.elements().asScala.length >= 3)
     assertTrue(json.get("id").isTextual)
-    assertEquals(BytesUtils.toHexString(scorex.util.idToBytes(ModifierId @@ transaction.id)), json.get("id").asText())
+    assertEquals(transaction.id, json.get("id").asText())
     assertTrue(json.get("modifierTypeId").isNumber)
     assertEquals(transaction.modifierTypeId.toInt, json.get("modifierTypeId").asInt())
 
