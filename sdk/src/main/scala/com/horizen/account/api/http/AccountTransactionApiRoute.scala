@@ -193,7 +193,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           body.nonce,
           body.gasPrice,
           body.gasLimit,
-          body.value,
+          body.value.orNull,
           body.data,
           if (body.signature_v.isDefined)
             new SignatureData(
@@ -675,7 +675,7 @@ object AccountTransactionRestScheme {
                                                nonce: BigInteger,
                                                gasLimit: BigInteger,
                                                gasPrice: BigInteger,
-                                               value: BigInteger,
+                                               value: Option[BigInteger],
                                                data: String,
                                                signature_v: Option[Array[Byte]],
                                                signature_r: Option[Array[Byte]],

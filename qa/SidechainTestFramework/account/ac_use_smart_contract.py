@@ -1,9 +1,10 @@
 import json
 from typing import Tuple
 from eth_abi import encode_abi, decode_abi
-from ac_smart_contract_compile import prepare_resources, get_cwd
+from SidechainTestFramework.account.ac_smart_contract_compile import prepare_resources, get_cwd
 import os
 from dataclasses import dataclass
+from SidechainTestFramework.account.mk_contract_address import mk_contract_address
 
 
 @dataclass
@@ -12,9 +13,13 @@ class ContractFunction:
     inputs: []
     outputs: []
     sigHash: str
+    isConstructor: bool
 
     def encode(self, *inputs):
-        encoded_string = self.sigHash + encode_abi(self.inputs, inputs).hex()
+        if not self.isConstructor:
+            encoded_string = self.sigHash + encode_abi(self.inputs, inputs).hex()
+        else:
+            encoded_string = encode_abi(self.inputs, inputs).hex()
         return encoded_string
 
     def decode(self, output):
@@ -45,7 +50,69 @@ class SmartContract:
                 input_tuple = f'({",".join(input_types)})'
                 sig_hash = self.Sighashes[f"{obj['name']}{input_tuple}"]
                 self.Functions[obj['name'] + input_tuple] = ContractFunction(obj['name'], input_types, output_types,
-                                                                             sig_hash)
+                                                                             sig_hash, False)
+            elif obj['type'] == 'constructor':
+                input_types = []
+                for inp in obj['inputs']:
+                    input_types.append(self.__get_input_type(inp))
+                self.Functions['constructor'] = ContractFunction('constructor', input_types, [],
+                                                                 '', True)
+
+    def call_function(self, node, functionName, *args, fromAddress: str, toAddress: str, nonce, gasLimit, gasPrice,
+                      value=0):
+        j = {
+            "from": fromAddress,
+            "to": toAddress,
+            "nonce": nonce,
+            "gasLimit": gasLimit,
+            "gasPrice": gasPrice,
+            "value": value,
+            "data": self.raw_encode_call(functionName, *args)
+        }
+        request = json.dumps(j)
+        response = node.transaction_createLegacyTransaction(request)
+        return response["result"]["transactionId"]
+
+    def static_call(self, node, functionName, *args, fromAddress, nonce, toAddress, gasLimit, gasPrice,
+                    value=0):
+        j = {
+            "from": fromAddress,
+            "to": toAddress,
+            "nonce": nonce,
+            "gasLimit": gasLimit,
+            "gasPrice": gasPrice,
+            "value": value,
+            "data": self.raw_encode_call(functionName, *args)
+        }
+        request = json.dumps(j)
+        response = node.rpc_eth_call(str(request), "0")
+        # TODO fix when it exists
+        return response
+
+    def deploy(self, node, *args, fromAddress, nonce, gasLimit, gasPrice,
+               value=0):
+        j = {
+            "from": fromAddress,
+            "nonce": nonce,
+            "gasLimit": gasLimit,
+            "gasPrice": gasPrice,
+            "value": value,
+            "data": self.Bytecode
+        }
+        if 'constructor' in self.Functions:
+            j['data'] = j['data'] + self.Functions['constructor'].encode(*args)
+
+        request = json.dumps(j)
+        response = node.transaction_createLegacyTransaction(request)
+
+        # tx_hash = response["result"]["transactionId"]
+        #
+        # j = {
+        #
+        # }
+        #
+        # nodeView.rpc_eth_getTransactionByHash(request)
+        return response["result"]["transactionId"], mk_contract_address(fromAddress, nonce)
 
     def __str__(self):
         string_rep = self.Name
@@ -141,11 +208,7 @@ if __name__ == '__main__':
     #     pass
     # SmartContract("contracts/ExampleERC20")
     print("Loading example contract and testing encoding")
-    sc = SmartContract("ExampleERC20.sol")
+    sc = SmartContract("ExampleContract.sol")
     print(sc)
     print(
-        f"Smart contract call approve(address,uint256) encoding: {sc.raw_encode_call('approve(address,uint256)', '0x1E0049783F008A0085193E00003D00cd54003c71', 115792089237316195423570985008687907853269984665640564039457584007913129639935)}")
-    print(
-        f"Smart contract call greet((address,uint256)) encoding: {sc.raw_encode_call('greet((address,uint256))', ('0x1E0049783F008A0085193E00003D00cd54003c71', 115792089237316195423570985008687907853269984665640564039457584007913129639935))}")
-    print(
-        f"Smart contract call name() result decoding 'Contract Name' (example): {sc.raw_decode_call_result('name()', bytearray.fromhex('0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000d436f6e7472616374204e616d6500000000000000000000000000000000000000'))}")
+        f"Smart contract call set(string) encoding: {sc.raw_encode_call('set(string)', 'This is my message')}")
