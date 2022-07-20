@@ -20,6 +20,6 @@ object ABIUtil {
   }
 
 
-  def getABIMethodId(methodSig: String): String = Numeric.toHexStringNoPrefix(Hash.sha3(methodSig.getBytes)).substring(2, 10)
+  def getABIMethodId(methodSig: String): String = Numeric.toHexStringNoPrefix(Hash.sha3(methodSig.getBytes)).substring(0, 8)
 
 }
