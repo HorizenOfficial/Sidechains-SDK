@@ -36,6 +36,14 @@ public class EthereumEvent {
     private static TreeMap<Integer, EventParameterData> getEventParameterData(Object eventInstance) throws IllegalAccessException, InvocationTargetException {
         var annotatedParams = new TreeMap<Integer, EventParameterData>();
         var parameterCandidates = new ArrayList<AccessibleObject>();
+
+        // Check if there are any parameter annotations in any event constructor, because scala ignores the allowed java annotation targets
+        for (var constructor : eventInstance.getClass().getDeclaredConstructors()) {
+            if (Arrays.stream(constructor.getParameterAnnotations()).flatMap(Arrays::stream).anyMatch(x -> x instanceof Parameter)) {
+                throw new IllegalArgumentException("Error while trying the get the parameter data: Parameter annotation not allowed in constructor");
+            }
+        }
+
         parameterCandidates.addAll(List.of(eventInstance.getClass().getDeclaredMethods()));
         parameterCandidates.addAll(List.of(eventInstance.getClass().getDeclaredFields()));
         for (AccessibleObject acObj : parameterCandidates) {
@@ -51,14 +59,6 @@ public class EthereumEvent {
             } else {
                 var method = (Method) acObj;
                 annotatedParams.put(acObj.getAnnotation(Parameter.class).value(), new EventParameterData(indexed, method.getReturnType(), (Type) method.invoke(eventInstance)));
-            }
-        }
-
-        if (annotatedParams.size() <= 0) {
-            for (var constructor : eventInstance.getClass().getDeclaredConstructors()) {
-                if (Arrays.stream(constructor.getParameterAnnotations()).flatMap(Arrays::stream).anyMatch(x -> x instanceof Parameter)) {
-                    throw new IllegalArgumentException("Error while trying the get the parameter data: Parameter annotation not allowed in constructor");
-                }
             }
         }
         return annotatedParams;
