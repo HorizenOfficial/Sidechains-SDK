@@ -21,7 +21,7 @@ import java.lang.reflect.Method;
 import java.util.*;
 
 public class EthereumEvent {
-    public EthereumEvent() {
+    private EthereumEvent() {
     }
 
     /**
