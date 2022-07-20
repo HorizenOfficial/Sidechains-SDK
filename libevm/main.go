@@ -1,32 +1,13 @@
-//go:build cgo
-
 package main
 
 // #cgo CFLAGS: -g -Wall -O3 -fpic -Werror
-//#include <stdlib.h>
-//
-//void Free(void *ptr) {
-//    free(ptr);
-//}
-//
-//typedef void (*logFunction)(char *msg);
-//
-//// global log callback function pointer
-//static logFunction log = NULL;
-//
-//// exported symbol to set the log function pointer
-//void RegisterLogCallback(logFunction callback) {
-//    log = callback;
-//}
-//
-//// used by GO to invoke the log callback, as GO cannot invoke C function pointers
-//void invokeLog(char *msg) {
-//    if (log != NULL) log(msg);
-//}
+// #include <stdlib.h>
+// #include "main.h"
 import "C"
 import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/log"
+	"libevm/interop"
 	"libevm/lib"
 	"unsafe"
 )
@@ -67,4 +48,13 @@ func init() {
 
 // main function is required by cgo, but doesn't do anything nor is it ever called
 func main() {
+}
+
+//export Invoke
+func Invoke(method *C.char, args *C.char) *C.char {
+	jsonString := interop.Invoke(instance, C.GoString(method), C.GoString(args))
+	if jsonString == "" {
+		return nil
+	}
+	return C.CString(jsonString)
 }
