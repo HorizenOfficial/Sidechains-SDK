@@ -2,6 +2,7 @@ package com.horizen.account.state
 
 import com.fasterxml.jackson.annotation.JsonView
 import com.google.common.primitives.Bytes
+import com.horizen.account.abi.ABIUtil.{METHOD_CODE_LENGTH, getABIMethodId, getArgumentsFromData, getOpCodeFromData}
 import com.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
@@ -9,14 +10,11 @@ import com.horizen.account.state.ForgerStakeMsgProcessor._
 import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
-import com.horizen.utils.{BytesUtils, ListSerializer}
-import com.horizen.account.abi.ABIDecoder.{OP_CODE_LENGTH, getArgumentsFromData, getOpCodeFromData}
-import com.horizen.account.state.AbstractFakeSmartContractMsgProcessor.getABIMethodId
 import com.horizen.serialization.Views
+import com.horizen.utils.{BytesUtils, ListSerializer}
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint256}
 import org.web3j.abi.datatypes.{Address, StaticStruct, Type}
-import org.web3j.crypto.Hash
 import org.web3j.utils.Numeric
 import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.crypto.hash.{Blake2b256, Keccak256}
@@ -31,6 +29,8 @@ trait ForgerStakesProvider {
   private[horizen] def getListOfForgers(view: BaseAccountStateView): Seq[AccountForgingStakeInfo]
 
   private[horizen] def addScCreationForgerStake(msg: Message, view: BaseAccountStateView): ExecutionResult
+
+  private[horizen] def findStakeData(view: BaseAccountStateView, stakeId: Array[Byte]): Option[ForgerStakeData]
 }
 
 case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSmartContractMsgProcessor with ForgerStakesProvider {
@@ -41,9 +41,9 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
 
   // ensure we have strings consistent with size of opcode
   require(
-    GetListOfForgersCmd.length == 2 * OP_CODE_LENGTH &&
-      AddNewStakeCmd.length == 2 * OP_CODE_LENGTH &&
-      RemoveStakeCmd.length == 2 * OP_CODE_LENGTH
+    GetListOfForgersCmd.length == 2 * METHOD_CODE_LENGTH &&
+      AddNewStakeCmd.length == 2 * METHOD_CODE_LENGTH &&
+      RemoveStakeCmd.length == 2 * METHOD_CODE_LENGTH
   )
 
   // TODO set proper values
@@ -73,10 +73,6 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     require(BytesUtils.toHexString(initialTip) == NULL_HEX_STRING_32)
 
     view.updateAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey, LinkedListNullValue)
-  }
-
-  def getMessageToSign(stakeId: Array[Byte], from: Array[Byte], nonce: Array[Byte]): Array[Byte] = {
-    Bytes.concat(from, nonce, stakeId)
   }
 
   def existsStakeData(view: BaseAccountStateView, stakeId: Array[Byte]): Boolean = {
@@ -273,7 +269,9 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
       return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(msgStr))
     }
 
-    val cmdInput = AddNewStakeCmdInputDecoder.decode(msg.getData) match {
+    val inputParams = getArgumentsFromData(msg.getData)
+
+    val cmdInput = AddNewStakeCmdInputDecoder.decode(inputParams) match {
       case Success(obj) => obj
       case Failure(exception) =>
         val msgStr = "Error while parsing cmd input"
@@ -336,7 +334,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
   private def checkGetListOfForgersCmd(msg: Message): Unit = {
     // check we have no other bytes after the op code in the msg data
     if (getArgumentsFromData(msg.getData).length > 0) {
-      val msgStr = s"invalid msg data length: ${msg.getData.length}, expected $OP_CODE_LENGTH"
+      val msgStr = s"invalid msg data length: ${msg.getData.length}, expected $METHOD_CODE_LENGTH"
       log.debug(msgStr)
       throw new IllegalArgumentException(msgStr)
     }
@@ -361,7 +359,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
       nodeReference = prevNodeReference
     }
 
-    val listOfForgers = AccountForgingStakeInfoListEncoder.encode(stakeList.asScala)
+    val listOfForgers = AccountForgingStakeInfoListEncoder.encode(stakeList)
     new ExecutionSucceeded(GetListOfForgersGasPaidValue, listOfForgers)
   }
 
@@ -379,7 +377,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
   }
 
   def doRemoveStakeCmd(msg: Message, view: BaseAccountStateView): ExecutionResult = {
-    val cmdInput = RemoveStakeCmdInputDecoder.decode(msg.getData) match {
+    val inputParams = getArgumentsFromData(msg.getData)
+    val cmdInput = RemoveStakeCmdInputDecoder.decode(inputParams) match {
       case Success(obj) => obj
       case Failure(exception) =>
         val msgStr = "Error while parsing cmd input"
@@ -469,6 +468,12 @@ object ForgerStakeMsgProcessor {
   val RemoveStakeCmd: String = getABIMethodId("withdraw(bytes32,bytes1,bytes32,bytes32)")
 
   val ForgerStakeSmartContractAddress = new AddressProposition(BytesUtils.fromHexString("0000000000000000000022222222222222222222"))
+
+  def getMessageToSign(stakeId: Array[Byte], from: Array[Byte], nonce: Array[Byte]): Array[Byte] = {
+    Bytes.concat(from, nonce, stakeId)
+  }
+
+
 }
 
 @JsonView(Array(classOf[Views.Default]))
@@ -476,7 +481,7 @@ object ForgerStakeMsgProcessor {
 case class AccountForgingStakeInfo(
                                     stakeId: Array[Byte],
                                     forgerStakeData: ForgerStakeData)
-  extends BytesSerializable with ABIEncodable {
+  extends BytesSerializable with ABIEncodable[StaticStruct] {
 
   override type M = AccountForgingStakeInfo
 
@@ -487,8 +492,8 @@ case class AccountForgingStakeInfo(
 
   private[horizen] def asABIType(): StaticStruct = {
 
-    val forgerPublicKeysParams: util.List[Type[_]] = forgerStakeData.forgerPublicKeys.asABIType().getValue.asInstanceOf[util.List[Type[_]]]
-    val listOfParams: util.List[Type[_]] = new util.ArrayList[Type[_]]()
+    val forgerPublicKeysParams = forgerStakeData.forgerPublicKeys.asABIType().getValue.asInstanceOf[util.Collection[_ <: Type[_]]]
+    val listOfParams = new util.ArrayList[Type[_]]()
 
     listOfParams.add(new Bytes32(stakeId))
     listOfParams.add(new Uint256(forgerStakeData.stakedAmount))
@@ -500,7 +505,9 @@ case class AccountForgingStakeInfo(
   }
 }
 
-object AccountForgingStakeInfoListEncoder extends ABIListEncoder[AccountForgingStakeInfo]
+object AccountForgingStakeInfoListEncoder extends ABIListEncoder[AccountForgingStakeInfo, StaticStruct]{
+  override def getAbiClass: Class[StaticStruct] = classOf[StaticStruct]
+}
 
 object AccountForgingStakeInfoSerializer extends ScorexSerializer[AccountForgingStakeInfo] {
 
@@ -521,7 +528,7 @@ object AccountForgingStakeInfoSerializer extends ScorexSerializer[AccountForging
 case class ForgerPublicKeys(
                              blockSignPublicKey: PublicKey25519Proposition,
                              vrfPublicKey: VrfPublicKey)
-  extends BytesSerializable with ABIEncodable {
+  extends BytesSerializable with ABIEncodable[StaticStruct] {
   override type M = ForgerPublicKeys
 
   private[horizen] def vrfPublicKeyToAbi(vrfPublicKey: Array[Byte]): (Bytes32, Bytes1) = {
@@ -561,14 +568,13 @@ object ForgerPublicKeysSerializer extends ScorexSerializer[ForgerPublicKeys] {
 
 case class AddNewStakeCmdInput(
                                 forgerPublicKeys: ForgerPublicKeys,
-                                ownerAddress: AddressProposition) extends ABIEncodable {
+                                ownerAddress: AddressProposition) extends ABIEncodable[StaticStruct] {
 
-
-  override type M = AddNewStakeCmdInput
 
   override def asABIType(): StaticStruct = {
     val forgerPublicKeysAbi = forgerPublicKeys.asABIType()
     val listOfParams: util.List[Type[_]] = new util.ArrayList(forgerPublicKeysAbi.getValue.asInstanceOf[util.List[Type[_]]])
+    //val listOfParams = new util.ArrayList(forgerPublicKeysAbi.getValue)
     listOfParams.add(new Address(Numeric.toHexString(ownerAddress.address())))
     new StaticStruct(listOfParams)
 
@@ -581,7 +587,7 @@ case class AddNewStakeCmdInput(
 
 object AddNewStakeCmdInputDecoder extends ABIDecoder[AddNewStakeCmdInput] {
 
-  override val ListOfABIParamTypes = org.web3j.abi.Utils.convert(util.Arrays.asList(new TypeReference[Bytes32]() {},
+  override val getListOfABIParamTypes = org.web3j.abi.Utils.convert(util.Arrays.asList(new TypeReference[Bytes32]() {},
     new TypeReference[Bytes32]() {},
     new TypeReference[Bytes1]() {},
     new TypeReference[Address]() {}))
@@ -606,9 +612,7 @@ object AddNewStakeCmdInputDecoder extends ABIDecoder[AddNewStakeCmdInput] {
 case class RemoveStakeCmdInput(
                                 stakeId: Array[Byte],
                                 signature: SignatureSecp256k1)
-  extends ABIEncodable {
-
-  override type M = RemoveStakeCmdInput
+  extends ABIEncodable[StaticStruct] {
 
   override def asABIType(): StaticStruct = {
     val listOfParams: util.List[Type[_]] = util.Arrays.asList(new Bytes32(stakeId), new Bytes1(signature.getV), new Bytes32(signature.getR), new Bytes32(signature.getS))
@@ -622,7 +626,7 @@ case class RemoveStakeCmdInput(
 
 object RemoveStakeCmdInputDecoder extends ABIDecoder[RemoveStakeCmdInput] {
 
-  override val ListOfABIParamTypes = org.web3j.abi.Utils.convert(util.Arrays.asList(new TypeReference[Bytes32]() {},
+  override val getListOfABIParamTypes = org.web3j.abi.Utils.convert(util.Arrays.asList(new TypeReference[Bytes32]() {},
     new TypeReference[Bytes1]() {},
     new TypeReference[Bytes32]() {},
     new TypeReference[Bytes32]() {}))

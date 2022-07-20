@@ -8,7 +8,6 @@ import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 
 import java.math.BigInteger
-import scala.Console.println
 import scala.collection.JavaConverters.asScalaIteratorConverter
 import scala.util.Random
 
@@ -99,7 +98,6 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
-        println(result)
         if (result == null)
           fail("Serialization failed for object SidechainApiResponseBody")
 
@@ -162,8 +160,8 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
     "reply at /withdrawCoins" in {
       val amountInZennies = 32
 
-      Post(basePath + "withdrawCoins").withEntity(SerializationUtil.serialize(ReqWithdrawCoins(1, Some(BigInteger.ONE),
-        TransactionWithdrawalRequest(utilMocks.getMCPublicKeyHashProposition.toString,amountInZennies), None))) ~> sidechainTransactionApiRoute ~> check {
+      Post(basePath + "withdrawCoins").withEntity(SerializationUtil.serialize(ReqWithdrawCoins(Some(BigInteger.ONE),
+        TransactionWithdrawalRequest(utilMocks.getMCPublicKeyHashProposition.toString, amountInZennies), None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
@@ -196,8 +194,8 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
     "reply at /makeForgerStake" in {
       val stakeAmountInZennies = 32
 
-      Post(basePath + "makeForgerStake").withEntity(SerializationUtil.serialize(ReqCreateForgerStake(1, Some(BigInteger.ONE),
-        TransactionForgerOutput(utilMocks.ownerString, Some(utilMocks.blockSignerPropositionString), utilMocks.vrfPublicKeyString, stakeAmountInZennies), None))) ~> sidechainTransactionApiRoute ~> check {
+      Post(basePath + "makeForgerStake").withEntity(SerializationUtil.serialize(ReqCreateForgerStake(Some(BigInteger.ONE),
+        TransactionForgerOutput(utilMocks.ownerPublicKeyString, Some(utilMocks.blockSignerPropositionString), utilMocks.vrfPublicKeyString, stakeAmountInZennies), None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
@@ -210,14 +208,8 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
     }
 
     "reply at /spendForgingStake" in {
-      val signature = utilMocks.getRandomSignatureSecp256k1
-      val stakeId = "9e26bd4ff89374e916b369024e882db68a49b824e71008b827c7794e9f4d0170"
-      val stake = TransactionSpendForgerStake(stakeId,
-        BytesUtils.toHexString(signature.getV),
-        BytesUtils.toHexString(signature.getR),
-        BytesUtils.toHexString(signature.getS))
-      val outAsTransactionObj = ReqSpendForgingStake(1, Some(BigInteger.ONE),
-        stake, None, Some(true))
+      val outAsTransactionObj = ReqSpendForgingStake(Some(BigInteger.ONE),
+        utilMocks.stakeId, None, Some(true))
 
       Post(basePath + "spendForgingStake").withEntity(SerializationUtil.serialize(outAsTransactionObj)) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
@@ -228,18 +220,18 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
 
         assertEquals(1, result.elements().asScala.length)
         assertTrue(result.get("transaction").isObject)
-      }
-      val outAsByteArray = ReqSpendForgingStake(1, Some(BigInteger.ONE),stake, None, Some(false))
+        val outAsByteArray = ReqSpendForgingStake(Some(BigInteger.ONE), utilMocks.stakeId, None, Some(false))
 
-      Post(basePath + "spendForgingStake").withEntity(SerializationUtil.serialize(outAsByteArray)) ~> sidechainTransactionApiRoute ~> check {
-        status.intValue() shouldBe StatusCodes.OK.intValue
-        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-        val result = mapper.readTree(entityAs[String]).get("result")
-        if (result == null)
-          fail("Serialization failed for object SidechainApiResponseBody")
+        Post(basePath + "spendForgingStake").withEntity(SerializationUtil.serialize(outAsByteArray)) ~> sidechainTransactionApiRoute ~> check {
+          status.intValue() shouldBe StatusCodes.OK.intValue
+          responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+          val result = mapper.readTree(entityAs[String]).get("result")
+          if (result == null)
+            fail("Serialization failed for object SidechainApiResponseBody")
 
-        assertEquals(1, result.elements().asScala.length)
-        assertTrue(result.get("transactionBytes").isTextual)
+          assertEquals(1, result.elements().asScala.length)
+          assertTrue(result.get("transactionBytes").isTextual)
+        }
       }
     }
 
@@ -247,7 +239,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
       val contractCodeBytes = new Array[Byte](100)
       Random.nextBytes(contractCodeBytes)
       val contractCode = BytesUtils.toHexString(contractCodeBytes)
-      Post(basePath + "createSmartContract").withEntity(SerializationUtil.serialize(ReqCreateContract(1, Some(BigInteger.ONE),
+      Post(basePath + "createSmartContract").withEntity(SerializationUtil.serialize(ReqCreateContract(Some(BigInteger.ONE),
         contractCode, None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`

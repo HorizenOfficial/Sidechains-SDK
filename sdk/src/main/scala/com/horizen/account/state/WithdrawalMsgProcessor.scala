@@ -1,10 +1,9 @@
 package com.horizen.account.state
 
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.account.abi.ABIDecoder.{OP_CODE_LENGTH, getOpCodeFromData}
 import com.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.state.AbstractFakeSmartContractMsgProcessor.getABIMethodId
+import com.horizen.account.abi.ABIUtil.{METHOD_CODE_LENGTH, getABIMethodId, getArgumentsFromData, getOpCodeFromData}
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.utils.{BytesUtils, ZenCoinsUtils}
@@ -15,6 +14,7 @@ import scorex.crypto.hash.Keccak256
 
 import java.math.BigInteger
 import java.util
+import scala.collection.JavaConverters.seqAsJavaListConverter
 
 trait WithdrawalRequestProvider {
   private[horizen] def getListOfWithdrawalReqRecords(epochNum: Int, view: BaseAccountStateView): Seq[WithdrawalRequest]
@@ -97,14 +97,13 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
 
   protected def execGetListOfWithdrawalReqRecords(msg: Message, view: BaseAccountStateView): ExecutionResult = {
     try {
-      require(msg.getData.length == OP_CODE_LENGTH + GetListOfWithdrawalRequestsCmdInputDecoder.ABIDataParamsLengthInBytes,
+      require(msg.getData.length == METHOD_CODE_LENGTH + GetListOfWithdrawalRequestsCmdInputDecoder.getABIDataParamsLengthInBytes,
         s"Wrong data length ${msg.getData.length}") //TODO should any length between OP_CODE_LENGTH to OP_CODE_LENGTH + 32 be supported?
-
-      val inputParams = GetListOfWithdrawalRequestsCmdInputDecoder.decode(msg.getData).get
+      val inputParams = GetListOfWithdrawalRequestsCmdInputDecoder.decode(getArgumentsFromData(msg.getData)).get
       val epochNum = inputParams.epochNum
       val listOfWithdrawalReqs = getListOfWithdrawalReqRecords(epochNum, view)
 
-      val abiEncodedList = WithdrawalRequestsListEncoder.encode(listOfWithdrawalReqs)
+      val abiEncodedList = WithdrawalRequestsListEncoder.encode(listOfWithdrawalReqs.asJava)
       //Evm log
       new ExecutionSucceeded(GasSpentForGetListOfWithdrawalReqsCmd, abiEncodedList)
     }
@@ -117,10 +116,10 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
   }
 
 
-  private[horizen] def checkWithdrawalRequestValidity(msg: Message, view: BaseAccountStateView): Unit = {
+  private[horizen] def checkWithdrawalRequestValidity(msg: Message): Unit = {
     val withdrawalAmount = msg.getValue
 
-    if (msg.getData.length != OP_CODE_LENGTH + AddWithdrawalRequestCmdInputDecoder.ABIDataParamsLengthInBytes) {
+    if (msg.getData.length != METHOD_CODE_LENGTH + AddWithdrawalRequestCmdInputDecoder.getABIDataParamsLengthInBytes) {
       log.error(s"Wrong message data field length: ${msg.getData.length}")
       throw new IllegalArgumentException("Wrong message data field length")
     }
@@ -136,7 +135,7 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
 
   protected def execAddWithdrawalRequest(msg: Message, view: BaseAccountStateView): ExecutionResult = {
     try {
-      checkWithdrawalRequestValidity(msg, view)
+      checkWithdrawalRequestValidity(msg)
       val currentEpochNum = view.getWithdrawalEpochInfo.epoch
       val numOfWithdrawalReqs = getWithdrawalEpochCounter(view, currentEpochNum)
       if (numOfWithdrawalReqs >= MaxWithdrawalReqsNumPerEpoch) {
@@ -147,7 +146,7 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
       val nextNumOfWithdrawalReqs: Int = numOfWithdrawalReqs + 1
       setWithdrawalEpochCounter(view, currentEpochNum, nextNumOfWithdrawalReqs)
 
-      val inputParams = AddWithdrawalRequestCmdInputDecoder.decode(msg.getData).get
+      val inputParams = AddWithdrawalRequestCmdInputDecoder.decode(getArgumentsFromData(msg.getData)).get
       val withdrawalAmount = msg.getValue
       val request = WithdrawalRequest(inputParams.mcAddr, withdrawalAmount)
       val requestInBytes = request.bytes
@@ -182,7 +181,7 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
 
 object AddWithdrawalRequestCmdInputDecoder extends ABIDecoder[AddWithdrawalRequestCmdInput] {
 
-  override val ListOfABIParamTypes = org.web3j.abi.Utils.convert(util.Arrays.asList(new TypeReference[Bytes20]() {}))
+  override def getListOfABIParamTypes: util.List[TypeReference[Type[_]]] = org.web3j.abi.Utils.convert(util.Arrays.asList(new TypeReference[Bytes20]() {}))
 
   override def createType(listOfParams: util.List[Type[_]]): AddWithdrawalRequestCmdInput = {
     AddWithdrawalRequestCmdInput(new MCPublicKeyHashProposition(listOfParams.get(0).asInstanceOf[Bytes20].getValue))
@@ -190,8 +189,7 @@ object AddWithdrawalRequestCmdInputDecoder extends ABIDecoder[AddWithdrawalReque
 
 }
 
-case class AddWithdrawalRequestCmdInput(mcAddr: MCPublicKeyHashProposition) extends ABIEncodable {
-  override type M = AddWithdrawalRequestCmdInput
+case class AddWithdrawalRequestCmdInput(mcAddr: MCPublicKeyHashProposition) extends ABIEncodable[StaticStruct] {
 
   override def asABIType(): StaticStruct = {
     new StaticStruct(
@@ -201,7 +199,7 @@ case class AddWithdrawalRequestCmdInput(mcAddr: MCPublicKeyHashProposition) exte
 }
 
 object GetListOfWithdrawalRequestsCmdInputDecoder extends ABIDecoder[GetListOfWithdrawalRequestsInputCmd] {
-  override val ListOfABIParamTypes = org.web3j.abi.Utils.convert(util.Arrays.asList(new TypeReference[Uint32]() {}))
+  override def getListOfABIParamTypes: util.List[TypeReference[Type[_]]] = org.web3j.abi.Utils.convert(util.Arrays.asList(new TypeReference[Uint32]() {}))
 
   override def createType(listOfParams: util.List[Type[_]]): GetListOfWithdrawalRequestsInputCmd = {
     GetListOfWithdrawalRequestsInputCmd(listOfParams.get(0).asInstanceOf[Uint32].getValue.intValue())
@@ -209,8 +207,7 @@ object GetListOfWithdrawalRequestsCmdInputDecoder extends ABIDecoder[GetListOfWi
 
 }
 
-case class GetListOfWithdrawalRequestsInputCmd(epochNum: Int) extends ABIEncodable {
-  override type M = GetListOfWithdrawalRequestsInputCmd
+case class GetListOfWithdrawalRequestsInputCmd(epochNum: Int) extends ABIEncodable[StaticStruct] {
 
   override def asABIType(): StaticStruct = {
    new StaticStruct(
@@ -219,4 +216,7 @@ case class GetListOfWithdrawalRequestsInputCmd(epochNum: Int) extends ABIEncodab
   }
 }
 
-object WithdrawalRequestsListEncoder extends ABIListEncoder[WithdrawalRequest]
+object WithdrawalRequestsListEncoder extends ABIListEncoder[WithdrawalRequest, StaticStruct]{
+  override def getAbiClass: Class[StaticStruct] = classOf[StaticStruct]
+
+}

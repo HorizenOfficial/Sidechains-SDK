@@ -71,6 +71,12 @@ type GetLogsParams struct {
 	TxHash common.Hash `json:"txHash"`
 }
 
+type SetTxContextParams struct {
+	HandleParams
+	TxHash  common.Hash `json:"txHash"`
+	TxIndex int         `json:"txIndex"`
+}
+
 // StateOpen will create a new state at the given root hash.
 // If the root hash is zero (or the hash of zero) this will give an empty trie.
 // If the hash is anything else this will result in an error if the nodes cannot be found.
@@ -350,4 +356,13 @@ func (s *Service) StateGetLogs(params GetLogsParams) (error, []*Log) {
 		return err, nil
 	}
 	return nil, getLogs(statedb, params.TxHash)
+}
+
+func (s *Service) StateSetTxContext(params SetTxContextParams) error {
+	err, statedb := s.statedbs.Get(params.Handle)
+	if err != nil {
+		return err
+	}
+	statedb.Prepare(params.TxHash, params.TxIndex)
+	return nil
 }

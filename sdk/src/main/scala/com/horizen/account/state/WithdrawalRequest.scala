@@ -13,8 +13,7 @@ import scorex.util.serialization.{Reader, Writer}
 import java.math.BigInteger
 
 @JsonView(Array(classOf[Views.Default]))
-//@JsonIgnoreProperties(Array("valueInZennies"))
-case class WithdrawalRequest(proposition: MCPublicKeyHashProposition, value: java.math.BigInteger) extends BytesSerializable with ABIEncodable {
+case class WithdrawalRequest(proposition: MCPublicKeyHashProposition, value: java.math.BigInteger) extends BytesSerializable with ABIEncodable[StaticStruct] {
   override type M = WithdrawalRequest
 
   override def serializer: ScorexSerializer[WithdrawalRequest] = WithdrawalRequestSerializer

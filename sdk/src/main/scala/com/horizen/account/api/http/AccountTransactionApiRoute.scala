@@ -150,7 +150,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       // lock the view and try to create CoreTransaction
       applyOnNodeView { sidechainNodeView =>
         var signedTx: EthereumTransaction = new EthereumTransaction(
-          body.chainId,
+          params.chainId,
           body.to.orNull,
           body.nonce,
           body.gasLimit,
@@ -285,7 +285,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
             val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
             val data = encodeAddNewStakeCmdRequest(body.forgerStakeInfo)
             val tmpTx: EthereumTransaction = new EthereumTransaction(
-              body.chainId,
+              params.chainId,
               to,
               nonce,
               gasLimit,
@@ -294,7 +294,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               valueInWei,
               data,
               null
-            );
+            )
             validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
           case None =>
             ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
@@ -321,29 +321,46 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         //TODO Probably getFittingSecret would need to take into account also gas
         val secret = getFittingSecret(sidechainNodeView, None, valueInWei)
         secret match {
-          case Some(secret) =>
+          case Some(txCreatorSecret) =>
             val to = BytesUtils.toHexString(ForgerStakeMsgProcessor.ForgerStakeSmartContractAddress.address())
-            val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
-            val data = encodeSpendStakeCmdRequest(body.spendForgerStakeInfo)
-            val tmpTx: EthereumTransaction = new EthereumTransaction(
-              body.chainId,
-              to,
-              nonce,
-              gasLimit,
-              maxPriorityFeePerGas,
-              maxFeePerGas,
-              valueInWei,
-              data,
-              null
-            );
-            val txRepresentation: (SidechainTypes#SCAT => SuccessResponse) =
-              if (body.format.getOrElse(false)) {
-                tx => TransactionDTO(tx)
-              } else {
-                tx => TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(tx)))
-              }
+            val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(txCreatorSecret.publicImage.address))
+            val stakeDataOpt = sidechainNodeView.getNodeState.getForgerStakeData(body.stakeId)
+            stakeDataOpt match {
+              case Some(stakeData) =>
+                val stakeOwnerSecretOpt = sidechainNodeView.getNodeWallet.secretByPublicKey(stakeData.ownerPublicKey)
+                if (stakeOwnerSecretOpt.isEmpty){
+                  ApiResponseUtil.toResponse(ErrorForgerStakeOwnerNotFound(s"Forger Stake Owner not found"))
+                }
+                else {
+                  val stakeOwnerSecret = stakeOwnerSecretOpt.get().asInstanceOf[PrivateKeySecp256k1]
 
-            validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx), txRepresentation)
+
+                  val msgToSign = ForgerStakeMsgProcessor.getMessageToSign(BytesUtils.fromHexString(body.stakeId),txCreatorSecret.publicImage().address(),nonce.toByteArray)
+                  val signature = stakeOwnerSecret.sign(msgToSign)
+                  val data = encodeSpendStakeCmdRequest(signature, body.stakeId)
+                  val tmpTx: EthereumTransaction = new EthereumTransaction(
+                    params.chainId,
+                    to,
+                    nonce,
+                    gasLimit,
+                    maxPriorityFeePerGas,
+                    maxFeePerGas,
+                    valueInWei,
+                    data,
+                    null
+                  )
+
+                  val txRepresentation: (SidechainTypes#SCAT => SuccessResponse) =
+                    if (body.format.getOrElse(false)) {
+                      tx => TransactionDTO(tx)
+                    } else {
+                      tx => TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(tx)))
+                    }
+
+                  validateAndSendTransaction(signTransactionWithSecret(txCreatorSecret, tmpTx), txRepresentation)
+                }
+              case None =>  ApiResponseUtil.toResponse(ErrorForgerStakeNotFound(s"No Forger Stake found with stake id ${body.stakeId}"))
+            }
           case None =>
             ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
         }
@@ -386,7 +403,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
             val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
             val tmpTx: EthereumTransaction = new EthereumTransaction(
-              body.chainId,
+              params.chainId,
               to,
               nonce,
               gasLimit,
@@ -395,7 +412,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
               valueInWei,
               data,
               null
-            );
+            )
             validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
           case None =>
             ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
@@ -437,7 +454,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
             val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
             val data = body.contractCode
             val tmpTx: EthereumTransaction = new EthereumTransaction(
-              body.chainId,
+              params.chainId,
               to,
               nonce,
               gasLimit,
@@ -465,11 +482,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     data
   }
 
-  def encodeSpendStakeCmdRequest(spendForgerStake: TransactionSpendForgerStake): String = {
-    val signature = new SignatureSecp256k1(BytesUtils.fromHexString(spendForgerStake.v),
-      BytesUtils.fromHexString(spendForgerStake.r),
-      BytesUtils.fromHexString(spendForgerStake.r))
-    val spendForgerStakeInput = RemoveStakeCmdInput(BytesUtils.fromHexString(spendForgerStake.stakeId), signature)
+  def encodeSpendStakeCmdRequest(signatureSecp256k1: SignatureSecp256k1, stakeId: String): String = {
+    val spendForgerStakeInput = RemoveStakeCmdInput(BytesUtils.fromHexString(stakeId), signatureSecp256k1)
     val data = BytesUtils.toHexString(Bytes.concat(BytesUtils.fromHexString(ForgerStakeMsgProcessor.RemoveStakeCmd), spendForgerStakeInput.encode()))
     data
   }
@@ -551,14 +565,6 @@ object AccountTransactionRestScheme {
   private[api] case class TransactionForgerOutput(ownerAddress: String, blockSignPublicKey: Option[String], vrfPubKey: String, value: Long)
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class TransactionSpendForgerStake(stakeId: String, v: String, r: String, s: String) {
-    require(stakeId.nonEmpty, "Stake Id is missing")
-    require(v.nonEmpty, "Signature v data is missing")
-    require(r.nonEmpty, "Signature r data is missing")
-    require(s.nonEmpty, "Signature s data is missing")
-  }
-
-  @JsonView(Array(classOf[Views.Default]))
   private[api] case class EIP1559GasInfo(gasLimit: BigInteger, maxPriorityFeePerGas: BigInteger, maxFeePerGas: BigInteger) {
     require(gasLimit.signum() > 0, "Gas limit can not be 0")
     require(maxPriorityFeePerGas.signum() > 0, "MaxPriorityFeePerGas must be greater than 0")
@@ -595,11 +601,9 @@ object AccountTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqWithdrawCoins(chainId: Long,
-                                           nonce: Option[BigInteger],
+  private[api] case class ReqWithdrawCoins(nonce: Option[BigInteger],
                                            withdrawalRequest: TransactionWithdrawalRequest,
                                            gasInfo: Option[EIP1559GasInfo]) {
-    require(chainId > 0, "ChainId must be positive")
     require(withdrawalRequest != null, "Withdrawal request info must be provided")
   }
 
@@ -610,12 +614,11 @@ object AccountTransactionRestScheme {
 
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqCreateForgerStake(chainId: Long,
-                                               nonce: Option[BigInteger],
-                                               forgerStakeInfo: TransactionForgerOutput,
-                                               gasInfo: Option[EIP1559GasInfo]
+  private[api] case class ReqCreateForgerStake(
+                                                nonce: Option[BigInteger],
+                                                forgerStakeInfo: TransactionForgerOutput,
+                                                gasInfo: Option[EIP1559GasInfo]
                                               ) {
-    require(chainId > 0, "ChainId must be positive")
     require(forgerStakeInfo != null, "Forger stake info must be provided")
   }
 
@@ -623,11 +626,10 @@ object AccountTransactionRestScheme {
   private[api] case class ReqSendTransactionPost(transactionBytes: String)
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqCreateContract(chainId: Long,
-                                            nonce: Option[BigInteger],
-                                            contractCode: String,
-                                            gasInfo: Option[EIP1559GasInfo]) {
-    require(chainId > 0, "ChainId must be positive")
+  private[api] case class ReqCreateContract(
+                                             nonce: Option[BigInteger],
+                                             contractCode: String,
+                                             gasInfo: Option[EIP1559GasInfo]) {
     require(contractCode.nonEmpty, "Contract code must be provided")
   }
 
@@ -636,35 +638,33 @@ object AccountTransactionRestScheme {
   private[api] case class TransactionIdDTO(transactionId: String) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqSpendForgingStake(chainId: Long,
-                                               nonce: Option[BigInteger],
-                                               spendForgerStakeInfo: TransactionSpendForgerStake,
-                                               gasInfo: Option[EIP1559GasInfo],
-                                               format: Option[Boolean]) {
-    require(chainId > 0, "ChainId must be positive")
-    require(spendForgerStakeInfo != null, "Signature data must be provided")
+  private[api] case class ReqSpendForgingStake(
+                                                nonce: Option[BigInteger],
+                                                stakeId: String,
+                                                gasInfo: Option[EIP1559GasInfo],
+                                                format: Option[Boolean]) {
+    require(stakeId.nonEmpty, "Signature data must be provided")
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqEIP1559Transaction(chainId: Long,
-                                                from: Option[String],
-                                                to: Option[String],
-                                                nonce: BigInteger,
-                                                gasLimit: BigInteger,
-                                                maxPriorityFeePerGas: BigInteger,
-                                                maxFeePerGas: BigInteger,
-                                                value: BigInteger,
-                                                data: String,
-                                                signature_v: Option[Array[Byte]],
-                                                signature_r: Option[Array[Byte]],
-                                                signature_s: Option[Array[Byte]]) {
+  private[api] case class ReqEIP1559Transaction(
+                                                 from: Option[String],
+                                                 to: Option[String],
+                                                 nonce: BigInteger,
+                                                 gasLimit: BigInteger,
+                                                 maxPriorityFeePerGas: BigInteger,
+                                                 maxFeePerGas: BigInteger,
+                                                 value: BigInteger,
+                                                 data: String,
+                                                 signature_v: Option[Array[Byte]],
+                                                 signature_r: Option[Array[Byte]],
+                                                 signature_s: Option[Array[Byte]]) {
     require(
       (signature_v.nonEmpty && signature_r.nonEmpty && signature_s.nonEmpty)
         || (signature_v.isEmpty && signature_r.isEmpty && signature_s.isEmpty),
       "Signature can not be partial"
     )
     require(gasLimit.signum() > 0, "Gas limit can not be 0")
-    require(chainId > 0, "ChainId must be positive")
     require(maxPriorityFeePerGas.signum() > 0, "MaxPriorityFeePerGas must be greater than 0")
     require(maxFeePerGas.signum() > 0, "MaxFeePerGas must be greater than 0")
   }
@@ -691,7 +691,7 @@ object AccountTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqRawTransaction(from: Option[String], payload: Array[Byte]);
+  private[api] case class ReqRawTransaction(from: Option[String], payload: Array[Byte])
 
 
 }
@@ -716,6 +716,16 @@ object AccountTransactionErrorResponse {
 
   case class ErrorInsufficientBalance(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0205"
+  }
+
+  case class ErrorForgerStakeNotFound(description: String) extends ErrorResponse {
+    override val code: String = "0206"
+    override val exception: JOptional[Throwable] = JOptional.empty()
+  }
+
+  case class ErrorForgerStakeOwnerNotFound(description: String) extends ErrorResponse {
+    override val code: String = "0207"
+    override val exception: JOptional[Throwable] = JOptional.empty()
   }
 
 }

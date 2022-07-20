@@ -17,18 +17,22 @@ import org.web3j.crypto.{Keys, RawTransaction, Sign, SignedRawTransaction}
 
 import java.math.BigInteger
 import java.util
+import java.util.Optional
 import scala.collection.JavaConverters._
 import scala.util.Random
 
 class AccountNodeViewUtilMocks extends MockitoSugar with BoxFixture with CompanionsFixture with SecretFixture{
 
+  val ownerSecret = getPrivateKeySecp256k1(2222222)
+  val ownerPublicKeyString = BytesUtils.toHexString(ownerSecret.publicImage().address())
+  val blockSignerPropositionString = "1122334455669988112233445566778811223344556677881122334455667788"
+  val vrfPublicKeyString = "aabbddddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff001234"
+  val stakeId = "9e26bd4ff89374e916b369024e882db68a49b824e71008b827c7794e9f4d0170"
+
   val transactionList: util.List[EthereumTransaction] = getTransactionList
   val listOfStakes: Seq[AccountForgingStakeInfo] = getListOfStakes
   val listOfWithdrawalRequests: Seq[WithdrawalRequest] = getListOfWithdrawalRequests
 
-  val ownerString = "00ddbbcc9900aabbcc9900aabbcc9900aabbcc99"
-  val blockSignerPropositionString = "1122334455669988112233445566778811223344556677881122334455667788"
-  val vrfPublicKeyString = "aabbddddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff001234"
   val fittingSecret =  getPrivateKeySecp256k1(10344)
 
 
@@ -44,14 +48,15 @@ class AccountNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compani
     Mockito.when(accountState.withdrawalRequests(ArgumentMatchers.anyInt())).thenAnswer(_ => listOfWithdrawalRequests)
     Mockito.when(accountState.getBalance(ArgumentMatchers.any[Array[Byte]])).thenAnswer(_ => ZenWeiConverter.MAX_MONEY_IN_WEI)//It has always enough money
     Mockito.when(accountState.getNonce(ArgumentMatchers.any[Array[Byte]])).thenAnswer(_ => BigInteger.ONE)//It has always enough money
-
+    Mockito.when(accountState.getForgerStakeData(ArgumentMatchers.anyString())).thenAnswer(myStakeId =>
+      getListOfStakes.find(stake => BytesUtils.toHexString(stake.stakeId).equals(myStakeId.getArgument(0))).map(stakeInfo => stakeInfo.forgerStakeData))
     accountState
   }
 
   def getNodeWalletMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeWalletBase = {
     val wallet: NodeWalletBase = mock[NodeWalletBase]
     Mockito.when(wallet.secretsOfType(classOf[PrivateKeySecp256k1])).thenAnswer(_ => util.Arrays.asList(fittingSecret))
-
+    Mockito.when(wallet.secretByPublicKey(ownerSecret.publicImage())).thenAnswer(_ => Optional.of(ownerSecret))
     wallet
   }
 
@@ -76,13 +81,13 @@ class AccountNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compani
 
   def getListOfStakes: Seq[AccountForgingStakeInfo] = {
     val list: util.List[AccountForgingStakeInfo] = new util.ArrayList[AccountForgingStakeInfo]()
-    val owner: AddressProposition = new AddressProposition(BytesUtils.fromHexString("00aabbcc9900aabbcc9900aabbcc9900aabbcc99"))
-    val blockSignerProposition = new PublicKey25519Proposition(BytesUtils.fromHexString("1122334455667788112233445566778811223344556677881122334455667788")) // 32 bytes
-    val vrfPublicKey = new VrfPublicKey(BytesUtils.fromHexString("aabbccddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff001234")) // 33 bytes
+    val owner: AddressProposition = new AddressProposition(BytesUtils.fromHexString(ownerPublicKeyString))
+    val blockSignerProposition = new PublicKey25519Proposition(BytesUtils.fromHexString(blockSignerPropositionString)) // 32 bytes
+    val vrfPublicKey = new VrfPublicKey(BytesUtils.fromHexString(vrfPublicKeyString)) // 33 bytes
 
     val forgerKeys = new ForgerPublicKeys(blockSignerProposition, vrfPublicKey)
     val forgingStakeData = new ForgerStakeData(forgerKeys, owner, BigInteger.ONE)
-    val stake = new AccountForgingStakeInfo(new Array[Byte](32), forgingStakeData)
+    val stake = new AccountForgingStakeInfo(BytesUtils.fromHexString(stakeId), forgingStakeData)
     list.add(stake)
     list.asScala
   }

@@ -3,12 +3,14 @@ package lib
 import (
 	"bytes"
 	"encoding/json"
+	//	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	"github.com/ethereum/go-ethereum/trie"
+	//	"github.com/tmthrgd/go-hex"
 	"math/big"
 	"testing"
 )
@@ -57,15 +59,26 @@ func generateReceipts(count int) types.Receipts {
 			Type:              uint8(v % 3),
 			CumulativeGasUsed: uint64(v * 1000),
 			Status:            status,
-			TxHash:            crypto.Keccak256Hash(big.NewInt(int64(41271*count + v)).Bytes()),
 		}
 		// Set the receipt logs and create the bloom filter.
-		receipt.Logs = make([]*types.Log, 0)
+		receipt.Logs = make([]*types.Log, 1)
+		topics := make([]common.Hash, 1)
+		topics[0] = crypto.Keccak256Hash(common.Hex2Bytes("aabbccdd"))
+
+		log := &types.Log{
+			Address: common.HexToAddress("1122334455667788990011223344556677889900"),
+			Topics:  topics,
+			Data:    common.Hex2Bytes("aabbccdd"),
+		}
+		receipt.Logs[0] = log
 		receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
-		// These three are non-consensus fields:
+		// These four are non-consensus fields:
 		//receipt.BlockHash
 		//receipt.BlockNumber
-		receipt.TransactionIndex = uint(v)
+		//receipt.TxHash = crypto.Keccak256Hash(big.NewInt(int64(41271*count + v)).Bytes())
+		//receipt.TransactionIndex = uint(v)
+		//fmt.Printf("receipt cumGas %d\n", receipt.CumulativeGasUsed)
+
 		receipts = append(receipts, receipt)
 	}
 	return receipts
@@ -82,6 +95,9 @@ func verifyRootHash(t *testing.T, instance *Service, list types.DerivableList) c
 	for i := 0; i < length; i++ {
 		valueBuf.Reset()
 		list.EncodeIndex(i, valueBuf)
+		//str := hex.EncodeToString(valueBuf.Bytes())
+		//t.Logf("receipt: %v", str)
+
 		values = append(values, common.CopyBytes(valueBuf.Bytes()))
 	}
 	err, actualRoot := instance.HashRoot(HashParams{

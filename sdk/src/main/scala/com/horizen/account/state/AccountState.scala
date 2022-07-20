@@ -3,20 +3,26 @@ package com.horizen.account.state
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountState
+import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.storage.AccountStateMetadataStorage
+import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.evm._
+import com.horizen.evm.interop.EvmLog
+import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import org.web3j.crypto.ContractUtils.generateContractAddress
 import scorex.core._
 import scorex.util.{ModifierId, ScorexLogging}
 
 import java.math.BigInteger
 import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter
-import scala.util.{Failure, Try}
+import scala.collection.mutable.ListBuffer
+import scala.util.{Failure, Success, Try}
 
 class AccountState(val params: NetworkParams,
                    override val version: VersionTag,
@@ -111,13 +117,57 @@ class AccountState(val params: NetworkParams,
       stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
     }
 
-    for (tx <- mod.sidechainTransactions) {
-      stateView.applyTransaction(tx).get
+    // get also list of receipts, useful for computing the receiptRoot hash
+    val receiptList = new ListBuffer[EthereumReceipt]()
+    val blockNumber = stateView.getHeight + 1
+    val blockHash = idToBytes(mod.id)
+    var cumGasUsed : BigInteger = BigInteger.ZERO
+
+    for ((tx, txIndex) <- mod.sidechainTransactions.zipWithIndex) {
+      stateView.applyTransaction(tx, txIndex, cumGasUsed) match {
+        case Success(consensusDataReceipt) =>
+          val txGasUsed = consensusDataReceipt.cumulativeGasUsed.subtract(cumGasUsed)
+          // update cumulative gas used so far
+          cumGasUsed = consensusDataReceipt.cumulativeGasUsed
+          val ethTx = tx.asInstanceOf[EthereumTransaction]
+
+          val txHash = idToBytes(ethTx.id)
+
+          // The contract address created, if the transaction was a contract creation
+          val contractAddress = if (ethTx.getTo == null) {
+            // this w3j util method is equivalent to the createAddress() in geth triggered also by CREATE opcode.
+            // Note: geth has also a CREATE2 opcode which may be optionally used in a smart contract solidity implementation
+            // in order to deploy another (deeper) smart contract with an address that is pre-determined before deploying it.
+            // This does not impact our case since the CREATE2 result would not be part of the receipt.
+            generateContractAddress(ethTx.getFrom.address, ethTx.getNonce)
+          } else {
+            // otherwise a zero-byte field
+            new Array[Byte](0)
+          }
+
+          // get a receipt obj with non consensus data too (logs updated too)
+          val fullReceipt = EthereumReceipt(consensusDataReceipt,
+                      txHash, txIndex, blockHash, blockNumber, txGasUsed, contractAddress)
+
+          log.debug(s"Adding to receipt list: ${fullReceipt.toString()}")
+
+          receiptList += fullReceipt
+
+        case Failure(e) =>
+          log.error("Could not apply tx", e)
+          throw new IllegalArgumentException(e)
+      }
     }
 
     // TODO: calculate and update fee info.
     // Note: we should save the total gas paid and the forgerAddress
     stateView.addFeeInfo(BlockFeeInfo(0L, mod.header.forgingStakeInfo.blockSignPublicKey))
+
+    // check stateRoot and receiptRoot against block header
+    mod.verifyReceiptDataConsistency(receiptList)
+
+    // eventually, store full receipts in the metaDataStorage indexed by txid
+    stateView.updateTransactionReceipts(receiptList)
 
     stateView.commit(idToVersion(mod.id)).get
 
@@ -243,6 +293,11 @@ class AccountState(val params: NetworkParams,
     stateMetadataStorage.getFeePayments(withdrawalEpoch)
   }
 
+  override def getHeight: Int = {
+    stateMetadataStorage.getHeight
+  }
+
+
   private def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = {
     val stateView: AccountStateView = getView
     val res = stateView.getOrderedForgingStakeInfoSeq
@@ -299,6 +354,20 @@ class AccountState(val params: NetworkParams,
     val stateView: AccountStateView = getView
     val res = stateView.getListOfForgerStakes
     stateView.close()
+    res
+  }
+
+  def getForgerStakeData(stakeId: String): Option[ForgerStakeData] = {
+    val stateView: AccountStateView = getView
+    val res = stateView.getForgerStakeData(stakeId)
+    stateView.close()
+    res
+  }
+
+  override def getLogs(txHash: Array[Byte]): Array[EvmLog] = {
+    val view = getView
+    val res = view.getLogs(txHash)
+    view.close()
     res
   }
 

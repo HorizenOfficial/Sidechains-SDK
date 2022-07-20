@@ -3,6 +3,8 @@ package com.horizen.account.state
 import com.google.common.primitives.Bytes
 import com.horizen.SidechainTypes
 import com.horizen.account.proposition.AddressProposition
+import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus
+import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceipt}
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress}
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.transaction.EthereumTransaction
@@ -12,12 +14,13 @@ import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.evm.{StateDB, StateStorageStrategy}
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.evm.ResourceHandle
+import com.horizen.evm.interop.EvmLog
 import com.horizen.state.StateView
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.{BlockFeeInfo, BytesUtils, WithdrawalEpochInfo}
 import scorex.core.VersionTag
-import scorex.util.ScorexLogging
+import scorex.util.{ScorexLogging, idToBytes}
 
 import java.math.BigInteger
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
@@ -108,6 +111,9 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     forgerStakesProvider.getListOfForgers(this)
   }
 
+  override def getForgerStakeData(stakeId: String): Option[ForgerStakeData] = {
+    forgerStakesProvider.findStakeData(this, BytesUtils.fromHexString(stakeId))
+  }
 
   def getOrderedForgingStakeInfoSeq: Seq[ForgingStakeInfo] = {
     val forgerStakeList = forgerStakesProvider.getListOfForgers(this)
@@ -122,8 +128,9 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
   }
 
 
-  def setupTxContext(tx: EthereumTransaction): Unit = {
-    // TODO: set context for the created events/logs assignment
+  def setupTxContext(tx: EthereumTransaction, idx: Integer): Unit = {
+    // set context for the created events/logs assignment
+    stateDb.setTxContext(idToBytes(tx.id), idx)
   }
 
   private def preCheck(tx: EthereumTransaction): BigInteger = {
@@ -175,17 +182,19 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     BigInteger.ZERO
   }
 
-  override def applyTransaction(tx: SidechainTypes#SCAT): Try[Unit] = Try {
+  override def applyTransaction(tx: SidechainTypes#SCAT, txIndex: Int, prevCumGasUsed: BigInteger): Try[EthereumConsensusDataReceipt] = Try {
     if (!tx.isInstanceOf[EthereumTransaction])
       throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
 
     val ethTx = tx.asInstanceOf[EthereumTransaction]
+    val txHash = idToBytes(ethTx.id)
 
     // Do the checks and prepay gas
     val bookedGasPrice: BigInteger = preCheck(ethTx)
 
     // Set Tx context for stateDB, to know where to keep EvmLogs
-    setupTxContext(ethTx)
+    setupTxContext(ethTx, txIndex)
+
     val message: Message = Message.fromTransaction(ethTx)
 
     // Increase the nonce by 1
@@ -197,17 +206,30 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     val processor = messageProcessors.find(_.canProcess(message, this)).getOrElse(
       throw new IllegalArgumentException(s"Transaction ${ethTx.id} has no known processor.")
     )
-    val gasUsed: BigInteger = processor.process(message, this) match {
+
+    val consensusDataReceipt : EthereumConsensusDataReceipt = processor.process(message, this) match {
       case success: ExecutionSucceeded =>
-        success.gasUsed()
+        val evmLogs = getLogs(txHash)
+        val gasUsed = success.gasUsed()
+        new EthereumConsensusDataReceipt(
+          ethTx.version(), ReceiptStatus.SUCCESSFUL.id, prevCumGasUsed.add(gasUsed), evmLogs)
+
+
       case failed: ExecutionFailed =>
+        val evmLogs = getLogs(txHash)
         stateDb.revertToSnapshot(revisionId)
-        failed.gasUsed()
+        val gasUsed = failed.gasUsed()
+        new EthereumConsensusDataReceipt(
+          ethTx.version(), ReceiptStatus.FAILED.id, prevCumGasUsed.add(gasUsed), evmLogs)
+
+
       case invalid: InvalidMessage =>
         throw new Exception(s"Transaction ${ethTx.id} is invalid.", invalid.getReason)
     }
 
     // todo: refund gas: bookedGasPrice - actualGasPrice
+    log.debug(s"Returning consensus data receipt: ${consensusDataReceipt.toString()}")
+    consensusDataReceipt
   }
 
   override def isEoaAccount(address: Array[Byte]): Boolean = stateDb.isEoaAccount(address)
@@ -284,6 +306,11 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     metadataStorageView.updateConsensusEpochNumber(consensusEpochNum)
   }
 
+  override def updateTransactionReceipts(receipts: Seq[EthereumReceipt]): Unit = {
+    metadataStorageView.updateTransactionReceipts(receipts)
+  }
+
+
   override def setCeased(): Unit = {
     metadataStorageView.setCeased()
   }
@@ -323,6 +350,10 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     metadataStorageView.getFeePayments(withdrawalEpoch)
   }
 
+  override def getAccountStateRoot: Array[Byte] = metadataStorageView.getAccountStateRoot
+
+  override def getHeight: Int = metadataStorageView.getHeight
+
   // account specific getters
   override def getBalance(address: Array[Byte]): BigInteger = {
     stateDb.getBalance(address)
@@ -336,7 +367,9 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     stateDb.getNonce(address)
   }
 
-  override def getAccountStateRoot: Array[Byte] = metadataStorageView.getAccountStateRoot
+  override def getLogs(txHash: Array[Byte]): Array[EvmLog] = {
+    stateDb.getLogs(txHash)
+  }
 
   override def close(): Unit = {
     // when a method is called on a closed handle, LibEvm throws an exception
@@ -345,4 +378,4 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
 
   override def getStateDbHandle: ResourceHandle = stateDb
 
- }
+}

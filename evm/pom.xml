@@ -51,6 +51,12 @@
       <version>31.0.1-jre</version>
       <scope>compile</scope>
     </dependency>
+      <dependency>
+          <groupId>org.web3j</groupId>
+          <artifactId>utils</artifactId>
+          <version>4.9.2</version>
+          <scope>compile</scope>
+      </dependency>
   </dependencies>
 
   <build>
