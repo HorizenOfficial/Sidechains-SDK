@@ -69,6 +69,8 @@
           <artifactId>curve25519-java</artifactId>
           <groupId>org.whispersystems</groupId>
         </exclusion>
+        <!-- NOTE: this comes from scrypto and contains a vulnerability, we use bcprov-jdk15on:1.69 below,
+         this will be removed with merging scrypto into scorex-core -->
         <exclusion>
           <artifactId>bcprov-jdk15to18</artifactId>
           <groupId>org.bouncycastle</groupId>
