@@ -55,11 +55,17 @@ final class LibEvm {
         RegisterLogCallback(message -> {
             try {
                 var json = message.getString(0);
-                var parsed = mapper.readValue(json, HashMap.class);
-                var lvl = parsed.remove("lvl");
-                var msg = parsed.remove("msg");
-                parsed.remove("t");
-                logger.log(gloglevelToLog4jLevel((String) lvl), String.format("%s %s", msg, parsed));
+                var data = mapper.readValue(json, HashMap.class);
+                // parse and remove known properties from the map
+                var level = gloglevelToLog4jLevel((String)data.remove("lvl"));
+                var file = data.remove("file");
+                var line = data.remove("line");
+                var fn = data.remove("fn");
+                var msg = data.remove("msg");
+                // ignore the timestamp supplied by go
+                data.remove("t");
+                // write to log4j logger
+                logger.log(level, String.format("[%s:%s] (%s) %s %s", file, line, fn, msg, data));
             } catch (Exception e) {
                 // make sure we do not throw any exception here because this callback is called by native code
                 logger.warn("received invalid log message data from libevm");

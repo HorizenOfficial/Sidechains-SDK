@@ -25,6 +25,7 @@ package main
 //}
 import "C"
 import (
+	"fmt"
 	"github.com/ethereum/go-ethereum/log"
 	"libevm/lib"
 	"unsafe"
@@ -38,6 +39,15 @@ var instance *lib.Service
 var logFormatter = log.JSONFormatEx(false, false)
 
 func logToCallback(r *log.Record) error {
+	// see comments on stack.Call.Format for available format specifiers
+	r.Ctx = append(r.Ctx,
+		// path of source file
+		"file", fmt.Sprintf("%+s", r.Call),
+		// line number
+		"line", fmt.Sprintf("%d", r.Call),
+		// function name (without additional path qualifiers because the filename will already be qualified)
+		"fn", fmt.Sprintf("%n", r.Call),
+	)
 	msg := C.CString(string(logFormatter.Format(r)))
 	defer C.free(unsafe.Pointer(msg))
 	C.invokeLog(msg)
