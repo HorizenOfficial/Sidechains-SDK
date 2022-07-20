@@ -12,7 +12,7 @@ import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
 
 import java.util
-import scala.util.{Random, Success, Try}
+import scala.util.{Random, Success}
 
 
 class WithdrawalMsgProcessorTest
@@ -27,6 +27,12 @@ class WithdrawalMsgProcessorTest
   def setUp(): Unit = {
   }
 
+  @Test
+  def testMethodIds(): Unit = {
+    //The expected methodIds were calcolated using this site: https://emn178.github.io/online-tools/keccak_256.html
+    assertEquals("Wrong MethodId for GetListOfWithdrawalRequest", "251b7baa", WithdrawalMsgProcessor.GetListOfWithdrawalReqsCmdSig)
+    assertEquals("Wrong MethodId for AddNewWithdrawalReq", "9950a60f", WithdrawalMsgProcessor.AddNewWithdrawalReqCmdSig)
+  }
 
   @Test
   def testInit(): Unit = {
