@@ -486,7 +486,7 @@ case class AccountForgingStakeInfo(
 
   private[horizen] def asABIType(): StaticStruct = {
 
-    val forgerPublicKeysParams = forgerStakeData.forgerPublicKeys.asABIType().getValue
+    val forgerPublicKeysParams = forgerStakeData.forgerPublicKeys.asABIType().getValue.asInstanceOf[util.Collection[_ <: Type[_]]]
     val listOfParams = new util.ArrayList[Type[_]]()
 
     listOfParams.add(new Bytes32(stakeId))
