@@ -9,7 +9,6 @@ import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.math.BigInteger;
 import java.util.HashMap;
@@ -36,7 +35,7 @@ final class LibEvm {
         return "so";
     }
 
-    private static Level gloglevelToLog4jLevel(String glogLevel) {
+    private static Level glogToLog4jLevel(String glogLevel) {
         switch (glogLevel) {
             case "trce":
                 return Level.TRACE;
@@ -55,15 +54,16 @@ final class LibEvm {
     }
 
     static {
+        // bind native methods in this class to libevm
         Native.register("libevm." + getOSLibExtension());
-        var mapper = new ObjectMapper();
-        Logger logger = LogManager.getLogger(LibEvm.class);
+        final var mapper = new ObjectMapper();
+        final var logger = LogManager.getLogger(LibEvm.class);
         RegisterLogCallback(message -> {
             try {
                 var json = message.getString(0);
                 var data = mapper.readValue(json, HashMap.class);
                 // parse and remove known properties from the map
-                var level = gloglevelToLog4jLevel((String) data.remove("lvl"));
+                var level = glogToLog4jLevel((String) data.remove("lvl"));
                 var file = data.remove("file");
                 var line = data.remove("line");
                 var fn = data.remove("fn");
