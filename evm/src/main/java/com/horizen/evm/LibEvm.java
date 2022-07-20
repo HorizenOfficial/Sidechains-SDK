@@ -38,13 +38,19 @@ final class LibEvm {
 
     private static Level gloglevelToLog4jLevel(String glogLevel) {
         switch (glogLevel) {
-            case "trce": return Level.TRACE;
+            case "trce":
+                return Level.TRACE;
             default:
-            case "dbug": return Level.DEBUG;
-            case "info": return Level.INFO;
-            case "warn": return Level.WARN;
-            case "eror": return Level.ERROR;
-            case "crit": return Level.FATAL;
+            case "dbug":
+                return Level.DEBUG;
+            case "info":
+                return Level.INFO;
+            case "warn":
+                return Level.WARN;
+            case "eror":
+                return Level.ERROR;
+            case "crit":
+                return Level.FATAL;
         }
     }
 
@@ -57,7 +63,7 @@ final class LibEvm {
                 var json = message.getString(0);
                 var data = mapper.readValue(json, HashMap.class);
                 // parse and remove known properties from the map
-                var level = gloglevelToLog4jLevel((String)data.remove("lvl"));
+                var level = gloglevelToLog4jLevel((String) data.remove("lvl"));
                 var file = data.remove("file");
                 var line = data.remove("line");
                 var fn = data.remove("fn");
@@ -67,8 +73,10 @@ final class LibEvm {
                 // write to log4j logger
                 logger.log(level, String.format("[%s:%s] (%s) %s %s", file, line, fn, msg, data));
             } catch (Exception e) {
-                // make sure we do not throw any exception here because this callback is called by native code
-                logger.warn("received invalid log message data from libevm");
+                // note: make sure we do not throw any exception here because this callback is called by native code
+                // for diagnostics we log the exception here, if it is caused by malformed json it will also include
+                // the raw json string itself
+                logger.warn("received invalid log message data from libevm", e);
             }
         });
     }

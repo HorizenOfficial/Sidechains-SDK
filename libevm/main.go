@@ -1,5 +1,7 @@
 package main
 
+// // the following will be compiled by CGO and linked against the GO binary
+// // this is not just a comment!
 // #cgo CFLAGS: -g -Wall -O3 -fpic -Werror
 // #include <stdlib.h>
 // #include "main.h"
