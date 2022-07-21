@@ -1,6 +1,6 @@
 package com.horizen.account.state
 
-import com.google.common.primitives.{Bytes, Ints}
+import com.horizen.account.abi
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.evm.{LevelDBDatabase, StateDB}
@@ -8,13 +8,17 @@ import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.utils.BytesUtils
 import org.junit.rules.TemporaryFolder
 import org.scalatestplus.mockito.MockitoSugar.mock
+import org.web3j.abi.datatypes.{DynamicArray, StaticStruct}
+import org.web3j.abi.datatypes.generated.{Bytes20, Uint32}
+import org.web3j.abi.{DefaultFunctionReturnDecoder, FunctionEncoder, TypeReference}
 
+import java.util
 import scala.util.Random
 
 
 trait MessageProcessorFixture {
   var tempFolder = new TemporaryFolder
-  val mcAddr =  new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte))
+  val mcAddr = new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte))
   val metadataStorageView: AccountStateMetadataStorageView = mock[AccountStateMetadataStorageView]
 
   def getView: AccountStateView = {
@@ -26,22 +30,6 @@ trait MessageProcessorFixture {
     val stateDb: StateDB = new StateDB(db, hashNull)
     new AccountStateView(metadataStorageView, stateDb, messageProcessors)
   }
-
-
-  def getAddWithdrawalRequestMessage(amount: java.math.BigInteger): Message = {
-     val data: Array[Byte] = Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.AddNewWithdrawalReqCmdSig),
-      mcAddr.bytes())
-
-    getMessage(WithdrawalMsgProcessor.fakeSmartContractAddress, amount, data)
-  }
-
-  def getGetListOfWithdrawalRequestMessage(epochNum: Int): Message = {
-    val data: Array[Byte] = Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.GetListOfWithdrawalReqsCmdSig),
-      Ints.toByteArray(epochNum))
-
-    getMessage(WithdrawalMsgProcessor.fakeSmartContractAddress, java.math.BigInteger.ZERO, data)
-  }
-
 
   def getMessage(destContractAddress: AddressProposition, amount: java.math.BigInteger, data: Array[Byte]): Message = {
     val gas = java.math.BigInteger.ONE

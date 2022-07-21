@@ -309,6 +309,20 @@ class AccountState(val params: NetworkParams,
     res
   }
 
+  override def getListOfForgerStakes: Seq[AccountForgingStakeInfo] = {
+    val stateView: AccountStateView = getView
+    val res = stateView.getListOfForgerStakes
+    stateView.close()
+    res
+  }
+
+  def getForgerStakeData(stakeId: String): Option[ForgerStakeData] = {
+    val stateView: AccountStateView = getView
+    val res = stateView.getForgerStakeData(stakeId)
+    stateView.close()
+    res
+  }
+
   override def getLogs(txHash: Array[Byte]): Array[EvmLog] = {
     val view = getView
     val res = view.getLogs(txHash)

@@ -72,7 +72,7 @@ case class AccountWalletApiRoute(override val settings: RESTApiSettings,
     entity(as[ReqGetBalance]) { body =>
       applyOnNodeView { sidechainNodeView =>
         try {
-          val fromAddr = new AddressProposition(BytesUtils.fromHexString(body.address.get))
+          val fromAddr = new AddressProposition(BytesUtils.fromHexString(body.address))
           val fromBalance = sidechainNodeView.getNodeState.getBalance(fromAddr.address())
           ApiResponseUtil.toResponse(RespGetBalance(fromBalance))
         }
@@ -94,7 +94,7 @@ object AccountWalletRestScheme {
   private[api] case class RespGetBalance(balance: BigInteger) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqGetBalance(address: Option[String]) {
+  private[api] case class ReqGetBalance(address: String) {
     require(address.nonEmpty, "Empty address")
   }
 }

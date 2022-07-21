@@ -60,12 +60,12 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
 
           val cmdInput = AddNewStakeCmdInput(
             ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
-            ownerAddressProposition,
+            ownerAddressProposition
           )
 
           val data: Array[Byte] = Bytes.concat(
             BytesUtils.fromHexString(AddNewStakeCmd),
-            AddNewStakeCmdInputSerializer.toBytes(cmdInput))
+            cmdInput.encode())
 
           val message = new Message(
             ownerAddressProposition,
@@ -105,6 +105,14 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
           log.debug(s"added FT amount = $value to address=$recipientProposition")
       }
     })
+  }
+
+  override def getListOfForgerStakes: Seq[AccountForgingStakeInfo] = {
+    forgerStakesProvider.getListOfForgers(this)
+  }
+
+  override def getForgerStakeData(stakeId: String): Option[ForgerStakeData] = {
+    forgerStakesProvider.findStakeData(this, BytesUtils.fromHexString(stakeId))
   }
 
   def getOrderedForgingStakeInfoSeq: Seq[ForgingStakeInfo] = {

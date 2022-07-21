@@ -1,7 +1,7 @@
 package com.horizen.account.state
 
 import com.horizen.account.utils.ZenWeiConverter
-import com.horizen.utils.{ListSerializer, WithdrawalEpochInfo}
+import com.horizen.utils.WithdrawalEpochInfo
 import org.junit.Assert._
 import org.junit._
 import org.mockito.Mockito
@@ -12,17 +12,11 @@ import org.scalatestplus.mockito._
 class WithdrawalMsgProcessorIntegrationTest
   extends JUnitSuite
     with MockitoSugar
-    with MessageProcessorFixture {
+    with WithdrawalMsgProcessorFixture {
 
 
   @Before
   def setUp(): Unit = {
-  }
-
-
-  def deserializeListOfWithdrawalRequest(wrListInBytes: Array[Byte]): java.util.List[WithdrawalRequest] = {
-    val withdrawalRequestSerializer = new ListSerializer[WithdrawalRequest](WithdrawalRequestSerializer)
-    withdrawalRequestSerializer.parseBytes(wrListInBytes)
   }
 
   @Test
@@ -60,7 +54,7 @@ class WithdrawalMsgProcessorIntegrationTest
     assertTrue("Missing return data for GetListOfWithdrawalRequest", res.asInstanceOf[ExecutionSucceeded].hasReturnData)
     var wrListInBytes = res.asInstanceOf[ExecutionSucceeded].returnData()
 
-    var listOfWR = deserializeListOfWithdrawalRequest(wrListInBytes)
+    var listOfWR = decodeListOfWithdrawalRequest(wrListInBytes)
 
     assertTrue("The list of withdrawal requests is not empty", listOfWR.isEmpty)
 
@@ -89,9 +83,10 @@ class WithdrawalMsgProcessorIntegrationTest
     assertEquals("Wrong result type", classOf[ExecutionSucceeded], res.getClass)
     assertTrue("Missing withdrawal request data", res.asInstanceOf[ExecutionSucceeded].hasReturnData)
     var wrInBytes = res.asInstanceOf[ExecutionSucceeded].returnData()
-    var wt = WithdrawalRequestSerializer.parseBytes(wrInBytes)
-    assertEquals("Wrong destination address", mcAddr, wt.proposition)
-    assertEquals("Wrong amount", withdrawalAmount1, wt.value)
+
+    var wt = decodeWithdrawalRequest(wrInBytes)
+    assertArrayEquals("Wrong destination address", mcAddr.bytes(), wt.addr.getValue)
+    assertEquals("Wrong amount", withdrawalAmount1, wt.amount.getValue)
 
     val newBalance = stateView.getBalance(msg.getFrom.address())
     assertEquals("Wrong value in account balance", 1177, ZenWeiConverter.convertWeiToZennies(newBalance))
@@ -102,12 +97,12 @@ class WithdrawalMsgProcessorIntegrationTest
     assertTrue("Missing return data for GetListOfWithdrawalRequest", res.asInstanceOf[ExecutionSucceeded].hasReturnData)
 
     wrListInBytes = res.asInstanceOf[ExecutionSucceeded].returnData()
-    listOfWR = deserializeListOfWithdrawalRequest(wrListInBytes)
+    listOfWR = decodeListOfWithdrawalRequest(wrListInBytes)
 
     assertEquals("Wrong list of withdrawal requests size", 1, listOfWR.size())
     val wr = listOfWR.get(0)
-    assertEquals("wrong address", mcAddr, wr.proposition)
-    assertEquals("wrong amount", withdrawalAmount1, wr.value)
+    assertArrayEquals("wrong address", mcAddr.bytes(), wr.addr.getValue)
+    assertEquals("wrong amount", withdrawalAmount1, wr.amount.getValue)
 
     //Creating a second withdrawal request
     val withdrawalAmount2 = ZenWeiConverter.convertZenniesToWei(223)
@@ -118,9 +113,10 @@ class WithdrawalMsgProcessorIntegrationTest
     assertEquals("Wrong result type", classOf[ExecutionSucceeded], res.getClass)
     assertTrue("Missing withdrawal request data", res.asInstanceOf[ExecutionSucceeded].hasReturnData)
     wrInBytes = res.asInstanceOf[ExecutionSucceeded].returnData()
-    wt = WithdrawalRequestSerializer.parseBytes(wrInBytes)
-    assertEquals("Wrong destination address", mcAddr, wt.proposition)
-    assertEquals("Wrong amount", withdrawalAmount2, wt.value)
+    wt = decodeWithdrawalRequest(wrInBytes)
+    assertArrayEquals("Wrong destination address", mcAddr.bytes(), wt.addr.getValue)
+    assertEquals("Wrong amount", withdrawalAmount2, wt.amount.getValue)
+
 
     val newBalanceAfterSecondWR = stateView.getBalance(msg.getFrom.address())
     val expectedBalance = newBalance.subtract(withdrawalAmount2)
@@ -132,16 +128,18 @@ class WithdrawalMsgProcessorIntegrationTest
     assertTrue("Missing return data for GetListOfWithdrawalRequest", res.asInstanceOf[ExecutionSucceeded].hasReturnData)
 
     wrListInBytes = res.asInstanceOf[ExecutionSucceeded].returnData()
-    listOfWR = deserializeListOfWithdrawalRequest(wrListInBytes)
+    listOfWR = decodeListOfWithdrawalRequest(wrListInBytes)
 
-    assertEquals("Wrong list of withdrawal requests size", 2, listOfWR.size())
+
+    assertEquals("ong list of withdrawal requests size", 2, listOfWR.size())
     val wr1 = listOfWR.get(0)
-    assertEquals("wrong address", mcAddr, wr1.proposition)
-    assertEquals("wrong amount", withdrawalAmount1, wr1.value)
+    assertArrayEquals("wrong address", mcAddr.bytes(), wr1.addr.getValue)
+    assertEquals("wrong amount", withdrawalAmount1, wr1.amount.getValue)
+
 
     val wr2 = listOfWR.get(1)
-    assertEquals("wrong address", mcAddr, wr2.proposition)
-    assertEquals("wrong amount", withdrawalAmount2, wr2.value)
+    assertArrayEquals("wrong address", mcAddr.bytes(), wr2.addr.getValue)
+    assertEquals("wrong amount", withdrawalAmount2, wr2.amount.getValue)
 
     stateView.stateDb.close()
   }
