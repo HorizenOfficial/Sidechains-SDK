@@ -8,10 +8,9 @@ import (
 )
 
 func Invoke(target interface{}, method string, args string) string {
-	// TODO uncomment as soon as dev_evm has log4j2 support
-	//log.Debug(">> invoke", "method", method, "args", args)
+	log.Debug(">> invoke", "method", method, "args", args)
 	result := toJsonResponse(callMethod(target, method, args))
-	//log.Debug("<< response", "result", result)
+	log.Debug("<< response", "result", result)
 	return result
 }
 

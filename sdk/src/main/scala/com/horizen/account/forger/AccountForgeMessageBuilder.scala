@@ -8,6 +8,7 @@ import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.{ByteArrayWrapper, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree}
 import com.horizen.SidechainTypes
+import com.horizen.account.block.AccountBlock.calculateReceiptRoot
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.history.AccountHistory
@@ -43,12 +44,6 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   type HIS = AccountHistory
   type MS = AccountState
   type MP = AccountMemoryPool
-
-  def computeReceiptRoot(receiptList: Seq[EthereumConsensusDataReceipt]) : Array[Byte] = {
-    // 1. for each receipt item in list rlp encode and append to a new leaf list
-    // 2. compute hash
-    TrieHasher.Root(receiptList.map(EthereumConsensusDataReceipt.rlpEncode).toArray)
-  }
 
   def computeStateRoot(view: AccountStateView, sidechainTransactions: Seq[SidechainTypes#SCAT],
                        mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
@@ -107,7 +102,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     dummyView.close()
 
     // 2. Compute the receipt root
-    val receiptsRoot: Array[Byte] = computeReceiptRoot(receiptList)
+    val receiptsRoot: Array[Byte] = calculateReceiptRoot(receiptList)
 
     // 3. As forger address take first address from the wallet
     val firstAddress = nodeView.vault.allSecrets().asScala

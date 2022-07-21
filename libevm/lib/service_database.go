@@ -31,14 +31,12 @@ func (s *Service) open(storage ethdb.Database) int {
 }
 
 func (s *Service) OpenMemoryDB() (error, int) {
-	// TODO uncomment as soon as dev_evm has log4j2 support
-	//log.Info("initializing memorydb")
+	log.Info("initializing memorydb")
 	return nil, s.open(rawdb.NewMemoryDatabase())
 }
 
 func (s *Service) OpenLevelDB(params LevelDBParams) (error, int) {
-	// TODO uncomment as soon as dev_evm has log4j2 support
-	//log.Info("initializing leveldb", "path", params.Path)
+	log.Info("initializing leveldb", "path", params.Path)
 	storage, err := rawdb.NewLevelDBDatabase(params.Path, 0, 0, "zen/db/data/", false)
 	if err != nil {
 		log.Error("failed to initialize database", "error", err)
