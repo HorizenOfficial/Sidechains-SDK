@@ -11,7 +11,7 @@ import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
 import com.horizen.serialization.Views
-import com.horizen.utils.{BytesUtils, ListSerializer}
+import com.horizen.utils.BytesUtils
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint256}
 import org.web3j.abi.datatypes.{Address, StaticStruct, Type}
@@ -57,9 +57,6 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     Keccak256.hash(Bytes.concat(
       msg.getFrom.address(), msg.getNonce.toByteArray, msg.getValue.toByteArray, msg.getData))
   }
-
-  private val forgingInfoSerializer: ListSerializer[AccountForgingStakeInfo] =
-    new ListSerializer[AccountForgingStakeInfo](AccountForgingStakeInfoSerializer)
 
   override def init(view: BaseAccountStateView): Unit = {
     super.init(view)
@@ -341,15 +338,10 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
   }
 
   override def getListOfForgers(view: BaseAccountStateView): Seq[AccountForgingStakeInfo] = {
-    doUncheckedGetListOfForgersCmd(view) match {
-      case res: ExecutionSucceeded =>
-        forgingInfoSerializer.parseBytesTry(res.returnData()).get.asScala
-
-      case _ => Seq()
-    }
+    getListOfForgerRecords(view).asScala
   }
 
-  def doUncheckedGetListOfForgersCmd(view: BaseAccountStateView): ExecutionResult = {
+  private def getListOfForgerRecords(view: BaseAccountStateView) : util.ArrayList[AccountForgingStakeInfo] = {
     val stakeList = new util.ArrayList[AccountForgingStakeInfo]()
     var nodeReference = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey).get
 
@@ -358,6 +350,11 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
       stakeList.add(item)
       nodeReference = prevNodeReference
     }
+    stakeList
+  }
+
+  def doUncheckedGetListOfForgersCmd(view: BaseAccountStateView): ExecutionResult = {
+    val stakeList = getListOfForgerRecords(view)
 
     val listOfForgers = AccountForgingStakeInfoListEncoder.encode(stakeList)
     new ExecutionSucceeded(GetListOfForgersGasPaidValue, listOfForgers)

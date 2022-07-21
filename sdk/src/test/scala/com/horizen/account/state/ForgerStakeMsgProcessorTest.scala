@@ -633,6 +633,12 @@ class ForgerStakeMsgProcessorTest
 
     })
 
+    //Check getListOfForgers
+    val forgerList2 = forgerStakeMessageProcessor.getListOfForgers(stateView)
+    assertEquals("List of forgers from getListOfForgers has different size respect the one from the fake smart contract execution", forgerList.size, forgerList2.size)
+
+
+
     // remove in the middle of the list
     var pair = checkRemoveItemFromList(stateView, forgerList, 2, totalForgersAmount)
     forgerList = pair._1
