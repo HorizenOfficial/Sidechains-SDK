@@ -575,7 +575,6 @@ public class CommandProcessor {
 
             MainchainBlockReference mcRef = MainchainBlockReference.create(mcBlockBytes, params, versionsManager).get();
 
-            // TODO for the time being we have the sc creation only, but we might support also FT
             List<MainchainBlockReferenceData> mainchainBlockReferencesData = Collections.singletonList(mcRef.data());
             List<MainchainHeader> mainchainHeadersData = Collections.singletonList(mcRef.header());
 
