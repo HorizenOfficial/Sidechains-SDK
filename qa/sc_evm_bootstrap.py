@@ -51,7 +51,8 @@ class SCEvmBootstrap(SidechainTestFramework):
 
 
     def sc_setup_nodes(self):
-        return start_sc_nodes(num_nodes=1, dirname=self.options.tmpdir, binary=[EVM_APP_BINARY])#, extra_args=['-agentlib'])
+        return start_sc_nodes(num_nodes=1, dirname=self.options.tmpdir, binary=[EVM_APP_BINARY]) #, extra_args=['-agentlib'])
+
 
     def run_test(self):
         sc_node = self.sc_nodes[0]
