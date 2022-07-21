@@ -12,10 +12,11 @@ import com.horizen.storage.Storage
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.Pair
 import com.horizen.wallet.ApplicationWallet
-import com.horizen.{SidechainApp, SidechainSettings, SidechainTypes, ChainInfo}
+import com.horizen.{ChainInfo, SidechainApp, SidechainSettings, SidechainTypes}
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}
+import scala.collection.JavaConverters.asScalaBufferConverter
 
 abstract class AccountAppModule extends com.google.inject.AbstractModule {
 
@@ -57,7 +58,7 @@ abstract class AccountAppModule extends com.google.inject.AbstractModule {
           customApiGroups,
           rejectedApiPaths,
           chainInfo,
-          customMessageProcessors
+          customMessageProcessors.asScala
         )
       }
     }

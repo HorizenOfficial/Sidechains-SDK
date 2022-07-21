@@ -15,12 +15,12 @@ import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumConsensusDataReceipt
-import com.horizen.account.state.AccountState.applyAndGetReceipts
+import com.horizen.account.secret.PrivateKeySecp256k1
+import com.horizen.account.state.AccountState.tryApplyAndGetReceipts
 import com.horizen.account.state.{AccountState, AccountStateView}
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.utils.Account
 import com.horizen.account.wallet.AccountWallet
-import com.horizen.evm.TrieHasher
 import com.horizen.forge.{AbstractForgeMessageBuilder, MainchainSynchronizer}
 import scorex.core.NodeViewModifier
 import scorex.core.block.Block.{BlockId, Timestamp}
@@ -51,7 +51,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     // we must ensure that all the tx we get from mempool are applicable to current state view
     // and we must stay below the block gas limit threshold, therefore we might have a subset of the input transactions
-    val receiptList = applyAndGetReceipts(view, mainchainBlockReferencesData, sidechainTransactions, inputBlockSize).get
+    val receiptList = tryApplyAndGetReceipts(view, mainchainBlockReferencesData, sidechainTransactions, inputBlockSize).get
 
     val listOfAppliedTxHash = receiptList.map(r => new ByteArrayWrapper(r.transactionHash))
 
@@ -105,15 +105,11 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val receiptsRoot: Array[Byte] = calculateReceiptRoot(receiptList)
 
     // 3. As forger address take first address from the wallet
-    val firstAddress = nodeView.vault.allSecrets().asScala
-      .find(s => s.publicImage().isInstanceOf[AddressProposition])
-      .map(_.publicImage().asInstanceOf[AddressProposition])
+    val addressList = nodeView.vault.secretsOfType(classOf[PrivateKeySecp256k1])
+    if (addressList.size() == 0)
+      throw new IllegalArgumentException("No addresses in wallet!")
 
-    val forgerAddress: AddressProposition = firstAddress match {
-      case Some(address) => address
-      case None =>
-        throw new IllegalArgumentException("No addresses in wallet!")
-    }
+    val forgerAddress = addressList.get(0).publicImage().asInstanceOf[AddressProposition]
 
     val block = AccountBlock.create(
       parentId,
@@ -163,17 +159,13 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     header.bytes.length
   }
 
-  override def collectTransactionsFromMemPool(nodeView: View, isWithdrawalEpochLastBlock: Boolean, blockSizeIn: Int): Seq[SidechainTypes#SCAT] =
+  override def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int): Seq[SidechainTypes#SCAT] =
   {
-    if (isWithdrawalEpochLastBlock) { // SC block is going to become the last block of the withdrawal epoch
-      Seq() // no SC Txs allowed
-    } else { // SC block is in the middle of the epoch
-      // no checks of the block size here, these txes are the candidates and their inclusion
-      // will be attempted by forger
+    // no checks of the block size here, these txes are the candidates and their inclusion
+    // will be attempted by forger
 
-      // TODO sort by address and nonce, and then preserving nonce ordering, sort by gas limit
-      nodeView.pool.take(nodeView.pool.size).toSeq
-    }
+    // TODO sort by address and nonce, and then preserving nonce ordering, sort by gas price
+    nodeView.pool.take(nodeView.pool.size).toSeq
   }
 
   override def getOmmersSize(ommers: Seq[Ommer[ AccountBlockHeader]]): Int = {

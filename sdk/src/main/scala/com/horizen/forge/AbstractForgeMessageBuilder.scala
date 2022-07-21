@@ -274,7 +274,7 @@ abstract class AbstractForgeMessageBuilder[
       mainchainSynchronizer.getMainchainBlockReference(hash) match {
         case Success(ref) => {
           val refDataSize = ref.data.bytes.length + 4 // placeholder for MainchainReferenceData length
-          if(blockSize + refDataSize > SidechainBlockBase.MAX_BLOCK_SIZE)
+          if (blockSize + refDataSize > SidechainBlockBase.MAX_BLOCK_SIZE)
             false // stop data collection
           else {
             mainchainReferenceData.append(ref.data)
@@ -290,9 +290,16 @@ abstract class AbstractForgeMessageBuilder[
     })
 
     val isWithdrawalEpochLastBlock: Boolean = mainchainReferenceData.size == withdrawalEpochMcBlocksLeft
+    val forkOngoing: Boolean = (blockId != branchPointInfo.branchPointId)
 
-    // Collect transactions if possible
-    val transactions: Seq[TX] = collectTransactionsFromMemPool(nodeView, isWithdrawalEpochLastBlock, blockSize)
+    val transactions: Seq[TX] = if (
+      isWithdrawalEpochLastBlock || // SC block is going to become the last block of the withdrawal epoch
+      forkOngoing // a fork is ongoing, the tip state is not fully reliable
+    ) {
+      Seq() // no SC Txs allowed
+    } else {
+      collectTransactionsFromMemPool(nodeView, blockSize)
+    }
 
     val tryBlock = createNewBlock(
       nodeView,
@@ -343,10 +350,7 @@ abstract class AbstractForgeMessageBuilder[
                       forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo,
                       vrfProof: VrfProof): Int
 
-  def collectTransactionsFromMemPool(
-                      nodeView: View,
-                      isWithdrawalEpochLastBlock: Boolean,
-                      blockSize: Int) : Seq[TX]
+  def collectTransactionsFromMemPool(nodeView: View, blockSize: Int): Seq[TX]
 
 
   def getOmmersSize(ommers: Seq[Ommer[H]]) : Int

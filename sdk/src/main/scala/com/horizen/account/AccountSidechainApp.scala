@@ -49,7 +49,7 @@ class AccountSidechainApp @Inject()
    @Named("CustomApiGroups") customApiGroups: JList[ApplicationApiGroup],
    @Named("RejectedApiPaths") rejectedApiPaths : JList[Pair[String, String]],
    @Named("ChainInfo") chainInfo : ChainInfo,
-   @Named("CustomMessageProcessors") customMessageProcessors: JList[MessageProcessor]
+   @Named("CustomMessageProcessors") customMessageProcessors: Seq[MessageProcessor]
   )
   extends AbstractSidechainApp(
     sidechainSettings,
@@ -169,7 +169,7 @@ class AccountSidechainApp @Inject()
     //SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
     AccountWalletApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef),
-    AccountEthRpcRoute(settings.restApi, nodeViewHolderRef, sidechainSettings, params, sidechainTransactionActorRef, stateMetadataStorage, stateDbStorage, customMessageProcessors.asScala)
+    AccountEthRpcRoute(settings.restApi, nodeViewHolderRef, sidechainSettings, params, sidechainTransactionActorRef, stateMetadataStorage, stateDbStorage, customMessageProcessors)
   )
 
   // In order to provide the feature to override core api and exclude some other apis,
