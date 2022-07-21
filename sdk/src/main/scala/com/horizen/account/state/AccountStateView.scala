@@ -107,6 +107,14 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     })
   }
 
+  override def getListOfForgerStakes: Seq[AccountForgingStakeInfo] = {
+    forgerStakesProvider.getListOfForgers(this)
+  }
+
+  override def getForgerStakeData(stakeId: String): Option[ForgerStakeData] = {
+    forgerStakesProvider.findStakeData(this, BytesUtils.fromHexString(stakeId))
+  }
+
   def getOrderedForgingStakeInfoSeq: Seq[ForgingStakeInfo] = {
     val forgerStakeList = forgerStakesProvider.getListOfForgers(this)
 
