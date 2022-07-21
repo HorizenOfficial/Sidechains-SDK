@@ -4,7 +4,7 @@ import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.proposition.MCPublicKeyHashProposition
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ListSerializer, WithdrawalEpochInfo}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo}
 import org.junit.Assert._
 import org.junit._
 import org.mockito._
@@ -12,13 +12,13 @@ import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
 
 import java.util
-import scala.util.{Random, Success, Try}
+import scala.util.{Random, Success}
 
 
 class WithdrawalMsgProcessorTest
   extends JUnitSuite
     with MockitoSugar
-    with MessageProcessorFixture {
+    with WithdrawalMsgProcessorFixture {
 
   val fakeAddress = new AddressProposition(BytesUtils.fromHexString("35fdd51e73221f467b40946c97791a3e19799bea"))
   val from: AddressProposition = new AddressProposition(BytesUtils.fromHexString("00aabbcc9900aabbcc9900aabbcc9900aabbcc99"))
@@ -27,6 +27,12 @@ class WithdrawalMsgProcessorTest
   def setUp(): Unit = {
   }
 
+  @Test
+  def testMethodIds(): Unit = {
+    //The expected methodIds were calcolated using this site: https://emn178.github.io/online-tools/keccak_256.html
+    assertEquals("Wrong MethodId for GetListOfWithdrawalRequest", "251b7baa", WithdrawalMsgProcessor.GetListOfWithdrawalReqsCmdSig)
+    assertEquals("Wrong MethodId for AddNewWithdrawalReq", "9950a60f", WithdrawalMsgProcessor.AddNewWithdrawalReqCmdSig)
+  }
 
   @Test
   def testInit(): Unit = {
@@ -63,14 +69,14 @@ class WithdrawalMsgProcessorTest
   def testProcess(): Unit = {
     val value: java.math.BigInteger = java.math.BigInteger.valueOf(1000000000L) //1 zenny and 1 wei
 
-    val msgForWrongProcessor = getMessage(fakeAddress, value,Array.emptyByteArray)
+    val msgForWrongProcessor = getMessage(fakeAddress, value, Array.emptyByteArray)
     val mockStateView: AccountStateView = mock[AccountStateView]
     Mockito.when(mockStateView.accountExists(msgForWrongProcessor.getTo.address())).thenReturn(true)
 
     assertEquals("msgForWrongProcessor processing should result in InvalidMessage", classOf[InvalidMessage], WithdrawalMsgProcessor.process(msgForWrongProcessor, mockStateView).getClass)
 
     val data = BytesUtils.fromHexString("99")
-    val msgWithWrongFunctionCall = getMessage(WithdrawalMsgProcessor.fakeSmartContractAddress, value,data)
+    val msgWithWrongFunctionCall = getMessage(WithdrawalMsgProcessor.fakeSmartContractAddress, value, data)
     Mockito.when(mockStateView.accountExists(msgWithWrongFunctionCall.getTo.address())).thenReturn(true)
 
     assertEquals("msgWithWrongFunctionCall processing should result in ExecutionFailed", classOf[ExecutionFailed], WithdrawalMsgProcessor.process(msgWithWrongFunctionCall, mockStateView).getClass)
@@ -172,12 +178,9 @@ class WithdrawalMsgProcessorTest
     assertEquals("Wrong result type", classOf[ExecutionSucceeded], res.getClass)
     assertTrue("Missing return data", res.asInstanceOf[ExecutionSucceeded].hasReturnData)
     var wrListInBytes = res.asInstanceOf[ExecutionSucceeded].returnData()
-
-    var withdrawalRequestSerializer = new ListSerializer[WithdrawalRequest](WithdrawalRequestSerializer)
-    var listOfWR = withdrawalRequestSerializer.parseBytes(wrListInBytes)
+    var listOfWR = decodeListOfWithdrawalRequest(wrListInBytes)
 
     assertTrue("The list of withdrawal requests is not empty", listOfWR.isEmpty)
-
 
     // With 3999 withdrawal requests
     val maxNumOfWithdrawalReqs = WithdrawalMsgProcessor.MaxWithdrawalReqsNumPerEpoch
@@ -197,7 +200,7 @@ class WithdrawalMsgProcessorTest
     )
 
     Mockito.when(mockStateView.getAccountStorageBytes(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[Array[Byte]])).thenAnswer(answer => {
-      val key : Array[Byte] = answer.getArgument(1)
+      val key: Array[Byte] = answer.getArgument(1)
       Success(mockWithdrawalRequestsList.get(new ByteArrayWrapper(key)))
     })
 
@@ -206,17 +209,16 @@ class WithdrawalMsgProcessorTest
     assertTrue("Missing return data", res.asInstanceOf[ExecutionSucceeded].hasReturnData)
     wrListInBytes = res.asInstanceOf[ExecutionSucceeded].returnData()
 
-    withdrawalRequestSerializer = new ListSerializer[WithdrawalRequest](WithdrawalRequestSerializer)
-    listOfWR = withdrawalRequestSerializer.parseBytes(wrListInBytes)
-
+    listOfWR = decodeListOfWithdrawalRequest(wrListInBytes)
     assertEquals("Wrong list of withdrawal requests size", maxNumOfWithdrawalReqs, listOfWR.size())
     (0 until maxNumOfWithdrawalReqs).foreach(index => {
       val wr = listOfWR.get(index)
-      assertEquals("wrong address", destAddress, wr.proposition)
-      assertEquals("wrong amount", ZenWeiConverter.convertZenniesToWei(index + 1), wr.value)
+      assertArrayEquals("wrong address", destAddress.bytes(), wr.addr.getValue)
+      assertEquals("wrong amount", ZenWeiConverter.convertZenniesToWei(index + 1), wr.amount.getValue)
     })
 
   }
 
 
 }
+

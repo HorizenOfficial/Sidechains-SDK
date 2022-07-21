@@ -2,11 +2,12 @@ package com.horizen.account.state
 
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.utils.BytesUtils
+import org.web3j.crypto.Hash
+import org.web3j.utils.Numeric
 import scorex.util.ScorexLogging
 
 abstract class AbstractFakeSmartContractMsgProcessor extends MessageProcessor with ScorexLogging {
 
-  val OP_CODE_LENGTH = 1
   val NULL_HEX_STRING_32: String = BytesUtils.toHexString(new Array[Byte](32))
 
   val fakeSmartContractAddress: AddressProposition
@@ -33,15 +34,6 @@ abstract class AbstractFakeSmartContractMsgProcessor extends MessageProcessor wi
     fakeSmartContractAddress.equals(msg.getTo)
   }
 
-  protected def getOpCodeFromData(data: Array[Byte]): Array[Byte] ={
-    require(data.length >= OP_CODE_LENGTH, s"Data length ${data.length} must be >= $OP_CODE_LENGTH")
-    data.slice(0, OP_CODE_LENGTH)
-  }
-
-  protected def getArgumentsFromData(data: Array[Byte]): Array[Byte] ={
-    require(data.length >= OP_CODE_LENGTH, s"Data length ${data.length} must be >= $OP_CODE_LENGTH")
-    data.drop(OP_CODE_LENGTH)
-  }
  }
 
 

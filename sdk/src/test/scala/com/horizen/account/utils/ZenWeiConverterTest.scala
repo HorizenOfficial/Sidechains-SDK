@@ -1,28 +1,11 @@
-package com.horizen.account.api.http
+package com.horizen.account.utils
 
-import com.horizen.SidechainTypes
-import com.horizen.account.utils.ZenWeiConverter
-import com.horizen.companion.SidechainSecretsCompanion
-import com.horizen.customtypes._
-import com.horizen.fixtures._
-import com.horizen.secret.{PrivateKey25519, Secret, SecretSerializer}
-import com.horizen.storage._
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, Pair}
 import org.junit.Assert._
 import org.junit._
-import org.mockito._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
-import scorex.core.VersionTag
-import scorex.crypto.hash.Blake2b256
 
-import java.lang.{Byte => JByte}
 import java.math.BigInteger
-import java.util
-import java.util.{HashMap => JHashMap, List => JList}
-import scala.collection.JavaConverters._
-import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Random, Try}
 
 class ZenWeiConverterTest
   extends JUnitSuite
