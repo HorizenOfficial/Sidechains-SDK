@@ -6,7 +6,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils.{ByteArrayWrapper, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree}
+import com.horizen.utils.{ByteArrayWrapper, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, Utils}
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock.calculateReceiptRoot
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
@@ -14,11 +14,12 @@ import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.EthereumConsensusDataReceipt
+import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceipt}
 import com.horizen.account.secret.PrivateKeySecp256k1
-import com.horizen.account.state.AccountState.tryApplyAndGetReceipts
+import com.horizen.account.state.AccountState.blockGasLimitExceeded
 import com.horizen.account.state.{AccountState, AccountStateView}
 import com.horizen.account.storage.AccountHistoryStorage
+import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.Account
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.forge.{AbstractForgeMessageBuilder, MainchainSynchronizer}
@@ -26,8 +27,10 @@ import scorex.core.NodeViewModifier
 import scorex.core.block.Block.{BlockId, Timestamp}
 import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 
+import java.math.BigInteger
 import scala.collection.JavaConverters._
-import scala.util.Try
+import scala.collection.mutable.ListBuffer
+import scala.util.{Failure, Success, Try}
 
 class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                                  companion: SidechainAccountTransactionsCompanion,
@@ -64,6 +67,65 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     }
 
     (view.stateDb.getIntermediateRoot, receiptList.map(_.consensusDataReceipt), appliedTransactions)
+  }
+
+
+  def blockSizeExceeded(blockSize: Int, txCounter: Int): Boolean = {
+    if (txCounter > SidechainBlockBase.MAX_SIDECHAIN_TXS_NUMBER || blockSize > SidechainBlockBase.MAX_BLOCK_SIZE)
+      true // stop data collection
+    else {
+      false // continue data collection
+    }
+  }
+
+  private def tryApplyAndGetReceipts(stateView: AccountStateView,
+                             mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
+                             sidechainTransactions: Seq[SidechainTypes#SCAT],
+                             inputBlockSize: Int): Try[Seq[EthereumReceipt]] = Try {
+
+    for(mcBlockRefData <- mainchainBlockReferencesData) {
+      stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
+    }
+
+    val receiptList = new ListBuffer[EthereumReceipt]()
+
+    var cumGasUsed : BigInteger = BigInteger.ZERO
+    var txsCounter: Int = 0
+    var blockSize: Int = inputBlockSize
+
+    for ((tx, txIndex) <- sidechainTransactions.zipWithIndex) {
+
+      stateView.applyTransaction(tx, txIndex, cumGasUsed) match {
+        case Success(consensusDataReceipt) =>
+          // update cumulative gas used so far
+          cumGasUsed = consensusDataReceipt.cumulativeGasUsed
+
+          blockSize = blockSize + tx.bytes.length + 4 // placeholder for Tx length
+          txsCounter += 1
+
+          if (blockSizeExceeded(blockSize, txsCounter))
+            return Success(receiptList)
+
+          if (blockGasLimitExceeded(cumGasUsed))
+            return Success(receiptList)
+
+          val ethTx = tx.asInstanceOf[EthereumTransaction]
+          val txHash = idToBytes(ethTx.id)
+
+          // get a receipt obj with txHash info only, other non consensus info are not used when forging
+          val receipt = EthereumReceipt(consensusDataReceipt,
+            txHash, txIndex, blockHash = Utils.ZEROS_HASH, blockNumber = -1, gasUsed = BigInteger.ZERO, contractAddress = new Array[Byte](0))
+
+          log.debug(s"Adding to receipt list: $receipt")
+
+          receiptList += receipt
+
+        case Failure(e) =>
+          // just skip this tx
+          log.debug("Could not apply tx, reason: " + e.getMessage)
+      }
+    }
+    receiptList
   }
 
   override def createNewBlock(

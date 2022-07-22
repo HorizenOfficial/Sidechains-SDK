@@ -4,19 +4,16 @@ import com.google.inject.Provides
 import com.google.inject.name.Named
 import com.horizen.account.state.MessageProcessor
 import com.horizen.api.http.ApplicationApiGroup
-import com.horizen.box.BoxSerializer
-import com.horizen.helper._
+
 import com.horizen.secret.SecretSerializer
-import com.horizen.state.ApplicationState
-import com.horizen.storage.Storage
+
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.Pair
-import com.horizen.wallet.ApplicationWallet
-import com.horizen.{ChainInfo, SidechainApp, SidechainSettings, SidechainTypes}
+
+import com.horizen.{SidechainSettings, SidechainTypes, ChainInfo}
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}
-import scala.collection.JavaConverters.asScalaBufferConverter
 
 abstract class AccountAppModule extends com.google.inject.AbstractModule {
 
@@ -58,7 +55,7 @@ abstract class AccountAppModule extends com.google.inject.AbstractModule {
           customApiGroups,
           rejectedApiPaths,
           chainInfo,
-          customMessageProcessors.asScala
+          customMessageProcessors
         )
       }
     }

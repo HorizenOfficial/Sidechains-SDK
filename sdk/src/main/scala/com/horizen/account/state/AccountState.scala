@@ -4,7 +4,7 @@ import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountState
 import com.horizen.account.receipt.EthereumReceipt
-import com.horizen.account.state.AccountState.applyAndGetReceipts
+import com.horizen.account.state.AccountState.blockGasLimitExceeded
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlockBase, WithdrawalEpochCertificate}
@@ -113,7 +113,57 @@ class AccountState(val params: NetworkParams,
         throw new IllegalArgumentException(s"Block ${mod.id} has feePaymentsHash ${BytesUtils.toHexString(mod.feePaymentsHash)} defined when no fee payments expected.")
     }
 
-    val receiptList = applyAndGetReceipts(stateView, mod.mainchainBlockReferencesData, mod.sidechainTransactions, blockHash = idToBytes(mod.id)).get
+
+    for(mcBlockRefData <- mod.mainchainBlockReferencesData) {
+      stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
+    }
+
+    // get also list of receipts, useful for computing the receiptRoot hash
+    val receiptList = new ListBuffer[EthereumReceipt]()
+    val blockNumber = stateView.getHeight + 1
+    val blockHash = idToBytes(mod.id)
+    var cumGasUsed : BigInteger = BigInteger.ZERO
+
+    for ((tx, txIndex) <- mod.sidechainTransactions.zipWithIndex) {
+      stateView.applyTransaction(tx, txIndex, cumGasUsed) match {
+        case Success(consensusDataReceipt) =>
+          val txGasUsed = consensusDataReceipt.cumulativeGasUsed.subtract(cumGasUsed)
+          // update cumulative gas used so far
+          cumGasUsed = consensusDataReceipt.cumulativeGasUsed
+          val ethTx = tx.asInstanceOf[EthereumTransaction]
+
+          if (blockGasLimitExceeded(cumGasUsed)) {
+            log.error("Could not apply tx, block gas limit exceeded")
+            throw new IllegalArgumentException("Could not apply tx, block gas limit exceeded")
+          }
+
+          val txHash = idToBytes(ethTx.id)
+
+          // The contract address created, if the transaction was a contract creation
+          val contractAddress = if (ethTx.getTo == null) {
+            // this w3j util method is equivalent to the createAddress() in geth triggered also by CREATE opcode.
+            // Note: geth has also a CREATE2 opcode which may be optionally used in a smart contract solidity implementation
+            // in order to deploy another (deeper) smart contract with an address that is pre-determined before deploying it.
+            // This does not impact our case since the CREATE2 result would not be part of the receipt.
+            generateContractAddress(ethTx.getFrom.address, ethTx.getNonce)
+          } else {
+            // otherwise a zero-byte field
+            new Array[Byte](0)
+          }
+
+          // get a receipt obj with non consensus data (logs updated too)
+          val fullReceipt = EthereumReceipt(consensusDataReceipt,
+                      txHash, txIndex, blockHash, blockNumber, txGasUsed, contractAddress)
+
+          log.debug(s"Adding to receipt list: ${fullReceipt.toString()}")
+
+          receiptList += fullReceipt
+
+        case Failure(e) =>
+          log.error("Could not apply tx", e)
+          throw new IllegalArgumentException(e)
+      }
+    }
 
     // TODO: calculate and update fee info.
     // Note: we should save the total gas paid and the forgerAddress
@@ -364,126 +414,4 @@ object AccountState extends ScorexLogging {
     // TODO
     false
   }
-
-  def blockSizeExceeded(blockSize: Int, txCounter: Int): Boolean = {
-    if (txCounter > SidechainBlockBase.MAX_SIDECHAIN_TXS_NUMBER || blockSize > SidechainBlockBase.MAX_BLOCK_SIZE)
-      true // stop data collection
-    else {
-      false // continue data collection
-    }
-  }
-
-  def applyAndGetReceipts(stateView: AccountStateView,
-                          mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-                          sidechainTransactions: Seq[SidechainTypes#SCAT],
-                          blockHash: Array[Byte]): Try[Seq[EthereumReceipt]] = Try {
-
-    for(mcBlockRefData <- mainchainBlockReferencesData) {
-      stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
-    }
-
-    val receiptList = new ListBuffer[EthereumReceipt]()
-    var cumGasUsed : BigInteger = BigInteger.ZERO
-
-    for ((tx, txIndex) <- sidechainTransactions.zipWithIndex) {
-
-      stateView.applyTransaction(tx, txIndex, cumGasUsed) match {
-        case Success(consensusDataReceipt) =>
-          val txGasUsed = consensusDataReceipt.cumulativeGasUsed.subtract(cumGasUsed)
-          // update cumulative gas used so far
-          cumGasUsed = consensusDataReceipt.cumulativeGasUsed
-
-          if (blockGasLimitExceeded(cumGasUsed)) {
-              log.error("Could not apply tx, block gas limit exceeded")
-              throw new IllegalArgumentException("Could not apply tx, block gas limit exceeded")
-          }
-
-          val ethTx = tx.asInstanceOf[EthereumTransaction]
-          val txHash = idToBytes(ethTx.id)
-
-          // The contract address created, if the transaction was a contract creation
-          val contractAddress = if (ethTx.getTo == null) {
-            // this w3j util method is equivalent to the createAddress() in geth triggered also by CREATE opcode.
-            // Note: geth has also a CREATE2 opcode which may be optionally used in a smart contract solidity implementation
-            // in order to deploy another (deeper) smart contract with an address that is pre-determined before deploying it.
-            // This does not impact our case since the CREATE2 result would not be part of the receipt.
-            generateContractAddress(ethTx.getFrom.address, ethTx.getNonce)
-          } else {
-            // otherwise a zero-byte field
-            new Array[Byte](0)
-          }
-
-          // get a receipt obj with non consensus data (logs updated too)
-          val blockNumber = stateView.getHeight + 1
-          val fullReceipt = EthereumReceipt(consensusDataReceipt,
-            txHash, txIndex, blockHash, blockNumber, txGasUsed, contractAddress)
-
-          log.debug(s"Adding to receipt list: ${fullReceipt.toString()}")
-          receiptList += fullReceipt
-
-        case Failure(e) =>
-            log.error("Could not apply tx", e)
-            throw new IllegalArgumentException(e)
-      }
-    }
-    receiptList
-  }
-
-  def tryApplyAndGetReceipts(stateView: AccountStateView,
-                          mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-                          sidechainTransactions: Seq[SidechainTypes#SCAT],
-                          inputBlockSize: Int): Try[Seq[EthereumReceipt]] = Try {
-
-    // this function is similar to applyAndGetReceipts(), and is called when forging a block.
-    // We opted for having a separate method even if they share some code since the flows are different
-    //   1. we do not have (and do not need) height and block hash
-    //   2. we must skip tx not applicable to the current state
-    //   3. we must include tx up to the block gas limits threshold
-    //   4. we do not need all the non consensus data in receipts
-
-    for(mcBlockRefData <- mainchainBlockReferencesData) {
-      stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
-    }
-
-    val receiptList = new ListBuffer[EthereumReceipt]()
-
-    var cumGasUsed : BigInteger = BigInteger.ZERO
-    var txsCounter: Int = 0
-    var blockSize: Int = inputBlockSize
-
-    for ((tx, txIndex) <- sidechainTransactions.zipWithIndex) {
-
-      stateView.applyTransaction(tx, txIndex, cumGasUsed) match {
-        case Success(consensusDataReceipt) =>
-          // update cumulative gas used so far
-          cumGasUsed = consensusDataReceipt.cumulativeGasUsed
-
-          blockSize = blockSize + tx.bytes.length + 4 // placeholder for Tx length
-          txsCounter += 1
-
-          if (blockSizeExceeded(blockSize, txsCounter))
-            return Success(receiptList)
-
-          if (blockGasLimitExceeded(cumGasUsed))
-            return Success(receiptList)
-
-          val ethTx = tx.asInstanceOf[EthereumTransaction]
-          val txHash = idToBytes(ethTx.id)
-
-          // get a receipt obj with txHash info only, other non consensus info are not used when forging
-          val receipt = EthereumReceipt(consensusDataReceipt,
-            txHash, txIndex, blockHash = Utils.ZEROS_HASH, blockNumber = -1, gasUsed = BigInteger.ZERO, contractAddress = new Array[Byte](0))
-
-          log.debug(s"Adding to receipt list: $receipt")
-
-          receiptList += receipt
-
-        case Failure(e) =>
-            // do not throw anything and just skip this tx
-            log.debug("Could not apply tx, reason: " + e.getMessage)
-      }
-    }
-    receiptList
-  }
-
 }
