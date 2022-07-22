@@ -22,7 +22,7 @@ import scorex.util.serialization.{Reader, Writer}
 
 import java.math.BigInteger
 import java.util
-import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.{Failure, Success}
 
 trait ForgerStakesProvider {
@@ -338,16 +338,16 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
   }
 
   override def getListOfForgers(view: BaseAccountStateView): Seq[AccountForgingStakeInfo] = {
-    getListOfForgerRecords(view).asScala
+    getListOfForgerRecords(view)
   }
 
-  private def getListOfForgerRecords(view: BaseAccountStateView) : util.ArrayList[AccountForgingStakeInfo] = {
-    val stakeList = new util.ArrayList[AccountForgingStakeInfo]()
+  private def getListOfForgerRecords(view: BaseAccountStateView) : Seq[AccountForgingStakeInfo] = {
+    var stakeList = Seq[AccountForgingStakeInfo]()
     var nodeReference = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey).get
 
     while (!linkedListNodeRefIsNull(nodeReference)) {
       val (item: AccountForgingStakeInfo, prevNodeReference: Array[Byte]) = getListItem(view, nodeReference)
-      stakeList.add(item)
+      stakeList = item +: stakeList
       nodeReference = prevNodeReference
     }
     stakeList
@@ -356,7 +356,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
   def doUncheckedGetListOfForgersCmd(view: BaseAccountStateView): ExecutionResult = {
     val stakeList = getListOfForgerRecords(view)
 
-    val listOfForgers = AccountForgingStakeInfoListEncoder.encode(stakeList)
+    val listOfForgers = AccountForgingStakeInfoListEncoder.encode(stakeList.asJava)
     new ExecutionSucceeded(GetListOfForgersGasPaidValue, listOfForgers)
   }
 
@@ -500,6 +500,26 @@ case class AccountForgingStakeInfo(
 
     new StaticStruct(listOfParams)
   }
+
+  override def equals(that: Any): Boolean =
+    that match {
+      case that: AccountForgingStakeInfo => {
+        that.canEqual(this) &&
+          this.forgerStakeData == that.forgerStakeData &&
+          util.Arrays.equals(this.stakeId, that.stakeId)
+      }
+      case _ => false
+    }
+
+
+  override def hashCode: Int = {
+    val prime = 31
+    var result = 1
+    result = prime * result + (if (stakeId == null) 0 else util.Arrays.hashCode(stakeId))
+    result = prime * result + (if (forgerStakeData == null) 0 else forgerStakeData.hashCode)
+    result
+  }
+
 }
 
 object AccountForgingStakeInfoListEncoder extends ABIListEncoder[AccountForgingStakeInfo, StaticStruct]{
@@ -546,6 +566,7 @@ case class ForgerPublicKeys(
   }
 
   override def serializer: ScorexSerializer[ForgerPublicKeys] = ForgerPublicKeysSerializer
+
 }
 
 object ForgerPublicKeysSerializer extends ScorexSerializer[ForgerPublicKeys] {
@@ -675,6 +696,8 @@ object ForgerStakeDataSerializer extends ScorexSerializer[ForgerStakeData] {
 
     ForgerStakeData(forgerPublicKeys, ownerPublicKey, stakeAmount)
   }
+
+
 }
 
 // A (sort of) linked list node containing:
