@@ -11,7 +11,7 @@ import com.horizen.account.utils.ZenWeiConverter.isValidZenAmount
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
 import com.horizen.serialization.Views
-import com.horizen.utils.{BytesUtils, ListSerializer}
+import com.horizen.utils.BytesUtils
 import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint256}
 import org.web3j.abi.datatypes.{Address, StaticStruct, Type}
@@ -22,7 +22,7 @@ import scorex.util.serialization.{Reader, Writer}
 
 import java.math.BigInteger
 import java.util
-import scala.collection.JavaConverters.asScalaBufferConverter
+import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.{Failure, Success}
 
 trait ForgerStakesProvider {
@@ -57,9 +57,6 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     Keccak256.hash(Bytes.concat(
       msg.getFrom.address(), msg.getNonce.toByteArray, msg.getValue.toByteArray, msg.getData))
   }
-
-  private val forgingInfoSerializer: ListSerializer[AccountForgingStakeInfo] =
-    new ListSerializer[AccountForgingStakeInfo](AccountForgingStakeInfoSerializer)
 
   override def init(view: BaseAccountStateView): Unit = {
     super.init(view)
@@ -341,25 +338,25 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
   }
 
   override def getListOfForgers(view: BaseAccountStateView): Seq[AccountForgingStakeInfo] = {
-    doUncheckedGetListOfForgersCmd(view) match {
-      case res: ExecutionSucceeded =>
-        forgingInfoSerializer.parseBytesTry(res.returnData()).get.asScala
-
-      case _ => Seq()
-    }
+    getListOfForgerRecords(view)
   }
 
-  def doUncheckedGetListOfForgersCmd(view: BaseAccountStateView): ExecutionResult = {
-    val stakeList = new util.ArrayList[AccountForgingStakeInfo]()
+  private def getListOfForgerRecords(view: BaseAccountStateView) : Seq[AccountForgingStakeInfo] = {
+    var stakeList = Seq[AccountForgingStakeInfo]()
     var nodeReference = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey).get
 
     while (!linkedListNodeRefIsNull(nodeReference)) {
       val (item: AccountForgingStakeInfo, prevNodeReference: Array[Byte]) = getListItem(view, nodeReference)
-      stakeList.add(item)
+      stakeList = item +: stakeList
       nodeReference = prevNodeReference
     }
+    stakeList
+  }
 
-    val listOfForgers = AccountForgingStakeInfoListEncoder.encode(stakeList)
+  def doUncheckedGetListOfForgersCmd(view: BaseAccountStateView): ExecutionResult = {
+    val stakeList = getListOfForgerRecords(view)
+
+    val listOfForgers = AccountForgingStakeInfoListEncoder.encode(stakeList.asJava)
     new ExecutionSucceeded(GetListOfForgersGasPaidValue, listOfForgers)
   }
 
@@ -503,6 +500,26 @@ case class AccountForgingStakeInfo(
 
     new StaticStruct(listOfParams)
   }
+
+  override def equals(that: Any): Boolean =
+    that match {
+      case that: AccountForgingStakeInfo => {
+        that.canEqual(this) &&
+          this.forgerStakeData == that.forgerStakeData &&
+          util.Arrays.equals(this.stakeId, that.stakeId)
+      }
+      case _ => false
+    }
+
+
+  override def hashCode: Int = {
+    val prime = 31
+    var result = 1
+    result = prime * result + (if (stakeId == null) 0 else util.Arrays.hashCode(stakeId))
+    result = prime * result + (if (forgerStakeData == null) 0 else forgerStakeData.hashCode)
+    result
+  }
+
 }
 
 object AccountForgingStakeInfoListEncoder extends ABIListEncoder[AccountForgingStakeInfo, StaticStruct]{
@@ -549,6 +566,7 @@ case class ForgerPublicKeys(
   }
 
   override def serializer: ScorexSerializer[ForgerPublicKeys] = ForgerPublicKeysSerializer
+
 }
 
 object ForgerPublicKeysSerializer extends ScorexSerializer[ForgerPublicKeys] {
@@ -678,6 +696,8 @@ object ForgerStakeDataSerializer extends ScorexSerializer[ForgerStakeData] {
 
     ForgerStakeData(forgerPublicKeys, ownerPublicKey, stakeAmount)
   }
+
+
 }
 
 // A (sort of) linked list node containing:
