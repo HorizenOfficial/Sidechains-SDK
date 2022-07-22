@@ -53,6 +53,7 @@ class SCEvmBootstrap(SidechainTestFramework):
     def sc_setup_nodes(self):
         return start_sc_nodes(num_nodes=1, dirname=self.options.tmpdir, binary=[EVM_APP_BINARY]) #, extra_args=['-agentlib'])
 
+
     def run_test(self):
         sc_node = self.sc_nodes[0]
         mc_block = self.nodes[0].getblock(str(self.sc_nodes_bootstrap_info.mainchain_block_height))
@@ -60,6 +61,7 @@ class SCEvmBootstrap(SidechainTestFramework):
         print("SC genesis mc block hex = " + mc_block_hex)
 
         sc_best_block = sc_node.block_best()["result"]
+        pprint.pprint(sc_best_block)
 
         assert_equal(sc_best_block["height"], 1, "The best block has not the specified height.")
 

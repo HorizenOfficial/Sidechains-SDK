@@ -4,16 +4,16 @@ import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountState
 import com.horizen.account.receipt.EthereumReceipt
+import com.horizen.account.state.AccountState.blockGasLimitExceeded
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.block.WithdrawalEpochCertificate
+import com.horizen.block.{MainchainBlockReferenceData, SidechainBlockBase, WithdrawalEpochCertificate}
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.evm._
 import com.horizen.evm.interop.EvmLog
-import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
-import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, Utils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import org.web3j.crypto.ContractUtils.generateContractAddress
 import scorex.core._
 import scorex.util.{ModifierId, ScorexLogging}
@@ -113,6 +113,7 @@ class AccountState(val params: NetworkParams,
         throw new IllegalArgumentException(s"Block ${mod.id} has feePaymentsHash ${BytesUtils.toHexString(mod.feePaymentsHash)} defined when no fee payments expected.")
     }
 
+
     for(mcBlockRefData <- mod.mainchainBlockReferencesData) {
       stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
     }
@@ -131,6 +132,11 @@ class AccountState(val params: NetworkParams,
           cumGasUsed = consensusDataReceipt.cumulativeGasUsed
           val ethTx = tx.asInstanceOf[EthereumTransaction]
 
+          if (blockGasLimitExceeded(cumGasUsed)) {
+            log.error("Could not apply tx, block gas limit exceeded")
+            throw new IllegalArgumentException("Could not apply tx, block gas limit exceeded")
+          }
+
           val txHash = idToBytes(ethTx.id)
 
           // The contract address created, if the transaction was a contract creation
@@ -145,7 +151,7 @@ class AccountState(val params: NetworkParams,
             new Array[Byte](0)
           }
 
-          // get a receipt obj with non consensus data too (logs updated too)
+          // get a receipt obj with non consensus data (logs updated too)
           val fullReceipt = EthereumReceipt(consensusDataReceipt,
                       txHash, txIndex, blockHash, blockNumber, txGasUsed, contractAddress)
 
@@ -164,7 +170,10 @@ class AccountState(val params: NetworkParams,
     stateView.addFeeInfo(BlockFeeInfo(0L, mod.header.forgingStakeInfo.blockSignPublicKey))
 
     // check stateRoot and receiptRoot against block header
-    mod.verifyReceiptDataConsistency(receiptList)
+    mod.verifyReceiptDataConsistency(receiptList.map(_.consensusDataReceipt))
+
+    val stateRoot = stateView.stateDb.getIntermediateRoot
+    mod.verifyStateRootDataConsistency(stateRoot)
 
     // eventually, store full receipts in the metaDataStorage indexed by txid
     stateView.updateTransactionReceipts(receiptList)
@@ -374,7 +383,7 @@ class AccountState(val params: NetworkParams,
 }
 
 
-object AccountState {
+object AccountState extends ScorexLogging {
   private[horizen] def restoreState(stateMetadataStorage: AccountStateMetadataStorage,
                                     stateDbStorage: Database,
                                     messageProcessors: Seq[MessageProcessor],
@@ -399,5 +408,10 @@ object AccountState {
         .applyModifier(genesisBlock).get
     } else
       throw new RuntimeException("State metadata storage is not empty!")
+  }
+
+  def blockGasLimitExceeded(cumGasUsed: BigInteger): Boolean = {
+    // TODO
+    false
   }
 }

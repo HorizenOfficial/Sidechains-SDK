@@ -5,7 +5,7 @@ import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
-import com.horizen.account.state.{AccountState, EoaMessageProcessor, ForgerStakeMsgProcessor, MessageProcessor, WithdrawalMsgProcessor}
+import com.horizen.account.state.{AccountState, MessageProcessor, MessageProcessorUtil}
 import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
 import com.horizen.account.transaction.AccountTransaction
 import com.horizen.account.validation.ChainIdBlockSemanticValidator
@@ -43,12 +43,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override type MP = AccountMemoryPool
 
   protected def messageProcessors(params: NetworkParams): Seq[MessageProcessor] = {
-    Seq(
-      EoaMessageProcessor,
-      WithdrawalMsgProcessor,
-      ForgerStakeMsgProcessor(params),
-
-    ) ++ customMessageProcessors
+      MessageProcessorUtil.getMessageProcessorSeq(params, customMessageProcessors)
   }
 
   override def semanticBlockValidators(params: NetworkParams): Seq[SemanticBlockValidator[AccountBlock]] = {
