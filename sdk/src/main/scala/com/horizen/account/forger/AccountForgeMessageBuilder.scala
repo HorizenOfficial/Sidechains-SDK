@@ -54,10 +54,8 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     // we must ensure that all the tx we get from mempool are applicable to current state view
     // and we must stay below the block gas limit threshold, therefore we might have a subset of the input transactions
-    val receiptList = tryApplyAndGetReceipts(view, mainchainBlockReferencesData, sidechainTransactions, inputBlockSize).get
-
-    val listOfAppliedTxHash = receiptList.map(r => new ByteArrayWrapper(r.transactionHash))
-
+    val (receiptList, listOfAppliedTxHash) = tryApplyAndGetReceipts(view, mainchainBlockReferencesData, sidechainTransactions, inputBlockSize).get
+    
     // get only the transactions for which we got a receipt
     val appliedTransactions = sidechainTransactions.filter{
       t => {
@@ -66,7 +64,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       }
     }
 
-    (view.stateDb.getIntermediateRoot, receiptList.map(_.consensusDataReceipt), appliedTransactions)
+    (view.stateDb.getIntermediateRoot, receiptList, appliedTransactions)
   }
 
 
@@ -81,13 +79,14 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   private def tryApplyAndGetReceipts(stateView: AccountStateView,
                              mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
                              sidechainTransactions: Seq[SidechainTypes#SCAT],
-                             inputBlockSize: Int): Try[Seq[EthereumReceipt]] = Try {
+                             inputBlockSize: Int): Try[(Seq[EthereumConsensusDataReceipt], Seq[ByteArrayWrapper])] = Try {
 
     for(mcBlockRefData <- mainchainBlockReferencesData) {
       stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
     }
 
-    val receiptList = new ListBuffer[EthereumReceipt]()
+    val receiptList = new ListBuffer[EthereumConsensusDataReceipt]()
+    val txHashList  = new ListBuffer[ByteArrayWrapper]()
 
     var cumGasUsed : BigInteger = BigInteger.ZERO
     var txsCounter: Int = 0
@@ -104,28 +103,23 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
           txsCounter += 1
 
           if (blockSizeExceeded(blockSize, txsCounter))
-            return Success(receiptList)
+            return Success(receiptList, txHashList)
 
           if (blockGasLimitExceeded(cumGasUsed))
-            return Success(receiptList)
+            return Success(receiptList, txHashList)
 
           val ethTx = tx.asInstanceOf[EthereumTransaction]
           val txHash = idToBytes(ethTx.id)
 
-          // get a receipt obj with txHash info only, other non consensus info are not used when forging
-          val receipt = EthereumReceipt(consensusDataReceipt,
-            txHash, txIndex, blockHash = Utils.ZEROS_HASH, blockNumber = -1, gasUsed = BigInteger.ZERO, contractAddress = new Array[Byte](0))
-
-          log.debug(s"Adding to receipt list: $receipt")
-
-          receiptList += receipt
+          receiptList += consensusDataReceipt
+          txHashList += txHash
 
         case Failure(e) =>
           // just skip this tx
           log.debug("Could not apply tx, reason: " + e.getMessage)
       }
     }
-    receiptList
+    (receiptList, txHashList)
   }
 
   override def createNewBlock(
