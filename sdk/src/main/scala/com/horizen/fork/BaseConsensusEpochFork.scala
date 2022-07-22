@@ -1,5 +1,5 @@
 package com.horizen.fork
 
-class BaseConsensusEpochFork (val epochNumber: scConsensusEpochNumber) {}
+class BaseConsensusEpochFork (val epochNumber: ForkConsensusEpochNumber) {}
 
-case class scConsensusEpochNumber(mainnetEpochNumber: Int, regtestEpochNumber: Int, testnetEpochNumber: Int) {}
+case class ForkConsensusEpochNumber(mainnetEpochNumber: Int, regtestEpochNumber: Int, testnetEpochNumber: Int) {}

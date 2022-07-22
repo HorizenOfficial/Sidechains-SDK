@@ -1,11 +1,12 @@
 package com.horizen.examples;
 
 import com.horizen.fork.ForkConfigurator;
-import com.horizen.fork.scConsensusEpochNumber;
+import com.horizen.fork.ForkConsensusEpochNumber;
 
 public class AppForkConfigurator extends ForkConfigurator {
     @Override
-    public scConsensusEpochNumber getBaseSidechainConsensusEpochNumbers() {
-        return new scConsensusEpochNumber(0,0,0);
+    public ForkConsensusEpochNumber getSidechainFork1() {
+        // TODO Set activation height for SidechainFork1
+        return new ForkConsensusEpochNumber(0, 0, 0);
     }
 }

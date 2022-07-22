@@ -11,7 +11,7 @@ object ForkManager {
     var mainchainForks: ListBuffer[BaseMainchainHeightFork] = ListBuffer[BaseMainchainHeightFork]()
     var consensusEpochForks: ListBuffer[BaseConsensusEpochFork] = ListBuffer[BaseConsensusEpochFork]()
 
-    def getMainchainHeightFork(mainchainHeight:Int):BaseMainchainHeightFork = {
+    def getMainchainFork(mainchainHeight:Int):BaseMainchainHeightFork = {
         if (networkName == null) {
             throw new RuntimeException("Forkmanager hasn't been initialized.")
         }
@@ -64,7 +64,10 @@ object ForkManager {
         mainchainForks += new BaseMainchainHeightFork(BaseMainchainHeightFork.DEFAULT_MAINCHAIN_FORK_HEIGHTS)
 
         forkConfigurator.check() match {
-            case Success(_) => consensusEpochForks += new BaseConsensusEpochFork(forkConfigurator.getBaseSidechainConsensusEpochNumbers())
+            case Success(_) => {
+                consensusEpochForks += new BaseConsensusEpochFork(forkConfigurator.getBaseSidechainConsensusEpochNumbers())
+                consensusEpochForks += new SidechainFork1(forkConfigurator.getSidechainFork1())
+            }
             case Failure(exception) => {
                 this.networkName = null
                 throw exception

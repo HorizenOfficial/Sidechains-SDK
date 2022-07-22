@@ -374,8 +374,7 @@ class SidechainApp @Inject()
   }
 
   // Init ForkManager
-  forkConfigurator.check() match {
-    case Success(_) => ForkManager.init(forkConfigurator, sidechainSettings.genesisData.mcNetwork)
+  ForkManager.init(forkConfigurator, sidechainSettings.genesisData.mcNetwork) match {
     case Failure(exception) => throw exception
   }
 

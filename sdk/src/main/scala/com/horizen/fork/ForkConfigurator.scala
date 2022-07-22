@@ -3,19 +3,24 @@ package com.horizen.fork
 import scala.util.{Failure, Success, Try}
 
 abstract class ForkConfigurator {
-  def getBaseSidechainConsensusEpochNumbers():scConsensusEpochNumber
+  final def getBaseSidechainConsensusEpochNumbers():ForkConsensusEpochNumber = {
+    ForkConsensusEpochNumber(0, 0, 0)
+  }
+
+  def getSidechainFork1():ForkConsensusEpochNumber
 
   final def check(): Try[Unit] = {
     val baseConsensusEpochNumbers = getBaseSidechainConsensusEpochNumbers()
-    if ((baseConsensusEpochNumbers.mainnetEpochNumber < 0) ||
-      (baseConsensusEpochNumbers.testnetEpochNumber < 0) ||
-      (baseConsensusEpochNumbers.regtestEpochNumber < 0))
-      Failure(new RuntimeException("Inappropriate baseConsensusEpoch activation height."))
+    val fork1EpochNumbers = getSidechainFork1()
+
+    if ((fork1EpochNumbers.mainnetEpochNumber < baseConsensusEpochNumbers.mainnetEpochNumber) ||
+                 (fork1EpochNumbers.testnetEpochNumber < baseConsensusEpochNumbers.testnetEpochNumber) ||
+                 (fork1EpochNumbers.regtestEpochNumber < baseConsensusEpochNumbers.regtestEpochNumber))
+        Failure(new RuntimeException("Inappropriate SidechainFork1 activation height."))
+    /*
+    * Put checks for each other implemented forks here, comparing corresponding epoch numbers with previous fork
+    */
     else
       Success()
-
-    /*
-     * Put checks for other implemented forks here
-     */
   }
 }
