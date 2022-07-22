@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import sys
 
+from mc_sc_forging5 import MCSCForging5
 from mc_sc_forging_delegation import MCSCForgingDelegation
 from sc_ceased import SCCeased
 from sc_cert_no_coin_record import SCCertNoCoinRecord
@@ -80,6 +81,9 @@ def run_tests(log_file):
 
     result = run_test(MCSCForging4())
     assert_equal(0, result, "mc_sc_forging4 test failed!")
+
+    result = run_test(MCSCForging5())
+    assert_equal(0, result, "mc_sc_forging5 test failed!")
 
     result = run_test(MCSCForgingDelegation())
     assert_equal(0, result, "mc_sc_forging_delegation test failed!")
