@@ -1,6 +1,7 @@
 package com.horizen.api.http
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.horizen.account.state.{AccountForgingStakeInfo, WithdrawalRequest}
 import com.horizen.account.transaction.AccountTransaction
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlock}
 import com.horizen.box.{Box, BoxUnlocker}
@@ -78,17 +79,29 @@ class SidechainJSONBOChecker {
   def assertsOnAccountTransactionJson(json: JsonNode, transaction: AccountTransaction[_, _]): Unit = {
     assertTrue(json.elements().asScala.length >= 3)
     assertTrue(json.get("id").isTextual)
-    assertEquals(BytesUtils.toHexString(scorex.util.idToBytes(ModifierId @@ transaction.id)), json.get("id").asText())
+    assertEquals(transaction.id, json.get("id").asText())
     assertTrue(json.get("modifierTypeId").isNumber)
     assertEquals(transaction.modifierTypeId.toInt, json.get("modifierTypeId").asInt())
 
     assertTrue(json.get("value").isNumber)
     assertEquals(transaction.getValue(), json.get("value").bigIntegerValue())
-
-
-
   }
 
+  def assertsOnAccountStakeInfoJson(json: JsonNode, stakeInfo: AccountForgingStakeInfo): Unit = {
+    assertEquals(2, json.elements().asScala.length)
+    assertTrue(json.get("stakeId").isTextual)
+    assertEquals(BytesUtils.toHexString(stakeInfo.stakeId), json.get("stakeId").asText())
+    assertEquals(3,json.get("forgerStakeData").elements().asScala.length)
+  }
+
+  def assertsOnWithdrawalRequestJson(json: JsonNode, request: WithdrawalRequest): Unit = {
+    assertEquals(3, json.elements().asScala.length)
+    assertTrue(json.get("proposition").get("mainchainAddress").isTextual)
+    assertTrue(json.get("value").isNumber)
+    assertEquals(request.value, json.get("value").bigIntegerValue())
+    assertTrue(json.get("valueInZennies").isNumber)
+    assertEquals(request.valueInZennies, json.get("valueInZennies").asLong())
+  }
 
   def assertsOnBoxUnlockerJson(json: JsonNode, boxUnlocker: BoxUnlocker[_]): Unit = {
     assertEquals(2, json.elements().asScala.length)

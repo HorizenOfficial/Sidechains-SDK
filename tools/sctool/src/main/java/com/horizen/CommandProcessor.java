@@ -14,6 +14,7 @@ import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.state.*;
 import com.horizen.account.storage.AccountStateMetadataStorageView;
 import com.horizen.account.transaction.AccountTransaction;
+import com.horizen.account.utils.MainchainTxCrosschainOutputAddressUtil;
 import com.horizen.account.utils.Secp256k1;
 import com.horizen.block.*;
 import com.horizen.box.Box;
@@ -40,6 +41,7 @@ import org.web3j.crypto.Keys;
 import scala.Enumeration;
 import org.web3j.crypto.ECKeyPair;
 import scala.collection.Seq;
+import scala.collection.mutable.ListBuffer;
 
 
 import java.io.*;
@@ -573,7 +575,6 @@ public class CommandProcessor {
 
             MainchainBlockReference mcRef = MainchainBlockReference.create(mcBlockBytes, params, versionsManager).get();
 
-            // TODO for the time being we have the sc creation only, but we might support also FT
             List<MainchainBlockReferenceData> mainchainBlockReferencesData = Collections.singletonList(mcRef.data());
             List<MainchainHeader> mainchainHeadersData = Collections.singletonList(mcRef.header());
 
@@ -619,10 +620,10 @@ public class CommandProcessor {
 
                 byte[] receiptsRoot = StateDB.EMPTY_ROOT_HASH; // empty root hash (no receipts)
 
-                AddressProposition forgerAddress =
-                  new AddressProposition(Arrays.copyOf(
-                          sidechainCreation.getScCrOutput().address(),
-                          com.horizen.account.utils.Account.ADDRESS_SIZE)); // taken from the creation
+                // taken from the creation cc out
+                AddressProposition forgerAddress = new AddressProposition(
+                          MainchainTxCrosschainOutputAddressUtil.getAccountAddress(
+                                  sidechainCreation.getScCrOutput().address()));
 
                 SidechainAccountTransactionsCompanion sidechainTransactionsCompanion = new SidechainAccountTransactionsCompanion(new HashMap<>());
 
@@ -730,7 +731,7 @@ public class CommandProcessor {
     private byte[] getGenesisStateRoot(List<MainchainBlockReferenceData> mainchainBlockReferencesData, NetworkParams params) throws MessageProcessorInitializationException {
         // TODO customMessageProcessors - for the time being we do not handle them in the bootstrapping tool.
         // If needed they should be somehow passed as parameters and added here
-        java.util.List<MessageProcessor> customMessageProcessors = new ArrayList<>();
+        Seq<MessageProcessor> customMessageProcessors = new ListBuffer<MessageProcessor>();
 
         Seq<MessageProcessor> messageProcessorSeq = MessageProcessorUtil.getMessageProcessorSeq(params, customMessageProcessors);
 

@@ -3,44 +3,38 @@ package com.horizen.evm;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.horizen.evm.interop.*;
 import com.horizen.evm.utils.Hash;
-import com.sun.jna.Library;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 
 import java.math.BigInteger;
 
 final class LibEvm {
-    private interface LibEvmInterface extends Library {
-        void Free(Pointer ptr);
+    static native void Free(Pointer ptr);
 
-        JsonPointer Invoke(String method, JsonPointer args);
+    private static native JsonPointer Invoke(String method, JsonPointer args);
+
+    private static native void RegisterLogCallback(LibEvmLogCallback callback);
+
+    static String getOSLibExtension() {
+        var os = System.getProperty("os.name").toLowerCase();
+        if (os.contains("mac os")) {
+            return "dylib";
+        } else if (os.contains("windows")) {
+            return "dll";
+        }
+        // default to linux file extension
+        return "so";
     }
 
-    /**
-     * Singleton instance of the native library.
-     */
-    private static final LibEvmInterface instance;
-
     static {
-        var os = System.getProperty("os.name").toLowerCase();
-        String libExtension;
-        if (os.contains("mac os")) {
-            libExtension = "dylib";
-        } else if (os.contains("windows")) {
-            libExtension = "dll";
-        } else {
-            libExtension = "so";
-        }
-        var lib = "libevm." + libExtension;
-        instance = Native.load(lib, LibEvmInterface.class);
+        // bind native methods in this class to libevm
+        Native.register("libevm." + getOSLibExtension());
+        // register log callback
+        RegisterLogCallback(LibEvmLogCallback.instance);
     }
 
     private LibEvm() {
         // prevent instantiation of this class
-    }
-
-    static void Free(Pointer ptr) {
-        instance.Free(ptr);
     }
 
     private static class InteropResult<R> {
@@ -61,7 +55,7 @@ final class LibEvm {
     }
 
     private static <R> R invoke(String method, JsonPointer args, Class<R> responseType) {
-        var json = instance.Invoke(method, args);
+        var json = Invoke(method, args);
         // build type information to deserialize to generic type InteropResult<R>
         var type = TypeFactory.defaultInstance().constructParametricType(InteropResult.class, responseType);
         InteropResult<R> response = json.deserialize(type);
@@ -204,6 +198,25 @@ final class LibEvm {
         }
         var params = new EvmParams(handle, from, to, value, input, gasLimit, gasPrice, context);
         return invoke("EvmApply", params, EvmResult.class);
+    }
+
+    public static EvmResult evmStaticCall(
+            int handle,
+            byte[] from,
+            byte[] to,
+            BigInteger value,
+            byte[] input,
+            BigInteger gasLimit,
+            BigInteger gasPrice,
+            EvmContext context
+    ) {
+        if (context == null) {
+            context = new EvmContext();
+            // TODO: decide what EIPs we are implementing, setting the baseFee to zero currently allows a gas price of zero
+            context.baseFee = BigInteger.ZERO;
+        }
+        var params = new EvmParams(handle, from, to, value, input, gasLimit, gasPrice, context);
+        return invoke("EvmStaticCall", params, EvmResult.class);
     }
 
     public static byte[] hashRoot(byte[][] values) {

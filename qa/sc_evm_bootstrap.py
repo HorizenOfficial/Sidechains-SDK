@@ -3,16 +3,14 @@ import json
 import pprint
 from decimal import Decimal
 
-import test_framework.util
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration, Account, LARGE_WITHDRAWAL_EPOCH_LENGTH
-from SidechainTestFramework.sc_forging_util import sc_create_forging_stake_mempool
+    SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import assert_equal, assert_true, initialize_chain_clean, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, COIN
+from test_framework.util import assert_equal, assert_true, start_nodes, \
+    websocket_port_by_mc_node_index, forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, is_mainchain_block_included_in_sc_block, check_box_balance, \
-    check_mainchain_block_reference_info, check_wallet_coins_balance, check_box_balance, get_lib_separator, \
+    start_sc_nodes, is_mainchain_block_included_in_sc_block, \
+    check_mainchain_block_reference_info, \
     AccountModelBlockVersion, EVM_APP_BINARY, generate_next_blocks, generate_next_block, generate_account_proposition, \
     convertZenniesToWei, convertZenToZennies, connect_sc_nodes
 
@@ -59,6 +57,7 @@ class SCEvmBootstrap(SidechainTestFramework):
 
     def sc_setup_nodes(self):
         return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir, binary=[EVM_APP_BINARY]*2)#, extra_args=[[], ['-agentlib']])
+
 
     def run_test(self):
 

@@ -69,6 +69,14 @@
         <configuration>
           <buildMode>c-shared</buildMode>
         </configuration>
+        <executions>
+          <execution>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>build</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
