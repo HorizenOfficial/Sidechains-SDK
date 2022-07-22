@@ -28,6 +28,6 @@ public class EvmApp {
         logger.info("...starting application...");
 
         sidechainApp.run();
-        System.out.println("Simple Sidechain application successfully started...");
+        System.out.println("EVM Sidechain application successfully started...");
     }
 }
