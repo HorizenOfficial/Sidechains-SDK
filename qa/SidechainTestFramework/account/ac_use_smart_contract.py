@@ -30,7 +30,8 @@ class ContractFunction:
 
 
 class SmartContract:
-
+    # TODO auto find nonce once implemnted if None
+    # TODO auto parse output and stuff once receipts and static calls work
     def __init__(self, contract_path: str):
         prepare_resources()
         self.__initialize_members(
