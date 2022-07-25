@@ -178,7 +178,7 @@ class SCEvmBootstrap(SidechainTestFramework):
         final_balance = sc_node.wallet_getBalance(balance_request)["result"]["balance"]
         assert_equal(initial_balance - transferred_amount_in_wei, final_balance)
 
-        smart_contract = SmartContract('ExampleContract')
+        smart_contract = SmartContract('StorageTestContract')
         print(smart_contract)
         # TODO fix rpc getTransactionCount
         # currently we know the nonce is 2 here, but it would be easier if this could be automated
