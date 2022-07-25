@@ -386,7 +386,7 @@ class AccountState(val params: NetworkParams,
   override def validate(tx: SidechainTypes#SCAT): Try[Unit] = Try {
     tx.semanticValidity()
 
-    if (!tx.isInstanceOf[MC2SCAggregatedTransaction]) {
+    if (tx.isInstanceOf[EthereumTransaction]) {
 
       val ethTx = tx.asInstanceOf[EthereumTransaction]
       val txHash = idToBytes(ethTx.id)
@@ -396,10 +396,10 @@ class AccountState(val params: NetworkParams,
       stateView.applyTransaction(tx, 0, BigInteger.ZERO) match {
         case Success(_) =>
           stateView.close()
-          log.debug(s"tx=$txHash succesfully applied to state")
+          log.debug(s"tx=$txHash succesfully validate against state view")
 
         case Failure(e) =>
-          log.error("Could not apply tx: ", e.getMessage)
+          log.error("Could not validate tx agaist state view: ", e.getMessage)
           stateView.close()
           throw new IllegalArgumentException(e)
       }
