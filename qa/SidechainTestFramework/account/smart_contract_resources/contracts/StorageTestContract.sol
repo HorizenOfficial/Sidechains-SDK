@@ -1,12 +1,9 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-
-contract ExampleContract {
+contract StorageTestContract {
     string private _storage;
-    constructor(){
-    }
+
     function set(string calldata value) external {
         _storage = value;
     }
