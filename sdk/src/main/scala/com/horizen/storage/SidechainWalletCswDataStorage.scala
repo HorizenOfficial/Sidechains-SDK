@@ -11,7 +11,10 @@ import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
-class SidechainWalletCswDataStorage(storage: Storage) extends ScorexLogging with SidechainStorageInfo with SidechainTypes {
+class SidechainWalletCswDataStorage(storage: Storage) extends ScorexLogging
+  with SidechainStorageInfo
+  with SidechainStorageCleanable
+  with SidechainTypes {
   require(storage != null, "Storage must be NOT NULL.")
 
   private val cswDataListSerializer = new ListSerializer[CswData](CswDataSerializer)
@@ -125,4 +128,6 @@ class SidechainWalletCswDataStorage(storage: Storage) extends ScorexLogging with
   }
 
   def isEmpty: Boolean = storage.isEmpty
+
+  override def cleanup(): Unit = storage.cleanup()
 }

@@ -395,6 +395,21 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     }
   }
 
+  /**
+   * Start reindex process: notify application wallet, cleanup the storages and recreate a genesis state
+   */
+  def startReindex(backupStorage: BackupStorage, genesisBlock: SidechainBlock,
+                   withdrawalEpochNumber: Int, consensusEpochInfo: ConsensusEpochInfo): Try[SidechainWallet] = {
+    applicationWallet.onReindex()
+    walletBoxStorage.cleanup()
+    walletTransactionStorage.cleanup()
+    forgingBoxesInfoStorage.cleanup()
+    cswDataProvider.cleanup()
+    SidechainWallet.createGenesisWallet(seed, walletBoxStorage, secretStorage, walletTransactionStorage,
+      forgingBoxesInfoStorage, cswDataProvider, backupStorage,
+      params, applicationWallet, genesisBlock, withdrawalEpochNumber , consensusEpochInfo)
+  }
+
 }
 
 object SidechainWallet

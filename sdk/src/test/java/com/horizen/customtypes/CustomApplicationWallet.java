@@ -30,6 +30,11 @@ public class CustomApplicationWallet implements ApplicationWallet {
     }
 
     @Override
+    public void onReindex() {
+
+    }
+
+    @Override
     public boolean checkStoragesVersion(byte[] blockId) {
         return true;
     }

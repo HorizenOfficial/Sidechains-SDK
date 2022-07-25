@@ -685,6 +685,24 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         throw e
     }
   }
+
+  /**
+   * Start reindex process: notify application state, cleanup the storages and recreate a genesis state
+   */
+  def startReindex(backupStorage: BackupStorage, genesisBlock: SidechainBlock): Try[SidechainState] = {
+    applicationState.onReindex() match {
+      case Success(appState) =>{
+        utxoMerkleTreeProvider.cleanup()
+        stateStorage.cleanup();
+        forgerBoxStorage.cleanup();
+        SidechainState.createGenesisState(stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, backupStorage , params, appState, genesisBlock)
+      }
+      case Failure(exception) => {
+        log.error("Error during reindex: applicationState.onReindex() method has failed", exception)
+        throw exception
+      }
+    }
+  }
 }
 
 object SidechainState

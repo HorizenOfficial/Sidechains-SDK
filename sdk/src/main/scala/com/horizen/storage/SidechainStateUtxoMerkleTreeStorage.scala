@@ -13,7 +13,10 @@ import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
 class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
-  extends ScorexLogging with SidechainStorageInfo with SidechainTypes {
+  extends ScorexLogging
+    with SidechainStorageInfo
+    with SidechainTypes
+    with SidechainStorageCleanable{
 
   var merkleTreeWrapper: InMemorySparseMerkleTreeWrapper = loadMerkleTree()
 
@@ -139,4 +142,6 @@ class SidechainStateUtxoMerkleTreeStorage(storage: Storage)
   }
 
   def isEmpty: Boolean = storage.isEmpty
+
+  override def cleanup(): Unit = storage.cleanup()
 }

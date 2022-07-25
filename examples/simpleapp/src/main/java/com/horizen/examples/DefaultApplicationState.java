@@ -93,6 +93,12 @@ public class DefaultApplicationState implements ApplicationState {
         appStorage2.close();
     }
 
+    @Override
+    public Try<ApplicationState> onReindex() {
+        appStorage1.cleanup();
+        appStorage2.cleanup();
+        return new Success<>(this);
+    }
 
     public Try<ApplicationState> onBackupRestore(BoxIterator i) {
         return new Success<>(this);

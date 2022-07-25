@@ -42,6 +42,8 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
   require(NodeViewModifier.ModifierIdSize == 32, "32 bytes ids assumed")
 
   def height: Int = storage.height
+  def reindexStatus: Int = storage.getReindexStatus().getOrElse(SidechainHistory.ReindexNotInProgress)
+
   def bestBlockId: ModifierId = storage.bestBlockId
   def bestBlock: SidechainBlock = storage.bestBlock
   def bestBlockInfo: SidechainBlockInfo = storage.bestBlockInfo
@@ -429,6 +431,11 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     height
   }
 
+
+  def getReindexStatus: Int = {
+    reindexStatus
+  }
+
   override def getFeePaymentsInfo(blockId: String): JOptional[FeePaymentsInfo] = {
     feePaymentsInfo(ModifierId @@ blockId).asJava
   }
@@ -584,6 +591,28 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
 
     new SidechainHistory(storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
   }
+
+  def startReindex(params: NetworkParams,
+                   genesisBlock: SidechainBlock,
+                   semanticBlockValidators: Seq[SemanticBlockValidator],
+                   historyBlockValidators: Seq[HistoryBlockValidator],
+                   stakeEpochInfo: StakeConsensusEpochInfo) : Try[SidechainHistory] = {
+    consensusDataStorage.cleanup()
+    SidechainHistory.createGenesisHistory(
+      storage.updateReindexStatus(0).get,
+      consensusDataStorage,
+      params, genesisBlock, semanticBlockValidators, historyBlockValidators, stakeEpochInfo, true)
+  }
+
+  def isReindexing(): Boolean = {
+    this.reindexStatus > SidechainHistory.ReindexNotInProgress
+  }
+
+  def updateReindexStatus(status: Int): SidechainHistory ={
+    val newStorage = storage.updateReindexStatus(status)
+    new SidechainHistory(newStorage.get, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
+  }
+
 }
 
 object SidechainHistory
@@ -599,6 +628,9 @@ object SidechainHistory
     else
       None
   }
+
+  val ReindexNotInProgress : Int = -2
+  val ReindexStarting : Int = -1
 
   def calculateGenesisBlockInfo(block: SidechainBlock, params: NetworkParams): SidechainBlockInfo = {
     require(block.id == params.sidechainGenesisBlockId, "Passed block is not a genesis block.")
@@ -624,13 +656,15 @@ object SidechainHistory
                                       genesisBlock: SidechainBlock,
                                       semanticBlockValidators: Seq[SemanticBlockValidator],
                                       historyBlockValidators: Seq[HistoryBlockValidator],
-                                      stakeEpochInfo: StakeConsensusEpochInfo) : Try[SidechainHistory] = {
-
-    if (historyStorage.isEmpty) {
+                                      stakeEpochInfo: StakeConsensusEpochInfo,
+                                      isReindexing: Boolean = false) : Try[SidechainHistory] = Try {
+    if (isReindexing || historyStorage.isEmpty) {
       val nonceEpochInfo = ConsensusDataProvider.calculateNonceForGenesisBlock(params)
-      new SidechainHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
-        .append(genesisBlock).map(_._1).get.reportModifierIsValid(genesisBlock)
-        .map(_.applyFullConsensusInfo(genesisBlock.id, FullConsensusEpochInfo(stakeEpochInfo, nonceEpochInfo)))
+      var gHistory = new SidechainHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators).append(genesisBlock).map(_._1).get
+      if (!isReindexing){
+        gHistory = gHistory.reportModifierIsValid(genesisBlock)
+      }
+      gHistory.applyFullConsensusInfo(genesisBlock.id, FullConsensusEpochInfo(stakeEpochInfo, nonceEpochInfo))
     }
     else
       throw new RuntimeException("History storage is not empty!")

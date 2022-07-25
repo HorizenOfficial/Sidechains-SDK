@@ -87,6 +87,12 @@ public class DefaultApplicationWallet implements ApplicationWallet {
     }
 
     @Override
+    public void onReindex() {
+        walletStorage1.cleanup();
+        walletStorage2.cleanup();
+    }
+
+    @Override
     public void onBackupRestore(BoxIterator i) {
 
     }

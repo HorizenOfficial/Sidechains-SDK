@@ -11,7 +11,7 @@ import com.horizen.utils.{Pair => JPair, _}
 import sparkz.core.consensus.ModifierSemanticValidity
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
-
+import com.google.common.primitives.Ints
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
@@ -33,6 +33,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
 
   private val sidechainBlockSerializer = new SidechainBlockSerializer(sidechainTransactionsCompanion)
   private val bestBlockIdKey: ByteArrayWrapper = new ByteArrayWrapper(Array.fill(32)(-1: Byte))
+  private val reindexStatusKey: ByteArrayWrapper = new ByteArrayWrapper(Array.fill(32)(-2: Byte))
 
   private val activeChain: ActiveChain = loadActiveChain()
 
@@ -71,6 +72,7 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
   }
 
   def bestBlockId: ModifierId = storage.get(bestBlockIdKey).asScala.map(d => bytesToId(d.data)).getOrElse(params.sidechainGenesisBlockId)
+
 
   def bestBlock: SidechainBlock = {
     require(height > 0, "SidechainHistoryStorage is empty. Cannot retrieve best block.")
@@ -229,6 +231,21 @@ class SidechainHistoryStorage(storage: Storage, sidechainTransactionsCompanion: 
       mcHeight <- activeChain.mcRefDataHeightByMcHash(mcHash)
       sidechainBlockId <- activeChain.idByMcReferenceData(mcHash)
     } yield MainchainBlockReferenceDataInfo(mcHash, mcHeight, sidechainBlockId)
+  }
+
+  def getReindexStatus(): Option[Int] = {
+    storage.get(reindexStatusKey).asScala.flatMap(baw => Option(Ints.fromByteArray(baw.data)))
+  }
+
+
+  def updateReindexStatus(status: Int): Try[SidechainHistoryStorage] = Try {
+    val toUpdate: JList[JPair[ByteArrayWrapper, ByteArrayWrapper]] = new JArrayList()
+    toUpdate.add(new JPair(reindexStatusKey, new ByteArrayWrapper(Ints.toByteArray(status))))
+    storage.update(
+      new ByteArrayWrapper(Utils.nextVersion),
+      toUpdate,
+      new JArrayList[ByteArrayWrapper]())
+    this
   }
 
   def update(block: SidechainBlock, blockInfo: SidechainBlockInfo): Try[SidechainHistoryStorage] = Try {
