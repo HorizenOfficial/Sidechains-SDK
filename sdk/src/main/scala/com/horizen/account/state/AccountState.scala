@@ -13,9 +13,11 @@ import com.horizen.evm._
 import com.horizen.evm.interop.EvmLog
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
+import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, Utils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import org.web3j.crypto.ContractUtils.generateContractAddress
 import scorex.core._
+import scorex.core.transaction.state.TransactionValidation
 import scorex.util.{ModifierId, ScorexLogging}
 
 import java.math.BigInteger
@@ -30,6 +32,7 @@ class AccountState(val params: NetworkParams,
                    stateDbStorage: Database,
                    messageProcessors: Seq[MessageProcessor])
   extends State[SidechainTypes#SCAT, AccountBlock, AccountStateView, AccountState]
+    with TransactionValidation[SidechainTypes#SCAT]
     with NodeAccountState
     with ScorexLogging {
 
@@ -379,6 +382,30 @@ class AccountState(val params: NetworkParams,
     view.close()
     res
   }
+
+  override def validate(tx: SidechainTypes#SCAT): Try[Unit] = Try {
+    tx.semanticValidity()
+
+    if (tx.isInstanceOf[EthereumTransaction]) {
+
+      val ethTx = tx.asInstanceOf[EthereumTransaction]
+      val txHash = idToBytes(ethTx.id)
+
+      val stateView = getView
+
+      stateView.applyTransaction(tx, 0, BigInteger.ZERO) match {
+        case Success(_) =>
+          stateView.close()
+          log.debug(s"tx=$txHash succesfully validate against state view")
+
+        case Failure(e) =>
+          log.error("Could not validate tx agaist state view: ", e.getMessage)
+          stateView.close()
+          throw new IllegalArgumentException(e)
+      }
+    }
+  }
+
 
 }
 
