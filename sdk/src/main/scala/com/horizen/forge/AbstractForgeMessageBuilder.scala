@@ -11,7 +11,7 @@ import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.{Transaction, TransactionSerializer}
 import com.horizen.utils.{DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, TimeToEpochUtils}
 import com.horizen.vrf.VrfOutput
-import com.horizen.{AbstractHistory, AbstractWallet, consensus}
+import com.horizen.{AbstractHistory, AbstractWallet}
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.block.Block
@@ -274,7 +274,7 @@ abstract class AbstractForgeMessageBuilder[
       mainchainSynchronizer.getMainchainBlockReference(hash) match {
         case Success(ref) => {
           val refDataSize = ref.data.bytes.length + 4 // placeholder for MainchainReferenceData length
-          if(blockSize + refDataSize > SidechainBlockBase.MAX_BLOCK_SIZE)
+          if (blockSize + refDataSize > SidechainBlockBase.MAX_BLOCK_SIZE)
             false // stop data collection
           else {
             mainchainReferenceData.append(ref.data)
@@ -290,9 +290,16 @@ abstract class AbstractForgeMessageBuilder[
     })
 
     val isWithdrawalEpochLastBlock: Boolean = mainchainReferenceData.size == withdrawalEpochMcBlocksLeft
+    val forkOngoing: Boolean = (blockId != branchPointInfo.branchPointId)
 
-    // Collect transactions if possible
-    val transactions: Seq[TX] = collectTransactionsFromMemPool(nodeView, isWithdrawalEpochLastBlock, blockSize)
+    val transactions: Seq[TX] = if (
+      isWithdrawalEpochLastBlock || // SC block is going to become the last block of the withdrawal epoch
+      forkOngoing // a fork is ongoing, the tip state is not fully reliable
+    ) {
+      Seq() // no SC Txs allowed
+    } else {
+      collectTransactionsFromMemPool(nodeView, blockSize)
+    }
 
     val tryBlock = createNewBlock(
       nodeView,
@@ -308,7 +315,8 @@ abstract class AbstractForgeMessageBuilder[
       forgingStakeMerklePathInfo.forgingStakeInfo,
       vrfProof,
       forgingStakeMerklePathInfo.merklePath,
-      companion)
+      companion,
+      blockSize)
 
     tryBlock match {
       case Success(block) => ForgeSuccess(block)
@@ -323,7 +331,7 @@ abstract class AbstractForgeMessageBuilder[
                      parentBlockId: Block.BlockId,
                      timestamp: Block.Timestamp,
                      mainchainReferenceData: Seq[MainchainBlockReferenceData],
-                     sidechainTransactions: Seq[Transaction],
+                     sidechainTransactions: Seq[TX],
                      mainchainHeaders: Seq[MainchainHeader],
                      ommers: Seq[Ommer[H]],
                      blockSignPrivateKey: PrivateKey25519,
@@ -331,6 +339,7 @@ abstract class AbstractForgeMessageBuilder[
                      vrfProof: VrfProof,
                      forgingStakeInfoMerklePath: MerklePath,
                      companion: DynamicTypedSerializer[TX,  TransactionSerializer[TX]],
+                     inputBlockSize: Int,
                      signatureOption: Option[Signature25519] = None
                     ): Try[SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase]]
 
@@ -341,10 +350,7 @@ abstract class AbstractForgeMessageBuilder[
                       forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo,
                       vrfProof: VrfProof): Int
 
-  def collectTransactionsFromMemPool(
-                      nodeView: View,
-                      isWithdrawalEpochLastBlock: Boolean,
-                      blockSize: Int) : Seq[TX]
+  def collectTransactionsFromMemPool(nodeView: View, blockSize: Int): Seq[TX]
 
 
   def getOmmersSize(ommers: Seq[Ommer[H]]) : Int

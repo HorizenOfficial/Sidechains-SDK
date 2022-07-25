@@ -1,23 +1,14 @@
 package com.horizen.evm;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.horizen.evm.interop.*;
 import com.horizen.evm.utils.Hash;
-import com.sun.jna.Callback;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
 
 import java.math.BigInteger;
-import java.util.HashMap;
 
 final class LibEvm {
-    private interface LibEvmLogCallback extends Callback {
-        void callback(Pointer message);
-    }
-
     static native void Free(Pointer ptr);
 
     private static native JsonPointer Invoke(String method, JsonPointer args);
@@ -35,50 +26,11 @@ final class LibEvm {
         return "so";
     }
 
-    private static Level glogToLog4jLevel(String glogLevel) {
-        switch (glogLevel) {
-            case "trce":
-                return Level.TRACE;
-            default:
-            case "dbug":
-                return Level.DEBUG;
-            case "info":
-                return Level.INFO;
-            case "warn":
-                return Level.WARN;
-            case "eror":
-                return Level.ERROR;
-            case "crit":
-                return Level.FATAL;
-        }
-    }
-
     static {
         // bind native methods in this class to libevm
         Native.register("libevm." + getOSLibExtension());
-        final var mapper = new ObjectMapper();
-        final var logger = LogManager.getLogger(LibEvm.class);
-        RegisterLogCallback(message -> {
-            try {
-                var json = message.getString(0);
-                var data = mapper.readValue(json, HashMap.class);
-                // parse and remove known properties from the map
-                var level = glogToLog4jLevel((String) data.remove("lvl"));
-                var file = data.remove("file");
-                var line = data.remove("line");
-                var fn = data.remove("fn");
-                var msg = data.remove("msg");
-                // ignore the timestamp supplied by go
-                data.remove("t");
-                // write to log4j logger
-                logger.log(level, String.format("[%s:%s] (%s) %s %s", file, line, fn, msg, data));
-            } catch (Exception e) {
-                // note: make sure we do not throw any exception here because this callback is called by native code
-                // for diagnostics we log the exception here, if it is caused by malformed json it will also include
-                // the raw json string itself
-                logger.warn("received invalid log message data from libevm", e);
-            }
-        });
+        // register log callback
+        RegisterLogCallback(LibEvmLogCallback.instance);
     }
 
     private LibEvm() {

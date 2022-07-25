@@ -45,7 +45,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                  parentId: BlockId,
                  timestamp: Timestamp,
                  mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-                 sidechainTransactions: Seq[Transaction],
+                 sidechainTransactions: Seq[SidechainTypes#SCBT],
                  mainchainHeaders: Seq[MainchainHeader],
                  ommers: Seq[Ommer[SidechainBlockHeader]],
                  ownerPrivateKey: PrivateKey25519,
@@ -53,6 +53,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                  vrfProof: VrfProof,
                  forgingStakeInfoMerklePath: MerklePath,
                  companion: DynamicTypedSerializer[SidechainTypes#SCBT, TransactionSerializer[SidechainTypes#SCBT]],
+                 inputBlockSize: Int,
                  signatureOption: Option[Signature25519]) : Try[SidechainBlockBase[SidechainTypes#SCBT, SidechainBlockHeader]] =
   {
     val feePayments = if(isWithdrawalEpochLastBlock) {
@@ -137,24 +138,20 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     header.bytes.length
   }
 
-  override def collectTransactionsFromMemPool(nodeView: View, isWithdrawalEpochLastBlock: Boolean, blockSizeIn: Int): Seq[SidechainTypes#SCBT] =
+  override def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int): Seq[SidechainTypes#SCBT] =
   {
     var blockSize: Int = blockSizeIn
-    if (isWithdrawalEpochLastBlock) { // SC block is going to become the last block of the withdrawal epoch
-      Seq() // no SC Txs allowed
-    } else { // SC block is in the middle of the epoch
-      var txsCounter: Int = 0
-      nodeView.pool.take(nodeView.pool.size).filter(tx => {
-        val txSize = tx.bytes.length + 4 // placeholder for Tx length
-        txsCounter += 1
-        if (txsCounter > SidechainBlockBase.MAX_SIDECHAIN_TXS_NUMBER || blockSize + txSize > SidechainBlockBase.MAX_BLOCK_SIZE)
-          false // stop data collection
-        else {
-          blockSize += txSize
-          true // continue data collection
-        }
-      }).toSeq
-    }
+    var txsCounter: Int = 0
+    nodeView.pool.take(nodeView.pool.size).filter(tx => {
+      val txSize = tx.bytes.length + 4 // placeholder for Tx length
+      txsCounter += 1
+      if (txsCounter > SidechainBlockBase.MAX_SIDECHAIN_TXS_NUMBER || blockSize + txSize > SidechainBlockBase.MAX_BLOCK_SIZE)
+        false // stop data collection
+      else {
+        blockSize += txSize
+        true // continue data collection
+      }
+    }).toSeq
   }
 
   override def getOmmersSize(ommers: Seq[Ommer[SidechainBlockHeader]]): Int = {
