@@ -178,34 +178,38 @@ class SCEvmBootstrap(SidechainTestFramework):
         final_balance = sc_node.wallet_getBalance(balance_request)["result"]["balance"]
         assert_equal(initial_balance - transferred_amount_in_wei, final_balance)
 
-        smart_contract = SmartContract('StorageTestContract')
+        smart_contract_type = 'StorageTestContract'
+        print(f"Creating smart contract utilities for {smart_contract_type}")
+        smart_contract = SmartContract(smart_contract_type)
         print(smart_contract)
-        # TODO fix rpc getTransactionCount
-        # currently we know the nonce is 2 here, but it would be easier if this could be automated
-        # nonce_response = sc_node.rpc_eth_getTransactionCount(str(evm_address), '0')
-        # pprint.pprint(nonce_response)
-        nonce = 2
-        tx_hash, smart_contract_address = smart_contract.deploy(sc_node, fromAddress=str(evm_address), nonce=nonce,
+        tx_hash, smart_contract_address = smart_contract.deploy(sc_node, fromAddress=str(evm_address),
                                                                 gasLimit=100000000,
                                                                 gasPrice=10)
-        nonce = nonce + 1
         generate_next_blocks(sc_node, "first node", 1)
         print("Blocks mined - tx receipt will contain address")
-        # TODO fix receipts, currently empty
+        # TODO fix receipts, currently mocked
         print("rpc response:")
         pprint.pprint(sc_node.rpc_eth_getTransactionReceipt(tx_hash))
 
-        smart_contract.call_function(sc_node, 'set(string)', 'This is a message', fromAddress=str(evm_address),
-                                     nonce=nonce,
+        test_message = 'This is a message'
+        smart_contract.call_function(sc_node, 'set(string)', test_message, fromAddress=str(evm_address),
                                      gasLimit=10000000, gasPrice=10, toAddress=smart_contract_address)
 
         generate_next_blocks(sc_node, "first node", 1)
-        # TODO eth_call to read the value and make sure it is "This is a message"
-        # Currently rpc doesn't do anything
         res = smart_contract.static_call(sc_node, 'get()',
-                                         fromAddress=str(evm_address),
-                                         nonce=nonce, gasLimit=10000000,
+                                         fromAddress=str(evm_address), gasLimit=10000000,
                                          gasPrice=10, toAddress=smart_contract_address)
+        assert_equal(res[0], test_message)
+
+        test_message = 'This is a different message'
+        smart_contract.call_function(sc_node, 'set(string)', test_message, fromAddress=str(evm_address),
+                                     gasLimit=10000000, gasPrice=10, toAddress=smart_contract_address)
+
+        generate_next_blocks(sc_node, "first node", 1)
+        res = smart_contract.static_call(sc_node, 'get()',
+                                         fromAddress=str(evm_address), gasLimit=10000000,
+                                         gasPrice=10, toAddress=smart_contract_address)
+        assert_equal(res[0], test_message)
 
 
 if __name__ == "__main__":

@@ -59,12 +59,12 @@ class SmartContract:
                 self.Functions['constructor'] = ContractFunction('constructor', input_types, [],
                                                                  '', True)
 
-    def call_function(self, node, functionName, *args, fromAddress: str, toAddress: str, nonce, gasLimit, gasPrice,
-                      value=0):
+    def call_function(self, node, functionName, *args, fromAddress: str, toAddress: str, nonce=None, gasLimit, gasPrice,
+                      value=0, tag='latest'):
         j = {
             "from": fromAddress,
             "to": toAddress,
-            "nonce": nonce,
+            "nonce": self.__ensure_nonce(node, fromAddress, nonce, tag),
             "gasLimit": gasLimit,
             "gasPrice": gasPrice,
             "value": value,
@@ -74,25 +74,23 @@ class SmartContract:
         response = node.transaction_createLegacyTransaction(request)
         return response["result"]["transactionId"]
 
-    def static_call(self, node, functionName, *args, fromAddress, nonce, toAddress, gasLimit, gasPrice,
-                    value=0):
-        j = {
+    def static_call(self, node, functionName, *args, fromAddress, nonce=None, toAddress, gasLimit, gasPrice,
+                    value=0, tag='latest'):
+        request = {
             "from": fromAddress,
             "to": toAddress,
-            "nonce": nonce,
+            "nonce": self.__ensure_nonce(node, fromAddress, nonce, tag),
             "gasLimit": gasLimit,
             "gasPrice": gasPrice,
             "value": value,
             "data": self.raw_encode_call(functionName, *args)
         }
-        request = json.dumps(j)
-        response = node.rpc_eth_call(request, "0")
-        print(response)
-        # TODO fix when it exists
-        return response
+        response = node.rpc_eth_call(request, "latest")
+        return self.raw_decode_call_result(functionName, bytes.fromhex(response['result']))
 
-    def deploy(self, node, *args, fromAddress, nonce, gasLimit, gasPrice,
-               value=0):
+    def deploy(self, node, *args, fromAddress, nonce=None, gasLimit, gasPrice,
+               value=0, tag='latest'):
+        nonce = self.__ensure_nonce(node, fromAddress, nonce, tag)
         j = {
             "from": fromAddress,
             "nonce": nonce,
@@ -106,7 +104,7 @@ class SmartContract:
 
         request = json.dumps(j)
         response = node.transaction_createLegacyTransaction(request)
-
+        print(response)
         # tx_hash = response["result"]["transactionId"]
         #
         # j = {
@@ -195,6 +193,12 @@ class SmartContract:
             raise RuntimeError(
                 "Contract name is not unique, please change the names of the contracts so they are unique")
         return sol_files[0]
+
+    @staticmethod
+    def __ensure_nonce(node, address, nonce, tag='latest'):
+        if nonce is None:
+            nonce = int(node.rpc_eth_getTransactionCount(str(address), tag)['result'], 16) + 1
+        return nonce
 
 
 if __name__ == '__main__':
