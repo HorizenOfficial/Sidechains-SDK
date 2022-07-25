@@ -262,6 +262,15 @@ public class StateDB extends ResourceHandle {
     }
 
     /**
+     * Add a new log entry.
+     *
+     * @param evmLog log entry
+     */
+    public void addLog(EvmLog evmLog) {
+        LibEvm.stateAddLog(handle, evmLog);
+    }
+
+    /**
      * Set tx context, used when the EVM emits new state logs.
      *
      * @param txHash the hash of the transaction to be set in context

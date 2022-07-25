@@ -177,6 +177,10 @@ final class LibEvm {
         return invoke("StateGetLogs", new GetLogsParams(handle, txHash), EvmLog[].class);
     }
 
+    public static void stateAddLog(int handle, EvmLog evmLog) {
+        invoke("StateAddLog", new AddLogParams(handle, evmLog));
+    }
+
     public static void stateSetTxContext(int handle, byte[] txHash, int txIndex) {
         invoke("StateSetTxContext", new SetTxContextParams(handle, txHash, txIndex));
     }
