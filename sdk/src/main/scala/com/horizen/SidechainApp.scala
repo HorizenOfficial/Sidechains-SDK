@@ -320,6 +320,7 @@ class SidechainApp @Inject()
     genesisBlock
     ) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
+  val nodeViewReindexer  =  SidechainNodeViewReindexerRef.apply(nodeViewHolderRef)
   def modifierSerializers: Map[ModifierTypeId, SparkzSerializer[_ <: NodeViewModifier]] =
     Map(SidechainBlock.ModifierTypeId -> new SidechainBlockSerializer(sidechainTransactionsCompanion),
       Transaction.ModifierTypeId -> sidechainTransactionsCompanion)
@@ -385,7 +386,7 @@ class SidechainApp @Inject()
     SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params),
-    SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
+    SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef, nodeViewReindexer, sidechainSecretsCompanion),
     SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef),
     SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager, params),
     SidechainBackupApiRoute(settings.restApi, nodeViewHolderRef, boxIterator)

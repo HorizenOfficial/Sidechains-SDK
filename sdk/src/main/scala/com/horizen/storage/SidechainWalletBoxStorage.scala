@@ -21,6 +21,7 @@ import scala.util.Try
 class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: SidechainBoxesCompanion)
   extends SidechainTypes
     with SidechainStorageInfo
+    with SidechainStorageCleanable
     with ScorexLogging
 {
   // Version - block Id
@@ -164,4 +165,5 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
 
   def getIterator: StorageIterator = storage.getIterator
 
+  override def cleanup(): Unit = storage.cleanup()
 }

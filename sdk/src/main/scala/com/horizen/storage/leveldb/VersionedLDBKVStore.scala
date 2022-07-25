@@ -136,6 +136,20 @@ final class VersionedLDBKVStore(protected val db: DB, keepVersions: Int) extends
   def getIterator(): StorageIterator = {
     new DatabaseIterator(db.iterator())
   }
+
+  def cleanup(): Try[Unit] = {
+    val batch = db.createWriteBatch()
+    try{
+      val it: StorageIterator = getIterator()
+      it.seekToFirst()
+      it.forEachRemaining(entry => batch.delete(entry.getKey))
+      db.write(batch)
+      db.delete(VersionsKey)
+      Success()
+    } finally {
+      batch.close()
+    }
+  }
 }
 
 object VersionedLDBKVStore {

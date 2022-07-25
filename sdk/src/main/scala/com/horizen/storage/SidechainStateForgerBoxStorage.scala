@@ -13,6 +13,7 @@ import scala.util.{Failure, Success, Try}
 class SidechainStateForgerBoxStorage(storage: Storage)
     extends ScorexLogging
       with SidechainStorageInfo
+      with SidechainStorageCleanable
       with SidechainTypes
 {
   // Version - block Id
@@ -79,4 +80,6 @@ class SidechainStateForgerBoxStorage(storage: Storage)
   }
 
   def isEmpty: Boolean = storage.isEmpty
+
+  override def cleanup(): Unit = storage.cleanup()
 }

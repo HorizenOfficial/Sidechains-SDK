@@ -40,6 +40,8 @@ class InMemoryStorageAdapter(hashMap: mutable.HashMap[ByteArrayWrapper, ByteArra
 
   def copy(): InMemoryStorageAdapter = new InMemoryStorageAdapter(hashMap.clone())
 
+  override def cleanup(): Unit = {hashMap.clear()}
+
   override def getIterator: StorageIterator = ???
 
 }

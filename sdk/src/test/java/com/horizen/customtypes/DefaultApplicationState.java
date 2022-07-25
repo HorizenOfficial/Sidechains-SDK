@@ -34,6 +34,11 @@ public class DefaultApplicationState implements ApplicationState {
     }
 
     @Override
+    public Try<ApplicationState> onReindex() {
+        return new Success<>(this);
+    }
+
+    @Override
     public boolean checkStoragesVersion(byte[] blockId) { return true; }
 
     @Override
