@@ -85,7 +85,8 @@ class SmartContract:
             "data": self.raw_encode_call(functionName, *args)
         }
         request = json.dumps(j)
-        response = node.rpc_eth_call(str(request), "0")
+        response = node.rpc_eth_call(request, "0")
+        print(response)
         # TODO fix when it exists
         return response
 
@@ -208,7 +209,7 @@ if __name__ == '__main__':
     #     pass
     # SmartContract("contracts/ExampleERC20")
     print("Loading example contract and testing encoding")
-    sc = SmartContract("ExampleContract.sol")
+    sc = SmartContract("StorageTestContract.sol")
     print(sc)
     print(
         f"Smart contract call set(string) encoding: {sc.raw_encode_call('set(string)', 'This is my message')}")
