@@ -1,12 +1,7 @@
 package com.horizen.account.state
 
 import com.google.common.primitives.Bytes
-import com.horizen.account.abi
 import com.horizen.utils.BytesUtils
-import org.web3j.abi.datatypes.DynamicArray
-import org.web3j.abi.{DefaultFunctionReturnDecoder, TypeReference}
-
-import java.util
 
 
 trait WithdrawalMsgProcessorFixture extends MessageProcessorFixture {
@@ -24,5 +19,7 @@ trait WithdrawalMsgProcessorFixture extends MessageProcessorFixture {
     getMessage(WithdrawalMsgProcessor.fakeSmartContractAddress, java.math.BigInteger.ZERO, data)
   }
 
+  val AddNewWithdrawalRequestEventSig = getEventSignature("AddWithdrawalRequestEvent(address,bytes20,uint256,uint32)")
+  val NumOfIndexedEvtParams = 2
 
 }
