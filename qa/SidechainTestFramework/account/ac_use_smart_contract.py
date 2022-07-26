@@ -134,8 +134,10 @@ class SmartContract:
             if response['result'] is not None and len(response['result']) > 0:
                 return self.raw_decode_call_result(functionName, bytes.fromhex(response['result']))
             else:
+                print(response)
                 return None
         else:
+            print(response)
             raise RuntimeError("Something went wrong, see {}".format(str(response)))
 
     def deploy(self, node, *args, fromAddress: str, nonce: int = None, gasLimit: int, gasPrice: int,
