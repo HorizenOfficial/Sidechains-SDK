@@ -130,8 +130,13 @@ class SmartContract:
             "data": self.raw_encode_call(functionName, *args)
         }
         response = node.rpc_eth_call(request, "latest")
-        if len(response['results']) > 0:
-            return self.raw_decode_call_result(functionName, bytes.fromhex(response['result']))
+        if 'result' in response:
+            if response['result'] is not None and len(response['result']) > 0:
+                return self.raw_decode_call_result(functionName, bytes.fromhex(response['result']))
+            else:
+                return None
+        else:
+            raise RuntimeError("Something went wrong, see {}".format(str(response)))
 
     def deploy(self, node, *args, fromAddress: str, nonce: int = None, gasLimit: int, gasPrice: int,
                value: int = 0, tag: str = 'latest'):
