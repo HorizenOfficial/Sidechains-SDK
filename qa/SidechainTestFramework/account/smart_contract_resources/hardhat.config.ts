@@ -22,7 +22,7 @@ task("sighashes", "Creates all the sighashes", async (taskArgs, hre) => {
 
 const config: HardhatUserConfig = {
   solidity: {
-    compilers: [{ version: "0.8.14" }],
+    compilers: [{ version: "0.8.4" }],
   },
 };
 
