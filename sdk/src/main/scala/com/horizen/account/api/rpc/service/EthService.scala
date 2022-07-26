@@ -1,42 +1,39 @@
 package com.horizen.account.api.rpc.service
 
 import akka.actor.ActorRef
-import akka.pattern.ask
 import akka.http.scaladsl.server.Directives.onComplete
+import akka.pattern.ask
 import akka.util.Timeout
-import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.{SidechainSettings, SidechainTypes}
-import com.horizen.account.api.http.AccountTransactionErrorResponse.{ErrorInsufficientBalance, GenericTransactionError}
+import com.horizen.SidechainSettings
+import com.horizen.account.api.http.AccountTransactionErrorResponse.GenericTransactionError
 import com.horizen.account.api.http.AccountTransactionRestScheme.TransactionIdDTO
-import com.horizen.account.api.rpc.utils.{Data, Quantity, ResponseObject}
+import com.horizen.account.api.rpc.handler.RpcException
+import com.horizen.account.api.rpc.utils._
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.state.{AccountState, AccountStateView, EvmMessageProcessor, ExecutionSucceeded, Message}
-import com.horizen.account.transaction.AccountTransaction
-import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.account.state.{AccountState, AccountStateView}
+import com.horizen.account.transaction.{AccountTransaction, EthereumTransaction}
 import com.horizen.account.wallet.AccountWallet
-import com.horizen.api.http.{ApiResponseUtil, SuccessResponse}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
+import com.horizen.api.http.{ApiResponseUtil, SuccessResponse}
+import com.horizen.evm.Evm
 import com.horizen.params.NetworkParams
 import com.horizen.proof.Proof
 import com.horizen.proposition.Proposition
-import com.horizen.serialization.Views
 import com.horizen.transaction.Transaction
 import org.web3j.crypto.TransactionDecoder
-import org.web3j.crypto.transaction.`type`.TransactionType
-import org.web3j.protocol.core.methods.response.{EthBlock, Log, TransactionReceipt, Transaction => Web3jTransaction}
+import org.web3j.protocol.core.methods.response.{EthBlock, Transaction => Web3jTransaction}
 import org.web3j.utils.Numeric
 import scorex.core.NodeViewHolder.CurrentView
-import scorex.crypto.hash.Keccak256
 
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, Future}
-import scala.util.{Failure, Success}
-import scala.language.postfixOps
-import java.util.{Optional => JOptional}
 import java.math.BigInteger
 import java.util
+import java.util.{Optional => JOptional}
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, Future}
+import scala.language.postfixOps
+import scala.util.{Failure, Success}
 
 
 class EthService(val stateView: AccountStateView, val nodeView: CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool], val networkParams: NetworkParams, val sidechainSettings: SidechainSettings, val sidechainTransactionActorRef: ActorRef) extends RpcService {
@@ -45,26 +42,41 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
     new EthBlock.Block("0x1", "0x56", "0x57", "0x58", "0x59", "0x0", "0x0", "0x0", "0x0", "0", "0", "0", "0", "0", "0", "1", "3000", "2000", "22", new util.ArrayList[EthBlock.TransactionResult[_]], new util.ArrayList[String], new util.ArrayList[String], "")
   }
 
+  // Executes a new message call immediately without creating a transaction on the block chain
+  @RpcMethod("eth_call") def call(params: TransactionArgs, tag: Quantity): Data = {
+    val result = Evm.Apply(
+      // TODO: get stateView at the given tag (block number, block hash, latest, etc.)
+      stateView.getStateDbHandle,
+      params.getFrom,
+      if (params.to == null) null else params.to.toBytes,
+      params.value,
+      params.getData,
+      params.gas,
+      params.gasPrice
+    )
 
-  @RpcMethod("eth_call") def call(ethCall: util.LinkedHashMap[String, String], tag: Quantity): Data = { // Executes a new message call immediately without creating a transaction on the block chain
-    // TODO: add read-only evm execution and cleanup here
-    var processor = new EvmMessageProcessor();
-    val msg = new Message(
-      new AddressProposition(Numeric.hexStringToByteArray("0xA83035b4E719827f146C91b119508ea452c77F35")),
-      new AddressProposition(Numeric.hexStringToByteArray(ethCall.get("to"))),
-      BigInteger.ZERO,
-      BigInteger.ZERO,
-      BigInteger.ZERO,
-      BigInteger.ZERO,
-      BigInteger.ZERO,
-      BigInteger.ZERO,
-      Numeric.hexStringToByteArray(ethCall.get("data")))
-    if (processor.canProcess(msg, stateView)) {
-      var result = processor.process(msg, stateView)
-      if (!result.isFailed)
-        return new Data(result.asInstanceOf[ExecutionSucceeded].returnData())
+    if (result.evmError.nonEmpty) {
+      throw new RpcException(
+        new RpcError(
+          RpcCode.ExecutionError.getCode,
+          result.evmError,
+          Numeric.toHexString(result.returnData)
+        )
+      )
     }
-    return new Data(null)
+
+    new Data(result.returnData)
+
+    //    val msg = params.toMessage
+    //    val processor = new EvmMessageProcessor();
+    //    if (processor.canProcess(msg, stateView)) {
+    //      val result = processor.process(msg, stateView)
+    //      if (!result.isFailed)
+    //        return new Data(result.asInstanceOf[ExecutionSucceeded].returnData())
+    //      else
+    //        throw new RpcException(new RpcError(RpcCode.RevertError))
+    //    }
+    //    new Data(null)
   }
 
   @RpcMethod("eth_blockNumber") def blockNumber = new Quantity(Numeric.toHexStringWithPrefix(BigInteger.valueOf(getBlockHeight)))

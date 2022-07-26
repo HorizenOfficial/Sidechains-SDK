@@ -1,6 +1,8 @@
 import json
 from typing import Tuple
 from eth_abi import encode_abi, decode_abi
+from eth_utils import to_checksum_address
+
 from SidechainTestFramework.account.ac_smart_contract_compile import prepare_resources, get_cwd
 import os
 from dataclasses import dataclass
@@ -121,8 +123,8 @@ class SmartContract:
                    A tuple with the included decoded data if applicable, None else
        """
         request = {
-            "from": fromAddress,
-            "to": toAddress,
+            "from": to_checksum_address(fromAddress),
+            "to": to_checksum_address(toAddress),
             "nonce": self.__ensure_nonce(node, fromAddress, nonce, tag),
             "gasLimit": gasLimit,
             "gasPrice": gasPrice,
@@ -134,8 +136,10 @@ class SmartContract:
             if response['result'] is not None and len(response['result']) > 0:
                 return self.raw_decode_call_result(functionName, bytes.fromhex(response['result']))
             else:
+                print(response)
                 return None
         else:
+            print(response)
             raise RuntimeError("Something went wrong, see {}".format(str(response)))
 
     def deploy(self, node, *args, fromAddress: str, nonce: int = None, gasLimit: int, gasPrice: int,
