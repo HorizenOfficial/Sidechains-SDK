@@ -242,7 +242,10 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         throw new RuntimeException(String.format("Invalid to address length %d", to.length));
     }
 
+    @JsonIgnore
     public String getToAddress() {
+        // TODO currently we have a bug that removes 0x prefix during the serialization
+        // as a consequence we might have different json strings on different sc network nodes
         return this.transaction.getTo();
     }
 

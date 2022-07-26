@@ -8,13 +8,12 @@ import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceip
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress}
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.ZenWeiConverter
+import com.horizen.account.utils.{MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
 import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput, WithdrawalEpochCertificate}
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
-import com.horizen.evm.{StateDB, StateStorageStrategy}
-import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
-import com.horizen.evm.ResourceHandle
 import com.horizen.evm.interop.EvmLog
+import com.horizen.evm.{ResourceHandle, StateDB, StateStorageStrategy}
+import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.StateView
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
@@ -49,10 +48,8 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
 
           val stakedAmount = ZenWeiConverter.convertZenniesToWei(scOut.amount)
 
-          // we must get 20 bytes out of 32 with the proper padding and byte order
-          // MC prepends a padding of 0 bytes (if needed) in the sc_create command when a 32 bytes address is specified.
-          // After reversing the bytes, the padding is trailed to the correct 20 bytes proposition
-          val ownerAddressProposition = new AddressProposition(BytesUtils.reverseBytes(scOut.address.take(com.horizen.account.utils.Account.ADDRESS_SIZE)))
+          val ownerAddressProposition = new AddressProposition(
+            MainchainTxCrosschainOutputAddressUtil.getAccountAddress(scOut.address))
 
           // customData = vrf key | blockSignerKey
           val vrfPublicKey = new VrfPublicKey(scOut.customCreationData.take(VrfPublicKey.KEY_LENGTH))
@@ -95,10 +92,8 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
           // we trust the MC that this is a valid amount
           val value = ZenWeiConverter.convertZenniesToWei(ftOut.amount)
 
-          // we must get 20 bytes out of 32 with the proper padding and byte order
-          // MC prepends a padding of 0 bytes (if needed) in the sc_create command when a 32 bytes address is specified.
-          // After reversing the bytes, the padding is trailed to the correct 20 bytes proposition
-          val recipientProposition = new AddressProposition(BytesUtils.reverseBytes(ftOut.propositionBytes.take(com.horizen.account.utils.Account.ADDRESS_SIZE)))
+          val recipientProposition = new AddressProposition(
+            MainchainTxCrosschainOutputAddressUtil.getAccountAddress(ftOut.propositionBytes))
 
           // stateDb will implicitly create account if not existing yet
           addBalance(recipientProposition.address(), value)
@@ -137,13 +132,14 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     // We are sure that transaction is semantically valid (so all the tx fields are valid)
     // and was successfully verified by ChainIdBlockSemanticValidator
 
+    // TODO this is checked also by EthereumTransaction.semanticValidity()
     // Check signature
     // TODO: add again later and check - message to sign seems to be false (?)
     //if (!tx.getSignature.isValid(tx.getFrom, tx.messageToSign()))
     //  throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: signature is invalid")
 
     // Check that "from" is EOA address
-    if(!isEoaAccount(tx.getFrom.address()))
+    if (!isEoaAccount(tx.getFrom.address()))
       throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: from account is not EOA")
 
     // Check the nonce
@@ -156,11 +152,11 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     } else if (result < 0) {
       throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: nonce ${txNonce} is to low (expected nonce is $stateNonce)")
     }*/
-    if(txNonce.add(BigInteger.ONE).compareTo(txNonce) < 0)
+    if (txNonce.add(BigInteger.ONE).compareTo(txNonce) < 0)
       throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: nonce ${txNonce} reached the max value")
 
     // Check eip15159 fee relation
-    if(tx.isEIP1559) {
+    if (tx.isEIP1559) {
       // TODO:  tx.getMaxFeePerGas().compareTo(block base fee) < 0 -> exception: max fee per gas less than block base fee"
     }
 
@@ -170,7 +166,7 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
 
     // Check that it is enough balance to pay after gas was bought.
     val txBalanceAfterGasPrepayment: BigInteger = getBalance(tx.getFrom.address())
-    if(txBalanceAfterGasPrepayment.compareTo(tx.getValue) < 0)
+    if (txBalanceAfterGasPrepayment.compareTo(tx.getValue) < 0)
       throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: not enough founds ${txBalanceAfterGasPrepayment} to pay ${tx.getValue}")
 
     bookedGasPrice
@@ -209,7 +205,7 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
       throw new IllegalArgumentException(s"Transaction ${ethTx.id} has no known processor.")
     )
 
-    val consensusDataReceipt : EthereumConsensusDataReceipt = processor.process(message, this) match {
+    val consensusDataReceipt: EthereumConsensusDataReceipt = processor.process(message, this) match {
       case success: ExecutionSucceeded =>
         val evmLogs = getLogs(txHash)
         val gasUsed = success.gasUsed()
@@ -371,6 +367,12 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
 
   override def getLogs(txHash: Array[Byte]): Array[EvmLog] = {
     stateDb.getLogs(txHash)
+  }
+
+  override def addLog(evmLog: EvmLog): Try[Unit] = {
+    Try {
+      stateDb.addLog(evmLog)
+    }
   }
 
   override def close(): Unit = {

@@ -178,9 +178,10 @@ class WithdrawalMsgProcessorTest
     assertEquals("Wrong result type", classOf[ExecutionSucceeded], res.getClass)
     assertTrue("Missing return data", res.asInstanceOf[ExecutionSucceeded].hasReturnData)
     var wrListInBytes = res.asInstanceOf[ExecutionSucceeded].returnData()
-    var listOfWR = decodeListOfWithdrawalRequest(wrListInBytes)
 
-    assertTrue("The list of withdrawal requests is not empty", listOfWR.isEmpty)
+    val expectedListOfWR = new util.ArrayList[WithdrawalRequest]()
+
+    assertArrayEquals(WithdrawalRequestsListEncoder.encode(expectedListOfWR),wrListInBytes)
 
     // With 3999 withdrawal requests
     val maxNumOfWithdrawalReqs = WithdrawalMsgProcessor.MaxWithdrawalReqsNumPerEpoch
@@ -194,6 +195,7 @@ class WithdrawalMsgProcessorTest
 
     (1 to maxNumOfWithdrawalReqs).foreach(index => {
       val wr = WithdrawalRequest(destAddress, ZenWeiConverter.convertZenniesToWei(index))
+      expectedListOfWR.add(wr)
       val key = WithdrawalMsgProcessor.getWithdrawalRequestsKey(epochNum, index)
       mockWithdrawalRequestsList.put(new ByteArrayWrapper(key), wr.bytes)
     }
@@ -209,13 +211,7 @@ class WithdrawalMsgProcessorTest
     assertTrue("Missing return data", res.asInstanceOf[ExecutionSucceeded].hasReturnData)
     wrListInBytes = res.asInstanceOf[ExecutionSucceeded].returnData()
 
-    listOfWR = decodeListOfWithdrawalRequest(wrListInBytes)
-    assertEquals("Wrong list of withdrawal requests size", maxNumOfWithdrawalReqs, listOfWR.size())
-    (0 until maxNumOfWithdrawalReqs).foreach(index => {
-      val wr = listOfWR.get(index)
-      assertArrayEquals("wrong address", destAddress.bytes(), wr.addr.getValue)
-      assertEquals("wrong amount", ZenWeiConverter.convertZenniesToWei(index + 1), wr.amount.getValue)
-    })
+    assertArrayEquals(WithdrawalRequestsListEncoder.encode(expectedListOfWR),wrListInBytes)
 
   }
 

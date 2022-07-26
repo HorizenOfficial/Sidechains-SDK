@@ -3,14 +3,15 @@ package com.horizen.account.state
 import com.horizen.account.abi
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.storage.AccountStateMetadataStorageView
+import com.horizen.evm.utils.Hash
 import com.horizen.evm.{LevelDBDatabase, StateDB}
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.utils.BytesUtils
 import org.junit.rules.TemporaryFolder
 import org.scalatestplus.mockito.MockitoSugar.mock
-import org.web3j.abi.datatypes.{DynamicArray, StaticStruct}
+import org.web3j.abi.datatypes.{DynamicArray, StaticStruct, Type}
 import org.web3j.abi.datatypes.generated.{Bytes20, Uint32}
-import org.web3j.abi.{DefaultFunctionReturnDecoder, FunctionEncoder, TypeReference}
+import org.web3j.abi.{DefaultFunctionReturnDecoder, EventEncoder, FunctionEncoder, FunctionReturnDecoder, TypeReference}
 
 import java.util
 import scala.util.Random
@@ -39,4 +40,9 @@ trait MessageProcessorFixture {
     new Message(from, destContractAddress, gas, gas, gas, gas, amount, nonce, data)
 
   }
+
+  def getEventSignature(eventABISignature: String): Array[Byte] =   org.web3j.utils.Numeric.hexStringToByteArray(EventEncoder.buildEventSignature(eventABISignature))
+
+  def decodeEventTopic[T <:Type[_]] (topic: Hash, ref: TypeReference[T] ) = FunctionReturnDecoder.decodeIndexedValue(BytesUtils.toHexString(topic.toBytes),ref)
+
 }

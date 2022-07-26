@@ -1,6 +1,7 @@
 package com.horizen.account.state
 
 import com.horizen.evm.ResourceHandle
+import com.horizen.evm.interop.EvmLog
 
 import java.math.BigInteger
 import scala.util.Try
@@ -33,4 +34,6 @@ trait BaseAccountStateView extends AccountStateReader {
   def removeAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Try[Unit]
 
   def addAccount(address: Array[Byte], codeHash: Array[Byte]): Try[Unit]
+
+  def addLog(evmLog: EvmLog): Try[Unit]
 }

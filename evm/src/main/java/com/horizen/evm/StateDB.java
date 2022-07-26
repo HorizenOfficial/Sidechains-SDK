@@ -11,6 +11,12 @@ public class StateDB extends ResourceHandle {
             Converter.fromHexString("c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470");
 
     /**
+     * TrieHasher.Root() of an empty byte array
+     */
+    public static byte[] EMPTY_ROOT_HASH =
+            Converter.fromHexString("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421");
+
+    /**
      * Opens a view on the state at the given state root hash.
      */
     public StateDB(Database db, byte[] root) {
@@ -253,6 +259,15 @@ public class StateDB extends ResourceHandle {
      */
     public EvmLog[] getLogs(byte[] txHash) {
         return LibEvm.stateGetLogs(handle, txHash);
+    }
+
+    /**
+     * Add a new log entry.
+     *
+     * @param evmLog log entry
+     */
+    public void addLog(EvmLog evmLog) {
+        LibEvm.stateAddLog(handle, evmLog);
     }
 
     /**

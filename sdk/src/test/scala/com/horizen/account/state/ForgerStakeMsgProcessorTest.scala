@@ -1,10 +1,12 @@
 package com.horizen.account.state
 
 import com.google.common.primitives.Bytes
-import com.horizen.account.abi
+import com.horizen.account.events.{DelegateForgerStake, WithdrawForgerStake}
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, GetListOfForgersCmd, RemoveStakeCmd}
+import com.horizen.account.utils.ZenWeiConverter
+import com.horizen.evm.interop.EvmLog
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
@@ -13,16 +15,14 @@ import org.junit._
 import org.mockito._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
-import org.web3j.abi.datatypes.DynamicArray
-import org.web3j.abi.{DefaultFunctionReturnDecoder, TypeReference}
+import org.web3j.abi.datatypes.Type
+import org.web3j.abi.{FunctionReturnDecoder, TypeReference}
 import org.web3j.crypto.{ECKeyPair, Keys, Sign}
 import scorex.crypto.hash.Keccak256
 
 import java.math.BigInteger
 import java.util
-import scala.collection.JavaConverters.collectionAsScalaIterableConverter
-import scala.collection.immutable.Seq
-
+import scala.collection.JavaConverters.seqAsJavaListConverter
 
 
 class ForgerStakeMsgProcessorTest
@@ -38,18 +38,24 @@ class ForgerStakeMsgProcessorTest
 
   val senderProposition: AddressProposition = new AddressProposition(BytesUtils.fromHexString("00aabbcc9900aabbcc9900aabbcc9900aabbcc99"))
 
-  val mockNetworkParams : NetworkParams = mock[NetworkParams]
-  val forgerStakeMessageProcessor : ForgerStakeMsgProcessor = ForgerStakeMsgProcessor(mockNetworkParams)
+  val mockNetworkParams: NetworkParams = mock[NetworkParams]
+  val forgerStakeMessageProcessor: ForgerStakeMsgProcessor = ForgerStakeMsgProcessor(mockNetworkParams)
 
   // create private/public key pair
-  val pair : ECKeyPair = Keys.createEcKeyPair
+  val pair: ECKeyPair = Keys.createEcKeyPair
   val ownerAddressProposition = new AddressProposition(BytesUtils.fromHexString(Keys.getAddress(pair)))
+
+  val AddNewForgerStakeEventSig = getEventSignature("DelegateForgerStake(address,address,bytes32,uint256)")
+  val NumOfIndexedAddNewStakeEvtParams = 2
+  val RemoveForgerStakeEventSig = getEventSignature("WithdrawForgerStake(address,bytes32)")
+  val NumOfIndexedRemoveForgerStakeEvtParams = 1
+
 
   @Before
   def setUp(): Unit = {
   }
 
-  def getDefaultMessage(opCode: Array[Byte], arguments: Array[Byte], nonce: BigInteger, value: BigInteger = negativeAmount) : Message = {
+  def getDefaultMessage(opCode: Array[Byte], arguments: Array[Byte], nonce: BigInteger, value: BigInteger = negativeAmount): Message = {
     val data = Bytes.concat(opCode, arguments)
     new Message(
       senderProposition,
@@ -90,10 +96,11 @@ class ForgerStakeMsgProcessorTest
       case res: ExecutionFailed => Assert.fail(s"Wrong result: $res")
       case res: ExecutionSucceeded =>
         assertTrue(res.hasReturnData)
+        assertArrayEquals(stakeId, res.returnData())
     }
   }
 
-  def getForgerStakeList(stateView: AccountStateView) : java.util.List[abi.util.AccountForgingStakeInfo] = {
+  def getForgerStakeList(stateView: AccountStateView): Array[Byte] = {
 
     val data: Array[Byte] = new Array[Byte](0)
     val msg = getDefaultMessage(BytesUtils.fromHexString(GetListOfForgersCmd),
@@ -109,27 +116,18 @@ class ForgerStakeMsgProcessorTest
         assertTrue(res.hasReturnData)
         assertTrue(res.gasUsed() == forgerStakeMessageProcessor.RemoveStakeGasPaidValue)
 
-        decodeListOfForgerStake(res.returnData())
+        res.returnData()
     }
   }
 
-  def decodeListOfForgerStake(data: Array[Byte]): java.util.List[abi.util.AccountForgingStakeInfo] ={
-    val decoder = new DefaultFunctionReturnDecoder()
-    val typeRef1 = org.web3j.abi.Utils.convert(util.Arrays.asList(new TypeReference[DynamicArray[abi.util.AccountForgingStakeInfo]]() {}))
-    val listOfWR = decoder.decodeFunctionResult(org.web3j.utils.Numeric.toHexString(data), typeRef1)
-    listOfWR.get(0).asInstanceOf[DynamicArray[abi.util.AccountForgingStakeInfo]].getValue
-
-  }
-
-  def createSenderAccount(view: AccountStateView, amount: BigInteger = BigInteger.ZERO) : Unit = {
+  def createSenderAccount(view: AccountStateView, amount: BigInteger = BigInteger.ZERO): Unit = {
     if (!view.accountExists(senderProposition.address())) {
       val codeHash = new Array[Byte](32)
       scala.util.Random.nextBytes(codeHash)
       view.addAccount(senderProposition.address(), codeHash)
 
-      if (amount.compareTo(BigInteger.ZERO) >= 0)
-      {
-         view.addBalance(senderProposition.address(), amount)
+      if (amount.compareTo(BigInteger.ZERO) >= 0) {
+        view.addBalance(senderProposition.address(), amount)
       }
     }
   }
@@ -141,7 +139,6 @@ class ForgerStakeMsgProcessorTest
     assertEquals("Wrong MethodId for AddNewStakeCmd", "5ca748ff", ForgerStakeMsgProcessor.AddNewStakeCmd)
     assertEquals("Wrong MethodId for RemoveStakeCmd", "f7419d79", ForgerStakeMsgProcessor.RemoveStakeCmd)
   }
-
 
 
   @Test
@@ -174,7 +171,7 @@ class ForgerStakeMsgProcessorTest
 
     // we have to call init beforehand
     assertFalse(stateView.accountExists(forgerStakeMessageProcessor.fakeSmartContractAddress.address()))
-    
+
     forgerStakeMessageProcessor.init(stateView)
 
     assertTrue(stateView.accountExists(forgerStakeMessageProcessor.fakeSmartContractAddress.address()))
@@ -225,7 +222,11 @@ class ForgerStakeMsgProcessorTest
     createSenderAccount(stateView, initialAmount)
 
     Mockito.when(mockNetworkParams.restrictForgers).thenReturn(true)
-    Mockito.when(mockNetworkParams.allowedForgersList).thenReturn(Seq((blockSignerProposition,vrfPublicKey)))
+    Mockito.when(mockNetworkParams.allowedForgersList).thenReturn(Seq((blockSignerProposition, vrfPublicKey)))
+
+    //Setting the context
+    val txHash1 = Keccak256.hash("first tx")
+    stateView.stateDb.setTxContext(txHash1, 10)
 
     val cmdInput = AddNewStakeCmdInput(
       ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
@@ -251,6 +252,15 @@ class ForgerStakeMsgProcessorTest
     assertTrue(stateView.getBalance(forgerStakeMessageProcessor.fakeSmartContractAddress.address()) == validWeiAmount)
     assertTrue(stateView.getBalance(senderProposition.address()) == initialAmount.subtract(validWeiAmount))
 
+    //Checking log
+    var listOfLogs = stateView.getLogs(txHash1.asInstanceOf[Array[Byte]])
+    assertEquals("Wrong number of logs", 1, listOfLogs.length)
+    var expStakeId = forgerStakeMessageProcessor.getStakeId(msg)
+    var expectedAddStakeEvt = DelegateForgerStake(msg.getFrom, ownerAddressProposition, expStakeId, msg.getValue)
+    checkAddNewForgerStakeEvent(expectedAddStakeEvt, listOfLogs(0))
+
+    val txHash2 = Keccak256.hash("second tx")
+    stateView.stateDb.setTxContext(txHash2, 10)
     // try processing a msg with the same stake (same msg), should fail
     forgerStakeMessageProcessor.process(msg, stateView) match {
       case res: ExecutionFailed =>
@@ -258,10 +268,21 @@ class ForgerStakeMsgProcessorTest
       case result => Assert.fail(s"Wrong result: $result")
     }
 
+    //Checking that log doesn't change
+    listOfLogs = stateView.getLogs(txHash2.asInstanceOf[Array[Byte]])
+    assertEquals("Wrong number of logs", 0, listOfLogs.length)
+
     // try processing a msg with different stake id (different nonce), should succeed
     val msg2 = getDefaultMessage(
       BytesUtils.fromHexString(AddNewStakeCmd),
       data, getRandomNonce, validWeiAmount)
+
+    val txHash3 = Keccak256.hash("third tx")
+    stateView.stateDb.setTxContext(txHash3, 10)
+
+    val expectedLastStake = AccountForgingStakeInfo(forgerStakeMessageProcessor.getStakeId(msg2),
+      ForgerStakeData(ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
+        ownerAddressProposition, validWeiAmount))
 
     forgerStakeMessageProcessor.process(msg2, stateView) match {
       case res: InvalidMessage => Assert.fail(s"Wrong result: $res")
@@ -275,6 +296,14 @@ class ForgerStakeMsgProcessorTest
     // verify we added the amount to smart contract and we charge the sender
     assertTrue(stateView.getBalance(forgerStakeMessageProcessor.fakeSmartContractAddress.address()) == validWeiAmount.multiply(BigInteger.TWO))
     assertTrue(stateView.getBalance(senderProposition.address()) == initialAmount.subtract(validWeiAmount.multiply(BigInteger.TWO)))
+
+
+    //Checking log
+    listOfLogs = stateView.getLogs(txHash3.asInstanceOf[Array[Byte]])
+    assertEquals("Wrong number of logs", 1, listOfLogs.length)
+    expStakeId = forgerStakeMessageProcessor.getStakeId(msg2)
+    expectedAddStakeEvt = DelegateForgerStake(msg2.getFrom, ownerAddressProposition, expStakeId, msg2.getValue)
+    checkAddNewForgerStakeEvent(expectedAddStakeEvt, listOfLogs(0))
 
     // remove first stake id
 
@@ -294,6 +323,9 @@ class ForgerStakeMsgProcessorTest
       BytesUtils.fromHexString(RemoveStakeCmd),
       data3, nonce3)
 
+    val txHash4 = Keccak256.hash("forth tx")
+    stateView.stateDb.setTxContext(txHash4, 10)
+
     // try processing the removal of stake, should succeed
     forgerStakeMessageProcessor.process(msg3, stateView) match {
       case res: InvalidMessage => Assert.fail(s"Wrong result: $res")
@@ -309,6 +341,12 @@ class ForgerStakeMsgProcessorTest
     assertTrue(stateView.getBalance(senderProposition.address()) == initialAmount.subtract(validWeiAmount.multiply(BigInteger.TWO)))
     assertTrue(stateView.getBalance(ownerAddressProposition.address()) == validWeiAmount)
 
+    //Checking log
+    listOfLogs = stateView.getLogs(txHash4.asInstanceOf[Array[Byte]])
+    assertEquals("Wrong number of logs", 1, listOfLogs.length)
+    val expectedRemoveStakeEvent = WithdrawForgerStake(ownerAddressProposition,stakeId)
+    checkRemoveForgerStakeEvent(expectedRemoveStakeEvent, listOfLogs(0))
+
     // try getting the list of stakes, no command arguments here, just op code
     val data4: Array[Byte] = new Array[Byte](0)
     val msg4 = getDefaultMessage(
@@ -322,14 +360,10 @@ class ForgerStakeMsgProcessorTest
         assertTrue(res.hasReturnData)
         assertTrue(res.gasUsed() == forgerStakeMessageProcessor.RemoveStakeGasPaidValue)
 
-       val returnedList = decodeListOfForgerStake(res.returnData())
-        // we should have the second stake id only
-        assertTrue(returnedList.size() == 1)
-        val item = returnedList.get(0)
-        println("This is the returned value: " + item)
+        val listOfExpectedForgerStakes = new util.ArrayList[AccountForgingStakeInfo]
+        listOfExpectedForgerStakes.add(expectedLastStake)
 
-        assertTrue(BytesUtils.toHexString(item.stakeId.getValue) == BytesUtils.toHexString(forgerStakeMessageProcessor.getStakeId(msg2)))
-        assertTrue(item.amount.getValue.equals(validWeiAmount))
+        assertArrayEquals(AccountForgingStakeInfoListEncoder.encode(listOfExpectedForgerStakes), res.returnData())
     }
 
     stateView.stateDb.commit()
@@ -352,8 +386,8 @@ class ForgerStakeMsgProcessorTest
 
     Mockito.when(mockNetworkParams.restrictForgers).thenReturn(true)
     Mockito.when(mockNetworkParams.allowedForgersList).thenReturn(Seq(
-      (blockSignerProposition1,vrfPublicKey1),
-      (blockSignerProposition2,vrfPublicKey2)
+      (blockSignerProposition1, vrfPublicKey1),
+      (blockSignerProposition2, vrfPublicKey2)
     ))
 
 
@@ -460,8 +494,8 @@ class ForgerStakeMsgProcessorTest
 
     Mockito.when(mockNetworkParams.restrictForgers).thenReturn(true)
     Mockito.when(mockNetworkParams.allowedForgersList).thenReturn(Seq(
-      (blockSignerProposition1,vrfPublicKey1),
-      (blockSignerProposition2,vrfPublicKey2)
+      (blockSignerProposition1, vrfPublicKey1),
+      (blockSignerProposition2, vrfPublicKey2)
     ))
 
     val cmdInput = AddNewStakeCmdInput(
@@ -473,7 +507,7 @@ class ForgerStakeMsgProcessorTest
 
     val msg = getDefaultMessage(
       BytesUtils.fromHexString(AddNewStakeCmd),
-      data, getRandomNonce,invalidWeiAmount)// gasLimit
+      data, getRandomNonce, invalidWeiAmount) // gasLimit
 
     // should fail because staked amount is not a zat amount
     forgerStakeMessageProcessor.process(msg, stateView) match {
@@ -509,8 +543,8 @@ class ForgerStakeMsgProcessorTest
 
     Mockito.when(mockNetworkParams.restrictForgers).thenReturn(true)
     Mockito.when(mockNetworkParams.allowedForgersList).thenReturn(Seq(
-      (blockSignerProposition1,vrfPublicKey1),
-      (blockSignerProposition2,vrfPublicKey2)
+      (blockSignerProposition1, vrfPublicKey1),
+      (blockSignerProposition2, vrfPublicKey2)
     ))
 
     createSenderAccount(stateView, BigInteger.ZERO)
@@ -575,11 +609,12 @@ class ForgerStakeMsgProcessorTest
     stateView.close()
   }
 
+
   @Test
-  def testForgerStakeLinkedList(): Unit = {
+  def testGetListOfForgers: Unit = {
 
     val expectedBlockSignerProposition = "1122334455667788112233445566778811223344556677881122334455667788" // 32 bytes
-    val blockSignerProposition = new PublicKey25519Proposition(BytesUtils.fromHexString("1122334455667788112233445566778811223344556677881122334455667788")) // 32 bytes
+    val blockSignerProposition = new PublicKey25519Proposition(BytesUtils.fromHexString(expectedBlockSignerProposition)) // 32 bytes
     val expectedVrfKey = "aabbccddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff001234"
     val vrfPublicKey = new VrfPublicKey(BytesUtils.fromHexString(expectedVrfKey)) // 33 bytes
 
@@ -602,89 +637,154 @@ class ForgerStakeMsgProcessorTest
     )
     val data: Array[Byte] = cmdInput.encode()
 
-    var totalForgersAmount = BigInteger.ZERO
+    val listOfExpectedForgerStakes = new util.ArrayList[AccountForgingStakeInfo]();
 
     // add 4 forger stakes with increasing amount
     for (i <- 1 to 4) {
       val stakeAmount = validWeiAmount.multiply(BigInteger.valueOf(i))
-      totalForgersAmount = totalForgersAmount.add(stakeAmount)
-        val msg = getDefaultMessage(
-          BytesUtils.fromHexString(AddNewStakeCmd),
-          data, getRandomNonce, stakeAmount)
+      val msg = getDefaultMessage(
+        BytesUtils.fromHexString(AddNewStakeCmd),
+        data, getRandomNonce, stakeAmount)
+      val expStakeId = forgerStakeMessageProcessor.getStakeId(msg)
+      listOfExpectedForgerStakes.add(AccountForgingStakeInfo(expStakeId,
+        ForgerStakeData(ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
+          ownerAddressProposition, stakeAmount)))
       forgerStakeMessageProcessor.process(msg, stateView) match {
-          case res: ExecutionSucceeded =>
-            assertTrue(res.hasReturnData)
-            assertTrue(res.gasUsed() == forgerStakeMessageProcessor.AddNewStakeGasPaidValue)
-          case result => Assert.fail(s"Wrong result: $result")
-        }
+        case res: ExecutionSucceeded =>
+          assertTrue(res.hasReturnData)
+          assertTrue(res.gasUsed() == forgerStakeMessageProcessor.AddNewStakeGasPaidValue)
+        case result => Assert.fail(s"Wrong result: $result")
+      }
     }
 
-    var forgerList = getForgerStakeList(stateView)
-    assertTrue(forgerList.size == 4)
-    val listTotalAmount = forgerList.asScala.foldLeft(BigInteger.ZERO)(
-      (amount, forgerStake) => forgerStake.amount.getValue.add(amount) )
-    assertTrue(listTotalAmount == totalForgersAmount)
 
-    forgerList.asScala.foreach(forgerStake => {
-      val vrfKey = org.web3j.utils.Numeric.toHexStringNoPrefix(forgerStake.vrfFirst32Bytes.getValue ++ forgerStake.vrfLastByte.getValue)
-      assertEquals("Wrong vrfKey",expectedVrfKey, vrfKey)
-      val blockSignerProposition = org.web3j.utils.Numeric.toHexStringNoPrefix(forgerStake.blockSignPublicKey.getValue)
-      assertEquals("Wrong BlockSignerProposition",expectedBlockSignerProposition, blockSignerProposition)
-
-    })
-
-    // remove in the middle of the list
-    var pair = checkRemoveItemFromList(stateView, forgerList, 2, totalForgersAmount)
-    forgerList = pair._1
-    totalForgersAmount = pair._2
-
-
-    // remove at the beginning of the list (head)
-    pair = checkRemoveItemFromList(stateView, forgerList, 0, totalForgersAmount)
-    forgerList = pair._1
-    totalForgersAmount = pair._2
-
-
-    // remove at the end of the list
-    pair = checkRemoveItemFromList(stateView, forgerList, 1, totalForgersAmount)
-    forgerList = pair._1
-    totalForgersAmount = pair._2
-
-
-    // remove the last element we have
-    val stakeIdToRemove = forgerList.get(0).stakeId
-    removeForgerStake(stateView, stakeIdToRemove.getValue)
-    forgerList = getForgerStakeList(stateView)
-    assertTrue(forgerList.size() == 0)
+    //Check getListOfForgers
+    val forgerList = forgerStakeMessageProcessor.getListOfForgers(stateView)
+    assertEquals(listOfExpectedForgerStakes, forgerList.asJava)
 
     stateView.stateDb.commit()
     stateView.stateDb.close()
   }
 
-  def checkRemoveItemFromList(stateView: AccountStateView, inputList: java.util.List[abi.util.AccountForgingStakeInfo],
-                              itemPosition: Int, totAmount: BigInteger) : (java.util.List[abi.util.AccountForgingStakeInfo], BigInteger) =
-    {
-      // get the info related to the item to remove
-      val stakeInfo = inputList.get(itemPosition)
-      val stakeIdToRemove = stakeInfo.stakeId
-      val stakedAmountToRemove = stakeInfo.amount
 
-      // call msg processor for removing the selected stake
-      removeForgerStake(stateView, stakeIdToRemove.getValue)
+  @Test
+  def testForgerStakeLinkedList(): Unit = {
 
-      // call msg processor for retrieving the resulting list of forgers
-      val returnedList = getForgerStakeList(stateView)
+    val expectedBlockSignerProposition = "aa22334455667788112233445586778811223344556677881122334455667788" // 32 bytes
+    val blockSignerProposition = new PublicKey25519Proposition(BytesUtils.fromHexString(expectedBlockSignerProposition)) // 32 bytes
+    val expectedVrfKey = "aabbccddeeff0099aabb87ddeeff0099aabbccddeeff0099aabbccd2aeff001234"
+    val vrfPublicKey = new VrfPublicKey(BytesUtils.fromHexString(expectedVrfKey)) // 33 bytes
 
-      // check the results:
-      //  we removed just one element
-      assertTrue(returnedList.size() == inputList.size()-1)
+    Mockito.when(mockNetworkParams.restrictForgers).thenReturn(true)
+    Mockito.when(mockNetworkParams.allowedForgersList).thenReturn(Seq(
+      (blockSignerProposition, vrfPublicKey)
+    ))
 
-      // we have now the expected total forger stake amount
-      val listTotalAmount = returnedList.asScala.foldLeft(BigInteger.ZERO)(
-        (amount, forgerStake) => forgerStake.amount.getValue.add(amount) )
-      assertTrue(listTotalAmount == totAmount.subtract(stakedAmountToRemove.getValue))
+    val stateView = getView
 
-      // return the list just retrieved and the current total forgers stake
-      (returnedList, listTotalAmount)
+    forgerStakeMessageProcessor.init(stateView)
+
+    // create sender account with some fund in it
+    // val initialAmount = BigInteger.valueOf(10).multiply(validWeiAmount)
+    val initialAmount = ZenWeiConverter.MAX_MONEY_IN_WEI
+    createSenderAccount(stateView, initialAmount)
+
+    val cmdInput = AddNewStakeCmdInput(
+      ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
+      ownerAddressProposition
+    )
+    val data: Array[Byte] = cmdInput.encode()
+
+
+    val listOfExpectedForgerStakes = new util.ArrayList[AccountForgingStakeInfo]();
+    // add 10 forger stakes with increasing amount
+    for (i <- 1 to 4) {
+      val stakeAmount = validWeiAmount.multiply(BigInteger.valueOf(i))
+      val msg = getDefaultMessage(
+        BytesUtils.fromHexString(AddNewStakeCmd),
+        data, getRandomNonce, stakeAmount)
+      val expStakeId = forgerStakeMessageProcessor.getStakeId(msg)
+      listOfExpectedForgerStakes.add(AccountForgingStakeInfo(expStakeId,
+        ForgerStakeData(ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
+          ownerAddressProposition, stakeAmount)))
+      forgerStakeMessageProcessor.process(msg, stateView) match {
+        case res: ExecutionSucceeded =>
+          assertTrue(res.hasReturnData)
+          assertTrue(res.gasUsed() == forgerStakeMessageProcessor.AddNewStakeGasPaidValue)
+        case result => Assert.fail(s"Wrong result: $result")
+      }
     }
+
+    val forgerListData = getForgerStakeList(stateView)
+
+    //Check getListOfForgers
+    val expectedforgerListData = AccountForgingStakeInfoListEncoder.encode(listOfExpectedForgerStakes)
+    assertArrayEquals(expectedforgerListData, forgerListData)
+
+
+    // remove in the middle of the list
+    checkRemoveItemFromList(stateView, listOfExpectedForgerStakes, 2)
+
+
+    // remove at the beginning of the list (head)
+    checkRemoveItemFromList(stateView, listOfExpectedForgerStakes, 0)
+
+    // remove at the end of the list
+    checkRemoveItemFromList(stateView, listOfExpectedForgerStakes, 1)
+
+    // remove the last element we have
+    checkRemoveItemFromList(stateView, listOfExpectedForgerStakes, 0)
+
+    stateView.stateDb.commit()
+    stateView.stateDb.close()
+  }
+
+  def checkRemoveItemFromList(stateView: AccountStateView, inputList: java.util.List[AccountForgingStakeInfo],
+                              itemPosition: Int) = {
+    // get the info related to the item to remove
+    val stakeInfo = inputList.remove(itemPosition)
+    val stakeIdToRemove = stakeInfo.stakeId
+
+    // call msg processor for removing the selected stake
+    removeForgerStake(stateView, stakeIdToRemove)
+
+    // call msg processor for retrieving the resulting list of forgers
+    val returnedList = getForgerStakeList(stateView)
+
+    // check the results:
+    //  we removed just one element
+    val inputListData = AccountForgingStakeInfoListEncoder.encode(inputList)
+    assertArrayEquals(inputListData, returnedList)
+
+  }
+
+  def checkAddNewForgerStakeEvent(expectedEvent: DelegateForgerStake, actualEvent: EvmLog) = {
+    assertArrayEquals("Wrong address", forgerStakeMessageProcessor.fakeSmartContractAddress.address(), actualEvent.address.toBytes)
+    assertEquals("Wrong number of topics", NumOfIndexedAddNewStakeEvtParams + 1, actualEvent.topics.length) //The first topic is the hash of the signature of the event
+    assertArrayEquals("Wrong event signature", AddNewForgerStakeEventSig, actualEvent.topics(0).toBytes)
+    assertEquals("Wrong from address in topic", expectedEvent.from, decodeEventTopic(actualEvent.topics(1), TypeReference.makeTypeReference(expectedEvent.from.getTypeAsString)))
+    assertEquals("Wrong owner address in topic", expectedEvent.owner, decodeEventTopic(actualEvent.topics(2), TypeReference.makeTypeReference(expectedEvent.owner.getTypeAsString)))
+
+    val listOfRefs = util.Arrays.asList(TypeReference.makeTypeReference(expectedEvent.stakeId.getTypeAsString), TypeReference.makeTypeReference(expectedEvent.value.getTypeAsString)).asInstanceOf[util.List[TypeReference[Type[_]]]]
+    val listOfDecodedData = FunctionReturnDecoder.decode(BytesUtils.toHexString(actualEvent.data), listOfRefs)
+    assertEquals("Wrong amount in data", expectedEvent.stakeId, listOfDecodedData.get(0))
+    assertEquals("Wrong stakeId in data", expectedEvent.value, listOfDecodedData.get(1))
+
+  }
+
+
+  def checkRemoveForgerStakeEvent(expectedEvent: WithdrawForgerStake, actualEvent: EvmLog) = {
+    assertArrayEquals("Wrong address", forgerStakeMessageProcessor.fakeSmartContractAddress.address(), actualEvent.address.toBytes)
+    assertEquals("Wrong number of topics", NumOfIndexedRemoveForgerStakeEvtParams + 1, actualEvent.topics.length) //The first topic is the hash of the signature of the event
+    assertArrayEquals("Wrong event signature", RemoveForgerStakeEventSig, actualEvent.topics(0).toBytes)
+    assertEquals("Wrong owner address in topic", expectedEvent.owner, decodeEventTopic(actualEvent.topics(1), TypeReference.makeTypeReference(expectedEvent.owner.getTypeAsString)))
+
+    val listOfRefs = util.Arrays.asList(TypeReference.makeTypeReference(expectedEvent.stakeId.getTypeAsString)).asInstanceOf[util.List[TypeReference[Type[_]]]]
+    val listOfDecodedData = FunctionReturnDecoder.decode(BytesUtils.toHexString(actualEvent.data), listOfRefs)
+    assertEquals("Wrong stakeId in data", expectedEvent.stakeId, listOfDecodedData.get(0))
+
+  }
+
+
+
 }
