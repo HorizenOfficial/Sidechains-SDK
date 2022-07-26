@@ -7,14 +7,13 @@ import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.state.AccountState.blockGasLimitExceeded
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.block.{MainchainBlockReferenceData, SidechainBlockBase, WithdrawalEpochCertificate}
+import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.evm._
 import com.horizen.evm.interop.EvmLog
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
-import com.horizen.transaction.MC2SCAggregatedTransaction
-import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, Utils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import org.web3j.crypto.ContractUtils.generateContractAddress
 import scorex.core._
 import scorex.core.transaction.state.TransactionValidation
@@ -126,6 +125,7 @@ class AccountState(val params: NetworkParams,
     val blockNumber = stateView.getHeight + 1
     val blockHash = idToBytes(mod.id)
     var cumGasUsed : BigInteger = BigInteger.ZERO
+    val listOfTxIds = new ListBuffer[ModifierId]()
 
     for ((tx, txIndex) <- mod.sidechainTransactions.zipWithIndex) {
       stateView.applyTransaction(tx, txIndex, cumGasUsed) match {
@@ -161,6 +161,7 @@ class AccountState(val params: NetworkParams,
           log.debug(s"Adding to receipt list: ${fullReceipt.toString()}")
 
           receiptList += fullReceipt
+          listOfTxIds += ethTx.id
 
         case Failure(e) =>
           log.error("Could not apply tx", e)
@@ -180,6 +181,7 @@ class AccountState(val params: NetworkParams,
 
     // eventually, store full receipts in the metaDataStorage indexed by txid
     stateView.updateTransactionReceipts(receiptList)
+    stateView.setBlockNumberForTransactions(blockNumber, listOfTxIds)
 
     stateView.commit(idToVersion(mod.id)).get
 
@@ -309,6 +311,7 @@ class AccountState(val params: NetworkParams,
     stateMetadataStorage.getHeight
   }
 
+  override def getTransactionBlockNumber(txId: scorex.util.ModifierId): Int = stateMetadataStorage.getTransactionBlockNumber(txId).get
 
   private def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = {
     val stateView: AccountStateView = getView
