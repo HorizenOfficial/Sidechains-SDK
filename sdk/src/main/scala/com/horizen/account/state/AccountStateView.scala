@@ -132,6 +132,7 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     // We are sure that transaction is semantically valid (so all the tx fields are valid)
     // and was successfully verified by ChainIdBlockSemanticValidator
 
+    // TODO this is checked also by EthereumTransaction.semanticValidity()
     // Check signature
     // TODO: add again later and check - message to sign seems to be false (?)
     //if (!tx.getSignature.isValid(tx.getFrom, tx.messageToSign()))
