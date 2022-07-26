@@ -1,9 +1,10 @@
 package com.horizen.account.state
 
+import com.horizen.account.event.EthereumEvent
 import com.horizen.account.proposition.AddressProposition
+import com.horizen.evm.interop.EvmLog
 import com.horizen.utils.BytesUtils
-import org.web3j.crypto.Hash
-import org.web3j.utils.Numeric
+import org.web3j.abi.datatypes.Address
 import scorex.util.ScorexLogging
 
 abstract class AbstractFakeSmartContractMsgProcessor extends MessageProcessor with ScorexLogging {
@@ -15,14 +16,12 @@ abstract class AbstractFakeSmartContractMsgProcessor extends MessageProcessor wi
 
   @throws[MessageProcessorInitializationException]
   override def init(view: BaseAccountStateView): Unit = {
-    if (!view.accountExists(fakeSmartContractAddress.address()))
-    {
+    if (!view.accountExists(fakeSmartContractAddress.address())) {
       view.addAccount(fakeSmartContractAddress.address(), fakeSmartContractCodeHash)
 
       log.debug(s"created Message Processor account ${BytesUtils.toHexString(fakeSmartContractAddress.address())}")
     }
-    else
-    {
+    else {
       val errorMsg = s"Account ${BytesUtils.toHexString(fakeSmartContractAddress.address())} already exists"
       log.error(errorMsg)
       throw new MessageProcessorInitializationException(errorMsg)
@@ -34,7 +33,11 @@ abstract class AbstractFakeSmartContractMsgProcessor extends MessageProcessor wi
     fakeSmartContractAddress.equals(msg.getTo)
   }
 
- }
+  def getEvmLog(event: Any): EvmLog = {
+    EthereumEvent.getEvmLog(new Address(BytesUtils.toHexString(fakeSmartContractAddress.address())), event)
+  }
+
+}
 
 
 
