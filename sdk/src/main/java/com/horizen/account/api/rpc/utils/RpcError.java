@@ -1,7 +1,10 @@
 package com.horizen.account.api.rpc.utils;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonView;
+import com.horizen.serialization.Views;
 
+@JsonView(Views.Default.class)
 public class RpcError {
     // allowed error codes: https://www.jsonrpc.org/specification#error_object
     private final int code;

@@ -19,14 +19,13 @@ public class RpcHandler {
 
     public ApiResponse apply(RpcRequest request) {
         try {
-            Object result = null;
             if (ethService.hasMethod(request.getMethod())) {
-                result = ethService.execute(request);
+                var result = ethService.execute(request);
+                return new RpcResponseSuccess(request.getId(), result);
             }
-            if (result == null) {
-                return new RpcResponseError(request.getId(), RpcError.fromCode(RpcCode.MethodNotFound));
-            }
-            return new RpcResponseSuccess(request.getId(), result);
+            return new RpcResponseError(request.getId(), RpcError.fromCode(RpcCode.MethodNotFound));
+        } catch (RpcException e) {
+            return new RpcResponseError(request.getId(), e.error);
         } catch (Exception e) {
             return new RpcResponseError(request.getId(), RpcError.fromCode(RpcCode.InternalError, e.getMessage()));
         }
