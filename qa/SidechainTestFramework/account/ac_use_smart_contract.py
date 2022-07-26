@@ -100,19 +100,15 @@ class SmartContract:
             "data": self.Bytecode
         }
         if 'constructor' in self.Functions:
+            if len(args) != len(self.Functions['constructor'].inputs):
+                raise RuntimeError(
+                    f"Constructor missing arguments: {len(args)} were provided, but {len(self.Functions['constructor'].inputs)} are necessary!")
             j['data'] = j['data'] + self.Functions['constructor'].encode(*args)
 
         request = json.dumps(j)
         response = node.transaction_createLegacyTransaction(request)
-        print(response)
-        # tx_hash = response["result"]["transactionId"]
-        #
-        # j = {
-        #
-        # }
-        #
-        # nodeView.rpc_eth_getTransactionByHash(request)
-        return response["result"]["transactionId"], mk_contract_address(fromAddress, nonce)
+        tx_hash = response["result"]["transactionId"]
+        return tx_hash, mk_contract_address(fromAddress, nonce)
 
     def __str__(self):
         string_rep = self.Name
@@ -196,8 +192,9 @@ class SmartContract:
 
     @staticmethod
     def __ensure_nonce(node, address, nonce, tag='latest'):
-        if nonce is None:
-            nonce = int(node.rpc_eth_getTransactionCount(str(address), tag)['result'], 16) + 1
+        on_chain_nonce = int(node.rpc_eth_getTransactionCount(str(address), tag)['result'], 16) + 1
+        if nonce is None or on_chain_nonce > nonce:
+            nonce = on_chain_nonce
         return nonce
 
 

@@ -19,7 +19,7 @@ from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     convertZenniesToWei, convertZenToZennies
 
 """
-Check the EVM bootstrap feature.
+Check an EVM Storage Smart Contract.
 
 Configuration: bootstrap 1 SC node and start it with genesis info extracted from a mainchain node.
     - Mine some blocks to reach hard fork
@@ -28,12 +28,16 @@ Configuration: bootstrap 1 SC node and start it with genesis info extracted from
     - Start SC node with that genesis info
 
 Test:
-    For the SC node:
-        - verify the MC block is included
+    For the smart contract:
+        - Deploy the smart contract without initial data
+        - Set the storage to a string
+        - Read the string in a read-only call
+        - Set the storage to a different string
+        - Read the different string in a read only call
 """
 
 
-class SCEvmBootstrap(SidechainTestFramework):
+class SCEvmStorageContract(SidechainTestFramework):
     sc_nodes_bootstrap_info = None
 
     def setup_nodes(self):
@@ -101,116 +105,56 @@ class SCEvmBootstrap(SidechainTestFramework):
                                       ft_amount_in_zen,
                                       mc_return_address)
 
-        # input("\n\t======> Enter any input to continue generating a new sc block...")
-        generate_next_blocks(sc_node, "first node", 1)
-        self.sc_sync_all()
-        sc_best_block = sc_node.block_best()["result"]
-        assert_equal(sc_best_block["height"], 2, "The best block has not the specified height.")
-        pprint.pprint(sc_best_block)
-        pprint.pprint(sc_node.rpc_eth_getBalance(str(evm_address), "1"))
-
-        '''
-        # TODO
-        # Make and activate forging stake for the SC node 1
-        stake_amount = 1.234
-        sc_create_forging_stake_mempool(sc_node, stake_amount)
-        self.sc_sync_all()  # Sync SC nodes mempools
-        # Generate SC block with ForgerStake creation TX
-        generate_next_block(sc_node, "first node")
-        '''
-
-        # input("\n\t======> Enter any input to continue generating blocks till next consensus epoch...")
-        # Generate SC block on SC node 1 for the next consensus epoch
         generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
         self.sc_sync_all()
 
         sc_best_block = sc_node.block_best()["result"]
         pprint.pprint(sc_best_block)
 
-        j = {"address": str(evm_address)}
-        balance_request = json.dumps(j)
-
-        # balance is in wei
-        initial_balance = sc_node.wallet_getBalance(balance_request)["result"]["balance"]
-        assert_equal(ft_amount_in_wei, initial_balance)
-
-        # Create an EOA to EOA transaction moving some fund to a new address not known by wallet.
-        # Amount should be expressed in zennies
-        transferred_amount = Decimal(12.34)
-        transferred_amount_in_zennies = convertZenToZennies(transferred_amount)
-        transferred_amount_in_wei = convertZenniesToWei(transferred_amount_in_zennies)
-
-        recipientKeys = generate_account_proposition("seed3", 1)[0]
-        print("Trying to send {} zen to address {}".format(transferred_amount, recipientKeys.proposition))
-
-        j = {
-            "from": str(evm_address),
-            "to": recipientKeys.proposition,
-            "value": transferred_amount_in_zennies
-        }
-        request = json.dumps(j)
-        response = sc_node.transaction_sendCoinsToAddress(request)
-        print("tx sent:")
-        pprint.pprint(response)
-
-        # get mempool contents
-        response = sc_node.transaction_allTransactions()
-        print("mempool contents:")
-        pprint.pprint(response)
-
-        # tx json repr has amount in wei
-        tx_amount_in_wei = response["result"]["transactions"][0]["value"]
-        assert_equal(str(tx_amount_in_wei), str(transferred_amount_in_wei))
-
-        # request chainId via rpc route
-        print("rpc response:")
-        pprint.pprint(sc_node.rpc_eth_chainId())
-
-        # request getBalance via rpc route
-        print("rpc response:")
-        pprint.pprint(sc_node.rpc_eth_getBalance(str(evm_address), "1"))
-
-        generate_next_blocks(sc_node, "first node", 1)
-        self.sc_sync_all()
-        sc_best_block = sc_node.block_best()["result"]
-        pprint.pprint(sc_best_block)
-
-        final_balance = sc_node.wallet_getBalance(balance_request)["result"]["balance"]
-        assert_equal(initial_balance - transferred_amount_in_wei, final_balance)
-
         smart_contract_type = 'StorageTestContract'
         print(f"Creating smart contract utilities for {smart_contract_type}")
         smart_contract = SmartContract(smart_contract_type)
         print(smart_contract)
-        tx_hash, smart_contract_address = smart_contract.deploy(sc_node, fromAddress=str(evm_address),
+        test_message = 'Initial message'
+        tx_hash, smart_contract_address = smart_contract.deploy(sc_node, test_message,
+                                                                fromAddress=str(evm_address),
                                                                 gasLimit=100000000,
                                                                 gasPrice=10)
         generate_next_blocks(sc_node, "first node", 1)
         print("Blocks mined - tx receipt will contain address")
         # TODO fix receipts, currently mocked
+        # TODO check logs (events)
         print("rpc response:")
         pprint.pprint(sc_node.rpc_eth_getTransactionReceipt(tx_hash))
 
+        generate_next_blocks(sc_node, "first node", 1)
+        res = smart_contract.static_call(sc_node, 'get()', fromAddress=str(evm_address), gasLimit=10000000,
+                                         gasPrice=10, toAddress=smart_contract_address)
+        print(f"Reading smart contract storage resulted in '{res[0]}'")
+        assert_equal(res[0], test_message)
+
         test_message = 'This is a message'
+        print(f"Setting smart contract storage to '{test_message}'")
         smart_contract.call_function(sc_node, 'set(string)', test_message, fromAddress=str(evm_address),
                                      gasLimit=10000000, gasPrice=10, toAddress=smart_contract_address)
 
         generate_next_blocks(sc_node, "first node", 1)
-        res = smart_contract.static_call(sc_node, 'get()',
-                                         fromAddress=str(evm_address), gasLimit=10000000,
+        res = smart_contract.static_call(sc_node, 'get()', fromAddress=str(evm_address), gasLimit=10000000,
                                          gasPrice=10, toAddress=smart_contract_address)
+        print(f"Reading smart contract storage resulted in '{res[0]}'")
         assert_equal(res[0], test_message)
 
         test_message = 'This is a different message'
+        print(f"Setting smart contract storage to '{test_message}'")
         smart_contract.call_function(sc_node, 'set(string)', test_message, fromAddress=str(evm_address),
                                      gasLimit=10000000, gasPrice=10, toAddress=smart_contract_address)
 
         generate_next_blocks(sc_node, "first node", 1)
-        res = smart_contract.static_call(sc_node, 'get()',
-                                         fromAddress=str(evm_address), gasLimit=10000000,
+        res = smart_contract.static_call(sc_node, 'get()', fromAddress=str(evm_address), gasLimit=10000000,
                                          gasPrice=10, toAddress=smart_contract_address)
+        print(f"Reading smart contract storage resulted in '{res[0]}'")
         assert_equal(res[0], test_message)
 
 
 if __name__ == "__main__":
-    SCEvmBootstrap().main()
+    SCEvmStorageContract().main()
