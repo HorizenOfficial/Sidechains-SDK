@@ -1,7 +1,7 @@
 package com.horizen.account.state
 
 import com.google.common.primitives.Bytes
-import com.horizen.account.events.{AddNewForgerStakeEvent, RemoveForgerStakeEvent}
+import com.horizen.account.events.{DelegateForgerStake, WithdrawForgerStake}
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, GetListOfForgersCmd, RemoveStakeCmd}
@@ -45,9 +45,9 @@ class ForgerStakeMsgProcessorTest
   val pair: ECKeyPair = Keys.createEcKeyPair
   val ownerAddressProposition = new AddressProposition(BytesUtils.fromHexString(Keys.getAddress(pair)))
 
-  val AddNewForgerStakeEventSig = getEventSignature("AddNewForgerStakeEvent(address,address,bytes32,uint256)")
+  val AddNewForgerStakeEventSig = getEventSignature("DelegateForgerStake(address,address,bytes32,uint256)")
   val NumOfIndexedAddNewStakeEvtParams = 2
-  val RemoveForgerStakeEventSig = getEventSignature("RemoveForgerStakeEvent(address,bytes32)")
+  val RemoveForgerStakeEventSig = getEventSignature("WithdrawForgerStake(address,bytes32)")
   val NumOfIndexedRemoveForgerStakeEvtParams = 1
 
 
@@ -256,7 +256,7 @@ class ForgerStakeMsgProcessorTest
     var listOfLogs = stateView.getLogs(txHash1.asInstanceOf[Array[Byte]])
     assertEquals("Wrong number of logs", 1, listOfLogs.length)
     var expStakeId = forgerStakeMessageProcessor.getStakeId(msg)
-    var expectedAddStakeEvt = AddNewForgerStakeEvent(msg.getFrom, ownerAddressProposition, expStakeId, msg.getValue)
+    var expectedAddStakeEvt = DelegateForgerStake(msg.getFrom, ownerAddressProposition, expStakeId, msg.getValue)
     checkAddNewForgerStakeEvent(expectedAddStakeEvt, listOfLogs(0))
 
     val txHash2 = Keccak256.hash("second tx")
@@ -302,7 +302,7 @@ class ForgerStakeMsgProcessorTest
     listOfLogs = stateView.getLogs(txHash3.asInstanceOf[Array[Byte]])
     assertEquals("Wrong number of logs", 1, listOfLogs.length)
     expStakeId = forgerStakeMessageProcessor.getStakeId(msg2)
-    expectedAddStakeEvt = AddNewForgerStakeEvent(msg2.getFrom, ownerAddressProposition, expStakeId, msg2.getValue)
+    expectedAddStakeEvt = DelegateForgerStake(msg2.getFrom, ownerAddressProposition, expStakeId, msg2.getValue)
     checkAddNewForgerStakeEvent(expectedAddStakeEvt, listOfLogs(0))
 
     // remove first stake id
@@ -344,7 +344,7 @@ class ForgerStakeMsgProcessorTest
     //Checking log
     listOfLogs = stateView.getLogs(txHash4.asInstanceOf[Array[Byte]])
     assertEquals("Wrong number of logs", 1, listOfLogs.length)
-    val expectedRemoveStakeEvent = RemoveForgerStakeEvent(ownerAddressProposition,stakeId)
+    val expectedRemoveStakeEvent = WithdrawForgerStake(ownerAddressProposition,stakeId)
     checkRemoveForgerStakeEvent(expectedRemoveStakeEvent, listOfLogs(0))
 
     // try getting the list of stakes, no command arguments here, just op code
@@ -758,7 +758,7 @@ class ForgerStakeMsgProcessorTest
 
   }
 
-  def checkAddNewForgerStakeEvent(expectedEvent: AddNewForgerStakeEvent, actualEvent: EvmLog) = {
+  def checkAddNewForgerStakeEvent(expectedEvent: DelegateForgerStake, actualEvent: EvmLog) = {
     assertArrayEquals("Wrong address", forgerStakeMessageProcessor.fakeSmartContractAddress.address(), actualEvent.address.toBytes)
     assertEquals("Wrong number of topics", NumOfIndexedAddNewStakeEvtParams + 1, actualEvent.topics.length) //The first topic is the hash of the signature of the event
     assertArrayEquals("Wrong event signature", AddNewForgerStakeEventSig, actualEvent.topics(0).toBytes)
@@ -773,7 +773,7 @@ class ForgerStakeMsgProcessorTest
   }
 
 
-  def checkRemoveForgerStakeEvent(expectedEvent: RemoveForgerStakeEvent, actualEvent: EvmLog) = {
+  def checkRemoveForgerStakeEvent(expectedEvent: WithdrawForgerStake, actualEvent: EvmLog) = {
     assertArrayEquals("Wrong address", forgerStakeMessageProcessor.fakeSmartContractAddress.address(), actualEvent.address.toBytes)
     assertEquals("Wrong number of topics", NumOfIndexedRemoveForgerStakeEvtParams + 1, actualEvent.topics.length) //The first topic is the hash of the signature of the event
     assertArrayEquals("Wrong event signature", RemoveForgerStakeEventSig, actualEvent.topics(0).toBytes)

@@ -1,6 +1,6 @@
 package com.horizen.account.state
 
-import com.horizen.account.events.AddWithdrawalRequestEvent
+import com.horizen.account.events.AddWithdrawalRequest
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.evm.interop.EvmLog
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
@@ -105,7 +105,7 @@ class WithdrawalMsgProcessorIntegrationTest
     //Checking log
     var listOfLogs = stateView.getLogs(txHash1.asInstanceOf[Array[Byte]])
     assertEquals("Wrong number of logs", 1, listOfLogs.length)
-    var expectedEvent = AddWithdrawalRequestEvent(msg.getFrom, mcAddr, withdrawalAmount1, epochNum)
+    var expectedEvent = AddWithdrawalRequest(msg.getFrom, mcAddr, withdrawalAmount1, epochNum)
     checkEvent(expectedEvent, listOfLogs(0))
 
     val txHash2 = Keccak256.hash("second tx")
@@ -148,7 +148,7 @@ class WithdrawalMsgProcessorIntegrationTest
     //Checking log
     listOfLogs = stateView.getLogs(txHash3.asInstanceOf[Array[Byte]])
     assertEquals("Wrong number of logs", 1, listOfLogs.length)
-    expectedEvent = AddWithdrawalRequestEvent(msg.getFrom, mcAddr, withdrawalAmount2, epochNum)
+    expectedEvent = AddWithdrawalRequest(msg.getFrom, mcAddr, withdrawalAmount2, epochNum)
     checkEvent(expectedEvent, listOfLogs(0))
 
     // GetListOfWithdrawalRequest after second withdrawal request creation
@@ -164,7 +164,7 @@ class WithdrawalMsgProcessorIntegrationTest
   }
 
 
-  def checkEvent(expectedEvent: AddWithdrawalRequestEvent, actualEvent: EvmLog) = {
+  def checkEvent(expectedEvent: AddWithdrawalRequest, actualEvent: EvmLog) = {
     assertArrayEquals("Wrong address", WithdrawalMsgProcessor.fakeSmartContractAddress.address(), actualEvent.address.toBytes)
     assertEquals("Wrong number of topics", NumOfIndexedEvtParams + 1, actualEvent.topics.length) //The first topic is the hash of the signature of the event
     assertArrayEquals("Wrong event signature", AddNewWithdrawalRequestEventSig, actualEvent.topics(0).toBytes)

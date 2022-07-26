@@ -19,7 +19,7 @@ trait WithdrawalMsgProcessorFixture extends MessageProcessorFixture {
     getMessage(WithdrawalMsgProcessor.fakeSmartContractAddress, java.math.BigInteger.ZERO, data)
   }
 
-  val AddNewWithdrawalRequestEventSig = getEventSignature("AddWithdrawalRequestEvent(address,bytes20,uint256,uint32)")
+  val AddNewWithdrawalRequestEventSig = getEventSignature("AddWithdrawalRequest(address,bytes20,uint256,uint32)")
   val NumOfIndexedEvtParams = 2
 
 }

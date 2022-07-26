@@ -3,7 +3,7 @@ package com.horizen.account.state
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.account.abi.ABIUtil.{METHOD_CODE_LENGTH, getABIMethodId, getArgumentsFromData, getOpCodeFromData}
 import com.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
-import com.horizen.account.events.AddWithdrawalRequestEvent
+import com.horizen.account.events.AddWithdrawalRequest
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.proposition.MCPublicKeyHashProposition
@@ -154,7 +154,7 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
 
       view.subBalance(msg.getFrom.address(), withdrawalAmount).get
 
-      val withdrawalEvent = AddWithdrawalRequestEvent(msg.getFrom, request.proposition, withdrawalAmount, currentEpochNum)
+      val withdrawalEvent = AddWithdrawalRequest(msg.getFrom, request.proposition, withdrawalAmount, currentEpochNum)
       val evmLog = getEvmLog(withdrawalEvent)
       view.addLog(evmLog).get
 
