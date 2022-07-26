@@ -30,9 +30,16 @@ class ContractFunction:
 
 
 class SmartContract:
+    """This class represents a type of smart contract. Function calls and deployments etc. are taken care of in this
+    implementation, specifically the encoding and sending of transactions via http or rpc"""
+
     # TODO auto find nonce once implemnted if None
     # TODO auto parse output and stuff once receipts and static calls work
     def __init__(self, contract_path: str):
+        """The constructor argument is a unique name of a smart contract.
+        For example "ERC20" but "ERC20.sol" or "someFolder/ERC20.sol" would work too.
+        The constructor makes sure the smart contracts are compiled and then looks
+        for the metadata and parses it."""
         prepare_resources()
         self.__initialize_members(
             SmartContract.__load(
@@ -59,8 +66,27 @@ class SmartContract:
                 self.Functions['constructor'] = ContractFunction('constructor', input_types, [],
                                                                  '', True)
 
-    def call_function(self, node, functionName, *args, fromAddress: str, toAddress: str, nonce=None, gasLimit, gasPrice,
-                      value=0, tag='latest'):
+    def call_function(self, node, functionName: str, *args, fromAddress: str, toAddress: str, nonce: int = None,
+                      gasLimit: int, gasPrice: int,
+                      value: int = 0, tag: str = 'latest'):
+        """Creates an on-chain writing legacy transaction of the function `functionName` with the encoded arguments.
+
+                Parameters:
+                    node:           The side chain node to use for rpc/http
+                    functionName (str):   The name of the function to call. Has to include parentheses and params without spaces (e.g. `someFunction(uint256,string)`
+                    *args: the arguments to call the function with, in the correct order.
+                    fromAddress: the sender address to use.
+                    toAddress: the address of the smart contract instance to use
+                    nonce (optional): The nonce to use. If not given, the nonce will be retrieved via rpc
+                    gasLimit: The gasLimit to use
+                    gasPrice: The gasPrice to use
+                    value: The value to use
+                    tag: The block tag to use when calling rpc methods
+
+                Returns:
+                    tx_hash: The transaction hash of the transaction
+
+        """
         j = {
             "from": fromAddress,
             "to": toAddress,
@@ -74,8 +100,26 @@ class SmartContract:
         response = node.transaction_createLegacyTransaction(request)
         return response["result"]["transactionId"]
 
-    def static_call(self, node, functionName, *args, fromAddress, nonce=None, toAddress, gasLimit, gasPrice,
-                    value=0, tag='latest'):
+    def static_call(self, node, functionName: str, *args, fromAddress: str, nonce: int = None, toAddress: str,
+                    gasLimit: int, gasPrice: int,
+                    value: int = 0, tag: str = 'latest'):
+        """Calls a function in read-only mode and returns the data if applicable
+
+               Parameters:
+                   node:           The side chain node to use for rpc/http
+                   functionName (str):   The name of the function to call. Has to include parentheses and params without spaces (e.g. `someFunction(uint256,string)`
+                   *args: the arguments to call the function with, in the correct order.
+                   fromAddress: the sender address to use.
+                   toAddress: the address of the smart contract instance to use
+                   nonce (optional): The nonce to use. If not given, the nonce will be retrieved via rpc
+                   gasLimit: The gasLimit to use
+                   gasPrice: The gasPrice to use
+                   value: The value to use
+                   tag: The block tag to use when calling rpc methods
+
+               Returns:
+                   A tuple with the included decoded data if applicable, None else
+       """
         request = {
             "from": fromAddress,
             "to": toAddress,
@@ -86,10 +130,26 @@ class SmartContract:
             "data": self.raw_encode_call(functionName, *args)
         }
         response = node.rpc_eth_call(request, "latest")
-        return self.raw_decode_call_result(functionName, bytes.fromhex(response['result']))
+        if len(response['results']) > 0:
+            return self.raw_decode_call_result(functionName, bytes.fromhex(response['result']))
 
-    def deploy(self, node, *args, fromAddress, nonce=None, gasLimit, gasPrice,
-               value=0, tag='latest'):
+    def deploy(self, node, *args, fromAddress: str, nonce: int = None, gasLimit: int, gasPrice: int,
+               value: int = 0, tag: str = 'latest'):
+        """Calls a function in read-only mode and returns the data if applicable
+
+        Parameters:
+            node:           The side chain node to use for rpc/http
+            *args: the arguments to call the function with, in the correct order.
+            fromAddress: the sender address to use.
+            nonce (optional): The nonce to use. If not given, the nonce will be retrieved via rpc
+            gasLimit: The gasLimit to use
+            gasPrice: The gasPrice to use
+            value: The value to use
+            tag: The block tag to use when calling rpc methods
+
+        Returns:
+            A tuple with the tx_hash and the precomputed address of the smart contract
+"""
         nonce = self.__ensure_nonce(node, fromAddress, nonce, tag)
         j = {
             "from": fromAddress,
@@ -121,12 +181,28 @@ class SmartContract:
         return string_rep
 
     def raw_encode_call(self, function_name: str, *args):
+        """Can be used to encode *args for function_name
+            Params:
+                function_name: The name of the function including parentheses and input types
+                *args: the arguments to encode
+
+            Returns:
+                A bytestring of the encoded function
+        """
         if function_name not in self.Functions:
             raise RuntimeError(f"Function {function_name} does not exist on contract {self.Name}")
         else:
             return self.Functions[function_name].encode(*args)
 
     def raw_decode_call_result(self, function_name: str, data):
+        """Can be used to decode *args for function_name
+            Params:
+                function_name: The name of the function including parentheses and input types
+                *args: the arguments to decode
+
+            Returns:
+                A tuple of the decoded values
+        """
         if function_name not in self.Functions:
             raise RuntimeError(f"Function {function_name} does not exist on contract {self.Name}")
         else:
