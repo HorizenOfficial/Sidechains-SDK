@@ -20,6 +20,7 @@ trait StateView[TX <: Transaction] extends BaseStateReader {
   def updateConsensusEpochNumber(consensusEpochNum: ConsensusEpochNumber): Unit
   def updateTransactionReceipts(receipts: Seq[EthereumReceipt]): Unit
   def setCeased(): Unit
+  def setBlockNumberForTransactions(blockNumber: Int, listOfTransaction: Seq[scorex.util.ModifierId]): Unit
 
   def commit(version: VersionTag): Try[Unit]
 }

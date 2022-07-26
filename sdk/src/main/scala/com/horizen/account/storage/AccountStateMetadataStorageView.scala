@@ -36,6 +36,8 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private[horizen] var consensusEpochOpt: Option[ConsensusEpochNumber] = None
   private[horizen] var accountStateRootOpt: Option[Array[Byte]] = None
   private[horizen] var receiptsOpt: Option[Seq[EthereumReceipt]] = None
+  private[horizen] var listOfTransactionsIds: Option[Seq[scorex.util.ModifierId]] = None
+  private[horizen] var currentBlockNumber: Int = 0
 
   // all getters same as in StateMetadataStorage, but looking first in the cached/dirty entries in memory
 
@@ -175,6 +177,29 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     receiptsOpt = Some(receipts)
   }
 
+  def setBlockNumberForTransactions(blockNumber: Int, listOfTransactionIds: Seq[scorex.util.ModifierId]): Unit = {
+    require(blockNumber > 0, s"Invalid block number: $blockNumber")
+    this.currentBlockNumber = blockNumber
+    this.listOfTransactionsIds = Some(listOfTransactionIds)
+  }
+
+  override def getTransactionBlockNumber(txId: scorex.util.ModifierId): Option[Int] = {
+    listOfTransactionsIds match {
+      case Some(txList) if (txList.contains(txId))  => Some(currentBlockNumber)
+      case _ => getTransactionBlockNumberFromStorage(txId)
+    }
+  }
+
+  private[horizen] def getTransactionBlockNumberFromStorage(txId: scorex.util.ModifierId): Option[Int] = {
+    storage.get(getTransactionBlockNumberKey(txId)).asScala match {
+      case Some(serData) =>
+        val blockNumber  = Ints.fromByteArray(serData)
+        Some(blockNumber)
+
+      case None => None
+    }
+  }
+
   def addFeePayment(blockFeeInfo: BlockFeeInfo): Unit = {
     blockFeeInfoOpt = Some(blockFeeInfo)
   }
@@ -211,6 +236,8 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     consensusEpochOpt = None
     accountStateRootOpt = None
     receiptsOpt = None
+    currentBlockNumber = 0
+    listOfTransactionsIds = None
   }
 
   private[horizen] def saveToStorage(version: ByteArrayWrapper): Unit = {
@@ -294,6 +321,14 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
         }
     })
 
+    listOfTransactionsIds.foreach(ids => {
+      val blockNum = new ByteArrayWrapper(Ints.toByteArray(currentBlockNumber))
+      ids.foreach( id => {
+        val key = getTransactionBlockNumberKey(id)
+        updateList.add(new JPair(key, blockNum))
+      })
+    })
+
     storage.update(version, updateList, removeList)
 
   }
@@ -329,6 +364,11 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private[horizen] def getReceiptKey(txHash : Array[Byte]): ByteArrayWrapper = {
     calculateKey(Bytes.concat("receipt".getBytes, txHash))
   }
+
+  private[horizen] def getTransactionBlockNumberKey(txId : scorex.util.ModifierId): ByteArrayWrapper = {
+    calculateKey(Bytes.concat("txblock".getBytes, txId.getBytes))
+  }
+
 
 }
 
