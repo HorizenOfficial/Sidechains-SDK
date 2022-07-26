@@ -264,6 +264,11 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
         walletPubKeys.contains(p.vrfPublicKey)
     })
 
+    // return an empty seq if we do not have forging stake, that is a legal (negative) result.
+    // We would have an exception trying to create a tree with no leaves
+    if (filteredForgingStakeInfoSeq.size == 0)
+      return Seq()
+
     val forgingStakeInfoTree = MerkleTree.createMerkleTree(filteredForgingStakeInfoSeq.map(info => info.hash).asJava)
 
     // 4. prepare merkle tree of all forger stakes and extract path info of mine (what is left after 3)

@@ -1066,3 +1066,6 @@ def convertZenToZennies(valueInZen):
 def convertZenniesToWei(valueInZennies):
     return int(round(ZENNY_TO_WEI_MULTIPLIER * valueInZennies))
 
+def convertZenToWei(valueInZen):
+    return convertZenniesToWei(convertZenToZennies(valueInZen))
+
