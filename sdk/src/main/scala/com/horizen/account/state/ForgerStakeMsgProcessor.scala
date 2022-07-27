@@ -316,9 +316,6 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
       // increase the balance of the "forger stake smart contract” account
       view.addBalance(fakeSmartContractAddress.address(), stakedAmount).get
 
-      // TODO
-      //view.addLog(new EvmLog concrete instance) // EvmLog will be used internally
-
       new ExecutionSucceeded(BigInteger.ZERO, newStakeId)
 
     } else {
