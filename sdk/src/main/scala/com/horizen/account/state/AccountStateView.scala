@@ -308,6 +308,10 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     metadataStorageView.updateTransactionReceipts(receipts)
   }
 
+   def getTransactionReceipt(txHash : Array[Byte]): Option[EthereumReceipt] = {
+    metadataStorageView.getTransactionReceipt(txHash)
+  }
+
   override def setBlockNumberForTransactions(blockNumber: Int, listOfTransactionIds: Seq[scorex.util.ModifierId]): Unit = {
     metadataStorageView.setBlockNumberForTransactions(blockNumber, listOfTransactionIds)
   }
