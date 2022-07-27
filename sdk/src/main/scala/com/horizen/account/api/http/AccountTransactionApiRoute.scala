@@ -328,14 +328,13 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
             stakeDataOpt match {
               case Some(stakeData) =>
                 val stakeOwnerSecretOpt = sidechainNodeView.getNodeWallet.secretByPublicKey(stakeData.ownerPublicKey)
-                if (stakeOwnerSecretOpt.isEmpty){
+                if (stakeOwnerSecretOpt.isEmpty) {
                   ApiResponseUtil.toResponse(ErrorForgerStakeOwnerNotFound(s"Forger Stake Owner not found"))
                 }
                 else {
                   val stakeOwnerSecret = stakeOwnerSecretOpt.get().asInstanceOf[PrivateKeySecp256k1]
 
-
-                  val msgToSign = ForgerStakeMsgProcessor.getMessageToSign(BytesUtils.fromHexString(body.stakeId),txCreatorSecret.publicImage().address(),nonce.toByteArray)
+                  val msgToSign = ForgerStakeMsgProcessor.getMessageToSign(BytesUtils.fromHexString(body.stakeId), txCreatorSecret.publicImage().address(), nonce.toByteArray)
                   val signature = stakeOwnerSecret.sign(msgToSign)
                   val data = encodeSpendStakeCmdRequest(signature, body.stakeId)
                   val tmpTx: EthereumTransaction = new EthereumTransaction(
@@ -350,16 +349,9 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                     null
                   )
 
-                  val txRepresentation: (SidechainTypes#SCAT => SuccessResponse) =
-                    if (body.format.getOrElse(false)) {
-                      tx => TransactionDTO(tx)
-                    } else {
-                      tx => TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(tx)))
-                    }
-
-                  validateAndSendTransaction(signTransactionWithSecret(txCreatorSecret, tmpTx), txRepresentation)
+                  validateAndSendTransaction(signTransactionWithSecret(txCreatorSecret, tmpTx))
                 }
-              case None =>  ApiResponseUtil.toResponse(ErrorForgerStakeNotFound(s"No Forger Stake found with stake id ${body.stakeId}"))
+              case None => ApiResponseUtil.toResponse(ErrorForgerStakeNotFound(s"No Forger Stake found with stake id ${body.stakeId}"))
             }
           case None =>
             ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
@@ -641,8 +633,7 @@ object AccountTransactionRestScheme {
   private[api] case class ReqSpendForgingStake(
                                                 nonce: Option[BigInteger],
                                                 stakeId: String,
-                                                gasInfo: Option[EIP1559GasInfo],
-                                                format: Option[Boolean]) {
+                                                gasInfo: Option[EIP1559GasInfo]) {
     require(stakeId.nonEmpty, "Signature data must be provided")
   }
 

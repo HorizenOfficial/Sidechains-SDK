@@ -209,7 +209,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
 
     "reply at /spendForgingStake" in {
       val outAsTransactionObj = ReqSpendForgingStake(Some(BigInteger.ONE),
-        utilMocks.stakeId, None, Some(true))
+        utilMocks.stakeId, None)
 
       Post(basePath + "spendForgingStake").withEntity(SerializationUtil.serialize(outAsTransactionObj)) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
@@ -219,19 +219,8 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
           fail("Serialization failed for object SidechainApiResponseBody")
 
         assertEquals(1, result.elements().asScala.length)
-        assertTrue(result.get("transaction").isObject)
-        val outAsByteArray = ReqSpendForgingStake(Some(BigInteger.ONE), utilMocks.stakeId, None, Some(false))
+        assertTrue(result.get("transactionId").isTextual)
 
-        Post(basePath + "spendForgingStake").withEntity(SerializationUtil.serialize(outAsByteArray)) ~> sidechainTransactionApiRoute ~> check {
-          status.intValue() shouldBe StatusCodes.OK.intValue
-          responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
-          val result = mapper.readTree(entityAs[String]).get("result")
-          if (result == null)
-            fail("Serialization failed for object SidechainApiResponseBody")
-
-          assertEquals(1, result.elements().asScala.length)
-          assertTrue(result.get("transactionBytes").isTextual)
-        }
       }
     }
 
