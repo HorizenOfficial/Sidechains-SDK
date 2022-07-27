@@ -21,6 +21,4 @@ trait AccountStateReader extends BaseStateReader {
   def getLogs(txHash: Array[Byte]): Array[EvmLog]
 
   def getHeight: Int
-
-  def getTransactionBlockNumber(txId: scorex.util.ModifierId): Int
 }

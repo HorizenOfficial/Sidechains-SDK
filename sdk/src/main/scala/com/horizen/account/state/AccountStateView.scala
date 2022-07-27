@@ -312,10 +312,6 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     metadataStorageView.getTransactionReceipt(txHash)
   }
 
-  override def setBlockNumberForTransactions(blockNumber: Int, listOfTransactionIds: Seq[scorex.util.ModifierId]): Unit = {
-    metadataStorageView.setBlockNumberForTransactions(blockNumber, listOfTransactionIds)
-  }
-
   override def setCeased(): Unit = {
     metadataStorageView.setCeased()
   }
@@ -388,7 +384,5 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
   }
 
   override def getStateDbHandle: ResourceHandle = stateDb
-
-  override def getTransactionBlockNumber(txId: scorex.util.ModifierId): Int = metadataStorageView.getTransactionBlockNumber(txId).get
 
 }

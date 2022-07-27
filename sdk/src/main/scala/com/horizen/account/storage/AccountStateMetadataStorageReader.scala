@@ -18,8 +18,6 @@ trait AccountStateMetadataStorageReader {
 
   def getTransactionReceipt(txHash: Array[Byte]) : Option[EthereumReceipt]
 
-  def getTransactionBlockNumber(txId: scorex.util.ModifierId): Option[Int]
-
   def hasCeased: Boolean
 
   // tip height

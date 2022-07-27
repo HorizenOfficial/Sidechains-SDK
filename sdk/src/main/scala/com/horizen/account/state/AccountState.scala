@@ -125,7 +125,6 @@ class AccountState(val params: NetworkParams,
     val blockNumber = stateView.getHeight + 1
     val blockHash = idToBytes(mod.id)
     var cumGasUsed : BigInteger = BigInteger.ZERO
-    val listOfTxIds = new ListBuffer[ModifierId]()
 
     for ((tx, txIndex) <- mod.sidechainTransactions.zipWithIndex) {
       stateView.applyTransaction(tx, txIndex, cumGasUsed) match {
@@ -161,7 +160,6 @@ class AccountState(val params: NetworkParams,
           log.debug(s"Adding to receipt list: ${fullReceipt.toString()}")
 
           receiptList += fullReceipt
-          listOfTxIds += ethTx.id
 
         case Failure(e) =>
           log.error("Could not apply tx", e)
@@ -181,7 +179,6 @@ class AccountState(val params: NetworkParams,
 
     // eventually, store full receipts in the metaDataStorage indexed by txid
     stateView.updateTransactionReceipts(receiptList)
-    stateView.setBlockNumberForTransactions(blockNumber, listOfTxIds)
 
     stateView.commit(idToVersion(mod.id)).get
 
@@ -310,8 +307,6 @@ class AccountState(val params: NetworkParams,
   override def getHeight: Int = {
     stateMetadataStorage.getHeight
   }
-
-  override def getTransactionBlockNumber(txId: scorex.util.ModifierId): Int = stateMetadataStorage.getTransactionBlockNumber(txId).get
 
   private def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = {
     val stateView: AccountStateView = getView

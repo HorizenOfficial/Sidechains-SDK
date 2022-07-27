@@ -46,6 +46,4 @@ class AccountStateMetadataStorage(storage: Storage) extends AccountStateMetadata
   override def getAccountStateRoot: Array[Byte] = getView.getAccountStateRoot
 
   override def getTransactionReceipt(txHash: Array[Byte]): Option[EthereumReceipt] = getView.getTransactionReceipt(txHash)
-
-  override def getTransactionBlockNumber(txId: scorex.util.ModifierId): Option[Int] = getView.getTransactionBlockNumber(txId)
 }
