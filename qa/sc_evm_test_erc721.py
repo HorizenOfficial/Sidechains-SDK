@@ -128,18 +128,50 @@ def compare_allowance(node, smart_contract, contract_address, owner_address, all
     return res[0]
 
 
+def call_noarg_fn(node, smart_contract, contract_address, sender_address, static_call, generate_block, method):
+    if static_call:
+        res = smart_contract.static_call(node, method, fromAddress=sender_address, gasLimit=10000000,
+                                         gasPrice=10, toAddress=contract_address)
+    else:
+        res = smart_contract.call_function(node, method, fromAddress=sender_address, gasLimit=10000000,
+                                           gasPrice=10, toAddress=contract_address)
+    if generate_block:
+        print("generating next block...")
+        generate_next_blocks(node, "first node", 1)
+
+    return res
+
+
 def compare_total_supply(node, smart_contract, contract_address, sender_address, expected_supply):
+    method = 'totalSupply()'
     print("Checking total supply of token at 0x{}...".format(contract_address))
-    res = smart_contract.static_call(node, 'totalSupply()', fromAddress=sender_address, gasLimit=10000000,
-                                     gasPrice=10, toAddress=contract_address)
+    res = call_noarg_fn(node, smart_contract, contract_address, sender_address, True, False, method)
     print("Expected supply: '{}', actual supply: '{}'".format(expected_supply, res[0]))
     assert_equal(res[0], expected_supply)
     return res[0]
 
 
-def deploy_smart_contract(node, smart_contract, from_address):
+def compare_name(node, smart_contract, contract_address, sender_address, expected_name):
+    method = 'name()'
+    print("Checking name of collection at {}...".format(contract_address))
+    res = call_noarg_fn(node, smart_contract, contract_address, sender_address, True, False, method)
+    print("Expected name: '{}', actual name: '{}'".format(expected_name, res[0]))
+    assert_equal(res[0], expected_name)
+    return res[0]
+
+
+def compare_symbol(node, smart_contract, contract_address, sender_address, expected_name):
+    method = 'symbol()'
+    print("Checking symbol of collection at {}...".format(contract_address))
+    res = call_noarg_fn(node, smart_contract, contract_address, sender_address, True, False, method)
+    print("Expected symbol: '{}', actual symbol: '{}'".format(expected_name, res[0]))
+    assert_equal(res[0], expected_name)
+    return res[0]
+
+
+def deploy_smart_contract(node, smart_contract, from_address, name, symbol, metadataURI):
     print("Deploying smart contract...")
-    tx_hash, address = smart_contract.deploy(node,
+    tx_hash, address = smart_contract.deploy(node, name, symbol, metadataURI,
                                              fromAddress=from_address,
                                              gasLimit=100000000,
                                              gasPrice=10)
@@ -152,7 +184,7 @@ def deploy_smart_contract(node, smart_contract, from_address):
     return address
 
 
-class SCEvmERC20Contract(SidechainTestFramework):
+class SCEvmERC721Contract(SidechainTestFramework):
     sc_nodes_bootstrap_info = None
 
     def setup_nodes(self):
@@ -224,68 +256,26 @@ class SCEvmERC20Contract(SidechainTestFramework):
         sc_best_block = sc_node.block_best()["result"]
         pprint.pprint(sc_best_block)
 
-        smart_contract_type = 'TestERC20'
+        ret = sc_node.wallet_createPrivateKeySecp256k1()
+        other_address = ret["result"]["proposition"]["address"]
+
+        smart_contract_type = 'TestERC721'
         print("Creating smart contract utilities for {}".format(smart_contract_type))
         smart_contract = SmartContract(smart_contract_type)
         print(smart_contract)
 
-        initial_balance = 100
-        smart_contract_address = deploy_smart_contract(sc_node, smart_contract, evm_address)
+        collection_name = "Test ERC721 Tokens"
+        collection_symbol = "TET"
+        collection_uri = "https://localhost:1337"
+        smart_contract_address = deploy_smart_contract(sc_node, smart_contract, evm_address, collection_name,
+                                                       collection_symbol, collection_uri)
 
-        res = compare_total_supply(sc_node, smart_contract, smart_contract_address, evm_address, initial_balance)
-        res = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address, initial_balance)
+        res = compare_total_supply(sc_node, smart_contract, smart_contract_address, evm_address, 0)
+        res = compare_name(sc_node, smart_contract, smart_contract_address, evm_address, collection_name)
+        res = compare_symbol(sc_node, smart_contract, smart_contract_address, evm_address, collection_symbol)
 
-        ret = sc_node.wallet_createPrivateKeySecp256k1()
-        other_address = ret["result"]["proposition"]["address"]
-        transfer_amount = 99
-
-        # Testing normal transfer
-        # TODO check result of static_call below - should indicate success but not actually change state
-        check_res = transfer_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
-                                    transfer_amount, static_call=True, generate_block=True)
-
-        compare_balance(sc_node, smart_contract, smart_contract_address, evm_address, initial_balance)
-
-        # TODO check receipt of tx below - should emit logs and be successful
-        tx_hash = transfer_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
-                                  transfer_amount, static_call=False, generate_block=True)
-        res = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address,
-                              initial_balance - transfer_amount)
-        res = compare_balance(sc_node, smart_contract, smart_contract_address, other_address, transfer_amount)
-
-        # Test reverting
-        reverting_transfer_amount = 2
-        # TODO check result data of static_call below once implemented - should indicate revert
-        check_res = transfer_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
-                                    reverting_transfer_amount, static_call=True, generate_block=True)
-        # TODO check receipt of tx below - should revert
-        tx_hash = transfer_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
-                                  reverting_transfer_amount, static_call=False, generate_block=True)
-        res = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address,
-                              initial_balance - transfer_amount)
-        res = compare_balance(sc_node, smart_contract, smart_contract_address, other_address, transfer_amount)
-
-        # Test transferFrom and approval
-        approved_amount = 10
-        tx_hash = approve(sc_node, smart_contract, smart_contract_address, other_address, evm_address, approved_amount,
-                          static_call=False, generate_block=True)
-        res = compare_balance(sc_node, smart_contract, smart_contract_address, other_address, transfer_amount)
-
-        res = compare_allowance(sc_node, smart_contract, smart_contract_address, other_address, evm_address,
-                                approved_amount)
-        # TODO once evm_call is fixed - below should indicate success
-        res = transfer_from_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
-                                   evm_address, approved_amount, static_call=True, generate_block=False)
-
-        # TODO once receipts are fixed - below should be a success and emit logs
-        tx_hash = transfer_from_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
-                                       evm_address, approved_amount, static_call=False, generate_block=True)
-
-        res = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address,
-                              initial_balance - transfer_amount + approved_amount)
-        res = compare_balance(sc_node, smart_contract, smart_contract_address, other_address,
-                              transfer_amount - approved_amount)
+        # TODO add more tests
 
 
 if __name__ == "__main__":
-    SCEvmERC20Contract().main()
+    SCEvmERC721Contract().main()

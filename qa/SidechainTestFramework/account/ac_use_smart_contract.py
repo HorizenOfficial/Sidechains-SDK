@@ -26,7 +26,7 @@ class ContractFunction:
         return decode_abi(self.outputs, output)
 
     def __str__(self):
-        return f'{self.sigHash} :: {self.name}({",".join(self.inputs)}) -> ({",".join(self.outputs)})'
+        return '{} :: {}({}) -> ({})'.format(self.sigHash, self.name, ",".join(self.inputs), ",".join(self.outputs))
 
 
 class SmartContract:
@@ -55,8 +55,8 @@ class SmartContract:
                     input_types.append(self.__get_input_type(inp))
                 for out in obj['outputs']:
                     output_types.append(self.__get_input_type(out))
-                input_tuple = f'({",".join(input_types)})'
-                sig_hash = self.Sighashes[f"{obj['name']}{input_tuple}"]
+                input_tuple = '({})'.format(",".join(input_types))
+                sig_hash = self.Sighashes["{}{}".format(obj['name'], input_tuple)]
                 self.Functions[obj['name'] + input_tuple] = ContractFunction(obj['name'], input_types, output_types,
                                                                              sig_hash, False)
             elif obj['type'] == 'constructor':
@@ -134,7 +134,7 @@ class SmartContract:
             if response['result'] is not None and len(response['result']) > 0:
                 return self.raw_decode_call_result(functionName, bytes.fromhex(response['result']))
             else:
-                print(response)
+                print("No return data in static_call: {}".format(str(response)))
                 return None
         else:
             print(response)
@@ -169,7 +169,8 @@ class SmartContract:
         if 'constructor' in self.Functions:
             if len(args) != len(self.Functions['constructor'].inputs):
                 raise RuntimeError(
-                    f"Constructor missing arguments: {len(args)} were provided, but {len(self.Functions['constructor'].inputs)} are necessary!")
+                    "Constructor missing arguments: {} were provided, but {} are necessary!".format(len(args), len(
+                        self.Functions['constructor'].inputs)))
             j['data'] = j['data'] + self.Functions['constructor'].encode(*args)
 
         request = json.dumps(j)
@@ -197,7 +198,7 @@ class SmartContract:
                 A bytestring of the encoded function
         """
         if function_name not in self.Functions:
-            raise RuntimeError(f"Function {function_name} does not exist on contract {self.Name}")
+            raise RuntimeError("Function {} does not exist on contract {}".format(function_name, self.Name))
         else:
             return self.Functions[function_name].encode(*args)
 
@@ -211,7 +212,7 @@ class SmartContract:
                 A tuple of the decoded values
         """
         if function_name not in self.Functions:
-            raise RuntimeError(f"Function {function_name} does not exist on contract {self.Name}")
+            raise RuntimeError("Function {} does not exist on contract {}".format(function_name, self.Name))
         else:
             return self.Functions[function_name].decode(data)
 
@@ -267,7 +268,8 @@ class SmartContract:
                     sol_files.append(os.path.join(root, file))
         if len(sol_files) < 1:
             raise RuntimeError(
-                f"Contract not found - check if a contract (not solidity file) with the name \"{contr}\" exists")
+                "Contract not found - check if a contract (not solidity file) with the name \"{}\" exists".format(
+                    contr))
         if len(sol_files) > 1:
             raise RuntimeError(
                 "Contract name is not unique, please change the names of the contracts so they are unique")
@@ -297,4 +299,4 @@ if __name__ == '__main__':
     sc = SmartContract("StorageTestContract.sol")
     print(sc)
     print(
-        f"Smart contract call set(string) encoding: {sc.raw_encode_call('set(string)', 'This is my message')}")
+        "Smart contract call set(string) encoding: {}".format(sc.raw_encode_call('set(string)', 'This is my message')))
