@@ -1,25 +1,19 @@
 #!/usr/bin/env python3
-import json
 import pprint
 from decimal import Decimal
 
-import test_framework.util
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
-from SidechainTestFramework.account.mk_contract_address import mk_contract_address
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration, Account, LARGE_WITHDRAWAL_EPOCH_LENGTH
-from SidechainTestFramework.sc_forging_util import sc_create_forging_stake_mempool
+    SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import assert_equal, assert_true, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, COIN
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, is_mainchain_block_included_in_sc_block, check_box_balance, \
-    check_mainchain_block_reference_info, check_wallet_coins_balance, check_box_balance, get_lib_separator, \
-    AccountModelBlockVersion, EVM_APP_BINARY, generate_next_blocks, generate_next_block, generate_account_proposition, \
-    convertZenniesToWei, convertZenToZennies
+from test_framework.util import assert_equal, assert_true, start_nodes, websocket_port_by_mc_node_index, \
+    forward_transfer_to_sidechain
+from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, \
+    is_mainchain_block_included_in_sc_block, check_mainchain_block_reference_info, AccountModelBlockVersion, \
+    EVM_APP_BINARY, generate_next_blocks, generate_next_block
 
 """
-Check an EVM Storage Smart Contract.
+Check an EVM ERC20 Smart Contract.
 
 Configuration: bootstrap 1 SC node and start it with genesis info extracted from a mainchain node.
     - Mine some blocks to reach hard fork
@@ -30,14 +24,135 @@ Configuration: bootstrap 1 SC node and start it with genesis info extracted from
 Test:
     For the smart contract:
         - Deploy the smart contract without initial data
-        - Set the storage to a string
-        - Read the string in a read-only call
-        - Set the storage to a different string
-        - Read the different string in a read only call
+        - Check initial minting success (static_call)
+        - Check initial supply (static_call)
+        - Check a successful transfer (static_call + actual tx)
+        - Check a reverting transfer (static_call + actual tx)
+        - Check approval + transferFrom (static_call + actual tx)
 """
 
 
-class SCEvmStorageContract(SidechainTestFramework):
+def call_addr_uint_fn(node, smart_contract, contract_address, source_addr, addr, uint, static_call, generate_block,
+                      method):
+    if static_call:
+        res = smart_contract.static_call(node, method, addr, uint,
+                                         fromAddress=source_addr,
+                                         gasLimit=10000000, gasPrice=10, toAddress=contract_address)
+    else:
+        res = smart_contract.call_function(node, method, addr, uint,
+                                           fromAddress=source_addr,
+                                           gasLimit=10000000, gasPrice=10, toAddress=contract_address)
+    if generate_block:
+        print("generating next block...")
+        generate_next_blocks(node, "first node", 1)
+    return res
+
+
+def call_addr_addr_uint_fn(node, smart_contract, contract_address, source_addr, addr1, addr2, uint, static_call,
+                           generate_block, method):
+    if static_call:
+        res = smart_contract.static_call(node, method, addr1, addr2, uint,
+                                         fromAddress=source_addr,
+                                         gasLimit=10000000, gasPrice=10, toAddress=contract_address)
+    else:
+        res = smart_contract.call_function(node, method, addr1, addr2, uint,
+                                           fromAddress=source_addr,
+                                           gasLimit=10000000, gasPrice=10, toAddress=contract_address)
+    if generate_block:
+        print("generating next block...")
+        generate_next_blocks(node, "first node", 1)
+    return res
+
+
+def transfer_tokens(node, smart_contract, contract_address, source_account, target_account, amount, *,
+                    static_call=False, generate_block=True):
+    method = 'transfer(address,uint256)'
+    if static_call:
+        print("Read-only calling {}: testing transfer of ".format(method) +
+              "{} tokens from 0x{} to 0x{}".format(amount, source_account, target_account))
+    else:
+        print("Calling {}: transferring {} tokens from 0x{} to 0x{}".format(method, amount, source_account,
+                                                                            target_account))
+
+    return call_addr_uint_fn(node, smart_contract, contract_address, source_account, target_account, amount,
+                             static_call, generate_block, method)
+
+
+def transfer_from_tokens(node, smart_contract, contract_address, tx_sender_account, source_account, target_account,
+                         amount, *, static_call=False, generate_block=True):
+    method = 'transferFrom(address,address,uint256)'
+    if static_call:
+        print("Read-only calling {}: testing transfer of ".format(method) +
+              "{} tokens from 0x{} to 0x{}".format(amount, source_account, target_account))
+    else:
+        print("Calling {}: transferring {} tokens from 0x{} to 0x{}".format(method, amount, source_account,
+                                                                            target_account))
+
+    return call_addr_addr_uint_fn(node, smart_contract, contract_address, tx_sender_account, source_account,
+                                  target_account, amount, static_call=static_call, generate_block=generate_block,
+                                  method=method)
+
+
+def approve(node, smart_contract, contract_address, source_account, target_account, amount, *, static_call=False,
+            generate_block=True):
+    method = 'approve(address,uint256)'
+    if static_call:
+        print("Read-only calling {}: testing approval of ".format(method) +
+              "{} tokens from 0x{} to 0x{}".format(amount, source_account, target_account))
+    else:
+        print(
+            "Calling {}: approving {} tokens from 0x{} to 0x{}".format(method, amount, source_account, target_account))
+
+    return call_addr_uint_fn(node, smart_contract, contract_address, source_account, target_account, amount,
+                             static_call, generate_block, method)
+
+
+def compare_balance(node, smart_contract, contract_address, account_address, expected_balance):
+    print("Checking balance of 0x{}...".format(account_address))
+    res = smart_contract.static_call(node, 'balanceOf(address)', account_address,
+                                     fromAddress=account_address,
+                                     gasLimit=10000000,
+                                     gasPrice=10, toAddress=contract_address)
+    print("Expected balance: '{}', actual balance: '{}'".format(expected_balance, res[0]))
+    assert_equal(res[0], expected_balance)
+    return res[0]
+
+
+def compare_allowance(node, smart_contract, contract_address, owner_address, allowed_address, expected_balance):
+    print("Checking allowance of 0x{} from 0x{}...".format(allowed_address, owner_address))
+    res = smart_contract.static_call(node, 'allowance(address,address)', owner_address, allowed_address,
+                                     fromAddress=allowed_address, gasLimit=10000000,
+                                     gasPrice=10, toAddress=contract_address)
+    print("Expected allowance: '{}', actual allowance: '{}'".format(expected_balance, res[0]))
+    assert_equal(res[0], expected_balance)
+    return res[0]
+
+
+def compare_total_supply(node, smart_contract, contract_address, sender_address, expected_supply):
+    print("Checking total supply of token at 0x{}...".format(contract_address))
+    res = smart_contract.static_call(node, 'totalSupply()', fromAddress=sender_address, gasLimit=10000000,
+                                     gasPrice=10, toAddress=contract_address)
+    print("Expected supply: '{}', actual supply: '{}'".format(expected_supply, res[0]))
+    assert_equal(res[0], expected_supply)
+    return res[0]
+
+
+def deploy_smart_contract(node, smart_contract, from_address):
+    print("Deploying smart contract...")
+    tx_hash, address = smart_contract.deploy(node,
+                                             fromAddress=from_address,
+                                             gasLimit=100000000,
+                                             gasPrice=10)
+    print("Generating next block...")
+    generate_next_blocks(node, "first node", 1)
+    # TODO fix receipts, currently mocked
+    # TODO check logs (events)
+    pprint.pprint(node.rpc_eth_getTransactionReceipt(tx_hash))
+    print("Smart contract deployed successfully to address 0x{}".format(address))
+    return address
+
+
+class SCEvmERC20Contract(SidechainTestFramework):
     sc_nodes_bootstrap_info = None
 
     def setup_nodes(self):
@@ -110,115 +225,67 @@ class SCEvmStorageContract(SidechainTestFramework):
         pprint.pprint(sc_best_block)
 
         smart_contract_type = 'TestERC20'
-        print(f"Creating smart contract utilities for {smart_contract_type}")
+        print("Creating smart contract utilities for {}".format(smart_contract_type))
         smart_contract = SmartContract(smart_contract_type)
         print(smart_contract)
 
         initial_balance = 100
-        tx_hash, smart_contract_address = smart_contract.deploy(sc_node,
-                                                                fromAddress=str(evm_address),
-                                                                gasLimit=100000000,
-                                                                gasPrice=10)
-        generate_next_blocks(sc_node, "first node", 1)
-        print("Blocks mined - tx receipt will contain address")
-        # TODO fix receipts, currently mocked
-        # TODO check logs (events)
-        print("rpc response:")
-        pprint.pprint(sc_node.rpc_eth_getTransactionReceipt(tx_hash))
+        smart_contract_address = deploy_smart_contract(sc_node, smart_contract, evm_address)
 
-        generate_next_blocks(sc_node, "first node", 1)
-        res = smart_contract.static_call(sc_node, 'balanceOf(address)', evm_address, fromAddress=str(evm_address),
-                                         gasLimit=10000000,
-                                         gasPrice=10, toAddress=smart_contract_address)
-        print(f"Reading smart contract storage resulted in '{res[0]}'")
-        assert_equal(res[0], initial_balance)
+        res = compare_total_supply(sc_node, smart_contract, smart_contract_address, evm_address, initial_balance)
+        res = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address, initial_balance)
 
         ret = sc_node.wallet_createPrivateKeySecp256k1()
         other_address = ret["result"]["proposition"]["address"]
         transfer_amount = 99
-        check_res = smart_contract.static_call(sc_node, 'transfer(address,uint256)', other_address, transfer_amount,
-                                               fromAddress=str(evm_address),
-                                               gasLimit=10000000, gasPrice=10, toAddress=smart_contract_address)
-        print(check_res)
 
-        smart_contract.call_function(sc_node, 'transfer(address,uint256)', other_address, transfer_amount,
-                                     fromAddress=str(evm_address),
-                                     gasLimit=10000000, gasPrice=10, toAddress=smart_contract_address)
+        # Testing normal transfer
+        # TODO check result of static_call below - should indicate success but not actually change state
+        check_res = transfer_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
+                                    transfer_amount, static_call=True, generate_block=True)
 
-        generate_next_blocks(sc_node, "first node", 1)
-        # TODO check receipt - should emit logs and be sucessful
+        compare_balance(sc_node, smart_contract, smart_contract_address, evm_address, initial_balance)
 
-        res = smart_contract.static_call(sc_node, 'balanceOf(address)', evm_address, fromAddress=str(evm_address),
-                                         gasLimit=10000000,
-                                         gasPrice=10, toAddress=smart_contract_address)
-        print(f"Reading smart contract storage resulted in '{res[0]}'")
-        assert_equal(res[0], initial_balance - transfer_amount)
-        res = smart_contract.static_call(sc_node, 'balanceOf(address)', other_address, fromAddress=str(evm_address),
-                                         gasLimit=10000000,
-                                         gasPrice=10, toAddress=smart_contract_address)
-        print(f"Reading smart contract storage resulted in '{res[0]}'")
-        assert_equal(res[0], transfer_amount)
+        # TODO check receipt of tx below - should emit logs and be successful
+        tx_hash = transfer_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
+                                  transfer_amount, static_call=False, generate_block=True)
+        res = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address,
+                              initial_balance - transfer_amount)
+        res = compare_balance(sc_node, smart_contract, smart_contract_address, other_address, transfer_amount)
 
-        # should revert
+        # Test reverting
         reverting_transfer_amount = 2
-        smart_contract.call_function(sc_node, 'transfer(address,uint256)', other_address, reverting_transfer_amount,
-                                     fromAddress=str(evm_address),
-                                     gasLimit=10000000, gasPrice=10, toAddress=smart_contract_address)
+        # TODO check result data of static_call below once implemented - should indicate revert
+        check_res = transfer_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
+                                    reverting_transfer_amount, static_call=True, generate_block=True)
+        # TODO check receipt of tx below - should revert
+        tx_hash = transfer_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
+                                  reverting_transfer_amount, static_call=False, generate_block=True)
+        res = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address,
+                              initial_balance - transfer_amount)
+        res = compare_balance(sc_node, smart_contract, smart_contract_address, other_address, transfer_amount)
 
-        res = smart_contract.static_call(sc_node, 'transfer(address,uint256)', other_address, reverting_transfer_amount,
-                                         fromAddress=str(evm_address),
-                                         gasLimit=10000000, gasPrice=10, toAddress=smart_contract_address)
-
-        generate_next_blocks(sc_node, "first node", 1)
-        # TODO check receipt - should revert
-        res = smart_contract.static_call(sc_node, 'balanceOf(address)', evm_address, fromAddress=str(evm_address),
-                                         gasLimit=10000000,
-                                         gasPrice=10, toAddress=smart_contract_address)
-        print(f"Reading smart contract storage resulted in '{res[0]}'")
-        assert_equal(res[0], initial_balance - transfer_amount)
-        res = smart_contract.static_call(sc_node, 'balanceOf(address)', other_address, fromAddress=str(evm_address),
-                                         gasLimit=10000000,
-                                         gasPrice=10, toAddress=smart_contract_address)
-        print(f"Reading smart contract storage resulted in '{res[0]}'")
-        assert_equal(res[0], transfer_amount)
-
-        # check approval with transfer from
+        # Test transferFrom and approval
         approved_amount = 10
-        smart_contract.call_function(sc_node, 'approve(address,uint256)', evm_address, approved_amount,
-                                     fromAddress=other_address,
-                                     gasLimit=10000000, gasPrice=10, toAddress=smart_contract_address)
-        generate_next_blocks(sc_node, "first node", 1)
+        tx_hash = approve(sc_node, smart_contract, smart_contract_address, other_address, evm_address, approved_amount,
+                          static_call=False, generate_block=True)
+        res = compare_balance(sc_node, smart_contract, smart_contract_address, other_address, transfer_amount)
 
-        res = smart_contract.static_call(sc_node, 'balanceOf(address)', other_address, fromAddress=str(evm_address),
-                                         gasLimit=10000000,
-                                         gasPrice=10, toAddress=smart_contract_address)
-        print(f"Reading smart contract storage resulted in '{res[0]}'")
-        assert_equal(res[0], transfer_amount)
+        res = compare_allowance(sc_node, smart_contract, smart_contract_address, other_address, evm_address,
+                                approved_amount)
+        # TODO once evm_call is fixed - below should indicate success
+        res = transfer_from_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
+                                   evm_address, approved_amount, static_call=True, generate_block=False)
 
-        res = smart_contract.static_call(sc_node, 'allowance(address,address)', other_address, evm_address,
-                                         fromAddress=evm_address,
-                                         gasLimit=10000000,
-                                         gasPrice=10, toAddress=smart_contract_address)
-        print(f"Reading smart contract storage resulted in '{res[0]}'")
-        assert_equal(res[0], approved_amount)
+        # TODO once receipts are fixed - below should be a success and emit logs
+        tx_hash = transfer_from_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
+                                       evm_address, approved_amount, static_call=False, generate_block=True)
 
-        smart_contract.call_function(sc_node, 'transferFrom(address,address,uint256)', other_address, evm_address,
-                                     approved_amount,
-                                     fromAddress=evm_address,
-                                     gasLimit=10000000, gasPrice=10, toAddress=smart_contract_address)
-        generate_next_blocks(sc_node, "first node", 1)
-
-        res = smart_contract.static_call(sc_node, 'balanceOf(address)', evm_address, fromAddress=str(evm_address),
-                                         gasLimit=10000000,
-                                         gasPrice=10, toAddress=smart_contract_address)
-        print(f"Reading smart contract storage resulted in '{res[0]}'")
-        assert_equal(res[0], initial_balance - transfer_amount + approved_amount)
-        res = smart_contract.static_call(sc_node, 'balanceOf(address)', other_address, fromAddress=str(evm_address),
-                                         gasLimit=10000000,
-                                         gasPrice=10, toAddress=smart_contract_address)
-        print(f"Reading smart contract storage resulted in '{res[0]}'")
-        assert_equal(res[0], transfer_amount - approved_amount)
+        res = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address,
+                              initial_balance - transfer_amount + approved_amount)
+        res = compare_balance(sc_node, smart_contract, smart_contract_address, other_address,
+                              transfer_amount - approved_amount)
 
 
 if __name__ == "__main__":
-    SCEvmStorageContract().main()
+    SCEvmERC20Contract().main()
