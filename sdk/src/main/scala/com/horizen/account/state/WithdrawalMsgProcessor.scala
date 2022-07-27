@@ -1,9 +1,10 @@
 package com.horizen.account.state
 
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
-import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.abi.ABIUtil.{METHOD_CODE_LENGTH, getABIMethodId, getArgumentsFromData, getOpCodeFromData}
+import com.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
+import com.horizen.account.events.AddWithdrawalRequest
+import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.utils.{BytesUtils, ZenCoinsUtils}
@@ -104,7 +105,6 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
       val listOfWithdrawalReqs = getListOfWithdrawalReqRecords(epochNum, view)
 
       val abiEncodedList = WithdrawalRequestsListEncoder.encode(listOfWithdrawalReqs.asJava)
-      //Evm log
       new ExecutionSucceeded(GasSpentForGetListOfWithdrawalReqsCmd, abiEncodedList)
     }
     catch {
@@ -153,6 +153,11 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
       view.updateAccountStorageBytes(fakeSmartContractAddress.address(), getWithdrawalRequestsKey(currentEpochNum, nextNumOfWithdrawalReqs), requestInBytes).get
 
       view.subBalance(msg.getFrom.address(), withdrawalAmount).get
+
+      val withdrawalEvent = AddWithdrawalRequest(msg.getFrom, request.proposition, withdrawalAmount, currentEpochNum)
+      val evmLog = getEvmLog(withdrawalEvent)
+      view.addLog(evmLog).get
+
       val abiEncodedResult = request.encode
       new ExecutionSucceeded(GasSpentForAddNewWithdrawalReqCmd, abiEncodedResult)
     }

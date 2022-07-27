@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonView
 import com.google.common.primitives.Bytes
 import com.horizen.account.abi.ABIUtil.{METHOD_CODE_LENGTH, getABIMethodId, getArgumentsFromData, getOpCodeFromData}
 import com.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
+import com.horizen.account.events.{DelegateForgerStake, WithdrawForgerStake}
 import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
 import com.horizen.account.state.ForgerStakeMsgProcessor._
@@ -304,6 +305,11 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     addForgerStake(view, newStakeId, blockSignPublicKey, vrfPublicKey, ownerAddress, stakedAmount)
     log.debug(s"Added stake to stateDb: newStakeId=${BytesUtils.toHexString(newStakeId)}, blockSignPublicKey=$blockSignPublicKey, vrfPublicKey=$vrfPublicKey, ownerAddress=$ownerAddress, stakedAmount=$stakedAmount")
 
+    val addNewStakeEvt = DelegateForgerStake(msg.getFrom, ownerAddress, newStakeId, stakedAmount)
+    val evmLog = getEvmLog(addNewStakeEvt)
+    view.addLog(evmLog).get
+
+
     if (isGenesisScCreation) {
       // no gas paid here
 
@@ -414,8 +420,9 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     // remove the forger stake data
     removeForgerStake(view, stakeId)
 
-    // TODO add log ForgerStakeWithdrawal(StakeId, ...) to the StateView ???
-    //view.addLog(new EvmLog concrete instance) // EvmLog will be used internally
+    val removeStakeEvt = WithdrawForgerStake(stakeData.ownerPublicKey, stakeId)
+    val evmLog = getEvmLog(removeStakeEvt)
+    view.addLog(evmLog).get
 
     // decrease the balance of the "stake smart contract” account
     view.subBalance(fakeSmartContractAddress.address(), stakeData.stakedAmount).get
