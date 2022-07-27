@@ -154,7 +154,7 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
   }
 
   @RpcMethod("eth_getCode") def getCode(address: String, tag: Quantity): String = { // TODO: return bytecode of given address or empty
-    ""//Numeric.toHexString(stateView.stateDb.getCode(Numeric.hexStringToByteArray(address)))
+    Numeric.toHexString(stateView.stateDb.getCode(Numeric.hexStringToByteArray(address)))
   }
 
   private def getBalance(address: String, tag: Quantity) = { // TODO: Add blockNumberOrTag handling
