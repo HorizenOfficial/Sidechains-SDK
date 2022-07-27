@@ -312,7 +312,15 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
 
     if (isGenesisScCreation) {
       // no gas paid here
+
+      // increase the balance of the "forger stake smart contract” account
+      view.addBalance(fakeSmartContractAddress.address(), stakedAmount).get
+
+      // TODO
+      //view.addLog(new EvmLog concrete instance) // EvmLog will be used internally
+
       new ExecutionSucceeded(BigInteger.ZERO, newStakeId)
+
     } else {
       // decrease the balance of `from` account by `tx.value`
       view.subBalance(msg.getFrom.address(), stakedAmount) match {
@@ -455,8 +463,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     }
     catch {
       case e: Exception =>
-        val msgStr = s"Exception while processing message: $msg"
-        log.debug(msgStr)
+        val msgStr = s"Exception while processing message: $msg, $e"
+        log.debug(msgStr, e)
         new ExecutionFailed(RemoveStakeGasPaidValue, new IllegalArgumentException(e))
     }
   }
