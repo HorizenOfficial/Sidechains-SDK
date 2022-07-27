@@ -211,6 +211,14 @@ func (s *Service) StateSetCodeHash(params CodeHashParams) error {
 	return nil
 }
 
+func (s *Service) StateGetCode(params AccountParams) (error, []byte) {
+	err, statedb := s.statedbs.Get(params.Handle)
+	if err != nil {
+		return err, nil
+	}
+	return nil, statedb.GetCode(params.Address)
+}
+
 // StateSetCode sets the given code, the code hash is updated automatically
 func (s *Service) StateSetCode(params CodeParams) error {
 	err, statedb := s.statedbs.Get(params.Handle)
