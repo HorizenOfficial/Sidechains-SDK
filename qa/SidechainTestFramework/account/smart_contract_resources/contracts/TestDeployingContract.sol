@@ -19,13 +19,16 @@ contract TestDeployingContract {
     }
     modifier onlyChild() {
         uint256 len = _children.length;
+        bool found = false;
         for (uint256 i = 0; i < len; i++) {
             if (msg.sender == address(_children[i])) {
-                _;
+                found = true;
                 break;
             }
         }
-        revert("Can only be the child");
+        if (!found)
+            revert("Can only be the child");
+        _;
     }
     function getSecret() onlyChild public view returns (string memory) {
 

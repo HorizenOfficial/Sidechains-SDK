@@ -13,7 +13,7 @@ from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_no
     EVM_APP_BINARY, generate_next_blocks, generate_next_block
 
 """
-Check an EVM Storage Smart Contract.
+Check an EVM ERC20 Smart Contract.
 
 Configuration: bootstrap 1 SC node and start it with genesis info extracted from a mainchain node.
     - Mine some blocks to reach hard fork

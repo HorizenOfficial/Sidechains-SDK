@@ -13,7 +13,7 @@ from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_no
     EVM_APP_BINARY, generate_next_blocks, generate_next_block
 
 """
-Check an EVM Storage Smart Contract.
+Check an EVM ERC721 Smart Contract.
 
 Configuration: bootstrap 1 SC node and start it with genesis info extracted from a mainchain node.
     - Mine some blocks to reach hard fork
@@ -23,12 +23,16 @@ Configuration: bootstrap 1 SC node and start it with genesis info extracted from
 
 Test:
     For the smart contract:
-        - Deploy the smart contract without initial data
-        - Check initial minting success (static_call)
-        - Check initial supply (static_call)
-        - Check a successful transfer (static_call + actual tx)
-        - Check a reverting transfer (static_call + actual tx)
-        - Check approval + transferFrom (static_call + actual tx)
+        - Deploy the smart contract with initial data
+        - Test minting
+        - Check minting results
+        - Pause contract
+        - Fail minting
+        - Unpause contract
+        - Mint a second time
+        - Check results
+        - Transfer nft
+        - Check results
 """
 
 

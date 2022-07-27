@@ -1,25 +1,20 @@
 #!/usr/bin/env python3
-import json
 import pprint
+import random
 from decimal import Decimal
 
-import test_framework.util
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
-from SidechainTestFramework.account.mk_contract_address import mk_contract_address
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration, Account, LARGE_WITHDRAWAL_EPOCH_LENGTH
-from SidechainTestFramework.sc_forging_util import sc_create_forging_stake_mempool
+    SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, assert_true, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, COIN
+    websocket_port_by_mc_node_index, forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, is_mainchain_block_included_in_sc_block, check_box_balance, \
-    check_mainchain_block_reference_info, check_wallet_coins_balance, check_box_balance, get_lib_separator, \
-    AccountModelBlockVersion, EVM_APP_BINARY, generate_next_blocks, generate_next_block, generate_account_proposition, \
-    convertZenniesToWei, convertZenToZennies
+    start_sc_nodes, is_mainchain_block_included_in_sc_block, check_mainchain_block_reference_info, \
+    AccountModelBlockVersion, EVM_APP_BINARY, generate_next_blocks, generate_next_block
 
 """
-Check an EVM Storage Smart Contract.
+Check an EVM Contract which deploys smart contracts, and their interaction.
 
 Configuration: bootstrap 1 SC node and start it with genesis info extracted from a mainchain node.
     - Mine some blocks to reach hard fork
@@ -29,12 +24,103 @@ Configuration: bootstrap 1 SC node and start it with genesis info extracted from
 
 Test:
     For the smart contract:
-        - Deploy the smart contract without initial data
-        - Set the storage to a string
-        - Read the string in a read-only call
-        - Set the storage to a different string
-        - Read the different string in a read only call
+        - Deploy the smart contract with initial secret
+        - Deploy a child contract
+        - Read the secret via child
+        - Deploy a second child contract
+        - Read the secret via second child
+        - Update secret via second child
+        - Read the secret via first and second child
 """
+
+
+def deploy_smart_contract(node, smart_contract_type, from_address, initial_secret):
+    print("Deploying smart contract with initial secret {}...".format(initial_secret))
+    tx_hash, address = smart_contract_type.deploy(node, initial_secret,
+                                                  fromAddress=from_address,
+                                                  gasLimit=100000000,
+                                                  gasPrice=10)
+    print("Generating next block...")
+    generate_next_blocks(node, "first node", 1)
+    # TODO fix receipts, currently mocked
+    # TODO check logs (events)
+    pprint.pprint(node.rpc_eth_getTransactionReceipt(tx_hash))
+    print("Smart contract deployed successfully to address 0x{}".format(address))
+    return address
+
+
+def deploy_child(node, smart_contract_type, smart_contract_address, from_address, *, static_call,
+                 generate_block):
+    method = 'deployContract()'
+    if static_call:
+        print("Read-only calling {}: testing deployment of a child contract".format(method))
+        res = smart_contract_type.static_call(node, method, fromAddress=from_address, gasLimit=10000000, gasPrice=10,
+                                              toAddress=smart_contract_address)
+    else:
+        print("Calling {}: deploying a child contract".format(method))
+        res = smart_contract_type.call_function(node, method, fromAddress=from_address, gasLimit=10000000, gasPrice=10,
+                                                toAddress=smart_contract_address)
+    if generate_block:
+        print("generating next block...")
+        generate_next_blocks(node, "first node", 1)
+
+    return res
+
+
+def update_parent_secret(node, smart_contract_type, smart_contract_address, from_address, *, new_secret, static_call,
+                         generate_block):
+    method = 'setParentSecret(string)'
+    if static_call:
+        print("Read-only calling {}: testing setting the secret to {} via a child contract".format(method, new_secret))
+        res = smart_contract_type.static_call(node, method, new_secret, fromAddress=from_address, gasLimit=10000000,
+                                              gasPrice=10, toAddress=smart_contract_address)
+    else:
+        print("Calling {}: setting the secret to {} via a child contract".format(method, new_secret))
+        res = smart_contract_type.call_function(node, method, new_secret, fromAddress=from_address, gasLimit=10000000,
+                                                gasPrice=10, toAddress=smart_contract_address)
+    if generate_block:
+        print("generating next block...")
+        generate_next_blocks(node, "first node", 1)
+
+    return res
+
+
+def get_secret(node, smart_contract_type, smart_contract_address, from_address):
+    method = 'checkParentSecret()'
+    print("Getting parent secret via function {} on contract {}".format(method, smart_contract_address))
+    res = smart_contract_type.static_call(node, method, fromAddress=from_address, gasLimit=10000000, gasPrice=10,
+                                          toAddress=smart_contract_address[2:])[0]
+    print("Parent secret: {}".format(res))
+    return res
+
+
+def compare_secret(node, smart_contract_type, smart_contract_address, from_address, expected_secret):
+    print("Comparing secrets...")
+    res = get_secret(node, smart_contract_type, smart_contract_address, from_address)
+    print("Expected secret: {}, actual secret: {}".format(expected_secret, res))
+    assert_equal(res, expected_secret)
+    return res
+
+
+def get_children(node, smart_contract_type, smart_contract_address, from_address):
+    method = 'getChildren()'
+    print("Getting children via function {}".format(method))
+    res = list(smart_contract_type.static_call(node, method, fromAddress=from_address, gasLimit=10000000, gasPrice=10,
+                                               toAddress=smart_contract_address)[0])
+    print("Children: {}".format(res))
+    return res
+
+
+def assert_child_count(node, smart_contract_type, smart_contract_address, from_address, expected_count):
+    print("Asserting child count...")
+    res = get_children(node, smart_contract_type, smart_contract_address, from_address)
+    print("Expected child count: {}, actual child count: {}".format(expected_count, len(res)))
+    assert_equal(len(res), expected_count)
+    return res
+
+
+def random_byte_string(*, length=20):
+    return '0x' + bytes([random.randrange(0, 256) for _ in range(0, length)]).hex()
 
 
 class SCEvmDeployingContract(SidechainTestFramework):
@@ -109,115 +195,67 @@ class SCEvmDeployingContract(SidechainTestFramework):
         sc_best_block = sc_node.block_best()["result"]
         pprint.pprint(sc_best_block)
 
-        smart_contract_type = 'TestERC20'
-        print(f"Creating smart contract utilities for {smart_contract_type}")
-        smart_contract = SmartContract(smart_contract_type)
-        print(smart_contract)
+        parent_smart_contract_type = 'TestDeployingContract'
+        print(f"Creating smart contract utilities for {parent_smart_contract_type}")
+        parent_smart_contract_type = SmartContract(parent_smart_contract_type)
+        print(parent_smart_contract_type)
 
-        initial_balance = 100
-        tx_hash, smart_contract_address = smart_contract.deploy(sc_node,
-                                                                fromAddress=str(evm_address),
-                                                                gasLimit=100000000,
-                                                                gasPrice=10)
-        generate_next_blocks(sc_node, "first node", 1)
-        print("Blocks mined - tx receipt will contain address")
-        # TODO fix receipts, currently mocked
-        # TODO check logs (events)
-        print("rpc response:")
-        pprint.pprint(sc_node.rpc_eth_getTransactionReceipt(tx_hash))
+        child_smart_contract_type = 'TestDeployedContract'
+        print(f"Creating smart contract utilities for {child_smart_contract_type}")
+        child_smart_contract_type = SmartContract(child_smart_contract_type)
+        print(child_smart_contract_type)
 
-        generate_next_blocks(sc_node, "first node", 1)
-        res = smart_contract.static_call(sc_node, 'balanceOf(address)', evm_address, fromAddress=str(evm_address),
-                                         gasLimit=10000000,
-                                         gasPrice=10, toAddress=smart_contract_address)
-        print(f"Reading smart contract storage resulted in '{res[0]}'")
-        assert_equal(res[0], initial_balance)
+        # testing deployment
+        initial_secret = random_byte_string(length=20)
+        number_of_children = 0
+        parent_contract_address = deploy_smart_contract(sc_node, parent_smart_contract_type, evm_address,
+                                                        initial_secret)
+        # asserting that there are no initial children
+        children = assert_child_count(sc_node, parent_smart_contract_type, parent_contract_address, evm_address,
+                                      number_of_children)
 
-        ret = sc_node.wallet_createPrivateKeySecp256k1()
-        other_address = ret["result"]["proposition"]["address"]
-        transfer_amount = 99
-        check_res = smart_contract.static_call(sc_node, 'transfer(address,uint256)', other_address, transfer_amount,
-                                               fromAddress=str(evm_address),
-                                               gasLimit=10000000, gasPrice=10, toAddress=smart_contract_address)
-        print(check_res)
+        # DEPLOYING FIRST CHILD
 
-        smart_contract.call_function(sc_node, 'transfer(address,uint256)', other_address, transfer_amount,
-                                     fromAddress=str(evm_address),
-                                     gasLimit=10000000, gasPrice=10, toAddress=smart_contract_address)
+        # TODO when evm_call is implemented - check result indicates success
+        res = deploy_child(sc_node, parent_smart_contract_type, parent_contract_address, evm_address,
+                           static_call=True, generate_block=False)
+        # TODO when receipts are implemented - check receipt indicates success and emits logs
+        tx_hash = deploy_child(sc_node, parent_smart_contract_type, parent_contract_address, evm_address,
+                               static_call=False, generate_block=True)
 
-        generate_next_blocks(sc_node, "first node", 1)
-        # TODO check receipt - should emit logs and be sucessful
+        number_of_children += 1
+        # asserting that there is now one child
+        children = assert_child_count(sc_node, parent_smart_contract_type, parent_contract_address, evm_address,
+                                      number_of_children)
+        compare_secret(sc_node, child_smart_contract_type, children[-1], evm_address, initial_secret)
 
-        res = smart_contract.static_call(sc_node, 'balanceOf(address)', evm_address, fromAddress=str(evm_address),
-                                         gasLimit=10000000,
-                                         gasPrice=10, toAddress=smart_contract_address)
-        print(f"Reading smart contract storage resulted in '{res[0]}'")
-        assert_equal(res[0], initial_balance - transfer_amount)
-        res = smart_contract.static_call(sc_node, 'balanceOf(address)', other_address, fromAddress=str(evm_address),
-                                         gasLimit=10000000,
-                                         gasPrice=10, toAddress=smart_contract_address)
-        print(f"Reading smart contract storage resulted in '{res[0]}'")
-        assert_equal(res[0], transfer_amount)
+        # DEPLOYING SECOND CHILD
 
-        # should revert
-        reverting_transfer_amount = 2
-        smart_contract.call_function(sc_node, 'transfer(address,uint256)', other_address, reverting_transfer_amount,
-                                     fromAddress=str(evm_address),
-                                     gasLimit=10000000, gasPrice=10, toAddress=smart_contract_address)
+        # TODO when evm_call is implemented - check result indicates success
+        res = deploy_child(sc_node, parent_smart_contract_type, parent_contract_address, evm_address,
+                           static_call=True, generate_block=False)
+        # TODO when receipts are implemented - check receipt indicates success and emits logs
+        tx_hash = deploy_child(sc_node, parent_smart_contract_type, parent_contract_address, evm_address,
+                               static_call=False, generate_block=True)
 
-        res = smart_contract.static_call(sc_node, 'transfer(address,uint256)', other_address, reverting_transfer_amount,
-                                         fromAddress=str(evm_address),
-                                         gasLimit=10000000, gasPrice=10, toAddress=smart_contract_address)
+        number_of_children += 1
+        # asserting that there is now one child
+        children = assert_child_count(sc_node, parent_smart_contract_type, parent_contract_address, evm_address,
+                                      number_of_children)
+        compare_secret(sc_node, child_smart_contract_type, children[-1], evm_address, initial_secret)
 
-        generate_next_blocks(sc_node, "first node", 1)
-        # TODO check receipt - should revert
-        res = smart_contract.static_call(sc_node, 'balanceOf(address)', evm_address, fromAddress=str(evm_address),
-                                         gasLimit=10000000,
-                                         gasPrice=10, toAddress=smart_contract_address)
-        print(f"Reading smart contract storage resulted in '{res[0]}'")
-        assert_equal(res[0], initial_balance - transfer_amount)
-        res = smart_contract.static_call(sc_node, 'balanceOf(address)', other_address, fromAddress=str(evm_address),
-                                         gasLimit=10000000,
-                                         gasPrice=10, toAddress=smart_contract_address)
-        print(f"Reading smart contract storage resulted in '{res[0]}'")
-        assert_equal(res[0], transfer_amount)
+        # SETTING SECRET VIA SECOND CHILD, CONFIRMING CHANGE VIA FIRST CHILD
 
-        # check approval with transfer from
-        approved_amount = 10
-        smart_contract.call_function(sc_node, 'approve(address,uint256)', evm_address, approved_amount,
-                                     fromAddress=other_address,
-                                     gasLimit=10000000, gasPrice=10, toAddress=smart_contract_address)
-        generate_next_blocks(sc_node, "first node", 1)
+        new_secret = random_byte_string()
+        # TODO when evm_call is implemented - check result indicates success
+        res = update_parent_secret(sc_node, child_smart_contract_type, children[-1], evm_address,
+                                   new_secret=new_secret, static_call=True, generate_block=False)
+        # TODO when receipts are implemented - check receipt indicates success and emits logs
+        tx_hash = update_parent_secret(sc_node, child_smart_contract_type, children[-1], evm_address,
+                                       new_secret=new_secret, static_call=False, generate_block=True)
 
-        res = smart_contract.static_call(sc_node, 'balanceOf(address)', other_address, fromAddress=str(evm_address),
-                                         gasLimit=10000000,
-                                         gasPrice=10, toAddress=smart_contract_address)
-        print(f"Reading smart contract storage resulted in '{res[0]}'")
-        assert_equal(res[0], transfer_amount)
-
-        res = smart_contract.static_call(sc_node, 'allowance(address,address)', other_address, evm_address,
-                                         fromAddress=evm_address,
-                                         gasLimit=10000000,
-                                         gasPrice=10, toAddress=smart_contract_address)
-        print(f"Reading smart contract storage resulted in '{res[0]}'")
-        assert_equal(res[0], approved_amount)
-
-        smart_contract.call_function(sc_node, 'transferFrom(address,address,uint256)', other_address, evm_address,
-                                     approved_amount,
-                                     fromAddress=evm_address,
-                                     gasLimit=10000000, gasPrice=10, toAddress=smart_contract_address)
-        generate_next_blocks(sc_node, "first node", 1)
-
-        res = smart_contract.static_call(sc_node, 'balanceOf(address)', evm_address, fromAddress=str(evm_address),
-                                         gasLimit=10000000,
-                                         gasPrice=10, toAddress=smart_contract_address)
-        print(f"Reading smart contract storage resulted in '{res[0]}'")
-        assert_equal(res[0], initial_balance - transfer_amount + approved_amount)
-        res = smart_contract.static_call(sc_node, 'balanceOf(address)', other_address, fromAddress=str(evm_address),
-                                         gasLimit=10000000,
-                                         gasPrice=10, toAddress=smart_contract_address)
-        print(f"Reading smart contract storage resulted in '{res[0]}'")
-        assert_equal(res[0], transfer_amount - approved_amount)
+        compare_secret(sc_node, child_smart_contract_type, children[-1], evm_address, new_secret)
+        compare_secret(sc_node, child_smart_contract_type, children[0], evm_address, new_secret)
 
 
 if __name__ == "__main__":
