@@ -194,7 +194,7 @@ class SCEvmForger(SidechainTestFramework):
 
         # try spending the stake by a sc node which does not own it
         forg_spend_res_2 = sc_node_2.transaction_spendForgingStake(
-            json.dumps({"stakeId": str(stakeId_genesis), "format": True}))
+            json.dumps({"stakeId": str(stakeId_genesis)}))
         assert_true('error' in forg_spend_res_2, "The command should fail")
         assert_equal(forg_spend_res_2['error']['description'], "Forger Stake Owner not found")
 
@@ -300,7 +300,7 @@ class SCEvmForger(SidechainTestFramework):
         # spend the genesis stake
         print("SC1 spends genesis stake...")
         spendForgerStakeJsonRes = sc_node_1.transaction_spendForgingStake(
-            json.dumps({"stakeId": str(stakeId_genesis), "format": True}))
+            json.dumps({"stakeId": str(stakeId_genesis)}))
         if "result" not in spendForgerStakeJsonRes:
             fail("spend forger stake failed: " + json.dumps(spendForgerStakeJsonRes))
         else:
@@ -358,7 +358,7 @@ class SCEvmForger(SidechainTestFramework):
 
         # SC1 remove all the remaining stakes
         spendForgerStakeJsonRes = sc_node_1.transaction_spendForgingStake(
-            json.dumps({"stakeId": str(stakeId_1), "format": True}))
+            json.dumps({"stakeId": str(stakeId_1)}))
         if "result" not in spendForgerStakeJsonRes:
             fail("spend forger stake failed: " + json.dumps(spendForgerStakeJsonRes))
         else:
@@ -376,7 +376,7 @@ class SCEvmForger(SidechainTestFramework):
         # TODO when we have no more ForgerStakes the SC is dead!!!
         # proposal: prevent spending of last stake (a minimal stake must be added beforehand)
         spendForgerStakeJsonRes = sc_node_1.transaction_spendForgingStake(
-            json.dumps({"stakeId": str(stakeId_2), "format": True}))
+            json.dumps({"stakeId": str(stakeId_2)}))
         if "result" not in spendForgerStakeJsonRes:
             fail("spend forger stake failed: " + json.dumps(spendForgerStakeJsonRes))
         else:
