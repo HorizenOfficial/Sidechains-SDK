@@ -24,7 +24,7 @@ import com.horizen.api.http.SidechainTransactionErrorResponse.GenericTransaction
 import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SidechainApiRoute, SuccessResponse}
 import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
-import com.horizen.proposition.{MCPublicKeyHashProposition, PublicKey25519Proposition, VrfPublicKey}
+import com.horizen.proposition.{MCPublicKeyHashProposition, MCPublicKeyHashPropositionSerializer, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.serialization.Views
 import com.horizen.transaction.Transaction
 import com.horizen.utils.BytesUtils
@@ -328,14 +328,13 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
             stakeDataOpt match {
               case Some(stakeData) =>
                 val stakeOwnerSecretOpt = sidechainNodeView.getNodeWallet.secretByPublicKey(stakeData.ownerPublicKey)
-                if (stakeOwnerSecretOpt.isEmpty){
+                if (stakeOwnerSecretOpt.isEmpty) {
                   ApiResponseUtil.toResponse(ErrorForgerStakeOwnerNotFound(s"Forger Stake Owner not found"))
                 }
                 else {
                   val stakeOwnerSecret = stakeOwnerSecretOpt.get().asInstanceOf[PrivateKeySecp256k1]
 
-
-                  val msgToSign = ForgerStakeMsgProcessor.getMessageToSign(BytesUtils.fromHexString(body.stakeId),txCreatorSecret.publicImage().address(),nonce.toByteArray)
+                  val msgToSign = ForgerStakeMsgProcessor.getMessageToSign(BytesUtils.fromHexString(body.stakeId), txCreatorSecret.publicImage().address(), nonce.toByteArray)
                   val signature = stakeOwnerSecret.sign(msgToSign)
                   val data = encodeSpendStakeCmdRequest(signature, body.stakeId)
                   val tmpTx: EthereumTransaction = new EthereumTransaction(
@@ -350,16 +349,9 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                     null
                   )
 
-                  val txRepresentation: (SidechainTypes#SCAT => SuccessResponse) =
-                    if (body.format.getOrElse(false)) {
-                      tx => TransactionDTO(tx)
-                    } else {
-                      tx => TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(tx)))
-                    }
-
-                  validateAndSendTransaction(signTransactionWithSecret(txCreatorSecret, tmpTx), txRepresentation)
+                  validateAndSendTransaction(signTransactionWithSecret(txCreatorSecret, tmpTx))
                 }
-              case None =>  ApiResponseUtil.toResponse(ErrorForgerStakeNotFound(s"No Forger Stake found with stake id ${body.stakeId}"))
+              case None => ApiResponseUtil.toResponse(ErrorForgerStakeNotFound(s"No Forger Stake found with stake id ${body.stakeId}"))
             }
           case None =>
             ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
@@ -490,7 +482,10 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
 
   def encodeAddNewWithdrawalRequestCmd(withdrawal: TransactionWithdrawalRequest): String = {
-    val addWithdrawalRequestInput = AddWithdrawalRequestCmdInput(new MCPublicKeyHashProposition(BytesUtils.fromHexString(withdrawal.mainchainAddress)))
+    // Keep in mind that check MC rpc `getnewaddress` returns standard address with hash inside in LE
+    // different to `getnewaddress "" true` hash that is in BE endianness.
+    val mcAddrHash = MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHorizenPublicKeyAddress(withdrawal.mainchainAddress, params))
+    val addWithdrawalRequestInput = AddWithdrawalRequestCmdInput(mcAddrHash)
     val data = BytesUtils.toHexString(Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.AddNewWithdrawalReqCmdSig), addWithdrawalRequestInput.encode()))
     data
   }
@@ -641,8 +636,7 @@ object AccountTransactionRestScheme {
   private[api] case class ReqSpendForgingStake(
                                                 nonce: Option[BigInteger],
                                                 stakeId: String,
-                                                gasInfo: Option[EIP1559GasInfo],
-                                                format: Option[Boolean]) {
+                                                gasInfo: Option[EIP1559GasInfo]) {
     require(stakeId.nonEmpty, "Signature data must be provided")
   }
 
