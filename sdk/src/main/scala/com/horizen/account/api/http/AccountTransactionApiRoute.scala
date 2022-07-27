@@ -24,7 +24,7 @@ import com.horizen.api.http.SidechainTransactionErrorResponse.GenericTransaction
 import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SidechainApiRoute, SuccessResponse}
 import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
-import com.horizen.proposition.{MCPublicKeyHashProposition, PublicKey25519Proposition, VrfPublicKey}
+import com.horizen.proposition.{MCPublicKeyHashProposition, MCPublicKeyHashPropositionSerializer, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.serialization.Views
 import com.horizen.transaction.Transaction
 import com.horizen.utils.BytesUtils
@@ -482,7 +482,10 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
 
   def encodeAddNewWithdrawalRequestCmd(withdrawal: TransactionWithdrawalRequest): String = {
-    val addWithdrawalRequestInput = AddWithdrawalRequestCmdInput(new MCPublicKeyHashProposition(BytesUtils.fromHexString(withdrawal.mainchainAddress)))
+    // Keep in mind that check MC rpc `getnewaddress` returns standard address with hash inside in LE
+    // different to `getnewaddress "" true` hash that is in BE endianness.
+    val mcAddrHash = MCPublicKeyHashPropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHorizenPublicKeyAddress(withdrawal.mainchainAddress, params))
+    val addWithdrawalRequestInput = AddWithdrawalRequestCmdInput(mcAddrHash)
     val data = BytesUtils.toHexString(Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.AddNewWithdrawalReqCmdSig), addWithdrawalRequestInput.encode()))
     data
   }

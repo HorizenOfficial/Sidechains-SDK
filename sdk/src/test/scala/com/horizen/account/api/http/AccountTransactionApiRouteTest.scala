@@ -159,9 +159,9 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
 
     "reply at /withdrawCoins" in {
       val amountInZennies = 32
-
+      val mcAddr = BytesUtils.toHorizenPublicKeyAddress(utilMocks.getMCPublicKeyHashProposition.bytes(),params)
       Post(basePath + "withdrawCoins").withEntity(SerializationUtil.serialize(ReqWithdrawCoins(Some(BigInteger.ONE),
-        TransactionWithdrawalRequest(utilMocks.getMCPublicKeyHashProposition.toString, amountInZennies), None))) ~> sidechainTransactionApiRoute ~> check {
+        TransactionWithdrawalRequest(mcAddr, amountInZennies), None))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         val result = mapper.readTree(entityAs[String]).get("result")
