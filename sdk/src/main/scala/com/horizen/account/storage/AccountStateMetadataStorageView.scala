@@ -185,7 +185,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
 
   override def getTransactionBlockNumber(txId: scorex.util.ModifierId): Option[Int] = {
     listOfTransactionsIds match {
-      case Some(txList) if (txList.contains(txId))  => Some(currentBlockNumber)
+      case Some(txList) if txList.contains(txId)  => Some(currentBlockNumber)
       case _ => getTransactionBlockNumberFromStorage(txId)
     }
   }
@@ -366,7 +366,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   }
 
   private[horizen] def getTransactionBlockNumberKey(txId : scorex.util.ModifierId): ByteArrayWrapper = {
-    calculateKey(Bytes.concat("txblock".getBytes, txId.getBytes))
+    calculateKey(Bytes.concat("txblock".getBytes, idToBytes(txId)))
   }
 
 

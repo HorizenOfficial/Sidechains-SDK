@@ -5,7 +5,7 @@ import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.storage.Storage
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, WithdrawalEpochInfo}
-import scorex.util.ScorexLogging
+import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
@@ -47,5 +47,5 @@ class AccountStateMetadataStorage(storage: Storage) extends AccountStateMetadata
 
   override def getTransactionReceipt(txHash: Array[Byte]): Option[EthereumReceipt] = getView.getTransactionReceipt(txHash)
 
-  override def getTransactionBlockNumber(txId: scorex.util.ModifierId): Option[Int] = getView.getTransactionBlockNumber(txId)
+  override def getTransactionBlockNumber(txId: ModifierId): Option[Int] = getView.getTransactionBlockNumber(txId)
 }

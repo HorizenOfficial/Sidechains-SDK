@@ -311,7 +311,7 @@ class AccountState(val params: NetworkParams,
     stateMetadataStorage.getHeight
   }
 
-  override def getTransactionBlockNumber(txId: scorex.util.ModifierId): Int = stateMetadataStorage.getTransactionBlockNumber(txId).get
+  override def getTransactionBlockNumber(txId: scorex.util.ModifierId): Option[Int] = stateMetadataStorage.getTransactionBlockNumber(txId)
 
   private def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = {
     val stateView: AccountStateView = getView

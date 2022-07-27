@@ -22,5 +22,5 @@ trait AccountStateReader extends BaseStateReader {
 
   def getHeight: Int
 
-  def getTransactionBlockNumber(txId: scorex.util.ModifierId): Int
+  def getTransactionBlockNumber(txId: scorex.util.ModifierId): Option[Int]
 }

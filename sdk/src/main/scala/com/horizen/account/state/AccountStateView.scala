@@ -385,6 +385,6 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
 
   override def getStateDbHandle: ResourceHandle = stateDb
 
-  override def getTransactionBlockNumber(txId: scorex.util.ModifierId): Int = metadataStorageView.getTransactionBlockNumber(txId).get
+  override def getTransactionBlockNumber(txId: scorex.util.ModifierId): Option[Int] = metadataStorageView.getTransactionBlockNumber(txId)
 
 }
