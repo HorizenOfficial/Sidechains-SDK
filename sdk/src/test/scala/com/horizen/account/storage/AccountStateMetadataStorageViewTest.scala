@@ -96,19 +96,6 @@ class AccountStateMetadataStorageViewTest
     assertTrue("receipts should be defined in view", storageView.getTransactionReceipt(receipt1.transactionHash).isDefined)
     assertTrue("receipts should not be in storage", stateMetadataStorage.getTransactionReceipt(receipt1.transactionHash).isEmpty)
 
-    val blockNumber = 154
-    val listOfTxIds = new ListBuffer[scorex.util.ModifierId]()
-    listOfTxIds += getRandomTxId
-    listOfTxIds += getRandomTxId
-    val txIdToFind = getRandomTxId
-    listOfTxIds += txIdToFind
-    listOfTxIds += getRandomTxId
-    storageView.setBlockNumberForTransactions(blockNumber, listOfTxIds)
-    val blockNumOpt = storageView.getTransactionBlockNumber(txIdToFind)
-    assertTrue("Block number should be defined in view", blockNumOpt.isDefined)
-    assertEquals("Wrong Block number defined in view", blockNumber, blockNumOpt.get)
-    assertTrue("Block number should not be in storage", stateMetadataStorage.getTransactionBlockNumber(txIdToFind).isEmpty)
-
     storageView.commit(bytesToVersion(getVersion.data()))
 
     assertEquals("Sidechain ceased state is different in view and in storage after a commit", storageView.hasCeased, stateMetadataStorage.hasCeased)
@@ -128,9 +115,6 @@ class AccountStateMetadataStorageViewTest
 
     assertEquals("Wrong receipts in view after commit", receipt1.blockNumber, storageView.getTransactionReceipt(receipt1.transactionHash).get.blockNumber)
     assertEquals("Wrong receipts in storage after commit", receipt1.blockNumber, stateMetadataStorage.getTransactionReceipt(receipt1.transactionHash).get.blockNumber)
-
-    assertEquals("Wrong Block number in view after commit", blockNumber, storageView.getTransactionBlockNumber(txIdToFind).get)
-    assertEquals("Wrong Block number in storage after commit", blockNumber, stateMetadataStorage.getTransactionBlockNumber(txIdToFind).get)
 
   }
 
@@ -181,12 +165,6 @@ class AccountStateMetadataStorageViewTest
     val value = new Array[Byte](32)
     Random.nextBytes(value)
     value
-  }
-
-  def getRandomTxId: scorex.util.ModifierId = {
-    val value = new Array[Byte](32)
-    Random.nextBytes(value)
-    scorex.util.bytesToId(value)
   }
 
 }
