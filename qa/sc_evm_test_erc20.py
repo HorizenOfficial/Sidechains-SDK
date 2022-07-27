@@ -147,7 +147,7 @@ def deploy_smart_contract(node, smart_contract, from_address):
     generate_next_blocks(node, "first node", 1)
     # TODO fix receipts, currently mocked
     # TODO check logs (events)
-    # pprint.pprint(node.rpc_eth_getTransactionReceipt(tx_hash))
+    pprint.pprint(node.rpc_eth_getTransactionReceipt(tx_hash))
     print("Smart contract deployed successfully to address 0x{}".format(address))
     return address
 

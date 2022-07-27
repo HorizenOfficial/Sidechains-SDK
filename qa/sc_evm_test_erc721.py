@@ -32,79 +32,45 @@ Test:
 """
 
 
-def call_addr_uint_fn(node, smart_contract, contract_address, source_addr, addr, uint, static_call, generate_block,
-                      method):
-    if static_call:
-        res = smart_contract.static_call(node, method, addr, uint,
-                                         fromAddress=source_addr,
-                                         gasLimit=10000000, gasPrice=10, toAddress=contract_address)
+def format_addr(add: str):
+    if add.startswith('0x'):
+        return add
     else:
-        res = smart_contract.call_function(node, method, addr, uint,
-                                           fromAddress=source_addr,
-                                           gasLimit=10000000, gasPrice=10, toAddress=contract_address)
-    if generate_block:
-        print("generating next block...")
-        generate_next_blocks(node, "first node", 1)
-    return res
+        return '0x' + add
 
 
-def call_addr_addr_uint_fn(node, smart_contract, contract_address, source_addr, addr1, addr2, uint, static_call,
-                           generate_block, method):
-    if static_call:
-        res = smart_contract.static_call(node, method, addr1, addr2, uint,
-                                         fromAddress=source_addr,
-                                         gasLimit=10000000, gasPrice=10, toAddress=contract_address)
+def normalize_addr(add: str):
+    if add.startswith('0x'):
+        return add[2:]
     else:
-        res = smart_contract.call_function(node, method, addr1, addr2, uint,
-                                           fromAddress=source_addr,
-                                           gasLimit=10000000, gasPrice=10, toAddress=contract_address)
-    if generate_block:
-        print("generating next block...")
-        generate_next_blocks(node, "first node", 1)
-    return res
+        return add
 
 
-def transfer_tokens(node, smart_contract, contract_address, source_account, target_account, amount, *,
-                    static_call=False, generate_block=True):
-    method = 'transfer(address,uint256)'
+def mint_payable(node, smart_contract, contract_address, source_account, amount, tokenid, *, static_call: bool,
+                 generate_block: bool):
+    method = 'mint(uint256)'
     if static_call:
-        print("Read-only calling {}: testing transfer of ".format(method) +
-              "{} tokens from 0x{} to 0x{}".format(amount, source_account, target_account))
-    else:
-        print("Calling {}: transferring {} tokens from 0x{} to 0x{}".format(method, amount, source_account,
-                                                                            target_account))
-
-    return call_addr_uint_fn(node, smart_contract, contract_address, source_account, target_account, amount,
-                             static_call, generate_block, method)
-
-
-def transfer_from_tokens(node, smart_contract, contract_address, tx_sender_account, source_account, target_account,
-                         amount, *, static_call=False, generate_block=True):
-    method = 'transferFrom(address,address,uint256)'
-    if static_call:
-        print("Read-only calling {}: testing transfer of ".format(method) +
-              "{} tokens from 0x{} to 0x{}".format(amount, source_account, target_account))
-    else:
-        print("Calling {}: transferring {} tokens from 0x{} to 0x{}".format(method, amount, source_account,
-                                                                            target_account))
-
-    return call_addr_addr_uint_fn(node, smart_contract, contract_address, tx_sender_account, source_account,
-                                  target_account, amount, static_call=static_call, generate_block=generate_block,
-                                  method=method)
-
-
-def approve(node, smart_contract, contract_address, source_account, target_account, amount, *, static_call=False,
-            generate_block=True):
-    method = 'approve(address,uint256)'
-    if static_call:
-        print("Read-only calling {}: testing approval of ".format(method) +
-              "{} tokens from 0x{} to 0x{}".format(amount, source_account, target_account))
+        print("Read-only calling {}: testing minting of ".format(method) +
+              "a token (id: {}) of collection {} to 0x{}".format(tokenid, contract_address, source_account))
+        res = smart_contract.static_call(node, method, tokenid,
+                                         fromAddress=source_account,
+                                         gasLimit=10000000, gasPrice=10,
+                                         toAddress=contract_address,
+                                         value=amount)
     else:
         print(
-            "Calling {}: approving {} tokens from 0x{} to 0x{}".format(method, amount, source_account, target_account))
+            "Calling {}: minting of a token (id: {}) of collection {} to 0x{}".format(method, tokenid, contract_address,
+                                                                                      source_account))
+        res = smart_contract.call_function(node, method, tokenid,
+                                           fromAddress=source_account,
+                                           gasLimit=10000000, gasPrice=10,
+                                           toAddress=contract_address,
+                                           value=amount)
 
-    return call_addr_uint_fn(node, smart_contract, contract_address, source_account, target_account, amount,
-                             static_call, generate_block, method)
+    if generate_block:
+        print("generating next block...")
+        generate_next_blocks(node, "first node", 1)
+    return res
 
 
 def compare_balance(node, smart_contract, contract_address, account_address, expected_balance):
@@ -142,6 +108,20 @@ def call_noarg_fn(node, smart_contract, contract_address, sender_address, static
     return res
 
 
+def call_onearg_fn(node, smart_contract, contract_address, sender_address, static_call, generate_block, method, arg):
+    if static_call:
+        res = smart_contract.static_call(node, method, arg, fromAddress=sender_address, gasLimit=10000000,
+                                         gasPrice=10, toAddress=contract_address)
+    else:
+        res = smart_contract.call_function(node, method, arg, fromAddress=sender_address, gasLimit=10000000,
+                                           gasPrice=10, toAddress=contract_address)
+    if generate_block:
+        print("generating next block...")
+        generate_next_blocks(node, "first node", 1)
+
+    return res
+
+
 def compare_total_supply(node, smart_contract, contract_address, sender_address, expected_supply):
     method = 'totalSupply()'
     print("Checking total supply of token at 0x{}...".format(contract_address))
@@ -169,6 +149,16 @@ def compare_symbol(node, smart_contract, contract_address, sender_address, expec
     return res[0]
 
 
+def compare_ownerof(node, smart_contract, contract_address, sender_address, tokenid, expected_owner):
+    method = 'ownerOf(uint256)'
+    expected_owner = format_addr(expected_owner)
+    print("Checking owner of token {} of collection at {}...".format(tokenid, contract_address))
+    res = call_onearg_fn(node, smart_contract, contract_address, sender_address, True, False, method, tokenid)
+    print("Expected owner: '{}', actual owner: '{}'".format(expected_owner, res[0]))
+    assert_equal(res[0], expected_owner)
+    return res[0]
+
+
 def deploy_smart_contract(node, smart_contract, from_address, name, symbol, metadataURI):
     print("Deploying smart contract...")
     tx_hash, address = smart_contract.deploy(node, name, symbol, metadataURI,
@@ -182,6 +172,64 @@ def deploy_smart_contract(node, smart_contract, from_address, name, symbol, meta
     # pprint.pprint(node.rpc_eth_getTransactionReceipt(tx_hash))
     print("Smart contract deployed successfully to address 0x{}".format(address))
     return address
+
+
+def get_native_balance(node, addr):
+    return int(node.rpc_eth_getBalance(addr, "1")['result'], 16)
+
+
+def compare_nat_balance(node, addr, expected_balance):
+    print("Checking native balance of 0x{}".format(addr))
+    new_balance = get_native_balance(node, addr)
+    print("Expected native balance: '{}', actual native balance: '{}'".format(expected_balance, new_balance))
+    assert_equal(new_balance, expected_balance)
+    return new_balance
+
+
+def set_paused(node, smart_contract, contract_address, sender_address, *, paused: bool, static_call: bool,
+               generate_block: bool):
+    if paused:
+        method = 'pause()'
+    else:
+        method = 'unpause()'
+
+    if static_call:
+        print("Read-only calling {}: checking (un)pausing of contract at {} from account 0x{}".format(method,
+                                                                                                      contract_address,
+                                                                                                      sender_address))
+    else:
+        print("Calling {}: (un)pausing contract at {} from account 0x{}".format(method,
+                                                                                contract_address,
+                                                                                sender_address))
+    if generate_block:
+        print("generating next block...")
+        generate_next_blocks(node, "first node", 1)
+
+    return call_noarg_fn(node, smart_contract, contract_address, sender_address, static_call, generate_block, method)
+
+
+def transfer_token(node, smart_contract, contract_address, sender_address, *, token_id: int, from_address=str,
+                   target_address=str, static_call: bool, generate_block: bool):
+    method = 'transferFrom(address,address,uint256)'
+    if static_call:
+        print("Read-only calling {}: testing transferring of ".format(method) +
+              "token (id: {}) from 0x{} to 0x{} via 0x{}".format(token_id, from_address, target_address,
+                                                                 sender_address))
+        res = smart_contract.static_call(node, method, from_address, target_address, token_id,
+                                         fromAddress=sender_address, gasLimit=10000000, gasPrice=10,
+                                         toAddress=contract_address)
+    else:
+        print("Calling {}: transferring".format(method) +
+              "token (id: {}) from 0x{} to 0x{} via 0x{}".format(token_id, from_address, target_address,
+                                                                 sender_address))
+        res = smart_contract.call_function(node, method, from_address, target_address, token_id,
+                                           fromAddress=sender_address, gasLimit=10000000, gasPrice=10,
+                                           toAddress=contract_address)
+
+    if generate_block:
+        print("generating next block...")
+        generate_next_blocks(node, "first node", 1)
+    return res
 
 
 class SCEvmERC721Contract(SidechainTestFramework):
@@ -246,7 +294,7 @@ class SCEvmERC721Contract(SidechainTestFramework):
         # transfer some fund from MC to SC using the evm address created before
         forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
                                       self.nodes[0],
-                                      evm_address,
+                                      normalize_addr(evm_address),
                                       ft_amount_in_zen,
                                       mc_return_address)
 
@@ -258,6 +306,9 @@ class SCEvmERC721Contract(SidechainTestFramework):
 
         ret = sc_node.wallet_createPrivateKeySecp256k1()
         other_address = ret["result"]["proposition"]["address"]
+        pprint.pprint(sc_node.rpc_eth_getBalance(str(evm_address), "1"))
+
+        zero_address = '0x0000000000000000000000000000000000000000'
 
         smart_contract_type = 'TestERC721'
         print("Creating smart contract utilities for {}".format(smart_contract_type))
@@ -267,14 +318,94 @@ class SCEvmERC721Contract(SidechainTestFramework):
         collection_name = "Test ERC721 Tokens"
         collection_symbol = "TET"
         collection_uri = "https://localhost:1337"
-        smart_contract_address = deploy_smart_contract(sc_node, smart_contract, evm_address, collection_name,
+        smart_contract_address = deploy_smart_contract(sc_node, smart_contract, evm_address,
+                                                       collection_name,
                                                        collection_symbol, collection_uri)
 
+        # checking initial data
         res = compare_total_supply(sc_node, smart_contract, smart_contract_address, evm_address, 0)
         res = compare_name(sc_node, smart_contract, smart_contract_address, evm_address, collection_name)
-        res = compare_symbol(sc_node, smart_contract, smart_contract_address, evm_address, collection_symbol)
+        res = compare_symbol(sc_node, smart_contract, smart_contract_address, other_address, collection_symbol)
 
-        # TODO add more tests
+        # get basic info about account
+        last_nat_balance = get_native_balance(sc_node, evm_address)
+        last_balance = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address, 0)
+
+        # test minting
+        minted_ids_user1 = [1]
+        minting_price = 1
+        minting_amount = 1
+        # TODO check execution before submitting proper transaction
+        res = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
+                           minted_ids_user1[0], static_call=True, generate_block=False)
+        # TODO check tx receipt once possible
+        tx_hash = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
+                               minted_ids_user1[0], static_call=False, generate_block=True)
+
+        res = compare_total_supply(sc_node, smart_contract, smart_contract_address, evm_address, 1)
+        res = compare_ownerof(sc_node, smart_contract, smart_contract_address, other_address, minted_ids_user1[0],
+                              evm_address)
+        last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance - minting_price)
+        last_balance = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address,
+                                       last_balance + minting_amount)
+
+        # test pausing and then minting (failed)
+        res = set_paused(sc_node, smart_contract, smart_contract_address, evm_address, paused=True,
+                         static_call=True, generate_block=False)
+        tx_hash = set_paused(sc_node, smart_contract, smart_contract_address, evm_address, paused=True,
+                             static_call=False, generate_block=True)
+        # TODO check execution before submitting proper transaction
+        minted_ids_user1.append(2)
+        res = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
+                           minted_ids_user1[1], static_call=True, generate_block=False)
+        # TODO check tx receipt once possible
+        tx_hash = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
+                               minted_ids_user1[1], static_call=False, generate_block=True)
+
+        res = compare_total_supply(sc_node, smart_contract, smart_contract_address, evm_address, 1)
+        last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance)
+        last_balance = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address, last_balance)
+
+        # Test unpausing and then minting (success)
+        res = set_paused(sc_node, smart_contract, smart_contract_address, evm_address, paused=False,
+                         static_call=True, generate_block=False)
+        tx_hash = set_paused(sc_node, smart_contract, smart_contract_address, evm_address, paused=False,
+                             static_call=False, generate_block=True)
+        # TODO check execution before submitting proper transaction
+        res = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
+                           minted_ids_user1[1], static_call=True, generate_block=False)
+        # TODO check tx receipt once possible
+        tx_hash = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
+                               minted_ids_user1[1], static_call=False, generate_block=True)
+
+        res = compare_total_supply(sc_node, smart_contract, smart_contract_address, evm_address, 2)
+        res = compare_ownerof(sc_node, smart_contract, smart_contract_address, other_address, minted_ids_user1[1],
+                              evm_address)
+        last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance - minting_price)
+        last_balance = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address,
+                                       last_balance + minting_amount)
+
+        # testing transfer
+        # TODO check execution before submitting proper transaction
+        res = transfer_token(sc_node, smart_contract, smart_contract_address, evm_address, from_address=evm_address,
+                             target_address=other_address, token_id=minted_ids_user1[0], static_call=True,
+                             generate_block=False)
+        # TODO check tx receipt once possible
+        tx_hash = transfer_token(sc_node, smart_contract, smart_contract_address, evm_address, from_address=evm_address,
+                                 target_address=other_address, token_id=minted_ids_user1[0], static_call=False,
+                                 generate_block=True)
+        minted_ids_user2 = [minted_ids_user1[0]]
+        minted_ids_user1 = [minted_ids_user1[1]]
+        res = compare_total_supply(sc_node, smart_contract, smart_contract_address, evm_address, 2)
+
+        res = compare_ownerof(sc_node, smart_contract, smart_contract_address, evm_address, minted_ids_user1[0],
+                              evm_address)
+        res = compare_ownerof(sc_node, smart_contract, smart_contract_address, other_address, minted_ids_user2[0],
+                              other_address)
+
+        last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance)
+        last_balance = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address, last_balance - 1)
+        last_balance = compare_balance(sc_node, smart_contract, smart_contract_address, other_address, last_balance)
 
 
 if __name__ == "__main__":
