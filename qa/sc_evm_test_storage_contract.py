@@ -46,6 +46,10 @@ def set_storage_value(node, smart_contract, address, tx_sender, new_value, *, st
     if generate_block:
         print("generating next block...")
         generate_next_blocks(node, "first node", 1)
+
+    if not static_call:
+        tx_receipt = node.rpc_eth_getTransactionReceipt(res)
+        print(tx_receipt)
     return res
 
 
