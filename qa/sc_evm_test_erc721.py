@@ -2,7 +2,7 @@
 import pprint
 from decimal import Decimal
 
-from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
+from SidechainTestFramework.account.ac_use_smart_contract import SmartContract, EvmExecutionError
 from SidechainTestFramework.account.address_util import format_evm, format_eoa
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
@@ -146,7 +146,7 @@ def compare_ownerof(node, smart_contract, contract_address, sender_address, toke
     print("Checking owner of token {} of collection at {}...".format(tokenid, contract_address))
     res = call_onearg_fn(node, smart_contract, contract_address, sender_address, True, False, method, tokenid)
     print("Expected owner: '{}', actual owner: '{}'".format(expected_owner, res[0]))
-    assert_equal(res[0], expected_owner)
+    assert_equal(format_evm(res[0]), format_evm(expected_owner))
     return res[0]
 
 
@@ -166,7 +166,7 @@ def deploy_smart_contract(node, smart_contract, from_address, name, symbol, meta
 
 
 def get_native_balance(node, addr):
-    return int(node.rpc_eth_getBalance(addr, "1")['result'], 16)
+    return int(node.rpc_eth_getBalance(format_evm(addr), "latest")['result'], 16)
 
 
 def compare_nat_balance(node, addr, expected_balance):
@@ -273,7 +273,7 @@ class SCEvmERC721Contract(SidechainTestFramework):
 
         ret = sc_node.wallet_createPrivateKeySecp256k1()
         pprint.pprint(ret)
-        evm_address = ret["result"]["proposition"]["address"]
+        evm_address = format_evm(ret["result"]["proposition"]["address"])
         print("pubkey = {}".format(evm_address))
 
         # call a legacy wallet api
@@ -297,7 +297,7 @@ class SCEvmERC721Contract(SidechainTestFramework):
 
         ret = sc_node.wallet_createPrivateKeySecp256k1()
         other_address = ret["result"]["proposition"]["address"]
-        pprint.pprint(sc_node.rpc_eth_getBalance(str(evm_address), "1"))
+        pprint.pprint(sc_node.rpc_eth_getBalance(str(evm_address), "latest"))
 
         zero_address = '0x0000000000000000000000000000000000000000'
 
@@ -346,10 +346,20 @@ class SCEvmERC721Contract(SidechainTestFramework):
                          static_call=True, generate_block=False)
         tx_hash = set_paused(sc_node, smart_contract, smart_contract_address, evm_address, paused=True,
                              static_call=False, generate_block=True)
-        # TODO check execution before submitting proper transaction
         minted_ids_user1.append(2)
-        res = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
-                           minted_ids_user1[1], static_call=True, generate_block=False)
+
+        exception_thrown = False
+        try:
+            exception_thrown = False
+            res = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
+                               minted_ids_user1[1], static_call=True, generate_block=False)
+        except EvmExecutionError as err:
+            exception_thrown = True
+            print("Expected exception thrown: {}".format(err))
+
+        finally:
+            assert_true(exception_thrown, "Exception should have been thrown")
+            pass
         # TODO check tx receipt once possible
         tx_hash = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
                                minted_ids_user1[1], static_call=False, generate_block=True)

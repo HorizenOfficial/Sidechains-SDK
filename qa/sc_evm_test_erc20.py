@@ -2,7 +2,8 @@
 import pprint
 from decimal import Decimal
 
-from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
+from SidechainTestFramework.account.ac_use_smart_contract import SmartContract, EvmExecutionError
+from SidechainTestFramework.account.address_util import format_evm
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
@@ -147,7 +148,7 @@ def deploy_smart_contract(node, smart_contract, from_address):
     generate_next_blocks(node, "first node", 1)
     # TODO check logs when implemented (events)
     tx_receipt = node.rpc_eth_getTransactionReceipt(tx_hash)
-    assert_equal(tx_receipt['result']['contractAddress'], address)
+    assert_equal(format_evm(tx_receipt['result']['contractAddress']), format_evm(address))
     print("Smart contract deployed successfully to address 0x{}".format(address))
     return address
 
@@ -255,9 +256,19 @@ class SCEvmERC20Contract(SidechainTestFramework):
 
         # Test reverting
         reverting_transfer_amount = 2
-        # TODO check result data of static_call below once implemented - should indicate revert
-        check_res = transfer_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
-                                    reverting_transfer_amount, static_call=True, generate_block=True)
+        exception_thrown = False
+        try:
+            exception_thrown = False
+            check_res = transfer_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
+                                        reverting_transfer_amount, static_call=True, generate_block=True)
+        except EvmExecutionError as err:
+            exception_thrown = True
+            print("Expected exception thrown: {}".format(err))
+
+        finally:
+            assert_true(exception_thrown, "Exception should have been thrown")
+            pass
+
         # TODO check receipt of tx below - should revert
         tx_hash = transfer_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
                                   reverting_transfer_amount, static_call=False, generate_block=True)
