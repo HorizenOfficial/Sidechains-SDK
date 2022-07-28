@@ -6,7 +6,14 @@ from eth_utils import to_checksum_address
 from SidechainTestFramework.account.ac_smart_contract_compile import prepare_resources, get_cwd
 import os
 from dataclasses import dataclass
+
+from SidechainTestFramework.account.address_util import format_eoa, format_evm
 from SidechainTestFramework.account.mk_contract_address import mk_contract_address
+
+
+class EvmExecutionError(RuntimeError):
+    def __init__(self, msg: str):
+        super().__init__(msg)
 
 
 @dataclass
@@ -90,8 +97,8 @@ class SmartContract:
 
         """
         j = {
-            "from": fromAddress,
-            "to": toAddress,
+            "from": format_eoa(fromAddress),
+            "to": format_eoa(toAddress),
             "nonce": self.__ensure_nonce(node, fromAddress, nonce, tag),
             "gasLimit": gasLimit,
             "gasPrice": gasPrice,
@@ -123,15 +130,15 @@ class SmartContract:
                    A tuple with the included decoded data if applicable, None else
        """
         request = {
-            "from": to_checksum_address(fromAddress),
-            "to": to_checksum_address(toAddress),
+            "from": format_evm(fromAddress),
+            "to": format_evm(toAddress),
             "nonce": self.__ensure_nonce(node, fromAddress, nonce, tag),
             "gasLimit": gasLimit,
             "gasPrice": gasPrice,
             "value": value,
             "data": self.raw_encode_call(functionName, *args)
         }
-        response = node.rpc_eth_call(request, "latest")
+        response = node.rpc_eth_call(request, tag)
         if 'result' in response:
             if response['result'] is not None and len(response['result']) > 0:
                 return self.raw_decode_call_result(functionName, bytes.fromhex(response['result']))
@@ -139,7 +146,13 @@ class SmartContract:
                 print("No return data in static_call: {}".format(str(response)))
                 return None
         else:
-            print(response)
+            if response['error']['message'] == 'execution reverted' and response['error']['data'].startswith(
+                    '0x08c379a0'):
+                print(response['error'])
+                if len(response['error']['data']) < 68:
+                    raise EvmExecutionError("Execution reverted without a reason.")
+                reason = decode_abi(['string'], bytes.fromhex(response['error']['data'][2:])[4:])[0]
+                raise EvmExecutionError("Execution reverted. Reason: \"{}\"".format(reason))
             raise RuntimeError("Something went wrong, see {}".format(str(response)))
 
     def deploy(self, node, *args, fromAddress: str, nonce: int = None, gasLimit: int, gasPrice: int,
@@ -161,7 +174,7 @@ class SmartContract:
 """
         nonce = self.__ensure_nonce(node, fromAddress, nonce, tag)
         j = {
-            "from": fromAddress,
+            "from": format_eoa(fromAddress),
             "nonce": nonce,
             "gasLimit": gasLimit,
             "gasPrice": gasPrice,
@@ -178,7 +191,7 @@ class SmartContract:
         request = json.dumps(j)
         response = node.transaction_createLegacyTransaction(request)
         tx_hash = response["result"]["transactionId"]
-        return tx_hash, mk_contract_address(fromAddress, nonce)
+        return tx_hash, to_checksum_address(mk_contract_address(fromAddress, nonce))
 
     def __str__(self):
         string_rep = self.Name
@@ -279,8 +292,8 @@ class SmartContract:
 
     @staticmethod
     def __ensure_nonce(node, address, nonce, tag='latest'):
-        on_chain_nonce = int(node.rpc_eth_getTransactionCount(str(address), tag)['result'], 16) + 1
-        if nonce is None or on_chain_nonce > nonce:
+        on_chain_nonce = int(node.rpc_eth_getTransactionCount(str(address), tag)['result'], 16)
+        if nonce is None:
             nonce = on_chain_nonce
         return nonce
 

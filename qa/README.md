@@ -10,7 +10,8 @@ It is possible to test a SC node or nodes with or without real MC node connectio
 - Install Python 3.5 or newer
 - Install requirements via `pip3 install -r ./SidechainTestFramework/account/requirements.txt` or a similar way.
     - You can also manually install the requirements listed
-    - Install node >= 16.13.2 and npm >= 8.1.2
+
+- Install node >= 16.13.2 and npm >= 8.1.2
     - eg. by using nvm (node version manager)
 - Install yarn globally (eg. via `npm -i -g yarn`)
 

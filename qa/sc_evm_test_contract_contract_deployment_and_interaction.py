@@ -42,9 +42,8 @@ def deploy_smart_contract(node, smart_contract_type, from_address, initial_secre
                                                   gasPrice=10)
     print("Generating next block...")
     generate_next_blocks(node, "first node", 1)
-    # TODO fix receipts, currently mocked
-    # TODO check logs (events)
-    pprint.pprint(node.rpc_eth_getTransactionReceipt(tx_hash))
+    tx_receipt = node.rpc_eth_getTransactionReceipt(tx_hash)
+    assert_equal(tx_receipt['result']['contractAddress'], address)
     print("Smart contract deployed successfully to address 0x{}".format(address))
     return address
 
