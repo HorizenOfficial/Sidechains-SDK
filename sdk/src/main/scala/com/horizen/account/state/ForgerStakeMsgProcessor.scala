@@ -281,7 +281,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     val vrfPublicKey: VrfPublicKey = cmdInput.forgerPublicKeys.vrfPublicKey
     val ownerAddress: AddressProposition = cmdInput.ownerAddress
 
-    if (networkParams.restrictForgers) {
+    // TODO decide whether we need to check also genesis case (also UTXO model)
+    if (!isGenesisScCreation && networkParams.restrictForgers) {
       // check that the delegation arguments satisfy the restricted list of forgers.
       if (!networkParams.allowedForgersList.contains((blockSignPublicKey, vrfPublicKey))) {
         val msgStr = "Forger is not in the allowed list"
