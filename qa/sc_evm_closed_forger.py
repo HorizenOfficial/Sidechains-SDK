@@ -28,10 +28,6 @@ Test:
 """
 
 
-def get_account_balance(sc_node, address):
-    return sc_node.wallet_getBalance(
-        json.dumps({"address": str(address)}))["result"]["balance"]
-
 
 class SCEvmClosedForgerList(SidechainTestFramework):
     sc_nodes_bootstrap_info = None

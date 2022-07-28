@@ -1072,3 +1072,7 @@ def convertZenToWei(valueInZen):
 # Account model: smart contract address for handling forger stakes
 # (see definition at SDK src code: ForgerStakeMsgProcessor.scala)
 ForgerStakeSmartContractAddress = "0000000000000000000022222222222222222222"
+
+def get_account_balance(sc_node, address):
+    return sc_node.wallet_getBalance(
+        json.dumps({"address": str(address)}))["result"]["balance"]
