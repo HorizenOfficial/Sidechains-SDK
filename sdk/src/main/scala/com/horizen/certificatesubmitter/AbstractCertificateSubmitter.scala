@@ -38,6 +38,7 @@ import scala.compat.java8.OptionConverters._
 import scala.concurrent.duration.{FiniteDuration, SECONDS}
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
+import scala.reflect.ClassTag
 import scala.util.{Failure, Random, Success, Try}
 
 /**
@@ -48,7 +49,7 @@ import scala.util.{Failure, Random, Success, Try}
 abstract class AbstractCertificateSubmitter[
   TX <: Transaction,
   H <: SidechainBlockHeaderBase,
-  PM <: SidechainBlockBase[TX, H]](settings: SidechainSettings,
+  PM <: SidechainBlockBase[TX, H] : ClassTag](settings: SidechainSettings,
                            sidechainNodeViewHolderRef: ActorRef,
                            params: NetworkParams,
                            mainchainChannel: MainchainNodeChannel)
@@ -73,7 +74,7 @@ abstract class AbstractCertificateSubmitter[
   protected[certificatesubmitter] var signaturesStatus: Option[SignaturesStatus] = None
 
   protected[certificatesubmitter] var certGenerationState: Boolean = false
-  protected val certificateFee = if (settings.withdrawalEpochCertificateSettings.certificateAutomaticFeeComputation) None else Some(settings.withdrawalEpochCertificateSettings.certificateFee)
+  protected val certificateFee: Option[String] = if (settings.withdrawalEpochCertificateSettings.certificateAutomaticFeeComputation) None else Some(settings.withdrawalEpochCertificateSettings.certificateFee)
 
   override def preStart(): Unit = {
     super.preStart()

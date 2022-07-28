@@ -111,7 +111,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       NodeWalletBase,
       NodeAccountMemoryPool,
       AccountNodeView,
-      _] =>
+      _] @unchecked =>
       msg match {
         case AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView(f) => try {
           val l: AccountNodeView = new AccountNodeView(history(), minimalState(), vault(), memoryPool())
@@ -124,7 +124,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       }
   }
 
-  override  protected def applyFunctionOnNodeView: Receive = {
+  override protected def applyFunctionOnNodeView: Receive = {
     case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView[
       AccountTransaction[Proposition, Proof[Proposition]],
       AccountBlockHeader,
@@ -134,7 +134,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       NodeWalletBase,
       NodeAccountMemoryPool,
       AccountNodeView,
-      _] =>
+      _] @unchecked =>
       msg match {
         case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView(f) => try {
           val l: AccountNodeView = new AccountNodeView(history(), minimalState(), vault(), memoryPool())
@@ -158,7 +158,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       NodeWalletBase,
       NodeAccountMemoryPool,
       AccountNodeView,
-      T,A] =>
+      T,A] @unchecked =>
       msg match {
         case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView(f,functionParams) => try {
           val l: AccountNodeView = new AccountNodeView(history(), minimalState(), vault(), memoryPool())
