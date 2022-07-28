@@ -41,7 +41,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
     try {
       val result = askActor[Map[InetSocketAddress, PeerInfo]](peerManager, GetAllPeers).map {
         _.map { case (address, peerInfo) =>
-          SidechainPeerNode(address.toString, peerInfo.lastHandshake, peerInfo.peerSpec.nodeName, peerInfo.connectionType.map(_.toString))
+          SidechainPeerNode(address.toString, None, peerInfo.lastHandshake, 0, peerInfo.peerSpec.nodeName, peerInfo.peerSpec.agentName, peerInfo.peerSpec.protocolVersion.toString, peerInfo.connectionType.map(_.toString))
         }
       }
       val resultList = Await.result(result, settings.timeout).toList
@@ -54,15 +54,21 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
   def connectedPeers: Route = (path("connectedPeers") & post) {
     try {
       val result = askActor[Seq[ConnectedPeer]](networkController, GetConnectedPeers).map {
-        _.flatMap(_.peerInfo)
-          .map { peerInfo =>
-            SidechainPeerNode(
-              address = peerInfo.peerSpec.address.map(_.toString).getOrElse(""),
-              lastSeen = peerInfo.lastHandshake,
-              name = peerInfo.peerSpec.nodeName,
-              connectionType = peerInfo.connectionType.map(_.toString)
-            )
+        _.flatMap { connection =>
+          connection.peerInfo.map {
+            peerInfo =>
+              SidechainPeerNode(
+                remoteAddress = connection.connectionId.remoteAddress.toString,
+                localAddress = Some(connection.connectionId.localAddress.toString),
+                lastHandshake = peerInfo.lastHandshake,
+                lastMessage = connection.lastMessage,
+                name = peerInfo.peerSpec.nodeName,
+                agentName = peerInfo.peerSpec.agentName,
+                protocolVersion = peerInfo.peerSpec.protocolVersion.toString,
+                connectionType = peerInfo.connectionType.map(_.toString)
+              )
           }
+        }
       }
       val resultList = Await.result(result, settings.timeout).toList
       ApiResponseUtil.toResponse(RespAllPeers(resultList))
@@ -179,7 +185,16 @@ object SidechainNodeRestSchema {
   private[api] case class RespAllPeers(peers: List[SidechainPeerNode]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class SidechainPeerNode(address: String, lastSeen: Long, name: String, connectionType: Option[String])
+  private[api] case class SidechainPeerNode(
+                                             remoteAddress: String,
+                                             localAddress: Option[String],
+                                             lastHandshake: Long,
+                                             lastMessage: Long,
+                                             name: String,
+                                             agentName: String,
+                                             protocolVersion: String,
+                                             connectionType: Option[String]
+                                           )
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespBlacklistedPeers(addresses: Seq[String]) extends SuccessResponse
