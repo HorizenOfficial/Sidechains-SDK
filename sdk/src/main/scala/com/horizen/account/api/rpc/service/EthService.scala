@@ -80,9 +80,10 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
   }
 
   @RpcMethod("eth_call") def call(params: TransactionArgs, tag: Quantity): Data = {
+    val stateDbRoot = getStateDbRootFromBlockById(getBlockIdByTag(tag.getValue))
+    if (stateDbRoot == null) return new Data(null)
     val result = Evm.Apply(
-      // TODO: get stateView at the given tag (block number, block hash, latest, etc.)
-      stateView.getStateDbHandle,
+      stateDbRoot.getStateDbHandle,
       params.getFrom,
       if (params.to == null) null else params.to.toBytes,
       params.value,
@@ -107,17 +108,42 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
 
   private def getBlockHeight = nodeView.history.getCurrentHeight
 
+  private def getStateDbRootFromBlockById(blockId: String) : AccountStateView = {
+    val block = nodeView.history.getBlockById(blockId)
+    if (block.isEmpty) return null
+    nodeView.state.getStateDbViewFromRoot(block.get().header.stateRoot)
+  }
+
   @RpcMethod("eth_chainId") def chainId = new Quantity(Numeric.toHexStringWithPrefix(BigInteger.valueOf(networkParams.chainId)))
 
   @RpcMethod("eth_getBalance") def GetBalance(address: String, blockNumberOrTag: Quantity) = new Quantity(getBalance(address, blockNumberOrTag))
 
-  private def getBalance(address: String, tag: Quantity) = { // TODO: Add blockNumberOrTag handling
-    val balance = nodeView.state.getBalance(Numeric.hexStringToByteArray(address))
+  private def getBlockIdByTag(tag: String): String = {
+    var blockId: java.util.Optional[String] = null
+    val history = nodeView.history
+    tag match {
+      case "earliest" => blockId = nodeView.history.getBlockIdByHeight(1)
+      //case "finalized" => //-39001: Unkown block
+      //case "safe" => //-39001: Unkown block
+      case "latest" => blockId = history.getBlockIdByHeight(nodeView.history.getCurrentHeight)
+      case "pending" => blockId = history.getBlockIdByHeight(nodeView.history.getCurrentHeight)
+      case _ => blockId = history.getBlockIdByHeight(Integer.parseInt(Numeric.cleanHexPrefix(tag), 16))
+    }
+    if (blockId.isEmpty) return null
+    blockId.get()
+  }
+
+  private def getBalance(address: String, tag: Quantity) : String = {
+    val stateDbRoot = getStateDbRootFromBlockById(getBlockIdByTag(tag.getValue))
+    if (stateDbRoot == null) return "null"
+    val balance = stateDbRoot.getBalance(Numeric.hexStringToByteArray(address))
     Numeric.toHexStringWithPrefix(balance)
   }
 
   @RpcMethod("eth_getTransactionCount") def getTransactionCount(address: String, tag: Quantity): Quantity = {
-    val nonce = nodeView.state.getNonce(Numeric.hexStringToByteArray(address))
+    val stateDbRoot = getStateDbRootFromBlockById(getBlockIdByTag(tag.getValue))
+    if (stateDbRoot == null) return new Quantity("null")
+    val nonce = stateDbRoot.getNonce(Numeric.hexStringToByteArray(address))
     new Quantity(Numeric.toHexStringWithPrefix(nonce))
   }
 
@@ -175,6 +201,9 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
   }
 
   @RpcMethod("eth_getCode") def getCode(address: String, tag: Quantity): String = {
+    //TODO: add getcode to state
+    //val stateDbRoot = getStateDbRootFromBlockById(getBlockIdByTag(tag.getValue))
+    //if (stateDbRoot == null) return ""
     val code = stateView.stateDb.getCode(Numeric.hexStringToByteArray(address))
     if (code == null)
       return ""
