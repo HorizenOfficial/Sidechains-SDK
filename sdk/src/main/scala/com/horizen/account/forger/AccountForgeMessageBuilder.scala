@@ -6,7 +6,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils.{ByteArrayWrapper, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, Utils}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, Utils}
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock.calculateReceiptRoot
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
@@ -37,11 +37,11 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                                  params: NetworkParams,
                                  allowNoWebsocketConnectionInRegtest: Boolean)
   extends AbstractForgeMessageBuilder[
-     SidechainTypes#SCAT,
-     AccountBlockHeader,
-     AccountBlock](
-  mainchainSynchronizer, companion, params, allowNoWebsocketConnectionInRegtest
-) with ScorexLogging {
+    SidechainTypes#SCAT,
+    AccountBlockHeader,
+    AccountBlock](
+    mainchainSynchronizer, companion, params, allowNoWebsocketConnectionInRegtest
+  ) with ScorexLogging {
   type HSTOR = AccountHistoryStorage
   type VL = AccountWallet
   type HIS = AccountHistory
@@ -55,9 +55,9 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     // we must ensure that all the tx we get from mempool are applicable to current state view
     // and we must stay below the block gas limit threshold, therefore we might have a subset of the input transactions
     val (receiptList, listOfAppliedTxHash) = tryApplyAndGetReceipts(view, mainchainBlockReferencesData, sidechainTransactions, inputBlockSize).get
-    
+
     // get only the transactions for which we got a receipt
-    val appliedTransactions = sidechainTransactions.filter{
+    val appliedTransactions = sidechainTransactions.filter {
       t => {
         val txHash = idToBytes(t.id)
         listOfAppliedTxHash.contains(new ByteArrayWrapper(txHash))
@@ -77,18 +77,18 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   }
 
   private def tryApplyAndGetReceipts(stateView: AccountStateView,
-                             mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-                             sidechainTransactions: Seq[SidechainTypes#SCAT],
-                             inputBlockSize: Int): Try[(Seq[EthereumConsensusDataReceipt], Seq[ByteArrayWrapper])] = Try {
+                                     mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
+                                     sidechainTransactions: Seq[SidechainTypes#SCAT],
+                                     inputBlockSize: Int): Try[(Seq[EthereumConsensusDataReceipt], Seq[ByteArrayWrapper])] = Try {
 
-    for(mcBlockRefData <- mainchainBlockReferencesData) {
+    for (mcBlockRefData <- mainchainBlockReferencesData) {
       stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
     }
 
     val receiptList = new ListBuffer[EthereumConsensusDataReceipt]()
-    val txHashList  = new ListBuffer[ByteArrayWrapper]()
+    val txHashList = new ListBuffer[ByteArrayWrapper]()
 
-    var cumGasUsed : BigInteger = BigInteger.ZERO
+    var cumGasUsed: BigInteger = BigInteger.ZERO
     var txsCounter: Int = 0
     var blockSize: Int = inputBlockSize
 
@@ -109,7 +109,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
             return Success(receiptList, txHashList)
 
           val ethTx = tx.asInstanceOf[EthereumTransaction]
-          val txHash = idToBytes(ethTx.id)
+          val txHash = BytesUtils.fromHexString(ethTx.id)
 
           receiptList += consensusDataReceipt
           txHashList += txHash
@@ -123,23 +123,22 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   }
 
   override def createNewBlock(
-                 nodeView: View,
-                 branchPointInfo: BranchPointInfo,
-                 isWithdrawalEpochLastBlock: Boolean,
-                 parentId: BlockId,
-                 timestamp: Timestamp,
-                 mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-                 sidechainTransactions: Seq[SidechainTypes#SCAT],
-                 mainchainHeaders: Seq[MainchainHeader],
-                 ommers: Seq[Ommer[ AccountBlockHeader]],
-                 ownerPrivateKey: PrivateKey25519,
-                 forgingStakeInfo: ForgingStakeInfo,
-                 vrfProof: VrfProof,
-                 forgingStakeInfoMerklePath: MerklePath,
-                 companion: DynamicTypedSerializer[SidechainTypes#SCAT, TransactionSerializer[SidechainTypes#SCAT]],
-                 inputBlockSize: Int,
-                 signatureOption: Option[Signature25519]) : Try[SidechainBlockBase[SidechainTypes#SCAT,  AccountBlockHeader]] =
-  {
+                               nodeView: View,
+                               branchPointInfo: BranchPointInfo,
+                               isWithdrawalEpochLastBlock: Boolean,
+                               parentId: BlockId,
+                               timestamp: Timestamp,
+                               mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
+                               sidechainTransactions: Seq[SidechainTypes#SCAT],
+                               mainchainHeaders: Seq[MainchainHeader],
+                               ommers: Seq[Ommer[AccountBlockHeader]],
+                               ownerPrivateKey: PrivateKey25519,
+                               forgingStakeInfo: ForgingStakeInfo,
+                               vrfProof: VrfProof,
+                               forgingStakeInfoMerklePath: MerklePath,
+                               companion: DynamicTypedSerializer[SidechainTypes#SCAT, TransactionSerializer[SidechainTypes#SCAT]],
+                               inputBlockSize: Int,
+                               signatureOption: Option[Signature25519]): Try[SidechainBlockBase[SidechainTypes#SCAT, AccountBlockHeader]] = {
 
     val feePaymentsHash: Array[Byte] = new Array[Byte](MerkleTree.ROOT_HASH_LENGTH)
 
@@ -152,7 +151,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     // - the list of transactions succesfully applied to the state ---> to be included in the forged block
     val (stateRoot, receiptList, appliedTxList)
     : (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT]) =
-      computeStateRoot(dummyView, sidechainTransactions, mainchainBlockReferencesData, inputBlockSize)
+    computeStateRoot(dummyView, sidechainTransactions, mainchainBlockReferencesData, inputBlockSize)
 
     // dispose of the view
     dummyView.close()
@@ -194,7 +193,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                                            vrfProof: VrfProof): Int = {
     // Create block header template, setting dummy values where it is possible.
     // Note:  AccountBlockHeader length is not constant because of the forgingStakeMerklePathInfo.merklePath.
-    val header =  AccountBlockHeader(
+    val header = AccountBlockHeader(
       AccountBlock.ACCOUNT_BLOCK_VERSION,
       parentId,
       timestamp,
@@ -204,8 +203,8 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
-      new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),// stateRoot TODO add constant
-      new AddressProposition(new Array[Byte](Account.ADDRESS_SIZE)),// forgerAddress: PublicKeySecp256k1Proposition TODO add constant,
+      new Array[Byte](MerkleTree.ROOT_HASH_LENGTH), // stateRoot TODO add constant
+      new AddressProposition(new Array[Byte](Account.ADDRESS_SIZE)), // forgerAddress: PublicKeySecp256k1Proposition TODO add constant,
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       Long.MaxValue,
       new Array[Byte](NodeViewModifier.ModifierIdSize),
@@ -215,8 +214,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     header.bytes.length
   }
 
-  override def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int): Seq[SidechainTypes#SCAT] =
-  {
+  override def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int): Seq[SidechainTypes#SCAT] = {
     // no checks of the block size here, these txes are the candidates and their inclusion
     // will be attempted by forger
 
@@ -224,7 +222,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     nodeView.pool.take(nodeView.pool.size).toSeq
   }
 
-  override def getOmmersSize(ommers: Seq[Ommer[ AccountBlockHeader]]): Int = {
+  override def getOmmersSize(ommers: Seq[Ommer[AccountBlockHeader]]): Int = {
     val ommersSerializer = new ListSerializer[Ommer[AccountBlockHeader]](AccountOmmerSerializer)
     ommersSerializer.toBytes(ommers.asJava).length
   }
@@ -250,14 +248,14 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     // 2. get from stateDb using root above the collection of all forger stakes (ordered)
     val stateViewFromRoot = state.getStateDbViewFromRoot(stateRoot)
-    val forgingStakeInfoSeq : Seq[ForgingStakeInfo] = stateViewFromRoot.getOrderedForgingStakeInfoSeq
+    val forgingStakeInfoSeq: Seq[ForgingStakeInfo] = stateViewFromRoot.getOrderedForgingStakeInfoSeq
     // release resources
     stateViewFromRoot.close()
 
     // 3. using wallet secrets, filter out the not-mine forging stakes
-    val secrets : Seq[Secret] = wallet.allSecrets().asScala
+    val secrets: Seq[Secret] = wallet.allSecrets().asScala
 
-    val walletPubKeys = secrets.map( e => e.publicImage())
+    val walletPubKeys = secrets.map(e => e.publicImage())
 
     val filteredForgingStakeInfoSeq = forgingStakeInfoSeq.filter(p => {
       walletPubKeys.contains(p.blockSignPublicKey) &&
