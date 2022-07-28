@@ -3,6 +3,7 @@ import pprint
 from decimal import Decimal
 
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
+from SidechainTestFramework.account.address_util import format_evm, format_eoa
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
@@ -34,20 +35,6 @@ Test:
         - Transfer nft
         - Check results
 """
-
-
-def format_addr(add: str):
-    if add.startswith('0x'):
-        return add
-    else:
-        return '0x' + add
-
-
-def normalize_addr(add: str):
-    if add.startswith('0x'):
-        return add[2:]
-    else:
-        return add
 
 
 def mint_payable(node, smart_contract, contract_address, source_account, amount, tokenid, *, static_call: bool,
@@ -155,7 +142,7 @@ def compare_symbol(node, smart_contract, contract_address, sender_address, expec
 
 def compare_ownerof(node, smart_contract, contract_address, sender_address, tokenid, expected_owner):
     method = 'ownerOf(uint256)'
-    expected_owner = format_addr(expected_owner)
+    expected_owner = format_evm(expected_owner)
     print("Checking owner of token {} of collection at {}...".format(tokenid, contract_address))
     res = call_onearg_fn(node, smart_contract, contract_address, sender_address, True, False, method, tokenid)
     print("Expected owner: '{}', actual owner: '{}'".format(expected_owner, res[0]))
@@ -171,9 +158,9 @@ def deploy_smart_contract(node, smart_contract, from_address, name, symbol, meta
                                              gasPrice=10)
     print("Generating next block...")
     generate_next_blocks(node, "first node", 1)
-    # TODO fix receipts, currently mocked
-    # TODO check logs (events)
-    # pprint.pprint(node.rpc_eth_getTransactionReceipt(tx_hash))
+    # TODO check logs when implemented (events)
+    tx_receipt = node.rpc_eth_getTransactionReceipt(tx_hash)
+    assert_equal(tx_receipt['result']['contractAddress'], address.lower())
     print("Smart contract deployed successfully to address 0x{}".format(address))
     return address
 
@@ -298,7 +285,7 @@ class SCEvmERC721Contract(SidechainTestFramework):
         # transfer some fund from MC to SC using the evm address created before
         forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
                                       self.nodes[0],
-                                      normalize_addr(evm_address),
+                                      format_eoa(evm_address),
                                       ft_amount_in_zen,
                                       mc_return_address)
 
@@ -327,9 +314,10 @@ class SCEvmERC721Contract(SidechainTestFramework):
                                                        collection_symbol, collection_uri)
 
         # checking initial data
-        res = compare_total_supply(sc_node, smart_contract, smart_contract_address, evm_address, 0)
-        res = compare_name(sc_node, smart_contract, smart_contract_address, evm_address, collection_name)
-        res = compare_symbol(sc_node, smart_contract, smart_contract_address, other_address, collection_symbol)
+        res = compare_total_supply(sc_node, smart_contract, smart_contract_address, format_evm(evm_address), 0)
+        res = compare_name(sc_node, smart_contract, smart_contract_address, format_evm(evm_address), collection_name)
+        res = compare_symbol(sc_node, smart_contract, smart_contract_address, format_evm(other_address),
+                             collection_symbol)
 
         # get basic info about account
         last_nat_balance = get_native_balance(sc_node, evm_address)

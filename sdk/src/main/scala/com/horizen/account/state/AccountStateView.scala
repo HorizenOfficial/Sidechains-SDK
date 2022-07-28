@@ -146,12 +146,11 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     val stateNonce: BigInteger = getNonce(tx.getFrom.address())
     val txNonce: BigInteger = tx.getNonce
     val result = stateNonce.compareTo(txNonce)
-    // TODO: add again later and check
-    /*if (result > 0) {
+    if (result > 0) {
       throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: nonce ${txNonce} is to high (expected nonce is $stateNonce)")
     } else if (result < 0) {
       throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: nonce ${txNonce} is to low (expected nonce is $stateNonce)")
-    }*/
+    }
     if (txNonce.add(BigInteger.ONE).compareTo(txNonce) < 0)
       throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: nonce ${txNonce} reached the max value")
 
@@ -195,8 +194,6 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
 
     val message: Message = Message.fromTransaction(ethTx)
 
-    // Increase the nonce by 1
-    increaseNonce(message.getFrom.address())
 
     // Create a snapshot to know where to rollback in case of Message processing failure
     val revisionId: Int = stateDb.snapshot()
@@ -225,6 +222,9 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
         throw new Exception(s"Transaction ${ethTx.id} is invalid.", invalid.getReason)
     }
 
+    // Increase the nonce by 1
+    increaseNonce(message.getFrom.address())
+    
     // todo: refund gas: bookedGasPrice - actualGasPrice
     log.debug(s"Returning consensus data receipt: ${consensusDataReceipt.toString()}")
     consensusDataReceipt
@@ -308,7 +308,7 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     metadataStorageView.updateTransactionReceipts(receipts)
   }
 
-   def getTransactionReceipt(txHash : Array[Byte]): Option[EthereumReceipt] = {
+  def getTransactionReceipt(txHash: Array[Byte]): Option[EthereumReceipt] = {
     metadataStorageView.getTransactionReceipt(txHash)
   }
 

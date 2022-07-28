@@ -3,7 +3,8 @@ import json
 import pprint
 from decimal import Decimal
 
-from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
+from SidechainTestFramework.account.ac_use_smart_contract import SmartContract, EvmExecutionError
+from SidechainTestFramework.account.address_util import format_evm, format_eoa
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
@@ -106,7 +107,7 @@ class SCEvmStorageContract(SidechainTestFramework):
 
         ret = sc_node.wallet_createPrivateKeySecp256k1()
         pprint.pprint(ret)
-        evm_address = ret["result"]["proposition"]["address"]
+        evm_address = format_evm(ret["result"]["proposition"]["address"])
         print("pubkey = {}".format(evm_address))
 
         # call a legacy wallet api
@@ -117,7 +118,7 @@ class SCEvmStorageContract(SidechainTestFramework):
         # transfer some fund from MC to SC using the evm address created before
         forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
                                       self.nodes[0],
-                                      evm_address,
+                                      format_eoa(evm_address),
                                       ft_amount_in_zen,
                                       mc_return_address)
 
@@ -133,23 +134,30 @@ class SCEvmStorageContract(SidechainTestFramework):
         print(smart_contract)
         test_message = 'Initial message'
         tx_hash, smart_contract_address = smart_contract.deploy(sc_node, test_message,
-                                                                fromAddress=str(evm_address),
+                                                                fromAddress=evm_address,
                                                                 gasLimit=100000000,
                                                                 gasPrice=10)
         generate_next_blocks(sc_node, "first node", 1)
         print("Blocks mined - tx receipt will contain address")
-        # TODO fix receipts, currently mocked
         # TODO check logs (events)
-        print("rpc response:")
-        pprint.pprint(sc_node.rpc_eth_getTransactionReceipt(tx_hash))
+        tx_receipt = sc_node.rpc_eth_getTransactionReceipt(tx_hash)
+        # TODO check receipt address in checksum format
+        assert_equal(format_evm(tx_receipt['result']['contractAddress']), smart_contract_address)
 
         generate_next_blocks(sc_node, "first node", 1)
         res = check_storage_value(sc_node, smart_contract, smart_contract_address, evm_address, test_message)
 
+        was_exception = False
         test_message = 'This is a message'
-        # TODO when evm_call is fixed - check result -> should indicate success
-        res = set_storage_value(sc_node, smart_contract, smart_contract_address, evm_address, test_message,
-                                static_call=True, generate_block=False)
+        try:
+            was_exception = False
+            res = set_storage_value(sc_node, smart_contract, smart_contract_address, evm_address, test_message,
+                                    static_call=True, generate_block=False)
+        except EvmExecutionError as err:
+            print(err)
+            was_exception = True
+        finally:
+            assert_true(not was_exception, "static call failed but should not have")
         # TODO when receipts are fixed - check tx -> should indicate success and emit log
         tx_hash = set_storage_value(sc_node, smart_contract, smart_contract_address, evm_address, test_message,
                                     static_call=False, generate_block=True)
