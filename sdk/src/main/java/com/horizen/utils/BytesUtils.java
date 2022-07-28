@@ -208,7 +208,7 @@ public final class BytesUtils {
 
     public static byte[] fromHorizenPublicKeyAddress(String address, NetworkParams params) {
         if(address.length() != HORIZEN_PUBLIC_KEY_ADDRESS_BASE58_Length)
-            throw new IllegalArgumentException(String.format("Incorrect Horizen public key address length $d", address.length()));
+            throw new IllegalArgumentException(String.format("Incorrect Horizen public key address length %d", address.length()));
 
         byte[] addressBytesWithChecksum = Base58.decode(address).get();
         byte[] addressBytes = Arrays.copyOfRange(addressBytesWithChecksum, 0, HORIZEN_PUBLIC_KEY_ADDRESS_PREFIX_LENGTH + HORIZEN_PUBLIC_KEY_ADDRESS_HASH_LENGTH);

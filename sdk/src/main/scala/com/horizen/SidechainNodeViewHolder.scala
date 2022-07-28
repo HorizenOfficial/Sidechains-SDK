@@ -76,7 +76,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       NodeWallet,
       NodeMemoryPool,
       SidechainNodeView,
-      _] =>
+      _] @unchecked =>
       msg match {
         case AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView(f) => try {
           val l: SidechainNodeView = new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), applicationState, applicationWallet)
@@ -99,7 +99,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       NodeWallet,
       NodeMemoryPool,
       SidechainNodeView,
-      _] =>
+      _] @unchecked =>
       msg match {
         case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyFunctionOnNodeView(f) => try {
           val l: SidechainNodeView = new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), applicationState, applicationWallet)
@@ -123,7 +123,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       NodeWallet,
       NodeMemoryPool,
       SidechainNodeView,
-      T, A] =>
+      T, A] @unchecked =>
       msg match {
         case AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView(f, functionParams) => try {
           val l: SidechainNodeView = new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), applicationState, applicationWallet)

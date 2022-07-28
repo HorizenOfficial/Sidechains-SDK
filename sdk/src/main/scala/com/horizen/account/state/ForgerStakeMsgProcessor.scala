@@ -281,7 +281,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     val vrfPublicKey: VrfPublicKey = cmdInput.forgerPublicKeys.vrfPublicKey
     val ownerAddress: AddressProposition = cmdInput.ownerAddress
 
-    if (networkParams.restrictForgers) {
+    // TODO decide whether we need to check also genesis case (also UTXO model)
+    if (!isGenesisScCreation && networkParams.restrictForgers) {
       // check that the delegation arguments satisfy the restricted list of forgers.
       if (!networkParams.allowedForgersList.contains((blockSignPublicKey, vrfPublicKey))) {
         val msgStr = "Forger is not in the allowed list"
@@ -312,7 +313,12 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
 
     if (isGenesisScCreation) {
       // no gas paid here
+
+      // increase the balance of the "forger stake smart contract” account
+      view.addBalance(fakeSmartContractAddress.address(), stakedAmount).get
+
       new ExecutionSucceeded(BigInteger.ZERO, newStakeId)
+
     } else {
       // decrease the balance of `from` account by `tx.value`
       view.subBalance(msg.getFrom.address(), stakedAmount) match {
@@ -455,8 +461,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     }
     catch {
       case e: Exception =>
-        val msgStr = s"Exception while processing message: $msg"
-        log.debug(msgStr)
+        val msgStr = s"Exception while processing message: $msg, $e"
+        log.debug(msgStr, e)
         new ExecutionFailed(RemoveStakeGasPaidValue, new IllegalArgumentException(e))
     }
   }

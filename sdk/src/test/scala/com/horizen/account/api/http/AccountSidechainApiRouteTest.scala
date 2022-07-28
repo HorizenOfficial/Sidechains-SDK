@@ -99,7 +99,7 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
           NodeWalletBase,
           NodeAccountMemoryPool,
           AccountNodeView,
-          _] =>
+          _] @unchecked =>
           m match {
             case GetDataFromCurrentNodeView(f) =>
               if (sidechainApiMockConfiguration.getShould_nodeViewHolder_GetDataFromCurrentNodeView_reply()) {
@@ -115,7 +115,7 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
           NodeWalletBase,
           NodeAccountMemoryPool,
           AccountNodeView,
-          _] =>
+          _] @unchecked =>
           m match {
             case ApplyFunctionOnNodeView(f) =>
               if (sidechainApiMockConfiguration.getShould_nodeViewHolder_ApplyFunctionOnNodeView_reply())
@@ -130,7 +130,8 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
           NodeWalletBase,
           NodeAccountMemoryPool,
           AccountNodeView,
-          _,_] =>
+          _,
+          _] @unchecked =>
           m match {
             case ApplyBiFunctionOnNodeView(f, funParameter) =>
               if (sidechainApiMockConfiguration.getShould_nodeViewHolder_ApplyBiFunctionOnNodeView_reply())

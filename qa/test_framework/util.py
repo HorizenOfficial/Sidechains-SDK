@@ -506,12 +506,6 @@ def initialize_new_sidechain_in_mainchain(mainchain_node, withdrawal_epoch_lengt
         custom_creation_data = vrf_public_key + public_key
         # the recipient address is a 20 byte account address. MC will pad them with 0 bytes up to 32 bytes
         to_address = account_public_key
-
-        # test
-        pprint.pprint(custom_creation_data)
-        pprint.pprint(vrf_public_key)
-        pprint.pprint(public_key)
-        pprint.pprint(account_public_key)
     else:
         custom_creation_data = vrf_public_key
         to_address = public_key
