@@ -5,6 +5,7 @@ import com.horizen.account.receipt.EthereumLog;
 import com.horizen.account.receipt.EthereumReceipt;
 import com.horizen.account.transaction.EthereumTransaction;
 import com.horizen.serialization.Views;
+import com.horizen.utils.BytesUtils;
 import org.web3j.utils.Numeric;
 import scala.collection.immutable.List;
 

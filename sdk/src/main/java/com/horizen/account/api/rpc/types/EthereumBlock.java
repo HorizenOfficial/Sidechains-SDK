@@ -29,6 +29,7 @@ public class EthereumBlock {
     private String gasUsed;
     private String timestamp;
     private List<String> transactions;
+    private List<EthereumTransactionView> transactionViews;
     private List<String> uncles;
     private List<String> sealFields;
     private String baseFeePerGas;
@@ -36,7 +37,7 @@ public class EthereumBlock {
     public EthereumBlock() {
     }
 
-    public EthereumBlock(String number, String hash, List<String> transactions, AccountBlock block) {
+    public EthereumBlock(String number, String hash, List<String> transactions, List<EthereumTransactionView> transactionViews, Boolean hydrated, AccountBlock block) {
         this.number = number;
         this.hash = hash;
         this.parentHash = "0x0";
@@ -53,7 +54,8 @@ public class EthereumBlock {
         this.gasLimit = "0x5208";
         this.gasUsed = "0x1";
         this.timestamp = String.valueOf(block.timestamp());
-        this.transactions = transactions;
+        if (hydrated) this.transactionViews = transactionViews;
+        else this.transactions = transactions;
     }
 
     public String getNumber() {
@@ -134,6 +136,10 @@ public class EthereumBlock {
 
     public List<String> getTransactions() {
         return this.transactions;
+    }
+
+    public List<EthereumTransactionView> getTransactionViews() {
+        return this.transactionViews;
     }
 
     public List<String> getUncles() {

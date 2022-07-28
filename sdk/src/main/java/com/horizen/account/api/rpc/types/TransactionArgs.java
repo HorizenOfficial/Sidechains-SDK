@@ -1,4 +1,4 @@
-package com.horizen.account.api.rpc.service;
+package com.horizen.account.api.rpc.types;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.horizen.account.proposition.AddressProposition;
