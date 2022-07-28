@@ -183,9 +183,9 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
           fail("Serialization failed for object SidechainApiResponseBody")
 
         assertEquals(1, result.elements().asScala.length)
-        assertTrue(result.get("listOStakes").isArray)
-        assertEquals(utilMocks.listOfStakes.size, result.get("listOStakes").elements().asScala.length)
-        val stakesJsonNode = result.get("listOStakes").elements().asScala.toList
+        assertTrue(result.get("stakes").isArray)
+        assertEquals(utilMocks.listOfStakes.size, result.get("stakes").elements().asScala.length)
+        val stakesJsonNode = result.get("stakes").elements().asScala.toList
         for (i <- 0 to stakesJsonNode.size - 1)
           jsonChecker.assertsOnAccountStakeInfoJson(stakesJsonNode(i), utilMocks.listOfStakes(i))
       }

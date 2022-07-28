@@ -132,7 +132,7 @@ class SCEvmForger(SidechainTestFramework):
             get_account_balance(sc_node_2, ForgerStakeSmartContractAddress))
 
         # get owner pub key from the node stake list (we have only 1 item)
-        stakeList = sc_node_1.transaction_allForgingStakes()["result"]['listOStakes']
+        stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
         assert_equal(len(stakeList), 1)
         stakeOwnerProposition = stakeList[0]['forgerStakeData']["ownerPublicKey"]["address"]
 
@@ -222,7 +222,7 @@ class SCEvmForger(SidechainTestFramework):
         self.sc_sync_all()
         print_current_epoch_and_slot(sc_node_1)
 
-        stakeList = sc_node_1.transaction_allForgingStakes()["result"]['listOStakes']
+        stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
         assert_equal(len(stakeList), 2)
 
         forgerStake2_amount = ft_amount_in_zen - forgerStake1_amount  # Zen
@@ -246,7 +246,7 @@ class SCEvmForger(SidechainTestFramework):
         print_current_epoch_and_slot(sc_node_1)
 
         # we now have 3 stakes
-        stakeList = sc_node_1.transaction_allForgingStakes()["result"]['listOStakes']
+        stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
         assert_equal(len(stakeList), 3)
 
         # Verify SC node 2 can not forge yet
@@ -340,7 +340,7 @@ class SCEvmForger(SidechainTestFramework):
         finally:
             assert_true(exception_occurs, "No forging stakes expected for SC node 1.")
 
-        stakeList = sc_node_1.transaction_allForgingStakes()["result"]['listOStakes']
+        stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
         assert_equal(len(stakeList), 2)
 
         stakeId_1 = stakeList[0]['stakeId']
@@ -370,7 +370,7 @@ class SCEvmForger(SidechainTestFramework):
         self.sc_sync_all()
         print_current_epoch_and_slot(sc_node_1)
 
-        stakeList = sc_node_1.transaction_allForgingStakes()["result"]['listOStakes']
+        stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
         assert_equal(len(stakeList), 1)
 
         # TODO when we have no more ForgerStakes the SC is dead!!!
@@ -389,7 +389,7 @@ class SCEvmForger(SidechainTestFramework):
         print_current_epoch_and_slot(sc_node_1)
 
         # we have no more stakes!!
-        stakeList = sc_node_1.transaction_allForgingStakes()["result"]['listOStakes']
+        stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
         assert_equal(len(stakeList), 0)
 
         # all balance is now at the expected owner address
