@@ -151,6 +151,12 @@ class SCEvmStorageContract(SidechainTestFramework):
         generate_next_blocks(sc_node, "first node", 1)
         res = check_storage_value(sc_node, smart_contract, smart_contract_address, evm_address, test_message)
 
+        block = sc_node.rpc_eth_getBlockByNumber('0x3', 'false')
+        pprint.pprint(block)
+
+        tx_hash = block['result']['transactions'][0]
+        pprint.pprint(sc_node.rpc_eth_getTransactionReceipt(tx_hash))
+        pprint.pprint(sc_node.rpc_eth_getTransactionByHash(tx_hash))
         was_exception = False
         test_message = 'This is a message'
         try:
