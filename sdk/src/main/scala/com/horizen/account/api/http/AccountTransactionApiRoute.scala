@@ -328,14 +328,14 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
             stakeDataOpt match {
               case Some(stakeData) =>
                 val stakeOwnerSecretOpt = sidechainNodeView.getNodeWallet.secretByPublicKey(stakeData.ownerPublicKey)
-                if (stakeOwnerSecretOpt.isEmpty){
+                if (stakeOwnerSecretOpt.isEmpty) {
                   ApiResponseUtil.toResponse(ErrorForgerStakeOwnerNotFound(s"Forger Stake Owner not found"))
                 }
                 else {
                   val stakeOwnerSecret = stakeOwnerSecretOpt.get().asInstanceOf[PrivateKeySecp256k1]
 
 
-                  val msgToSign = ForgerStakeMsgProcessor.getMessageToSign(BytesUtils.fromHexString(body.stakeId),txCreatorSecret.publicImage().address(),nonce.toByteArray)
+                  val msgToSign = ForgerStakeMsgProcessor.getMessageToSign(BytesUtils.fromHexString(body.stakeId), txCreatorSecret.publicImage().address(), nonce.toByteArray)
                   val signature = stakeOwnerSecret.sign(msgToSign)
                   val data = encodeSpendStakeCmdRequest(signature, body.stakeId)
                   val tmpTx: EthereumTransaction = new EthereumTransaction(
@@ -359,7 +359,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
                   validateAndSendTransaction(signTransactionWithSecret(txCreatorSecret, tmpTx), txRepresentation)
                 }
-              case None =>  ApiResponseUtil.toResponse(ErrorForgerStakeNotFound(s"No Forger Stake found with stake id ${body.stakeId}"))
+              case None => ApiResponseUtil.toResponse(ErrorForgerStakeNotFound(s"No Forger Stake found with stake id ${body.stakeId}"))
             }
           case None =>
             ApiResponseUtil.toResponse(ErrorInsufficientBalance("No account with enough balance found", JOptional.empty()))
@@ -667,6 +667,8 @@ object AccountTransactionRestScheme {
     require(gasLimit.signum() > 0, "Gas limit can not be 0")
     require(maxPriorityFeePerGas.signum() > 0, "MaxPriorityFeePerGas must be greater than 0")
     require(maxFeePerGas.signum() > 0, "MaxFeePerGas must be greater than 0")
+    require(to.isEmpty || to.get.length == 40 /* address length without prefix 0x */ , "to is not empty but has the wrong length - do not use a 0x prefix")
+    require(from.isEmpty || from.get.length == 40 /* address length without prefix 0x */ , "from is not empty but has the wrong length - do not use a 0x prefix")
   }
 
   @JsonView(Array(classOf[Views.Default]))
@@ -687,7 +689,8 @@ object AccountTransactionRestScheme {
     )
     require(gasLimit.signum() > 0, "Gas limit can not be 0")
     require(gasPrice.signum() > 0, "Gas price can not be 0")
-    require(to.isEmpty || to.get.length == 42 /* address length with prefix 0x */)
+    require(to.isEmpty || to.get.length == 40 /* address length without prefix 0x */ , "to is not empty but has the wrong length - do not use a 0x prefix")
+    require(from.isEmpty || from.get.length == 40 /* address length without prefix 0x */ , "from is not empty but has the wrong length - do not use a 0x prefix")
   }
 
   @JsonView(Array(classOf[Views.Default]))
