@@ -195,6 +195,8 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     public Long getChainId() {
         if (this.isEIP1559())
             return this.eip1559Tx().getChainId();
+        else if (this.isSigned())
+            return ((SignedRawTransaction) this.transaction).getChainId();
         return null;
     }
 
