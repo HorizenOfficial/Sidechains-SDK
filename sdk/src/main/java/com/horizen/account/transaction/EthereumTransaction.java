@@ -192,11 +192,30 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return null;
     }
 
+    static long convertToLong(byte[] bytes) {
+        long value = 0l;
+
+        // Iterating through for loop
+        for (byte b : bytes) {
+            // Shifting previous value 8 bits to right and
+            // add it with next value
+            value = (value << 8) + (b & 255);
+        }
+
+        return value;
+    }
+
     public Long getChainId() {
         if (this.isEIP1559())
             return this.eip1559Tx().getChainId();
-        else if (this.isSigned())
-            return ((SignedRawTransaction) this.transaction).getChainId();
+        else if (this.isSigned()) {
+            var signedTx = (SignedRawTransaction) this.transaction;
+            var sigData = signedTx.getSignatureData();
+            if (sigData.getS()[0] == 0 && sigData.getR()[0] == 0)
+                return convertToLong(sigData.getV());
+            else return ((SignedRawTransaction) this.transaction).getChainId(); // TODO check necessity
+        }
+
         return null;
     }
 
