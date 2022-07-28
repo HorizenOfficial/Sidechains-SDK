@@ -17,14 +17,13 @@ import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
 
-class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyncInfo, HR <: HistoryReader[PMOD,SI] : ClassTag]
+class SidechainBlockActor[PMOD <: PersistentNodeViewModifier : ClassTag, SI <: SidechainSyncInfo, HR <: HistoryReader[PMOD,SI] : ClassTag]
 (settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, forgerRef: ActorRef)(implicit ec: ExecutionContext)
   extends Actor with ScorexLogging {
 
-  private var generatedBlockGroups: TrieMap[ModifierId, Seq[ModifierId]] = TrieMap()
-  private var generatedBlocksPromises: TrieMap[ModifierId, Promise[Try[Seq[ModifierId]]]] = TrieMap()
-
-  private var submitBlockPromises: TrieMap[ModifierId, Promise[Try[ModifierId]]] = TrieMap()
+  private val generatedBlockGroups: TrieMap[ModifierId, Seq[ModifierId]] = TrieMap()
+  private val generatedBlocksPromises: TrieMap[ModifierId, Promise[Try[Seq[ModifierId]]]] = TrieMap()
+  private val submitBlockPromises: TrieMap[ModifierId, Promise[Try[ModifierId]]] = TrieMap()
 
   lazy val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
   implicit lazy val timeout: Timeout = Timeout(timeoutDuration)
@@ -88,8 +87,7 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyn
   }
 
   protected def processTryForgeNextBlockForEpochAndSlotMessage: Receive = {
-    case messageToForger @ TryForgeNextBlockForEpochAndSlot(epochNumber, slotNumber) =>
-    {
+    case messageToForger @ TryForgeNextBlockForEpochAndSlot(_, _) =>
       val blockCreationFuture = forgerRef ? messageToForger
       val blockCreationResult = Await.result(blockCreationFuture, timeoutDuration).asInstanceOf[Try[ModifierId]]
       blockCreationResult match {
@@ -101,7 +99,6 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyn
         }
         case failRes @ Failure(ex) => sender() ! Future(failRes)
       }
-    }
   }
 
   override def receive: Receive = {
@@ -124,15 +121,15 @@ object SidechainBlockActor {
 }
 
 object SidechainBlockActorRef {
-  def props[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyncInfo, HR <: HistoryReader[PMOD,SI] : ClassTag](settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainForgerRef: ActorRef)
+  def props[PMOD <: PersistentNodeViewModifier : ClassTag, SI <: SidechainSyncInfo, HR <: HistoryReader[PMOD, SI] : ClassTag](settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainForgerRef: ActorRef)
            (implicit ec: ExecutionContext): Props =
-    Props(new SidechainBlockActor[PMOD,SI, HR](settings, sidechainNodeViewHolderRef, sidechainForgerRef))
+    Props(new SidechainBlockActor[PMOD, SI, HR](settings, sidechainNodeViewHolderRef, sidechainForgerRef))
 
-  def apply[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyncInfo, HR <: HistoryReader[PMOD,SI] : ClassTag](name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainForgerRef: ActorRef)
+  def apply[PMOD <: PersistentNodeViewModifier : ClassTag, SI <: SidechainSyncInfo, HR <: HistoryReader[PMOD, SI] : ClassTag](name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainForgerRef: ActorRef)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props[PMOD,SI, HR](settings, sidechainNodeViewHolderRef, sidechainForgerRef), name)
+    system.actorOf(props[PMOD, SI, HR](settings, sidechainNodeViewHolderRef, sidechainForgerRef), name)
 
-  def apply[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyncInfo, HR <: HistoryReader[PMOD,SI]: ClassTag](settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainForgerRef: ActorRef)
+  def apply[PMOD <: PersistentNodeViewModifier : ClassTag, SI <: SidechainSyncInfo, HR <: HistoryReader[PMOD, SI]: ClassTag](settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, sidechainForgerRef: ActorRef)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props[PMOD,SI, HR](settings, sidechainNodeViewHolderRef, sidechainForgerRef))
+    system.actorOf(props[PMOD, SI, HR](settings, sidechainNodeViewHolderRef, sidechainForgerRef))
 }
