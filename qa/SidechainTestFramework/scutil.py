@@ -310,11 +310,16 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
     with open(fileToOpen, 'r') as templateFile:
         tmpConfig = templateFile.read()
 
+    genesis_stake_vrf_pub_key = None
+    genesis_stake_sign_pub_key = None
+
     genesis_secrets = []
     if bootstrap_info.genesis_vrf_account is not None:
+        genesis_stake_vrf_pub_key = bootstrap_info.genesis_vrf_account.publicKey
         genesis_secrets.append(bootstrap_info.genesis_vrf_account.secret)
 
     if bootstrap_info.genesis_account is not None:
+        genesis_stake_sign_pub_key = bootstrap_info.genesis_account.publicKey
         genesis_secrets.append(bootstrap_info.genesis_account.secret)
 
     if bootstrap_info.genesis_evm_account is not None:
@@ -322,6 +327,12 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
 
     all_private_keys = bootstrap_info.certificate_proof_info.schnorr_secrets
     signer_private_keys = [all_private_keys[idx] for idx in sc_node_config.submitter_private_keys_indexes]
+
+    if sc_node_config.forger_options.restrict_forgers:
+        if genesis_stake_vrf_pub_key != None and genesis_stake_sign_pub_key != None:
+            sc_node_config.forger_options.allowed_forgers.append(
+                '{ blockSignProposition = "'+genesis_stake_sign_pub_key+'" NEW_LINE vrfPublicKey = "'+genesis_stake_vrf_pub_key+'" }')
+
 
     config = tmpConfig % {
         'NODE_NUMBER': n,
