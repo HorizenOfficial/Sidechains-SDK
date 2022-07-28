@@ -131,6 +131,27 @@ public class EthereumTransactionTest {
     }
 
     @Test
+    public void ethereumLegacyEIP155TransactionTest() {
+        // Test 1: direct constructor test
+        try {
+            Long chainId = Long.valueOf(1);
+            var someTx = new EthereumTransaction(
+                    "0x3535353535353535353535353535353535353535",
+                    BigInteger.valueOf(9),
+                    BigInteger.valueOf(20).multiply(BigInteger.TEN.pow(9)),
+                    BigInteger.valueOf(21000),
+                    BigInteger.TEN.pow(18),
+                    "",
+                    new Sign.SignatureData(new byte[]{1}, new byte[]{0}, new byte[]{0})
+            );
+            assertEquals("Chainid was not correct", someTx.getChainId(), chainId);
+            assertEquals("EIP-155 message to sign is incorrect", "0x" + BytesUtils.toHexString(someTx.messageToSign()), "0xec098504a817c800825208943535353535353535353535353535353535353535880de0b6b3a764000080018080");
+        } catch (NullPointerException e) {
+            fail("Test1: Successful EthereumTransaction creation expected.");
+        }
+    }
+
+    @Test
     public void ethereumEIP1559RawTransactionTest() {
         // Test 0: direct constructor
         var someTx = new EthereumTransaction(someValue.longValue(),
