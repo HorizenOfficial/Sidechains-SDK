@@ -121,7 +121,7 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
     new Quantity(Numeric.toHexStringWithPrefix(nonce))
   }
 
-  @RpcMethod("net_version") def version: String = Numeric.toHexStringNoPrefix(BigInteger.valueOf(networkParams.chainId))
+  @RpcMethod("net_version") def version: String = String.valueOf(networkParams.chainId)
 
   @RpcMethod("eth_estimateGas") def estimateGas(transaction: util.LinkedHashMap[String, String] /*, tag: Quantity*/) = { // TODO: We need an estimateGas function to execute EVM and get the gasUsed
     if (transaction.containsKey("data") && transaction.get("data") != null && transaction.get("data").length > 1)
