@@ -6,7 +6,7 @@ import com.horizen.consensus._
 import com.horizen.params.NetworkParams
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
-import com.horizen.utils.TimeToEpochUtils
+import com.horizen.utils.{BytesUtils, TimeToEpochUtils}
 import com.horizen.vrf.VrfOutput
 import scorex.core.block.Block
 import scorex.core.utils.TimeProvider
@@ -165,7 +165,7 @@ class ConsensusValidator[
     val forgingStakeIsCorrect = stakeConsensusEpochInfo.rootHash.sameElements(header.forgingStakeMerklePath.apply(header.forgingStakeInfo.hash))
     if (!forgingStakeIsCorrect) {
       log.debug(s"Actual stakeInfo: rootHash: ${stakeConsensusEpochInfo.rootHash}, totalStake: ${stakeConsensusEpochInfo.totalStake}")
-      throw new IllegalStateException(s"Forging stake merkle path in block ${header.id} is inconsistent to stakes merkle root hash ${stakeConsensusEpochInfo.rootHash.deep.mkString(",")}")
+      throw new IllegalStateException(s"Forging stake merkle path in block ${header.id} is inconsistent to stakes merkle root hash ${BytesUtils.toHexString(stakeConsensusEpochInfo.rootHash)}")
     }
 
     val value = header.forgingStakeInfo.stakeAmount

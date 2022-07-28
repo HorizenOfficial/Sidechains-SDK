@@ -11,6 +11,7 @@ import com.horizen.account.block.AccountBlock;
 import com.horizen.account.block.AccountBlockHeader;
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion;
 import com.horizen.account.proposition.AddressProposition;
+import com.horizen.account.secret.PrivateKeySecp256k1;
 import com.horizen.account.state.*;
 import com.horizen.account.storage.AccountStateMetadataStorageView;
 import com.horizen.account.transaction.AccountTransaction;
@@ -221,10 +222,14 @@ public class CommandProcessor {
         try {
             ECKeyPair pair = Keys.createEcKeyPair(new SecureRandom(json.get("seed").asText().getBytes()));
 
+            // private key
             byte[] accountSecretBytes = Arrays.copyOf(pair.getPrivateKey().toByteArray(), Secp256k1.PRIVATE_KEY_SIZE);
-            AddressProposition addressProposition = new AddressProposition(BytesUtils.fromHexString(Keys.getAddress(pair)));
+            PrivateKeySecp256k1 privKey = new PrivateKeySecp256k1(accountSecretBytes);
+            SidechainSecretsCompanion secretsCompanion = new SidechainSecretsCompanion(new HashMap<>());
+            accountSecretStr = BytesUtils.toHexString(secretsCompanion.toBytes(privKey));
 
-            accountSecretStr      = BytesUtils.toHexString(accountSecretBytes);
+            // public key
+            AddressProposition addressProposition = privKey.publicImage();
             accountPropositionStr = BytesUtils.toHexString(addressProposition.address());
 
         } catch (Exception e) {

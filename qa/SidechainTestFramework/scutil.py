@@ -317,6 +317,9 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
     if bootstrap_info.genesis_account is not None:
         genesis_secrets.append(bootstrap_info.genesis_account.secret)
 
+    if bootstrap_info.genesis_evm_account is not None:
+        genesis_secrets.append(bootstrap_info.genesis_evm_account.secret)
+
     all_private_keys = bootstrap_info.certificate_proof_info.schnorr_secrets
     signer_private_keys = [all_private_keys[idx] for idx in sc_node_config.submitter_private_keys_indexes]
 
@@ -798,7 +801,8 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
                                                             sc_nodes_bootstrap_info.certificate_proof_info,
                                                             sc_nodes_bootstrap_info.initial_cumulative_comm_tree_hash,
                                                             cert_keys_paths,
-                                                            csw_keys_paths)
+                                                            csw_keys_paths,
+                                                            None)
     for i in range(total_number_of_sidechain_nodes):
         sc_node_conf = network.sc_nodes_configuration[i]
         if i == 0:
@@ -842,10 +846,12 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
     certificate_proof_info = generate_certificate_proof_info("seed", 7, 5, cert_keys_paths)
     csw_verification_key = generate_csw_proof_info(sc_creation_info.withdrawal_epoch_length, csw_keys_paths)
 
-    account_public_key = None
+    genesis_evm_account = None
+    evm_account_public_key = None
     if (blockversion == AccountModelBlockVersion):
-        account_keys = generate_account_proposition("seed", 1)
-        account_public_key = account_keys[0].proposition
+        evm_accounts = generate_account_proposition("seed", 1)
+        genesis_evm_account = evm_accounts[0]
+        evm_account_public_key = genesis_evm_account.proposition
 
     genesis_info = initialize_new_sidechain_in_mainchain(
         sc_creation_info.mc_node,
@@ -858,7 +864,7 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
         csw_verification_key,
         sc_creation_info.btr_data_length,
         sc_creation_info.sc_creation_version,
-        account_public_key
+        evm_account_public_key
     )
 
     genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret, vrf_key.secret,
@@ -868,7 +874,8 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
     return SCBootstrapInfo(sidechain_id, genesis_account, sc_creation_info.forward_amount, genesis_info[1],
                            genesis_data["scGenesisBlockHex"], genesis_data["powData"], genesis_data["mcNetwork"],
                            sc_creation_info.withdrawal_epoch_length, vrf_key, certificate_proof_info,
-                           genesis_data["initialCumulativeCommTreeHash"], cert_keys_paths, csw_keys_paths)
+                           genesis_data["initialCumulativeCommTreeHash"], cert_keys_paths, csw_keys_paths,
+                           genesis_evm_account)
 
 
 """
@@ -1059,3 +1066,9 @@ def convertZenToZennies(valueInZen):
 def convertZenniesToWei(valueInZennies):
     return int(round(ZENNY_TO_WEI_MULTIPLIER * valueInZennies))
 
+def convertZenToWei(valueInZen):
+    return convertZenniesToWei(convertZenToZennies(valueInZen))
+
+# Account model: smart contract address for handling forger stakes
+# (see definition at SDK src code: ForgerStakeMsgProcessor.scala)
+ForgerStakeSmartContractAddress = "0000000000000000000022222222222222222222"

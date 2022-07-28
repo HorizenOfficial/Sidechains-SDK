@@ -264,9 +264,12 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
         walletPubKeys.contains(p.vrfPublicKey)
     })
 
-    val forgingStakeInfoTree = MerkleTree.createMerkleTree(filteredForgingStakeInfoSeq.map(info => info.hash).asJava)
+    // return an empty seq if we do not have forging stake, that is a legal (negative) result.
+    if (filteredForgingStakeInfoSeq.size == 0)
+      return Seq()
 
     // 4. prepare merkle tree of all forger stakes and extract path info of mine (what is left after 3)
+    val forgingStakeInfoTree = MerkleTree.createMerkleTree(forgingStakeInfoSeq.map(info => info.hash).asJava)
     val merkleTreeLeaves = forgingStakeInfoTree.leaves().asScala.map(leaf => new ByteArrayWrapper(leaf))
 
     // Calculate merkle path for all delegated forgerBoxes
