@@ -40,6 +40,8 @@ public class EvmTest extends LibEvmTestBase {
             try (var statedb = new StateDB(db, hashNull)) {
                 // test a simple value transfer
                 statedb.addBalance(addr1, v10m);
+                // Due to nonce increase before any transaction on sdk side
+                statedb.setNonce(addr1, BigInteger.ONE);
                 result = Evm.Apply(statedb, addr1, addr2, v5m, null, gasLimit, gasPrice);
                 assertEquals("", result.evmError);
                 assertEquals(v5m, statedb.getBalance(addr2));
@@ -52,6 +54,8 @@ public class EvmTest extends LibEvmTestBase {
                 calldata = concat(contractCode, initialValue);
                 var context = new EvmContext();
                 context.txHash = Hash.FromBytes(txHash);
+                // Due to nonce increase before any transaction on sdk side
+                statedb.setNonce(addr2, BigInteger.ONE);
                 final var createResult = Evm.Apply(statedb, addr2, null, null, calldata, gasLimit, gasPrice, context);
                 assertEquals("", createResult.evmError);
                 contractAddress = createResult.contractAddress.toBytes();
