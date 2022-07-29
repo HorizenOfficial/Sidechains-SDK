@@ -13,7 +13,7 @@ from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     AccountModelBlockVersion, EVM_APP_BINARY, is_mainchain_block_included_in_sc_block, assert_true, \
     check_mainchain_block_reference_info, convertZenToZennies, convertZenniesToWei
 from test_framework.util import assert_equal, assert_false, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain
+    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail
 
 """
 Checks Certificate automatic creation and submission to MC for an EVM Sidechain:
@@ -191,9 +191,12 @@ class SCEvmBackwardTransfer(SidechainTestFramework):
         # Try to withdraw coins from SC to MC: 2 withdrawals
         mc_address1 = mc_node.getnewaddress()
         print("First BT MC public key address is {}".format(mc_address1))
-        bt_amount1 = ft_amount_in_zen - 3
-        sc_bt_amount1 = convertZenToZennies(bt_amount1)
-        withdrawcoins(sc_node, mc_address1, sc_bt_amount1)
+        bt_amount_in_zen_1 = ft_amount_in_zen - 3
+        sc_bt_amount_in_zennies_1 = convertZenToZennies(bt_amount_in_zen_1)
+        res = withdrawcoins(sc_node, mc_address1, sc_bt_amount_in_zennies_1)
+        if "error" in res:
+            fail(f"Creating Withdrawal request failed: " + json.dumps(res))
+
         # Check the balance hasn't changed yet
         new_balance = http_wallet_balance(sc_node, evm_address)
         assert_equal(ft_amount_in_wei, new_balance, "wrong balance")
@@ -206,39 +209,41 @@ class SCEvmBackwardTransfer(SidechainTestFramework):
         # Generate SC block
         generate_next_blocks(sc_node, "first node", 1)
         # Check the balance has changed
-        bt_amount2 = ft_amount_in_zen - bt_amount1
-        sc_bt_amount2 = convertZenToZennies(bt_amount2)
+        bt_amount_in_zen_2 = ft_amount_in_zen - bt_amount_in_zen_1
+        sc_bt_amount_in_zennies_2 = convertZenToZennies(bt_amount_in_zen_2)
         new_balance = http_wallet_balance(sc_node, evm_address)
-        assert_equal(new_balance, convertZenniesToWei(sc_bt_amount2), "wrong balance after first withdrawal request")
+        assert_equal(convertZenniesToWei(sc_bt_amount_in_zennies_2), new_balance,  "wrong balance after first withdrawal request")
 
         # verifies that there is one withdrawal request
         list_of_WR = all_withdrawal_requests(sc_node, current_epoch_number)["listOfWR"]
         assert_equal(1, len(list_of_WR), "Wrong number of withdrawal requests")
         assert_equal(mc_address1, list_of_WR[0]["proposition"]["mainchainAddress"])
-        assert_equal(convertZenniesToWei(sc_bt_amount1), list_of_WR[0]["value"])
-        assert_equal(sc_bt_amount1, list_of_WR[0]["valueInZennies"])
+        assert_equal(convertZenniesToWei(sc_bt_amount_in_zennies_1), list_of_WR[0]["value"])
+        assert_equal(sc_bt_amount_in_zennies_1, list_of_WR[0]["valueInZennies"])
 
         mc_address2 = self.nodes[0].getnewaddress()
         print("Second BT MC public key address is {}".format(mc_address2))
-        withdrawcoins(sc_node, mc_address2, sc_bt_amount2)
+        res = withdrawcoins(sc_node, mc_address2, sc_bt_amount_in_zennies_2)
+        if "error" in res:
+            fail(f"Creating Withdrawal request failed: " + json.dumps(res))
 
         # Generate SC block
         generate_next_blocks(sc_node, "first node", 1)
         # Check the balance has changed
         new_balance = http_wallet_balance(sc_node, evm_address)
-        assert_equal(new_balance, 0, "wrong balance after second withdrawal request")
+        assert_equal(0, new_balance, "wrong balance after second withdrawal request")
 
         # verifies that there are 2 withdrawal request2
         list_of_WR = all_withdrawal_requests(sc_node, current_epoch_number)["listOfWR"]
         assert_equal(2, len(list_of_WR))
 
         assert_equal(mc_address1, list_of_WR[0]["proposition"]["mainchainAddress"])
-        assert_equal(convertZenniesToWei(sc_bt_amount1), list_of_WR[0]["value"])
-        assert_equal(sc_bt_amount1, list_of_WR[0]["valueInZennies"])
+        assert_equal(convertZenniesToWei(sc_bt_amount_in_zennies_1), list_of_WR[0]["value"])
+        assert_equal(sc_bt_amount_in_zennies_1, list_of_WR[0]["valueInZennies"])
 
         assert_equal(mc_address2, list_of_WR[1]["proposition"]["mainchainAddress"])
-        assert_equal(convertZenniesToWei(sc_bt_amount2), list_of_WR[1]["value"])
-        assert_equal(sc_bt_amount2, list_of_WR[1]["valueInZennies"])
+        assert_equal(convertZenniesToWei(sc_bt_amount_in_zennies_2), list_of_WR[1]["value"])
+        assert_equal(sc_bt_amount_in_zennies_2, list_of_WR[1]["valueInZennies"])
 
 
         # Generate 8 more MC block to finish the first withdrawal epoch, then generate 1 more SC block to sync with MC.
@@ -280,7 +285,7 @@ class SCEvmBackwardTransfer(SidechainTestFramework):
         assert_equal(1, we1_cert["cert"]["epochNumber"], "Sidechain epoch number in certificate is wrong.")
         assert_equal(we1_end_epoch_cum_sc_tx_comm_tree_root, we1_cert["cert"]["endEpochCumScTxCommTreeRoot"],
                      "Sidechain endEpochCumScTxCommTreeRoot in certificate is wrong.")
-        assert_equal(bt_amount1 + bt_amount2, we1_cert["cert"]["totalAmount"],
+        assert_equal(bt_amount_in_zen_1 + bt_amount_in_zen_2, we1_cert["cert"]["totalAmount"],
                      "Sidechain total amount in certificate is wrong.")
 
         # Generate MC block and verify that certificate is present
@@ -295,8 +300,8 @@ class SCEvmBackwardTransfer(SidechainTestFramework):
             str(mc_node.getblock(we2_2_mcblock_hash, False))))
 
         # Check certificate BT entries
-        assert_equal(bt_amount1, we1_cert["vout"][1]["value"], "First BT amount is wrong.")
-        assert_equal(bt_amount2, we1_cert["vout"][2]["value"], "Second BT amount is wrong.")
+        assert_equal(bt_amount_in_zen_1, we1_cert["vout"][1]["value"], "First BT amount is wrong.")
+        assert_equal(bt_amount_in_zen_2, we1_cert["vout"][2]["value"], "Second BT amount is wrong.")
 
         cert_address_1 = we1_cert["vout"][1]["scriptPubKey"]["addresses"][0]
         assert_equal(mc_address1, cert_address_1, "First BT standard address is wrong.")
@@ -326,11 +331,11 @@ class SCEvmBackwardTransfer(SidechainTestFramework):
 
         sc_pub_key_1 = we1_sc_cert["backwardTransferOutputs"][0]["address"]
         assert_equal(mc_address1, sc_pub_key_1, "First BT address is wrong.")
-        assert_equal(sc_bt_amount1, we1_sc_cert["backwardTransferOutputs"][0]["amount"], "First BT amount is wrong.")
+        assert_equal(sc_bt_amount_in_zennies_1, we1_sc_cert["backwardTransferOutputs"][0]["amount"], "First BT amount is wrong.")
 
         sc_pub_key_2 = we1_sc_cert["backwardTransferOutputs"][1]["address"]
         assert_equal(mc_address2, sc_pub_key_2, "Second BT address is wrong.")
-        assert_equal(sc_bt_amount2, we1_sc_cert["backwardTransferOutputs"][1]["amount"], "Second BT amount is wrong.")
+        assert_equal(sc_bt_amount_in_zennies_2, we1_sc_cert["backwardTransferOutputs"][1]["amount"], "Second BT amount is wrong.")
 
         assert_equal(we1_certHash, we1_sc_cert["hash"], "Certificate hash is different to the one in MC.")
 

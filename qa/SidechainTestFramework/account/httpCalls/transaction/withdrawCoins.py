@@ -2,7 +2,7 @@ import json
 
 
 # execute a transaction/withdrawCoins call on account sidechain
-def withdrawcoins(sidechain_node, address, amount, nonce=1):
+def withdrawcoins(sidechain_node, address, amount, nonce=None):
     j = {
         "nonce": nonce,
         "withdrawalRequest":

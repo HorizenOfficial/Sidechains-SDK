@@ -123,7 +123,10 @@ class SCEvmBWTCornerCases(SidechainTestFramework):
         # *************** Test 2: Withdrawal amount under dust threshold *****************
         # Tries a withdrawal request with amount under dust threshold (54 zennies), wr should not be created but the tx should be created
         bt_amount_in_zennies = 53
-        tx_id = withdrawcoins(sc_node, mc_address1, bt_amount_in_zennies)["result"]["transactionId"]
+        res = withdrawcoins(sc_node, mc_address1, bt_amount_in_zennies)
+        if "error" in res:
+            fail(f"Creating Withdrawal request failed: " + json.dumps(res))
+        tx_id = res["result"]["transactionId"]
 
         generate_next_block(sc_node, "first node")
         # verifies that there are no withdrawal requests
