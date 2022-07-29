@@ -12,7 +12,8 @@ from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, \
     check_mainchain_block_reference_info, \
     AccountModelBlockVersion, EVM_APP_BINARY, generate_next_blocks, generate_next_block, generate_account_proposition, \
-    convertZenniesToWei, convertZenToZennies, connect_sc_nodes, get_account_balance, convertZenToWei
+    convertZenniesToWei, convertZenToZennies, connect_sc_nodes, get_account_balance, convertZenToWei, \
+    ForgerStakeSmartContractAddress
 
 """
 Configuration: 
@@ -56,7 +57,7 @@ class SCEvmEOA2EOA(SidechainTestFramework):
                               binary=[EVM_APP_BINARY]*2)#, extra_args=[['-agentlib'], []])
 
     def makeEoa2Eoa(self, from_sc_node, to_sc_node, from_addr, to_addr, amount_in_zen,
-                    nonce = None, debug = None):
+                    nonce = None, print_tx_json = False):
         initial_balance_from = get_account_balance(from_sc_node, from_addr)
         initial_balance_to = get_account_balance(to_sc_node, to_addr)
 
@@ -91,14 +92,16 @@ class SCEvmEOA2EOA(SidechainTestFramework):
         if not tx_hash in response['result']['transactionIds']:
             return (False, "tx not in mempool")
 
-        if not debug is None:
+        if print_tx_json:
             pprint.pprint(from_sc_node.transaction_allTransactions(json.dumps({"format": True})))
 
         generate_next_block(from_sc_node, "first node")
         self.sc_sync_all()
 
+        # TODO check receipt, meanwhile do some check on amounts
+
         # check updated balances are as expected
-        # TODO take gas into account)
+        # TODO take gas into account
         final_balance_from = get_account_balance(from_sc_node, from_addr)
         final_balance_to = get_account_balance(to_sc_node, to_addr)
 
@@ -162,6 +165,12 @@ class SCEvmEOA2EOA(SidechainTestFramework):
         ret, msg = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc2, transferred_amount_in_zen, 3)
         assert_true(ret, msg)
 
+        print("Create an EOA to EOA transaction with a null value")
+        transferred_amount_in_zen = Decimal('0.0')
+        ret, msg = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc2,
+                                    transferred_amount_in_zen, print_tx_json=True)
+        assert_true(ret, msg)
+
         #negative cases
 
         print("Create an EOA to EOA transaction with an invalid from address (not owned) ==> SHOULD FAIL")
@@ -182,17 +191,25 @@ class SCEvmEOA2EOA(SidechainTestFramework):
         except Exception as e:
             print("Expected failure: {}".format(e))
 
-
-            
         print("Create an EOA to EOA transaction moving some fund with too high a nonce ==> SHOULD FAIL")
         transferred_amount_in_zen = Decimal('33')
-        ret, msg = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc2, transferred_amount_in_zen, 33)
+        ret, msg = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc2, transferred_amount_in_zen,
+                                    33)
         if not ret:
             print("Expected failure: {}".format(msg))
         else:
             fail("EOA2EOA with bad nonce should not work")
 
-        print("Create an EOA to EOA transaction moving to large a fund ==> SHOULD FAIL")
+        print("Create an EOA to EOA transaction moving some fund with too low a nonce ==> SHOULD FAIL")
+        transferred_amount_in_zen = Decimal('33')
+        ret, msg = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc2,
+                                    transferred_amount_in_zen, 0)
+        if not ret:
+            print("Expected failure: {}".format(msg))
+        else:
+            fail("EOA2EOA with bad nonce should not work")
+
+        print("Create an EOA to EOA transaction moving too large a fund ==> SHOULD FAIL")
         transferred_amount_in_zen = Decimal('5678')
         ret, msg = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc2, transferred_amount_in_zen)
         if not ret:
@@ -200,16 +217,17 @@ class SCEvmEOA2EOA(SidechainTestFramework):
         else:
             fail("EOA2EOA with too big an amount should not work")
 
-        # TODO check this, should fail or not?
-        print("Create an EOA to EOA transaction with an invalid amount (null) ==> SHOULD FAIL?")
-        transferred_amount_in_zen = Decimal('0.0')
-        ret, msg = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc2,
-                                    transferred_amount_in_zen, debug=1)
+        print("Create an EOA to EOA transaction moving a fund to a fake contract address ==> SHOULD FAIL")
+        transferred_amount_in_zen = Decimal('1')
+        ret, msg = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, ForgerStakeSmartContractAddress, transferred_amount_in_zen)
         if not ret:
             print("Expected failure: {}".format(msg))
         else:
-            fail("EOA2EOA with null amount should not work")
+            fail("EOA2EOA to fake smart contract should not work")
 
-              
+
+
+
+
 if __name__ == "__main__":
     SCEvmEOA2EOA().main()
