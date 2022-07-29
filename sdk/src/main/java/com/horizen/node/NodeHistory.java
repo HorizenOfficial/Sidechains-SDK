@@ -12,9 +12,6 @@ import java.util.Optional;
 public interface NodeHistory
         extends NodeHistoryBase<BoxTransaction<Proposition, Box<Proposition>>, SidechainBlockHeader, SidechainBlock> {
 
-    @Override
-    Optional<SidechainBlock> getBlockById(String blockId);
-
     Optional<BoxTransaction<Proposition, Box<Proposition>>> searchTransactionInsideSidechainBlock(String transactionId, String blockId);
 
     Optional<BoxTransaction<Proposition, Box<Proposition>>> searchTransactionInsideBlockchain(String transactionId);
