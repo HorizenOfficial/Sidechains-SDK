@@ -58,6 +58,13 @@ func TestInvoke(t *testing.T) {
 		},
 		Amount: (*hexutil.Big)(big.NewInt(1000000000000000000)),
 	})
+	call(t, instance, "StateSetNonce", lib.NonceParams{
+		AccountParams: lib.AccountParams{
+			HandleParams: lib.HandleParams{Handle: handle},
+			Address:      user,
+		},
+		Nonce: 1,
+	})
 	// deploy contract
 	result := call(t, instance, "EvmApply", lib.EvmParams{
 		HandleParams: lib.HandleParams{Handle: handle},
@@ -70,6 +77,15 @@ func TestInvoke(t *testing.T) {
 	if result.EvmError != "" {
 		t.Fatalf("vm error: %v", result.EvmError)
 	}
+	/* TODO: check test
+	getCodeResult := call(t, instance, "StateGetCode", lib.AccountParams{
+		HandleParams: lib.HandleParams{Handle: handle},
+		Address:      *result.ContractAddress,
+	}).([]byte)
+	const expectedCode = "60806040526004361060305760003560e01c80632e64cec1146035578063371303c01460565780636057361d14606a575b600080fd5b348015604057600080fd5b5060005460405190815260200160405180910390f35b348015606157600080fd5b506068607a565b005b606860753660046086565b600055565b6000546075906001609e565b600060208284031215609757600080fd5b5035919050565b6000821982111560be57634e487b7160e01b600052601160045260246000fd5b50019056fea264697066735822122080d9db531d29b1bd6b4e16762726b70e2a94f0b40ee4e2ab534d9b879cf1c25664736f6c634300080f0033"
+	if expectedCode != common.Bytes2Hex(getCodeResult) {
+		t.Fatalf("deployed code does not match %s", common.Bytes2Hex(getCodeResult))
+	}*/
 	// call function to check if can retrieve value
 	resultRetrieve := call(t, instance, "EvmStaticCall", lib.EvmParams{
 		HandleParams: lib.HandleParams{Handle: handle},
@@ -112,7 +128,7 @@ func TestInvoke(t *testing.T) {
 		HandleParams: lib.HandleParams{Handle: handle},
 		Address:      user,
 	}).(hexutil.Uint64)
-	if uint64(nonce) != 0 {
+	if uint64(nonce) != 1 {
 		t.Fatalf("nonce was modified: expected 0, actual %v", nonce)
 	}
 	// cleanup

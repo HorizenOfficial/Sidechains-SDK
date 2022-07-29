@@ -9,6 +9,7 @@ import com.horizen.transaction.TransactionSerializer;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import org.jetbrains.annotations.NotNull;
 import org.web3j.crypto.RawTransaction;
+import org.web3j.crypto.Sign;
 import org.web3j.crypto.Sign.SignatureData;
 import org.web3j.crypto.SignedRawTransaction;
 import org.web3j.crypto.TransactionEncoder;
@@ -16,11 +17,13 @@ import org.web3j.crypto.transaction.type.LegacyTransaction;
 import org.web3j.crypto.transaction.type.Transaction1559;
 import org.web3j.crypto.transaction.type.TransactionType;
 import org.web3j.utils.Numeric;
+import org.web3j.crypto.Hash;
 
 import javax.annotation.Nullable;
 import java.math.BigInteger;
 import java.security.SignatureException;
 import java.util.Objects;
+
 
 // TODO ensure that the json parameters are fitting for the use case
 @JsonPropertyOrder({"from", "gasPrice", "nonce", "to", "value", "signature"})
@@ -28,7 +31,7 @@ import java.util.Objects;
 @JsonView(Views.Default.class)
 public class EthereumTransaction extends AccountTransaction<AddressProposition, SignatureSecp256k1> {
     private final RawTransaction transaction;
-
+    
     // depends on the transaction
     public EthereumTransaction(
             RawTransaction transaction
@@ -100,11 +103,16 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return AccountTransactionsIdsEnum.EthereumTransaction.id();
     }
 
-    // TODO: eth tx id must be exactly a 32 bytes of transactionHash()
-    public String transactionHash() {
-        return AccountTransactionHash.getHash(
-                Numeric.toHexString(TransactionEncoder.encode(this.getTransaction(), ((SignedRawTransaction) this.transaction).getSignatureData())),
-                this.version());
+    @Override
+    @JsonProperty("id")
+    public String id() {
+        byte[] encodedMessage;
+        if (this.isSigned()) {
+            SignedRawTransaction stx = (SignedRawTransaction) this.transaction;
+            encodedMessage = TransactionEncoder.encode(this.getTransaction(),
+                    stx.getSignatureData());
+        } else encodedMessage = TransactionEncoder.encode(this.getTransaction());
+        return com.horizen.utils.BytesUtils.toHexString(Hash.sha3(encodedMessage, 0, encodedMessage.length));
     }
 
     @Override
@@ -192,9 +200,30 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return null;
     }
 
+    static long convertToLong(byte[] bytes) {
+        long value = 0l;
+
+        // Iterating through for loop
+        for (byte b : bytes) {
+            // Shifting previous value 8 bits to right and
+            // add it with next value
+            value = (value << 8) + (b & 255);
+        }
+
+        return value;
+    }
+
     public Long getChainId() {
         if (this.isEIP1559())
             return this.eip1559Tx().getChainId();
+        else if (this.isSigned()) {
+            var signedTx = (SignedRawTransaction) this.transaction;
+            var sigData = signedTx.getSignatureData();
+            if (sigData.getS()[0] == 0 && sigData.getR()[0] == 0)
+                return convertToLong(sigData.getV());
+            else return ((SignedRawTransaction) this.transaction).getChainId(); // TODO check necessity
+        }
+
         return null;
     }
 

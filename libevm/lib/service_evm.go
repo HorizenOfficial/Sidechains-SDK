@@ -173,17 +173,15 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 	)
 	if contractCreation {
 		var deployedContractAddress common.Address
-		initialNonce := statedb.GetNonce(params.From)
+		// Since we increase the nonce before any transactions, we would get a wrong result here
+		// So we reduce the nonce by 1 and then evm.Create will increase it again to the value it should
+		// be after the transaction. This is necessary, since in the non-creation case the nonce should
+		// already be increased
+		statedb.SetNonce(params.From, statedb.GetNonce(params.From)-1)
 		// we ignore returnData here because it holds the contract code that was just deployed
 		_, deployedContractAddress, gas, vmerr = evm.Create(sender, params.Input, gas, params.Value.ToInt())
-		// evm.Create() will also increment the callers' nonce - for EOAs, which the sender here always is,
-		// we don't want that, because it is handled by the core outside this scope.
-		// Essiest solution is to just reset the nonce after the evm invocation if it was altered.
-		// The check is necessary because in some error cases the nonce might not have been altered.
-		if initialNonce != statedb.GetNonce(params.From) {
-			statedb.SetNonce(params.From, initialNonce)
-		}
-		contractAddress = &deployedContractAddress
+		// TODO check if the nonce could ever be wrong here in an error case for example
+        contractAddress = &deployedContractAddress
 	} else {
 		returnData, gas, vmerr = evm.Call(sender, *params.To, params.Input, gas, params.Value.ToInt())
 	}

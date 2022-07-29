@@ -7,14 +7,13 @@ import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.state.AccountState.blockGasLimitExceeded
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.block.{MainchainBlockReferenceData, SidechainBlockBase, WithdrawalEpochCertificate}
+import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.evm._
 import com.horizen.evm.interop.EvmLog
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
-import com.horizen.transaction.MC2SCAggregatedTransaction
-import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, Utils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import org.web3j.crypto.ContractUtils.generateContractAddress
 import scorex.core._
 import scorex.core.transaction.state.TransactionValidation
@@ -117,7 +116,7 @@ class AccountState(val params: NetworkParams,
     }
 
 
-    for(mcBlockRefData <- mod.mainchainBlockReferencesData) {
+    for (mcBlockRefData <- mod.mainchainBlockReferencesData) {
       stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
     }
 
@@ -125,7 +124,7 @@ class AccountState(val params: NetworkParams,
     val receiptList = new ListBuffer[EthereumReceipt]()
     val blockNumber = stateView.getHeight + 1
     val blockHash = idToBytes(mod.id)
-    var cumGasUsed : BigInteger = BigInteger.ZERO
+    var cumGasUsed: BigInteger = BigInteger.ZERO
 
     for ((tx, txIndex) <- mod.sidechainTransactions.zipWithIndex) {
       stateView.applyTransaction(tx, txIndex, cumGasUsed) match {
@@ -140,7 +139,7 @@ class AccountState(val params: NetworkParams,
             throw new IllegalArgumentException("Could not apply tx, block gas limit exceeded")
           }
 
-          val txHash = idToBytes(ethTx.id)
+          val txHash = BytesUtils.fromHexString(ethTx.id)
 
           // The contract address created, if the transaction was a contract creation
           val contractAddress = if (ethTx.getTo == null) {
@@ -156,7 +155,7 @@ class AccountState(val params: NetworkParams,
 
           // get a receipt obj with non consensus data (logs updated too)
           val fullReceipt = EthereumReceipt(consensusDataReceipt,
-                      txHash, txIndex, blockHash, blockNumber, txGasUsed, contractAddress)
+            txHash, txIndex, blockHash, blockNumber, txGasUsed, contractAddress)
 
           log.debug(s"Adding to receipt list: ${fullReceipt.toString()}")
 
@@ -309,7 +308,6 @@ class AccountState(val params: NetworkParams,
     stateMetadataStorage.getHeight
   }
 
-
   private def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = {
     val stateView: AccountStateView = getView
     val res = stateView.getOrderedForgingStakeInfoSeq
@@ -389,7 +387,7 @@ class AccountState(val params: NetworkParams,
     if (tx.isInstanceOf[EthereumTransaction]) {
 
       val ethTx = tx.asInstanceOf[EthereumTransaction]
-      val txHash = idToBytes(ethTx.id)
+      val txHash = BytesUtils.fromHexString(ethTx.id)
 
       val stateView = getView
 
