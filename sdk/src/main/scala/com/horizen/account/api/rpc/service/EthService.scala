@@ -100,9 +100,7 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
     Numeric.toHexString(result.returnData)
   }
 
-  @RpcMethod("eth_blockNumber") def blockNumber = new Quantity(Numeric.toHexStringWithPrefix(BigInteger.valueOf(getBlockHeight)))
-
-  private def getBlockHeight = nodeView.history.getCurrentHeight
+  @RpcMethod("eth_blockNumber") def blockNumber = new Quantity(Numeric.toHexStringWithPrefix(BigInteger.valueOf(nodeView.history.getCurrentHeight)))
 
   @RpcMethod("eth_chainId") def chainId = new Quantity(Numeric.toHexStringWithPrefix(BigInteger.valueOf(networkParams.chainId)))
 
