@@ -58,6 +58,13 @@ func TestInvoke(t *testing.T) {
 		},
 		Amount: (*hexutil.Big)(big.NewInt(1000000000000000000)),
 	})
+	call(t, instance, "StateSetNonce", lib.NonceParams{
+		AccountParams: lib.AccountParams{
+			HandleParams: lib.HandleParams{Handle: handle},
+			Address:      user,
+		},
+		Nonce: 1,
+	})
 	// deploy contract
 	result := call(t, instance, "EvmApply", lib.EvmParams{
 		HandleParams: lib.HandleParams{Handle: handle},
@@ -121,7 +128,7 @@ func TestInvoke(t *testing.T) {
 		HandleParams: lib.HandleParams{Handle: handle},
 		Address:      user,
 	}).(hexutil.Uint64)
-	if uint64(nonce) != 0 {
+	if uint64(nonce) != 1 {
 		t.Fatalf("nonce was modified: expected 0, actual %v", nonce)
 	}
 	// cleanup

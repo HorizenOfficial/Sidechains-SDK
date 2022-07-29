@@ -125,7 +125,7 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
 
   def setupTxContext(tx: EthereumTransaction, idx: Integer): Unit = {
     // set context for the created events/logs assignment
-    stateDb.setTxContext(idToBytes(tx.id), idx)
+    stateDb.setTxContext(BytesUtils.fromHexString(tx.id), idx)
   }
 
   private def preCheck(tx: EthereumTransaction): BigInteger = {
@@ -135,8 +135,8 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     // TODO this is checked also by EthereumTransaction.semanticValidity()
     // Check signature
     // TODO: add again later and check - message to sign seems to be false (?)
-    //if (!tx.getSignature.isValid(tx.getFrom, tx.messageToSign()))
-    //  throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: signature is invalid")
+    if (!tx.getSignature.isValid(tx.getFrom, tx.messageToSign()))
+      throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: signature is invalid")
 
     // Check that "from" is EOA address
     if (!isEoaAccount(tx.getFrom.address()))
@@ -146,7 +146,7 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     val stateNonce: BigInteger = getNonce(tx.getFrom.address())
     val txNonce: BigInteger = tx.getNonce
     val result = stateNonce.compareTo(txNonce)
-    // TODO: add again later and check
+
     if (result > 0) {
       throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: nonce ${txNonce} is too low (expected nonce is $stateNonce)")
     } else if (result < 0) {
@@ -185,7 +185,7 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
       throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
 
     val ethTx = tx.asInstanceOf[EthereumTransaction]
-    val txHash = idToBytes(ethTx.id)
+    val txHash = BytesUtils.fromHexString(ethTx.id)
 
     // Do the checks and prepay gas
     val bookedGasPrice: BigInteger = preCheck(ethTx)
@@ -224,6 +224,7 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
       case invalid: InvalidMessage =>
         throw new Exception(s"Transaction ${ethTx.id} is invalid.", invalid.getReason)
     }
+
 
     // todo: refund gas: bookedGasPrice - actualGasPrice
     log.debug(s"Returning consensus data receipt: ${consensusDataReceipt.toString()}")
@@ -308,7 +309,7 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     metadataStorageView.updateTransactionReceipts(receipts)
   }
 
-   def getTransactionReceipt(txHash : Array[Byte]): Option[EthereumReceipt] = {
+  def getTransactionReceipt(txHash: Array[Byte]): Option[EthereumReceipt] = {
     metadataStorageView.getTransactionReceipt(txHash)
   }
 

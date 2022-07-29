@@ -187,7 +187,7 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
   }
 
   @RpcMethod("eth_gasPrice") def gasPrice = { // TODO: Get the real gasPrice later
-    new Quantity("0x1")
+    new Quantity("0x3B9ACA00")
   }
 
   @RpcMethod("eth_getTransactionByHash") def getTransactionByHash(transactionHash: String): EthereumTransactionView = {
