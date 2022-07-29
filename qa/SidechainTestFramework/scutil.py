@@ -1069,10 +1069,24 @@ def convertZenniesToWei(valueInZennies):
 def convertZenToWei(valueInZen):
     return convertZenniesToWei(convertZenToZennies(valueInZen))
 
+def convertWeiToZen(valueInWei):
+    valueInZen = (valueInWei/ZENNY_TO_WEI_MULTIPLIER)/COIN
+    if valueInZen < 1/COIN:
+        return 0
+    else:
+        return valueInZen
+
 def convertZenniesToZen(valueInZennies):
     return (valueInZennies / COIN)
 
 
 # Account model: smart contract address for handling forger stakes
-# (see definition at SDK src code: ForgerStakeMsgProcessor.scala)
+# (see definition at SDK src code: WithdrawalMsgProcessor.scala, ForgerStakeMsgProcessor.scala)
+WithdrawalReqSmartContractAddress = "0000000000000000000011111111111111111111"
 ForgerStakeSmartContractAddress = "0000000000000000000022222222222222222222"
+
+def get_account_balance(sc_node, address):
+    return sc_node.wallet_getBalance(
+        json.dumps({"address": str(address)}))["result"]["balance"]
+
+

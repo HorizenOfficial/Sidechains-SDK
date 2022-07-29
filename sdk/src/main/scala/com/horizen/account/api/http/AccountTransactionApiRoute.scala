@@ -123,7 +123,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         val secret = getFittingSecret(sidechainNodeView, body.from, valueInWei)
         secret match {
           case Some(secret) =>
-            val nonce = sidechainNodeView.getNodeState.getNonce(secret.publicImage.address)
+            val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
             val tmpTx = new EthereumTransaction(
               destAddress,
               nonce,

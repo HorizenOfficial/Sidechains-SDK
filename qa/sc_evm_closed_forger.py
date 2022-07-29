@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import pprint
 
 from decimal import Decimal
 
@@ -7,11 +8,11 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
     SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH, SCForgerConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, assert_true, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain
+    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, assert_false
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, AccountModelBlockVersion, EVM_APP_BINARY, generate_next_block, \
     convertZenToZennies, connect_sc_nodes, convertZenToWei, generate_secrets, \
-    generate_vrf_secrets
+    generate_vrf_secrets, get_account_balance
 
 """
 Check the EVM bootstrap feature.
@@ -27,10 +28,6 @@ Test:
 
 """
 
-
-def get_account_balance(sc_node, address):
-    return sc_node.wallet_getBalance(
-        json.dumps({"address": str(address)}))["result"]["balance"]
 
 
 class SCEvmClosedForgerList(SidechainTestFramework):
@@ -77,8 +74,7 @@ class SCEvmClosedForgerList(SidechainTestFramework):
         return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
                               binary=[EVM_APP_BINARY] * 2)#, extra_args=[['-agentlib'], []])
 
-    def tryMakeForgetStake(self, sc_node, owner_address, blockSignPubKey, vrf_public_key, amount,
-                           expected_stake_list_len):
+    def tryMakeForgetStake(self, sc_node, owner_address, blockSignPubKey, vrf_public_key, amount):
         # a transaction with a forger stake info not compliant with the closed forger list will be successfully
         # included in a block but the receipt will then report a 'failed' status.
         forgerStakes = {"forgerStakeInfo": {
@@ -97,14 +93,13 @@ class SCEvmClosedForgerList(SidechainTestFramework):
         self.sc_sync_all()
 
         # check we had a failure in the receipt
-        # TODO as of now returned obj is not json but a hardcoded formatted string
-        # tx_hash = makeForgerStakeJsonRes['result']["transactionId"]
-        # receipt = sc_node_1.rpc_eth_getTransactionReceipt(tx_hash)
-        # pprint.pprint(receipt['result'])
+        tx_hash = makeForgerStakeJsonRes['result']["transactionId"]
+        print("Getting receipt for txhash={}".format(tx_hash))
 
-        # check we have the expected list len
-        stakeList = sc_node.transaction_allForgingStakes()["result"]['stakes']
-        return (len(stakeList) == expected_stake_list_len)
+        receipt = sc_node.rpc_eth_getTransactionReceipt(tx_hash)
+        status = int(receipt['result']['status'], 16)
+        # status == 1 is succesful
+        return (status == 1)
 
     def run_test(self):
 
@@ -144,32 +139,28 @@ class SCEvmClosedForgerList(SidechainTestFramework):
         print("Try to stake to an invalid blockSignProposition...")
         result = self.tryMakeForgetStake(
               sc_node_1, evm_address_sc_node_1, outlaw_blockSignPubKey,
-              self.allowed_forger_vrf_public_key, amount=33, expected_stake_list_len=1)
-
-        assert_true(result)
+              self.allowed_forger_vrf_public_key, amount=33)
+        assert_false(result)
 
         # Try to stake to an invalid vrfPublicKey
         print("Try to stake to an invalid vrfPublicKey...")
         result = self.tryMakeForgetStake(
               sc_node_1, evm_address_sc_node_1, self.allowed_forger_block_signer_public_key,
-              outlaw_vrfPubKey, amount=33, expected_stake_list_len=1)
-
-        assert_true(result)
+              outlaw_vrfPubKey, amount=33)
+        assert_false(result)
 
         # Try to stake with an invalid blockSignProposition and an invalid vrfPublicKey
         print("Try to stake to an invalid blockSignProposition and an invalid vrfPublicKey...")
         result = self.tryMakeForgetStake(
               sc_node_1, evm_address_sc_node_1, outlaw_blockSignPubKey,
-              outlaw_vrfPubKey, amount=33, expected_stake_list_len=1)
-
-        assert_true(result)
+              outlaw_vrfPubKey, amount=33)
+        assert_false(result)
 
         # Try to stake with a valid blockSignProposition and valid vrfPublicKey
         print("Try to stake to a valid blockSignProposition and valid vrfPublicKey...")
         result = self.tryMakeForgetStake(
               sc_node_1, evm_address_sc_node_1, self.allowed_forger_block_signer_public_key,
-              self.allowed_forger_vrf_public_key, amount=33, expected_stake_list_len=2)
-
+              self.allowed_forger_vrf_public_key, amount=33)
         assert_true(result)
 
 

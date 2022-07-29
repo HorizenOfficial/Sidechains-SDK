@@ -10,11 +10,9 @@ from test_framework.util import assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, AccountModelBlockVersion, EVM_APP_BINARY, generate_next_block, convertZenniesToWei, \
-    convertZenToZennies, connect_sc_nodes, convertZenToWei, ForgerStakeSmartContractAddress
+    convertZenToZennies, connect_sc_nodes, convertZenToWei, ForgerStakeSmartContractAddress, get_account_balance
 
 """
-Check the EVM bootstrap feature.
-
 Configuration: 
     - 2 SC nodes connected with each other
     - 1 MC node
@@ -46,11 +44,6 @@ def get_sc_wallet_pubkeys(sc_node):
             pkey_list.append(p['address'])
 
     return pkey_list
-
-
-def get_account_balance(sc_node, address):
-    return sc_node.wallet_getBalance(
-        json.dumps({"address": str(address)}))["result"]["balance"]
 
 
 def print_current_epoch_and_slot(sc_node):
