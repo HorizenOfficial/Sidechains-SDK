@@ -604,7 +604,7 @@ object AccountTransactionRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqAllWithdrawalRequests(epochNum: Int) {
-    require(epochNum > 0, "Epoch number must be positive")
+    require(epochNum >= 0, "Epoch number must be positive")
   }
 
 
