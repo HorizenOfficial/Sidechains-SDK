@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import json
 import pprint
 from decimal import Decimal
 
@@ -298,6 +299,15 @@ class SCEvmERC721Contract(SidechainTestFramework):
         ret = sc_node.wallet_createPrivateKeySecp256k1()
         other_address = ret["result"]["proposition"]["address"]
         pprint.pprint(sc_node.rpc_eth_getBalance(str(evm_address), "latest"))
+        pprint.pprint(sc_node.rpc_eth_getBalance(format_eoa(other_address), "latest"))
+        sc_node.transaction_sendCoinsToAddress(json.dumps({
+            'from': format_eoa(evm_address),
+            'to': format_eoa(other_address),
+            'value': 1
+        }))
+        generate_next_block(sc_node, "first node", 1)
+
+        pprint.pprint(sc_node.rpc_eth_getBalance(format_eoa(other_address), "latest"))
 
         zero_address = '0x0000000000000000000000000000000000000000'
 
