@@ -194,6 +194,8 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
 
     val message: Message = Message.fromTransaction(ethTx)
 
+    // Increase the nonce by 1
+    increaseNonce(message.getFrom.address())
 
     // Create a snapshot to know where to rollback in case of Message processing failure
     val revisionId: Int = stateDb.snapshot()
@@ -222,8 +224,6 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
         throw new Exception(s"Transaction ${ethTx.id} is invalid.", invalid.getReason)
     }
 
-    // Increase the nonce by 1
-    increaseNonce(message.getFrom.address())
 
     // todo: refund gas: bookedGasPrice - actualGasPrice
     log.debug(s"Returning consensus data receipt: ${consensusDataReceipt.toString()}")
