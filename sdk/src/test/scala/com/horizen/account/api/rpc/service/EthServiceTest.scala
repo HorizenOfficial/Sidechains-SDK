@@ -3,10 +3,11 @@ package com.horizen.account.api.rpc.service
 import akka.actor.TypedActor.dispatcher
 import akka.actor.{ActorRef, ActorSystem}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
+import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.{SidechainHistory, SidechainSettings}
 import com.horizen.account.api.rpc.request.RpcRequest
 import com.horizen.account.api.rpc.response.RpcResponseError
-import com.horizen.account.api.rpc.utils.Quantity
+import com.horizen.account.api.rpc.types.Quantity
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.node.AccountNodeView
@@ -52,19 +53,19 @@ class EthServiceTest extends JUnitSuite
     var json = "{\"id\":\"1\", \"jsonrpc\":\"2.0\",\"method\":\"eth_estimateGas\", \"params\":{\"tx\":\"test\", \"tx2\":\"test2\"}}"
     var request = mapper.readTree(json)
     var rpcRequest = new RpcRequest(request)
-    assertEquals("Invalid params", ethService.execute(rpcRequest).asInstanceOf[RpcResponseError].getError.getMessage)
+    assertThrows[RpcException] { ethService.execute(rpcRequest) }
 
     // Test 1: Parameters are of wrong type
     json = "{\"id\":\"1\", \"jsonrpc\":\"2.0\",\"method\":\"eth_estimateGas\", \"params\":{\"tx\":\"test\", \"tx2\":\"test2\"}}"
     request = mapper.readTree(json)
     rpcRequest = new RpcRequest(request)
-    assertEquals("Invalid params", ethService.execute(rpcRequest).asInstanceOf[RpcResponseError].getError.getMessage)
+    assertThrows[RpcException] { ethService.execute(rpcRequest) }
 
     // Test 2: Wrong number of parameters
     json = "{\"id\":\"1\", \"jsonrpc\":\"2.0\",\"method\":\"eth_estimateGas\", \"params\":[5, 10, 20]}}"
     request = mapper.readTree(json)
     rpcRequest = new RpcRequest(request)
-    assertEquals("Invalid params", ethService.execute(rpcRequest).asInstanceOf[RpcResponseError].getError.getMessage)
+    assertThrows[RpcException] { ethService.execute(rpcRequest) }
 
     // Test 3: Request execution calls correct function and returns value correctly
     json = "{\"id\":\"1\", \"jsonrpc\":\"2.0\",\"method\":\"eth_chainId\", \"params\":[]}}"
