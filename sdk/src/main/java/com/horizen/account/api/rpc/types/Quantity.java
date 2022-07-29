@@ -1,18 +1,18 @@
-package com.horizen.account.api.rpc.utils;
+package com.horizen.account.api.rpc.types;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
-public class Data {
-    private final byte[] value;
+public class Quantity {
+    private final String value;
 
     @JsonCreator
-    public Data(byte[] value) {
+    public Quantity(String value) {
         this.value = value;
     }
 
     @JsonValue
-    public byte[] getValue() {
+    public String getValue() {
         return value;
     }
 }

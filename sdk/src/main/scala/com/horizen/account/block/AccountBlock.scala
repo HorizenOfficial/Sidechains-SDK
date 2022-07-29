@@ -11,7 +11,7 @@ import com.horizen.evm.TrieHasher
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
-import com.horizen.utils.{ByteArrayWrapper, MerklePath}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerklePath}
 import com.horizen.validation.InconsistentSidechainBlockDataException
 import com.horizen.{ScorexEncoding, SidechainTypes, account}
 import scorex.core.block.Block
@@ -41,8 +41,9 @@ class AccountBlock(override val header: AccountBlockHeader,
     // verify Ethereum friendly transaction root hash
     val txRootHash = TrieHasher.Root(sidechainTransactions.map(tx => tx.bytes).toArray)
     if (!java.util.Arrays.equals(txRootHash, header.sidechainTransactionsMerkleRootHash)) {
-      log.error("invalid transaction root hash")
-      throw new InconsistentSidechainBlockDataException("invalid transaction root hash")
+      val reason = s"Invalid transaction root hash: actual ${BytesUtils.toHexString(header.sidechainTransactionsMerkleRootHash)}, expected ${BytesUtils.toHexString(txRootHash)}"
+      log.error(reason)
+      throw new InconsistentSidechainBlockDataException(reason)
     }
   }
 
@@ -50,16 +51,18 @@ class AccountBlock(override val header: AccountBlockHeader,
   def verifyReceiptDataConsistency(receiptList: Seq[EthereumConsensusDataReceipt]): Unit = {
     val receiptRootHash = calculateReceiptRoot(receiptList)
     if (!java.util.Arrays.equals(receiptRootHash, header.receiptsRoot)) {
-      log.error("Invalid receipts root hash")
-      throw new InconsistentSidechainBlockDataException("invalid receipt root hash")
+      val reason = s"Invalid receipts root hash: actual ${BytesUtils.toHexString(header.receiptsRoot)}, expected ${BytesUtils.toHexString(receiptRootHash)}"
+      log.error(reason)
+      throw new InconsistentSidechainBlockDataException(reason)
     }
   }
 
   @throws(classOf[InconsistentSidechainBlockDataException])
   def verifyStateRootDataConsistency(stateRoot: Array[Byte]): Unit = {
     if (!java.util.Arrays.equals(stateRoot, header.stateRoot)) {
-      log.error("invalid state root hash")
-      throw new InconsistentSidechainBlockDataException("invalid state root hash")
+      val reason = s"Invalid state root hash: actual ${BytesUtils.toHexString(header.stateRoot)}, expected ${BytesUtils.toHexString(stateRoot)}"
+      log.error(reason)
+      throw new InconsistentSidechainBlockDataException(reason)
     }
   }
 
