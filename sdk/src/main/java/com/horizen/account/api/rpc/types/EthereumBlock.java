@@ -9,35 +9,31 @@ import java.util.List;
 
 @JsonView(Views.Default.class)
 public class EthereumBlock {
-    private String number;
-    private String hash;
-    private String parentHash;
-    private String nonce;
-    private String sha3Uncles;
-    private String logsBloom;
-    private String transactionsRoot;
-    private String stateRoot;
-    private String receiptsRoot;
+    private final String number;
+    private final String hash;
+    private final String parentHash;
+    private final String nonce;
+    private final String sha3Uncles;
+    private final String logsBloom;
+    private final String transactionsRoot;
+    private final String stateRoot;
+    private final String receiptsRoot;
+    private final String miner;
+    private final String mixHash;
+    private final String extraData;
+    private final String size;
+    private final String gasLimit;
+    private final String gasUsed;
+    private final String timestamp;
+    private final List<?> transactions;
     private String author;
-    private String miner;
-    private String mixHash;
     private String difficulty;
     private String totalDifficulty;
-    private String extraData;
-    private String size;
-    private String gasLimit;
-    private String gasUsed;
-    private String timestamp;
-    private List<String> transactions;
-    private List<EthereumTransactionView> transactionViews;
     private List<String> uncles;
     private List<String> sealFields;
     private String baseFeePerGas;
 
-    public EthereumBlock() {
-    }
-
-    public EthereumBlock(String number, String hash, List<String> transactions, List<EthereumTransactionView> transactionViews, Boolean hydrated, AccountBlock block) {
+    public EthereumBlock(String number, String hash, List<?> transactions, AccountBlock block) {
         this.number = number;
         this.hash = hash;
         this.parentHash = "0x0";
@@ -47,15 +43,14 @@ public class EthereumBlock {
         this.transactionsRoot = "0x0";
         this.stateRoot = Numeric.toHexString(block.header().stateRoot());
         this.receiptsRoot = Numeric.toHexString(block.header().receiptsRoot());
-        this.miner = "0x0";
+        this.miner = Numeric.toHexString(block.header().forgerAddress().address());
         this.mixHash = "0x0";
         this.extraData = "0x0";
-        this.size = String.valueOf(block.header().bytes().length);
+        this.size = Numeric.prependHexPrefix(Integer.toHexString(block.header().bytes().length));
         this.gasLimit = "0x5208";
         this.gasUsed = "0x1";
-        this.timestamp = String.valueOf(block.timestamp());
-        if (hydrated) this.transactionViews = transactionViews;
-        else this.transactions = transactions;
+        this.timestamp = Numeric.prependHexPrefix(Long.toHexString(block.timestamp()));
+        this.transactions = transactions;
     }
 
     public String getNumber() {
@@ -134,12 +129,8 @@ public class EthereumBlock {
         return this.timestamp;
     }
 
-    public List<String> getTransactions() {
+    public List<?> getTransactions() {
         return this.transactions;
-    }
-
-    public List<EthereumTransactionView> getTransactionViews() {
-        return this.transactionViews;
     }
 
     public List<String> getUncles() {

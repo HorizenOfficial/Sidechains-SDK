@@ -38,8 +38,6 @@ extends com.horizen.AbstractHistory[SidechainTypes#SCAT, AccountBlockHeader, Acc
     }
   }
 
-  override def getBestBlock: AccountBlock = bestBlock
-
   override def searchTransactionInsideBlockchain(transactionId: String): JOptional[SidechainTypes#SCAT] = {
     var startingBlock = JOptional.ofNullable(getBestBlock)
     var transaction : JOptional[SidechainTypes#SCAT] = JOptional.empty()

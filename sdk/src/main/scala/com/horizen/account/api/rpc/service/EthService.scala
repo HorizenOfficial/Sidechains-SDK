@@ -8,7 +8,7 @@ import com.horizen.SidechainSettings
 import com.horizen.account.api.http.AccountTransactionErrorResponse.GenericTransactionError
 import com.horizen.account.api.http.AccountTransactionRestScheme.TransactionIdDTO
 import com.horizen.account.api.rpc.handler.RpcException
-import com.horizen.account.api.rpc.types.{Data, EthereumBlock, EthereumReceiptView, EthereumTransactionView, Quantity, TransactionArgs}
+import com.horizen.account.api.rpc.types._
 import com.horizen.account.api.rpc.utils._
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.history.AccountHistory
@@ -19,6 +19,7 @@ import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.{ApiResponseUtil, SuccessResponse}
 import com.horizen.evm.Evm
+import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.Transaction
 import org.web3j.crypto.TransactionDecoder
@@ -44,44 +45,38 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
   }
 
   @RpcMethod("eth_getBlockByNumber") def getBlockByNumber(tag: Quantity, hydratedTx: Boolean): EthereumBlock = {
-    val blockId = nodeView.history.getBlockIdByHeight(Integer.parseInt(Numeric.cleanHexPrefix(tag.getValue), 16))
-    val txHashes: ListBuffer[String] = ListBuffer()
-    val txViews: ListBuffer[EthereumTransactionView] = ListBuffer()
-
-    if (blockId.isEmpty) return new EthereumBlock()
-
-    val txs = getTransactionsFromBlock(getBlockById(blockId.get()))
-    txs.foreach(transaction => {
-      txViews.append(new EthereumTransactionView(transaction))
-      txHashes.append(Numeric.prependHexPrefix(transaction.id))
-    })
-    new EthereumBlock(tag.getValue, Numeric.prependHexPrefix(blockId.get()), txHashes.toList.asJava, txViews.toList.asJava, hydratedTx, nodeView.history.getBlockById(blockId.get()).get())
+    constructEthBlockWithTransactions(getBlockIdByTag(tag.getValue), hydratedTx)
   }
 
-  def getTransactionsFromBlock(block: AccountBlock) = {
+  @RpcMethod("eth_getBlockByHash") def getBlockByHash(tag: Quantity, hydratedTx: Boolean): EthereumBlock = {
+    constructEthBlockWithTransactions(Numeric.cleanHexPrefix(tag.getValue), hydratedTx)
+  }
+
+  private def constructEthBlockWithTransactions(blockId: String, hydratedTx: Boolean): EthereumBlock = {
+    if (blockId == null) return null
+    val block = nodeView.history.getBlockById(blockId)
+    if (block.isEmpty) return null
+    val transactions = getTransactionsFromBlock(block.get())
+    val txList: ListBuffer[Any] = ListBuffer()
+    transactions.foreach(transaction => {
+      if (hydratedTx) {
+        val receipt = stateView.getTransactionReceipt(Numeric.hexStringToByteArray(Numeric.cleanHexPrefix(transaction.id)))
+        if (!receipt.isEmpty) txList.append(new EthereumTransactionView(receipt.get, transaction))
+      } else txList.append(Numeric.prependHexPrefix(transaction.id))
+    })
+    new EthereumBlock(Numeric.prependHexPrefix(Integer.toHexString(nodeView.history.getBlockHeight(blockId).get())), Numeric.prependHexPrefix(blockId), txList.toList.asJava, block.get())
+  }
+
+  private def getTransactionsFromBlock(block: AccountBlock) = {
     val ethTx = new ListBuffer[EthereumTransaction]
     block.transactions.foreach(transaction =>
       if (transaction.isInstanceOf[EthereumTransaction]) ethTx.append(transaction.asInstanceOf[EthereumTransaction]))
     ethTx
   }
 
-  def getBlockById(blockId: String) = nodeView.history.getBlockById(blockId).get()
-
-  @RpcMethod("eth_getBlockByHash") def getBlockByHash(tag: Quantity, hydratedTx: Boolean): EthereumBlock = {
-    val txHashes: ListBuffer[String] = ListBuffer()
-    val txViews: ListBuffer[EthereumTransactionView] = ListBuffer()
-
-    val txs = getTransactionsFromBlock(getBlockById(Numeric.cleanHexPrefix(tag.getValue)))
-    txs.foreach(transaction => {
-      txViews.append(new EthereumTransactionView(transaction))
-      txHashes.append(Numeric.prependHexPrefix(transaction.id))
-    })
-    new EthereumBlock(Numeric.prependHexPrefix(Integer.toHexString(nodeView.history.getBlockHeight(Numeric.cleanHexPrefix(tag.getValue)).get())), Numeric.prependHexPrefix(tag.getValue), txHashes.toList.asJava, txViews.toList.asJava, hydratedTx, nodeView.history.getBlockById(Numeric.cleanHexPrefix(tag.getValue)).get())
-  }
-
-  @RpcMethod("eth_call") def call(params: TransactionArgs, tag: Quantity): Data = {
-    val stateDbRoot = getStateDbRootFromBlockById(getBlockIdByTag(tag.getValue))
-    if (stateDbRoot == null) return new Data(null)
+  @RpcMethod("eth_call") def call(params: TransactionArgs, tag: Quantity): String = {
+    val stateDbRoot = getStateViewFromBlockById(getBlockIdByTag(tag.getValue))
+    if (stateDbRoot == null) return null
     val result = Evm.Apply(
       stateDbRoot.getStateDbHandle,
       params.getFrom,
@@ -101,30 +96,57 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
         )
       )
     }
-    new Data(result.returnData)
+    if (result.returnData == null) return null
+    Numeric.toHexString(result.returnData)
   }
 
   @RpcMethod("eth_blockNumber") def blockNumber = new Quantity(Numeric.toHexStringWithPrefix(BigInteger.valueOf(getBlockHeight)))
 
   private def getBlockHeight = nodeView.history.getCurrentHeight
 
-  private def getStateDbRootFromBlockById(blockId: String) : AccountStateView = {
+  @RpcMethod("eth_chainId") def chainId = new Quantity(Numeric.toHexStringWithPrefix(BigInteger.valueOf(networkParams.chainId)))
+
+  @RpcMethod("eth_getBalance") def GetBalance(address: String, blockNumberOrTag: Quantity) = new Quantity(getBalance(address, blockNumberOrTag))
+
+  private def getBalance(address: String, tag: Quantity): String = {
+    val stateDbRoot = getStateViewFromBlockById(getBlockIdByTag(tag.getValue))
+    if (stateDbRoot == null) return "null"
+    val balance = stateDbRoot.getBalance(Numeric.hexStringToByteArray(address))
+    Numeric.toHexStringWithPrefix(balance)
+  }
+
+  @RpcMethod("eth_getTransactionCount") def getTransactionCount(address: String, tag: Quantity): Quantity = {
+    val stateDbRoot = getStateViewFromBlockById(getBlockIdByTag(tag.getValue))
+    if (stateDbRoot == null) return new Quantity("0x0")
+    val nonce = stateDbRoot.getNonce(Numeric.hexStringToByteArray(address))
+    new Quantity(Numeric.toHexStringWithPrefix(nonce))
+  }
+
+  private def getStateViewFromBlockById(blockId: String): AccountStateView = {
     val block = nodeView.history.getBlockById(blockId)
     if (block.isEmpty) return null
     nodeView.state.getStateDbViewFromRoot(block.get().header.stateRoot)
   }
-
-  @RpcMethod("eth_chainId") def chainId = new Quantity(Numeric.toHexStringWithPrefix(BigInteger.valueOf(networkParams.chainId)))
-
-  @RpcMethod("eth_getBalance") def GetBalance(address: String, blockNumberOrTag: Quantity) = new Quantity(getBalance(address, blockNumberOrTag))
 
   private def getBlockIdByTag(tag: String): String = {
     var blockId: java.util.Optional[String] = null
     val history = nodeView.history
     tag match {
       case "earliest" => blockId = nodeView.history.getBlockIdByHeight(1)
-      //case "finalized" => //-39001: Unkown block
-      //case "safe" => //-39001: Unkown block
+      case "finalized" => throw new RpcException(
+        new RpcError(
+          RpcCode.UnknownBlock.getCode,
+          "Unknown Block",
+          null
+        )
+      )
+      case "safe" => throw new RpcException(
+        new RpcError(
+          RpcCode.UnknownBlock.getCode,
+          "Unknown Block",
+          null
+        )
+      )
       case "latest" => blockId = history.getBlockIdByHeight(nodeView.history.getCurrentHeight)
       case "pending" => blockId = history.getBlockIdByHeight(nodeView.history.getCurrentHeight)
       case _ => blockId = history.getBlockIdByHeight(Integer.parseInt(Numeric.cleanHexPrefix(tag), 16))
@@ -133,27 +155,37 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
     blockId.get()
   }
 
-  private def getBalance(address: String, tag: Quantity) : String = {
-    val stateDbRoot = getStateDbRootFromBlockById(getBlockIdByTag(tag.getValue))
-    if (stateDbRoot == null) return "null"
-    val balance = stateDbRoot.getBalance(Numeric.hexStringToByteArray(address))
-    Numeric.toHexStringWithPrefix(balance)
-  }
-
-  @RpcMethod("eth_getTransactionCount") def getTransactionCount(address: String, tag: Quantity): Quantity = {
-    val stateDbRoot = getStateDbRootFromBlockById(getBlockIdByTag(tag.getValue))
-    if (stateDbRoot == null) return new Quantity("null")
-    val nonce = stateDbRoot.getNonce(Numeric.hexStringToByteArray(address))
-    new Quantity(Numeric.toHexStringWithPrefix(nonce))
-  }
-
   @RpcMethod("net_version") def version: String = String.valueOf(networkParams.chainId)
 
-  @RpcMethod("eth_estimateGas") def estimateGas(transaction: util.LinkedHashMap[String, String] /*, tag: Quantity*/) = { // TODO: We need an estimateGas function to execute EVM and get the gasUsed
-    if (transaction.containsKey("data") && transaction.get("data") != null && transaction.get("data").length > 1)
-      new Quantity(Numeric.toHexStringWithPrefix(BigInteger.valueOf(3000000))) // particular smart contract creation
-    else
-      new Quantity(Numeric.toHexStringWithPrefix(BigInteger.valueOf(21000))) // EOA to EOA
+  //todo: simplify together with eth_call
+  @RpcMethod("eth_estimateGas") def estimateGas(transaction: util.LinkedHashMap[String, String] /*, tag: Quantity*/): String = {
+    val parameters: TransactionArgs = new TransactionArgs
+    parameters.value = if (transaction.containsKey("value")) Numeric.toBigInt(transaction.get("value")) else null
+    parameters.from = if (transaction.containsKey("from")) Address.FromBytes(Numeric.hexStringToByteArray(transaction.get("from"))) else null
+    parameters.to = if (transaction.containsKey("to")) Address.FromBytes(Numeric.hexStringToByteArray(transaction.get("to"))) else null
+    parameters.data = if (transaction.containsKey("data")) transaction.get("data") else null
+    val stateDbRoot = getStateViewFromBlockById(getBlockIdByTag("latest"))
+    if (stateDbRoot == null) return null
+    val result = Evm.Apply(
+      stateDbRoot.getStateDbHandle,
+      parameters.getFrom,
+      if (parameters.to == null) null else parameters.to.toBytes,
+      parameters.value,
+      parameters.getData,
+      parameters.gas,
+      parameters.gasPrice
+    )
+
+    if (result.evmError.nonEmpty) {
+      throw new RpcException(
+        new RpcError(
+          RpcCode.ExecutionError.getCode,
+          result.evmError,
+          Numeric.toHexString(result.returnData)
+        )
+      )
+    }
+    Numeric.toHexStringWithPrefix(result.usedGas)
   }
 
   @RpcMethod("eth_gasPrice") def gasPrice = { // TODO: Get the real gasPrice later
@@ -161,12 +193,11 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
   }
 
   @RpcMethod("eth_getTransactionByHash") def getTransactionByHash(transactionHash: String): EthereumTransactionView = {
-    val tx = nodeView.history.searchTransactionInsideBlockchain(Numeric.cleanHexPrefix(transactionHash))
-    if (tx.isEmpty) {
-      null
-    } else {
-      new EthereumTransactionView(tx.get().asInstanceOf[EthereumTransaction])
-    }
+    val receipt = stateView.getTransactionReceipt(Numeric.hexStringToByteArray(Numeric.cleanHexPrefix(transactionHash)))
+    if (receipt.isEmpty) return null
+    val block = getBlockById(nodeView.history.getBlockIdByHeight(receipt.get.blockNumber).get())
+    val tx = block.transactions(receipt.get.transactionIndex)
+    new EthereumTransactionView(receipt.get, tx.asInstanceOf[EthereumTransaction])
   }
 
   @RpcMethod("eth_sendRawTransaction") def sendRawTransaction(signedTxData: String): Quantity = {
@@ -190,23 +221,22 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
   }
 
   @RpcMethod("eth_getTransactionReceipt")
-  def getTransactionReceipt(transactionHash: String): EthereumReceiptView = {
+  def getTransactionReceipt(transactionHash: String): Any = {
     val receipt = stateView.getTransactionReceipt(Numeric.hexStringToByteArray(Numeric.cleanHexPrefix(transactionHash)))
-    val tx = nodeView.history.searchTransactionInsideBlockchain(Numeric.cleanHexPrefix(transactionHash))
-    if (receipt.isEmpty || tx.isEmpty) {
-      new EthereumReceiptView()
-    } else {
-      new EthereumReceiptView(receipt.get, tx.get().asInstanceOf[EthereumTransaction])
-    }
+    if (receipt.isEmpty) return null
+    val block = getBlockById(nodeView.history.getBlockIdByHeight(receipt.get.blockNumber).get())
+    val tx = block.transactions(receipt.get.transactionIndex)
+    new EthereumReceiptView(receipt.get, tx.asInstanceOf[EthereumTransaction])
   }
 
+  private def getBlockById(blockId: String) = nodeView.history.getBlockById(blockId).get()
+
   @RpcMethod("eth_getCode") def getCode(address: String, tag: Quantity): String = {
-    //TODO: add getcode to state
-    //val stateDbRoot = getStateDbRootFromBlockById(getBlockIdByTag(tag.getValue))
-    //if (stateDbRoot == null) return ""
-    val code = stateView.stateDb.getCode(Numeric.hexStringToByteArray(address))
+    val stateDbRoot = getStateViewFromBlockById(getBlockIdByTag(tag.getValue))
+    if (stateDbRoot == null) return ""
+    val code = stateDbRoot.stateDb.getCode(Numeric.hexStringToByteArray(address))
     if (code == null)
-      return ""
+      return "0x"
     Numeric.toHexString(code)
   }
 }
