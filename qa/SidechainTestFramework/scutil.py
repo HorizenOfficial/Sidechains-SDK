@@ -1069,6 +1069,10 @@ def convertZenniesToWei(valueInZennies):
 def convertZenToWei(valueInZen):
     return convertZenniesToWei(convertZenToZennies(valueInZen))
 
+def convertZenniesToZen(valueInZennies):
+    return (valueInZennies / COIN)
+
+
 # Account model: smart contract address for handling forger stakes
 # (see definition at SDK src code: ForgerStakeMsgProcessor.scala)
 ForgerStakeSmartContractAddress = "0000000000000000000022222222222222222222"
