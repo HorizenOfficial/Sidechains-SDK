@@ -397,7 +397,7 @@ class AccountState(val params: NetworkParams,
           log.debug(s"tx=$txHash succesfully validate against state view")
 
         case Failure(e) =>
-          log.error("Could not validate tx agaist state view: ", e.getMessage)
+          log.error("Could not validate tx agaist state view: ", e)
           stateView.close()
           throw new IllegalArgumentException(e)
       }

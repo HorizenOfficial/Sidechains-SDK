@@ -94,16 +94,16 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     for ((tx, txIndex) <- sidechainTransactions.zipWithIndex) {
 
+      blockSize = blockSize + tx.bytes.length + 4 // placeholder for Tx length
+      txsCounter += 1
+
+      if (blockSizeExceeded(blockSize, txsCounter))
+        return Success(receiptList, txHashList)
+
       stateView.applyTransaction(tx, txIndex, cumGasUsed) match {
         case Success(consensusDataReceipt) =>
           // update cumulative gas used so far
           cumGasUsed = consensusDataReceipt.cumulativeGasUsed
-
-          blockSize = blockSize + tx.bytes.length + 4 // placeholder for Tx length
-          txsCounter += 1
-
-          if (blockSizeExceeded(blockSize, txsCounter))
-            return Success(receiptList, txHashList)
 
           if (blockGasLimitExceeded(cumGasUsed))
             return Success(receiptList, txHashList)

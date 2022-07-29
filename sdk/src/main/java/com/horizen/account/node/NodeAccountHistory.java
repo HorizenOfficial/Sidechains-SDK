@@ -15,10 +15,6 @@ public interface NodeAccountHistory extends NodeHistoryBase<
         AccountBlock
         > {
 
-    Optional<AccountBlock> getBlockById(String blockId);
-
-    AccountBlock getBestBlock();
-
     Optional<AccountTransaction<Proposition, Proof<Proposition>>> searchTransactionInsideSidechainBlock(String transactionId, String blockId);
 
     Optional<AccountTransaction<Proposition, Proof<Proposition>>> searchTransactionInsideBlockchain(String transactionId);

@@ -181,7 +181,7 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		// we ignore returnData here because it holds the contract code that was just deployed
 		_, deployedContractAddress, gas, vmerr = evm.Create(sender, params.Input, gas, params.Value.ToInt())
 		// TODO check if the nonce could ever be wrong here in an error case for example
-        contractAddress = &deployedContractAddress
+		contractAddress = &deployedContractAddress
 	} else {
 		returnData, gas, vmerr = evm.Call(sender, *params.To, params.Input, gas, params.Value.ToInt())
 	}

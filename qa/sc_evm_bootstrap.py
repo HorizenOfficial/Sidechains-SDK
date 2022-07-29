@@ -13,6 +13,7 @@ from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     check_mainchain_block_reference_info, \
     AccountModelBlockVersion, EVM_APP_BINARY, generate_next_blocks, generate_next_block, generate_account_proposition, \
     convertZenniesToWei, convertZenToZennies, connect_sc_nodes
+from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 
 """
 Check the EVM bootstrap feature.
@@ -131,12 +132,9 @@ class SCEvmBootstrap(SidechainTestFramework):
         sc_best_block = sc_node_1.block_best()["result"]
         pprint.pprint(sc_best_block)
 
-        j = {"address": str(evm_address)}
-        balance_request = json.dumps(j)
-
         # balance is in wei
-        initial_balance = sc_node_1.wallet_getBalance(balance_request)["result"]["balance"]
-        assert_equal(ft_amount_in_wei, initial_balance )
+        initial_balance = http_wallet_balance(sc_node_1, evm_address)
+        assert_equal(ft_amount_in_wei, initial_balance)
 
         # Create an EOA to EOA transaction moving some fund to a new address not known by wallet.
         # Amount should be expressed in zennies
@@ -182,7 +180,7 @@ class SCEvmBootstrap(SidechainTestFramework):
         sc_best_block = sc_node_1.block_best()["result"]
         pprint.pprint(sc_best_block)
 
-        final_balance = sc_node_1.wallet_getBalance(balance_request)["result"]["balance"]
+        final_balance = http_wallet_balance(sc_node_1, evm_address)
         assert_equal(initial_balance - transferred_amount_in_wei, final_balance )
 
 if __name__ == "__main__":
