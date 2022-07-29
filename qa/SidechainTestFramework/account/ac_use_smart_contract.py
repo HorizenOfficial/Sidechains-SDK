@@ -141,7 +141,7 @@ class SmartContract:
         response = node.rpc_eth_call(request, tag)
         if 'result' in response:
             if response['result'] is not None and len(response['result']) > 0:
-                return self.raw_decode_call_result(functionName, bytes.fromhex(response['result']))
+                return self.raw_decode_call_result(functionName, bytes.fromhex(format_eoa(response['result'])))
             else:
                 print("No return data in static_call: {}".format(str(response)))
                 return None
