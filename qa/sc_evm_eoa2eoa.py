@@ -13,7 +13,7 @@ from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     check_mainchain_block_reference_info, \
     AccountModelBlockVersion, EVM_APP_BINARY, generate_next_blocks, generate_next_block, generate_account_proposition, \
     convertZenniesToWei, convertZenToZennies, connect_sc_nodes, get_account_balance, convertZenToWei, \
-    ForgerStakeSmartContractAddress
+    ForgerStakeSmartContractAddress, WithdrawalReqSmartContractAddress, convertWeiToZen
 
 """
 Configuration: 
@@ -21,8 +21,9 @@ Configuration:
     - 1 MC node
 
 Test:
-    For the SC node:
-        - 
+    Test some positive scenario for the transfer of funds from EOA to EOA accounts
+    Test some negative scenario too
+     
 """
 class SCEvmEOA2EOA(SidechainTestFramework):
 
@@ -57,7 +58,7 @@ class SCEvmEOA2EOA(SidechainTestFramework):
                               binary=[EVM_APP_BINARY]*2)#, extra_args=[['-agentlib'], []])
 
     def makeEoa2Eoa(self, from_sc_node, to_sc_node, from_addr, to_addr, amount_in_zen,
-                    nonce = None, print_tx_json = False):
+                    nonce = None, print_json_results = False):
         initial_balance_from = get_account_balance(from_sc_node, from_addr)
         initial_balance_to = get_account_balance(to_sc_node, to_addr)
 
@@ -89,36 +90,42 @@ class SCEvmEOA2EOA(SidechainTestFramework):
 
         # get mempool contents and check contents are as expected
         response = from_sc_node.transaction_allTransactions(json.dumps({"format": False}))
-        if not tx_hash in response['result']['transactionIds']:
-            return (False, "tx not in mempool")
+        assert_true(tx_hash in response['result']['transactionIds'])
 
-        if print_tx_json:
+        if print_json_results:
             pprint.pprint(from_sc_node.transaction_allTransactions(json.dumps({"format": True})))
 
         generate_next_block(from_sc_node, "first node")
         self.sc_sync_all()
 
-        # TODO check receipt, meanwhile do some check on amounts
-
-        # check updated balances are as expected
-        # TODO take gas into account
         final_balance_from = get_account_balance(from_sc_node, from_addr)
         final_balance_to = get_account_balance(to_sc_node, to_addr)
 
-        if from_addr != to_addr:
-            cond_to = (initial_balance_to + amount_in_wei) == final_balance_to
-            cond_from = (initial_balance_from - amount_in_wei) == final_balance_from
-        else:
-            # using same address do not change balances
-            cond_to = initial_balance_to == final_balance_to
-            cond_from = initial_balance_from == final_balance_from
+        # check receipt, meanwhile do some check on amounts
+        # TODO take gas into account
+        receipt = from_sc_node.rpc_eth_getTransactionReceipt(tx_hash)
+        if print_json_results:
+            pprint.pprint(receipt)
+        status = int(receipt['result']['status'], 16)
+        if status == 0:
+            # failed, there should be no balance modifications
+            assert_equal(initial_balance_to, final_balance_to)
+            assert_equal(initial_balance_from, final_balance_from)
+            return (False, "receipt status FAILED")
+        elif status == 1:
+            # success, check we have expected balances
+            if from_addr != to_addr:
+                cond_to = (initial_balance_to + amount_in_wei) == final_balance_to
+                cond_from = (initial_balance_from - amount_in_wei) == final_balance_from
+            else:
+                # using same address do not change balances
+                cond_to = initial_balance_to == final_balance_to
+                cond_from = initial_balance_from == final_balance_from
+            assert_true(cond_to)
+            assert_true(cond_from)
 
-        if not cond_to:
-            return (False, "destination balance")
-        if not cond_from:
-            return (False, "source balance")
+        return (True, "OK")
 
-        return True, "OK"
 
     def run_test(self):
 
@@ -168,8 +175,23 @@ class SCEvmEOA2EOA(SidechainTestFramework):
         print("Create an EOA to EOA transaction with a null value")
         transferred_amount_in_zen = Decimal('0.0')
         ret, msg = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc2,
-                                    transferred_amount_in_zen, print_tx_json=True)
+                                    transferred_amount_in_zen)
         assert_true(ret, msg)
+
+        print("Create an EOA to EOA transaction to a not existing address")
+        transferred_amount_in_zen = Decimal('1')
+        not_existing_address = "63FaC9201494f0bd17B9892B9fae4d52fe3BD377"
+        ret, msg = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, not_existing_address, transferred_amount_in_zen)
+        assert_true(ret, msg)
+
+        # TODO when gas charging will be enabled, this must fail since the sender has not enough balance
+        # for payoing the gas
+        print("Create an EOA to EOA transaction moving all the from balance")
+        transferred_amount_in_zen = convertWeiToZen(get_account_balance(sc_node_1, evm_address_sc1))
+        ret, msg = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc2,
+                                    transferred_amount_in_zen)
+        assert_true(ret, msg)
+
 
         #negative cases
 
@@ -217,9 +239,18 @@ class SCEvmEOA2EOA(SidechainTestFramework):
         else:
             fail("EOA2EOA with too big an amount should not work")
 
-        print("Create an EOA to EOA transaction moving a fund to a fake contract address ==> SHOULD FAIL")
+        print("Create an EOA to EOA transaction moving a fund to a fake contract address (forger stakes)  ==> SHOULD FAIL")
         transferred_amount_in_zen = Decimal('1')
         ret, msg = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, ForgerStakeSmartContractAddress, transferred_amount_in_zen)
+        if not ret:
+            print("Expected failure: {}".format(msg))
+        else:
+            fail("EOA2EOA to fake smart contract should not work")
+
+        print("Create an EOA to EOA transaction moving a fund to a fake contract address (withdrawal reqs) ==> SHOULD FAIL")
+        transferred_amount_in_zen = Decimal('1')
+        ret, msg = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, WithdrawalReqSmartContractAddress,
+                                    transferred_amount_in_zen)
         if not ret:
             print("Expected failure: {}".format(msg))
         else:
