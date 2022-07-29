@@ -51,6 +51,53 @@ public class EthereumTransactionTest {
     }
 
     @Test
+    public void transactionIdTests() {
+        // EIP-1559
+        var eipSignedTx = new EthereumTransaction(
+                31337,
+                "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+                BigInteger.valueOf(0L),
+                BigInteger.valueOf(1),
+                BigInteger.valueOf(1),
+                BigInteger.valueOf(1),
+                BigInteger.valueOf(1),
+                "",
+                new Sign.SignatureData((byte) 27,
+                        BytesUtils.fromHexString("805c658ac084be6da079d96bd4799bef3aa4578c8e57b97c3c6df9f581551023"),
+                        BytesUtils.fromHexString("568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d"))
+        );
+        assertEquals("0x0dbd564dfb0c029e471d39a325d0b00bf9686f61f97f200e0b7299117eed51a8", "0x" + eipSignedTx.id());
+        // Legacy
+        var legacyTx = new EthereumTransaction(
+                "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+                BigInteger.valueOf(0L),
+                BigInteger.valueOf(1),
+                BigInteger.valueOf(1),
+                BigInteger.valueOf(1),
+                "",
+                new Sign.SignatureData((byte) 28,
+                        BytesUtils.fromHexString("2a4afbdd7e8d99c3df9dfd9e4ecd0afe018d8dec0b8b5fe1a44d5f30e7d0a5c5"),
+                        BytesUtils.fromHexString("7ca554a8317ff86eb6b23d06fa210d23e551bed58f58f803a87e5950aa47a9e9"))
+        );
+        assertEquals("0x306f23ca4948f7b791768878eb540915d0e12bae54c0f7f2a119095de074dab6", "0x" + legacyTx.id());
+
+        // EIP-155 tx
+        var eip155Tx = new EthereumTransaction(
+                "0x3535353535353535353535353535353535353535",
+                BigInteger.valueOf(9L),
+                BigInteger.valueOf(20).multiply(BigInteger.TEN.pow(9)),
+                BigInteger.valueOf(21000),
+                BigInteger.TEN.pow(18),
+                "",
+                new Sign.SignatureData((byte) 37,
+                        BytesUtils.fromHexString("28EF61340BD939BC2195FE537567866003E1A15D3C71FF63E1590620AA636276"),
+                        BytesUtils.fromHexString("67CBE9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83"))
+        );
+        assertEquals(Hash.sha3("0xf86c098504a817c800825208943535353535353535353535353535353535353535880de0b6b3a76400008025a028ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa636276a067cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d83"), "0x" + eip155Tx.id());
+
+    }
+
+    @Test
     public void ethereumLegacyRawTransactionTest() {
         // Test 1: direct constructor test
         try {
