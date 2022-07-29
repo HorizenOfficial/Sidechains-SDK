@@ -31,8 +31,7 @@ import java.util.Objects;
 @JsonView(Views.Default.class)
 public class EthereumTransaction extends AccountTransaction<AddressProposition, SignatureSecp256k1> {
     private final RawTransaction transaction;
-
-
+    
     // depends on the transaction
     public EthereumTransaction(
             RawTransaction transaction
@@ -108,11 +107,11 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     @JsonProperty("id")
     public String id() {
         byte[] encodedMessage;
-        if (this.isSigned())
+        if (this.isSigned()) {
+            SignedRawTransaction stx = (SignedRawTransaction) this.transaction;
             encodedMessage = TransactionEncoder.encode(this.getTransaction(),
-                    new Sign.SignatureData(this.getSignature().getV(),
-                            this.getSignature().getR(), this.getSignature().getS()));
-        else encodedMessage = TransactionEncoder.encode(this.getTransaction());
+                    stx.getSignatureData());
+        } else encodedMessage = TransactionEncoder.encode(this.getTransaction());
         return com.horizen.utils.BytesUtils.toHexString(Hash.sha3(encodedMessage, 0, encodedMessage.length));
     }
 
