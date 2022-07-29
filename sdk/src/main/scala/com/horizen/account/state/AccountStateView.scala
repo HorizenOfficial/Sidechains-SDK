@@ -135,8 +135,8 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     // TODO this is checked also by EthereumTransaction.semanticValidity()
     // Check signature
     // TODO: add again later and check - message to sign seems to be false (?)
-    //if (!tx.getSignature.isValid(tx.getFrom, tx.messageToSign()))
-    //  throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: signature is invalid")
+    if (!tx.getSignature.isValid(tx.getFrom, tx.messageToSign()))
+      throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: signature is invalid")
 
     // Check that "from" is EOA address
     if (!isEoaAccount(tx.getFrom.address()))
