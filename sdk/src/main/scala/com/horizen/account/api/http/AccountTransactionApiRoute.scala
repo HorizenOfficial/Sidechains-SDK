@@ -661,6 +661,8 @@ object AccountTransactionRestScheme {
     require(gasLimit.signum() > 0, "Gas limit can not be 0")
     require(maxPriorityFeePerGas.signum() > 0, "MaxPriorityFeePerGas must be greater than 0")
     require(maxFeePerGas.signum() > 0, "MaxFeePerGas must be greater than 0")
+    require(to.isEmpty || to.get.length == 40 /* address length without prefix 0x */ , "to is not empty but has the wrong length - do not use a 0x prefix")
+    require(from.isEmpty || from.get.length == 40 /* address length without prefix 0x */ , "from is not empty but has the wrong length - do not use a 0x prefix")
   }
 
   @JsonView(Array(classOf[Views.Default]))
@@ -681,7 +683,8 @@ object AccountTransactionRestScheme {
     )
     require(gasLimit.signum() > 0, "Gas limit can not be 0")
     require(gasPrice.signum() > 0, "Gas price can not be 0")
-    require(to.isEmpty || to.get.length == 42 /* address length with prefix 0x */)
+    require(to.isEmpty || to.get.length == 40 /* address length without prefix 0x */ , "to is not empty but has the wrong length - do not use a 0x prefix")
+    require(from.isEmpty || from.get.length == 40 /* address length without prefix 0x */ , "from is not empty but has the wrong length - do not use a 0x prefix")
   }
 
   @JsonView(Array(classOf[Views.Default]))

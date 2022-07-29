@@ -116,7 +116,7 @@ class AccountState(val params: NetworkParams,
     }
 
 
-    for(mcBlockRefData <- mod.mainchainBlockReferencesData) {
+    for (mcBlockRefData <- mod.mainchainBlockReferencesData) {
       stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
     }
 
@@ -124,7 +124,7 @@ class AccountState(val params: NetworkParams,
     val receiptList = new ListBuffer[EthereumReceipt]()
     val blockNumber = stateView.getHeight + 1
     val blockHash = idToBytes(mod.id)
-    var cumGasUsed : BigInteger = BigInteger.ZERO
+    var cumGasUsed: BigInteger = BigInteger.ZERO
 
     for ((tx, txIndex) <- mod.sidechainTransactions.zipWithIndex) {
       stateView.applyTransaction(tx, txIndex, cumGasUsed) match {
@@ -139,7 +139,7 @@ class AccountState(val params: NetworkParams,
             throw new IllegalArgumentException("Could not apply tx, block gas limit exceeded")
           }
 
-          val txHash = idToBytes(ethTx.id)
+          val txHash = BytesUtils.fromHexString(ethTx.id)
 
           // The contract address created, if the transaction was a contract creation
           val contractAddress = if (ethTx.getTo == null) {
@@ -155,7 +155,7 @@ class AccountState(val params: NetworkParams,
 
           // get a receipt obj with non consensus data (logs updated too)
           val fullReceipt = EthereumReceipt(consensusDataReceipt,
-                      txHash, txIndex, blockHash, blockNumber, txGasUsed, contractAddress)
+            txHash, txIndex, blockHash, blockNumber, txGasUsed, contractAddress)
 
           log.debug(s"Adding to receipt list: ${fullReceipt.toString()}")
 
@@ -387,7 +387,7 @@ class AccountState(val params: NetworkParams,
     if (tx.isInstanceOf[EthereumTransaction]) {
 
       val ethTx = tx.asInstanceOf[EthereumTransaction]
-      val txHash = idToBytes(ethTx.id)
+      val txHash = BytesUtils.fromHexString(ethTx.id)
 
       val stateView = getView
 
