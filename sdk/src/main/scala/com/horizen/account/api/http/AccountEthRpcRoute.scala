@@ -11,7 +11,7 @@ import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
-import com.horizen.account.state.{AccountState, AccountStateView, MessageProcessor}
+import com.horizen.account.state.{AccountState, MessageProcessor}
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.JacksonSupport._
@@ -19,6 +19,7 @@ import com.horizen.api.http.{ApiResponseUtil, SidechainApiRoute}
 import com.horizen.evm.LevelDBDatabase
 import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
+import com.horizen.utils.ClosableResourceHandler
 import com.horizen.{SidechainSettings, SidechainTypes}
 import scorex.core.NodeViewHolder
 import scorex.core.NodeViewHolder.CurrentView
@@ -45,7 +46,9 @@ case class AccountEthRpcRoute(override val settings: RESTApiSettings,
     NodeAccountState,
     NodeWalletBase,
     NodeAccountMemoryPool,
-    AccountNodeView] with SidechainTypes {
+    AccountNodeView]
+    with SidechainTypes
+    with ClosableResourceHandler {
 
   override implicit val tag: ClassTag[AccountNodeView] = ClassTag[AccountNodeView](classOf[AccountNodeView])
   type NV = CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]
@@ -61,11 +64,11 @@ case class AccountEthRpcRoute(override val settings: RESTApiSettings,
       applyOnAccountView { view =>
         // TODO: optimize usage of rpcHandler (no need to create an object from scratch every time)
         // TODO: improve the usage of node and state views. Possibly put the getters into the RpcHandler
-        val currentView: AccountStateView = view.state.getView
-        val rpcHandler = new RpcHandler(new EthService(currentView, view, params, sidechainSettings, sidechainTransactionActorRef));
-        val res = rpcHandler.apply(new RpcRequest(body))
-        currentView.close()
-        ApiResponseUtil.toResponseWithoutResultWrapper(res);
+        using(view.state.getView) {currentView =>
+          val rpcHandler = new RpcHandler(new EthService(currentView, view, params, sidechainSettings, sidechainTransactionActorRef));
+          val res = rpcHandler.apply(new RpcRequest(body))
+          ApiResponseUtil.toResponseWithoutResultWrapper(res);
+        }
 
       }
     }

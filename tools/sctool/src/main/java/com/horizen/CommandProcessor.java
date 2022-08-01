@@ -741,22 +741,24 @@ public class CommandProcessor {
         Seq<MessageProcessor> messageProcessorSeq = MessageProcessorUtil.getMessageProcessorSeq(params, customMessageProcessors);
 
         AccountStateView view = getStateView(messageProcessorSeq);
+        try(view){
 
-        // init all the message processors
-        scala.collection.Iterator iter = messageProcessorSeq.iterator();
-        while (iter.hasNext()) {
-            ((MessageProcessor)iter.next()).init(view);
+            // init all the message processors
+            scala.collection.Iterator iter = messageProcessorSeq.iterator();
+            while (iter.hasNext()) {
+                ((MessageProcessor)iter.next()).init(view);
+            }
+
+            // apply sc creation output, this will call forger stake msg processor
+            for(MainchainBlockReferenceData mcBlockRefData : mainchainBlockReferencesData) {
+                view.applyMainchainBlockReferenceData(mcBlockRefData).get();
+            }
+
+            // get the state root after all state-changing operations
+            byte[] stateRoot = view.getIntermediateRoot();
+            return stateRoot;
+
         }
-
-        // apply sc creation output, this will call forger stake msg processor
-        for(MainchainBlockReferenceData mcBlockRefData : mainchainBlockReferencesData) {
-            view.applyMainchainBlockReferenceData(mcBlockRefData).get();
-        }
-
-        // get the state root after all state-changing operations
-        byte[] stateRoot = view.stateDb().getIntermediateRoot();
-        view.close();
-        return stateRoot;
     }
 
     private String getNetworkName(byte network) {

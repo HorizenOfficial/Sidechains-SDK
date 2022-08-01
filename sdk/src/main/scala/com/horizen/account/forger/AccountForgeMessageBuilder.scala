@@ -1,12 +1,5 @@
 package com.horizen.account.forger
 
-import com.horizen.block._
-import com.horizen.consensus._
-import com.horizen.params.NetworkParams
-import com.horizen.proof.{Signature25519, VrfProof}
-import com.horizen.secret.{PrivateKey25519, Secret}
-import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, Utils}
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock.calculateReceiptRoot
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
@@ -14,7 +7,7 @@ import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceipt}
+import com.horizen.account.receipt.EthereumConsensusDataReceipt
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state.AccountState.blockGasLimitExceeded
 import com.horizen.account.state.{AccountState, AccountStateView}
@@ -22,7 +15,14 @@ import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.Account
 import com.horizen.account.wallet.AccountWallet
+import com.horizen.block._
+import com.horizen.consensus._
 import com.horizen.forge.{AbstractForgeMessageBuilder, MainchainSynchronizer}
+import com.horizen.params.NetworkParams
+import com.horizen.proof.{Signature25519, VrfProof}
+import com.horizen.secret.{PrivateKey25519, Secret}
+import com.horizen.transaction.TransactionSerializer
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree}
 import scorex.core.NodeViewModifier
 import scorex.core.block.Block.{BlockId, Timestamp}
 import scorex.util.{ModifierId, ScorexLogging, idToBytes}
@@ -41,7 +41,9 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     AccountBlockHeader,
     AccountBlock](
     mainchainSynchronizer, companion, params, allowNoWebsocketConnectionInRegtest
-  ) with ScorexLogging {
+  )
+    with ClosableResourceHandler
+    with ScorexLogging {
   type HSTOR = AccountHistoryStorage
   type VL = AccountWallet
   type HIS = AccountHistory
@@ -64,7 +66,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       }
     }
 
-    (view.stateDb.getIntermediateRoot, receiptList, appliedTransactions)
+    (view.getIntermediateRoot, receiptList, appliedTransactions)
   }
 
 
@@ -143,19 +145,14 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val feePaymentsHash: Array[Byte] = new Array[Byte](MerkleTree.ROOT_HASH_LENGTH)
 
     // 1. create a view and try to apply all transactions in the list.
-    val dummyView = nodeView.state.getView
-
-    // the outputs will be:
-    // - the resulting stateRoot
-    // - the list of receipt of the transactions succesfully applied ---> for getting the receiptsRoot
-    // - the list of transactions succesfully applied to the state ---> to be included in the forged block
     val (stateRoot, receiptList, appliedTxList)
-    : (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT]) =
-    computeStateRoot(dummyView, sidechainTransactions, mainchainBlockReferencesData, inputBlockSize)
-
-    // dispose of the view
-    dummyView.close()
-
+    : (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT]) = using(nodeView.state.getView) { dummyView =>
+      // the outputs will be:
+      // - the resulting stateRoot
+      // - the list of receipt of the transactions successfully applied ---> for getting the receiptsRoot
+      // - the list of transactions successfully applied to the state ---> to be included in the forged block
+      computeStateRoot(dummyView, sidechainTransactions, mainchainBlockReferencesData, inputBlockSize)
+    }
     // 2. Compute the receipt root
     val receiptsRoot: Array[Byte] = calculateReceiptRoot(receiptList)
 
@@ -185,6 +182,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       companion.asInstanceOf[SidechainAccountTransactionsCompanion])
 
     block
+
   }
 
   override def precalculateBlockHeaderSize(parentId: ModifierId,
@@ -247,10 +245,9 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val stateRoot = getStateRoot(history, nextBlockTimestamp, branchPointInfo)
 
     // 2. get from stateDb using root above the collection of all forger stakes (ordered)
-    val stateViewFromRoot = state.getStateDbViewFromRoot(stateRoot)
-    val forgingStakeInfoSeq: Seq[ForgingStakeInfo] = stateViewFromRoot.getOrderedForgingStakeInfoSeq
-    // release resources
-    stateViewFromRoot.close()
+    val forgingStakeInfoSeq: Seq[ForgingStakeInfo] = using(state.getStateDbViewFromRoot(stateRoot)) { stateViewFromRoot =>
+      stateViewFromRoot.getOrderedForgingStakeInfoSeq
+    }
 
     // 3. using wallet secrets, filter out the not-mine forging stakes
     val secrets: Seq[Secret] = wallet.allSecrets().asScala
@@ -263,7 +260,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     })
 
     // return an empty seq if we do not have forging stake, that is a legal (negative) result.
-    if (filteredForgingStakeInfoSeq.size == 0)
+    if (filteredForgingStakeInfoSeq.isEmpty)
       return Seq()
 
     // 4. prepare merkle tree of all forger stakes and extract path info of mine (what is left after 3)
