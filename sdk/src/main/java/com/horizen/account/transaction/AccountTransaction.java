@@ -24,5 +24,7 @@ public abstract class AccountTransaction<P extends Proposition, PR extends Proof
 
     public abstract byte[] getData();
 
+    public abstract PR getRealSignature();
+
     public abstract PR getSignature();
 }

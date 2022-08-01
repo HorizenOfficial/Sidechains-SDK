@@ -45,9 +45,9 @@ public class EthereumTransactionView {
             gasPrice = Numeric.toHexStringWithPrefix(ethTx.getGasPrice());
         }
         if (ethTx.getChainId() != null) chainId = String.valueOf(ethTx.getChainId());
-        v = Numeric.toHexString(ethTx.getSignature().getV());
-        r = Numeric.toHexString(ethTx.getSignature().getR());
-        s = Numeric.toHexString(ethTx.getSignature().getS());
+        v = Numeric.toHexString(ethTx.getRealSignature().getV());
+        r = Numeric.toHexString(ethTx.getRealSignature().getR());
+        s = Numeric.toHexString(ethTx.getRealSignature().getS());
         blockHash = Numeric.toHexString(receipt.blockHash());
         blockNumber = Numeric.prependHexPrefix(Integer.toHexString(receipt.blockNumber()));
         from = (ethTx.getFrom() != null) ? Numeric.toHexString(ethTx.getFrom().address()) : null;

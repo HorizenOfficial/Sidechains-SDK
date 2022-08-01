@@ -299,18 +299,27 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     @Override
-    public SignatureSecp256k1 getSignature() {
+    public SignatureSecp256k1 getRealSignature() {
         if (this.isSigned()) {
             SignedRawTransaction stx = (SignedRawTransaction) this.transaction;
             return new SignatureSecp256k1(
-                    new byte[]{stx.getRealV(Numeric.toBigInt(stx.getSignatureData().getV()))},
-                    stx.getSignatureData().getR(),
+                    new byte[]{stx.getRealV(Numeric.toBigInt(stx.getSignatureData().getV()))},                    stx.getSignatureData().getR(),
                     stx.getSignatureData().getS());
         }
         return null;
     }
 
-
+    @Override
+    public SignatureSecp256k1 getSignature() {
+        if (this.isSigned()) {
+            SignedRawTransaction stx = (SignedRawTransaction) this.transaction;
+            return new SignatureSecp256k1(
+                    stx.getSignatureData().getV(),
+                    stx.getSignatureData().getR(),
+                    stx.getSignatureData().getS());
+        }
+        return null;
+    }
     @Override
     public String toString() {
         if (this.isEIP1559())
@@ -325,7 +334,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                     this.getData() != null ? Numeric.toHexString(this.getData()) : "",
                     Numeric.toHexStringWithPrefix(this.getMaxFeePerGas()),
                     Numeric.toHexStringWithPrefix(this.getMaxPriorityFeePerGas()),
-                    isSigned() ? getSignature().toString() : ""
+                    isSigned() ? getRealSignature().toString() : ""
             );
         else return String.format(
                 "EthereumTransaction{from=%s, nonce=%s, gasPrice=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
@@ -337,7 +346,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                 this.getTo() != null ? this.getTo() : "0x",
                 Numeric.toHexStringWithPrefix(this.getValue()),
                 this.getData() != null ? Numeric.toHexString(this.getData()) : "",
-                isSigned() ? getSignature().toString() : ""
+                isSigned() ? getRealSignature().toString() : ""
         );
     }
 

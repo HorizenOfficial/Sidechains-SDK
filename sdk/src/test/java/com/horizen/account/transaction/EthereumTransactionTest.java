@@ -50,6 +50,17 @@ public class EthereumTransactionTest {
 
     }
 
+    public void checkEthTx(EthereumTransaction tx) {
+        String strBefore = tx.toString();
+        byte[] encodedTx = EthereumTransactionSerializer.getSerializer().toBytes(tx);
+        // read what *it wrote
+        EthereumTransaction decodedTx = EthereumTransactionSerializer.getSerializer().parseBytes(encodedTx);
+        String strAfter = decodedTx.toString();
+        // we must have the same representation
+        assertEquals(strBefore, strAfter);
+        assertEquals(tx, decodedTx);
+    }
+
     @Test
     public void transactionIdTests() {
         // EIP-1559
@@ -67,6 +78,8 @@ public class EthereumTransactionTest {
                         BytesUtils.fromHexString("568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d"))
         );
         assertEquals("0x0dbd564dfb0c029e471d39a325d0b00bf9686f61f97f200e0b7299117eed51a8", "0x" + eipSignedTx.id());
+        checkEthTx(eipSignedTx);
+
         // Legacy
         var legacyTx = new EthereumTransaction(
                 "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
@@ -80,6 +93,7 @@ public class EthereumTransactionTest {
                         BytesUtils.fromHexString("7ca554a8317ff86eb6b23d06fa210d23e551bed58f58f803a87e5950aa47a9e9"))
         );
         assertEquals("0x306f23ca4948f7b791768878eb540915d0e12bae54c0f7f2a119095de074dab6", "0x" + legacyTx.id());
+        checkEthTx(legacyTx);
 
         // EIP-155 tx
         var eip155Tx = new EthereumTransaction(
@@ -94,6 +108,7 @@ public class EthereumTransactionTest {
                         BytesUtils.fromHexString("67CBE9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83"))
         );
         assertEquals(Hash.sha3("0xf86c098504a817c800825208943535353535353535353535353535353535353535880de0b6b3a76400008025a028ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa636276a067cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d83"), "0x" + eip155Tx.id());
+        checkEthTx(eip155Tx);
 
     }
 
@@ -105,7 +120,7 @@ public class EthereumTransactionTest {
                     "0x", someValue, someValue, someValue,
                     someValue, "", null
             );
-            assertNull(someTx.getSignature());
+            assertNull(someTx.getRealSignature());
         } catch (NullPointerException e) {
             fail("Test1: Successful EthereumTransaction creation expected.");
         }
@@ -149,7 +164,7 @@ public class EthereumTransactionTest {
         assertEquals("", ethereumTransaction.getFromAddress());
 
         // Test 11: ethereum transaction instance returns Signature correctly
-        assertNull(ethereumTransaction.getSignature());
+        assertNull(ethereumTransaction.getRealSignature());
 
         // Test 12: ethereum transaction instance returns transaction serializer correctly
         assertEquals(EthereumTransactionSerializer.getSerializer(), ethereumTransaction.serializer());
@@ -205,7 +220,7 @@ public class EthereumTransactionTest {
                 "0x", someValue, someValue, someValue, someValue,
                 someValue, "", null
         );
-        assertNull(someTx.getSignature());
+        assertNull(someTx.getRealSignature());
 
         rawTransaction = RawTransaction.createTransaction(someValue.longValue(), someValue,
                 someValue, "0x", someValue, "", someValue, someValue);
@@ -238,7 +253,7 @@ public class EthereumTransactionTest {
         assertArrayEquals(ethereumTransaction.messageToSign(), ethereumTransactionDeserialize.messageToSign());
 
         // Test 6: ethereum transaction instance returns Signature correctly
-        assertNull(ethereumTransaction.getSignature());
+        assertNull(ethereumTransaction.getRealSignature());
 
         // Test 7: ethereum transaction instance returns transaction serializer correctly
         assertEquals(EthereumTransactionSerializer.getSerializer(), ethereumTransaction.serializer());
@@ -274,7 +289,7 @@ public class EthereumTransactionTest {
                     "0x", someValue, someValue, someValue,
                     someValue, "", signedRawTransaction.getSignatureData()
             );
-            assertNotNull(someTx.getSignature());
+            assertNotNull(someTx.getRealSignature());
         } catch (Exception ignored) {
             fail("Should not happen");
         }
@@ -327,7 +342,7 @@ public class EthereumTransactionTest {
                 TransactionEncoder.encode(ethereumTransaction.getTransaction()));
 
         // Test 7: ethereum transaction instance returns Signature correctly
-        assertArrayEquals(secp256k1Signature.bytes(), ethereumTransaction.getSignature().bytes());
+        assertArrayEquals(secp256k1Signature.bytes(), ethereumTransaction.getRealSignature().bytes());
 
         // Test 8: ethereum transaction instance returns transaction serializer correctly
         assertEquals(EthereumTransactionSerializer.getSerializer(), ethereumTransaction.serializer());
@@ -353,10 +368,10 @@ public class EthereumTransactionTest {
                     "0x", someValue, someValue, someValue, someValue,
                     someValue, "", signedRawTransaction.getSignatureData()
             );
-            assertNotNull(someTx.getSignature());
+            assertNotNull(someTx.getRealSignature());
             assertEquals("EthereumTransaction{from=" + someTx.getFromAddress() + ", nonce=0x1, gasLimit=0x1, to=0x, value=" +
                             "0x1, data=0x, " +
-                            "maxFeePerGas=0x1, maxPriorityFeePerGas=0x1, Signature=" + someTx.getSignature().toString() + '}',
+                            "maxFeePerGas=0x1, maxPriorityFeePerGas=0x1, Signature=" + someTx.getRealSignature().toString() + '}',
                     someTx.toString());
 
             assertEquals(
@@ -409,7 +424,7 @@ public class EthereumTransactionTest {
                 TransactionEncoder.encode(ethereumTransaction.getTransaction()));
 
         // Test 7: ethereum transaction instance returns Signature correctly
-        assertArrayEquals(secp256k1Signature.bytes(), ethereumTransaction.getSignature().bytes());
+        assertArrayEquals(secp256k1Signature.bytes(), ethereumTransaction.getRealSignature().bytes());
 
         // Test 8: ethereum transaction instance returns transaction serializer correctly
         assertEquals(EthereumTransactionSerializer.getSerializer(), ethereumTransaction.serializer());

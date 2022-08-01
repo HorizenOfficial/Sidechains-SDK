@@ -25,7 +25,7 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
     private final byte[] s;
 
     public SignatureSecp256k1(byte[] v, byte[] r, byte[] s) {
-        if (v.length != Secp256k1.SIGNATURE_V_SIZE ||
+        if (/*v.length != Secp256k1.SIGNATURE_V_SIZE ||*/
                 r.length != Secp256k1.SIGNATURE_RS_SIZE ||
                 s.length != Secp256k1.SIGNATURE_RS_SIZE) {
             throw new IllegalArgumentException(String.format(
