@@ -101,9 +101,10 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
         val restoredWallet = dataOpt._3
         val restoredMempool = dataOpt._4
 
-        // best block id is updated in history storage as very last step
+
         val historyStatus : Option[(String, Boolean, Int)] =  restoredHistory.getReindexStatus match {
           case SidechainHistory.ReindexNotInProgress | SidechainHistory.ReindexStarting => {
+            // best block id is updated in history storage as very last step
             Some(idToVersion(restoredHistory.bestBlockId), false, 0)
           }
           case reindexHeight => {
@@ -459,7 +460,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
 
   // This method is actually a copy-paste of parent NodeViewHolder method.
-  // The difference is that isResynching() check has been added
+  // The difference is that isReindexing() check has been added
   override protected def transactionsProcessing: Receive = {
     case newTxs: NewTransactions[SidechainTypes#SCBT] =>
       if (isReindexing()){

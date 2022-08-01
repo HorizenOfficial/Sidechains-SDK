@@ -315,6 +315,21 @@ class SidechainHistoryTest extends JUnitSuite
     assertTrue("Block expected to be present.", history.contains(blockB5.id))
     assertEquals("Block expected to have undefined semantic validity.", ModifierSemanticValidity.Unknown, history.isSemanticallyValid(blockB5.id))
     assertEquals("Different progress info expected.", ProgressInfo[SidechainBlock](None, Seq(), Seq()), progressInfo)
+
+    // Test 11: start reindexing
+    history.startReindex(params,
+      genesisBlock,
+      Seq(new SidechainBlockSemanticValidator(params)),
+      Seq(), StakeConsensusEpochInfo(idToBytes(genesisBlock.id), 0L)) match {
+        case Success(hist) =>
+          history = hist
+        case Failure(e) => assertFalse("Unexpected Exception occurred during startReindex %s".format(e.getMessage), true)
+    }
+    //check
+    assertEquals("History must report indexing in progress", true, history.isReindexing())
+    assertEquals("History reindex status must be 0", 0, history.getReindexStatus)
+    assertEquals("Expected to report the same height as before", 4, history.height)
+    assertTrue("Expected to report the same best block as before", history.contains(blockB4.id))
   }
 
   @Test

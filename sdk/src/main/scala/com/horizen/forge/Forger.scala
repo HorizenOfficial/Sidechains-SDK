@@ -1,6 +1,7 @@
 package com.horizen.forge
 
 import java.util.{Timer, TimerTask}
+
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
@@ -11,9 +12,10 @@ import com.horizen.consensus.{ConsensusEpochAndSlot, ConsensusEpochNumber, Conse
 import com.horizen.forge.Forger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
 import com.horizen.params.NetworkParams
 import com.horizen.utils.TimeToEpochUtils
-import sparkz.core.NodeViewHolder.ReceivableMessages
-import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
-import sparkz.core.utils.NetworkTimeProvider
+import scorex.core.NodeViewHolder.ReceivableMessages
+import scorex.core.NodeViewHolder.ReceivableMessages.{GetNodeViewChanges, LocallyGeneratedModifier}
+import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.ChangedHistory
+import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ScorexLogging
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -35,6 +37,8 @@ class Forger(settings: SidechainSettings,
   private val consensusMillisecondsInSlot: Int = params.consensusSecondsInSlot * 1000
   private def forgingInitiatorTimerTask: TimerTask = new TimerTask {override def run(): Unit = tryToCreateBlockNow()}
   private var timerOpt: Option[Timer] = None
+  protected var history: Option[SidechainHistory] = None
+
 
   private def startTimer(): Unit = {
     this.timerOpt match {
@@ -65,14 +69,22 @@ class Forger(settings: SidechainSettings,
 
   override def preStart(): Unit = {
     context.system.eventStream.subscribe(self, SidechainAppEvents.SidechainApplicationStart.getClass)
+    //subscribe for changes to history (we need it to be aware of reindexing status)
+    context.system.eventStream.subscribe(self, classOf[ChangedHistory[SidechainHistory]])
+    viewHolderRef ! GetNodeViewChanges(history = true, state = false, vault = false, mempool = true)
   }
 
   override def postStop(): Unit = {
     log.debug("Forger actor is stopping...")
     super.postStop()
   }
+  protected def viewHolderEvents: Receive = {
+    case ChangedHistory(newHistory: SidechainHistory) =>
+      history = Some(newHistory)
+  }
 
   override def receive: Receive = {
+    viewHolderEvents orElse
     checkForger orElse
     processStartForgingMessage orElse
     processStopForgingMessage orElse
@@ -118,6 +130,10 @@ class Forger(settings: SidechainSettings,
   }
 
   protected def tryToCreateBlockForEpochAndSlot(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, respondsToOpt: Option[ActorRef], blockCreationTimeout: Timeout): Unit = {
+    if (history.isDefined && history.get.isReindexing()){
+      log.info("Forge skipped - reindex was in progress")
+      respondsToOpt.map(respondsTo => respondsTo ! Failure(new RuntimeException("Forge skipped - reindex was in progress")))
+    }
     val forgeMessage: ForgeMessageBuilder#ForgeMessageType = forgeMessageBuilder.buildForgeMessageForEpochAndSlot(epochNumber, slot, blockCreationTimeout)
     val forgedBlockAsFuture = (viewHolderRef ? forgeMessage).asInstanceOf[Future[ForgeResult]]
     forgedBlockAsFuture.onComplete{
