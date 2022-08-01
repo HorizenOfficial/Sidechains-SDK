@@ -5,7 +5,7 @@ import json
 from decimal import Decimal
 
 from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
-    VrfAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths, LARGE_WITHDRAWAL_EPOCH_LENGTH, \
+    VrfAccount, SchnorrAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths, LARGE_WITHDRAWAL_EPOCH_LENGTH, \
     SCCreationInfo, DEFAULT_API_KEY
 from SidechainTestFramework.sidechainauthproxy import SidechainAuthServiceProxy
 import subprocess
@@ -228,13 +228,34 @@ def generate_vrf_secrets(seed, number_of_vrf_keys):
     return vrf_keys
 
 
+"""
+Generate Schnorr keys by calling ScBootstrappingTools with command "generateCertificateSignerKey"
+Parameters:
+ - seed
+ - number_of_accounts: the number of keys to be generated
+
+Output: an array of instances of SchnorrKey (see sc_bootstrap_info.py).
+"""
+def generate_cert_signer_secrets(seed, number_of_schnorr_keys):
+    schnorr_keys = []
+    secrets = []
+    for i in range(number_of_schnorr_keys):
+        jsonParameters = {"seed": "{0}_{1}".format(seed, i + 1)}
+        secrets.append(launch_bootstrap_tool("generateCertificateSignerKey", jsonParameters))
+
+    for i in range(len(secrets)):
+        secret = secrets[i]
+        schnorr_keys.append(SchnorrAccount(secret["signerSecret"], secret["signerPublicKey"]))
+    return schnorr_keys
+
+
 # Maybe should we give the possibility to customize the configuration file by adding more fields ?
 
 """
 Generate withdrawal certificate proof info calling ScBootstrappingTools with command "generateProofInfo"
 Parameters:
  - seed
- - number_of_schnorr_keys: the number of schnorr keys to be generated
+ - number_of_signer_keys: the number of schnorr keys to be generated
  - threshold: the minimum set of the participants required for a valid proof creation
  - keys_paths: instance of ProofKeysPaths. Contains paths to load/generate Coboundary Marlin snark keys
  - isCSWEnabled: if ceased sidechain withdrawal is enabled or not
@@ -243,10 +264,18 @@ Output: CertificateProofInfo (see sc_bootstrap_info.py).
 """
 
 
-def generate_certificate_proof_info(seed, number_of_schnorr_keys, threshold, keys_paths, is_csw_enabled):
+def generate_certificate_proof_info(seed, number_of_signer_keys, threshold, keys_paths, is_csw_enabled):
+    signer_keys = generate_cert_signer_secrets(seed, number_of_signer_keys)
+
+    signer_secrets = []
+    signer_public_keys = []
+    for i in range(len(signer_keys)):
+        keys = signer_keys[i]
+        signer_secrets.append(keys.secret)
+        signer_public_keys.append(keys.publicKey)
+
     json_parameters = {
-        "seed": seed,
-        "maxPks": number_of_schnorr_keys,
+        "signersPublicKeys": signer_public_keys,
         "threshold": threshold,
         "provingKeyPath": keys_paths.proving_key_path,
         "verificationKeyPath": keys_paths.verification_key_path,
@@ -257,17 +286,9 @@ def generate_certificate_proof_info(seed, number_of_schnorr_keys, threshold, key
     threshold = output["threshold"]
     verification_key = output["verificationKey"]
     gen_sys_constant = output["genSysConstant"]
-    schnorr_keys = output["schnorrKeys"]
 
-    schnorr_secrets = []
-    schnorr_public_keys = []
-    for i in range(len(schnorr_keys)):
-        keys = schnorr_keys[i]
-        schnorr_secrets.append(keys["schnorrSecret"])
-        schnorr_public_keys.append(keys["schnorrPublicKey"])
-
-    certificate_proof_info = CertificateProofInfo(threshold, gen_sys_constant, verification_key, schnorr_secrets,
-                                                  schnorr_public_keys)
+    certificate_proof_info = CertificateProofInfo(threshold, gen_sys_constant, verification_key, signer_secrets,
+                                                  signer_public_keys)
     return certificate_proof_info
 
 
