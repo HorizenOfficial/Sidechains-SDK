@@ -140,6 +140,12 @@ public class StorageTest {
         ByteArrayWrapper nonExistValuesVersion = storageFixture.getVersion();
         s.update(nonExistValuesVersion, new ArrayList<>(), Collections.singletonList(storageFixture.getKeyValue().getKey()));
         assertEquals("Storage must have specified version.", nonExistValuesVersion, s.lastVersionID().get());
+
+        //Cleanup the storage: it must be empty after the cleanup
+        s.cleanup();
+        assertEquals("Storage must be empty after cleanup", 0, s.getAll().size());
+        assertEquals("Storage last versionID must be empty", true, s.lastVersionID().isEmpty());
+        assertEquals("Storage must not have any version after the cleanup", 0, s.numberOfVersions());
     }
 
     @Test
