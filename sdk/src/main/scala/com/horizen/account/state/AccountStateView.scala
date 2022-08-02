@@ -19,14 +19,14 @@ import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.{BlockFeeInfo, BytesUtils, WithdrawalEpochInfo}
 import scorex.core.VersionTag
-import scorex.util.{ScorexLogging, idToBytes}
+import scorex.util.ScorexLogging
 
 import java.math.BigInteger
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 import scala.util.Try
 
-class AccountStateView(private val metadataStorageView: AccountStateMetadataStorageView,
-                       val stateDb: StateDB,
+class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
+                       stateDb: StateDB,
                        messageProcessors: Seq[MessageProcessor])
   extends StateView[SidechainTypes#SCAT]
     with BaseAccountStateView
@@ -123,9 +123,9 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
   }
 
 
-  def setupTxContext(tx: EthereumTransaction, idx: Integer): Unit = {
+  def setupTxContext(txHash: Array[Byte], idx: Integer): Unit = {
     // set context for the created events/logs assignment
-    stateDb.setTxContext(BytesUtils.fromHexString(tx.id), idx)
+    stateDb.setTxContext(txHash, idx)
   }
 
   private def preCheck(tx: EthereumTransaction): BigInteger = {
@@ -193,7 +193,7 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     val bookedGasPrice: BigInteger = preCheck(ethTx)
 
     // Set Tx context for stateDB, to know where to keep EvmLogs
-    setupTxContext(ethTx, txIndex)
+    setupTxContext(txHash, txIndex)
 
     val message: Message = Message.fromTransaction(ethTx)
 
@@ -388,4 +388,7 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
 
   override def getStateDbHandle: ResourceHandle = stateDb
 
+  override def getIntermediateRoot: Array[Byte] = stateDb.getIntermediateRoot
+
+  override def getCode(address: Array[Byte]): Array[Byte] = stateDb.getCode(address)
 }

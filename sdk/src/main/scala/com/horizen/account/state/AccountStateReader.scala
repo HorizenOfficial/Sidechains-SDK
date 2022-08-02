@@ -1,5 +1,6 @@
 package com.horizen.account.state
 
+import com.horizen.evm.LibEvm
 import com.horizen.evm.interop.EvmLog
 import com.horizen.state.BaseStateReader
 
@@ -21,4 +22,9 @@ trait AccountStateReader extends BaseStateReader {
   def getLogs(txHash: Array[Byte]): Array[EvmLog]
 
   def getHeight: Int
+
+  def getIntermediateRoot: Array[Byte]
+
+  def getCode(address: Array[Byte]): Array[Byte]
+
 }
