@@ -10,7 +10,6 @@ import com.horizen.account.api.http.AccountTransactionRestScheme.TransactionIdDT
 import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.account.api.rpc.types._
 import com.horizen.account.api.rpc.utils._
-import com.horizen.account.block.AccountBlock
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.state.{AccountState, AccountStateView}
@@ -43,7 +42,7 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
     with ClosableResourceHandler {
 
   //function which describes default transaction representation for answer after adding the transaction to a memory pool
-  val defaultTransactionResponseRepresentation: (Transaction => SuccessResponse) = {
+  val defaultTransactionResponseRepresentation: Transaction => SuccessResponse = {
     transaction => TransactionIdDTO(transaction.id)
   }
 
@@ -59,22 +58,19 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
     if (blockId == null) return null
     val block = nodeView.history.getBlockById(blockId)
     if (block.isEmpty) return null
-    val transactions = getTransactionsFromBlock(block.get())
-    val txList: ListBuffer[Any] = ListBuffer()
-    transactions.foreach(transaction => {
-      if (hydratedTx) {
-        val receipt = stateView.getTransactionReceipt(Numeric.hexStringToByteArray(Numeric.cleanHexPrefix(transaction.id)))
-        if (!receipt.isEmpty) txList.append(new EthereumTransactionView(receipt.get, transaction))
-      } else txList.append(Numeric.prependHexPrefix(transaction.id))
-    })
-    new EthereumBlock(Numeric.prependHexPrefix(Integer.toHexString(nodeView.history.getBlockHeight(blockId).get())), Numeric.prependHexPrefix(blockId), txList.toList.asJava, block.get())
-  }
-
-  private def getTransactionsFromBlock(block: AccountBlock) = {
-    val ethTx = new ListBuffer[EthereumTransaction]
-    block.transactions.foreach(transaction =>
-      if (transaction.isInstanceOf[EthereumTransaction]) ethTx.append(transaction.asInstanceOf[EthereumTransaction]))
-    ethTx
+    val transactions = block.get().transactions.collect { case tx: EthereumTransaction => tx }
+    new EthereumBlock(
+      Numeric.prependHexPrefix(Integer.toHexString(nodeView.history.getBlockHeight(blockId).get())),
+      Numeric.prependHexPrefix(blockId),
+      if (!hydratedTx) {
+        transactions.map(tx => Numeric.prependHexPrefix(tx.id)).toList.asJava
+      } else {
+        transactions.flatMap(tx => stateView.getTransactionReceipt(Numeric.hexStringToByteArray(tx.id)) match {
+          case Some(receipt) => Some(new EthereumTransactionView(receipt, tx))
+          case None => None
+        }).toList.asJava
+      },
+      block.get())
   }
 
   @RpcMethod("eth_call") def call(params: TransactionArgs, tag: Quantity): String = {
@@ -213,7 +209,8 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
      }
   }
 
-  @RpcMethod("eth_gasPrice") def gasPrice = { // TODO: Get the real gasPrice later
+  @RpcMethod("eth_gasPrice") def gasPrice: Quantity = {
+    // TODO: Get the real gasPrice later
     new Quantity("0x3B9ACA00")
   }
 
@@ -232,11 +229,10 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
   }
 
   private def validateAndSendTransaction(transaction: Transaction,
-                                         transactionResponseRepresentation: (Transaction => SuccessResponse) = defaultTransactionResponseRepresentation) = {
+                                         transactionResponseRepresentation: Transaction => SuccessResponse = defaultTransactionResponseRepresentation) = {
     implicit val timeout: Timeout = 5 seconds
     val barrier = Await.result(sidechainTransactionActorRef ? BroadcastTransaction(transaction), timeout.duration).asInstanceOf[Future[Unit]]
     onComplete(barrier) {
-      // TODO: add correct responses
       case Success(_) =>
         ApiResponseUtil.toResponse(transactionResponseRepresentation(transaction))
       case Failure(exp) =>
