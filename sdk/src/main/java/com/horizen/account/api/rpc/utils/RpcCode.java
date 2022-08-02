@@ -13,8 +13,8 @@ public enum RpcCode {
     ActionNotAllowed(2, "Action not allowed"),
     ExecutionError(3, "Execution error"),
 
-    // horizen custom error codes
-    UnknownBlock(-39001, "Unknown block");
+    // the range of -32000 to -32099 is reserved for implementation-defined server-errors
+    UnknownBlock(-32000, "Unknown block");
 
     private final int code;
     private final String message;

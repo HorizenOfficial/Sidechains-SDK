@@ -12,13 +12,11 @@ import com.horizen.account.api.rpc.types._
 import com.horizen.account.api.rpc.utils._
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
-import com.horizen.account.state.{AccountState, AccountStateView}
+import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.{ApiResponseUtil, SuccessResponse}
-import com.horizen.evm.Evm
-import com.horizen.evm.interop.EvmResult
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.Transaction
 import com.horizen.utils.ClosableResourceHandler
@@ -56,13 +54,13 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
     if (blockId == null) return null
     val block = nodeView.history.getBlockById(blockId)
     if (block.isEmpty) return null
+    // TODO: why does this not compile?
+    //val transactions = block.get().transactions.collect { case tx: EthereumTransaction => tx }
     val transactions = block.get().transactions.filter {
       _.isInstanceOf[EthereumTransaction]
     } map {
       _.asInstanceOf[EthereumTransaction]
     }
-    // TODO: why does this not compile?
-//    val transactions = block.get().transactions.collect { case tx: EthereumTransaction => tx }
     new EthereumBlock(
       Numeric.prependHexPrefix(Integer.toHexString(nodeView.history.getBlockHeight(blockId).get())),
       Numeric.prependHexPrefix(blockId),
@@ -77,46 +75,69 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
       block.get())
   }
 
-  private def doCall(params: TransactionArgs, tag: Quantity): Option[EvmResult] = {
+  private def doCall(params: TransactionArgs, tag: Quantity): Option[ExecutionResult] = {
     using(getStateViewFromBlockById(getBlockIdByTag(tag.getValue))) { stateDbRoot =>
       if (stateDbRoot == null) {
         return None
-      } else {
-        val result = Evm.Apply(
-          stateDbRoot.getStateDbHandle,
-          params.getFrom,
-          if (params.to == null) null else params.to.toBytes,
-          params.value,
-          params.getData,
-          params.gas,
-          params.gasPrice)
-
-        if (result.evmError.nonEmpty) {
-          throw new RpcException(new RpcError(
-            RpcCode.ExecutionError.getCode, result.evmError, Numeric.toHexString(result.returnData)))
-        }
-
-        Some(result)
       }
+      val message = params.toMessage
+
+      // TODO: refactor to reuse parts of AccountStateView.applyTransaction?
+      val messageProcessors = Seq(
+        EoaMessageProcessor,
+        WithdrawalMsgProcessor,
+        ForgerStakeMsgProcessor(networkParams),
+        new EvmMessageProcessor()
+      )
+
+      val processor = messageProcessors.find(_.canProcess(message, stateView)).getOrElse(
+        throw new IllegalArgumentException("Unable to process call.")
+      )
+
+      Some(processor.process(message, stateView))
     }
   }
 
   @RpcMethod("eth_call") def call(params: TransactionArgs, tag: Quantity): String = {
     doCall(params, tag) match {
-      case Some(result) =>
-        if (result.returnData == null)
+      case Some(success: ExecutionSucceeded) =>
+        if (success.hasReturnData)
+          Numeric.toHexString(success.returnData)
+        else
           null
-        else {
-          Numeric.toHexString(result.returnData)
-        }
-      case None => null
+
+      case Some(failed: ExecutionFailed) =>
+        throw new RpcException(new RpcError(
+          RpcCode.ExecutionError.getCode, failed.getReason.getMessage, failed.getReason match {
+            case evmRevert: EvmException => Numeric.toHexString(evmRevert.returnData)
+            case _ => null
+          }))
+
+      case Some(invalid: InvalidMessage) =>
+        throw new IllegalArgumentException("Invalid message.", invalid.getReason)
+
+      case None =>
+        throw new IllegalArgumentException(s"Unable to get state for given tag: ${tag.getValue}")
     }
   }
 
   @RpcMethod("eth_estimateGas") def estimateGas(params: TransactionArgs /*, tag: Quantity*/): String = {
     doCall(params, new Quantity("latest")) match {
-      case Some(result) => Numeric.toHexStringWithPrefix(result.usedGas)
-      case None => null
+      case Some(success: ExecutionSucceeded) =>
+        Numeric.toHexStringWithPrefix(success.gasUsed())
+
+      case Some(failed: ExecutionFailed) =>
+        throw new RpcException(new RpcError(
+          RpcCode.ExecutionError.getCode, failed.getReason.getMessage, failed.getReason match {
+            case evmRevert: EvmException => Numeric.toHexString(evmRevert.returnData)
+            case _ => null
+          }))
+
+      case Some(invalid: InvalidMessage) =>
+        throw new IllegalArgumentException("Invalid message.", invalid.getReason)
+
+      case None =>
+        throw new IllegalArgumentException("Unable to get state for given tag: latest")
     }
   }
 

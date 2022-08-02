@@ -40,9 +40,10 @@ public class TransactionArgs {
     }
 
     public Message toMessage() {
+        var from = getFrom();
         return new Message(
-                new AddressProposition(getFrom()),
-                new AddressProposition(to.toBytes()),
+                from == null ? null : new AddressProposition(from),
+                to == null ? null : new AddressProposition(to.toBytes()),
                 gasPrice,
                 maxFeePerGas,
                 maxPriorityFeePerGas,
