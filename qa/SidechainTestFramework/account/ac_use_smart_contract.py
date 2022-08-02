@@ -1,5 +1,5 @@
 import json
-from typing import Tuple
+from typing import Tuple, Any
 from eth_abi import encode_abi, decode_abi
 from eth_utils import to_checksum_address
 
@@ -9,6 +9,8 @@ from dataclasses import dataclass
 
 from SidechainTestFramework.account.address_util import format_eoa, format_evm
 from SidechainTestFramework.account.mk_contract_address import mk_contract_address
+from enum import Enum
+import SidechainTestFramework.account.ac_make_raw_tx as make_raw_tx
 
 
 class EvmExecutionError(RuntimeError):
@@ -36,6 +38,12 @@ class ContractFunction:
 
     def __str__(self):
         return '{} :: {}({}) -> ({})'.format(self.sigHash, self.name, ",".join(self.inputs), ",".join(self.outputs))
+
+
+class CallMethod(Enum):
+    HTTP = 0
+    RPC_LEGACY = 1
+    RPC_EIP1559 = 2
 
 
 class SmartContract:
@@ -75,9 +83,11 @@ class SmartContract:
                 self.Functions['constructor'] = ContractFunction('constructor', input_types, [],
                                                                  '', True)
 
-    def call_function(self, node, functionName: str, *args, fromAddress: str, toAddress: str, nonce: int = None,
-                      gasLimit: int, gasPrice: int,
-                      value: int = 0, tag: str = 'latest'):
+    def call_function(self, node, functionName: str, *args,
+                      call_method: CallMethod = CallMethod.HTTP,
+                      fromAddress: str, toAddress: str, nonce: int = None,
+                      gasLimit: int, gasPrice: int = None, maxFeePerGas: int = None,
+                      maxPriorityFeePerGas: int = None, value: int = 0, tag: str = 'latest'):
         """Creates an on-chain writing legacy transaction of the function `functionName` with the encoded arguments.
 
                 Parameters:
@@ -96,18 +106,45 @@ class SmartContract:
                     tx_hash: The transaction hash of the transaction
 
         """
-        j = {
-            "from": format_eoa(fromAddress),
-            "to": format_eoa(toAddress),
-            "nonce": self.__ensure_nonce(node, fromAddress, nonce, tag),
-            "gasLimit": gasLimit,
-            "gasPrice": gasPrice,
-            "value": value,
-            "data": self.raw_encode_call(functionName, *args)
-        }
-        request = json.dumps(j)
-        response = node.transaction_createLegacyTransaction(request)
-        return response["result"]["transactionId"]
+        data = self.raw_encode_call(functionName, *args)
+        response: Any = ''
+        if call_method is CallMethod.HTTP:
+            request = json.dumps({
+                "from": format_eoa(fromAddress),
+                "to": format_eoa(toAddress),
+                "nonce": self.__ensure_nonce(node, fromAddress, nonce, tag),
+                "gasLimit": gasLimit,
+                "gasPrice": gasPrice,
+                "value": value,
+                "data": data
+            })
+            response = node.transaction_createLegacyTransaction(request)
+            return response["result"]["transactionId"]
+        elif call_method is CallMethod.RPC_LEGACY:
+            rawTx = make_raw_tx.legacy(
+                to=toAddress, nonce=self.__ensure_nonce(node, fromAddress, nonce, tag),
+                value=value, gas_limit=gasLimit, gas_price=gasPrice, data=data)
+            response = node.transaction_signTransaction(json.dumps({
+                "from": format_eoa(fromAddress),
+                "payload": format_eoa(rawTx)
+            }))
+            print(response)
+            response = node.rpc_eth_sendRawTransaction(response['result']['transactionData'])
+            print(response)
+        elif call_method is CallMethod.RPC_EIP1559:
+            rawTx = make_raw_tx.eip1559(
+                to=toAddress, nonce=self.__ensure_nonce(node, fromAddress, nonce, tag),
+                value=value, gas_limit=gasLimit, max_fee_per_gas=maxFeePerGas,
+                max_priority_fee_per_gas=maxPriorityFeePerGas, data=data,
+                chain_id=self.__ensure_chain_id(node, tag))
+            response = node.transaction_signTransaction(json.dumps({
+                "from": format_eoa(fromAddress),
+                "payload": format_eoa(rawTx)
+            }))
+            print(response)
+            response = node.rpc_eth_sendRawTransaction(response['result']['transactionData'])
+            print(response)
+        return response["result"]
 
     def static_call(self, node, functionName: str, *args, fromAddress: str, nonce: int = None, toAddress: str,
                     gasLimit: int, gasPrice: int,
@@ -296,6 +333,11 @@ class SmartContract:
         if nonce is None:
             nonce = on_chain_nonce
         return nonce
+
+    @staticmethod
+    def __ensure_chain_id(node, tag='latest'):
+        chainId = int(node.rpc_eth_getChainId(tag)['result'], 16)
+        return chainId
 
 
 if __name__ == '__main__':

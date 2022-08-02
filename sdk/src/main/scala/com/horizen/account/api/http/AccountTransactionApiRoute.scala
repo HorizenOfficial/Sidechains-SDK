@@ -1,5 +1,6 @@
 package com.horizen.account.api.http
 
+import org.web3j.crypto._
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
@@ -221,11 +222,11 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   /**
    * Create a raw evm transaction, specifying the bytes.
    */
-  def sendRawTransaction: Route = (post & path("createRawTransaction")) {
+  def sendRawTransaction: Route = (post & path("sendRawTransaction")) {
     entity(as[ReqRawTransaction]) { body =>
       // lock the view and try to create CoreTransaction
       applyOnNodeView { sidechainNodeView =>
-        var signedTx = EthereumTransactionSerializer.getSerializer.parseBytes(body.payload)
+        var signedTx = new EthereumTransaction(TransactionDecoder.decode(body.payload))
         if (!signedTx.isSigned) {
           val secret =
             getFittingSecret(sidechainNodeView, body.from, signedTx.getValue)
@@ -245,7 +246,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     entity(as[ReqRawTransaction]) {
       body => {
         applyOnNodeView { sidechainNodeView =>
-          var signedTx = EthereumTransactionSerializer.getSerializer.parseBytes(body.payload)
+          var signedTx = new EthereumTransaction(TransactionDecoder.decode(body.payload))
           val secret =
             getFittingSecret(sidechainNodeView, body.from, signedTx.getValue)
           secret match {
@@ -254,7 +255,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
             case None =>
               return ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
           }
-          ApiResponseUtil.toResponse(defaultTransactionResponseRepresentation(signedTx))
+          ApiResponseUtil.toResponse(rawTransactionResponseRepresentation(signedTx))
         }
       }
     }
@@ -495,6 +496,14 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   val defaultTransactionResponseRepresentation: (Transaction => SuccessResponse) = {
     transaction => TransactionIdDTO(transaction.id)
   }
+  //function which describes default transaction representation for answer after adding the transaction to a memory pool
+  val rawTransactionResponseRepresentation: (EthereumTransaction => SuccessResponse) = {
+    transaction =>
+      RawTransactionOutput("0x" + BytesUtils.toHexString(TransactionEncoder.encode(
+        transaction.getTransaction,
+        transaction.getTransaction.asInstanceOf[SignedRawTransaction].getSignatureData))
+      )
+  }
 
 
   private def validateAndSendTransaction(transaction: SidechainTypes#SCAT,
@@ -633,6 +642,9 @@ object AccountTransactionRestScheme {
   private[api] case class TransactionIdDTO(transactionId: String) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RawTransactionOutput(transactionData: String) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqSpendForgingStake(
                                                 nonce: Option[BigInteger],
                                                 stakeId: String,
@@ -688,7 +700,7 @@ object AccountTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqRawTransaction(from: Option[String], payload: Array[Byte])
+  private[api] case class ReqRawTransaction(from: Option[String], payload: String)
 
 
 }
