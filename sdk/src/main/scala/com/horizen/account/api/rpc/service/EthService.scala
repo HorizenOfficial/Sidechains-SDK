@@ -56,7 +56,13 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
     if (blockId == null) return null
     val block = nodeView.history.getBlockById(blockId)
     if (block.isEmpty) return null
-    val transactions = block.get().transactions.collect { case tx: EthereumTransaction => tx }
+    val transactions = block.get().transactions.filter {
+      _.isInstanceOf[EthereumTransaction]
+    } map {
+      _.asInstanceOf[EthereumTransaction]
+    }
+    // TODO: why does this not compile?
+//    val transactions = block.get().transactions.collect { case tx: EthereumTransaction => tx }
     new EthereumBlock(
       Numeric.prependHexPrefix(Integer.toHexString(nodeView.history.getBlockHeight(blockId).get())),
       Numeric.prependHexPrefix(blockId),
