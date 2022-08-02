@@ -200,6 +200,7 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
       .result(sidechainTransactionActorRef ? BroadcastTransaction(transaction), timeout.duration)
       .asInstanceOf[Future[Unit]]
     onComplete(barrier) {
+      // TODO: add correct responses
       case Success(_) => ApiResponseUtil.toResponse(transactionResponseRepresentation(transaction))
       case Failure(exp) => ApiResponseUtil.toResponse(GenericTransactionError(
         "GenericTransactionError",
