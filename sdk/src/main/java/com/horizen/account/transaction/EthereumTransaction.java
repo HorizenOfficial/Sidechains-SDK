@@ -221,7 +221,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             var sigData = signedTx.getSignatureData();
             if (sigData.getS()[0] == 0 && sigData.getR()[0] == 0)
                 return convertToLong(sigData.getV());
-            else return ((SignedRawTransaction) this.transaction).getChainId(); // TODO check necessity
+            else return ((SignedRawTransaction) this.transaction).getChainId(); // useful for EIP155
         }
 
         return null;
@@ -303,7 +303,8 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         if (this.isSigned()) {
             SignedRawTransaction stx = (SignedRawTransaction) this.transaction;
             return new SignatureSecp256k1(
-                    new byte[]{stx.getRealV(Numeric.toBigInt(stx.getSignatureData().getV()))},                    stx.getSignatureData().getR(),
+                    new byte[]{stx.getRealV(Numeric.toBigInt(stx.getSignatureData().getV()))},
+                    stx.getSignatureData().getR(),
                     stx.getSignatureData().getS());
         }
         return null;
@@ -320,6 +321,8 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         }
         return null;
     }
+
+
     @Override
     public String toString() {
         if (this.isEIP1559())
@@ -334,7 +337,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                     this.getData() != null ? Numeric.toHexString(this.getData()) : "",
                     Numeric.toHexStringWithPrefix(this.getMaxFeePerGas()),
                     Numeric.toHexStringWithPrefix(this.getMaxPriorityFeePerGas()),
-                    isSigned() ? getRealSignature().toString() : ""
+                    isSigned() ? getSignature().toString() : ""
             );
         else return String.format(
                 "EthereumTransaction{from=%s, nonce=%s, gasPrice=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
@@ -346,7 +349,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                 this.getTo() != null ? this.getTo() : "0x",
                 Numeric.toHexStringWithPrefix(this.getValue()),
                 this.getData() != null ? Numeric.toHexString(this.getData()) : "",
-                isSigned() ? getRealSignature().toString() : ""
+                isSigned() ? getSignature().toString() : ""
         );
     }
 

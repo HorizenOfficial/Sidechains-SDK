@@ -1,6 +1,7 @@
 package com.horizen.account.api.rpc.types;
 
 import com.fasterxml.jackson.annotation.JsonView;
+import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.receipt.EthereumReceipt;
 import com.horizen.account.transaction.EthereumTransaction;
 import com.horizen.account.utils.Account;
@@ -45,9 +46,9 @@ public class EthereumTransactionView {
             gasPrice = Numeric.toHexStringWithPrefix(ethTx.getGasPrice());
         }
         if (ethTx.getChainId() != null) chainId = String.valueOf(ethTx.getChainId());
-        v = Numeric.toHexString(ethTx.getRealSignature().getV());
-        r = Numeric.toHexString(ethTx.getRealSignature().getR());
-        s = Numeric.toHexString(ethTx.getRealSignature().getS());
+        v = Numeric.toHexString(ethTx.getSignature().getV());
+        r = Numeric.toHexString(ethTx.getSignature().getR());
+        s = Numeric.toHexString(ethTx.getSignature().getS());
         blockHash = Numeric.toHexString(receipt.blockHash());
         blockNumber = Numeric.prependHexPrefix(Integer.toHexString(receipt.blockNumber()));
         from = (ethTx.getFrom() != null) ? Numeric.toHexString(ethTx.getFrom().address()) : null;

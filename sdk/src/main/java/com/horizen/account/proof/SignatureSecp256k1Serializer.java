@@ -23,6 +23,7 @@ public final class SignatureSecp256k1Serializer implements ProofSerializer<Signa
 
     @Override
     public void serialize(SignatureSecp256k1 signature, Writer writer) {
+        // variable length, as per EIP155
         writer.putInt(signature.getV().length);
         writer.putBytes(signature.getV());
         writer.putBytes(signature.getR());

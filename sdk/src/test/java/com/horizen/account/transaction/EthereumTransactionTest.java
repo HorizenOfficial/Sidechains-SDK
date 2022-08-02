@@ -211,6 +211,27 @@ public class EthereumTransactionTest {
         } catch (NullPointerException e) {
             fail("Test1: Successful EthereumTransaction creation expected.");
         }
+
+        // metamask eip155 tx:
+        // - from address: 0x892278d9f50a1da5b2e98e5056f165b1b2486d97
+        // - to address: 0xd830603264bd3118cf95f1fc623749337342f9e9
+        // - value: 3000000000000000000
+        // - chain id: 1997
+        String metamaskHexStr = "de01f86d02843b9aca0082520894d830603264bd3118cf95f1fc623749337342f9e98829a2241af62c000080820fbea0f638802002d7c0a3115716f7d24d646452d598050ffc2d6892ba0ed88aeb76bea01dd5a7fb9ea0ec2a414dbb93b09b3e716a3cd05c1e333d40622c63d0c34e3d35";
+
+        EthereumTransaction decodedTx = EthereumTransactionSerializer.getSerializer().parseBytes(BytesUtils.fromHexString(metamaskHexStr));
+        long chainId = decodedTx.getChainId();
+        byte[] fromAddress = decodedTx.getFrom().address();
+        byte[] toAddress = decodedTx.getTo().address();
+
+        assertEquals("892278d9f50a1da5b2e98e5056f165b1b2486d97", BytesUtils.toHexString(fromAddress));
+        assertEquals("d830603264bd3118cf95f1fc623749337342f9e9", BytesUtils.toHexString(toAddress));
+        assertEquals(1997, chainId);
+        assertEquals("3000000000000000000", decodedTx.getValue().toString());
+
+        // re-encode and check it is the same
+        byte[] encodedTx = EthereumTransactionSerializer.getSerializer().toBytes(decodedTx);
+        assertEquals(metamaskHexStr, BytesUtils.toHexString(encodedTx));
     }
 
     @Test

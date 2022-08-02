@@ -132,18 +132,21 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     // We are sure that transaction is semantically valid (so all the tx fields are valid)
     // and was successfully verified by ChainIdBlockSemanticValidator
 
+    // cache it since it is not a real getter
+    val txFromAddr = tx.getFrom
+
     // TODO this is checked also by EthereumTransaction.semanticValidity()
     // Check signature
     // TODO: add again later and check - message to sign seems to be false (?)
-    if (!tx.getRealSignature.isValid(tx.getFrom, tx.messageToSign()))
+    if (!tx.getRealSignature.isValid(txFromAddr, tx.messageToSign()))
       throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: signature is invalid")
 
     // Check that "from" is EOA address
-    if (!isEoaAccount(tx.getFrom.address()))
+    if (!isEoaAccount(txFromAddr.address()))
       throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: from account is not EOA")
 
     // Check the nonce
-    val stateNonce: BigInteger = getNonce(tx.getFrom.address())
+    val stateNonce: BigInteger = getNonce(txFromAddr.address())
     val txNonce: BigInteger = tx.getNonce
     val result = stateNonce.compareTo(txNonce)
     if (result > 0) {
@@ -164,7 +167,7 @@ class AccountStateView(private val metadataStorageView: AccountStateMetadataStor
     val bookedGasPrice: BigInteger = buyGas(tx)
 
     // Check that it is enough balance to pay after gas was bought.
-    val txBalanceAfterGasPrepayment: BigInteger = getBalance(tx.getFrom.address())
+    val txBalanceAfterGasPrepayment: BigInteger = getBalance(txFromAddr.address())
     if (txBalanceAfterGasPrepayment.compareTo(tx.getValue) < 0)
       throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: not enough founds ${txBalanceAfterGasPrepayment} to pay ${tx.getValue}")
 
