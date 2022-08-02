@@ -1,22 +1,19 @@
 package com.horizen.account.api.rpc.service
 
-import akka.actor.TypedActor.dispatcher
 import akka.actor.{ActorRef, ActorSystem}
-import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.horizen.SidechainSettings
 import com.horizen.account.api.rpc.handler.RpcException
-import com.horizen.{SidechainHistory, SidechainSettings}
 import com.horizen.account.api.rpc.request.RpcRequest
-import com.horizen.account.api.rpc.response.RpcResponseError
 import com.horizen.account.api.rpc.types.Quantity
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.node.AccountNodeView
 import com.horizen.account.state.{AccountState, AccountStateView}
 import com.horizen.account.wallet.AccountWallet
-import com.horizen.api.http.{SidechainApiMockConfiguration, SidechainTransactionActorRef}
 import com.horizen.fixtures.{FieldElementFixture, MockedSidechainNodeViewHolderFixture}
 import com.horizen.params.{NetworkParams, RegTestParams}
-import org.junit.Assert.{assertEquals, assertFalse}
+import org.junit.Assert.assertEquals
 import org.junit.{Before, Test}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
@@ -47,7 +44,7 @@ class EthServiceTest extends JUnitSuite
 
   @Test
   def testEthService(): Unit = {
-    var mapper = new ObjectMapper
+    val mapper = new ObjectMapper
 
     // Test 1: Parameters are of wrong type
     var json = "{\"id\":\"1\", \"jsonrpc\":\"2.0\",\"method\":\"eth_estimateGas\", \"params\":{\"tx\":\"test\", \"tx2\":\"test2\"}}"

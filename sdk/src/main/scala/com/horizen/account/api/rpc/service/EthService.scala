@@ -18,7 +18,7 @@ import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.{ApiResponseUtil, SuccessResponse}
 import com.horizen.evm.Evm
-import com.horizen.evm.utils.Address
+import com.horizen.evm.interop.EvmResult
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.Transaction
 import com.horizen.utils.ClosableResourceHandler
@@ -27,10 +27,8 @@ import org.web3j.utils.Numeric
 import scorex.core.NodeViewHolder.CurrentView
 
 import java.math.BigInteger
-import java.util
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters.seqAsJavaListConverter
-import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
@@ -73,11 +71,11 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
       block.get())
   }
 
-  @RpcMethod("eth_call") def call(params: TransactionArgs, tag: Quantity): String = {
+  private def doCall(params: TransactionArgs, tag: Quantity): Option[EvmResult] = {
     using(getStateViewFromBlockById(getBlockIdByTag(tag.getValue))) { stateDbRoot =>
-      if (stateDbRoot == null)
-        return null
-      else {
+      if (stateDbRoot == null) {
+        return None
+      } else {
         val result = Evm.Apply(
           stateDbRoot.getStateDbHandle,
           params.getFrom,
@@ -85,24 +83,34 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
           params.value,
           params.getData,
           params.gas,
-          params.gasPrice
-        )
+          params.gasPrice)
 
         if (result.evmError.nonEmpty) {
-          throw new RpcException(
-            new RpcError(
-              RpcCode.ExecutionError.getCode,
-              result.evmError,
-              Numeric.toHexString(result.returnData)
-            )
-          )
+          throw new RpcException(new RpcError(
+            RpcCode.ExecutionError.getCode, result.evmError, Numeric.toHexString(result.returnData)))
         }
+
+        Some(result)
+      }
+    }
+  }
+
+  @RpcMethod("eth_call") def call(params: TransactionArgs, tag: Quantity): String = {
+    doCall(params, tag) match {
+      case Some(result) =>
         if (result.returnData == null)
           null
-        else
+        else {
           Numeric.toHexString(result.returnData)
+        }
+      case None => null
+    }
+  }
 
-      }
+  @RpcMethod("eth_estimateGas") def estimateGas(params: TransactionArgs /*, tag: Quantity*/): String = {
+    doCall(params, new Quantity("latest")) match {
+      case Some(result) => Numeric.toHexStringWithPrefix(result.usedGas)
+      case None => null
     }
   }
 
@@ -147,67 +155,16 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
     var blockId: java.util.Optional[String] = null
     val history = nodeView.history
     tag match {
-      case "earliest" => blockId = nodeView.history.getBlockIdByHeight(1)
-      case "finalized" => throw new RpcException(
-        new RpcError(
-          RpcCode.UnknownBlock.getCode,
-          "Unknown Block",
-          null
-        )
-      )
-      case "safe" => throw new RpcException(
-        new RpcError(
-          RpcCode.UnknownBlock.getCode,
-          "Unknown Block",
-          null
-        )
-      )
-      case "latest" => blockId = history.getBlockIdByHeight(nodeView.history.getCurrentHeight)
-      case "pending" => blockId = history.getBlockIdByHeight(nodeView.history.getCurrentHeight)
-      case _ => blockId = history.getBlockIdByHeight(Integer.parseInt(Numeric.cleanHexPrefix(tag), 16))
+      case "earliest" => blockId = history.getBlockIdByHeight(1)
+      case "finalized" | "safe" => throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock))
+      case "latest" | "pending" => blockId = history.getBlockIdByHeight(history.getCurrentHeight)
+      case height => blockId = history.getBlockIdByHeight(Integer.parseInt(Numeric.cleanHexPrefix(height), 16))
     }
     if (blockId.isEmpty) return null
     blockId.get()
   }
 
   @RpcMethod("net_version") def version: String = String.valueOf(networkParams.chainId)
-
-  //todo: simplify together with eth_call
-  @RpcMethod("eth_estimateGas") def estimateGas(transaction: util.LinkedHashMap[String, String] /*, tag: Quantity*/): String = {
-    val parameters: TransactionArgs = new TransactionArgs
-    parameters.value = if (transaction.containsKey("value")) Numeric.toBigInt(transaction.get("value")) else null
-    parameters.from = if (transaction.containsKey("from")) Address.FromBytes(Numeric.hexStringToByteArray(transaction.get("from"))) else null
-    parameters.to = if (transaction.containsKey("to")) Address.FromBytes(Numeric.hexStringToByteArray(transaction.get("to"))) else null
-    parameters.data = if (transaction.containsKey("data")) transaction.get("data") else null
-
-    using(getStateViewFromBlockById(getBlockIdByTag("latest"))) { stateDbRoot =>
-      if (stateDbRoot == null)
-        return null
-      else {
-        val result = Evm.Apply(
-          stateDbRoot.getStateDbHandle,
-          parameters.getFrom,
-          if (parameters.to == null) null else parameters.to.toBytes,
-          parameters.value,
-          parameters.getData,
-          parameters.gas,
-          parameters.gasPrice
-        )
-
-        if (result.evmError.nonEmpty) {
-          throw new RpcException(
-            new RpcError(
-              RpcCode.ExecutionError.getCode,
-              result.evmError,
-              Numeric.toHexString(result.returnData)
-            )
-          )
-        }
-        Numeric.toHexStringWithPrefix(result.usedGas)
-
-      }
-     }
-  }
 
   @RpcMethod("eth_gasPrice") def gasPrice: Quantity = {
     // TODO: Get the real gasPrice later
@@ -231,23 +188,27 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
   private def validateAndSendTransaction(transaction: Transaction,
                                          transactionResponseRepresentation: Transaction => SuccessResponse = defaultTransactionResponseRepresentation) = {
     implicit val timeout: Timeout = 5 seconds
-    val barrier = Await.result(sidechainTransactionActorRef ? BroadcastTransaction(transaction), timeout.duration).asInstanceOf[Future[Unit]]
+    val barrier = Await
+      .result(sidechainTransactionActorRef ? BroadcastTransaction(transaction), timeout.duration)
+      .asInstanceOf[Future[Unit]]
     onComplete(barrier) {
-      case Success(_) =>
-        ApiResponseUtil.toResponse(transactionResponseRepresentation(transaction))
-      case Failure(exp) =>
-        ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exp))
-        )
+      case Success(_) => ApiResponseUtil.toResponse(transactionResponseRepresentation(transaction))
+      case Failure(exp) => ApiResponseUtil.toResponse(GenericTransactionError(
+        "GenericTransactionError",
+        JOptional.of(exp)))
     }
   }
 
   @RpcMethod("eth_getTransactionReceipt")
   def getTransactionReceipt(transactionHash: String): Any = {
-    val receipt = stateView.getTransactionReceipt(Numeric.hexStringToByteArray(Numeric.cleanHexPrefix(transactionHash)))
-    if (receipt.isEmpty) return null
-    val block = getBlockById(nodeView.history.getBlockIdByHeight(receipt.get.blockNumber).get())
-    val tx = block.transactions(receipt.get.transactionIndex)
-    new EthereumReceiptView(receipt.get, tx.asInstanceOf[EthereumTransaction])
+    stateView.getTransactionReceipt(Numeric.hexStringToByteArray(transactionHash)) match {
+      case Some(receipt) => {
+        val block = getBlockById(nodeView.history.getBlockIdByHeight(receipt.blockNumber).get())
+        val tx = block.transactions(receipt.transactionIndex)
+        new EthereumReceiptView(receipt, tx.asInstanceOf[EthereumTransaction])
+      }
+      case None => null
+    }
   }
 
   private def getBlockById(blockId: String) = nodeView.history.getBlockById(blockId).get()

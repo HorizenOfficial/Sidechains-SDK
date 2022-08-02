@@ -7,12 +7,14 @@ public enum RpcCode {
     MethodNotFound(-32601, "Method not found"),
     InvalidParams(-32602, "Invalid params"),
     InternalError(-32603, "Internal error"),
-    UnknownBlock(-39001, "Unknown block"),
 
     // custom ethereum error codes
     Unauthorized(1, "Unauthorized"),
     ActionNotAllowed(2, "Action not allowed"),
-    ExecutionError(3, "Execution error");
+    ExecutionError(3, "Execution error"),
+
+    // horizen custom error codes
+    UnknownBlock(-39001, "Unknown block");
 
     private final int code;
     private final String message;
