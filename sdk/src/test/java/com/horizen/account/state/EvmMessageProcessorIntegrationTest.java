@@ -72,7 +72,7 @@ public class EvmMessageProcessorIntegrationTest extends MessageProcessorTestBase
         var initialValue = new byte[32];
         initialValue[initialValue.length - 1] = 42;
         // add constructor arguments to the end of the deployment code
-        stateView.stateDb().setNonce(originAddress, BigInteger.ONE);
+        stateView.increaseNonce(originAddress);
         var msg = getMessage(null, concat(deployCode, initialValue));
         assertTrue("should process test contract deployment", processor.canProcess(msg, stateView));
         var result = processor.process(msg, stateView);
