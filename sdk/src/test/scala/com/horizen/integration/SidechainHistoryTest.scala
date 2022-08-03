@@ -327,7 +327,7 @@ class SidechainHistoryTest extends JUnitSuite
     }
     //check
     assertEquals("History must report indexing in progress", true, history.isReindexing())
-    assertEquals("History reindex status must be 0", 0, history.getReindexStatus)
+    assertEquals("History reindex status must be 1", 1, history.getReindexStatus)
     assertEquals("Expected to report the same height as before", 4, history.height)
     assertTrue("Expected to report the same best block as before", history.contains(blockB4.id))
   }

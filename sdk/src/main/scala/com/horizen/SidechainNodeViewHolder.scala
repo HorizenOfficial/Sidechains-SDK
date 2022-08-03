@@ -103,11 +103,11 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
 
         val historyStatus : Option[(String, Boolean, Int)] =  restoredHistory.getReindexStatus match {
-          case SidechainHistory.ReindexNotInProgress | SidechainHistory.ReindexStarting => {
-            // best block id is updated in history storage as very last step
+          case SidechainHistory.ReindexNotInProgress  => {
             Some(idToVersion(restoredHistory.bestBlockId), false, 0)
           }
           case reindexHeight => {
+            // best block id is updated in history storage as very last step
             val blockIdOption = restoredHistory.getBlockIdByHeight(reindexHeight)
             if (blockIdOption.isPresent){
               Some(blockIdOption.get(), true, reindexHeight)
@@ -234,9 +234,9 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
     val result = checkAndRecoverStorages(restoredData)
     if (result.exists(curr => (curr._1.isReindexing()))) {
-      var oldHeight = result.get._1.getReindexStatus
+      val oldHeight = result.get._1.getReindexStatus
       log.info("Resuming reindex from height "+oldHeight)
-      self ! SidechainNodeViewHolder.InternalReceivableMessages.ReindexProgress(oldHeight+1)
+      self ! SidechainNodeViewHolder.ReceivableMessages.ReindexStep(true)
     }
     result
   }
@@ -351,94 +351,108 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
    * Process reindex messages
    */
   protected def processReindex: Receive = {
-    case SidechainNodeViewHolder.ReceivableMessages.ReindexStart() => {
-      //do nothing on this step, is just used to switch to "reindex" mode
-      updateNodeView(
-        updatedHistory =  Some(history().updateReindexStatus(SidechainHistory.ReindexStarting))
-      )
-      self ! SidechainNodeViewHolder.InternalReceivableMessages.ReindexProgress(0)
-    }
-    case SidechainNodeViewHolder.InternalReceivableMessages.ReindexProgress(step: Int) => {
-      reindexStep(step) match {
-        case Success(_) => {
-          if (step < history().height) {
-          self ! SidechainNodeViewHolder.InternalReceivableMessages.ReindexProgress(step+1)
+    case SidechainNodeViewHolder.ReceivableMessages.ReindexStep(proceedIfNeeded: Boolean) => {
+
+      reindexStep(proceedIfNeeded) match {
+        case Success(proceed) => {
+          if (proceed) {
+            self ! SidechainNodeViewHolder.ReceivableMessages.ReindexStep(proceedIfNeeded)
           }
         }
         case Failure(exception) => {
-          log.error(s"Reindex stopped with errors at step ${step}", exception)
+          log.error(s"Reindex step failed with error", exception)
         }
       }
     }
   }
 
-  protected def reindexStep(step: Int) = Try {
-    if (step == 0) {
-      logger.debug("Reindex initializing")
-      minimalState().startReindex(backupStorage, genesisBlock) match {
-        case Success(stateCleaned) => {
-          val cinfo: (ModifierId, ConsensusEpochInfo) = stateCleaned.getCurrentConsensusEpochInfo
-          val withdrawalEpochNumber: Int = stateCleaned.getWithdrawalEpochInfo.epoch
-
-          vault().startReindex(backupStorage, genesisBlock, withdrawalEpochNumber, cinfo._2) match {
-            case Success(walletCleaned) => {
-              history().startReindex(params, genesisBlock, semanticBlockValidators(params),
-               historyBlockValidators(params), StakeConsensusEpochInfo(cinfo._2.forgingStakeInfoTree.rootHash(), cinfo._2.forgersStake)) match {
-                case Success(historyCleaned) => {
-                  updateNodeView(
-                    updatedHistory = Some(historyCleaned),
-                    updatedState = Some(stateCleaned),
-                    updatedVault = Some(walletCleaned)
-                  )
+  protected def reindexStep(proceedIfNeeded: Boolean)  = Try[Boolean] {
+    val currentReindexStatus = history().reindexStatus
+    currentReindexStatus match {
+      case SidechainHistory.ReindexNotInProgress => {
+        //do nothing on this step, is just used to switch to "reindex" mode. Always proceed
+        updateNodeView(
+          updatedHistory =  Some(history().updateReindexStatus(0))
+        )
+        true
+      }
+      case reindexedHeight => {
+        if (reindexedHeight == 0){
+          logger.debug("Reindex initialize and block 1 (genesis)")
+          minimalState().startReindex(backupStorage, genesisBlock) match {
+            case Success(stateCleaned) => {
+              val cinfo: (ModifierId, ConsensusEpochInfo) = stateCleaned.getCurrentConsensusEpochInfo
+              val withdrawalEpochNumber: Int = stateCleaned.getWithdrawalEpochInfo.epoch
+              logger.debug("ciaoo")
+              vault().startReindex(backupStorage, genesisBlock, withdrawalEpochNumber, cinfo._2) match {
+                case Success(walletCleaned) => {
+                  history().startReindex(params, genesisBlock, semanticBlockValidators(params),
+                    historyBlockValidators(params), StakeConsensusEpochInfo(cinfo._2.forgingStakeInfoTree.rootHash(), cinfo._2.forgersStake)) match {
+                    case Success(historyCleaned) => {
+                      logger.debug("history cleaned")
+                      logger.debug(""+walletCleaned.allBoxes.size())
+                      updateNodeView(
+                        updatedHistory = Some(historyCleaned),
+                        updatedState = Some(stateCleaned),
+                        updatedVault = Some(walletCleaned)
+                      )
+                      proceedIfNeeded
+                    }
+                    case Failure(e) => {
+                      log.error(s"Error during reindex: unable to initialize history", e)
+                      throw e //propagate the exception to avoid the execution of the following steps
+                    }
+                  }
                 }
                 case Failure(e) => {
-                  log.error(s"Error during reindex: unable to initialize history", e)
-                  throw e  //propagate the exception to avoid the execution of the following steps
+                  log.error(s"Error during reindex: unable to initialize wallet", e)
+                  throw e //propagate the exception to avoid the execution of the following steps
                 }
               }
             }
             case Failure(e) => {
-              log.error(s"Error during reindex: unable to initialize wallet", e)
-              throw e  //propagate the exception to avoid the execution of the following steps
+              log.error(s"Error during reindex: unable to initialize state", e)
+              throw e //propagate the exception to avoid the execution of the following steps
             }
           }
-        }
-        case Failure(e) => {
-          log.error(s"Error during reindex: unable to initialize state", e)
-          throw e  //propagate the exception to avoid the execution of the following steps
-        }
-      }
-    } else {
-      logger.debug("Reindexing block " + step)
-      val blokIdOptional = history().getBlockIdByHeight(step)
-      if (blokIdOptional.isPresent) {
-        val blockOptional = history.getBlockById(blokIdOptional.get)
-        if (blockOptional.isPresent) {
-          val progressInfo = ProgressInfo(None, Seq(), Seq(blockOptional.get()), Seq())
-          val (newHistory, newStateTry, newWallet, blocksApplied) =
-            updateStateAndWallet(history(), minimalState(), vault(), progressInfo, IndexedSeq())
-          newStateTry match {
-            case Success(newState) => {
-              val reindexCompleted = (step == history.height)
-              updateNodeView(
-                updatedHistory = Some(newHistory.updateReindexStatus(if (reindexCompleted) SidechainHistory.ReindexNotInProgress else step)),
-                updatedState = Some(newState),
-                updatedVault = Some(newWallet)
-              )
-              if (reindexCompleted){
-                log.debug("Reindex completed!")
+        }else {
+          val newHeight = reindexedHeight + 1
+          logger.debug("Reindexing block " + newHeight)
+          val blokIdOptional = history().getBlockIdByHeight(newHeight)
+          if (blokIdOptional.isPresent) {
+            val blockOptional = history.getBlockById(blokIdOptional.get)
+            if (blockOptional.isPresent) {
+              val progressInfo = ProgressInfo(None, Seq(), Seq(blockOptional.get()), Seq())
+              val (newHistory, newStateTry, newWallet, blocksApplied) =
+                updateStateAndWallet(history(), minimalState(), vault(), progressInfo, IndexedSeq())
+              newStateTry match {
+                case Success(newState) => {
+                  val reindexCompleted = (newHeight == history.height)
+                  val nextReindexStatus = if (reindexCompleted) SidechainHistory.ReindexNotInProgress else newHeight
+                  updateNodeView(
+                    updatedHistory = Some(newHistory.updateReindexStatus(nextReindexStatus)),
+                    updatedState = Some(newState),
+                    updatedVault = Some(newWallet)
+                  )
+                  if (reindexCompleted) {
+                    log.debug("Reindex completed!")
+                    false
+                  } else {
+                    proceedIfNeeded
+                  }
+                }
+                case Failure(e) => {
+                  log.error(s"Error during reindex of block at height ${newHeight}", e)
+                  throw e //propagate the exception to avoid the execution of the following steps
+                }
               }
+            } else {
+              throw new RuntimeException(s"Error during reindex- Unable to find block at height ${newHeight}")
             }
-            case Failure(e) => {
-              log.error(s"Error during reindex of block at height ${step}", e)
-              throw e  //propagate the exception to avoid the execution of the following steps
-            }
+          } else {
+            throw new RuntimeException(s"Error during reindex- Unable to find block at height ${newHeight}")
           }
-        }else{
-          throw new RuntimeException(s"Error during reindex- Unable to find block at height ${step}")
         }
-      }else{
-        throw new RuntimeException(s"Error during reindex- Unable to find block at height ${step}")
       }
     }
   }
@@ -750,7 +764,7 @@ object SidechainNodeViewHolder /*extends ScorexLogging with SparkzEncoding*/ {
     case class LocallyGeneratedSecret[S <: SidechainTypes#SCS](secret: S)
 
     case object GetStorageVersions
-    case class ReindexStart()
+    case class ReindexStep(proceedIfNeeded: Boolean)
   }
 
   private[horizen] object InternalReceivableMessages {
@@ -763,8 +777,6 @@ object SidechainNodeViewHolder /*extends ScorexLogging with SparkzEncoding*/ {
     case class LocallyGeneratedTransaction[TX <: Transaction](tx: TX) extends NewLocallyGeneratedTransactions[TX] {
       override val txs: Iterable[TX] = Iterable(tx)
     }
-
-    case class ReindexProgress(step: Int)
 
   }
 }

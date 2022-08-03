@@ -597,7 +597,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
                    stakeEpochInfo: StakeConsensusEpochInfo) : Try[SidechainHistory] = {
     consensusDataStorage.cleanup()
     SidechainHistory.createGenesisHistory(
-      storage.updateReindexStatus(0).get,
+      storage.updateReindexStatus(if (this.height == 1) SidechainHistory.ReindexNotInProgress else 1).get,
       consensusDataStorage,
       params, genesisBlock, semanticBlockValidators, historyBlockValidators, stakeEpochInfo, true)
   }
@@ -627,8 +627,7 @@ object SidechainHistory
       None
   }
 
-  val ReindexNotInProgress : Int = -2
-  val ReindexStarting : Int = -1
+  val ReindexNotInProgress : Int = -1
 
   def calculateGenesisBlockInfo(block: SidechainBlock, params: NetworkParams): SidechainBlockInfo = {
     require(block.id == params.sidechainGenesisBlockId, "Passed block is not a genesis block.")

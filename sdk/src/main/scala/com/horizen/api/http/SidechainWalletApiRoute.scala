@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.SidechainNodeViewHolder.ReceivableMessages
 import com.horizen.SidechainNodeViewHolder.ReceivableMessages.LocallyGeneratedSecret
 import com.horizen.SidechainNodeViewReindexer.ReceivableMessages.{StartReindex, StatusReindex}
-import com.horizen.SidechainTypes
+import com.horizen.{SidechainHistory, SidechainTypes}
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainWalletErrorResponse.{ErrorFailedToParseSecret, ErrorPropositionNotFound, ErrorPropositionNotMatch, ErrorSecretAlreadyPresent, ErrorSecretNotAdded}
 import com.horizen.api.http.SidechainWalletRestScheme.{ReqDumpWallet, ReqExportSecret, ReqImportSecret, RespDumpSecrets, RespExportSecret, RespImportSecrets, _}
@@ -34,7 +34,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
 
   //Please don't forget to add Auth for every new method of the wallet.
   override val route: Route = pathPrefix("wallet") {
-    allBoxes ~ coinsBalance ~ balanceOfType ~ createPrivateKey25519 ~ createVrfSecret ~ allPublicKeys ~ importSecret ~ exportSecret ~ dumpSecrets ~ importSecrets ~ reindex
+    allBoxes ~ coinsBalance ~ balanceOfType ~ createPrivateKey25519 ~ createVrfSecret ~ allPublicKeys ~ importSecret ~ exportSecret ~ dumpSecrets ~ importSecrets ~ reindex ~ reindexStatus
   }
 
   /**
@@ -182,25 +182,42 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
 
   /**
    * Reindex endpoint.
-   * If called with "start: true" parameter, a reindex will be started.
-   * If called without parameter or if a previous reindex is still ongoing, will display the current status
+   * Returns true if the reindex started succesfully
+   * Return false if a reindex was already ongoing
    */
   def reindex: Route = (post & path("reindex")) {
     withAuth {
-      entity(as[ReqReindex]) { body =>
-        val requestedStart = body.start
-        val future = if (requestedStart)
-                            sidechainNodeViewReindexer ? StartReindex() else
-                            sidechainNodeViewReindexer ? StatusReindex()
-                          Await.result(future, timeout.duration).asInstanceOf[Try[Option[Long]]] match {
-          case Success(ret) =>
-            if (ret.isEmpty)
-              ApiResponseUtil.toResponse(RespReindex(if (requestedStart) "started" else "inactive", ret))
-            else
-              ApiResponseUtil.toResponse(RespReindex("ongoing", ret))
-          case Failure(e) =>
-            ApiResponseUtil.toResponse(ErrorSecretAlreadyPresent("Failed to launch reindex.", JOptional.of(e)))
+      val future = sidechainNodeViewReindexer ? StartReindex()
+      Await.result(future, timeout.duration).asInstanceOf[Try[Option[Int]]] match {
+        case Success(ret) => {
+          if (ret.isEmpty){
+            ApiResponseUtil.toResponse(RespReindexStart(true, Option.empty))
+          }else{
+            ApiResponseUtil.toResponse(RespReindexStart(false, ret))
+          }
         }
+        case Failure(e) =>
+          ApiResponseUtil.toResponse(ErrorSecretAlreadyPresent("Failed to launch reindex", JOptional.of(e)))
+      }
+    }
+  }
+
+
+  /**
+   * Reindex status
+   */
+  def reindexStatus: Route = (post & path("reindexStatus")) {
+    withAuth {
+      val future = sidechainNodeViewReindexer ? StatusReindex()
+      Await.result(future, timeout.duration).asInstanceOf[Try[Int]] match {
+        case Success(ret) => {
+          ret match {
+            case SidechainHistory.ReindexNotInProgress =>  ApiResponseUtil.toResponse(RespReindexStatus("inactive", Option.empty))
+            case reachedHeight =>  ApiResponseUtil.toResponse(RespReindexStatus("ongoing", Some(reachedHeight)))
+          }
+        }
+        case Failure(e) =>
+          ApiResponseUtil.toResponse(ErrorSecretAlreadyPresent("Failed to get reindexStatus", JOptional.of(e)))
       }
     }
   }
@@ -328,10 +345,10 @@ object SidechainWalletRestScheme {
   private[api] case class RespBalance(balance: Long) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqReindex(start: Boolean) extends SuccessResponse
+  private[api] case class RespReindexStart(started: Boolean, heightReached: Option[Int]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespReindex(status: String, heightReached: Option[Long]) extends SuccessResponse
+  private[api] case class RespReindexStatus(status: String, heightReached: Option[Int]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespCreatePrivateKey(proposition: Proposition) extends SuccessResponse

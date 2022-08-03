@@ -391,6 +391,10 @@ class SidechainApp @Inject()
     SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager, params),
     SidechainBackupApiRoute(settings.restApi, nodeViewHolderRef, boxIterator)
   )
+  if (params.isInstanceOf[RegTestParams]){
+    coreApiRoutes = coreApiRoutes :+ SidechainDebugApiRoute(settings.restApi, nodeViewHolderRef)
+  }
+
 
   val transactionSubmitProvider : TransactionSubmitProvider = new TransactionSubmitProviderImpl(sidechainTransactionActorRef)
   val nodeViewProvider : NodeViewProvider = new NodeViewProviderImpl(nodeViewHolderRef)
