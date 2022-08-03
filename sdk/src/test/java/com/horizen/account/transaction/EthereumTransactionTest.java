@@ -2,6 +2,7 @@ package com.horizen.account.transaction;
 
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
+import com.horizen.account.utils.EthereumTransactionUtils;
 import com.horizen.evm.TrieHasher;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.BytesUtils;
@@ -240,14 +241,14 @@ public class EthereumTransactionTest {
     @Test
     public void ethereumTransactionConversionUtilsTest() {
         long lv = 1997;
-        byte[] res = EthereumTransaction.convertToBytes(lv);
-        long lv2 = EthereumTransaction.convertToLong(res);
+        byte[] res = EthereumTransactionUtils.convertToBytes(lv);
+        long lv2 = EthereumTransactionUtils.convertToLong(res);
         assertEquals(lv, lv2);
 
         byte[] bv = BytesUtils.fromHexString("01");
-        long lv3 = EthereumTransaction.convertToLong(bv);
+        long lv3 = EthereumTransactionUtils.convertToLong(bv);
         assertEquals(lv3, 1);
-        byte[] bv2 = EthereumTransaction.convertToBytes(lv3);
+        byte[] bv2 = EthereumTransactionUtils.convertToBytes(lv3);
         assertEquals("0000000000000001", BytesUtils.toHexString(bv2));
     }
 

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.*;
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.utils.Account;
+import com.horizen.account.utils.EthereumTransactionUtils;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
@@ -21,7 +22,6 @@ import org.web3j.crypto.Hash;
 
 import javax.annotation.Nullable;
 import java.math.BigInteger;
-import java.nio.ByteBuffer;
 import java.security.SignatureException;
 import java.util.Objects;
 
@@ -210,7 +210,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             if (sigData.getS()[0] == 0 && sigData.getR()[0] == 0) {
                 // for a not-really signed legacy tx implementing EIP155, here the chainid is the V itself
                 // the caller needs it for encoding the tx properly
-                return convertToLong(sigData.getV());
+                return EthereumTransactionUtils.convertToLong(sigData.getV());
             } else {
                 // for a fully signed legacy tx implementing EIP155
                 return ((SignedRawTransaction) this.transaction).getChainId();
@@ -316,6 +316,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return null;
     }
 
+    // used in json representation of signature fields. In case of EIP155 tx getV() returns the value carrying the chainId
     public byte[] getV() { return (getSignatureData() != null) ? getSignatureData().getV() : null; }
     public byte[] getR() { return (getSignatureData() != null) ? getSignatureData().getR() : null; }
     public byte[] getS() { return (getSignatureData() != null) ? getSignatureData().getS() : null; }
@@ -359,17 +360,4 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return TransactionEncoder.encode(this.transaction);
     }
 
-    // Util function
-    // w3j private method in TransactionEncoder, it returns a byte array with Long.BYTES length
-    public static byte[] convertToBytes(long x) {
-        ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
-        buffer.putLong(x);
-        return buffer.array();
-    }
-
-    // w3j way for converting bytes, it works also with generic byte contents (not only Long.BYTES byte arrays)
-    public static long convertToLong(byte[] bytes) {
-        BigInteger bi = Numeric.toBigInt(bytes);
-        return bi.longValue();
-    }
 }
