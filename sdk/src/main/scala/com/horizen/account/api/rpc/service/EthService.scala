@@ -54,8 +54,6 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
     if (blockId == null) return null
     val block = nodeView.history.getBlockById(blockId)
     if (block.isEmpty) return null
-    // TODO: why does this not compile?
-    //val transactions = block.get().transactions.collect { case tx: EthereumTransaction => tx }
     val transactions = block.get().transactions.filter {
       _.isInstanceOf[EthereumTransaction]
     } map {
@@ -76,37 +74,37 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
   }
 
   private def doCall(params: TransactionArgs, tag: Quantity) = {
-    using(getStateViewFromBlockById(getBlockIdByTag(tag.getValue))) { stateDbRoot =>
-      if (stateDbRoot == null) {
-        throw new IllegalArgumentException(s"Unable to get state for given tag: ${tag.getValue}")
-      }
-      val message = params.toMessage
+    getStateViewAtTag(tag) {
+      case None => throw new IllegalArgumentException(s"Unable to get state for given tag: ${tag.getValue}")
+      case Some(tagStateView) => {
+        val message = params.toMessage
 
-      // TODO: refactor to reuse parts of AccountStateView.applyTransaction?
-      val messageProcessors = Seq(
-        EoaMessageProcessor,
-        WithdrawalMsgProcessor,
-        ForgerStakeMsgProcessor(networkParams),
-        new EvmMessageProcessor()
-      )
+        // TODO: refactor to reuse parts of AccountStateView.applyTransaction?
+        val messageProcessors = Seq(
+          EoaMessageProcessor,
+          WithdrawalMsgProcessor,
+          ForgerStakeMsgProcessor(networkParams),
+          new EvmMessageProcessor()
+        )
 
-      val processor = messageProcessors.find(_.canProcess(message, stateView)).getOrElse(
-        throw new IllegalArgumentException("Unable to process call.")
-      )
+        val processor = messageProcessors.find(_.canProcess(message, tagStateView)).getOrElse(
+          throw new IllegalArgumentException("Unable to process call.")
+        )
 
-      processor.process(message, stateView) match {
-        case failed: ExecutionFailed =>
-          // throw on execution errors, also include evm revert reason if possible
-          throw new RpcException(new RpcError(
-            RpcCode.ExecutionError.getCode, failed.getReason.getMessage, failed.getReason match {
-              case evmRevert: EvmException => Numeric.toHexString(evmRevert.returnData)
-              case _ => null
-            }))
+        processor.process(message, tagStateView) match {
+          case failed: ExecutionFailed =>
+            // throw on execution errors, also include evm revert reason if possible
+            throw new RpcException(new RpcError(
+              RpcCode.ExecutionError.getCode, failed.getReason.getMessage, failed.getReason match {
+                case evmRevert: EvmException => Numeric.toHexString(evmRevert.returnData)
+                case _ => null
+              }))
 
-        case invalid: InvalidMessage =>
-          throw new IllegalArgumentException("Invalid message.", invalid.getReason)
+          case invalid: InvalidMessage =>
+            throw new IllegalArgumentException("Invalid message.", invalid.getReason)
 
-        case success: ExecutionSucceeded => success
+          case success: ExecutionSucceeded => success
+        }
       }
     }
   }
@@ -127,36 +125,32 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
 
   @RpcMethod("eth_chainId") def chainId = new Quantity(Numeric.toHexStringWithPrefix(BigInteger.valueOf(networkParams.chainId)))
 
-  @RpcMethod("eth_getBalance") def GetBalance(address: String, blockNumberOrTag: Quantity) = new Quantity(getBalance(address, blockNumberOrTag))
-
-  private def getBalance(address: String, tag: Quantity): String = {
-    using(getStateViewFromBlockById(getBlockIdByTag(tag.getValue))) { stateDbRoot =>
-      if (stateDbRoot == null)
-        return "null"
-      else {
-        val balance = stateDbRoot.getBalance(Numeric.hexStringToByteArray(address))
-        Numeric.toHexStringWithPrefix(balance)
-      }
+  @RpcMethod("eth_getBalance") def GetBalance(address: String, tag: Quantity): Quantity = {
+    getStateViewAtTag(tag) {
+      case None => new Quantity("null")
+      case Some(tagStateView) => new Quantity(
+        Numeric.toHexStringWithPrefix(tagStateView.getBalance(Numeric.hexStringToByteArray(address)))
+      )
     }
   }
 
   @RpcMethod("eth_getTransactionCount") def getTransactionCount(address: String, tag: Quantity): Quantity = {
-    using(getStateViewFromBlockById(getBlockIdByTag(tag.getValue))) { stateDbRoot =>
-      if (stateDbRoot == null)
-       return new Quantity("0x0")
-      else {
-        val nonce = stateDbRoot.getNonce(Numeric.hexStringToByteArray(address))
-        new Quantity(Numeric.toHexStringWithPrefix(nonce))
-      }
+    getStateViewAtTag(tag) {
+      case None => new Quantity("0x0")
+      case Some(tagStateView) => new Quantity(
+        Numeric.toHexStringWithPrefix(tagStateView.getNonce(Numeric.hexStringToByteArray(address)))
+      )
     }
   }
 
-  private def getStateViewFromBlockById(blockId: String): AccountStateView = {
-    val block = nodeView.history.getBlockById(blockId)
+  private def getStateViewAtTag[A](tag: Quantity)(fun: Option[AccountStateView] ⇒ A): A = {
+    val block = nodeView.history.getBlockById(getBlockIdByTag(tag.getValue))
     if (block.isEmpty)
-      null
+      fun(None)
     else
-      nodeView.state.getStateDbViewFromRoot(block.get().header.stateRoot)
+      using(nodeView.state.getStateDbViewFromRoot(block.get().header.stateRoot)) {
+        tagStateView => fun(Some(tagStateView))
+      }
   }
 
   private def getBlockIdByTag(tag: String): String = {
@@ -223,16 +217,14 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
   private def getBlockById(blockId: String) = nodeView.history.getBlockById(blockId).get()
 
   @RpcMethod("eth_getCode") def getCode(address: String, tag: Quantity): String = {
-    using(getStateViewFromBlockById(getBlockIdByTag(tag.getValue))) { stateDbRoot =>
-      if (stateDbRoot == null)
-        return ""
-      else {
-        val code = stateDbRoot.getCode(Numeric.hexStringToByteArray(address))
+    getStateViewAtTag(tag) {
+      case None => ""
+      case Some(tagStateView) =>
+        val code = tagStateView.getCode(Numeric.hexStringToByteArray(address))
         if (code == null)
           "0x"
         else
           Numeric.toHexString(code)
-      }
     }
   }
 }
