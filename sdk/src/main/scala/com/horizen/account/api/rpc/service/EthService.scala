@@ -76,23 +76,10 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
   private def doCall(params: TransactionArgs, tag: Quantity) = {
     getStateViewAtTag(tag) {
       case None => throw new IllegalArgumentException(s"Unable to get state for given tag: ${tag.getValue}")
-      case Some(tagStateView) => {
-        val message = params.toMessage
+      case Some(tagStateView) => tagStateView.applyMessage(params.toMessage) match {
+          case Some(success: ExecutionSucceeded) => success
 
-        // TODO: refactor to reuse parts of AccountStateView.applyTransaction?
-        val messageProcessors = Seq(
-          EoaMessageProcessor,
-          WithdrawalMsgProcessor,
-          ForgerStakeMsgProcessor(networkParams),
-          new EvmMessageProcessor()
-        )
-
-        val processor = messageProcessors.find(_.canProcess(message, tagStateView)).getOrElse(
-          throw new IllegalArgumentException("Unable to process call.")
-        )
-
-        processor.process(message, tagStateView) match {
-          case failed: ExecutionFailed =>
+          case Some(failed: ExecutionFailed) =>
             // throw on execution errors, also include evm revert reason if possible
             throw new RpcException(new RpcError(
               RpcCode.ExecutionError.getCode, failed.getReason.getMessage, failed.getReason match {
@@ -100,12 +87,11 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
                 case _ => null
               }))
 
-          case invalid: InvalidMessage =>
+          case Some(invalid: InvalidMessage) =>
             throw new IllegalArgumentException("Invalid message.", invalid.getReason)
 
-          case success: ExecutionSucceeded => success
+          case _ => throw new IllegalArgumentException("Unable to process call.")
         }
-      }
     }
   }
 
