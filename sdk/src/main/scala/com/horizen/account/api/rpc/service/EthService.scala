@@ -12,6 +12,7 @@ import com.horizen.account.api.rpc.types._
 import com.horizen.account.api.rpc.utils._
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
+import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.wallet.AccountWallet
@@ -23,6 +24,7 @@ import com.horizen.utils.ClosableResourceHandler
 import org.web3j.crypto.TransactionDecoder
 import org.web3j.utils.Numeric
 import scorex.core.NodeViewHolder.CurrentView
+import scorex.util.ModifierId
 
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
@@ -159,12 +161,25 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
     new Quantity("0x3B9ACA00")
   }
 
-  @RpcMethod("eth_getTransactionByHash") def getTransactionByHash(transactionHash: String): EthereumTransactionView = {
-    val receipt = stateView.getTransactionReceipt(Numeric.hexStringToByteArray(Numeric.cleanHexPrefix(transactionHash)))
-    if (receipt.isEmpty) return null
-    val block = getBlockById(nodeView.history.getBlockIdByHeight(receipt.get.blockNumber).get())
-    val tx = block.transactions(receipt.get.transactionIndex)
-    new EthereumTransactionView(receipt.get, tx.asInstanceOf[EthereumTransaction])
+  private def getTransactionAndReceipt[A](transactionHash: String)(f: (EthereumTransaction, EthereumReceipt) => A) = {
+    stateView.getTransactionReceipt(Numeric.hexStringToByteArray(transactionHash))
+      .flatMap(receipt => {
+        nodeView.history.blockIdByHeight(receipt.blockNumber)
+          .map(ModifierId(_))
+          .flatMap(nodeView.history.getStorageBlockById)
+          .map(_.transactions(receipt.transactionIndex).asInstanceOf[EthereumTransaction])
+          .map(tx => f(tx, receipt))
+      })
+  }
+
+  @RpcMethod("eth_getTransactionByHash")
+  def getTransactionByHash(transactionHash: String): EthereumTransactionView = {
+    getTransactionAndReceipt(transactionHash) { (tx, receipt) => new EthereumTransactionView(receipt, tx) }.orNull
+  }
+
+  @RpcMethod("eth_getTransactionReceipt")
+  def getTransactionReceipt(transactionHash: String): EthereumReceiptView = {
+    getTransactionAndReceipt(transactionHash) { (tx, receipt) => new EthereumReceiptView(receipt, tx) }.orNull
   }
 
   @RpcMethod("eth_sendRawTransaction") def sendRawTransaction(signedTxData: String): Quantity = {
@@ -187,20 +202,6 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
         JOptional.of(exp)))
     }
   }
-
-  @RpcMethod("eth_getTransactionReceipt")
-  def getTransactionReceipt(transactionHash: String): Any = {
-    stateView.getTransactionReceipt(Numeric.hexStringToByteArray(transactionHash)) match {
-      case Some(receipt) => {
-        val block = getBlockById(nodeView.history.getBlockIdByHeight(receipt.blockNumber).get())
-        val tx = block.transactions(receipt.transactionIndex)
-        new EthereumReceiptView(receipt, tx.asInstanceOf[EthereumTransaction])
-      }
-      case None => null
-    }
-  }
-
-  private def getBlockById(blockId: String) = nodeView.history.getBlockById(blockId).get()
 
   @RpcMethod("eth_getCode") def getCode(address: String, tag: Quantity): String = {
     getStateViewAtTag(tag) {
