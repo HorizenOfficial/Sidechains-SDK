@@ -600,7 +600,7 @@ def connect_sc_nodes(from_connection, node_num, wait_for=25):
     while True:
         if time.time() - start >= wait_for:
             raise (TimeoutException("Trying to connect to node{0}".format(node_num)))
-        if any(i for i in (from_connection.node_connectedPeers()["result"]["peers"]) if i.get("address") == "/" + ip_port):
+        if any(i for i in (from_connection.node_connectedPeers()["result"]["peers"]) if i.get("remoteAddress") == "/" + ip_port):
             break
         time.sleep(WAIT_CONST)
 
