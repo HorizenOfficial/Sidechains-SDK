@@ -13,6 +13,7 @@ import com.horizen.account.api.rpc.utils._
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
+import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state.{AccountState, AccountStateView}
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.wallet.AccountWallet
@@ -23,7 +24,9 @@ import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.Transaction
 import com.horizen.utils.ClosableResourceHandler
-import org.web3j.crypto.TransactionDecoder
+import com.horizen.utils.BytesUtils
+import org.web3j.crypto.Sign.SignatureData
+import org.web3j.crypto.{SignedRawTransaction, TransactionDecoder, TransactionEncoder}
 import org.web3j.utils.Numeric
 import scorex.core.NodeViewHolder.CurrentView
 
@@ -31,6 +34,7 @@ import java.math.BigInteger
 import java.util
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters.seqAsJavaListConverter
+import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
@@ -110,6 +114,50 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
     }
   }
 
+  @RpcMethod("eth_signTransaction") def signTransaction(params: TransactionArgs): String = {
+    var signedTx = params.toTransaction
+    val secret =
+      getFittingSecret(nodeView.vault, nodeView.state, Option.apply(params.from.toUTXOString), params.value)
+    secret match {
+      case Some(secret) =>
+        signedTx = signTransactionWithSecret(secret, signedTx)
+      case None =>
+        throw new RpcException(
+          new RpcError(
+            35555, // TODO get proper error code
+            "Insufficient funds on the account in from",
+            signedTx.getFromAddress
+          )
+        )
+    }
+    "0x" + BytesUtils.toHexString(TransactionEncoder.encode(signedTx.getTransaction, signedTx.getTransaction.asInstanceOf[SignedRawTransaction].getSignatureData))
+  }
+
+  private def getFittingSecret(wallet: AccountWallet, state: AccountState, fromAddress: Option[String], txValueInWei: BigInteger)
+  : Option[PrivateKeySecp256k1] = {
+    val allAccounts = wallet.secretsOfType(classOf[PrivateKeySecp256k1])
+    val secret = allAccounts.find(
+      a => (fromAddress.isEmpty ||
+        BytesUtils.toHexString(a.asInstanceOf[PrivateKeySecp256k1].publicImage
+          .address) == fromAddress.get) &&
+        state.getBalance(a.asInstanceOf[PrivateKeySecp256k1].publicImage.address).compareTo(txValueInWei) >= 0 // TODO account for gas
+    )
+
+    if (secret.nonEmpty) Option.apply(secret.get.asInstanceOf[PrivateKeySecp256k1])
+    else Option.empty[PrivateKeySecp256k1]
+  }
+
+  private def signTransactionWithSecret(secret: PrivateKeySecp256k1, tx: EthereumTransaction): EthereumTransaction = {
+    val messageToSign = tx.messageToSign()
+    val msgSignature = secret.sign(messageToSign)
+    new EthereumTransaction(
+      new SignedRawTransaction(
+        tx.getTransaction.getTransaction,
+        new SignatureData(msgSignature.getV, msgSignature.getR, msgSignature.getS)
+      )
+    )
+  }
+
   @RpcMethod("eth_blockNumber") def blockNumber = new Quantity(Numeric.toHexStringWithPrefix(BigInteger.valueOf(nodeView.history.getCurrentHeight)))
 
   @RpcMethod("eth_chainId") def chainId = new Quantity(Numeric.toHexStringWithPrefix(BigInteger.valueOf(networkParams.chainId)))
@@ -131,7 +179,7 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
   @RpcMethod("eth_getTransactionCount") def getTransactionCount(address: String, tag: Quantity): Quantity = {
     using(getStateViewFromBlockById(getBlockIdByTag(tag.getValue))) { stateDbRoot =>
       if (stateDbRoot == null)
-       return new Quantity("0x0")
+        return new Quantity("0x0")
       else {
         val nonce = stateDbRoot.getNonce(Numeric.hexStringToByteArray(address))
         new Quantity(Numeric.toHexStringWithPrefix(nonce))
@@ -210,7 +258,7 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
         Numeric.toHexStringWithPrefix(result.usedGas)
 
       }
-     }
+    }
   }
 
   @RpcMethod("eth_gasPrice") def gasPrice = { // TODO: Get the real gasPrice later
