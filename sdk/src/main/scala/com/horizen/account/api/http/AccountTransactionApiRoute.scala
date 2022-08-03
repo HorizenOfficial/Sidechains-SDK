@@ -147,7 +147,10 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                   gasLimit,
                   valueInWei,
                   "",
-                  new SignatureData(BigInteger.valueOf(params.chainId).toByteArray, Array[Byte](0), Array[Byte](0)))
+                  new SignatureData(
+                    EthereumTransaction.convertToBytes(params.chainId),
+                    Array[Byte](0),
+                    Array[Byte](0)))
                 validateAndSendTransaction(signTransactionEIP155WithSecret(secret, tmpTx))
               } else {
                 val tmpTx = new EthereumTransaction(
