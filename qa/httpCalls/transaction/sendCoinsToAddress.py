@@ -1,4 +1,5 @@
 import json
+import sys
 
 
 # execute a transaction/sendCoinsToAddress call
@@ -17,7 +18,10 @@ def sendCoinsToAddress(sidechainNode, address, amount, fee, api_key=None):
         response = sidechainNode.transaction_sendCoinsToAddress(request, api_key)
     else:
         response = sidechainNode.transaction_sendCoinsToAddress(request)
-    return response["result"]["transactionId"]
+    if "error" in response:
+        raise Exception(response['error']['description'], response['error']['detail'])
+    else:
+        return response["result"]["transactionId"]
 
 def sendCoinsToAddressDryRun(sidechainNode, address, amount, fee, api_key=None):
     j = {

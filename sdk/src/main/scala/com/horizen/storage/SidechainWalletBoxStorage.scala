@@ -36,6 +36,7 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
   private val _walletBoxesBalances = new mutable.LinkedHashMap[Class[_ <: Box[_ <: Proposition]], Long]()
   private val _walletBoxSerializer = new WalletBoxSerializer(sidechainBoxesCompanion)
 
+
   loadWalletBoxes()
 
   private def calculateBoxesBalances() : Unit = {
@@ -165,5 +166,10 @@ class SidechainWalletBoxStorage (storage : Storage, sidechainBoxesCompanion: Sid
 
   def getIterator: StorageIterator = storage.getIterator
 
-  override def cleanup(): Unit = storage.cleanup()
+  override def cleanup(): Unit = {
+    _walletBoxes.clear()
+    _walletBoxesByType.clear()
+    _walletBoxesBalances.clear()
+    storage.cleanup()
+  }
 }

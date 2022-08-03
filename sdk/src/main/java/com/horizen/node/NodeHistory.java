@@ -21,6 +21,8 @@ public interface NodeHistory {
 
     boolean isInActiveChain(String blockId);
 
+    boolean isReindexing();
+
     List<String> getLastBlockIds(int count);
 
     SidechainBlock getBestBlock();

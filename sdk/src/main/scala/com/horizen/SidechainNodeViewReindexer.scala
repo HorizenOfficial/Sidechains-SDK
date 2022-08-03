@@ -39,19 +39,22 @@ class SidechainNodeViewReindexer
   }
 
   protected def processReindexEvents: Receive = {
-    case SidechainNodeViewReindexer.ReceivableMessages.StartReindex() => reindexHandler(true)
-    case SidechainNodeViewReindexer.ReceivableMessages.StatusReindex() => reindexHandler(false)
+    case SidechainNodeViewReindexer.ReceivableMessages.StartReindex() => startReindex()
+    case SidechainNodeViewReindexer.ReceivableMessages.StatusReindex() => statusReindex()
   }
 
-  protected def reindexHandler(startIfNeeded: Boolean): Unit = {
+  protected def startReindex(): Unit = {
     if (reindexStatus == SidechainHistory.ReindexNotInProgress) {
-      if (startIfNeeded) {
-        viewHolderRef ! SidechainNodeViewHolder.ReceivableMessages.ReindexStart()
-      }
-      sender() ! Success(Option.empty)
-    }else{
+        viewHolderRef ! SidechainNodeViewHolder.ReceivableMessages.ReindexStep(true)
+        sender() ! Success(Option.empty)
+    }else {
       sender() ! Success(Some(reindexStatus))
     }
+  }
+
+
+  protected def statusReindex(): Unit = {
+    sender() ! Success(reindexStatus)
   }
 }
 
