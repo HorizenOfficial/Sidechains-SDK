@@ -41,8 +41,8 @@ class ContractFunction:
 
 
 class CallMethod(Enum):
-    HTTP = 0
-    RPC_LEGACY = 1
+    RPC_LEGACY = 0
+    RPC_EIP155 = 1
     RPC_EIP1559 = 2
 
 
@@ -84,71 +84,61 @@ class SmartContract:
                                                                  '', True)
 
     def call_function(self, node, functionName: str, *args,
-                      call_method: CallMethod = CallMethod.HTTP,
+                      call_method: CallMethod = CallMethod.RPC_LEGACY,
                       fromAddress: str, toAddress: str, nonce: int = None,
-                      gasLimit: int, gasPrice: int = None, maxFeePerGas: int = None,
-                      maxPriorityFeePerGas: int = None, value: int = 0, tag: str = 'latest'):
-        """Creates an on-chain writing legacy transaction of the function `functionName` with the encoded arguments.
-
-                Parameters:
-                    node:           The side chain node to use for rpc/http
-                    functionName (str):   The name of the function to call. Has to include parentheses and params without spaces (e.g. `someFunction(uint256,string)`
-                    *args: the arguments to call the function with, in the correct order.
-                    fromAddress: the sender address to use.
-                    toAddress: the address of the smart contract instance to use
-                    nonce (optional): The nonce to use. If not given, the nonce will be retrieved via rpc
-                    gasLimit: The gasLimit to use
-                    gasPrice: The gasPrice to use
-                    value: The value to use
-                    tag: The block tag to use when calling rpc methods
+                      gasLimit: int, gasPrice: int = 1, maxFeePerGas: int = 1,
+                      maxPriorityFeePerGas: int = 1, value: int = 0, tag: str = 'latest'):
+        """Creates an on-chain writing transaction of the function `functionName` with the encoded arguments.
 
                 Returns:
                     tx_hash: The transaction hash of the transaction
+                :param args: the arguments to call the function with, in the correct order
+                :param node: The side chain node to use for rpc/http
+                :param functionName: The name of the function to call. Has to include parentheses and params without spaces (e.g. `someFunction(uint256,string)`
+                :param call_method: The type of transaction to create
+                :param fromAddress: the sender address to use
+                :param toAddress: the address of the smart contract instance to use
+                :param gasLimit: The gasLimit to use
+                :param gasPrice: The gasPrice to use
+                :param nonce: The nonce to use. If not given, the nonce will be retrieved via rpc
+                :param tag: The block tag to use when calling rpc methods
+                :param value: The value to use
+                :param maxFeePerGas: maxFeePerGas in EIP1559
+                :param maxPriorityFeePerGas: maxPriorityFeePerGas in eip1559
 
         """
         data = self.raw_encode_call(functionName, *args)
-        response: Any = ''
-        if call_method is CallMethod.HTTP:
-            request = json.dumps({
-                "from": format_eoa(fromAddress),
-                "to": format_eoa(toAddress),
-                "nonce": self.__ensure_nonce(node, fromAddress, nonce, tag),
-                "gasLimit": gasLimit,
-                "gasPrice": gasPrice,
-                "value": value,
-                "data": data
-            })
-            response = node.transaction_createLegacyTransaction(request)
-            return response["result"]["transactionId"]
-        elif call_method is CallMethod.RPC_LEGACY:
-            rawTx = make_raw_tx.legacy(
-                to=toAddress, nonce=self.__ensure_nonce(node, fromAddress, nonce, tag),
-                value=value, gas_limit=gasLimit, gas_price=gasPrice, data=data)
-            response = node.transaction_signTransaction(json.dumps({
-                "from": format_eoa(fromAddress),
-                "payload": format_eoa(rawTx)
-            }))
+        nonce = self.__ensure_nonce(node, fromAddress, nonce, tag)
+        chain_id = self.__ensure_chain_id(node)
+        if call_method is CallMethod.RPC_LEGACY:
+            response = node.rpc_eth_signTransaction(
+                self.__make_legacy_sign_payload(from_addr=fromAddress, to=toAddress, nonce=nonce, gas_price=gasPrice,
+                                                gas=gasLimit, data=data, value=value))
             print(response)
-            response = node.rpc_eth_sendRawTransaction(response['result']['transactionData'])
+            response = node.rpc_eth_sendRawTransaction(response['result'])
             print(response)
+            return response['result']
+        elif call_method is CallMethod.RPC_EIP155:
+            response = node.rpc_eth_signTransaction(
+                self.__make_eip155_sign_payload(from_addr=fromAddress, to=toAddress, chain_id=chain_id, nonce=nonce,
+                                                gas_price=gasPrice, gas=gasLimit, data=data, value=value))
+            print(response)
+            response = node.rpc_eth_sendRawTransaction(response['result'])
+            print(response)
+            return response["result"]
         elif call_method is CallMethod.RPC_EIP1559:
-            rawTx = make_raw_tx.eip1559(
-                to=toAddress, nonce=self.__ensure_nonce(node, fromAddress, nonce, tag),
-                value=value, gas_limit=gasLimit, max_fee_per_gas=maxFeePerGas,
-                max_priority_fee_per_gas=maxPriorityFeePerGas, data=data,
-                chain_id=self.__ensure_chain_id(node, tag))
-            response = node.transaction_signTransaction(json.dumps({
-                "from": format_eoa(fromAddress),
-                "payload": format_eoa(rawTx)
-            }))
+            response = node.rpc_eth_signTransaction(
+                self.__make_eip1559_sign_payload(from_addr=fromAddress, to=toAddress, chain_id=chain_id, nonce=nonce,
+                                                 max_fee_per_gas=maxFeePerGas,
+                                                 max_priority_fee_per_gas=maxPriorityFeePerGas, gas=gasLimit, data=data,
+                                                 value=value))
             print(response)
-            response = node.rpc_eth_sendRawTransaction(response['result']['transactionData'])
+            response = node.rpc_eth_sendRawTransaction(response['result'])
             print(response)
-        return response["result"]
+            return response["result"]
 
     def static_call(self, node, functionName: str, *args, fromAddress: str, nonce: int = None, toAddress: str,
-                    gasLimit: int, gasPrice: int,
-                    value: int = 0, tag: str = 'latest'):
+                    gasLimit: int, gasPrice: int, value: int = 0, tag: str = 'latest'):
         """Calls a function in read-only mode and returns the data if applicable
 
                Parameters:
@@ -192,43 +182,63 @@ class SmartContract:
                 raise EvmExecutionError("Execution reverted. Reason: \"{}\"".format(reason))
             raise RuntimeError("Something went wrong, see {}".format(str(response)))
 
-    def deploy(self, node, *args, fromAddress: str, nonce: int = None, gasLimit: int, gasPrice: int,
+    def deploy(self, node, *args, call_method: CallMethod = CallMethod.RPC_LEGACY, fromAddress: str, nonce: int = None,
+               gasLimit: int, gasPrice: int = 1, maxFeePerGas: int = 1, maxPriorityFeePerGas: int = 1,
                value: int = 0, tag: str = 'latest'):
         """Calls a function in read-only mode and returns the data if applicable
-
-        Parameters:
-            node:           The side chain node to use for rpc/http
-            *args: the arguments to call the function with, in the correct order.
-            fromAddress: the sender address to use.
-            nonce (optional): The nonce to use. If not given, the nonce will be retrieved via rpc
-            gasLimit: The gasLimit to use
-            gasPrice: The gasPrice to use
-            value: The value to use
-            tag: The block tag to use when calling rpc methods
+            :param node: The side chain node to use for rpc/http
+            :param call_method: The tx type
+            :param value:  The value to use
+            :param tag: The block tag to use when calling rpc methods
+            :param nonce:  The nonce to use. If not given, the nonce will be retrieved via rpc
+            :param fromAddress: the sender address to use
+            :param maxPriorityFeePerGas: the maxPriorityFeePerGas in eip1559
+            :param gasLimit: The gasLimit to use
+            :param gasPrice:  The gasPrice to use in legacy/eip155 transactions
+            :param maxFeePerGas:  the maxFeePerGas in eip1559
 
         Returns:
             A tuple with the tx_hash and the precomputed address of the smart contract
 """
         nonce = self.__ensure_nonce(node, fromAddress, nonce, tag)
-        j = {
-            "from": format_eoa(fromAddress),
-            "nonce": nonce,
-            "gasLimit": gasLimit,
-            "gasPrice": gasPrice,
-            "value": value,
-            "data": self.Bytecode
-        }
+        data = self.Bytecode
+        chain_id = self.__ensure_chain_id(node)
+
         if 'constructor' in self.Functions:
             if len(args) != len(self.Functions['constructor'].inputs):
                 raise RuntimeError(
                     "Constructor missing arguments: {} were provided, but {} are necessary!".format(len(args), len(
                         self.Functions['constructor'].inputs)))
-            j['data'] = j['data'] + self.Functions['constructor'].encode(*args)
+            data = data + self.Functions['constructor'].encode(*args)
+        response: Any = ''
 
-        request = json.dumps(j)
-        response = node.transaction_createLegacyTransaction(request)
-        tx_hash = response["result"]["transactionId"]
-        return tx_hash, to_checksum_address(mk_contract_address(fromAddress, nonce))
+        if call_method is CallMethod.RPC_LEGACY:
+            response = node.rpc_eth_signTransaction(
+                self.__make_legacy_sign_payload(from_addr=fromAddress, to=None, nonce=nonce, gas_price=gasPrice,
+                                                gas=gasLimit, data=data, value=value))
+            print(response)
+            response = node.rpc_eth_sendRawTransaction(response['result'])
+            print(response)
+
+        elif call_method is CallMethod.RPC_EIP155:
+            response = node.rpc_eth_signTransaction(
+                self.__make_eip155_sign_payload(from_addr=fromAddress, to=None, chain_id=chain_id, nonce=nonce,
+                                                gas_price=gasPrice, gas=gasLimit, data=data, value=value))
+            print(response)
+            response = node.rpc_eth_sendRawTransaction(response['result'])
+            print(response)
+
+        elif call_method is CallMethod.RPC_EIP1559:
+            response = node.rpc_eth_signTransaction(
+                self.__make_eip1559_sign_payload(from_addr=fromAddress, to=None, chain_id=chain_id, nonce=nonce,
+                                                 max_fee_per_gas=maxFeePerGas,
+                                                 max_priority_fee_per_gas=maxPriorityFeePerGas, gas=gasLimit, data=data,
+                                                 value=value))
+            print(response)
+            response = node.rpc_eth_sendRawTransaction(response['result'])
+            print(response)
+
+        return response["result"], to_checksum_address(mk_contract_address(fromAddress, nonce))
 
     def __str__(self):
         string_rep = self.Name
@@ -275,6 +285,61 @@ class SmartContract:
         self.Abi = abi
         self.Bytecode = bytecode
         self.Sighashes = sig_hashes
+
+    @staticmethod
+    def __make_legacy_sign_payload(*, from_addr: str, to: str = None, nonce: int, gas: int, value: int = 1,
+                                   data: str = '0x', gas_price: int = 1):
+        r = {
+            "type": 0,
+            "nonce": nonce,
+            "gas": gas,
+            "value": value,
+            "input": data,
+            "from": from_addr,
+            "gasPrice": gas_price
+        }
+        if to is not None:
+            r["to"] = to
+
+        return r
+
+    @staticmethod
+    def __make_eip155_sign_payload(*, from_addr: str, to: str = None, nonce: int, gas: int, value: int,
+                                   data: str = '0x', gas_price: int = 1, chain_id: str):
+        r = {
+            "type": 0,
+            "nonce": nonce,
+            "gas": gas,
+            "value": value,
+            "input": data,
+            "from": from_addr,
+            "gasPrice": gas_price,
+            "chainId": chain_id
+        }
+        if to is not None:
+            r["to"] = to
+
+        return r
+
+    @staticmethod
+    def __make_eip1559_sign_payload(*, from_addr: str, to: str = None, nonce: int, gas: int, value: int,
+                                    data: str = None, max_priority_fee_per_gas: int = None, max_fee_per_gas: int = None,
+                                    chain_id: str):
+        r = {
+            "type": 0,
+            "nonce": nonce,
+            "gas": gas,
+            "value": value,
+            "input": data,
+            "from": from_addr,
+            "maxPriorityFeePerGas": max_priority_fee_per_gas,
+            "maxFeePerGas": max_fee_per_gas,
+            "chainId": chain_id
+        }
+        if to is not None:
+            r["to"] = to
+
+        return r
 
     @staticmethod
     def __load(json_file: str):
@@ -335,9 +400,8 @@ class SmartContract:
         return nonce
 
     @staticmethod
-    def __ensure_chain_id(node, tag='latest'):
-        chainId = int(node.rpc_eth_getChainId(tag)['result'], 16)
-        return chainId
+    def __ensure_chain_id(node):
+        return node.rpc_eth_chainId()['result']
 
 
 if __name__ == '__main__':

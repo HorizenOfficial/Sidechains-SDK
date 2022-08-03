@@ -31,7 +31,7 @@ import java.util.Objects;
 @JsonView(Views.Default.class)
 public class EthereumTransaction extends AccountTransaction<AddressProposition, SignatureSecp256k1> {
     private final RawTransaction transaction;
-    
+
     // depends on the transaction
     public EthereumTransaction(
             RawTransaction transaction
@@ -171,9 +171,9 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         //TODO: add this again later or remove, because these checks are already made in some other place
         if (this.getFrom().address().length != Account.ADDRESS_SIZE)
             throw new TransactionSemanticValidityException("Cannot create signed transaction without valid from address");
-        //if (!this.getSignature().isValid(this.getFrom(), this.messageToSign()))
-        //    throw new TransactionSemanticValidityException("Cannot create signed transaction with invalid " +
-        //            "signature");
+        if (!this.getSignature().isValid(this.getFrom(), this.messageToSign()))
+            throw new TransactionSemanticValidityException("Cannot create signed transaction with invalid " +
+                    "signature");
     }
 
     @Override

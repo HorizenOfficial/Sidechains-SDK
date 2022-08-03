@@ -21,6 +21,15 @@ public class Address {
         this.bytes = bytes;
     }
 
+    @Override
+    public String toString() {
+        return "0x" + Converter.toHexString(bytes);
+    }
+
+    public String toUTXOString() {
+        return Converter.toHexString(bytes);
+    }
+
     public static Address FromBytes(byte[] bytes) {
         if (bytes == null) {
             return null;
