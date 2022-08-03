@@ -17,7 +17,7 @@ import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.{EthereumTransaction, EthereumTransactionSerializer}
-import com.horizen.account.utils.ZenWeiConverter
+import com.horizen.account.utils.{EthereumTransactionUtils, ZenWeiConverter}
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.SidechainTransactionErrorResponse.GenericTransactionError
@@ -148,7 +148,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
                   valueInWei,
                   "",
                   new SignatureData(
-                    EthereumTransaction.convertToBytes(params.chainId),
+                    EthereumTransactionUtils.convertToBytes(params.chainId),
                     Array[Byte](0),
                     Array[Byte](0)))
                 validateAndSendTransaction(signTransactionEIP155WithSecret(secret, tmpTx))
