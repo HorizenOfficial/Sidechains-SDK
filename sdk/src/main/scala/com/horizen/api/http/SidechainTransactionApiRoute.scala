@@ -3,7 +3,7 @@ package com.horizen.api.http
 import java.lang
 import java.util.{Collections, ArrayList => JArrayList, List => JList}
 import akka.actor.{ActorRef, ActorRefFactory}
-import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.{Route, ValidationRejection}
 import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
@@ -494,9 +494,9 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
   }
 
   /**
-    * Validate and send a transaction, given its serialization as input.
-    * Return error in case of invalid transaction or parsing error, otherwise return the id of the transaction.
-    */
+   * Validate and send a transaction, given its serialization as input.
+   * Return error in case of invalid transaction or parsing error, otherwise return the id of the transaction.
+   */
   def sendTransaction: Route = (post & path("sendTransaction")) {
     withAuth {
       entity(as[ReqSendTransactionPost]) { body =>
@@ -505,12 +505,17 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
             ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError",
               JOptional.of(new IllegalArgumentException("Node reindex in progress - unable to send transaction"))))
           } else {
-            val transactionBytes = BytesUtils.fromHexString(body.transactionBytes)
-            companion.parseBytesTry(transactionBytes) match {
-              case Success(transaction) =>
-                validateAndSendTransaction(transaction)
-              case Failure(exception) =>
-                ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exception)))
+            try{
+              val transactionBytes = BytesUtils.fromHexString(body.transactionBytes)
+              companion.parseBytesTry(transactionBytes) match {
+                case Success(transaction) =>
+                  validateAndSendTransaction(transaction)
+                case Failure(exception) =>
+                  ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exception)))
+              }
+            } catch {
+              case t:  Throwable =>
+                ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(t)))
             }
           }
         }
