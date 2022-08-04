@@ -132,7 +132,7 @@ class AccountTransactionApiRouteTest extends AccountSidechainApiRouteTest {
       Post(basePath + "sendCoinsToAddress")
         .withEntity(
           SerializationUtil.serialize(ReqSendCoinsToAddress(Option.empty[String], None,
-            "00112233445566778899AABBCCDDEEFF01020304", 10))
+            "00112233445566778899AABBCCDDEEFF01020304", 10, Option.empty[Boolean]))
         ) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
         responseEntity.getContentType() shouldEqual ContentTypes.`application/json`

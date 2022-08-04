@@ -17,21 +17,23 @@ import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.{EthereumTransaction, EthereumTransactionSerializer}
-import com.horizen.account.utils.ZenWeiConverter
+import com.horizen.account.utils.{EthereumTransactionUtils, ZenWeiConverter}
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.SidechainTransactionErrorResponse.GenericTransactionError
 import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SidechainApiRoute, SuccessResponse}
 import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
-import com.horizen.proposition.{MCPublicKeyHashProposition, MCPublicKeyHashPropositionSerializer, PublicKey25519Proposition, VrfPublicKey}
+import com.horizen.proposition.{MCPublicKeyHashPropositionSerializer, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.serialization.Views
 import com.horizen.transaction.Transaction
 import com.horizen.utils.BytesUtils
 import org.web3j.crypto.Sign.SignatureData
 import org.web3j.crypto.SignedRawTransaction
+import org.web3j.crypto.TransactionEncoder.createEip155SignatureData
 import scorex.core.settings.RESTApiSettings
 
+import java.lang
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters._
@@ -60,8 +62,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
 
   override val route: Route = (pathPrefix("transaction")) {
-    allTransactions ~ sendCoinsToAddress ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendRawTransaction ~ signTransaction ~ makeForgerStake ~
-      withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~ allForgingStakes
+    allTransactions ~ sendCoinsToAddress ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendRawTransaction ~
+      signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~ allForgingStakes
   }
 
   /**
@@ -106,6 +108,17 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     )
   }
 
+  def signTransactionEIP155WithSecret(secret: PrivateKeySecp256k1, tx: EthereumTransaction): EthereumTransaction = {
+    val messageToSign = tx.messageToSign()
+    val msgSignature = secret.sign(messageToSign)
+    new EthereumTransaction(
+      new SignedRawTransaction(
+        tx.getTransaction.getTransaction,
+        createEip155SignatureData(new SignatureData(msgSignature.getV, msgSignature.getR, msgSignature.getS), params.chainId)
+      )
+    )
+  }
+
   /**
    * Create and sign a core transaction, specifying regular outputs and fee. Search for and spend proper amount of regular coins. Then validate and send the transaction.
    * Return the new transaction as a hex string if format = false, otherwise its JSON representation.
@@ -124,16 +137,33 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         secret match {
           case Some(secret) =>
             val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
-            val tmpTx = new EthereumTransaction(
-              destAddress,
-              nonce,
-              gasPrice,
-              gasLimit,
-              valueInWei,
-              "",
-              null
-            )
-            validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
+            val isEIP155 = body.EIP155.getOrElse(false)
+
+            val response = if (isEIP155) {
+                val tmpTx = new EthereumTransaction(
+                  destAddress,
+                  nonce,
+                  gasPrice,
+                  gasLimit,
+                  valueInWei,
+                  "",
+                  new SignatureData(
+                    EthereumTransactionUtils.convertToBytes(params.chainId),
+                    Array[Byte](0),
+                    Array[Byte](0)))
+                validateAndSendTransaction(signTransactionEIP155WithSecret(secret, tmpTx))
+              } else {
+                val tmpTx = new EthereumTransaction(
+                  destAddress,
+                  nonce,
+                  gasPrice,
+                  gasLimit,
+                  valueInWei,
+                  "",
+                  null)
+                validateAndSendTransaction(signTransactionWithSecret(secret, tmpTx))
+              }
+            response
           case None =>
             ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
         }
@@ -590,7 +620,8 @@ object AccountTransactionRestScheme {
   private[api] case class ReqSendCoinsToAddress(from: Option[String],
                                                 nonce: Option[BigInteger],
                                                 to: String,
-                                                @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long) {
+                                                @JsonDeserialize(contentAs = classOf[lang.Long]) value: Long,
+                                                EIP155: Option[Boolean]) {
     require(to.nonEmpty, "Empty destination address")
     require(value >= 0, "Negative value. Value must be >= 0")
   }

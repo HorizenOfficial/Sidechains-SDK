@@ -2,6 +2,7 @@ package com.horizen.account.transaction;
 
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
+import com.horizen.account.utils.EthereumTransactionUtils;
 import com.horizen.evm.TrieHasher;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.utils.BytesUtils;
@@ -50,6 +51,19 @@ public class EthereumTransactionTest {
 
     }
 
+    public void checkEthTx(EthereumTransaction tx) {
+        assertTrue(tx.getSignature().isValid(tx.getFrom(), tx.messageToSign()));
+        String strBefore = tx.toString();
+        byte[] encodedTx = EthereumTransactionSerializer.getSerializer().toBytes(tx);
+        // read what *it wrote
+        EthereumTransaction decodedTx = EthereumTransactionSerializer.getSerializer().parseBytes(encodedTx);
+        String strAfter = decodedTx.toString();
+        // we must have the same representation
+        assertEquals(strBefore, strAfter);
+        assertEquals(tx, decodedTx);
+        assertTrue(decodedTx.getSignature().isValid(decodedTx.getFrom(), decodedTx.messageToSign()));
+    }
+
     @Test
     public void transactionIdTests() {
         // EIP-1559
@@ -67,6 +81,8 @@ public class EthereumTransactionTest {
                         BytesUtils.fromHexString("568277f09a64771f5b4588ff07f75725a8e40d2c641946eb645152dcd4c93f0d"))
         );
         assertEquals("0x0dbd564dfb0c029e471d39a325d0b00bf9686f61f97f200e0b7299117eed51a8", "0x" + eipSignedTx.id());
+        checkEthTx(eipSignedTx);
+
         // Legacy
         var legacyTx = new EthereumTransaction(
                 "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
@@ -80,6 +96,7 @@ public class EthereumTransactionTest {
                         BytesUtils.fromHexString("7ca554a8317ff86eb6b23d06fa210d23e551bed58f58f803a87e5950aa47a9e9"))
         );
         assertEquals("0x306f23ca4948f7b791768878eb540915d0e12bae54c0f7f2a119095de074dab6", "0x" + legacyTx.id());
+        checkEthTx(legacyTx);
 
         // EIP-155 tx
         var eip155Tx = new EthereumTransaction(
@@ -94,6 +111,7 @@ public class EthereumTransactionTest {
                         BytesUtils.fromHexString("67CBE9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83"))
         );
         assertEquals(Hash.sha3("0xf86c098504a817c800825208943535353535353535353535353535353535353535880de0b6b3a76400008025a028ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa636276a067cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d83"), "0x" + eip155Tx.id());
+        checkEthTx(eip155Tx);
 
     }
 
@@ -196,7 +214,44 @@ public class EthereumTransactionTest {
         } catch (NullPointerException e) {
             fail("Test1: Successful EthereumTransaction creation expected.");
         }
+
+        // metamask eip155 tx:
+        // - from address: 0x892278d9f50a1da5b2e98e5056f165b1b2486d97
+        // - to address: 0xd830603264bd3118cf95f1fc623749337342f9e9
+        // - value: 3000000000000000000
+        // - chain id: 1997
+        String metamaskHexStr = "de01f86d02843b9aca0082520894d830603264bd3118cf95f1fc623749337342f9e98829a2241af62c000080820fbea0f638802002d7c0a3115716f7d24d646452d598050ffc2d6892ba0ed88aeb76bea01dd5a7fb9ea0ec2a414dbb93b09b3e716a3cd05c1e333d40622c63d0c34e3d35";
+
+        EthereumTransaction decodedTx = EthereumTransactionSerializer.getSerializer().parseBytes(BytesUtils.fromHexString(metamaskHexStr));
+        long chainId = decodedTx.getChainId();
+        byte[] fromAddress = decodedTx.getFrom().address();
+        byte[] toAddress = decodedTx.getTo().address();
+
+        assertTrue(decodedTx.getSignature().isValid(decodedTx.getFrom(), decodedTx.messageToSign()));
+        assertEquals("892278d9f50a1da5b2e98e5056f165b1b2486d97", BytesUtils.toHexString(fromAddress));
+        assertEquals("d830603264bd3118cf95f1fc623749337342f9e9", BytesUtils.toHexString(toAddress));
+        assertEquals(1997, chainId);
+        assertEquals("3000000000000000000", decodedTx.getValue().toString());
+
+        // re-encode and check it is the same
+        byte[] encodedTx = EthereumTransactionSerializer.getSerializer().toBytes(decodedTx);
+        assertEquals(metamaskHexStr, BytesUtils.toHexString(encodedTx));
     }
+
+    @Test
+    public void ethereumTransactionConversionUtilsTest() {
+        long lv = 1997;
+        byte[] res = EthereumTransactionUtils.convertToBytes(lv);
+        long lv2 = EthereumTransactionUtils.convertToLong(res);
+        assertEquals(lv, lv2);
+
+        byte[] bv = BytesUtils.fromHexString("01");
+        long lv3 = EthereumTransactionUtils.convertToLong(bv);
+        assertEquals(lv3, 1);
+        byte[] bv2 = EthereumTransactionUtils.convertToBytes(lv3);
+        assertEquals("0000000000000001", BytesUtils.toHexString(bv2));
+    }
+
 
     @Test
     public void ethereumEIP1559RawTransactionTest() {
