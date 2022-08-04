@@ -2,7 +2,6 @@ package com.horizen.account.state
 
 import scorex.util.ScorexLogging
 
-import java.math.BigInteger
 import scala.util.Failure
 
 /*
@@ -10,9 +9,6 @@ import scala.util.Failure
  * In our case to make a transfer from one user account (EOA account) to another user account.
  */
 object EoaMessageProcessor extends MessageProcessor with ScorexLogging {
-  //TODO: actual gas to be defined
-  val GAS_USED: BigInteger = BigInteger.valueOf(21000L)
-
   override def init(view: BaseAccountStateView): Unit = {
     // No actions required for transferring coins during genesis state initialization.
   }
@@ -26,20 +22,23 @@ object EoaMessageProcessor extends MessageProcessor with ScorexLogging {
   }
 
   override def process(msg: Message, view: BaseAccountStateView): ExecutionResult = {
+
+    val gasUsed = GasCalculator.intrinsicGas(msg.getData, isContractCreation = false)
+
     view.subBalance(msg.getFrom.address(), msg.getValue) match {
       case Failure(reason) =>
         log.error(s"Unable to subtract ${msg.getValue} wei from ${msg.getFrom}", reason)
-        return new ExecutionFailed(GAS_USED, new Exception(reason))
+        return new ExecutionFailed(gasUsed, new Exception(reason))
       case _ => // do nothing
     }
 
     view.addBalance(msg.getTo.address(), msg.getValue) match {
       case Failure(reason) =>
         log.error(s"Unable to add ${msg.getValue} wei to ${msg.getTo}", reason)
-        return new ExecutionFailed(GAS_USED, new Exception(reason))
+        return new ExecutionFailed(gasUsed, new Exception(reason))
       case _ => // do nothing
     }
 
-    new ExecutionSucceeded(GAS_USED, Array.emptyByteArray)
+    new ExecutionSucceeded(gasUsed, Array.emptyByteArray)
   }
 }

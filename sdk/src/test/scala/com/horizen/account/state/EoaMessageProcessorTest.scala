@@ -1,7 +1,6 @@
 package com.horizen.account.state
 
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.evm.StateDB
 import com.horizen.fixtures.SecretFixture
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertTrue}
 import org.junit.Test
@@ -106,7 +105,7 @@ class EoaMessageProcessorTest extends JUnitSuite
 
     EoaMessageProcessor.process(msg, mockStateView) match {
       case es: ExecutionSucceeded =>
-        assertEquals("Different gas found", EoaMessageProcessor.GAS_USED, es.gasUsed())
+        assertEquals("Different gas found", GasCalculator.TxGas, es.gasUsed())
         assertArrayEquals("Different return data found", Array.emptyByteArray, es.returnData())
       case _: ExecutionFailed | _: InvalidMessage => fail("Execution failure received")
     }
@@ -122,7 +121,7 @@ class EoaMessageProcessorTest extends JUnitSuite
     EoaMessageProcessor.process(msg, mockStateView) match {
       case _: ExecutionSucceeded | _: InvalidMessage => fail("Execution failure expected")
       case ef: ExecutionFailed =>
-        assertEquals("Different gas found", EoaMessageProcessor.GAS_USED, ef.gasUsed())
+        assertEquals("Different gas found", GasCalculator.TxGas, ef.gasUsed())
         assertEquals("Different exception found", exception, ef.getReason.getCause)
     }
 
@@ -147,7 +146,7 @@ class EoaMessageProcessorTest extends JUnitSuite
     EoaMessageProcessor.process(msg, mockStateView) match {
       case _: ExecutionSucceeded | _: InvalidMessage => fail("Execution failure expected")
       case ef: ExecutionFailed =>
-        assertEquals("Different gas found", EoaMessageProcessor.GAS_USED, ef.gasUsed())
+        assertEquals("Different gas found", GasCalculator.TxGas, ef.gasUsed())
         assertEquals("Different exception found", exception, ef.getReason.getCause)
     }
   }
