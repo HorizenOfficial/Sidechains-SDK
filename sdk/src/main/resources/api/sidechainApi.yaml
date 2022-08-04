@@ -1399,6 +1399,69 @@ paths:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
 
+  /wallet/reindex:
+    post:
+      tags:
+        - wallet
+      summary: Start a full wallet reindex on the local node
+      description: If reindex was not already in progress, returns true and state and wallet are reindexed from the genesis block. If a reindex is in progress, no action is performed and returs false
+      operationId: reindex
+
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      started:
+                        type: boolean
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+                
+  /wallet/reindexStatus:
+    post:
+      tags:
+        - wallet
+      summary: Returns reindex status
+      description: Returned status can be 'inactive' or 'ongoing'. If reindex is in 'ongoing', returns also the reached height.
+      operationId: reindexStatus
+      
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                      heightReached:
+                        type: integer
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
+          
+
   # Sidechain node operations
   /node/allPeers:
     post:
