@@ -49,6 +49,7 @@ from sc_csw_in_fee_payment import ScCSWInFeePaymentTest
 from sc_bt_limit import ScBtLimitTest
 from sc_bt_limit_across_fork import ScBtLimitAcrossForkTest
 from sc_wallet_reindex import SidechainWalletReindexTest
+from sc_wallet_reindex_along_sync import SidechainWalletReindexSyncTest
 
 def run_test(test):
     try:
@@ -201,6 +202,9 @@ def run_tests(log_file):
 
     result = run_test(SidechainWalletReindexTest())
     assert_equal(0, result, "sc_wallet_reindex test failed!")
+
+    result = run_test(SidechainWalletReindexSyncTest())
+    assert_equal(0, result, "sc_wallet_reindex_along_sync test failed!")
 
 
 if __name__ == "__main__":
