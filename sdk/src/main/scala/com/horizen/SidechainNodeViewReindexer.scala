@@ -17,7 +17,6 @@ class SidechainNodeViewReindexer
   HR <: HistoryReader[PMOD, SI] : ClassTag]
 (viewHolderRef: ActorRef) (implicit ec: ExecutionContext) extends Actor with ScorexLogging {
 
-  protected var historyHeight : Int = 0
   protected var reindexStatus : Int = 0
 
   override def preStart(): Unit = {
@@ -34,7 +33,6 @@ class SidechainNodeViewReindexer
 
   protected def processViewHolderEvents: Receive = {
     case ChangedHistory(history: SidechainHistory) =>
-      this.historyHeight = history.getCurrentHeight
       this.reindexStatus = history.reindexStatus
   }
 
@@ -48,6 +46,7 @@ class SidechainNodeViewReindexer
         viewHolderRef ! SidechainNodeViewHolder.ReceivableMessages.ReindexStep(true)
         sender() ! Success(Option.empty)
     }else {
+      //nothing to do, just return the current progress
       sender() ! Success(Some(reindexStatus))
     }
   }

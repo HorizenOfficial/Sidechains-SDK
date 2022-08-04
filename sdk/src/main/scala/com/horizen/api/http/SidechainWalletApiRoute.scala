@@ -183,7 +183,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
   /**
    * Reindex endpoint.
    * Returns true if the reindex started succesfully
-   * Return false if a reindex was already ongoing
+   * Return false if  reindex not started (was already ongoing)
    */
   def reindex: Route = (post & path("reindex")) {
     withAuth {
@@ -191,9 +191,9 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
       Await.result(future, timeout.duration).asInstanceOf[Try[Option[Int]]] match {
         case Success(ret) => {
           if (ret.isEmpty){
-            ApiResponseUtil.toResponse(RespReindexStart(true, Option.empty))
+            ApiResponseUtil.toResponse(RespReindexStart(true))
           }else{
-            ApiResponseUtil.toResponse(RespReindexStart(false, ret))
+            ApiResponseUtil.toResponse(RespReindexStart(false))
           }
         }
         case Failure(e) =>
@@ -204,7 +204,8 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
 
 
   /**
-   * Reindex status
+   * Reindex status.
+   * Returns the status (inactive, ongoing), and, if ongoing, the height reached
    */
   def reindexStatus: Route = (post & path("reindexStatus")) {
     withAuth {
@@ -345,7 +346,7 @@ object SidechainWalletRestScheme {
   private[api] case class RespBalance(balance: Long) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespReindexStart(started: Boolean, heightReached: Option[Int]) extends SuccessResponse
+  private[api] case class RespReindexStart(started: Boolean) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespReindexStatus(status: String, heightReached: Option[Int]) extends SuccessResponse
