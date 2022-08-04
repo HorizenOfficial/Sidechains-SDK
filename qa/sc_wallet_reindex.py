@@ -80,15 +80,6 @@ class SidechainWalletReindexTest(SidechainTestFramework):
                 return True
         return False
     
-    def readFile(self, file_path):
-        f = open(file_path, "r")
-        key_list = []
-        for line in f:
-            if ("#" not in line):
-                row = line.split(" ")
-                key_list += [(row[0], row[1][:-1])]
-        return key_list
-
     def run_test(self):
         self.sync_all()
         sc_node1 = self.sc_nodes[0]
