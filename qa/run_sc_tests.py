@@ -48,6 +48,7 @@ from sc_mempool_min_fee_rate import SCMempoolMinFeeRate
 from sc_csw_in_fee_payment import ScCSWInFeePaymentTest
 from sc_bt_limit import ScBtLimitTest
 from sc_bt_limit_across_fork import ScBtLimitAcrossForkTest
+from sc_wallet_reindex import SidechainWalletReindexTest
 
 def run_test(test):
     try:
@@ -197,6 +198,10 @@ def run_tests(log_file):
 
     result = run_test(ScBtLimitAcrossForkTest())
     assert_equal(0, result, "sc_bt_limit_across_fork test failed!")
+
+    result = run_test(SidechainWalletReindexTest())
+    assert_equal(0, result, "sc_wallet_reindex test failed!")
+
 
 if __name__ == "__main__":
     my_log_file = open("sc_test.log", "w")
