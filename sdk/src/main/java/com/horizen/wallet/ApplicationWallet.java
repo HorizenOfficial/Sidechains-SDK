@@ -14,6 +14,7 @@ public interface ApplicationWallet {
     void onChangeBoxes(byte[] blockId, List<Box<Proposition>> boxesToUpdate, List<byte[]> boxIdsToRemove);
     void onRollback(byte[] blockId);
 
+    //called before starting a reindex
     void onReindex();
 
     // check that all storages of the application which are update by the sdk core, have the version corresponding to the

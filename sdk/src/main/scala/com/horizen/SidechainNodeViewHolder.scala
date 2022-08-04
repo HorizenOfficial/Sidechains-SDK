@@ -103,7 +103,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
 
         val historyStatus : Option[(String, Boolean, Int)] =  restoredHistory.getReindexStatus match {
-          case SidechainHistory.ReindexNotInProgress  => {
+          case SidechainHistory.ReindexNotInProgress | 0 => {
             Some(idToVersion(restoredHistory.bestBlockId), false, 0)
           }
           case reindexHeight => {
@@ -156,7 +156,13 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                       // This is the successful case
                       log.info("state, history and wallet storages are consistent")
                       dumpStorages
-                      Some(restoredHistory, checkedState, checkedWallet, restoredMempool)
+                      if (isReindexing && reindexHeight == 0){
+                        //reindex was just started but nothing happened before the stop -> go back to not in progress
+                        Some(restoredHistory.updateReindexStatus(SidechainHistory.ReindexNotInProgress), checkedState, checkedWallet, restoredMempool)
+                      }else{
+                        Some(restoredHistory, checkedState, checkedWallet, restoredMempool)
+                      }
+
                     }
                     else {
                       log.error("state and wallet storages are not consistent and could not be recovered")
@@ -383,14 +389,11 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
             case Success(stateCleaned) => {
               val cinfo: (ModifierId, ConsensusEpochInfo) = stateCleaned.getCurrentConsensusEpochInfo
               val withdrawalEpochNumber: Int = stateCleaned.getWithdrawalEpochInfo.epoch
-              logger.debug("ciaoo")
               vault().startReindex(backupStorage, genesisBlock, withdrawalEpochNumber, cinfo._2) match {
                 case Success(walletCleaned) => {
                   history().startReindex(params, genesisBlock, semanticBlockValidators(params),
                     historyBlockValidators(params), StakeConsensusEpochInfo(cinfo._2.forgingStakeInfoTree.rootHash(), cinfo._2.forgersStake)) match {
                     case Success(historyCleaned) => {
-                      logger.debug("history cleaned")
-                      logger.debug(""+walletCleaned.allBoxes.size())
                       updateNodeView(
                         updatedHistory = Some(historyCleaned),
                         updatedState = Some(stateCleaned),

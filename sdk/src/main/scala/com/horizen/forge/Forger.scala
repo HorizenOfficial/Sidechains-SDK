@@ -71,7 +71,7 @@ class Forger(settings: SidechainSettings,
     context.system.eventStream.subscribe(self, SidechainAppEvents.SidechainApplicationStart.getClass)
     //subscribe for changes to history (we need it to be aware of reindexing status)
     context.system.eventStream.subscribe(self, classOf[ChangedHistory[SidechainHistory]])
-    viewHolderRef ! GetNodeViewChanges(history = true, state = false, vault = false, mempool = true)
+    viewHolderRef ! GetNodeViewChanges(history = true, state = false, vault = false, mempool = false)
   }
 
   override def postStop(): Unit = {
