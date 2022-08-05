@@ -17,7 +17,8 @@ env:
   global:
     - DOCKER_ORG=zencash
     - IMAGE_NAME=sc-ci-base
-    - PROD_RELEASE_BRANCHES='main'
+    # Separate branches by space
+    - PROD_RELEASE_BRANCHES='master'
     - PUBLISH_BUILD=false
 
 script:
