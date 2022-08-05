@@ -213,8 +213,8 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
       Await.result(future, timeout.duration).asInstanceOf[Try[Int]] match {
         case Success(ret) => {
           ret match {
-            case SidechainHistory.ReindexNotInProgress =>  ApiResponseUtil.toResponse(RespReindexStatus(this.ReindexInactive, Option.empty))
-            case reachedHeight =>  ApiResponseUtil.toResponse(RespReindexStatus(this.ReindexOngoing, Some(reachedHeight)))
+            case SidechainHistory.ReindexNotInProgress =>  ApiResponseUtil.toResponse(RespReindexStatus(SidechainWalletApiRoute.ReindexInactive, Option.empty))
+            case reachedHeight =>  ApiResponseUtil.toResponse(RespReindexStatus(SidechainWalletApiRoute.ReindexOngoing, Some(reachedHeight)))
           }
         }
         case Failure(e) =>
@@ -332,8 +332,8 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
 }
 
 object SidechainWalletApiRoute {
-    val ReindexInactive = "inactive"
-    val ReindexOngoing = "ongoing"
+  val ReindexInactive = "inactive"
+  val ReindexOngoing = "ongoing"
 }
 
 object SidechainWalletRestScheme {
