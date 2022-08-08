@@ -59,10 +59,10 @@ class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: Memp
     unconfirmed.values.toSeq.sortWith(sortFunc).take(limit).map(tx => tx.getUnconfirmedTx())
   }
 
-  def takeWithWithdrawalBoxesLimit(limit: Int, allowedWithdrawalBoxes: Int): Iterable[SidechainTypes#SCBT] = {
+  def takeWithWithdrawalBoxesLimit(allowedWithdrawalBoxes: Int): Iterable[SidechainTypes#SCBT] = {
     val filteredTxs: JArrayList[SidechainTypes#SCBT] = new JArrayList[SidechainTypes#SCBT]()
     var newWithdrawalBoxes = 0
-    take(limit).foreach( tx => {
+    take(size).foreach( tx => {
       val txWithdrawalBoxes = tx.newBoxes().asScala.count(box => box.isInstanceOf[WithdrawalRequestBox])
       if( txWithdrawalBoxes + newWithdrawalBoxes <= allowedWithdrawalBoxes) {
         newWithdrawalBoxes += txWithdrawalBoxes

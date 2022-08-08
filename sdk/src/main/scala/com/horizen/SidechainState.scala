@@ -194,11 +194,11 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     })
   }
 
-  def getOrElseWithdrawalEpochInfo(): WithdrawalEpochInfo = {
+  private def getOrElseWithdrawalEpochInfo(): WithdrawalEpochInfo = {
     stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0))
   }
 
-  def getAllowedWithdrawalRequestBoxesPerBlock: Int = {
+  private def getAllowedWithdrawalRequestBoxesPerBlock: Int = {
     params.maxWBsAllowed / (params.withdrawalEpochLength - 1)
   }
 

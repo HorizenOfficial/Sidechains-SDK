@@ -313,7 +313,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       } else { // SC block is in the middle of the epoch
         var txsCounter: Int = 0
         val allowedWithdrawalRequestBoxes = nodeView.state.getAllowedWithdrawalRequestBoxes(mainchainBlockReferenceDataToRetrieve.size) - nodeView.state.getAlreadyMinedWithdrawalRequestBoxesInCurrentEpoch
-        nodeView.pool.takeWithWithdrawalBoxesLimit(nodeView.pool.size, allowedWithdrawalRequestBoxes).filter(tx => {
+        nodeView.pool.takeWithWithdrawalBoxesLimit(allowedWithdrawalRequestBoxes).filter(tx => {
           val txSize = tx.bytes.length + 4 // placeholder for Tx length
           txsCounter += 1
           if(txsCounter > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER || blockSize + txSize > SidechainBlock.MAX_BLOCK_SIZE)
