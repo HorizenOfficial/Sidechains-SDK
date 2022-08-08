@@ -3,12 +3,11 @@ package interop
 import (
 	_ "embed"
 	"encoding/json"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"libevm/lib"
 	"math/big"
 	"testing"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 //go:generate solc --bin --hashes --opcodes --storage-layout --optimize -o compiled --overwrite ../contracts/Storage.sol
@@ -85,18 +84,6 @@ func TestInvoke(t *testing.T) {
 	if expectedCode != common.Bytes2Hex(getCodeResult) {
 		t.Fatalf("deployed code does not match %s", common.Bytes2Hex(getCodeResult))
 	}
-	// call function to check if can retrieve value
-	resultRetrieve := call(t, instance, "EvmStaticCall", lib.EvmParams{
-		HandleParams: lib.HandleParams{Handle: handle},
-		From:         user,
-		To:           result.ContractAddress,
-		Input:        common.Hex2Bytes(funcRetrieve),
-		GasLimit:     200000,
-		GasPrice:     (*hexutil.Big)(big.NewInt(1000000000)),
-	}).(*lib.EvmResult)
-	if resultRetrieve.EvmError != "" {
-		t.Fatalf("vm error: %v", resultRetrieve.EvmError)
-	}
 	// call function to store value
 	call(t, instance, "EvmApply", lib.EvmParams{
 		HandleParams: lib.HandleParams{Handle: handle},
@@ -107,7 +94,7 @@ func TestInvoke(t *testing.T) {
 		GasPrice:     (*hexutil.Big)(big.NewInt(1000000000)),
 	})
 	// call function to retrieve value
-	resultRetrieve = call(t, instance, "EvmApply", lib.EvmParams{
+	resultRetrieve := call(t, instance, "EvmApply", lib.EvmParams{
 		HandleParams: lib.HandleParams{Handle: handle},
 		From:         user,
 		To:           result.ContractAddress,

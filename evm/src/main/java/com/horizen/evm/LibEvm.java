@@ -208,25 +208,6 @@ final class LibEvm {
         return invoke("EvmApply", params, EvmResult.class);
     }
 
-    public static EvmResult evmStaticCall(
-            int handle,
-            byte[] from,
-            byte[] to,
-            BigInteger value,
-            byte[] input,
-            BigInteger gasLimit,
-            BigInteger gasPrice,
-            EvmContext context
-    ) {
-        if (context == null) {
-            context = new EvmContext();
-            // TODO: decide what EIPs we are implementing, setting the baseFee to zero currently allows a gas price of zero
-            context.baseFee = BigInteger.ZERO;
-        }
-        var params = new EvmParams(handle, from, to, value, input, gasLimit, gasPrice, context);
-        return invoke("EvmStaticCall", params, EvmResult.class);
-    }
-
     public static byte[] hashRoot(byte[][] values) {
         return invoke("HashRoot", new HashParams(values), Hash.class).toBytes();
     }
