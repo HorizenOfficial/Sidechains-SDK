@@ -168,13 +168,12 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
   }
 
   private def buyGas(msg: Message) = {
-    // calc max possible payment
     val gas = msg.getGasLimit
-    val maxFees = gas.multiply({
-      // TODO: double check with GETH: they use feeCap just for the balance check,
-      //  but gasPrice for the maxFees that are deducted
-      if (msg.getGasFeeCap != null) msg.getGasFeeCap else msg.getGasPrice
-    })
+    // with a legacy TX gasPrice will be the one set by the caller
+    // with an EIP1559 TX gasPrice will be the effective gasPrice (baseFee+tip, capped at feeCap)
+    val effectiveFees = gas.multiply(msg.getGasPrice)
+    // maxFees is calculated using the feeCap, even if the cap was not reached, i.e. baseFee+tip < feeCap
+    val maxFees = if (msg.getGasFeeCap == null) effectiveFees else gas.multiply(msg.getGasFeeCap)
     // make sure the sender has enough balance to cover max fees plus value
     val sender = msg.getFrom.address()
     if (getBalance(sender).compareTo(maxFees.add(msg.getValue)) < 0) {
@@ -182,24 +181,24 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     }
     // allocate gas for this transaction
     // TODO: deduct gas from gasPool of the current block and refund unused gas at the end
-    gasPool = new GasPool(msg.getGasLimit)
-    // prepay gas fees
-    subBalance(sender, maxFees)
+    gasPool = new GasPool(gas)
+    // prepay effective gas fees
+    subBalance(sender, effectiveFees)
   }
 
   private def refundGas(msg: Message): Unit = {
     val quotient = 5 // pre-EIP-3529 this was 2 (london release)
     val max = gasPool.getUsedGas.divide(BigInteger.valueOf(quotient))
     val refund = stateDb.getRefund match {
+      // cap refund to a quotient of the used gas
       case refund if max.compareTo(refund) > 1 => max
       case refund => refund
     }
     // return funds for remaining gas, exchanged at the original rate.
-    val remaining = gasPool.getAvailableGas.add(refund).multiply({
-      // TODO: double check why GETH always uses gasPrice here and not feeCap
-      if (msg.getGasFeeCap != null) msg.getGasFeeCap else msg.getGasPrice
-    })
+    val remaining = gasPool.getAvailableGas.add(refund).multiply(msg.getGasPrice)
     addBalance(msg.getFrom.address(), remaining)
+
+    // TODO: also return remaining gas to the gasPool of the current block so it is available for the next transaction
   }
 
   def applyMessage(message: Message): Option[ExecutionResult] = {

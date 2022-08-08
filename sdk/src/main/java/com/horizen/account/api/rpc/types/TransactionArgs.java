@@ -80,7 +80,7 @@ public class TransactionArgs {
                     gasFeeCap = maxFeePerGas;
                 }
                 if (maxPriorityFeePerGas != null) {
-                    gasFeeCap = maxPriorityFeePerGas;
+                    gasTipCap = maxPriorityFeePerGas;
                 }
                 // Backfill the legacy gasPrice for EVM execution, unless we're all zeroes
                 if (gasFeeCap.bitLength() > 0 || gasTipCap.bitLength() > 0) {

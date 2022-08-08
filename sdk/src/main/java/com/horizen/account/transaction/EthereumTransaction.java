@@ -362,7 +362,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         var gasFeeCap = !is1559 ? getGasPrice() : getMaxFeePerGas();
         var gasTipCap = !is1559 ? getGasPrice() : getMaxPriorityFeePerGas();
         if (baseFee != null) {
-            // gas price is baseFee + tip, but capped at the fee cap
+            // calculate effective gas price as baseFee + tip capped at the fee cap
             gasPrice = baseFee.add(gasTipCap).min(gasFeeCap);
         }
         return new Message(
