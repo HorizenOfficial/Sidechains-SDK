@@ -387,6 +387,9 @@ class AccountState(val params: NetworkParams,
     }
   }
 
+  // TODO: get baseFee for the block
+  override def getBaseFee: BigInteger = BigInteger.ZERO
+
   override def validate(tx: SidechainTypes#SCAT): Try[Unit] = Try {
     tx.semanticValidity()
 
@@ -398,7 +401,7 @@ class AccountState(val params: NetworkParams,
       using(getView) { stateView =>
         stateView.applyTransaction(tx, 0, BigInteger.ZERO) match {
           case Success(_) =>
-            log.debug(s"tx=$txHash succesfully validate against state view")
+            log.debug(s"tx=${ethTx.id} succesfully validate against state view")
 
           case Failure(e) =>
             log.error("Could not validate tx agaist state view: ", e)

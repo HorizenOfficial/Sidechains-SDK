@@ -29,6 +29,7 @@ import scorex.util.ModifierId
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters.seqAsJavaListConverter
+import scala.compat.java8.OptionConverters.RichOptionalGeneric
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
@@ -54,31 +55,34 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
 
   private def constructEthBlockWithTransactions(blockId: String, hydratedTx: Boolean): EthereumBlock = {
     if (blockId == null) return null
-    val block = nodeView.history.getBlockById(blockId)
-    if (block.isEmpty) return null
-    val transactions = block.get().transactions.filter {
-      _.isInstanceOf[EthereumTransaction]
-    } map {
-      _.asInstanceOf[EthereumTransaction]
+    nodeView.history.getBlockById(blockId).asScala match {
+      case None => null
+      case Some(block) =>
+        val transactions = block.transactions.filter {
+          _.isInstanceOf[EthereumTransaction]
+        } map {
+          _.asInstanceOf[EthereumTransaction]
+        }
+        new EthereumBlock(
+          Numeric.prependHexPrefix(Integer.toHexString(nodeView.history.getBlockHeight(blockId).get())),
+          Numeric.prependHexPrefix(blockId),
+          if (!hydratedTx) {
+            transactions.map(tx => Numeric.prependHexPrefix(tx.id)).toList.asJava
+          } else {
+            transactions.flatMap(tx => stateView.getTransactionReceipt(Numeric.hexStringToByteArray(tx.id)) match {
+              case Some(receipt) => Some(new EthereumTransactionView(receipt, tx))
+              case None => None
+            }).toList.asJava
+          },
+          block,
+        )
     }
-    new EthereumBlock(
-      Numeric.prependHexPrefix(Integer.toHexString(nodeView.history.getBlockHeight(blockId).get())),
-      Numeric.prependHexPrefix(blockId),
-      if (!hydratedTx) {
-        transactions.map(tx => Numeric.prependHexPrefix(tx.id)).toList.asJava
-      } else {
-        transactions.flatMap(tx => stateView.getTransactionReceipt(Numeric.hexStringToByteArray(tx.id)) match {
-          case Some(receipt) => Some(new EthereumTransactionView(receipt, tx))
-          case None => None
-        }).toList.asJava
-      },
-      block.get())
   }
 
   private def doCall(params: TransactionArgs, tag: Quantity) = {
     getStateViewAtTag(tag) {
       case None => throw new IllegalArgumentException(s"Unable to get state for given tag: ${tag.getValue}")
-      case Some(tagStateView) => tagStateView.applyMessage(params.toMessage) match {
+      case Some(tagStateView) => tagStateView.applyMessage(params.toMessage(tagStateView.getBaseFee)) match {
           case Some(success: ExecutionSucceeded) => success
 
           case Some(failed: ExecutionFailed) =>
@@ -132,26 +136,23 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
   }
 
   private def getStateViewAtTag[A](tag: Quantity)(fun: Option[AccountStateView] ⇒ A): A = {
-    val block = nodeView.history.getBlockById(getBlockIdByTag(tag.getValue))
-    if (block.isEmpty)
-      fun(None)
-    else
-      using(nodeView.state.getStateDbViewFromRoot(block.get().header.stateRoot)) {
+    nodeView.history.getBlockById(getBlockIdByTag(tag.getValue)).asScala match {
+      case Some(block) => using(nodeView.state.getStateDbViewFromRoot(block.header.stateRoot)) {
         tagStateView => fun(Some(tagStateView))
       }
+      case None => fun(None)
+    }
   }
 
   private def getBlockIdByTag(tag: String): String = {
-    var blockId: java.util.Optional[String] = null
     val history = nodeView.history
-    tag match {
-      case "earliest" => blockId = history.getBlockIdByHeight(1)
+    val blockId = tag match {
+      case "earliest" => history.getBlockIdByHeight(1)
       case "finalized" | "safe" => throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock))
-      case "latest" | "pending" => blockId = history.getBlockIdByHeight(history.getCurrentHeight)
-      case height => blockId = history.getBlockIdByHeight(Integer.parseInt(Numeric.cleanHexPrefix(height), 16))
+      case "latest" | "pending" => history.getBlockIdByHeight(history.getCurrentHeight)
+      case height => history.getBlockIdByHeight(Integer.parseInt(Numeric.cleanHexPrefix(height), 16))
     }
-    if (blockId.isEmpty) return null
-    blockId.get()
+    blockId.orElse(null)
   }
 
   @RpcMethod("net_version") def version: String = String.valueOf(networkParams.chainId)

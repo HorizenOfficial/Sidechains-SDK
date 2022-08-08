@@ -3,13 +3,14 @@ package com.horizen.account.transaction;
 import com.fasterxml.jackson.annotation.*;
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
+import com.horizen.account.state.Message;
 import com.horizen.account.utils.Account;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import org.jetbrains.annotations.NotNull;
+import org.web3j.crypto.Hash;
 import org.web3j.crypto.RawTransaction;
-import org.web3j.crypto.Sign;
 import org.web3j.crypto.Sign.SignatureData;
 import org.web3j.crypto.SignedRawTransaction;
 import org.web3j.crypto.TransactionEncoder;
@@ -17,7 +18,6 @@ import org.web3j.crypto.transaction.type.LegacyTransaction;
 import org.web3j.crypto.transaction.type.Transaction1559;
 import org.web3j.crypto.transaction.type.TransactionType;
 import org.web3j.utils.Numeric;
-import org.web3j.crypto.Hash;
 
 import javax.annotation.Nullable;
 import java.math.BigInteger;
@@ -31,7 +31,7 @@ import java.util.Objects;
 @JsonView(Views.Default.class)
 public class EthereumTransaction extends AccountTransaction<AddressProposition, SignatureSecp256k1> {
     private final RawTransaction transaction;
-    
+
     // depends on the transaction
     public EthereumTransaction(
             RawTransaction transaction
@@ -201,7 +201,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     static long convertToLong(byte[] bytes) {
-        long value = 0l;
+        long value = 0L;
 
         // Iterating through for loop
         for (byte b : bytes) {
@@ -354,5 +354,27 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         if (this.transaction.getType().isLegacy() && this.isSigned())
             return ((SignedRawTransaction) this.transaction).getEncodedTransaction(this.getChainId());
         return TransactionEncoder.encode(this.transaction);
+    }
+
+    public Message asMessage(BigInteger baseFee) {
+        var is1559 = isEIP1559();
+        var gasPrice = !is1559 ? getGasPrice() : getMaxFeePerGas();
+        var gasFeeCap = !is1559 ? getGasPrice() : getMaxFeePerGas();
+        var gasTipCap = !is1559 ? getGasPrice() : getMaxPriorityFeePerGas();
+        if (baseFee != null) {
+            // gas price is baseFee + tip, but capped at the fee cap
+            gasPrice = baseFee.add(gasTipCap).min(gasFeeCap);
+        }
+        return new Message(
+                getFrom(),
+                getTo(),
+                gasPrice,
+                gasFeeCap,
+                gasTipCap,
+                getGasLimit(),
+                getValue(),
+                getNonce(),
+                getData()
+        );
     }
 }
