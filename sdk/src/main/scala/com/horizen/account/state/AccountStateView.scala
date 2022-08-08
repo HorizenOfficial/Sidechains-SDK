@@ -36,6 +36,8 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
   lazy val withdrawalReqProvider: WithdrawalRequestProvider = messageProcessors.find(_.isInstanceOf[WithdrawalRequestProvider]).get.asInstanceOf[WithdrawalRequestProvider]
   lazy val forgerStakesProvider: ForgerStakesProvider = messageProcessors.find(_.isInstanceOf[ForgerStakesProvider]).get.asInstanceOf[ForgerStakesProvider]
 
+  private val gasPool = new GasPool(BigInteger.ZERO)
+
   // modifiers
   override def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[Unit] = Try {
     refData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {
@@ -392,6 +394,8 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
   }
 
   override def getStateDbHandle: ResourceHandle = stateDb
+
+  override def getGasPool: GasPool = gasPool
 
   override def getIntermediateRoot: Array[Byte] = stateDb.getIntermediateRoot
 

@@ -9,6 +9,8 @@ import scala.util.Try
 trait BaseAccountStateView extends AccountStateReader {
   def getStateDbHandle: ResourceHandle
 
+  def getGasPool: GasPool
+
   def isEoaAccount(address: Array[Byte]): Boolean
 
   def addBalance(address: Array[Byte], amount: BigInteger): Try[Unit]
