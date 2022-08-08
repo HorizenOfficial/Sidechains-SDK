@@ -1,7 +1,6 @@
 package lib
 
 import (
-	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
@@ -15,8 +14,6 @@ import (
 )
 
 type EvmContext struct {
-	TxHash      common.Hash    `json:"txHash"`
-	TxIndex     int            `json:"txIndex"`
 	Difficulty  *hexutil.Big   `json:"difficulty"`
 	Coinbase    common.Address `json:"coinbase"`
 	BlockNumber *hexutil.Big   `json:"blockNumber"`
@@ -81,6 +78,7 @@ func (p *EvmParams) getBlockContext() vm.BlockContext {
 }
 
 func mockBlockHashFn(n uint64) common.Hash {
+	// TODO: fetch real block hashes
 	return common.BytesToHash(crypto.Keccak256([]byte(new(big.Int).SetUint64(n).String())))
 }
 
@@ -139,21 +137,7 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		sender           = vm.AccountRef(params.From)
 		gas              = uint64(params.GasLimit)
 		contractCreation = params.To == nil
-		homestead        = evm.ChainConfig().IsHomestead(evm.Context.BlockNumber)
-		istanbul         = evm.ChainConfig().IsIstanbul(evm.Context.BlockNumber)
 	)
-
-	statedb.Prepare(params.Context.TxHash, params.Context.TxIndex)
-
-	// Check clauses 4-5, subtract intrinsic gas if everything is correct
-	intrinsicGas, err := core.IntrinsicGas(params.Input, params.AccessList, contractCreation, homestead, istanbul)
-	if err != nil {
-		return err, nil
-	}
-	if gas < intrinsicGas {
-		return fmt.Errorf("%w: have %d, want %d", core.ErrIntrinsicGas, gas, intrinsicGas), nil
-	}
-	gas -= intrinsicGas
 
 	// Check clause 6
 	// TODO: do we need this here?
@@ -176,10 +160,17 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		// So we reduce the nonce by 1 and then evm.Create will increase it again to the value it should
 		// be after the transaction. This is necessary, since in the non-creation case the nonce should
 		// already be increased
-		statedb.SetNonce(params.From, statedb.GetNonce(params.From)-1)
+		nonce := statedb.GetNonce(params.From)
+		if nonce > 0 {
+			statedb.SetNonce(params.From, nonce-1)
+		}
 		// we ignore returnData here because it holds the contract code that was just deployed
 		_, deployedContractAddress, gas, vmerr = evm.Create(sender, params.Input, gas, params.Value.ToInt())
-		// TODO check if the nonce could ever be wrong here in an error case for example
+		// if there is an error evm.Create might not have incremented the nonce as expected,
+		// in that case we correct it to the previous value
+		if statedb.GetNonce(params.From) != nonce {
+			statedb.SetNonce(params.From, nonce)
+		}
 		contractAddress = &deployedContractAddress
 	} else {
 		returnData, gas, vmerr = evm.Call(sender, *params.To, params.Input, gas, params.Value.ToInt())

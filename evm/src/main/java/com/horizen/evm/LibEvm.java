@@ -145,6 +145,10 @@ final class LibEvm {
         invoke("StateSetCode", new CodeParams(handle, address, code));
     }
 
+    public static BigInteger stateGetRefund(int handle) {
+        return invoke("StateGetRefund", new HandleParams(handle), BigInteger.class);
+    }
+
     public static byte[] stateGetStorage(int handle, byte[] address, byte[] key) {
         return invoke("StateGetStorage", new StorageParams(handle, address, key), Hash.class).toBytes();
     }

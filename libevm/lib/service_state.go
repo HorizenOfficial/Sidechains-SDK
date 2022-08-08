@@ -229,6 +229,14 @@ func (s *Service) StateSetCode(params CodeParams) error {
 	return nil
 }
 
+func (s *Service) StateGetRefund(params HandleParams) (error, hexutil.Uint64) {
+	err, statedb := s.statedbs.Get(params.Handle)
+	if err != nil {
+		return err, 0
+	}
+	return nil, (hexutil.Uint64)(statedb.GetRefund())
+}
+
 func (s *Service) StateGetStorage(params StorageParams) (error, common.Hash) {
 	err, statedb := s.statedbs.Get(params.Handle)
 	if err != nil {

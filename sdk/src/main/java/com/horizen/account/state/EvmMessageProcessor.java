@@ -34,7 +34,7 @@ public class EvmMessageProcessor implements MessageProcessor {
                     msg.getTo() == null ? null : msg.getTo().address(),
                     msg.getValue(),
                     msg.getData(),
-                    msg.getGasLimit(),
+                    view.getGasPool().getAvailableGas(),
                     msg.getGasPrice()
             );
             if (result.evmError.isEmpty()) {

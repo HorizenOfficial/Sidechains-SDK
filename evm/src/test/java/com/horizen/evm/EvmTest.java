@@ -1,8 +1,6 @@
 package com.horizen.evm;
 
-import com.horizen.evm.interop.EvmContext;
 import com.horizen.evm.interop.EvmResult;
-import com.horizen.evm.utils.Hash;
 import org.junit.Test;
 
 import java.math.BigInteger;
@@ -52,11 +50,10 @@ public class EvmTest extends LibEvmTestBase {
 
                 // test contract deployment
                 calldata = concat(contractCode, initialValue);
-                var context = new EvmContext();
-                context.txHash = Hash.FromBytes(txHash);
+                statedb.setTxContext(txHash, 0);
                 // Due to nonce increase before any transaction on sdk side
                 statedb.setNonce(addr2, BigInteger.ONE);
-                final var createResult = Evm.Apply(statedb, addr2, null, null, calldata, gasLimit, gasPrice, context);
+                final var createResult = Evm.Apply(statedb, addr2, null, null, calldata, gasLimit, gasPrice);
                 assertEquals("", createResult.evmError);
                 contractAddress = createResult.contractAddress.toBytes();
                 assertEquals(hex(codeHash), hex(statedb.getCodeHash(contractAddress)));

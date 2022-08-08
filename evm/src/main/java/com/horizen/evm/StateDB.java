@@ -183,6 +183,15 @@ public class StateDB extends ResourceHandle {
     }
 
     /**
+     * Get refunded gas.
+     *
+     * @return refunded gas
+     */
+    public BigInteger getRefund() {
+        return LibEvm.stateGetRefund(handle);
+    }
+
+    /**
      * Read storage trie of given account.
      *
      * @param address account address

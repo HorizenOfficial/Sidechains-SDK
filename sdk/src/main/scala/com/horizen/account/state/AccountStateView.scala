@@ -36,7 +36,7 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
   lazy val withdrawalReqProvider: WithdrawalRequestProvider = messageProcessors.find(_.isInstanceOf[WithdrawalRequestProvider]).get.asInstanceOf[WithdrawalRequestProvider]
   lazy val forgerStakesProvider: ForgerStakesProvider = messageProcessors.find(_.isInstanceOf[ForgerStakesProvider]).get.asInstanceOf[ForgerStakesProvider]
 
-  private val gasPool = new GasPool(BigInteger.ZERO)
+  private var gasPool = new GasPool(BigInteger.ZERO)
 
   // modifiers
   override def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[Unit] = Try {
@@ -130,7 +130,7 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     stateDb.setTxContext(txHash, idx)
   }
 
-  private def preCheck(tx: EthereumTransaction): BigInteger = {
+  private def preCheck(tx: EthereumTransaction): Unit = {
     // We are sure that transaction is semantically valid (so all the tx fields are valid)
     // and was successfully verified by ChainIdBlockSemanticValidator
 
@@ -161,24 +161,45 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
       // TODO:  tx.getMaxFeePerGas().compareTo(block base fee) < 0 -> exception: max fee per gas less than block base fee"
     }
 
-    // Check that from account has enough balance to pay max gas*price value
-    // and reserve this amount.
-    val bookedGasPrice: BigInteger = buyGas(tx)
-
     // Check that it is enough balance to pay after gas was bought.
     val txBalanceAfterGasPrepayment: BigInteger = getBalance(tx.getFrom.address())
     if (txBalanceAfterGasPrepayment.compareTo(tx.getValue) < 0)
       throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: not enough founds $txBalanceAfterGasPrepayment to pay ${tx.getValue}")
-
-    bookedGasPrice
   }
 
-  private def buyGas(tx: EthereumTransaction): BigInteger = {
-    // TODO: implement gas prepayment strategy
+  private def buyGas(msg: Message) = {
     // calc max possible payment
-    // subtract the balance
-    // return the used value
-    BigInteger.ZERO
+    val gas = msg.getGasLimit
+    val maxFees = gas.multiply({
+      // TODO: double check with GETH: they use feeCap just for the balance check,
+      //  but gasPrice for the maxFees that are deducted
+      if (msg.getGasFeeCap != null) msg.getGasFeeCap else msg.getGasPrice
+    })
+    // make sure the sender has enough balance to cover max fees plus value
+    val sender = msg.getFrom.address()
+    if (getBalance(sender).compareTo(maxFees.add(msg.getValue)) < 0) {
+      throw new Exception("insufficient funds for gas * price + value")
+    }
+    // allocate gas for this transaction
+    // TODO: deduct gas from gasPool of the current block and refund unused gas at the end
+    gasPool = new GasPool(msg.getGasLimit)
+    // prepay gas fees
+    subBalance(sender, maxFees)
+  }
+
+  private def refundGas(msg: Message): Unit = {
+    val quotient = 5 // pre-EIP-3529 this was 2 (london release)
+    val max = gasPool.getUsedGas.divide(BigInteger.valueOf(quotient))
+    val refund = stateDb.getRefund match {
+      case refund if max.compareTo(refund) > 1 => max
+      case refund => refund
+    }
+    // return funds for remaining gas, exchanged at the original rate.
+    val remaining = gasPool.getAvailableGas.add(refund).multiply({
+      // TODO: double check why GETH always uses gasPrice here and not feeCap
+      if (msg.getGasFeeCap != null) msg.getGasFeeCap else msg.getGasPrice
+    })
+    addBalance(msg.getFrom.address(), remaining)
   }
 
   def applyMessage(message: Message): Option[ExecutionResult] = {
@@ -188,7 +209,22 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     //  - processing message
     //  - returning unused gas and refunds
     //  it should not contain some of the "preCheck" validations though like checking the nonce
-    messageProcessors.find(_.canProcess(message, this)).map(_.process(message, this))
+
+    // First check this message satisfies all consensus rules before
+    // applying the message. The rules include these clauses
+    //
+    // 1. the nonce of the message caller is correct
+    // 2. caller has enough balance to cover transaction fee(gaslimit * gasprice)
+    // 3. the amount of gas required is available in the block
+    // 4. the purchased gas is enough to cover intrinsic usage
+    // 5. there is no overflow when calculating intrinsic gas
+    // 6. caller has enough balance to cover asset transfer for **topmost** call
+
+    buyGas(message)
+    val result = messageProcessors.find(_.canProcess(message, this)).map(_.process(message, this))
+    refundGas(message)
+
+    result
   }
 
   override def applyTransaction(tx: SidechainTypes#SCAT, txIndex: Int, prevCumGasUsed: BigInteger): Try[EthereumConsensusDataReceipt] = Try {
@@ -199,12 +235,12 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     val txHash = BytesUtils.fromHexString(ethTx.id)
 
     // Do the checks and prepay gas
-    val bookedGasPrice: BigInteger = preCheck(ethTx)
+    preCheck(ethTx)
 
     // Set Tx context for stateDB, to know where to keep EvmLogs
     setupTxContext(txHash, txIndex)
 
-    val message: Message = Message.fromTransaction(ethTx)
+    val message: Message = ethTx.asMessage(getBaseFee)
 
     // Increase the nonce by 1
     increaseNonce(message.getFrom.address())
@@ -400,4 +436,7 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
   override def getIntermediateRoot: Array[Byte] = stateDb.getIntermediateRoot
 
   override def getCode(address: Array[Byte]): Array[Byte] = stateDb.getCode(address)
+
+  // TODO: get baseFee for the block
+  override def getBaseFee: BigInteger = BigInteger.ZERO
 }
