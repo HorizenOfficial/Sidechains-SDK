@@ -1,17 +1,16 @@
 package com.horizen
 
-import java.util.{Comparator, Optional, List => JList}
-
 import com.horizen.box.Box
 import com.horizen.node.NodeMemoryPool
 import com.horizen.transaction.BoxTransaction
-import com.horizen.utils.MempoolMap
-import scorex.util.{ModifierId, ScorexLogging}
+import com.horizen.utils.{MempoolMap, TpsUtils}
 import scorex.core.transaction.MempoolReader
+import scorex.util.{ModifierId, ScorexLogging}
 
-import scala.collection.concurrent.TrieMap
-import scala.util.{Failure, Success, Try}
+import java.time.LocalDateTime
+import java.util.{Comparator, Optional, List => JList}
 import scala.collection.JavaConverters._
+import scala.util.{Failure, Success, Try}
 
 class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: MempoolSettings)
   extends scorex.core.transaction.MemoryPool[SidechainTypes#SCBT, SidechainMemoryPool]
@@ -84,38 +83,71 @@ class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: Memp
 
   // Setters:
   override def put(tx: SidechainTypes#SCBT): Try[SidechainMemoryPool] = {
+    val startTime = LocalDateTime.now()
+    TpsUtils.log("put single tx in mempool, checking tx compatibility", log)
     // check if tx is not colliding with unconfirmed using
     // tx.incompatibilityChecker().hasIncompatibleTransactions(tx, unconfirmed)
     val entry = SidechainMemoryPoolEntry(tx)
     if (entry.feeRate.getFeeRate() < minFeeRate) {
-       Failure(new IllegalArgumentException("Transaction fee is less than mempool.minFeeRate - " + tx))
+      val compatibilityCheckEndTime = LocalDateTime.now()
+      val (compatibilityCheckInMinutes, compatibilityCheckInSeconds) = TpsUtils.getMinAndSecFromTwoDates(compatibilityCheckEndTime, startTime)
+      TpsUtils.log(s"put single tx in mempool stopped, tx fee is less than mempool.minFeeRate in ${compatibilityCheckInMinutes}':${compatibilityCheckInSeconds}''", log)
+
+      Failure(new IllegalArgumentException("Transaction fee is less than mempool.minFeeRate - " + tx))
     } else if (tx.incompatibilityChecker().isMemoryPoolCompatible &&
         tx.incompatibilityChecker().isTransactionCompatible(tx, unconfirmed.values.toList.map(t => t.getUnconfirmedTx()).asJava)) {
+
+      val compatibilityCheckEndTime = LocalDateTime.now()
+      val (compatibilityCheckInMinutes, compatibilityCheckInSeconds) = TpsUtils.getMinAndSecFromTwoDates(compatibilityCheckEndTime, startTime)
+      TpsUtils.log(s"done checking tx compatibility in ${compatibilityCheckInMinutes}':${compatibilityCheckInSeconds}''", log)
+
       if (addWithSizeCheck(entry))
         Success[SidechainMemoryPool](this)
       else
         Failure(new IllegalArgumentException("Mempool full and tx feeRate too low, unable to add transaction - " + tx))
     } else {
-        Failure(new IllegalArgumentException("Transaction is incompatible - " + tx))
+      val compatibilityCheckEndTime = LocalDateTime.now()
+      val (compatibilityCheckInMinutes, compatibilityCheckInSeconds) = TpsUtils.getMinAndSecFromTwoDates(compatibilityCheckEndTime, startTime)
+      TpsUtils.log(s"put single tx in mempool stopped, tx fee is incompatible in ${compatibilityCheckInMinutes}':${compatibilityCheckInSeconds}''", log)
+
+      Failure(new IllegalArgumentException("Transaction is incompatible - " + tx))
     }
   }
 
 
   override def put(txs: Iterable[SidechainTypes#SCBT]): Try[SidechainMemoryPool] = {
+    val startTime = LocalDateTime.now()
+    TpsUtils.log("put multiple tx in mempool, checking tx compatibility", log)
     // for each tx in txs call "put"
     // rollback to initial state if "put(tx)" failed
     for (t <- txs.tails) {
       if (t != Nil &&
           (!t.head.incompatibilityChecker().isMemoryPoolCompatible ||
-           !t.head.incompatibilityChecker().isTransactionCompatible(t.head, t.tail.toList.asJava)))
+           !t.head.incompatibilityChecker().isTransactionCompatible(t.head, t.tail.toList.asJava))) {
+
+        val compatibilityCheckEndTime = LocalDateTime.now()
+        val (compatibilityCheckInMinutes, compatibilityCheckInSeconds) = TpsUtils.getMinAndSecFromTwoDates(compatibilityCheckEndTime, startTime)
+        TpsUtils.log(s"put multiple tx in mempool stopped, incompatible transaction found in ${compatibilityCheckInMinutes}':${compatibilityCheckInSeconds}''", log)
+
         return Failure(new IllegalArgumentException("There is incompatible transaction - " + t.head))
+      }
     }
 
-    val currentUnconfimed = unconfirmed.values.toList.map(t => t.getUnconfirmedTx()).asJava
+    val currentUnconfirmed = unconfirmed.values.toList.map(t => t.getUnconfirmedTx()).asJava
     for (t <- txs) {
-      if (!t.incompatibilityChecker().isTransactionCompatible(t, currentUnconfimed))
+      if (!t.incompatibilityChecker().isTransactionCompatible(t, currentUnconfirmed)) {
+
+        val compatibilityCheckEndTime = LocalDateTime.now()
+        val (compatibilityCheckInMinutes, compatibilityCheckInSeconds) = TpsUtils.getMinAndSecFromTwoDates(compatibilityCheckEndTime, startTime)
+        TpsUtils.log(s"put multiple tx in mempool stopped, incompatible transaction found in ${compatibilityCheckInMinutes}':${compatibilityCheckInSeconds}''", log)
+
         return Failure(new IllegalArgumentException("There is incompatible transaction - " + t))
+      }
     }
+
+    val compatibilityCheckEndTime = LocalDateTime.now()
+    val (compatibilityCheckInMinutes, compatibilityCheckInSeconds) = TpsUtils.getMinAndSecFromTwoDates(compatibilityCheckEndTime, startTime)
+    TpsUtils.log(s"done checking tx compatibility in ${compatibilityCheckInMinutes}':${compatibilityCheckInSeconds}''", log)
 
     for (t <- txs) {
       val entry = SidechainMemoryPoolEntry(t)
@@ -149,15 +181,31 @@ class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: Memp
   // TO DO: check usage in Scorex core
   // Probably, we need to do a Global check inside for both new and existing transactions.
   override def putWithoutCheck(txs: Iterable[SidechainTypes#SCBT]): SidechainMemoryPool = {
+    val startTime = LocalDateTime.now()
+    TpsUtils.log("putWithoutCheck multiple tx in mempool, checking tx compatibility", log)
     for (t <- txs.tails) {
-      if (t != Nil && !t.head.incompatibilityChecker().isTransactionCompatible(t.head, t.tail.toList.asJava))
+      if (t != Nil && !t.head.incompatibilityChecker().isTransactionCompatible(t.head, t.tail.toList.asJava)) {
+        val compatibilityCheckEndTime = LocalDateTime.now()
+        val (compatibilityCheckInMinutes, compatibilityCheckInSeconds) = TpsUtils.getMinAndSecFromTwoDates(compatibilityCheckEndTime, startTime)
+        TpsUtils.log(s"putWithoutCheck multiple tx in mempool stopped, incompatible transaction found in ${compatibilityCheckInMinutes}':${compatibilityCheckInSeconds}''", log)
+
         return this
+      }
     }
 
     for (t <- txs) {
-      if (!t.incompatibilityChecker().isTransactionCompatible(t, unconfirmed.values.toList.map(t => t.getUnconfirmedTx()).asJava))
+      if (!t.incompatibilityChecker().isTransactionCompatible(t, unconfirmed.values.toList.map(t => t.getUnconfirmedTx()).asJava)) {
+        val compatibilityCheckEndTime = LocalDateTime.now()
+        val (compatibilityCheckInMinutes, compatibilityCheckInSeconds) = TpsUtils.getMinAndSecFromTwoDates(compatibilityCheckEndTime, startTime)
+        TpsUtils.log(s"putWithoutCheck multiple tx in mempool stopped, incompatible transaction found in ${compatibilityCheckInMinutes}':${compatibilityCheckInSeconds}''", log)
+
         return this
+      }
     }
+
+    val compatibilityCheckEndTime = LocalDateTime.now()
+    val (compatibilityCheckInMinutes, compatibilityCheckInSeconds) = TpsUtils.getMinAndSecFromTwoDates(compatibilityCheckEndTime, startTime)
+    TpsUtils.log(s"done checking tx compatibility in ${compatibilityCheckInMinutes}':${compatibilityCheckInSeconds}''", log)
 
     for (t <- txs) {
       val entry = SidechainMemoryPoolEntry(t)
