@@ -95,9 +95,14 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
           val recipientProposition = new AddressProposition(
             MainchainTxCrosschainOutputAddressUtil.getAccountAddress(ftOut.propositionBytes))
 
-          // stateDb will implicitly create account if not existing yet
-          addBalance(recipientProposition.address(), value)
-          log.debug(s"added FT amount = $value to address=$recipientProposition")
+          if (isEoaAccount(recipientProposition.address())) {
+            // stateDb will implicitly create account if not existing yet
+            addBalance(recipientProposition.address(), value)
+            log.debug(s"added FT amount = $value to address=$recipientProposition")
+          } else {
+            log.warn(s"ignored FT to non-EOA account, amount = $value to address=$recipientProposition (the amount was effectively burned)")
+            // TODO: we should return the amount back to mcReturnAddress instead of just burning it
+          }
       }
     })
   }
