@@ -1,6 +1,9 @@
 package com.horizen.account.state;
 
 import com.horizen.evm.Evm;
+import com.horizen.evm.interop.EvmContext;
+
+import java.math.BigInteger;
 
 public class EvmMessageProcessor implements MessageProcessor {
     @Override
@@ -26,16 +29,21 @@ public class EvmMessageProcessor implements MessageProcessor {
     @Override
     public ExecutionResult process(Message msg, BaseAccountStateView view) {
         try {
-            // TODO: this will only process legacy transactions correctly as PriorityFee and FeeCap are ignored
-            //  (and the baseFee is set to zero internally in `LibEvm.evmApply`)
+            // prepare context
+            var context = new EvmContext();
+            context.baseFee = view.getBaseFee();
+            context.blockNumber = BigInteger.valueOf(view.getHeight());
+            // execute EVM
             var result = Evm.Apply(
                     view.getStateDbHandle(),
                     msg.getFrom().address(),
                     msg.getTo() == null ? null : msg.getTo().address(),
                     msg.getValue(),
                     msg.getData(),
+                    // TODO: the GASLIMIT opcode will return wrong results this way, because the intrinsicGas was already removed here
                     view.getGasPool().getAvailableGas(),
-                    msg.getGasPrice()
+                    msg.getGasPrice(),
+                    context
             );
             if (result.evmError.isEmpty()) {
                 return new ExecutionSucceeded(result.usedGas, result.returnData);
