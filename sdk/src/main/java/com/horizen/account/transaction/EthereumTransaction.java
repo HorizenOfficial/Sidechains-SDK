@@ -149,13 +149,13 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             if (getMaxPriorityFeePerGas().signum() < 0)
                 throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                         "eip1559 transaction with negative maxPriorityFeePerGas", id()));
-            if (getMaxFeePerGas().bitCount() > 256)
+            if (getMaxFeePerGas().bitLength() > 256)
                 throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                        "eip1559 transaction maxFeePerGas bit length [%d] is too high", id(), getMaxFeePerGas().bitCount()));
+                        "eip1559 transaction maxFeePerGas bit length [%d] is too high", id(), getMaxFeePerGas().bitLength()));
 
-            if (getMaxPriorityFeePerGas().bitCount() > 256)
+            if (getMaxPriorityFeePerGas().bitLength() > 256)
                 throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                        "eip1559 transaction maxPriorityFeePerGas bit length [%d] is too high", id(), getMaxPriorityFeePerGas().bitCount()));
+                        "eip1559 transaction maxPriorityFeePerGas bit length [%d] is too high", id(), getMaxPriorityFeePerGas().bitLength()));
 
             if (getMaxFeePerGas().compareTo(getMaxPriorityFeePerGas()) < 0)
                 throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
