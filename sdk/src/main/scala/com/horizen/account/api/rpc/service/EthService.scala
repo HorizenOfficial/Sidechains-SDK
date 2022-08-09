@@ -150,10 +150,14 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
   private def signTransactionWithSecret(secret: PrivateKeySecp256k1, tx: EthereumTransaction): EthereumTransaction = {
     val messageToSign = tx.messageToSign()
     val msgSignature = secret.sign(messageToSign)
-    new EthereumTransaction(
+    var signatureData = new SignatureData(msgSignature.getV, msgSignature.getR, msgSignature.getS)
+    if (!tx.isEIP1559 && tx.isSigned && tx.getChainId != null) {
+      signatureData = TransactionEncoder.createEip155SignatureData(signatureData, tx.getChainId)
+    }
+    val signedTx = new EthereumTransaction(
       new SignedRawTransaction(
         tx.getTransaction.getTransaction,
-        new SignatureData(msgSignature.getV, msgSignature.getR, msgSignature.getS)
+        signatureData
       )
     )
   }
