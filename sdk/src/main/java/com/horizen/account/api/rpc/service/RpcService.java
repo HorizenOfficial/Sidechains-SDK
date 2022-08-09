@@ -50,8 +50,12 @@ public class RpcService {
     }
 
     private Object[] convertParams(Method method, JsonNode params) throws RpcException {
+        var optionalAnnotation = method.getAnnotation(RpcOptionalParameters.class);
+        var optionalParameters = optionalAnnotation == null ? 0 : optionalAnnotation.value();
         var parameters = method.getParameterTypes();
-        if (!params.isArray() || parameters.length != params.size()) {
+        if (!params.isArray() ||
+                params.size() > parameters.length ||
+                params.size() < parameters.length + optionalParameters) {
             throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams));
         }
         try {
