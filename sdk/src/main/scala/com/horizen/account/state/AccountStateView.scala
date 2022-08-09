@@ -130,41 +130,40 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     stateDb.setTxContext(txHash, idx)
   }
 
-  private def preCheck(tx: EthereumTransaction): Unit = {
+  private def preCheck(msg: Message): Unit = {
     // We are sure that transaction is semantically valid (so all the tx fields are valid)
     // and was successfully verified by ChainIdBlockSemanticValidator
 
-    // TODO this is checked also by EthereumTransaction.semanticValidity()
-    // Check signature
-    // TODO: add again later and check - message to sign seems to be false (?)
-    if (!tx.getSignature.isValid(tx.getFrom, tx.messageToSign()))
-      throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: signature is invalid")
-
-    // Check that "from" is EOA address
-    if (!isEoaAccount(tx.getFrom.address()))
-      throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: from account is not EOA")
+    // call these only once as they are not a simple getters
+    val sender = msg.getFrom
 
     // Check the nonce
-    val stateNonce: BigInteger = getNonce(tx.getFrom.address())
-    val txNonce: BigInteger = tx.getNonce
-    val result = stateNonce.compareTo(txNonce)
-    if (result > 0) {
-      throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: tx nonce $txNonce is too low (state nonce is $stateNonce)")
-    } else if (result < 0) {
-      throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: tx nonce $txNonce is too high (state nonce is $stateNonce)")
+    val stateNonce = getNonce(sender.address())
+    val txNonce = msg.getNonce
+    val result = txNonce.compareTo(stateNonce)
+    if (result < 0) {
+      throw new TransactionSemanticValidityException(
+        s"nonce too low: address ${sender.checksumAddress()}, tx: $txNonce, state: $stateNonce")
+    } else if (result > 0) {
+      throw new TransactionSemanticValidityException(
+        s"nonce too high: address ${sender.checksumAddress()}, tx: $txNonce, state: $stateNonce")
     }
-    if (txNonce.add(BigInteger.ONE).compareTo(txNonce) < 0)
-      throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: nonce $txNonce reached the max value")
+    // GETH and therefore StateDB use uint64 to store the nonce and perform an overflow check here using (nonce+1<nonce)
+    // BigInteger will not overflow like that, so we just verify that the result after increment still fits into 64 bits
+    if (stateNonce.add(BigInteger.ONE).bitLength() > 64)
+      throw new TransactionSemanticValidityException(
+        s"nonce has max value: address ${sender.checksumAddress()}, nonce: $stateNonce")
 
-    // Check eip15159 fee relation
-    if (tx.isEIP1559) {
-      // TODO:  tx.getMaxFeePerGas().compareTo(block base fee) < 0 -> exception: max fee per gas less than block base fee"
+    // Check that the sender is an EOA
+    if (!isEoaAccount(sender.address())) {
+      val codeHash = BytesUtils.toHexString(getCodeHash(sender.address()))
+      throw new TransactionSemanticValidityException(
+        s"sender not an eoa: address ${sender.checksumAddress()}, codeHash: $codeHash")
     }
 
-    // Check that it is enough balance to pay after gas was bought.
-    val txBalanceAfterGasPrepayment: BigInteger = getBalance(tx.getFrom.address())
-    if (txBalanceAfterGasPrepayment.compareTo(tx.getValue) < 0)
-      throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: not enough founds $txBalanceAfterGasPrepayment to pay ${tx.getValue}")
+    if (msg.getGasFeeCap.compareTo(getBaseFee) < 0)
+      throw new TransactionSemanticValidityException(
+        s"max fee per gas less than block base fee: address ${sender.checksumAddress()}, maxFeePerGas: ${msg.getGasFeeCap}, baseFee: $getBaseFee")
   }
 
   private def buyGas(msg: Message) = {
@@ -175,15 +174,17 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     // maxFees is calculated using the feeCap, even if the cap was not reached, i.e. baseFee+tip < feeCap
     val maxFees = if (msg.getGasFeeCap == null) effectiveFees else gas.multiply(msg.getGasFeeCap)
     // make sure the sender has enough balance to cover max fees plus value
-    val sender = msg.getFrom.address()
-    if (getBalance(sender).compareTo(maxFees.add(msg.getValue)) < 0) {
-      throw new Exception("insufficient funds for gas * price + value")
+    val sender = msg.getFrom
+    val have = getBalance(sender.address())
+    val want = maxFees.add(msg.getValue)
+    if (have.compareTo(want) < 0) {
+      throw new TransactionSemanticValidityException(s"insufficient funds for gas * price + value: address ${sender.checksumAddress()} have $have want $want")
     }
     // allocate gas for this transaction
     // TODO: deduct gas from gasPool of the current block and refund unused gas at the end
     gasPool = new GasPool(gas)
     // prepay effective gas fees
-    subBalance(sender, effectiveFees)
+    subBalance(sender.address(), effectiveFees)
   }
 
   private def refundGas(msg: Message): Unit = {
@@ -201,14 +202,7 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     // TODO: also return remaining gas to the gasPool of the current block so it is available for the next transaction
   }
 
-  def applyMessage(message: Message): Option[ExecutionResult] = {
-    // TODO: some refactoring is required here, applyMessage should include:
-    //  - buying gas
-    //  - validations that the caller has enough funds for everything (gas and value transfer)
-    //  - processing message
-    //  - returning unused gas and refunds
-    //  it should not contain some of the "preCheck" validations though like checking the nonce
-
+  def applyMessage(msg: Message): Option[ExecutionResult] = {
     // First check this message satisfies all consensus rules before
     // applying the message. The rules include these clauses
     //
@@ -219,9 +213,21 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     // 5. there is no overflow when calculating intrinsic gas
     // 6. caller has enough balance to cover asset transfer for **topmost** call
 
-    buyGas(message)
-    val result = messageProcessors.find(_.canProcess(message, this)).map(_.process(message, this))
-    refundGas(message)
+    buyGas(msg)
+
+    // TODO: handle OutOfGasExceptions
+    gasPool.consumeGas(GasCalculator.intrinsicGas(msg.getData, msg.getTo == null))
+
+    val revisionId: Int = stateDb.snapshot()
+
+    val result = messageProcessors.find(_.canProcess(msg, this)).map(_.process(msg, this))
+    result match {
+      case Some(_: ExecutionSucceeded) =>
+      // revert changes in case anything goes wrong
+      case _ => stateDb.revertToSnapshot(revisionId)
+    }
+
+    refundGas(msg)
 
     result
   }
@@ -232,45 +238,34 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
 
     val ethTx = tx.asInstanceOf[EthereumTransaction]
     val txHash = BytesUtils.fromHexString(ethTx.id)
+    val msg = ethTx.asMessage(getBaseFee)
 
-    // Do the checks and prepay gas
-    preCheck(ethTx)
-
-    // Set Tx context for stateDB, to know where to keep EvmLogs
+    // Tx context for stateDB, to know where to keep EvmLogs
     setupTxContext(txHash, txIndex)
 
-    val message: Message = ethTx.asMessage(getBaseFee)
+    // do preliminary checks
+    preCheck(msg)
 
-    // Increase the nonce by 1
-    increaseNonce(message.getFrom.address())
+    // increase the nonce by 1
+    increaseNonce(msg.getFrom.address())
 
-    // Create a snapshot to know where to rollback in case of Message processing failure
-    val revisionId: Int = stateDb.snapshot()
-
-    val consensusDataReceipt: EthereumConsensusDataReceipt = applyMessage(message) match {
-      case Some(success: ExecutionSucceeded) =>
-        val evmLogs = getLogs(txHash)
-        val gasUsed = success.gasUsed()
-        new EthereumConsensusDataReceipt(
-          ethTx.version(), ReceiptStatus.SUCCESSFUL.id, prevCumGasUsed.add(gasUsed), evmLogs)
-
-
-      case Some(failed: ExecutionFailed) =>
-        val evmLogs = getLogs(txHash)
-        stateDb.revertToSnapshot(revisionId)
-        val gasUsed = failed.gasUsed()
-        new EthereumConsensusDataReceipt(
-          ethTx.version(), ReceiptStatus.FAILED.id, prevCumGasUsed.add(gasUsed), evmLogs)
-
+    val consensusDataReceipt = applyMessage(msg) match {
+      case None =>
+        throw new IllegalArgumentException(s"Transaction ${ethTx.id} has no known processor.")
 
       case Some(invalid: InvalidMessage) =>
         throw new Exception(s"Transaction ${ethTx.id} is invalid.", invalid.getReason)
 
-      case None =>
-        throw new IllegalArgumentException(s"Transaction ${ethTx.id} has no known processor.")
+      case Some(result) =>
+        val evmLogs = getLogs(txHash)
+        val gasUsed = result.gasUsed()
+        val status = result match {
+          case _: ExecutionFailed => ReceiptStatus.FAILED.id
+          case _: ExecutionSucceeded => ReceiptStatus.SUCCESSFUL.id
+        }
+        new EthereumConsensusDataReceipt(ethTx.version(), status, prevCumGasUsed.add(gasUsed), evmLogs)
     }
 
-    // todo: refund gas: bookedGasPrice - actualGasPrice
     log.debug(s"Returning consensus data receipt: ${consensusDataReceipt.toString()}")
     consensusDataReceipt
   }
