@@ -182,6 +182,7 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     }
     // allocate gas for this transaction
     // TODO: deduct gas from gasPool of the current block and refund unused gas at the end
+//    blockGasPool.consumeGas(gas)
     gasPool = new GasPool(gas)
     // prepay effective gas fees
     subBalance(sender.address(), effectiveFees)
@@ -199,6 +200,7 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     val remaining = gasPool.getAvailableGas.add(refund).multiply(msg.getGasPrice)
     addBalance(msg.getFrom.address(), remaining)
 
+//    blockGasPool.refundGas(refund)
     // TODO: also return remaining gas to the gasPool of the current block so it is available for the next transaction
   }
 
@@ -215,23 +217,19 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
 
     buyGas(msg)
 
-    try {
-      gasPool.consumeGas(GasCalculator.intrinsicGas(msg.getData, msg.getTo == null))
-      val revisionId: Int = stateDb.snapshot()
+    gasPool.consumeGas(GasCalculator.intrinsicGas(msg.getData, msg.getTo == null))
+    val revisionId: Int = stateDb.snapshot()
 
-      val result = messageProcessors.find(_.canProcess(msg, this)).map(_.process(msg, this))
-      result match {
-        case Some(_: ExecutionSucceeded) =>
-        // revert changes in case anything goes wrong
-        case _ => stateDb.revertToSnapshot(revisionId)
-      }
-
-      refundGas(msg)
-
-      result
-    } catch {
-      case err: OutOfGasException => None
+    val result = messageProcessors.find(_.canProcess(msg, this)).map(_.process(msg, this))
+    result match {
+      case Some(_: ExecutionSucceeded) =>
+      // revert changes in case anything goes wrong
+      case _ => stateDb.revertToSnapshot(revisionId)
     }
+
+    refundGas(msg)
+
+    result
   }
 
   override def applyTransaction(tx: SidechainTypes#SCAT, txIndex: Int, prevCumGasUsed: BigInteger): Try[EthereumConsensusDataReceipt] = Try {
@@ -433,5 +431,6 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
   override def getCode(address: Array[Byte]): Array[Byte] = stateDb.getCode(address)
 
   // TODO: get baseFee for the block
-  override def getBaseFee: BigInteger = BigInteger.valueOf(1000000000)
+  // TODO: currently a non-zero baseFee makes all the python tests fail, because they do not consider spending fees
+  override def getBaseFee: BigInteger = BigInteger.valueOf(0)
 }
