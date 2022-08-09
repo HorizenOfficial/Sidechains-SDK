@@ -1,6 +1,9 @@
 package com.horizen.account.api.rpc.types;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.horizen.account.api.rpc.handler.RpcException;
+import com.horizen.account.api.rpc.utils.RpcCode;
+import com.horizen.account.api.rpc.utils.RpcError;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.state.Message;
 import com.horizen.evm.utils.Address;
@@ -47,9 +50,9 @@ public class TransactionArgs {
      * This method is used in calls and traces that do not require a real live transaction.
      * Reimplementation of the same logic in GETH.
      */
-    public Message toMessage(BigInteger baseFee) {
+    public Message toMessage(BigInteger baseFee) throws RpcException {
         if (gasPrice != null && (maxFeePerGas != null || maxPriorityFeePerGas != null)) {
-            throw new IllegalArgumentException("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified");
+            throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified"));
         }
         // global RPC gas cap (in geth this is a config variable)
         var gasLimit = BigInteger.valueOf(50_000_000);
