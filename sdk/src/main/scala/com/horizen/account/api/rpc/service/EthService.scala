@@ -113,25 +113,21 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
     Numeric.toHexStringWithPrefix(doCall(params, new Quantity("latest")).gasUsed())
   }
 
-  @RpcMethod("eth_blockNumber") def blockNumber = new Quantity(Numeric.toHexStringWithPrefix(BigInteger.valueOf(nodeView.history.getCurrentHeight)))
+  @RpcMethod("eth_blockNumber") def blockNumber = new Quantity(BigInteger.valueOf(nodeView.history.getCurrentHeight))
 
-  @RpcMethod("eth_chainId") def chainId = new Quantity(Numeric.toHexStringWithPrefix(BigInteger.valueOf(networkParams.chainId)))
+  @RpcMethod("eth_chainId") def chainId = new Quantity(BigInteger.valueOf(networkParams.chainId))
 
   @RpcMethod("eth_getBalance") def GetBalance(address: String, tag: Quantity): Quantity = {
     getStateViewAtTag(tag) {
       case None => new Quantity("null")
-      case Some(tagStateView) => new Quantity(
-        Numeric.toHexStringWithPrefix(tagStateView.getBalance(Numeric.hexStringToByteArray(address)))
-      )
+      case Some(tagStateView) => new Quantity(tagStateView.getBalance(Numeric.hexStringToByteArray(address)))
     }
   }
 
   @RpcMethod("eth_getTransactionCount") def getTransactionCount(address: String, tag: Quantity): Quantity = {
     getStateViewAtTag(tag) {
       case None => new Quantity("0x0")
-      case Some(tagStateView) => new Quantity(
-        Numeric.toHexStringWithPrefix(tagStateView.getNonce(Numeric.hexStringToByteArray(address)))
-      )
+      case Some(tagStateView) => new Quantity(tagStateView.getNonce(Numeric.hexStringToByteArray(address)))
     }
   }
 
@@ -158,8 +154,10 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
   @RpcMethod("net_version") def version: String = String.valueOf(networkParams.chainId)
 
   @RpcMethod("eth_gasPrice") def gasPrice: Quantity = {
-    // TODO: Get the real gasPrice later
-    new Quantity("0x3B9ACA00")
+    getStateViewAtTag(new Quantity("latest")) {
+      case None => new Quantity("0x0")
+      case Some(tagStateView) => new Quantity(tagStateView.getBaseFee)
+    }
   }
 
   private def getTransactionAndReceipt[A](transactionHash: String)(f: (EthereumTransaction, EthereumReceipt) => A) = {

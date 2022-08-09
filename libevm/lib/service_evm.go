@@ -139,12 +139,6 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		contractCreation = params.To == nil
 	)
 
-	// Check clause 6
-	// TODO: do we need this here?
-	//if msg.Value().Sign() > 0 && !evm.Context.CanTransfer(statedb, msg.From(), msg.Value()) {
-	//	return fmt.Errorf("%w: address %v", core.ErrInsufficientFundsForTransfer, msg.From().Hex()), nil
-	//}
-
 	// Set up the initial access list.
 	if rules := evm.ChainConfig().Rules(evm.Context.BlockNumber, evm.Context.Random != nil); rules.IsBerlin {
 		statedb.PrepareAccessList(params.From, params.To, vm.ActivePrecompiles(rules), params.AccessList)

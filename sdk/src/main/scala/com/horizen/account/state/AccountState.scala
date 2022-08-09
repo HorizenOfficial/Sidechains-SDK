@@ -387,8 +387,11 @@ class AccountState(val params: NetworkParams,
     }
   }
 
-  // TODO: get baseFee for the block
-  override def getBaseFee: BigInteger = BigInteger.ZERO
+  override def getBaseFee: BigInteger = {
+    using(getView) { view =>
+      view.getBaseFee
+    }
+  }
 
   override def validate(tx: SidechainTypes#SCAT): Try[Unit] = Try {
     tx.semanticValidity()

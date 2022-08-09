@@ -432,5 +432,5 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
   override def getCode(address: Array[Byte]): Array[Byte] = stateDb.getCode(address)
 
   // TODO: get baseFee for the block
-  override def getBaseFee: BigInteger = BigInteger.ZERO
+  override def getBaseFee: BigInteger = BigInteger.valueOf(1000000000)
 }
