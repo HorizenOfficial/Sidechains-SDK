@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
+import logging
 from netrc import netrc
-
 from SidechainTestFramework.sc_boostrap_info import SCNetworkConfiguration, SCBootstrapInfo, \
     LARGE_WITHDRAWAL_EPOCH_LENGTH
 from test_framework.test_framework import BitcoinTestFramework
@@ -20,7 +20,6 @@ import sys
 import shutil
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
-
 from SidechainTestFramework.scutil import LEVEL_ERROR, LEVEL_DEBUG
 
 '''
@@ -104,6 +103,23 @@ class SidechainTestFramework(BitcoinTestFramework):
     def run_test(self):
         pass
 
+    def setup_logger(self,  options):
+        logfile = os.path.abspath(os.path.join(os.path.dirname(__file__), '../', 'sc_test.log'))
+        filehandler = logging.FileHandler(logfile, "a+")
+        streamhandler = logging.StreamHandler()
+
+        if self.options.trace_rpc:
+            filehandler.setLevel(logging.DEBUG)
+            streamhandler.setLevel(logging.DEBUG)
+        else:
+            filehandler.setLevel(options.logfilelevel.upper())
+            streamhandler.setLevel(options.logconsolelevel.upper())
+
+        logging.basicConfig(format="[%(asctime)s] : [%(levelname)s] : %(message)s",
+                            handlers=[filehandler, streamhandler],
+                            level=logging.DEBUG
+                            )
+
     def main(self):
         import optparse
 
@@ -114,7 +130,8 @@ class SidechainTestFramework(BitcoinTestFramework):
                           help="Don't stop bitcoinds after the test execution")
         parser.add_option("--zendir", dest="zendir", default="ZenCore/src",
                           help="Source directory containing zend/zen-cli (default: %default)")
-        parser.add_option("--scjarpath", dest="scjarpath", default="../examples/simpleapp/target/sidechains-sdk-simpleapp-0.5.0-SNAPSHOT.jar;../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp", #New option. Main class path won't be needed in future
+        examples_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', 'examples'))
+        parser.add_option("--scjarpath", dest="scjarpath", default=f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-0.5.0-SNAPSHOT.jar;{examples_dir}/simpleapp/target/lib/* com.horizen.examples.SimpleApp", #New option. Main class path won't be needed in future
                           help="Directory containing .jar file for SC (default: %default)")
         parser.add_option("--tmpdir", dest="tmpdir", default=tempfile.mkdtemp(prefix="sc_test"),
                           help="Root directory for datadirs")
@@ -130,10 +147,7 @@ class SidechainTestFramework(BitcoinTestFramework):
         self.add_options(parser)
         self.sc_add_options(parser)
         (self.options, self.args) = parser.parse_args()
-
-        if self.options.trace_rpc:
-            import logging
-            logging.basicConfig(level=logging.DEBUG)
+        self.setup_logger(self.options)
 
         os.environ['PATH'] = self.options.zendir+":"+os.environ['PATH']
 
@@ -144,7 +158,7 @@ class SidechainTestFramework(BitcoinTestFramework):
             if not os.path.isdir(self.options.tmpdir):
                 os.makedirs(self.options.tmpdir)
 
-            print("Initializing test directory "+self.options.tmpdir)
+            logging.info("Initializing test directory "+self.options.tmpdir)
 
             self.setup_chain()
 
@@ -159,41 +173,41 @@ class SidechainTestFramework(BitcoinTestFramework):
             success = True
 
         except JSONRPCException as e:
-            print("JSONRPC error: "+e.error['message'])
+            logging.error("JSONRPC error: "+e.error['message'])
             traceback.print_tb(sys.exc_info()[2])
         except SCAPIException as e: #New exception for SC API
-            print("SCAPI error: "+e.error)
+            logging.error("SCAPI error: "+e.error)
             traceback.print_tb(sys.exc_info()[2])
         except TimeoutException as e:
-            print("Timeout while: " + e.operation) #Timeout for SC Operations
+            logging.error("Timeout while: " + e.operation) #Timeout for SC Operations
             traceback.print_tb(sys.exc_info()[2])
         except AssertionError as msg:
-            print("Assertion failed: " + str(msg))
+            logging.error("Assertion failed: " + str(msg))
             traceback.print_tb(sys.exc_info()[2])
         except Exception as e:
-            print("Unexpected exception caught during testing: "+str(e))
+            logging.error("Unexpected exception caught during testing: "+str(e))
             traceback.print_tb(sys.exc_info()[2])
 
         if not self.options.noshutdown: #Support for tests with MC only, SC only, MC/SC
             if hasattr(self,"sc_nodes"):
-                print("Stopping SC nodes")
+                logging.info("Stopping SC nodes")
                 stop_sc_nodes(self.sc_nodes)
             if hasattr(self, "nodes"):
-                print("Stopping MC nodes")
+                logging.info("Stopping MC nodes")
                 stop_nodes(self.nodes)
                 wait_bitcoinds()
         else:
-            print("Note: client processes were not stopped and may still be running")
+            logging.info("Note: client processes were not stopped and may still be running")
 
         if not self.options.nocleanup and not self.options.noshutdown:
-            print("Cleaning up")
+            logging.info("Cleaning up")
             shutil.rmtree(self.options.tmpdir)
 
         if success:
-            print("Test successful")
+            logging.info("Test successful")
             sys.exit(0)
         else:
-            print("Failed")
+            logging.error("Failed")
             sys.exit(1)
 
 '''Support for running MC & SC Nodes with different binaries. 

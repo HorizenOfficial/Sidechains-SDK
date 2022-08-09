@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import logging
 import pprint
 import time
 
@@ -55,27 +55,27 @@ class SCGenesisInfoScVersions(SidechainTestFramework):
         ret = create_alien_sidechain(self.mcTest, mc_node, scVersion=0, epochLength=10, customHexTag="5c00", feCfgList=[16])
         self.scid0_ver0 = ret['scid']
         self.crtx0 = ret['txid']
-        print("scid = {}".format(self.scid0_ver0))
+        logging.info("scid = {}".format(self.scid0_ver0))
         time.sleep(1)
 
         ret = create_alien_sidechain(self.mcTest, mc_node, scVersion=1, epochLength=10, customHexTag="5c01", feCfgList=[16])
         self.scid0_ver1 = ret['scid']
         self.crtx1 = ret['txid']
-        print("scid = {}".format(self.scid0_ver1))
+        logging.info("scid = {}".format(self.scid0_ver1))
         time.sleep(1)
 
         mc_node.generate(10)
 
         cert = create_certificate_for_alien_sc(self.mcTest, self.scid0_ver0, mc_node, fePatternArray=["003f"]) # b'00111111'
-        print("cert = {}".format(cert))
+        logging.info("cert = {}".format(cert))
         time.sleep(1)
 
         cert = create_certificate_for_alien_sc(self.mcTest, self.scid0_ver1, mc_node, fePatternArray=["003f"]) # b'00111111'
-        print("cert = {}".format(cert))
+        logging.info("cert = {}".format(cert))
         time.sleep(1)
 
-        print("Mc height = {}".format(mc_node.getblockcount()))
-        print("MC mempool content: {}".format(mc_node.getrawmempool()))
+        logging.info("Mc height = {}".format(mc_node.getblockcount()))
+        logging.info("MC mempool content: {}".format(mc_node.getrawmempool()))
         #----------------------------------------
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
 
@@ -92,9 +92,9 @@ class SCGenesisInfoScVersions(SidechainTestFramework):
 
         bheight = mc_node.getblockcount()
         bhex    = mc_node.getblock(str(bheight))
-        print("Mc height = {}".format(bheight))
-        print("Mc block txs   = {}".format(bhex['tx']))
-        print("Mc block certs = {}".format(bhex['cert']))
+        logging.info("Mc height = {}".format(bheight))
+        logging.info("Mc block txs   = {}".format(bhex['tx']))
+        logging.info("Mc block certs = {}".format(bhex['cert']))
         # check we have 2 transactions (coinbase + this sc creation tx) and 2 certificates for the alien sidechains
         # in the same block
         assert_equal(2, len(bhex["tx"]), "MC block expected to contain 2 transactions.")
@@ -123,10 +123,10 @@ class SCGenesisInfoScVersions(SidechainTestFramework):
 
         # Generate 8 more MC block to finish the first withdrawal epoch, then generate 1 more SC block to sync with MC.
         we0_end_mcblock_hash = mc_node.generate(8)[7]
-        print("End mc block hash in withdrawal epoch 0 = " + we0_end_mcblock_hash)
+        logging.info("End mc block hash in withdrawal epoch 0 = " + we0_end_mcblock_hash)
         we0_end_mcblock_json = mc_node.getblock(we0_end_mcblock_hash)
         we0_end_epoch_cum_sc_tx_comm_tree_root = we0_end_mcblock_json["scCumTreeHash"]
-        print("End cum sc tx commtree root hash in withdrawal epoch 0 = " + we0_end_epoch_cum_sc_tx_comm_tree_root)
+        logging.info("End cum sc tx commtree root hash in withdrawal epoch 0 = " + we0_end_epoch_cum_sc_tx_comm_tree_root)
         scblock_id2 = generate_next_block(sc_node, "first node")
         check_mcreferencedata_presence(we0_end_mcblock_hash, scblock_id2, sc_node)
 
@@ -152,7 +152,7 @@ class SCGenesisInfoScVersions(SidechainTestFramework):
         # Wait until Certificate will appear in MC node mempool
         time.sleep(10)
         while mc_node.getmempoolinfo()["size"] == 0 and sc_node.submitter_isCertGenerationActive()["result"]["state"]:
-            print("Wait for certificate in mc mempool...")
+            logging.info("Wait for certificate in mc mempool...")
             time.sleep(2)
             sc_node.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
@@ -179,7 +179,7 @@ class SCGenesisInfoScVersions(SidechainTestFramework):
         assert_equal(5, len(mc_node.getblock(we1_2_mcblock_hash)["cert"]), "MC block expected to contain 5 Certificates.")
 
         #assert_equal(we0_certHash, mc_node.getblock(we1_2_mcblock_hash)["cert"][0], "MC block expected to contain certificate.")
-        print("MC block with withdrawal certificates = {0}\n".format(str(mc_node.getblock(we1_2_mcblock_hash, False))))
+        logging.info("MC block with withdrawal certificates = {0}\n".format(str(mc_node.getblock(we1_2_mcblock_hash, False))))
 
         #input("-----------")
         # Generate SC block and verify that certificate is synced back

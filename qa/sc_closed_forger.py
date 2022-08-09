@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import logging
+
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_true, initialize_chain_clean, start_nodes, connect_nodes_bi, websocket_port_by_mc_node_index, forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import generate_secrets, start_sc_nodes, generate_next_blocks, bootstrap_sidechain_nodes, generate_secrets, generate_vrf_secrets
@@ -70,35 +72,35 @@ class SidechainClosedForgerTest(SidechainTestFramework):
         self.sc_sync_all()
 
         # Try to stake to an invalid blockSignProposition
-        print("Try to stake to an invalid blockSignProposition...")
+        logging.info("Try to stake to an invalid blockSignProposition...")
         new_public_key = http_wallet_createPrivateKey25519(self.sc_nodes[0])
         new_vrf_public_key = http_wallet_createVrfSecret(sc_node1)
         result = makeForgerStake(self.sc_nodes[0], self.allowed_forger_proposition, new_public_key, self.allowed_forger_vrf_public_key, forger_amount, sc_fee)
-        print(result)
+        logging.info(result)
         assert_true('error' in result)
         assert_true('This publicKey is not allowed to forge' in result['error']['detail'])
-        print("Ok!")
+        logging.info("Ok!")
 
         # Try to stake to an invalid vrfPublicKey
-        print("Try to stake to an invalid vrfPublicKey...")
+        logging.info("Try to stake to an invalid vrfPublicKey...")
         result = makeForgerStake(self.sc_nodes[0], self.allowed_forger_proposition, self.allowed_forger_proposition, new_vrf_public_key, forger_amount, sc_fee)
-        print(result)
+        logging.info(result)
         assert_true('error' in result)
         assert_true('This publicKey is not allowed to forge' in result['error']['detail'])
-        print("Ok!")
+        logging.info("Ok!")
 
         # Try to stake with an invalid blockSignProposition and an invalid vrfPublicKey
-        print("Try to stake to an invalid vrfPublicKey...")
+        logging.info("Try to stake to an invalid vrfPublicKey...")
         result = makeForgerStake(self.sc_nodes[0], self.allowed_forger_proposition, new_public_key, new_vrf_public_key, forger_amount, sc_fee)
-        print(result)
+        logging.info(result)
         assert_true('error' in result)
         assert_true('This publicKey is not allowed to forge' in result['error']['detail'])
-        print("Ok!")
+        logging.info("Ok!")
 
         # Try to stake with a valid blockSignProposition and a valid vrfPublickey
-        print("Try to stake with a valid blockSignProposition and a valid vrfPublickey")
+        logging.info("Try to stake with a valid blockSignProposition and a valid vrfPublickey")
         result = makeForgerStake(self.sc_nodes[0], self.allowed_forger_proposition, self.allowed_forger_proposition, self.allowed_forger_vrf_public_key, forger_amount, sc_fee)
-        print(result)
+        logging.info(result)
         assert_true('result' in result)
         assert_true('transactionId' in result['result'])
 

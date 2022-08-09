@@ -1,4 +1,5 @@
 #!/usr/bin/env python2
+import logging
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -67,9 +68,9 @@ class SCNodeResponseAlongSync(SidechainTestFramework):
     def run_test(self):
         mc_nodes = self.nodes
         sc_nodes = self.sc_nodes
-        print("Number of started mc nodes: {0}".format(len(mc_nodes), "The number of MC nodes is not {0}.".format(
+        logging.info("Number of started mc nodes: {0}".format(len(mc_nodes), "The number of MC nodes is not {0}.".format(
             self.number_of_mc_nodes)))
-        print("Number of started sc nodes: {0}".format(len(sc_nodes), "The number of SC nodes is not {0}.".format(
+        logging.info("Number of started sc nodes: {0}".format(len(sc_nodes), "The number of SC nodes is not {0}.".format(
             self.number_of_sidechain_nodes)))
 
         sc_node1 = self.sc_nodes[0]
@@ -77,38 +78,38 @@ class SCNodeResponseAlongSync(SidechainTestFramework):
         sc_node2 = self.sc_nodes[1]
 
         blocks_numb = BLOCKS_TO_FORGE
-        print("gonna forge " + str(blocks_numb) + " blocks")
+        logging.info("gonna forge " + str(blocks_numb) + " blocks")
         generate_next_blocks(sc_node1, node1Name, blocks_numb)
         best1 = sc_node1.block_best()['result']['block']['id']
         best2_0 = sc_node2.block_best()['result']['block']['id']
-        print("best 1 - best 2_0")
-        print(best1)
-        print(best2_0)
+        logging.info("best 1 - best 2_0")
+        logging.info(best1)
+        logging.info(best2_0)
 
         assert_not_equal(best1, best2_0, "They are same already, quite weird")
 
-        print("connecting the two nodes...")
+        logging.info("connecting the two nodes...")
         connect_sc_nodes(sc_node1, 1)
-        print("sleep 5 seconds to let it start Sync ...")
+        logging.info("sleep 5 seconds to let it start Sync ...")
         time.sleep(5)
 
         best2_1 = (sc_node2.block_best()['result']['block']['id'])
-        print("Middle check")
-        print("best 1: " + best1)
-        print("best 2_0: " + best2_0)
-        print("best 2_1: " + best2_1)
+        logging.info("Middle check")
+        logging.info("best 1: " + best1)
+        logging.info("best 2_0: " + best2_0)
+        logging.info("best 2_1: " + best2_1)
         assert_not_equal(best2_1, best2_0, "Sync has not started")
         assert_not_equal(best2_1, best1, " Too fast to synchronize, they are already sync")  # try to add more block??
-        print("Middle check passed")
+        logging.info("Middle check passed")
 
         assert_equal(True, sc_node1.submitter_isCertificateSubmitterEnabled()["result"]["enabled"])
         assert_equal(True, sc_node1.submitter_isCertificateSubmitterEnabled()["result"]["enabled"])
         sync_sc_blocks(self.sc_nodes, 200, True)
         best2_2 = (sc_node2.block_best()['result']['block']['id'])
-        print("Final check")
-        print("best 1" + best1)
-        print("best 1_1:" + sc_node1.block_best()['result']['block']['id'])
-        print("best 2_2:" + best2_2)
+        logging.info("Final check")
+        logging.info("best 1" + best1)
+        logging.info("best 1_1:" + sc_node1.block_best()['result']['block']['id'])
+        logging.info("best 2_2:" + best2_2)
 
         assert_equal(best1, best2_2, "best 1 should be like best 2 at the end of synchronization")
 

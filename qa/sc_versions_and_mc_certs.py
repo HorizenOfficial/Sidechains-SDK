@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import logging
 import pprint
 import time
 
@@ -55,7 +55,7 @@ class SCVersionsAndMCCertificates(SidechainTestFramework):
         mc_node = self.nodes[0]
         sc_node = self.sc_nodes[0]
 
-        print("Mc height = {}".format(mc_node.getblockcount()))
+        logging.info("Mc height = {}".format(mc_node.getblockcount()))
         self.mcTest = CertTestUtils(self.options.tmpdir)
 
         ret = create_alien_sidechain(self.mcTest, mc_node, scVersion=0, epochLength=self.sc_withdrawal_epoch_length-1, customHexTag="5c00", feCfgList=[128, 128])
@@ -79,10 +79,10 @@ class SCVersionsAndMCCertificates(SidechainTestFramework):
 
         # Generate 8 more MC block to finish the first withdrawal epoch, then generate 1 more SC block to sync with MC.
         we0_end_mcblock_hash = mc_node.generate(8)[7]
-        print("End mc block hash in withdrawal epoch 0 = " + we0_end_mcblock_hash)
+        logging.info("End mc block hash in withdrawal epoch 0 = " + we0_end_mcblock_hash)
         we0_end_mcblock_json = mc_node.getblock(we0_end_mcblock_hash)
         we0_end_epoch_cum_sc_tx_comm_tree_root = we0_end_mcblock_json["scCumTreeHash"]
-        print("End cum sc tx commtree root hash in withdrawal epoch 0 = " + we0_end_epoch_cum_sc_tx_comm_tree_root)
+        logging.info("End cum sc tx commtree root hash in withdrawal epoch 0 = " + we0_end_epoch_cum_sc_tx_comm_tree_root)
         scblock_id2 = generate_next_block(sc_node, "first node")
         check_mcreferencedata_presence(we0_end_mcblock_hash, scblock_id2, sc_node)
 
@@ -107,7 +107,7 @@ class SCVersionsAndMCCertificates(SidechainTestFramework):
         # Wait until Certificate will appear in MC node mempool
         time.sleep(10)
         while mc_node.getmempoolinfo()["size"] == 0 and sc_node.submitter_isCertGenerationActive()["result"]["state"]:
-            print("Wait for certificate in mc mempool...")
+            logging.info("Wait for certificate in mc mempool...")
             time.sleep(2)
             sc_node.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
@@ -132,7 +132,7 @@ class SCVersionsAndMCCertificates(SidechainTestFramework):
         assert_equal(1, len(mc_node.getblock(we1_2_mcblock_hash)["tx"]), "MC block expected to contain 1 transaction (the coinbase only).")
         assert_equal(3, len(mc_node.getblock(we1_2_mcblock_hash)["cert"]), "MC block expected to contain 3 Certificates.")
 
-        print("MC block with withdrawal certificates for epoch 0 = {0}\n".format(str(mc_node.getblock(we1_2_mcblock_hash, False))))
+        logging.info("MC block with withdrawal certificates for epoch 0 = {0}\n".format(str(mc_node.getblock(we1_2_mcblock_hash, False))))
 
         # Generate SC block and verify that certificate is synced back
         scblock_id4 = generate_next_blocks(sc_node, "first node", 1)[0]

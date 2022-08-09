@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import logging
+
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_true, assert_equal
 from SidechainTestFramework.scutil import connect_sc_nodes, sc_p2p_port, initialize_default_sc_chain_clean, start_sc_nodes, wait_for_next_sc_blocks
@@ -29,7 +31,7 @@ class SidechainNodesInitializationTest(SidechainTestFramework):
     def sc_setup_network(self, split = False):
         self.sc_nodes = self.sc_setup_nodes()
         #Connect nodes together
-        print("Connecting node0, node1 and node2...")
+        logging.info("Connecting node0, node1 and node2...")
         connect_sc_nodes(self.sc_nodes[0], 1) #In Scorex, it is just needed to call connect on one of the two
         connect_sc_nodes(self.sc_nodes[1], 2)
         connect_sc_nodes(self.sc_nodes[0], 2)
@@ -39,18 +41,18 @@ class SidechainNodesInitializationTest(SidechainTestFramework):
         return start_sc_nodes(3, self.options.tmpdir)
     
     def check_connections(self, node, nodename, other_nodes):
-        print("Checking connections for {0}...".format(nodename))
+        logging.info("Checking connections for {0}...".format(nodename))
         peers_node = []
         for peer in node.node_connectedPeers()["result"]["peers"]:
             peers_node.append(peer["name"])
-        print("-->Peers connected to {0}: {1}".format(nodename, json.dumps(peers_node)))
+        logging.info("-->Peers connected to {0}: {1}".format(nodename, json.dumps(peers_node)))
         for other_node in other_nodes:
             assert_true(other_node in peers_node, "{0} not connected to {1}".format(other_node, nodename))
-        print("OK\n")
+        logging.info("OK\n")
         
     def check_genesis_balances(self, node, nodename, expected_keys_count, expected_boxes_count):
-        print("Genesis checks for {0}...".format(nodename))
-        print("-->Checking that each public key has a box assigned with a non-zero value... ")
+        logging.info("Genesis checks for {0}...".format(nodename))
+        logging.info("-->Checking that each public key has a box assigned with a non-zero value... ")
 
         responce = node.wallet_allPublicKeys()
         public_keys = responce["result"]["propositions"]
@@ -70,10 +72,10 @@ class SidechainNodesInitializationTest(SidechainTestFramework):
                     assert_true(box["value"] > 0, "Non positive value for box: {0} with public key: {1}".format(box["id"], key))
                     break
             assert_true(target is not None, "Box related to public key: {0} not found".format(key))
-        print("-->Checking genesis balance...")
+        logging.info("-->Checking genesis balance...")
         assert_equal(10000000000, int(balance["balance"]), "Unexpected balance")
-        print("-->Total balance: {0}".format(json.dumps(balance["balance"])))
-        print("OK\n")
+        logging.info("-->Total balance: {0}".format(json.dumps(balance["balance"])))
+        logging.info("OK\n")
     
     def run_test(self):
         node0name = "node0"
