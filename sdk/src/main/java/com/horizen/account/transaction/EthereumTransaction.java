@@ -341,11 +341,11 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                 "EthereumTransaction{from=%s, nonce=%s, gasPrice=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
                         "Signature=%s}",
                 getFromAddress(),
-                Numeric.toHexStringWithPrefix(this.getNonce()),
-                Numeric.toHexStringWithPrefix(this.getGasPrice()),
-                Numeric.toHexStringWithPrefix(this.getGasLimit()),
-                this.getTo() != null ? this.getTo() : "0x",
-                Numeric.toHexStringWithPrefix(this.getValue()),
+                Numeric.toHexStringWithPrefix(this.getNonce() != null ? this.getNonce() : BigInteger.ZERO),
+                Numeric.toHexStringWithPrefix(this.getGasPrice() != null ? this.getGasPrice() : BigInteger.ZERO),
+                Numeric.toHexStringWithPrefix(this.getGasLimit() != null ? this.getGasLimit() : BigInteger.ZERO),
+                this.getToAddress() != null ? this.getToAddress() : "0x",
+                Numeric.toHexStringWithPrefix(this.getValue() != null ? this.getValue() : BigInteger.ZERO),
                 this.getData() != null ? Numeric.toHexString(this.getData()) : "",
                 isSigned() ? new SignatureSecp256k1(getSignatureData()).toString() : ""
         );

@@ -72,4 +72,22 @@ public class TransactionArgs {
         }
         return null;
     }
+
+    @Override
+    public String toString() {
+        return "TransactionArgs{" +
+                "type=" + (type != null ? type.toString() : "empty") +
+                ", from=" + (from != null ? from.toString() : "empty") +
+                ", to=" + (to != null ? to.toString() : "empty") +
+                ", gas=" + (gas != null ? gas.toString() : "empty") +
+                ", gasPrice=" + (gasPrice != null ? gasPrice.toString() : "empty") +
+                ", maxFeePerGas=" + (maxFeePerGas != null ? maxFeePerGas.toString() : "empty") +
+                ", maxPriorityFeePerGas=" + (maxPriorityFeePerGas != null ? maxPriorityFeePerGas.toString() : "empty") +
+                ", value=" + (value != null ? value.toString() : "empty") +
+                ", nonce=" + (nonce != null ? nonce.toString() : "empty") +
+                ", data='" + (data != null ? data : "empty") + '\'' +
+                ", input='" + (input != null ? input : "empty") + '\'' +
+                ", chainId=" + (chainId != null ? chainId.toString() : "empty") +
+                '}';
+    }
 }

@@ -326,7 +326,7 @@ class SmartContract:
                                     data: str = None, max_priority_fee_per_gas: int = None, max_fee_per_gas: int = None,
                                     chain_id: str):
         r = {
-            "type": 0,
+            "type": 2,
             "nonce": nonce,
             "gas": gas,
             "value": value,
