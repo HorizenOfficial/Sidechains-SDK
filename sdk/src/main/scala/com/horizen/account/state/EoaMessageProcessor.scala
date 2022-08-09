@@ -23,22 +23,20 @@ object EoaMessageProcessor extends MessageProcessor with ScorexLogging {
 
   override def process(msg: Message, view: BaseAccountStateView): ExecutionResult = {
 
-    val gasUsed = GasCalculator.intrinsicGas(msg.getData, isContractCreation = false)
-
     view.subBalance(msg.getFrom.address(), msg.getValue) match {
       case Failure(reason) =>
         log.error(s"Unable to subtract ${msg.getValue} wei from ${msg.getFrom}", reason)
-        return new ExecutionFailed(gasUsed, new Exception(reason))
+        return new ExecutionFailed(new Exception(reason))
       case _ => // do nothing
     }
 
     view.addBalance(msg.getTo.address(), msg.getValue) match {
       case Failure(reason) =>
         log.error(s"Unable to add ${msg.getValue} wei to ${msg.getTo}", reason)
-        return new ExecutionFailed(gasUsed, new Exception(reason))
+        return new ExecutionFailed(new Exception(reason))
       case _ => // do nothing
     }
 
-    new ExecutionSucceeded(gasUsed, Array.emptyByteArray)
+    new ExecutionSucceeded(Array.emptyByteArray)
   }
 }

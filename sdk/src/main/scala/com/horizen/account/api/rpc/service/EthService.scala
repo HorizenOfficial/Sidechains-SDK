@@ -79,11 +79,11 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
     }
   }
 
-  private def doCall(params: TransactionArgs, tag: Quantity) = {
+  private def doCall[A](params: TransactionArgs, tag: Quantity)(fun: (ExecutionSucceeded, AccountStateView) ⇒ A): A = {
     getStateViewAtTag(tag) {
       case None => throw new IllegalArgumentException(s"Unable to get state for given tag: ${tag.getValue}")
       case Some(tagStateView) => tagStateView.applyMessage(params.toMessage(tagStateView.getBaseFee)) match {
-          case Some(success: ExecutionSucceeded) => success
+          case Some(success: ExecutionSucceeded) => fun(success, tagStateView)
 
           case Some(failed: ExecutionFailed) =>
             // throw on execution errors, also include evm revert reason if possible
@@ -102,15 +102,15 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
   }
 
   @RpcMethod("eth_call") def call(params: TransactionArgs, tag: Quantity): String = {
-    val result = doCall(params, tag)
-    if (result.hasReturnData)
-      Numeric.toHexString(result.returnData)
-    else
-      null
+    doCall(params, tag) {
+      (result, _) => if (result.hasReturnData) Numeric.toHexString(result.returnData) else null
+    }
   }
 
   @RpcMethod("eth_estimateGas") def estimateGas(params: TransactionArgs /*, tag: Quantity*/): String = {
-    Numeric.toHexStringWithPrefix(doCall(params, new Quantity("latest")).gasUsed())
+    doCall(params, new Quantity("latest")) {
+      (_, view) => Numeric.toHexStringWithPrefix(view.getGasPool.getUsedGas)
+    }
   }
 
   @RpcMethod("eth_blockNumber") def blockNumber = new Quantity(BigInteger.valueOf(nodeView.history.getCurrentHeight))

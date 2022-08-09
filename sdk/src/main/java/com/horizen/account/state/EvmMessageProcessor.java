@@ -45,10 +45,13 @@ public class EvmMessageProcessor implements MessageProcessor {
                     msg.getGasPrice(),
                     context
             );
+            // consume gas the EVM has used:
+            // the EVM will never consume more gas than is available, hence this should never throw
+            view.getGasPool().consumeGas(result.usedGas);
             if (result.evmError.isEmpty()) {
-                return new ExecutionSucceeded(result.usedGas, result.returnData);
+                return new ExecutionSucceeded(result.returnData);
             }
-            return new ExecutionFailed(result.usedGas, new EvmException(result.evmError, result.returnData));
+            return new ExecutionFailed(new EvmException(result.evmError, result.returnData));
         } catch (Exception err) {
             return new InvalidMessage(err);
         }

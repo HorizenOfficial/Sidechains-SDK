@@ -13,5 +13,5 @@ public interface MessageProcessor {
     // * ExecutionSucceeded(BigInteger gasUsed, byte[] returnData) -> if was applied as expected
     // * ExecutionFailed(BigInteger gasUsed, Exception reason) -> if was executed, but marked as "failed"
     // * InvalidMessage(Exception reason) -> if is invalid -> block is invalid
-    ExecutionResult process(Message msg, BaseAccountStateView view);
+    ExecutionResult process(Message msg, BaseAccountStateView view) throws OutOfGasException;
 }

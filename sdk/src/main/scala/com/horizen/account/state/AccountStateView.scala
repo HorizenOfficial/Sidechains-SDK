@@ -215,21 +215,23 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
 
     buyGas(msg)
 
-    // TODO: handle OutOfGasExceptions
-    gasPool.consumeGas(GasCalculator.intrinsicGas(msg.getData, msg.getTo == null))
+    try {
+      gasPool.consumeGas(GasCalculator.intrinsicGas(msg.getData, msg.getTo == null))
+      val revisionId: Int = stateDb.snapshot()
 
-    val revisionId: Int = stateDb.snapshot()
+      val result = messageProcessors.find(_.canProcess(msg, this)).map(_.process(msg, this))
+      result match {
+        case Some(_: ExecutionSucceeded) =>
+        // revert changes in case anything goes wrong
+        case _ => stateDb.revertToSnapshot(revisionId)
+      }
 
-    val result = messageProcessors.find(_.canProcess(msg, this)).map(_.process(msg, this))
-    result match {
-      case Some(_: ExecutionSucceeded) =>
-      // revert changes in case anything goes wrong
-      case _ => stateDb.revertToSnapshot(revisionId)
+      refundGas(msg)
+
+      result
+    } catch {
+      case err: OutOfGasException => None
     }
-
-    refundGas(msg)
-
-    result
   }
 
   override def applyTransaction(tx: SidechainTypes#SCAT, txIndex: Int, prevCumGasUsed: BigInteger): Try[EthereumConsensusDataReceipt] = Try {
@@ -258,12 +260,11 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
 
       case Some(result) =>
         val evmLogs = getLogs(txHash)
-        val gasUsed = result.gasUsed()
         val status = result match {
           case _: ExecutionFailed => ReceiptStatus.FAILED.id
           case _: ExecutionSucceeded => ReceiptStatus.SUCCESSFUL.id
         }
-        new EthereumConsensusDataReceipt(ethTx.version(), status, prevCumGasUsed.add(gasUsed), evmLogs)
+        new EthereumConsensusDataReceipt(ethTx.version(), status, prevCumGasUsed.add(gasPool.getUsedGas), evmLogs)
     }
 
     log.debug(s"Returning consensus data receipt: ${consensusDataReceipt.toString()}")

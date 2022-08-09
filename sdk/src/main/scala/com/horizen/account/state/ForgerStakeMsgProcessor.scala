@@ -257,14 +257,14 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     if (!isValidZenAmount(msg.getValue)) {
       val msgStr = s"Value is not a legal wei amount: ${msg.getValue.toString()}"
       log.debug(msgStr)
-      return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(msgStr))
+      return new ExecutionFailed(new IllegalArgumentException(msgStr))
     }
 
     // check also that sender account exists (unless we are staking in the sc creation phase)
     if (!isGenesisScCreation && !view.accountExists(msg.getFrom.address())) {
       val msgStr = s"Sender account does not exist: ${msg.getFrom.toString}"
       log.debug(msgStr)
-      return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(msgStr))
+      return new ExecutionFailed(new IllegalArgumentException(msgStr))
     }
 
     val inputParams = getArgumentsFromData(msg.getData)
@@ -274,7 +274,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
       case Failure(exception) =>
         val msgStr = "Error while parsing cmd input"
         log.debug(msgStr, exception)
-        return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(msgStr))
+        return new ExecutionFailed(new IllegalArgumentException(msgStr))
     }
 
     val blockSignPublicKey: PublicKey25519Proposition = cmdInput.forgerPublicKeys.blockSignPublicKey
@@ -287,7 +287,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
       if (!networkParams.allowedForgersList.contains((blockSignPublicKey, vrfPublicKey))) {
         val msgStr = "Forger is not in the allowed list"
         log.debug(msgStr)
-        return new ExecutionFailed(AddNewStakeGasPaidValue, new Exception(msgStr))
+        return new ExecutionFailed(new Exception(msgStr))
       }
     }
 
@@ -298,7 +298,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     if (existsStakeData(view, newStakeId)) {
       val msgStr = s"Stake ${BytesUtils.toHexString(newStakeId)} already in stateDb"
       log.error(msgStr)
-      return new ExecutionFailed(AddNewStakeGasPaidValue, new Exception(msgStr))
+      return new ExecutionFailed(new Exception(msgStr))
     }
 
     // add the obj to stateDb
@@ -312,12 +312,10 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
 
 
     if (isGenesisScCreation) {
-      // no gas paid here
-
       // increase the balance of the "forger stake smart contract” account
       view.addBalance(fakeSmartContractAddress.address(), stakedAmount).get
 
-      new ExecutionSucceeded(BigInteger.ZERO, newStakeId)
+      new ExecutionSucceeded(newStakeId)
 
     } else {
       // decrease the balance of `from` account by `tx.value`
@@ -330,12 +328,12 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
           //view.addLog(new EvmLog concrete instance) // EvmLog will be used internally
 
           // Maybe result is not useful in case of success execution (used probably for RPC commands only)
-          new ExecutionSucceeded(AddNewStakeGasPaidValue, newStakeId)
+          new ExecutionSucceeded(newStakeId)
 
         case Failure(e) =>
           val balance = view.getBalance(msg.getFrom.address())
           log.debug(s"Could not subtract $stakedAmount from account: current balance = $balance")
-          new ExecutionFailed(AddNewStakeGasPaidValue, new Exception(e))
+          new ExecutionFailed(new Exception(e))
       }
     }
   }
@@ -369,7 +367,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     val stakeList = getListOfForgerRecords(view)
 
     val listOfForgers = AccountForgingStakeInfoListEncoder.encode(stakeList.asJava)
-    new ExecutionSucceeded(GetListOfForgersGasPaidValue, listOfForgers)
+    new ExecutionSucceeded(listOfForgers)
   }
 
   def doGetListOfForgersCmd(msg: Message, view: BaseAccountStateView): ExecutionResult = {
@@ -379,7 +377,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     catch {
       case e: Exception =>
         log.debug("Exception while adding a new Withdrawal Request", e)
-        return new ExecutionFailed(GetListOfForgersGasPaidValue, e)
+        return new ExecutionFailed(e)
     }
 
     doUncheckedGetListOfForgersCmd(view)
@@ -392,7 +390,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
       case Failure(exception) =>
         val msgStr = "Error while parsing cmd input"
         log.debug(msgStr, exception)
-        return new ExecutionFailed(AddNewStakeGasPaidValue, new IllegalArgumentException(exception))
+        return new ExecutionFailed(new IllegalArgumentException(exception))
     }
 
     val stakeId: Array[Byte] = cmdInput.stakeId
@@ -404,7 +402,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
       case None =>
         val msgStr = "No such stake id in state-db"
         log.debug(msgStr)
-        return new ExecutionFailed(RemoveStakeGasPaidValue, new Exception(msgStr))
+        return new ExecutionFailed(new Exception(msgStr))
     }
 
     // check signature
@@ -412,7 +410,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     if (!signature.isValid(stakeData.ownerPublicKey, msgToSign)) {
       val msgStr = "Invalid signature"
       log.debug(msgStr)
-      return new ExecutionFailed(RemoveStakeGasPaidValue, new Exception(msgStr))
+      return new ExecutionFailed(new Exception(msgStr))
     }
 
     // remove the forger stake data
@@ -430,7 +428,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
 
     // Maybe result is not useful in case of success execution (used probably for RPC commands only)
     val result = stakeId
-    new ExecutionSucceeded(RemoveStakeGasPaidValue, result)
+    new ExecutionSucceeded(result)
   }
 
   override def process(msg: Message, view: BaseAccountStateView): ExecutionResult = {
@@ -445,25 +443,28 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
       val cmdString = BytesUtils.toHexString(getOpCodeFromData(msg.getData))
       cmdString match {
         case `GetListOfForgersCmd` =>
+          view.getGasPool.consumeGas(GetListOfForgersGasPaidValue)
           doGetListOfForgersCmd(msg, view)
 
         case `AddNewStakeCmd` =>
+          view.getGasPool.consumeGas(AddNewStakeGasPaidValue)
           doAddNewStakeCmd(msg, view)
 
         case `RemoveStakeCmd` =>
+          view.getGasPool.consumeGas(RemoveStakeGasPaidValue)
           doRemoveStakeCmd(msg, view)
 
         case _ =>
           val msgStr = s"op code $cmdString not supported"
           log.debug(msgStr)
-          new ExecutionFailed(RemoveStakeGasPaidValue, new IllegalArgumentException(msgStr))
+          new ExecutionFailed(new IllegalArgumentException(msgStr))
       }
     }
     catch {
       case e: Exception =>
         val msgStr = s"Exception while processing message: $msg, $e"
         log.debug(msgStr, e)
-        new ExecutionFailed(RemoveStakeGasPaidValue, new IllegalArgumentException(e))
+        new ExecutionFailed(new IllegalArgumentException(e))
     }
   }
 }

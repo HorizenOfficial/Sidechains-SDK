@@ -33,10 +33,7 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
 
   //TODO Define a proper amount of gas spent for each operation
   val GasSpentForGetListOfWithdrawalReqsCmd: BigInteger = BigInteger.ONE
-  val GasSpentForGetListOfWithdrawalReqsFailure: BigInteger = BigInteger.ONE
   val GasSpentForAddNewWithdrawalReqCmd: BigInteger = BigInteger.ONE
-  val GasSpentForAddNewWithdrawalReqFailure: BigInteger = BigInteger.ONE
-  val GasSpentForGenericFailure: BigInteger = BigInteger.ONE
 
   val MaxWithdrawalReqsNumPerEpoch = 3999
   val DustThresholdInWei: BigInteger = ZenWeiConverter.convertZenniesToWei(ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE))
@@ -54,19 +51,26 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
 
         val functionSig = BytesUtils.toHexString(getOpCodeFromData(msg.getData))
         functionSig match {
-          case GetListOfWithdrawalReqsCmdSig => execGetListOfWithdrawalReqRecords(msg, view)
-          case AddNewWithdrawalReqCmdSig => execAddWithdrawalRequest(msg, view)
-          case _ => log.debug(s"Requested function does not exist. Function signature: $functionSig")
-            new ExecutionFailed(GasSpentForGenericFailure, new IllegalArgumentException(s"Requested function does not exist"))
+          case GetListOfWithdrawalReqsCmdSig =>
+            view.getGasPool.consumeGas(GasSpentForGetListOfWithdrawalReqsCmd)
+            execGetListOfWithdrawalReqRecords(msg, view)
+
+          case AddNewWithdrawalReqCmdSig =>
+            view.getGasPool.consumeGas(GasSpentForAddNewWithdrawalReqCmd)
+            execAddWithdrawalRequest(msg, view)
+
+          case _ =>
+            val msgStr = s"Requested function does not exist. Function signature: $functionSig"
+            log.debug(msgStr)
+            new ExecutionFailed(new IllegalArgumentException(msgStr))
         }
       }
     }
     catch {
       case e: Exception =>
         log.error(s"Exception while processing message: $msg", e)
-        new ExecutionFailed(GasSpentForGenericFailure, e)
+        new ExecutionFailed(e)
     }
-
   }
 
   private def getWithdrawalEpochCounter(view: BaseAccountStateView, epochNum: Int) = {
@@ -105,12 +109,12 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
       val listOfWithdrawalReqs = getListOfWithdrawalReqRecords(epochNum, view)
 
       val abiEncodedList = WithdrawalRequestsListEncoder.encode(listOfWithdrawalReqs.asJava)
-      new ExecutionSucceeded(GasSpentForGetListOfWithdrawalReqsCmd, abiEncodedList)
+      new ExecutionSucceeded(abiEncodedList)
     }
     catch {
       case e: Exception =>
         log.debug(s"Error while getting Withdrawal Request list: ${e.getMessage}", e)
-        new ExecutionFailed(GasSpentForGetListOfWithdrawalReqsFailure, e)
+        new ExecutionFailed(e)
     }
 
   }
@@ -140,7 +144,7 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
       val numOfWithdrawalReqs = getWithdrawalEpochCounter(view, currentEpochNum)
       if (numOfWithdrawalReqs >= MaxWithdrawalReqsNumPerEpoch) {
         log.debug(s"Reached maximum number of Withdrawal Requests per epoch: request is invalid")
-        return new ExecutionFailed(GasSpentForAddNewWithdrawalReqFailure, new IllegalArgumentException("Reached maximum number of Withdrawal Requests per epoch"))
+        return new ExecutionFailed(new IllegalArgumentException("Reached maximum number of Withdrawal Requests per epoch"))
       }
 
       val nextNumOfWithdrawalReqs: Int = numOfWithdrawalReqs + 1
@@ -159,12 +163,12 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
       view.addLog(evmLog).get
 
       val abiEncodedResult = request.encode
-      new ExecutionSucceeded(GasSpentForAddNewWithdrawalReqCmd, abiEncodedResult)
+      new ExecutionSucceeded(abiEncodedResult)
     }
     catch {
       case e: Exception =>
         log.debug("Exception while adding a new Withdrawal Request", e)
-        new ExecutionFailed(GasSpentForAddNewWithdrawalReqFailure, e)
+        new ExecutionFailed(e)
     }
 
   }
