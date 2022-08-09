@@ -110,11 +110,76 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
     }
   }
 
-  @RpcMethod("eth_estimateGas") def estimateGas(params: TransactionArgs /*, tag: Quantity*/): String = {
-    // TODO: binary search because the required gas limit might be higher than the used gas
-    doCall(params, new Quantity("latest")) {
-      (_, view) => Numeric.toHexStringWithPrefix(view.getGasPool.getUsedGas)
+  def binarySearch(lowBound: BigInteger, highBound: BigInteger)(fun: BigInteger => Boolean): BigInteger = {
+    var low = lowBound
+    var high = highBound
+    while (low.add(BigInteger.ONE).compareTo(high) < 0) {
+      val mid = high.add(low).divide(BigInteger.TWO)
+      if (fun(mid)) {
+        // on success lower the upper bound
+        high = mid
+      } else {
+        // on failure raise the lower bound
+        low = mid
+      }
     }
+    high
+  }
+
+  @RpcMethod("eth_estimateGas")
+  @RpcOptionalParameters(1)
+  def estimateGas(params: TransactionArgs, tag: String): Quantity = {
+    // Binary search the gas requirement, as it may be higher than the amount used
+    val lowBound = GasCalculator.TxGas.subtract(BigInteger.ONE)
+    // Determine the highest gas limit can be used during the estimation.
+    var highBound = params.gas
+    getStateViewAtTag(tag) { tagStateView =>
+      if (highBound == null || highBound.compareTo(GasCalculator.TxGas) < 0) {
+        // TODO: get block gas limit
+        highBound = BigInteger.valueOf(30000000)
+      }
+      // Normalize the max fee per gas the call is willing to spend.
+      var feeCap = BigInteger.ZERO
+      if (params.gasPrice != null && (params.maxFeePerGas != null || params.maxPriorityFeePerGas != null)) {
+        throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified"))
+      } else if (params.gasPrice != null) {
+        feeCap = params.gasPrice
+      } else if (params.maxFeePerGas != null) {
+        feeCap = params.maxFeePerGas
+      }
+      // Recap the highest gas limit with account's available balance.
+      if (feeCap.bitLength() > 0) {
+        val balance = tagStateView.getBalance(params.getFrom)
+        val available = if (params.value == null) { balance } else {
+          if (params.value.compareTo(balance) >= 0)
+            throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "insufficient funds for transfer"))
+          balance.subtract(params.value)
+        }
+        val allowance = available.divide(feeCap)
+        if (highBound.compareTo(allowance) > 0) {
+          highBound = allowance
+        }
+      }
+    }
+    // Recap the highest gas allowance with specified gascap.
+    // global RPC gas cap (in geth this is a config variable)
+    val rpcGasCap = BigInteger.valueOf(50000000)
+    if (highBound.compareTo(rpcGasCap) > 0) {
+      highBound = rpcGasCap
+    }
+    // Execute the binary search and hone in on an executable gas limit
+    val requiredGasLimit = binarySearch(lowBound, highBound) { testGasLimit =>
+      params.gas = testGasLimit
+      doCall(params, tag) { (result, _) => !result.isFailed }
+    }
+    // Reject the transaction as invalid if it still fails at the highest allowance
+    if (requiredGasLimit == highBound) {
+      params.gas = highBound
+      if (doCall(params, tag) { (result, _) => result.isFailed }) {
+        throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, s"gas required exceeds allowance ($highBound)"))
+      }
+    }
+    new Quantity(requiredGasLimit)
   }
 
   @RpcMethod("eth_blockNumber")
