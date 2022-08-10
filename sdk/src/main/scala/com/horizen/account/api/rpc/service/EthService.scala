@@ -160,6 +160,7 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
         signatureData
       )
     )
+    signedTx
   }
 
   @RpcMethod("eth_blockNumber") def blockNumber = new Quantity(Numeric.toHexStringWithPrefix(BigInteger.valueOf(nodeView.history.getCurrentHeight)))
@@ -229,12 +230,12 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
   @RpcMethod("net_version") def version: String = String.valueOf(networkParams.chainId)
 
   //todo: simplify together with eth_call
-  @RpcMethod("eth_estimateGas") def estimateGas(transaction: util.LinkedHashMap[String, String] /*, tag: Quantity*/): String = {
-    val parameters: TransactionArgs = new TransactionArgs
-    parameters.value = if (transaction.containsKey("value")) Numeric.toBigInt(transaction.get("value")) else null
-    parameters.from = if (transaction.containsKey("from")) Address.FromBytes(Numeric.hexStringToByteArray(transaction.get("from"))) else null
-    parameters.to = if (transaction.containsKey("to")) Address.FromBytes(Numeric.hexStringToByteArray(transaction.get("to"))) else null
-    parameters.data = if (transaction.containsKey("data")) transaction.get("data") else null
+  @RpcMethod("eth_estimateGas") def estimateGas(parameters: TransactionArgs /*, tag: Quantity*/): String = {
+    //    val parameters: TransactionArgs = new TransactionArgs
+    //    parameters.value = if (transaction.containsKey("value")) Numeric.toBigInt(transaction.get("value")) else null
+    //    parameters.from = if (transaction.containsKey("from")) Address.FromBytes(Numeric.hexStringToByteArray(transaction.get("from"))) else null
+    //    parameters.to = if (transaction.containsKey("to")) Address.FromBytes(Numeric.hexStringToByteArray(transaction.get("to"))) else null
+    //    parameters.data = if (transaction.containsKey("data")) transaction.get("data") else null
 
     using(getStateViewFromBlockById(getBlockIdByTag("latest"))) { stateDbRoot =>
       if (stateDbRoot == null)

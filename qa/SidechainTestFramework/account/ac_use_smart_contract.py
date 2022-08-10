@@ -8,6 +8,7 @@ import os
 from dataclasses import dataclass
 
 from SidechainTestFramework.account.address_util import format_eoa, format_evm
+from SidechainTestFramework.account.evm_util import CallMethod
 from SidechainTestFramework.account.mk_contract_address import mk_contract_address
 from enum import Enum
 import SidechainTestFramework.account.ac_make_raw_tx as make_raw_tx
@@ -38,12 +39,6 @@ class ContractFunction:
 
     def __str__(self):
         return '{} :: {}({}) -> ({})'.format(self.sigHash, self.name, ",".join(self.inputs), ",".join(self.outputs))
-
-
-class CallMethod(Enum):
-    RPC_LEGACY = 0
-    RPC_EIP155 = 1
-    RPC_EIP1559 = 2
 
 
 class SmartContract:
@@ -181,6 +176,32 @@ class SmartContract:
                 reason = decode_abi(['string'], bytes.fromhex(response['error']['data'][2:])[4:])[0]
                 raise EvmExecutionError("Execution reverted. Reason: \"{}\"".format(reason))
             raise RuntimeError("Something went wrong, see {}".format(str(response)))
+
+    def estimate_gas(self, node, functionName: str, *args, fromAddress: str, toAddress: str,
+                     gasLimit: int = None, gasPrice: int = None, value: int = 0, nonce: int = None,
+                     tag: str = 'latest'):
+        request = {
+            "from": format_evm(fromAddress),
+            "to": format_evm(toAddress),
+            "data": self.raw_encode_call(functionName, *args),
+            "nonce": self.__ensure_nonce(node, fromAddress, nonce, tag),
+            "value": value
+        }
+        if gasLimit is not None:
+            request["gasLimit"] = gasLimit
+        if gasPrice is not None:
+            request["gasPrice"] = gasPrice
+
+        response = node.rpc_eth_estimateGas(request)
+        print(response)
+        if 'result' in response:
+            if response['result'] is not None and len(response['result']) > 0:
+                return int(response['result'], 16)
+            else:
+                print("No return data in estimate_gas: {}".format(str(response)))
+                return None
+        else:
+            raise EvmExecutionError("Could not estimmate gas")
 
     def deploy(self, node, *args, call_method: CallMethod = CallMethod.RPC_LEGACY, fromAddress: str, nonce: int = None,
                gasLimit: int, gasPrice: int = 1, maxFeePerGas: int = 1, maxPriorityFeePerGas: int = 1,
