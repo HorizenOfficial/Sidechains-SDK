@@ -13,6 +13,7 @@ from test_framework.util import fail, assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, certificate_field_config_csw_enabled
 from httpCalls.block.findBlockByID import http_block_findById
 from httpCalls.transaction.withdrawCoins import withdrawMultiCoins
+from httpCalls.block.forgingInfo import http_block_forging_info
 
 """
 Configuration:
@@ -28,6 +29,11 @@ Test:
         - Send 1 FT to SC node 1 on different addresses.
         - Generate 1 MC and 1 SC block to see FT in the sidechain.
         - Generate a transaction that has 999 WithdrawalRequestBoxes
+        - Generate a SC block and verify that it includes this transaction since we didn't reach the SC fork 1
+
+        - ############## EPOCH 1 #####################
+        - Reach the SC fork 1
+        - Generate a transaction that has 999 WithdrawalRequestBoxes
         - Generate a SC block and verify that it doesn't include this transaction (2 MC block reference included = 798 WBs slots)
         - Generate a new MC block to open other 399 slots
         - Generate a SC block that includes this transction (Slots left = 3*399 - 999 = 198)
@@ -41,7 +47,7 @@ Test:
         - Create a transaction that generate the reamining WBs allowed in the epoch (3999 - alreadyMinedWbs = 824 WBs)
         - Generate another MC block and SC block to reach the end of the epoch
 
-        - ############## EPOCH 1 #####################
+        - ############## EPOCH 2 #####################
         - Generate the first MC block of the next epoch and a SC block
         - Verify that this SC block contains the previously generated transaction containing the remaining WBs (824)
         - Wait for certificate submission.
@@ -51,7 +57,7 @@ Test:
         - Generate MC blocks to reach the end of the Withdrawal epoch 1.
         - Generate a SC block that contains all of these MC blocks.
         
-        - ############## EPOCH 2 #####################
+        - ############## EPOCH 3 #####################
         - Generate the first MC block of the next epoch and a SC block
         - Verify that we have the 300 WBs transaction included in this SC block. We couldn't add before because we opened all the needed slots in the last block of the epoch that can't include any transactions
         - Wait for certificate submission.
@@ -76,7 +82,7 @@ class ScBtLimitTest(SidechainTestFramework):
             cert_signing_enabled=True  # enable signer
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length, sc_creation_version=SC_CREATION_VERSION_1, csw_enabled=True), sc_node_configuration)
-        self.sidechain_id = bootstrap_sidechain_nodes(self.options, network).sidechain_id
+        self.sidechain_id = bootstrap_sidechain_nodes(self.options, network, 720*120*5).sidechain_id
 
     def sc_setup_nodes(self):
         return start_sc_nodes(1, self.options.tmpdir)
@@ -111,6 +117,11 @@ class ScBtLimitTest(SidechainTestFramework):
 
         # ******************** EPOCH 0 START ********************
         print("******************** EPOCH 0 START ********************")
+
+        #Verify we didn't reach the SC fork1 that includes BT limit
+        consensusEpochData = http_block_forging_info(sc_node)
+        assert_equal(consensusEpochData["bestEpochNumber"], 1)
+        
         epoch_mc_blocks_left = self.sc_withdrawal_epoch_length - 1
 
         # create 1 FTs in the same MC block to SC
@@ -127,6 +138,55 @@ class ScBtLimitTest(SidechainTestFramework):
         epoch_mc_blocks_left -= 1
         # Generate 1 SC block to include FTs.
         generate_next_blocks(sc_node, "first node", 1)[0]
+
+        # Create a transaction that generates 999 WBs 
+        bt_address = mc_node.getnewaddress()
+        bt_addresses = [bt_address for i in range(999)]
+        amounts = [54 for i in range(999)]
+        withdrawMultiCoins(sc_node, bt_addresses, amounts)
+
+        # Try to Generate 1 SC block.
+        # Since we are in the consensus epoch 1 we still didn't activate the Fork1 that includes BT limitation
+        sc_block_id = generate_next_blocks(sc_node, "first node", 1)[0]
+        block_json = http_block_findById(sc_node, sc_block_id)
+        assert_equal(len(block_json["block"]["sidechainTransactions"]), 1)
+
+        # Generate MC blocks to reach the end of the epoch
+        we0_end_mcblock_hash = mc_node.generate(epoch_mc_blocks_left)[0]
+        print("End mc block hash in withdrawal epoch 0 = " + we0_end_mcblock_hash)
+        we0_end_mcblock_json = mc_node.getblock(we0_end_mcblock_hash)
+        we0_end_epoch_cum_sc_tx_comm_tree_root = we0_end_mcblock_json["scCumTreeHash"]
+        print("End cum sc tx cum comm tree root hash in withdrawal epoch 0 = " + we0_end_epoch_cum_sc_tx_comm_tree_root)
+
+        sc_block_id = generate_next_block(sc_node, "first node")
+        block_json = http_block_findById(sc_node, sc_block_id)
+        check_mcreferencedata_presence(we0_end_mcblock_hash, sc_block_id, sc_node)
+
+        # ******************** EPOCH 1 START ********************
+        print("******************** EPOCH 1 START ********************")
+
+        # Generate first mc block of the next epoch
+        we1_1_mcblock_hash = mc_node.generate(1)[0]
+        epoch_mc_blocks_left = self.sc_withdrawal_epoch_length - 1
+        sc_block_id = generate_next_blocks(sc_node, "first node", 1)[0]
+
+        # Wait until Certificate will appear in MC node mempool
+        time.sleep(10)
+        while mc_node.getmempoolinfo()["size"] == 0 and sc_node.submitter_isCertGenerationActive()["result"]["state"]:
+            print("Wait for certificate in mc mempool...")
+            time.sleep(2)
+            sc_node.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
+        assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
+
+        # Generate MC and SC blocks with Cert
+        we1_2_mcblock_hash = mc_node.generate(1)[0]
+        epoch_mc_blocks_left -= 1
+
+        # Reach the SC fork 1
+        generate_next_block(sc_node, "first node", force_switch_to_next_epoch = True)
+        consensusEpochData = http_block_forging_info(sc_node)
+        print(consensusEpochData)
+        assert_equal(consensusEpochData["bestEpochNumber"], 3)
 
         # Based on withdrawalEpochLength = 10, maxBTsAllowedPerCertificate = 3999, we open 399 slots for WithdrawalBoxes for each MC block reference
         # 2 MC block mined = 399 * 2 = 798 WthdrawalBoxes allowed
@@ -201,8 +261,8 @@ class ScBtLimitTest(SidechainTestFramework):
         check_mcreferencedata_presence(we0_end_mcblock_hash, sc_block_id, sc_node)
 
 
-        # ******************** EPOCH 1 START ********************
-        print("******************** EPOCH 1 START ********************")
+        # ******************** EPOCH 2 START ********************
+        print("******************** EPOCH 2 START ********************")
 
         # Generate first mc block of the next epoch
         we1_1_mcblock_hash = mc_node.generate(1)[0]
@@ -255,8 +315,8 @@ class ScBtLimitTest(SidechainTestFramework):
 
         epoch_mc_blocks_left = self.sc_withdrawal_epoch_length
 
-        # ******************** EPOCH 2 START ********************
-        print("******************** EPOCH 2 START ********************")
+        # ******************** EPOCH 3 START ********************
+        print("******************** EPOCH 3 START ********************")
 
         # Generate first mc block of the next epoch
         we2_1_mcblock_hash = mc_node.generate(1)[0]
@@ -268,6 +328,10 @@ class ScBtLimitTest(SidechainTestFramework):
 
         check_mcreference_presence(we2_1_mcblock_hash, sc_block_id, sc_node)
 
+        # This is for an actual bug on ZEND that selectes to many inputs for the certificate
+        mc_addr = mc_node.getnewaddress()
+        mc_node.sendtoaddress(mc_addr, 10)
+
         # Wait until Certificate will appear in MC node mempool
         time.sleep(10)
         while mc_node.getmempoolinfo()["size"] == 0 and sc_node.submitter_isCertGenerationActive()["result"]["state"]:
@@ -275,6 +339,6 @@ class ScBtLimitTest(SidechainTestFramework):
             time.sleep(2)
             sc_node.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
- 
+        
 if __name__ == "__main__":
     ScBtLimitTest().main()

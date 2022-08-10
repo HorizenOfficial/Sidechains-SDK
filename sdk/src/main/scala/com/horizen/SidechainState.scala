@@ -7,6 +7,7 @@ import com.horizen.box._
 import com.horizen.box.data.ZenBoxData
 import com.horizen.consensus._
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
+import com.horizen.fork.ForkManager
 import com.horizen.node.NodeState
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublicKey}
@@ -178,7 +179,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       throw new IllegalArgumentException(s"Block ${mod.id} contains duplicated input boxes to open")
     }
 
-    checkWithdrawalBoxesAllowed(mod)
+    if (BackwardTransferLimitEnabled)
+      checkWithdrawalBoxesAllowed(mod)
   }
 
   private def checkWithdrawalBoxesAllowed(mod: SidechainBlock): Unit = {
@@ -208,6 +210,13 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   def getAllowedWithdrawalRequestBoxes(numberOfMainchainBlockReferenceInBlock: Int): Int = {
     getAllowedWithdrawalRequestBoxesPerBlock * (getOrElseWithdrawalEpochInfo().lastEpochIndex + numberOfMainchainBlockReferenceInBlock)
+  }
+
+  def BackwardTransferLimitEnabled: Boolean = {
+    if (stateStorage.lastVersionId.isEmpty)
+      false
+    else
+      ForkManager.getSidechainConsensusEpochFork(getCurrentConsensusEpochInfo._2.epoch).BackwardTransferLimitEnabled()
   }
 
   private def validateTopQualityCertificate(topQualityCertificate: WithdrawalEpochCertificate, certReferencedEpochNumber: Int): Unit = {
@@ -308,8 +317,9 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           }
         })
 
-      val numberOfWithdrawalRequestBoxes = newBoxes.count(box => box.isInstanceOf[WithdrawalRequestBox])
-      if (numberOfWithdrawalRequestBoxes > params.maxWBsAllowed) {
+      lazy val numberOfWithdrawalRequestBoxes = newBoxes.count(box => box.isInstanceOf[WithdrawalRequestBox])
+      if (BackwardTransferLimitEnabled &&
+        numberOfWithdrawalRequestBoxes > params.maxWBsAllowed) {
         throw new Exception(s"Exceed the maximum withdrawal request boxes per epoch (${numberOfWithdrawalRequestBoxes} out of ${params.maxWBsAllowed})")
       }
     }

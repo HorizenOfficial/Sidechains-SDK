@@ -9,13 +9,14 @@ import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
 import com.horizen.customtypes.DefaultApplicationState
 import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
+import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
 import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, WithdrawalEpochInfo, Pair => JPair}
-import com.horizen.{SidechainState, SidechainTypes, SidechainStateUtxoMerkleTreeProvider, SidechainUtxoMerkleTreeProviderCSWDisabled, SidechainUtxoMerkleTreeProviderCSWEnabled}
+import com.horizen.{SidechainState, SidechainStateUtxoMerkleTreeProvider, SidechainTypes, SidechainUtxoMerkleTreeProviderCSWDisabled, SidechainUtxoMerkleTreeProviderCSWEnabled}
 import org.junit.Assert._
 import org.junit._
 import org.mockito.Mockito
@@ -51,6 +52,10 @@ class SidechainStateIntegrationTest
   val initialConsensusEpoch: ConsensusEpochNumber = intToConsensusEpochNumber(1)
 
   val initialBlockFeeInfo: BlockFeeInfo = BlockFeeInfo(100, getPrivateKey25519("1234".getBytes()).publicImage())
+
+  val simpleForkConfigurator = new SimpleForkConfigurator
+  val forkManagerUtil = new ForkManagerUtil()
+  forkManagerUtil.initializeForkManager(simpleForkConfigurator, "mainnet")
 
   def getRegularTransaction(zenOutputsCount: Int, forgerOutputsCount: Int): RegularTransaction = {
     val outputsCount = zenOutputsCount + forgerOutputsCount

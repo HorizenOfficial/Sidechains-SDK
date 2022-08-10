@@ -4,13 +4,14 @@ import java.util.{ArrayList => JArrayList, List => JList}
 import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, WithdrawalEpochCertificate}
 import com.horizen.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
 import com.horizen.box._
-import com.horizen.consensus.ConsensusEpochNumber
+import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
+import com.horizen.fork.{ForkManager, ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
-import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
+import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage}
 import com.horizen.state.{ApplicationState, SidechainStateReader}
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, WithdrawalEpochInfo, Pair => JPair}
@@ -50,6 +51,10 @@ class SidechainStateTest
   val secretList = new ListBuffer[PrivateKey25519]()
 
   val params = MainNetParams()
+
+  val simpleForkConfigurator = new SimpleForkConfigurator
+  val forkManagerUtil = new ForkManagerUtil()
+  forkManagerUtil.initializeForkManager(simpleForkConfigurator, "regtest")
 
   def getRegularTransaction(regularOutputsCount: Int,
                             forgerOutputsCount: Int,
@@ -123,6 +128,15 @@ class SidechainStateTest
     Mockito.when(mockedStateStorage.getWithdrawalEpochInfo).thenReturn(None)
 
     Mockito.when(mockedStateStorage.getWithdrawalRequests(ArgumentMatchers.any[Int]())).thenReturn(Seq())
+
+    Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(11)))
+
+    Mockito.when(mockedStateForgerBoxStorage.getAllForgerBoxes).thenReturn(
+      Seq(
+        getRegularTransaction(0,1,0,Seq(),1)
+          .newBoxes().get(0).asInstanceOf[ForgerBox]
+      )
+    )
 
     // Mock get and update methods of StateForgerBoxStorage
     Mockito.when(mockedStateForgerBoxStorage.lastVersionId).thenReturn(Some(stateVersion.last))
@@ -331,6 +345,15 @@ class SidechainStateTest
     Mockito.when(mockedStateStorage.getWithdrawalEpochInfo).thenReturn(None)
 
     Mockito.when(mockedStateStorage.getWithdrawalRequests(ArgumentMatchers.any[Int]())).thenReturn(Seq())
+
+    Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(11)))
+
+    Mockito.when(mockedStateForgerBoxStorage.getAllForgerBoxes).thenReturn(
+      Seq(
+        getRegularTransaction(0,1,0,Seq(),1)
+          .newBoxes().get(0).asInstanceOf[ForgerBox]
+      )
+    )
 
     Mockito.when(mockedStateForgerBoxStorage.lastVersionId).thenAnswer(_ => Some(stateVersion.last))
 
@@ -588,6 +611,15 @@ class SidechainStateTest
         boxList.find(_.id().sameElements(boxId))
       })
 
+    Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(11)))
+
+    Mockito.when(mockedStateForgerBoxStorage.getAllForgerBoxes).thenReturn(
+      Seq(
+        getRegularTransaction(0,1,0,Seq(),1)
+          .newBoxes().get(0).asInstanceOf[ForgerBox]
+      )
+    )
+
     Mockito.when(mockedStateForgerBoxStorage.lastVersionId).thenReturn(Some(stateVersion.last))
 
     Mockito.when(mockedStateUtxoMerkleTreeProvider.lastVersionId).thenReturn(Some(stateVersion.last))
@@ -654,6 +686,15 @@ class SidechainStateTest
         boxList.find(_.id().sameElements(boxId))
       })
 
+    Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(11)))
+
+    Mockito.when(mockedStateForgerBoxStorage.getAllForgerBoxes).thenReturn(
+      Seq(
+        getRegularTransaction(0,1,0,Seq(),1)
+          .newBoxes().get(0).asInstanceOf[ForgerBox]
+      )
+    )
+
     Mockito.when(mockedStateForgerBoxStorage.lastVersionId).thenReturn(Some(stateVersion.last))
 
     Mockito.when(mockedStateUtxoMerkleTreeProvider.lastVersionId).thenReturn(Some(stateVersion.last))
@@ -712,6 +753,15 @@ class SidechainStateTest
     Mockito.when(mockedStateStorage.getWithdrawalEpochInfo).thenReturn(None)
 
     Mockito.when(mockedStateStorage.getWithdrawalRequests(ArgumentMatchers.any[Int]())).thenReturn(Seq())
+
+    Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(11)))
+
+    Mockito.when(mockedStateForgerBoxStorage.getAllForgerBoxes).thenReturn(
+      Seq(
+        getRegularTransaction(0,1,0,Seq(),1)
+          .newBoxes().get(0).asInstanceOf[ForgerBox]
+      )
+    )
 
     Mockito.when(mockedStateForgerBoxStorage.lastVersionId).thenReturn(Some(stateVersion.last))
 
@@ -858,5 +908,23 @@ class SidechainStateTest
     assertFalse("Block validation must fail.",
       validateTry.isSuccess)
     assertTrue(validateTry.failed.get.getMessage.equals("Exceeded the maximum number of WithdrawalBoxes allowed!"))
+
+    //Test BTs limit before the Fork1
+    Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(1)))
+
+    transactionList.clear()
+    transactionList += getRegularTransaction(1, 0, 100, Seq(), 100)
+
+    Mockito.when(mockedBlock.transactions)
+      .thenReturn(transactionList.toList)
+
+    Mockito.when(mockedBlock.parentId)
+      .thenReturn(bytesToId(stateVersion.last.data))
+      .thenReturn(bytesToId(stateVersion.last.data))
+      .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
+
+    validateTry = sidechainState.validate(mockedBlock)
+    assertTrue("Block validation must be successful.",
+      validateTry.isSuccess)
   }
 }

@@ -6,13 +6,14 @@ import com.horizen.box.Box
 import com.horizen.chain.{MainchainHeaderHash, SidechainBlockInfo}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
+import com.horizen.fork.ForkManager
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, VrfSecretKey}
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.{FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerkleTree, TimeToEpochUtils}
-import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainMemoryPoolEntry, SidechainState, SidechainWallet}
+import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainMemoryPoolEntry, SidechainState, SidechainTypes, SidechainWallet}
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.util.{ModifierId, ScorexLogging}
 
@@ -313,7 +314,8 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       } else { // SC block is in the middle of the epoch
         var txsCounter: Int = 0
         val allowedWithdrawalRequestBoxes = nodeView.state.getAllowedWithdrawalRequestBoxes(mainchainBlockReferenceDataToRetrieve.size) - nodeView.state.getAlreadyMinedWithdrawalRequestBoxesInCurrentEpoch
-        nodeView.pool.takeWithWithdrawalBoxesLimit(allowedWithdrawalRequestBoxes).filter(tx => {
+        val mempoolTx = if (nodeView.state.BackwardTransferLimitEnabled)  nodeView.pool.takeWithWithdrawalBoxesLimit(allowedWithdrawalRequestBoxes) else nodeView.pool.take(nodeView.pool.size)
+        mempoolTx.filter(tx => {
           val txSize = tx.bytes.length + 4 // placeholder for Tx length
           txsCounter += 1
           if(txsCounter > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER || blockSize + txSize > SidechainBlock.MAX_BLOCK_SIZE)
