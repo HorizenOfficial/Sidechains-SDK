@@ -63,6 +63,7 @@
 							"pattern": "^0x([0-9a-f][0-9a-f]){0,32}$"
 						},
 						"sha3Uncles": {
+							"description": "not included, returns 0x0",
 							"title": "Ommers hash",
 							"type": "string",
 							"pattern": "^0x([0-9a-f][0-9a-f]){0,32}$"
@@ -88,11 +89,13 @@
 							"pattern": "^0x([0-9a-f][0-9a-f]){0,32}$"
 						},
 						"logsBloom": {
+							"description": "not included now, returns 0x0",
 							"title": "Bloom filter",
 							"type": "string",
 							"pattern": "^0x[0-9a-f]{512}$"
 						},
 						"difficulty": {
+							"description": "not included",
 							"title": "Difficulty",
 							"type": "string",
 							"pattern": "^0x[0-9a-f]*$"
@@ -103,11 +106,13 @@
 							"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$"
 						},
 						"gasLimit": {
+							"description": "fixed values now",
 							"title": "Gas limit",
 							"type": "string",
 							"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$"
 						},
 						"gasUsed": {
+							"description": "fixed values now",
 							"title": "Gas used",
 							"type": "string",
 							"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$"
@@ -118,26 +123,31 @@
 							"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$"
 						},
 						"extraData": {
+							"description": "not included, returns 0x0",
 							"title": "Extra data",
 							"type": "string",
 							"pattern": "^0x[0-9a-f]*$"
 						},
 						"mixHash": {
+							"description": "not included, returns 0x0",
 							"title": "Mix hash",
 							"type": "string",
 							"pattern": "^0x([0-9a-f][0-9a-f]){0,32}$"
 						},
 						"nonce": {
+							"description": "not included, returns 0x0",
 							"title": "Nonce",
 							"type": "string",
 							"pattern": "^0x[0-9a-f]{16}$"
 						},
 						"totalDifficulty": {
+							"description": "not included",
 							"title": "Total difficult",
 							"type": "string",
 							"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$"
 						},
 						"baseFeePerGas": {
+							"description": "not included",
 							"title": "Base fee per gas",
 							"type": "string",
 							"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$"
@@ -226,7 +236,7 @@
 													"accessList": {
 														"title": "accessList",
 														"type": "array",
-														"description": "EIP-2930 access list",
+														"description": "EIP-2930 access list - not included - always empty",
 														"items": {
 															"title": "Access list entry",
 															"type": "object",
@@ -327,7 +337,7 @@
 													"accessList": {
 														"title": "accessList",
 														"type": "array",
-														"description": "EIP-2930 access list",
+														"description": "EIP-2930 access list - not included - always empty",
 														"items": {
 															"title": "Access list entry",
 															"type": "object",
@@ -452,6 +462,7 @@
 							]
 						},
 						"uncles": {
+							"description": "not included",
 							"title": "Uncles",
 							"type": "array",
 							"items": {
@@ -534,6 +545,7 @@
 							"pattern": "^0x([0-9a-f][0-9a-f]){0,32}$"
 						},
 						"sha3Uncles": {
+							"description": "not included, returns 0x0",
 							"title": "Ommers hash",
 							"type": "string",
 							"pattern": "^0x([0-9a-f][0-9a-f]){0,32}$"
@@ -559,11 +571,13 @@
 							"pattern": "^0x([0-9a-f][0-9a-f]){0,32}$"
 						},
 						"logsBloom": {
+							"description": "not included now, returns 0x0",
 							"title": "Bloom filter",
 							"type": "string",
 							"pattern": "^0x[0-9a-f]{512}$"
 						},
 						"difficulty": {
+							"description": "not included",
 							"title": "Difficulty",
 							"type": "string",
 							"pattern": "^0x[0-9a-f]*$"
@@ -574,11 +588,13 @@
 							"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$"
 						},
 						"gasLimit": {
+							"description": "fixed value now",
 							"title": "Gas limit",
 							"type": "string",
 							"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$"
 						},
 						"gasUsed": {
+							"description": "fixed value now",
 							"title": "Gas used",
 							"type": "string",
 							"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$"
@@ -589,26 +605,31 @@
 							"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$"
 						},
 						"extraData": {
+							"description": "not included, returns 0x0",
 							"title": "Extra data",
 							"type": "string",
 							"pattern": "^0x[0-9a-f]*$"
 						},
 						"mixHash": {
+							"description": "not included, returns 0x0",
 							"title": "Mix hash",
 							"type": "string",
 							"pattern": "^0x([0-9a-f][0-9a-f]){0,32}$"
 						},
 						"nonce": {
+							"description": "not included, returns 0x0",
 							"title": "Nonce",
 							"type": "string",
 							"pattern": "^0x[0-9a-f]{16}$"
 						},
 						"totalDifficulty": {
+							"description": "not included",
 							"title": "Total difficult",
 							"type": "string",
 							"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$"
 						},
 						"baseFeePerGas": {
+							"description": "not included",
 							"title": "Base fee per gas",
 							"type": "string",
 							"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$"
@@ -697,7 +718,7 @@
 													"accessList": {
 														"title": "accessList",
 														"type": "array",
-														"description": "EIP-2930 access list",
+														"description": "EIP-2930 access list - not included - always empty",
 														"items": {
 															"title": "Access list entry",
 															"type": "object",
@@ -798,7 +819,7 @@
 													"accessList": {
 														"title": "accessList",
 														"type": "array",
-														"description": "EIP-2930 access list",
+														"description": "EIP-2930 access list - not included - always empty",
 														"items": {
 															"title": "Access list entry",
 															"type": "object",
@@ -1035,7 +1056,7 @@
 									"accessList": {
 										"title": "accessList",
 										"type": "array",
-										"description": "EIP-2930 access list",
+										"description": "EIP-2930 access list - will be ignored",
 										"items": {
 											"title": "Access list entry",
 											"type": "object",
@@ -1117,7 +1138,7 @@
 									"accessList": {
 										"title": "accessList",
 										"type": "array",
-										"description": "EIP-2930 access list",
+										"description": "EIP-2930 access list - not supported",
 										"items": {
 											"title": "Access list entry",
 											"type": "object",
@@ -1322,7 +1343,7 @@
 									"accessList": {
 										"title": "accessList",
 										"type": "array",
-										"description": "EIP-2930 access list",
+										"description": "EIP-2930 access list - not supported",
 										"items": {
 											"title": "Access list entry",
 											"type": "object",
@@ -1404,7 +1425,7 @@
 									"accessList": {
 										"title": "accessList",
 										"type": "array",
-										"description": "EIP-2930 access list",
+										"description": "EIP-2930 access list - not supported",
 										"items": {
 											"title": "Access list entry",
 											"type": "object",
@@ -1545,112 +1566,6 @@
 					"title": "Gas price",
 					"type": "string",
 					"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$"
-				}
-			}
-		},
-		{
-			"name": "eth_feeHistory",
-			"summary": "Transaction fee history",
-			"description": "Returns transaction base fee per gas and effective priority fee per gas for the requested/supported block range.",
-			"params": [
-				{
-					"name": "blockCount",
-					"description": "Requested range of blocks. Clients will return less than the requested range if not all blocks are available.",
-					"required": true,
-					"schema": {
-						"title": "hex encoded unsigned integer",
-						"type": "string",
-						"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$"
-					}
-				},
-				{
-					"name": "newestBlock",
-					"description": "Highest block of the requested range.",
-					"required": true,
-					"schema": {
-						"title": "Block number or tag",
-						"oneOf": [
-							{
-								"title": "Block number",
-								"type": "string",
-								"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$"
-							},
-							{
-								"title": "Block tag",
-								"type": "string",
-								"enum": [
-									"earliest",
-									"finalized",
-									"safe",
-									"latest",
-									"pending"
-								],
-								"description": "`earliest`: The lowest numbered block the client has available; `finalized`: The most recent crypto-economically secure block, cannot be re-orged outside of manual intervention driven by community coordination; `safe`: The most recent block that is safe from re-orgs under honest majority and certain synchronicity assumptions; `latest`: The most recent block in the canonical chain observed by the client, this block may be re-orged out of the canonical chain even under healthy/normal conditions; `pending`: A sample next block built by the client on top of `latest` and containing the set of transactions usually taken from local mempool. Before the merge transition is finalized, any call querying for `finalized` or `safe` block MUST be responded to with `-39001: Unknown block` error"
-							}
-						]
-					}
-				},
-				{
-					"name": "rewardPercentiles",
-					"description": "A monotonically increasing list of percentile values. For each block in the requested range, the transactions will be sorted in ascending order by effective tip per gas and the coresponding effective tip for the percentile will be determined, accounting for gas consumed.",
-					"required": true,
-					"schema": {
-						"title": "rewardPercentiles",
-						"type": "array",
-						"items": {
-							"title": "rewardPercentile",
-							"description": "Floating point value between 0 and 100.",
-							"type": "number"
-						}
-					}
-				}
-			],
-			"result": {
-				"name": "feeHistoryResult",
-				"description": "Fee history for the returned block range. This can be a subsection of the requested range if not all blocks are available.",
-				"schema": {
-					"title": "feeHistoryResults",
-					"description": "Fee history results.",
-					"type": "object",
-					"required": [
-						"firstBlock",
-						"baseFeePerGas",
-						"gasUsedRatio"
-					],
-					"properties": {
-						"oldestBlock": {
-							"title": "oldestBlock",
-							"type": "string",
-							"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$",
-							"description": "Lowest number block of returned range."
-						},
-						"baseFeePerGas": {
-							"title": "baseFeePerGasArray",
-							"description": "An array of block base fees per gas. This includes the next block after the newest of the returned range, because this value can be derived from the newest block. Zeroes are returned for pre-EIP-1559 blocks.",
-							"type": "array",
-							"items": {
-								"title": "hex encoded unsigned integer",
-								"type": "string",
-								"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$"
-							}
-						},
-						"reward": {
-							"title": "rewardArray",
-							"description": "A two-dimensional array of effective priority fees per gas at the requested block percentiles.",
-							"type": "array",
-							"items": {
-								"title": "rewardPercentile",
-								"description": "An array of effective priority fee per gas data points from a single block. All zeroes are returned if the block is empty.",
-								"type": "array",
-								"items": {
-									"title": "rewardPercentile",
-									"type": "string",
-									"pattern": "^0x([1-9a-f]+[0-9a-f]*|0)$",
-									"description": "A given percentile sample of effective priority fees per gas from a single block in ascending order, weighted by gas used. Zeroes are returned if the block is empty."
-								}
-							}
-						}
-					}
 				}
 			}
 		},
@@ -1918,7 +1833,7 @@
 								"accessList": {
 									"title": "accessList",
 									"type": "array",
-									"description": "EIP-2930 access list",
+									"description": "EIP-2930 access list - not supported",
 									"items": {
 										"title": "Access list entry",
 										"type": "object",
@@ -2019,7 +1934,7 @@
 								"accessList": {
 									"title": "accessList",
 									"type": "array",
-									"description": "EIP-2930 access list",
+									"description": "EIP-2930 access list - not supported",
 									"items": {
 										"title": "Access list entry",
 										"type": "object",
