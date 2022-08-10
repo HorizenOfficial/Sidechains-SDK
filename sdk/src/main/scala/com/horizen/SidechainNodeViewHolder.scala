@@ -9,7 +9,8 @@ import com.horizen.node.SidechainNodeView
 import com.horizen.params.NetworkParams
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
-import com.horizen.utils.{BytesUtils, SDKModifiersCache, TpsUtils}
+import com.horizen.utils.tps.TpsUtils
+import com.horizen.utils.{BytesUtils, SDKModifiersCache}
 import com.horizen.validation._
 import com.horizen.wallet.ApplicationWallet
 import scorex.core.NodeViewHolder.DownloadRequest
@@ -375,39 +376,39 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
               updateStateAndWallet(historyBeforeStUpdate, minimalState(), vault(), progressInfo, IndexedSeq())
 
             val updateStateAndWalletEndTime = LocalDateTime.now()
-            val (updateStateAndWalletInMinutes, updateStateAndWalletInSeconds) = TpsUtils.getMinAndSecFromTwoDates(updateStateAndWalletEndTime, startTime)
+            val updateStateAndWalletDuration = TpsUtils.getMinAndSecFromTwoDates(startTime, updateStateAndWalletEndTime)
 
-            TpsUtils.log(s"done updating state and wallet in ${updateStateAndWalletInMinutes}':${updateStateAndWalletInSeconds}''", log)
+            TpsUtils.log(s"done updating state and wallet in $updateStateAndWalletDuration", log)
 
             newStateTry match {
               case Success(newState) =>
                 val newMemPool = updateMemPool(progressInfo.toRemove, blocksApplied, memoryPool(), newState)
                 // Note: in parent NodeViewHolder.pmodModify wallet was updated here.
                 val updateMemPoolEndTime = LocalDateTime.now()
-                val (updateMemPoolInMinutes, updateMemPoolInSeconds) = TpsUtils.getMinAndSecFromTwoDates(updateMemPoolEndTime, updateStateAndWalletEndTime)
-                TpsUtils.log(s"done updating mempool in ${updateMemPoolInMinutes}':${updateMemPoolInSeconds}''", log)
+                val updateMempoolDuration = TpsUtils.getMinAndSecFromTwoDates(updateStateAndWalletEndTime, updateMemPoolEndTime)
+                TpsUtils.log(s"done updating mempool in $updateMempoolDuration", log)
 
                 log.info(s"Persistent modifier ${pmod.encodedId} applied successfully, now updating node view")
                 updateNodeView(Some(newHistory), Some(newState), Some(newWallet), Some(newMemPool))
                 val updateNodeViewEndTime = LocalDateTime.now()
-                val (updateNodeViewInMinutes, updateNodeViewInSeconds) = TpsUtils.getMinAndSecFromTwoDates(updateNodeViewEndTime, updateMemPoolEndTime)
-                TpsUtils.log(s"done updating NodeView in ${updateNodeViewInMinutes}':${updateNodeViewInSeconds}''", log)
+                val updateNodeViewDuration = TpsUtils.getMinAndSecFromTwoDates(updateMemPoolEndTime, updateNodeViewEndTime)
+                TpsUtils.log(s"done updating NodeView in $updateNodeViewDuration", log)
 
                 log.debug(s"Current mempool size: ${newMemPool.getSize} transactions - ${newMemPool.usedSizeKBytes}kb (${newMemPool.usedPercentage}%)")
               case Failure(e) =>
                 log.warn(s"Can`t apply persistent modifier (id: ${pmod.encodedId}, contents: $pmod) to minimal state", e)
                 updateNodeView(updatedHistory = Some(newHistory))
                 val updateNodeViewEndTime = LocalDateTime.now()
-                val (updateNodeViewInMinutes, updateNodeViewInSeconds) = TpsUtils.getMinAndSecFromTwoDates(updateNodeViewEndTime, startTime)
-                TpsUtils.log(s"done updating NodeView in ${updateNodeViewInMinutes}':${updateNodeViewInSeconds}'' but failed to apply newState", log)
+                val updateNodeViewDuration = TpsUtils.getMinAndSecFromTwoDates(startTime, updateNodeViewEndTime)
+                TpsUtils.log(s"done updating NodeView in $updateNodeViewDuration but failed to apply newState", log)
                 context.system.eventStream.publish(SemanticallyFailedModification(pmod, e))
             }
           } else {
             requestDownloads(progressInfo)
             updateNodeView(updatedHistory = Some(historyBeforeStUpdate))
             val updateNodeViewEndTime = LocalDateTime.now()
-            val (updateNodeViewInMinutes, updateNodeViewInSeconds) = TpsUtils.getMinAndSecFromTwoDates(updateNodeViewEndTime, startTime)
-            TpsUtils.log(s"done updating NodeView in ${updateNodeViewInMinutes}':${updateNodeViewInSeconds}'' but progress info to apply is empty", log)
+            val updateNodeViewDuration = TpsUtils.getMinAndSecFromTwoDates(startTime, updateNodeViewEndTime)
+            TpsUtils.log(s"done updating NodeView in $updateNodeViewDuration but progress info to apply is empty", log)
           }
         case Failure(e) =>
           log.warn(s"Can`t apply persistent modifier (id: ${pmod.encodedId}, contents: $pmod) to history", e)
@@ -415,8 +416,8 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       }
 
       val endTime = LocalDateTime.now()
-      val (endTimeInMinutes, endTimeInSeconds) = TpsUtils.getMinAndSecFromTwoDates(endTime, startTime)
-      TpsUtils.log(s"done applying modifier in ${endTimeInMinutes}':${endTimeInSeconds}''", log)
+      val fullDuration = TpsUtils.getMinAndSecFromTwoDates(startTime, endTime)
+      TpsUtils.log(s"done applying modifier in $fullDuration", log)
     } else {
       log.warn(s"Trying to apply modifier ${pmod.encodedId} that's already in history")
     }

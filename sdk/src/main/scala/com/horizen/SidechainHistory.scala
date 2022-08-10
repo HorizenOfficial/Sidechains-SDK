@@ -8,6 +8,7 @@ import com.horizen.node.NodeHistory
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
 import com.horizen.storage.SidechainHistoryStorage
+import com.horizen.utils.tps.TpsUtils
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import scorex.core.NodeViewModifier
@@ -154,6 +155,9 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
   }
 
   def bestForkChanges(block: SidechainBlock): Try[ProgressInfo[SidechainBlock]] = Try {
+    TpsUtils.forkCounter += 1
+    TpsUtils.log(s"the fork number ${TpsUtils.forkCounter} has been detected!", log)
+
     val (newChainSuffix, currentChainSuffix) = commonBlockSuffixes(modifierById(block.parentId).get)
     if(newChainSuffix.isEmpty && currentChainSuffix.isEmpty)
       throw new IllegalArgumentException("Cannot retrieve fork changes. Fork length is more than params.maxHistoryRewritingLength")
@@ -166,6 +170,8 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       val toRemove = currentChainSuffix.tail.map(id => storage.blockById(id).get)
       val toApply = newChainSuffix.tail.map(id => storage.blockById(id).get) ++ Seq(block)
 
+      TpsUtils.log(s"${toRemove.size} blocks are to be removed, ${toApply.size} to be applied", log)
+
       require(toApply.nonEmpty)
       if(toRemove.isEmpty) {
         // usually it should not be empty, but there is the case when we are just applying a valid block whose id
@@ -176,6 +182,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       ProgressInfo[SidechainBlock](rollbackPoint, toRemove, toApply, Seq())
     } else {
       //log.info(s"Orphaned block $block from invalid suffix")
+      TpsUtils.log(s"block $block from an invalid suffix", log)
       ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq())
     }
   }
