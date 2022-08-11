@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="WARN" monitorInterval="30">
+<Configuration status="WARN" monitorInterval="30" shutdownHook="disable">
 
     <Properties>
         <Property name="LOG_PATTERN">[%-5level] %d{yyyy-MM-dd HH:mm:ss:SSS Z} [%28F:%-4L] [%t] %c - %msg%n</Property>
