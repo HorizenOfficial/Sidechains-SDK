@@ -3,10 +3,9 @@ package com.horizen.account.state
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.evm.utils.Hash
-import com.horizen.evm.{LevelDBDatabase, StateDB}
+import com.horizen.evm.{MemoryDatabase, StateDB}
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.utils.BytesUtils
-import org.junit.rules.TemporaryFolder
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.web3j.abi.datatypes.Type
 import org.web3j.abi.{EventEncoder, FunctionReturnDecoder, TypeReference}
@@ -15,15 +14,12 @@ import scala.util.Random
 
 
 trait MessageProcessorFixture {
-  var tempFolder = new TemporaryFolder
   val mcAddr = new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte))
   val metadataStorageView: AccountStateMetadataStorageView = mock[AccountStateMetadataStorageView]
 
   def getView: AccountStateView = {
-    tempFolder.create()
-    val databaseFolder = tempFolder.newFolder("evm-db" + Math.random())
     val hashNull = BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000000")
-    val db = new LevelDBDatabase(databaseFolder.getAbsolutePath)
+    val db = new MemoryDatabase()
     val messageProcessors: Seq[MessageProcessor] = Seq()
     val stateDb = new StateDB(db, hashNull)
     new AccountStateView(metadataStorageView, stateDb, messageProcessors)
