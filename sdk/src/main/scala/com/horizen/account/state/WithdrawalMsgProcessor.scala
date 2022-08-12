@@ -39,43 +39,28 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
   val DustThresholdInWei: BigInteger = ZenWeiConverter.convertZenniesToWei(ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE))
 
 
-  override def process(msg: Message, view: BaseAccountStateView): ExecutionResult = {
+  override def process(msg: Message, view: BaseAccountStateView): Array[Byte] = {
     //TODO: check errors in Ethereum, maybe for some kind of errors there a predefined types or codes
 
-    try {
-      if (!canProcess(msg, view)) {
-        log.error(s"Cannot process message $msg")
-        new InvalidMessage(new IllegalArgumentException(s"Cannot process message $msg"))
-      }
-      else {
+    BytesUtils.toHexString(getOpCodeFromData(msg.getData)) match {
+      case GetListOfWithdrawalReqsCmdSig =>
+        view.getGasPool.consumeGas(GasSpentForGetListOfWithdrawalReqsCmd)
+        execGetListOfWithdrawalReqRecords(msg, view)
 
-        val functionSig = BytesUtils.toHexString(getOpCodeFromData(msg.getData))
-        functionSig match {
-          case GetListOfWithdrawalReqsCmdSig =>
-            view.getGasPool.consumeGas(GasSpentForGetListOfWithdrawalReqsCmd)
-            execGetListOfWithdrawalReqRecords(msg, view)
+      case AddNewWithdrawalReqCmdSig =>
+        view.getGasPool.consumeGas(GasSpentForAddNewWithdrawalReqCmd)
+        execAddWithdrawalRequest(msg, view)
 
-          case AddNewWithdrawalReqCmdSig =>
-            view.getGasPool.consumeGas(GasSpentForAddNewWithdrawalReqCmd)
-            execAddWithdrawalRequest(msg, view)
-
-          case _ =>
-            val msgStr = s"Requested function does not exist. Function signature: $functionSig"
-            log.debug(msgStr)
-            new ExecutionFailed(new IllegalArgumentException(msgStr))
-        }
-      }
-    }
-    catch {
-      case e: Exception =>
-        log.error(s"Exception while processing message: $msg", e)
-        new ExecutionFailed(e)
+      case functionSig =>
+        val msgStr = s"Requested function does not exist. Function signature: $functionSig"
+        log.debug(msgStr)
+        throw new ExecutionFailedException(msgStr)
     }
   }
 
   private def getWithdrawalEpochCounter(view: BaseAccountStateView, epochNum: Int) = {
     val key = getWithdrawalEpochCounterKey(epochNum)
-    val wrCounterInBytesPadded = view.getAccountStorage(fakeSmartContractAddress.address(), key).get
+    val wrCounterInBytesPadded = view.getAccountStorage(fakeSmartContractAddress.address(), key)
     val wrCounterInBytes = wrCounterInBytesPadded.drop(wrCounterInBytesPadded.length - Ints.BYTES)
     val numOfWithdrawalReqs = Ints.fromByteArray(wrCounterInBytes)
 
@@ -86,7 +71,7 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
     val nextNumOfWithdrawalReqsBytes = Ints.toByteArray(nextNumOfWithdrawalReqs)
     val paddedNextNumOfWithdrawalReqs = Bytes.concat(new Array[Byte](32 - nextNumOfWithdrawalReqsBytes.length), nextNumOfWithdrawalReqsBytes)
     val wrCounterKey = getWithdrawalEpochCounterKey(currentEpochNum)
-    view.updateAccountStorage(fakeSmartContractAddress.address(), wrCounterKey, paddedNextNumOfWithdrawalReqs).get
+    view.updateAccountStorage(fakeSmartContractAddress.address(), wrCounterKey, paddedNextNumOfWithdrawalReqs)
   }
 
 
@@ -95,28 +80,17 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
 
     val listOfWithdrawalReqs = (1 to numOfWithdrawalReqs).map(index => {
       val currentKey = getWithdrawalRequestsKey(epochNum, index)
-      WithdrawalRequestSerializer.parseBytes(view.getAccountStorageBytes(fakeSmartContractAddress.address(), currentKey).get)
+      WithdrawalRequestSerializer.parseBytes(view.getAccountStorageBytes(fakeSmartContractAddress.address(), currentKey))
     })
     listOfWithdrawalReqs
   }
 
-  protected def execGetListOfWithdrawalReqRecords(msg: Message, view: BaseAccountStateView): ExecutionResult = {
-    try {
-      require(msg.getData.length == METHOD_CODE_LENGTH + GetListOfWithdrawalRequestsCmdInputDecoder.getABIDataParamsLengthInBytes,
-        s"Wrong data length ${msg.getData.length}") //TODO should any length between OP_CODE_LENGTH to OP_CODE_LENGTH + 32 be supported?
-      val inputParams = GetListOfWithdrawalRequestsCmdInputDecoder.decode(getArgumentsFromData(msg.getData)).get
-      val epochNum = inputParams.epochNum
-      val listOfWithdrawalReqs = getListOfWithdrawalReqRecords(epochNum, view)
-
-      val abiEncodedList = WithdrawalRequestsListEncoder.encode(listOfWithdrawalReqs.asJava)
-      new ExecutionSucceeded(abiEncodedList)
-    }
-    catch {
-      case e: Exception =>
-        log.debug(s"Error while getting Withdrawal Request list: ${e.getMessage}", e)
-        new ExecutionFailed(e)
-    }
-
+  protected def execGetListOfWithdrawalReqRecords(msg: Message, view: BaseAccountStateView): Array[Byte] = {
+    require(msg.getData.length == METHOD_CODE_LENGTH + GetListOfWithdrawalRequestsCmdInputDecoder.getABIDataParamsLengthInBytes,
+      s"Wrong data length ${msg.getData.length}") //TODO should any length between OP_CODE_LENGTH to OP_CODE_LENGTH + 32 be supported?
+    val inputParams = GetListOfWithdrawalRequestsCmdInputDecoder.decode(getArgumentsFromData(msg.getData))
+    val listOfWithdrawalReqs = getListOfWithdrawalReqRecords(inputParams.epochNum, view)
+    WithdrawalRequestsListEncoder.encode(listOfWithdrawalReqs.asJava)
   }
 
 
@@ -137,40 +111,31 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
     }
   }
 
-  protected def execAddWithdrawalRequest(msg: Message, view: BaseAccountStateView): ExecutionResult = {
-    try {
-      checkWithdrawalRequestValidity(msg)
-      val currentEpochNum = view.getWithdrawalEpochInfo.epoch
-      val numOfWithdrawalReqs = getWithdrawalEpochCounter(view, currentEpochNum)
-      if (numOfWithdrawalReqs >= MaxWithdrawalReqsNumPerEpoch) {
-        log.debug(s"Reached maximum number of Withdrawal Requests per epoch: request is invalid")
-        return new ExecutionFailed(new IllegalArgumentException("Reached maximum number of Withdrawal Requests per epoch"))
-      }
-
-      val nextNumOfWithdrawalReqs: Int = numOfWithdrawalReqs + 1
-      setWithdrawalEpochCounter(view, currentEpochNum, nextNumOfWithdrawalReqs)
-
-      val inputParams = AddWithdrawalRequestCmdInputDecoder.decode(getArgumentsFromData(msg.getData)).get
-      val withdrawalAmount = msg.getValue
-      val request = WithdrawalRequest(inputParams.mcAddr, withdrawalAmount)
-      val requestInBytes = request.bytes
-      view.updateAccountStorageBytes(fakeSmartContractAddress.address(), getWithdrawalRequestsKey(currentEpochNum, nextNumOfWithdrawalReqs), requestInBytes).get
-
-      view.subBalance(msg.getFrom.address(), withdrawalAmount).get
-
-      val withdrawalEvent = AddWithdrawalRequest(msg.getFrom, request.proposition, withdrawalAmount, currentEpochNum)
-      val evmLog = getEvmLog(withdrawalEvent)
-      view.addLog(evmLog).get
-
-      val abiEncodedResult = request.encode
-      new ExecutionSucceeded(abiEncodedResult)
-    }
-    catch {
-      case e: Exception =>
-        log.debug("Exception while adding a new Withdrawal Request", e)
-        new ExecutionFailed(e)
+  protected def execAddWithdrawalRequest(msg: Message, view: BaseAccountStateView): Array[Byte] = {
+    checkWithdrawalRequestValidity(msg)
+    val currentEpochNum = view.getWithdrawalEpochInfo.epoch
+    val numOfWithdrawalReqs = getWithdrawalEpochCounter(view, currentEpochNum)
+    if (numOfWithdrawalReqs >= MaxWithdrawalReqsNumPerEpoch) {
+      log.debug(s"Reached maximum number of Withdrawal Requests per epoch: request is invalid")
+      throw new ExecutionFailedException("Reached maximum number of Withdrawal Requests per epoch")
     }
 
+    val nextNumOfWithdrawalReqs: Int = numOfWithdrawalReqs + 1
+    setWithdrawalEpochCounter(view, currentEpochNum, nextNumOfWithdrawalReqs)
+
+    val inputParams = AddWithdrawalRequestCmdInputDecoder.decode(getArgumentsFromData(msg.getData))
+    val withdrawalAmount = msg.getValue
+    val request = WithdrawalRequest(inputParams.mcAddr, withdrawalAmount)
+    val requestInBytes = request.bytes
+    view.updateAccountStorageBytes(fakeSmartContractAddress.address(), getWithdrawalRequestsKey(currentEpochNum, nextNumOfWithdrawalReqs), requestInBytes)
+
+    view.subBalance(msg.getFrom.address(), withdrawalAmount)
+
+    val withdrawalEvent = AddWithdrawalRequest(msg.getFrom, request.proposition, withdrawalAmount, currentEpochNum)
+    val evmLog = getEvmLog(withdrawalEvent)
+    view.addLog(evmLog)
+
+    request.encode
   }
 
   private[horizen] def calculateKey(keySeed: Array[Byte]): Array[Byte] = {

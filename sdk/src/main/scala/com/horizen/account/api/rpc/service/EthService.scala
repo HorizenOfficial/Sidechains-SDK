@@ -34,7 +34,7 @@ import scala.compat.java8.OptionConverters.RichOptionalGeneric
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 
 class EthService(val stateView: AccountStateView, val nodeView: CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool], val networkParams: NetworkParams, val sidechainSettings: SidechainSettings, val sidechainTransactionActorRef: ActorRef)
@@ -82,31 +82,22 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
     }
   }
 
-  private def doCall[A](params: TransactionArgs, tag: String)(fun: (ExecutionSucceeded, AccountStateView) ⇒ A): A = {
+  private def doCall[A](params: TransactionArgs, tag: String)(fun: (Array[Byte], AccountStateView) ⇒ A): A = {
     getStateViewAtTag(tag) { tagStateView =>
-      tagStateView.applyMessage(params.toMessage(tagStateView.getBaseFee)) match {
-          case Some(success: ExecutionSucceeded) => fun(success, tagStateView)
-
-          case Some(failed: ExecutionFailed) =>
-            // throw on execution errors, also include evm revert reason if possible
-            throw new RpcException(new RpcError(
-              RpcCode.ExecutionError.getCode, failed.getReason.getMessage, failed.getReason match {
-                case evmRevert: EvmException => Numeric.toHexString(evmRevert.returnData)
-                case _ => null
-              }))
-
-          case Some(invalid: InvalidMessage) =>
-            throw new IllegalArgumentException("Invalid message.", invalid.getReason)
-
-          case _ => throw new IllegalArgumentException("Unable to process call.")
-        }
+      try {
+        fun(tagStateView.applyMessage(params.toMessage(tagStateView.getBaseFee)), tagStateView)
+      } catch {
+        // throw on execution errors, also include evm revert reason if possible
+        case evmRevert: EvmException => throw new RpcException(new RpcError(
+          RpcCode.ExecutionError.getCode, evmRevert.getMessage, Numeric.toHexString(evmRevert.returnData)))
+      }
     }
   }
 
   @RpcMethod("eth_call")
   def call(params: TransactionArgs, tag: String): String = {
     doCall(params, tag) {
-      (result, _) => if (result.hasReturnData) Numeric.toHexString(result.returnData) else null
+      (result, _) => if (result != null) Numeric.toHexString(result) else null
     }
   }
 
@@ -167,17 +158,19 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
     if (highBound.compareTo(rpcGasCap) > 0) {
       highBound = rpcGasCap
     }
-    // Execute the binary search and hone in on an executable gas limit
-    val requiredGasLimit = binarySearch(lowBound, highBound) { testGasLimit =>
-      params.gas = testGasLimit
-      doCall(params, tag) { (result, _) => !result.isFailed }
+    // lambda that tests a given gas limit, returns true on successful execution, false on out-of-gas error
+    // other exceptions are not caught as the call would not succeed with any amount of gas
+    val check = (gas: BigInteger) => try {
+      params.gas = gas
+      doCall(params, tag) { (_, _) => true }
+    } catch {
+      case _: OutOfGasException => false
     }
+    // Execute the binary search and hone in on an executable gas limit
+    val requiredGasLimit = binarySearch(lowBound, highBound)(check)
     // Reject the transaction as invalid if it still fails at the highest allowance
-    if (requiredGasLimit == highBound) {
-      params.gas = highBound
-      if (doCall(params, tag) { (result, _) => result.isFailed }) {
-        throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, s"gas required exceeds allowance ($highBound)"))
-      }
+    if (requiredGasLimit == highBound && check(highBound)) {
+      throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, s"gas required exceeds allowance ($highBound)"))
     }
     new Quantity(requiredGasLimit)
   }

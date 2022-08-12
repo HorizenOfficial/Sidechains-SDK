@@ -29,7 +29,7 @@ import scala.util.{Failure, Success}
 trait ForgerStakesProvider {
   private[horizen] def getListOfForgers(view: BaseAccountStateView): Seq[AccountForgingStakeInfo]
 
-  private[horizen] def addScCreationForgerStake(msg: Message, view: BaseAccountStateView): ExecutionResult
+  private[horizen] def addScCreationForgerStake(msg: Message, view: BaseAccountStateView): Array[Byte]
 
   private[horizen] def findStakeData(view: BaseAccountStateView, stakeId: Array[Byte]): Option[ForgerStakeData]
 }
@@ -64,7 +64,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     // set the initial value for the linked list last element (null hash)
 
     // check we do not have this key set to any value yet
-    val initialTip = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey).get
+    val initialTip = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey)
 
     // getting a not existing key from state DB using RAW strategy as the api is doing
     // gives 32 bytes filled with 0 (CHUNK strategy gives an empty array instead
@@ -75,67 +75,49 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
 
   def existsStakeData(view: BaseAccountStateView, stakeId: Array[Byte]): Boolean = {
     // do the RAW-strategy read even if the record is actually multi-line in stateDb. It will save some gas.
-    view.getAccountStorage(fakeSmartContractAddress.address(), stakeId) match {
-      case Success(data) =>
-        // getting a not existing key from state DB using RAW strategy
-        // gives an array of 32 bytes filled with 0, while using CHUNK strategy
-        // gives an empty array instead
-        BytesUtils.toHexString(data) != NULL_HEX_STRING_32
-
-      case Failure(e) =>
-        log.error("Failure in getting value from state DB", e)
-        throw new Exception(e)
-    }
+    val data = view.getAccountStorage(fakeSmartContractAddress.address(), stakeId)
+    // getting a not existing key from state DB using RAW strategy
+    // gives an array of 32 bytes filled with 0, while using CHUNK strategy
+    // gives an empty array instead
+    BytesUtils.toHexString(data) != NULL_HEX_STRING_32
   }
 
   def findStakeData(view: BaseAccountStateView, stakeId: Array[Byte]): Option[ForgerStakeData] = {
-    view.getAccountStorageBytes(fakeSmartContractAddress.address(), stakeId) match {
-      case Success(data) =>
-        if (data.length == 0) {
-          // getting a not existing key from state DB using RAW strategy
-          // gives an array of 32 bytes filled with 0, while using CHUNK strategy, as the api is doing here
-          // gives an empty array instead
-          None
-        } else {
-          ForgerStakeDataSerializer.parseBytesTry(data) match {
-            case Success(obj) => Some(obj)
-            case Failure(exception) =>
-              log.error("Error while parsing forger data.", exception)
-              throw exception
-          }
-        }
-
-      case Failure(e) =>
-        log.error("Failure in getting value from state DB", e)
-        throw new Exception(e)
+    val data = view.getAccountStorageBytes(fakeSmartContractAddress.address(), stakeId)
+    if (data.length == 0) {
+      // getting a not existing key from state DB using RAW strategy
+      // gives an array of 32 bytes filled with 0, while using CHUNK strategy, as the api is doing here
+      // gives an empty array instead
+      None
+    } else {
+      ForgerStakeDataSerializer.parseBytesTry(data) match {
+        case Success(obj) => Some(obj)
+        case Failure(exception) =>
+          log.error("Error while parsing forger data.", exception)
+          throw exception
+      }
     }
   }
 
   def findLinkedListNode(view: BaseAccountStateView, nodeId: Array[Byte]): Option[LinkedListNode] = {
-    view.getAccountStorageBytes(fakeSmartContractAddress.address(), nodeId) match {
-      case Success(data) =>
-        if (data.length == 0) {
-          // getting a not existing key from state DB using RAW strategy
-          // gives an array of 32 bytes filled with 0, while using CHUNK strategy, as the api is doing here
-          // gives an empty array instead
-          None
-        } else {
-          LinkedListNodeSerializer.parseBytesTry(data) match {
-            case Success(obj) => Some(obj)
-            case Failure(exception) =>
-              log.error("Error while parsing forging info.", exception)
-              throw exception
-          }
-        }
-
-      case Failure(e) =>
-        log.error("Failure in getting value from state DB", e)
-        throw new Exception(e)
+    val data = view.getAccountStorageBytes(fakeSmartContractAddress.address(), nodeId)
+    if (data.length == 0) {
+      // getting a not existing key from state DB using RAW strategy
+      // gives an array of 32 bytes filled with 0, while using CHUNK strategy, as the api is doing here
+      // gives an empty array instead
+      None
+    } else {
+      LinkedListNodeSerializer.parseBytesTry(data) match {
+        case Success(obj) => Some(obj)
+        case Failure(exception) =>
+          log.error("Error while parsing forging info.", exception)
+          throw exception
+      }
     }
   }
 
   def addNewNodeToList(view: BaseAccountStateView, stakeId: Array[Byte]): Unit = {
-    val oldTip = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey).get
+    val oldTip = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey)
 
     val newTip = Blake2b256.hash(stakeId)
 
@@ -248,35 +230,28 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
   def linkedListNodeRefIsNull(ref: Array[Byte]): Boolean =
     BytesUtils.toHexString(ref).equals(BytesUtils.toHexString(LinkedListNullValue))
 
-  override def addScCreationForgerStake(msg: Message, view: BaseAccountStateView): ExecutionResult =
+  override def addScCreationForgerStake(msg: Message, view: BaseAccountStateView): Array[Byte] =
     doAddNewStakeCmd(msg, view, isGenesisScCreation = true)
 
-  def doAddNewStakeCmd(msg: Message, view: BaseAccountStateView, isGenesisScCreation: Boolean = false): ExecutionResult = {
+  def doAddNewStakeCmd(msg: Message, view: BaseAccountStateView, isGenesisScCreation: Boolean = false): Array[Byte] = {
 
     // first of all check msg.value, it must be a legal wei amount convertible in satoshi without any remainder
     if (!isValidZenAmount(msg.getValue)) {
       val msgStr = s"Value is not a legal wei amount: ${msg.getValue.toString()}"
       log.debug(msgStr)
-      return new ExecutionFailed(new IllegalArgumentException(msgStr))
+      throw new ExecutionFailedException(msgStr)
     }
 
     // check also that sender account exists (unless we are staking in the sc creation phase)
     if (!isGenesisScCreation && !view.accountExists(msg.getFrom.address())) {
       val msgStr = s"Sender account does not exist: ${msg.getFrom.toString}"
       log.debug(msgStr)
-      return new ExecutionFailed(new IllegalArgumentException(msgStr))
+      throw new ExecutionFailedException(msgStr)
     }
 
     val inputParams = getArgumentsFromData(msg.getData)
 
-    val cmdInput = AddNewStakeCmdInputDecoder.decode(inputParams) match {
-      case Success(obj) => obj
-      case Failure(exception) =>
-        val msgStr = "Error while parsing cmd input"
-        log.debug(msgStr, exception)
-        return new ExecutionFailed(new IllegalArgumentException(msgStr))
-    }
-
+    val cmdInput = AddNewStakeCmdInputDecoder.decode(inputParams)
     val blockSignPublicKey: PublicKey25519Proposition = cmdInput.forgerPublicKeys.blockSignPublicKey
     val vrfPublicKey: VrfPublicKey = cmdInput.forgerPublicKeys.vrfPublicKey
     val ownerAddress: AddressProposition = cmdInput.ownerAddress
@@ -287,7 +262,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
       if (!networkParams.allowedForgersList.contains((blockSignPublicKey, vrfPublicKey))) {
         val msgStr = "Forger is not in the allowed list"
         log.debug(msgStr)
-        return new ExecutionFailed(new Exception(msgStr))
+        throw new ExecutionFailedException(msgStr)
       }
     }
 
@@ -298,7 +273,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     if (existsStakeData(view, newStakeId)) {
       val msgStr = s"Stake ${BytesUtils.toHexString(newStakeId)} already in stateDb"
       log.error(msgStr)
-      return new ExecutionFailed(new Exception(msgStr))
+      throw new ExecutionFailedException(msgStr)
     }
 
     // add the obj to stateDb
@@ -308,34 +283,22 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
 
     val addNewStakeEvt = DelegateForgerStake(msg.getFrom, ownerAddress, newStakeId, stakedAmount)
     val evmLog = getEvmLog(addNewStakeEvt)
-    view.addLog(evmLog).get
+    view.addLog(evmLog)
 
 
     if (isGenesisScCreation) {
       // increase the balance of the "forger stake smart contract” account
-      view.addBalance(fakeSmartContractAddress.address(), stakedAmount).get
-
-      new ExecutionSucceeded(newStakeId)
-
+      view.addBalance(fakeSmartContractAddress.address(), stakedAmount)
     } else {
       // decrease the balance of `from` account by `tx.value`
-      view.subBalance(msg.getFrom.address(), stakedAmount) match {
-        case Success(_) =>
-          // increase the balance of the "forger stake smart contract” account
-          view.addBalance(fakeSmartContractAddress.address(), stakedAmount).get
-
-          // TODO add log ForgerStakeDelegation(StakeId, ...) to the StateView ???
-          //view.addLog(new EvmLog concrete instance) // EvmLog will be used internally
-
-          // Maybe result is not useful in case of success execution (used probably for RPC commands only)
-          new ExecutionSucceeded(newStakeId)
-
-        case Failure(e) =>
-          val balance = view.getBalance(msg.getFrom.address())
-          log.debug(s"Could not subtract $stakedAmount from account: current balance = $balance")
-          new ExecutionFailed(new Exception(e))
-      }
+      view.subBalance(msg.getFrom.address(), stakedAmount)
+      // increase the balance of the "forger stake smart contract” account
+      view.addBalance(fakeSmartContractAddress.address(), stakedAmount)
+      // TODO add log ForgerStakeDelegation(StakeId, ...) to the StateView ???
+      //view.addLog(new EvmLog concrete instance) // EvmLog will be used internally
     }
+    // result in case of success execution might be useful for RPC commands
+    newStakeId
   }
 
   private def checkGetListOfForgersCmd(msg: Message): Unit = {
@@ -343,17 +306,13 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     if (getArgumentsFromData(msg.getData).length > 0) {
       val msgStr = s"invalid msg data length: ${msg.getData.length}, expected $METHOD_CODE_LENGTH"
       log.debug(msgStr)
-      throw new IllegalArgumentException(msgStr)
+      throw new ExecutionFailedException(msgStr)
     }
   }
 
   override def getListOfForgers(view: BaseAccountStateView): Seq[AccountForgingStakeInfo] = {
-    getListOfForgerRecords(view)
-  }
-
-  private def getListOfForgerRecords(view: BaseAccountStateView) : Seq[AccountForgingStakeInfo] = {
     var stakeList = Seq[AccountForgingStakeInfo]()
-    var nodeReference = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey).get
+    var nodeReference = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey)
 
     while (!linkedListNodeRefIsNull(nodeReference)) {
       val (item: AccountForgingStakeInfo, prevNodeReference: Array[Byte]) = getListItem(view, nodeReference)
@@ -363,36 +322,19 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     stakeList
   }
 
-  def doUncheckedGetListOfForgersCmd(view: BaseAccountStateView): ExecutionResult = {
-    val stakeList = getListOfForgerRecords(view)
-
-    val listOfForgers = AccountForgingStakeInfoListEncoder.encode(stakeList.asJava)
-    new ExecutionSucceeded(listOfForgers)
+  def doUncheckedGetListOfForgersCmd(view: BaseAccountStateView): Array[Byte] = {
+    val stakeList = getListOfForgers(view)
+    AccountForgingStakeInfoListEncoder.encode(stakeList.asJava)
   }
 
-  def doGetListOfForgersCmd(msg: Message, view: BaseAccountStateView): ExecutionResult = {
-    try {
-      checkGetListOfForgersCmd(msg)
-    }
-    catch {
-      case e: Exception =>
-        log.debug("Exception while adding a new Withdrawal Request", e)
-        return new ExecutionFailed(e)
-    }
-
+  def doGetListOfForgersCmd(msg: Message, view: BaseAccountStateView): Array[Byte] = {
+    checkGetListOfForgersCmd(msg)
     doUncheckedGetListOfForgersCmd(view)
   }
 
-  def doRemoveStakeCmd(msg: Message, view: BaseAccountStateView): ExecutionResult = {
+  def doRemoveStakeCmd(msg: Message, view: BaseAccountStateView): Array[Byte] = {
     val inputParams = getArgumentsFromData(msg.getData)
-    val cmdInput = RemoveStakeCmdInputDecoder.decode(inputParams) match {
-      case Success(obj) => obj
-      case Failure(exception) =>
-        val msgStr = "Error while parsing cmd input"
-        log.debug(msgStr, exception)
-        return new ExecutionFailed(new IllegalArgumentException(exception))
-    }
-
+    val cmdInput = RemoveStakeCmdInputDecoder.decode(inputParams)
     val stakeId: Array[Byte] = cmdInput.stakeId
     val signature: SignatureSecp256k1 = cmdInput.signature
 
@@ -402,7 +344,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
       case None =>
         val msgStr = "No such stake id in state-db"
         log.debug(msgStr)
-        return new ExecutionFailed(new Exception(msgStr))
+        throw new ExecutionFailedException(msgStr)
     }
 
     // check signature
@@ -410,7 +352,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     if (!signature.isValid(stakeData.ownerPublicKey, msgToSign)) {
       val msgStr = "Invalid signature"
       log.debug(msgStr)
-      return new ExecutionFailed(new Exception(msgStr))
+      throw new ExecutionFailedException(msgStr)
     }
 
     // remove the forger stake data
@@ -418,53 +360,36 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
 
     val removeStakeEvt = WithdrawForgerStake(stakeData.ownerPublicKey, stakeId)
     val evmLog = getEvmLog(removeStakeEvt)
-    view.addLog(evmLog).get
+    view.addLog(evmLog)
 
     // decrease the balance of the "stake smart contract” account
-    view.subBalance(fakeSmartContractAddress.address(), stakeData.stakedAmount).get
+    view.subBalance(fakeSmartContractAddress.address(), stakeData.stakedAmount)
 
     // increase the balance of owner (not the sender) by withdrawn amount.
     view.addBalance(stakeData.ownerPublicKey.address(), stakeData.stakedAmount)
 
     // Maybe result is not useful in case of success execution (used probably for RPC commands only)
-    val result = stakeId
-    new ExecutionSucceeded(result)
+    stakeId
   }
 
-  override def process(msg: Message, view: BaseAccountStateView): ExecutionResult = {
-    try {
+  override def process(msg: Message, view: BaseAccountStateView): Array[Byte] = {
+    BytesUtils.toHexString(getOpCodeFromData(msg.getData)) match {
+      case GetListOfForgersCmd =>
+        view.getGasPool.consumeGas(GetListOfForgersGasPaidValue)
+        doGetListOfForgersCmd(msg, view)
 
-      if (!canProcess(msg, view)) {
-        val errMsg = s"Cannot process message $msg"
-        log.error(errMsg)
-        return new InvalidMessage(new IllegalArgumentException(errMsg))
-      }
+      case AddNewStakeCmd =>
+        view.getGasPool.consumeGas(AddNewStakeGasPaidValue)
+        doAddNewStakeCmd(msg, view)
 
-      val cmdString = BytesUtils.toHexString(getOpCodeFromData(msg.getData))
-      cmdString match {
-        case `GetListOfForgersCmd` =>
-          view.getGasPool.consumeGas(GetListOfForgersGasPaidValue)
-          doGetListOfForgersCmd(msg, view)
+      case RemoveStakeCmd =>
+        view.getGasPool.consumeGas(RemoveStakeGasPaidValue)
+        doRemoveStakeCmd(msg, view)
 
-        case `AddNewStakeCmd` =>
-          view.getGasPool.consumeGas(AddNewStakeGasPaidValue)
-          doAddNewStakeCmd(msg, view)
-
-        case `RemoveStakeCmd` =>
-          view.getGasPool.consumeGas(RemoveStakeGasPaidValue)
-          doRemoveStakeCmd(msg, view)
-
-        case _ =>
-          val msgStr = s"op code $cmdString not supported"
-          log.debug(msgStr)
-          new ExecutionFailed(new IllegalArgumentException(msgStr))
-      }
-    }
-    catch {
-      case e: Exception =>
-        val msgStr = s"Exception while processing message: $msg, $e"
-        log.debug(msgStr, e)
-        new ExecutionFailed(new IllegalArgumentException(e))
+      case opCodeHex =>
+        val msgStr = s"op code $opCodeHex not supported"
+        log.debug(msgStr)
+        throw new ExecutionFailedException(msgStr)
     }
   }
 }
@@ -483,7 +408,6 @@ object ForgerStakeMsgProcessor {
   def getMessageToSign(stakeId: Array[Byte], from: Array[Byte], nonce: Array[Byte]): Array[Byte] = {
     Bytes.concat(from, nonce, stakeId)
   }
-
 
 }
 
@@ -517,11 +441,10 @@ case class AccountForgingStakeInfo(
 
   override def equals(that: Any): Boolean =
     that match {
-      case that: AccountForgingStakeInfo => {
+      case that: AccountForgingStakeInfo =>
         that.canEqual(this) &&
           this.forgerStakeData == that.forgerStakeData &&
           util.Arrays.equals(this.stakeId, that.stakeId)
-      }
       case _ => false
     }
 
@@ -619,10 +542,12 @@ case class AddNewStakeCmdInput(
 
 object AddNewStakeCmdInputDecoder extends ABIDecoder[AddNewStakeCmdInput] {
 
-  override val getListOfABIParamTypes = org.web3j.abi.Utils.convert(util.Arrays.asList(new TypeReference[Bytes32]() {},
-    new TypeReference[Bytes32]() {},
-    new TypeReference[Bytes1]() {},
-    new TypeReference[Address]() {}))
+  override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] =
+    org.web3j.abi.Utils.convert(util.Arrays.asList(
+      new TypeReference[Bytes32]() {},
+      new TypeReference[Bytes32]() {},
+      new TypeReference[Bytes1]() {},
+      new TypeReference[Address]() {}))
 
    override def createType(listOfParams: util.List[Type[_]]): AddNewStakeCmdInput = {
     val forgerPublicKey = new PublicKey25519Proposition(listOfParams.get(0).asInstanceOf[Bytes32].getValue)
@@ -658,10 +583,12 @@ case class RemoveStakeCmdInput(
 
 object RemoveStakeCmdInputDecoder extends ABIDecoder[RemoveStakeCmdInput] {
 
-  override val getListOfABIParamTypes = org.web3j.abi.Utils.convert(util.Arrays.asList(new TypeReference[Bytes32]() {},
-    new TypeReference[Bytes1]() {},
-    new TypeReference[Bytes32]() {},
-    new TypeReference[Bytes32]() {}))
+  override val getListOfABIParamTypes: util.List[TypeReference[Type[_]]] =
+    org.web3j.abi.Utils.convert(util.Arrays.asList(
+      new TypeReference[Bytes32]() {},
+      new TypeReference[Bytes1]() {},
+      new TypeReference[Bytes32]() {},
+      new TypeReference[Bytes32]() {}))
 
   override def createType(listOfParams: util.List[Type[_]]): RemoveStakeCmdInput = {
     val stakeId = listOfParams.get(0).asInstanceOf[Bytes32].getValue

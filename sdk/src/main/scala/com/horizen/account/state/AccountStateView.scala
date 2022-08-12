@@ -61,10 +61,7 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
             ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
             ownerAddressProposition
           )
-
-          val data: Array[Byte] = Bytes.concat(
-            BytesUtils.fromHexString(AddNewStakeCmd),
-            cmdInput.encode())
+          val data = Bytes.concat(BytesUtils.fromHexString(AddNewStakeCmd), cmdInput.encode())
 
           val message = new Message(
             ownerAddressProposition,
@@ -77,16 +74,8 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
             BigInteger.ONE.negate(), // a negative nonce value will rule out collision with real transactions
             data)
 
-          forgerStakesProvider.addScCreationForgerStake(message, this) match {
-            case res: ExecutionFailed =>
-              log.error(res.getReason.getMessage)
-              throw new IllegalArgumentException(res.getReason)
-            case res: InvalidMessage =>
-              log.error(res.getReason.getMessage)
-              throw new IllegalArgumentException(res.getReason)
-            case res: ExecutionSucceeded =>
-              log.debug(s"sc creation forging stake added with stakeid: ${BytesUtils.toHexString(res.returnData())}")
-          }
+          val returnData = forgerStakesProvider.addScCreationForgerStake(message, this)
+          log.debug(s"sc creation forging stake added with stakeid: ${BytesUtils.toHexString(returnData)}")
 
         case ft: ForwardTransfer =>
           val ftOut: MainchainTxForwardTransferCrosschainOutput = ft.getFtOutput
@@ -104,26 +93,20 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     })
   }
 
-  override def getListOfForgerStakes: Seq[AccountForgingStakeInfo] = {
+  override def getListOfForgerStakes: Seq[AccountForgingStakeInfo] =
     forgerStakesProvider.getListOfForgers(this)
-  }
 
-  override def getForgerStakeData(stakeId: String): Option[ForgerStakeData] = {
+  override def getForgerStakeData(stakeId: String): Option[ForgerStakeData] =
     forgerStakesProvider.findStakeData(this, BytesUtils.fromHexString(stakeId))
-  }
 
   def getOrderedForgingStakeInfoSeq: Seq[ForgingStakeInfo] = {
-    val forgerStakeList = forgerStakesProvider.getListOfForgers(this)
-
-    forgerStakeList.map {
-      item =>
-        ForgingStakeInfo(
-          item.forgerStakeData.forgerPublicKeys.blockSignPublicKey,
-          item.forgerStakeData.forgerPublicKeys.vrfPublicKey,
-          ZenWeiConverter.convertWeiToZennies(item.forgerStakeData.stakedAmount))
+    forgerStakesProvider.getListOfForgers(this).map { item =>
+      ForgingStakeInfo(
+        item.forgerStakeData.forgerPublicKeys.blockSignPublicKey,
+        item.forgerStakeData.forgerPublicKeys.vrfPublicKey,
+        ZenWeiConverter.convertWeiToZennies(item.forgerStakeData.stakedAmount))
     }.sorted(Ordering[ForgingStakeInfo].reverse)
   }
-
 
   def setupTxContext(txHash: Array[Byte], idx: Integer): Unit = {
     // set context for the created events/logs assignment
@@ -166,7 +149,7 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
         s"max fee per gas less than block base fee: address ${sender.checksumAddress()}, maxFeePerGas: ${msg.getGasFeeCap}, baseFee: $getBaseFee")
   }
 
-  private def buyGas(msg: Message) = {
+  private def buyGas(msg: Message): Unit = {
     val gas = msg.getGasLimit
     // with a legacy TX gasPrice will be the one set by the caller
     // with an EIP1559 TX gasPrice will be the effective gasPrice (baseFee+tip, capped at feeCap)
@@ -193,7 +176,7 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     val max = gasPool.getUsedGas.divide(BigInteger.valueOf(quotient))
     val refund = stateDb.getRefund match {
       // cap refund to a quotient of the used gas
-      case refund if max.compareTo(refund) > 1 => max
+      case refund if refund.compareTo(max) > 1 => max
       case refund => refund
     }
     // return funds for remaining gas, exchanged at the original rate.
@@ -204,32 +187,26 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     // TODO: also return remaining gas to the gasPool of the current block so it is available for the next transaction
   }
 
-  def applyMessage(msg: Message): Option[ExecutionResult] = {
-    // First check this message satisfies all consensus rules before
-    // applying the message. The rules include these clauses
-    //
-    // 1. the nonce of the message caller is correct
-    // 2. caller has enough balance to cover transaction fee(gaslimit * gasprice)
-    // 3. the amount of gas required is available in the block
-    // 4. the purchased gas is enough to cover intrinsic usage
-    // 5. there is no overflow when calculating intrinsic gas
-    // 6. caller has enough balance to cover asset transfer for **topmost** call
-
+  def applyMessage(msg: Message): Array[Byte] = {
     buyGas(msg)
+    val revisionId = stateDb.snapshot()
 
-    gasPool.consumeGas(GasCalculator.intrinsicGas(msg.getData, msg.getTo == null))
-    val revisionId: Int = stateDb.snapshot()
-
-    val result = messageProcessors.find(_.canProcess(msg, this)).map(_.process(msg, this))
-    result match {
-      case Some(_: ExecutionSucceeded) =>
-      // revert changes in case anything goes wrong
-      case _ => stateDb.revertToSnapshot(revisionId)
+    try {
+      // always consume intrinsic gas
+      gasPool.consumeGas(GasCalculator.intrinsicGas(msg.getData, msg.getTo == null))
+      messageProcessors.find(_.canProcess(msg, this)) match {
+        case Some(processor) => processor.process(msg, this)
+        case None => throw new IllegalArgumentException(s"Unable to process message.")
+      }
+    } catch {
+      // if the processor throws we revert all changes and consume any remaining gas
+      case err: Exception =>
+        stateDb.revertToSnapshot(revisionId)
+        gasPool.consumeGas(gasPool.getAvailableGas)
+        throw err
+    } finally {
+      refundGas(msg)
     }
-
-    refundGas(msg)
-
-    result
   }
 
   override def applyTransaction(tx: SidechainTypes#SCAT, txIndex: Int, prevCumGasUsed: BigInteger): Try[EthereumConsensusDataReceipt] = Try {
@@ -249,22 +226,17 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     // increase the nonce by 1
     increaseNonce(msg.getFrom.address())
 
-    val consensusDataReceipt = applyMessage(msg) match {
-      case None =>
-        throw new IllegalArgumentException(s"Transaction ${ethTx.id} has no known processor.")
-
-      case Some(invalid: InvalidMessage) =>
-        throw new Exception(s"Transaction ${ethTx.id} is invalid.", invalid.getReason)
-
-      case Some(result) =>
-        val evmLogs = getLogs(txHash)
-        val status = result match {
-          case _: ExecutionFailed => ReceiptStatus.FAILED.id
-          case _: ExecutionSucceeded => ReceiptStatus.SUCCESSFUL.id
-        }
-        new EthereumConsensusDataReceipt(ethTx.version(), status, prevCumGasUsed.add(gasPool.getUsedGas), evmLogs)
+    // apply message to state
+    val status = try {
+      applyMessage(msg)
+      ReceiptStatus.SUCCESSFUL
+    } catch {
+      case err: Exception =>
+        log.debug("applying message failed", err)
+        ReceiptStatus.FAILED
     }
-
+    val consensusDataReceipt = new EthereumConsensusDataReceipt(
+      ethTx.version(), status.id, prevCumGasUsed.add(gasPool.getUsedGas), getLogs(txHash))
     log.debug(s"Returning consensus data receipt: ${consensusDataReceipt.toString()}")
     consensusDataReceipt
   }
@@ -276,85 +248,63 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
   override def accountExists(address: Array[Byte]): Boolean = !stateDb.isEmpty(address)
 
   // account modifiers:
-  override def addAccount(address: Array[Byte], codeHash: Array[Byte]): Try[Unit] = Try {
+  override def addAccount(address: Array[Byte], codeHash: Array[Byte]): Unit =
     stateDb.setCodeHash(address, codeHash)
-  }
 
-  override def addBalance(address: Array[Byte], amount: BigInteger): Try[Unit] = Try {
+  override def addBalance(address: Array[Byte], amount: BigInteger): Unit =
     stateDb.addBalance(address, amount)
-  }
 
-  override def subBalance(address: Array[Byte], amount: BigInteger): Try[Unit] = Try {
+  override def subBalance(address: Array[Byte], amount: BigInteger): Unit = {
     // stateDb lib does not do any sanity check, and negative balances might arise (and java/go json IF does not correctly handle it)
     // TODO: for the time being do the checks here, later they will be done in the caller stack
     require(amount.compareTo(BigInteger.ZERO) >= 0)
-    val balance = stateDb.getBalance(address)
-    require(balance.compareTo(amount) >= 0)
-
+    if (amount.compareTo(BigInteger.ZERO) > 0) {
+      require(stateDb.getBalance(address).compareTo(amount) >= 0)
+    }
     stateDb.subBalance(address, amount)
   }
 
-  override def increaseNonce(address: Array[Byte]): Try[Unit] = Try {
-    val currentNonce: BigInteger = getNonce(address)
-    stateDb.setNonce(address, currentNonce.add(BigInteger.ONE))
-  }
+  override def increaseNonce(address: Array[Byte]): Unit =
+    stateDb.setNonce(address, getNonce(address).add(BigInteger.ONE))
 
-  override def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Try[Unit] = Try {
+  override def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit =
     stateDb.setStorage(address, key, value, StateStorageStrategy.RAW)
-  }
 
-  override def updateAccountStorageBytes(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Try[Unit] = Try {
+  override def updateAccountStorageBytes(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit =
     stateDb.setStorage(address, key, value, StateStorageStrategy.CHUNKED)
-  }
 
-  override def getAccountStorage(address: Array[Byte], key: Array[Byte]): Try[Array[Byte]] = Try {
+  override def getAccountStorage(address: Array[Byte], key: Array[Byte]): Array[Byte] =
     stateDb.getStorage(address, key, StateStorageStrategy.RAW)
-  }
 
-  override def getAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Try[Array[Byte]] = Try {
+  override def getAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Array[Byte] =
     stateDb.getStorage(address, key, StateStorageStrategy.CHUNKED)
-  }
 
-  override def removeAccountStorage(address: Array[Byte], key: Array[Byte]): Try[Unit] = Try {
+  override def removeAccountStorage(address: Array[Byte], key: Array[Byte]): Unit =
     stateDb.removeStorage(address, key, StateStorageStrategy.RAW)
-  }
 
-  override def removeAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Try[Unit] = Try {
+  override def removeAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Unit =
     stateDb.removeStorage(address, key, StateStorageStrategy.CHUNKED)
-  }
-
-  // log handling
-  // def addLog(log: EvmLog) : Try[Unit] = ???
 
   // out-of-the-box helpers
-  override def addCertificate(cert: WithdrawalEpochCertificate): Unit = {
+  override def addCertificate(cert: WithdrawalEpochCertificate): Unit =
     metadataStorageView.updateTopQualityCertificate(cert)
-  }
 
-  override def addFeeInfo(info: BlockFeeInfo): Unit = {
+  override def addFeeInfo(info: BlockFeeInfo): Unit =
     metadataStorageView.addFeePayment(info)
-  }
 
-  override def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo): Unit = {
+  override def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo): Unit =
     metadataStorageView.updateWithdrawalEpochInfo(withdrawalEpochInfo)
-  }
 
-  override def updateConsensusEpochNumber(consensusEpochNum: ConsensusEpochNumber): Unit = {
+  override def updateConsensusEpochNumber(consensusEpochNum: ConsensusEpochNumber): Unit =
     metadataStorageView.updateConsensusEpochNumber(consensusEpochNum)
-  }
 
-  override def updateTransactionReceipts(receipts: Seq[EthereumReceipt]): Unit = {
+  override def updateTransactionReceipts(receipts: Seq[EthereumReceipt]): Unit =
     metadataStorageView.updateTransactionReceipts(receipts)
-  }
 
-  def getTransactionReceipt(txHash: Array[Byte]): Option[EthereumReceipt] = {
+  def getTransactionReceipt(txHash: Array[Byte]): Option[EthereumReceipt] =
     metadataStorageView.getTransactionReceipt(txHash)
-  }
 
-  override def setCeased(): Unit = {
-    metadataStorageView.setCeased()
-  }
-
+  override def setCeased(): Unit = metadataStorageView.setCeased()
 
   override def commit(version: VersionTag): Try[Unit] = Try {
     // Update StateDB without version, then set the rootHash and commit metadataStorageView
@@ -367,64 +317,40 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
   override def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] =
     withdrawalReqProvider.getListOfWithdrawalReqRecords(withdrawalEpoch, this)
 
-  override def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
+  override def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] =
     metadataStorageView.getTopQualityCertificate(referencedWithdrawalEpoch)
-  }
 
-  override def certificateTopQuality(referencedWithdrawalEpoch: Int): Long = {
-    metadataStorageView.getTopQualityCertificate(referencedWithdrawalEpoch) match {
-      case Some(certificate) => certificate.quality
-      case None => 0
-    }
-  }
+  override def certificateTopQuality(referencedWithdrawalEpoch: Int): Long =
+    metadataStorageView.getTopQualityCertificate(referencedWithdrawalEpoch).map(_.quality).getOrElse(0)
 
-  override def getWithdrawalEpochInfo: WithdrawalEpochInfo = {
-    metadataStorageView.getWithdrawalEpochInfo
-  }
+  override def getWithdrawalEpochInfo: WithdrawalEpochInfo = metadataStorageView.getWithdrawalEpochInfo
 
   override def hasCeased: Boolean = metadataStorageView.hasCeased
 
   override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = metadataStorageView.getConsensusEpochNumber
 
-  override def getFeePayments(withdrawalEpoch: Int): Seq[BlockFeeInfo] = {
+  override def getFeePayments(withdrawalEpoch: Int): Seq[BlockFeeInfo] =
     metadataStorageView.getFeePayments(withdrawalEpoch)
-  }
 
   override def getAccountStateRoot: Array[Byte] = metadataStorageView.getAccountStateRoot
 
   override def getHeight: Int = metadataStorageView.getHeight
 
   // account specific getters
-  override def getBalance(address: Array[Byte]): BigInteger = {
-    stateDb.getBalance(address)
-  }
+  override def getBalance(address: Array[Byte]): BigInteger = stateDb.getBalance(address)
 
-  override def getCodeHash(address: Array[Byte]): Array[Byte] = {
-    stateDb.getCodeHash(address)
-  }
+  override def getCodeHash(address: Array[Byte]): Array[Byte] = stateDb.getCodeHash(address)
 
-  override def getNonce(address: Array[Byte]): BigInteger = {
-    stateDb.getNonce(address)
-  }
+  override def getNonce(address: Array[Byte]): BigInteger = stateDb.getNonce(address)
 
-  override def getLogs(txHash: Array[Byte]): Array[EvmLog] = {
-    stateDb.getLogs(txHash)
-  }
+  override def getLogs(txHash: Array[Byte]): Array[EvmLog] = stateDb.getLogs(txHash)
 
-  override def addLog(evmLog: EvmLog): Try[Unit] = {
-    Try {
-      stateDb.addLog(evmLog)
-    }
-  }
+  override def addLog(evmLog: EvmLog): Unit = stateDb.addLog(evmLog)
 
-  override def close(): Unit = {
-    // when a method is called on a closed handle, LibEvm throws an exception
-    stateDb.close()
-  }
+  // when a method is called on a closed handle, LibEvm throws an exception
+  override def close(): Unit = stateDb.close()
 
   override def getStateDbHandle: ResourceHandle = stateDb
-
-  override def getGasPool: GasPool = gasPool
 
   override def getIntermediateRoot: Array[Byte] = stateDb.getIntermediateRoot
 
@@ -433,4 +359,6 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
   // TODO: get baseFee for the block
   // TODO: currently a non-zero baseFee makes all the python tests fail, because they do not consider spending fees
   override def getBaseFee: BigInteger = BigInteger.valueOf(0)
+
+  override def getGasPool: GasPool = gasPool
 }

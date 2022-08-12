@@ -27,33 +27,32 @@ public class EvmMessageProcessor implements MessageProcessor {
     }
 
     @Override
-    public ExecutionResult process(Message msg, BaseAccountStateView view) {
-        try {
-            // prepare context
-            var context = new EvmContext();
-            context.baseFee = view.getBaseFee();
-            context.blockNumber = BigInteger.valueOf(view.getHeight());
-            // execute EVM
-            var result = Evm.Apply(
-                    view.getStateDbHandle(),
-                    msg.getFrom().address(),
-                    msg.getTo() == null ? null : msg.getTo().address(),
-                    msg.getValue(),
-                    msg.getData(),
-                    // TODO: the GASLIMIT opcode will return wrong results this way, because the intrinsicGas was already removed here
-                    view.getGasPool().getAvailableGas(),
-                    msg.getGasPrice(),
-                    context
-            );
-            // consume gas the EVM has used:
-            // the EVM will never consume more gas than is available, hence this should never throw
-            view.getGasPool().consumeGas(result.usedGas);
-            if (result.evmError.isEmpty()) {
-                return new ExecutionSucceeded(result.returnData);
+    public byte[] process(Message msg, BaseAccountStateView view) throws ExecutionFailedException {
+        // prepare context
+        var context = new EvmContext();
+        context.baseFee = view.getBaseFee();
+        context.blockNumber = BigInteger.valueOf(view.getHeight());
+        // execute EVM
+        var result = Evm.Apply(
+                view.getStateDbHandle(),
+                msg.getFrom().address(),
+                msg.getTo() == null ? null : msg.getTo().address(),
+                msg.getValue(),
+                msg.getData(),
+                // TODO: the GASLIMIT opcode will return wrong results this way, because the intrinsicGas was already removed here
+                view.getGasPool().getAvailableGas(),
+                msg.getGasPrice(),
+                context
+        );
+        // consume gas the EVM has used:
+        // the EVM will never consume more gas than is available, hence this should never throw
+        view.getGasPool().consumeGas(result.usedGas);
+        if (!result.evmError.isEmpty()) {
+            if (result.evmError.startsWith("out of gas")) {
+                throw new OutOfGasException();
             }
-            return new ExecutionFailed(new EvmException(result.evmError, result.returnData));
-        } catch (Exception err) {
-            return new InvalidMessage(err);
+            throw new EvmException(result.evmError, result.returnData);
         }
+        return result.returnData;
     }
 }
