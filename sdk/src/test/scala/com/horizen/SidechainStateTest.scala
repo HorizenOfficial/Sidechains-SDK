@@ -632,8 +632,6 @@ class SidechainStateTest
       )
     )
 
-    Mockito.when(mockedStateStorage.getForgerListIndexes).thenAnswer(_ => {Option.empty})
-
     Mockito.when(mockedStateStorage.getForgerList).thenAnswer(_ => {Option.empty})
 
     Mockito.when(mockedStateForgerBoxStorage.lastVersionId).thenReturn(Some(stateVersion.last))
@@ -716,7 +714,7 @@ class SidechainStateTest
     stateVersion.clear()
     stateVersion += getVersion
     transactionList.clear()
-    transactionList += getRegularTransaction(1, 1, Seq(), 5)
+    transactionList += getRegularTransaction(1, 1, 0, Seq(), 5)
 
     Mockito.when(mockedStateStorage.lastVersionId).thenReturn(Some(stateVersion.last))
 
@@ -725,6 +723,8 @@ class SidechainStateTest
         val boxId = answer.getArgument(0).asInstanceOf[Array[Byte]]
         boxList.find(_.id().sameElements(boxId))
       })
+
+    Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(1)))
 
     Mockito.when(mockedStateForgerBoxStorage.lastVersionId).thenReturn(Some(stateVersion.last))
 
