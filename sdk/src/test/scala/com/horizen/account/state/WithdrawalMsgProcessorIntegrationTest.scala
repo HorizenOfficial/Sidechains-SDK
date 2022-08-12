@@ -29,7 +29,6 @@ class WithdrawalMsgProcessorIntegrationTest
 
   @Test
   def testInit(): Unit = {
-
     using(getView) { stateView =>
       WithdrawalMsgProcessor.init(stateView)
 
@@ -39,9 +38,7 @@ class WithdrawalMsgProcessorIntegrationTest
       assertEquals("Wrong initial nonce", java.math.BigInteger.ZERO, stateView.getNonce(WithdrawalMsgProcessor.fakeSmartContractAddress.address()))
       assertNotNull("Wrong initial code hash", stateView.getCodeHash(WithdrawalMsgProcessor.fakeSmartContractAddress.address()))
     }
-
   }
-
 
   @Test
   def testWithdrawalRequestProcessorIntegration(): Unit = {
@@ -77,7 +74,6 @@ class WithdrawalMsgProcessorIntegrationTest
       assertEquals(classOf[IllegalArgumentException], res.asInstanceOf[ExecutionFailed].getReason.getClass)
 
       //Creating the first Withdrawal request
-
 
       val withdrawalAmount1 = ZenWeiConverter.convertZenniesToWei(123)
       var msg = getAddWithdrawalRequestMessage(withdrawalAmount1)
@@ -157,13 +153,10 @@ class WithdrawalMsgProcessorIntegrationTest
 
       wrListInBytes = res.asInstanceOf[ExecutionSucceeded].returnData()
       assertArrayEquals(WithdrawalRequestsListEncoder.encode(expectedListOfWR), wrListInBytes)
-
-
     }
   }
 
-
-  def checkEvent(expectedEvent: AddWithdrawalRequest, actualEvent: EvmLog) = {
+  def checkEvent(expectedEvent: AddWithdrawalRequest, actualEvent: EvmLog): Unit = {
     assertArrayEquals("Wrong address", WithdrawalMsgProcessor.fakeSmartContractAddress.address(), actualEvent.address.toBytes)
     assertEquals("Wrong number of topics", NumOfIndexedEvtParams + 1, actualEvent.topics.length) //The first topic is the hash of the signature of the event
     assertArrayEquals("Wrong event signature", AddNewWithdrawalRequestEventSig, actualEvent.topics(0).toBytes)
@@ -174,6 +167,5 @@ class WithdrawalMsgProcessorIntegrationTest
     val listOfDecodedData = FunctionReturnDecoder.decode(BytesUtils.toHexString(actualEvent.data), listOfRefs)
     assertEquals("Wrong amount in data", expectedEvent.value, listOfDecodedData.get(0))
     assertEquals("Wrong epoch number in data", expectedEvent.epochNumber, listOfDecodedData.get(1))
-
   }
 }

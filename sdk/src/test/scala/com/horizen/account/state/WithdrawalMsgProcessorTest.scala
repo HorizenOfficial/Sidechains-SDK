@@ -36,17 +36,14 @@ class WithdrawalMsgProcessorTest
 
   @Test
   def testInit(): Unit = {
-
     val mockStateView: AccountStateView = mock[AccountStateView]
-    Mockito.when(mockStateView.addAccount(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[Array[Byte]])).
-      thenAnswer(args => {
+    Mockito.when(mockStateView.addAccount(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[Array[Byte]]))
+      .thenAnswer(args => {
         assertArrayEquals("Different address expected.", args.getArgument(0), WithdrawalMsgProcessor.fakeSmartContractAddress.address())
         assertArrayEquals("Different code hash expected.", args.getArgument(1), WithdrawalMsgProcessor.fakeSmartContractCodeHash)
         Success[Unit]()
       })
-
     WithdrawalMsgProcessor.init(mockStateView)
-
   }
 
   @Test
@@ -61,9 +58,7 @@ class WithdrawalMsgProcessorTest
 
     val msgNotProcessable = getMessage(fakeAddress, java.math.BigInteger.ZERO, Array.emptyByteArray)
     assertFalse("Message not for WithdrawalMsgProcessor can be processed", WithdrawalMsgProcessor.canProcess(msgNotProcessable, mockStateView))
-
   }
-
 
   @Test
   def testProcess(): Unit = {
@@ -89,9 +84,7 @@ class WithdrawalMsgProcessorTest
     val res = WithdrawalMsgProcessor.process(mockMsg, mockStateView)
     assertEquals("msgWithWrongFunctionCall processing should result in ExecutionFailed", classOf[ExecutionFailed], res.getClass)
     assertEquals(expException, res.asInstanceOf[ExecutionFailed].getReason)
-
   }
-
 
   @Test
   def testAddWithdrawalRequestFailures(): Unit = {
@@ -123,7 +116,6 @@ class WithdrawalMsgProcessorTest
     assertEquals("Withdrawal request with insufficient balance should result in ExecutionFailed", classOf[ExecutionFailed], res.getClass)
     assertEquals(classOf[IllegalArgumentException], res.asInstanceOf[ExecutionFailed].getReason.getClass)
 
-
     //Under dust threshold
     val withdrawalAmountUnderDustThreshold: java.math.BigInteger = ZenWeiConverter.convertZenniesToWei(13)
     val msgUnderDustThres = getAddWithdrawalRequestMessage(withdrawalAmountUnderDustThreshold)
@@ -143,12 +135,10 @@ class WithdrawalMsgProcessorTest
     val key = WithdrawalMsgProcessor.getWithdrawalEpochCounterKey(epochNum)
     val numOfWithdrawalReqs = Bytes.concat(new Array[Byte](32 - Ints.BYTES), Ints.toByteArray(WithdrawalMsgProcessor.MaxWithdrawalReqsNumPerEpoch))
 
-    Mockito.when(mockStateView.getAccountStorage(WithdrawalMsgProcessor.fakeSmartContractAddress.address(), key)).thenReturn(Success(numOfWithdrawalReqs))
+    Mockito.when(mockStateView.getAccountStorage(WithdrawalMsgProcessor.fakeSmartContractAddress.address(), key)).thenReturn(numOfWithdrawalReqs)
     res = WithdrawalMsgProcessor.process(msg, mockStateView)
     assertEquals("Withdrawal request processing when max number of wt was already reached should result in ExecutionFailed", classOf[ExecutionFailed], res.getClass)
     assertEquals(classOf[IllegalArgumentException], res.asInstanceOf[ExecutionFailed].getReason.getClass)
-
-
   }
 
   @Test
@@ -172,7 +162,7 @@ class WithdrawalMsgProcessorTest
     val counterKey = WithdrawalMsgProcessor.getWithdrawalEpochCounterKey(epochNum)
     val numOfWithdrawalReqs = Bytes.concat(new Array[Byte](32 - Ints.BYTES), Ints.toByteArray(0))
 
-    Mockito.when(mockStateView.getAccountStorage(WithdrawalMsgProcessor.fakeSmartContractAddress.address(), counterKey)).thenReturn(Success(numOfWithdrawalReqs))
+    Mockito.when(mockStateView.getAccountStorage(WithdrawalMsgProcessor.fakeSmartContractAddress.address(), counterKey)).thenReturn(numOfWithdrawalReqs)
 
     res = WithdrawalMsgProcessor.process(msg, mockStateView)
     assertEquals("Wrong result type", classOf[ExecutionSucceeded], res.getClass)
@@ -188,18 +178,17 @@ class WithdrawalMsgProcessorTest
 
     val numOfWithdrawalReqsInBytes = Bytes.concat(new Array[Byte](32 - Ints.BYTES), Ints.toByteArray(maxNumOfWithdrawalReqs))
 
-    Mockito.when(mockStateView.getAccountStorage(WithdrawalMsgProcessor.fakeSmartContractAddress.address(), counterKey)).thenReturn(Success(numOfWithdrawalReqsInBytes))
+    Mockito.when(mockStateView.getAccountStorage(WithdrawalMsgProcessor.fakeSmartContractAddress.address(), counterKey)).thenReturn(numOfWithdrawalReqsInBytes)
 
     val destAddress = new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte))
     val mockWithdrawalRequestsList = new util.HashMap[ByteArrayWrapper, Array[Byte]](maxNumOfWithdrawalReqs)
 
-    (1 to maxNumOfWithdrawalReqs).foreach(index => {
+    for (index <- 1 to maxNumOfWithdrawalReqs) {
       val wr = WithdrawalRequest(destAddress, ZenWeiConverter.convertZenniesToWei(index))
       expectedListOfWR.add(wr)
       val key = WithdrawalMsgProcessor.getWithdrawalRequestsKey(epochNum, index)
       mockWithdrawalRequestsList.put(new ByteArrayWrapper(key), wr.bytes)
     }
-    )
 
     Mockito.when(mockStateView.getAccountStorageBytes(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[Array[Byte]])).thenAnswer(answer => {
       val key: Array[Byte] = answer.getArgument(1)
@@ -212,9 +201,6 @@ class WithdrawalMsgProcessorTest
     wrListInBytes = res.asInstanceOf[ExecutionSucceeded].returnData()
 
     assertArrayEquals(WithdrawalRequestsListEncoder.encode(expectedListOfWR),wrListInBytes)
-
   }
-
-
 }
 

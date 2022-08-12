@@ -32,12 +32,12 @@ class EoaMessageProcessorIntegrationTest
 
       // Test 2: to account exists and has NO code hash defined, so considered as EOA
       // declare account with some coins
-      assertTrue("EOA account expected to be set", stateView.addBalance(toAddress.address(), BigInteger.ONE).isSuccess)
+      stateView.addBalance(toAddress.address(), BigInteger.ONE)
       assertTrue("Processor expected to BE ABLE to process message", EoaMessageProcessor.canProcess(msg, stateView))
 
       // Test 3: to account exists and has code hash defined, so considered as Smart contract account
       val codeHash: Array[Byte] = Keccak256.hash("abcd".getBytes())
-      assertTrue("Smart contract account expected to be set", stateView.addAccount(toAddress.address(), codeHash).isSuccess)
+      stateView.addAccount(toAddress.address(), codeHash)
       assertFalse("Processor expected to UNABLE to process message", EoaMessageProcessor.canProcess(msg, stateView))
 
       // Test 4: "to" is null -> smart contract declaration case
@@ -59,18 +59,12 @@ class EoaMessageProcessorIntegrationTest
       val fromInitialValue: BigInteger = msg.getValue.multiply(BigInteger.TEN)
       stateView.addBalance(msg.getFrom.address(), fromInitialValue)
 
+      val returnData = EoaMessageProcessor.process(msg, stateView)
+//      assertEquals("Different gas found", GasCalculator.TxGas, es.gasUsed())
+      assertArrayEquals("Different return data found", Array.emptyByteArray, returnData)
 
-      EoaMessageProcessor.process(msg, stateView) match {
-        case es: ExecutionSucceeded =>
-          assertEquals("Different gas found", GasCalculator.TxGas, es.gasUsed())
-          assertArrayEquals("Different return data found", Array.emptyByteArray, es.returnData())
-
-          assertEquals("Different from account value found", fromInitialValue.subtract(msg.getValue), stateView.getBalance(msg.getFrom.address()))
-          assertEquals("Different to account value found", msg.getValue, stateView.getBalance(msg.getTo.address()))
-        case _: ExecutionFailed | _: InvalidMessage => fail("Execution failure received")
-      }
-
+      assertEquals("Different from account value found", fromInitialValue.subtract(msg.getValue), stateView.getBalance(msg.getFrom.address()))
+      assertEquals("Different to account value found", msg.getValue, stateView.getBalance(msg.getTo.address()))
     }
-
   }
 }

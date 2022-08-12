@@ -9,7 +9,7 @@ import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 
 import java.math.BigInteger
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 class EoaMessageProcessorTest extends JUnitSuite
   with MockitoSugar
@@ -103,13 +103,9 @@ class EoaMessageProcessorTest extends JUnitSuite
       Success()
     })
 
-    EoaMessageProcessor.process(msg, mockStateView) match {
-      case es: ExecutionSucceeded =>
-        assertEquals("Different gas found", GasCalculator.TxGas, es.gasUsed())
-        assertArrayEquals("Different return data found", Array.emptyByteArray, es.returnData())
-      case _: ExecutionFailed | _: InvalidMessage => fail("Execution failure received")
-    }
-
+    val returnData = EoaMessageProcessor.process(msg, mockStateView)
+    assertEquals("Different gas found", GasCalculator.TxGas, gasUsed)
+    assertArrayEquals("Different return data found", Array.emptyByteArray, returnData)
 
     // Test 2: Failure during subBalance
     Mockito.reset(mockStateView)
@@ -118,11 +114,11 @@ class EoaMessageProcessorTest extends JUnitSuite
       Failure(exception)
     })
 
-    EoaMessageProcessor.process(msg, mockStateView) match {
-      case _: ExecutionSucceeded | _: InvalidMessage => fail("Execution failure expected")
-      case ef: ExecutionFailed =>
-        assertEquals("Different gas found", GasCalculator.TxGas, ef.gasUsed())
-        assertEquals("Different exception found", exception, ef.getReason.getCause)
+    Try.apply(EoaMessageProcessor.process(msg, mockStateView)) match {
+      case Success(_) => fail("Execution failure expected")
+      case Failure(ef)=>
+        assertEquals("Different gas found", GasCalculator.TxGas, gasUsed)
+        assertEquals("Different exception found", exception, ef.getCause)
     }
 
 
@@ -143,11 +139,11 @@ class EoaMessageProcessorTest extends JUnitSuite
       Failure(exception)
     })
 
-    EoaMessageProcessor.process(msg, mockStateView) match {
-      case _: ExecutionSucceeded | _: InvalidMessage => fail("Execution failure expected")
-      case ef: ExecutionFailed =>
-        assertEquals("Different gas found", GasCalculator.TxGas, ef.gasUsed())
-        assertEquals("Different exception found", exception, ef.getReason.getCause)
+    Try.apply(EoaMessageProcessor.process(msg, mockStateView)) match {
+      case Success(_) => fail("Execution failure expected")
+      case Failure(ef) =>
+        assertEquals("Different gas found", GasCalculator.TxGas, gasUsed)
+        assertEquals("Different exception found", exception, ef.getCause)
     }
   }
 }
