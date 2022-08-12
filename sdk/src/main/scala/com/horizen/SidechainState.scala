@@ -185,15 +185,17 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     }
 
     //Check that we don't have multiple openStake transactions with the same forgerIndex
-    val forgerListIndexes = new JArrayList[Int]()
-    mod.transactions.foreach(tx => {
-      if (tx.isInstanceOf[OpenStakeTransaction]) {
-        val openStakeTransaction = tx.asInstanceOf[OpenStakeTransaction]
-        if (forgerListIndexes.contains(openStakeTransaction.getForgerIndex))
-          throw new IllegalArgumentException(s"Block ${mod.id} contains OpenStakeTransactions with duplicated forgerIndex")
-        forgerListIndexes.add(openStakeTransaction.getForgerIndex)
-      }
-    })
+    if (openStakeTransactionEnabled) {
+      val forgerListIndexes = new JArrayList[Int]()
+      mod.transactions.foreach(tx => {
+        if (tx.isInstanceOf[OpenStakeTransaction]) {
+          val openStakeTransaction = tx.asInstanceOf[OpenStakeTransaction]
+          if (forgerListIndexes.contains(openStakeTransaction.getForgerIndex))
+            throw new IllegalArgumentException(s"Block ${mod.id} contains OpenStakeTransactions with duplicated forgerIndex")
+          forgerListIndexes.add(openStakeTransaction.getForgerIndex)
+        }
+      })
+    }
     
     if (backwardTransferLimitEnabled)
       checkWithdrawalBoxesAllowed(mod)
@@ -232,6 +234,15 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     stateStorage.getConsensusEpochNumber match {
       case Some(consensusEpochNumber) =>
         ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).backwardTransferLimitEnabled()
+      case None =>
+        false
+    }
+  }
+
+  def openStakeTransactionEnabled: Boolean = {
+    stateStorage.getConsensusEpochNumber match {
+      case Some(consensusEpochNumber) =>
+        ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).openStakeTransactionEnabled()
       case None =>
         false
     }
@@ -301,6 +312,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     if (!tx.isInstanceOf[MC2SCAggregatedTransaction]) {
 
       if (tx.isInstanceOf[OpenStakeTransaction]) {
+        if (!openStakeTransactionEnabled)
+          throw new Exception("OpenStakeTransaction is still not allowed in this consensus epoch!")
         if (isForgingOpen())
           throw new Exception("OpenStakeTransactions are not allowed because the forger operation has already been opened!")
         val openStakeTransaction = tx.asInstanceOf[OpenStakeTransaction]

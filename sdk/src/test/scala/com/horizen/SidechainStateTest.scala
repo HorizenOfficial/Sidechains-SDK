@@ -724,8 +724,6 @@ class SidechainStateTest
         boxList.find(_.id().sameElements(boxId))
       })
 
-    Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(1)))
-
     Mockito.when(mockedStateForgerBoxStorage.lastVersionId).thenReturn(Some(stateVersion.last))
 
     Mockito.when(mockedStateUtxoMerkleTreeProvider.lastVersionId).thenReturn(Some(stateVersion.last))
@@ -746,15 +744,31 @@ class SidechainStateTest
     var forgerListIndexes = ForgerList(Array[Int](1,1,0,0,0))
     // NEGATIVE TESTS
 
-    //Test validate(Transaction) with restrict forger disabled
-    Mockito.when(mockedParams.restrictForgers).thenReturn(false)
-    Mockito.when(mockedParams.allowedForgersList).thenReturn(Seq())
+    //Test validate(Transaction) without reach the Fork1
     var openStakeTransaction = getOpenStakeTransaction(
       (boxList.head.asInstanceOf[ZenBox], secretList.head),
       0,
       JOptional.empty()
     )
+
+    Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(1)))
+
     var tryValidate = sidechainState.validate(openStakeTransaction.asInstanceOf[SidechainTypes#SCBT])
+    assertFalse("Transaction validation must fail.",
+      tryValidate.isSuccess)
+    assertTrue(tryValidate.failed.get.getMessage.equals("OpenStakeTransaction is still not allowed in this consensus epoch!"))
+
+    //Test validate(Transaction) with restrict forger disabled
+    Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(11)))
+
+    Mockito.when(mockedParams.restrictForgers).thenReturn(false)
+    Mockito.when(mockedParams.allowedForgersList).thenReturn(Seq())
+    openStakeTransaction = getOpenStakeTransaction(
+      (boxList.head.asInstanceOf[ZenBox], secretList.head),
+      0,
+      JOptional.empty()
+    )
+    tryValidate = sidechainState.validate(openStakeTransaction.asInstanceOf[SidechainTypes#SCBT])
     assertFalse("Transaction validation must fail.",
       tryValidate.isSuccess)
     assertTrue(tryValidate.failed.get.getMessage.equals("OpenStakeTransactions are not allowed because the forger operation has already been opened!"))

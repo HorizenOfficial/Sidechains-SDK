@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_true, assert_equal, initialize_chain_clean, start_nodes, connect_nodes_bi, websocket_port_by_mc_node_index, forward_transfer_to_sidechain
-from SidechainTestFramework.scutil import generate_secrets, start_sc_nodes, generate_next_blocks, bootstrap_sidechain_nodes, generate_secrets, generate_vrf_secrets
+from SidechainTestFramework.scutil import generate_secrets, start_sc_nodes, generate_next_blocks, bootstrap_sidechain_nodes, generate_secrets, generate_vrf_secrets, generate_next_block
 from httpCalls.wallet.createPrivateKey25519 import http_wallet_createPrivateKey25519
 from httpCalls.transaction.makeForgerStake import makeForgerStake
 from httpCalls.wallet.createVrfSecret import http_wallet_createVrfSecret
@@ -10,6 +10,7 @@ from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress, sendCoi
 from httpCalls.transaction.openStake import createOpenStakeTransaction, createOpenStakeTransactionSimplified
 from httpCalls.transaction.sendTransaction import sendTransaction
 from httpCalls.block.best import http_block_best
+from httpCalls.block.forgingInfo import http_block_forging_info
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, SCForgerConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
@@ -53,7 +54,7 @@ class SidechainClosedForgerTest(SidechainTestFramework):
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 600, LARGE_WITHDRAWAL_EPOCH_LENGTH),
                                          sc_node_1_configuration)
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network,  720*120*5)
 
     def sc_setup_nodes(self):
         # Start 1 SC node
@@ -137,6 +138,20 @@ class SidechainClosedForgerTest(SidechainTestFramework):
         allBoxes = http_wallet_allBoxes(sc_node1)
         new_public_key_box = self.find_box(allBoxes, new_public_key)
         assert_true(new_public_key_box != {})
+
+        forging_info = http_block_forging_info(sc_node1)
+        assert_equal(forging_info["bestEpochNumber"], 2)
+
+        #Try to send an openStake transaction without had reach the SC Fork 1
+        tx_bytes = createOpenStakeTransaction(sc_node1, new_public_key_box["id"],new_public_key,0,sc_fee)
+        res = sendTransaction(sc_node1, tx_bytes["transactionBytes"])
+        assert_true(res["error"]["detail"], "OpenStakeTransaction is still not allowed in this consensus epoch!")
+        print("Ok!")
+
+        #Reach the SC Fork 1
+        generate_next_block(sc_node1, "first node", force_switch_to_next_epoch=True)
+        forging_info = http_block_forging_info(sc_node1)
+        assert_equal(forging_info["bestEpochNumber"], 3)
 
         #Try to send an openStake transaction with negative forgerIndex
         print("Try to send an openStake transaction with negative forgerIndex")
