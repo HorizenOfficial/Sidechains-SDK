@@ -218,7 +218,8 @@ class SCEvmForger(SidechainTestFramework):
         stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
         assert_equal(len(stakeList), 2)
 
-        forgerStake2_amount = ft_amount_in_zen - forgerStake1_amount  # Zen
+        tx_cost_amount = 1
+        forgerStake2_amount = ft_amount_in_zen - (forgerStake1_amount) - tx_cost_amount# Zen, 1 zen left for paying gas
         forgerStakes = {"forgerStakeInfo": {
             "ownerAddress": evm_address_sc_node_1,  # SC node 1 is an owner
             "blockSignPublicKey": sc2_blockSignPubKey,  # SC node 2 is a block signer
@@ -341,7 +342,7 @@ class SCEvmForger(SidechainTestFramework):
 
         # balance is in wei
         final_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
-        assert_equal(0, final_balance)
+        assert_equal(convertZenToWei(tx_cost_amount), final_balance)
         bal_sc_cr_prop = get_account_balance(sc_node_1, sc_cr_owner_proposition)
         assert_equal(convertZenniesToWei(stakeAmount), bal_sc_cr_prop)
         assert_equal(
@@ -389,7 +390,8 @@ class SCEvmForger(SidechainTestFramework):
         final_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
         assert_equal(
             convertZenToWei(forgerStake1_amount) +
-            convertZenToWei(forgerStake2_amount),
+            convertZenToWei(forgerStake2_amount) +
+            convertZenToWei(tx_cost_amount),
             final_balance)
 
         # Generate SC block on SC node keeping current epoch

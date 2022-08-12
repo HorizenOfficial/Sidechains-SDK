@@ -133,7 +133,9 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         val gasPrice = BigInteger.valueOf(1) // TODO actual gas implementation
         val gasLimit = BigInteger.valueOf(1) // TODO actual gas implementation
         // check if the fromAddress is either empty or it fits and the value is high enough
-        val secret = getFittingSecret(sidechainNodeView, body.from, valueInWei)
+        val txCost = valueInWei.add(gasPrice.multiply(gasLimit))
+
+        val secret = getFittingSecret(sidechainNodeView, body.from, txCost)
         secret match {
           case Some(secret) =>
             val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
@@ -197,8 +199,10 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
             null
         )
         if (!signedTx.isSigned) {
+          val txCost = signedTx.getValue.add(signedTx.getGasPrice.multiply(signedTx.getGasLimit))
+
           val secret =
-            getFittingSecret(sidechainNodeView, body.from, signedTx.getValue)
+            getFittingSecret(sidechainNodeView, body.from, txCost)
           secret match {
             case Some(secret) =>
               signedTx = signTransactionWithSecret(secret, signedTx)
@@ -234,8 +238,10 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
             null
         )
         if (!signedTx.isSigned) {
+          val txCost = signedTx.getValue.add(signedTx.getGasPrice.multiply(signedTx.getGasLimit))
+
           val secret =
-            getFittingSecret(sidechainNodeView, body.from, signedTx.getValue)
+            getFittingSecret(sidechainNodeView, body.from, txCost)
           secret match {
             case Some(secret) =>
               signedTx = signTransactionWithSecret(secret, signedTx)
@@ -257,8 +263,10 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       applyOnNodeView { sidechainNodeView =>
         var signedTx = EthereumTransactionSerializer.getSerializer.parseBytes(body.payload)
         if (!signedTx.isSigned) {
+          val txCost = signedTx.getValue.add(signedTx.getGasPrice.multiply(signedTx.getGasLimit))
+
           val secret =
-            getFittingSecret(sidechainNodeView, body.from, signedTx.getValue)
+            getFittingSecret(sidechainNodeView, body.from, txCost)
           secret match {
             case Some(secret) =>
               signedTx = signTransactionWithSecret(secret, signedTx)
@@ -276,8 +284,10 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       body => {
         applyOnNodeView { sidechainNodeView =>
           var signedTx = EthereumTransactionSerializer.getSerializer.parseBytes(body.payload)
+          val txCost = signedTx.getValue.add(signedTx.getGasPrice.multiply(signedTx.getGasLimit))
+
           val secret =
-            getFittingSecret(sidechainNodeView, body.from, signedTx.getValue)
+            getFittingSecret(sidechainNodeView, body.from, txCost)
           secret match {
             case Some(secret) =>
               signedTx = signTransactionWithSecret(secret, signedTx)
@@ -307,7 +317,9 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           gasLimit = body.gasInfo.get.gasLimit
         }
         //TODO Probably getFittingSecret would need to take into account also gas
-        val secret = getFittingSecret(sidechainNodeView, None, valueInWei)
+        val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
+
+        val secret = getFittingSecret(sidechainNodeView, None, txCost)
         secret match {
           case Some(secret) =>
 
@@ -349,7 +361,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           gasLimit = body.gasInfo.get.gasLimit
         }
         //TODO Probably getFittingSecret would need to take into account also gas
-        val secret = getFittingSecret(sidechainNodeView, None, valueInWei)
+        val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
+        val secret = getFittingSecret(sidechainNodeView, None, txCost)
         secret match {
           case Some(txCreatorSecret) =>
             val to = BytesUtils.toHexString(ForgerStakeMsgProcessor.ForgerStakeSmartContractAddress.address())
@@ -419,7 +432,9 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           gasLimit = gasInfo.get.gasLimit
         }
         //TODO Probably getFittingSecret would need to take into account also gas
-        val secret = getFittingSecret(sidechainNodeView, None, valueInWei)
+        val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
+
+        val secret = getFittingSecret(sidechainNodeView, None, txCost)
         secret match {
           case Some(secret) =>
 
@@ -469,7 +484,9 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           gasLimit = body.gasInfo.get.gasLimit
         }
         //TODO Probably getFittingSecret would need to take into account also gas
-        val secret = getFittingSecret(sidechainNodeView, None, valueInWei)
+        val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
+
+        val secret = getFittingSecret(sidechainNodeView, None, txCost)
         secret match {
           case Some(secret) =>
             val to = null
@@ -537,6 +554,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       case Success(_) =>
         ApiResponseUtil.toResponse(transactionResponseRepresentation(transaction))
       case Failure(exp) =>
+        log.error("validateAndSendTransaction", exp)
         ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exp)))
     }
 

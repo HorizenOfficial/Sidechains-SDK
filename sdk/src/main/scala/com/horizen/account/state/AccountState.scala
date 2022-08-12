@@ -392,17 +392,21 @@ class AccountState(val params: NetworkParams,
 
     if (tx.isInstanceOf[EthereumTransaction]) {
 
-      val ethTx = tx.asInstanceOf[EthereumTransaction]
-      val txHash = BytesUtils.fromHexString(ethTx.id)
-
       using(getView) { stateView =>
-        stateView.applyTransaction(tx, 0, BigInteger.ZERO) match {
-          case Success(_) =>
-            log.debug(s"tx=$txHash succesfully validate against state view")
+        //Check the nonce
 
-          case Failure(e) =>
-            log.error("Could not validate tx agaist state view: ", e)
-            throw new IllegalArgumentException(e)
+        if (stateView.getNonce(tx.getFrom.bytes()).compareTo(tx.getNonce) > 0) {
+          val msg = s"Transaction nonce is too low: ${tx.getNonce}"
+          log.error(msg)
+          throw new NonceTooLowException(tx.id,tx.getNonce)
+        }
+
+        val txCost = tx.getValue.add(tx.getGasLimit.multiply(tx.getGasPrice))
+        val currentBalance = stateView.getBalance(tx.getFrom.bytes())
+        if (currentBalance.compareTo(txCost) < 0){
+          val msg = s"Insufficient funds for executing transaction: balance ${currentBalance}, tx cost ${txCost}"
+          log.error(msg)
+          throw new IllegalArgumentException(msg)
         }
       }
     }

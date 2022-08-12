@@ -134,19 +134,14 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
   }
 
   private def preCheck(tx: EthereumTransaction): BigInteger = {
+
     // We are sure that transaction is semantically valid (so all the tx fields are valid)
     // and was successfully verified by ChainIdBlockSemanticValidator
 
     // cache it since it is not a real getter
     val txFromAddr = tx.getFrom
 
-    // TODO this is checked also by EthereumTransaction.semanticValidity()
-    // Check signature
-    // TODO: add again later and check - message to sign seems to be false (?)
-    if (!tx.getSignature.isValid(txFromAddr, tx.messageToSign()))
-      throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: signature is invalid")
-
-    // Check that "from" is EOA address
+   // Check that "from" is EOA address
     if (!isEoaAccount(txFromAddr.address()))
       throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: from account is not EOA")
 
@@ -155,7 +150,7 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     val txNonce: BigInteger = tx.getNonce
     val result = stateNonce.compareTo(txNonce)
     if (result > 0) {
-      throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: tx nonce ${txNonce} is too low (state nonce is $stateNonce)")
+      throw new NonceTooLowException(tx.id, txNonce)
     } else if (result < 0) {
       throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: tx nonce ${txNonce} is too high (state nonce is $stateNonce)")
     }
@@ -170,7 +165,7 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     // Check that from account has enough balance to pay max gas*price value
     // and reserve this amount.
     val bookedGasPrice: BigInteger = buyGas(tx)
-
+//TODO why do we need bookedGasPrice? Isn't enough to check again that balance > value + gasLimit * gasPrice?
     // Check that it is enough balance to pay after gas was bought.
     val txBalanceAfterGasPrepayment: BigInteger = getBalance(txFromAddr.address())
     if (txBalanceAfterGasPrepayment.compareTo(tx.getValue) < 0)

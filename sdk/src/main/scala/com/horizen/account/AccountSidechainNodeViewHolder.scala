@@ -54,7 +54,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     history <- AccountHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
     state <- AccountState.restoreState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params)
     wallet <- AccountWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes, secretStorage)
-    pool <- Some(AccountMemoryPool.emptyPool)
+    pool <- Some(AccountMemoryPool.createEmptyMempool(state))
   } yield (history, state, wallet, pool)
 
   override protected def genesisState: (HIS, MS, VL, MP) = {
@@ -68,7 +68,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
       wallet <- AccountWallet.createGenesisWallet(sidechainSettings.wallet.seed.getBytes, secretStorage)
 
-      pool <- Success(AccountMemoryPool.emptyPool)
+      pool <- Success(AccountMemoryPool.createEmptyMempool(state))
     } yield (history, state, wallet, pool)
 
     result.get

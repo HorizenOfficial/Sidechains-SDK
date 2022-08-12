@@ -11,7 +11,7 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, generate_next_blocks, generate_next_block, \
     AccountModelBlockVersion, EVM_APP_BINARY, is_mainchain_block_included_in_sc_block, assert_true, \
-    check_mainchain_block_reference_info, convertZenToZennies, convertZenniesToWei
+    check_mainchain_block_reference_info, convertZenToZennies, convertZenniesToWei, convertZenToWei
 from test_framework.util import assert_equal, assert_false, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail
 
@@ -209,10 +209,12 @@ class SCEvmBackwardTransfer(SidechainTestFramework):
         # Generate SC block
         generate_next_blocks(sc_node, "first node", 1)
         # Check the balance has changed
-        bt_amount_in_zen_2 = ft_amount_in_zen - bt_amount_in_zen_1
+        tx_cost = 1
+        bt_amount_in_zen_2 = ft_amount_in_zen - bt_amount_in_zen_1 - tx_cost
         sc_bt_amount_in_zennies_2 = convertZenToZennies(bt_amount_in_zen_2)
         new_balance = http_wallet_balance(sc_node, evm_address)
-        assert_equal(convertZenniesToWei(sc_bt_amount_in_zennies_2), new_balance,  "wrong balance after first withdrawal request")
+        tx_cost_in_wei = convertZenToWei(tx_cost)
+        assert_equal(convertZenniesToWei(sc_bt_amount_in_zennies_2) + tx_cost_in_wei, new_balance,  "wrong balance after first withdrawal request")
 
         # verifies that there is one withdrawal request
         list_of_WR = all_withdrawal_requests(sc_node, current_epoch_number)["listOfWR"]
@@ -231,7 +233,7 @@ class SCEvmBackwardTransfer(SidechainTestFramework):
         generate_next_blocks(sc_node, "first node", 1)
         # Check the balance has changed
         new_balance = http_wallet_balance(sc_node, evm_address)
-        assert_equal(0, new_balance, "wrong balance after second withdrawal request")
+        assert_equal(tx_cost_in_wei, new_balance, "wrong balance after second withdrawal request")
 
         # verifies that there are 2 withdrawal request2
         list_of_WR = all_withdrawal_requests(sc_node, current_epoch_number)["listOfWR"]

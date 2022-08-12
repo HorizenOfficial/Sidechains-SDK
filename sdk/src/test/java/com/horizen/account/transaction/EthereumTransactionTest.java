@@ -286,7 +286,7 @@ public class EthereumTransactionTest {
         // Test 4: ethereum transaction object returns version correctly
         assertEquals(2 /*eip1559*/, ethereumTransaction.version());
 
-        assertNull(ethereumTransaction.getGasPrice());
+        assertEquals(ethereumTransaction.getMaxFeePerGas(),ethereumTransaction.getGasPrice());
 
         // Test 5: ethereum transaction instance returns messageToSign correctly
         EthereumTransaction ethereumTransactionDeserialize = EthereumTransactionSerializer.getSerializer().parseBytes(ethereumTransaction.bytes());

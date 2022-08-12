@@ -139,6 +139,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         if (getGasLimit().signum() <= 0)
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "non-positive gas limit", id()));
+        //TODO why this check is not in Geth (maybe)?
         if (getTo() == null && getData().length == 0)
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "smart contract declaration transaction without data", id()));
@@ -169,12 +170,14 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         }
 
 
-        //TODO: add this again later or remove, because these checks are already made in some other place
         if (this.getFrom().address().length != Account.ADDRESS_SIZE)
             throw new TransactionSemanticValidityException("Cannot create signed transaction without valid from address");
-        //if (!this.getSignature().isValid(this.getFrom(), this.messageToSign()))
-        //    throw new TransactionSemanticValidityException("Cannot create signed transaction with invalid " +
-        //            "signature");
+        // TODO: add again later and check - message to sign seems to be false (?)
+        if (!this.getSignature().isValid(getFrom(), messageToSign()))
+            throw new TransactionSemanticValidityException("Transaction " + id() + "is invalid: signature is invalid");
+
+
+        //TODO add intrinsic gas check, if not already made in some other place
     }
 
     @Override
@@ -186,7 +189,8 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     public BigInteger getGasPrice() {
         if (!this.isEIP1559())
             return this.legacyTx().getGasPrice();
-        return null;
+        //in Geth for EIP1559 tx gasPrice returns gasFeeCap
+        return getMaxFeePerGas();
     }
 
     public BigInteger getMaxFeePerGas() {

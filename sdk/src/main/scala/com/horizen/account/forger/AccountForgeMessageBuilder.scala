@@ -10,7 +10,7 @@ import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumConsensusDataReceipt
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state.AccountState.blockGasLimitExceeded
-import com.horizen.account.state.{AccountState, AccountStateView}
+import com.horizen.account.state.{AccountState, AccountStateView, NonceTooLowException}
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.Account
@@ -93,8 +93,9 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     var cumGasUsed: BigInteger = BigInteger.ZERO
     var txsCounter: Int = 0
     var blockSize: Int = inputBlockSize
+    val listOfAccountsToSkip = new ListBuffer[SidechainTypes#SCP]
 
-    for ((tx, txIndex) <- sidechainTransactions.zipWithIndex) {
+    for ((tx, txIndex) <- sidechainTransactions.zipWithIndex if !listOfAccountsToSkip.contains(tx.getFrom)) {
 
       blockSize = blockSize + tx.bytes.length + 4 // placeholder for Tx length
       txsCounter += 1
@@ -115,10 +116,13 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
           receiptList += consensusDataReceipt
           txHashList += txHash
-
-        case Failure(e) =>
+       case Failure(e : NonceTooLowException) =>
           // just skip this tx
-          log.debug("Could not apply tx, reason: " + e.getMessage)
+         log.debug(s"Could not apply tx, reason: ${e.getMessage}")
+        case Failure(e) =>
+          // skip all txs from the same account
+          listOfAccountsToSkip.append(tx.getFrom)
+          log.debug(s"Could not apply tx, reason: ${e.getMessage}. Skipping all next transactions from the same account because not executable anymore")
       }
     }
     (receiptList, txHashList)
@@ -215,8 +219,6 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   override def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int): Seq[SidechainTypes#SCAT] = {
     // no checks of the block size here, these txes are the candidates and their inclusion
     // will be attempted by forger
-
-    // TODO sort by address and nonce, and then preserving nonce ordering, sort by gas price
     nodeView.pool.take(nodeView.pool.size).toSeq
   }
 
