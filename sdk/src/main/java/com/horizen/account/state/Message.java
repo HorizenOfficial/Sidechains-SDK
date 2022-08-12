@@ -1,7 +1,6 @@
 package com.horizen.account.state;
 
 import com.horizen.account.proposition.AddressProposition;
-import com.horizen.account.transaction.EthereumTransaction;
 
 import java.math.BigInteger;
 import java.util.Arrays;
