@@ -4,7 +4,6 @@ import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountState
 import com.horizen.account.receipt.EthereumReceipt
-import com.horizen.account.state.AccountState.blockGasLimitExceeded
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.block.WithdrawalEpochCertificate
@@ -136,11 +135,6 @@ class AccountState(val params: NetworkParams,
             cumGasUsed = consensusDataReceipt.cumulativeGasUsed
             val ethTx = tx.asInstanceOf[EthereumTransaction]
 
-            if (blockGasLimitExceeded(cumGasUsed)) {
-              log.error("Could not apply tx, block gas limit exceeded")
-              throw new IllegalArgumentException("Could not apply tx, block gas limit exceeded")
-            }
-
             val txHash = BytesUtils.fromHexString(ethTx.id)
 
             // The contract address created, if the transaction was a contract creation
@@ -163,9 +157,13 @@ class AccountState(val params: NetworkParams,
 
             receiptList += fullReceipt
 
-          case Failure(e) =>
-            log.error("Could not apply tx", e)
-            throw new IllegalArgumentException(e)
+          case Failure(err: GasLimitReached) =>
+            log.error("Could not apply tx, block gas limit exceeded")
+            throw new IllegalArgumentException("Could not apply tx, block gas limit exceeded", err)
+
+          case Failure(err) =>
+            log.error("Could not apply tx", err)
+            throw new IllegalArgumentException(err)
         }
       }
 
@@ -444,11 +442,5 @@ object AccountState extends ScorexLogging {
         .applyModifier(genesisBlock).get
     } else
       throw new RuntimeException("State metadata storage is not empty!")
-  }
-
-
-  def blockGasLimitExceeded(cumGasUsed: BigInteger): Boolean = {
-    // TODO
-    false
   }
 }

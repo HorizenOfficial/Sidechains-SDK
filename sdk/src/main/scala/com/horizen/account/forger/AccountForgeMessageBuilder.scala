@@ -9,7 +9,6 @@ import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumConsensusDataReceipt
 import com.horizen.account.secret.PrivateKeySecp256k1
-import com.horizen.account.state.AccountState.blockGasLimitExceeded
 import com.horizen.account.state.{AccountState, AccountStateView, GasLimitReached, GasPool}
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.transaction.EthereumTransaction
@@ -112,6 +111,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
           txHashList += txHash
 
         case Failure(_: GasLimitReached) =>
+          // block gas limit reached
           return Success(receiptList, txHashList)
 
         case Failure(e) =>
