@@ -358,15 +358,15 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
   override def process(msg: Message, view: BaseAccountStateView): Array[Byte] = {
     BytesUtils.toHexString(getOpCodeFromData(msg.getData)) match {
       case GetListOfForgersCmd =>
-        view.burnGas(GetListOfForgersGasPaidValue)
+        view.subGas(GetListOfForgersGasPaidValue)
         doGetListOfForgersCmd(msg, view)
 
       case AddNewStakeCmd =>
-        view.burnGas(AddNewStakeGasPaidValue)
+        view.subGas(AddNewStakeGasPaidValue)
         doAddNewStakeCmd(msg, view)
 
       case RemoveStakeCmd =>
-        view.burnGas(RemoveStakeGasPaidValue)
+        view.subGas(RemoveStakeGasPaidValue)
         doRemoveStakeCmd(msg, view)
 
       case opCodeHex =>

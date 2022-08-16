@@ -27,7 +27,7 @@ trait BaseAccountStateView extends AccountStateReader {
 
   def addLog(evmLog: EvmLog): Unit
 
-  def availableGas: BigInteger
-  def fillGas(gas: BigInteger): Unit
-  def burnGas(gas: BigInteger): Unit
+  def getGas: BigInteger
+  def addGas(gas: BigInteger): Unit
+  def subGas(gas: BigInteger): Unit
 }

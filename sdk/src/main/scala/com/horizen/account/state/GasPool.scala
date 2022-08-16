@@ -15,7 +15,7 @@ class GasPool(initialGas: BigInteger) {
 
   def getUsedGas: BigInteger = initialGas.subtract(availableGas)
 
-  def consumeGas(gas: BigInteger): Unit = {
+  def subGas(gas: BigInteger): Unit = {
     if (gas.compareTo(BigInteger.ZERO) < 0)
       throw new IllegalArgumentException("cannot consume a negative amount of gas")
     if (availableGas.compareTo(gas) < 0) {
@@ -24,7 +24,7 @@ class GasPool(initialGas: BigInteger) {
     availableGas = availableGas.subtract(gas)
   }
 
-  def returnGas(gas: BigInteger): Unit = {
+  def addGas(gas: BigInteger): Unit = {
     if (gas.compareTo(BigInteger.ZERO) < 0)
       throw new IllegalArgumentException("cannot return a negative amount of gas")
     val sum = availableGas.add(gas)

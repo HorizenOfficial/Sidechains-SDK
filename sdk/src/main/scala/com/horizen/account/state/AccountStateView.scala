@@ -149,27 +149,28 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     val want = maxFees.add(msg.getValue)
     if (have.compareTo(want) < 0) throw InsufficientFundsException(sender, have, want)
     // deduct gas from gasPool of the current block (unused gas will be returned after execution)
-    blockGasPool.consumeGas(gas)
+    blockGasPool.subGas(gas)
     // prepay effective gas fees
     subBalance(sender, effectiveFees)
     // allocate gas for this transaction
-    fillGas(gas)
+    addGas(gas)
   }
 
   private def refundGas(msg: Message, blockGasPool: GasPool): Unit = {
     val quotient = 5 // this was 2 before EIP-3529 (london release)
-    val usedGas = msg.getGasLimit.subtract(availableGas)
+    val usedGas = msg.getGasLimit.subtract(getGas)
     val max = usedGas.divide(BigInteger.valueOf(quotient))
     // cap refund to a quotient of the used gas
-    fillGas(stateDb.getRefund match {
+    addGas(stateDb.getRefund match {
       case refund if refund.compareTo(max) > 1 => max
       case refund => refund
     })
     // return funds for remaining gas, exchanged at the original rate.
-    val remaining = availableGas.multiply(msg.getGasPrice)
+    val remaining = getGas.multiply(msg.getGasPrice)
     addBalance(msg.getFrom.address(), remaining)
     // return remaining gas to the gasPool of the current block so it is available for the next transaction
-    blockGasPool.returnGas(availableGas)
+    blockGasPool.addGas(getGas)
+    subGas(getGas)
   }
 
   def applyMessage(msg: Message, blockGasPool: GasPool): Array[Byte] = {
@@ -177,10 +178,10 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     buyGas(msg, blockGasPool)
     // consume intrinsic gas
     val intrinsicGas = GasCalculator.intrinsicGas(msg.getData, msg.getTo == null)
-    if (availableGas.compareTo(intrinsicGas) < 0) {
-      throw IntrinsicGasException(availableGas, intrinsicGas)
+    if (getGas.compareTo(intrinsicGas) < 0) {
+      throw IntrinsicGasException(getGas, intrinsicGas)
     }
-    burnGas(intrinsicGas)
+    subGas(intrinsicGas)
     // find and execute the first matching processor
     messageProcessors.find(_.canProcess(msg, this)) match {
       case None => throw new IllegalArgumentException("Unable to process message.")
@@ -193,7 +194,7 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
           // any other exception will bubble up and invalidate the block
           case err: ExecutionFailedException =>
             stateDb.revertToSnapshot(revisionId)
-            burnGas(availableGas)
+            subGas(getGas)
             throw err
         } finally {
           refundGas(msg, blockGasPool)
@@ -343,7 +344,7 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
 
   // account specific getters
   override def getBalance(address: Array[Byte]): BigInteger = {
-    burnGas(BigInteger.ONE)
+    subGas(BigInteger.ONE)
     stateDb.getBalance(address)
   }
 
@@ -369,13 +370,16 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
   override def getBaseFee: BigInteger = BigInteger.valueOf(0)
 
   // gas methods
-  private var gasInTheTank = BigInteger.ZERO
-  override def availableGas: BigInteger = gasInTheTank
-  override def fillGas(gas: BigInteger): Unit = gasInTheTank = gasInTheTank.add(gas)
-  override def burnGas(gas: BigInteger): Unit = {
-    if (gasInTheTank.compareTo(gas) < 0) {
+  private var currentGas = BigInteger.ZERO
+
+  override def getGas: BigInteger = currentGas
+
+  override def addGas(gas: BigInteger): Unit = currentGas = currentGas.add(gas)
+
+  override def subGas(gas: BigInteger): Unit = {
+    if (currentGas.compareTo(gas) < 0) {
       throw OutOfGasException()
     }
-    gasInTheTank = gasInTheTank.subtract(gas)
+    currentGas = currentGas.subtract(gas)
   }
 }

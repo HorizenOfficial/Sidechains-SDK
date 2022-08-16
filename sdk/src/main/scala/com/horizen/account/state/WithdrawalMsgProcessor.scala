@@ -44,11 +44,11 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
 
     BytesUtils.toHexString(getOpCodeFromData(msg.getData)) match {
       case GetListOfWithdrawalReqsCmdSig =>
-        view.burnGas(GasSpentForGetListOfWithdrawalReqsCmd)
+        view.subGas(GasSpentForGetListOfWithdrawalReqsCmd)
         execGetListOfWithdrawalReqRecords(msg, view)
 
       case AddNewWithdrawalReqCmdSig =>
-        view.burnGas(GasSpentForAddNewWithdrawalReqCmd)
+        view.subGas(GasSpentForAddNewWithdrawalReqCmd)
         execAddWithdrawalRequest(msg, view)
 
       case functionSig =>
