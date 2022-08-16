@@ -10,17 +10,32 @@ addons:
 services:
   - docker
 
+git:
+  depth: false
+
 env:
   global:
     - DOCKER_ORG=zencash
     - IMAGE_NAME=sc-ci-base
+    # Separate branches by space
+    - PROD_RELEASE_BRANCHES='master'
+    - PUBLISH_BUILD=false
 
 script:
   - source ci/setup_env.sh
   - ci/travis_keep_alive.sh
-  - ci/script.sh
+  - ci/script.sh tests
 
 jobs:
   include:
     - name: jdk-11_latest
-      env: IMAGE_TAG='bionic_jdk-11_latest' TESTS='000,001'
+      env: PUBLISH_BUILD=true IMAGE_TAG='bionic_jdk-11_latest' TESTS='000'
+
+
+deploy:
+  provider: script
+  script: ci/script.sh release
+  skip_cleanup: true
+  on:
+    tags: true
+    condition: $PUBLISH_BUILD = true
