@@ -153,18 +153,14 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     // prepay effective gas fees
     subBalance(sender, effectiveFees)
     // allocate gas for this transaction
-    addGas(gas)
+    setGas(gas)
   }
 
   private def refundGas(msg: Message, blockGasPool: GasPool): Unit = {
-    val quotient = 5 // this was 2 before EIP-3529 (london release)
     val usedGas = msg.getGasLimit.subtract(getGas)
-    val max = usedGas.divide(BigInteger.valueOf(quotient))
-    // cap refund to a quotient of the used gas
-    addGas(stateDb.getRefund match {
-      case refund if refund.compareTo(max) > 1 => max
-      case refund => refund
-    })
+    // cap gas refund to a quotient of the used gas
+    // the quotient was 2 before EIP-3529 (london release)
+    addGas(stateDb.getRefund.min(usedGas.divide(GasCalculator.RefundQuotientEIP3529)))
     // return funds for remaining gas, exchanged at the original rate.
     val remaining = getGas.multiply(msg.getGasPrice)
     addBalance(msg.getFrom.address(), remaining)
@@ -247,20 +243,34 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     consensusDataReceipt
   }
 
-  override def isEoaAccount(address: Array[Byte]): Boolean = stateDb.isEoaAccount(address)
+  override def isEoaAccount(address: Array[Byte]): Boolean = {
+    subGas(GasCalculator.GasTBD)
+    stateDb.isEoaAccount(address)
+  }
 
-  override def isSmartContractAccount(address: Array[Byte]): Boolean = stateDb.isSmartContractAccount(address)
+  override def isSmartContractAccount(address: Array[Byte]): Boolean = {
+    subGas(GasCalculator.GasTBD)
+    stateDb.isSmartContractAccount(address)
+  }
 
-  override def accountExists(address: Array[Byte]): Boolean = !stateDb.isEmpty(address)
+  override def accountExists(address: Array[Byte]): Boolean = {
+    subGas(GasCalculator.GasTBD)
+    !stateDb.isEmpty(address)
+  }
 
   // account modifiers:
-  override def addAccount(address: Array[Byte], codeHash: Array[Byte]): Unit =
+  override def addAccount(address: Array[Byte], codeHash: Array[Byte]): Unit = {
+    subGas(GasCalculator.GasTBD)
     stateDb.setCodeHash(address, codeHash)
+  }
 
-  override def addBalance(address: Array[Byte], amount: BigInteger): Unit =
+  override def addBalance(address: Array[Byte], amount: BigInteger): Unit = {
+    subGas(GasCalculator.GasTBD)
     stateDb.addBalance(address, amount)
+  }
 
   override def subBalance(address: Array[Byte], amount: BigInteger): Unit = {
+    subGas(GasCalculator.GasTBD)
     // stateDb lib does not do any sanity check, and negative balances might arise (and java/go json IF does not correctly handle it)
     // TODO: for the time being do the checks here, later they will be done in the caller stack
     require(amount.compareTo(BigInteger.ZERO) >= 0)
@@ -273,23 +283,35 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
   override def increaseNonce(address: Array[Byte]): Unit =
     stateDb.setNonce(address, getNonce(address).add(BigInteger.ONE))
 
-  override def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit =
-    stateDb.setStorage(address, key, value, StateStorageStrategy.RAW)
-
-  override def updateAccountStorageBytes(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit =
-    stateDb.setStorage(address, key, value, StateStorageStrategy.CHUNKED)
-
-  override def getAccountStorage(address: Array[Byte], key: Array[Byte]): Array[Byte] =
+  override def getAccountStorage(address: Array[Byte], key: Array[Byte]): Array[Byte] = {
+    subGas(GasCalculator.GasTBD)
     stateDb.getStorage(address, key, StateStorageStrategy.RAW)
+  }
 
-  override def getAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Array[Byte] =
+  override def getAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Array[Byte] = {
+    subGas(GasCalculator.GasTBD)
     stateDb.getStorage(address, key, StateStorageStrategy.CHUNKED)
+  }
 
-  override def removeAccountStorage(address: Array[Byte], key: Array[Byte]): Unit =
+  override def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit = {
+    subGas(GasCalculator.GasTBD)
+    stateDb.setStorage(address, key, value, StateStorageStrategy.RAW)
+  }
+
+  override def updateAccountStorageBytes(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit = {
+    subGas(GasCalculator.GasTBD)
+    stateDb.setStorage(address, key, value, StateStorageStrategy.CHUNKED)
+  }
+
+  override def removeAccountStorage(address: Array[Byte], key: Array[Byte]): Unit = {
+    subGas(GasCalculator.GasTBD)
     stateDb.removeStorage(address, key, StateStorageStrategy.RAW)
+  }
 
-  override def removeAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Unit =
+  override def removeAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Unit = {
+    subGas(GasCalculator.GasTBD)
     stateDb.removeStorage(address, key, StateStorageStrategy.CHUNKED)
+  }
 
   // out-of-the-box helpers
   override def addCertificate(cert: WithdrawalEpochCertificate): Unit =
@@ -338,23 +360,38 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
   override def getFeePayments(withdrawalEpoch: Int): Seq[BlockFeeInfo] =
     metadataStorageView.getFeePayments(withdrawalEpoch)
 
-  override def getAccountStateRoot: Array[Byte] = metadataStorageView.getAccountStateRoot
 
   override def getHeight: Int = metadataStorageView.getHeight
 
   // account specific getters
+  override def getNonce(address: Array[Byte]): BigInteger = {
+    subGas(GasCalculator.GasTBD)
+    stateDb.getNonce(address)
+  }
+
   override def getBalance(address: Array[Byte]): BigInteger = {
-    subGas(BigInteger.ONE)
+    subGas(GasCalculator.BalanceGasEIP1884)
     stateDb.getBalance(address)
   }
 
-  override def getCodeHash(address: Array[Byte]): Array[Byte] = stateDb.getCodeHash(address)
+  override def getCodeHash(address: Array[Byte]): Array[Byte] = {
+    subGas(GasCalculator.ExtcodeHashGasEIP1884)
+    stateDb.getCodeHash(address)
+  }
 
-  override def getNonce(address: Array[Byte]): BigInteger = stateDb.getNonce(address)
+  override def getCode(address: Array[Byte]): Array[Byte] = {
+    subGas(GasCalculator.GasTBD)
+    stateDb.getCode(address)
+  }
+
+  override def getAccountStateRoot: Array[Byte] = metadataStorageView.getAccountStateRoot
 
   override def getLogs(txHash: Array[Byte]): Array[EvmLog] = stateDb.getLogs(txHash)
 
-  override def addLog(evmLog: EvmLog): Unit = stateDb.addLog(evmLog)
+  override def addLog(evmLog: EvmLog): Unit = {
+    subGas(GasCalculator.LogGas.add(GasCalculator.LogTopicGas.multiply(BigInteger.valueOf(evmLog.topics.length))))
+    stateDb.addLog(evmLog)
+  }
 
   // when a method is called on a closed handle, LibEvm throws an exception
   override def close(): Unit = stateDb.close()
@@ -362,8 +399,6 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
   override def getStateDbHandle: ResourceHandle = stateDb
 
   override def getIntermediateRoot: Array[Byte] = stateDb.getIntermediateRoot
-
-  override def getCode(address: Array[Byte]): Array[Byte] = stateDb.getCode(address)
 
   // TODO: get baseFee for the block
   // TODO: currently a non-zero baseFee makes all the python tests fail, because they do not consider spending fees
