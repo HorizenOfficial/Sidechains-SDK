@@ -109,13 +109,12 @@ class EoaMessageProcessorTest extends JUnitSuite
     Mockito.reset(mockStateView)
     val exception = new Exception("some error")
     Mockito.when(mockStateView.subBalance(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[BigInteger])).thenAnswer(args => {
-      Failure(exception)
+      throw exception
     })
 
     Try.apply(EoaMessageProcessor.process(msg, mockStateView)) match {
       case Success(_) => fail("Execution failure expected")
-      case Failure(ef)=>
-        assertEquals("Different exception found", exception, ef.getCause)
+      case Failure(err)=> assertEquals("Different exception found", exception, err)
     }
 
     // Test 3: Failure during addBalance
@@ -132,13 +131,12 @@ class EoaMessageProcessorTest extends JUnitSuite
     })
 
     Mockito.when(mockStateView.addBalance(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[BigInteger])).thenAnswer(args => {
-      Failure(exception)
+      throw exception
     })
 
     Try.apply(EoaMessageProcessor.process(msg, mockStateView)) match {
       case Success(_) => fail("Execution failure expected")
-      case Failure(ef) =>
-        assertEquals("Different exception found", exception, ef.getCause)
+      case Failure(err) => assertEquals("Different exception found", exception, err)
     }
   }
 }

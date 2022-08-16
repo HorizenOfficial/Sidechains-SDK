@@ -12,7 +12,7 @@ import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
 
 import java.util
-import scala.util.{Random, Success}
+import scala.util.{Failure, Random, Success, Try}
 
 
 class WithdrawalMsgProcessorTest
@@ -68,22 +68,23 @@ class WithdrawalMsgProcessorTest
     val mockStateView: AccountStateView = mock[AccountStateView]
     Mockito.when(mockStateView.accountExists(msgForWrongProcessor.getTo.address())).thenReturn(true)
 
-    assertEquals("msgForWrongProcessor processing should result in InvalidMessage", classOf[InvalidMessage], WithdrawalMsgProcessor.process(msgForWrongProcessor, mockStateView).getClass)
+    // msgForWrongProcessor processing should result in InvalidMessage
+    assertThrows[IllegalArgumentException] { WithdrawalMsgProcessor.process(msgForWrongProcessor, mockStateView) }
 
     val data = BytesUtils.fromHexString("99")
     val msgWithWrongFunctionCall = getMessage(WithdrawalMsgProcessor.fakeSmartContractAddress, value, data)
     Mockito.when(mockStateView.accountExists(msgWithWrongFunctionCall.getTo.address())).thenReturn(true)
 
-    assertEquals("msgWithWrongFunctionCall processing should result in ExecutionFailed", classOf[ExecutionFailed], WithdrawalMsgProcessor.process(msgWithWrongFunctionCall, mockStateView).getClass)
+    // msgWithWrongFunctionCall processing should result in ExecutionFailed
+    assertThrows[ExecutionFailedException] { WithdrawalMsgProcessor.process(msgWithWrongFunctionCall, mockStateView) }
 
     val mockMsg = mock[Message]
-
     Mockito.when(mockMsg.getTo).thenReturn(WithdrawalMsgProcessor.fakeSmartContractAddress)
     val expException = new RuntimeException()
     Mockito.when(mockMsg.getData).thenThrow(expException)
-    val res = WithdrawalMsgProcessor.process(mockMsg, mockStateView)
-    assertEquals("msgWithWrongFunctionCall processing should result in ExecutionFailed", classOf[ExecutionFailed], res.getClass)
-    assertEquals(expException, res.asInstanceOf[ExecutionFailed].getReason)
+
+    // msgWithWrongFunctionCall processing should result in ExecutionFailed
+    assertThrows[ExecutionFailedException] { WithdrawalMsgProcessor.process(mockMsg, mockStateView) }
   }
 
   @Test
@@ -152,9 +153,8 @@ class WithdrawalMsgProcessorTest
 
     Mockito.when(mockStateView.accountExists(msg.getTo.address())).thenReturn(true)
 
-    var res = WithdrawalMsgProcessor.process(msg, mockStateView)
-    assertEquals("Withdrawal request list with invalid data should result in ExecutionFailed", classOf[ExecutionFailed], res.getClass)
-    assertEquals(classOf[IllegalArgumentException], res.asInstanceOf[ExecutionFailed].getReason.getClass)
+    // Withdrawal request list with invalid data should throw ExecutionFailedException
+    assertThrows[IllegalArgumentException] { WithdrawalMsgProcessor.process(msg, mockStateView) }
 
     // No withdrawal requests
 
@@ -164,20 +164,13 @@ class WithdrawalMsgProcessorTest
 
     Mockito.when(mockStateView.getAccountStorage(WithdrawalMsgProcessor.fakeSmartContractAddress.address(), counterKey)).thenReturn(numOfWithdrawalReqs)
 
-    res = WithdrawalMsgProcessor.process(msg, mockStateView)
-    assertEquals("Wrong result type", classOf[ExecutionSucceeded], res.getClass)
-    assertTrue("Missing return data", res.asInstanceOf[ExecutionSucceeded].hasReturnData)
-    var wrListInBytes = res.asInstanceOf[ExecutionSucceeded].returnData()
-
+    var returnData = WithdrawalMsgProcessor.process(msg, mockStateView)
     val expectedListOfWR = new util.ArrayList[WithdrawalRequest]()
-
-    assertArrayEquals(WithdrawalRequestsListEncoder.encode(expectedListOfWR),wrListInBytes)
+    assertArrayEquals(WithdrawalRequestsListEncoder.encode(expectedListOfWR), returnData)
 
     // With 3999 withdrawal requests
     val maxNumOfWithdrawalReqs = WithdrawalMsgProcessor.MaxWithdrawalReqsNumPerEpoch
-
     val numOfWithdrawalReqsInBytes = Bytes.concat(new Array[Byte](32 - Ints.BYTES), Ints.toByteArray(maxNumOfWithdrawalReqs))
-
     Mockito.when(mockStateView.getAccountStorage(WithdrawalMsgProcessor.fakeSmartContractAddress.address(), counterKey)).thenReturn(numOfWithdrawalReqsInBytes)
 
     val destAddress = new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte))
@@ -195,12 +188,8 @@ class WithdrawalMsgProcessorTest
       Success(mockWithdrawalRequestsList.get(new ByteArrayWrapper(key)))
     })
 
-    res = WithdrawalMsgProcessor.process(msg, mockStateView)
-    assertEquals("Wrong result type", classOf[ExecutionSucceeded], res.getClass)
-    assertTrue("Missing return data", res.asInstanceOf[ExecutionSucceeded].hasReturnData)
-    wrListInBytes = res.asInstanceOf[ExecutionSucceeded].returnData()
-
-    assertArrayEquals(WithdrawalRequestsListEncoder.encode(expectedListOfWR),wrListInBytes)
+    returnData = WithdrawalMsgProcessor.process(msg, mockStateView)
+    assertArrayEquals(WithdrawalRequestsListEncoder.encode(expectedListOfWR), returnData)
   }
 }
 

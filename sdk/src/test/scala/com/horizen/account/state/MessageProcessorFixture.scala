@@ -9,20 +9,24 @@ import com.horizen.utils.BytesUtils
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.web3j.abi.datatypes.Type
 import org.web3j.abi.{EventEncoder, FunctionReturnDecoder, TypeReference}
+import com.horizen.utils.ClosableResourceHandler
 
+import java.math.BigInteger
 import scala.util.Random
 
 
-trait MessageProcessorFixture {
+trait MessageProcessorFixture extends ClosableResourceHandler {
   val mcAddr = new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte))
   val metadataStorageView: AccountStateMetadataStorageView = mock[AccountStateMetadataStorageView]
 
-  def getView: AccountStateView = {
+  def usingView(fun: AccountStateView => Unit): Unit = {
     val hashNull = BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000000")
     val db = new MemoryDatabase()
     val messageProcessors: Seq[MessageProcessor] = Seq()
     val stateDb = new StateDB(db, hashNull)
-    new AccountStateView(metadataStorageView, stateDb, messageProcessors)
+    val view = new AccountStateView(metadataStorageView, stateDb, messageProcessors)
+    view.setGas(BigInteger.valueOf(1000000))
+    using(view)(fun)
   }
 
   def getMessage(destContractAddress: AddressProposition, amount: java.math.BigInteger, data: Array[Byte]): Message = {

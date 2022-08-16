@@ -25,7 +25,7 @@ class EoaMessageProcessorIntegrationTest
     val emptyData: Array[Byte] = Array.emptyByteArray
     val msg: Message = getMessage(toAddress, value, emptyData)
 
-    using(getView) { stateView =>
+    usingView { stateView =>
 
       // Test 1: to account doesn't exist, so considered as EOA
       assertTrue("Processor expected to BE ABLE to process message", EoaMessageProcessor.canProcess(msg, stateView))
@@ -55,7 +55,7 @@ class EoaMessageProcessorIntegrationTest
     val emptyData: Array[Byte] = Array.emptyByteArray
     val msg: Message = getMessage(toAddress, value, emptyData)
 
-    using(getView) { stateView =>
+    usingView { stateView =>
       val fromInitialValue: BigInteger = msg.getValue.multiply(BigInteger.TEN)
       stateView.addBalance(msg.getFrom.address(), fromInitialValue)
 

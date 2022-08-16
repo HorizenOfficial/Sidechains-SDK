@@ -133,7 +133,7 @@ class ForgerStakeMsgProcessorTest
 
   @Test
   def testNullRecords(): Unit = {
-    using(getView) { stateView =>
+    usingView { stateView =>
       forgerStakeMessageProcessor.init(stateView)
 
       // getting a not existing key from state DB using RAW strategy gives an array of 32 bytes filled with 0, while
@@ -158,7 +158,7 @@ class ForgerStakeMsgProcessorTest
   @Test
   def testInit(): Unit = {
 
-    using(getView) { stateView =>
+    usingView { stateView =>
 
       // we have to call init beforehand
       assertFalse(stateView.accountExists(forgerStakeMessageProcessor.fakeSmartContractAddress.address()))
@@ -174,7 +174,7 @@ class ForgerStakeMsgProcessorTest
 
   @Test
   def testCanProcess(): Unit = {
-    using(getView) { stateView =>
+    usingView { stateView =>
 
       forgerStakeMessageProcessor.init(stateView)
 
@@ -204,7 +204,7 @@ class ForgerStakeMsgProcessorTest
     val blockSignerProposition = new PublicKey25519Proposition(BytesUtils.fromHexString("1122334455667788112233445566778811223344556677881122334455667788")) // 32 bytes
     val vrfPublicKey = new VrfPublicKey(BytesUtils.fromHexString("aabbccddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff001234")) // 33 bytes
 
-    using(getView) { stateView =>
+    usingView { stateView =>
 
       forgerStakeMessageProcessor.init(stateView)
 
@@ -345,7 +345,7 @@ class ForgerStakeMsgProcessorTest
   @Test
   def testAddStakeNotInAllowedList(): Unit = {
 
-    using(getView) { stateView =>
+    usingView { stateView =>
 
       val blockSignerProposition1 = new PublicKey25519Proposition(BytesUtils.fromHexString("1100000000000000000000000000000000000000000000000000000000000011")) // 32 bytes
       val vrfPublicKey1 = new VrfPublicKey(BytesUtils.fromHexString("110000000000000000000000000000000000000000000000000000000000000011")) // 33 bytes
@@ -390,7 +390,7 @@ class ForgerStakeMsgProcessorTest
 
   @Test
   def testProcessInvalidOpCode(): Unit = {
-    using(getView) { stateView =>
+    usingView { stateView =>
       forgerStakeMessageProcessor.init(stateView)
       val data: Array[Byte] = BytesUtils.fromHexString("1234567890")
       val msg = getDefaultMessage(BytesUtils.fromHexString("03"), data, getRandomNonce)
@@ -406,7 +406,7 @@ class ForgerStakeMsgProcessorTest
 
   @Test
   def testProcessInvalidFakeSmartContractAddress(): Unit = {
-    using(getView) { stateView =>
+    usingView { stateView =>
       forgerStakeMessageProcessor.init(stateView)
       val data = Bytes.concat(BytesUtils.fromHexString(GetListOfForgersCmd), new Array[Byte](0))
       val msg = new Message(
@@ -429,7 +429,7 @@ class ForgerStakeMsgProcessorTest
   @Test
   def testAddStakeAmountNotValid(): Unit = {
     // this test will not be meaningful anymore when all sanity checks will be performed before calling any MessageProcessor
-    using(getView) { stateView =>
+    usingView { stateView =>
       // create private/public key pair
       val pair = Keys.createEcKeyPair
 
@@ -476,7 +476,7 @@ class ForgerStakeMsgProcessorTest
   def testAddStakeFromEmptyBalanceAccount(): Unit = {
 
     // this test will not be meaningful anymore when all sanity checks will be performed before calling any MessageProcessor
-    using(getView) { stateView =>
+    usingView { stateView =>
 
       // create private/public key pair
       val pair = Keys.createEcKeyPair
@@ -532,7 +532,7 @@ class ForgerStakeMsgProcessorTest
       (blockSignerProposition, vrfPublicKey)
     ))
 
-    using(getView) { stateView =>
+    usingView { stateView =>
 
       forgerStakeMessageProcessor.init(stateView)
 
@@ -568,7 +568,7 @@ class ForgerStakeMsgProcessorTest
       (blockSignerProposition, vrfPublicKey)
     ))
 
-    using(getView) { stateView =>
+    usingView { stateView =>
 
       forgerStakeMessageProcessor.init(stateView)
 
@@ -622,7 +622,7 @@ class ForgerStakeMsgProcessorTest
       (blockSignerProposition, vrfPublicKey)
     ))
 
-    using(getView) { stateView =>
+    usingView { stateView =>
 
       forgerStakeMessageProcessor.init(stateView)
 

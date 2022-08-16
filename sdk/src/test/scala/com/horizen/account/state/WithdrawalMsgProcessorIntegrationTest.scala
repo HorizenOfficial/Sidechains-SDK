@@ -29,7 +29,7 @@ class WithdrawalMsgProcessorIntegrationTest
 
   @Test
   def testInit(): Unit = {
-    using(getView) { stateView =>
+    usingView { stateView =>
       WithdrawalMsgProcessor.init(stateView)
 
       assertTrue("Account doesn't exist after init", stateView.accountExists(WithdrawalMsgProcessor.fakeSmartContractAddress.address()))
@@ -43,7 +43,7 @@ class WithdrawalMsgProcessorIntegrationTest
   @Test
   def testWithdrawalRequestProcessorIntegration(): Unit = {
     // Setup state view
-    using(getView) { stateView =>
+    usingView { stateView =>
       WithdrawalMsgProcessor.init(stateView)
 
       val epochNum = 102
