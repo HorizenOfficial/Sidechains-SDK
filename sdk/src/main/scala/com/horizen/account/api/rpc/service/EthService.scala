@@ -122,13 +122,7 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
       case Some(secret) =>
         signedTx = signTransactionWithSecret(secret, signedTx)
       case None =>
-        throw new RpcException(
-          new RpcError(
-            35555, // TODO get proper error code
-            "Insufficient funds on the account in from",
-            signedTx.getFromAddress
-          )
-        )
+        return null
     }
     "0x" + BytesUtils.toHexString(TransactionEncoder.encode(signedTx.getTransaction, signedTx.getTransaction.asInstanceOf[SignedRawTransaction].getSignatureData))
   }

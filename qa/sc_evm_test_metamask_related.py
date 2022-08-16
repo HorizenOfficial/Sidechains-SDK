@@ -328,7 +328,7 @@ def deploy_erc20_smart_contract(node, smart_contract, from_address):
     return address
 
 
-class SCEvmERC721Contract(SidechainTestFramework):
+class SCEvmMetamaskTest(SidechainTestFramework):
     sc_nodes_bootstrap_info = None
 
     def setup_nodes(self):
@@ -355,6 +355,7 @@ class SCEvmERC721Contract(SidechainTestFramework):
                               binary=[EVM_APP_BINARY])  # , extra_args=['-agentlib'])
 
     def run_test(self):
+        global global_call_method
         # Setting up
         sc_node = self.sc_nodes[0]
         mc_block = self.nodes[0].getblock(str(self.sc_nodes_bootstrap_info.mainchain_block_height))
@@ -411,16 +412,170 @@ class SCEvmERC721Contract(SidechainTestFramework):
         eoa_assert_native_balance(sc_node, evm_address, initial_balance - transfer_amount)
         eoa_assert_native_balance(sc_node, other_address, transfer_amount)
 
-        zero_address = '0x0000000000000000000000000000000000000000'
+        eoa_transfer(sc_node, evm_address, other_address, transfer_amount, static_call=True, generate_block=False)
+        eoa_transfer(sc_node, evm_address, other_address, transfer_amount, call_method=CallMethod.RPC_EIP155)
 
-        smart_contract_type = 'TestERC721'
-        print("Creating smart contract utilities for {}".format(smart_contract_type))
-        smart_contract = SmartContract(smart_contract_type)
-        print(smart_contract)
+        eoa_assert_native_balance(sc_node, evm_address, initial_balance - 2 * transfer_amount)
+        eoa_assert_native_balance(sc_node, other_address, 2 * transfer_amount)
+
+        eoa_transfer(sc_node, evm_address, other_address, transfer_amount, static_call=True, generate_block=False)
+        eoa_transfer(sc_node, evm_address, other_address, transfer_amount, call_method=CallMethod.RPC_EIP1559)
+
+        eoa_assert_native_balance(sc_node, evm_address, initial_balance - 3 * transfer_amount)
+        eoa_assert_native_balance(sc_node, other_address, 3 * transfer_amount)
+
+        zero_address = '0x0000000000000000000000000000000000000000'
 
         collection_name = "Test ERC721 Tokens"
         collection_symbol = "TET"
         collection_uri = "https://localhost:1337"
+
+        global_call_method = CallMethod.RPC_EIP155
+        print("Running test with EIP155 calls")
+
+        smart_contract_type = 'TestERC721'
+        print("Creating smart contract utilities for {}".format(smart_contract_type))
+        smart_contract = SmartContract(smart_contract_type)
+        smart_contract_address = deploy_smart_contract(sc_node, smart_contract, evm_address,
+                                                       collection_name,
+                                                       collection_symbol, collection_uri)
+
+        # checking initial data
+        res = compare_total_supply(sc_node, smart_contract, smart_contract_address, format_evm(evm_address), 0)
+        res = compare_name(sc_node, smart_contract, smart_contract_address, format_evm(evm_address), collection_name)
+        res = compare_symbol(sc_node, smart_contract, smart_contract_address, format_evm(other_address),
+                             collection_symbol)
+
+        # get basic info about account
+        last_nat_balance = get_native_balance(sc_node, evm_address)
+        last_balance = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address, 0)
+
+        # Minting NFTs via RPC
+
+        minted_ids_user1 = [1]
+        minting_price = 1
+        minting_amount = 1
+        gas = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
+                           minted_ids_user1[0], estimate_gas=True, generate_block=False, static_call=False)
+        print("gas:", gas)
+        # check execution before submitting proper transaction
+        res = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
+                           minted_ids_user1[0], static_call=True, generate_block=False)
+        # check tx receipt once possible
+        tx_hash = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
+                               minted_ids_user1[0], static_call=False, generate_block=True)
+
+        res = compare_total_supply(sc_node, smart_contract, smart_contract_address, evm_address, 1)
+        res = compare_ownerof(sc_node, smart_contract, smart_contract_address, other_address, minted_ids_user1[0],
+                              evm_address)
+        last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance - minting_price)
+        last_balance = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address,
+                                       last_balance + minting_amount)
+
+        # Testing ERC20 functionality
+        smart_contract_type = 'TestERC20'
+        smart_contract = SmartContract(smart_contract_type)
+
+        initial_balance = 100
+        smart_contract_address = deploy_erc20_smart_contract(sc_node, smart_contract, evm_address)
+
+        res = compare_erc20_total_supply(sc_node, smart_contract, smart_contract_address, evm_address, initial_balance)
+        res = compare_erc20_balance(sc_node, smart_contract, smart_contract_address, evm_address, initial_balance)
+
+        transfer_amount = 99
+
+        # Testing normal transfer
+        check_res = transfer_erc20_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
+                                          transfer_amount, static_call=True, generate_block=True)
+
+        compare_erc20_balance(sc_node, smart_contract, smart_contract_address, evm_address, initial_balance)
+
+        gas = transfer_erc20_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
+                                    transfer_amount, static_call=False, generate_block=False, estimate_gas=True)
+        print("Gas:", gas)
+        tx_hash = transfer_erc20_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
+                                        transfer_amount, static_call=False, generate_block=True)
+
+        res = compare_erc20_balance(sc_node, smart_contract, smart_contract_address, evm_address,
+                                    initial_balance - transfer_amount)
+        res = compare_erc20_balance(sc_node, smart_contract, smart_contract_address, other_address, transfer_amount)
+
+        global_call_method = CallMethod.RPC_LEGACY
+        print("Running test with legacy calls")
+
+        smart_contract_type = 'TestERC721'
+        print("Creating smart contract utilities for {}".format(smart_contract_type))
+        smart_contract = SmartContract(smart_contract_type)
+        smart_contract_address = deploy_smart_contract(sc_node, smart_contract, evm_address,
+                                                       collection_name,
+                                                       collection_symbol, collection_uri)
+
+        # checking initial data
+        res = compare_total_supply(sc_node, smart_contract, smart_contract_address, format_evm(evm_address), 0)
+        res = compare_name(sc_node, smart_contract, smart_contract_address, format_evm(evm_address), collection_name)
+        res = compare_symbol(sc_node, smart_contract, smart_contract_address, format_evm(other_address),
+                             collection_symbol)
+
+        # get basic info about account
+        last_nat_balance = get_native_balance(sc_node, evm_address)
+        last_balance = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address, 0)
+
+        # Minting NFTs via RPC
+
+        minted_ids_user1 = [1]
+        minting_price = 1
+        minting_amount = 1
+        gas = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
+                           minted_ids_user1[0], estimate_gas=True, generate_block=False, static_call=False)
+        print("gas:", gas)
+        # check execution before submitting proper transaction
+        res = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
+                           minted_ids_user1[0], static_call=True, generate_block=False)
+        # check tx receipt once possible
+        tx_hash = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
+                               minted_ids_user1[0], static_call=False, generate_block=True)
+
+        res = compare_total_supply(sc_node, smart_contract, smart_contract_address, evm_address, 1)
+        res = compare_ownerof(sc_node, smart_contract, smart_contract_address, other_address, minted_ids_user1[0],
+                              evm_address)
+        last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance - minting_price)
+        last_balance = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address,
+                                       last_balance + minting_amount)
+
+        # Testing ERC20 functionality
+        smart_contract_type = 'TestERC20'
+        smart_contract = SmartContract(smart_contract_type)
+
+        initial_balance = 100
+        smart_contract_address = deploy_erc20_smart_contract(sc_node, smart_contract, evm_address)
+
+        res = compare_erc20_total_supply(sc_node, smart_contract, smart_contract_address, evm_address, initial_balance)
+        res = compare_erc20_balance(sc_node, smart_contract, smart_contract_address, evm_address, initial_balance)
+
+        transfer_amount = 99
+
+        # Testing normal transfer
+        check_res = transfer_erc20_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
+                                          transfer_amount, static_call=True, generate_block=True)
+
+        compare_erc20_balance(sc_node, smart_contract, smart_contract_address, evm_address, initial_balance)
+
+        gas = transfer_erc20_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
+                                    transfer_amount, static_call=False, generate_block=False, estimate_gas=True)
+        print("Gas:", gas)
+        tx_hash = transfer_erc20_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
+                                        transfer_amount, static_call=False, generate_block=True)
+
+        res = compare_erc20_balance(sc_node, smart_contract, smart_contract_address, evm_address,
+                                    initial_balance - transfer_amount)
+        res = compare_erc20_balance(sc_node, smart_contract, smart_contract_address, other_address, transfer_amount)
+
+        global_call_method = CallMethod.RPC_EIP1559
+        print("Running test with EIP1559 calls")
+
+        smart_contract_type = 'TestERC721'
+        print("Creating smart contract utilities for {}".format(smart_contract_type))
+        smart_contract = SmartContract(smart_contract_type)
         smart_contract_address = deploy_smart_contract(sc_node, smart_contract, evm_address,
                                                        collection_name,
                                                        collection_symbol, collection_uri)
@@ -487,4 +642,4 @@ class SCEvmERC721Contract(SidechainTestFramework):
 
 
 if __name__ == "__main__":
-    SCEvmERC721Contract().main()
+    SCEvmMetamaskTest().main()
