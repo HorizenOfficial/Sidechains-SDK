@@ -9,7 +9,7 @@ import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumConsensusDataReceipt
 import com.horizen.account.secret.PrivateKeySecp256k1
-import com.horizen.account.state.{AccountState, AccountStateView, GasLimitReached, GasPool}
+import com.horizen.account.state.{AccountState, AccountStateView, GasLimitReached, BlockGasPool}
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.Account
@@ -89,7 +89,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val receiptList = new ListBuffer[EthereumConsensusDataReceipt]()
     val txHashList = new ListBuffer[ByteArrayWrapper]()
 
-    val blockGasPool = new GasPool(BigInteger.valueOf(30000000))
+    val blockGasPool = new BlockGasPool(BigInteger.valueOf(30000000))
     var txsCounter: Int = 0
     var blockSize: Int = inputBlockSize
 

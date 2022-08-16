@@ -5,7 +5,7 @@ import com.horizen.evm.interop.EvmLog
 
 import java.math.BigInteger
 
-trait BaseAccountStateView extends AccountStateReader {
+trait BaseAccountStateView extends AccountStateReader with GasSpender {
   def getStateDbHandle: ResourceHandle
 
   def accountExists(address: Array[Byte]): Boolean
@@ -25,8 +25,4 @@ trait BaseAccountStateView extends AccountStateReader {
   def removeAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Unit
 
   def addLog(evmLog: EvmLog): Unit
-
-  def getGas: BigInteger
-  def addGas(gas: BigInteger): Unit
-  def subGas(gas: BigInteger): Unit
 }

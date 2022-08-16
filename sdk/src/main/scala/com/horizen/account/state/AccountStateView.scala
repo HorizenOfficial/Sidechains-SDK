@@ -24,9 +24,10 @@ import java.math.BigInteger
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 import scala.util.Try
 
-class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
-                       stateDb: StateDB,
-                       messageProcessors: Seq[MessageProcessor])
+class AccountStateView(
+  metadataStorageView: AccountStateMetadataStorageView,
+  stateDb: StateDB,
+  messageProcessors: Seq[MessageProcessor])
   extends StateView[SidechainTypes#SCAT]
     with BaseAccountStateView
     with AutoCloseable
@@ -136,7 +137,7 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     if (msg.getGasFeeCap.compareTo(getBaseFee) < 0) throw FeeCapTooLowException(sender, msg.getGasFeeCap, getBaseFee)
   }
 
-  private def buyGas(msg: Message, blockGasPool: GasPool): Unit = {
+  private def buyGas(msg: Message, blockGasPool: BlockGasPool): Unit = {
     val gas = msg.getGasLimit
     // with a legacy TX gasPrice will be the one set by the caller
     // with an EIP1559 TX gasPrice will be the effective gasPrice (baseFee+tip, capped at feeCap)
@@ -156,11 +157,11 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     setGas(gas)
   }
 
-  private def refundGas(msg: Message, blockGasPool: GasPool): Unit = {
+  private def refundGas(msg: Message, blockGasPool: BlockGasPool): Unit = {
     val usedGas = msg.getGasLimit.subtract(getGas)
     // cap gas refund to a quotient of the used gas
     // the quotient was 2 before EIP-3529 (london release)
-    addGas(stateDb.getRefund.min(usedGas.divide(GasCalculator.RefundQuotientEIP3529)))
+    addGas(stateDb.getRefund.min(usedGas.divide(GasUtil.RefundQuotientEIP3529)))
     // return funds for remaining gas, exchanged at the original rate.
     val remaining = getGas.multiply(msg.getGasPrice)
     addBalance(msg.getFrom.address(), remaining)
@@ -169,11 +170,11 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     subGas(getGas)
   }
 
-  def applyMessage(msg: Message, blockGasPool: GasPool): Array[Byte] = {
+  def applyMessage(msg: Message, blockGasPool: BlockGasPool): Array[Byte] = {
     // allocate gas for processing this message
     buyGas(msg, blockGasPool)
     // consume intrinsic gas
-    val intrinsicGas = GasCalculator.intrinsicGas(msg.getData, msg.getTo == null)
+    val intrinsicGas = GasUtil.calculateIntrinsicGas(msg.getData, msg.getTo == null)
     if (getGas.compareTo(intrinsicGas) < 0) {
       throw IntrinsicGasException(getGas, intrinsicGas)
     }
@@ -210,7 +211,7 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
    *    - not enough gas for intrinsic gas
    *    - block gas limit reached
    */
-  override def applyTransaction(tx: SidechainTypes#SCAT, txIndex: Int, blockGasPool: GasPool): Try[EthereumConsensusDataReceipt] = Try {
+  override def applyTransaction(tx: SidechainTypes#SCAT, txIndex: Int, blockGasPool: BlockGasPool): Try[EthereumConsensusDataReceipt] = Try {
     if (!tx.isInstanceOf[EthereumTransaction])
       throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
 
@@ -244,33 +245,33 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
   }
 
   override def isEoaAccount(address: Array[Byte]): Boolean = {
-    subGas(GasCalculator.GasTBD)
+    subGas(GasUtil.GasTBD)
     stateDb.isEoaAccount(address)
   }
 
   override def isSmartContractAccount(address: Array[Byte]): Boolean = {
-    subGas(GasCalculator.GasTBD)
+    subGas(GasUtil.GasTBD)
     stateDb.isSmartContractAccount(address)
   }
 
   override def accountExists(address: Array[Byte]): Boolean = {
-    subGas(GasCalculator.GasTBD)
+    subGas(GasUtil.GasTBD)
     !stateDb.isEmpty(address)
   }
 
   // account modifiers:
   override def addAccount(address: Array[Byte], codeHash: Array[Byte]): Unit = {
-    subGas(GasCalculator.GasTBD)
+    subGas(GasUtil.GasTBD)
     stateDb.setCodeHash(address, codeHash)
   }
 
   override def addBalance(address: Array[Byte], amount: BigInteger): Unit = {
-    subGas(GasCalculator.GasTBD)
+    subGas(GasUtil.GasTBD)
     stateDb.addBalance(address, amount)
   }
 
   override def subBalance(address: Array[Byte], amount: BigInteger): Unit = {
-    subGas(GasCalculator.GasTBD)
+    subGas(GasUtil.GasTBD)
     // stateDb lib does not do any sanity check, and negative balances might arise (and java/go json IF does not correctly handle it)
     // TODO: for the time being do the checks here, later they will be done in the caller stack
     require(amount.compareTo(BigInteger.ZERO) >= 0)
@@ -284,32 +285,32 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     stateDb.setNonce(address, getNonce(address).add(BigInteger.ONE))
 
   override def getAccountStorage(address: Array[Byte], key: Array[Byte]): Array[Byte] = {
-    subGas(GasCalculator.GasTBD)
+    subGas(GasUtil.GasTBD)
     stateDb.getStorage(address, key, StateStorageStrategy.RAW)
   }
 
   override def getAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Array[Byte] = {
-    subGas(GasCalculator.GasTBD)
+    subGas(GasUtil.GasTBD)
     stateDb.getStorage(address, key, StateStorageStrategy.CHUNKED)
   }
 
   override def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit = {
-    subGas(GasCalculator.GasTBD)
+    subGas(GasUtil.GasTBD)
     stateDb.setStorage(address, key, value, StateStorageStrategy.RAW)
   }
 
   override def updateAccountStorageBytes(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit = {
-    subGas(GasCalculator.GasTBD)
+    subGas(GasUtil.GasTBD)
     stateDb.setStorage(address, key, value, StateStorageStrategy.CHUNKED)
   }
 
   override def removeAccountStorage(address: Array[Byte], key: Array[Byte]): Unit = {
-    subGas(GasCalculator.GasTBD)
+    subGas(GasUtil.GasTBD)
     stateDb.removeStorage(address, key, StateStorageStrategy.RAW)
   }
 
   override def removeAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Unit = {
-    subGas(GasCalculator.GasTBD)
+    subGas(GasUtil.GasTBD)
     stateDb.removeStorage(address, key, StateStorageStrategy.CHUNKED)
   }
 
@@ -365,22 +366,22 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
 
   // account specific getters
   override def getNonce(address: Array[Byte]): BigInteger = {
-    subGas(GasCalculator.GasTBD)
+    subGas(GasUtil.GasTBD)
     stateDb.getNonce(address)
   }
 
   override def getBalance(address: Array[Byte]): BigInteger = {
-    subGas(GasCalculator.BalanceGasEIP1884)
+    subGas(GasUtil.BalanceGasEIP1884)
     stateDb.getBalance(address)
   }
 
   override def getCodeHash(address: Array[Byte]): Array[Byte] = {
-    subGas(GasCalculator.ExtcodeHashGasEIP1884)
+    subGas(GasUtil.ExtcodeHashGasEIP1884)
     stateDb.getCodeHash(address)
   }
 
   override def getCode(address: Array[Byte]): Array[Byte] = {
-    subGas(GasCalculator.GasTBD)
+    subGas(GasUtil.GasTBD)
     stateDb.getCode(address)
   }
 
@@ -389,7 +390,7 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
   override def getLogs(txHash: Array[Byte]): Array[EvmLog] = stateDb.getLogs(txHash)
 
   override def addLog(evmLog: EvmLog): Unit = {
-    subGas(GasCalculator.LogGas.add(GasCalculator.LogTopicGas.multiply(BigInteger.valueOf(evmLog.topics.length))))
+    subGas(GasUtil.LogGas.add(GasUtil.LogTopicGas.multiply(BigInteger.valueOf(evmLog.topics.length))))
     stateDb.addLog(evmLog)
   }
 
@@ -403,18 +404,4 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
   // TODO: get baseFee for the block
   // TODO: currently a non-zero baseFee makes all the python tests fail, because they do not consider spending fees
   override def getBaseFee: BigInteger = BigInteger.valueOf(0)
-
-  // gas methods
-  private var currentGas = BigInteger.ZERO
-
-  override def getGas: BigInteger = currentGas
-
-  override def addGas(gas: BigInteger): Unit = currentGas = currentGas.add(gas)
-
-  override def subGas(gas: BigInteger): Unit = {
-    if (currentGas.compareTo(gas) < 0) {
-      throw OutOfGasException()
-    }
-    currentGas = currentGas.subtract(gas)
-  }
 }

@@ -4,13 +4,13 @@ import com.horizen.account.utils.BigIntegerUtil
 
 import java.math.BigInteger
 
-object GasCalculator {
+// numbers based on geth implementation:
+// https://github.com/ethereum/go-ethereum/blob/v1.10.16/params/protocol_params.go
+object GasUtil {
   val TxGas: BigInteger = BigInteger.valueOf(21000)
   val TxGasContractCreation: BigInteger = BigInteger.valueOf(53000)
   val TxDataZeroGas: BigInteger = BigInteger.valueOf(4)
   val TxDataNonZeroGasEIP2028: BigInteger = BigInteger.valueOf(16)
-
-  val GasTBD: BigInteger = BigInteger.ZERO
 
   val CallGasEIP150: BigInteger = BigInteger.valueOf(700)
   val BalanceGasEIP1884: BigInteger = BigInteger.valueOf(700)
@@ -26,7 +26,7 @@ object GasCalculator {
   val RefundQuotient: BigInteger = BigInteger.valueOf(2)
   val RefundQuotientEIP3529: BigInteger = BigInteger.valueOf(5)
 
-  def intrinsicGas(data: Array[Byte], isContractCreation: Boolean): BigInteger = {
+  def calculateIntrinsicGas(data: Array[Byte], isContractCreation: Boolean): BigInteger = {
     // Set the starting gas for the raw transaction
     var gas = if (isContractCreation) TxGasContractCreation else TxGas
 

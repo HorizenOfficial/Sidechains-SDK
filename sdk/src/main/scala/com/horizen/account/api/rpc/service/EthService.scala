@@ -86,7 +86,7 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
     getStateViewAtTag(tag) { tagStateView =>
       try {
         val msg = params.toMessage(tagStateView.getBaseFee)
-        fun(tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit)), tagStateView)
+        fun(tagStateView.applyMessage(msg, new BlockGasPool(msg.getGasLimit)), tagStateView)
       } catch {
         // throw on execution errors, also include evm revert reason if possible
         case evmRevert: EvmException => throw new RpcException(new RpcError(
@@ -122,11 +122,11 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
   @RpcOptionalParameters(1)
   def estimateGas(params: TransactionArgs, tag: String): Quantity = {
     // Binary search the gas requirement, as it may be higher than the amount used
-    val lowBound = GasCalculator.TxGas.subtract(BigInteger.ONE)
+    val lowBound = GasUtil.TxGas.subtract(BigInteger.ONE)
     // Determine the highest gas limit can be used during the estimation.
     var highBound = params.gas
     getStateViewAtTag(tag) { tagStateView =>
-      if (highBound == null || highBound.compareTo(GasCalculator.TxGas) < 0) {
+      if (highBound == null || highBound.compareTo(GasUtil.TxGas) < 0) {
         // TODO: get block gas limit
         highBound = BigInteger.valueOf(30000000)
       }
