@@ -44,17 +44,15 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
 
     BytesUtils.toHexString(getOpCodeFromData(msg.getData)) match {
       case GetListOfWithdrawalReqsCmdSig =>
-        view.getGasPool.consumeGas(GasSpentForGetListOfWithdrawalReqsCmd)
+        view.burnGas(GasSpentForGetListOfWithdrawalReqsCmd)
         execGetListOfWithdrawalReqRecords(msg, view)
 
       case AddNewWithdrawalReqCmdSig =>
-        view.getGasPool.consumeGas(GasSpentForAddNewWithdrawalReqCmd)
+        view.burnGas(GasSpentForAddNewWithdrawalReqCmd)
         execAddWithdrawalRequest(msg, view)
 
       case functionSig =>
-        val msgStr = s"Requested function does not exist. Function signature: $functionSig"
-        log.debug(msgStr)
-        throw new ExecutionFailedException(msgStr)
+        throw new ExecutionFailedException(s"Requested function does not exist. Function signature: $functionSig")
     }
   }
 
@@ -98,16 +96,11 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
     val withdrawalAmount = msg.getValue
 
     if (msg.getData.length != METHOD_CODE_LENGTH + AddWithdrawalRequestCmdInputDecoder.getABIDataParamsLengthInBytes) {
-      log.error(s"Wrong message data field length: ${msg.getData.length}")
-      throw new IllegalArgumentException("Wrong message data field length")
-    }
-    else if (!ZenWeiConverter.isValidZenAmount(withdrawalAmount)) {
-      log.error(s"Withdrawal amount is not a valid Zen amount: $withdrawalAmount")
-      throw new IllegalArgumentException("Withdrawal amount is not a valid Zen amount")
-    }
-    else if (withdrawalAmount.compareTo(DustThresholdInWei) < 0) {
-      log.error(s"Withdrawal amount is under the dust threshold: $withdrawalAmount")
-      throw new IllegalArgumentException("Withdrawal amount is under the dust threshold")
+      throw new ExecutionFailedException(s"Wrong message data field length: ${msg.getData.length}")
+    } else if (!ZenWeiConverter.isValidZenAmount(withdrawalAmount)) {
+      throw new ExecutionFailedException(s"Withdrawal amount is not a valid Zen amount: $withdrawalAmount")
+    } else if (withdrawalAmount.compareTo(DustThresholdInWei) < 0) {
+      throw new ExecutionFailedException(s"Withdrawal amount is under the dust threshold: $withdrawalAmount")
     }
   }
 
@@ -116,8 +109,7 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
     val currentEpochNum = view.getWithdrawalEpochInfo.epoch
     val numOfWithdrawalReqs = getWithdrawalEpochCounter(view, currentEpochNum)
     if (numOfWithdrawalReqs >= MaxWithdrawalReqsNumPerEpoch) {
-      log.debug(s"Reached maximum number of Withdrawal Requests per epoch: request is invalid")
-      throw new ExecutionFailedException("Reached maximum number of Withdrawal Requests per epoch")
+      throw new ExecutionFailedException("Reached maximum number of Withdrawal Requests per epoch: request is invalid")
     }
 
     val nextNumOfWithdrawalReqs: Int = numOfWithdrawalReqs + 1

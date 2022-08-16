@@ -85,7 +85,8 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
   private def doCall[A](params: TransactionArgs, tag: String)(fun: (Array[Byte], AccountStateView) ⇒ A): A = {
     getStateViewAtTag(tag) { tagStateView =>
       try {
-        fun(tagStateView.applyMessage(params.toMessage(tagStateView.getBaseFee)), tagStateView)
+        val msg = params.toMessage(tagStateView.getBaseFee)
+        fun(tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit)), tagStateView)
       } catch {
         // throw on execution errors, also include evm revert reason if possible
         case evmRevert: EvmException => throw new RpcException(new RpcError(

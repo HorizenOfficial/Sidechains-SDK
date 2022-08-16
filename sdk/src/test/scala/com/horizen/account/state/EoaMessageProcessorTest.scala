@@ -132,7 +132,6 @@ class EoaMessageProcessorTest extends JUnitSuite
         assertEquals("Different exception found", exception, ef.getCause)
     }
 
-
     // Test 3: Failure during addBalance
     Mockito.reset(mockStateView)
 

@@ -36,8 +36,6 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
   lazy val withdrawalReqProvider: WithdrawalRequestProvider = messageProcessors.find(_.isInstanceOf[WithdrawalRequestProvider]).get.asInstanceOf[WithdrawalRequestProvider]
   lazy val forgerStakesProvider: ForgerStakesProvider = messageProcessors.find(_.isInstanceOf[ForgerStakesProvider]).get.asInstanceOf[ForgerStakesProvider]
 
-  private var gasPool = new GasPool(BigInteger.ZERO)
-
   // modifiers
   override def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[Unit] = Try {
     refData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {
@@ -149,7 +147,7 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
         s"max fee per gas less than block base fee: address ${sender.checksumAddress()}, maxFeePerGas: ${msg.getGasFeeCap}, baseFee: $getBaseFee")
   }
 
-  private def buyGas(msg: Message): Unit = {
+  private def buyGas(msg: Message, blockGasPool: GasPool): GasPool = {
     val gas = msg.getGasLimit
     // with a legacy TX gasPrice will be the one set by the caller
     // with an EIP1559 TX gasPrice will be the effective gasPrice (baseFee+tip, capped at feeCap)
@@ -163,53 +161,78 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     if (have.compareTo(want) < 0) {
       throw new TransactionSemanticValidityException(s"insufficient funds for gas * price + value: address ${sender.checksumAddress()} have $have want $want")
     }
-    // allocate gas for this transaction
-    // TODO: deduct gas from gasPool of the current block and refund unused gas at the end
-//    blockGasPool.consumeGas(gas)
-    gasPool = new GasPool(gas)
+    // deduct gas from gasPool of the current block (unused gas will be returned after execution)
+    blockGasPool.consumeGas(gas)
     // prepay effective gas fees
     subBalance(sender.address(), effectiveFees)
+    // allocate gas for this transaction
+    new GasPool(gas)
   }
 
-  private def refundGas(msg: Message): Unit = {
+  private def refundGas(msg: Message, txGasPool: GasPool, blockGasPool: GasPool): Unit = {
     val quotient = 5 // pre-EIP-3529 this was 2 (london release)
-    val max = gasPool.getUsedGas.divide(BigInteger.valueOf(quotient))
+    val max = txGasPool.getUsedGas.divide(BigInteger.valueOf(quotient))
     val refund = stateDb.getRefund match {
       // cap refund to a quotient of the used gas
       case refund if refund.compareTo(max) > 1 => max
       case refund => refund
     }
+    txGasPool.returnGas(refund)
     // return funds for remaining gas, exchanged at the original rate.
-    val remaining = gasPool.getAvailableGas.add(refund).multiply(msg.getGasPrice)
+    val remaining = txGasPool.getAvailableGas.multiply(msg.getGasPrice)
     addBalance(msg.getFrom.address(), remaining)
 
-//    blockGasPool.refundGas(refund)
-    // TODO: also return remaining gas to the gasPool of the current block so it is available for the next transaction
+    // return remaining gas to the gasPool of the current block so it is available for the next transaction
+    blockGasPool.returnGas(txGasPool.getAvailableGas)
   }
 
-  def applyMessage(msg: Message): Array[Byte] = {
-    buyGas(msg)
-    val revisionId = stateDb.snapshot()
-
+  def applyMessage(msg: Message, blockGasPool: GasPool): Array[Byte] = {
+    val txGasPool = try {
+      buyGas(msg, blockGasPool)
+    } catch {
+      // throw an Exception that is not ExecutionFailedException
+      case err: OutOfGasException => throw new Exception("block gas limit reached", err);
+    }
     try {
       // always consume intrinsic gas
-      gasPool.consumeGas(GasCalculator.intrinsicGas(msg.getData, msg.getTo == null))
-      messageProcessors.find(_.canProcess(msg, this)) match {
-        case Some(processor) => processor.process(msg, this)
-        case None => throw new IllegalArgumentException(s"Unable to process message.")
-      }
+      txGasPool.consumeGas(GasCalculator.intrinsicGas(msg.getData, msg.getTo == null))
     } catch {
-      // if the processor throws we revert all changes and consume any remaining gas
-      case err: Exception =>
-        stateDb.revertToSnapshot(revisionId)
-        gasPool.consumeGas(gasPool.getAvailableGas)
-        throw err
-    } finally {
-      refundGas(msg)
+      // throw an Exception that is not ExecutionFailedException
+      case err: OutOfGasException => throw new Exception("intrinsic gas too low", err);
+    }
+
+    messageProcessors.find(_.canProcess(msg, this)) match {
+      case None => throw new IllegalArgumentException("Unable to process message.")
+      case Some(processor) =>
+        val revisionId = stateDb.snapshot()
+        try {
+          processor.process(msg, this)
+        } catch {
+          // if the processor throws ExecutionFailedException we revert all changes and consume any remaining gas
+          // any other exception will bubble up and invalidate the block
+          case err: ExecutionFailedException =>
+            stateDb.revertToSnapshot(revisionId)
+            txGasPool.consumeGas(txGasPool.getAvailableGas)
+            throw err
+        } finally {
+          refundGas(msg, txGasPool, blockGasPool)
+        }
     }
   }
 
-  override def applyTransaction(tx: SidechainTypes#SCAT, txIndex: Int, prevCumGasUsed: BigInteger): Try[EthereumConsensusDataReceipt] = Try {
+  /**
+   * Possible outcomes:
+   *  - tx applied succesfully => Receipt with status success
+   *  - tx execution failed => Receipt with status failed
+   *    - if any ExecutionFailedException was thrown, including but not limited to:
+   *    - OutOfGasException (not intrinsic gas, see below!)
+   *    - EvmException (EVM reverted) / fake contract exception
+   *  - tx could not be applied => throws an exception (this will lead to and invalid block)
+   *    - any of the preChecks fail
+   *    - not enough gas for intrinsic gas
+   *    - block gas limit reached
+   */
+  override def applyTransaction(tx: SidechainTypes#SCAT, txIndex: Int, blockGasPool: GasPool): Try[EthereumConsensusDataReceipt] = Try {
     if (!tx.isInstanceOf[EthereumTransaction])
       throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
 
@@ -228,15 +251,16 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
 
     // apply message to state
     val status = try {
-      applyMessage(msg)
+      applyMessage(msg, blockGasPool)
       ReceiptStatus.SUCCESSFUL
     } catch {
-      case err: Exception =>
-        log.debug("applying message failed", err)
+      // any other exception will bubble up and invalidate the block
+      case err: ExecutionFailedException =>
+        log.error("applying message failed", err)
         ReceiptStatus.FAILED
     }
     val consensusDataReceipt = new EthereumConsensusDataReceipt(
-      ethTx.version(), status.id, prevCumGasUsed.add(gasPool.getUsedGas), getLogs(txHash))
+      ethTx.version(), status.id, blockGasPool.getUsedGas, getLogs(txHash))
     log.debug(s"Returning consensus data receipt: ${consensusDataReceipt.toString()}")
     consensusDataReceipt
   }
@@ -337,7 +361,10 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
   override def getHeight: Int = metadataStorageView.getHeight
 
   // account specific getters
-  override def getBalance(address: Array[Byte]): BigInteger = stateDb.getBalance(address)
+  override def getBalance(address: Array[Byte]): BigInteger = {
+    burnGas(BigInteger.ONE)
+    stateDb.getBalance(address)
+  }
 
   override def getCodeHash(address: Array[Byte]): Array[Byte] = stateDb.getCodeHash(address)
 
@@ -360,5 +387,14 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
   // TODO: currently a non-zero baseFee makes all the python tests fail, because they do not consider spending fees
   override def getBaseFee: BigInteger = BigInteger.valueOf(0)
 
-  override def getGasPool: GasPool = gasPool
+  // gas methods
+//  def getGasPool: GasPool = gasPool
+  private var gasInTheTank = BigInteger.ZERO
+  override def fillGas(gas: BigInteger): Unit = gasInTheTank = gasInTheTank.add(gas)
+  override def burnGas(gas: BigInteger): Unit = {
+    if (gasInTheTank.compareTo(gas) < 0) {
+      throw new OutOfGasException(gas, gasInTheTank)
+    }
+    gasInTheTank = gasInTheTank.subtract(gas)
+  }
 }

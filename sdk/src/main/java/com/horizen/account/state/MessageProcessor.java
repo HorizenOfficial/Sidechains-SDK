@@ -10,8 +10,8 @@ public interface MessageProcessor {
 
     // Apply processor modifying the view.
     // Possible results:
-    // * ExecutionSucceeded(BigInteger gasUsed, byte[] returnData) -> if was applied as expected
-    // * ExecutionFailed(BigInteger gasUsed, Exception reason) -> if was executed, but marked as "failed"
-    // * InvalidMessage(Exception reason) -> if is invalid -> block is invalid
+    // * return byte[] returnData -> if was applied as expected
+    // * throws ExecutionFailedException -> if was executed, but marked as "failed"
+    // * throws any other Exception -> if is invalid -> block is invalid
     byte[] process(Message msg, BaseAccountStateView view) throws ExecutionFailedException;
 }

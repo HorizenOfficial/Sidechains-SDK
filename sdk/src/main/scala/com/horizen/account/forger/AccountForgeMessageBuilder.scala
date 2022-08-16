@@ -10,7 +10,7 @@ import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumConsensusDataReceipt
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state.AccountState.blockGasLimitExceeded
-import com.horizen.account.state.{AccountState, AccountStateView}
+import com.horizen.account.state.{AccountState, AccountStateView, GasPool}
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.Account
@@ -90,7 +90,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val receiptList = new ListBuffer[EthereumConsensusDataReceipt]()
     val txHashList = new ListBuffer[ByteArrayWrapper]()
 
-    var cumGasUsed: BigInteger = BigInteger.ZERO
+    val blockGasPool = new GasPool(BigInteger.valueOf(30000000))
     var txsCounter: Int = 0
     var blockSize: Int = inputBlockSize
 
@@ -102,12 +102,10 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       if (blockSizeExceeded(blockSize, txsCounter))
         return Success(receiptList, txHashList)
 
-      stateView.applyTransaction(tx, txIndex, cumGasUsed) match {
+      stateView.applyTransaction(tx, txIndex, blockGasPool) match {
         case Success(consensusDataReceipt) =>
-          // update cumulative gas used so far
-          cumGasUsed = consensusDataReceipt.cumulativeGasUsed
 
-          if (blockGasLimitExceeded(cumGasUsed))
+          if (blockGasPool.getAvailableGas.equals(BigInteger.ZERO))
             return Success(receiptList, txHashList)
 
           val ethTx = tx.asInstanceOf[EthereumTransaction]

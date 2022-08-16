@@ -126,9 +126,10 @@ class AccountState(val params: NetworkParams,
       val blockNumber = stateView.getHeight + 1
       val blockHash = idToBytes(mod.id)
       var cumGasUsed: BigInteger = BigInteger.ZERO
+      val blockGasPool = new GasPool(BigInteger.valueOf(30000000))
 
       for ((tx, txIndex) <- mod.sidechainTransactions.zipWithIndex) {
-        stateView.applyTransaction(tx, txIndex, cumGasUsed) match {
+        stateView.applyTransaction(tx, txIndex, blockGasPool) match {
           case Success(consensusDataReceipt) =>
             val txGasUsed = consensusDataReceipt.cumulativeGasUsed.subtract(cumGasUsed)
             // update cumulative gas used so far
@@ -400,9 +401,10 @@ class AccountState(val params: NetworkParams,
 
       val ethTx = tx.asInstanceOf[EthereumTransaction]
       val txHash = BytesUtils.fromHexString(ethTx.id)
+      val blockGasPool = new GasPool(BigInteger.valueOf(30000000))
 
       using(getView) { stateView =>
-        stateView.applyTransaction(tx, 0, BigInteger.ZERO) match {
+        stateView.applyTransaction(tx, 0, blockGasPool) match {
           case Success(_) =>
             log.debug(s"tx=${ethTx.id} succesfully validate against state view")
 

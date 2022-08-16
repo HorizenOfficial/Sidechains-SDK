@@ -46,11 +46,13 @@ public class EvmMessageProcessor implements MessageProcessor {
         );
         // consume gas the EVM has used:
         // the EVM will never consume more gas than is available, hence this should never throw
-        view.getGasPool().consumeGas(result.usedGas);
+        // and OutOfGasException is manually thrown if the EVM reported "out of gas"
+        view.burnGas(result.usedGas);
         if (!result.evmError.isEmpty()) {
             if (result.evmError.startsWith("out of gas")) {
                 throw new OutOfGasException();
             }
+            // returnData here will include the revert reason
             throw new EvmException(result.evmError, result.returnData);
         }
         return result.returnData;

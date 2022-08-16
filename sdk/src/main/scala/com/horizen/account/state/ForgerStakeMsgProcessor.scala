@@ -93,8 +93,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
       ForgerStakeDataSerializer.parseBytesTry(data) match {
         case Success(obj) => Some(obj)
         case Failure(exception) =>
-          log.error("Error while parsing forger data.", exception)
-          throw exception
+          throw new ExecutionFailedException("Error while parsing forger data.", exception)
       }
     }
   }
@@ -110,8 +109,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
       LinkedListNodeSerializer.parseBytesTry(data) match {
         case Success(obj) => Some(obj)
         case Failure(exception) =>
-          log.error("Error while parsing forging info.", exception)
-          throw exception
+          throw new ExecutionFailedException("Error while parsing forger info.", exception)
       }
     }
   }
@@ -223,7 +221,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
       val prevNodeKey = node.previousNodeKey
       (listItem, prevNodeKey)
     } else {
-      throw new IllegalArgumentException("Tip has the null value, no list here")
+      throw new ExecutionFailedException("Tip has the null value, no list here")
     }
   }
 
@@ -237,16 +235,12 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
 
     // first of all check msg.value, it must be a legal wei amount convertible in satoshi without any remainder
     if (!isValidZenAmount(msg.getValue)) {
-      val msgStr = s"Value is not a legal wei amount: ${msg.getValue.toString()}"
-      log.debug(msgStr)
-      throw new ExecutionFailedException(msgStr)
+      throw new ExecutionFailedException(s"Value is not a legal wei amount: ${msg.getValue.toString()}")
     }
 
     // check also that sender account exists (unless we are staking in the sc creation phase)
     if (!isGenesisScCreation && !view.accountExists(msg.getFrom.address())) {
-      val msgStr = s"Sender account does not exist: ${msg.getFrom.toString}"
-      log.debug(msgStr)
-      throw new ExecutionFailedException(msgStr)
+      throw new ExecutionFailedException(s"Sender account does not exist: ${msg.getFrom.toString}")
     }
 
     val inputParams = getArgumentsFromData(msg.getData)
@@ -260,9 +254,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     if (!isGenesisScCreation && networkParams.restrictForgers) {
       // check that the delegation arguments satisfy the restricted list of forgers.
       if (!networkParams.allowedForgersList.contains((blockSignPublicKey, vrfPublicKey))) {
-        val msgStr = "Forger is not in the allowed list"
-        log.debug(msgStr)
-        throw new ExecutionFailedException(msgStr)
+        throw new ExecutionFailedException("Forger is not in the allowed list")
       }
     }
 
@@ -271,9 +263,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
 
     // check we do not already have this stake obj in the db
     if (existsStakeData(view, newStakeId)) {
-      val msgStr = s"Stake ${BytesUtils.toHexString(newStakeId)} already in stateDb"
-      log.error(msgStr)
-      throw new ExecutionFailedException(msgStr)
+      throw new ExecutionFailedException(s"Stake ${BytesUtils.toHexString(newStakeId)} already in stateDb")
     }
 
     // add the obj to stateDb
@@ -339,20 +329,13 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     val signature: SignatureSecp256k1 = cmdInput.signature
 
     // get the forger stake data to remove
-    val stakeData = findStakeData(view, stakeId) match {
-      case Some(obj) => obj
-      case None =>
-        val msgStr = "No such stake id in state-db"
-        log.debug(msgStr)
-        throw new ExecutionFailedException(msgStr)
-    }
+    val stakeData = findStakeData(view, stakeId)
+      .getOrElse(throw new ExecutionFailedException("No such stake id in state-db"))
 
     // check signature
     val msgToSign = getMessageToSign(stakeId, msg.getFrom.address(), msg.getNonce.toByteArray)
     if (!signature.isValid(stakeData.ownerPublicKey, msgToSign)) {
-      val msgStr = "Invalid signature"
-      log.debug(msgStr)
-      throw new ExecutionFailedException(msgStr)
+      throw new ExecutionFailedException("Invalid signature")
     }
 
     // remove the forger stake data
@@ -375,21 +358,19 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
   override def process(msg: Message, view: BaseAccountStateView): Array[Byte] = {
     BytesUtils.toHexString(getOpCodeFromData(msg.getData)) match {
       case GetListOfForgersCmd =>
-        view.getGasPool.consumeGas(GetListOfForgersGasPaidValue)
+        view.burnGas(GetListOfForgersGasPaidValue)
         doGetListOfForgersCmd(msg, view)
 
       case AddNewStakeCmd =>
-        view.getGasPool.consumeGas(AddNewStakeGasPaidValue)
+        view.burnGas(AddNewStakeGasPaidValue)
         doAddNewStakeCmd(msg, view)
 
       case RemoveStakeCmd =>
-        view.getGasPool.consumeGas(RemoveStakeGasPaidValue)
+        view.burnGas(RemoveStakeGasPaidValue)
         doRemoveStakeCmd(msg, view)
 
       case opCodeHex =>
-        val msgStr = s"op code $opCodeHex not supported"
-        log.debug(msgStr)
-        throw new ExecutionFailedException(msgStr)
+        throw new ExecutionFailedException(s"op code $opCodeHex not supported")
     }
   }
 }
