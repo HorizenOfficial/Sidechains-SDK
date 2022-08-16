@@ -34,7 +34,7 @@ public class EthereumTransactionView {
     public EthereumTransactionView(EthereumReceipt receipt, EthereumTransaction ethTx) {
         type = Numeric.prependHexPrefix((Integer.toHexString(ethTx.transactionTypeId())));
         nonce = Numeric.toHexStringWithPrefix(ethTx.getNonce());
-        to = Numeric.cleanHexPrefix(ethTx.getToAddress()).length() != Account.ADDRESS_SIZE ? null : ethTx.getToAddress();
+        to = Numeric.cleanHexPrefix(ethTx.getToAddress()).length() != 2*Account.ADDRESS_SIZE ? null : ethTx.getToAddress();
         gas = Numeric.toHexStringWithPrefix(ethTx.getGasLimit());
         value = Numeric.toHexStringWithPrefix(ethTx.getValue());
         input = Numeric.toHexString(ethTx.getData());
@@ -45,9 +45,9 @@ public class EthereumTransactionView {
             gasPrice = Numeric.toHexStringWithPrefix(ethTx.getGasPrice());
         }
         if (ethTx.getChainId() != null) chainId = String.valueOf(ethTx.getChainId());
-        v = Numeric.toHexString(ethTx.getSignature().getV());
-        r = Numeric.toHexString(ethTx.getSignature().getR());
-        s = Numeric.toHexString(ethTx.getSignature().getS());
+        v = (ethTx.getV() != null) ? Numeric.toHexString(ethTx.getV()) : null;
+        r = (ethTx.getR() != null) ? Numeric.toHexString(ethTx.getR()) : null;
+        s = (ethTx.getS() != null) ? Numeric.toHexString(ethTx.getS()) : null;
         blockHash = Numeric.toHexString(receipt.blockHash());
         blockNumber = Numeric.prependHexPrefix(Integer.toHexString(receipt.blockNumber()));
         from = (ethTx.getFrom() != null) ? Numeric.toHexString(ethTx.getFrom().address()) : null;

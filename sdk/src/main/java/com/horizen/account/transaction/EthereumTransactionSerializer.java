@@ -28,9 +28,7 @@ public class EthereumTransactionSerializer implements TransactionSerializer<Ethe
     public void serialize(EthereumTransaction tx, Writer writer) {
         byte[] encodedMessage;
         if (tx.isSigned())
-            encodedMessage = TransactionEncoder.encode(tx.getTransaction(),
-                    new Sign.SignatureData(tx.getSignature().getV(),
-                            tx.getSignature().getR(), tx.getSignature().getS()));
+            encodedMessage = TransactionEncoder.encode(tx.getTransaction(), tx.getSignatureData());
         else encodedMessage = TransactionEncoder.encode(tx.getTransaction());
 
         writer.putInt(encodedMessage.length);

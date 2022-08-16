@@ -25,13 +25,14 @@ public final class SignatureSecp256k1 implements ProofOfKnowledge<PrivateKeySecp
     private final byte[] s;
 
     public SignatureSecp256k1(byte[] v, byte[] r, byte[] s) {
-        if (v.length != Secp256k1.SIGNATURE_V_SIZE ||
+        if (v.length > Secp256k1.SIGNATURE_V_MAXSIZE ||
                 r.length != Secp256k1.SIGNATURE_RS_SIZE ||
                 s.length != Secp256k1.SIGNATURE_RS_SIZE) {
             throw new IllegalArgumentException(String.format(
-                    "Incorrect signature length, %d expected, %d found",
-                    Secp256k1.SIGNATURE_SIZE,
-                    v.length + r.length + s.length
+                    "Incorrect signature data: v=%d (expected at most %d); r=%d (expected %d); s=%d (expected %d)",
+                    v.length, Secp256k1.SIGNATURE_V_MAXSIZE,
+                    r.length, Secp256k1.SIGNATURE_RS_SIZE,
+                    s.length, Secp256k1.SIGNATURE_RS_SIZE
             ));
         }
         this.v = v;

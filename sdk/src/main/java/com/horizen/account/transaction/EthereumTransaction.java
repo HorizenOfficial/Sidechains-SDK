@@ -6,6 +6,7 @@ import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.state.GasUintOverflowException;
 import com.horizen.account.state.Message;
 import com.horizen.account.utils.Account;
+import com.horizen.account.utils.EthereumTransactionUtils;
 import com.horizen.account.utils.BigIntegerUtil;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.TransactionSerializer;
@@ -203,28 +204,20 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return null;
     }
 
-    static long convertToLong(byte[] bytes) {
-        long value = 0L;
-
-        // Iterating through for loop
-        for (byte b : bytes) {
-            // Shifting previous value 8 bits to right and
-            // add it with next value
-            value = (value << 8) + (b & 255);
-        }
-
-        return value;
-    }
-
     public Long getChainId() {
         if (this.isEIP1559())
             return this.eip1559Tx().getChainId();
         else if (this.isSigned()) {
             var signedTx = (SignedRawTransaction) this.transaction;
             var sigData = signedTx.getSignatureData();
-            if (sigData.getS()[0] == 0 && sigData.getR()[0] == 0)
-                return convertToLong(sigData.getV());
-            else return ((SignedRawTransaction) this.transaction).getChainId(); // TODO check necessity
+            if (sigData.getS()[0] == 0 && sigData.getR()[0] == 0) {
+                // for a not-really signed legacy tx implementing EIP155, here the chainid is the V itself
+                // the caller needs it for encoding the tx properly
+                return EthereumTransactionUtils.convertToLong(sigData.getV());
+            } else {
+                // for a fully signed legacy tx implementing EIP155
+                return ((SignedRawTransaction) this.transaction).getChainId();
+            }
         }
 
         return null;
@@ -301,6 +294,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return Numeric.hexStringToByteArray(transaction.getData());
     }
 
+    @JsonIgnore
     @Override
     public SignatureSecp256k1 getSignature() {
         if (this.isSigned()) {
@@ -313,6 +307,22 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return null;
     }
 
+    @JsonIgnore
+    public Sign.SignatureData getSignatureData() {
+        if (this.isSigned()) {
+            SignedRawTransaction stx = (SignedRawTransaction) this.transaction;
+            return new Sign.SignatureData(
+                    stx.getSignatureData().getV(),
+                    stx.getSignatureData().getR(),
+                    stx.getSignatureData().getS());
+        }
+        return null;
+    }
+
+    // used in json representation of signature fields. In case of EIP155 tx getV() returns the value carrying the chainId
+    public byte[] getV() { return (getSignatureData() != null) ? getSignatureData().getV() : null; }
+    public byte[] getR() { return (getSignatureData() != null) ? getSignatureData().getR() : null; }
+    public byte[] getS() { return (getSignatureData() != null) ? getSignatureData().getS() : null; }
 
     @Override
     public String toString() {
@@ -328,7 +338,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                     this.getData() != null ? Numeric.toHexString(this.getData()) : "",
                     Numeric.toHexStringWithPrefix(this.getMaxFeePerGas()),
                     Numeric.toHexStringWithPrefix(this.getMaxPriorityFeePerGas()),
-                    isSigned() ? getSignature().toString() : ""
+                    isSigned() ? new SignatureSecp256k1(getSignatureData()).toString() : ""
             );
         else return String.format(
                 "EthereumTransaction{from=%s, nonce=%s, gasPrice=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
@@ -340,22 +350,16 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                 this.getTo() != null ? this.getTo() : "0x",
                 Numeric.toHexStringWithPrefix(this.getValue()),
                 this.getData() != null ? Numeric.toHexString(this.getData()) : "",
-                isSigned() ? getSignature().toString() : ""
+                isSigned() ? new SignatureSecp256k1(getSignatureData()).toString() : ""
         );
     }
 
-    /*
-     * from: "0xEB014f8c8B418Db6b45774c326A0E64C78914dC0",
-     * gasPrice: "20000000000",
-     * gas: "21000",
-     * to: '0x3535353535353535353535353535353535353535',
-     * value: "1000000000000000000",
-     * data: ""
-     */
     @Override
     public byte[] messageToSign() {
-        if (this.transaction.getType().isLegacy() && this.isSigned())
+        if (this.transaction.getType().isLegacy() && this.isSigned()) {
+            // the chainid might be set also in legacy case due to EIP155
             return ((SignedRawTransaction) this.transaction).getEncodedTransaction(this.getChainId());
+        }
         return TransactionEncoder.encode(this.transaction);
     }
 
