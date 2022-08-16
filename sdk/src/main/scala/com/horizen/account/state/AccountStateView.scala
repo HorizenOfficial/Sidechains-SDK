@@ -8,14 +8,13 @@ import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceip
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress}
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.{MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
+import com.horizen.account.utils.{BigIntegerUtil, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
 import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput, WithdrawalEpochCertificate}
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.evm.interop.EvmLog
 import com.horizen.evm.{ResourceHandle, StateDB, StateStorageStrategy}
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.StateView
-import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.{BlockFeeInfo, BytesUtils, WithdrawalEpochInfo}
 import scorex.core.VersionTag
@@ -116,38 +115,28 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     // and was successfully verified by ChainIdBlockSemanticValidator
 
     // call these only once as they are not a simple getters
-    val sender = msg.getFrom
+    val sender = msg.getFrom.address()
 
     // Check the nonce
-    val stateNonce = getNonce(sender.address())
+    val stateNonce = getNonce(sender)
     val txNonce = msg.getNonce
     val result = txNonce.compareTo(stateNonce)
     if (result < 0) {
-      throw new TransactionSemanticValidityException(
-        s"nonce too low: address ${sender.checksumAddress()}, tx: $txNonce, state: $stateNonce")
+      throw NonceTooLowException(sender, txNonce, stateNonce)
     } else if (result > 0) {
-      throw new TransactionSemanticValidityException(
-        s"nonce too high: address ${sender.checksumAddress()}, tx: $txNonce, state: $stateNonce")
+      throw NonceTooHighException(sender, txNonce, stateNonce)
     }
     // GETH and therefore StateDB use uint64 to store the nonce and perform an overflow check here using (nonce+1<nonce)
     // BigInteger will not overflow like that, so we just verify that the result after increment still fits into 64 bits
-    if (stateNonce.add(BigInteger.ONE).bitLength() > 64)
-      throw new TransactionSemanticValidityException(
-        s"nonce has max value: address ${sender.checksumAddress()}, nonce: $stateNonce")
+    if (!BigIntegerUtil.isUint64(stateNonce.add(BigInteger.ONE))) throw NonceMaxException(sender, stateNonce)
 
     // Check that the sender is an EOA
-    if (!isEoaAccount(sender.address())) {
-      val codeHash = BytesUtils.toHexString(getCodeHash(sender.address()))
-      throw new TransactionSemanticValidityException(
-        s"sender not an eoa: address ${sender.checksumAddress()}, codeHash: $codeHash")
-    }
+    if (!isEoaAccount(sender)) throw SenderNotEoaException(sender, getCodeHash(sender))
 
-    if (msg.getGasFeeCap.compareTo(getBaseFee) < 0)
-      throw new TransactionSemanticValidityException(
-        s"max fee per gas less than block base fee: address ${sender.checksumAddress()}, maxFeePerGas: ${msg.getGasFeeCap}, baseFee: $getBaseFee")
+    if (msg.getGasFeeCap.compareTo(getBaseFee) < 0) throw FeeCapTooLowException(sender, msg.getGasFeeCap, getBaseFee)
   }
 
-  private def buyGas(msg: Message, blockGasPool: GasPool): GasPool = {
+  private def buyGas(msg: Message, blockGasPool: GasPool): Unit = {
     val gas = msg.getGasLimit
     // with a legacy TX gasPrice will be the one set by the caller
     // with an EIP1559 TX gasPrice will be the effective gasPrice (baseFee+tip, capped at feeCap)
@@ -155,52 +144,44 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     // maxFees is calculated using the feeCap, even if the cap was not reached, i.e. baseFee+tip < feeCap
     val maxFees = if (msg.getGasFeeCap == null) effectiveFees else gas.multiply(msg.getGasFeeCap)
     // make sure the sender has enough balance to cover max fees plus value
-    val sender = msg.getFrom
-    val have = getBalance(sender.address())
+    val sender = msg.getFrom.address()
+    val have = getBalance(sender)
     val want = maxFees.add(msg.getValue)
-    if (have.compareTo(want) < 0) {
-      throw new TransactionSemanticValidityException(s"insufficient funds for gas * price + value: address ${sender.checksumAddress()} have $have want $want")
-    }
+    if (have.compareTo(want) < 0) throw InsufficientFundsException(sender, have, want)
     // deduct gas from gasPool of the current block (unused gas will be returned after execution)
     blockGasPool.consumeGas(gas)
     // prepay effective gas fees
-    subBalance(sender.address(), effectiveFees)
+    subBalance(sender, effectiveFees)
     // allocate gas for this transaction
-    new GasPool(gas)
+    fillGas(gas)
   }
 
-  private def refundGas(msg: Message, txGasPool: GasPool, blockGasPool: GasPool): Unit = {
-    val quotient = 5 // pre-EIP-3529 this was 2 (london release)
-    val max = txGasPool.getUsedGas.divide(BigInteger.valueOf(quotient))
-    val refund = stateDb.getRefund match {
-      // cap refund to a quotient of the used gas
+  private def refundGas(msg: Message, blockGasPool: GasPool): Unit = {
+    val quotient = 5 // this was 2 before EIP-3529 (london release)
+    val usedGas = msg.getGasLimit.subtract(availableGas)
+    val max = usedGas.divide(BigInteger.valueOf(quotient))
+    // cap refund to a quotient of the used gas
+    fillGas(stateDb.getRefund match {
       case refund if refund.compareTo(max) > 1 => max
       case refund => refund
-    }
-    txGasPool.returnGas(refund)
+    })
     // return funds for remaining gas, exchanged at the original rate.
-    val remaining = txGasPool.getAvailableGas.multiply(msg.getGasPrice)
+    val remaining = availableGas.multiply(msg.getGasPrice)
     addBalance(msg.getFrom.address(), remaining)
-
     // return remaining gas to the gasPool of the current block so it is available for the next transaction
-    blockGasPool.returnGas(txGasPool.getAvailableGas)
+    blockGasPool.returnGas(availableGas)
   }
 
   def applyMessage(msg: Message, blockGasPool: GasPool): Array[Byte] = {
-    val txGasPool = try {
-      buyGas(msg, blockGasPool)
-    } catch {
-      // throw an Exception that is not ExecutionFailedException
-      case err: OutOfGasException => throw new Exception("block gas limit reached", err);
+    // allocate gas for processing this message
+    buyGas(msg, blockGasPool)
+    // consume intrinsic gas
+    val intrinsicGas = GasCalculator.intrinsicGas(msg.getData, msg.getTo == null)
+    if (availableGas.compareTo(intrinsicGas) < 0) {
+      throw IntrinsicGasException(availableGas, intrinsicGas)
     }
-    try {
-      // always consume intrinsic gas
-      txGasPool.consumeGas(GasCalculator.intrinsicGas(msg.getData, msg.getTo == null))
-    } catch {
-      // throw an Exception that is not ExecutionFailedException
-      case err: OutOfGasException => throw new Exception("intrinsic gas too low", err);
-    }
-
+    burnGas(intrinsicGas)
+    // find and execute the first matching processor
     messageProcessors.find(_.canProcess(msg, this)) match {
       case None => throw new IllegalArgumentException("Unable to process message.")
       case Some(processor) =>
@@ -212,10 +193,10 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
           // any other exception will bubble up and invalidate the block
           case err: ExecutionFailedException =>
             stateDb.revertToSnapshot(revisionId)
-            txGasPool.consumeGas(txGasPool.getAvailableGas)
+            burnGas(availableGas)
             throw err
         } finally {
-          refundGas(msg, txGasPool, blockGasPool)
+          refundGas(msg, blockGasPool)
         }
     }
   }
@@ -227,7 +208,7 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
    *    - if any ExecutionFailedException was thrown, including but not limited to:
    *    - OutOfGasException (not intrinsic gas, see below!)
    *    - EvmException (EVM reverted) / fake contract exception
-   *  - tx could not be applied => throws an exception (this will lead to and invalid block)
+   *  - tx could not be applied => throws an exception (this will lead to an invalid block)
    *    - any of the preChecks fail
    *    - not enough gas for intrinsic gas
    *    - block gas limit reached
@@ -388,12 +369,12 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
   override def getBaseFee: BigInteger = BigInteger.valueOf(0)
 
   // gas methods
-//  def getGasPool: GasPool = gasPool
   private var gasInTheTank = BigInteger.ZERO
+  override def availableGas: BigInteger = gasInTheTank
   override def fillGas(gas: BigInteger): Unit = gasInTheTank = gasInTheTank.add(gas)
   override def burnGas(gas: BigInteger): Unit = {
     if (gasInTheTank.compareTo(gas) < 0) {
-      throw new OutOfGasException(gas, gasInTheTank)
+      throw OutOfGasException()
     }
     gasInTheTank = gasInTheTank.subtract(gas)
   }

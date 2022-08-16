@@ -3,8 +3,10 @@ package com.horizen.account.transaction;
 import com.fasterxml.jackson.annotation.*;
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
+import com.horizen.account.state.GasUintOverflowException;
 import com.horizen.account.state.Message;
 import com.horizen.account.utils.Account;
+import com.horizen.account.utils.BigIntegerUtil;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
@@ -138,6 +140,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         if (getGasLimit().signum() <= 0)
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "non-positive gas limit", id()));
+        if (!BigIntegerUtil.isUint64(getGasLimit())) throw new GasUintOverflowException();
         if (getTo() == null && getData().length == 0)
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "smart contract declaration transaction without data", id()));

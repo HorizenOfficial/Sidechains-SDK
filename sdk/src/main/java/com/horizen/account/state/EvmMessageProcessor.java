@@ -32,6 +32,9 @@ public class EvmMessageProcessor implements MessageProcessor {
         var context = new EvmContext();
         context.baseFee = view.getBaseFee();
         context.blockNumber = BigInteger.valueOf(view.getHeight());
+        // total gas limit supplied in the transaction, only used by the GASLIMIT opcode
+        // current gas in the pool cannot be used because intrinsic gas was already removed here
+        context.gasLimit = msg.getGasLimit();
         // execute EVM
         var result = Evm.Apply(
                 view.getStateDbHandle(),
@@ -39,8 +42,7 @@ public class EvmMessageProcessor implements MessageProcessor {
                 msg.getTo() == null ? null : msg.getTo().address(),
                 msg.getValue(),
                 msg.getData(),
-                // TODO: the GASLIMIT opcode will return wrong results this way, because the intrinsicGas was already removed here
-                view.getGasPool().getAvailableGas(),
+                view.availableGas(),
                 msg.getGasPrice(),
                 context
         );

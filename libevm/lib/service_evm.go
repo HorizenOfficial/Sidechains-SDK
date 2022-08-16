@@ -19,6 +19,7 @@ type EvmContext struct {
 	BlockNumber *hexutil.Big   `json:"blockNumber"`
 	Time        *hexutil.Big   `json:"time"`
 	BaseFee     *hexutil.Big   `json:"baseFee"`
+	GasLimit    hexutil.Uint64 `json:"gasLimit"`
 }
 
 type EvmParams struct {
@@ -47,6 +48,9 @@ func (c *EvmContext) setDefaults() {
 	if c.BaseFee == nil {
 		c.BaseFee = (*hexutil.Big)(big.NewInt(params.InitialBaseFee))
 	}
+	if c.GasLimit == 0 {
+		c.GasLimit = (hexutil.Uint64)(math.MaxUint64)
+	}
 }
 
 // setDefaults for parameters that were omitted
@@ -72,7 +76,7 @@ func (p *EvmParams) getBlockContext() vm.BlockContext {
 		BlockNumber: p.Context.BlockNumber.ToInt(),
 		Time:        p.Context.Time.ToInt(),
 		Difficulty:  p.Context.Difficulty.ToInt(),
-		GasLimit:    uint64(p.GasLimit),
+		GasLimit:    uint64(p.Context.GasLimit),
 		BaseFee:     p.Context.BaseFee.ToInt(),
 	}
 }

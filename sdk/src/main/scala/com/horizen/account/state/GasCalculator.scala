@@ -1,5 +1,7 @@
 package com.horizen.account.state
 
+import com.horizen.account.utils.BigIntegerUtil
+
 import java.math.BigInteger
 
 object GasCalculator {
@@ -25,6 +27,8 @@ object GasCalculator {
 
       gas = gas.add(nonZeroGas.multiply(BigInteger.valueOf(nonZeroElements)))
       gas = gas.add(TxDataZeroGas.multiply(BigInteger.valueOf(zeroElements)))
+
+      if (!BigIntegerUtil.isUint64(gas)) throw GasUintOverflowException()
     }
 
     // TODO: if we support accessList in a transaction we need this too

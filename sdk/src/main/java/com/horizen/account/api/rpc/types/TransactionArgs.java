@@ -6,6 +6,7 @@ import com.horizen.account.api.rpc.utils.RpcCode;
 import com.horizen.account.api.rpc.utils.RpcError;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.state.Message;
+import com.horizen.account.utils.BigIntegerUtil;
 import com.horizen.evm.utils.Address;
 import org.web3j.utils.Numeric;
 
@@ -52,13 +53,21 @@ public class TransactionArgs {
      */
     public Message toMessage(BigInteger baseFee) throws RpcException {
         if (gasPrice != null && (maxFeePerGas != null || maxPriorityFeePerGas != null)) {
-            throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified"));
+            throw new RpcException(RpcError.fromCode(
+                    RpcCode.InvalidParams,
+                    "both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified"
+            ));
         }
         // global RPC gas cap (in geth this is a config variable)
         var gasLimit = BigInteger.valueOf(50_000_000);
         // cap gas limit given by the caller
-        if (gas != null && gas.signum() > 0 && gas.compareTo(gasLimit) < 0) {
-            gasLimit = gas;
+        if (gas != null) {
+            if (!BigIntegerUtil.isUint64(gas)) {
+                throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "invalid gas limit"));
+            }
+            if (gas.compareTo(gasLimit) < 0) {
+                gasLimit = gas;
+            }
         }
         var gasPrice = BigInteger.ZERO;
         var gasFeeCap = BigInteger.ZERO;

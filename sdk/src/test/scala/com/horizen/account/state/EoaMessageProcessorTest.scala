@@ -73,16 +73,6 @@ class EoaMessageProcessorTest extends JUnitSuite
     assertFalse("Message for EoaMessageProcessor wrongly can be processed", EoaMessageProcessor.canProcess(contractDeclarationMessage, mockStateView))
   }
 
-  def getMockedGasPool: GasPool = {
-    val pool = mock[GasPool]
-    var usedGas = BigInteger.ZERO
-    Mockito.when(pool.consumeGas(ArgumentMatchers.any[BigInteger])).thenAnswer(args => {
-      val gas: BigInteger = args.getArgument(0)
-      usedGas = usedGas.add(gas)
-    })
-    pool
-  }
-
   @Test
   def process(): Unit = {
     val address: AddressProposition = getAddressProposition(12345L)
@@ -91,8 +81,6 @@ class EoaMessageProcessorTest extends JUnitSuite
     val msg: Message = getMessage(address, value, emptyData)
 
     val mockStateView: AccountStateView = mock[AccountStateView]
-    val testGasPool = new GasPool(BigInteger.valueOf(10000000))
-    Mockito.when(mockStateView.getGasPool).thenAnswer(_ => testGasPool)
 
     // Test 1: Success: no failures during balance changes
     Mockito.when(mockStateView.subBalance(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[BigInteger])).thenAnswer(args => {
@@ -115,7 +103,6 @@ class EoaMessageProcessorTest extends JUnitSuite
     })
 
     val returnData = EoaMessageProcessor.process(msg, mockStateView)
-    assertEquals("Different gas found", GasCalculator.TxGas, testGasPool.getUsedGas)
     assertArrayEquals("Different return data found", Array.emptyByteArray, returnData)
 
     // Test 2: Failure during subBalance
@@ -128,7 +115,6 @@ class EoaMessageProcessorTest extends JUnitSuite
     Try.apply(EoaMessageProcessor.process(msg, mockStateView)) match {
       case Success(_) => fail("Execution failure expected")
       case Failure(ef)=>
-//        assertEquals("Different gas found", GasCalculator.TxGas, gasUsed)
         assertEquals("Different exception found", exception, ef.getCause)
     }
 
@@ -152,7 +138,6 @@ class EoaMessageProcessorTest extends JUnitSuite
     Try.apply(EoaMessageProcessor.process(msg, mockStateView)) match {
       case Success(_) => fail("Execution failure expected")
       case Failure(ef) =>
-//        assertEquals("Different gas found", GasCalculator.TxGas, gasUsed)
         assertEquals("Different exception found", exception, ef.getCause)
     }
   }

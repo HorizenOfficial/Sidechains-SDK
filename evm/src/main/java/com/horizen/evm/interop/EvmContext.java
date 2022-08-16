@@ -10,4 +10,5 @@ public class EvmContext {
     public BigInteger blockNumber;
     public BigInteger time;
     public BigInteger baseFee;
+    public BigInteger gasLimit;
 }
