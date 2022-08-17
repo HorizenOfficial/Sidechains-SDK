@@ -87,21 +87,21 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
     getStateViewAtTag(tag) {
       case None => throw new IllegalArgumentException(s"Unable to get state for given tag: ${tag.getValue}")
       case Some(tagStateView) => tagStateView.applyMessage(params.toMessage) match {
-          case Some(success: ExecutionSucceeded) => success
+        case Some(success: ExecutionSucceeded) => success
 
-          case Some(failed: ExecutionFailed) =>
-            // throw on execution errors, also include evm revert reason if possible
-            throw new RpcException(new RpcError(
-              RpcCode.ExecutionError.getCode, failed.getReason.getMessage, failed.getReason match {
-                case evmRevert: EvmException => Numeric.toHexString(evmRevert.returnData)
-                case _ => null
-              }))
+        case Some(failed: ExecutionFailed) =>
+          // throw on execution errors, also include evm revert reason if possible
+          throw new RpcException(new RpcError(
+            RpcCode.ExecutionError.getCode, failed.getReason.getMessage, failed.getReason match {
+              case evmRevert: EvmException => Numeric.toHexString(evmRevert.returnData)
+              case _ => null
+            }))
 
-          case Some(invalid: InvalidMessage) =>
-            throw new IllegalArgumentException("Invalid message.", invalid.getReason)
+        case Some(invalid: InvalidMessage) =>
+          throw new IllegalArgumentException("Invalid message.", invalid.getReason)
 
-          case _ => throw new IllegalArgumentException("Unable to process call.")
-        }
+        case _ => throw new IllegalArgumentException("Unable to process call.")
+      }
     }
   }
 
@@ -206,45 +206,7 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
   }
 
   @RpcMethod("net_version") def version: String = String.valueOf(networkParams.chainId)
-
-
-  //todo: simplify together with eth_call
-  @RpcMethod("eth_estimateGas") def estimateGas(parameters: TransactionArgs /*, tag: Quantity*/): String = {
-    //    val parameters: TransactionArgs = new TransactionArgs
-    //    parameters.value = if (transaction.containsKey("value")) Numeric.toBigInt(transaction.get("value")) else null
-    //    parameters.from = if (transaction.containsKey("from")) Address.FromBytes(Numeric.hexStringToByteArray(transaction.get("from"))) else null
-    //    parameters.to = if (transaction.containsKey("to")) Address.FromBytes(Numeric.hexStringToByteArray(transaction.get("to"))) else null
-    //    parameters.data = if (transaction.containsKey("data")) transaction.get("data") else null
-
-    using(getStateViewFromBlockById(getBlockIdByTag("latest"))) { stateDbRoot =>
-      if (stateDbRoot == null)
-        return null
-      else {
-        val result = Evm.Apply(
-          stateDbRoot.getStateDbHandle,
-          parameters.getFrom,
-          if (parameters.to == null) null else parameters.to.toBytes,
-          parameters.value,
-          parameters.getData,
-          parameters.gas,
-          parameters.gasPrice
-        )
-
-        if (result.evmError.nonEmpty) {
-          throw new RpcException(
-            new RpcError(
-              RpcCode.ExecutionError.getCode,
-              result.evmError,
-              Numeric.toHexString(result.returnData)
-            )
-          )
-        }
-        Numeric.toHexStringWithPrefix(result.usedGas)
-
-      }
-    }
-  }
-
+  
   @RpcMethod("eth_gasPrice") def gasPrice = { // TODO: Get the real gasPrice later
     new Quantity("0x3B9ACA00")
   }
