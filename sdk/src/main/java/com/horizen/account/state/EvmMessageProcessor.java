@@ -40,9 +40,10 @@ public class EvmMessageProcessor implements MessageProcessor {
             if (result.evmError.isEmpty()) {
                 return new ExecutionSucceeded(result.usedGas, result.returnData);
             }
-            return new ExecutionFailed(result.usedGas, new Exception(result.evmError));
+            return new ExecutionFailed(result.usedGas, new EvmException(result.evmError, result.returnData));
         } catch (Exception err) {
             return new InvalidMessage(err);
         }
     }
 }
+

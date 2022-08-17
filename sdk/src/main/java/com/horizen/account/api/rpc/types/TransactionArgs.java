@@ -5,6 +5,8 @@ import com.horizen.account.transaction.EthereumTransaction;
 import com.horizen.evm.utils.Address;
 import org.web3j.crypto.Sign;
 import org.web3j.utils.Numeric;
+import com.horizen.account.state.Message;
+import com.horizen.account.proposition.AddressProposition;
 
 import java.math.BigInteger;
 
@@ -89,5 +91,18 @@ public class TransactionArgs {
                 ", input='" + (input != null ? input : "empty") + '\'' +
                 ", chainId=" + (chainId != null ? chainId.toString() : "empty") +
                 '}';
+    }
+    public Message toMessage() {
+        return new Message(
+                new AddressProposition(getFrom()),
+                to == null ? null : new AddressProposition(to.toBytes()),
+                gasPrice,
+                maxFeePerGas,
+                maxPriorityFeePerGas,
+                gas,
+                value,
+                nonce,
+                getData()
+        );
     }
 }
