@@ -34,7 +34,7 @@ The log output for this test run can be found in the qa directory with the name 
 Or run individual test using command:
 
 ```
-python <test.py>
+python3 <test.py> --logconsolelevel=info
 ```
 
 **Template configuration files**
