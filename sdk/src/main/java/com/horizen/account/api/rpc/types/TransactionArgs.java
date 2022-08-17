@@ -42,7 +42,7 @@ public class TransactionArgs {
     public Message toMessage() {
         return new Message(
                 new AddressProposition(getFrom()),
-                new AddressProposition(to.toBytes()),
+                to == null ? null : new AddressProposition(to.toBytes()),
                 gasPrice,
                 maxFeePerGas,
                 maxPriorityFeePerGas,

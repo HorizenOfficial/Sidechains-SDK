@@ -155,12 +155,12 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     val txNonce: BigInteger = tx.getNonce
     val result = stateNonce.compareTo(txNonce)
     if (result > 0) {
-      throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: tx nonce ${txNonce} is too low (state nonce is $stateNonce)")
+      throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: tx nonce $txNonce is too low (state nonce is $stateNonce)")
     } else if (result < 0) {
-      throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: tx nonce ${txNonce} is too high (state nonce is $stateNonce)")
+      throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: tx nonce $txNonce is too high (state nonce is $stateNonce)")
     }
     if (txNonce.add(BigInteger.ONE).compareTo(txNonce) < 0)
-      throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: nonce ${txNonce} reached the max value")
+      throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: nonce $txNonce reached the max value")
 
     // Check eip15159 fee relation
     if (tx.isEIP1559) {
@@ -174,7 +174,7 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     // Check that it is enough balance to pay after gas was bought.
     val txBalanceAfterGasPrepayment: BigInteger = getBalance(txFromAddr.address())
     if (txBalanceAfterGasPrepayment.compareTo(tx.getValue) < 0)
-      throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: not enough founds ${txBalanceAfterGasPrepayment} to pay ${tx.getValue}")
+      throw new TransactionSemanticValidityException(s"Transaction ${tx.id} is invalid: not enough founds $txBalanceAfterGasPrepayment to pay ${tx.getValue}")
 
     bookedGasPrice
   }
@@ -185,6 +185,16 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     // subtract the balance
     // return the used value
     BigInteger.ZERO
+  }
+
+  def applyMessage(message: Message): Option[ExecutionResult] = {
+    // TODO: some refactoring is required here, applyMessage should include:
+    //  - buying gas
+    //  - validations that the caller has enough funds for everything (gas and value transfer)
+    //  - processing message
+    //  - returning unused gas and refunds
+    //  it should not contain some of the "preCheck" validations though like checking the nonce
+    messageProcessors.find(_.canProcess(message, this)).map(_.process(message, this))
   }
 
   override def applyTransaction(tx: SidechainTypes#SCAT, txIndex: Int, prevCumGasUsed: BigInteger): Try[EthereumConsensusDataReceipt] = Try {
@@ -208,19 +218,15 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
     // Create a snapshot to know where to rollback in case of Message processing failure
     val revisionId: Int = stateDb.snapshot()
 
-    val processor = messageProcessors.find(_.canProcess(message, this)).getOrElse(
-      throw new IllegalArgumentException(s"Transaction ${ethTx.id} has no known processor.")
-    )
-
-    val consensusDataReceipt: EthereumConsensusDataReceipt = processor.process(message, this) match {
-      case success: ExecutionSucceeded =>
+    val consensusDataReceipt: EthereumConsensusDataReceipt = applyMessage(message) match {
+      case Some(success: ExecutionSucceeded) =>
         val evmLogs = getLogs(txHash)
         val gasUsed = success.gasUsed()
         new EthereumConsensusDataReceipt(
           ethTx.version(), ReceiptStatus.SUCCESSFUL.id, prevCumGasUsed.add(gasUsed), evmLogs)
 
 
-      case failed: ExecutionFailed =>
+      case Some(failed: ExecutionFailed) =>
         val evmLogs = getLogs(txHash)
         stateDb.revertToSnapshot(revisionId)
         val gasUsed = failed.gasUsed()
@@ -228,10 +234,12 @@ class AccountStateView(metadataStorageView: AccountStateMetadataStorageView,
           ethTx.version(), ReceiptStatus.FAILED.id, prevCumGasUsed.add(gasUsed), evmLogs)
 
 
-      case invalid: InvalidMessage =>
+      case Some(invalid: InvalidMessage) =>
         throw new Exception(s"Transaction ${ethTx.id} is invalid.", invalid.getReason)
-    }
 
+      case None =>
+        throw new IllegalArgumentException(s"Transaction ${ethTx.id} has no known processor.")
+    }
 
     // todo: refund gas: bookedGasPrice - actualGasPrice
     log.debug(s"Returning consensus data receipt: ${consensusDataReceipt.toString()}")
