@@ -1,18 +1,22 @@
+import logging
 import os
 import sys
 
 import json
 from decimal import Decimal
 
+import jsonschema
+from jsonschema.validators import validate
+
 from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
     VrfAccount, SchnorrAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths, LARGE_WITHDRAWAL_EPOCH_LENGTH, \
-    SCCreationInfo, DEFAULT_API_KEY
+    DEFAULT_API_KEY
 from SidechainTestFramework.sidechainauthproxy import SidechainAuthServiceProxy
 import subprocess
 import time
 import socket
 from contextlib import closing
-
+from performance.perf_data import PerformanceData
 from test_framework.mc_test.mc_test import generate_random_field_element_hex, get_field_element_with_padding
 from test_framework.util import initialize_new_sidechain_in_mainchain, get_spendable, swap_bytes, assert_equal
 
@@ -417,6 +421,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "CSW_VERIFICATION_KEY_PATH": bootstrap_info.csw_keys_paths.verification_key_path if bootstrap_info.csw_keys_paths is not None else "",
         "RESTRICT_FORGERS": ("true" if sc_node_config.forger_options.restrict_forgers else "false"),
         "ALLOWED_FORGERS_LIST": sc_node_config.forger_options.allowed_forgers,
+        "BLOCK_RATE": sc_node_config.block_rate,
+        "LATENCY": sc_node_config.latency,
     }
     config = config.replace("'", "")
     config = config.replace("NEW_LINE", "\n")
@@ -474,7 +480,9 @@ def initialize_default_sc_datadir(dirname, n, api_key):
         "CSW_PROVING_KEY_PATH": csw_keys_paths.proving_key_path,
         "CSW_VERIFICATION_KEY_PATH": csw_keys_paths.verification_key_path,
         "RESTRICT_FORGERS": "false",
-        "ALLOWED_FORGERS_LIST": []
+        "ALLOWED_FORGERS_LIST": [],
+        "BLOCK_RATE": 120,
+        "LATENCY": 0,
     }
 
     configsData.append({
@@ -1124,3 +1132,18 @@ def create_certificate_for_alien_sc(mcTest, scid, mc_node, fePatternArray):
 
     assert_equal(True, cert in mc_node.getrawmempool())
     return cert
+
+
+def deserialize_perf_test_json(json_file):
+    with open(json_file) as f:
+        json_data = json.load(f)
+    with open('./performance/perf_test_schema.json', 'r') as schema_file:
+        schema = json.load(schema_file)
+    try:
+        validate(instance=json_data, schema=schema)
+    except jsonschema.exceptions.ValidationError as error:
+        logging.error("Failed to validate perf_test.json {}".format(error))
+        raise error
+
+    perf_data: dict[str, PerformanceData] = json_data
+    return perf_data

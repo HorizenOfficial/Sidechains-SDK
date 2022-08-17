@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "block_rate",
+    "initial_txs",
+    "network_topology",
+    "nodes"
+  ],
+  "properties": {
+    "block_rate": {
+      "type": "number"
+    },
+    "initial_txs": {
+      "type": "number"
+    },
+    "network_topology": {
+      "type": "number"
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "properties": {
+          "latency_settings": {
+            "type": "number"
+          },
+          "forger": {
+            "type": "boolean"
+          },
+          "tx_creator": {
+            "type": "boolean"
+          },
+          "throughput": {
+            "type": "number"
+          },
+          "total_execution_time": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "latency_settings",
+          "forger",
+          "tx_creator"
+        ]
+      }
+    }
+  }
+}
