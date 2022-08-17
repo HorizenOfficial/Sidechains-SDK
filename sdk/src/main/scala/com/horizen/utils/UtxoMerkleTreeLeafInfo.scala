@@ -2,7 +2,7 @@ package com.horizen.utils
 
 import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.librustsidechains.FieldElement
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
+import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
 case class UtxoMerkleTreeLeafInfo(leaf: Array[Byte], position: Long) extends BytesSerializable {
@@ -10,7 +10,7 @@ case class UtxoMerkleTreeLeafInfo(leaf: Array[Byte], position: Long) extends Byt
 
   override type M = UtxoMerkleTreeLeafInfo
 
-  override def serializer: ScorexSerializer[UtxoMerkleTreeLeafInfo] = UtxoMerkleTreeLeafInfoSerializer
+  override def serializer: SparkzSerializer[UtxoMerkleTreeLeafInfo] = UtxoMerkleTreeLeafInfoSerializer
 
   override def hashCode(): Int = java.util.Arrays.hashCode(leaf) + position.hashCode()
 
@@ -25,7 +25,7 @@ case class UtxoMerkleTreeLeafInfo(leaf: Array[Byte], position: Long) extends Byt
 }
 
 
-object UtxoMerkleTreeLeafInfoSerializer extends ScorexSerializer[UtxoMerkleTreeLeafInfo] {
+object UtxoMerkleTreeLeafInfoSerializer extends SparkzSerializer[UtxoMerkleTreeLeafInfo] {
   override def serialize(obj: UtxoMerkleTreeLeafInfo, w: Writer): Unit = {
     w.putBytes(obj.leaf)
     w.putLong(obj.position)

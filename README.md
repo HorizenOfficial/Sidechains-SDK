@@ -65,9 +65,9 @@ The project has a Maven module structure and consists of 4 modules:
 If you need to run the sidechain node as a **docker container** or behind a **NAT** the hostname and port pair that the node binds to will be different from the “logical” host name and port pair that is used to connect to the system from the outside. This requires special configuration that sets both the logical and the bind pairs for remoting.
 You need to set the *declaredAddress* field with the host machine's address.
 ```
-scorex {
-    dataDir = /tmp/scorex/data/blockchain
-    logDir = /tmp/scorex/data/log
+sparkz {
+    dataDir = /tmp/sparkz/data/blockchain
+    logDir = /tmp/sparkz/data/log
 	...
     network {
         nodeName = "node name"

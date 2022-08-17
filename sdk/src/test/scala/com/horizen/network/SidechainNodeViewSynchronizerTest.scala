@@ -15,17 +15,17 @@ import org.junit.{After, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.core.NodeViewHolder.ReceivableMessages.{GetNodeViewChanges, ModifiersFromRemote, TransactionsFromRemote}
-import scorex.core.network.ModifiersStatus.Requested
-import scorex.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs}
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SyntacticallyFailedModification
-import scorex.core.network.message.{Message, MessageSerializer, ModifiersData, ModifiersSpec}
-import scorex.core.network.{ConnectedPeer, ConnectionId, Incoming}
-import scorex.core.serialization.ScorexSerializer
-import scorex.core.settings.ScorexSettings
-import scorex.core.transaction.Transaction
-import scorex.core.utils.NetworkTimeProvider
-import scorex.core.{ModifierTypeId, NodeViewModifier}
+import sparkz.core.NodeViewHolder.ReceivableMessages.{GetNodeViewChanges, ModifiersFromRemote, TransactionsFromRemote}
+import sparkz.core.network.ModifiersStatus.Requested
+import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs}
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SyntacticallyFailedModification
+import sparkz.core.network.message.{Message, MessageSerializer, ModifiersData, ModifiersSpec}
+import sparkz.core.network.{ConnectedPeer, ConnectionId, DeliveryTracker, Incoming}
+import sparkz.core.serialization.SparkzSerializer
+import sparkz.core.settings.SparkzSettings
+import sparkz.core.transaction.Transaction
+import sparkz.core.utils.NetworkTimeProvider
+import sparkz.core.{ModifierTypeId, NodeViewModifier}
 import scorex.util.ModifierId
 
 import java.io.{BufferedReader, FileReader}
@@ -40,7 +40,7 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
   with SidechainBlockInfoFixture {
 
   implicit val actorSystem: ActorSystem = ActorSystem("sc_nvhs_mocked")
-  implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("scorex.executionContext")
+  implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("sparkz.executionContext")
 
   private val modifiersSpec = new ModifiersSpec(1024 * 1024)
 
@@ -210,22 +210,22 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
     }
   }
 
-  protected def prepareData(): (ActorRef, SidechainDeliveryTracker, SidechainBlock, ConnectedPeer, TestProbe, TestProbe, MessageSerializer) = {
+  protected def prepareData(): (ActorRef, DeliveryTracker, SidechainBlock, ConnectedPeer, TestProbe, TestProbe, MessageSerializer) = {
     val networkControllerProbe = TestProbe()
     val viewHolderProbe = TestProbe()
-    val scorexSettings: ScorexSettings = ScorexSettings.read(Some(getClass.getClassLoader.getResource("sc_node_holder_fixter_settings.conf").getFile))
-    val timeProvider = new NetworkTimeProvider(scorexSettings.ntp)
+    val sparkzSettings: SparkzSettings = SparkzSettings.read(Some(getClass.getClassLoader.getResource("sc_node_holder_fixter_settings.conf").getFile))
+    val timeProvider = new NetworkTimeProvider(sparkzSettings.ntp)
 
     val peer = ConnectedPeer(ConnectionId(new InetSocketAddress(10), new InetSocketAddress(11), Incoming), mock[ActorRef], 0L, None)
-    val tracker: SidechainDeliveryTracker = mock[SidechainDeliveryTracker]
+    val tracker: DeliveryTracker = mock[DeliveryTracker]
 
-    val modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =
+    val modifierSerializers: Map[ModifierTypeId, SparkzSerializer[_ <: NodeViewModifier]] =
     Map(SidechainBlock.ModifierTypeId -> new SidechainBlockSerializer(sidechainTransactionsCompanion),
       Transaction.ModifierTypeId -> sidechainTransactionsCompanion)
 
     val nodeViewSynchronizerRef = actorSystem.actorOf(Props(
-      new SidechainNodeViewSynchronizer(networkControllerProbe.ref, viewHolderProbe.ref, SidechainSyncInfoMessageSpec, scorexSettings.network, timeProvider, modifierSerializers) {
-        override protected val deliveryTracker: SidechainDeliveryTracker = tracker
+      new SidechainNodeViewSynchronizer(networkControllerProbe.ref, viewHolderProbe.ref, SidechainSyncInfoMessageSpec, sparkzSettings.network, timeProvider, modifierSerializers) {
+        override protected val deliveryTracker: DeliveryTracker = tracker
       }))
 
     networkControllerProbe.expectMsgType[RegisterMessageSpecs]
@@ -235,7 +235,7 @@ class SidechainNodeViewSynchronizerTest extends JUnitSuite
     val block = mock[SidechainBlock]
     Mockito.when(block.id).thenReturn(modifierId)
 
-    val messageSerializer = new MessageSerializer(Seq(modifiersSpec), scorexSettings.network.magicBytes)
+    val messageSerializer = new MessageSerializer(Seq(modifiersSpec), sparkzSettings.network.magicBytes, sparkzSettings.network.messageLengthBytesLimit)
 
     (nodeViewSynchronizerRef, tracker, block, peer, networkControllerProbe, viewHolderProbe, messageSerializer)
   }

@@ -10,10 +10,10 @@ import com.horizen.params.{NetworkParams, NetworkParamsUtils}
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
-import scorex.core.NodeViewModifier
-import scorex.core.consensus.History._
-import scorex.core.consensus.{History, ModifierSemanticValidity}
-import scorex.core.validation.RecoverableModifierError
+import sparkz.core.NodeViewModifier
+import sparkz.core.consensus.History._
+import sparkz.core.consensus.{History, ModifierSemanticValidity}
+import sparkz.core.validation.RecoverableModifierError
 import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 
 import scala.collection.mutable.ListBuffer
@@ -26,13 +26,13 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
                                 val params: NetworkParams,
                                 semanticBlockValidators: Seq[SemanticBlockValidator],
                                 historyBlockValidators: Seq[HistoryBlockValidator])
-  extends scorex.core.consensus.History[
+  extends sparkz.core.consensus.History[
       SidechainBlock,
       SidechainSyncInfo,
       SidechainHistory]
   with NetworkParamsUtils
   with ConsensusDataProvider
-  with scorex.core.utils.ScorexEncoding
+  with sparkz.core.utils.SparkzEncoding
   with NodeHistory
   with ScorexLogging
 {
@@ -63,7 +63,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
       if(isGenesisBlock(block.id)) {
         (
           storage.update(block, SidechainHistory.calculateGenesisBlockInfo(block, params)),
-          ProgressInfo(None, Seq(), Seq(block), Seq())
+          ProgressInfo(None, Seq(), Seq(block))
         )
       }
       else {
@@ -73,7 +73,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
         if (block.parentId.equals(bestBlockId)) {
           (
             storage.update(block, blockInfo),
-            ProgressInfo(None, Seq(), Seq(block), Seq())
+            ProgressInfo(None, Seq(), Seq(block))
           )
         } else {
           // Check if retrieved block is the best one, but from another chain
@@ -89,7 +89,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
                 (
                   storage.update(block, blockInfo),
                   // TO DO: we should somehow prevent growing of such chain (penalize the peer?)
-                  ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq())
+                  ProgressInfo[SidechainBlock](None, Seq(), Seq())
                 )
               }
 
@@ -98,7 +98,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
             // We retrieved block from another chain that is not the best one
             (
               storage.update(block, blockInfo),
-              ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq())
+              ProgressInfo[SidechainBlock](None, Seq(), Seq())
             )
           }
         }
@@ -173,10 +173,10 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
         log.warn(s"No blocks to remove from current chain, we are just applying: ${toApply.map(b => b.id).mkString(", ")}")
       }
 
-      ProgressInfo[SidechainBlock](rollbackPoint, toRemove, toApply, Seq())
+      ProgressInfo[SidechainBlock](rollbackPoint, toRemove, toApply)
     } else {
       //log.info(s"Orphaned block $block from invalid suffix")
-      ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq())
+      ProgressInfo[SidechainBlock](None, Seq(), Seq())
     }
   }
 
@@ -244,7 +244,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
     // Remove blocks, that were applied before current invalid one
     // Apply blocks, that were part of ActiveChain
     // skip blocks to Download, that are part of wrong chain we tried to apply.
-    val newProgressInfo = ProgressInfo(progressInfo.branchPoint, progressInfo.toApply.takeWhile(block => !block.id.equals(modifier.id)), progressInfo.toRemove, Seq())
+    val newProgressInfo = ProgressInfo(progressInfo.branchPoint, progressInfo.toApply.takeWhile(block => !block.id.equals(modifier.id)), progressInfo.toRemove)
     newHistory -> newProgressInfo
   }
 

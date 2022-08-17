@@ -34,13 +34,13 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.junit.JUnitRunner
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.core.app.Version
-import scorex.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
-import scorex.core.network.peer.PeerInfo
-import scorex.core.network.peer.PeerManager.ReceivableMessages.{GetAllPeers, GetBlacklistedPeers}
-import scorex.core.network.{ConnectedPeer, Incoming, Outgoing, PeerSpec}
-import scorex.core.settings.{RESTApiSettings, ScorexSettings}
-import scorex.core.utils.NetworkTimeProvider
+import sparkz.core.app.Version
+import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
+import sparkz.core.network.peer.PeerInfo
+import sparkz.core.network.peer.PeerManager.ReceivableMessages.{GetAllPeers, GetBlacklistedPeers}
+import sparkz.core.network.{ConnectedPeer, Incoming, Outgoing, PeerSpec}
+import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
+import sparkz.core.utils.NetworkTimeProvider
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, bytesToId}
 
@@ -110,10 +110,10 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   Mockito.when(mockedRESTSettings.apiKeyHash).thenAnswer(_ => Some("aa8ed2a907753a4a7c66f2aa1d48a0a74d4fde9a6ef34bae96a86dcd7800af98"))
 
   val mockedSidechainSettings: SidechainSettings = mock[SidechainSettings]
-  Mockito.when(mockedSidechainSettings.scorexSettings).thenAnswer(_ => {
-    val mockedScorexSettings: ScorexSettings = mock[ScorexSettings]
-    Mockito.when(mockedScorexSettings.restApi).thenAnswer(_ => mockedRESTSettings)
-    mockedScorexSettings
+  Mockito.when(mockedSidechainSettings.sparkzSettings).thenAnswer(_ => {
+    val mockedSparkzSettings: SparkzSettings = mock[SparkzSettings]
+    Mockito.when(mockedSparkzSettings.restApi).thenAnswer(_ => mockedRESTSettings)
+    mockedSparkzSettings
   })
 
   implicit lazy val actorSystem: ActorSystem = ActorSystem("test-api-routes")

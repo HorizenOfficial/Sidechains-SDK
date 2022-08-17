@@ -40,15 +40,15 @@ import com.horizen.utils.{BlockUtils, BytesUtils, Pair}
 import com.horizen.wallet.ApplicationWallet
 import com.horizen.websocket.client._
 import com.horizen.websocket.server.WebSocketServerRef
-import scorex.core.api.http.ApiRoute
-import scorex.core.app.Application
-import scorex.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
-import scorex.core.network.PeerFeature
-import scorex.core.network.message.MessageSpec
-import scorex.core.serialization.ScorexSerializer
-import scorex.core.settings.ScorexSettings
-import scorex.core.transaction.Transaction
-import scorex.core.{ModifierTypeId, NodeViewModifier}
+import sparkz.core.api.http.ApiRoute
+import sparkz.core.app.Application
+import sparkz.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
+import sparkz.core.network.PeerFeature
+import sparkz.core.network.message.MessageSpec
+import sparkz.core.serialization.SparkzSerializer
+import sparkz.core.settings.SparkzSettings
+import sparkz.core.transaction.Transaction
+import sparkz.core.{ModifierTypeId, NodeViewModifier}
 import scorex.util.ScorexLogging
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
@@ -63,7 +63,7 @@ import com.horizen.websocket.client.{DefaultWebSocketReconnectionHandler, Mainch
 import com.horizen.websocket.server.WebSocketServerRef
 import com.horizen.serialization.JsonHorizenPublicKeyHashSerializer
 import com.horizen.transaction.mainchain.SidechainCreation
-import scorex.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
+import sparkz.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.horizen.fork.{ForkConfigurator, ForkManager}
@@ -102,7 +102,7 @@ class SidechainApp @Inject()
   override type PMOD = SidechainBlock
   override type NVHT = SidechainNodeViewHolder
 
-  override implicit lazy val settings: ScorexSettings = sidechainSettings.scorexSettings
+  override implicit lazy val settings: SparkzSettings = sidechainSettings.sparkzSettings
 
   override protected implicit lazy val actorSystem: ActorSystem = ActorSystem(settings.network.agentName, CustomAkkaConfiguration.getCustomConfig())
 
@@ -219,7 +219,7 @@ class SidechainApp @Inject()
       sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
       isCSWEnabled = isCSWEnabled
     )
-    case _ => throw new IllegalArgumentException("Configuration file scorex.genesis.mcNetwork parameter contains inconsistent value.")
+    case _ => throw new IllegalArgumentException("Configuration file sparkz.genesis.mcNetwork parameter contains inconsistent value.")
   }
 
   // Configure Horizen address json serializer specifying proper network type.
@@ -264,30 +264,30 @@ class SidechainApp @Inject()
 
   // Init all storages
   protected val sidechainSecretStorage = new SidechainSecretStorage(
-    //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/secret")),
+    //openStorage(new JFile(s"${sidechainSettings.sparkzSettings.dataDir.getAbsolutePath}/secret")),
     registerStorage(secretStorage),
     sidechainSecretsCompanion)
   protected val sidechainWalletBoxStorage = new SidechainWalletBoxStorage(
-    //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/wallet")),
+    //openStorage(new JFile(s"${sidechainSettings.sparkzSettings.dataDir.getAbsolutePath}/wallet")),
     registerStorage(walletBoxStorage),
     sidechainBoxesCompanion)
   protected val sidechainWalletTransactionStorage = new SidechainWalletTransactionStorage(
-    //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/walletTransaction")),
+    //openStorage(new JFile(s"${sidechainSettings.sparkzSettings.dataDir.getAbsolutePath}/walletTransaction")),
     registerStorage(walletTransactionStorage),
     sidechainTransactionsCompanion)
   protected val sidechainStateStorage = new SidechainStateStorage(
-    //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/state")),
+    //openStorage(new JFile(s"${sidechainSettings.sparkzSettings.dataDir.getAbsolutePath}/state")),
     registerStorage(stateStorage),
     sidechainBoxesCompanion)
   protected val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(registerStorage(forgerBoxStorage))
   protected val sidechainStateUtxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider = getSidechainStateUtxoMerkleTreeProvider(registerStorage(utxoMerkleTreeStorage), params)
 
   protected val sidechainHistoryStorage = new SidechainHistoryStorage(
-    //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/history")),
+    //openStorage(new JFile(s"${sidechainSettings.sparkzSettings.dataDir.getAbsolutePath}/history")),
     registerStorage(historyStorage),
     sidechainTransactionsCompanion, params)
   protected val consensusDataStorage = new ConsensusDataStorage(
-    //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/consensusData")),
+    //openStorage(new JFile(s"${sidechainSettings.sparkzSettings.dataDir.getAbsolutePath}/consensusData")),
     registerStorage(consensusStorage))
   protected val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(registerStorage(walletForgingBoxesInfoStorage))
   protected val sidechainWalletCswDataProvider: SidechainWalletCswDataProvider = getSidechainWalletCswDataProvider(registerStorage(walletCswDataStorage), params)
@@ -323,7 +323,7 @@ class SidechainApp @Inject()
     genesisBlock
     ) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
-  def modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =
+  def modifierSerializers: Map[ModifierTypeId, SparkzSerializer[_ <: NodeViewModifier]] =
     Map(SidechainBlock.ModifierTypeId -> new SidechainBlockSerializer(sidechainTransactionsCompanion),
       Transaction.ModifierTypeId -> sidechainTransactionsCompanion)
 
@@ -363,7 +363,7 @@ class SidechainApp @Inject()
 
   // Init Certificate Submitter
   val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
-  val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.scorexSettings.network)
+  val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.sparkzSettings.network)
 
   // Init CSW manager
   val cswManager: Option[ActorRef] = if (isCSWEnabled) Some(CswManagerRef(sidechainSettings, params, nodeViewHolderRef)) else None
@@ -447,13 +447,13 @@ class SidechainApp @Inject()
     val shutdownHookThreadId = shutdownHookThread.getId()
 
     // remove the shutdown hook for avoiding being called twice when we eventually call System.exit()
-    // (unless we are executing the hook thread itself)
+    // (unless we are executiexecuting the hook thread itself)
     if (currentThreadId != shutdownHookThreadId)
       Runtime.getRuntime.removeShutdownHook(shutdownHookThread)
 
     // We are doing this because it is the only way for accessing the private 'upnpGateway' parent data member, and we
     // need to rewrite the implementation of the stopAll() base method, which we do not call from here
-    val upnpGateway = scorexContext.upnpGateway
+    val upnpGateway = sparkzContext.upnpGateway
 
     log.info("Stopping network services")
     upnpGateway.foreach(_.deletePort(settings.network.bindAddress.getPort))

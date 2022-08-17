@@ -13,12 +13,12 @@ import com.horizen.secret.{PrivateKey25519, VrfSecretKey}
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.{FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerkleTree, TimeToEpochUtils}
 import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainMemoryPoolEntry, SidechainState, SidechainWallet}
-import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
+import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.collection.JavaConverters._
 import com.horizen.vrf.VrfOutput
-import scorex.core.NodeViewModifier
+import sparkz.core.NodeViewModifier
 
 import scala.collection.mutable.ArrayBuffer
 import scala.util.{Failure, Success, Try}

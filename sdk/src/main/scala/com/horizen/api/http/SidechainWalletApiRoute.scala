@@ -16,7 +16,7 @@ import com.horizen.proposition.{Proposition, VrfPublicKey}
 import com.horizen.secret.{PrivateKey25519Creator, Secret, VrfKeyGenerator}
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
-import scorex.core.settings.RESTApiSettings
+import sparkz.core.settings.RESTApiSettings
 
 import java.io.{File, PrintWriter}
 import scala.collection.JavaConverters._

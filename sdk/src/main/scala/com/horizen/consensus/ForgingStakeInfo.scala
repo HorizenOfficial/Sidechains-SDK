@@ -6,7 +6,7 @@ import com.horizen.box.ForgerBox
 import com.horizen.proposition.{PublicKey25519Proposition, PublicKey25519PropositionSerializer, VrfPublicKey, VrfPublicKeySerializer}
 import com.horizen.serialization.Views
 import com.horizen.utils.{ByteArrayWrapper, Utils}
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
+import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
 @JsonView(Array(classOf[Views.Default]))
@@ -17,7 +17,7 @@ case class ForgingStakeInfo(blockSignPublicKey: PublicKey25519Proposition,
 
   override type M = ForgingStakeInfo
 
-  override def serializer: ScorexSerializer[ForgingStakeInfo] = ForgingStakeInfoSerializer
+  override def serializer: SparkzSerializer[ForgingStakeInfo] = ForgingStakeInfoSerializer
 
   def hash: Array[Byte] = Utils.doubleSHA256Hash(
     Bytes.concat(blockSignPublicKey.bytes(), vrfPublicKey.bytes(), Longs.toByteArray(stakeAmount))
@@ -49,7 +49,7 @@ object ForgingStakeInfo {
   }
 }
 
-object ForgingStakeInfoSerializer extends ScorexSerializer[ForgingStakeInfo]{
+object ForgingStakeInfoSerializer extends SparkzSerializer[ForgingStakeInfo]{
   override def serialize(obj: ForgingStakeInfo, w: Writer): Unit = {
     PublicKey25519PropositionSerializer.getSerializer.serialize(obj.blockSignPublicKey, w)
     VrfPublicKeySerializer.getSerializer.serialize(obj.vrfPublicKey, w)

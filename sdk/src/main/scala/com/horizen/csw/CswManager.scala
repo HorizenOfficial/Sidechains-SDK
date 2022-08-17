@@ -15,9 +15,9 @@ import com.horizen.proposition.PublicKey25519Proposition
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.{CswProofStatusSerializer, Views}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, CswData, ForwardTransferCswData, UtxoCswData, WithdrawalEpochUtils}
-import scorex.core.NodeViewHolder.CurrentView
-import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.ChangedState
+import sparkz.core.NodeViewHolder.CurrentView
+import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.ChangedState
 import scorex.util.ScorexLogging
 
 import scala.collection.JavaConverters._
@@ -35,7 +35,7 @@ class CswManager(settings: SidechainSettings,
   import com.horizen.csw.CswManager.InternalReceivableMessages.{CswProofFailed, CswProofSuccessfullyGenerated, TryToScheduleProofGeneration}
   type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
 
-  val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
+  val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
 
   var hasSidechainCeased: Boolean = false

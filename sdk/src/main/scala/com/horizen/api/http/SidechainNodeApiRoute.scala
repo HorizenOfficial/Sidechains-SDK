@@ -11,12 +11,12 @@ import com.horizen.api.http.SidechainNodeRestSchema._
 import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
-import scorex.core.network.ConnectedPeer
-import scorex.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
-import scorex.core.network.peer.PeerInfo
-import scorex.core.network.peer.PeerManager.ReceivableMessages.{Blacklisted, GetAllPeers, GetBlacklistedPeers, RemovePeer}
-import scorex.core.settings.RESTApiSettings
-import scorex.core.utils.NetworkTimeProvider
+import sparkz.core.network.ConnectedPeer
+import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
+import sparkz.core.network.peer.PeerInfo
+import sparkz.core.network.peer.PeerManager.ReceivableMessages.{Blacklisted, GetAllPeers, GetBlacklistedPeers, RemovePeer}
+import sparkz.core.settings.RESTApiSettings
+import sparkz.core.utils.NetworkTimeProvider
 
 import java.lang.Thread.sleep
 import java.net.{InetAddress, InetSocketAddress}

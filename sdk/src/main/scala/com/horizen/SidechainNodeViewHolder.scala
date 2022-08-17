@@ -12,14 +12,13 @@ import com.horizen.storage._
 import com.horizen.utils.{BytesUtils, SDKModifiersCache}
 import com.horizen.validation._
 import com.horizen.wallet.ApplicationWallet
-import scorex.core.NodeViewHolder.DownloadRequest
-import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
-import scorex.core.consensus.History.ProgressInfo
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages._
-import scorex.core.settings.ScorexSettings
-import scorex.core.transaction.Transaction
-import scorex.core.utils.NetworkTimeProvider
-import scorex.core.{ModifiersCache, idToVersion, versionToId}
+import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
+import sparkz.core.consensus.History.ProgressInfo
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
+import sparkz.core.settings.SparkzSettings
+import sparkz.core.transaction.Transaction
+import sparkz.core.utils.NetworkTimeProvider
+import sparkz.core.{ModifiersCache, idToVersion, versionToId}
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.annotation.tailrec
@@ -42,7 +41,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                               applicationWallet: ApplicationWallet,
                               applicationState: ApplicationState,
                               genesisBlock: SidechainBlock)
-  extends scorex.core.NodeViewHolder[SidechainTypes#SCBT, SidechainBlock]
+  extends sparkz.core.NodeViewHolder[SidechainTypes#SCBT, SidechainBlock]
     with ScorexLogging
     with SidechainTypes {
   override type SI = SidechainSyncInfo
@@ -58,7 +57,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                             alternativeProgressInfo: Option[ProgressInfo[SidechainBlock]],
                                             suffix: IndexedSeq[SidechainBlock])
 
-  override val scorexSettings: ScorexSettings = sidechainSettings.scorexSettings
+  override val sparksSettings: SparkzSettings = sidechainSettings.sparkzSettings
   private var applyingBlock: Boolean = false
 
   lazy val listOfStorageInfo: Seq[SidechainStorageInfo] = Seq[SidechainStorageInfo](
@@ -81,7 +80,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
    * Cache for modifiers. If modifiers are coming out-of-order, they are to be stored in this cache.
    */
   protected override lazy val modifiersCache: ModifiersCache[SidechainBlock, HIS] =
-    new SDKModifiersCache[SidechainBlock, HIS](scorexSettings.network.maxModifiersCacheSize)
+    new SDKModifiersCache[SidechainBlock, HIS](sparksSettings.network.maxModifiersCacheSize)
 
   // this method is called at the startup after the load of the storages from the persistent db. It might happen that the node was not
   // stopped gracefully and therefore the consistency among storages might not be ensured. This method tries to recover this situation
@@ -328,7 +327,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
    * Publish `ModifiersProcessingResult` message with all just applied and removed from cache modifiers.
    */
   override protected def processRemoteModifiers: Receive = {
-    case scorex.core.NodeViewHolder.ReceivableMessages.ModifiersFromRemote(mods: Seq[SidechainBlock]) =>
+    case sparkz.core.NodeViewHolder.ReceivableMessages.ModifiersFromRemote(mods: Seq[SidechainBlock]) =>
       mods.foreach(m => modifiersCache.put(m.id, m))
 
       log.debug(s"Cache size before: ${modifiersCache.size}")
@@ -388,7 +387,6 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                 context.system.eventStream.publish(SemanticallyFailedModification(pmod, e))
             }
           } else {
-            requestDownloads(progressInfo)
             updateNodeView(updatedHistory = Some(historyBeforeStUpdate))
           }
         case Failure(e) =>
@@ -400,13 +398,6 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     }
   }
 
-  // This method is actually a copy-paste of parent NodeViewHolder.requestDownloads method.
-  override protected def requestDownloads(pi: ProgressInfo[SidechainBlock]): Unit = {
-    pi.toDownload.foreach { case (tid, id) =>
-      context.system.eventStream.publish(DownloadRequest(tid, id))
-    }
-  }
-
   // This method is actually a copy-paste of parent NodeViewHolder.updateState method.
   // The difference is that State is updated together with Wallet.
   @tailrec
@@ -415,7 +406,6 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                    wallet: VL,
                                    progressInfo: ProgressInfo[SidechainBlock],
                                    suffixApplied: IndexedSeq[SidechainBlock]): (HIS, Try[MS], VL, Seq[SidechainBlock]) = {
-    requestDownloads(progressInfo)
 
     // Do rollback if chain switch needed
     val (walletToApplyTry: Try[VL], stateToApplyTry: Try[MS], suffixTrimmed: IndexedSeq[SidechainBlock]) = if (progressInfo.chainSwitchingNeeded) {
@@ -549,7 +539,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   }
 }
 
-object SidechainNodeViewHolder /*extends ScorexLogging with ScorexEncoding*/ {
+object SidechainNodeViewHolder /*extends ScorexLogging with SparkzEncoding*/ {
   object ReceivableMessages {
     case class GetDataFromCurrentSidechainNodeView[HIS, MS, VL, MP, A](f: SidechainNodeView => A)
 

@@ -14,7 +14,7 @@ import com.horizen.transaction.TransactionSerializer
 import org.junit.Assert._
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-import scorex.core.consensus.ModifierSemanticValidity
+import sparkz.core.consensus.ModifierSemanticValidity
 
 
 class SidechainHistoryStorageTest extends JUnitSuite with SidechainBlockFixture with StoreFixture with SidechainBlockInfoFixture with CompanionsFixture {
