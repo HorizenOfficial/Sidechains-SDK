@@ -68,11 +68,17 @@ class SCVersionsAndMCCertificates(SidechainTestFramework):
         crtx2 = ret['txid']
         assert_true(crtx2 in mc_node.getrawmempool(), "Sc Creation is expected to be added to mempool.")
 
+        ret = create_alien_sidechain(self.mcTest, mc_node, scVersion=2, epochLength=self.sc_withdrawal_epoch_length-1, customHexTag="5c02", feCfgList=[128, 128])
+        self.scid_ver2 = ret['scid']
+        crtx3 = ret['txid']
+        assert_true(crtx3 in mc_node.getrawmempool(), "Sc Creation is expected to be added to mempool.")
+
         # Generate MC block and SC block
         mcblock_hash1 = mc_node.generate(1)[0]
 
         #assert_true(crtx1 in mc_node.getblock(mcblock_hash1)['tx'])
         assert_true(crtx2 in mc_node.getblock(mcblock_hash1)['tx'])
+        assert_true(crtx3 in mc_node.getblock(mcblock_hash1)['tx'])
 
         scblock_id1 = generate_next_blocks(sc_node, "first node", 1)[0]
         check_mcreference_presence(mcblock_hash1, scblock_id1, sc_node)
