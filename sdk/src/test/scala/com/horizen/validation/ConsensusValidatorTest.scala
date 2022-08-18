@@ -95,26 +95,26 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
     val lastGenerator = generators.last
 
     /////////// Timestamp related checks //////////////
-//    println("Test blockGeneratedBeforeParent")
-//    val blockGeneratedBeforeParent = generateBlockWithTimestampBeforeParent(lastGenerator, blocks.last.timestamp)
-//    history.append(blockGeneratedBeforeParent).failed.get match {
-//      case expected: IllegalArgumentException => assert(expected.getMessage == "Block had been generated before parent block had been generated")
-//      case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
-//    }
-//
-//    println("Test blockWithTheSameSlotAsParent")
-//    val blockWithTheSameSlotAsParent = generateBlockForTheSameSlot(generators)
-//    history.append(blockWithTheSameSlotAsParent).failed.get match {
-//      case expected: IllegalArgumentException => assert(expected.getMessage == "Block absolute slot number is equal or less than parent block")
-//      case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
-//    }
-//
-//    println("Test blockGeneratedWithSkippedEpoch")
-//    val blockGeneratedWithSkippedEpoch = generateBlockWithSkippedEpoch(lastGenerator, blocks.last.timestamp, slotLengthInSeconds * epochSizeInSlots)
-//    history.append(blockGeneratedWithSkippedEpoch).failed.get match {
-//      case expected: IllegalStateException => assert(expected.getMessage == "Whole epoch had been skipped")
-//      case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
-//    }
+    println("Test blockGeneratedBeforeParent")
+    val blockGeneratedBeforeParent = generateBlockWithTimestampBeforeParent(lastGenerator, blocks.last.timestamp)
+    history.append(blockGeneratedBeforeParent).failed.get match {
+      case expected: IllegalArgumentException => assert(expected.getMessage == "Block had been generated before parent block had been generated")
+      case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
+    }
+
+    println("Test blockWithTheSameSlotAsParent")
+    val blockWithTheSameSlotAsParent = generateBlockForTheSameSlot(generators)
+    history.append(blockWithTheSameSlotAsParent).failed.get match {
+      case expected: IllegalArgumentException => assert(expected.getMessage == "Block absolute slot number is equal or less than parent block")
+      case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
+    }
+
+    println("Test blockGeneratedWithSkippedEpoch")
+    val blockGeneratedWithSkippedEpoch = generateBlockWithSkippedEpoch(lastGenerator, blocks.last.timestamp, slotLengthInSeconds * epochSizeInSlots)
+    history.append(blockGeneratedWithSkippedEpoch).failed.get match {
+      case expected: IllegalStateException => assert(expected.getMessage == "Whole epoch had been skipped")
+      case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
+    }
 
     // TODO: Current test is wrong, timestamp is hardcoded to have persistent tests, so now instead of "Block in future" we have "Whole epoch had been skipped".
     // TODO: restore and fix
@@ -128,48 +128,48 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
 
 
     /////////// VRF verification /////////////////
-//    println("Test blockGeneratedWithIncorrectNonce")
-//    val blockGeneratedWithIncorrectNonce = generateBlockWithIncorrectNonce(lastGenerator)
-//    history.append(blockGeneratedWithIncorrectNonce).failed.get match {
-//      case expected: IllegalStateException => assert(expected.getMessage == s"VRF check for block ${blockGeneratedWithIncorrectNonce.id} had been failed")
-//      case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
-//    }
-//
-//    println("Test blockGeneratedWithIncorrectSlot")
-//    val blockGeneratedWithIncorrectSlot = generateBlockWithIncorrectSlot(lastGenerator)
-//    history.append(blockGeneratedWithIncorrectSlot).failed.get match {
-//      case expected: IllegalStateException => assert(expected.getMessage == s"VRF check for block ${blockGeneratedWithIncorrectSlot.id} had been failed")
-//      case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
-//    }
-//
-//    println("Test blockGeneratedWithIncorrectVrfPublicKey")
-//    val blockGeneratedWithIncorrectVrfPublicKey = generateBlockWithIncorrectVrfPublicKey(lastGenerator)
-//    history.append(blockGeneratedWithIncorrectVrfPublicKey).failed.get match {
-//      case expected: IllegalStateException => assert(expected.getMessage == s"VRF check for block ${blockGeneratedWithIncorrectVrfPublicKey.id} had been failed")
-//      case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
-//    }
-//
-//    println("Test blockGeneratedWithIncorrectVrfProof")
-//    val blockGeneratedWithIncorrectVrfProof = generateBlockWithIncorrectVrfProof(lastGenerator)
-//    history.append(blockGeneratedWithIncorrectVrfProof).failed.get match {
-//      case expected: IllegalStateException => assert(expected.getMessage == s"VRF check for block ${blockGeneratedWithIncorrectVrfProof.id} had been failed")
-//      case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
-//    }
-//
-//    /////////// Forging stake verification /////////////////
-//    println("Test generateBlockWithIncorrectForgingStakeBlockSignProposition")
-//    val blockGeneratedWithIncorrectForgingStakeBlockSignProposition = generateBlockWithIncorrectForgingStakeBlockSignProposition(lastGenerator)
-//    history.append(blockGeneratedWithIncorrectForgingStakeBlockSignProposition).failed.get match {
-//      case expected: IllegalStateException => assert(expected.getMessage.contains(s"Forging stake merkle path in block ${blockGeneratedWithIncorrectForgingStakeBlockSignProposition.id} is inconsistent to stakes merkle root hash"))
-//      case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
-//    }
-//
-//    println("Test blockGeneratedWithIncorrectStakeAmount")
-//    val blockGeneratedWithIncorrectStakeAmount = generateBlockWithIncorrectForgingStakeAmount(lastGenerator)
-//    history.append(blockGeneratedWithIncorrectStakeAmount).failed.get match {
-//      case expected: IllegalStateException => assert(expected.getMessage.contains(s"Forging stake merkle path in block ${blockGeneratedWithIncorrectStakeAmount.id} is inconsistent to stakes merkle root hash"))
-//      case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
-//    }
+    println("Test blockGeneratedWithIncorrectNonce")
+    val blockGeneratedWithIncorrectNonce = generateBlockWithIncorrectNonce(lastGenerator)
+    history.append(blockGeneratedWithIncorrectNonce).failed.get match {
+      case expected: IllegalStateException => assert(expected.getMessage == s"VRF check for block ${blockGeneratedWithIncorrectNonce.id} had been failed")
+      case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
+    }
+
+    println("Test blockGeneratedWithIncorrectSlot")
+    val blockGeneratedWithIncorrectSlot = generateBlockWithIncorrectSlot(lastGenerator)
+    history.append(blockGeneratedWithIncorrectSlot).failed.get match {
+      case expected: IllegalStateException => assert(expected.getMessage == s"VRF check for block ${blockGeneratedWithIncorrectSlot.id} had been failed")
+      case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
+    }
+
+    println("Test blockGeneratedWithIncorrectVrfPublicKey")
+    val blockGeneratedWithIncorrectVrfPublicKey = generateBlockWithIncorrectVrfPublicKey(lastGenerator)
+    history.append(blockGeneratedWithIncorrectVrfPublicKey).failed.get match {
+      case expected: IllegalStateException => assert(expected.getMessage == s"VRF check for block ${blockGeneratedWithIncorrectVrfPublicKey.id} had been failed")
+      case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
+    }
+
+    println("Test blockGeneratedWithIncorrectVrfProof")
+    val blockGeneratedWithIncorrectVrfProof = generateBlockWithIncorrectVrfProof(lastGenerator)
+    history.append(blockGeneratedWithIncorrectVrfProof).failed.get match {
+      case expected: IllegalStateException => assert(expected.getMessage == s"VRF check for block ${blockGeneratedWithIncorrectVrfProof.id} had been failed")
+      case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
+    }
+
+    /////////// Forging stake verification /////////////////
+    println("Test generateBlockWithIncorrectForgingStakeBlockSignProposition")
+    val blockGeneratedWithIncorrectForgingStakeBlockSignProposition = generateBlockWithIncorrectForgingStakeBlockSignProposition(lastGenerator)
+    history.append(blockGeneratedWithIncorrectForgingStakeBlockSignProposition).failed.get match {
+      case expected: IllegalStateException => assert(expected.getMessage.contains(s"Forging stake merkle path in block ${blockGeneratedWithIncorrectForgingStakeBlockSignProposition.id} is inconsistent to stakes merkle root hash"))
+      case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
+    }
+
+    println("Test blockGeneratedWithIncorrectStakeAmount")
+    val blockGeneratedWithIncorrectStakeAmount = generateBlockWithIncorrectForgingStakeAmount(lastGenerator)
+    history.append(blockGeneratedWithIncorrectStakeAmount).failed.get match {
+      case expected: IllegalStateException => assert(expected.getMessage.contains(s"Forging stake merkle path in block ${blockGeneratedWithIncorrectStakeAmount.id} is inconsistent to stakes merkle root hash"))
+      case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
+    }
 
     /////////// Stake verification /////////////////
     println("Test blockWithNotEnoughStake")
