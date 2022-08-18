@@ -105,32 +105,23 @@ class SmartContract:
         data = self.raw_encode_call(functionName, *args)
         nonce = self.__ensure_nonce(node, fromAddress, nonce, tag)
         chain_id = self.__ensure_chain_id(node)
+        response: Any = ''
         if call_method is CallMethod.RPC_LEGACY:
             response = node.rpc_eth_signTransaction(
                 self.__make_legacy_sign_payload(from_addr=fromAddress, to=toAddress, nonce=nonce, gas_price=gasPrice,
                                                 gas=gasLimit, data=data, value=value))
-            print(response)
-            response = node.rpc_eth_sendRawTransaction(response['result'])
-            print(response)
-            return response['result']
         elif call_method is CallMethod.RPC_EIP155:
             response = node.rpc_eth_signTransaction(
                 self.__make_eip155_sign_payload(from_addr=fromAddress, to=toAddress, chain_id=chain_id, nonce=nonce,
                                                 gas_price=gasPrice, gas=gasLimit, data=data, value=value))
-            print(response)
-            response = node.rpc_eth_sendRawTransaction(response['result'])
-            print(response)
-            return response["result"]
         elif call_method is CallMethod.RPC_EIP1559:
             response = node.rpc_eth_signTransaction(
                 self.__make_eip1559_sign_payload(from_addr=fromAddress, to=toAddress, chain_id=chain_id, nonce=nonce,
                                                  max_fee_per_gas=maxFeePerGas,
                                                  max_priority_fee_per_gas=maxPriorityFeePerGas, gas=gasLimit, data=data,
                                                  value=value))
-            print(response)
-            response = node.rpc_eth_sendRawTransaction(response['result'])
-            print(response)
-            return response["result"]
+        response = node.rpc_eth_sendRawTransaction(response['result'])
+        return response["result"]
 
     def static_call(self, node, functionName: str, *args, fromAddress: str, nonce: int = None, toAddress: str,
                     gasLimit: int, gasPrice: int, value: int = 0, tag: str = 'latest'):
@@ -201,7 +192,7 @@ class SmartContract:
                 print("No return data in estimate_gas: {}".format(str(response)))
                 return None
         else:
-            raise EvmExecutionError("Could not estimmate gas")
+            raise EvmExecutionError("Could not estimate gas: {}".format(str(response)))
 
     def deploy(self, node, *args, call_method: CallMethod = CallMethod.RPC_LEGACY, fromAddress: str, nonce: int = None,
                gasLimit: int, gasPrice: int = 1, maxFeePerGas: int = 1, maxPriorityFeePerGas: int = 1,
@@ -237,17 +228,11 @@ class SmartContract:
             response = node.rpc_eth_signTransaction(
                 self.__make_legacy_sign_payload(from_addr=fromAddress, to=None, nonce=nonce, gas_price=gasPrice,
                                                 gas=gasLimit, data=data, value=value))
-            print(response)
-            response = node.rpc_eth_sendRawTransaction(response['result'])
-            print(response)
 
         elif call_method is CallMethod.RPC_EIP155:
             response = node.rpc_eth_signTransaction(
                 self.__make_eip155_sign_payload(from_addr=fromAddress, to=None, chain_id=chain_id, nonce=nonce,
                                                 gas_price=gasPrice, gas=gasLimit, data=data, value=value))
-            print(response)
-            response = node.rpc_eth_sendRawTransaction(response['result'])
-            print(response)
 
         elif call_method is CallMethod.RPC_EIP1559:
             response = node.rpc_eth_signTransaction(
@@ -255,10 +240,7 @@ class SmartContract:
                                                  max_fee_per_gas=maxFeePerGas,
                                                  max_priority_fee_per_gas=maxPriorityFeePerGas, gas=gasLimit, data=data,
                                                  value=value))
-            print(response)
-            response = node.rpc_eth_sendRawTransaction(response['result'])
-            print(response)
-
+        response = node.rpc_eth_sendRawTransaction(response['result'])
         return response["result"], to_checksum_address(mk_contract_address(fromAddress, nonce))
 
     def __str__(self):
