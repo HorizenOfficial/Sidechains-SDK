@@ -24,6 +24,7 @@ import com.horizen.transaction.Transaction
 import com.horizen.utils.ClosableResourceHandler
 import org.web3j.crypto.TransactionDecoder
 import org.web3j.utils.Numeric
+import scorex.core.NodeViewHolder
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.util.ModifierId
 
@@ -31,15 +32,32 @@ import java.math.BigInteger
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
-import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 
-class EthService(val stateView: AccountStateView, val nodeView: CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool], val networkParams: NetworkParams, val sidechainSettings: SidechainSettings, val sidechainTransactionActorRef: ActorRef)
+class EthService(val sidechainNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuration, networkParams: NetworkParams, val sidechainSettings: SidechainSettings, val sidechainTransactionActorRef: ActorRef)
   extends RpcService
     with ClosableResourceHandler {
+  type NV = CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]
+
+  def applyOnAccountView[R](functionToBeApplied: NV => R): R = {
+    // function wrapper that handles error cases and exceptions
+    val wrappedFunction = (nodeview: NV) => Try {
+      functionToBeApplied(nodeview)
+    }
+    try {
+      implicit val timeout: Timeout = new Timeout(nvtimeout)
+      val res = (sidechainNodeViewHolderRef ? NodeViewHolder.ReceivableMessages.GetDataFromCurrentView(wrappedFunction)).asInstanceOf[Future[Try[R]]]
+      val result = Await.result[Try[R]](res, nvtimeout)
+      result.get
+    }
+    catch {
+      case e: Exception => throw new Exception(e)
+    }
+  }
 
   //function which describes default transaction representation for answer after adding the transaction to a memory pool
   val defaultTransactionResponseRepresentation: Transaction => SuccessResponse = {
@@ -48,15 +66,23 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
 
   @RpcMethod("eth_getBlockByNumber")
   def getBlockByNumber(tag: String, hydratedTx: Boolean): EthereumBlock = {
-    constructEthBlockWithTransactions(getBlockIdByTag(tag), hydratedTx)
+    applyOnAccountView { nodeView =>
+      using(nodeView.state.getView) { stateView =>
+        constructEthBlockWithTransactions(nodeView, stateView, getBlockIdByTag(nodeView, tag), hydratedTx)
+      }
+    }
   }
 
   @RpcMethod("eth_getBlockByHash")
   def getBlockByHash(tag: String, hydratedTx: Boolean): EthereumBlock = {
-    constructEthBlockWithTransactions(Numeric.cleanHexPrefix(tag), hydratedTx)
+    applyOnAccountView { nodeView =>
+      using(nodeView.state.getView) { stateView =>
+        constructEthBlockWithTransactions(nodeView, stateView, Numeric.cleanHexPrefix(tag), hydratedTx)
+      }
+    }
   }
 
-  private def constructEthBlockWithTransactions(blockId: String, hydratedTx: Boolean): EthereumBlock = {
+  private def constructEthBlockWithTransactions(nodeView: NV, stateView: AccountStateView, blockId: String, hydratedTx: Boolean): EthereumBlock = {
     if (blockId == null) return null
     nodeView.history.getBlockById(blockId).asScala match {
       case None => null
@@ -82,8 +108,8 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
     }
   }
 
-  private def doCall[A](params: TransactionArgs, tag: String)(fun: (Array[Byte], AccountStateView) ⇒ A): A = {
-    getStateViewAtTag(tag) { tagStateView =>
+  private def doCall[A](nodeView: NV, params: TransactionArgs, tag: String)(fun: (Array[Byte], AccountStateView) ⇒ A): A = {
+    getStateViewAtTag(nodeView, tag) { tagStateView =>
       try {
         val msg = params.toMessage(tagStateView.getBaseFee)
         fun(tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit)), tagStateView)
@@ -97,8 +123,10 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
 
   @RpcMethod("eth_call")
   def call(params: TransactionArgs, tag: String): String = {
-    doCall(params, tag) {
-      (result, _) => if (result != null) Numeric.toHexString(result) else null
+    applyOnAccountView { nodeView =>
+      doCall(nodeView, params, tag) {
+        (result, _) => if (result != null) Numeric.toHexString(result) else null
+      }
     }
   }
 
@@ -121,83 +149,91 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
   @RpcMethod("eth_estimateGas")
   @RpcOptionalParameters(1)
   def estimateGas(params: TransactionArgs, tag: String): Quantity = {
-    // Binary search the gas requirement, as it may be higher than the amount used
-    val lowBound = GasUtil.TxGas.subtract(BigInteger.ONE)
-    // Determine the highest gas limit can be used during the estimation.
-    var highBound = params.gas
-    getStateViewAtTag(tag) { tagStateView =>
-      if (highBound == null || highBound.compareTo(GasUtil.TxGas) < 0) {
-        // TODO: get block gas limit
-        highBound = BigInteger.valueOf(30000000)
-      }
-      // Normalize the max fee per gas the call is willing to spend.
-      var feeCap = BigInteger.ZERO
-      if (params.gasPrice != null && (params.maxFeePerGas != null || params.maxPriorityFeePerGas != null)) {
-        throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified"))
-      } else if (params.gasPrice != null) {
-        feeCap = params.gasPrice
-      } else if (params.maxFeePerGas != null) {
-        feeCap = params.maxFeePerGas
-      }
-      // Recap the highest gas limit with account's available balance.
-      if (feeCap.bitLength() > 0) {
-        val balance = tagStateView.getBalance(params.getFrom)
-        val available = if (params.value == null) { balance } else {
-          if (params.value.compareTo(balance) >= 0)
-            throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "insufficient funds for transfer"))
-          balance.subtract(params.value)
+    applyOnAccountView { nodeView =>
+      // Binary search the gas requirement, as it may be higher than the amount used
+      val lowBound = GasUtil.TxGas.subtract(BigInteger.ONE)
+      // Determine the highest gas limit can be used during the estimation.
+      var highBound = params.gas
+      getStateViewAtTag(nodeView, tag) { tagStateView =>
+        if (highBound == null || highBound.compareTo(GasUtil.TxGas) < 0) {
+          // TODO: get block gas limit
+          highBound = BigInteger.valueOf(30000000)
         }
-        val allowance = available.divide(feeCap)
-        if (highBound.compareTo(allowance) > 0) {
-          highBound = allowance
+        // Normalize the max fee per gas the call is willing to spend.
+        var feeCap = BigInteger.ZERO
+        if (params.gasPrice != null && (params.maxFeePerGas != null || params.maxPriorityFeePerGas != null)) {
+          throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified"))
+        } else if (params.gasPrice != null) {
+          feeCap = params.gasPrice
+        } else if (params.maxFeePerGas != null) {
+          feeCap = params.maxFeePerGas
+        }
+        // Recap the highest gas limit with account's available balance.
+        if (feeCap.bitLength() > 0) {
+          val balance = tagStateView.getBalance(params.getFrom)
+          val available = if (params.value == null) { balance } else {
+            if (params.value.compareTo(balance) >= 0)
+              throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "insufficient funds for transfer"))
+            balance.subtract(params.value)
+          }
+          val allowance = available.divide(feeCap)
+          if (highBound.compareTo(allowance) > 0) {
+            highBound = allowance
+          }
         }
       }
+      // Recap the highest gas allowance with specified gascap.
+      // global RPC gas cap (in geth this is a config variable)
+      val rpcGasCap = BigInteger.valueOf(50000000)
+      if (highBound.compareTo(rpcGasCap) > 0) {
+        highBound = rpcGasCap
+      }
+      // lambda that tests a given gas limit, returns true on successful execution, false on out-of-gas error
+      // other exceptions are not caught as the call would not succeed with any amount of gas
+      val check = (gas: BigInteger) => try {
+        params.gas = gas
+        doCall(nodeView, params, tag) { (_, _) => true }
+      } catch {
+        case _: OutOfGasException => false
+      }
+      // Execute the binary search and hone in on an executable gas limit
+      val requiredGasLimit = binarySearch(lowBound, highBound)(check)
+      // Reject the transaction as invalid if it still fails at the highest allowance
+      if (requiredGasLimit == highBound && check(highBound)) {
+        throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, s"gas required exceeds allowance ($highBound)"))
+      }
+      new Quantity(requiredGasLimit)
     }
-    // Recap the highest gas allowance with specified gascap.
-    // global RPC gas cap (in geth this is a config variable)
-    val rpcGasCap = BigInteger.valueOf(50000000)
-    if (highBound.compareTo(rpcGasCap) > 0) {
-      highBound = rpcGasCap
-    }
-    // lambda that tests a given gas limit, returns true on successful execution, false on out-of-gas error
-    // other exceptions are not caught as the call would not succeed with any amount of gas
-    val check = (gas: BigInteger) => try {
-      params.gas = gas
-      doCall(params, tag) { (_, _) => true }
-    } catch {
-      case _: OutOfGasException => false
-    }
-    // Execute the binary search and hone in on an executable gas limit
-    val requiredGasLimit = binarySearch(lowBound, highBound)(check)
-    // Reject the transaction as invalid if it still fails at the highest allowance
-    if (requiredGasLimit == highBound && check(highBound)) {
-      throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, s"gas required exceeds allowance ($highBound)"))
-    }
-    new Quantity(requiredGasLimit)
   }
 
   @RpcMethod("eth_blockNumber")
-  def blockNumber = new Quantity(BigInteger.valueOf(nodeView.history.getCurrentHeight))
+  def blockNumber: Quantity = applyOnAccountView { nodeView =>
+    new Quantity(BigInteger.valueOf(nodeView.history.getCurrentHeight))
+  }
 
   @RpcMethod("eth_chainId")
-  def chainId = new Quantity(BigInteger.valueOf(networkParams.chainId))
+  def chainId: Quantity = new Quantity(BigInteger.valueOf(networkParams.chainId))
 
   @RpcMethod("eth_getBalance")
   def GetBalance(address: Address, tag: String): Quantity = {
-    getStateViewAtTag(tag) { tagStateView =>
-      new Quantity(tagStateView.getBalance(address.toBytes))
+    applyOnAccountView { nodeView =>
+      getStateViewAtTag(nodeView, tag) { tagStateView =>
+        new Quantity(tagStateView.getBalance(address.toBytes))
+      }
     }
   }
 
   @RpcMethod("eth_getTransactionCount")
   def getTransactionCount(address: Address, tag: String): Quantity = {
-    getStateViewAtTag(tag) { tagStateView =>
-      new Quantity(tagStateView.getNonce(address.toBytes))
+    applyOnAccountView { nodeView =>
+      getStateViewAtTag(nodeView, tag) { tagStateView =>
+        new Quantity(tagStateView.getNonce(address.toBytes))
+      }
     }
   }
 
-  private def getStateViewAtTag[A](tag: String)(fun: AccountStateView ⇒ A): A = {
-    nodeView.history.getBlockById(getBlockIdByTag(tag)).asScala match {
+  private def getStateViewAtTag[A](nodeView: NV, tag: String)(fun: AccountStateView ⇒ A): A = {
+    nodeView.history.getBlockById(getBlockIdByTag(nodeView, tag)).asScala match {
       case Some(block) => using(nodeView.state.getStateDbViewFromRoot(block.header.stateRoot)) {
         tagStateView => fun(tagStateView)
       }
@@ -205,7 +241,7 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
     }
   }
 
-  private def getBlockIdByTag(tag: String): String = {
+  private def getBlockIdByTag(nodeView: NV, tag: String): String = {
     val history = nodeView.history
     val blockId = tag match {
       case "earliest" => history.getBlockIdByHeight(1)
@@ -221,18 +257,24 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
 
   @RpcMethod("eth_gasPrice")
   def gasPrice: Quantity = {
-    getStateViewAtTag("latest") { tagStateView => new Quantity(tagStateView.getBaseFee) }
+    applyOnAccountView { nodeView =>
+      getStateViewAtTag(nodeView, "latest") { tagStateView => new Quantity(tagStateView.getBaseFee) }
+    }
   }
 
   private def getTransactionAndReceipt[A](transactionHash: String)(f: (EthereumTransaction, EthereumReceipt) => A) = {
-    stateView.getTransactionReceipt(Numeric.hexStringToByteArray(transactionHash))
-      .flatMap(receipt => {
-        nodeView.history.blockIdByHeight(receipt.blockNumber)
-          .map(ModifierId(_))
-          .flatMap(nodeView.history.getStorageBlockById)
-          .map(_.transactions(receipt.transactionIndex).asInstanceOf[EthereumTransaction])
-          .map(tx => f(tx, receipt))
-      })
+    applyOnAccountView { nodeView =>
+      using(nodeView.state.getView) { stateView =>
+        stateView.getTransactionReceipt(Numeric.hexStringToByteArray(transactionHash))
+          .flatMap(receipt => {
+            nodeView.history.blockIdByHeight(receipt.blockNumber)
+              .map(ModifierId(_))
+              .flatMap(nodeView.history.getStorageBlockById)
+              .map(_.transactions(receipt.transactionIndex).asInstanceOf[EthereumTransaction])
+              .map(tx => f(tx, receipt))
+          })
+      }
+    }
   }
 
   @RpcMethod("eth_getTransactionByHash")
@@ -270,12 +312,14 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
 
   @RpcMethod("eth_getCode")
   def getCode(address: Address, tag: String): String = {
-    getStateViewAtTag(tag) { tagStateView =>
-        val code = tagStateView.getCode(address.toBytes)
-        if (code == null)
-          "0x"
-        else
-          Numeric.toHexString(code)
+    applyOnAccountView { nodeView =>
+      getStateViewAtTag(nodeView,tag) { tagStateView =>
+          val code = tagStateView.getCode(address.toBytes)
+          if (code == null)
+            "0x"
+          else
+            Numeric.toHexString(code)
+      }
     }
   }
 }
