@@ -21,7 +21,7 @@ import com.horizen.api.http.{ApiResponseUtil, SuccessResponse}
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.Transaction
 import com.horizen.utils.ClosableResourceHandler
-import org.web3j.crypto.TransactionDecoder
+import org.web3j.crypto.{TransactionDecoder, TransactionEncoder}
 import org.web3j.utils.Numeric
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.util.ModifierId
@@ -184,6 +184,8 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
 
   @RpcMethod("eth_sendRawTransaction") def sendRawTransaction(signedTxData: String): Quantity = {
     val tx = new EthereumTransaction(TransactionDecoder.decode(signedTxData))
+    if (tx.isEIP1559)
+        if (Numeric.toHexString(TransactionEncoder.encode(tx.getTransaction, tx.getSignatureData)) != signedTxData) throw new RpcException(new RpcError(RpcCode.ParseError.getCode, RpcCode.ParseError.getMessage, "Access list not supported"))
     validateAndSendTransaction(tx)
     new Quantity(Numeric.prependHexPrefix(tx.id))
   }
