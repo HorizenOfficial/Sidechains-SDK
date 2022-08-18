@@ -34,7 +34,7 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.concurrent.duration.{Duration, DurationInt, FiniteDuration}
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 
 class EthService(val sidechainNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuration, networkParams: NetworkParams, val sidechainSettings: SidechainSettings, val sidechainTransactionActorRef: ActorRef)
@@ -43,11 +43,15 @@ class EthService(val sidechainNodeViewHolderRef: ActorRef, val nvtimeout: Finite
   type NV = CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]
 
   def applyOnAccountView[R](functionToBeApplied: NV => R): R = {
+    // function wrapper that handles error cases and exceptions
+    val wrappedFunction = (nodeview: NV) => Try {
+      functionToBeApplied(nodeview)
+    }
     try {
       implicit val timeout: Timeout = new Timeout(nvtimeout)
-      val res = (sidechainNodeViewHolderRef ? NodeViewHolder.ReceivableMessages.GetDataFromCurrentView(functionToBeApplied)).asInstanceOf[Future[R]]
-      val result = Await.result[R](res, nvtimeout)
-      result
+      val res = (sidechainNodeViewHolderRef ? NodeViewHolder.ReceivableMessages.GetDataFromCurrentView(wrappedFunction)).asInstanceOf[Future[Try[R]]]
+      val result = Await.result[Try[R]](res, nvtimeout)
+      result.get
     }
     catch {
       case e: Exception => throw new Exception(e)
@@ -127,7 +131,7 @@ class EthService(val sidechainNodeViewHolderRef: ActorRef, val nvtimeout: Finite
       if (result.hasReturnData)
         Numeric.toHexString(result.returnData)
       else
-        null
+        ""
     }
   }
 

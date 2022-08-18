@@ -54,16 +54,13 @@ case class AccountEthRpcRoute(override val settings: RESTApiSettings,
   override val route: Route = (pathPrefix("ethv1")) {
     ethRpc ~ ethOptions
   }
+  val rpcHandler = new RpcHandler(new EthService(sidechainNodeViewHolderRef, settings.timeout, params, sidechainSettings, sidechainTransactionActorRef));
 
   /**
    * Returns the success / error response of called rpc method or error if method does not exist
    */
   def ethRpc: Route = (post) {
     entity(as[JsonNode]) { body =>
-      // TODO: optimize usage of rpcHandler (no need to create an object from scratch every time)
-      // TODO: improve the usage of node and state views. Possibly put the getters into the RpcHandler
-
-      val rpcHandler = new RpcHandler(new EthService(sidechainNodeViewHolderRef, settings.timeout, params, sidechainSettings, sidechainTransactionActorRef));
       val res = rpcHandler.apply(new RpcRequest(body))
       ApiResponseUtil.toResponseWithoutResultWrapper(res);
     }
