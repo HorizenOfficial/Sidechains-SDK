@@ -31,7 +31,7 @@ class EthServiceTest extends JUnitSuite
   var ethService: EthService = _
   var params: NetworkParams = _
   var transactionActorRef: ActorRef = _
-
+  var NodeViewHolderRef: ActorRef = _
   implicit val actorSystem: ActorSystem = ActorSystem("sc_nvh_mocked")
 
   @Before
@@ -39,8 +39,9 @@ class EthServiceTest extends JUnitSuite
     val settings = mock[SidechainSettings]
     params = RegTestParams(initialCumulativeCommTreeHash = FieldElementFixture.generateFieldElement())
     transactionActorRef = mock[ActorRef]
+    NodeViewHolderRef = mock[ActorRef]
 
-    ethService = new EthService(transactionActorRef, new FiniteDuration(10, SECONDS), params, settings, transactionActorRef)
+    ethService = new EthService(NodeViewHolderRef, new FiniteDuration(10, SECONDS), params, settings, transactionActorRef)
   }
 
   @Test
