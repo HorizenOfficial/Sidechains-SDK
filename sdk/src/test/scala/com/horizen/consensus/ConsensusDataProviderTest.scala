@@ -1,9 +1,9 @@
 package com.horizen.consensus
 
 import java.io.{BufferedReader, BufferedWriter, FileReader, FileWriter}
-
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
+import com.horizen.fork.{ForkManager, SimpleForkConfigurator}
 import com.horizen.params.{NetworkParams, NetworkParamsUtils, TestNetParams}
 import com.horizen.proof.VrfProof
 import com.horizen.storage.{InMemoryStorageAdapter, SidechainBlockInfoProvider}
@@ -11,7 +11,7 @@ import com.horizen.utils
 import com.horizen.utils.{BytesUtils, TimeToEpochUtils, Utils}
 import com.horizen.vrf.VrfOutput
 import org.junit.Assert._
-import org.junit.Test
+import org.junit.{Before, Test}
 import scorex.core.consensus.ModifierSemanticValidity
 import scorex.util._
 
@@ -133,6 +133,10 @@ class ConsensusDataProviderTest extends CompanionsFixture{
   val generator: SidechainBlockFixture = new SidechainBlockFixture {}
   val dummyWithdrawalEpochInfo = utils.WithdrawalEpochInfo(0, 0)
 
+  @Before
+  def init(): Unit = {
+    ForkManager.init(new SimpleForkConfigurator(), "regtest")
+  }
 
   @Test
   def test(): Unit = {

@@ -115,7 +115,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
       .flatMap{currentSlot =>
         val slotWithShift = intToConsensusSlotNumber(Math.min(currentSlot + generationRules.corruption.consensusSlotShift, params.consensusSlotsInEpoch))
         println(s"Process slot: ${slotWithShift}")
-        val res = forgersSet.getEligibleForger(slotWithShift, consensusNonce, totalStake, generationRules.corruption.getStakeCheckCorruptionFunction)
+        val res = forgersSet.getEligibleForger(slotWithShift, consensusNonce, totalStake, generationRules.corruption.getStakeCheckCorruptionFunction, nextEpochNumber)
         if (res.isEmpty) {println(s"No forger had been found for slot ${currentSlot}")}
         res.map{case(forger, proof, vrfOutput) => (forger, proof, vrfOutput, intToConsensusSlotNumber(currentSlot))}
       }

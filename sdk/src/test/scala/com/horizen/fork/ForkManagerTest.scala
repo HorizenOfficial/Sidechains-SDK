@@ -1,10 +1,18 @@
 package com.horizen.fork
 
 import org.junit.Assert.{assertEquals, assertNotEquals}
-import org.junit.Test
+import org.junit.{Before, Test}
 import org.scalatestplus.junit.JUnitSuite
 
 class ForkManagerTest extends JUnitSuite {
+
+  @Before
+  def init(): Unit = {
+    val c = ForkManager.getClass.getDeclaredConstructor()
+    c.setAccessible(true)
+    c.newInstance()
+  }
+
   @Test
   def ForkmangerTest: Unit = {
     val simpleForkConfigurator = new SimpleForkConfigurator

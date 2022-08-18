@@ -39,6 +39,11 @@ object TimeToEpochUtils {
     virtualGenesisBlockTimeStamp(params) + (totalSlots * params.consensusSecondsInSlot)
   }
 
+  def secondsRemainingInSlot(params: NetworkParams, timestamp: Block.Timestamp): Long = {
+    val secondsElapsedInSlot = (timestamp - virtualGenesisBlockTimeStamp(params)) % params.consensusSecondsInSlot
+    params.consensusSecondsInSlot - secondsElapsedInSlot
+  }
+
   private def getEpochIndex(params: NetworkParams, timestamp: Block.Timestamp): Int = {
     require(timestamp >= params.sidechainGenesisBlockTimestamp,
       s"Try to get index epoch for timestamp ${timestamp} which are less than genesis timestamp ${params.sidechainGenesisBlockTimestamp}")

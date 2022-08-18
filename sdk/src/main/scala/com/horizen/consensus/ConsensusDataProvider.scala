@@ -1,10 +1,10 @@
 package com.horizen.consensus
 
 import java.security.MessageDigest
-
 import com.google.common.primitives.{Ints, Longs}
 import com.horizen.block.SidechainBlockHeader
 import com.horizen.chain.SidechainBlockInfo
+import com.horizen.fork.ForkManager
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
 import com.horizen.storage.SidechainBlockInfoProvider
 import com.horizen.utils.{LruCache, TimeToEpochUtils, Utils}
@@ -92,15 +92,18 @@ trait ConsensusDataProvider {
     val previousNonce = consensusDataStorage.getNonceConsensusEpochInfo(previousEpoch).getOrElse(calculateNonceForEpoch(previousEpoch)).bytes
     nonceMessageDigest.update(previousNonce)
 
-    val currentEpochNumberBytes = Ints.toByteArray(TimeToEpochUtils.timeStampToEpochNumber(params, lastBlockInfoInEpoch.timestamp))
+    val currentEpoch = TimeToEpochUtils.timeStampToEpochNumber(params, lastBlockInfoInEpoch.timestamp)
+    val currentEpochNumberBytes = Ints.toByteArray(currentEpoch)
     nonceMessageDigest.update(currentEpochNumberBytes)
 
-    // Calculate hash and return the first 8 bytes of it.
+
+    // Calculate hash and return the first 8(32 after the fork) bytes of it.
     // Note: first epoch nonce is a timestamp of genesis block - 8 bytes.
     // And moreover `buildVrfMessage` expect for the concatenated value with the value that fits FieldElement.
     // TODO: think about the usage of VRF inside the circuit.
+    val nonceLength = ForkManager.getSidechainConsensusEpochFork(currentEpoch).nonceLength
     val resultHash = nonceMessageDigest.digest();
-    NonceConsensusEpochInfo(byteArrayToConsensusNonce(resultHash.slice(0, 8)))
+    NonceConsensusEpochInfo(byteArrayToConsensusNonce(resultHash.slice(0, nonceLength)))
   }
 
   //Message digest for nonce calculation is done in reverse order, i.e. from last eligible slot to first eligible slot

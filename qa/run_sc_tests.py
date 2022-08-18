@@ -46,6 +46,7 @@ from sc_csw_disabled import SCCswDisabled
 from sc_mempool_max_size import  SCMempoolMaxSize
 from sc_mempool_min_fee_rate import SCMempoolMinFeeRate
 from sc_csw_in_fee_payment import ScCSWInFeePaymentTest
+from sc_sync_after_fork import SCSyncAfterFork
 
 def run_test(test):
     try:
@@ -189,6 +190,9 @@ def run_tests(log_file):
 
     result = run_test(ScCSWInFeePaymentTest())
     assert_equal(0, result, "sc_csw_in_fee_payment test failed!")
+
+    result = run_test(SCSyncAfterFork())
+    assert_equal(0, result, "sc_sync_after_fork test failed!")
 
 if __name__ == "__main__":
     my_log_file = open("sc_test.log", "w")

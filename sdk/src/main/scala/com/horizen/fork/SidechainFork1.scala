@@ -1,5 +1,10 @@
 package com.horizen.fork
 
+import com.horizen.librustsidechains.Constants
+
 class SidechainFork1(override val epochNumber: ForkConsensusEpochNumber) extends BaseConsensusEpochFork(epochNumber) {
-  // TODO This is a blank fork. Put implementation for the first fork here.
+
+  override def nonceLength: Int = Constants.FIELD_ELEMENT_LENGTH()
+
+  override def stakePercentageForkApplied: Boolean = true
 }
