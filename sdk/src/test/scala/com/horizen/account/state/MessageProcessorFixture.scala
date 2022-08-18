@@ -31,12 +31,12 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
     }
   }
 
-  def getMessage(destContractAddress: AddressProposition, value: BigInteger, data: Array[Byte]): Message = {
-    val gas = BigInteger.ZERO
+  def getMessage(destAddress: AddressProposition, value: BigInteger, data: Array[Byte]): Message = {
+    val gasPrice = BigInteger.ZERO
     val gasLimit = BigInteger.valueOf(1000000)
     val nonce = BigInteger.ZERO
     val from = new AddressProposition(BytesUtils.fromHexString("00aabbcc9900aabbcc9900aabbcc9900aabbcc99"))
-    new Message(from, destContractAddress, gas, gas, gas, gasLimit, value, nonce, data)
+    new Message(from, destAddress, gasPrice, gasPrice, gasPrice, gasLimit, value, nonce, data)
   }
 
   /**

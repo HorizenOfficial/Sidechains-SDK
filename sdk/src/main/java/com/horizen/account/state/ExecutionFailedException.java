@@ -1,7 +1,7 @@
 package com.horizen.account.state;
 
 /**
- * Message processing failed, alos revert-and-consume-all-gas.
+ * Message processing failed, also revert-and-consume-all-gas.
  */
 public class ExecutionFailedException extends Exception {
     public ExecutionFailedException(String message) {

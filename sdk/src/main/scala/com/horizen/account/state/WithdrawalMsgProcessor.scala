@@ -25,8 +25,7 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
 
   override val fakeSmartContractAddress: AddressProposition = new AddressProposition(BytesUtils.fromHexString("0000000000000000000011111111111111111111"))
 
-  override val fakeSmartContractCodeHash: Array[Byte] =
-    Keccak256.hash("WithdrawalRequestSmartContractCodeHash")
+  override val fakeSmartContractCodeHash: Array[Byte] = Keccak256.hash("WithdrawalRequestSmartContractCodeHash")
 
   val GetListOfWithdrawalReqsCmdSig: String = getABIMethodId("getWithdrawalRequests(uint32)")
   val AddNewWithdrawalReqCmdSig: String = getABIMethodId("submitWithdrawalRequest(bytes20)")
@@ -41,7 +40,6 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
 
   override def process(msg: Message, view: BaseAccountStateView, gas: GasPool): Array[Byte] = {
     //TODO: check errors in Ethereum, maybe for some kind of errors there a predefined types or codes
-
     BytesUtils.toHexString(getOpCodeFromData(msg.getData)) match {
       case GetListOfWithdrawalReqsCmdSig =>
         gas.subGas(GasSpentForGetListOfWithdrawalReqsCmd)
