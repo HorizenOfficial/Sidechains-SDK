@@ -14,7 +14,7 @@ class GasPool(initialGas: BigInteger) {
     if (gas.compareTo(BigInteger.ZERO) < 0)
       throw new IllegalArgumentException("cannot consume a negative amount of gas")
     if (currentGas.compareTo(gas) < 0) {
-      throw OutOfGasException()
+      throw new OutOfGasException()
     }
     currentGas = currentGas.subtract(gas)
   }

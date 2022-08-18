@@ -4,10 +4,7 @@ import com.horizen.account.utils.BigIntegerUtil
 
 import java.math.BigInteger
 
-class StateTransition(
-    view: AccountStateView,
-    messageProcessors: Seq[MessageProcessor],
-    blockGasPool: BlockGasPool) {
+class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProcessor], blockGasPool: GasPool) {
 
   def transition(msg: Message): Array[Byte] = {
     // do preliminary checks
@@ -31,34 +28,18 @@ class StateTransition(
         try {
           processor.process(msg, view, gasPool)
         } catch {
-          // if the processor throws ExecutionFailedException we revert all changes and consume any remaining gas
-          // any other exception will bubble up and invalidate the block
-          case err: ExecutionFailedException =>
+          // if the processor throws ExecutionRevertedException we revert all changes
+          case err: ExecutionRevertedException =>
             view.revertToSnapshot(revisionId)
             throw err
-          case err =>
+          // if the processor throws ExecutionFailedException we revert all changes and consume any remaining gas
+          case err: ExecutionFailedException =>
             view.revertToSnapshot(revisionId)
             gasPool.subGas(gasPool.getGas)
             throw err
+          // any other exception will bubble up and invalidate the block
         } finally {
           refundGas(msg, gasPool)
-
-          /*
-// When an error was returned by the EVM or when setting the creation code
-// above we revert to the snapshot and consume any gas remaining. Additionally
-// when we're in homestead this also counts for code storage gas errors.
-if err != nil {
-    evm.StateDB.RevertToSnapshot(snapshot)
-    if err != ErrExecutionReverted {
-        gas = 0
-    }
-    // TODO: consider clearing up unused snapshots:
-    //} else {
-    //	evm.StateDB.DiscardSnapshot(snapshot)
-}
-return ret, gas, err
-           */
-
         }
     }
   }
@@ -105,6 +86,11 @@ return ret, gas, err
     val want = maxFees.add(msg.getValue)
     if (have.compareTo(want) < 0) throw InsufficientFundsException(sender, have, want)
     // deduct gas from gasPool of the current block (unused gas will be returned after execution)
+    if (blockGasPool.getGas.compareTo(gas) < 0) {
+      // we want to throw the block "gas limit reached" exception here instead of "out of gas"
+      // the latter would just fail the current message, but this is an invalid message
+      throw GasLimitReached()
+    }
     blockGasPool.subGas(gas)
     // prepay effective gas fees
     view.subBalance(sender, effectiveFees)

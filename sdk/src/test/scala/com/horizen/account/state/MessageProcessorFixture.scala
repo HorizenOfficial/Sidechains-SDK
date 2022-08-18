@@ -12,6 +12,7 @@ import org.web3j.abi.datatypes.Type
 import org.web3j.abi.{EventEncoder, FunctionReturnDecoder, TypeReference}
 
 import java.math.BigInteger
+import scala.language.implicitConversions
 import scala.util.Random
 
 trait MessageProcessorFixture extends ClosableResourceHandler {
@@ -20,6 +21,9 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
   val hashNull: Array[Byte] =
     BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000000")
 
+  // simplifies using BigIntegers within the tests
+  implicit def longToBigInteger(x: Long): BigInteger = BigInteger.valueOf(x)
+
   def usingView(processor: MessageProcessor)(fun: AccountStateView => Unit): Unit = {
     using(new MemoryDatabase()) { db =>
       val stateDb = new StateDB(db, hashNull)
@@ -27,28 +31,30 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
     }
   }
 
-  def getMessage(destContractAddress: AddressProposition, amount: BigInteger, data: Array[Byte]): Message = {
+  def getMessage(destContractAddress: AddressProposition, value: BigInteger, data: Array[Byte]): Message = {
     val gas = BigInteger.ZERO
     val gasLimit = BigInteger.valueOf(1000000)
     val nonce = BigInteger.ZERO
     val from = new AddressProposition(BytesUtils.fromHexString("00aabbcc9900aabbcc9900aabbcc9900aabbcc99"))
-    new Message(from, destContractAddress, gas, gas, gas, gasLimit, amount, nonce, data)
+    new Message(from, destContractAddress, gas, gas, gas, gasLimit, value, nonce, data)
   }
 
-  def execute(view: AccountStateView, msg: Message, expectedGas: BigInteger): Array[Byte] = {
-    val gas = new BlockGasPool(BigInteger.valueOf(1000000))
-    val returnData = view.applyMessage(msg, gas)
-    assertEquals("Unexpected gas consumption", expectedGas, gas.getUsedGas)
-    returnData
+  /**
+   * Creates a large temporary gas pool and passes it into the given function.
+   */
+  def withGas[A](fun: GasPool => A): A = {
+    fun(new GasPool(BigInteger.valueOf(1000000)))
   }
 
   /**
    * Creates a large temporary gas pool and verifies the amount of total gas consumed.
    */
-  def expectGas(expectedGas: BigInteger)(fun: GasPool => Unit): Unit = {
-    val gas = new GasPool(BigInteger.valueOf(1000000))
-    fun(gas)
-    assertEquals("Unexpected gas consumption", expectedGas, gas.getUsedGas)
+  def assertGas[A](expectedGas: BigInteger = BigInteger.ZERO)(fun: GasPool => A): A = {
+    withGas { gas =>
+      val ret = fun(gas)
+      assertEquals("Unexpected gas consumption", expectedGas, gas.getUsedGas)
+      ret
+    }
   }
 
   def getEventSignature(eventABISignature: String): Array[Byte] =

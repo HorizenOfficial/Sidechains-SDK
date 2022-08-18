@@ -8,10 +8,20 @@ public interface MessageProcessor {
     // Checks if the processor is applicable to the Message
     boolean	canProcess(Message msg, BaseAccountStateView view);
 
-    // Apply processor modifying the view.
-    // Possible results:
-    // * return byte[] returnData -> if was applied as expected
-    // * throws ExecutionFailedException -> if was executed, but marked as "failed"
-    // * throws any other Exception -> if is invalid -> block is invalid
+    /**
+     * Apply processor modifying the view. Possible results:
+     * <ul>
+     *     <li>applied as expected: return byte[]</li>
+     *     <li>message valid and (partially) executed, but operation "failed": throw ExecutionFailedException</li>
+     *     <li>message invalid and must not exist in a block: throw any other Exception</li>
+     * </ul>
+     * @param msg message to apply to the state
+     * @param view state view
+     * @param gas available gas for the execution
+     * @return return data on successful execution
+     * @throws ExecutionRevertedException revert-and-keep-gas-left, also mark the message as "failed"
+     * @throws ExecutionFailedException revert-and-consume-all-gas, also mark the message as "failed"
+     * @throws RuntimeException any other exceptions are consideres as "invalid message"
+     */
     byte[] process(Message msg, BaseAccountStateView view, GasPool gas) throws ExecutionFailedException;
 }

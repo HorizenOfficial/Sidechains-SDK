@@ -86,11 +86,11 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
     getStateViewAtTag(tag) { tagStateView =>
       try {
         val msg = params.toMessage(tagStateView.getBaseFee)
-        fun(tagStateView.applyMessage(msg, new BlockGasPool(msg.getGasLimit)), tagStateView)
+        fun(tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit)), tagStateView)
       } catch {
         // throw on execution errors, also include evm revert reason if possible
-        case evmRevert: EvmException => throw new RpcException(new RpcError(
-          RpcCode.ExecutionError.getCode, evmRevert.getMessage, Numeric.toHexString(evmRevert.returnData)))
+        case evmRevert: ExecutionRevertedException => throw new RpcException(new RpcError(
+          RpcCode.ExecutionError.getCode, evmRevert.getMessage, Numeric.toHexString(evmRevert.revertReason)))
       }
     }
   }

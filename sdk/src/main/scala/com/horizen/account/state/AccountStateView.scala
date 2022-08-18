@@ -116,7 +116,7 @@ class AccountStateView(
     stateDb.setTxContext(txHash, idx)
   }
 
-  def applyMessage(msg: Message, blockGasPool: BlockGasPool): Array[Byte] = {
+  def applyMessage(msg: Message, blockGasPool: GasPool): Array[Byte] = {
     new StateTransition(this, messageProcessors, blockGasPool).transition(msg)
   }
 
@@ -132,7 +132,7 @@ class AccountStateView(
    *    - not enough gas for intrinsic gas
    *    - block gas limit reached
    */
-  override def applyTransaction(tx: SidechainTypes#SCAT, txIndex: Int, blockGasPool: BlockGasPool): Try[EthereumConsensusDataReceipt] = Try {
+  override def applyTransaction(tx: SidechainTypes#SCAT, txIndex: Int, blockGasPool: GasPool): Try[EthereumConsensusDataReceipt] = Try {
     if (!tx.isInstanceOf[EthereumTransaction])
       throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
 

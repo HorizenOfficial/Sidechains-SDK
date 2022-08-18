@@ -8,7 +8,6 @@ import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 
 import java.math.BigInteger
-import scala.util.{Failure, Success, Try}
 
 class EoaMessageProcessorTest extends JUnitSuite
   with MockitoSugar
@@ -82,37 +81,21 @@ class EoaMessageProcessorTest extends JUnitSuite
       assertEquals("Different amount found", msg.getValue, args.getArgument(1))
     })
 
-    expectGas(BigInteger.ZERO) { gas =>
-      val returnData = EoaMessageProcessor.process(msg, mockStateView, gas)
-      assertArrayEquals("Different return data found", Array.emptyByteArray, returnData)
-    }
+    val returnData = assertGas(BigInteger.ZERO)(EoaMessageProcessor.process(msg, mockStateView, _))
+    assertArrayEquals("Different return data found", Array.emptyByteArray, returnData)
 
     // Test 2: Failure during subBalance
     Mockito.reset(mockStateView)
-    val exception = new Exception("some error")
     Mockito.when(mockStateView.subBalance(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[BigInteger])).thenAnswer(args => {
-      throw exception
+      throw new Exception("something went error")
     })
-
-    expectGas(BigInteger.ZERO) { gas =>
-      Try.apply(EoaMessageProcessor.process(msg, mockStateView, gas)) match {
-        case Success(_) => fail("Execution failure expected")
-        case Failure(err) => assertEquals("Different exception found", exception, err)
-      }
-    }
+    assertThrows[Exception](withGas(EoaMessageProcessor.process(msg, mockStateView, _)))
 
     // Test 3: Failure during addBalance
     Mockito.reset(mockStateView)
     Mockito.when(mockStateView.addBalance(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[BigInteger])).thenAnswer(args => {
-      throw exception
+      throw new Exception("something else went error")
     })
-
-    expectGas(BigInteger.ZERO) { gas =>
-      Try.apply(EoaMessageProcessor.process(msg, mockStateView, gas)) match {
-        case Success(_) => fail("Execution failure expected")
-        case Failure(err) =>
-          assertEquals("Different exception found", exception, err)
-      }
-    }
+    assertThrows[Exception](withGas(EoaMessageProcessor.process(msg, mockStateView, _)))
   }
 }
