@@ -51,7 +51,6 @@ case class AccountEthRpcRoute(override val settings: RESTApiSettings,
     with ClosableResourceHandler {
 
   override implicit val tag: ClassTag[AccountNodeView] = ClassTag[AccountNodeView](classOf[AccountNodeView])
-  type NV = CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]
   override val route: Route = (pathPrefix("ethv1")) {
     ethRpc ~ ethOptions
   }
@@ -61,29 +60,13 @@ case class AccountEthRpcRoute(override val settings: RESTApiSettings,
    */
   def ethRpc: Route = (post) {
     entity(as[JsonNode]) { body =>
-      applyOnAccountView { view =>
-        // TODO: optimize usage of rpcHandler (no need to create an object from scratch every time)
-        // TODO: improve the usage of node and state views. Possibly put the getters into the RpcHandler
-        using(view.state.getView) {currentView =>
-          val rpcHandler = new RpcHandler(new EthService(currentView, view, params, sidechainSettings, sidechainTransactionActorRef));
-          val res = rpcHandler.apply(new RpcRequest(body))
-          ApiResponseUtil.toResponseWithoutResultWrapper(res);
-        }
+      // TODO: optimize usage of rpcHandler (no need to create an object from scratch every time)
+      // TODO: improve the usage of node and state views. Possibly put the getters into the RpcHandler
 
-      }
+      val rpcHandler = new RpcHandler(new EthService(sidechainNodeViewHolderRef, settings.timeout, params, sidechainSettings, sidechainTransactionActorRef));
+      val res = rpcHandler.apply(new RpcRequest(body))
+      ApiResponseUtil.toResponseWithoutResultWrapper(res);
     }
-  }
-
-  def applyOnAccountView[R](functionToBeApplied: NV => R): R = {
-    try {
-      val res = (sidechainNodeViewHolderRef ? NodeViewHolder.ReceivableMessages.GetDataFromCurrentView(functionToBeApplied)).asInstanceOf[Future[R]]
-      val result = Await.result[R](res, settings.timeout)
-      result
-    }
-    catch {
-      case e: Exception => throw new Exception(e)
-    }
-
   }
 
   def ethOptions: Route = (options) {

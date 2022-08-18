@@ -21,6 +21,8 @@ import org.web3j.utils.Numeric
 import scorex.core.NodeViewHolder.CurrentView
 
 import java.math.BigInteger
+import scala.concurrent.duration.{Duration, FiniteDuration, SECONDS}
+
 // TODO: we need full coverage of eth rpc service. Every method with both success and fail cases
 class EthServiceTest extends JUnitSuite
   with MockitoSugar
@@ -37,9 +39,8 @@ class EthServiceTest extends JUnitSuite
     val settings = mock[SidechainSettings]
     params = RegTestParams(initialCumulativeCommTreeHash = FieldElementFixture.generateFieldElement())
     transactionActorRef = mock[ActorRef]
-    val nodeView = mock[CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]]
-    val stateView = mock[AccountStateView]
-    ethService = new EthService(stateView, nodeView, params, settings, transactionActorRef)
+
+    ethService = new EthService(transactionActorRef, new FiniteDuration(10, SECONDS), params, settings, transactionActorRef)
   }
 
   @Test
@@ -50,19 +51,25 @@ class EthServiceTest extends JUnitSuite
     var json = "{\"id\":\"1\", \"jsonrpc\":\"2.0\",\"method\":\"eth_estimateGas\", \"params\":{\"tx\":\"test\", \"tx2\":\"test2\"}}"
     var request = mapper.readTree(json)
     var rpcRequest = new RpcRequest(request)
-    assertThrows[RpcException] { ethService.execute(rpcRequest) }
+    assertThrows[RpcException] {
+      ethService.execute(rpcRequest)
+    }
 
     // Test 1: Parameters are of wrong type
     json = "{\"id\":\"1\", \"jsonrpc\":\"2.0\",\"method\":\"eth_estimateGas\", \"params\":{\"tx\":\"test\", \"tx2\":\"test2\"}}"
     request = mapper.readTree(json)
     rpcRequest = new RpcRequest(request)
-    assertThrows[RpcException] { ethService.execute(rpcRequest) }
+    assertThrows[RpcException] {
+      ethService.execute(rpcRequest)
+    }
 
     // Test 2: Wrong number of parameters
     json = "{\"id\":\"1\", \"jsonrpc\":\"2.0\",\"method\":\"eth_estimateGas\", \"params\":[5, 10, 20]}}"
     request = mapper.readTree(json)
     rpcRequest = new RpcRequest(request)
-    assertThrows[RpcException] { ethService.execute(rpcRequest) }
+    assertThrows[RpcException] {
+      ethService.execute(rpcRequest)
+    }
 
     // Test 3: Request execution calls correct function and returns value correctly
     json = "{\"id\":\"1\", \"jsonrpc\":\"2.0\",\"method\":\"eth_chainId\", \"params\":[]}}"

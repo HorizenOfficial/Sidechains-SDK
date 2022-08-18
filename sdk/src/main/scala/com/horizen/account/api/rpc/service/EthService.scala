@@ -4,7 +4,7 @@ import akka.actor.ActorRef
 import akka.http.scaladsl.server.Directives.onComplete
 import akka.pattern.ask
 import akka.util.Timeout
-import com.horizen.SidechainSettings
+import com.horizen.{SidechainNodeViewHolder, SidechainSettings}
 import com.horizen.account.api.http.AccountTransactionErrorResponse.GenericTransactionError
 import com.horizen.account.api.http.AccountTransactionRestScheme.TransactionIdDTO
 import com.horizen.account.api.rpc.handler.RpcException
@@ -23,21 +23,36 @@ import com.horizen.transaction.Transaction
 import com.horizen.utils.ClosableResourceHandler
 import org.web3j.crypto.TransactionDecoder
 import org.web3j.utils.Numeric
+import scorex.core.NodeViewHolder
 import scorex.core.NodeViewHolder.CurrentView
+import scorex.core.settings.RESTApiSettings
 import scorex.util.ModifierId
 
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters.seqAsJavaListConverter
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, Future}
+import scala.concurrent.duration.{Duration, DurationInt, FiniteDuration}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
 
-class EthService(val stateView: AccountStateView, val nodeView: CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool], val networkParams: NetworkParams, val sidechainSettings: SidechainSettings, val sidechainTransactionActorRef: ActorRef)
+class EthService(val sidechainNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuration, networkParams: NetworkParams, val sidechainSettings: SidechainSettings, val sidechainTransactionActorRef: ActorRef)
   extends RpcService
     with ClosableResourceHandler {
+  type NV = CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]
+
+  def applyOnAccountView[R](functionToBeApplied: NV => R): R = {
+    try {
+      implicit val timeout: Timeout = new Timeout(nvtimeout)
+      val res = (sidechainNodeViewHolderRef ? NodeViewHolder.ReceivableMessages.GetDataFromCurrentView(functionToBeApplied)).asInstanceOf[Future[R]]
+      val result = Await.result[R](res, nvtimeout)
+      result
+    }
+    catch {
+      case e: Exception => throw new Exception(e)
+    }
+  }
 
   //function which describes default transaction representation for answer after adding the transaction to a memory pool
   val defaultTransactionResponseRepresentation: Transaction => SuccessResponse = {
@@ -45,14 +60,23 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
   }
 
   @RpcMethod("eth_getBlockByNumber") def getBlockByNumber(tag: Quantity, hydratedTx: Boolean): EthereumBlock = {
-    constructEthBlockWithTransactions(getBlockIdByTag(tag.getValue), hydratedTx)
+    applyOnAccountView { nodeView =>
+      using(nodeView.state.getView) { stateView =>
+        constructEthBlockWithTransactions(nodeView, stateView, getBlockIdByTag(nodeView, tag.getValue), hydratedTx)
+      }
+    }
   }
 
   @RpcMethod("eth_getBlockByHash") def getBlockByHash(tag: Quantity, hydratedTx: Boolean): EthereumBlock = {
-    constructEthBlockWithTransactions(Numeric.cleanHexPrefix(tag.getValue), hydratedTx)
+    applyOnAccountView { nodeView =>
+      using(nodeView.state.getView) { stateView =>
+        constructEthBlockWithTransactions(nodeView, stateView, Numeric.cleanHexPrefix(tag.getValue), hydratedTx)
+      }
+    }
   }
 
-  private def constructEthBlockWithTransactions(blockId: String, hydratedTx: Boolean): EthereumBlock = {
+  private def constructEthBlockWithTransactions(nodeView: NV, stateView: AccountStateView, blockId: String, hydratedTx: Boolean): EthereumBlock = {
+
     if (blockId == null) return null
     val block = nodeView.history.getBlockById(blockId)
     if (block.isEmpty) return null
@@ -75,64 +99,70 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
       block.get())
   }
 
-  private def doCall(params: TransactionArgs, tag: Quantity) = {
-    getStateViewAtTag(tag) {
+  private def doCall(nodeView: NV, params: TransactionArgs, tag: Quantity) = {
+    getStateViewAtTag(nodeView, tag) {
       case None => throw new IllegalArgumentException(s"Unable to get state for given tag: ${tag.getValue}")
       case Some(tagStateView) => tagStateView.applyMessage(params.toMessage) match {
-          case Some(success: ExecutionSucceeded) => success
+        case Some(success: ExecutionSucceeded) => success
 
-          case Some(failed: ExecutionFailed) =>
-            // throw on execution errors, also include evm revert reason if possible
-            throw new RpcException(new RpcError(
-              RpcCode.ExecutionError.getCode, failed.getReason.getMessage, failed.getReason match {
-                case evmRevert: EvmException => Numeric.toHexString(evmRevert.returnData)
-                case _ => null
-              }))
+        case Some(failed: ExecutionFailed) =>
+          // throw on execution errors, also include evm revert reason if possible
+          throw new RpcException(new RpcError(
+            RpcCode.ExecutionError.getCode, failed.getReason.getMessage, failed.getReason match {
+              case evmRevert: EvmException => Numeric.toHexString(evmRevert.returnData)
+              case _ => null
+            }))
 
-          case Some(invalid: InvalidMessage) =>
-            throw new IllegalArgumentException("Invalid message.", invalid.getReason)
+        case Some(invalid: InvalidMessage) =>
+          throw new IllegalArgumentException("Invalid message.", invalid.getReason)
 
-          case _ => throw new IllegalArgumentException("Unable to process call.")
-        }
+        case _ => throw new IllegalArgumentException("Unable to process call.")
+      }
     }
   }
 
   @RpcMethod("eth_call") def call(params: TransactionArgs, tag: Quantity): String = {
-    val result = doCall(params, tag)
-    if (result.hasReturnData)
-      Numeric.toHexString(result.returnData)
-    else
-      null
+    applyOnAccountView { nodeView =>
+      val result = doCall(nodeView, params, tag)
+      if (result.hasReturnData)
+        Numeric.toHexString(result.returnData)
+      else
+        null
+    }
   }
 
   @RpcMethod("eth_estimateGas") def estimateGas(params: TransactionArgs /*, tag: Quantity*/): String = {
-    Numeric.toHexStringWithPrefix(doCall(params, new Quantity("latest")).gasUsed())
+    applyOnAccountView { nodeView => Numeric.toHexStringWithPrefix(doCall(nodeView, params, new Quantity("latest")).gasUsed()) }
   }
 
-  @RpcMethod("eth_blockNumber") def blockNumber = new Quantity(Numeric.toHexStringWithPrefix(BigInteger.valueOf(nodeView.history.getCurrentHeight)))
+  @RpcMethod("eth_blockNumber") def blockNumber: Quantity = applyOnAccountView { nodeView => new Quantity(Numeric.toHexStringWithPrefix(BigInteger.valueOf(nodeView.history.getCurrentHeight))) }
 
-  @RpcMethod("eth_chainId") def chainId = new Quantity(Numeric.toHexStringWithPrefix(BigInteger.valueOf(networkParams.chainId)))
+  @RpcMethod("eth_chainId") def chainId: Quantity = new Quantity(Numeric.toHexStringWithPrefix(BigInteger.valueOf(networkParams.chainId)))
 
   @RpcMethod("eth_getBalance") def GetBalance(address: String, tag: Quantity): Quantity = {
-    getStateViewAtTag(tag) {
-      case None => new Quantity("null")
-      case Some(tagStateView) => new Quantity(
-        Numeric.toHexStringWithPrefix(tagStateView.getBalance(Numeric.hexStringToByteArray(address)))
-      )
+    applyOnAccountView { nodeView =>
+      getStateViewAtTag(nodeView, tag) {
+        case None => new Quantity("null")
+        case Some(tagStateView) => new Quantity(
+          Numeric.toHexStringWithPrefix(tagStateView.getBalance(Numeric.hexStringToByteArray(address)))
+        )
+      }
     }
   }
 
   @RpcMethod("eth_getTransactionCount") def getTransactionCount(address: String, tag: Quantity): Quantity = {
-    getStateViewAtTag(tag) {
-      case None => new Quantity("0x0")
-      case Some(tagStateView) => new Quantity(
-        Numeric.toHexStringWithPrefix(tagStateView.getNonce(Numeric.hexStringToByteArray(address)))
-      )
+    applyOnAccountView { nodeView =>
+      getStateViewAtTag(nodeView, tag) {
+        case None => new Quantity("0x0")
+        case Some(tagStateView) => new Quantity(
+          Numeric.toHexStringWithPrefix(tagStateView.getNonce(Numeric.hexStringToByteArray(address)))
+        )
+      }
     }
   }
 
-  private def getStateViewAtTag[A](tag: Quantity)(fun: Option[AccountStateView] ⇒ A): A = {
-    val block = nodeView.history.getBlockById(getBlockIdByTag(tag.getValue))
+  private def getStateViewAtTag[A](nodeView: NV, tag: Quantity)(fun: Option[AccountStateView] ⇒ A): A = {
+    val block = nodeView.history.getBlockById(getBlockIdByTag(nodeView, tag.getValue))
     if (block.isEmpty)
       fun(None)
     else
@@ -141,7 +171,7 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
       }
   }
 
-  private def getBlockIdByTag(tag: String): String = {
+  private def getBlockIdByTag(nodeView: NV, tag: String): String = {
     var blockId: java.util.Optional[String] = null
     val history = nodeView.history
     tag match {
@@ -162,14 +192,18 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
   }
 
   private def getTransactionAndReceipt[A](transactionHash: String)(f: (EthereumTransaction, EthereumReceipt) => A) = {
-    stateView.getTransactionReceipt(Numeric.hexStringToByteArray(transactionHash))
-      .flatMap(receipt => {
-        nodeView.history.blockIdByHeight(receipt.blockNumber)
-          .map(ModifierId(_))
-          .flatMap(nodeView.history.getStorageBlockById)
-          .map(_.transactions(receipt.transactionIndex).asInstanceOf[EthereumTransaction])
-          .map(tx => f(tx, receipt))
-      })
+    applyOnAccountView { nodeView =>
+      using(nodeView.state.getView) { stateView =>
+        stateView.getTransactionReceipt(Numeric.hexStringToByteArray(transactionHash))
+          .flatMap(receipt => {
+            nodeView.history.blockIdByHeight(receipt.blockNumber)
+              .map(ModifierId(_))
+              .flatMap(nodeView.history.getStorageBlockById)
+              .map(_.transactions(receipt.transactionIndex).asInstanceOf[EthereumTransaction])
+              .map(tx => f(tx, receipt))
+          })
+      }
+    }
   }
 
   @RpcMethod("eth_getTransactionByHash")
@@ -204,14 +238,16 @@ class EthService(val stateView: AccountStateView, val nodeView: CurrentView[Acco
   }
 
   @RpcMethod("eth_getCode") def getCode(address: String, tag: Quantity): String = {
-    getStateViewAtTag(tag) {
-      case None => ""
-      case Some(tagStateView) =>
-        val code = tagStateView.getCode(Numeric.hexStringToByteArray(address))
-        if (code == null)
-          "0x"
-        else
-          Numeric.toHexString(code)
+    applyOnAccountView { nodeView =>
+      getStateViewAtTag(nodeView, tag) {
+        case None => ""
+        case Some(tagStateView) =>
+          val code = tagStateView.getCode(Numeric.hexStringToByteArray(address))
+          if (code == null)
+            "0x"
+          else
+            Numeric.toHexString(code)
+      }
     }
   }
 }
