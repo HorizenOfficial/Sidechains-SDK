@@ -2,19 +2,11 @@ package com.horizen.account.state
 
 import java.math.BigInteger
 
-trait GasSpender {
+class GasPool(initialGas: BigInteger) {
 
-  private var initialGas = BigInteger.ZERO
-  private var currentGas = BigInteger.ZERO
+  private var currentGas = initialGas
 
   def getGas: BigInteger = currentGas
-
-  def setGas(gasLimit: BigInteger): Unit = {
-    if (gasLimit.compareTo(BigInteger.ZERO) < 0)
-      throw new IllegalArgumentException("cannot set a negative amount of gas")
-    initialGas = gasLimit
-    currentGas = gasLimit
-  }
 
   def getUsedGas: BigInteger = initialGas.subtract(currentGas)
 
@@ -36,5 +28,3 @@ trait GasSpender {
     currentGas = sum
   }
 }
-
-

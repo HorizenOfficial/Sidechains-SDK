@@ -6,7 +6,7 @@ import org.scalatestplus.junit.JUnitSuite
 
 import java.math.BigInteger
 
-class GasCalculatorTest extends JUnitSuite {
+class GasUtilTest extends JUnitSuite {
 
   private def zeroes(n: Int) = Array.fill(n) { 0.toByte }
 

@@ -2,10 +2,7 @@ package com.horizen.account.state
 
 import java.math.BigInteger
 
-class BlockGasPool(initialGas: BigInteger) extends GasSpender {
-
-  setGas(initialGas)
-
+class BlockGasPool(initialGas: BigInteger) extends GasPool(initialGas) {
   override def subGas(gas: BigInteger): Unit = {
     try {
       super.subGas(gas)

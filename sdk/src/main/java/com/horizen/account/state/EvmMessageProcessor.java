@@ -27,7 +27,7 @@ public class EvmMessageProcessor implements MessageProcessor {
     }
 
     @Override
-    public byte[] process(Message msg, BaseAccountStateView view) throws ExecutionFailedException {
+    public byte[] process(Message msg, BaseAccountStateView view, GasPool gas) throws ExecutionFailedException {
         // prepare context
         var context = new EvmContext();
         context.baseFee = view.getBaseFee();
@@ -42,21 +42,22 @@ public class EvmMessageProcessor implements MessageProcessor {
                 msg.getTo() == null ? null : msg.getTo().address(),
                 msg.getValue(),
                 msg.getData(),
-                view.getGas(),
+                gas.getGas(),
                 msg.getGasPrice(),
                 context
         );
+        var returnData = result.returnData == null ? new byte[0] : result.returnData;
         // consume gas the EVM has used:
         // the EVM will never consume more gas than is available, hence this should never throw
         // and OutOfGasException is manually thrown if the EVM reported "out of gas"
-        view.subGas(result.usedGas);
+        gas.subGas(result.usedGas);
         if (!result.evmError.isEmpty()) {
             if (result.evmError.startsWith("out of gas")) {
                 throw new OutOfGasException();
             }
             // returnData here will include the revert reason
-            throw new EvmException(result.evmError, result.returnData);
+            throw new EvmException(result.evmError, returnData);
         }
-        return result.returnData;
+        return returnData;
     }
 }

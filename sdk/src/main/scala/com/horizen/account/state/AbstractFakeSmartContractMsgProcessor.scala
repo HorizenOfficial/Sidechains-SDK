@@ -36,8 +36,4 @@ abstract class AbstractFakeSmartContractMsgProcessor extends MessageProcessor wi
   def getEvmLog(event: Any): EvmLog = {
     EthereumEvent.getEvmLog(new Address(BytesUtils.toHexString(fakeSmartContractAddress.address())), event)
   }
-
 }
-
-
-

@@ -116,92 +116,8 @@ class AccountStateView(
     stateDb.setTxContext(txHash, idx)
   }
 
-  private def preCheck(msg: Message): Unit = {
-    // We are sure that transaction is semantically valid (so all the tx fields are valid)
-    // and was successfully verified by ChainIdBlockSemanticValidator
-
-    // call these only once as they are not a simple getters
-    val sender = msg.getFrom.address()
-
-    // Check the nonce
-    val stateNonce = getNonce(sender)
-    val txNonce = msg.getNonce
-    val result = txNonce.compareTo(stateNonce)
-    if (result < 0) {
-      throw NonceTooLowException(sender, txNonce, stateNonce)
-    } else if (result > 0) {
-      throw NonceTooHighException(sender, txNonce, stateNonce)
-    }
-    // GETH and therefore StateDB use uint64 to store the nonce and perform an overflow check here using (nonce+1<nonce)
-    // BigInteger will not overflow like that, so we just verify that the result after increment still fits into 64 bits
-    if (!BigIntegerUtil.isUint64(stateNonce.add(BigInteger.ONE))) throw NonceMaxException(sender, stateNonce)
-
-    // Check that the sender is an EOA
-    if (!isEoaAccount(sender)) throw SenderNotEoaException(sender, getCodeHash(sender))
-
-    if (msg.getGasFeeCap.compareTo(getBaseFee) < 0) throw FeeCapTooLowException(sender, msg.getGasFeeCap, getBaseFee)
-  }
-
-  private def buyGas(msg: Message, blockGasPool: BlockGasPool): Unit = {
-    val gas = msg.getGasLimit
-    // with a legacy TX gasPrice will be the one set by the caller
-    // with an EIP1559 TX gasPrice will be the effective gasPrice (baseFee+tip, capped at feeCap)
-    val effectiveFees = gas.multiply(msg.getGasPrice)
-    // maxFees is calculated using the feeCap, even if the cap was not reached, i.e. baseFee+tip < feeCap
-    val maxFees = if (msg.getGasFeeCap == null) effectiveFees else gas.multiply(msg.getGasFeeCap)
-    // make sure the sender has enough balance to cover max fees plus value
-    val sender = msg.getFrom.address()
-    val have = getBalance(sender)
-    val want = maxFees.add(msg.getValue)
-    if (have.compareTo(want) < 0) throw InsufficientFundsException(sender, have, want)
-    // deduct gas from gasPool of the current block (unused gas will be returned after execution)
-    blockGasPool.subGas(gas)
-    // prepay effective gas fees
-    subBalance(sender, effectiveFees)
-    // allocate gas for this transaction
-    setGas(gas)
-  }
-
-  private def refundGas(msg: Message, blockGasPool: BlockGasPool): Unit = {
-    val usedGas = msg.getGasLimit.subtract(getGas)
-    // cap gas refund to a quotient of the used gas
-    // the quotient was 2 before EIP-3529 (london release)
-    addGas(stateDb.getRefund.min(usedGas.divide(GasUtil.RefundQuotientEIP3529)))
-    // return funds for remaining gas, exchanged at the original rate.
-    val remaining = getGas.multiply(msg.getGasPrice)
-    addBalance(msg.getFrom.address(), remaining)
-    // return remaining gas to the gasPool of the current block so it is available for the next transaction
-    blockGasPool.addGas(getGas)
-    subGas(getGas)
-  }
-
   def applyMessage(msg: Message, blockGasPool: BlockGasPool): Array[Byte] = {
-    // allocate gas for processing this message
-    buyGas(msg, blockGasPool)
-    // consume intrinsic gas
-    val intrinsicGas = GasUtil.calculateIntrinsicGas(msg.getData, msg.getTo == null)
-    if (getGas.compareTo(intrinsicGas) < 0) {
-      throw IntrinsicGasException(getGas, intrinsicGas)
-    }
-    subGas(intrinsicGas)
-    // find and execute the first matching processor
-    messageProcessors.find(_.canProcess(msg, this)) match {
-      case None => throw new IllegalArgumentException("Unable to process message.")
-      case Some(processor) =>
-        val revisionId = stateDb.snapshot()
-        try {
-          processor.process(msg, this)
-        } catch {
-          // if the processor throws ExecutionFailedException we revert all changes and consume any remaining gas
-          // any other exception will bubble up and invalidate the block
-          case err: ExecutionFailedException =>
-            stateDb.revertToSnapshot(revisionId)
-            subGas(getGas)
-            throw err
-        } finally {
-          refundGas(msg, blockGasPool)
-        }
-    }
+    new StateTransition(this, messageProcessors, blockGasPool).transition(msg)
   }
 
   /**
@@ -227,12 +143,6 @@ class AccountStateView(
     // Tx context for stateDB, to know where to keep EvmLogs
     setupTxContext(txHash, txIndex)
 
-    // do preliminary checks
-    preCheck(msg)
-
-    // increase the nonce by 1
-    increaseNonce(msg.getFrom.address())
-
     // apply message to state
     val status = try {
       applyMessage(msg, blockGasPool)
@@ -242,6 +152,9 @@ class AccountStateView(
       case err: ExecutionFailedException =>
         log.error("applying message failed", err)
         ReceiptStatus.FAILED
+    } finally {
+      // make sure we disable automatic gas consumption in case a message processor enabled it
+      trackGas(None)
     }
     val consensusDataReceipt = new EthereumConsensusDataReceipt(
       ethTx.version(), status.id, blockGasPool.getUsedGas, getLogs(txHash))
@@ -250,33 +163,33 @@ class AccountStateView(
   }
 
   override def isEoaAccount(address: Array[Byte]): Boolean = {
-    subGas(GasUtil.GasTBD)
+    useGas(GasUtil.GasTBD)
     stateDb.isEoaAccount(address)
   }
 
   override def isSmartContractAccount(address: Array[Byte]): Boolean = {
-    subGas(GasUtil.GasTBD)
+    useGas(GasUtil.GasTBD)
     stateDb.isSmartContractAccount(address)
   }
 
   override def accountExists(address: Array[Byte]): Boolean = {
-    subGas(GasUtil.GasTBD)
+    useGas(GasUtil.GasTBD)
     !stateDb.isEmpty(address)
   }
 
   // account modifiers:
   override def addAccount(address: Array[Byte], codeHash: Array[Byte]): Unit = {
-    subGas(GasUtil.GasTBD)
+    useGas(GasUtil.GasTBD)
     stateDb.setCodeHash(address, codeHash)
   }
 
   override def addBalance(address: Array[Byte], amount: BigInteger): Unit = {
-    subGas(GasUtil.GasTBD)
+    useGas(GasUtil.GasTBD)
     stateDb.addBalance(address, amount)
   }
 
   override def subBalance(address: Array[Byte], amount: BigInteger): Unit = {
-    subGas(GasUtil.GasTBD)
+    useGas(GasUtil.GasTBD)
     // stateDb lib does not do any sanity check, and negative balances might arise (and java/go json IF does not correctly handle it)
     // TODO: for the time being do the checks here, later they will be done in the caller stack
     require(amount.compareTo(BigInteger.ZERO) >= 0)
@@ -290,32 +203,32 @@ class AccountStateView(
     stateDb.setNonce(address, getNonce(address).add(BigInteger.ONE))
 
   override def getAccountStorage(address: Array[Byte], key: Array[Byte]): Array[Byte] = {
-    subGas(GasUtil.GasTBD)
+    useGas(GasUtil.GasTBD)
     stateDb.getStorage(address, key, StateStorageStrategy.RAW)
   }
 
   override def getAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Array[Byte] = {
-    subGas(GasUtil.GasTBD)
+    useGas(GasUtil.GasTBD)
     stateDb.getStorage(address, key, StateStorageStrategy.CHUNKED)
   }
 
   override def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit = {
-    subGas(GasUtil.GasTBD)
+    useGas(GasUtil.GasTBD)
     stateDb.setStorage(address, key, value, StateStorageStrategy.RAW)
   }
 
   override def updateAccountStorageBytes(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit = {
-    subGas(GasUtil.GasTBD)
+    useGas(GasUtil.GasTBD)
     stateDb.setStorage(address, key, value, StateStorageStrategy.CHUNKED)
   }
 
   override def removeAccountStorage(address: Array[Byte], key: Array[Byte]): Unit = {
-    subGas(GasUtil.GasTBD)
+    useGas(GasUtil.GasTBD)
     stateDb.removeStorage(address, key, StateStorageStrategy.RAW)
   }
 
   override def removeAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Unit = {
-    subGas(GasUtil.GasTBD)
+    useGas(GasUtil.GasTBD)
     stateDb.removeStorage(address, key, StateStorageStrategy.CHUNKED)
   }
 
@@ -371,22 +284,22 @@ class AccountStateView(
 
   // account specific getters
   override def getNonce(address: Array[Byte]): BigInteger = {
-    subGas(GasUtil.GasTBD)
+    useGas(GasUtil.GasTBD)
     stateDb.getNonce(address)
   }
 
   override def getBalance(address: Array[Byte]): BigInteger = {
-    subGas(GasUtil.BalanceGasEIP1884)
+    useGas(GasUtil.BalanceGasEIP1884)
     stateDb.getBalance(address)
   }
 
   override def getCodeHash(address: Array[Byte]): Array[Byte] = {
-    subGas(GasUtil.ExtcodeHashGasEIP1884)
+    useGas(GasUtil.ExtcodeHashGasEIP1884)
     stateDb.getCodeHash(address)
   }
 
   override def getCode(address: Array[Byte]): Array[Byte] = {
-    subGas(GasUtil.GasTBD)
+    useGas(GasUtil.GasTBD)
     stateDb.getCode(address)
   }
 
@@ -395,7 +308,7 @@ class AccountStateView(
   override def getLogs(txHash: Array[Byte]): Array[EvmLog] = stateDb.getLogs(txHash)
 
   override def addLog(evmLog: EvmLog): Unit = {
-    subGas(GasUtil.LogGas.add(GasUtil.LogTopicGas.multiply(BigInteger.valueOf(evmLog.topics.length))))
+    useGas(GasUtil.LogGas.add(GasUtil.LogTopicGas.multiply(BigInteger.valueOf(evmLog.topics.length))))
     stateDb.addLog(evmLog)
   }
 
@@ -409,4 +322,20 @@ class AccountStateView(
   // TODO: get baseFee for the block
   // TODO: currently a non-zero baseFee makes all the python tests fail, because they do not consider spending fees
   override def getBaseFee: BigInteger = BigInteger.valueOf(0)
+
+  def getRefund: BigInteger = stateDb.getRefund
+
+  def snapshot: Int = stateDb.snapshot()
+
+  def revertToSnapshot(revisionId: Int): Unit = stateDb.revertToSnapshot(revisionId)
+
+  // automatic gas consumption
+  private var trackedGasPool: Option[GasPool] = None
+
+  def trackGas(gasPool: Option[GasPool]): Unit = trackedGasPool = gasPool
+
+  private def useGas(gas: BigInteger): Unit = trackedGasPool match {
+    case Some(gasPool) => gasPool.subGas(gas)
+    case None => // gas tracking is disabled
+  }
 }

@@ -13,5 +13,5 @@ public interface MessageProcessor {
     // * return byte[] returnData -> if was applied as expected
     // * throws ExecutionFailedException -> if was executed, but marked as "failed"
     // * throws any other Exception -> if is invalid -> block is invalid
-    byte[] process(Message msg, BaseAccountStateView view) throws ExecutionFailedException;
+    byte[] process(Message msg, BaseAccountStateView view, GasPool gas) throws ExecutionFailedException;
 }

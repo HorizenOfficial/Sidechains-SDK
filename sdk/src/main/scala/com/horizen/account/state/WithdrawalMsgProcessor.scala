@@ -39,16 +39,16 @@ object WithdrawalMsgProcessor extends AbstractFakeSmartContractMsgProcessor with
   val DustThresholdInWei: BigInteger = ZenWeiConverter.convertZenniesToWei(ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE))
 
 
-  override def process(msg: Message, view: BaseAccountStateView): Array[Byte] = {
+  override def process(msg: Message, view: BaseAccountStateView, gas: GasPool): Array[Byte] = {
     //TODO: check errors in Ethereum, maybe for some kind of errors there a predefined types or codes
 
     BytesUtils.toHexString(getOpCodeFromData(msg.getData)) match {
       case GetListOfWithdrawalReqsCmdSig =>
-        view.subGas(GasSpentForGetListOfWithdrawalReqsCmd)
+        gas.subGas(GasSpentForGetListOfWithdrawalReqsCmd)
         execGetListOfWithdrawalReqRecords(msg, view)
 
       case AddNewWithdrawalReqCmdSig =>
-        view.subGas(GasSpentForAddNewWithdrawalReqCmd)
+        gas.subGas(GasSpentForAddNewWithdrawalReqCmd)
         execAddWithdrawalRequest(msg, view)
 
       case functionSig =>
