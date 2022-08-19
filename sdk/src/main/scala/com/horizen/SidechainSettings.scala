@@ -7,11 +7,14 @@ import scala.concurrent.duration.FiniteDuration
 case class ForgerKeysData(blockSignProposition: String,
                           vrfPublicKey: String)
 
-case class WebSocketSettings(address: String,
+case class WebSocketClientSettings(address: String,
                              connectionTimeout: FiniteDuration,
                              reconnectionDelay: FiniteDuration,
                              reconnectionMaxAttempts: Int,
-                             allowNoConnectionInRegtest: Boolean = true, // In Regtest allow to forge new blocks without connection to MC node, for example.
+                             allowNoConnectionInRegtest: Boolean = true // In Regtest allow to forge new blocks without connection to MC node, for example.
+                            )
+
+case class WebSocketServerSettings(address: String,
                              wsServer: Boolean = false,
                              wsServerPort: Int = 8025
                             )
@@ -57,7 +60,8 @@ case class LogInfoSettings(logFileName: String = "debug.log",
 case class SidechainSettings(
                               scorexSettings: ScorexSettings,
                               genesisData: GenesisDataSettings,
-                              websocket: WebSocketSettings,
+                              websocketClient: WebSocketClientSettings,
+                              websocketServer: WebSocketServerSettings,
                               withdrawalEpochCertificateSettings: WithdrawalEpochCertificateSettings,
                               mempool: MempoolSettings,
                               wallet: WalletSettings,

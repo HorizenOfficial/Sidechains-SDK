@@ -333,12 +333,12 @@ class SidechainApp @Inject()
 
   // Retrieve information for using a web socket connector
   val communicationClient: WebSocketCommunicationClient = new WebSocketCommunicationClient()
-  val webSocketReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(sidechainSettings.websocket)
+  val webSocketReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(sidechainSettings.websocketClient)
 
   // Create the web socket connector and configure it
   val webSocketConnector : WebSocketConnector with WebSocketChannel = new WebSocketConnectorImpl(
-    sidechainSettings.websocket.address,
-    sidechainSettings.websocket.connectionTimeout,
+    sidechainSettings.websocketClient.address,
+    sidechainSettings.websocketClient.connectionTimeout,
     communicationClient,
     webSocketReconnectionHandler
   )
@@ -369,8 +369,8 @@ class SidechainApp @Inject()
   val cswManager: Option[ActorRef] = if (isCSWEnabled) Some(CswManagerRef(sidechainSettings, params, nodeViewHolderRef)) else None
 
   //Websocket server for the Explorer
-  if(sidechainSettings.websocket.wsServer) {
-    val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocket.wsServerPort)
+  if(sidechainSettings.websocketServer.wsServer) {
+    val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocketServer.wsServerPort)
   }
 
   // Init ForkManager

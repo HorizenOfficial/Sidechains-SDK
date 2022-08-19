@@ -20,7 +20,8 @@ object SidechainSettingsReader
   protected val sidechainSettingsName = "sidechain-sdk-settings.conf"
 
   def fromConfig(config: Config): SidechainSettings = {
-    val webSocketConnectorConfigurationSettings = config.as[WebSocketSettings]("scorex.websocket")
+    val webSocketClientSettings = config.as[WebSocketClientSettings]("scorex.websocketClient")
+    val webSocketServerSettings = config.as[WebSocketServerSettings]("scorex.websocketServer")
     val scorexSettings = config.as[ScorexSettings]("scorex")
     val genesisSettings = config.as[GenesisDataSettings]("scorex.genesis")
     val certificateSettings = config.as[WithdrawalEpochCertificateSettings]("scorex.withdrawalEpochCertificate")
@@ -30,7 +31,7 @@ object SidechainSettingsReader
     val cswSettings = config.as[CeasedSidechainWithdrawalSettings]("scorex.csw")
     val logInfoSettings = config.as[LogInfoSettings]("scorex.logInfo")
 
-    SidechainSettings(scorexSettings, genesisSettings, webSocketConnectorConfigurationSettings, certificateSettings,
+    SidechainSettings(scorexSettings, genesisSettings, webSocketClientSettings, webSocketServerSettings, certificateSettings,
       mempoolSettings, walletSettings, forgerSettings, cswSettings, logInfoSettings)
   }
 
