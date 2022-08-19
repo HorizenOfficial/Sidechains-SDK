@@ -11,7 +11,7 @@ import scala.concurrent.{Future, Promise}
 import scala.util.Try
 
 @ClientEndpoint
-class WebSocketConnectorImpl(enabled: Boolean, bindAddress: String, connectionTimeout: FiniteDuration, messageHandler: WebSocketMessageHandler, reconnectionHandler: WebSocketReconnectionHandler) extends WebSocketConnector with WebSocketChannel with ScorexLogging {
+class WebSocketConnectorImpl(bindAddress: String, connectionTimeout: FiniteDuration, messageHandler: WebSocketMessageHandler, reconnectionHandler: WebSocketReconnectionHandler) extends WebSocketConnector with WebSocketChannel with ScorexLogging {
 
   private var userSession: Session = _
   private val client = ClientManager.createClient()
@@ -41,25 +41,21 @@ class WebSocketConnectorImpl(enabled: Boolean, bindAddress: String, connectionTi
     userSession != null && userSession.isOpen
 
   override def start(): Try[Unit] = Try {
-    if(enabled) {
-      if (isStarted()) throw new IllegalStateException("Connector is already started.")
+    if (isStarted()) throw new IllegalStateException("Connector is already started.")
 
-      client.getProperties.put(ClientProperties.RECONNECT_HANDLER, reconnectHandler)
-      client.getProperties.put(ClientProperties.HANDSHAKE_TIMEOUT, String.valueOf(connectionTimeout.toMillis))
-      log.info(s"Starting web socket connector, ws address = $bindAddress...")
-      userSession = client.connectToServer(this, new URI(bindAddress))
-      reconnectionHandler.onConnectionSuccess()
-      log.info("Web socket connector started.")
+    client.getProperties.put(ClientProperties.RECONNECT_HANDLER, reconnectHandler)
+    client.getProperties.put(ClientProperties.HANDSHAKE_TIMEOUT, String.valueOf(connectionTimeout.toMillis))
+    log.info(s"Starting web socket connector, ws address = $bindAddress...")
+    userSession = client.connectToServer(this, new URI(bindAddress))
+    reconnectionHandler.onConnectionSuccess()
+    log.info("Web socket connector started.")
 
-      userSession.addMessageHandler(new MessageHandler.Whole[String]() {
-        override def onMessage(t: String): Unit = {
-          log.info("Message received from server: " + t)
-          messageHandler.onReceivedMessage(t)
-        }
-      })
-    } else {
-      log.info("Due to the settings, node is not enabled for connections.")
-    }
+    userSession.addMessageHandler(new MessageHandler.Whole[String]() {
+      override def onMessage(t: String): Unit = {
+        log.info("Message received from server: " + t)
+        messageHandler.onReceivedMessage(t)
+      }
+    })
   }
 
   override def asyncStart(): Future[Try[Unit]] = {
@@ -81,23 +77,19 @@ class WebSocketConnectorImpl(enabled: Boolean, bindAddress: String, connectionTi
   }
 
   override def sendMessage(message: String): Unit = {
-    if(enabled) {
-      try {
-        userSession.getAsyncRemote.sendText(message, new SendHandler {
-          override def onResult(sendResult: SendResult): Unit = {
-            if (!sendResult.isOK) {
-              log.info("Send message failed.")
-              messageHandler.onSendMessageErrorOccurred(message, sendResult.getException)
-            }
-            else log.info("Message sent")
+    try {
+      userSession.getAsyncRemote.sendText(message, new SendHandler {
+        override def onResult(sendResult: SendResult): Unit = {
+          if (!sendResult.isOK) {
+            log.info("Send message failed.")
+            messageHandler.onSendMessageErrorOccurred(message, sendResult.getException)
           }
+          else log.info("Message sent")
         }
-        )
-      } catch {
-        case e: Throwable => messageHandler.onSendMessageErrorOccurred(message, e)
       }
-    } else {
-      log.info("Due to the settings, node is not enabled for connections.")
+      )
+    } catch {
+      case e: Throwable => messageHandler.onSendMessageErrorOccurred(message, e)
     }
   }
 }
