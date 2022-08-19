@@ -8,7 +8,7 @@ import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus.{ConsensusDataStorage, NonceConsensusEpochInfo, StakeConsensusEpochInfo}
 import com.horizen.customtypes.SemanticallyInvalidTransactionSerializer
 import com.horizen.fixtures._
-import com.horizen.fork.ForkManager
+import com.horizen.fork.{ForkManager, SimpleForkConfigurator}
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.storage.{InMemoryStorageAdapter, SidechainHistoryStorage, Storage}
 import com.horizen.transaction.TransactionSerializer
@@ -48,14 +48,8 @@ class SidechainHistoryTest extends JUnitSuite
   var storage: Storage = _
 
   @Before
-  def init(): Unit = {
-    val c = ForkManager.getClass.getDeclaredConstructor()
-    c.setAccessible(true)
-    c.newInstance()
-  }
-
-  @Before
   def setUp(): Unit = {
+    ForkManager.init(new SimpleForkConfigurator(), "regtest")
     // declare real genesis block id
     params = MainNetParams(new Array[Byte](32), genesisBlock.id, sidechainGenesisBlockTimestamp = 720 * 120)
 
@@ -69,7 +63,6 @@ class SidechainHistoryTest extends JUnitSuite
         tempDir()
       })
   }
-
 
   @Test
   def genesisTest(): Unit = {
@@ -91,7 +84,6 @@ class SidechainHistoryTest extends JUnitSuite
     assertTrue("Expected to contain the genesis block.", history.contains(genesisBlock.id))
     assertTrue("Check for genesis block was failed.", history.isGenesisBlock(genesisBlock.id))
   }
-
 
   @Test
   def appendTest(): Unit = {

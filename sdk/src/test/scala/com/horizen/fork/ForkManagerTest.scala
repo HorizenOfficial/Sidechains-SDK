@@ -8,26 +8,27 @@ class ForkManagerTest extends JUnitSuite {
 
   @Before
   def init(): Unit = {
+    //this is to reset ForkManager from other tests
     val c = ForkManager.getClass.getDeclaredConstructor()
     c.setAccessible(true)
     c.newInstance()
   }
 
   @Test
-  def ForkmangerTest: Unit = {
+  def ForkManagerTest: Unit = {
     val simpleForkConfigurator = new SimpleForkConfigurator
 
     var res = ForkManager.init(simpleForkConfigurator, "wrongname")
-    assertEquals("Expected failure on ForkManger initialization", true, res.isFailure)
+    assertEquals("Expected failure on ForkManager initialization", true, res.isFailure)
 
     res = ForkManager.init(new BadForkConfigurator, "regtest")
-    assertEquals("Expected failure on ForkManger initialization", true, res.isFailure)
+    assertEquals("Expected failure on ForkManager initialization", true, res.isFailure)
 
     res = ForkManager.init(simpleForkConfigurator, "regtest")
-    assertEquals("Expected successed ForkManger initialization", true, res.isSuccess)
+    assertEquals("Expected successed ForkManager initialization", true, res.isSuccess)
 
     res = ForkManager.init(simpleForkConfigurator, "regtest")
-    assertEquals("Expected failure on ForkManger initialization", true, res.isFailure)
+    assertEquals("Expected failure on ForkManager initialization", true, res.isFailure)
 
     val mainchainFork1 = ForkManager.getMainchainFork(419)
     assertEquals("Expected not to get mainchain fork", null, mainchainFork1)
