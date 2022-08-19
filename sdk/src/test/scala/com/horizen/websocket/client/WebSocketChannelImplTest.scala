@@ -56,10 +56,11 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
     val conf = WebSocketClientSettings(
+      enabled = true,
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
-      reconnectionMaxAttempts = 1,
+      reconnectionMaxAttempts = 1
     )
 
     val defaultReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(conf)
@@ -71,7 +72,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
       defaultReconnectionHandler.onConnectionFailed(asw.getArgument(0)))
     Mockito.when(mockedWebSocketReconnectionHandler.getDelay).thenAnswer(_ => defaultReconnectionHandler.getDelay)
 
-    val connector = new WebSocketConnectorImpl(conf.address, conf.connectionTimeout, mockedWebSocketMessageHandler, mockedWebSocketReconnectionHandler)
+    val connector = new WebSocketConnectorImpl(conf.enabled, conf.address, conf.connectionTimeout, mockedWebSocketMessageHandler, mockedWebSocketReconnectionHandler)
 
     val attempt_1 = connector.start()
     assertTrue(attempt_1.isSuccess)
@@ -99,6 +100,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
     val conf = WebSocketClientSettings(
+      enabled = true,
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
@@ -114,7 +116,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
       defaultReconnectionHandler.onConnectionFailed(asw.getArgument(0)))
     Mockito.when(mockedWebSocketReconnectionHandler.getDelay).thenAnswer(_ => defaultReconnectionHandler.getDelay)
 
-    val connector = new WebSocketConnectorImpl(conf.address, conf.connectionTimeout, mockedWebSocketMessageHandler, mockedWebSocketReconnectionHandler)
+    val connector = new WebSocketConnectorImpl(conf.enabled, conf.address, conf.connectionTimeout, mockedWebSocketMessageHandler, mockedWebSocketReconnectionHandler)
 
     assertFalse("Web socket connector is started.", connector.isStarted())
 
@@ -137,6 +139,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
     val conf = WebSocketClientSettings(
+      enabled = true,
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
@@ -152,7 +155,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
       defaultReconnectionHandler.onConnectionFailed(asw.getArgument(0)))
     Mockito.when(mockedWebSocketReconnectionHandler.getDelay).thenAnswer(_ => defaultReconnectionHandler.getDelay)
 
-    val connector = new WebSocketConnectorImpl(conf.address, conf.connectionTimeout, mockedWebSocketMessageHandler, mockedWebSocketReconnectionHandler)
+    val connector = new WebSocketConnectorImpl(conf.enabled, conf.address, conf.connectionTimeout, mockedWebSocketMessageHandler, mockedWebSocketReconnectionHandler)
 
     assertFalse("Web socket connector is started.", connector.isStarted())
 
@@ -175,6 +178,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
     val conf = WebSocketClientSettings(
+      enabled = true,
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
@@ -190,7 +194,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
       defaultReconnectionHandler.onConnectionFailed(asw.getArgument(0)))
     Mockito.when(mockedWebSocketReconnectionHandler.getDelay).thenAnswer(_ => defaultReconnectionHandler.getDelay)
 
-    val connector = new WebSocketConnectorImpl(conf.address, conf.connectionTimeout, mockedWebSocketMessageHandler, mockedWebSocketReconnectionHandler)
+    val connector = new WebSocketConnectorImpl(conf.enabled, conf.address, conf.connectionTimeout, mockedWebSocketMessageHandler, mockedWebSocketReconnectionHandler)
 
     val startOp = connector.start()
     assertTrue(startOp.isSuccess)
@@ -216,6 +220,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
     val conf = WebSocketClientSettings(
+      enabled = true,
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 1 seconds,
@@ -231,7 +236,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
       defaultReconnectionHandler.onConnectionFailed(asw.getArgument(0)))
     Mockito.when(mockedWebSocketReconnectionHandler.getDelay).thenAnswer(_ => defaultReconnectionHandler.getDelay)
 
-    val connector = new WebSocketConnectorImpl(conf.address, conf.connectionTimeout, mockedWebSocketMessageHandler, mockedWebSocketReconnectionHandler)
+    val connector = new WebSocketConnectorImpl(conf.enabled, conf.address, conf.connectionTimeout, mockedWebSocketMessageHandler, mockedWebSocketReconnectionHandler)
 
     val startOp = connector.start()
     assertTrue(startOp.isSuccess)
@@ -291,6 +296,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
     val conf = WebSocketClientSettings(
+      enabled = true,
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 1 seconds,
@@ -306,7 +312,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
       defaultReconnectionHandler.onConnectionFailed(asw.getArgument(0)))
     Mockito.when(mockedWebSocketReconnectionHandler.getDelay).thenAnswer(_ => defaultReconnectionHandler.getDelay)
 
-    val connector = new WebSocketConnectorImpl(conf.address, conf.connectionTimeout, mockedWebSocketMessageHandler, mockedWebSocketReconnectionHandler)
+    val connector = new WebSocketConnectorImpl(conf.enabled, conf.address, conf.connectionTimeout, mockedWebSocketMessageHandler, mockedWebSocketReconnectionHandler)
 
     val startOp = connector.start()
     assertTrue(startOp.isSuccess)
@@ -354,6 +360,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     // We try to connect but the server is not started
     // Remember the parameter of the configuration 'reconnectionMaxAttempts = 3'
     val conf = WebSocketClientSettings(
+      enabled = true,
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
@@ -369,7 +376,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
       defaultReconnectionHandler.onConnectionFailed(asw.getArgument(0)))
     Mockito.when(mockedWebSocketReconnectionHandler.getDelay).thenAnswer(_ => defaultReconnectionHandler.getDelay)
 
-    val connector = new WebSocketConnectorImpl(conf.address, conf.connectionTimeout, mockedWebSocketMessageHandler, mockedWebSocketReconnectionHandler)
+    val connector = new WebSocketConnectorImpl(conf.enabled, conf.address, conf.connectionTimeout, mockedWebSocketMessageHandler, mockedWebSocketReconnectionHandler)
 
     val startOp = connector.start()
 
@@ -398,6 +405,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     // We try to connect but the server is not started
     // Remember the parameter of the configuration 'reconnectionMaxAttempts = 3'
     val conf = WebSocketClientSettings(
+      enabled = true,
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
@@ -413,7 +421,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
       defaultReconnectionHandler.onConnectionFailed(asw.getArgument(0)))
     Mockito.when(mockedWebSocketReconnectionHandler.getDelay).thenAnswer(_ => defaultReconnectionHandler.getDelay)
 
-    val connector = new WebSocketConnectorImpl(conf.address, conf.connectionTimeout, mockedWebSocketMessageHandler, mockedWebSocketReconnectionHandler)
+    val connector = new WebSocketConnectorImpl(conf.enabled, conf.address, conf.connectionTimeout, mockedWebSocketMessageHandler, mockedWebSocketReconnectionHandler)
 
     val startOp = connector.start()
 
@@ -460,6 +468,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
     val conf = WebSocketClientSettings(
+      enabled = true,
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 1 seconds,
@@ -475,7 +484,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
       defaultReconnectionHandler.onConnectionFailed(asw.getArgument(0)))
     Mockito.when(mockedWebSocketReconnectionHandler.getDelay).thenAnswer(_ => defaultReconnectionHandler.getDelay)
 
-    val connector = new WebSocketConnectorImpl(conf.address, conf.connectionTimeout, mockedWebSocketMessageHandler, mockedWebSocketReconnectionHandler)
+    val connector = new WebSocketConnectorImpl(conf.enabled, conf.address, conf.connectionTimeout, mockedWebSocketMessageHandler, mockedWebSocketReconnectionHandler)
 
     val startOp = connector.start()
     assertTrue(startOp.isSuccess)
@@ -512,6 +521,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
     val conf = WebSocketClientSettings(
+      enabled = true,
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 1 seconds,
@@ -527,7 +537,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
       defaultReconnectionHandler.onConnectionFailed(asw.getArgument(0)))
     Mockito.when(mockedWebSocketReconnectionHandler.getDelay).thenAnswer(_ => defaultReconnectionHandler.getDelay)
 
-    val connector = new WebSocketConnectorImpl(conf.address, conf.connectionTimeout, mockedWebSocketMessageHandler, mockedWebSocketReconnectionHandler)
+    val connector = new WebSocketConnectorImpl(conf.enabled, conf.address, conf.connectionTimeout, mockedWebSocketMessageHandler, mockedWebSocketReconnectionHandler)
 
     val futureOfChannel = connector.asyncStart()
     assertFalse("The connector is started.", connector.isStarted)
@@ -559,6 +569,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     val mockedWebSocketMessageHandler: WebSocketMessageHandler = mock[WebSocketMessageHandler]
 
     val conf = WebSocketClientSettings(
+      enabled = true,
       address = "ws://" + serverHost + ":" + serverPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 1 seconds,
@@ -574,7 +585,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
       defaultReconnectionHandler.onConnectionFailed(asw.getArgument(0)))
     Mockito.when(mockedWebSocketReconnectionHandler.getDelay).thenAnswer(_ => defaultReconnectionHandler.getDelay)
 
-    val connector = new WebSocketConnectorImpl(conf.address, conf.connectionTimeout, mockedWebSocketMessageHandler, mockedWebSocketReconnectionHandler)
+    val connector = new WebSocketConnectorImpl(conf.enabled, conf.address, conf.connectionTimeout, mockedWebSocketMessageHandler, mockedWebSocketReconnectionHandler)
 
     val futureOfChannel = connector.asyncStart()
     assertFalse("The connector is started.", connector.isStarted)
@@ -623,6 +634,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
     pushServer.start()
 
     val conf = WebSocketClientSettings(
+      enabled = true,
       address = "ws://" + serverHost + ":" + pushServerPort,
       connectionTimeout = 10 milliseconds,
       reconnectionDelay = 0 seconds,
@@ -638,7 +650,7 @@ class WebSocketChannelImplTest extends JUnitSuite with MockitoSugar {
       defaultReconnectionHandler.onConnectionFailed(asw.getArgument(0)))
     Mockito.when(mockedWebSocketReconnectionHandler.getDelay).thenAnswer(_ => defaultReconnectionHandler.getDelay)
 
-    val connector = new WebSocketConnectorImpl(conf.address, conf.connectionTimeout, mockedWebSocketMessageHandler, mockedWebSocketReconnectionHandler)
+    val connector = new WebSocketConnectorImpl(conf.enabled, conf.address, conf.connectionTimeout, mockedWebSocketMessageHandler, mockedWebSocketReconnectionHandler)
 
     val pushedMessages = 5
 

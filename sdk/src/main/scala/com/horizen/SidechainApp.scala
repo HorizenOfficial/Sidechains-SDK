@@ -337,6 +337,7 @@ class SidechainApp @Inject()
 
   // Create the web socket connector and configure it
   val webSocketConnector : WebSocketConnector with WebSocketChannel = new WebSocketConnectorImpl(
+    sidechainSettings.websocketClient.enabled,
     sidechainSettings.websocketClient.address,
     sidechainSettings.websocketClient.connectionTimeout,
     communicationClient,

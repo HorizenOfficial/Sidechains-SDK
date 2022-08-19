@@ -11,8 +11,9 @@ case class WebSocketClientSettings(address: String,
                              connectionTimeout: FiniteDuration,
                              reconnectionDelay: FiniteDuration,
                              reconnectionMaxAttempts: Int,
-                             allowNoConnectionInRegtest: Boolean = true // In Regtest allow to forge new blocks without connection to MC node, for example.
-                            )
+                             allowNoConnectionInRegtest: Boolean = true, // In Regtest allow to forge new blocks without connection to MC node, for example.
+                             enabled: Boolean
+                             )
 
 case class WebSocketServerSettings(address: String,
                              wsServer: Boolean = false,
