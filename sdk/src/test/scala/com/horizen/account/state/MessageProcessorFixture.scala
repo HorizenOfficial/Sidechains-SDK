@@ -2,6 +2,7 @@ package com.horizen.account.state
 
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.storage.AccountStateMetadataStorageView
+import com.horizen.account.utils.Account
 import com.horizen.evm.utils.Hash
 import com.horizen.evm.{MemoryDatabase, StateDB}
 import com.horizen.proposition.MCPublicKeyHashProposition
@@ -16,7 +17,7 @@ import scala.language.implicitConversions
 import scala.util.Random
 
 trait MessageProcessorFixture extends ClosableResourceHandler {
-  val mcAddr = new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte))
+  val mcAddr = new MCPublicKeyHashProposition(randomBytes(20))
   val metadataStorageView: AccountStateMetadataStorageView = mock[AccountStateMetadataStorageView]
   val hashNull: Array[Byte] =
     BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000000")
@@ -24,11 +25,31 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
   // simplifies using BigIntegers within the tests
   implicit def longToBigInteger(x: Long): BigInteger = BigInteger.valueOf(x)
 
-  def usingView(processor: MessageProcessor)(fun: AccountStateView => Unit): Unit = {
+  def randomBytes(n: Int): Array[Byte] = {
+    val bytes = new Array[Byte](n)
+    Random.nextBytes(bytes)
+    bytes
+  }
+
+  def randomU256: BigInteger = new BigInteger(randomBytes(32))
+
+  def randomHash: Array[Byte] = randomBytes(32)
+
+  def randomAddress: AddressProposition = new AddressProposition(randomBytes(Account.ADDRESS_SIZE))
+
+  def usingView(processors: Seq[MessageProcessor])(fun: AccountStateView => Unit): Unit = {
     using(new MemoryDatabase()) { db =>
       val stateDb = new StateDB(db, hashNull)
-      using(new AccountStateView(metadataStorageView, stateDb, Seq(processor)))(fun)
+      using(new AccountStateView(metadataStorageView, stateDb, processors))(fun)
     }
+  }
+
+  def usingView(processor: MessageProcessor)(fun: AccountStateView => Unit): Unit = {
+    usingView(Seq(processor))(fun)
+  }
+
+  def usingView(fun: AccountStateView => Unit): Unit = {
+    usingView(Seq.empty)(fun)
   }
 
   def getMessage(destAddress: AddressProposition, value: BigInteger, data: Array[Byte]): Message = {
@@ -51,9 +72,11 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
    */
   def assertGas[A](expectedGas: BigInteger = BigInteger.ZERO)(fun: GasPool => A): A = {
     withGas { gas =>
-      val ret = fun(gas)
-      assertEquals("Unexpected gas consumption", expectedGas, gas.getUsedGas)
-      ret
+      try {
+        fun(gas)
+      } finally {
+        assertEquals("Unexpected gas consumption", expectedGas, gas.getUsedGas)
+      }
     }
   }
 
