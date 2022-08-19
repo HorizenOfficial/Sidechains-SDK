@@ -9,7 +9,7 @@ public interface MessageProcessor {
     boolean	canProcess(Message msg, BaseAccountStateView view);
 
     /**
-     * Apply processor modifying the view. Possible results:
+     * Apply message to the given view. Possible results:
      * <ul>
      *     <li>applied as expected: return byte[]</li>
      *     <li>message valid and (partially) executed, but operation "failed": throw ExecutionFailedException</li>

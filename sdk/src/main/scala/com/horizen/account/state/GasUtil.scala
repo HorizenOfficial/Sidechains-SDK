@@ -1,6 +1,7 @@
 package com.horizen.account.state
 
 import com.horizen.account.utils.BigIntegerUtil
+import com.horizen.evm.interop.EvmLog
 
 import java.math.BigInteger
 
@@ -26,7 +27,7 @@ object GasUtil {
   val RefundQuotient: BigInteger = BigInteger.valueOf(2)
   val RefundQuotientEIP3529: BigInteger = BigInteger.valueOf(5)
 
-  def calculateIntrinsicGas(data: Array[Byte], isContractCreation: Boolean): BigInteger = {
+  def intrinsicGas(data: Array[Byte], isContractCreation: Boolean): BigInteger = {
     // Set the starting gas for the raw transaction
     var gas = if (isContractCreation) TxGasContractCreation else TxGas
 
@@ -48,4 +49,6 @@ object GasUtil {
 
     gas
   }
+
+  def logGas(evmLog: EvmLog): BigInteger = LogGas.add(LogTopicGas.multiply(BigInteger.valueOf(evmLog.topics.length)))
 }

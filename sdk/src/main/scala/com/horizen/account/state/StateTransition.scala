@@ -12,7 +12,7 @@ class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProc
     // allocate gas for processing this message
     val gasPool = buyGas(msg)
     // consume intrinsic gas
-    val intrinsicGas = GasUtil.calculateIntrinsicGas(msg.getData, msg.getTo == null)
+    val intrinsicGas = GasUtil.intrinsicGas(msg.getData, msg.getTo == null)
     if (gasPool.getGas.compareTo(intrinsicGas) < 0) {
       throw IntrinsicGasException(gasPool.getGas, intrinsicGas)
     }

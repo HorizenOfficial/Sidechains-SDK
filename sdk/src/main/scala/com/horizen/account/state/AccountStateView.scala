@@ -316,7 +316,7 @@ class AccountStateView(
   override def getLogs(txHash: Array[Byte]): Array[EvmLog] = stateDb.getLogs(txHash)
 
   override def addLog(evmLog: EvmLog): Unit = {
-    useGas(GasUtil.LogGas.add(GasUtil.LogTopicGas.multiply(BigInteger.valueOf(evmLog.topics.length))))
+    useGas(GasUtil.logGas(evmLog))
     stateDb.addLog(evmLog)
   }
 
