@@ -2,13 +2,13 @@ package com.horizen.integration
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
-
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus.{ConsensusDataStorage, NonceConsensusEpochInfo, StakeConsensusEpochInfo}
 import com.horizen.customtypes.SemanticallyInvalidTransactionSerializer
 import com.horizen.fixtures._
+import com.horizen.fork.ForkManager
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.storage.{InMemoryStorageAdapter, SidechainHistoryStorage, Storage}
 import com.horizen.transaction.TransactionSerializer
@@ -47,6 +47,12 @@ class SidechainHistoryTest extends JUnitSuite
   val scorexSettings = mock[ScorexSettings]
   var storage: Storage = _
 
+  @Before
+  def init(): Unit = {
+    val c = ForkManager.getClass.getDeclaredConstructor()
+    c.setAccessible(true)
+    c.newInstance()
+  }
 
   @Before
   def setUp(): Unit = {
