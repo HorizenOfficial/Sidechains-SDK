@@ -5,7 +5,6 @@ import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.utils.Account
 import com.horizen.evm.utils.Hash
 import com.horizen.evm.{MemoryDatabase, StateDB}
-import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
 import org.junit.Assert.assertEquals
 import org.scalatestplus.mockito.MockitoSugar.mock
@@ -17,10 +16,9 @@ import scala.language.implicitConversions
 import scala.util.Random
 
 trait MessageProcessorFixture extends ClosableResourceHandler {
-  val mcAddr = new MCPublicKeyHashProposition(randomBytes(20))
   val metadataStorageView: AccountStateMetadataStorageView = mock[AccountStateMetadataStorageView]
-  val hashNull: Array[Byte] =
-    BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000000")
+  val hashNull: Array[Byte] = Array.fill(32)(0)
+  val origin: Array[Byte] = randomAddress
 
   // simplifies using BigIntegers within the tests
   implicit def longToBigInteger(x: Long): BigInteger = BigInteger.valueOf(x)
@@ -35,7 +33,7 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
 
   def randomHash: Array[Byte] = randomBytes(32)
 
-  def randomAddress: AddressProposition = new AddressProposition(randomBytes(Account.ADDRESS_SIZE))
+  def randomAddress: Array[Byte] = randomBytes(Account.ADDRESS_SIZE)
 
   def usingView(processors: Seq[MessageProcessor])(fun: AccountStateView => Unit): Unit = {
     using(new MemoryDatabase()) { db =>
@@ -52,12 +50,23 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
     usingView(Seq.empty)(fun)
   }
 
-  def getMessage(destAddress: AddressProposition, value: BigInteger, data: Array[Byte]): Message = {
+  def getMessage(
+      to: Array[Byte],
+      value: BigInteger = BigInteger.ZERO,
+      data: Array[Byte] = Array.emptyByteArray,
+      nonce: BigInteger = BigInteger.ZERO): Message = {
     val gasPrice = BigInteger.ZERO
     val gasLimit = BigInteger.valueOf(1000000)
-    val nonce = BigInteger.ZERO
-    val from = new AddressProposition(BytesUtils.fromHexString("00aabbcc9900aabbcc9900aabbcc9900aabbcc99"))
-    new Message(from, destAddress, gasPrice, gasPrice, gasPrice, gasLimit, value, nonce, data)
+    new Message(
+      new AddressProposition(origin),
+      if (to == null) null else new AddressProposition(to),
+      gasPrice,
+      gasPrice,
+      gasPrice,
+      gasLimit,
+      value,
+      nonce,
+      data)
   }
 
   /**
@@ -85,5 +94,4 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
 
   def decodeEventTopic[T <: Type[_]](topic: Hash, ref: TypeReference[T]): Type[_] =
     FunctionReturnDecoder.decodeIndexedValue(BytesUtils.toHexString(topic.toBytes), ref)
-
 }

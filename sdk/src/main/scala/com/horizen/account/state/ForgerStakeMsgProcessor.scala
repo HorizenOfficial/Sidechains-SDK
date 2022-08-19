@@ -2,7 +2,7 @@ package com.horizen.account.state
 
 import com.fasterxml.jackson.annotation.JsonView
 import com.google.common.primitives.Bytes
-import com.horizen.account.abi.ABIUtil.{METHOD_CODE_LENGTH, getABIMethodId, getArgumentsFromData, getOpCodeFromData}
+import com.horizen.account.abi.ABIUtil.{METHOD_CODE_LENGTH, getABIMethodId, getArgumentsFromData, getFunctionSignature}
 import com.horizen.account.abi.{ABIDecoder, ABIEncodable, ABIListEncoder}
 import com.horizen.account.events.{DelegateForgerStake, WithdrawForgerStake}
 import com.horizen.account.proof.SignatureSecp256k1
@@ -34,18 +34,10 @@ trait ForgerStakesProvider {
   private[horizen] def findStakeData(view: BaseAccountStateView, stakeId: Array[Byte]): Option[ForgerStakeData]
 }
 
-case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSmartContractMsgProcessor with ForgerStakesProvider {
+case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContractMsgProcessor with ForgerStakesProvider {
 
-  override val fakeSmartContractAddress: AddressProposition = ForgerStakeSmartContractAddress
-  override val fakeSmartContractCodeHash: Array[Byte] =
-    Keccak256.hash("ForgerStakeSmartContractCodeHash")
-
-  // ensure we have strings consistent with size of opcode
-  require(
-    GetListOfForgersCmd.length == 2 * METHOD_CODE_LENGTH &&
-      AddNewStakeCmd.length == 2 * METHOD_CODE_LENGTH &&
-      RemoveStakeCmd.length == 2 * METHOD_CODE_LENGTH
-  )
+  override val contractAddress: Array[Byte] = ForgerStakeSmartContractAddress
+  override val contractCodeHash: Array[Byte] = Keccak256.hash("ForgerStakeSmartContractCodeHash")
 
   // TODO set proper values
   val GetListOfForgersGasPaidValue: BigInteger = BigInteger.ONE
@@ -64,26 +56,27 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     // set the initial value for the linked list last element (null hash)
 
     // check we do not have this key set to any value yet
-    val initialTip = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey)
+    val initialTip = view.getAccountStorage(contractAddress, LinkedListTipKey)
 
     // getting a not existing key from state DB using RAW strategy as the api is doing
-    // gives 32 bytes filled with 0 (CHUNK strategy gives an empty array instead
-    require(BytesUtils.toHexString(initialTip) == NULL_HEX_STRING_32)
+    // gives 32 bytes filled with 0 (CHUNK strategy gives an empty array instead)
+    if (!initialTip.sameElements(NULL_HEX_STRING_32))
+      throw new MessageProcessorInitializationException("initial tip already set")
 
-    view.updateAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey, LinkedListNullValue)
+    view.updateAccountStorage(contractAddress, LinkedListTipKey, LinkedListNullValue)
   }
 
   def existsStakeData(view: BaseAccountStateView, stakeId: Array[Byte]): Boolean = {
     // do the RAW-strategy read even if the record is actually multi-line in stateDb. It will save some gas.
-    val data = view.getAccountStorage(fakeSmartContractAddress.address(), stakeId)
+    val data = view.getAccountStorage(contractAddress, stakeId)
     // getting a not existing key from state DB using RAW strategy
     // gives an array of 32 bytes filled with 0, while using CHUNK strategy
     // gives an empty array instead
-    BytesUtils.toHexString(data) != NULL_HEX_STRING_32
+    !data.sameElements(NULL_HEX_STRING_32)
   }
 
   def findStakeData(view: BaseAccountStateView, stakeId: Array[Byte]): Option[ForgerStakeData] = {
-    val data = view.getAccountStorageBytes(fakeSmartContractAddress.address(), stakeId)
+    val data = view.getAccountStorageBytes(contractAddress, stakeId)
     if (data.length == 0) {
       // getting a not existing key from state DB using RAW strategy
       // gives an array of 32 bytes filled with 0, while using CHUNK strategy, as the api is doing here
@@ -99,7 +92,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
   }
 
   def findLinkedListNode(view: BaseAccountStateView, nodeId: Array[Byte]): Option[LinkedListNode] = {
-    val data = view.getAccountStorageBytes(fakeSmartContractAddress.address(), nodeId)
+    val data = view.getAccountStorageBytes(contractAddress, nodeId)
     if (data.length == 0) {
       // getting a not existing key from state DB using RAW strategy
       // gives an array of 32 bytes filled with 0, while using CHUNK strategy, as the api is doing here
@@ -115,7 +108,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
   }
 
   def addNewNodeToList(view: BaseAccountStateView, stakeId: Array[Byte]): Unit = {
-    val oldTip = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey)
+    val oldTip = view.getAccountStorage(contractAddress, LinkedListTipKey)
 
     val newTip = Blake2b256.hash(stakeId)
 
@@ -130,15 +123,15 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
       )
 
       // store the modified previous node
-      view.updateAccountStorageBytes(fakeSmartContractAddress.address(), oldTip,
+      view.updateAccountStorageBytes(contractAddress, oldTip,
         LinkedListNodeSerializer.toBytes(modPreviousNode))
     }
 
     // update list tip, now it is this newly added one
-    view.updateAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey, newTip)
+    view.updateAccountStorage(contractAddress, LinkedListTipKey, newTip)
 
     // store the new node
-    view.updateAccountStorageBytes(fakeSmartContractAddress.address(), newTip,
+    view.updateAccountStorageBytes(contractAddress, newTip,
       LinkedListNodeSerializer.toBytes(
         LinkedListNode(stakeId, oldTip, LinkedListNullValue)))
   }
@@ -156,7 +149,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
       ForgerPublicKeys(blockSignProposition, vrfPublicKey), ownerPublicKey, stakedAmount)
 
     // store the forger stake data
-    view.updateAccountStorageBytes(fakeSmartContractAddress.address(), stakeId,
+    view.updateAccountStorageBytes(contractAddress, stakeId,
       ForgerStakeDataSerializer.toBytes(forgerStakeData))
   }
 
@@ -178,7 +171,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
         nodeToRemove.nextNodeKey)
 
       // store the modified previous node
-      view.updateAccountStorageBytes(fakeSmartContractAddress.address(), prevNodeId,
+      view.updateAccountStorageBytes(contractAddress, prevNodeId,
         LinkedListNodeSerializer.toBytes(modPreviousNode))
     }
 
@@ -193,18 +186,18 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
         nextNode.nextNodeKey)
 
       // store the modified next node
-      view.updateAccountStorageBytes(fakeSmartContractAddress.address(), nextNodeId,
+      view.updateAccountStorageBytes(contractAddress, nextNodeId,
         LinkedListNodeSerializer.toBytes(modNextNode))
     } else {
       // if there is no next node, we update the linked list tip to point to the previous node, promoted to be the new tip
-      view.updateAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey, nodeToRemove.previousNodeKey)
+      view.updateAccountStorage(contractAddress, LinkedListTipKey, nodeToRemove.previousNodeKey)
     }
 
     // remove the stake
-    view.removeAccountStorageBytes(fakeSmartContractAddress.address(), stakeId)
+    view.removeAccountStorageBytes(contractAddress, stakeId)
 
     // remove the node from the linked list
-    view.removeAccountStorageBytes(fakeSmartContractAddress.address(), nodeToRemoveId)
+    view.removeAccountStorageBytes(contractAddress, nodeToRemoveId)
   }
 
   def getListItem(view: BaseAccountStateView, tip: Array[Byte]): (AccountForgingStakeInfo, Array[Byte]) = {
@@ -278,12 +271,12 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
 
     if (isGenesisScCreation) {
       // increase the balance of the "forger stake smart contract” account
-      view.addBalance(fakeSmartContractAddress.address(), stakedAmount)
+      view.addBalance(contractAddress, stakedAmount)
     } else {
       // decrease the balance of `from` account by `tx.value`
       view.subBalance(msg.getFrom.address(), stakedAmount)
       // increase the balance of the "forger stake smart contract” account
-      view.addBalance(fakeSmartContractAddress.address(), stakedAmount)
+      view.addBalance(contractAddress, stakedAmount)
       // TODO add log ForgerStakeDelegation(StakeId, ...) to the StateView ???
       //view.addLog(new EvmLog concrete instance) // EvmLog will be used internally
     }
@@ -302,7 +295,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
 
   override def getListOfForgers(view: BaseAccountStateView): Seq[AccountForgingStakeInfo] = {
     var stakeList = Seq[AccountForgingStakeInfo]()
-    var nodeReference = view.getAccountStorage(fakeSmartContractAddress.address(), LinkedListTipKey)
+    var nodeReference = view.getAccountStorage(contractAddress, LinkedListTipKey)
 
     while (!linkedListNodeRefIsNull(nodeReference)) {
       val (item: AccountForgingStakeInfo, prevNodeReference: Array[Byte]) = getListItem(view, nodeReference)
@@ -346,7 +339,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
     view.addLog(evmLog)
 
     // decrease the balance of the "stake smart contract” account
-    view.subBalance(fakeSmartContractAddress.address(), stakeData.stakedAmount)
+    view.subBalance(contractAddress, stakeData.stakedAmount)
 
     // increase the balance of owner (not the sender) by withdrawn amount.
     view.addBalance(stakeData.ownerPublicKey.address(), stakeData.stakedAmount)
@@ -356,7 +349,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends AbstractFakeSm
   }
 
   override def process(msg: Message, view: BaseAccountStateView, gas: GasPool): Array[Byte] = {
-    BytesUtils.toHexString(getOpCodeFromData(msg.getData)) match {
+    getFunctionSignature(msg.getData) match {
       case GetListOfForgersCmd =>
         gas.subGas(GetListOfForgersGasPaidValue)
         doGetListOfForgersCmd(msg, view)
@@ -384,12 +377,18 @@ object ForgerStakeMsgProcessor {
   val AddNewStakeCmd: String = getABIMethodId("delegate(bytes32,bytes32,bytes1,address)")
   val RemoveStakeCmd: String = getABIMethodId("withdraw(bytes32,bytes1,bytes32,bytes32)")
 
-  val ForgerStakeSmartContractAddress = new AddressProposition(BytesUtils.fromHexString("0000000000000000000022222222222222222222"))
+  // ensure we have strings consistent with size of opcode
+  require(
+    GetListOfForgersCmd.length == 2 * METHOD_CODE_LENGTH &&
+      AddNewStakeCmd.length == 2 * METHOD_CODE_LENGTH &&
+      RemoveStakeCmd.length == 2 * METHOD_CODE_LENGTH
+  )
+
+  val ForgerStakeSmartContractAddress: Array[Byte] = BytesUtils.fromHexString("0000000000000000000022222222222222222222")
 
   def getMessageToSign(stakeId: Array[Byte], from: Array[Byte], nonce: Array[Byte]): Array[Byte] = {
     Bytes.concat(from, nonce, stakeId)
   }
-
 }
 
 @JsonView(Array(classOf[Views.Default]))
@@ -618,8 +617,6 @@ object ForgerStakeDataSerializer extends ScorexSerializer[ForgerStakeData] {
 
     ForgerStakeData(forgerPublicKeys, ownerPublicKey, stakeAmount)
   }
-
-
 }
 
 // A (sort of) linked list node containing:

@@ -311,7 +311,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         secret match {
           case Some(secret) =>
 
-            val to = BytesUtils.toHexString(ForgerStakeMsgProcessor.ForgerStakeSmartContractAddress.address())
+            val to = BytesUtils.toHexString(ForgerStakeMsgProcessor.ForgerStakeSmartContractAddress)
             val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
             val data = encodeAddNewStakeCmdRequest(body.forgerStakeInfo)
             val tmpTx: EthereumTransaction = new EthereumTransaction(
@@ -352,7 +352,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         val secret = getFittingSecret(sidechainNodeView, None, valueInWei)
         secret match {
           case Some(txCreatorSecret) =>
-            val to = BytesUtils.toHexString(ForgerStakeMsgProcessor.ForgerStakeSmartContractAddress.address())
+            val to = BytesUtils.toHexString(ForgerStakeMsgProcessor.ForgerStakeSmartContractAddress)
             val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(txCreatorSecret.publicImage.address))
             val stakeDataOpt = sidechainNodeView.getNodeState.getForgerStakeData(body.stakeId)
             stakeDataOpt match {
@@ -404,7 +404,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     entity(as[ReqWithdrawCoins]) { body =>
       // lock the view and try to create CoreTransaction
       applyOnNodeView { sidechainNodeView =>
-        val to = BytesUtils.toHexString(WithdrawalMsgProcessor.fakeSmartContractAddress.address())
+        val to = BytesUtils.toHexString(WithdrawalMsgProcessor.contractAddress)
         val data = encodeAddNewWithdrawalRequestCmd(body.withdrawalRequest)
         val valueInWei = ZenWeiConverter.convertZenniesToWei(body.withdrawalRequest.value)
         val gasInfo = body.gasInfo

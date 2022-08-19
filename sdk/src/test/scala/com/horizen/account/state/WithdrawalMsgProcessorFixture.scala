@@ -1,26 +1,26 @@
 package com.horizen.account.state
 
 import com.google.common.primitives.Bytes
+import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.utils.BytesUtils
 
 import java.math.BigInteger
 
 trait WithdrawalMsgProcessorFixture extends MessageProcessorFixture {
-
+  val mcAddr = new MCPublicKeyHashProposition(randomBytes(20))
   val AddNewWithdrawalRequestEventSig: Array[Byte] = getEventSignature(
     "AddWithdrawalRequest(address,bytes20,uint256,uint32)")
   val NumOfIndexedEvtParams = 2
 
-  def getAddWithdrawalRequestMessage(amount: BigInteger): Message = {
+  def addWithdrawalRequestMessage(amount: BigInteger): Message = {
     val params = AddWithdrawalRequestCmdInput(mcAddr).encode()
     val data = Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.AddNewWithdrawalReqCmdSig), params)
-    getMessage(WithdrawalMsgProcessor.fakeSmartContractAddress, amount, data)
+    getMessage(WithdrawalMsgProcessor.contractAddress, amount, data)
   }
 
-  def getGetListOfWithdrawalRequestMessage(epochNum: Int): Message = {
+  def listWithdrawalRequestsMessage(epochNum: Int): Message = {
     val params = GetListOfWithdrawalRequestsInputCmd(epochNum).encode()
     val data = Bytes.concat(BytesUtils.fromHexString(WithdrawalMsgProcessor.GetListOfWithdrawalReqsCmdSig), params)
-    getMessage(WithdrawalMsgProcessor.fakeSmartContractAddress, BigInteger.ZERO, data)
+    getMessage(WithdrawalMsgProcessor.contractAddress, BigInteger.ZERO, data)
   }
-
 }

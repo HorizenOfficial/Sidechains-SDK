@@ -8,7 +8,7 @@ import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceip
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress}
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.{BigIntegerUtil, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
+import com.horizen.account.utils.{MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
 import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput, WithdrawalEpochCertificate}
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.evm.interop.EvmLog
@@ -63,7 +63,7 @@ class AccountStateView(
 
           val message = new Message(
             ownerAddressProposition,
-            ForgerStakeSmartContractAddress,
+            new AddressProposition(ForgerStakeSmartContractAddress),
             BigInteger.ZERO, // gasPrice
             BigInteger.ZERO, // gasFeeCap
             BigInteger.ZERO, // gasTipCap

@@ -27,7 +27,7 @@ class WithdrawalMsgProcessorIntegrationTest
 
   @Test
   def testInit(): Unit = {
-    val address = WithdrawalMsgProcessor.fakeSmartContractAddress.address()
+    val address = WithdrawalMsgProcessor.contractAddress
     usingView(WithdrawalMsgProcessor) { view =>
       WithdrawalMsgProcessor.init(view)
       assertTrue("Account doesn't exist after init", view.accountExists(address))
@@ -35,7 +35,7 @@ class WithdrawalMsgProcessorIntegrationTest
       assertEquals("Wrong initial nonce", BigInteger.ZERO, view.getNonce(address))
       assertArrayEquals(
         "Wrong initial code hash",
-        WithdrawalMsgProcessor.fakeSmartContractCodeHash,
+        WithdrawalMsgProcessor.contractCodeHash,
         view.getCodeHash(address))
     }
   }
@@ -49,7 +49,7 @@ class WithdrawalMsgProcessorIntegrationTest
       Mockito.when(metadataStorageView.getWithdrawalEpochInfo).thenReturn(WithdrawalEpochInfo(epochNum, 1))
 
       // GetListOfWithdrawalRequest without withdrawal requests yet
-      val msgForListOfWR = getGetListOfWithdrawalRequestMessage(epochNum)
+      val msgForListOfWR = listWithdrawalRequestsMessage(epochNum)
       var wrListInBytes = withGas(WithdrawalMsgProcessor.process(msgForListOfWR, view, _))
       val expectedListOfWR = new util.ArrayList[WithdrawalRequest]()
       assertArrayEquals(WithdrawalRequestsListEncoder.encode(expectedListOfWR), wrListInBytes)
@@ -57,13 +57,13 @@ class WithdrawalMsgProcessorIntegrationTest
       // Invalid request for insufficient balance
       view.subBalance(msgForListOfWR.getFrom.address(), view.getBalance(msgForListOfWR.getFrom.address()))
       val withdrawalAmount = ZenWeiConverter.convertZenniesToWei(10)
-      val msgBalance = getAddWithdrawalRequestMessage(withdrawalAmount)
+      val msgBalance = addWithdrawalRequestMessage(withdrawalAmount)
       // Withdrawal request with insufficient balance should result in ExecutionFailed
       assertThrows[ExecutionFailedException](withGas(WithdrawalMsgProcessor.process(msgBalance, view, _)))
 
       // Creating the first Withdrawal request
       val withdrawalAmount1 = ZenWeiConverter.convertZenniesToWei(123)
-      var msg = getAddWithdrawalRequestMessage(withdrawalAmount1)
+      var msg = addWithdrawalRequestMessage(withdrawalAmount1)
       val initialBalance = ZenWeiConverter.convertZenniesToWei(1300)
       view.addBalance(msg.getFrom.address(), initialBalance)
       var newExpectedWR = WithdrawalRequest(mcAddr, msg.getValue)
@@ -96,7 +96,7 @@ class WithdrawalMsgProcessorIntegrationTest
 
       // Creating a second withdrawal request
       val withdrawalAmount2 = ZenWeiConverter.convertZenniesToWei(223)
-      msg = getAddWithdrawalRequestMessage(withdrawalAmount2)
+      msg = addWithdrawalRequestMessage(withdrawalAmount2)
       newExpectedWR = WithdrawalRequest(mcAddr, msg.getValue)
       expectedListOfWR.add(newExpectedWR)
 
@@ -125,7 +125,7 @@ class WithdrawalMsgProcessorIntegrationTest
   def checkEvent(expectedEvent: AddWithdrawalRequest, actualEvent: EvmLog): Unit = {
     assertArrayEquals(
       "Wrong address",
-      WithdrawalMsgProcessor.fakeSmartContractAddress.address(),
+      WithdrawalMsgProcessor.contractAddress,
       actualEvent.address.toBytes)
     // The first topic is the hash of the signature of the event
     assertEquals("Wrong number of topics", NumOfIndexedEvtParams + 1, actualEvent.topics.length)

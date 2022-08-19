@@ -19,7 +19,7 @@ class EoaMessageProcessorIntegrationTest
 
   @Test
   def canProcess(): Unit = {
-    val toAddress = getAddressProposition(12345L)
+    val toAddress = getAddressProposition(12345L).address()
     val value = BigInteger.TWO
     val msg = getMessage(toAddress, value, Array.emptyByteArray)
 
@@ -29,12 +29,12 @@ class EoaMessageProcessorIntegrationTest
 
       // Test 2: to account exists and has NO code hash defined, so considered as EOA
       // declare account with some coins
-      view.addBalance(toAddress.address(), BigInteger.ONE)
+      view.addBalance(toAddress, BigInteger.ONE)
       assertTrue("Processor expected to BE ABLE to process message", EoaMessageProcessor.canProcess(msg, view))
 
       // Test 3: to account exists and has code hash defined, so considered as Smart contract account
       val codeHash: Array[Byte] = Keccak256.hash("abcd".getBytes())
-      view.addAccount(toAddress.address(), codeHash)
+      view.addAccount(toAddress, codeHash)
       assertFalse("Processor expected to UNABLE to process message", EoaMessageProcessor.canProcess(msg, view))
 
       // Test 4: "to" is null -> smart contract declaration case
@@ -48,7 +48,8 @@ class EoaMessageProcessorIntegrationTest
   def process(): Unit = {
     val value = BigInteger.valueOf(1337)
     val initialBalance = BigInteger.valueOf(10000000)
-    val msg = getMessage(getAddressProposition(12345L), value, Array.emptyByteArray)
+    val to = getAddressProposition(12345L).address()
+    val msg = getMessage(to, value, Array.emptyByteArray)
     val sender = msg.getFrom.address()
 
     usingView(EoaMessageProcessor) { view =>
