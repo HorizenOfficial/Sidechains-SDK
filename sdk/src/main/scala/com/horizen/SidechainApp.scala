@@ -26,6 +26,7 @@ import com.horizen.storage._
 import com.horizen.transaction._
 import com.horizen.utils.{BytesUtils, Pair}
 import com.horizen.wallet.ApplicationWallet
+import com.horizen.websocket.client.{DefaultWebSocketReconnectionHandler, WebSocketChannel, WebSocketCommunicationClient, WebSocketConnector, WebSocketConnectorImpl, WebSocketReconnectionHandler}
 import com.horizen.websocket.server.WebSocketServerRef
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer
@@ -35,6 +36,7 @@ import sparkz.core.{ModifierTypeId, NodeViewModifier}
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
 import java.util.{HashMap => JHashMap, List => JList}
+import scala.util.Try
 
 class SidechainApp @Inject()
   (@Named("SidechainSettings") override val sidechainSettings: SidechainSettings,
@@ -185,6 +187,32 @@ class SidechainApp @Inject()
     actorSystem.actorOf(SidechainNodeViewSynchronizer.props(networkControllerRef, nodeViewHolderRef,
         SidechainSyncInfoMessageSpec, settings.network, timeProvider, modifierSerializers))
 
+  // Retrieve information for using a web socket connector
+  override val communicationClient: WebSocketCommunicationClient = new WebSocketCommunicationClient()
+  override val webSocketReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(sidechainSettings.websocketClient)
+
+  if(sidechainSettings.websocketClient.enabled) {
+    // Create the web socket connector and configure it
+    val webSocketConnector : WebSocketConnector with WebSocketChannel = new WebSocketConnectorImpl(
+      sidechainSettings.websocketClient.address,
+      sidechainSettings.websocketClient.connectionTimeout,
+      communicationClient,
+      webSocketReconnectionHandler
+    )
+
+    // Start the web socket connector
+    val connectorStarted : Try[Unit] = webSocketConnector.start()
+    if (connectorStarted.isSuccess)
+      communicationClient.setWebSocketChannel(webSocketConnector)
+    else if (sidechainSettings.withdrawalEpochCertificateSettings.submitterIsEnabled)
+      throw new RuntimeException("Unable to connect to websocket. Certificate submitter needs connection to Mainchain.")
+
+  } else {
+    log.info("Due to the settings, node is not enabled for connections.")
+  }
+
+  // If the web socket connector can be started, maybe we would to associate a client to the web socket channel created by the connector
+
   // Init Forger with a proper web socket client
   val sidechainBlockForgerActorRef: ActorRef = ForgerRef("Forger", sidechainSettings, nodeViewHolderRef,  mainchainSynchronizer, sidechainTransactionsCompanion, timeProvider, params)
 
@@ -201,8 +229,8 @@ class SidechainApp @Inject()
   val cswManager: Option[ActorRef] = if (isCSWEnabled) Some(CswManagerRef(sidechainSettings, params, nodeViewHolderRef)) else None
 
   //Websocket server for the Explorer
-  if(sidechainSettings.websocket.wsServer) {
-    val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocket.wsServerPort)
+  if(sidechainSettings.websocketServer.wsServer) {
+    val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocketServer.wsServerPort)
   }
 
   val boxIterator: BoxIterator = backupStorage.getBoxIterator
