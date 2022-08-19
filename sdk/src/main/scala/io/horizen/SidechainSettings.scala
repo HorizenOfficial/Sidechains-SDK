@@ -13,16 +13,20 @@ case class ForgerKeysData(
     vrfPublicKey: String,
 )
 
-case class WebSocketSettings(
+case class WebSocketClientSettings(
     address: String,
     connectionTimeout: FiniteDuration,
     reconnectionDelay: FiniteDuration,
     reconnectionMaxAttempts: Int,
     // In Regtest allow to forge new blocks without connection to MC node, for example.
     allowNoConnectionInRegtest: Boolean = true,
-    wsServer: Boolean = false,
-    wsServerPort: Int = 8025,
+    enabled: Boolean
 )
+
+case class WebSocketServerSettings(
+                                    wsServer: Boolean = false,
+                                    wsServerPort: Int = 8025
+                                  )
 
 case class GenesisDataSettings(scGenesisBlockHex: String,
                                scId: String,
@@ -114,7 +118,8 @@ case class AccountMempoolSettings(maxNonceGap: Int = 16,
 case class SidechainSettings(
     sparkzSettings: SparkzSettings,
     genesisData: GenesisDataSettings,
-    websocket: WebSocketSettings,
+    websocketClient: WebSocketClientSettings,
+    websocketServer: WebSocketServerSettings,
     withdrawalEpochCertificateSettings: WithdrawalEpochCertificateSettings,
     remoteKeysManagerSettings: RemoteKeysManagerSettings,
     mempool: MempoolSettings,
