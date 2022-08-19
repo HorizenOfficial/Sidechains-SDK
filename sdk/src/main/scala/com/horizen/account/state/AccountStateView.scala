@@ -185,18 +185,26 @@ class AccountStateView(
 
   override def addBalance(address: Array[Byte], amount: BigInteger): Unit = {
     useGas(GasUtil.GasTBD)
-    stateDb.addBalance(address, amount)
+    amount.compareTo(BigInteger.ZERO) match {
+      case x if x == 0 => // amount is zero
+      case x if x < 0 =>
+        throw new ExecutionFailedException("cannot add negative amount to balance")
+      case _ => stateDb.addBalance(address, amount)
+    }
   }
 
   override def subBalance(address: Array[Byte], amount: BigInteger): Unit = {
     useGas(GasUtil.GasTBD)
     // stateDb lib does not do any sanity check, and negative balances might arise (and java/go json IF does not correctly handle it)
     // TODO: for the time being do the checks here, later they will be done in the caller stack
-    require(amount.compareTo(BigInteger.ZERO) >= 0)
-    if (amount.compareTo(BigInteger.ZERO) > 0) {
-      require(stateDb.getBalance(address).compareTo(amount) >= 0)
+    amount.compareTo(BigInteger.ZERO) match {
+      case x if x == 0 => // amount is zero
+      case x if x < 0 =>
+        throw new ExecutionFailedException("cannot subtract negative amount from balance")
+      case x if x > 0 && stateDb.getBalance(address).compareTo(amount) < 0 =>
+        throw new ExecutionFailedException("insufficient balance")
+      case _ => stateDb.subBalance(address, amount)
     }
-    stateDb.subBalance(address, amount)
   }
 
   override def increaseNonce(address: Array[Byte]): Unit =
