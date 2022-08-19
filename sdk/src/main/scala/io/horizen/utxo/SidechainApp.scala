@@ -194,6 +194,32 @@ class SidechainApp @Inject()
     actorSystem.actorOf(SidechainNodeViewSynchronizer.props(networkControllerRef, nodeViewHolderRef,
         SidechainSyncInfoMessageSpec, settings.network, timeProvider, modifierSerializers))
 
+  // Retrieve information for using a web socket connector
+  override val communicationClient: WebSocketCommunicationClient = new WebSocketCommunicationClient()
+  override val webSocketReconnectionHandler: WebSocketReconnectionHandler = new DefaultWebSocketReconnectionHandler(sidechainSettings.websocketClient)
+
+  if(sidechainSettings.websocketClient.enabled) {
+    // Create the web socket connector and configure it
+    val webSocketConnector : WebSocketConnector with WebSocketChannel = new WebSocketConnectorImpl(
+      sidechainSettings.websocketClient.address,
+      sidechainSettings.websocketClient.connectionTimeout,
+      communicationClient,
+      webSocketReconnectionHandler
+    )
+
+    // Start the web socket connector
+    val connectorStarted : Try[Unit] = webSocketConnector.start()
+    if (connectorStarted.isSuccess)
+      communicationClient.setWebSocketChannel(webSocketConnector)
+    else if (sidechainSettings.withdrawalEpochCertificateSettings.submitterIsEnabled)
+      throw new RuntimeException("Unable to connect to websocket. Certificate submitter needs connection to Mainchain.")
+
+  } else {
+    log.info("Due to the settings, node is not enabled for connections.")
+  }
+
+  // If the web socket connector can be started, maybe we would to associate a client to the web socket channel created by the connector
+
   // Init Forger with a proper web socket client
   val sidechainBlockForgerActorRef: ActorRef = forge.ForgerRef("Forger", sidechainSettings, nodeViewHolderRef,  mainchainSynchronizer, sidechainTransactionsCompanion, timeProvider, params)
 
