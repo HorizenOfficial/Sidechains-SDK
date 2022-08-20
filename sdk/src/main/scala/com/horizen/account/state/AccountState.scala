@@ -271,11 +271,8 @@ class AccountState(val params: NetworkParams,
     new AccountStateView(stateMetadataStorage.getView, new StateDB(stateDbStorage, stateRoot), messageProcessors)
 
   // Base getters
-  override def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] = {
-    using(getView) { stateView =>
-      stateView.withdrawalRequests(withdrawalEpoch)
-    }
-  }
+  override def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] =
+    using(getView)(_.withdrawalRequests(withdrawalEpoch))
 
   override def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
     stateMetadataStorage.getTopQualityCertificate(referencedWithdrawalEpoch)
@@ -308,11 +305,7 @@ class AccountState(val params: NetworkParams,
     stateMetadataStorage.getHeight
   }
 
-  private def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = {
-    using(getView) { view =>
-      view.getOrderedForgingStakeInfoSeq
-    }
-  }
+  private def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = using(getView)(_.getOrderedForgingStakeInfoSeq)
 
   // Returns lastBlockInEpoch and ConsensusEpochInfo for that epoch
   // TODO this is common code with SidechainState
@@ -336,55 +329,23 @@ class AccountState(val params: NetworkParams,
   }
 
   // Account specific getters
-  override def getBalance(address: Array[Byte]): BigInteger = {
-    using(getView) { view =>
-      view.getBalance(address)
-    }
-  }
+  override def getBalance(address: Array[Byte]): BigInteger = using(getView)(_.getBalance(address))
 
   override def getAccountStateRoot: Array[Byte] = stateMetadataStorage.getAccountStateRoot
 
-  override def getCodeHash(address: Array[Byte]): Array[Byte] = {
-    using(getView) { view =>
-      view.getCodeHash(address)
-    }
-  }
+  override def getCodeHash(address: Array[Byte]): Array[Byte] = using(getView)(_.getCodeHash(address))
 
-  override def getNonce(address: Array[Byte]): BigInteger = {
-    using(getView) { view =>
-      view.getNonce(address)
-    }
-  }
+  override def getNonce(address: Array[Byte]): BigInteger = using(getView)(_.getNonce(address))
 
-  override def getListOfForgerStakes: Seq[AccountForgingStakeInfo] = {
-    using(getView) { view =>
-      view.getListOfForgerStakes
-    }
-  }
+  override def getListOfForgerStakes: Seq[AccountForgingStakeInfo] = using(getView)(_.getListOfForgerStakes)
 
-  def getForgerStakeData(stakeId: String): Option[ForgerStakeData] = {
-    using(getView) { view =>
-      view.getForgerStakeData(stakeId)
-    }
-  }
+  def getForgerStakeData(stakeId: String): Option[ForgerStakeData] = using(getView)(_.getForgerStakeData(stakeId))
 
-  override def getLogs(txHash: Array[Byte]): Array[EvmLog] = {
-    using(getView) { view =>
-      view.getLogs(txHash)
-    }
-  }
+  override def getLogs(txHash: Array[Byte]): Array[EvmLog] = using(getView)(_.getLogs(txHash))
 
-  def getIntermediateRoot: Array[Byte] = {
-    using(getView) { view =>
-      view.getIntermediateRoot
-    }
-  }
+  def getIntermediateRoot: Array[Byte] = using(getView)(_.getIntermediateRoot)
 
-  override def getCode(address: Array[Byte]): Array[Byte] = {
-    using(getView) { view =>
-      view.getCode(address)
-    }
-  }
+  override def getCode(address: Array[Byte]): Array[Byte] = using(getView)(_.getCode(address))
 
   override def getBaseFee: BigInteger = using(getView)(_.getBaseFee)
 
@@ -411,9 +372,7 @@ class AccountState(val params: NetworkParams,
       }
     }
   }
-
 }
-
 
 object AccountState extends ScorexLogging {
   private[horizen] def restoreState(stateMetadataStorage: AccountStateMetadataStorage,
