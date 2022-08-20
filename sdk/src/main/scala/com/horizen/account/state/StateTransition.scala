@@ -101,7 +101,6 @@ class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProc
   private def refundGas(msg: Message, gas: GasPool): Unit = {
     val usedGas = msg.getGasLimit.subtract(gas.getGas)
     // cap gas refund to a quotient of the used gas
-    // the quotient was 2 before EIP-3529 (london release)
     gas.addGas(view.getRefund.min(usedGas.divide(GasUtil.RefundQuotientEIP3529)))
     // return funds for remaining gas, exchanged at the original rate.
     val remaining = gas.getGas.multiply(msg.getGasPrice)

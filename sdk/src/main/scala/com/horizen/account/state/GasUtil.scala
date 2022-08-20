@@ -24,7 +24,6 @@ object GasUtil {
 
   // The Refund Quotient is the cap on how much of the used gas can be refunded. Before EIP-3529,
   // up to half the consumed gas could be refunded. Redefined as 1/5th in EIP-3529
-  val RefundQuotient: BigInteger = BigInteger.valueOf(2)
   val RefundQuotientEIP3529: BigInteger = BigInteger.valueOf(5)
 
   def intrinsicGas(data: Array[Byte], isContractCreation: Boolean): BigInteger = {
