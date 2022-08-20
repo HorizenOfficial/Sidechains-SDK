@@ -35,8 +35,10 @@ object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with Withdra
   val MaxWithdrawalReqsNumPerEpoch = 3999
   val DustThresholdInWei: BigInteger = ZenWeiConverter.convertZenniesToWei(ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE))
 
+  @throws(classOf[ExecutionFailedException])
   override def process(msg: Message, view: BaseAccountStateView, gas: GasPool): Array[Byte] = {
     //TODO: check errors in Ethereum, maybe for some kind of errors there a predefined types or codes
+    view.enableGasTracking(gas)
     getFunctionSignature(msg.getData) match {
       case GetListOfWithdrawalReqsCmdSig =>
         gas.subGas(GasSpentForGetListOfWithdrawalReqsCmd)

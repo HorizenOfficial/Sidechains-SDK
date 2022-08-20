@@ -154,7 +154,7 @@ class AccountStateView(
         ReceiptStatus.FAILED
     } finally {
       // make sure we disable automatic gas consumption in case a message processor enabled it
-      trackGas(None)
+      disableGasTracking()
     }
     val consensusDataReceipt = new EthereumConsensusDataReceipt(
       ethTx.version(), status.id, blockGasPool.getUsedGas, getLogs(txHash))
@@ -340,10 +340,12 @@ class AccountStateView(
 
   def revertToSnapshot(revisionId: Int): Unit = stateDb.revertToSnapshot(revisionId)
 
-  // automatic gas consumption
+  // used automatic gas consumption
   private var trackedGasPool: Option[GasPool] = None
 
-  def trackGas(gasPool: Option[GasPool]): Unit = trackedGasPool = gasPool
+  def enableGasTracking(gasPool: GasPool): Unit = trackedGasPool = Some(gasPool)
+
+  def disableGasTracking(): Unit = trackedGasPool = None
 
   private def useGas(gas: BigInteger): Unit = trackedGasPool match {
     case Some(gasPool) => gasPool.subGas(gas)

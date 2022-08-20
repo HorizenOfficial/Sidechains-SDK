@@ -39,11 +39,6 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
   override val contractAddress: Array[Byte] = ForgerStakeSmartContractAddress
   override val contractCodeHash: Array[Byte] = Keccak256.hash("ForgerStakeSmartContractCodeHash")
 
-  // TODO set proper values
-  val GetListOfForgersGasPaidValue: BigInteger = BigInteger.ONE
-  val AddNewStakeGasPaidValue: BigInteger      = BigInteger.ONE
-  val RemoveStakeGasPaidValue: BigInteger      = BigInteger.ONE
-
   val networkParams: NetworkParams = params
 
   def getStakeId(msg: Message): Array[Byte] = {
@@ -348,22 +343,14 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     stakeId
   }
 
+  @throws(classOf[ExecutionFailedException])
   override def process(msg: Message, view: BaseAccountStateView, gas: GasPool): Array[Byte] = {
+    view.enableGasTracking(gas)
     getFunctionSignature(msg.getData) match {
-      case GetListOfForgersCmd =>
-        gas.subGas(GetListOfForgersGasPaidValue)
-        doGetListOfForgersCmd(msg, view)
-
-      case AddNewStakeCmd =>
-        gas.subGas(AddNewStakeGasPaidValue)
-        doAddNewStakeCmd(msg, view)
-
-      case RemoveStakeCmd =>
-        gas.subGas(RemoveStakeGasPaidValue)
-        doRemoveStakeCmd(msg, view)
-
-      case opCodeHex =>
-        throw new ExecutionFailedException(s"op code $opCodeHex not supported")
+      case GetListOfForgersCmd => doGetListOfForgersCmd(msg, view)
+      case AddNewStakeCmd => doAddNewStakeCmd(msg, view)
+      case RemoveStakeCmd => doRemoveStakeCmd(msg, view)
+      case opCodeHex => throw new ExecutionFailedException(s"op code $opCodeHex not supported")
     }
   }
 }

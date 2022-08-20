@@ -20,7 +20,7 @@ object GasUtil {
   val LogGas: BigInteger = BigInteger.valueOf(375)
   val LogTopicGas: BigInteger = BigInteger.valueOf(375)
 
-  val GasTBD: BigInteger = BigInteger.ZERO
+  val GasTBD: BigInteger = BigInteger.valueOf(250)
 
   // The Refund Quotient is the cap on how much of the used gas can be refunded. Before EIP-3529,
   // up to half the consumed gas could be refunded. Redefined as 1/5th in EIP-3529

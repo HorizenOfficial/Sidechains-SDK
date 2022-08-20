@@ -26,5 +26,6 @@ trait BaseAccountStateView extends AccountStateReader {
 
   def addLog(evmLog: EvmLog): Unit
 
-  def trackGas(gas: Option[GasPool]): Unit
+  def enableGasTracking(gasPool: GasPool): Unit
+  def disableGasTracking(): Unit
 }
