@@ -52,6 +52,7 @@ class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProc
     val sender = msg.getFrom.address()
 
     // Check the nonce
+    // TODO: skip nonce checks if message is "fake" (RPC calls)
     val stateNonce = view.getNonce(sender)
     val txNonce = msg.getNonce
     val result = txNonce.compareTo(stateNonce)
@@ -69,6 +70,7 @@ class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProc
     if (!view.isEoaAccount(sender))
       throw SenderNotEoaException(sender, view.getCodeHash(sender))
 
+    // TODO: fee checks if message is "fake" (RPC calls)
     if (msg.getGasFeeCap.compareTo(view.getBaseFee) < 0)
       throw FeeCapTooLowException(sender, msg.getGasFeeCap, view.getBaseFee)
   }

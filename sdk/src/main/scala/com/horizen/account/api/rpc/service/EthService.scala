@@ -21,6 +21,7 @@ import com.horizen.api.http.{ApiResponseUtil, SuccessResponse}
 import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.Transaction
+import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.ClosableResourceHandler
 import org.web3j.crypto.TransactionDecoder
 import org.web3j.utils.Numeric
@@ -38,25 +39,21 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 
-class EthService(val sidechainNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuration, networkParams: NetworkParams, val sidechainSettings: SidechainSettings, val sidechainTransactionActorRef: ActorRef)
+class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuration, networkParams: NetworkParams, val sidechainSettings: SidechainSettings, val sidechainTransactionActorRef: ActorRef)
   extends RpcService
     with ClosableResourceHandler {
   type NV = CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]
 
   def applyOnAccountView[R](functionToBeApplied: NV => R): R = {
-    // function wrapper that handles error cases and exceptions
-    val wrappedFunction = (nodeview: NV) => Try {
-      functionToBeApplied(nodeview)
-    }
-    try {
-      implicit val timeout: Timeout = new Timeout(nvtimeout)
-      val res = (sidechainNodeViewHolderRef ? NodeViewHolder.ReceivableMessages.GetDataFromCurrentView(wrappedFunction)).asInstanceOf[Future[Try[R]]]
-      val result = Await.result[Try[R]](res, nvtimeout)
-      result.get
-    }
-    catch {
-      case e: Exception => throw new Exception(e)
-    }
+    implicit val timeout: Timeout = new Timeout(nvtimeout)
+    val res = scNodeViewHolderRef.ask {
+      NodeViewHolder.ReceivableMessages.GetDataFromCurrentView { (nodeview: NV) =>
+        // wrap any exceptions
+        Try(functionToBeApplied(nodeview))
+      }
+    }.asInstanceOf[Future[Try[R]]]
+    // return result or rethrow potential exceptions
+    Await.result(res, nvtimeout).get
   }
 
   //function which describes default transaction representation for answer after adding the transaction to a memory pool
@@ -115,8 +112,12 @@ class EthService(val sidechainNodeViewHolderRef: ActorRef, val nvtimeout: Finite
         fun(tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit)), tagStateView)
       } catch {
         // throw on execution errors, also include evm revert reason if possible
-        case evmRevert: ExecutionRevertedException => throw new RpcException(new RpcError(
-          RpcCode.ExecutionError.getCode, evmRevert.getMessage, Numeric.toHexString(evmRevert.revertReason)))
+        case reverted: ExecutionRevertedException => throw new RpcException(new RpcError(
+          RpcCode.ExecutionError.getCode, reverted.getMessage, Numeric.toHexString(reverted.revertReason)))
+        case err: ExecutionFailedException => throw new RpcException(new RpcError(
+          RpcCode.ExecutionError.getCode, err.getMessage, null))
+        case err: TransactionSemanticValidityException => throw new RpcException(new RpcError(
+          RpcCode.ExecutionError.getCode, err.getMessage, null))
       }
     }
   }

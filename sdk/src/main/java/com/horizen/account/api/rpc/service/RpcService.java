@@ -70,7 +70,7 @@ public class RpcService {
         }
     }
 
-    public Object execute(RpcRequest req) throws IllegalAccessException, RpcException, InvocationTargetException {
+    public Object execute(RpcRequest req) throws Throwable {
         var method = rpcMethods.get(req.getMethod());
         if (method == null) throw new RpcException(RpcError.fromCode(RpcCode.MethodNotFound));
         var params = convertParams(method, req.getParams());
@@ -78,10 +78,7 @@ public class RpcService {
             return method.invoke(this, params);
         } catch (InvocationTargetException e) {
             // unpack and rethrow potential RpcException
-            if (e.getCause() instanceof RpcException) {
-                throw (RpcException) e.getCause();
-            }
-            throw e;
+            throw e.getCause();
         }
     }
 }
