@@ -156,8 +156,7 @@ class EthService(val sidechainNodeViewHolderRef: ActorRef, val nvtimeout: Finite
       var highBound = params.gas
       getStateViewAtTag(nodeView, tag) { tagStateView =>
         if (highBound == null || highBound.compareTo(GasUtil.TxGas) < 0) {
-          // TODO: get block gas limit
-          highBound = BigInteger.valueOf(30000000)
+          highBound = tagStateView.getBlockGasLimit
         }
         // Normalize the max fee per gas the call is willing to spend.
         var feeCap = BigInteger.ZERO

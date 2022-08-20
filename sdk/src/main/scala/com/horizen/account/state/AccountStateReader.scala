@@ -22,4 +22,5 @@ trait AccountStateReader extends BaseStateReader {
   def getHeight: Int
 
   def getBaseFee: BigInteger
+  def getBlockGasLimit: BigInteger
 }

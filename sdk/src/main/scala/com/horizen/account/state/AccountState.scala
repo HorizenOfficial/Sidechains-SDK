@@ -125,7 +125,7 @@ class AccountState(val params: NetworkParams,
       val blockNumber = stateView.getHeight + 1
       val blockHash = idToBytes(mod.id)
       var cumGasUsed: BigInteger = BigInteger.ZERO
-      val blockGasPool = new GasPool(BigInteger.valueOf(30000000))
+      val blockGasPool = new GasPool(stateView.getBlockGasLimit)
 
       for ((tx, txIndex) <- mod.sidechainTransactions.zipWithIndex) {
         stateView.applyTransaction(tx, txIndex, blockGasPool) match {
@@ -386,11 +386,9 @@ class AccountState(val params: NetworkParams,
     }
   }
 
-  override def getBaseFee: BigInteger = {
-    using(getView) { view =>
-      view.getBaseFee
-    }
-  }
+  override def getBaseFee: BigInteger = using(getView)(_.getBaseFee)
+
+  override def getBlockGasLimit: BigInteger = using(getView)(_.getBaseFee)
 
   override def validate(tx: SidechainTypes#SCAT): Try[Unit] = Try {
     tx.semanticValidity()
@@ -399,7 +397,7 @@ class AccountState(val params: NetworkParams,
 
       val ethTx = tx.asInstanceOf[EthereumTransaction]
       val txHash = BytesUtils.fromHexString(ethTx.id)
-      val blockGasPool = new GasPool(BigInteger.valueOf(30000000))
+      val blockGasPool = new GasPool(getBlockGasLimit)
 
       using(getView) { stateView =>
         stateView.applyTransaction(tx, 0, blockGasPool) match {

@@ -89,7 +89,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val receiptList = new ListBuffer[EthereumConsensusDataReceipt]()
     val txHashList = new ListBuffer[ByteArrayWrapper]()
 
-    val blockGasPool = new GasPool(BigInteger.valueOf(30000000))
+    val blockGasPool = new GasPool(stateView.getBlockGasLimit)
     var txsCounter: Int = 0
     var blockSize: Int = inputBlockSize
 

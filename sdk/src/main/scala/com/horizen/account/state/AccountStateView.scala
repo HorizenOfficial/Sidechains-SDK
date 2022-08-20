@@ -327,9 +327,12 @@ class AccountStateView(
 
   override def getIntermediateRoot: Array[Byte] = stateDb.getIntermediateRoot
 
-  // TODO: get baseFee for the block
+  // TODO: get baseFee for the block header
   // TODO: currently a non-zero baseFee makes all the python tests fail, because they do not consider spending fees
   override def getBaseFee: BigInteger = BigInteger.valueOf(0)
+
+  // TODO: get gas limit from current block header
+  override def getBlockGasLimit: BigInteger = BigInteger.valueOf(30000000)
 
   def getRefund: BigInteger = stateDb.getRefund
 
