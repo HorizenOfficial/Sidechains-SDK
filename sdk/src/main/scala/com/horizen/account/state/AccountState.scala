@@ -349,7 +349,7 @@ class AccountState(val params: NetworkParams,
 
   override def getBaseFee: BigInteger = using(getView)(_.getBaseFee)
 
-  override def getBlockGasLimit: BigInteger = using(getView)(_.getBaseFee)
+  override def getBlockGasLimit: BigInteger = using(getView)(_.getBlockGasLimit)
 
   override def validate(tx: SidechainTypes#SCAT): Try[Unit] = Try {
     tx.semanticValidity()
