@@ -110,8 +110,7 @@ class SmartContract:
         return response["result"]["transactionId"]
 
     def static_call(self, node, functionName: str, *args, fromAddress: str, nonce: int = None, toAddress: str,
-                    gasLimit: int, gasPrice: int,
-                    value: int = 0, tag: str = 'latest'):
+                    gasLimit: int = 0, gasPrice: int = 0, value: int = 0, tag: str = 'latest'):
         """Calls a function in read-only mode and returns the data if applicable
 
                Parameters:
@@ -133,11 +132,13 @@ class SmartContract:
             "from": format_evm(fromAddress),
             "to": format_evm(toAddress),
             "nonce": self.__ensure_nonce(node, fromAddress, nonce, tag),
-            "gasLimit": gasLimit,
-            "gasPrice": gasPrice,
             "value": value,
             "data": self.raw_encode_call(functionName, *args)
         }
+        if gasLimit > 0:
+            request["gas"] = gasLimit
+        if gasPrice > 0:
+            request["gasPrice"] = gasPrice
         response = node.rpc_eth_call(request, tag)
         if 'result' in response:
             if response['result'] is not None and len(response['result']) > 0:
@@ -292,7 +293,7 @@ class SmartContract:
 
     @staticmethod
     def __ensure_nonce(node, address, nonce, tag='latest'):
-        on_chain_nonce = int(node.rpc_eth_getTransactionCount(str(address), tag)['result'], 16)
+        on_chain_nonce = int(node.rpc_eth_getTransactionCount(format_evm(address), tag)['result'], 16)
         if nonce is None:
             nonce = on_chain_nonce
         return nonce
