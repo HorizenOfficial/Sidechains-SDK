@@ -260,6 +260,9 @@ func (s *Service) StateSetStorage(params SetStorageParams) error {
 	if err != nil {
 		return err
 	}
+	// TODO: implement updating the refund counter according to:
+	//  https://github.com/ethereum/go-ethereum/blob/0ce494b60cd00d70f1f9f2dd0b9bfbd76204168a/core/vm/operations_acl.go#L27
+	//  the storage methods below should also use apply this logic
 	statedb.SetState(params.Address, params.Key, params.Value)
 	return nil
 }
