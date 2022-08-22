@@ -17,6 +17,7 @@ import com.horizen.account.state.{AccountState, AccountStateView}
 import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.account.utils.EthereumTransactionDecoder
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.{ApiResponseUtil, SuccessResponse}
@@ -25,7 +26,7 @@ import com.horizen.transaction.Transaction
 import com.horizen.utils.ClosableResourceHandler
 import com.horizen.utils.BytesUtils
 import org.web3j.crypto.Sign.SignatureData
-import org.web3j.crypto.{SignedRawTransaction, TransactionDecoder, TransactionEncoder}
+import org.web3j.crypto.{SignedRawTransaction, TransactionEncoder}
 import org.web3j.utils.Numeric
 import scorex.core.NodeViewHolder
 import scorex.core.NodeViewHolder.CurrentView
@@ -270,7 +271,7 @@ class EthService(val sidechainNodeViewHolderRef: ActorRef, val nvtimeout: Finite
   }
 
   @RpcMethod("eth_sendRawTransaction") def sendRawTransaction(signedTxData: String): Quantity = {
-    val tx = new EthereumTransaction(TransactionDecoder.decode(signedTxData))
+    val tx = new EthereumTransaction(EthereumTransactionDecoder.decode(signedTxData))
     validateAndSendTransaction(tx)
     new Quantity(Numeric.prependHexPrefix(tx.id))
   }
