@@ -6,8 +6,8 @@ import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.horizen.block.SidechainBlock
 
-import javax.websocket.{OnClose, OnError, OnMessage, OnOpen, SendHandler, SendResult, Session}
-import javax.websocket.server.ServerEndpoint
+import jakarta.websocket.{OnClose, OnError, OnMessage, OnOpen, SendHandler, SendResult, Session}
+import jakarta.websocket.server.ServerEndpoint
 import sparkz.util.SparkzLogging
 
 import scala.util.{Failure, Success}

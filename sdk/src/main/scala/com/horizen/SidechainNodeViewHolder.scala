@@ -134,7 +134,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                   (rolledBackState, rolledBackWallet) match {
                     case (Success(s), Success(w)) =>
                       log.debug("State and wallet succesfully rolled back")
-                      dumpStorages
+                      dumpStorages()
                       Some((restoredHistory, s, w, restoredMempool))
                     case (Failure(e), _) =>
                       log.error("State roll back failed: ", e)

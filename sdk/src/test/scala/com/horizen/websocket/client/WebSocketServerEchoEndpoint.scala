@@ -1,7 +1,7 @@
 package com.horizen.websocket.client
 
-import javax.websocket.{OnMessage, Session}
-import javax.websocket.server.ServerEndpoint
+import jakarta.websocket.server.ServerEndpoint
+import jakarta.websocket.{OnMessage, Session}
 
 @ServerEndpoint("/")
 class WebSocketServerEchoEndpoint {
