@@ -19,6 +19,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.SignatureException;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.Map;
 
 import static java.util.Map.entry;
@@ -60,7 +61,7 @@ public class EthereumTransactionTest {
         EthereumTransaction decodedTx = EthereumTransactionSerializer.getSerializer().parseBytes(encodedTx);
         String strAfter = decodedTx.toString();
         // we must have the same representation
-        assertEquals(strBefore, strAfter);
+        assertEquals(strBefore.toLowerCase(Locale.ROOT), strAfter.toLowerCase(Locale.ROOT));
         assertEquals(tx, decodedTx);
         assertTrue(decodedTx.getSignature().isValid(decodedTx.getFrom(), decodedTx.messageToSign()));
     }
@@ -100,6 +101,15 @@ public class EthereumTransactionTest {
         checkEthTx(legacyTx);
 
         // EIP-155 tx
+        var unsignedEip155Tx = new EthereumTransaction(
+                "0x3535353535353535353535353535353535353535",
+                BigInteger.valueOf(9L),
+                BigInteger.valueOf(20).multiply(BigInteger.TEN.pow(9)),
+                BigInteger.valueOf(21000),
+                BigInteger.TEN.pow(18),
+                "",
+                new Sign.SignatureData(new byte[]{1}, new byte[]{0}, new byte[]{0})
+        );
         var eip155Tx = new EthereumTransaction(
                 "0x3535353535353535353535353535353535353535",
                 BigInteger.valueOf(9L),
@@ -111,6 +121,7 @@ public class EthereumTransactionTest {
                         BytesUtils.fromHexString("28EF61340BD939BC2195FE537567866003E1A15D3C71FF63E1590620AA636276"),
                         BytesUtils.fromHexString("67CBE9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83"))
         );
+        assertArrayEquals(unsignedEip155Tx.messageToSign(), eip155Tx.messageToSign());
         assertEquals(Hash.sha3("0xf86c098504a817c800825208943535353535353535353535353535353535353535880de0b6b3a76400008025a028ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa636276a067cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d83"), "0x" + eip155Tx.id());
         checkEthTx(eip155Tx);
 

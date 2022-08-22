@@ -4,7 +4,7 @@ import akka.actor.ActorRef
 import akka.http.scaladsl.server.Directives.onComplete
 import akka.pattern.ask
 import akka.util.Timeout
-import com.horizen.{SidechainSettings}
+import com.horizen.SidechainSettings
 import com.horizen.account.api.http.AccountTransactionErrorResponse.GenericTransactionError
 import com.horizen.account.api.http.AccountTransactionRestScheme.TransactionIdDTO
 import com.horizen.account.api.rpc.handler.RpcException
@@ -12,6 +12,8 @@ import com.horizen.account.api.rpc.types._
 import com.horizen.account.api.rpc.utils._
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
+import com.horizen.account.secret.PrivateKeySecp256k1
+import com.horizen.account.state.{AccountState, AccountStateView}
 import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
@@ -22,6 +24,9 @@ import com.horizen.api.http.{ApiResponseUtil, SuccessResponse}
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.Transaction
 import com.horizen.utils.ClosableResourceHandler
+import com.horizen.utils.BytesUtils
+import org.web3j.crypto.Sign.SignatureData
+import org.web3j.crypto.{SignedRawTransaction, TransactionEncoder}
 import org.web3j.utils.Numeric
 import scorex.core.NodeViewHolder
 import scorex.core.NodeViewHolder.CurrentView
@@ -30,8 +35,10 @@ import scorex.util.ModifierId
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters.seqAsJavaListConverter
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
+import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
+import scala.concurrent.duration.FiniteDuration
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
@@ -138,6 +145,51 @@ class EthService(val sidechainNodeViewHolderRef: ActorRef, val nvtimeout: Finite
     applyOnAccountView { nodeView => Numeric.toHexStringWithPrefix(doCall(nodeView, params, new Quantity("latest")).gasUsed()) }
   }
 
+  @RpcMethod("eth_signTransaction") def signTransaction(params: TransactionArgs): String = {
+    applyOnAccountView { nodeView =>
+      var signedTx = params.toTransaction
+      val secret =
+        getFittingSecret(nodeView.vault, nodeView.state, Option.apply(params.from.toUTXOString), params.value)
+      secret match {
+        case Some(secret) =>
+          signedTx = signTransactionWithSecret(secret, signedTx)
+        case None =>
+          return null
+      }
+      "0x" + BytesUtils.toHexString(TransactionEncoder.encode(signedTx.getTransaction, signedTx.getTransaction.asInstanceOf[SignedRawTransaction].getSignatureData))
+    }
+  }
+
+  private def getFittingSecret(wallet: AccountWallet, state: AccountState, fromAddress: Option[String], txValueInWei: BigInteger)
+  : Option[PrivateKeySecp256k1] = {
+    val allAccounts = wallet.secretsOfType(classOf[PrivateKeySecp256k1])
+    val secret = allAccounts.find(
+      a => (fromAddress.isEmpty ||
+        BytesUtils.toHexString(a.asInstanceOf[PrivateKeySecp256k1].publicImage
+          .address) == fromAddress.get) &&
+        state.getBalance(a.asInstanceOf[PrivateKeySecp256k1].publicImage.address).compareTo(txValueInWei) >= 0 // TODO account for gas
+    )
+
+    if (secret.nonEmpty) Option.apply(secret.get.asInstanceOf[PrivateKeySecp256k1])
+    else Option.empty[PrivateKeySecp256k1]
+  }
+
+  private def signTransactionWithSecret(secret: PrivateKeySecp256k1, tx: EthereumTransaction): EthereumTransaction = {
+    val messageToSign = tx.messageToSign()
+    val msgSignature = secret.sign(messageToSign)
+    var signatureData = new SignatureData(msgSignature.getV, msgSignature.getR, msgSignature.getS)
+    if (!tx.isEIP1559 && tx.isSigned && tx.getChainId != null) {
+      signatureData = TransactionEncoder.createEip155SignatureData(signatureData, tx.getChainId)
+    }
+    val signedTx = new EthereumTransaction(
+      new SignedRawTransaction(
+        tx.getTransaction.getTransaction,
+        signatureData
+      )
+    )
+    signedTx
+  }
+
   @RpcMethod("eth_blockNumber") def blockNumber: Quantity = applyOnAccountView { nodeView => new Quantity(Numeric.toHexStringWithPrefix(BigInteger.valueOf(nodeView.history.getCurrentHeight))) }
 
   @RpcMethod("eth_chainId") def chainId: Quantity = new Quantity(Numeric.toHexStringWithPrefix(BigInteger.valueOf(networkParams.chainId)))
@@ -189,8 +241,7 @@ class EthService(val sidechainNodeViewHolderRef: ActorRef, val nvtimeout: Finite
 
   @RpcMethod("net_version") def version: String = String.valueOf(networkParams.chainId)
 
-  @RpcMethod("eth_gasPrice") def gasPrice: Quantity = {
-    // TODO: Get the real gasPrice later
+  @RpcMethod("eth_gasPrice") def gasPrice = { // TODO: Get the real gasPrice later
     new Quantity("0x3B9ACA00")
   }
 
