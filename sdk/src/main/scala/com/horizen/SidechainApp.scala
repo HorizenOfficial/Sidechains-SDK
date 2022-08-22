@@ -202,16 +202,15 @@ class SidechainApp @Inject()
 
     // Start the web socket connector
     val connectorStarted : Try[Unit] = webSocketConnector.start()
+    // If the web socket connector can be started, maybe we would to associate a client to the web socket channel created by the connector
     if (connectorStarted.isSuccess)
       communicationClient.setWebSocketChannel(webSocketConnector)
     else if (sidechainSettings.withdrawalEpochCertificateSettings.submitterIsEnabled)
       throw new RuntimeException("Unable to connect to websocket. Certificate submitter needs connection to Mainchain.")
 
   } else {
-    log.info("Due to the settings, node is not enabled for connections.")
+    log.info("Websocket client is disabled.")
   }
-
-  // If the web socket connector can be started, maybe we would to associate a client to the web socket channel created by the connector
 
   // Init Forger with a proper web socket client
   val sidechainBlockForgerActorRef: ActorRef = ForgerRef("Forger", sidechainSettings, nodeViewHolderRef,  mainchainSynchronizer, sidechainTransactionsCompanion, timeProvider, params)

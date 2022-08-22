@@ -23,9 +23,9 @@ case class WebSocketClientSettings(
 )
 
 case class WebSocketServerSettings(
-                                    wsServer: Boolean = false,
-                                    wsServerPort: Int = 8025
-                                  )
+                             wsServer: Boolean = false,
+                             wsServerPort: Int = 8025
+                            )
 
 case class GenesisDataSettings(scGenesisBlockHex: String,
                                scId: String,
