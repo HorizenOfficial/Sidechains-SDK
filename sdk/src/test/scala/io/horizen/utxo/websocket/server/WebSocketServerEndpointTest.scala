@@ -21,7 +21,7 @@ import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedMempo
 
 import java.net.URI
 import java.util
-import javax.websocket._
+import jakarta.websocket._
 import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}

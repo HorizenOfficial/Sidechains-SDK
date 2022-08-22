@@ -4,11 +4,11 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import io.horizen.utxo.block.SidechainBlock
+import jakarta.websocket.{OnClose, OnError, OnMessage, OnOpen, SendHandler, SendResult, Session}
+import jakarta.websocket.server.ServerEndpoint
 import sparkz.util.SparkzLogging
 
 import java.util
-import javax.websocket._
-import javax.websocket.server.ServerEndpoint
 import scala.util.{Failure, Success}
 
 abstract class RequestType(val code:Int)
