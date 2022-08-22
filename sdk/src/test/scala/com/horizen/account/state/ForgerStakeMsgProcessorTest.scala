@@ -39,8 +39,6 @@ class ForgerStakeMsgProcessorTest
   val invalidWeiAmount: BigInteger = new BigInteger("10000000001")
   val validWeiAmount: BigInteger = new BigInteger("10000000000")
 
-  val senderProposition: AddressProposition = new AddressProposition(BytesUtils.fromHexString("00aabbcc9900aabbcc9900aabbcc9900aabbcc99"))
-
   val mockNetworkParams: NetworkParams = mock[NetworkParams]
   val forgerStakeMessageProcessor: ForgerStakeMsgProcessor = ForgerStakeMsgProcessor(mockNetworkParams)
   /** short hand: forger state fake contract address */
@@ -63,7 +61,7 @@ class ForgerStakeMsgProcessorTest
   def getDefaultMessage(opCode: Array[Byte], arguments: Array[Byte], nonce: BigInteger, value: BigInteger = negativeAmount): Message = {
     val data = Bytes.concat(opCode, arguments)
     new Message(
-      senderProposition,
+      new AddressProposition(origin),
       new AddressProposition(contractAddress), // to
       dummyBigInteger, // gasPrice
       dummyBigInteger, // gasFeeCap
@@ -78,18 +76,14 @@ class ForgerStakeMsgProcessorTest
 
   def removeForgerStake(stateView: AccountStateView, stakeId: Array[Byte]): Unit = {
     val nonce = randomNonce
-    val msgToSign = ForgerStakeMsgProcessor.getMessageToSign(stakeId, senderProposition.address(), nonce.toByteArray)
+    val msgToSign = ForgerStakeMsgProcessor.getMessageToSign(stakeId, origin, nonce.toByteArray)
     val msgSignatureData = Sign.signMessage(msgToSign, pair, true)
     val msgSignature = new SignatureSecp256k1(msgSignatureData)
 
     // create command arguments
     val removeCmdInput = RemoveStakeCmdInput(stakeId, msgSignature)
-
     val data: Array[Byte] = removeCmdInput.encode()
-
-    val msg = getDefaultMessage(
-      BytesUtils.fromHexString(RemoveStakeCmd),
-      data, nonce)
+    val msg = getMessage(contractAddress, 0, BytesUtils.fromHexString(RemoveStakeCmd) ++ data, nonce)
 
     // try processing the removal of stake, should succeed
     val returnData = withGas(forgerStakeMessageProcessor.process(msg, stateView, _))
@@ -98,9 +92,8 @@ class ForgerStakeMsgProcessorTest
   }
 
   def getForgerStakeList(stateView: AccountStateView): Array[Byte] = {
-    val data: Array[Byte] = new Array[Byte](0)
-    val msg = getDefaultMessage(BytesUtils.fromHexString(GetListOfForgersCmd), data, randomNonce)
-    val returnData = assertGas(forgerStakeMessageProcessor.RemoveStakeGasPaidValue) {
+    val msg = getMessage(contractAddress, 0, BytesUtils.fromHexString(GetListOfForgersCmd), randomNonce)
+    val returnData = assertGas(2250) {
       forgerStakeMessageProcessor.process(msg, stateView, _)
     }
     assertNotNull(returnData)
@@ -108,11 +101,11 @@ class ForgerStakeMsgProcessorTest
   }
 
   def createSenderAccount(view: AccountStateView, amount: BigInteger = BigInteger.ZERO): Unit = {
-    if (!view.accountExists(senderProposition.address())) {
-      view.addAccount(senderProposition.address(), randomHash)
+    if (!view.accountExists(origin)) {
+      view.addAccount(origin, randomHash)
 
       if (amount.compareTo(BigInteger.ZERO) >= 0) {
-        view.addBalance(senderProposition.address(), amount)
+        view.addBalance(origin, amount)
       }
     }
   }
@@ -206,12 +199,10 @@ class ForgerStakeMsgProcessorTest
       )
 
       val data: Array[Byte] = cmdInput.encode()
-      val msg = getDefaultMessage(
-        BytesUtils.fromHexString(AddNewStakeCmd),
-        data, randomNonce, validWeiAmount)
+      val msg = getMessage(contractAddress, validWeiAmount, BytesUtils.fromHexString(AddNewStakeCmd) ++ data, randomNonce)
 
       // positive case, verify we can add the stake to view
-      val returnData = assertGas(forgerStakeMessageProcessor.AddNewStakeGasPaidValue) {
+      val returnData = assertGas(3500) {
         forgerStakeMessageProcessor.process(msg, view, _)
       }
       assertNotNull(returnData)
@@ -219,7 +210,7 @@ class ForgerStakeMsgProcessorTest
 
       // verify we added the amount to smart contract and we charge the sender
       assertTrue(view.getBalance(contractAddress) == validWeiAmount)
-      assertTrue(view.getBalance(senderProposition.address()) == initialAmount.subtract(validWeiAmount))
+      assertTrue(view.getBalance(origin) == initialAmount.subtract(validWeiAmount))
 
       // Checking log
       // TODO: asInstanceOf required? gigo
@@ -239,9 +230,7 @@ class ForgerStakeMsgProcessorTest
       assertEquals("Wrong number of logs", 0, listOfLogs.length)
 
       // try processing a msg with different stake id (different nonce), should succeed
-      val msg2 = getDefaultMessage(
-        BytesUtils.fromHexString(AddNewStakeCmd),
-        data, randomNonce, validWeiAmount)
+      val msg2 = getMessage(contractAddress, validWeiAmount, BytesUtils.fromHexString(AddNewStakeCmd) ++ data, randomNonce)
 
       val txHash3 = Keccak256.hash("third tx")
       view.setupTxContext(txHash3, 10)
@@ -250,7 +239,7 @@ class ForgerStakeMsgProcessorTest
         ForgerStakeData(ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
           ownerAddressProposition, validWeiAmount))
 
-      val returnData2 = assertGas(forgerStakeMessageProcessor.AddNewStakeGasPaidValue) {
+      val returnData2 = assertGas(4000) {
         forgerStakeMessageProcessor.process(msg2, view, _)
       }
       assertNotNull(returnData2)
@@ -258,7 +247,7 @@ class ForgerStakeMsgProcessorTest
 
       // verify we added the amount to smart contract and we charge the sender
       assertTrue(view.getBalance(contractAddress) == validWeiAmount.multiply(BigInteger.TWO))
-      assertTrue(view.getBalance(senderProposition.address()) == initialAmount.subtract(validWeiAmount.multiply(BigInteger.TWO)))
+      assertTrue(view.getBalance(origin) == initialAmount.subtract(validWeiAmount.multiply(BigInteger.TWO)))
 
       // Checking log
       listOfLogs = view.getLogs(txHash3.asInstanceOf[Array[Byte]])
@@ -270,19 +259,19 @@ class ForgerStakeMsgProcessorTest
       // remove first stake id
       val stakeId = forgerStakeMessageProcessor.getStakeId(msg)
       val nonce3 = randomNonce
-      val msgToSign = ForgerStakeMsgProcessor.getMessageToSign(stakeId, senderProposition.address(), nonce3.toByteArray)
+      val msgToSign = ForgerStakeMsgProcessor.getMessageToSign(stakeId, origin, nonce3.toByteArray)
       val msgSignatureData = Sign.signMessage(msgToSign, pair, true)
       val msgSignature = new SignatureSecp256k1(msgSignatureData)
 
       // create command arguments
       val removeCmdInput = RemoveStakeCmdInput(stakeId, msgSignature)
 
-      val msg3 = getDefaultMessage(BytesUtils.fromHexString(RemoveStakeCmd), removeCmdInput.encode(), nonce3)
+      val msg3 = getMessage(contractAddress, 0, BytesUtils.fromHexString(RemoveStakeCmd) ++ removeCmdInput.encode(), nonce3)
       val txHash4 = Keccak256.hash("forth tx")
       view.setupTxContext(txHash4, 10)
 
       // try processing the removal of stake, should succeed
-      val returnData3 = assertGas(forgerStakeMessageProcessor.RemoveStakeGasPaidValue) {
+      val returnData3 = assertGas(3125) {
         forgerStakeMessageProcessor.process(msg3, view, _)
       }
       assertNotNull(returnData3)
@@ -290,7 +279,7 @@ class ForgerStakeMsgProcessorTest
 
       // verify we removed the amount from smart contract and we added it to owner (sender is not concerned)
       assertEquals(validWeiAmount, view.getBalance(contractAddress))
-      assertEquals(initialAmount.subtract(validWeiAmount.multiply(BigInteger.TWO)), view.getBalance(senderProposition.address()))
+      assertEquals(initialAmount.subtract(validWeiAmount.multiply(BigInteger.TWO)), view.getBalance(origin))
       assertEquals(validWeiAmount, view.getBalance(ownerAddressProposition.address()))
 
       // Checking log
@@ -300,7 +289,7 @@ class ForgerStakeMsgProcessorTest
       checkRemoveForgerStakeEvent(expectedRemoveStakeEvent, listOfLogs(0))
 
       val msg4 = getDefaultMessage(BytesUtils.fromHexString(GetListOfForgersCmd), Array.emptyByteArray, randomNonce)
-      val returnData4 = assertGas(forgerStakeMessageProcessor.RemoveStakeGasPaidValue) {
+      val returnData4 = assertGas(750) {
         forgerStakeMessageProcessor.process(msg4, view, _)
       }
       assertNotNull(returnData4)
@@ -346,9 +335,9 @@ class ForgerStakeMsgProcessorTest
         data, randomNonce, validWeiAmount)
 
       // should fail because forger is not in the allowed list
-      assertThrows[ExecutionFailedException] {
-        assertGas(forgerStakeMessageProcessor.AddNewStakeGasPaidValue) {
-          forgerStakeMessageProcessor.process(msg, view, _)
+      assertGas(250) { gas =>
+        assertThrows[ExecutionFailedException] {
+          forgerStakeMessageProcessor.process(msg, view, gas)
         }
       }
 
@@ -364,7 +353,7 @@ class ForgerStakeMsgProcessorTest
       val msg = getDefaultMessage(BytesUtils.fromHexString("03"), data, randomNonce)
 
       // should fail because op code is invalid
-      assertThrows[ExecutionFailedException](assertGas(0)(forgerStakeMessageProcessor.process(msg, view, _)))
+      assertGas(0)(gas => assertThrows[ExecutionFailedException](forgerStakeMessageProcessor.process(msg, view, gas)))
       view.commit(bytesToVersion(getVersion.data()))
     }
   }
@@ -403,9 +392,9 @@ class ForgerStakeMsgProcessorTest
         data, randomNonce, invalidWeiAmount)
 
       // should fail because staked amount is not a zat amount
-      assertThrows[ExecutionFailedException] {
-        assertGas(forgerStakeMessageProcessor.AddNewStakeGasPaidValue) {
-          forgerStakeMessageProcessor.process(msg, view, _)
+      assertGas(0) { gas =>
+        assertThrows[ExecutionFailedException] {
+          forgerStakeMessageProcessor.process(msg, view, gas)
         }
       }
 
@@ -451,9 +440,9 @@ class ForgerStakeMsgProcessorTest
         data, randomNonce, validWeiAmount)
 
       // should fail because staked amount is not a zat amount
-      assertThrows[ExecutionFailedException] {
-        assertGas(forgerStakeMessageProcessor.AddNewStakeGasPaidValue) {
-          forgerStakeMessageProcessor.process(msg, view, _)
+      assertGas(3250) { gas =>
+        assertThrows[ExecutionFailedException] {
+          forgerStakeMessageProcessor.process(msg, view, gas)
         }
       }
       view.commit(bytesToVersion(getVersion.data()))
@@ -485,9 +474,9 @@ class ForgerStakeMsgProcessorTest
         BytesUtils.fromHexString(GetListOfForgersCmd),
         data, randomNonce)
 
-      assertThrows[ExecutionFailedException] {
-        assertGas(forgerStakeMessageProcessor.GetListOfForgersGasPaidValue) {
-          forgerStakeMessageProcessor.process(msg, view, _)
+      assertGas(0) { gas =>
+        assertThrows[ExecutionFailedException] {
+          forgerStakeMessageProcessor.process(msg, view, gas)
         }
       }
 
@@ -527,17 +516,14 @@ class ForgerStakeMsgProcessorTest
       // add 4 forger stakes with increasing amount
       for (i <- 1 to 4) {
         val stakeAmount = validWeiAmount.multiply(BigInteger.valueOf(i))
-        val msg = getDefaultMessage(
-          BytesUtils.fromHexString(AddNewStakeCmd),
-          data, randomNonce, stakeAmount)
+        val msg = getMessage(contractAddress, stakeAmount,
+          BytesUtils.fromHexString(AddNewStakeCmd) ++ data, randomNonce)
         val expStakeId = forgerStakeMessageProcessor.getStakeId(msg)
         listOfExpectedForgerStakes.add(AccountForgingStakeInfo(expStakeId,
           ForgerStakeData(ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
             ownerAddressProposition, stakeAmount)))
 
-        val returnData = assertGas(forgerStakeMessageProcessor.AddNewStakeGasPaidValue) {
-          forgerStakeMessageProcessor.process(msg, view, _)
-        }
+        val returnData = withGas(forgerStakeMessageProcessor.process(msg, view, _))
         assertNotNull(returnData)
       }
 
@@ -583,16 +569,13 @@ class ForgerStakeMsgProcessorTest
       // add 10 forger stakes with increasing amount
       for (i <- 1 to 4) {
         val stakeAmount = validWeiAmount.multiply(BigInteger.valueOf(i))
-        val msg = getDefaultMessage(
-          BytesUtils.fromHexString(AddNewStakeCmd),
-          data, randomNonce, stakeAmount)
+        val msg = getMessage(contractAddress, stakeAmount,
+          BytesUtils.fromHexString(AddNewStakeCmd) ++ data, randomNonce)
         val expStakeId = forgerStakeMessageProcessor.getStakeId(msg)
         listOfExpectedForgerStakes.add(AccountForgingStakeInfo(expStakeId,
           ForgerStakeData(ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
             ownerAddressProposition, stakeAmount)))
-        val returnData = assertGas(forgerStakeMessageProcessor.AddNewStakeGasPaidValue) {
-          forgerStakeMessageProcessor.process(msg, view, _)
-        }
+        val returnData = withGas(forgerStakeMessageProcessor.process(msg, view, _))
         assertNotNull(returnData)
       }
 
