@@ -1,12 +1,12 @@
 package com.horizen;
-import java.io.File;
-import java.util.*;
 
-import com.horizen.settings.SettingsReader;
 import com.horizen.tools.utils.ConsolePrinter;
 import com.horizen.tools.utils.MessagePrinter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import java.io.File;
+import java.util.*;
 
 public class DbTool {
     public static final Set<String> storageNames = new HashSet<>(Arrays.asList(
@@ -19,8 +19,7 @@ public class DbTool {
             "stateForgerBox",
             "stateUtxoMerkleTree",
             "history",
-            "consensusData",
-            "appState1", "appState2", "appWallet1", "appWallet2" // simple app tests
+            "consensusData"
     ));
 
     public static void main(String args[]) {
@@ -35,6 +34,7 @@ public class DbTool {
 
         Logger log = LogManager.getLogger(com.horizen.DbTool.class);
 
+        // read database folder path from input arguments
         if (args.length == 0) {
             log.error("Please provide DB folder path as first parameter!");
             return;
@@ -45,12 +45,18 @@ public class DbTool {
         }
         String dataDirAbsolutePath = args[0];
 
+        // read custom storage names list from input arguments
+        List<String> customStorageNames = Arrays.asList(args[1].split(","));
+        for(String customStorageName: customStorageNames) {
+            storageNames.add(customStorageName);
+        }
+
         MessagePrinter printer = new ConsolePrinter();
         DbToolCommandProcessor processor = new DbToolCommandProcessor(printer, dataDirAbsolutePath, log);
-        if(args.length > 1)
+        if(args.length > 2)
             try {
-                StringBuilder cmd = new StringBuilder(args[1]);
-                for(int i=2; i<args.length; i++)
+                StringBuilder cmd = new StringBuilder(args[2]);
+                for(int i=3; i<args.length; i++)
                     cmd.append(" ").append(args[i]);
                 log.info("Starting db tool with cmd input: " + cmd);
                 processor.processCommand(cmd.toString());
