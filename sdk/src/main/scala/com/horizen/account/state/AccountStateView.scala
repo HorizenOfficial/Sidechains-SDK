@@ -153,6 +153,8 @@ class AccountStateView(
         log.error("applying message failed", err)
         ReceiptStatus.FAILED
     } finally {
+      // finalize pending changes, clear the journal and reset refund counter
+      stateDb.finalizeChanges()
       // make sure we disable automatic gas consumption in case a message processor enabled it
       disableGasTracking()
     }

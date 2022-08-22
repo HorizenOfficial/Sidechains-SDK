@@ -106,6 +106,15 @@ func (s *Service) StateClose(params HandleParams) {
 	s.statedbs.Remove(params.Handle)
 }
 
+func (s *Service) StateFinalize(params HandleParams) error {
+	err, statedb := s.statedbs.Get(params.Handle)
+	if err != nil {
+		return err
+	}
+	statedb.Finalise(true)
+	return nil
+}
+
 func (s *Service) StateIntermediateRoot(params HandleParams) (error, common.Hash) {
 	err, statedb := s.statedbs.Get(params.Handle)
 	if err != nil {

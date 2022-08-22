@@ -93,6 +93,10 @@ final class LibEvm {
         invoke("StateClose", new HandleParams(handle));
     }
 
+    public static void stateFinalize(int handle) {
+        invoke("StateFinalize", new HandleParams(handle));
+    }
+
     public static byte[] stateIntermediateRoot(int handle) {
         return invoke("StateIntermediateRoot", new HandleParams(handle), Hash.class).toBytes();
     }
