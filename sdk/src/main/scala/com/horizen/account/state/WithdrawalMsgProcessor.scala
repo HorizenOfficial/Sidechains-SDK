@@ -81,8 +81,9 @@ object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with Withdra
   }
 
   protected def execGetListOfWithdrawalReqRecords(msg: Message, view: BaseAccountStateView): Array[Byte] = {
-    require(msg.getData.length == METHOD_CODE_LENGTH + GetListOfWithdrawalRequestsCmdInputDecoder.getABIDataParamsLengthInBytes,
-      s"Wrong data length ${msg.getData.length}") //TODO should any length between OP_CODE_LENGTH to OP_CODE_LENGTH + 32 be supported?
+    //TODO should any length between OP_CODE_LENGTH to OP_CODE_LENGTH + 32 be supported?
+    if (msg.getData.length != METHOD_CODE_LENGTH + GetListOfWithdrawalRequestsCmdInputDecoder.getABIDataParamsLengthInBytes)
+      throw new ExecutionFailedException(s"Wrong message data field length: ${msg.getData.length}")
     val inputParams = GetListOfWithdrawalRequestsCmdInputDecoder.decode(getArgumentsFromData(msg.getData))
     val listOfWithdrawalReqs = getListOfWithdrawalReqRecords(inputParams.epochNum, view)
     WithdrawalRequestsListEncoder.encode(listOfWithdrawalReqs.asJava)
