@@ -69,41 +69,31 @@ public class TransactionArgs {
                 gasLimit = gas;
             }
         }
-        var gasPrice = BigInteger.ZERO;
+        var effectiveGasPrice = BigInteger.ZERO;
         var gasFeeCap = BigInteger.ZERO;
         var gasTipCap = BigInteger.ZERO;
-        if (baseFee == null) {
-            // If there's no basefee, then it must be a non-1559 execution
-            if (this.gasPrice != null) {
-                gasPrice = this.gasPrice;
-                gasFeeCap = this.gasPrice;
-                gasTipCap = this.gasPrice;
-            }
+        if (gasPrice != null) {
+            // User specified the legacy gas field, convert to 1559 gas typing
+            effectiveGasPrice = gasPrice;
+            gasFeeCap = gasPrice;
+            gasTipCap = gasPrice;
         } else {
-            // A basefee is provided, necessitating 1559-type execution
-            if (this.gasPrice != null) {
-                // User specified the legacy gas field, convert to 1559 gas typing
-                gasPrice = this.gasPrice;
-                gasFeeCap = this.gasPrice;
-                gasTipCap = this.gasPrice;
-            } else {
-                // User specified 1559 gas fields (or none), use those
-                if (maxFeePerGas != null) {
-                    gasFeeCap = maxFeePerGas;
-                }
-                if (maxPriorityFeePerGas != null) {
-                    gasTipCap = maxPriorityFeePerGas;
-                }
-                // Backfill the legacy gasPrice for EVM execution, unless we're all zeroes
-                if (gasFeeCap.bitLength() > 0 || gasTipCap.bitLength() > 0) {
-                    gasPrice = baseFee.add(gasTipCap).min(gasFeeCap);
-                }
+            // User specified 1559 gas fields (or none), use those
+            if (maxFeePerGas != null) {
+                gasFeeCap = maxFeePerGas;
+            }
+            if (maxPriorityFeePerGas != null) {
+                gasTipCap = maxPriorityFeePerGas;
+            }
+            // Backfill the legacy gasPrice for EVM execution, unless we're all zeroes
+            if (gasFeeCap.bitLength() > 0 || gasTipCap.bitLength() > 0) {
+                effectiveGasPrice = baseFee.add(gasTipCap).min(gasFeeCap);
             }
         }
         return new Message(
                 new AddressProposition(getFrom()),
                 to == null ? null : new AddressProposition(to.toBytes()),
-                gasPrice,
+                effectiveGasPrice,
                 gasFeeCap,
                 gasTipCap,
                 gasLimit,

@@ -362,19 +362,15 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
     public Message asMessage(BigInteger baseFee) {
         var is1559 = isEIP1559();
-        var gasPrice = !is1559 ? getGasPrice() : getMaxFeePerGas();
         var gasFeeCap = !is1559 ? getGasPrice() : getMaxFeePerGas();
         var gasTipCap = !is1559 ? getGasPrice() : getMaxPriorityFeePerGas();
-        // TODO: switches on baseFee being null or not are used in geth to determine if the EIP1559 hardfork has
-        //  already happened or not - we will always have EIP1559, so we don't really need it, correct?
-        if (baseFee != null) {
-            // calculate effective gas price as baseFee + tip capped at the fee cap
-            gasPrice = baseFee.add(gasTipCap).min(gasFeeCap);
-        }
+        // calculate effective gas price as baseFee + tip capped at the fee cap
+        // this will default to gasPrice if the transaction is not EIP-1559
+        var effectiveGasPrice = baseFee.add(gasTipCap).min(gasFeeCap);
         return new Message(
                 getFrom(),
                 getTo(),
-                gasPrice,
+                effectiveGasPrice,
                 gasFeeCap,
                 gasTipCap,
                 getGasLimit(),
