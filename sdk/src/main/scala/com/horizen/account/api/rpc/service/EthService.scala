@@ -13,8 +13,10 @@ import com.horizen.account.api.rpc.utils._
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.receipt.EthereumReceipt
+import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.account.utils.EthereumTransactionDecoder
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.{ApiResponseUtil, SuccessResponse}
@@ -22,8 +24,9 @@ import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.Transaction
 import com.horizen.transaction.exception.TransactionSemanticValidityException
-import com.horizen.utils.ClosableResourceHandler
-import org.web3j.crypto.TransactionDecoder
+import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
+import org.web3j.crypto.Sign.SignatureData
+import org.web3j.crypto.{SignedRawTransaction, TransactionEncoder}
 import org.web3j.utils.Numeric
 import scorex.core.NodeViewHolder
 import scorex.core.NodeViewHolder.CurrentView
@@ -32,6 +35,7 @@ import scorex.util.ModifierId
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters.seqAsJavaListConverter
+import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{Await, Future}
@@ -145,6 +149,51 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
       }
     }
     high
+  }
+
+  @RpcMethod("eth_signTransaction") def signTransaction(params: TransactionArgs): String = {
+    applyOnAccountView { nodeView =>
+      var signedTx = params.toTransaction
+      val secret =
+        getFittingSecret(nodeView.vault, nodeView.state, Option.apply(params.from.toUTXOString), params.value)
+      secret match {
+        case Some(secret) =>
+          signedTx = signTransactionWithSecret(secret, signedTx)
+        case None =>
+          return null
+      }
+      "0x" + BytesUtils.toHexString(TransactionEncoder.encode(signedTx.getTransaction, signedTx.getTransaction.asInstanceOf[SignedRawTransaction].getSignatureData))
+    }
+  }
+
+  private def getFittingSecret(wallet: AccountWallet, state: AccountState, fromAddress: Option[String], txValueInWei: BigInteger)
+  : Option[PrivateKeySecp256k1] = {
+    val allAccounts = wallet.secretsOfType(classOf[PrivateKeySecp256k1])
+    val secret = allAccounts.find(
+      a => (fromAddress.isEmpty ||
+        BytesUtils.toHexString(a.asInstanceOf[PrivateKeySecp256k1].publicImage
+          .address) == fromAddress.get) &&
+        state.getBalance(a.asInstanceOf[PrivateKeySecp256k1].publicImage.address).compareTo(txValueInWei) >= 0 // TODO account for gas
+    )
+
+    if (secret.nonEmpty) Option.apply(secret.get.asInstanceOf[PrivateKeySecp256k1])
+    else Option.empty[PrivateKeySecp256k1]
+  }
+
+  private def signTransactionWithSecret(secret: PrivateKeySecp256k1, tx: EthereumTransaction): EthereumTransaction = {
+    val messageToSign = tx.messageToSign()
+    val msgSignature = secret.sign(messageToSign)
+    var signatureData = new SignatureData(msgSignature.getV, msgSignature.getR, msgSignature.getS)
+    if (!tx.isEIP1559 && tx.isSigned && tx.getChainId != null) {
+      signatureData = TransactionEncoder.createEip155SignatureData(signatureData, tx.getChainId)
+    }
+    val signedTx = new EthereumTransaction(
+      new SignedRawTransaction(
+        tx.getTransaction.getTransaction,
+        signatureData
+      )
+    )
+    signedTx
   }
 
   @RpcMethod("eth_estimateGas")
@@ -288,7 +337,7 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   }
 
   @RpcMethod("eth_sendRawTransaction") def sendRawTransaction(signedTxData: String): Quantity = {
-    val tx = new EthereumTransaction(TransactionDecoder.decode(signedTxData))
+    val tx = new EthereumTransaction(EthereumTransactionDecoder.decode(signedTxData))
     validateAndSendTransaction(tx)
     new Quantity(Numeric.prependHexPrefix(tx.id))
   }
