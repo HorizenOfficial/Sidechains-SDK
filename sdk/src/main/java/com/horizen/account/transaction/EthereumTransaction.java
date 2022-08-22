@@ -32,7 +32,7 @@ import java.util.Objects;
 @JsonView(Views.Default.class)
 public class EthereumTransaction extends AccountTransaction<AddressProposition, SignatureSecp256k1> {
     private final RawTransaction transaction;
-    
+
     // depends on the transaction
     public EthereumTransaction(
             RawTransaction transaction
@@ -172,9 +172,9 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         //TODO: add this again later or remove, because these checks are already made in some other place
         if (this.getFrom().address().length != Account.ADDRESS_SIZE)
             throw new TransactionSemanticValidityException("Cannot create signed transaction without valid from address");
-        //if (!this.getSignature().isValid(this.getFrom(), this.messageToSign()))
-        //    throw new TransactionSemanticValidityException("Cannot create signed transaction with invalid " +
-        //            "signature");
+        if (!this.getSignature().isValid(this.getFrom(), this.messageToSign()))
+            throw new TransactionSemanticValidityException("Cannot create signed transaction with invalid " +
+                    "signature");
     }
 
     @Override
@@ -341,11 +341,11 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                 "EthereumTransaction{from=%s, nonce=%s, gasPrice=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
                         "Signature=%s}",
                 getFromAddress(),
-                Numeric.toHexStringWithPrefix(this.getNonce()),
-                Numeric.toHexStringWithPrefix(this.getGasPrice()),
-                Numeric.toHexStringWithPrefix(this.getGasLimit()),
-                this.getTo() != null ? this.getTo() : "0x",
-                Numeric.toHexStringWithPrefix(this.getValue()),
+                Numeric.toHexStringWithPrefix(this.getNonce() != null ? this.getNonce() : BigInteger.ZERO),
+                Numeric.toHexStringWithPrefix(this.getGasPrice() != null ? this.getGasPrice() : BigInteger.ZERO),
+                Numeric.toHexStringWithPrefix(this.getGasLimit() != null ? this.getGasLimit() : BigInteger.ZERO),
+                this.getToAddress() != null ? this.getToAddress() : "0x",
+                Numeric.toHexStringWithPrefix(this.getValue() != null ? this.getValue() : BigInteger.ZERO),
                 this.getData() != null ? Numeric.toHexString(this.getData()) : "",
                 isSigned() ? new SignatureSecp256k1(getSignatureData()).toString() : ""
         );
