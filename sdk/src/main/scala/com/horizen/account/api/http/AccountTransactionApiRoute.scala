@@ -17,8 +17,8 @@ import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
-import com.horizen.account.transaction.{EthereumTransaction, EthereumTransactionSerializer}
-import com.horizen.account.utils.{EthereumTransactionUtils, ZenWeiConverter}
+import com.horizen.account.transaction.{EthereumTransaction}
+import com.horizen.account.utils.{EthereumTransactionDecoder, EthereumTransactionUtils, ZenWeiConverter}
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.SidechainTransactionErrorResponse.GenericTransactionError
@@ -256,7 +256,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     entity(as[ReqRawTransaction]) { body =>
       // lock the view and try to create CoreTransaction
       applyOnNodeView { sidechainNodeView =>
-        var signedTx = new EthereumTransaction(TransactionDecoder.decode(body.payload))
+        var signedTx = new EthereumTransaction(EthereumTransactionDecoder.decode(body.payload))
         if (!signedTx.isSigned) {
           val secret =
             getFittingSecret(sidechainNodeView, body.from, signedTx.getValue)
@@ -276,7 +276,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     entity(as[ReqRawTransaction]) {
       body => {
         applyOnNodeView { sidechainNodeView =>
-          var signedTx = new EthereumTransaction(TransactionDecoder.decode(body.payload))
+          var signedTx = new EthereumTransaction(EthereumTransactionDecoder.decode(body.payload))
           val secret =
             getFittingSecret(sidechainNodeView, body.from, signedTx.getValue)
           secret match {
