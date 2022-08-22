@@ -3,7 +3,7 @@ package io.horizen.utxo.websocket.server
 import com.horizen.websocket.server.WebSocketServerBaseImpl
 import io.horizen.utxo.block.SidechainBlock
 
-import javax.websocket._
+import jakarta.websocket.ClientEndpoint
 
 @ClientEndpoint
 class WebSocketServerImpl(bindPort: Int, configuration: Class[_]) extends WebSocketServerBaseImpl(bindPort, configuration) {
