@@ -145,16 +145,18 @@ class EthService(val sidechainNodeViewHolderRef: ActorRef, val nvtimeout: Finite
   }
 
   @RpcMethod("eth_signTransaction") def signTransaction(params: TransactionArgs): String = {
-    var signedTx = params.toTransaction
-    val secret =
-      getFittingSecret(nodeView.vault, nodeView.state, Option.apply(params.from.toUTXOString), params.value)
-    secret match {
-      case Some(secret) =>
-        signedTx = signTransactionWithSecret(secret, signedTx)
-      case None =>
-        return null
+    applyOnAccountView { nodeView =>
+      var signedTx = params.toTransaction
+      val secret =
+        getFittingSecret(nodeView.vault, nodeView.state, Option.apply(params.from.toUTXOString), params.value)
+      secret match {
+        case Some(secret) =>
+          signedTx = signTransactionWithSecret(secret, signedTx)
+        case None =>
+          return null
+      }
+      "0x" + BytesUtils.toHexString(TransactionEncoder.encode(signedTx.getTransaction, signedTx.getTransaction.asInstanceOf[SignedRawTransaction].getSignatureData))
     }
-    "0x" + BytesUtils.toHexString(TransactionEncoder.encode(signedTx.getTransaction, signedTx.getTransaction.asInstanceOf[SignedRawTransaction].getSignatureData))
   }
 
   private def getFittingSecret(wallet: AccountWallet, state: AccountState, fromAddress: Option[String], txValueInWei: BigInteger)
