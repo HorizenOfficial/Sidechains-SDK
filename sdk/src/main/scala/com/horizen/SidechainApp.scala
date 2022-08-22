@@ -58,7 +58,9 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
-
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.core.impl.Log4jContextFactory
+import org.apache.logging.log4j.core.util.DefaultShutdownCallbackRegistry
 
 class SidechainApp @Inject()
   (@Named("SidechainSettings") val sidechainSettings: SidechainSettings,
@@ -423,18 +425,12 @@ class SidechainApp @Inject()
 
     Http().bindAndHandle(combinedRoute, bindAddress.getAddress.getHostAddress, bindAddress.getPort)
 
-    //Retrieve the list of all registered Shutdown hooks
-    val clazz = Class.forName("java.lang.ApplicationShutdownHooks")
-    val field = clazz.getDeclaredField("hooks")
-    field.setAccessible(true)
-    val hooks = field.get(null)
 
     //Remove the Logger shutdown hook
-    val threadMap = hooks.asInstanceOf[JMap[Thread, Thread]].values()
-    threadMap.asScala.toArray.find(thread => thread.getName.equals("Logging-Cleaner")) match {
-      case Some(thread) =>
-        Runtime.getRuntime.removeShutdownHook(thread)
-      case None =>
+    val factory = LogManager.getFactory
+    if (factory.isInstanceOf[Log4jContextFactory]) {
+      val contextFactory = factory.asInstanceOf[Log4jContextFactory]
+      contextFactory.getShutdownCallbackRegistry.asInstanceOf[DefaultShutdownCallbackRegistry].stop()
     }
 
     //Add a new Shutdown hook that closes all the storages and stops all the interfaces and actors.
