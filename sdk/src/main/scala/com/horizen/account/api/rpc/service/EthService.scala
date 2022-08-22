@@ -4,7 +4,7 @@ import akka.actor.ActorRef
 import akka.http.scaladsl.server.Directives.onComplete
 import akka.pattern.ask
 import akka.util.Timeout
-import com.horizen.{SidechainNodeViewHolder, SidechainSettings}
+import com.horizen.{SidechainSettings}
 import com.horizen.account.api.http.AccountTransactionErrorResponse.GenericTransactionError
 import com.horizen.account.api.http.AccountTransactionRestScheme.TransactionIdDTO
 import com.horizen.account.api.rpc.handler.RpcException
@@ -15,24 +15,23 @@ import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.account.utils.EthereumTransactionDecoder
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.{ApiResponseUtil, SuccessResponse}
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.Transaction
 import com.horizen.utils.ClosableResourceHandler
-import org.web3j.crypto.TransactionDecoder
 import org.web3j.utils.Numeric
 import scorex.core.NodeViewHolder
 import scorex.core.NodeViewHolder.CurrentView
-import scorex.core.settings.RESTApiSettings
 import scorex.util.ModifierId
 
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters.seqAsJavaListConverter
-import scala.concurrent.duration.{Duration, DurationInt, FiniteDuration}
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
@@ -221,7 +220,7 @@ class EthService(val sidechainNodeViewHolderRef: ActorRef, val nvtimeout: Finite
   }
 
   @RpcMethod("eth_sendRawTransaction") def sendRawTransaction(signedTxData: String): Quantity = {
-    val tx = new EthereumTransaction(TransactionDecoder.decode(signedTxData))
+    val tx = new EthereumTransaction(EthereumTransactionDecoder.decode(signedTxData))
     validateAndSendTransaction(tx)
     new Quantity(Numeric.prependHexPrefix(tx.id))
   }
