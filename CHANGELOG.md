@@ -1,3 +1,6 @@
+**0.4.1**
+1. TODO
+
 **0.4.0**
 1. Memory pool improvement: upper bound size limit introduced (default 300Mb) altogether with cleanup strategy (the lowest fee rate transaction removed first).
 2. Memory pool improvement: minimum fee rate check added for incoming transactions. By default, is disabled.
