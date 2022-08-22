@@ -44,6 +44,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.github.organization>HorizenOfficial</project.github.organization>
     <scala.version>2.12.12</scala.version>
+    <tyrus.version>2.1.0</tyrus.version>
   </properties>
   <dependencies>
     <dependency>
@@ -213,21 +214,21 @@
     <dependency>
       <groupId>org.glassfish.tyrus.bundles</groupId>
       <artifactId>tyrus-standalone-client</artifactId>
-      <version>1.20</version>
+      <version>${tyrus.version}</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.glassfish.tyrus/tyrus-container-grizzly-server -->
     <dependency>
       <groupId>org.glassfish.tyrus</groupId>
       <artifactId>tyrus-container-grizzly-server</artifactId>
-      <version>1.20</version>
+      <version>${tyrus.version}</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.glassfish.tyrus/tyrus-server -->
     <dependency>
       <groupId>org.glassfish.tyrus</groupId>
       <artifactId>tyrus-server</artifactId>
-      <version>1.20</version>
+      <version>${tyrus.version}</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.iq80.leveldb/leveldb-project -->
@@ -399,7 +400,7 @@
       <plugin>
         <groupId>net.alchim31.maven</groupId>
         <artifactId>scala-maven-plugin</artifactId>
-        <version>4.4.0</version>
+        <version>4.7.1</version>
         <executions>
           <execution>
             <id>compile-scala-sources</id>
@@ -473,7 +474,7 @@
       <plugin>
         <groupId>net.alchim31.maven</groupId>
         <artifactId>scala-maven-plugin</artifactId>
-        <version>4.4.0</version>
+        <version>4.7.1</version>
         <configuration>
           <scalaVersion>${scala.version}</scalaVersion>
         </configuration>
