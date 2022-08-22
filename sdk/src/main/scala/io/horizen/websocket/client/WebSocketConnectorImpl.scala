@@ -77,14 +77,12 @@ class WebSocketConnectorImpl(bindAddress: String, connectionTimeout: FiniteDurat
 
   override def sendMessage(message: String): Unit = {
     try {
-      userSession.getAsyncRemote.sendText(message, new SendHandler {
-        override def onResult(sendResult: SendResult): Unit = {
-          if (!sendResult.isOK) {
-            log.info("Send message failed.")
-            messageHandler.onSendMessageErrorOccurred(message, sendResult.getException)
-          }
-          else log.info("Message sent")
+      userSession.getAsyncRemote.sendText(message, (sendResult: SendResult) => {
+        if (!sendResult.isOK) {
+          log.info("Send message failed.")
+          messageHandler.onSendMessageErrorOccurred(message, sendResult.getException)
         }
+        else log.info("Message sent")
       }
       )
     } catch {
