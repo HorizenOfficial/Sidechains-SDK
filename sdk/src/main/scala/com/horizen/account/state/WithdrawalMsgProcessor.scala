@@ -49,7 +49,7 @@ object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with Withdra
         execAddWithdrawalRequest(msg, view)
 
       case functionSig =>
-        throw new ExecutionFailedException(s"Requested function does not exist. Function signature: $functionSig")
+        throw new ExecutionRevertedException(s"Requested function does not exist. Function signature: $functionSig")
     }
   }
 
@@ -83,7 +83,7 @@ object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with Withdra
   protected def execGetListOfWithdrawalReqRecords(msg: Message, view: BaseAccountStateView): Array[Byte] = {
     //TODO should any length between OP_CODE_LENGTH to OP_CODE_LENGTH + 32 be supported?
     if (msg.getData.length != METHOD_CODE_LENGTH + GetListOfWithdrawalRequestsCmdInputDecoder.getABIDataParamsLengthInBytes)
-      throw new ExecutionFailedException(s"Wrong message data field length: ${msg.getData.length}")
+      throw new ExecutionRevertedException(s"Wrong message data field length: ${msg.getData.length}")
     val inputParams = GetListOfWithdrawalRequestsCmdInputDecoder.decode(getArgumentsFromData(msg.getData))
     val listOfWithdrawalReqs = getListOfWithdrawalReqRecords(inputParams.epochNum, view)
     WithdrawalRequestsListEncoder.encode(listOfWithdrawalReqs.asJava)
@@ -94,11 +94,11 @@ object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with Withdra
     val withdrawalAmount = msg.getValue
 
     if (msg.getData.length != METHOD_CODE_LENGTH + AddWithdrawalRequestCmdInputDecoder.getABIDataParamsLengthInBytes) {
-      throw new ExecutionFailedException(s"Wrong message data field length: ${msg.getData.length}")
+      throw new ExecutionRevertedException(s"Wrong message data field length: ${msg.getData.length}")
     } else if (!ZenWeiConverter.isValidZenAmount(withdrawalAmount)) {
-      throw new ExecutionFailedException(s"Withdrawal amount is not a valid Zen amount: $withdrawalAmount")
+      throw new ExecutionRevertedException(s"Withdrawal amount is not a valid Zen amount: $withdrawalAmount")
     } else if (withdrawalAmount.compareTo(DustThresholdInWei) < 0) {
-      throw new ExecutionFailedException(s"Withdrawal amount is under the dust threshold: $withdrawalAmount")
+      throw new ExecutionRevertedException(s"Withdrawal amount is under the dust threshold: $withdrawalAmount")
     }
   }
 
@@ -107,7 +107,7 @@ object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with Withdra
     val currentEpochNum = view.getWithdrawalEpochInfo.epoch
     val numOfWithdrawalReqs = getWithdrawalEpochCounter(view, currentEpochNum)
     if (numOfWithdrawalReqs >= MaxWithdrawalReqsNumPerEpoch) {
-      throw new ExecutionFailedException("Reached maximum number of Withdrawal Requests per epoch: request is invalid")
+      throw new ExecutionRevertedException("Reached maximum number of Withdrawal Requests per epoch: request is invalid")
     }
 
     val nextNumOfWithdrawalReqs: Int = numOfWithdrawalReqs + 1

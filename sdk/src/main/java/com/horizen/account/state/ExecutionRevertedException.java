@@ -14,4 +14,14 @@ public class ExecutionRevertedException extends ExecutionFailedException {
     public ExecutionRevertedException() {
         this(new byte[0]);
     }
+
+    public ExecutionRevertedException(String message) {
+        super(message);
+        this.revertReason = new byte[0];
+    }
+
+    public ExecutionRevertedException(String message, Throwable cause) {
+        super(message, cause);
+        this.revertReason = new byte[0];
+    }
 }

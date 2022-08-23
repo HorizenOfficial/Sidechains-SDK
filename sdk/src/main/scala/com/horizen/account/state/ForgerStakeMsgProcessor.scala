@@ -81,7 +81,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
       ForgerStakeDataSerializer.parseBytesTry(data) match {
         case Success(obj) => Some(obj)
         case Failure(exception) =>
-          throw new ExecutionFailedException("Error while parsing forger data.", exception)
+          throw new ExecutionRevertedException("Error while parsing forger data.", exception)
       }
     }
   }
@@ -97,7 +97,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
       LinkedListNodeSerializer.parseBytesTry(data) match {
         case Success(obj) => Some(obj)
         case Failure(exception) =>
-          throw new ExecutionFailedException("Error while parsing forger info.", exception)
+          throw new ExecutionRevertedException("Error while parsing forger info.", exception)
       }
     }
   }
@@ -209,7 +209,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
       val prevNodeKey = node.previousNodeKey
       (listItem, prevNodeKey)
     } else {
-      throw new ExecutionFailedException("Tip has the null value, no list here")
+      throw new ExecutionRevertedException("Tip has the null value, no list here")
     }
   }
 
@@ -223,12 +223,12 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
 
     // first of all check msg.value, it must be a legal wei amount convertible in satoshi without any remainder
     if (!isValidZenAmount(msg.getValue)) {
-      throw new ExecutionFailedException(s"Value is not a legal wei amount: ${msg.getValue.toString()}")
+      throw new ExecutionRevertedException(s"Value is not a legal wei amount: ${msg.getValue.toString()}")
     }
 
     // check also that sender account exists (unless we are staking in the sc creation phase)
     if (!isGenesisScCreation && !view.accountExists(msg.getFrom.address())) {
-      throw new ExecutionFailedException(s"Sender account does not exist: ${msg.getFrom.toString}")
+      throw new ExecutionRevertedException(s"Sender account does not exist: ${msg.getFrom.toString}")
     }
 
     val inputParams = getArgumentsFromData(msg.getData)
@@ -242,7 +242,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     if (!isGenesisScCreation && networkParams.restrictForgers) {
       // check that the delegation arguments satisfy the restricted list of forgers.
       if (!networkParams.allowedForgersList.contains((blockSignPublicKey, vrfPublicKey))) {
-        throw new ExecutionFailedException("Forger is not in the allowed list")
+        throw new ExecutionRevertedException("Forger is not in the allowed list")
       }
     }
 
@@ -251,7 +251,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
 
     // check we do not already have this stake obj in the db
     if (existsStakeData(view, newStakeId)) {
-      throw new ExecutionFailedException(s"Stake ${BytesUtils.toHexString(newStakeId)} already in stateDb")
+      throw new ExecutionRevertedException(s"Stake ${BytesUtils.toHexString(newStakeId)} already in stateDb")
     }
 
     // add the obj to stateDb
@@ -284,7 +284,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     if (getArgumentsFromData(msg.getData).length > 0) {
       val msgStr = s"invalid msg data length: ${msg.getData.length}, expected $METHOD_CODE_LENGTH"
       log.debug(msgStr)
-      throw new ExecutionFailedException(msgStr)
+      throw new ExecutionRevertedException(msgStr)
     }
   }
 
@@ -318,12 +318,12 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
 
     // get the forger stake data to remove
     val stakeData = findStakeData(view, stakeId)
-      .getOrElse(throw new ExecutionFailedException("No such stake id in state-db"))
+      .getOrElse(throw new ExecutionRevertedException("No such stake id in state-db"))
 
     // check signature
     val msgToSign = getMessageToSign(stakeId, msg.getFrom.address(), msg.getNonce.toByteArray)
     if (!signature.isValid(stakeData.ownerPublicKey, msgToSign)) {
-      throw new ExecutionFailedException("Invalid signature")
+      throw new ExecutionRevertedException("Invalid signature")
     }
 
     // remove the forger stake data
@@ -350,7 +350,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
       case GetListOfForgersCmd => doGetListOfForgersCmd(msg, view)
       case AddNewStakeCmd => doAddNewStakeCmd(msg, view)
       case RemoveStakeCmd => doRemoveStakeCmd(msg, view)
-      case opCodeHex => throw new ExecutionFailedException(s"op code $opCodeHex not supported")
+      case opCodeHex => throw new ExecutionRevertedException(s"op code $opCodeHex not supported")
     }
   }
 }
