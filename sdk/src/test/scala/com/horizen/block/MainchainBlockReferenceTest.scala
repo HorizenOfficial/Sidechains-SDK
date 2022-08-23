@@ -580,11 +580,11 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     val scIdHex4 = "391c699ad12d478ea4f98bdb0fc2bbe56efdc703b642b54eaffd0c99f1569ab3"
     val scId4 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex4))) // LE
 
-    // SC5: ---> a single certificate with 2 custom fields and 1 bitvector field. ((version=1)
+    // SC5: ---> a single certificate with 2 custom fields and 1 bitvector field. ((version=2 ceasing)
     val scIdHex5 = "03510ddeb9991c60c64b90b5fe5af42bd4fe9f3c1d38250c0c325b365e0c9b8a"
     val scId5 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex5))) // LE
 
-    // SC6: ---> a single certificate with 2 custom fields and 1 bitvector field. ((version=1)
+    // SC6: ---> a single certificate with 2 custom fields and 1 bitvector field. ((version=2 non-ceasing)
     val scIdHex6 = "331aa93e94bdafda0fe3065f777c4c78465f86374971f5f4b063fbece7bea8b6"
     val scId6 = new ByteArrayWrapper(BytesUtils.reverseBytes(BytesUtils.fromHexString(scIdHex6))) // LE
 
