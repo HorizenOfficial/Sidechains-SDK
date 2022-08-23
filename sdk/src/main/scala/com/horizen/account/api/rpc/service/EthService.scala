@@ -246,6 +246,8 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
         case _: OutOfGasException => false
       }
       // Execute the binary search and hone in on an executable gas limit
+      // We need to do a search because the gas required during execution is not necessarily equal to the consumed
+      // gas after the execution. See https://github.com/ethereum/go-ethereum/commit/682875adff760a29a2bb0024190883e4b4dd5d72
       val requiredGasLimit = binarySearch(lowBound, highBound)(check)
       // Reject the transaction as invalid if it still fails at the highest allowance
       if (requiredGasLimit == highBound && check(highBound)) {
