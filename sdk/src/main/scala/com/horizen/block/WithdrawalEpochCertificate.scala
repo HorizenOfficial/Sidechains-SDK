@@ -22,11 +22,10 @@ case class FieldElementCertificateField(rawData: Array[Byte]) extends ScorexLogg
         logger.debug(s"sc version=${SidechainCreationVersion0}: prepend raw data to the FieldElement of size=${rawData.length}")
           // prepend raw data to the FieldElement size
         Bytes.concat(new Array[Byte](FieldElementUtils.fieldElementLength() - rawData.length), rawData)
-      case SidechainCreationVersion1 | SidechainCreationVersion2 =>
+      case other =>
         logger.debug(s"sc version=${version}: append raw data to the FieldElement of size=${rawData.length}")
         // append raw data to the FieldElement size
         Bytes.concat(rawData, new Array[Byte](FieldElementUtils.fieldElementLength() - rawData.length))
-      case other => throw new IllegalArgumentException(s"Version $other is not supported.")
     }
     logger.debug("Fe after:  " + BytesUtils.toHexString(bytes))
     bytes
