@@ -26,6 +26,12 @@ object GasUtil {
   // up to half the consumed gas could be refunded. Redefined as 1/5th in EIP-3529
   val RefundQuotientEIP3529: BigInteger = BigInteger.valueOf(5)
 
+  /**
+   * Global gas limit when executing messages via RPC calls this can be larger than the block gas limit, getter's might
+   * require more gas than is ever required during a transaction.
+   */
+  val RpcGlobalGasCap: BigInteger = BigInteger.valueOf(50000000)
+
   def intrinsicGas(data: Array[Byte], isContractCreation: Boolean): BigInteger = {
     // Set the starting gas for the raw transaction
     var gas = if (isContractCreation) TxGasContractCreation else TxGas

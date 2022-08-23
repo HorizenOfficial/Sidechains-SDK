@@ -233,7 +233,7 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
       }
       // Recap the highest gas allowance with specified gascap.
       // global RPC gas cap (in geth this is a config variable)
-      val rpcGasCap = BigInteger.valueOf(50000000)
+      val rpcGasCap = GasUtil.RpcGlobalGasCap
       if (highBound.compareTo(rpcGasCap) > 0) {
         highBound = rpcGasCap
       }
