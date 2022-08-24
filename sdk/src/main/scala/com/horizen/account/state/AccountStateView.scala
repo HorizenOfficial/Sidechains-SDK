@@ -116,6 +116,8 @@ class AccountStateView(
     stateDb.setTxContext(txHash, idx)
   }
 
+  @throws(classOf[InvalidMessageException])
+  @throws(classOf[ExecutionFailedException])
   def applyMessage(msg: Message, blockGasPool: GasPool): Array[Byte] = {
     new StateTransition(this, messageProcessors, blockGasPool).transition(msg)
   }
@@ -150,7 +152,7 @@ class AccountStateView(
     } catch {
       // any other exception will bubble up and invalidate the block
       case err: ExecutionFailedException =>
-        log.error("applying message failed", err)
+        log.error(s"applying message failed, tx.id=${ethTx.id}", err)
         ReceiptStatus.FAILED
     } finally {
       // finalize pending changes, clear the journal and reset refund counter
@@ -165,26 +167,26 @@ class AccountStateView(
   }
 
   override def isEoaAccount(address: Array[Byte]): Boolean = {
-    useGas(GasUtil.GasTBD)
     stateDb.isEoaAccount(address)
   }
 
   override def isSmartContractAccount(address: Array[Byte]): Boolean = {
-    useGas(GasUtil.GasTBD)
     stateDb.isSmartContractAccount(address)
   }
 
   override def accountExists(address: Array[Byte]): Boolean = {
-    useGas(GasUtil.GasTBD)
     !stateDb.isEmpty(address)
   }
 
   // account modifiers:
   override def addAccount(address: Array[Byte], codeHash: Array[Byte]): Unit = {
-    useGas(GasUtil.GasTBD)
     stateDb.setCodeHash(address, codeHash)
   }
 
+  override def increaseNonce(address: Array[Byte]): Unit =
+    stateDb.setNonce(address, getNonce(address).add(BigInteger.ONE))
+
+  @throws(classOf[ExecutionFailedException])
   override def addBalance(address: Array[Byte], amount: BigInteger): Unit = {
     useGas(GasUtil.GasTBD)
     amount.compareTo(BigInteger.ZERO) match {
@@ -195,6 +197,7 @@ class AccountStateView(
     }
   }
 
+  @throws(classOf[ExecutionFailedException])
   override def subBalance(address: Array[Byte], amount: BigInteger): Unit = {
     useGas(GasUtil.GasTBD)
     // stateDb lib does not do any sanity check, and negative balances might arise (and java/go json IF does not correctly handle it)
@@ -209,34 +212,37 @@ class AccountStateView(
     }
   }
 
-  override def increaseNonce(address: Array[Byte]): Unit =
-    stateDb.setNonce(address, getNonce(address).add(BigInteger.ONE))
-
+  @throws(classOf[OutOfGasException])
   override def getAccountStorage(address: Array[Byte], key: Array[Byte]): Array[Byte] = {
     useGas(GasUtil.GasTBD)
     stateDb.getStorage(address, key, StateStorageStrategy.RAW)
   }
 
+  @throws(classOf[OutOfGasException])
   override def getAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Array[Byte] = {
     useGas(GasUtil.GasTBD)
     stateDb.getStorage(address, key, StateStorageStrategy.CHUNKED)
   }
 
+  @throws(classOf[OutOfGasException])
   override def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit = {
     useGas(GasUtil.GasTBD)
     stateDb.setStorage(address, key, value, StateStorageStrategy.RAW)
   }
 
+  @throws(classOf[OutOfGasException])
   override def updateAccountStorageBytes(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit = {
     useGas(GasUtil.GasTBD)
     stateDb.setStorage(address, key, value, StateStorageStrategy.CHUNKED)
   }
 
+  @throws(classOf[OutOfGasException])
   override def removeAccountStorage(address: Array[Byte], key: Array[Byte]): Unit = {
     useGas(GasUtil.GasTBD)
     stateDb.removeStorage(address, key, StateStorageStrategy.RAW)
   }
 
+  @throws(classOf[OutOfGasException])
   override def removeAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Unit = {
     useGas(GasUtil.GasTBD)
     stateDb.removeStorage(address, key, StateStorageStrategy.CHUNKED)
@@ -294,22 +300,18 @@ class AccountStateView(
 
   // account specific getters
   override def getNonce(address: Array[Byte]): BigInteger = {
-    useGas(GasUtil.GasTBD)
     stateDb.getNonce(address)
   }
 
   override def getBalance(address: Array[Byte]): BigInteger = {
-    useGas(GasUtil.BalanceGasEIP1884)
     stateDb.getBalance(address)
   }
 
   override def getCodeHash(address: Array[Byte]): Array[Byte] = {
-    useGas(GasUtil.ExtcodeHashGasEIP1884)
     stateDb.getCodeHash(address)
   }
 
   override def getCode(address: Array[Byte]): Array[Byte] = {
-    useGas(GasUtil.GasTBD)
     stateDb.getCode(address)
   }
 
@@ -317,6 +319,7 @@ class AccountStateView(
 
   override def getLogs(txHash: Array[Byte]): Array[EvmLog] = stateDb.getLogs(txHash)
 
+  @throws(classOf[OutOfGasException])
   override def addLog(evmLog: EvmLog): Unit = {
     useGas(GasUtil.logGas(evmLog))
     stateDb.addLog(evmLog)
@@ -349,6 +352,7 @@ class AccountStateView(
 
   def disableGasTracking(): Unit = trackedGasPool = None
 
+  @throws(classOf[OutOfGasException])
   private def useGas(gas: BigInteger): Unit = trackedGasPool match {
     case Some(gasPool) => gasPool.subGas(gas)
     case None => // gas tracking is disabled

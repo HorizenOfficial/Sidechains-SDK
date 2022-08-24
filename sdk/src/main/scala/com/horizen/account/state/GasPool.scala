@@ -10,6 +10,7 @@ class GasPool(initialGas: BigInteger) {
 
   def getUsedGas: BigInteger = initialGas.subtract(currentGas)
 
+  @throws(classOf[OutOfGasException])
   def subGas(gas: BigInteger): Unit = {
     if (gas.compareTo(BigInteger.ZERO) < 0)
       throw new IllegalArgumentException("cannot consume a negative amount of gas")

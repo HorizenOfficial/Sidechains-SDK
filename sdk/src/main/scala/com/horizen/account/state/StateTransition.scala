@@ -6,6 +6,8 @@ import java.math.BigInteger
 
 class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProcessor], blockGasPool: GasPool) {
 
+  @throws(classOf[InvalidMessageException])
+  @throws(classOf[ExecutionFailedException])
   def transition(msg: Message): Array[Byte] = {
     // do preliminary checks
     preCheck(msg)
