@@ -149,7 +149,7 @@ class SCGenesisInfoScVersions(SidechainTestFramework):
 
         expEndEpochHeight = None
         scInfoItems = mc_node.getscinfo("*")['items']
-        # there are 4 alien scs + 1 bootstrapped here
+        # there are 6 alien scs + 1 bootstrapped here
         assert_equal(7, len(scInfoItems), "Unexpected number of sc info in MC")
         for it in scInfoItems:
             scid = it['scid']
