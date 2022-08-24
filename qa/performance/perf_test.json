@@ -1,19 +1,34 @@
 {
   "block_rate": 1,
-  "initial_txs": 1000,
-  "network_topology": 3,
+  "initial_txs": 999,
+  "network_topology": 2,
   "nodes": [
     {
-      "latency_settings": 1,
+      "latency_settings": 0,
       "forger": true,
       "tx_creator": false
     },
     {
-      "latency_settings": 1,
+      "latency_settings": 0,
       "forger": false,
       "tx_creator": true,
       "throughput": 1000,
       "total_execution_time": 100
+    },
+    {
+      "latency_settings": 0,
+      "forger": false,
+      "tx_creator": false
+    },
+    {
+      "latency_settings": 0,
+      "forger": false,
+      "tx_creator": false
+    },
+    {
+      "latency_settings": 0,
+      "forger": false,
+      "tx_creator": false
     }
   ]
 }

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from enum import Enum
 from typing_extensions import TypedDict
 
 
@@ -15,3 +16,9 @@ class NodeData(TypedDict, total=False):
     tx_creator: bool
     throughput: int
     total_execution_time: int
+
+
+class NetworkTopology(Enum):
+    DaisyChain = 1
+    Ring = 2
+    Star = 3
