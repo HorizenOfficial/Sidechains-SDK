@@ -357,7 +357,6 @@ class AccountState(val params: NetworkParams,
     if (tx.isInstanceOf[EthereumTransaction]) {
 
       val ethTx = tx.asInstanceOf[EthereumTransaction]
-      val txHash = BytesUtils.fromHexString(ethTx.id)
       val blockGasPool = new GasPool(getBlockGasLimit)
 
       using(getView) { stateView =>

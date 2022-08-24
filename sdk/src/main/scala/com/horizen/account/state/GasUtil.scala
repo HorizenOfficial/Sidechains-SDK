@@ -29,6 +29,7 @@ object GasUtil {
   /**
    * Global gas limit when executing messages via RPC calls this can be larger than the block gas limit, getter's might
    * require more gas than is ever required during a transaction.
+   * TODO: move to SidechainSettings
    */
   val RpcGlobalGasCap: BigInteger = BigInteger.valueOf(50000000)
 

@@ -19,6 +19,7 @@ object EoaMessageProcessor extends MessageProcessor with ScorexLogging {
     msg.getTo != null && view.isEoaAccount(msg.getTo.address())
   }
 
+  @throws(classOf[ExecutionFailedException])
   override def process(msg: Message, view: BaseAccountStateView, gas: GasPool): Array[Byte] = {
     view.subBalance(msg.getFrom.address(), msg.getValue)
     view.addBalance(msg.getTo.address(), msg.getValue)

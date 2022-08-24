@@ -112,6 +112,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
         case Failure(_: GasLimitReached) =>
           // block gas limit reached
+          // TODO: keep trying to fit transactions into the block: this TX did not fit, but another one might
           return Success(receiptList, txHashList)
 
         case Failure(e) =>
