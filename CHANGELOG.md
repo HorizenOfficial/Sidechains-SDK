@@ -1,3 +1,9 @@
+**0.4.1**
+1. CCTP: other sidechains with version 2+ are supported.
+2. API authentication behavior updated: can be disabled now.
+3. Swagger API schema fixed.
+4. DBTool: custom storages support added.
+
 **0.4.0**
 1. Memory pool improvement: upper bound size limit introduced (default 300Mb) altogether with cleanup strategy (the lowest fee rate transaction removed first).
 2. Memory pool improvement: minimum fee rate check added for incoming transactions. By default, is disabled.
