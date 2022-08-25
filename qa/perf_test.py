@@ -57,6 +57,7 @@ class PerformanceTest(SidechainTestFramework):
     sc_node_data: dict[str, NodeData] = perf_test_data["nodes"]
     sc_nodes_list = list(sc_node_data)
     initial_txs = perf_data["initial_txs"]
+    block_rate = perf_data["block_rate"]
     connection_map = {}
 
     def setup_nodes(self):
@@ -228,13 +229,17 @@ class PerformanceTest(SidechainTestFramework):
             if node["forger"]:
                 print(f"Forger found - Node{index}")
                 http_start_forging(self.sc_nodes[index])
+        # Sleep for initial block rate time, before polling transactions more frequently
+        sleep(self.block_rate)
+        # Wait until mempool empty - this should also mean that other nodes mempools are empty (differences will be performance issues)
+        while len(allTransactions(txs_creators[0], False)["transactionIds"]) != 0:
+            sleep(3)
 
         pprint.pprint(len(allTransactions(txs_creators[0], False)["transactionIds"]))
         sleep(200)
         pprint.pprint(len(allTransactions(txs_creators[0], False)["transactionIds"]))
         sleep(30)
         pprint.pprint(len(allTransactions(txs_creators[0], False)["transactionIds"]))
-        # Wait until mempool empty - this should also mean that other nodes mempools are empty (differences will be performance issues)
 
         # stop forging
         for index, node in enumerate(self.sc_nodes_list):
@@ -243,15 +248,22 @@ class PerformanceTest(SidechainTestFramework):
                 http_stop_forging(self.sc_nodes[index])
 
         # call allTransactions for every node and print the content
-        # for node in self.sc_nodes:
-        #     print(allTransactions(node, False)["transactionIds"])
+        for node in self.sc_nodes:
+            mempool_transactions = allTransactions(node, False)["transactionIds"]
+            number_of_transactions = len(mempool_transactions)
+            print(f"Node{node.index} mempool transactions remaining: {number_of_transactions}")
+            if mempool_transactions > 0:
+                print(f"Node{node.index} mempool transactions: {mempool_transactions}")
+
 
         # Take blockhash of every node and verify they are all the same
         test_end_block_ids = self.get_best_node_block_ids()
         assert_equal(len(set(test_end_block_ids.values())), 1)
 
         # Take the balance of each node
-
+        for node in self.sc_nodes:
+            wallet_balance = http_wallet_balance(node)
+            print(f"Node{node.index} Wallet Balance: {wallet_balance}")
 
 if __name__ == "__main__":
     PerformanceTest().main()
