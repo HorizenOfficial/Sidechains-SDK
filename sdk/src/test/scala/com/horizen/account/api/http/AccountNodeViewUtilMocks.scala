@@ -50,6 +50,7 @@ class AccountNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compani
     Mockito.when(accountState.getNonce(ArgumentMatchers.any[Array[Byte]])).thenAnswer(_ => BigInteger.ONE)//It has always enough money
     Mockito.when(accountState.getForgerStakeData(ArgumentMatchers.anyString())).thenAnswer(myStakeId =>
       getListOfStakes.find(stake => BytesUtils.toHexString(stake.stakeId).equals(myStakeId.getArgument(0))).map(stakeInfo => stakeInfo.forgerStakeData))
+    Mockito.when(accountState.getBaseFee).thenAnswer(_ => BigInteger.ZERO) // TODO: base fee can be configurable
     accountState
   }
 
