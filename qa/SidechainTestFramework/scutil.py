@@ -422,7 +422,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "RESTRICT_FORGERS": ("true" if sc_node_config.forger_options.restrict_forgers else "false"),
         "ALLOWED_FORGERS_LIST": sc_node_config.forger_options.allowed_forgers,
         "BLOCK_RATE": sc_node_config.block_rate,
-        "LATENCY": sc_node_config.latency,
+        "LATENCY": sc_node_config.latency_settings,
     }
     config = config.replace("'", "")
     config = config.replace("NEW_LINE", "\n")

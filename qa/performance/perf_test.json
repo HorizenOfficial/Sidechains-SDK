@@ -1,5 +1,5 @@
 {
-  "block_rate": 1,
+  "block_rate": 30,
   "initial_txs": 999,
   "network_topology": 2,
   "nodes": [

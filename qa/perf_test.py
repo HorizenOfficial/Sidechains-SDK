@@ -1,8 +1,12 @@
 import logging
+import pprint
+from time import sleep
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
-from httpCalls.block.forging import http_start_forging
+from httpCalls.block.best import http_block_best
+from httpCalls.block.findBlockByID import http_block_findById
+from httpCalls.block.forging import http_start_forging, http_stop_forging
 from httpCalls.transaction.allTransactions import allTransactions
 from httpCalls.transaction.sendCoinsToAddress import sendCointsToMultipleAddress, sendCoinsToAddress
 from httpCalls.wallet.balance import http_wallet_balance
@@ -40,7 +44,7 @@ def get_node_configuration(mc_node, sc_node_data, perf_data):
                     address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
                 max_connections=max_connections,
                 block_rate=perf_data["block_rate"],
-                latency=sc_node["latency_settings"]
+                latency_settings=sc_node["latency_settings"]
             )
         )
     return node_configuration
@@ -101,6 +105,7 @@ class PerformanceTest(SidechainTestFramework):
         if topology == NetworkTopology.Ring:
             # Connect final node to first node
             connect_sc_nodes(self.sc_nodes[node], 1)
+            self.create_node_connection_map(0, [node])
             self.create_node_connection_map(node, [0])
         # Star Topology
         if topology == NetworkTopology.Star:
@@ -148,9 +153,17 @@ class PerformanceTest(SidechainTestFramework):
         for creator_node in tx_creators:
             destination_address = creator_node.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
             for i in range(self.initial_txs):
-                # Populate the mempool - so dont mine a block
+                # Populate the mempool - so don't mine a block
                 sendCoinsToAddress(creator_node, destination_address, utxo_amount, 0)
             assert_equal(len(allTransactions(creator_node, False)["transactionIds"]), self.initial_txs)
+
+    def get_best_node_block_ids(self):
+        block_ids = {}
+        for node in self.sc_nodes:
+            block = http_block_best(node)
+            block_ids[self.sc_nodes.index(node)] = block["id"]
+        print(block_ids)
+        return block_ids
 
     def run_test(self):
         mc_nodes = self.nodes
@@ -205,21 +218,38 @@ class PerformanceTest(SidechainTestFramework):
         # Reconnect the node to the network - connect_sc_nodes
         self.reconnect_txs_creator_nodes()
 
-        # Take blockhash of every node
+        # Take best block id of every node
+        test_start_block_ids = self.get_best_node_block_ids()
+        assert_equal(len(set(test_start_block_ids.values())), 1)
 
         # Start forging on nodes where forger == true
         # while mempool not empty - poll the mempool endpoint
         for index, node in enumerate(self.sc_nodes_list):
             if node["forger"]:
-                sc_node = self.sc_nodes[index]
-                http_start_forging(sc_node)
+                print(f"Forger found - Node{index}")
+                http_start_forging(self.sc_nodes[index])
 
+        pprint.pprint(len(allTransactions(txs_creators[0], False)["transactionIds"]))
+        sleep(200)
+        pprint.pprint(len(allTransactions(txs_creators[0], False)["transactionIds"]))
+        sleep(30)
+        pprint.pprint(len(allTransactions(txs_creators[0], False)["transactionIds"]))
         # Wait until mempool empty - this should also mean that other nodes mempools are empty (differences will be performance issues)
 
         # stop forging
+        for index, node in enumerate(self.sc_nodes_list):
+            if node["forger"]:
+                print(f"Stopping Forger Node{index}")
+                http_stop_forging(self.sc_nodes[index])
 
         # call allTransactions for every node and print the content
+        # for node in self.sc_nodes:
+        #     print(allTransactions(node, False)["transactionIds"])
+
         # Take blockhash of every node and verify they are all the same
+        test_end_block_ids = self.get_best_node_block_ids()
+        assert_equal(len(set(test_end_block_ids.values())), 1)
+
         # Take the balance of each node
 
 
