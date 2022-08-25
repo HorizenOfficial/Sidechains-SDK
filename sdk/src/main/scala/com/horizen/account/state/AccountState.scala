@@ -4,7 +4,6 @@ import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountState
 import com.horizen.account.receipt.EthereumReceipt
-import com.horizen.account.state.AccountState.blockGasLimitExceeded
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.block.WithdrawalEpochCertificate
@@ -126,19 +125,15 @@ class AccountState(val params: NetworkParams,
       val blockNumber = stateView.getHeight + 1
       val blockHash = idToBytes(mod.id)
       var cumGasUsed: BigInteger = BigInteger.ZERO
+      val blockGasPool = new GasPool(stateView.getBlockGasLimit)
 
       for ((tx, txIndex) <- mod.sidechainTransactions.zipWithIndex) {
-        stateView.applyTransaction(tx, txIndex, cumGasUsed) match {
+        stateView.applyTransaction(tx, txIndex, blockGasPool) match {
           case Success(consensusDataReceipt) =>
             val txGasUsed = consensusDataReceipt.cumulativeGasUsed.subtract(cumGasUsed)
             // update cumulative gas used so far
             cumGasUsed = consensusDataReceipt.cumulativeGasUsed
             val ethTx = tx.asInstanceOf[EthereumTransaction]
-
-            if (blockGasLimitExceeded(cumGasUsed)) {
-              log.error("Could not apply tx, block gas limit exceeded")
-              throw new IllegalArgumentException("Could not apply tx, block gas limit exceeded")
-            }
 
             val txHash = BytesUtils.fromHexString(ethTx.id)
 
@@ -162,9 +157,13 @@ class AccountState(val params: NetworkParams,
 
             receiptList += fullReceipt
 
-          case Failure(e) =>
-            log.error("Could not apply tx", e)
-            throw new IllegalArgumentException(e)
+          case Failure(err: GasLimitReached) =>
+            log.error("Could not apply tx, block gas limit exceeded")
+            throw new IllegalArgumentException("Could not apply tx, block gas limit exceeded", err)
+
+          case Failure(err) =>
+            log.error("Could not apply tx", err)
+            throw new IllegalArgumentException(err)
         }
       }
 
@@ -272,11 +271,8 @@ class AccountState(val params: NetworkParams,
     new AccountStateView(stateMetadataStorage.getView, new StateDB(stateDbStorage, stateRoot), messageProcessors)
 
   // Base getters
-  override def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] = {
-    using(getView) { stateView =>
-      stateView.withdrawalRequests(withdrawalEpoch)
-    }
-  }
+  override def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] =
+    using(getView)(_.withdrawalRequests(withdrawalEpoch))
 
   override def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
     stateMetadataStorage.getTopQualityCertificate(referencedWithdrawalEpoch)
@@ -309,11 +305,7 @@ class AccountState(val params: NetworkParams,
     stateMetadataStorage.getHeight
   }
 
-  private def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = {
-    using(getView) { view =>
-      view.getOrderedForgingStakeInfoSeq
-    }
-  }
+  private def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = using(getView)(_.getOrderedForgingStakeInfoSeq)
 
   // Returns lastBlockInEpoch and ConsensusEpochInfo for that epoch
   // TODO this is common code with SidechainState
@@ -337,55 +329,27 @@ class AccountState(val params: NetworkParams,
   }
 
   // Account specific getters
-  override def getBalance(address: Array[Byte]): BigInteger = {
-    using(getView) { view =>
-      view.getBalance(address)
-    }
-  }
+  override def getBalance(address: Array[Byte]): BigInteger = using(getView)(_.getBalance(address))
 
   override def getAccountStateRoot: Array[Byte] = stateMetadataStorage.getAccountStateRoot
 
-  override def getCodeHash(address: Array[Byte]): Array[Byte] = {
-    using(getView) { view =>
-      view.getCodeHash(address)
-    }
-  }
+  override def getCodeHash(address: Array[Byte]): Array[Byte] = using(getView)(_.getCodeHash(address))
 
-  override def getNonce(address: Array[Byte]): BigInteger = {
-    using(getView) { view =>
-      view.getNonce(address)
-    }
-  }
+  override def getNonce(address: Array[Byte]): BigInteger = using(getView)(_.getNonce(address))
 
-  override def getListOfForgerStakes: Seq[AccountForgingStakeInfo] = {
-    using(getView) { view =>
-      view.getListOfForgerStakes
-    }
-  }
+  override def getListOfForgerStakes: Seq[AccountForgingStakeInfo] = using(getView)(_.getListOfForgerStakes)
 
-  def getForgerStakeData(stakeId: String): Option[ForgerStakeData] = {
-    using(getView) { view =>
-      view.getForgerStakeData(stakeId)
-    }
-  }
+  def getForgerStakeData(stakeId: String): Option[ForgerStakeData] = using(getView)(_.getForgerStakeData(stakeId))
 
-  override def getLogs(txHash: Array[Byte]): Array[EvmLog] = {
-    using(getView) { view =>
-      view.getLogs(txHash)
-    }
-  }
+  override def getLogs(txHash: Array[Byte]): Array[EvmLog] = using(getView)(_.getLogs(txHash))
 
-  def getIntermediateRoot: Array[Byte] = {
-    using(getView) { view =>
-      view.getIntermediateRoot
-    }
-  }
+  def getIntermediateRoot: Array[Byte] = using(getView)(_.getIntermediateRoot)
 
-  override def getCode(address: Array[Byte]): Array[Byte] = {
-    using(getView) { view =>
-      view.getCode(address)
-    }
-  }
+  override def getCode(address: Array[Byte]): Array[Byte] = using(getView)(_.getCode(address))
+
+  override def getBaseFee: BigInteger = using(getView)(_.getBaseFee)
+
+  override def getBlockGasLimit: BigInteger = using(getView)(_.getBlockGasLimit)
 
   override def validate(tx: SidechainTypes#SCAT): Try[Unit] = Try {
     tx.semanticValidity()
@@ -393,12 +357,12 @@ class AccountState(val params: NetworkParams,
     if (tx.isInstanceOf[EthereumTransaction]) {
 
       val ethTx = tx.asInstanceOf[EthereumTransaction]
-      val txHash = BytesUtils.fromHexString(ethTx.id)
+      val blockGasPool = new GasPool(getBlockGasLimit)
 
       using(getView) { stateView =>
-        stateView.applyTransaction(tx, 0, BigInteger.ZERO) match {
+        stateView.applyTransaction(tx, 0, blockGasPool) match {
           case Success(_) =>
-            log.debug(s"tx=$txHash succesfully validate against state view")
+            log.debug(s"tx=${ethTx.id} succesfully validate against state view")
 
           case Failure(e) =>
             log.error("Could not validate tx agaist state view: ", e)
@@ -407,9 +371,7 @@ class AccountState(val params: NetworkParams,
       }
     }
   }
-
 }
-
 
 object AccountState extends ScorexLogging {
   private[horizen] def restoreState(stateMetadataStorage: AccountStateMetadataStorage,
@@ -436,11 +398,5 @@ object AccountState extends ScorexLogging {
         .applyModifier(genesisBlock).get
     } else
       throw new RuntimeException("State metadata storage is not empty!")
-  }
-
-
-  def blockGasLimitExceeded(cumGasUsed: BigInteger): Boolean = {
-    // TODO
-    false
   }
 }

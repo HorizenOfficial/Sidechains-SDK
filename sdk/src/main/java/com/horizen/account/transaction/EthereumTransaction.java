@@ -3,22 +3,21 @@ package com.horizen.account.transaction;
 import com.fasterxml.jackson.annotation.*;
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
+import com.horizen.account.state.GasUintOverflowException;
+import com.horizen.account.state.Message;
 import com.horizen.account.utils.Account;
+import com.horizen.account.utils.BigIntegerUtil;
 import com.horizen.account.utils.EthereumTransactionUtils;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import org.jetbrains.annotations.NotNull;
-import org.web3j.crypto.RawTransaction;
-import org.web3j.crypto.Sign;
+import org.web3j.crypto.*;
 import org.web3j.crypto.Sign.SignatureData;
-import org.web3j.crypto.SignedRawTransaction;
-import org.web3j.crypto.TransactionEncoder;
 import org.web3j.crypto.transaction.type.LegacyTransaction;
 import org.web3j.crypto.transaction.type.Transaction1559;
 import org.web3j.crypto.transaction.type.TransactionType;
 import org.web3j.utils.Numeric;
-import org.web3j.crypto.Hash;
 
 import javax.annotation.Nullable;
 import java.math.BigInteger;
@@ -139,6 +138,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         if (getGasLimit().signum() <= 0)
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "non-positive gas limit", id()));
+        if (!BigIntegerUtil.isUint64(getGasLimit())) throw new GasUintOverflowException();
         if (getTo() == null && getData().length == 0)
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "smart contract declaration transaction without data", id()));
@@ -150,13 +150,13 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             if (getMaxPriorityFeePerGas().signum() < 0)
                 throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                         "eip1559 transaction with negative maxPriorityFeePerGas", id()));
-            if (getMaxFeePerGas().bitCount() > 256)
+            if (getMaxFeePerGas().bitLength() > 256)
                 throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                        "eip1559 transaction maxFeePerGas bit length [%d] is too high", id(), getMaxFeePerGas().bitCount()));
+                        "eip1559 transaction maxFeePerGas bit length [%d] is too high", id(), getMaxFeePerGas().bitLength()));
 
-            if (getMaxPriorityFeePerGas().bitCount() > 256)
+            if (getMaxPriorityFeePerGas().bitLength() > 256)
                 throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                        "eip1559 transaction maxPriorityFeePerGas bit length [%d] is too high", id(), getMaxPriorityFeePerGas().bitCount()));
+                        "eip1559 transaction maxPriorityFeePerGas bit length [%d] is too high", id(), getMaxPriorityFeePerGas().bitLength()));
 
             if (getMaxFeePerGas().compareTo(getMaxPriorityFeePerGas()) < 0)
                 throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
@@ -360,4 +360,23 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return TransactionEncoder.encode(this.transaction);
     }
 
+    public Message asMessage(BigInteger baseFee) {
+        var is1559 = isEIP1559();
+        var gasFeeCap = !is1559 ? getGasPrice() : getMaxFeePerGas();
+        var gasTipCap = !is1559 ? getGasPrice() : getMaxPriorityFeePerGas();
+        // calculate effective gas price as baseFee + tip capped at the fee cap
+        // this will default to gasPrice if the transaction is not EIP-1559
+        var effectiveGasPrice = baseFee.add(gasTipCap).min(gasFeeCap);
+        return new Message(
+                getFrom(),
+                getTo(),
+                effectiveGasPrice,
+                gasFeeCap,
+                gasTipCap,
+                getGasLimit(),
+                getValue(),
+                getNonce(),
+                getData()
+        );
+    }
 }

@@ -33,30 +33,4 @@ public final class Evm {
     ) {
         return LibEvm.evmApply(stateDBHandle.handle, from, to, value, input, gasLimit, gasPrice, null);
     }
-
-    public static EvmResult StaticCall(
-            ResourceHandle stateDBHandle,
-            byte[] from,
-            byte[] to,
-            BigInteger value,
-            byte[] input,
-            BigInteger gasLimit,
-            BigInteger gasPrice,
-            EvmContext context
-    ) {
-        return LibEvm.evmStaticCall(stateDBHandle.handle, from, to, value, input, gasLimit, gasPrice, context);
-    }
-
-
-    public static EvmResult StaticCall(
-            ResourceHandle stateDBHandle,
-            byte[] from,
-            byte[] to,
-            BigInteger value,
-            byte[] input,
-            BigInteger gasLimit,
-            BigInteger gasPrice
-    ) {
-        return LibEvm.evmStaticCall(stateDBHandle.handle, from, to, value, input, gasLimit, gasPrice, null);
-    }
 }

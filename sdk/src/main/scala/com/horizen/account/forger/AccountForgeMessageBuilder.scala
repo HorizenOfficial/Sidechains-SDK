@@ -9,8 +9,7 @@ import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumConsensusDataReceipt
 import com.horizen.account.secret.PrivateKeySecp256k1
-import com.horizen.account.state.AccountState.blockGasLimitExceeded
-import com.horizen.account.state.{AccountState, AccountStateView}
+import com.horizen.account.state.{AccountState, AccountStateView, GasLimitReached, GasPool}
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.Account
@@ -90,7 +89,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val receiptList = new ListBuffer[EthereumConsensusDataReceipt]()
     val txHashList = new ListBuffer[ByteArrayWrapper]()
 
-    var cumGasUsed: BigInteger = BigInteger.ZERO
+    val blockGasPool = new GasPool(stateView.getBlockGasLimit)
     var txsCounter: Int = 0
     var blockSize: Int = inputBlockSize
 
@@ -102,19 +101,19 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       if (blockSizeExceeded(blockSize, txsCounter))
         return Success(receiptList, txHashList)
 
-      stateView.applyTransaction(tx, txIndex, cumGasUsed) match {
+      stateView.applyTransaction(tx, txIndex, blockGasPool) match {
         case Success(consensusDataReceipt) =>
-          // update cumulative gas used so far
-          cumGasUsed = consensusDataReceipt.cumulativeGasUsed
-
-          if (blockGasLimitExceeded(cumGasUsed))
-            return Success(receiptList, txHashList)
 
           val ethTx = tx.asInstanceOf[EthereumTransaction]
           val txHash = BytesUtils.fromHexString(ethTx.id)
 
           receiptList += consensusDataReceipt
           txHashList += txHash
+
+        case Failure(_: GasLimitReached) =>
+          // block gas limit reached
+          // TODO: keep trying to fit transactions into the block: this TX did not fit, but another one might
+          return Success(receiptList, txHashList)
 
         case Failure(e) =>
           // just skip this tx

@@ -3,6 +3,8 @@ import json
 import pprint
 from decimal import Decimal
 
+from eth_utils import to_checksum_address
+
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
@@ -88,7 +90,8 @@ class SCEvmBootstrap(SidechainTestFramework):
 
         ret = sc_node_1.wallet_createPrivateKeySecp256k1()
         pprint.pprint(ret)
-        evm_address = ret["result"]["proposition"]["address"]
+        evm_address = str(ret["result"]["proposition"]["address"])
+        evm_hex_address = to_checksum_address(evm_address)
         print("pubkey = {}".format(evm_address))
 
         # call a legacy wallet api
@@ -112,7 +115,7 @@ class SCEvmBootstrap(SidechainTestFramework):
         sc_best_block = sc_node_1.block_best()["result"]
         assert_equal(sc_best_block["height"], 2, "The best block has not the specified height.")
         pprint.pprint(sc_best_block)
-        pprint.pprint(sc_node_1.rpc_eth_getBalance(str(evm_address), "1"))
+        pprint.pprint(sc_node_1.rpc_eth_getBalance(evm_hex_address, "1"))
 
         '''
         # TODO
@@ -142,12 +145,13 @@ class SCEvmBootstrap(SidechainTestFramework):
         transferred_amount_in_zennies = convertZenToZennies(transferred_amount)
         transferred_amount_in_wei = convertZenniesToWei(transferred_amount_in_zennies)
 
-        recipientKeys = generate_account_proposition("seed3", 1)[0]
-        print("Trying to send {} zen to address {}".format(transferred_amount, recipientKeys.proposition))
+        recipient_keys = generate_account_proposition("seed3", 1)[0]
+        recipient_proposition = recipient_keys.proposition
+        print("Trying to send {} zen to address {}".format(transferred_amount, recipient_proposition))
 
         j = {
-            "from": str(evm_address),
-            "to": recipientKeys.proposition,
+            "from": evm_address,
+            "to": recipient_proposition,
             "value": transferred_amount_in_zennies
         }
         request = json.dumps(j)
@@ -173,7 +177,7 @@ class SCEvmBootstrap(SidechainTestFramework):
 
         # request getBalance via rpc route
         print("rpc response:")
-        pprint.pprint(sc_node_1.rpc_eth_getBalance(str(evm_address), "1"))
+        pprint.pprint(sc_node_1.rpc_eth_getBalance(evm_hex_address, "1"))
 
         generate_next_blocks(sc_node_1, "first node", 1)
         self.sc_sync_all()
@@ -181,7 +185,8 @@ class SCEvmBootstrap(SidechainTestFramework):
         pprint.pprint(sc_best_block)
 
         final_balance = http_wallet_balance(sc_node_1, evm_address)
-        assert_equal(initial_balance - transferred_amount_in_wei, final_balance )
+        assert_equal(initial_balance - transferred_amount_in_wei, final_balance)
+
 
 if __name__ == "__main__":
     SCEvmBootstrap().main()

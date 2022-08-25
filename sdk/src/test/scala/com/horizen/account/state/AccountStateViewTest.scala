@@ -12,36 +12,39 @@ import org.scalatestplus.mockito._
 
 import scala.util.Random
 
-
-class AccountStateViewTest
-  extends JUnitSuite
-    with MockitoSugar {
+class AccountStateViewTest extends JUnitSuite with MockitoSugar {
 
   var stateView: AccountStateView = _
 
   @Before
   def setUp(): Unit = {
-
     val mockWithdrawalReqProvider = mock[WithdrawalRequestProvider]
     val messageProcessors: Seq[MessageProcessor] = Seq()
-    val metadataStorageView: AccountStateMetadataStorageView = mock[AccountStateMetadataStorageView]
+    val metadataStorageView: AccountStateMetadataStorageView =
+      mock[AccountStateMetadataStorageView]
     val stateDb: StateDB = mock[StateDB]
     stateView = new AccountStateView(metadataStorageView, stateDb, messageProcessors) {
-      override lazy val withdrawalReqProvider: WithdrawalRequestProvider = mockWithdrawalReqProvider
+      override lazy val withdrawalReqProvider: WithdrawalRequestProvider =
+        mockWithdrawalReqProvider
     }
-
   }
 
   @Test
   def testWithdrawalReqProviderFieldInitialization(): Unit = {
-
-    val messageProcessors: Seq[MessageProcessor] = Seq(mock[MessageProcessor], mock[MessageProcessor], WithdrawalMsgProcessor, mock[MessageProcessor])
-    val metadataStorageView: AccountStateMetadataStorageView = mock[AccountStateMetadataStorageView]
+    val messageProcessors: Seq[MessageProcessor] = Seq(
+      mock[MessageProcessor],
+      mock[MessageProcessor],
+      WithdrawalMsgProcessor,
+      mock[MessageProcessor])
+    val metadataStorageView: AccountStateMetadataStorageView =
+      mock[AccountStateMetadataStorageView]
     val stateDb: StateDB = mock[StateDB]
     stateView = new AccountStateView(metadataStorageView, stateDb, messageProcessors)
 
-    assertEquals("Wrong withdrawalReqProvider", WithdrawalMsgProcessor, stateView.withdrawalReqProvider)
-
+    assertEquals(
+      "Wrong withdrawalReqProvider",
+      WithdrawalMsgProcessor,
+      stateView.withdrawalReqProvider)
   }
 
   @Test
@@ -49,13 +52,12 @@ class AccountStateViewTest
     val epochNum = 102
 
     // No withdrawal requests
-
-    Mockito.when(stateView.withdrawalReqProvider.getListOfWithdrawalReqRecords(epochNum, stateView)).thenReturn(Seq())
+    Mockito
+      .when(stateView.withdrawalReqProvider.getListOfWithdrawalReqRecords(epochNum, stateView))
+      .thenReturn(Seq())
 
     var res = stateView.withdrawalRequests(epochNum)
-
     assertTrue("The list of withdrawal requests is not empty", res.isEmpty)
-
 
     // With 3999 withdrawal requests
     val maxNumOfWithdrawalReqs = WithdrawalMsgProcessor.MaxWithdrawalReqsNumPerEpoch
@@ -63,9 +65,10 @@ class AccountStateViewTest
     val destAddress = new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte))
     val listOfWR = (1 to maxNumOfWithdrawalReqs).map(index => {
       WithdrawalRequest(destAddress, ZenWeiConverter.convertZenniesToWei(index))
-    }
-    )
-    Mockito.when(stateView.withdrawalReqProvider.getListOfWithdrawalReqRecords(epochNum, stateView)).thenReturn(listOfWR)
+    })
+    Mockito
+      .when(stateView.withdrawalReqProvider.getListOfWithdrawalReqRecords(epochNum, stateView))
+      .thenReturn(listOfWR)
 
     res = stateView.withdrawalRequests(epochNum)
 
@@ -75,8 +78,5 @@ class AccountStateViewTest
       assertEquals("wrong address", destAddress, wr.proposition)
       assertEquals("wrong amount", index + 1, wr.valueInZennies)
     })
-
   }
-
-
 }

@@ -1,7 +1,5 @@
 package com.horizen.account.state
 
-import com.horizen.account.proposition.AddressProposition
-import com.horizen.evm.StateDB
 import com.horizen.fixtures.SecretFixture
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertTrue}
 import org.junit.Test
@@ -10,13 +8,8 @@ import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 
 import java.math.BigInteger
-import scala.util.{Failure, Success}
 
-class EoaMessageProcessorTest extends JUnitSuite
-  with MockitoSugar
-  with SecretFixture
-  with MessageProcessorFixture {
-
+class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFixture with MessageProcessorFixture {
 
   @Test
   def init(): Unit = {
@@ -32,123 +25,89 @@ class EoaMessageProcessorTest extends JUnitSuite
 
   @Test
   def canProcess(): Unit = {
-    val address: AddressProposition = getAddressProposition(12345L)
-    val value: java.math.BigInteger = java.math.BigInteger.ONE
-    val emptyData: Array[Byte] = Array.emptyByteArray
-    val msg: Message = getMessage(address, value, emptyData)
+    val address = getAddressProposition(12345L).address()
+    val value = BigInteger.ONE
+    val msg = getMessage(address, value, Array.emptyByteArray)
 
-    val mockStateView: AccountStateView = mock[AccountStateView]
-
+    val mockStateView = mock[AccountStateView]
 
     // Test 1: send to EOA account, tx with empty "data"
-    Mockito.when(mockStateView.isEoaAccount(ArgumentMatchers.any[Array[Byte]])).thenAnswer(args => {
-      val addressBytes: Array[Byte] = args.getArgument(0)
-      assertArrayEquals("Different address found", msg.getTo.address(), addressBytes)
-      true
-    })
-
-    assertTrue("Message for EoaMessageProcessor cannot be processed", EoaMessageProcessor.canProcess(msg, mockStateView))
-
+    Mockito
+      .when(mockStateView.isEoaAccount(ArgumentMatchers.any[Array[Byte]]))
+      .thenAnswer(args => {
+        assertArrayEquals("Different address found", msg.getTo.address(), args.getArgument(0))
+        true
+      })
+    assertTrue(
+      "Message for EoaMessageProcessor cannot be processed",
+      EoaMessageProcessor.canProcess(msg, mockStateView))
 
     // Test 2: send to EOA account, tx with no-empty "data"
-    val data: Array[Byte] = new Array[Byte](1000)
-    val msgWithData: Message = getMessage(address, value, data)
-
-    assertTrue("Message for EoaMessageProcessor cannot be processed", EoaMessageProcessor.canProcess(msgWithData, mockStateView))
-
+    val data = new Array[Byte](1000)
+    val msgWithData = getMessage(address, value, data)
+    assertTrue(
+      "Message for EoaMessageProcessor cannot be processed",
+      EoaMessageProcessor.canProcess(msgWithData, mockStateView))
 
     // Test 3: Failure: send to smart contract account
     Mockito.reset(mockStateView)
-    Mockito.when(mockStateView.isEoaAccount(ArgumentMatchers.any[Array[Byte]])).thenAnswer(args => {
-      val addressBytes: Array[Byte] = args.getArgument(0)
-      assertArrayEquals("Different address found", msg.getTo.address(), addressBytes)
-      false
-    })
-
-    assertFalse("Message for EoaMessageProcessor wrongly can be processed", EoaMessageProcessor.canProcess(msg, mockStateView))
-
+    Mockito
+      .when(mockStateView.isEoaAccount(ArgumentMatchers.any[Array[Byte]]))
+      .thenAnswer(args => {
+        assertArrayEquals("Different address found", msg.getTo.address(), args.getArgument(0))
+        false
+      })
+    assertFalse(
+      "Message for EoaMessageProcessor wrongly can be processed",
+      EoaMessageProcessor.canProcess(msg, mockStateView))
 
     // Test 4: Failure: to is null
     Mockito.reset(mockStateView)
-    val contractDeclarationMessage: Message = getMessage(null, value, data)
-    assertFalse("Message for EoaMessageProcessor wrongly can be processed", EoaMessageProcessor.canProcess(contractDeclarationMessage, mockStateView))
+    val contractDeclarationMessage = getMessage(null, value, data)
+    assertFalse(
+      "Message for EoaMessageProcessor wrongly can be processed",
+      EoaMessageProcessor.canProcess(contractDeclarationMessage, mockStateView))
   }
 
   @Test
   def process(): Unit = {
-    val address: AddressProposition = getAddressProposition(12345L)
-    val value: java.math.BigInteger = java.math.BigInteger.ONE
-    val emptyData: Array[Byte] = Array.emptyByteArray
-    val msg: Message = getMessage(address, value, emptyData)
-
-    val mockStateView: AccountStateView = mock[AccountStateView]
-
+    val msg = getMessage(randomAddress, randomU256)
+    val mockStateView = mock[AccountStateView]
 
     // Test 1: Success: no failures during balance changes
-    Mockito.when(mockStateView.subBalance(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[BigInteger])).thenAnswer(args => {
-      val addressBytes: Array[Byte] = args.getArgument(0)
-      val amount: BigInteger = args.getArgument(1)
+    Mockito
+      .when(mockStateView.subBalance(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[BigInteger]))
+      .thenAnswer(args => {
+        assertArrayEquals("Different address found", msg.getFrom.address(), args.getArgument(0))
+        assertEquals("Different amount found", msg.getValue, args.getArgument(1))
+      })
 
-      assertArrayEquals("Different address found", msg.getFrom.address(), addressBytes)
-      assertEquals("Different amount found", msg.getValue, amount)
+    Mockito
+      .when(mockStateView.addBalance(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[BigInteger]))
+      .thenAnswer(args => {
+        assertArrayEquals("Different address found", msg.getTo.address(), args.getArgument(0))
+        assertEquals("Different amount found", msg.getValue, args.getArgument(1))
+      })
 
-      Success()
-    })
-
-    Mockito.when(mockStateView.addBalance(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[BigInteger])).thenAnswer(args => {
-      val addressBytes: Array[Byte] = args.getArgument(0)
-      val amount: BigInteger = args.getArgument(1)
-
-      assertArrayEquals("Different address found", msg.getTo.address(), addressBytes)
-      assertEquals("Different amount found", msg.getValue, amount)
-      Success()
-    })
-
-    EoaMessageProcessor.process(msg, mockStateView) match {
-      case es: ExecutionSucceeded =>
-        assertEquals("Different gas found", EoaMessageProcessor.GAS_USED, es.gasUsed())
-        assertArrayEquals("Different return data found", Array.emptyByteArray, es.returnData())
-      case _: ExecutionFailed | _: InvalidMessage => fail("Execution failure received")
-    }
-
+    val returnData = assertGas(BigInteger.ZERO)(EoaMessageProcessor.process(msg, mockStateView, _))
+    assertArrayEquals("Different return data found", Array.emptyByteArray, returnData)
 
     // Test 2: Failure during subBalance
     Mockito.reset(mockStateView)
-    val exception = new Exception("some error")
-    Mockito.when(mockStateView.subBalance(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[BigInteger])).thenAnswer(args => {
-      Failure(exception)
-    })
-
-    EoaMessageProcessor.process(msg, mockStateView) match {
-      case _: ExecutionSucceeded | _: InvalidMessage => fail("Execution failure expected")
-      case ef: ExecutionFailed =>
-        assertEquals("Different gas found", EoaMessageProcessor.GAS_USED, ef.gasUsed())
-        assertEquals("Different exception found", exception, ef.getReason.getCause)
-    }
-
+    Mockito
+      .when(mockStateView.subBalance(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[BigInteger]))
+      .thenAnswer(_ => {
+        throw new Exception("something went error")
+      })
+    assertThrows[Exception](withGas(EoaMessageProcessor.process(msg, mockStateView, _)))
 
     // Test 3: Failure during addBalance
     Mockito.reset(mockStateView)
-
-    Mockito.when(mockStateView.subBalance(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[BigInteger])).thenAnswer(args => {
-      val addressBytes: Array[Byte] = args.getArgument(0)
-      val amount: BigInteger = args.getArgument(1)
-
-      assertArrayEquals("Different address found", msg.getFrom.address(), addressBytes)
-      assertEquals("Different amount found", msg.getValue, amount)
-
-      Success()
-    })
-
-    Mockito.when(mockStateView.addBalance(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[BigInteger])).thenAnswer(args => {
-      Failure(exception)
-    })
-
-    EoaMessageProcessor.process(msg, mockStateView) match {
-      case _: ExecutionSucceeded | _: InvalidMessage => fail("Execution failure expected")
-      case ef: ExecutionFailed =>
-        assertEquals("Different gas found", EoaMessageProcessor.GAS_USED, ef.gasUsed())
-        assertEquals("Different exception found", exception, ef.getReason.getCause)
-    }
+    Mockito
+      .when(mockStateView.addBalance(ArgumentMatchers.any[Array[Byte]], ArgumentMatchers.any[BigInteger]))
+      .thenAnswer(_ => {
+        throw new Exception("something else went error")
+      })
+    assertThrows[Exception](withGas(EoaMessageProcessor.process(msg, mockStateView, _)))
   }
 }

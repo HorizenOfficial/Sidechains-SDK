@@ -106,6 +106,15 @@ func (s *Service) StateClose(params HandleParams) {
 	s.statedbs.Remove(params.Handle)
 }
 
+func (s *Service) StateFinalize(params HandleParams) error {
+	err, statedb := s.statedbs.Get(params.Handle)
+	if err != nil {
+		return err
+	}
+	statedb.Finalise(true)
+	return nil
+}
+
 func (s *Service) StateIntermediateRoot(params HandleParams) (error, common.Hash) {
 	err, statedb := s.statedbs.Get(params.Handle)
 	if err != nil {
@@ -229,6 +238,14 @@ func (s *Service) StateSetCode(params CodeParams) error {
 	return nil
 }
 
+func (s *Service) StateGetRefund(params HandleParams) (error, hexutil.Uint64) {
+	err, statedb := s.statedbs.Get(params.Handle)
+	if err != nil {
+		return err, 0
+	}
+	return nil, (hexutil.Uint64)(statedb.GetRefund())
+}
+
 func (s *Service) StateGetStorage(params StorageParams) (error, common.Hash) {
 	err, statedb := s.statedbs.Get(params.Handle)
 	if err != nil {
@@ -243,6 +260,9 @@ func (s *Service) StateSetStorage(params SetStorageParams) error {
 	if err != nil {
 		return err
 	}
+	// TODO: implement updating the refund counter according to:
+	//  https://github.com/ethereum/go-ethereum/blob/0ce494b60cd00d70f1f9f2dd0b9bfbd76204168a/core/vm/operations_acl.go#L27
+	//  the storage methods below should also use apply this logic
 	statedb.SetState(params.Address, params.Key, params.Value)
 	return nil
 }

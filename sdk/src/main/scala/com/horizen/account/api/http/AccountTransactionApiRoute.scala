@@ -62,7 +62,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   override implicit val tag: ClassTag[AccountNodeView] = ClassTag[AccountNodeView](classOf[AccountNodeView])
 
 
-  override val route: Route = (pathPrefix("transaction")) {
+  override val route: Route = pathPrefix("transaction") {
     allTransactions ~ sendCoinsToAddress ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendRawTransaction ~
       signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~ allForgingStakes
   }
@@ -131,8 +131,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       applyOnNodeView { sidechainNodeView =>
         val valueInWei = ZenWeiConverter.convertZenniesToWei(body.value)
         val destAddress = body.to
-        val gasPrice = BigInteger.valueOf(1) // TODO actual gas implementation
-        val gasLimit = BigInteger.valueOf(1) // TODO actual gas implementation
+        val gasPrice = sidechainNodeView.getNodeState.getBaseFee // TODO actual gas implementation
+        val gasLimit = GasUtil.TxGas
         // check if the fromAddress is either empty or it fits and the value is high enough
         val secret = getFittingSecret(sidechainNodeView, body.from, valueInWei)
         secret match {
@@ -312,7 +312,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         secret match {
           case Some(secret) =>
 
-            val to = BytesUtils.toHexString(ForgerStakeMsgProcessor.ForgerStakeSmartContractAddress.address())
+            val to = BytesUtils.toHexString(ForgerStakeMsgProcessor.ForgerStakeSmartContractAddress)
             val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
             val data = encodeAddNewStakeCmdRequest(body.forgerStakeInfo)
             val tmpTx: EthereumTransaction = new EthereumTransaction(
@@ -353,7 +353,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         val secret = getFittingSecret(sidechainNodeView, None, valueInWei)
         secret match {
           case Some(txCreatorSecret) =>
-            val to = BytesUtils.toHexString(ForgerStakeMsgProcessor.ForgerStakeSmartContractAddress.address())
+            val to = BytesUtils.toHexString(ForgerStakeMsgProcessor.ForgerStakeSmartContractAddress)
             val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(txCreatorSecret.publicImage.address))
             val stakeDataOpt = sidechainNodeView.getNodeState.getForgerStakeData(body.stakeId)
             stakeDataOpt match {
@@ -405,7 +405,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     entity(as[ReqWithdrawCoins]) { body =>
       // lock the view and try to create CoreTransaction
       applyOnNodeView { sidechainNodeView =>
-        val to = BytesUtils.toHexString(WithdrawalMsgProcessor.fakeSmartContractAddress.address())
+        val to = BytesUtils.toHexString(WithdrawalMsgProcessor.contractAddress)
         val data = encodeAddNewWithdrawalRequestCmd(body.withdrawalRequest)
         val valueInWei = ZenWeiConverter.convertZenniesToWei(body.withdrawalRequest.value)
         val gasInfo = body.gasInfo
@@ -523,7 +523,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
 
   //function which describes default transaction representation for answer after adding the transaction to a memory pool
-  val defaultTransactionResponseRepresentation: (Transaction => SuccessResponse) = {
+  val defaultTransactionResponseRepresentation: Transaction => SuccessResponse = {
     transaction => TransactionIdDTO(transaction.id)
   }
   //function which describes default transaction representation for answer after adding the transaction to a memory pool
@@ -537,7 +537,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
 
   private def validateAndSendTransaction(transaction: SidechainTypes#SCAT,
-                                         transactionResponseRepresentation: (SidechainTypes#SCAT => SuccessResponse) = defaultTransactionResponseRepresentation) = {
+                                         transactionResponseRepresentation: SidechainTypes#SCAT => SuccessResponse = defaultTransactionResponseRepresentation) = {
 
     val barrier = Await.result(
       sidechainTransactionActorRef ? BroadcastTransaction(transaction),

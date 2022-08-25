@@ -12,9 +12,9 @@ public enum RpcCode {
     Unauthorized(1, "Unauthorized"),
     ActionNotAllowed(2, "Action not allowed"),
     ExecutionError(3, "Execution error"),
+    UnknownBlock(-39001, "Unknown block");
 
     // the range of -32000 to -32099 is reserved for implementation-defined server-errors
-    UnknownBlock(-32000, "Unknown block");
 
     private final int code;
     private final String message;

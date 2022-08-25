@@ -93,6 +93,10 @@ final class LibEvm {
         invoke("StateClose", new HandleParams(handle));
     }
 
+    public static void stateFinalize(int handle) {
+        invoke("StateFinalize", new HandleParams(handle));
+    }
+
     public static byte[] stateIntermediateRoot(int handle) {
         return invoke("StateIntermediateRoot", new HandleParams(handle), Hash.class).toBytes();
     }
@@ -143,6 +147,10 @@ final class LibEvm {
 
     public static void stateSetCode(int handle, byte[] address, byte[] code) {
         invoke("StateSetCode", new CodeParams(handle, address, code));
+    }
+
+    public static BigInteger stateGetRefund(int handle) {
+        return invoke("StateGetRefund", new HandleParams(handle), BigInteger.class);
     }
 
     public static byte[] stateGetStorage(int handle, byte[] address, byte[] key) {
@@ -206,25 +214,6 @@ final class LibEvm {
         }
         var params = new EvmParams(handle, from, to, value, input, gasLimit, gasPrice, context);
         return invoke("EvmApply", params, EvmResult.class);
-    }
-
-    public static EvmResult evmStaticCall(
-            int handle,
-            byte[] from,
-            byte[] to,
-            BigInteger value,
-            byte[] input,
-            BigInteger gasLimit,
-            BigInteger gasPrice,
-            EvmContext context
-    ) {
-        if (context == null) {
-            context = new EvmContext();
-            // TODO: decide what EIPs we are implementing, setting the baseFee to zero currently allows a gas price of zero
-            context.baseFee = BigInteger.ZERO;
-        }
-        var params = new EvmParams(handle, from, to, value, input, gasLimit, gasPrice, context);
-        return invoke("EvmStaticCall", params, EvmResult.class);
     }
 
     public static byte[] hashRoot(byte[][] values) {
