@@ -5,7 +5,6 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
 from httpCalls.block.best import http_block_best
-from httpCalls.block.findBlockByID import http_block_findById
 from httpCalls.block.forging import http_start_forging, http_stop_forging
 from httpCalls.transaction.allTransactions import allTransactions
 from httpCalls.transaction.sendCoinsToAddress import sendCointsToMultipleAddress, sendCoinsToAddress
@@ -224,21 +223,16 @@ class PerformanceTest(SidechainTestFramework):
         assert_equal(len(set(test_start_block_ids.values())), 1)
 
         # Start forging on nodes where forger == true
-        # while mempool not empty - poll the mempool endpoint
         for index, node in enumerate(self.sc_nodes_list):
             if node["forger"]:
-                print(f"Forger found - Node{index}")
+                print(f"Forger found - Node{index} - Start Forging...")
                 http_start_forging(self.sc_nodes[index])
-        # Sleep for initial block rate time, before polling transactions more frequently
-        sleep(self.block_rate)
-        # Wait until mempool empty - this should also mean that other nodes mempools are empty (differences will be performance issues)
-        while len(allTransactions(txs_creators[0], False)["transactionIds"]) != 0:
-            sleep(3)
+        # # Sleep for initial block rate time, before polling transactions more frequently
+        # sleep(self.block_rate)
+        # # Wait until mempool empty - this should also mean that other nodes mempools are empty (differences will be performance issues)
+        # while len(allTransactions(txs_creators[0], False)["transactionIds"]) != 0:
+        #     sleep(3)
 
-        pprint.pprint(len(allTransactions(txs_creators[0], False)["transactionIds"]))
-        sleep(200)
-        pprint.pprint(len(allTransactions(txs_creators[0], False)["transactionIds"]))
-        sleep(30)
         pprint.pprint(len(allTransactions(txs_creators[0], False)["transactionIds"]))
 
         # stop forging
@@ -252,7 +246,7 @@ class PerformanceTest(SidechainTestFramework):
             mempool_transactions = allTransactions(node, False)["transactionIds"]
             number_of_transactions = len(mempool_transactions)
             print(f"Node{node.index} mempool transactions remaining: {number_of_transactions}")
-            if mempool_transactions > 0:
+            if number_of_transactions > 0:
                 print(f"Node{node.index} mempool transactions: {mempool_transactions}")
 
 
