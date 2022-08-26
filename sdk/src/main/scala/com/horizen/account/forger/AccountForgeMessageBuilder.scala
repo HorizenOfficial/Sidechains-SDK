@@ -162,6 +162,15 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     val forgerAddress = addressList.get(0).publicImage().asInstanceOf[AddressProposition]
 
+    // TODO: 4. calculate baseFee
+    val baseFee = 0
+
+    // 5. Get cumulativeGasUsed from last receipt in list if available
+    val gasUsed = if (receiptList.size > 0) receiptList.last.cumulativeGasUsed.longValue() else 0
+
+    // 6. Set gasLimit
+    val gasLimit = Account.GAS_LIMIT
+
     val block = AccountBlock.create(
       parentId,
       AccountBlock.ACCOUNT_BLOCK_VERSION,
@@ -178,6 +187,9 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       stateRoot,
       receiptsRoot,
       forgerAddress,
+      baseFee,
+      gasUsed,
+      gasLimit,
       companion.asInstanceOf[SidechainAccountTransactionsCompanion])
 
     block
@@ -202,6 +214,9 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH), // stateRoot TODO add constant
       new AddressProposition(new Array[Byte](Account.ADDRESS_SIZE)), // forgerAddress: PublicKeySecp256k1Proposition TODO add constant,
+      Long.MaxValue,
+      Long.MaxValue,
+      Long.MaxValue,
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       Long.MaxValue,
       new Array[Byte](NodeViewModifier.ModifierIdSize),
