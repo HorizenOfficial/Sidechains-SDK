@@ -8,14 +8,11 @@ class ForkManagerTest extends JUnitSuite {
 
   @Before
   def init(): Unit = {
-    //this is to reset ForkManager from other tests
-    val c = ForkManager.getClass.getDeclaredConstructor()
-    c.setAccessible(true)
-    c.newInstance()
+    ForkManager.reset()
   }
 
   @Test
-  def ForkManagerTest: Unit = {
+  def ForkManagerTest(): Unit = {
     val simpleForkConfigurator = new SimpleForkConfigurator
 
     var res = ForkManager.init(simpleForkConfigurator, "wrongname")

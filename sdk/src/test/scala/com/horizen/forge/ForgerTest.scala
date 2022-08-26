@@ -27,20 +27,20 @@ class ForgerTest extends JUnitSuite with Matchers {
   def testForgingScheduleAtTheBeginningOfNewSlot(): Unit = {
     /*
     Intent here is to start forging blocks 1 second before the next slot,
-    with consensusSecondsInSlot being 5 seconds
+    with consensusSecondsInSlot being 2 seconds
     Math is TimeToEpochUtils is quite entangled, so let me explain the values below:
-    epochInSeconds = consensusSlotsInEpoch * consensusSecondsInSlot = 1 * 5 = 5
+    epochInSeconds = consensusSlotsInEpoch * consensusSecondsInSlot = 1 * 2 = 2
     virtualGenesisBlockTimeStamp = sidechainGenesisBlockTimestamp - epochInSeconds + consensusSecondsInSlot
-      = 11 - 5 + 5 = 11
-    secondsElapsedInSlot = (timestamp - virtualGenesisBlockTimeStamp) % consensusSecondsInSlot = (20 - 11) % 5 = 4
-    secondsRemainingInSlot = consensusSecondsInSlot - secondsElapsedInSlot = 5 - 4 = 1
+      = 11 - 2 + 2 = 11
+    secondsElapsedInSlot = (timestamp - virtualGenesisBlockTimeStamp) % consensusSecondsInSlot = (20 - 11) % 2 = 1
+    secondsRemainingInSlot = consensusSecondsInSlot - secondsElapsedInSlot = 2 - 1 = 1
      */
 
     val timeProvider = mock[NetworkTimeProvider]
     when(timeProvider.time()).thenReturn(20000)
     val params = mock[NetworkParams]
     when(params.consensusSlotsInEpoch).thenReturn(1)
-    when(params.consensusSecondsInSlot).thenReturn(5)
+    when(params.consensusSecondsInSlot).thenReturn(2)
     when(params.sidechainGenesisBlockTimestamp).thenReturn(11)
 
     val (forger, viewHolder) = prepareTestData(params, timeProvider)
@@ -49,8 +49,8 @@ class ForgerTest extends JUnitSuite with Matchers {
     viewHolder.expectMsgType[LocallyGeneratedModifier[SidechainBlock]] //first right away
     viewHolder.expectNoMessage(900.millis) //then ~1s pause
     viewHolder.expectMsgType[LocallyGeneratedModifier[SidechainBlock]](1100.millis) //next in a second
-    viewHolder.expectNoMessage(4900.millis) //then ~10s pause
-    viewHolder.expectMsgType[LocallyGeneratedModifier[SidechainBlock]](5100.millis) //next in 10 seconds
+    viewHolder.expectNoMessage(1900.millis) //then ~2s pause
+    viewHolder.expectMsgType[LocallyGeneratedModifier[SidechainBlock]](2100.millis) //next in 2 seconds
   }
 
   def prepareTestData(params: NetworkParams, timeProvider: NetworkTimeProvider): (ActorRef, TestProbe) = {

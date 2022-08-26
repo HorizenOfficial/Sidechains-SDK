@@ -5,8 +5,8 @@ import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
 case class NonceConsensusEpochInfo(consensusNonce: ConsensusNonce) extends BytesSerializable {
-  if (!consensusNonceLength.contains(consensusNonce.length)) {
-      throw new IllegalArgumentException("Incorrect consensus nonce length, %d bytes expected, %d found.".format(consensusNonceLength, consensusNonce.length))
+  if (!consensusNonceAllowedLengths.contains(consensusNonce.length)) {
+      throw new IllegalArgumentException("Incorrect consensus nonce length, %d bytes expected, %d found.".format(consensusNonceAllowedLengths, consensusNonce.length))
   }
 
   override def toString: String = s"NonceConsensusEpochInfo(consensusNonce=${BytesUtils.toHexString(consensusNonce)}"

@@ -74,4 +74,10 @@ object ForkManager {
             }
         }
     }
+
+    private[fork] def reset(): Unit = {
+        this.networkName = null
+        this.mainchainForks = ListBuffer[BaseMainchainHeightFork]()
+        this.consensusEpochForks = ListBuffer[BaseConsensusEpochFork]()
+    }
 }

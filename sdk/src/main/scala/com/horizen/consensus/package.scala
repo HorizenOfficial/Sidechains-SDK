@@ -1,6 +1,6 @@
 package com.horizen
 
-import com.google.common.primitives.{Bytes, Ints, Longs}
+import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
 import com.horizen.poseidonnative.PoseidonHash
 import com.horizen.vrf.VrfOutput
@@ -12,7 +12,7 @@ import java.math.{BigDecimal, BigInteger, MathContext}
 package object consensus {
   val merkleTreeHashLen: Int = 32
   val sha256HashLen: Int = 32
-  val consensusNonceLength: Seq[Int] = Seq(8, 32)
+  val consensusNonceAllowedLengths: Seq[Int] = Seq(8, 32)
 
   val consensusHardcodedSaltString: Array[Byte] = "TEST".getBytes()
   val consensusPreForkLength: Int = 4 + 8 + consensusHardcodedSaltString.length
@@ -57,15 +57,28 @@ package object consensus {
 
     val resBytes = Bytes.concat(slotNumberBytes, nonceBytes, consensusHardcodedSaltString)
     if (resBytes.length > consensusPreForkLength) {
-      nonceBytes.update(nonceBytes.length - 1, (nonceBytes.last.abs % 64).toByte) //only 0 to 63 is allowed for last byte
-      val digest = PoseidonHash.getInstanceConstantLength(3)
-      digest.update(FieldElementUtils.messageToFieldElement(slotNumberBytes))
-      digest.update(FieldElementUtils.messageToFieldElement(nonceBytes))
-      digest.update(FieldElementUtils.messageToFieldElement(consensusHardcodedSaltString))
-      VrfMessage @@ digest.finalizeHash().serializeFieldElement()
+      val nonceBytesHalves = nonceBytes.splitAt(nonceBytes.length / 2)
+      VrfMessage @@ generateHashAndCleanUp(
+        slotNumberBytes,
+        nonceBytesHalves._1,
+        nonceBytesHalves._2,
+        consensusHardcodedSaltString
+      )
     }
     else
       VrfMessage @@ resBytes
+  }
+
+  private def generateHashAndCleanUp(elements: Array[Byte]*): Array[Byte] = {
+    val digest = PoseidonHash.getInstanceConstantLength(elements.length)
+    elements.foreach { message =>
+      val fieldElement = FieldElementUtils.messageToFieldElement(message)
+      digest.update(fieldElement)
+      fieldElement.freeFieldElement()
+    }
+    val result = digest.finalizeHash().serializeFieldElement()
+    digest.freePoseidonHash()
+    result
   }
 
   def vrfOutputToPositiveBigInteger(vrfOutput: VrfOutput): BigInteger = {
