@@ -7,7 +7,7 @@ import com.horizen.box._
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
-import com.horizen.fork.{ForkManager, ForkManagerUtil, SimpleForkConfigurator}
+import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.params.MainNetParams
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
@@ -193,6 +193,7 @@ class SidechainStateTest
       .thenReturn(bytesToId(stateVersion.last.data))
       .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
 
+    Mockito.when(mockedBlock.timestamp).thenReturn(86401)
 
     Mockito.doNothing().when(mockedApplicationState).validate(ArgumentMatchers.any[SidechainStateReader](),
       ArgumentMatchers.any[SidechainBlock]())
@@ -246,6 +247,7 @@ class SidechainStateTest
     Mockito.when(doubleSpendTransactionMockedBlock.mainchainBlockReferencesData).thenReturn(Seq())
     Mockito.when(doubleSpendTransactionMockedBlock.parentId).thenReturn(bytesToId(stateVersion.last.data))
     Mockito.when(doubleSpendTransactionMockedBlock.id).thenReturn(ModifierId @@ "testBlock")
+    Mockito.when(doubleSpendTransactionMockedBlock.timestamp).thenReturn(86401)
 
     val boxAndSecret2: Seq[(ZenBox,PrivateKey25519)] = Seq((boxList.last.asInstanceOf[ZenBox], secretList.last))
 
@@ -741,6 +743,8 @@ class SidechainStateTest
     val mockedParams = mock[MainNetParams]
     Mockito.when(mockedParams.maxWBsAllowed).thenReturn(100)
     Mockito.when(mockedParams.withdrawalEpochLength).thenReturn(11)
+    Mockito.when(mockedParams.consensusSlotsInEpoch).thenReturn(1)
+    Mockito.when(mockedParams.consensusSecondsInSlot).thenReturn(1)
 
     Mockito.when(mockedStateStorage.lastVersionId).thenReturn(Some(stateVersion.last))
 
@@ -784,6 +788,7 @@ class SidechainStateTest
       .thenReturn(bytesToId(stateVersion.last.data))
       .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
 
+    Mockito.when(mockedBlock.timestamp).thenReturn(86401)
 
     Mockito.doNothing().when(mockedApplicationState).validate(ArgumentMatchers.any[SidechainStateReader](),
       ArgumentMatchers.any[SidechainBlock]())
@@ -911,6 +916,7 @@ class SidechainStateTest
 
     //Test BTs limit before the Fork1
     Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(1)))
+    Mockito.when(mockedParams.consensusSlotsInEpoch).thenReturn(86400)
 
     transactionList.clear()
     transactionList += getRegularTransaction(1, 0, 100, Seq(), 100)
