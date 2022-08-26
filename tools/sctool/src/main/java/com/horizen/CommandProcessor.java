@@ -15,6 +15,7 @@ import com.horizen.account.secret.PrivateKeySecp256k1;
 import com.horizen.account.state.*;
 import com.horizen.account.storage.AccountStateMetadataStorageView;
 import com.horizen.account.transaction.AccountTransaction;
+import com.horizen.account.utils.Account;
 import com.horizen.account.utils.MainchainTxCrosschainOutputAddressUtil;
 import com.horizen.account.utils.Secp256k1;
 import com.horizen.block.*;
@@ -630,6 +631,13 @@ public class CommandProcessor {
                           MainchainTxCrosschainOutputAddressUtil.getAccountAddress(
                                   sidechainCreation.getScCrOutput().address()));
 
+                // TODO: Add baseFee start value here
+                Long baseFee = 0L;
+
+                Long gasUsed = 0L;
+
+                Long gasLimit = Long.valueOf(Account.GAS_LIMIT);
+
                 SidechainAccountTransactionsCompanion sidechainTransactionsCompanion = new SidechainAccountTransactionsCompanion(new HashMap<>());
 
                 ForgingStakeInfo forgingStakeInfo = sidechainCreation.getAccountForgerStakeInfo();
@@ -650,6 +658,9 @@ public class CommandProcessor {
                         stateRoot,
                         receiptsRoot,
                         forgerAddress,
+                        baseFee,
+                        gasUsed,
+                        gasLimit,
                         sidechainTransactionsCompanion,
                         scala.Option.empty()
                 ).get();

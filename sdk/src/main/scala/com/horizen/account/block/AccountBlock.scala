@@ -16,6 +16,7 @@ import com.horizen.validation.InconsistentSidechainBlockDataException
 import com.horizen.{ScorexEncoding, SidechainTypes, account}
 import scorex.core.block.Block
 import scorex.util.{ScorexLogging, idToBytes}
+import com.horizen.account.utils.Account
 
 import scala.util.Try
 
@@ -89,6 +90,9 @@ object AccountBlock extends ScorexEncoding {
              stateRoot: Array[Byte],
              receiptsRoot: Array[Byte],
              forgerAddress: AddressProposition,
+             baseFee: Long,
+             gasUsed: Long,
+             gasLimit: Long,
              companion: SidechainAccountTransactionsCompanion,
              signatureOption: Option[Signature25519] = None // TO DO: later we should think about different unsigned/signed blocks creation methods
             ): Try[AccountBlock] = Try {
@@ -123,6 +127,9 @@ object AccountBlock extends ScorexEncoding {
           stateRoot,
           receiptsRoot,
           forgerAddress,
+          baseFee,
+          gasUsed,
+          gasLimit,
           ommersMerkleRootHash,
           ommers.map(_.score).sum,
           feePaymentsHash,
@@ -145,6 +152,9 @@ object AccountBlock extends ScorexEncoding {
       stateRoot,
       receiptsRoot,
       forgerAddress,
+      baseFee,
+      gasUsed,
+      gasLimit,
       ommersMerkleRootHash,
       ommers.map(_.score).sum,
       feePaymentsHash,

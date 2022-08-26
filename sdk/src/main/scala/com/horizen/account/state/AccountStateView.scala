@@ -8,7 +8,7 @@ import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceip
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress}
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.{MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
+import com.horizen.account.utils.{Account, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
 import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput, WithdrawalEpochCertificate}
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.evm.interop.EvmLog
@@ -337,7 +337,7 @@ class AccountStateView(
   override def getBaseFee: BigInteger = BigInteger.valueOf(0)
 
   // TODO: get gas limit from current block header
-  override def getBlockGasLimit: BigInteger = BigInteger.valueOf(30000000)
+  override def getBlockGasLimit: BigInteger = BigInteger.valueOf(Account.GAS_LIMIT)
 
   def getRefund: BigInteger = stateDb.getRefund
 
