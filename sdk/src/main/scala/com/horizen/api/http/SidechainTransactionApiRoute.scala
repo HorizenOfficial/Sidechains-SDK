@@ -42,7 +42,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
   override val route: Route = (pathPrefix("transaction")) {
     allTransactions ~ findById ~ decodeTransactionBytes ~ createCoreTransaction ~ createCoreTransactionSimplified ~
-    sendCoinsToAddress ~ sendTransaction ~ withdrawCoins ~ makeForgerStake ~ spendForgingStake
+    sendCoinsToAddress ~ sendTransaction ~ withdrawCoins ~ makeForgerStake ~ spendForgingStake ~ broadcastMempool
   }
 
   /**
@@ -473,6 +473,23 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     }
   }
 
+  /**
+   * Used only for test purpose.
+   * Broadcast to the network all the transactions in the mempool
+   */
+  def broadcastMempool: Route = (post & path("broadcastMempool")) {
+    withAuth {
+      withNodeView { sidechainNodeView =>
+        sidechainNodeView.getNodeMemoryPool.getTransactions().forEach(tx =>{
+          val barrier = Await.result(
+            sidechainTransactionActorRef ? BroadcastTransaction(tx),
+            settings.timeout).asInstanceOf[Future[Unit]]
+        })
+        ApiResponseUtil.toResponse(RespBroadcastMempool)
+      }
+    }
+  }
+
   // try to get the first PublicKey25519Proposition in the wallet
   // None - if not present.
   private def getChangeAddress(wallet: NodeWallet): Option[PublicKey25519Proposition] = {
@@ -658,6 +675,9 @@ object SidechainTransactionRestScheme {
     require(transactionInputs.nonEmpty, "Empty inputs list")
     require(regularOutputs.nonEmpty || forgerOutputs.nonEmpty, "Empty outputs")
   }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] object RespBroadcastMempool extends SuccessResponse
 
 }
 
