@@ -2,7 +2,6 @@ package com.horizen.api.http
 
 import java.lang
 import java.util.{Collections, ArrayList => JArrayList, List => JList}
-
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
@@ -13,8 +12,8 @@ import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.SidechainTransactionErrorResponse._
 import com.horizen.api.http.SidechainTransactionRestScheme._
-import com.horizen.box.data.{ForgerBoxData, BoxData, WithdrawalRequestBoxData, ZenBoxData}
-import com.horizen.box.{Box, ZenBox, ForgerBox}
+import com.horizen.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
+import com.horizen.box.{Box, ForgerBox, ZenBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.{NodeWallet, SidechainNodeView}
 import com.horizen.params.NetworkParams
@@ -23,6 +22,7 @@ import com.horizen.proposition._
 import com.horizen.serialization.Views
 import com.horizen.transaction._
 import com.horizen.utils.{BytesUtils, ZenCoinsUtils}
+import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SuccessfulTransaction
 import scorex.core.settings.RESTApiSettings
 
 import scala.collection.JavaConverters._
@@ -35,6 +35,7 @@ import java.util.{Optional => JOptional}
 case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                                         sidechainNodeViewHolderRef: ActorRef,
                                         sidechainTransactionActorRef: ActorRef,
+                                        sidechainNodeViewSynchronizer: ActorRef,
                                         companion: SidechainTransactionsCompanion,
                                         params: NetworkParams)
                                        (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
@@ -481,9 +482,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     withAuth {
       withNodeView { sidechainNodeView =>
         sidechainNodeView.getNodeMemoryPool.getTransactions().forEach(tx =>{
-          val barrier = Await.result(
-            sidechainTransactionActorRef ? BroadcastTransaction(tx),
-            settings.timeout).asInstanceOf[Future[Unit]]
+          sidechainNodeViewSynchronizer ! SuccessfulTransaction(tx)
         })
         ApiResponseUtil.toResponse(RespBroadcastMempool)
       }

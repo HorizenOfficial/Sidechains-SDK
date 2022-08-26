@@ -137,7 +137,7 @@ trait SidechainNodeViewHolderFixture
 
   def getSidechainTransactionApiRoute : SidechainTransactionApiRoute = {
     SidechainTransactionApiRoute(sidechainSettings.scorexSettings.restApi, nodeViewHolderRef,
-      sidechainTransactionActorRef, sidechainTransactionsCompanion, params)
+      sidechainTransactionActorRef, null, sidechainTransactionsCompanion, params)
   }
 
 }
