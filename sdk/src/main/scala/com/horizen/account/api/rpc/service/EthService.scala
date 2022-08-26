@@ -127,6 +127,7 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   }
 
   @RpcMethod("eth_call")
+  @RpcOptionalParameters(1)
   def call(params: TransactionArgs, tag: String): String = {
     applyOnAccountView { nodeView =>
       doCall(nodeView, params, tag) {
@@ -266,6 +267,7 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   def chainId: Quantity = new Quantity(BigInteger.valueOf(networkParams.chainId))
 
   @RpcMethod("eth_getBalance")
+  @RpcOptionalParameters(1)
   def GetBalance(address: Address, tag: String): Quantity = {
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { tagStateView =>
@@ -275,6 +277,7 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   }
 
   @RpcMethod("eth_getTransactionCount")
+  @RpcOptionalParameters(1)
   def getTransactionCount(address: Address, tag: String): Quantity = {
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { tagStateView =>
@@ -297,7 +300,7 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
     val blockId = tag match {
       case "earliest" => history.getBlockIdByHeight(1)
       case "finalized" | "safe" => throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock))
-      case "latest" | "pending" => history.getBlockIdByHeight(history.getCurrentHeight)
+      case "latest" | "pending" | null => history.getBlockIdByHeight(history.getCurrentHeight)
       case height => history.getBlockIdByHeight(Numeric.decodeQuantity(height).intValueExact())
     }
     blockId.orElse(null)
@@ -362,6 +365,7 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   }
 
   @RpcMethod("eth_getCode")
+  @RpcOptionalParameters(1)
   def getCode(address: Address, tag: String): String = {
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView,tag) { tagStateView =>
