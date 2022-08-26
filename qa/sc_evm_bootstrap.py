@@ -94,6 +94,10 @@ class SCEvmBootstrap(SidechainTestFramework):
         evm_hex_address = to_checksum_address(evm_address)
         print("pubkey = {}".format(evm_address))
 
+        ret = sc_node_1.wallet_createPrivateKeySecp256k1()
+        evm_address_2 = str(ret["result"]["proposition"]["address"])
+        print("pubkey = {}".format(evm_address_2))
+
         # call a legacy wallet api
         ret = sc_node_1.wallet_allPublicKeys()
         pprint.pprint(ret)
@@ -106,6 +110,12 @@ class SCEvmBootstrap(SidechainTestFramework):
         forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
                                       self.nodes[0],
                                       evm_address,
+                                      ft_amount_in_zen,
+                                      mc_return_address)
+
+        forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
+                                      self.nodes[0],
+                                      evm_address_2,
                                       ft_amount_in_zen,
                                       mc_return_address)
 
@@ -171,6 +181,20 @@ class SCEvmBootstrap(SidechainTestFramework):
         tx_amount_in_wei = response_2["result"]["transactions"][0]["value"]
         assert_equal(str(tx_amount_in_wei), str(transferred_amount_in_wei))
 
+        # send more zen with another from address to have more than one transaction in block
+        print("Trying to send {} zen to address {}".format(transferred_amount, recipient_proposition))
+
+        j = {
+            "from": evm_address_2,
+            "to": recipient_proposition,
+            "value": transferred_amount_in_zennies
+        }
+        request = json.dumps(j)
+        response = sc_node_1.transaction_sendCoinsToAddress(request)
+        print("tx sent:")
+        pprint.pprint(response)
+        self.sc_sync_all()
+
         # request chainId via rpc route
         print("rpc response:")
         pprint.pprint(sc_node_1.rpc_eth_chainId())
@@ -183,6 +207,9 @@ class SCEvmBootstrap(SidechainTestFramework):
         self.sc_sync_all()
         sc_best_block = sc_node_1.block_best()["result"]
         pprint.pprint(sc_best_block)
+
+        # check if header contains correct gasUsed (2 * eoa to eoa transfer gas costs)
+        assert_equal(21000*2, sc_best_block['block']['header']['gasUsed'])
 
         final_balance = http_wallet_balance(sc_node_1, evm_address)
         assert_equal(initial_balance - transferred_amount_in_wei, final_balance)
