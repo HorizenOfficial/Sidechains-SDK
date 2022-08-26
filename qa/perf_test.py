@@ -7,6 +7,7 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
 from httpCalls.block.best import http_block_best
 from httpCalls.block.forging import http_start_forging, http_stop_forging
 from httpCalls.transaction.allTransactions import allTransactions
+from httpCalls.transaction.broadcastMempool import http_broadcast_mempool
 from httpCalls.transaction.sendCoinsToAddress import sendCointsToMultipleAddress, sendCoinsToAddress
 from httpCalls.wallet.balance import http_wallet_balance
 from test_framework.util import start_nodes, \
@@ -47,6 +48,10 @@ def get_node_configuration(mc_node, sc_node_data, perf_data):
             )
         )
     return node_configuration
+
+
+def get_number_of_transactions_for_node(node):
+    return len(allTransactions(node, False)["transactionIds"])
 
 
 class PerformanceTest(SidechainTestFramework):
@@ -162,8 +167,13 @@ class PerformanceTest(SidechainTestFramework):
         for node in self.sc_nodes:
             block = http_block_best(node)
             block_ids[self.sc_nodes.index(node)] = block["id"]
-        print(block_ids)
         return block_ids
+
+    def log_node_wallet_balances(self):
+        # Output the balance of each node
+        for index, node in enumerate(self.sc_nodes):
+            wallet_balance = http_wallet_balance(node)
+            print(f"Node{index} Wallet Balance: {wallet_balance}")
 
     def run_test(self):
         mc_nodes = self.nodes
@@ -218,22 +228,48 @@ class PerformanceTest(SidechainTestFramework):
         # Reconnect the node to the network - connect_sc_nodes
         self.reconnect_txs_creator_nodes()
 
-        # Take best block id of every node
+        # Take best block id of every node and assert they all match
         test_start_block_ids = self.get_best_node_block_ids()
         assert_equal(len(set(test_start_block_ids.values())), 1)
+
+
+
+        # Sleep for x seconds to allow mempool to propagate and then log the mempool transactions for each node.
+        sleep(5)
+        for index, node in enumerate(self.sc_nodes):
+            mempool_transactions = get_number_of_transactions_for_node(node)
+            print(f"Node{index} mempool transactions: {mempool_transactions}")
+            # TODO multiply this by number of tx_creators?
+            assert_equal(mempool_transactions, self.initial_txs)
+
+        # Output the wallet balance of each node
+        print("Node Wallet Balances Before Test...")
+        self.log_node_wallet_balances()
 
         # Start forging on nodes where forger == true
         for index, node in enumerate(self.sc_nodes_list):
             if node["forger"]:
                 print(f"Forger found - Node{index} - Start Forging...")
                 http_start_forging(self.sc_nodes[index])
-        # # Sleep for initial block rate time, before polling transactions more frequently
-        # sleep(self.block_rate)
-        # # Wait until mempool empty - this should also mean that other nodes mempools are empty (differences will be performance issues)
-        # while len(allTransactions(txs_creators[0], False)["transactionIds"]) != 0:
-        #     sleep(3)
 
-        pprint.pprint(len(allTransactions(txs_creators[0], False)["transactionIds"]))
+        # Broadcast the txs creator node mempool to the rest of the network
+        for index, node in enumerate(self.sc_nodes_list):
+            if node["tx_creator"]:
+                print(f"Broadcasting Mempool for Node{index}")
+                http_broadcast_mempool(self.sc_nodes[index])
+
+
+
+        # TODO Add maximum test run time to config, wait for time if not 0 or if 0 wait for mempool to be empty
+        # Wait until mempool empty - this should also mean that other nodes mempools are empty (differences will be performance issues)
+        end_test = False
+        while not end_test:
+            end_test = True
+            for node in txs_creators:
+                if len(allTransactions(node, False)["transactionIds"]) != 0:
+                    end_test = False
+                    break
+            sleep(3)
 
         # stop forging
         for index, node in enumerate(self.sc_nodes_list):
@@ -242,22 +278,31 @@ class PerformanceTest(SidechainTestFramework):
                 http_stop_forging(self.sc_nodes[index])
 
         # call allTransactions for every node and print the content
-        for node in self.sc_nodes:
+        # TODO: print mempool of each node if we're running timed test
+        for index, node in enumerate(self.sc_nodes):
             mempool_transactions = allTransactions(node, False)["transactionIds"]
-            number_of_transactions = len(mempool_transactions)
-            print(f"Node{node.index} mempool transactions remaining: {number_of_transactions}")
+            number_of_transactions = get_number_of_transactions_for_node(node)
+            print(f"Node{index} mempool transactions remaining: {number_of_transactions}")
             if number_of_transactions > 0:
-                print(f"Node{node.index} mempool transactions: {mempool_transactions}")
-
+                print(f"Node{index} mempool transactions: {mempool_transactions}")
 
         # Take blockhash of every node and verify they are all the same
         test_end_block_ids = self.get_best_node_block_ids()
         assert_equal(len(set(test_end_block_ids.values())), 1)
 
-        # Take the balance of each node
-        for node in self.sc_nodes:
-            wallet_balance = http_wallet_balance(node)
-            print(f"Node{node.index} Wallet Balance: {wallet_balance}")
+        # TODO: Find balance for the node sender and receiver and verify that it's what we expect
+        # sum(balance of each node) => total ZEN present at the end of the test
+        # Output the wallet balance of each node
+        print("Node Wallet Balances After Test...")
+        self.log_node_wallet_balances()
+
+        # TODO: Run test for x minutes for x amount of transactions, take transactions in each block and divide by block_rate or 60s??
+        # call block_findById starting with the last block take number of transactions and see if block id is equal to the block before we started the test
+        # Otherwise call block_findById with field parentId which is the block before
+
+        #TODO: number of tx mined (prefilled mempool transactions - tx inserted into block) - only for timed test run
+
+        # TODO: Figure out way to get around 1000 boxes limit
 
 if __name__ == "__main__":
     PerformanceTest().main()
