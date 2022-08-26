@@ -117,6 +117,9 @@ class SCEvmBootstrap(SidechainTestFramework):
         pprint.pprint(sc_best_block)
         pprint.pprint(sc_node_1.rpc_eth_getBalance(evm_hex_address, "1"))
 
+        # Check account balance via rpc not using optional tag
+        assert_equal(ft_amount_in_wei, int(sc_node_1.rpc_eth_getBalance(evm_hex_address)['result'], 16))
+
         '''
         # TODO
         # Make and activate forging stake for the SC node 1
