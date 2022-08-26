@@ -163,10 +163,10 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val forgerAddress = addressList.get(0).publicImage().asInstanceOf[AddressProposition]
 
     // TODO: 4. calculate baseFee
-    val baseFee = 0L
+    val baseFee = 0
 
     // 5. Get cumulativeGasUsed from last receipt in list if available
-    val gasUsed = if (receiptList.size > 0) receiptList.last.cumulativeGasUsed.longValue() else 0L
+    val gasUsed = if (receiptList.size > 0) receiptList.last.cumulativeGasUsed.longValue() else 0
 
     // 6. Set gasLimit
     val gasLimit = Account.GAS_LIMIT
