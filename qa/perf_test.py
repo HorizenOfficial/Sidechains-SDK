@@ -7,6 +7,7 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
 from httpCalls.block.best import http_block_best
 from httpCalls.block.forging import http_start_forging, http_stop_forging
 from httpCalls.transaction.allTransactions import allTransactions
+from httpCalls.transaction.broadcastMempool import http_broadcast_mempool
 from httpCalls.transaction.sendCoinsToAddress import sendCointsToMultipleAddress, sendCoinsToAddress
 from httpCalls.wallet.balance import http_wallet_balance
 from httpCalls.wallet.allBoxesOfType import http_wallet_allBoxesOfType
@@ -51,6 +52,10 @@ def get_node_configuration(mc_node, sc_node_data, perf_data):
             )
         )
     return node_configuration
+
+
+def get_number_of_transactions_for_node(node):
+    return len(allTransactions(node, False)["transactionIds"])
 
 
 class PerformanceTest(SidechainTestFramework):
@@ -177,7 +182,13 @@ class PerformanceTest(SidechainTestFramework):
             if (box["proposition"]["publicKey"] == address):
                 address_boxes.append(box)
         return address_boxes
-            
+
+    def log_node_wallet_balances(self):
+        # Output the balance of each node
+        for index, node in enumerate(self.sc_nodes):
+            wallet_balance = http_wallet_balance(node)
+            print(f"Node{index} Wallet Balance: {wallet_balance}")
+
     def run_test(self):
         mc_nodes = self.nodes
         sc_nodes = self.sc_nodes
@@ -281,9 +292,13 @@ class PerformanceTest(SidechainTestFramework):
         # Reconnect the node to the network - connect_sc_nodes
         self.reconnect_txs_creator_nodes()
 
-        # Take best block id of every node
+        # Take best block id of every node and assert they all match
         test_start_block_ids = self.get_best_node_block_ids()
         assert_equal(len(set(test_start_block_ids.values())), 1)
+
+        # Output the wallet balance of each node
+        print("Node Wallet Balances Before Test...")
+        self.log_node_wallet_balances()
 
         # Broadcast node creator mempool to the network
         for node in txs_creators:
@@ -303,12 +318,16 @@ class PerformanceTest(SidechainTestFramework):
         #     sleep(3)
 
         ######## RUN UNTIL NODE CREATORS MEMPOOLS ARE EMPTY ########
+
+        # TODO Add maximum test run time to config, wait for time if not 0 or if 0 wait for mempool to be empty
+        # Wait until mempool empty - this should also mean that other nodes mempools are empty (differences will be performance issues)
         end_test = False
         while(not end_test):
             end_test = True
             for creator_node in txs_creators:
                 if (len(allTransactions(creator_node, True)["transactions"]) != 0):
                     end_test = False
+                    break
             sleep(5)
 
         # stop forging
@@ -326,6 +345,7 @@ class PerformanceTest(SidechainTestFramework):
             mempool_transactions = allTransactions(self.sc_nodes[i], False)
             number_of_transactions = len(mempool_transactions)
             print(f"Node {i} mempool transactions remaining: {number_of_transactions}")
+            # TODO: print mempool of each node if we're running timed test
             #if number_of_transactions > 0:
                 #print(f"Node {i} mempool transactions: {mempool_transactions}")
 
@@ -333,10 +353,22 @@ class PerformanceTest(SidechainTestFramework):
             wallet_balance = http_wallet_balance(self.sc_nodes[i])
             print(f"Node {i} Wallet Balance: {wallet_balance}")
 
-
         # Take blockhash of every node and verify they are all the same
         test_end_block_ids = self.get_best_node_block_ids()
         assert_equal(len(set(test_end_block_ids.values())), 1)
-        
+
+        # TODO: Find balance for the node sender and receiver and verify that it's what we expect
+        # sum(balance of each node) => total ZEN present at the end of the test
+        # Output the wallet balance of each node
+        print("Node Wallet Balances After Test...")
+        self.log_node_wallet_balances()
+
+        # TODO: Run test for x minutes for x amount of transactions, take transactions in each block and divide by block_rate or 60s??
+        # call block_findById starting with the last block take number of transactions and see if block id is equal to the block before we started the test
+        # Otherwise call block_findById with field parentId which is the block before
+
+        #TODO: number of tx mined (prefilled mempool transactions - tx inserted into block) - only for timed test run
+
+
 if __name__ == "__main__":
     PerformanceTest().main()
