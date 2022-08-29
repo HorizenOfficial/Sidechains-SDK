@@ -7,12 +7,14 @@ import com.horizen.box._
 import com.horizen.box.data.ZenBoxData
 import com.horizen.consensus._
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
+import com.horizen.fork.ForkManager
 import com.horizen.node.NodeState
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.ApplicationState
 import com.horizen.storage.{BackupStorage, SidechainStateForgerBoxStorage, SidechainStateStorage}
 import com.horizen.transaction.MC2SCAggregatedTransaction
+import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import scorex.core._
 import scorex.core.transaction.state._
@@ -256,11 +258,23 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       }
 
       val newBoxes = tx.newBoxes().asScala
-
-      newCoinsBoxesAmount = newBoxes
+      val newCoinBoxes = newBoxes
         .filter(box => box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]] || box.isInstanceOf[WithdrawalRequestBox])
-        .map(_.value()).sum
 
+      stateStorage.getConsensusEpochNumber match {
+        case Some(consensusEpochNumber) =>
+          val coinBoxMinAmount = ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).coinBoxMinAmount
+          newCoinBoxes.foreach { coinBox =>
+            if (coinBox.value() < coinBoxMinAmount)
+              throw new TransactionSemanticValidityException(s"Transaction [${tx.id()}] is semantically invalid: " +
+                s"Coin box value [${coinBox.value()}] is below the threshold[$coinBoxMinAmount].")
+          }
+        case None =>
+          throw new IllegalStateException("Can't retrieve Consensus Epoch related info form StateStorage.")
+      }
+
+
+      newCoinsBoxesAmount = newCoinBoxes.map(_.value()).sum
       if (closedCoinsBoxesAmount != newCoinsBoxesAmount + tx.fee())
         throw new Exception("Amounts sum of CoinsBoxes is incorrect. " +
           s"ClosedBox amount - $closedCoinsBoxesAmount, NewBoxesAmount - $newCoinsBoxesAmount, Fee - ${tx.fee()}")

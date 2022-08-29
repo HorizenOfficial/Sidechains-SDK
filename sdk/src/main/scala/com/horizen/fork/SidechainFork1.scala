@@ -1,5 +1,10 @@
 package com.horizen.fork
 
+import com.horizen.utils.ZenCoinsUtils
+
 class SidechainFork1(override val epochNumber: ForkConsensusEpochNumber) extends BaseConsensusEpochFork(epochNumber) {
-  // TODO This is a blank fork. Put implementation for the first fork here.
+
+  override val ftMinAmount: Long = ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE)
+
+  override val coinBoxMinAmount: Long = ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE)
 }

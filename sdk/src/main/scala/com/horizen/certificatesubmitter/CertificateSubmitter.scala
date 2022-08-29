@@ -8,19 +8,23 @@ import com.horizen._
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter._
+import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
+import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
+import com.horizen.fork.ForkManager
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.SchnorrProposition
 import com.horizen.secret.SchnorrSecret
 import com.horizen.transaction.mainchain.SidechainCreation
-import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.utils.{BytesUtils, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.websocket.client.{MainchainNodeChannel, WebsocketErrorResponseException, WebsocketInvalidErrorMessageException}
 import scorex.core.NodeViewHolder.CurrentView
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 import scorex.util.ScorexLogging
+
 import java.io.File
 import java.util
 import java.util.Optional
@@ -247,8 +251,9 @@ class CertificateSubmitter(settings: SidechainSettings,
   // No MBTRs support, so no sense to specify btrFee different to zero.
   private def getBtrFee(referencedWithdrawalEpochNumber: Int): Long = 0
 
-  // Every positive value FT is allowed.
-  private def getFtMinAmount(referencedWithdrawalEpochNumber: Int): Long = 0
+  private[certificatesubmitter] def getFtMinAmount(consensusEpochNumber: Int): Long = {
+    ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).ftMinAmount
+  }
 
   private def getMessageToSign(referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
     def getMessage(sidechainNodeView: View): Try[Array[Byte]] = Try {
@@ -258,7 +263,8 @@ class CertificateSubmitter(settings: SidechainSettings,
       val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(referencedWithdrawalEpochNumber)
 
       val btrFee: Long = getBtrFee(referencedWithdrawalEpochNumber)
-      val ftMinAmount: Long = getFtMinAmount(referencedWithdrawalEpochNumber)
+      val consensusEpochNumber = lastSidechainEpochNumberForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
+      val ftMinAmount: Long = getFtMinAmount(consensusEpochNumber)
 
       val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
       val sidechainId = params.sidechainId
@@ -542,7 +548,8 @@ class CertificateSubmitter(settings: SidechainSettings,
     val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(status.referencedEpoch)
 
     val btrFee: Long = getBtrFee(status.referencedEpoch)
-    val ftMinAmount: Long = getFtMinAmount(status.referencedEpoch)
+    val consensusEpochNumber = lastSidechainEpochNumberForWithdrawalEpochNumber(history, status.referencedEpoch)
+    val ftMinAmount: Long = getFtMinAmount(consensusEpochNumber)
     val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, status.referencedEpoch)
     val sidechainId = params.sidechainId
     val utxoMerkleTreeRoot: Optional[Array[Byte]] = getUtxoMerkleTreeRoot(status.referencedEpoch, state)
@@ -564,7 +571,20 @@ class CertificateSubmitter(settings: SidechainSettings,
       signersPublicKeyWithSignatures)
   }
 
+  private def lastSidechainEpochNumberForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): ConsensusEpochNumber = {
+    val headerInfo: MainchainHeaderInfo = getLastMainchainBlockHashForWithdrawalEpochNumber(history, withdrawalEpochNumber)
+
+    val parentBlockInfo: SidechainBlockInfo = history.storage.blockInfoById(headerInfo.sidechainBlockId)
+    TimeToEpochUtils.timeStampToEpochNumber(params, parentBlockInfo.timestamp)
+  }
+
   private def lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): Array[Byte] = {
+    val headerInfo: MainchainHeaderInfo = getLastMainchainBlockHashForWithdrawalEpochNumber(history, withdrawalEpochNumber)
+
+    headerInfo.cumulativeCommTreeHash
+  }
+
+  private def getLastMainchainBlockHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int) = {
     val mcBlockHash = withdrawalEpochNumber match {
       case -1 => params.parentHashOfGenesisMainchainBlock
       case _ => {
@@ -576,9 +596,7 @@ class CertificateSubmitter(settings: SidechainSettings,
       BytesUtils.toHexString(mcBlockHash)
     }")
 
-    val headerInfo = history.mainchainHeaderInfoByHash(mcBlockHash).getOrElse(throw new IllegalStateException("Missed MC Cumulative Hash"))
-
-    headerInfo.cumulativeCommTreeHash
+    history.mainchainHeaderInfoByHash(mcBlockHash).getOrElse(throw new IllegalStateException("Missed MC Cumulative Hash"))
   }
 
   private def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {

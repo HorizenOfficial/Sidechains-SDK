@@ -3,6 +3,8 @@ import sys
 
 from mc_sc_forging5 import MCSCForging5
 from mc_sc_forging_delegation import MCSCForgingDelegation
+from qa.sc_dust_threshold_fork import SCDustThresholdFork
+from qa.sc_ft_limit_fork import SCFTLimitFork
 from sc_ceased import SCCeased
 from sc_cert_no_coin_record import SCCertNoCoinRecord
 from sc_cert_submission_decentralization import SCCertSubmissionDecentralization
@@ -188,6 +190,12 @@ def run_tests(log_file):
     assert_equal(0, result, "sc_mempool_min_fee_rate test failed!")
 
     result = run_test(ScCSWInFeePaymentTest())
+    assert_equal(0, result, "sc_csw_in_fee_payment test failed!")
+
+    result = run_test(SCDustThresholdFork())
+    assert_equal(0, result, "sc_csw_in_fee_payment test failed!")
+
+    result = run_test(SCFTLimitFork())
     assert_equal(0, result, "sc_csw_in_fee_payment test failed!")
 
 if __name__ == "__main__":
