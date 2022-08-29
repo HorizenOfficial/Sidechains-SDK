@@ -7,17 +7,17 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
 from httpCalls.block.best import http_block_best
 from httpCalls.block.forging import http_start_forging, http_stop_forging
 from httpCalls.transaction.allTransactions import allTransactions
-from httpCalls.transaction.broadcastMempool import http_broadcast_mempool
-from httpCalls.transaction.sendCoinsToAddress import sendCointsToMultipleAddress, sendCoinsToAddress
+from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress
 from httpCalls.wallet.balance import http_wallet_balance
 from httpCalls.wallet.allBoxesOfType import http_wallet_allBoxesOfType
 from httpCalls.transaction.createCoreTransaction import http_create_core_transaction
 from httpCalls.transaction.sendTransaction import http_send_transaction
 from httpCalls.transaction.broadcastMempool import http_broadcast_mempool
+from httpCalls.wallet.allPublicKeys import http_wallet_allPublicKeys
 from test_framework.util import start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, assert_equal
 from SidechainTestFramework.scutil import assert_true, bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks, \
-    deserialize_perf_test_json, connect_sc_nodes, check_wallet_coins_balance, disconnect_sc_nodes, sc_connected_peers
+    deserialize_perf_test_json, connect_sc_nodes, sc_connected_peers
 from performance.perf_data import PerformanceData, NodeData, NetworkTopology
 
 
@@ -81,7 +81,7 @@ class PerformanceTest(SidechainTestFramework):
             *sc_nodes
         )
 
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720*120*5)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720*self.block_rate/2)
 
     def sc_setup_nodes(self):
         return start_sc_nodes(len(self.sc_node_data), self.options.tmpdir)
@@ -132,48 +132,32 @@ class PerformanceTest(SidechainTestFramework):
 
     def find_txs_creators(self):
         txs_creators = []
+        non_txs_creator = []
         for index, node in enumerate(self.sc_nodes_list):
             if node["tx_creator"]:
                 txs_creators.append(self.sc_nodes[index])
-        return txs_creators
+            else:
+                non_txs_creator.append(self.sc_nodes[index])
+        return txs_creators, non_txs_creator
 
-    def disconnect_txs_creator_nodes(self):
-        for index, node in enumerate(self.sc_nodes_list):
-            if node["tx_creator"]:
-                print(f"Node{index} connected peers BEFORE disconnect: {sc_connected_peers(self.sc_nodes[index])}")
-                for connected_node in self.connection_map[index]:
-                    print(f"DISCONNECTING node{index} from node{connected_node} and node{connected_node} from node{index}")
-                    disconnect_sc_nodes(self.sc_nodes[index], connected_node)
-                    disconnect_sc_nodes(self.sc_nodes[connected_node], index)
-                print(f"Node{index} connected peers AFTER disconnect: {sc_connected_peers(self.sc_nodes[index])}")
+    def send_coins_to_multiple_destination(self, utxo_amount, txs_creator_nodes, non_creator_nodes):
 
-    def reconnect_txs_creator_nodes(self):
-        for index, node in enumerate(self.sc_nodes_list):
-            if node["tx_creator"]:
-                print(f"Node{index} connected peers BEFORE reconnect: {sc_connected_peers(self.sc_nodes[index])}")
-                for connected_node in self.connection_map[index]:
-                    print(f"RECONNECTING node{index} to node{connected_node}")
-                    connect_sc_nodes(self.sc_nodes[index], connected_node)
-                print(f"Node{index} connected peers AFTER reconnect: {sc_connected_peers(self.sc_nodes[index])}")
-
-    def send_coins_to_creator_node_addresses(self, utxo_amount):
-        tx_creators = self.find_txs_creators()
-
-        for j in range (len(tx_creators)):
-            destination_address = tx_creators[j].wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
+        for j in range (len(txs_creator_nodes)):
+            destination_address = non_creator_nodes[0].wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
             for i in range(self.initial_txs):
                 # Populate the mempool - so don't mine a block
-                sendCoinsToAddress(tx_creators[j], destination_address, utxo_amount, 0)
+                sendCoinsToAddress(txs_creator_nodes[j], destination_address, utxo_amount, 0)
                 if (i%1000 == 0):
                     print("Node "+str(j)+" sent txs: "+str(i))
-            assert_equal(len(allTransactions(tx_creators[j], False)["transactionIds"]), self.initial_txs)
+            assert_equal(len(allTransactions(txs_creator_nodes[j], False)["transactionIds"]), self.initial_txs)
+            print("Node "+str(j)+" totally sent txs: "+str(self.initial_txs))
 
     def get_best_node_block_ids(self):
         block_ids = {}
         for node in self.sc_nodes:
             block = http_block_best(node)
             block_ids[self.sc_nodes.index(node)] = block["id"]
-        pprint.pprint("Starting block ids: \n" + str(block_ids))
+        pprint.pprint("Block ids: \n" + str(block_ids))
         return block_ids
     
     def find_boxes_of_address(self, boxes, address):
@@ -186,8 +170,11 @@ class PerformanceTest(SidechainTestFramework):
     def log_node_wallet_balances(self):
         # Output the balance of each node
         for index, node in enumerate(self.sc_nodes):
-            wallet_balance = http_wallet_balance(node)
-            print(f"Node{index} Wallet Balance: {wallet_balance}")
+            wallet_boxes = http_wallet_allBoxesOfType(node, "ZenBox")
+            wallet_balance = 0
+            for box in wallet_boxes:
+                wallet_balance += box["value"]
+            print(f"Node{index} Wallet Balance: {wallet_balance }")
 
     def run_test(self):
         mc_nodes = self.nodes
@@ -201,7 +188,7 @@ class PerformanceTest(SidechainTestFramework):
         mc_return_address = mc_nodes[0].getnewaddress()
 
         # Get tx creator nodes
-        txs_creators = self.find_txs_creators()
+        txs_creators, non_txs_creators = self.find_txs_creators()
 
         # create 1 FT to every transaction creator node
         for i in range(len(txs_creators)):
@@ -227,7 +214,7 @@ class PerformanceTest(SidechainTestFramework):
         # Create many UTXOs in a single transaction to multiple addresses
         # Taking FT box and splitting into many UTXOs to enable the creation of multiple transactions for the next part
         # of the test (population of the mempool)
-        utxo_amount = 1000 * 1e8 / self.initial_txs
+        utxo_amount = ft_amount * 1e8 / self.initial_txs
         for i in range(len(txs_creator_addresses)):
 
             #Get FT box id (we should have only 1 ZenBox right now)
@@ -276,21 +263,14 @@ class PerformanceTest(SidechainTestFramework):
             filtered_boxes = self.find_boxes_of_address(zen_boxes, txs_creator_addresses[i])
             assert_equal(len(filtered_boxes), self.initial_txs)
 
-        # disconnect node to fill mempool without effecting other nodes
-        self.disconnect_txs_creator_nodes()
-
-        # send coins to creator nodes
+        # Populate the mempool
         print("Populating the mempool...")
-        self.send_coins_to_creator_node_addresses(utxo_amount)
+        self.send_coins_to_multiple_destination(utxo_amount, txs_creators, non_txs_creators)
         print("Mempool ready!")
 
-        # verify that the creator nodes has the correct amount of transactions in the mempool
-        for i in range(len(txs_creators)):
-            mempool = allTransactions(txs_creators[i], True)["transactions"]
-            assert_equal(len(mempool), self.initial_txs)
-
-        # Reconnect the node to the network - connect_sc_nodes
-        self.reconnect_txs_creator_nodes()
+        # verify that all the nodes have the correct amount of transactions in the mempool
+        for node in self.sc_nodes:
+            assert_equal(len(allTransactions(node, True)["transactions"]), self.initial_txs)
 
         # Take best block id of every node and assert they all match
         test_start_block_ids = self.get_best_node_block_ids()
@@ -300,11 +280,6 @@ class PerformanceTest(SidechainTestFramework):
         print("Node Wallet Balances Before Test...")
         self.log_node_wallet_balances()
 
-        # Broadcast node creator mempool to the network
-        for node in txs_creators:
-            http_broadcast_mempool(node)
-
-        #TODO: this is not working: "Forging is not possible, because of whole consensus epoch is missed: current epoch = 22, parent epoch = 2"
         # Start forging on nodes where forger == true
         for index, node in enumerate(self.sc_nodes_list):
             if node["forger"]:
@@ -325,10 +300,10 @@ class PerformanceTest(SidechainTestFramework):
         while(not end_test):
             end_test = True
             for creator_node in txs_creators:
-                if (len(allTransactions(creator_node, True)["transactions"]) != 0):
+                if (len(allTransactions(creator_node, False)["transactionIds"]) != 0):
                     end_test = False
                     break
-            sleep(5)
+            sleep(self.block_rate - 2)
 
         # stop forging
         for index, node in enumerate(self.sc_nodes_list):
@@ -342,16 +317,12 @@ class PerformanceTest(SidechainTestFramework):
         for i in range (len(self.sc_nodes)):
 
             # Retrieve node mempool
-            mempool_transactions = allTransactions(self.sc_nodes[i], False)
+            mempool_transactions = allTransactions(self.sc_nodes[i], False)["transactionIds"]
             number_of_transactions = len(mempool_transactions)
             print(f"Node {i} mempool transactions remaining: {number_of_transactions}")
             # TODO: print mempool of each node if we're running timed test
             #if number_of_transactions > 0:
                 #print(f"Node {i} mempool transactions: {mempool_transactions}")
-
-            # Retrieve node balance
-            wallet_balance = http_wallet_balance(self.sc_nodes[i])
-            print(f"Node {i} Wallet Balance: {wallet_balance}")
 
         # Take blockhash of every node and verify they are all the same
         test_end_block_ids = self.get_best_node_block_ids()
