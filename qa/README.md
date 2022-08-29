@@ -28,8 +28,8 @@ sudo nano /etc/environment
 ```
 2. In this file after Path from the new line put Environment variables:
 ```
-BITCOINCLI=/home/yourName/yourProjectDirectory/zen/zen-cli
-BITCOIND=/home/yourName/yourProjectDirectory/zen/zend
+BITCOINCLI=/home/yourName/yourProjectDirectory/zen/src/zen-cli
+BITCOIND=/home/yourName/yourProjectDirectory/zen/src/zend
 SIDECHAIN_SDK=/home/yourName/yourProjectDirectory/Sidechains-SDK
 ```
 change yourName and yourProjectDirectory to the relevant one.
