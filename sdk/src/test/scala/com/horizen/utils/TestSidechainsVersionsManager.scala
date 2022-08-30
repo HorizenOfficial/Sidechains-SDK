@@ -1,6 +1,6 @@
 package com.horizen.utils
 
-import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion0, SidechainCreationVersion1}
+import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion0, SidechainCreationVersion1, SidechainCreationVersion2}
 import com.horizen.block.SidechainsVersionsManager
 import com.horizen.params.NetworkParams
 
@@ -16,6 +16,11 @@ case object SidechainVersionZero extends TestSidechainsVersionsStrategy {
 // For every sidechain id return version 1
 case object SidechainVersionOne extends TestSidechainsVersionsStrategy {
   override def getVersion(sidechainId: Array[Byte]): SidechainCreationVersion = SidechainCreationVersion1
+}
+
+// For every sidechain id return version 2
+case object SidechainVersionTwo extends TestSidechainsVersionsStrategy {
+  override def getVersion(sidechainId: Array[Byte]): SidechainCreationVersion = SidechainCreationVersion2
 }
 
 // For every sidechain id return exception
