@@ -49,6 +49,15 @@ class AccountState(val params: NetworkParams,
     }
   }
 
+  def getTxFeesPerGas(tx: EthereumTransaction) : (BigInteger, BigInteger) = {
+    if (tx.isEIP1559) {
+      val baseFee = getBaseFee
+      (baseFee, tx.getMaxPriorityFeePerGas)
+    } else {
+      (BigInteger.ZERO, tx.getGasPrice)
+    }
+  }
+
   // Modifiers:
   override def applyModifier(mod: AccountBlock): Try[AccountState] = Try {
     require(versionToBytes(version).sameElements(idToBytes(mod.parentId)),
@@ -115,7 +124,6 @@ class AccountState(val params: NetworkParams,
           throw new IllegalArgumentException(s"Block ${mod.id} has feePaymentsHash ${BytesUtils.toHexString(mod.feePaymentsHash)} defined when no fee payments expected.")
       }
 
-
       for (mcBlockRefData <- mod.mainchainBlockReferencesData) {
         stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
       }
@@ -125,6 +133,8 @@ class AccountState(val params: NetworkParams,
       val blockNumber = stateView.getHeight + 1
       val blockHash = idToBytes(mod.id)
       var cumGasUsed: BigInteger = BigInteger.ZERO
+      var cumBaseFee: BigInteger = BigInteger.ZERO // cumulative base-fee, burned in eth, goes to forgers pool
+      var cumForgerTips: BigInteger = BigInteger.ZERO  // cumulative max-priority-fee, is paid to block forger
       val blockGasPool = new GasPool(stateView.getBlockGasLimit)
 
       for ((tx, txIndex) <- mod.sidechainTransactions.zipWithIndex) {
@@ -157,6 +167,12 @@ class AccountState(val params: NetworkParams,
 
             receiptList += fullReceipt
 
+            // legacy TXes will have just the second contribution, given by user set gasPrice.
+            // EIP1559 TXes have both.
+            val (txBaseFeePerGas, txMaxPriorityFeePerGas) = getTxFeesPerGas(ethTx)
+            cumBaseFee = cumBaseFee.add(txBaseFeePerGas.multiply(txGasUsed))
+            cumForgerTips = cumForgerTips.add(txMaxPriorityFeePerGas.multiply(txGasUsed))
+
           case Failure(err: GasLimitReached) =>
             log.error("Could not apply tx, block gas limit exceeded")
             throw new IllegalArgumentException("Could not apply tx, block gas limit exceeded", err)
@@ -167,7 +183,14 @@ class AccountState(val params: NetworkParams,
         }
       }
 
+      log.debug(s"cumBaseFee=$cumBaseFee, cumForgerTips=$cumForgerTips")
+
       // TODO: calculate and update fee info.
+      // TODO new case class AccountBlockFeeInfo with both cum contributions as input param and forger address as well
+      // The two contributions will go like this:
+      // - base -> forgers pool
+      // - tip -> forger
+      // the distributions will work similarly to utxo model (which has 30%  - 70%)
       // Note: we should save the total gas paid and the forgerAddress
       stateView.addFeeInfo(BlockFeeInfo(0L, mod.header.forgingStakeInfo.blockSignPublicKey))
 
