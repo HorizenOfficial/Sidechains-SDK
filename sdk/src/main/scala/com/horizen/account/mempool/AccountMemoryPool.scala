@@ -109,11 +109,11 @@ class AccountMemoryPool(unconfirmed: MempoolMap, stateReader: AccountStateReader
           }
         }
         else {
-          val stateNonce = unconfirmed.nonces.get(tx.getFrom).get
-          if (stateNonce.equals(tx.getNonce)) {
+          val expectedNonce = unconfirmed.nonces.get(tx.getFrom).get
+          if (expectedNonce.equals(tx.getNonce)) {
             val executableTxsMap = unconfirmed.executableTxs.get(tx.getFrom).getOrElse(new mutable.TreeMap[BigInteger, ModifierId]())
             executableTxsMap.put(tx.getNonce, tx.id)
-            var nextNonce = stateNonce.add(BigInteger.ONE)
+            var nextNonce = expectedNonce.add(BigInteger.ONE)
             //Check if some non executable tx can be promoted
             unconfirmed.nonExecutableTxs.get(tx.getFrom).foreach(txs => {
               while (txs.contains(nextNonce)) {
@@ -130,7 +130,7 @@ class AccountMemoryPool(unconfirmed: MempoolMap, stateReader: AccountStateReader
             unconfirmed.nonces.put(tx.getFrom, nextNonce)
 
           }
-          else if (tx.getNonce.compareTo(stateNonce) >= 0) {
+          else if (tx.getNonce.compareTo(expectedNonce) >= 0) {
 
             val map = unconfirmed.nonExecutableTxs.get(tx.getFrom).getOrElse(new mutable.TreeMap[BigInteger, ModifierId]())
             val oldTxIdOpt = map.get(tx.getNonce)
@@ -222,7 +222,7 @@ class AccountMemoryPool(unconfirmed: MempoolMap, stateReader: AccountStateReader
 
 object AccountMemoryPool {
   def createEmptyMempool(stateReader: AccountStateReader): AccountMemoryPool = {
-    new AccountMemoryPool(new MempoolMap(), stateReader)
+    new AccountMemoryPool(MempoolMap(), stateReader)
   }
 }
 

@@ -390,20 +390,19 @@ class AccountState(val params: NetworkParams,
   override def validate(tx: SidechainTypes#SCAT): Try[Unit] = Try {
     tx.semanticValidity()
 
-    if (tx.isInstanceOf[EthereumTransaction]) {
-
-      using(getView) { stateView =>
-        //Check the nonce
-
-        if (stateView.getNonce(tx.getFrom.bytes()).compareTo(tx.getNonce) > 0) {
+    using(getView) { stateView =>
+      //Check the nonce
+      if (tx.isInstanceOf[EthereumTransaction]) {
+        val ethTx = tx.asInstanceOf[EthereumTransaction]
+        if (stateView.getNonce(ethTx.getFrom.address()).compareTo(tx.getNonce) > 0) {
           val msg = s"Transaction nonce is too low: ${tx.getNonce}"
           log.error(msg)
-          throw new NonceTooLowException(tx.id,tx.getNonce)
+          throw new NonceTooLowException(tx.id, tx.getNonce)
         }
 
         val txCost = tx.getValue.add(tx.getGasLimit.multiply(tx.getGasPrice))
-        val currentBalance = stateView.getBalance(tx.getFrom.bytes())
-        if (currentBalance.compareTo(txCost) < 0){
+        val currentBalance = stateView.getBalance(ethTx.getFrom.address())
+        if (currentBalance.compareTo(txCost) < 0) {
           val msg = s"Insufficient funds for executing transaction: balance ${currentBalance}, tx cost ${txCost}"
           log.error(msg)
           throw new IllegalArgumentException(msg)

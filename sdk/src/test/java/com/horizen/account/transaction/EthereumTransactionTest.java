@@ -143,7 +143,7 @@ public class EthereumTransactionTest {
         // Test 4: toString function returns correctly
         ethereumTransaction = new EthereumTransaction(rawTransaction);
         assertEquals("Ethereum Transaction to String expected to be equal",
-                "EthereumTransaction{from=, nonce=0x1, gasPrice=0x1, gasLimit=0x1, to=0x, value=0x1, data=0x, " +
+                "EthereumTransaction{id=" + ethereumTransaction.id() + ", from=, nonce=0x1, gasPrice=0x1, gasLimit=0x1, to=0x, value=0x1, data=0x, " +
                         "Signature=}",
                 ethereumTransaction.toString());
 
@@ -276,7 +276,7 @@ public class EthereumTransactionTest {
 
         // Test 2: toString function returns correctly
         ethereumTransaction = new EthereumTransaction(rawTransaction);
-        assertEquals("EthereumTransaction{from=, nonce=0x1, gasLimit=0x1, to=0x, value=0x1, data=0x, " +
+        assertEquals("EthereumTransaction{id=" + ethereumTransaction.id() + ", from=, nonce=0x1, gasLimit=0x1, to=0x, value=0x1, data=0x, " +
                         "maxFeePerGas=0x1, maxPriorityFeePerGas=0x1, Signature=}",
                 ethereumTransaction.toString());
 
@@ -358,7 +358,7 @@ public class EthereumTransactionTest {
         ethereumTransaction = new EthereumTransaction(signedRawTransaction);
         try {
             assertEquals("Ethereum Transaction to String expected to be equal",
-                    "EthereumTransaction{from=" + signedRawTransaction.getFrom()
+                    "EthereumTransaction{id=" + ethereumTransaction.id() + ", from=" + signedRawTransaction.getFrom()
                             + ", nonce=0x1, gasPrice=0x1, gasLimit=0x1, to=0x, value=0x1, data=0x, "
                             + "Signature=" + secp256k1Signature.toString() + "}",
                     ethereumTransaction.toString());
@@ -409,7 +409,7 @@ public class EthereumTransactionTest {
                     someValue, "", signedRawTransaction.getSignatureData()
             );
             assertNotNull(someTx.getSignature());
-            assertEquals("EthereumTransaction{from=" + someTx.getFromAddress() + ", nonce=0x1, gasLimit=0x1, to=0x, value=" +
+            assertEquals("EthereumTransaction{id=" + someTx.id() + ", from=" + someTx.getFromAddress() + ", nonce=0x1, gasLimit=0x1, to=0x, value=" +
                             "0x1, data=0x, " +
                             "maxFeePerGas=0x1, maxPriorityFeePerGas=0x1, Signature=" + someTx.getSignature().toString() + '}',
                     someTx.toString());
@@ -445,7 +445,7 @@ public class EthereumTransactionTest {
         ethereumTransaction = new EthereumTransaction(signedRawTransaction);
         try {
             assertEquals("Ethereum Transaction to String expected to be equal",
-                    "EthereumTransaction{from=" + signedRawTransaction.getFrom()
+                    "EthereumTransaction{id=" + ethereumTransaction.id() + ", from=" + signedRawTransaction.getFrom()
                             + ", nonce=0x1, gasPrice=0x1, gasLimit=0x1, to=0x, value=0x1, data=0x, "
                             + "Signature=" + secp256k1Signature.toString() + "}",
                     ethereumTransaction.toString());

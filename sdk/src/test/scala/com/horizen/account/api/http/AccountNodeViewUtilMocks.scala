@@ -1,5 +1,6 @@
 package com.horizen.account.api.http
 
+import com.horizen.account.fixtures.EthereumTransactionFixture
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.secret.PrivateKeySecp256k1
@@ -21,7 +22,9 @@ import java.util.Optional
 import scala.collection.JavaConverters._
 import scala.util.Random
 
-class AccountNodeViewUtilMocks extends MockitoSugar with BoxFixture with CompanionsFixture with SecretFixture{
+class AccountNodeViewUtilMocks extends MockitoSugar
+  with SecretFixture
+  with EthereumTransactionFixture {
 
   val ownerSecret = getPrivateKeySecp256k1(2222222)
   val ownerPublicKeyString = BytesUtils.toHexString(ownerSecret.publicImage().address())
@@ -60,22 +63,10 @@ class AccountNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compani
     wallet
   }
 
-  private def getTransaction(value: java.math.BigInteger): EthereumTransaction = {
-    val rawTransaction = RawTransaction.createTransaction(value, value, value, "0x", value, "")
-    val tmp = new EthereumTransaction(rawTransaction)
-    val message = tmp.messageToSign()
-
-    // Create a key pair, create tx signature and create ethereum Transaction
-    val pair = Keys.createEcKeyPair
-    val msgSignature = Sign.signMessage(message, pair, true)
-    val signedRawTransaction = new SignedRawTransaction(value, value, value, "0x", value, "", msgSignature)
-    new EthereumTransaction(signedRawTransaction)
-  }
-
   def getTransactionList: util.List[EthereumTransaction] = {
     val list: util.List[EthereumTransaction] = new util.ArrayList[EthereumTransaction]()
-    list.add(getTransaction(ZenWeiConverter.convertZenniesToWei(1))) // 1 Zenny
-    list.add(getTransaction(ZenWeiConverter.convertZenniesToWei(12))) // 12 Zennies
+    list.add(createLegacyTransaction(ZenWeiConverter.convertZenniesToWei(1))) // 1 Zenny
+    list.add(createLegacyTransaction(ZenWeiConverter.convertZenniesToWei(12))) // 12 Zennies
     list
   }
 

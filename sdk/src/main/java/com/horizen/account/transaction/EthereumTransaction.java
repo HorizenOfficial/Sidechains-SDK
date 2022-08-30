@@ -170,7 +170,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         }
 
 
-        if (this.getFrom().address().length != Account.ADDRESS_SIZE)
+        if (this.getFrom() == null || this.getFrom().address().length != Account.ADDRESS_SIZE)
             throw new TransactionSemanticValidityException("Cannot create signed transaction without valid from address");
         // TODO: add again later and check - message to sign seems to be false (?)
         if (!this.getSignature().isValid(getFrom(), messageToSign()))
@@ -329,8 +329,9 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     public String toString() {
         if (this.isEIP1559())
             return String.format(
-                    "EthereumTransaction{from=%s, nonce=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
+                    "EthereumTransaction{id=%s, from=%s, nonce=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
                             "maxFeePerGas=%s, maxPriorityFeePerGas=%s, Signature=%s}",
+                    id(),
                     getFromAddress(),
                     Numeric.toHexStringWithPrefix(this.getNonce()),
                     Numeric.toHexStringWithPrefix(this.getGasLimit()),
@@ -342,8 +343,9 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                     isSigned() ? new SignatureSecp256k1(getSignatureData()).toString() : ""
             );
         else return String.format(
-                "EthereumTransaction{from=%s, nonce=%s, gasPrice=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
+                "EthereumTransaction{id=%s, from=%s, nonce=%s, gasPrice=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
                         "Signature=%s}",
+                id(),
                 getFromAddress(),
                 Numeric.toHexStringWithPrefix(this.getNonce()),
                 Numeric.toHexStringWithPrefix(this.getGasPrice()),
