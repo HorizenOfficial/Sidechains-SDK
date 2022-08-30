@@ -1,7 +1,10 @@
 package com.horizen.account.receipt
 
 import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus.ReceiptStatus
-import com.horizen.account.receipt.EthereumConsensusDataReceipt.{ReceiptStatus, createLogsBloom}
+import com.horizen.account.receipt.EthereumConsensusDataReceipt.{
+  ReceiptStatus,
+  createBloomFilter
+}
 import com.horizen.account.receipt.ReceiptTxType.ReceiptTxType
 import com.horizen.evm.interop.EvmLog
 import com.horizen.utils.BytesUtils
@@ -14,10 +17,12 @@ import java.util
 import scala.collection.mutable.ListBuffer
 
 case class EthereumConsensusDataReceipt(
-                                         transactionType: Int,
-                                         status: Int,
-                                         cumulativeGasUsed: BigInteger,
-                                         logs: Seq[EvmLog], logsBloom: Array[Byte]) {
+    transactionType: Int,
+    status: Int,
+    cumulativeGasUsed: BigInteger,
+    logs: Seq[EvmLog],
+    logsBloom: Array[Byte]
+) {
 
   /*  From yellow paper
       ----------------------
@@ -28,16 +33,28 @@ case class EthereumConsensusDataReceipt(
       and the Bloom filter composed from information in those logs, Rb
    */
 
-  def this(transactionType: Int,
-           status: Int,
-           cumulativeGasUsed: BigInteger,
-           logs: Seq[EvmLog]) {
+  def this(
+      transactionType: Int,
+      status: Int,
+      cumulativeGasUsed: BigInteger,
+      logs: Seq[EvmLog]
+  ) {
 
-    this(transactionType, status, cumulativeGasUsed, logs, createLogsBloom(logs))
+    this(
+      transactionType,
+      status,
+      cumulativeGasUsed,
+      logs,
+      createBloomFilter(logs)
+    )
   }
 
-  require(transactionType >= 0 && transactionType <= ReceiptTxType.DynamicFeeTxType.id)
-  require(status == ReceiptStatus.SUCCESSFUL.id || status == ReceiptStatus.FAILED.id)
+  require(
+    transactionType >= 0 && transactionType <= ReceiptTxType.DynamicFeeTxType.id
+  )
+  require(
+    status == ReceiptStatus.SUCCESSFUL.id || status == ReceiptStatus.FAILED.id
+  )
 
   def getTxType: ReceiptTxType = {
     transactionType match {
@@ -91,7 +108,9 @@ case class EthereumConsensusDataReceipt(
     if (logsBloom != null)
       logsBloomStr = BytesUtils.toHexString(logsBloom)
 
-    String.format(s"EthereumReceipt (receipt consensus data) { txType=$getTxType, status=$getStatus, cumGasUsed=$cumulativeGasUsed, logs=$logsString, logsBloom=$logsBloomStr}")
+    String.format(
+      s"EthereumReceipt (receipt consensus data) { txType=$getTxType, status=$getStatus, cumGasUsed=$cumulativeGasUsed, logs=$logsString, logsBloom=$logsBloomStr}"
+    )
   }
 }
 
@@ -111,7 +130,6 @@ object EthereumConsensusDataReceipt {
     val FAILED, SUCCESSFUL = Value
   }
 
-
   def decodeLegacy(rlpData: Array[Byte]): EthereumConsensusDataReceipt = {
     val rlpList = RlpDecoder.decode(rlpData)
     val values = rlpList.getValues.get(0).asInstanceOf[RlpList]
@@ -124,7 +142,8 @@ object EthereumConsensusDataReceipt {
       }
       1
     }
-    val cumulativeGasUsed = values.getValues.get(1).asInstanceOf[RlpString].asPositiveBigInteger
+    val cumulativeGasUsed =
+      values.getValues.get(1).asInstanceOf[RlpString].asPositiveBigInteger
     val logsBloom = values.getValues.get(2).asInstanceOf[RlpString].getBytes
     val logList = values.getValues.get(3).asInstanceOf[RlpList]
     val logs = new ListBuffer[EvmLog]
@@ -132,17 +151,32 @@ object EthereumConsensusDataReceipt {
     if (logsListSize > 0) {
       // loop on list and decode all logs
       for (i <- 0 until logsListSize) {
-        val log = EvmLogUtils.rlpDecode(logList.getValues.get(i).asInstanceOf[RlpList])
+        val log =
+          EvmLogUtils.rlpDecode(logList.getValues.get(i).asInstanceOf[RlpList])
         logs += log
       }
     }
-    EthereumConsensusDataReceipt(ReceiptTxType.LegacyTxType.id, status, cumulativeGasUsed, logs, logsBloom)
+    EthereumConsensusDataReceipt(
+      ReceiptTxType.LegacyTxType.id,
+      status,
+      cumulativeGasUsed,
+      logs,
+      logsBloom
+    )
   }
 
-
-  def decodeTyped(rt: Int, rlpData: Array[Byte]): EthereumConsensusDataReceipt = {
+  def decodeTyped(
+      rt: Int,
+      rlpData: Array[Byte]
+  ): EthereumConsensusDataReceipt = {
     val r = decodeLegacy(rlpData)
-    EthereumConsensusDataReceipt(rt, r.status, r.cumulativeGasUsed, r.logs, r.logsBloom)
+    EthereumConsensusDataReceipt(
+      rt,
+      r.status,
+      r.cumulativeGasUsed,
+      r.logs,
+      r.logsBloom
+    )
   }
 
   def rlpDecode(rlpData: Array[Byte]): EthereumConsensusDataReceipt = {
@@ -154,10 +188,8 @@ object EthereumConsensusDataReceipt {
     if (b0 == 1 || b0 == 2) {
       val rt = ReceiptTxType(b0).id
       decodeTyped(rt, util.Arrays.copyOfRange(rlpData, 1, rlpData.length))
-    }
-    else decodeLegacy(rlpData)
+    } else decodeLegacy(rlpData)
   }
-
 
   def rlpEncode(r: EthereumConsensusDataReceipt): Array[Byte] = {
     val values = asRlpValues(r)
@@ -165,7 +197,11 @@ object EthereumConsensusDataReceipt {
     val encoded = RlpEncoder.encode(rlpList)
     if (!(r.getTxType == ReceiptTxType.LegacyTxType)) {
       // add byte for versioned type support
-      ByteBuffer.allocate(encoded.length + 1).put(r.getTxType.id.toByte).put(encoded).array
+      ByteBuffer
+        .allocate(encoded.length + 1)
+        .put(r.getTxType.id.toByte)
+        .put(encoded)
+        .array
     } else {
       encoded
     }
@@ -173,8 +209,9 @@ object EthereumConsensusDataReceipt {
 
   def asRlpValues(r: EthereumConsensusDataReceipt): util.List[RlpType] = {
     val result = new util.ArrayList[RlpType]
-    val postTxState = if (r.status == 1) Array[Byte](1)
-    else new Array[Byte](0)
+    val postTxState =
+      if (r.status == 1) Array[Byte](1)
+      else new Array[Byte](0)
     result.add(RlpString.create(postTxState))
     result.add(RlpString.create(r.cumulativeGasUsed))
     //bloom filters
@@ -200,7 +237,6 @@ object EthereumConsensusDataReceipt {
   def getBloomFilterValues(data: Array[Byte]) = {
     // Copy first 3 pairs of bytes to hashBuffer
     val hashBuffer = Keccak256.hash(data)
-    println(String.format("%02x", Byte.box(hashBuffer(1))))
 
     // Calculate byte values
     val v1 = 1 << (hashBuffer(1) & 0x7)
@@ -208,14 +244,20 @@ object EthereumConsensusDataReceipt {
     val v3 = 1 << (hashBuffer(5) & 0x7)
 
     // Calculate byte indexes
-    val i1 = 256 - ((bytesToShort(hashBuffer(0), hashBuffer(1)) & 0x7ff) >> 3) - 1
-    val i2 = 256 - ((bytesToShort(hashBuffer(2), hashBuffer(3)) & 0x7ff) >> 3) - 1
-    val i3 = 256 - ((bytesToShort(hashBuffer(4), hashBuffer(5)) & 0x7ff) >> 3) - 1
+    val i1 =
+      256 - ((bytesToShort(hashBuffer(0), hashBuffer(1)) & 0x7ff) >> 3) - 1
+    val i2 =
+      256 - ((bytesToShort(hashBuffer(2), hashBuffer(3)) & 0x7ff) >> 3) - 1
+    val i3 =
+      256 - ((bytesToShort(hashBuffer(4), hashBuffer(5)) & 0x7ff) >> 3) - 1
 
     (i1, v1, i2, v2, i3, v3)
   }
 
-  def addDataToBloomFilter(bloomFilter: Array[Byte], data: Array[Byte]): Array[Byte] = {
+  def addDataToBloomFilter(
+      bloomFilter: Array[Byte],
+      data: Array[Byte]
+  ): Array[Byte] = {
     val (i1, v1, i2, v2, i3, v3) = getBloomFilterValues(data)
 
     bloomFilter(i1) = (bloomFilter(i1) | v1).toByte
@@ -225,4 +267,15 @@ object EthereumConsensusDataReceipt {
     bloomFilter
   }
 
+  def createBloomFilter(evmLog: Seq[EvmLog]): Array[Byte] = {
+    var bloomFilter = Array.fill[Byte](256)(0)
+
+    evmLog.foreach(log => {
+      log.topics.foreach(topic => {
+        bloomFilter = addDataToBloomFilter(bloomFilter, topic.toBytes)
+      })
+    })
+
+    bloomFilter
+  }
 }
