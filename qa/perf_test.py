@@ -12,8 +12,6 @@ from httpCalls.wallet.balance import http_wallet_balance
 from httpCalls.wallet.allBoxesOfType import http_wallet_allBoxesOfType
 from httpCalls.transaction.createCoreTransaction import http_create_core_transaction
 from httpCalls.transaction.sendTransaction import http_send_transaction
-from httpCalls.transaction.broadcastMempool import http_broadcast_mempool
-from httpCalls.wallet.allPublicKeys import http_wallet_allPublicKeys
 from test_framework.util import start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, assert_equal
 from SidechainTestFramework.scutil import assert_true, bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks, \
@@ -187,7 +185,7 @@ class PerformanceTest(SidechainTestFramework):
         ft_amount = 1000
         mc_return_address = mc_nodes[0].getnewaddress()
 
-        # Get tx creator nodes
+        # Get tx creator nodes and non tx creator nodes
         txs_creators, non_txs_creators = self.find_txs_creators()
 
         # create 1 FT to every transaction creator node
@@ -285,12 +283,6 @@ class PerformanceTest(SidechainTestFramework):
             if node["forger"]:
                 print(f"Forger found - Node{index} - Start Forging...")
                 http_start_forging(self.sc_nodes[index])
-
-        # # Sleep for initial block rate time, before polling transactions more frequently
-        # sleep(self.block_rate)
-        # # Wait until mempool empty - this should also mean that other nodes mempools are empty (differences will be performance issues)
-        # while len(allTransactions(txs_creators[0], False)["transactionIds"]) != 0:
-        #     sleep(3)
 
         ######## RUN UNTIL NODE CREATORS MEMPOOLS ARE EMPTY ########
 
