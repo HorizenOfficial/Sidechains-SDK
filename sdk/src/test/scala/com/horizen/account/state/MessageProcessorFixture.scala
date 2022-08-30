@@ -1,48 +1,106 @@
 package com.horizen.account.state
 
-import com.horizen.account.abi
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.storage.AccountStateMetadataStorageView
+import com.horizen.account.utils.Account
 import com.horizen.evm.utils.Hash
-import com.horizen.evm.{LevelDBDatabase, StateDB}
-import com.horizen.proposition.MCPublicKeyHashProposition
-import com.horizen.utils.BytesUtils
-import org.junit.rules.TemporaryFolder
+import com.horizen.evm.{MemoryDatabase, StateDB}
+import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
+import org.junit.Assert.assertEquals
 import org.scalatestplus.mockito.MockitoSugar.mock
-import org.web3j.abi.datatypes.{DynamicArray, StaticStruct, Type}
-import org.web3j.abi.datatypes.generated.{Bytes20, Uint32}
-import org.web3j.abi.{DefaultFunctionReturnDecoder, EventEncoder, FunctionEncoder, FunctionReturnDecoder, TypeReference}
+import org.web3j.abi.datatypes.Type
+import org.web3j.abi.{EventEncoder, FunctionReturnDecoder, TypeReference}
 
-import java.util
+import java.math.BigInteger
+import scala.language.implicitConversions
 import scala.util.Random
 
+trait MessageProcessorFixture extends ClosableResourceHandler {
+  // simplifies using BigIntegers within the tests
+  implicit def longToBigInteger(x: Long): BigInteger = BigInteger.valueOf(x)
 
-trait MessageProcessorFixture {
-  var tempFolder = new TemporaryFolder
-  val mcAddr = new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte))
   val metadataStorageView: AccountStateMetadataStorageView = mock[AccountStateMetadataStorageView]
+  val hashNull: Array[Byte] = Array.fill(32)(0)
+  val origin: Array[Byte] = randomAddress
 
-  def getView: AccountStateView = {
-    tempFolder.create()
-    val databaseFolder = tempFolder.newFolder("evm-db" + Math.random())
-    val hashNull = BytesUtils.fromHexString("0000000000000000000000000000000000000000000000000000000000000000")
-    val db = new LevelDBDatabase(databaseFolder.getAbsolutePath)
-    val messageProcessors: Seq[MessageProcessor] = Seq()
-    val stateDb: StateDB = new StateDB(db, hashNull)
-    new AccountStateView(metadataStorageView, stateDb, messageProcessors)
+  def randomBytes(n: Int): Array[Byte] = {
+    val bytes = new Array[Byte](n)
+    Random.nextBytes(bytes)
+    bytes
   }
 
-  def getMessage(destContractAddress: AddressProposition, amount: java.math.BigInteger, data: Array[Byte]): Message = {
-    val gas = java.math.BigInteger.ONE
-    val nonce = java.math.BigInteger.valueOf(234)
-    val from: AddressProposition = new AddressProposition(BytesUtils.fromHexString("00aabbcc9900aabbcc9900aabbcc9900aabbcc99"))
+  def randomU256: BigInteger = new BigInteger(randomBytes(32))
 
-    new Message(from, destContractAddress, gas, gas, gas, gas, amount, nonce, data)
+  def randomHash: Array[Byte] = randomBytes(32)
 
+  def randomAddress: Array[Byte] = randomBytes(Account.ADDRESS_SIZE)
+
+  def usingView(processors: Seq[MessageProcessor])(fun: AccountStateView => Unit): Unit = {
+    using(new MemoryDatabase()) { db =>
+      val stateDb = new StateDB(db, hashNull)
+      using(new AccountStateView(metadataStorageView, stateDb, processors))(fun)
+    }
   }
 
-  def getEventSignature(eventABISignature: String): Array[Byte] =   org.web3j.utils.Numeric.hexStringToByteArray(EventEncoder.buildEventSignature(eventABISignature))
+  def usingView(processor: MessageProcessor)(fun: AccountStateView => Unit): Unit = {
+    usingView(Seq(processor))(fun)
+  }
 
-  def decodeEventTopic[T <:Type[_]] (topic: Hash, ref: TypeReference[T] ) = FunctionReturnDecoder.decodeIndexedValue(BytesUtils.toHexString(topic.toBytes),ref)
+  def usingView(fun: AccountStateView => Unit): Unit = {
+    usingView(Seq.empty)(fun)
+  }
 
+  def getMessage(
+      to: Array[Byte],
+      value: BigInteger = BigInteger.ZERO,
+      data: Array[Byte] = Array.emptyByteArray,
+      nonce: BigInteger = BigInteger.ZERO
+  ): Message = {
+    val gasPrice = BigInteger.ZERO
+    val gasLimit = BigInteger.valueOf(1000000)
+    new Message(
+      new AddressProposition(origin),
+      if (to == null) null else new AddressProposition(to),
+      gasPrice,
+      gasPrice,
+      gasPrice,
+      gasLimit,
+      value,
+      nonce,
+      data
+    )
+  }
+
+  /**
+   * Creates a large temporary gas pool and passes it into the given function.
+   */
+  def withGas[A](fun: GasPool => A): A = {
+    fun(new GasPool(BigInteger.valueOf(1000000)))
+  }
+
+  /**
+   * Creates a large temporary gas pool and verifies the amount of total gas consumed.
+   * TODO: enable gas checks again
+   */
+  def assertGas[A](expectedGas: BigInteger = BigInteger.ZERO, enfore: Boolean = false)(fun: GasPool => A): A = {
+    withGas { gas =>
+      try {
+        fun(gas)
+      } finally {
+        if (enfore) {
+          assertEquals("Unexpected gas consumption", expectedGas, gas.getUsedGas)
+        } else {
+          println("consumed gas: " + gas.getUsedGas)
+          if (expectedGas != gas.getUsedGas)
+            println(" mismatch here, expected is: " + expectedGas)
+        }
+      }
+    }
+  }
+
+  def getEventSignature(eventABISignature: String): Array[Byte] =
+    org.web3j.utils.Numeric.hexStringToByteArray(EventEncoder.buildEventSignature(eventABISignature))
+
+  def decodeEventTopic[T <: Type[_]](topic: Hash, ref: TypeReference[T]): Type[_] =
+    FunctionReturnDecoder.decodeIndexedValue(BytesUtils.toHexString(topic.toBytes), ref)
 }

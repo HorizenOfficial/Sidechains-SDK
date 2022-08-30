@@ -1,7 +1,6 @@
 package com.horizen.account.state;
 
 import com.horizen.account.proposition.AddressProposition;
-import com.horizen.account.transaction.EthereumTransaction;
 
 import java.math.BigInteger;
 import java.util.Arrays;
@@ -12,7 +11,7 @@ public class Message {
 
     private final BigInteger gasPrice;
     private final BigInteger gasFeeCap;
-    private final BigInteger gasTipCap; // gas premium
+    private final BigInteger gasTipCap;
     private final BigInteger gasLimit;
 
     private final BigInteger value;
@@ -20,15 +19,15 @@ public class Message {
     private final byte[] data;
 
     public Message(
-        AddressProposition from,
-        AddressProposition to,
-        BigInteger gasPrice,
-        BigInteger gasFeeCap,
-        BigInteger gasTipCap,
-        BigInteger gasLimit,
-        BigInteger value,
-        BigInteger nonce,
-        byte[] data
+            AddressProposition from,
+            AddressProposition to,
+            BigInteger gasPrice,
+            BigInteger gasFeeCap,
+            BigInteger gasTipCap,
+            BigInteger gasLimit,
+            BigInteger value,
+            BigInteger nonce,
+            byte[] data
     ) {
         this.from = from;
         this.to = to;
@@ -75,20 +74,5 @@ public class Message {
 
     public byte[] getData() {
         return data;
-    }
-
-    public static Message fromTransaction(EthereumTransaction tx) {
-        // TODO: fix message
-        return new Message(
-            tx.getFrom(),
-            tx.getTo(),
-            tx.getGasPrice(),
-            BigInteger.ONE /*tx.getFeeCap()*/,
-            BigInteger.ONE/*tx.getGasPremium()*/,
-            tx.getGasLimit(),
-            tx.getValue(),
-            tx.getNonce(),
-            tx.getData()
-        );
     }
 }

@@ -1,5 +1,6 @@
 package com.horizen.account.api.http
 
+import org.web3j.crypto._
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
@@ -16,8 +17,8 @@ import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
-import com.horizen.account.transaction.{EthereumTransaction, EthereumTransactionSerializer}
-import com.horizen.account.utils.{EthereumTransactionUtils, ZenWeiConverter}
+import com.horizen.account.transaction.{EthereumTransaction}
+import com.horizen.account.utils.{EthereumTransactionDecoder, EthereumTransactionUtils, ZenWeiConverter}
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.SidechainTransactionErrorResponse.GenericTransactionError
@@ -61,7 +62,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   override implicit val tag: ClassTag[AccountNodeView] = ClassTag[AccountNodeView](classOf[AccountNodeView])
 
 
-  override val route: Route = (pathPrefix("transaction")) {
+  override val route: Route = pathPrefix("transaction") {
     allTransactions ~ sendCoinsToAddress ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendRawTransaction ~
       signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~ allForgingStakes
   }
@@ -130,8 +131,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       applyOnNodeView { sidechainNodeView =>
         val valueInWei = ZenWeiConverter.convertZenniesToWei(body.value)
         val destAddress = body.to
-        val gasPrice = BigInteger.valueOf(1) // TODO actual gas implementation
-        val gasLimit = BigInteger.valueOf(1) // TODO actual gas implementation
+        val gasPrice = sidechainNodeView.getNodeState.getBaseFee // TODO actual gas implementation
+        val gasLimit = GasUtil.TxGas
         // check if the fromAddress is either empty or it fits and the value is high enough
         val txCost = valueInWei.add(gasPrice.multiply(gasLimit))
 
@@ -257,16 +258,16 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   /**
    * Create a raw evm transaction, specifying the bytes.
    */
-  def sendRawTransaction: Route = (post & path("createRawTransaction")) {
+  def sendRawTransaction: Route = (post & path("sendRawTransaction")) {
     entity(as[ReqRawTransaction]) { body =>
       // lock the view and try to create CoreTransaction
       applyOnNodeView { sidechainNodeView =>
-        var signedTx = EthereumTransactionSerializer.getSerializer.parseBytes(body.payload)
+        var signedTx = new EthereumTransaction(EthereumTransactionDecoder.decode(body.payload))
         if (!signedTx.isSigned) {
           val txCost = signedTx.getValue.add(signedTx.getGasPrice.multiply(signedTx.getGasLimit))
 
           val secret =
-            getFittingSecret(sidechainNodeView, body.from, txCost)
+            getFittingSecret(sidechainNodeView, body.from, signedTx.getValue)
           secret match {
             case Some(secret) =>
               signedTx = signTransactionWithSecret(secret, signedTx)
@@ -283,9 +284,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     entity(as[ReqRawTransaction]) {
       body => {
         applyOnNodeView { sidechainNodeView =>
-          var signedTx = EthereumTransactionSerializer.getSerializer.parseBytes(body.payload)
+          var signedTx = new EthereumTransaction(EthereumTransactionDecoder.decode(body.payload))
           val txCost = signedTx.getValue.add(signedTx.getGasPrice.multiply(signedTx.getGasLimit))
-
           val secret =
             getFittingSecret(sidechainNodeView, body.from, txCost)
           secret match {
@@ -294,7 +294,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
             case None =>
               return ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
           }
-          ApiResponseUtil.toResponse(defaultTransactionResponseRepresentation(signedTx))
+          ApiResponseUtil.toResponse(rawTransactionResponseRepresentation(signedTx))
         }
       }
     }
@@ -323,7 +323,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         secret match {
           case Some(secret) =>
 
-            val to = BytesUtils.toHexString(ForgerStakeMsgProcessor.ForgerStakeSmartContractAddress.address())
+            val to = BytesUtils.toHexString(ForgerStakeMsgProcessor.ForgerStakeSmartContractAddress)
             val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
             val data = encodeAddNewStakeCmdRequest(body.forgerStakeInfo)
             val tmpTx: EthereumTransaction = new EthereumTransaction(
@@ -365,7 +365,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         val secret = getFittingSecret(sidechainNodeView, None, txCost)
         secret match {
           case Some(txCreatorSecret) =>
-            val to = BytesUtils.toHexString(ForgerStakeMsgProcessor.ForgerStakeSmartContractAddress.address())
+            val to = BytesUtils.toHexString(ForgerStakeMsgProcessor.ForgerStakeSmartContractAddress)
             val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(txCreatorSecret.publicImage.address))
             val stakeDataOpt = sidechainNodeView.getNodeState.getForgerStakeData(body.stakeId)
             stakeDataOpt match {
@@ -417,7 +417,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     entity(as[ReqWithdrawCoins]) { body =>
       // lock the view and try to create CoreTransaction
       applyOnNodeView { sidechainNodeView =>
-        val to = BytesUtils.toHexString(WithdrawalMsgProcessor.fakeSmartContractAddress.address())
+        val to = BytesUtils.toHexString(WithdrawalMsgProcessor.contractAddress)
         val data = encodeAddNewWithdrawalRequestCmd(body.withdrawalRequest)
         val valueInWei = ZenWeiConverter.convertZenniesToWei(body.withdrawalRequest.value)
         val gasInfo = body.gasInfo
@@ -539,13 +539,21 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
 
   //function which describes default transaction representation for answer after adding the transaction to a memory pool
-  val defaultTransactionResponseRepresentation: (Transaction => SuccessResponse) = {
+  val defaultTransactionResponseRepresentation: Transaction => SuccessResponse = {
     transaction => TransactionIdDTO(transaction.id)
+  }
+  //function which describes default transaction representation for answer after adding the transaction to a memory pool
+  val rawTransactionResponseRepresentation: (EthereumTransaction => SuccessResponse) = {
+    transaction =>
+      RawTransactionOutput("0x" + BytesUtils.toHexString(TransactionEncoder.encode(
+        transaction.getTransaction,
+        transaction.getTransaction.asInstanceOf[SignedRawTransaction].getSignatureData))
+      )
   }
 
 
   private def validateAndSendTransaction(transaction: SidechainTypes#SCAT,
-                                         transactionResponseRepresentation: (SidechainTypes#SCAT => SuccessResponse) = defaultTransactionResponseRepresentation) = {
+                                         transactionResponseRepresentation: SidechainTypes#SCAT => SuccessResponse = defaultTransactionResponseRepresentation) = {
 
     val barrier = Await.result(
       sidechainTransactionActorRef ? BroadcastTransaction(transaction),
@@ -682,6 +690,9 @@ object AccountTransactionRestScheme {
   private[api] case class TransactionIdDTO(transactionId: String) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RawTransactionOutput(transactionData: String) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqSpendForgingStake(
                                                 nonce: Option[BigInteger],
                                                 stakeId: String,
@@ -737,7 +748,7 @@ object AccountTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqRawTransaction(from: Option[String], payload: Array[Byte])
+  private[api] case class ReqRawTransaction(from: Option[String], payload: String)
 
 
 }

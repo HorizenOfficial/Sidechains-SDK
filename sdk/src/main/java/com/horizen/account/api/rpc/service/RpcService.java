@@ -49,35 +49,36 @@ public class RpcService {
         return rpcMethods.containsKey(method);
     }
 
-    private Object[] convertParams(Method method, JsonNode params) throws RpcException {
+    private Object[] convertArgs(Method method, JsonNode args) throws RpcException {
+        var optionalAnnotation = method.getAnnotation(RpcOptionalParameters.class);
+        var optionalParameters = optionalAnnotation == null ? 0 : optionalAnnotation.value();
         var parameters = method.getParameterTypes();
-        if (!params.isArray() || parameters.length != params.size()) {
+        if (!args.isArray() ||
+                args.size() > parameters.length ||
+                args.size() < parameters.length - optionalParameters) {
             throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams));
         }
         try {
-            var convertedParams = new Object[parameters.length];
+            var convertedArgs = new Object[parameters.length];
             for (int i = 0; i < parameters.length; i++) {
-                convertedParams[i] = mapper.convertValue(params.get(i), parameters[i]);
+                convertedArgs[i] = mapper.convertValue(args.get(i), parameters[i]);
             }
-            return convertedParams;
+            return convertedArgs;
         } catch (IllegalArgumentException err) {
             LogManager.getLogger().warn("RPC call with invalid params", err);
             throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, err.getMessage()));
         }
     }
 
-    public Object execute(RpcRequest req) throws IllegalAccessException, RpcException, InvocationTargetException {
+    public Object execute(RpcRequest req) throws Throwable {
         var method = rpcMethods.get(req.getMethod());
         if (method == null) throw new RpcException(RpcError.fromCode(RpcCode.MethodNotFound));
-        var params = convertParams(method, req.getParams());
+        var args = convertArgs(method, req.getParams());
         try {
-            return method.invoke(this, params);
+            return method.invoke(this, args);
         } catch (InvocationTargetException e) {
             // unpack and rethrow potential RpcException
-            if (e.getCause() instanceof RpcException) {
-                throw (RpcException) e.getCause();
-            }
-            throw e;
+            throw e.getCause();
         }
     }
 }

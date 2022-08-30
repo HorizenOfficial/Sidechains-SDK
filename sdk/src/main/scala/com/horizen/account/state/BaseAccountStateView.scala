@@ -4,36 +4,38 @@ import com.horizen.evm.ResourceHandle
 import com.horizen.evm.interop.EvmLog
 
 import java.math.BigInteger
-import scala.util.Try
 
 trait BaseAccountStateView extends AccountStateReader {
   def getStateDbHandle: ResourceHandle
 
+  def accountExists(address: Array[Byte]): Boolean
   def isEoaAccount(address: Array[Byte]): Boolean
-
-  def addBalance(address: Array[Byte], amount: BigInteger): Try[Unit]
-
-  def subBalance(address: Array[Byte], amount: BigInteger): Try[Unit]
-
-  def increaseNonce(address: Array[Byte]): Try[Unit]
-
   def isSmartContractAccount(address: Array[Byte]): Boolean
 
-  def getAccountStorage(address: Array[Byte], key: Array[Byte]): Try[Array[Byte]]
+  def addAccount(address: Array[Byte], codeHash: Array[Byte]): Unit
+  def increaseNonce(address: Array[Byte]): Unit
 
-  def getAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Try[Array[Byte]]
+  @throws(classOf[ExecutionFailedException])
+  def addBalance(address: Array[Byte], amount: BigInteger): Unit
+  @throws(classOf[ExecutionFailedException])
+  def subBalance(address: Array[Byte], amount: BigInteger): Unit
 
-  def updateAccountStorageBytes(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Try[Unit]
+  @throws(classOf[OutOfGasException])
+  def getAccountStorage(address: Array[Byte], key: Array[Byte]): Array[Byte]
+  @throws(classOf[OutOfGasException])
+  def getAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Array[Byte]
+  @throws(classOf[OutOfGasException])
+  def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit
+  @throws(classOf[OutOfGasException])
+  def updateAccountStorageBytes(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit
+  @throws(classOf[OutOfGasException])
+  def removeAccountStorage(address: Array[Byte], key: Array[Byte]): Unit
+  @throws(classOf[OutOfGasException])
+  def removeAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Unit
 
-  def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Try[Unit]
+  @throws(classOf[OutOfGasException])
+  def addLog(evmLog: EvmLog): Unit
 
-  def accountExists(address: Array[Byte]): Boolean
-
-  def removeAccountStorage(address: Array[Byte], key: Array[Byte]): Try[Unit]
-
-  def removeAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Try[Unit]
-
-  def addAccount(address: Array[Byte], codeHash: Array[Byte]): Try[Unit]
-
-  def addLog(evmLog: EvmLog): Try[Unit]
+  def enableGasTracking(gasPool: GasPool): Unit
+  def disableGasTracking(): Unit
 }

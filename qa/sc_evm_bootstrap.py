@@ -3,6 +3,8 @@ import json
 import pprint
 from decimal import Decimal
 
+from eth_utils import to_checksum_address
+
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
@@ -88,8 +90,13 @@ class SCEvmBootstrap(SidechainTestFramework):
 
         ret = sc_node_1.wallet_createPrivateKeySecp256k1()
         pprint.pprint(ret)
-        evm_address = ret["result"]["proposition"]["address"]
+        evm_address = str(ret["result"]["proposition"]["address"])
+        evm_hex_address = to_checksum_address(evm_address)
         print("pubkey = {}".format(evm_address))
+
+        ret = sc_node_1.wallet_createPrivateKeySecp256k1()
+        evm_address_2 = str(ret["result"]["proposition"]["address"])
+        print("pubkey = {}".format(evm_address_2))
 
         # call a legacy wallet api
         ret = sc_node_1.wallet_allPublicKeys()
@@ -106,13 +113,22 @@ class SCEvmBootstrap(SidechainTestFramework):
                                       ft_amount_in_zen,
                                       mc_return_address)
 
+        forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
+                                      self.nodes[0],
+                                      evm_address_2,
+                                      ft_amount_in_zen,
+                                      mc_return_address)
+
         #input("\n\t======> Enter any input to continue generating a new sc block...")
         generate_next_blocks(sc_node_1, "first node", 1)
         self.sc_sync_all()
         sc_best_block = sc_node_1.block_best()["result"]
         assert_equal(sc_best_block["height"], 2, "The best block has not the specified height.")
         pprint.pprint(sc_best_block)
-        pprint.pprint(sc_node_1.rpc_eth_getBalance(str(evm_address), "1"))
+        pprint.pprint(sc_node_1.rpc_eth_getBalance(evm_hex_address, "1"))
+
+        # Check account balance via rpc not using optional tag
+        assert_equal(ft_amount_in_wei, int(sc_node_1.rpc_eth_getBalance(evm_hex_address)['result'], 16))
 
         '''
         # TODO
@@ -142,12 +158,13 @@ class SCEvmBootstrap(SidechainTestFramework):
         transferred_amount_in_zennies = convertZenToZennies(transferred_amount)
         transferred_amount_in_wei = convertZenniesToWei(transferred_amount_in_zennies)
 
-        recipientKeys = generate_account_proposition("seed3", 1)[0]
-        print("Trying to send {} zen to address {}".format(transferred_amount, recipientKeys.proposition))
+        recipient_keys = generate_account_proposition("seed3", 1)[0]
+        recipient_proposition = recipient_keys.proposition
+        print("Trying to send {} zen to address {}".format(transferred_amount, recipient_proposition))
 
         j = {
-            "from": str(evm_address),
-            "to": recipientKeys.proposition,
+            "from": evm_address,
+            "to": recipient_proposition,
             "value": transferred_amount_in_zennies
         }
         request = json.dumps(j)
@@ -167,21 +184,39 @@ class SCEvmBootstrap(SidechainTestFramework):
         tx_amount_in_wei = response_2["result"]["transactions"][0]["value"]
         assert_equal(str(tx_amount_in_wei), str(transferred_amount_in_wei))
 
+        # send more zen with another from address to have more than one transaction in block
+        print("Trying to send {} zen to address {}".format(transferred_amount, recipient_proposition))
+
+        j = {
+            "from": evm_address_2,
+            "to": recipient_proposition,
+            "value": transferred_amount_in_zennies
+        }
+        request = json.dumps(j)
+        response = sc_node_1.transaction_sendCoinsToAddress(request)
+        print("tx sent:")
+        pprint.pprint(response)
+        self.sc_sync_all()
+
         # request chainId via rpc route
         print("rpc response:")
         pprint.pprint(sc_node_1.rpc_eth_chainId())
 
         # request getBalance via rpc route
         print("rpc response:")
-        pprint.pprint(sc_node_1.rpc_eth_getBalance(str(evm_address), "1"))
+        pprint.pprint(sc_node_1.rpc_eth_getBalance(evm_hex_address, "1"))
 
         generate_next_blocks(sc_node_1, "first node", 1)
         self.sc_sync_all()
         sc_best_block = sc_node_1.block_best()["result"]
         pprint.pprint(sc_best_block)
 
+        # check if header contains correct gasUsed (2 * eoa to eoa transfer gas costs)
+        assert_equal(21000*2, sc_best_block['block']['header']['gasUsed'])
+
         final_balance = http_wallet_balance(sc_node_1, evm_address)
-        assert_equal(initial_balance - transferred_amount_in_wei, final_balance )
+        assert_equal(initial_balance - transferred_amount_in_wei, final_balance)
+
 
 if __name__ == "__main__":
     SCEvmBootstrap().main()

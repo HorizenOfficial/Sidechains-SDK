@@ -3,22 +3,21 @@ package com.horizen.account.transaction;
 import com.fasterxml.jackson.annotation.*;
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
+import com.horizen.account.state.GasUintOverflowException;
+import com.horizen.account.state.Message;
 import com.horizen.account.utils.Account;
+import com.horizen.account.utils.BigIntegerUtil;
 import com.horizen.account.utils.EthereumTransactionUtils;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import org.jetbrains.annotations.NotNull;
-import org.web3j.crypto.RawTransaction;
-import org.web3j.crypto.Sign;
+import org.web3j.crypto.*;
 import org.web3j.crypto.Sign.SignatureData;
-import org.web3j.crypto.SignedRawTransaction;
-import org.web3j.crypto.TransactionEncoder;
 import org.web3j.crypto.transaction.type.LegacyTransaction;
 import org.web3j.crypto.transaction.type.Transaction1559;
 import org.web3j.crypto.transaction.type.TransactionType;
 import org.web3j.utils.Numeric;
-import org.web3j.crypto.Hash;
 
 import javax.annotation.Nullable;
 import java.math.BigInteger;
@@ -32,7 +31,7 @@ import java.util.Objects;
 @JsonView(Views.Default.class)
 public class EthereumTransaction extends AccountTransaction<AddressProposition, SignatureSecp256k1> {
     private final RawTransaction transaction;
-    
+
     // depends on the transaction
     public EthereumTransaction(
             RawTransaction transaction
@@ -139,6 +138,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         if (getGasLimit().signum() <= 0)
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "non-positive gas limit", id()));
+        if (!BigIntegerUtil.isUint64(getGasLimit())) throw new GasUintOverflowException();
         //TODO why this check is not in Geth (maybe)?
         if (getTo() == null && getData().length == 0)
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
@@ -151,13 +151,13 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             if (getMaxPriorityFeePerGas().signum() < 0)
                 throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                         "eip1559 transaction with negative maxPriorityFeePerGas", id()));
-            if (getMaxFeePerGas().bitCount() > 256)
+            if (getMaxFeePerGas().bitLength() > 256)
                 throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                        "eip1559 transaction maxFeePerGas bit length [%d] is too high", id(), getMaxFeePerGas().bitCount()));
+                        "eip1559 transaction maxFeePerGas bit length [%d] is too high", id(), getMaxFeePerGas().bitLength()));
 
-            if (getMaxPriorityFeePerGas().bitCount() > 256)
+            if (getMaxPriorityFeePerGas().bitLength() > 256)
                 throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                        "eip1559 transaction maxPriorityFeePerGas bit length [%d] is too high", id(), getMaxPriorityFeePerGas().bitCount()));
+                        "eip1559 transaction maxPriorityFeePerGas bit length [%d] is too high", id(), getMaxPriorityFeePerGas().bitLength()));
 
             if (getMaxFeePerGas().compareTo(getMaxPriorityFeePerGas()) < 0)
                 throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
@@ -172,10 +172,9 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
 
         if (this.getFrom() == null || this.getFrom().address().length != Account.ADDRESS_SIZE)
             throw new TransactionSemanticValidityException("Cannot create signed transaction without valid from address");
-        // TODO: add again later and check - message to sign seems to be false (?)
-        if (!this.getSignature().isValid(getFrom(), messageToSign()))
-            throw new TransactionSemanticValidityException("Transaction " + id() + "is invalid: signature is invalid");
-
+        if (!this.getSignature().isValid(this.getFrom(), this.messageToSign()))
+            throw new TransactionSemanticValidityException("Cannot create signed transaction with invalid " +
+                    "signature");
 
         //TODO add intrinsic gas check, if not already made in some other place
     }
@@ -347,11 +346,11 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                         "Signature=%s}",
                 id(),
                 getFromAddress(),
-                Numeric.toHexStringWithPrefix(this.getNonce()),
-                Numeric.toHexStringWithPrefix(this.getGasPrice()),
-                Numeric.toHexStringWithPrefix(this.getGasLimit()),
-                this.getTo() != null ? this.getTo() : "0x",
-                Numeric.toHexStringWithPrefix(this.getValue()),
+                Numeric.toHexStringWithPrefix(this.getNonce() != null ? this.getNonce() : BigInteger.ZERO),
+                Numeric.toHexStringWithPrefix(this.getGasPrice() != null ? this.getGasPrice() : BigInteger.ZERO),
+                Numeric.toHexStringWithPrefix(this.getGasLimit() != null ? this.getGasLimit() : BigInteger.ZERO),
+                this.getToAddress() != null ? this.getToAddress() : "0x",
+                Numeric.toHexStringWithPrefix(this.getValue() != null ? this.getValue() : BigInteger.ZERO),
                 this.getData() != null ? Numeric.toHexString(this.getData()) : "",
                 isSigned() ? new SignatureSecp256k1(getSignatureData()).toString() : ""
         );
@@ -366,4 +365,23 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return TransactionEncoder.encode(this.transaction);
     }
 
+    public Message asMessage(BigInteger baseFee) {
+        var is1559 = isEIP1559();
+        var gasFeeCap = !is1559 ? getGasPrice() : getMaxFeePerGas();
+        var gasTipCap = !is1559 ? getGasPrice() : getMaxPriorityFeePerGas();
+        // calculate effective gas price as baseFee + tip capped at the fee cap
+        // this will default to gasPrice if the transaction is not EIP-1559
+        var effectiveGasPrice = baseFee.add(gasTipCap).min(gasFeeCap);
+        return new Message(
+                getFrom(),
+                getTo(),
+                effectiveGasPrice,
+                gasFeeCap,
+                gasTipCap,
+                getGasLimit(),
+                getValue(),
+                getNonce(),
+                getData()
+        );
+    }
 }

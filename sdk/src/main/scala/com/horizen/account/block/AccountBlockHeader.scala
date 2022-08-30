@@ -35,6 +35,9 @@ case class AccountBlockHeader(
                                stateRoot: Array[Byte],
                                receiptsRoot: Array[Byte],
                                forgerAddress: AddressProposition,
+                               baseFee: Long,
+                               gasUsed: Long,
+                               gasLimit: Long,
                                override val ommersMerkleRootHash: Array[Byte], // build on top of Ommer.id()
                                override val ommersCumulativeScore: Long, // to be able to calculate the score of the block without having the full SB. For future
                                override val feePaymentsHash: Array[Byte], // hash of the fee payments created during applying this block to the state. zeros by default.
@@ -61,6 +64,9 @@ case class AccountBlockHeader(
       stateRoot,
       receiptsRoot,
       forgerAddress.bytes(),
+      Longs.toByteArray(baseFee),
+      Longs.toByteArray(gasUsed),
+      Longs.toByteArray(gasLimit),
       ommersMerkleRootHash,
       Longs.toByteArray(ommersCumulativeScore),
       feePaymentsHash
@@ -92,6 +98,7 @@ case class AccountBlockHeader(
     s"AccountBlockHeader($id, $version, $timestamp, $forgingStakeInfo, $vrfProof, " +
       s"${ByteUtils.toHexString(sidechainTransactionsMerkleRootHash)}, ${ByteUtils.toHexString(mainchainMerkleRootHash)}, " +
       s"${ByteUtils.toHexString(stateRoot)}, ${ByteUtils.toHexString(receiptsRoot)}, $forgerAddress" +
+      s"$baseFee, $gasUsed, $gasLimit, " +
       s"${ByteUtils.toHexString(ommersMerkleRootHash)}, $ommersCumulativeScore, $signature)"
 }
 
@@ -119,6 +126,12 @@ object AccountBlockHeaderSerializer extends ScorexSerializer[AccountBlockHeader]
     w.putBytes(obj.receiptsRoot)
 
     AddressPropositionSerializer.getSerializer.serialize(obj.forgerAddress, w)
+
+    w.putLong(obj.baseFee)
+
+    w.putLong(obj.gasUsed)
+
+    w.putLong(obj.gasLimit)
 
     w.putBytes(obj.ommersMerkleRootHash)
 
@@ -155,6 +168,12 @@ object AccountBlockHeaderSerializer extends ScorexSerializer[AccountBlockHeader]
 
     val forgerAddress = AddressPropositionSerializer.getSerializer.parse(r)
 
+    val baseFee = r.getLong()
+
+    val gasUsed = r.getLong()
+
+    val gasLimit = r.getLong()
+
     val ommersMerkleRootHash = r.getBytes(NodeViewModifier.ModifierIdSize)
 
     val ommersCumulativeScore: Long = r.getLong()
@@ -175,6 +194,9 @@ object AccountBlockHeaderSerializer extends ScorexSerializer[AccountBlockHeader]
       stateRoot,
       receiptsRoot,
       forgerAddress,
+      baseFee,
+      gasUsed,
+      gasLimit,
       ommersMerkleRootHash,
       ommersCumulativeScore,
       feePaymentsHash,

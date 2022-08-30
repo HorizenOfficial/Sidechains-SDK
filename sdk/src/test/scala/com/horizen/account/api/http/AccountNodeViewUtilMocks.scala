@@ -26,8 +26,8 @@ class AccountNodeViewUtilMocks extends MockitoSugar
   with SecretFixture
   with EthereumTransactionFixture {
 
-  val ownerSecret = getPrivateKeySecp256k1(2222222)
-  val ownerPublicKeyString = BytesUtils.toHexString(ownerSecret.publicImage().address())
+  val ownerSecret: PrivateKeySecp256k1 = getPrivateKeySecp256k1(2222222)
+  val ownerPublicKeyString: String = BytesUtils.toHexString(ownerSecret.publicImage().address())
   val blockSignerPropositionString = "1122334455669988112233445566778811223344556677881122334455667788"
   val vrfPublicKeyString = "aabbddddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff001234"
   val stakeId = "9e26bd4ff89374e916b369024e882db68a49b824e71008b827c7794e9f4d0170"
@@ -36,7 +36,7 @@ class AccountNodeViewUtilMocks extends MockitoSugar
   val listOfStakes: Seq[AccountForgingStakeInfo] = getListOfStakes
   val listOfWithdrawalRequests: Seq[WithdrawalRequest] = getListOfWithdrawalRequests
 
-  val fittingSecret =  getPrivateKeySecp256k1(10344)
+  val fittingSecret: PrivateKeySecp256k1 = getPrivateKeySecp256k1(10344)
 
 
   def getNodeHistoryMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeAccountHistory = {
@@ -53,6 +53,7 @@ class AccountNodeViewUtilMocks extends MockitoSugar
     Mockito.when(accountState.getNonce(ArgumentMatchers.any[Array[Byte]])).thenAnswer(_ => BigInteger.ONE)//It has always enough money
     Mockito.when(accountState.getForgerStakeData(ArgumentMatchers.anyString())).thenAnswer(myStakeId =>
       getListOfStakes.find(stake => BytesUtils.toHexString(stake.stakeId).equals(myStakeId.getArgument(0))).map(stakeInfo => stakeInfo.forgerStakeData))
+    Mockito.when(accountState.getBaseFee).thenAnswer(_ => BigInteger.ZERO) // TODO: base fee can be configurable
     accountState
   }
 
@@ -76,9 +77,9 @@ class AccountNodeViewUtilMocks extends MockitoSugar
     val blockSignerProposition = new PublicKey25519Proposition(BytesUtils.fromHexString(blockSignerPropositionString)) // 32 bytes
     val vrfPublicKey = new VrfPublicKey(BytesUtils.fromHexString(vrfPublicKeyString)) // 33 bytes
 
-    val forgerKeys = new ForgerPublicKeys(blockSignerProposition, vrfPublicKey)
-    val forgingStakeData = new ForgerStakeData(forgerKeys, owner, BigInteger.ONE)
-    val stake = new AccountForgingStakeInfo(BytesUtils.fromHexString(stakeId), forgingStakeData)
+    val forgerKeys = ForgerPublicKeys(blockSignerProposition, vrfPublicKey)
+    val forgingStakeData = ForgerStakeData(forgerKeys, owner, BigInteger.ONE)
+    val stake = AccountForgingStakeInfo(BytesUtils.fromHexString(stakeId), forgingStakeData)
     list.add(stake)
     list.asScala
   }
@@ -88,7 +89,7 @@ class AccountNodeViewUtilMocks extends MockitoSugar
     val list: util.List[WithdrawalRequest] = new util.ArrayList[WithdrawalRequest]()
     val mcAddr = new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte))
     val valueInWei = ZenWeiConverter.convertZenniesToWei(123)
-    val request = new WithdrawalRequest(mcAddr, valueInWei)
+    val request = WithdrawalRequest(mcAddr, valueInWei)
     list.add(request)
     list.asScala
 

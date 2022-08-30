@@ -12,7 +12,7 @@ public class RpcError {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private final String data;
 
-    public RpcError(Integer code, String message, String data) {
+    public RpcError(int code, String message, String data) {
         this.code = code;
         this.message = message;
         this.data = data;

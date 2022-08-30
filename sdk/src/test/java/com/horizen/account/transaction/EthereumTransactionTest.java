@@ -2,6 +2,7 @@ package com.horizen.account.transaction;
 
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
+import com.horizen.account.utils.EthereumTransactionDecoder;
 import com.horizen.account.utils.EthereumTransactionUtils;
 import com.horizen.evm.TrieHasher;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
@@ -18,6 +19,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.SignatureException;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.Map;
 
 import static java.util.Map.entry;
@@ -59,7 +61,7 @@ public class EthereumTransactionTest {
         EthereumTransaction decodedTx = EthereumTransactionSerializer.getSerializer().parseBytes(encodedTx);
         String strAfter = decodedTx.toString();
         // we must have the same representation
-        assertEquals(strBefore, strAfter);
+        assertEquals(strBefore.toLowerCase(Locale.ROOT), strAfter.toLowerCase(Locale.ROOT));
         assertEquals(tx, decodedTx);
         assertTrue(decodedTx.getSignature().isValid(decodedTx.getFrom(), decodedTx.messageToSign()));
     }
@@ -99,6 +101,15 @@ public class EthereumTransactionTest {
         checkEthTx(legacyTx);
 
         // EIP-155 tx
+        var unsignedEip155Tx = new EthereumTransaction(
+                "0x3535353535353535353535353535353535353535",
+                BigInteger.valueOf(9L),
+                BigInteger.valueOf(20).multiply(BigInteger.TEN.pow(9)),
+                BigInteger.valueOf(21000),
+                BigInteger.TEN.pow(18),
+                "",
+                new Sign.SignatureData(new byte[]{1}, new byte[]{0}, new byte[]{0})
+        );
         var eip155Tx = new EthereumTransaction(
                 "0x3535353535353535353535353535353535353535",
                 BigInteger.valueOf(9L),
@@ -110,6 +121,7 @@ public class EthereumTransactionTest {
                         BytesUtils.fromHexString("28EF61340BD939BC2195FE537567866003E1A15D3C71FF63E1590620AA636276"),
                         BytesUtils.fromHexString("67CBE9D8997F761AECB703304B3800CCF555C9F3DC64214B297FB1966A3B6D83"))
         );
+        assertArrayEquals(unsignedEip155Tx.messageToSign(), eip155Tx.messageToSign());
         assertEquals(Hash.sha3("0xf86c098504a817c800825208943535353535353535353535353535353535353535880de0b6b3a76400008025a028ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa636276a067cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d83"), "0x" + eip155Tx.id());
         checkEthTx(eip155Tx);
 
@@ -530,5 +542,18 @@ public class EthereumTransactionTest {
             final var actualHash = Numeric.toHexString(TrieHasher.Root(rlpTxs));
             assertEquals("should match transaction root hash", testCase.getValue(), actualHash);
         }
+    }
+
+    // https://etherscan.io/getRawTx?tx=0xde78fe4a45109823845dc47c9030aac4c3efd3e5c540e229984d6f7b5eb4ec83
+    @Test
+    public void ethereumTransactionDecoderTest() {
+        // Test 1: Decoded tx should be as expected - same tx as linked above, just without access list
+        var actualTx = new EthereumTransaction(EthereumTransactionDecoder.decode("0x02f8c60183012ec786023199fa3df88602e59652e99b8303851d9400000000003b3cc22af3ae1eac0440bcee416b4080b8530100d5a0afa68dd8cb83097765263adad881af6eed479c4a33ab293dce330b92aa52bc2a7cd3816edaa75f890b00000000000000000000000000000000000000000000007eb2e82c51126a5dde0a2e2a52f701c080a020d7f34682e1c2834fcb0838e08be184ea6eba5189eda34c9a7561a209f7ed04a07c63c158f32d26630a9732d7553cfc5b16cff01f0a72c41842da693821ccdfcb"));
+        var expectedTx = new EthereumTransaction(1, "0x00000000003b3cc22aF3aE1EAc0440BcEe416B40", Numeric.toBigInt("12EC7"), Numeric.toBigInt("0x03851d"), Numeric.toBigInt("0x023199fa3df8"), Numeric.toBigInt("0x02e59652e99b"), BigInteger.ZERO, "0x0100d5a0afa68dd8cb83097765263adad881af6eed479c4a33ab293dce330b92aa52bc2a7cd3816edaa75f890b00000000000000000000000000000000000000000000007eb2e82c51126a5dde0a2e2a52f701", null);
+        assertArrayEquals(expectedTx.messageToSign(), actualTx.messageToSign());
+
+        // Test 2: Access list is not allowed in Ethereum Transaction, should throw exception
+        assertThrows("Test2: Exception during tx decoding expected", IllegalArgumentException.class,
+                () -> EthereumTransactionDecoder.decode("0x02f9040c0183012ec786023199fa3df88602e59652e99b8303851d9400000000003b3cc22af3ae1eac0440bcee416b4080b8530100d5a0afa68dd8cb83097765263adad881af6eed479c4a33ab293dce330b92aa52bc2a7cd3816edaa75f890b00000000000000000000000000000000000000000000007eb2e82c51126a5dde0a2e2a52f701f90344f9024994a68dd8cb83097765263adad881af6eed479c4a33f90231a00000000000000000000000000000000000000000000000000000000000000004a0745448ebd86f892e3973b919a6686b32d8505f8eb2e02df5a36797f187adb881a00000000000000000000000000000000000000000000000000000000000000003a00000000000000000000000000000000000000000000000000000000000000011a0a580422a537c1b63e41b8febf02c6c28bef8713a2a44af985cc8d4c2b24b1c86a091e3d6ffd1390da3bfbc0e0875515e89982841b064fcda9b67cffc63d8082ab6a091e3d6ffd1390da3bfbc0e0875515e89982841b064fcda9b67cffc63d8082ab8a0bf9ee777cf4683df01da9dfd7aeab60490278463b1d516455d67d23c750f96dca00000000000000000000000000000000000000000000000000000000000000012a0000000000000000000000000000000000000000000000000000000000000000fa00000000000000000000000000000000000000000000000000000000000000010a0a580422a537c1b63e41b8febf02c6c28bef8713a2a44af985cc8d4c2b24b1c88a0bd9bbcf6ef1c613b05ca02fcfe3d4505eb1c5d375083cb127bda8b8afcd050fba06306683371f43cb3203ee553ce8ac90eb82e4721cc5335d281e1e556d3edcdbca00000000000000000000000000000000000000000000000000000000000000013a0bd9bbcf6ef1c613b05ca02fcfe3d4505eb1c5d375083cb127bda8b8afcd050f9a00000000000000000000000000000000000000000000000000000000000000014f89b94ab293dce330b92aa52bc2a7cd3816edaa75f890bf884a0000000000000000000000000000000000000000000000000000000000000000ca00000000000000000000000000000000000000000000000000000000000000008a00000000000000000000000000000000000000000000000000000000000000006a00000000000000000000000000000000000000000000000000000000000000007f85994c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2f842a051c9df7cdd01b5cb5fb293792b1e67ec1ac1048ae7e4c7cf6cf46883589dfbd4a03c679e5fc421e825187f885e3dcd7f4493f886ceeb4930450588e35818a32b9c80a020d7f34682e1c2834fcb0838e08be184ea6eba5189eda34c9a7561a209f7ed04a07c63c158f32d26630a9732d7553cfc5b16cff01f0a72c41842da693821ccdfcb"));
     }
 }

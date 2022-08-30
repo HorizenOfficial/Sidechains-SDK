@@ -32,6 +32,15 @@ public class StateDB extends ResourceHandle {
     }
 
     /**
+     * Finalize any pending changes, clear the current journal and reset refund counter.
+     * Note: Must be called between separate transactions as rollbacks are not supported over multiple transactions,
+     * therefore also invalidates all snapshots.
+     */
+    public void finalizeChanges() {
+        LibEvm.stateFinalize(handle);
+    }
+
+    /**
      * Get current state root hash including any currently pending changes, but without committing.
      *
      * @return state root hash
@@ -180,6 +189,15 @@ public class StateDB extends ResourceHandle {
      */
     public void setCode(byte[] address, byte[] code) {
         LibEvm.stateSetCode(handle, address, code);
+    }
+
+    /**
+     * Get refunded gas.
+     *
+     * @return refunded gas
+     */
+    public BigInteger getRefund() {
+        return LibEvm.stateGetRefund(handle);
     }
 
     /**

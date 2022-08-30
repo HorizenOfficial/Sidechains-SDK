@@ -1,5 +1,6 @@
 package com.horizen.account.transaction;
 
+import com.horizen.account.utils.EthereumTransactionDecoder;
 import com.horizen.transaction.TransactionSerializer;
 import org.web3j.crypto.*;
 import org.web3j.utils.Numeric;
@@ -40,7 +41,7 @@ public class EthereumTransactionSerializer implements TransactionSerializer<Ethe
         // TODO: remove reliance on length
         var length = reader.getInt();
         var encodedMessage = reader.getBytes(length);
-        var transaction = TransactionDecoder.decode(Numeric.toHexString(encodedMessage));
+        var transaction = EthereumTransactionDecoder.decode(Numeric.toHexString(encodedMessage));
         return new EthereumTransaction(transaction);
     }
 }

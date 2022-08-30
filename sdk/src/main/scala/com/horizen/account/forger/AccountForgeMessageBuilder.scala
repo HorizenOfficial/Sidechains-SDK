@@ -9,8 +9,7 @@ import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumConsensusDataReceipt
 import com.horizen.account.secret.PrivateKeySecp256k1
-import com.horizen.account.state.AccountState.blockGasLimitExceeded
-import com.horizen.account.state.{AccountState, AccountStateView, NonceTooLowException}
+import com.horizen.account.state.{AccountState, AccountStateView, GasLimitReached, GasPool, NonceTooLowException}
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.Account
@@ -90,7 +89,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val receiptList = new ListBuffer[EthereumConsensusDataReceipt]()
     val txHashList = new ListBuffer[ByteArrayWrapper]()
 
-    var cumGasUsed: BigInteger = BigInteger.ZERO
+    val blockGasPool = new GasPool(stateView.getBlockGasLimit)
     var txsCounter: Int = 0
     var blockSize: Int = inputBlockSize
     val listOfAccountsToSkip = new ListBuffer[SidechainTypes#SCP]
@@ -103,20 +102,20 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       if (blockSizeExceeded(blockSize, txsCounter))
         return Success(receiptList, txHashList)
 
-      stateView.applyTransaction(tx, txIndex, cumGasUsed) match {
+      stateView.applyTransaction(tx, txIndex, blockGasPool) match {
         case Success(consensusDataReceipt) =>
-          // update cumulative gas used so far
-          cumGasUsed = consensusDataReceipt.cumulativeGasUsed
-
-          if (blockGasLimitExceeded(cumGasUsed))
-            return Success(receiptList, txHashList)
 
           val ethTx = tx.asInstanceOf[EthereumTransaction]
           val txHash = BytesUtils.fromHexString(ethTx.id)
 
           receiptList += consensusDataReceipt
           txHashList += txHash
-       case Failure(e : NonceTooLowException) =>
+
+        case Failure(_: GasLimitReached) =>
+          // block gas limit reached
+          // TODO: keep trying to fit transactions into the block: this TX did not fit, but another one might
+          return Success(receiptList, txHashList)
+       case Failure(e: NonceTooLowException) =>
           // just skip this tx
          log.debug(s"Could not apply tx, reason: ${e.getMessage}")
         case Failure(e) =>
@@ -167,6 +166,15 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     val forgerAddress = addressList.get(0).publicImage().asInstanceOf[AddressProposition]
 
+    // TODO: 4. calculate baseFee
+    val baseFee = 0
+
+    // 5. Get cumulativeGasUsed from last receipt in list if available
+    val gasUsed = if (receiptList.size > 0) receiptList.last.cumulativeGasUsed.longValue() else 0
+
+    // 6. Set gasLimit
+    val gasLimit = Account.GAS_LIMIT
+
     val block = AccountBlock.create(
       parentId,
       AccountBlock.ACCOUNT_BLOCK_VERSION,
@@ -183,6 +191,9 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       stateRoot,
       receiptsRoot,
       forgerAddress,
+      baseFee,
+      gasUsed,
+      gasLimit,
       companion.asInstanceOf[SidechainAccountTransactionsCompanion])
 
     block
@@ -207,6 +218,9 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH), // stateRoot TODO add constant
       new AddressProposition(new Array[Byte](Account.ADDRESS_SIZE)), // forgerAddress: PublicKeySecp256k1Proposition TODO add constant,
+      Long.MaxValue,
+      Long.MaxValue,
+      Long.MaxValue,
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       Long.MaxValue,
       new Array[Byte](NodeViewModifier.ModifierIdSize),

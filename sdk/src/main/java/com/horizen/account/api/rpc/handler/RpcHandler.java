@@ -26,7 +26,7 @@ public class RpcHandler {
             return new RpcResponseError(request.getId(), RpcError.fromCode(RpcCode.MethodNotFound));
         } catch (RpcException e) {
             return new RpcResponseError(request.getId(), e.error);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             return new RpcResponseError(request.getId(), RpcError.fromCode(RpcCode.InternalError, e.getMessage()));
         }
     }
