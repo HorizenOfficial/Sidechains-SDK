@@ -197,12 +197,12 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   }
 
   def getAlreadyMinedWithdrawalRequestBoxesInCurrentEpoch: Int = {
-    stateStorage.getWithdrawalRequests(stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)).epoch).size
+    stateStorage.getWithdrawalRequests(getWithdrawalEpochInfo.epoch).size
   }
 
   def getAllowedWithdrawalRequestBoxes(numberOfMainchainBlockReferenceInBlock: Int): Int = {
     Math.min(params.maxWBsAllowed,
-            (params.maxWBsAllowed * (stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)).lastEpochIndex + numberOfMainchainBlockReferenceInBlock)) / (params.withdrawalEpochLength - 1))
+            (params.maxWBsAllowed * (getWithdrawalEpochInfo.lastEpochIndex + numberOfMainchainBlockReferenceInBlock)) / (params.withdrawalEpochLength - 1))
   }
 
   private def validateTopQualityCertificate(topQualityCertificate: WithdrawalEpochCertificate, certReferencedEpochNumber: Int): Unit = {
@@ -302,18 +302,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
             }
           }
         })
-
-      lazy val numberOfWithdrawalRequestBoxes = newBoxes.count(box => box.isInstanceOf[WithdrawalRequestBox])
-      val backwardTransferLimitEnabled = stateStorage.getConsensusEpochNumber match {
-        case Some(consensusEpochNumber) =>
-          ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).backwardTransferLimitEnabled()
-        case None =>
-          false
-      }
-      if (backwardTransferLimitEnabled &&
-        numberOfWithdrawalRequestBoxes > params.maxWBsAllowed) {
-        throw new Exception(s"Exceed the maximum withdrawal request boxes per epoch (${numberOfWithdrawalRequestBoxes} out of ${params.maxWBsAllowed})")
-      }
     }
 
     applicationState.validate(this, tx)

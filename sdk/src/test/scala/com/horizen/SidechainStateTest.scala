@@ -678,7 +678,6 @@ class SidechainStateTest
     stateVersion += getVersion
     val belowTresholdTransaction = getRegularTransaction(1, 0, 98, Seq(), 10)
     val tresholdTransaction = getRegularTransaction(1, 0, 99, Seq(), 10)
-    val aboveTresholdTransaction = getRegularTransaction(1, 0, 100, Seq(), 10)
 
     Mockito.when(mockedStateStorage.lastVersionId).thenReturn(Some(stateVersion.last))
 
@@ -717,11 +716,6 @@ class SidechainStateTest
     assertTrue("Transaction validation must be successful.",
       tryValidate.isSuccess)
 
-    //Test validate(Transaction) with a number of WithdrawalBoxes > maxWBsAllowed
-    tryValidate = sidechainState.validate(aboveTresholdTransaction)
-    assertFalse("Transaction validation must fail.",
-      tryValidate.isSuccess)
-    assertTrue(tryValidate.failed.get.getMessage.equals("Exceed the maximum withdrawal request boxes per epoch (100 out of 99)"))
   }
 
   @Test
