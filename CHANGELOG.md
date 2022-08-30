@@ -12,7 +12,7 @@
 5. API freezing during node synchronization resolved.
 6. New API endpoints added for importing/exporting keys to/from the wallet.
 7. Forger sorts transactions by fee rate instead of fee.
-8. Wallet: max fee check added for locally generated transactions to prevent absurdly high fees. Max fee value is set in zennies. Default value is 10000000 (1 Zen).
+8. Wallet: max fee check added for locally generated transactions to prevent absurdly high fees. Max fee value is set in zennies. Default value is 10000000 (0.1 Zen).
 9. Custom propositions wallet management improved: complex multi-key propositions are now recognized.
 10. Peers spam detection mechanism improved: "trash" data detection in the end of the block/transaction added.
 11. Bootstrapping tool: dlog keys multiple initialization prevented.
