@@ -37,8 +37,7 @@ Test:
 def set_storage_value(node, smart_contract, address, tx_sender, new_value, *, static_call=False, generate_block=True):
     if static_call:
         print("Testing setting smart contract storage to {} in a static call".format(new_value))
-        res = smart_contract.static_call(node, 'set(string)', new_value, fromAddress=tx_sender,
-                                         gasLimit=10000000, gasPrice=10, toAddress=address)
+        res = smart_contract.static_call(node, 'set(string)', new_value, fromAddress=tx_sender, toAddress=address)
     else:
         print("Setting smart contract storage to {}".format(new_value))
         res = smart_contract.call_function(node, 'set(string)', new_value, fromAddress=tx_sender,
@@ -55,8 +54,7 @@ def set_storage_value(node, smart_contract, address, tx_sender, new_value, *, st
 
 def check_storage_value(node, smart_contract, address, tx_sender, expected_value):
     print("Checking stored value...")
-    res = smart_contract.static_call(node, 'get()', fromAddress=tx_sender, gasLimit=10000000,
-                                     gasPrice=10, toAddress=address)
+    res = smart_contract.static_call(node, 'get()', fromAddress=tx_sender, toAddress=address)
     print("Expected stored value: \"{}\", actual stored value: \"{}\"".format(expected_value, res[0]))
     return res[0]
 

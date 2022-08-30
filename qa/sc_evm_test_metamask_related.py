@@ -56,7 +56,6 @@ def mint_payable(node, smart_contract, contract_address, source_account, amount,
               "a token (id: {}) of collection {} to 0x{}".format(tokenid, contract_address, source_account))
         res = smart_contract.static_call(node, method, tokenid,
                                          fromAddress=source_account,
-                                         gasLimit=10000000, gasPrice=10,
                                          toAddress=contract_address,
                                          value=amount)
     else:
@@ -76,8 +75,7 @@ def compare_balance(node, smart_contract, contract_address, account_address, exp
     print("Checking balance of 0x{}...".format(account_address))
     res = smart_contract.static_call(node, 'balanceOf(address)', account_address,
                                      fromAddress=account_address,
-                                     gasLimit=10000000,
-                                     gasPrice=10, toAddress=contract_address)
+                                     toAddress=contract_address)
     print("Expected balance: '{}', actual balance: '{}'".format(expected_balance, res[0]))
     assert_equal(res[0], expected_balance)
     return res[0]
@@ -86,8 +84,7 @@ def compare_balance(node, smart_contract, contract_address, account_address, exp
 def compare_allowance(node, smart_contract, contract_address, owner_address, allowed_address, expected_balance):
     print("Checking allowance of 0x{} from 0x{}...".format(allowed_address, owner_address))
     res = smart_contract.static_call(node, 'allowance(address,address)', owner_address, allowed_address,
-                                     fromAddress=allowed_address, gasLimit=10000000,
-                                     gasPrice=10, toAddress=contract_address)
+                                     fromAddress=allowed_address, toAddress=contract_address)
     print("Expected allowance: '{}', actual allowance: '{}'".format(expected_balance, res[0]))
     assert_equal(res[0], expected_balance)
     return res[0]
@@ -96,8 +93,7 @@ def compare_allowance(node, smart_contract, contract_address, owner_address, all
 def call_noarg_fn(node, smart_contract, contract_address, sender_address, static_call, generate_block, method,
                   call_method=global_call_method):
     if static_call:
-        res = smart_contract.static_call(node, method, fromAddress=sender_address, gasLimit=10000000,
-                                         gasPrice=10, toAddress=contract_address)
+        res = smart_contract.static_call(node, method, fromAddress=sender_address, toAddress=contract_address)
     else:
         res = smart_contract.call_function(node, method, fromAddress=sender_address, gasLimit=10000000,
                                            gasPrice=10, maxFeePerGas=10, maxPriorityFeePerGas=1,
@@ -112,8 +108,7 @@ def call_noarg_fn(node, smart_contract, contract_address, sender_address, static
 def call_onearg_fn(node, smart_contract, contract_address, sender_address, static_call, generate_block, method, arg,
                    call_method=global_call_method):
     if static_call:
-        res = smart_contract.static_call(node, method, arg, fromAddress=sender_address, gasLimit=10000000,
-                                         gasPrice=10, toAddress=contract_address)
+        res = smart_contract.static_call(node, method, arg, fromAddress=sender_address, toAddress=contract_address)
     else:
         res = smart_contract.call_function(node, method, arg, fromAddress=sender_address, gasLimit=10000000,
                                            gasPrice=10, maxFeePerGas=10, maxPriorityFeePerGas=1,
@@ -225,7 +220,7 @@ def transfer_token(node, smart_contract, contract_address, sender_address, *, to
               "token (id: {}) from 0x{} to 0x{} via 0x{}".format(token_id, from_address, target_address,
                                                                  sender_address))
         res = smart_contract.static_call(node, method, from_address, target_address, token_id,
-                                         fromAddress=sender_address, gasLimit=10000000, gasPrice=10,
+                                         fromAddress=sender_address,
                                          toAddress=contract_address)
     else:
         print("Calling {}: transferring".format(method) +
@@ -265,8 +260,7 @@ def compare_erc20_balance(node, smart_contract, contract_address, account_addres
     print("Checking balance of 0x{}...".format(account_address))
     res = smart_contract.static_call(node, 'balanceOf(address)', account_address,
                                      fromAddress=account_address,
-                                     gasLimit=10000000,
-                                     gasPrice=10, toAddress=contract_address)
+                                     toAddress=contract_address)
     print("Expected balance: '{}', actual balance: '{}'".format(expected_balance, res[0]))
     assert_equal(res[0], expected_balance)
     return res[0]
@@ -293,8 +287,7 @@ def call_addr_uint_fn(node, smart_contract, contract_address, source_addr, addr,
                                            gasPrice=10, toAddress=contract_address)
     if static_call:
         res = smart_contract.static_call(node, method, addr, uint,
-                                         fromAddress=source_addr,
-                                         gasLimit=10000000, gasPrice=10, toAddress=contract_address)
+                                         fromAddress=source_addr, toAddress=contract_address)
     else:
         res = smart_contract.call_function(node, method, addr, uint,
                                            fromAddress=source_addr,
@@ -307,8 +300,7 @@ def call_addr_uint_fn(node, smart_contract, contract_address, source_addr, addr,
 
 def compare_erc20_total_supply(node, smart_contract, contract_address, sender_address, expected_supply):
     print("Checking total supply of token at 0x{}...".format(contract_address))
-    res = smart_contract.static_call(node, 'totalSupply()', fromAddress=sender_address, gasLimit=10000000,
-                                     gasPrice=10, toAddress=contract_address)
+    res = smart_contract.static_call(node, 'totalSupply()', fromAddress=sender_address, toAddress=contract_address)
     print("Expected supply: '{}', actual supply: '{}'".format(expected_supply, res[0]))
     assert_equal(res[0], expected_supply)
     return res[0]
