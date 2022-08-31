@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-from netrc import netrc
-
-from SidechainTestFramework.sc_boostrap_info import SCNetworkConfiguration, SCBootstrapInfo, \
-    LARGE_WITHDRAWAL_EPOCH_LENGTH
+from SidechainTestFramework.sc_boostrap_info import  LARGE_WITHDRAWAL_EPOCH_LENGTH
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.authproxy import JSONRPCException
 from SidechainTestFramework.sidechainauthproxy import SCAPIException

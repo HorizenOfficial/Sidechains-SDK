@@ -1,4 +1,6 @@
 {
+  "test_type": 2,
+  "test_run_time": 180,
   "block_rate": 30,
   "initial_txs": 999,
   "network_topology": 2,

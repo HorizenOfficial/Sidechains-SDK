@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "required": [
+    "test_type",
     "block_rate",
     "initial_txs",
     "network_topology",

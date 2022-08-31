@@ -1,10 +1,12 @@
 import logging
 import pprint
+import time
 from time import sleep
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
 from httpCalls.block.best import http_block_best
+from httpCalls.block.findBlockByID import http_block_findById
 from httpCalls.block.forging import http_start_forging, http_stop_forging
 from httpCalls.transaction.allTransactions import allTransactions
 from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress
@@ -15,8 +17,8 @@ from httpCalls.transaction.sendTransaction import http_send_transaction
 from test_framework.util import start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, assert_equal
 from SidechainTestFramework.scutil import assert_true, bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks, \
-    deserialize_perf_test_json, connect_sc_nodes, sc_connected_peers
-from performance.perf_data import PerformanceData, NodeData, NetworkTopology
+    deserialize_perf_test_json, connect_sc_nodes
+from performance.perf_data import NetworkTopology, TestType
 
 
 def get_node_configuration(mc_node, sc_node_data, perf_data):
@@ -60,7 +62,8 @@ class PerformanceTest(SidechainTestFramework):
     sc_nodes_bootstrap_info = None
     perf_test_data = deserialize_perf_test_json("./performance/perf_test.json")
     perf_data = perf_test_data
-    sc_node_data = perf_test_data["nodes"]
+    test_type = TestType(perf_data["test_type"])
+    sc_node_data = perf_data["nodes"]
     sc_nodes_list = list(sc_node_data)
     initial_txs = perf_data["initial_txs"]
     block_rate = perf_data["block_rate"]
@@ -79,7 +82,7 @@ class PerformanceTest(SidechainTestFramework):
             *sc_nodes
         )
 
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720*self.block_rate/2)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720 * self.block_rate / 2)
 
     def sc_setup_nodes(self):
         return start_sc_nodes(len(self.sc_node_data), self.options.tmpdir)
@@ -92,7 +95,7 @@ class PerformanceTest(SidechainTestFramework):
                 self.connection_map[key] = [value]
 
     def set_topology(self):
-        topology = NetworkTopology(self.perf_test_data["network_topology"])
+        topology = NetworkTopology(self.perf_data["network_topology"])
         node_count = len(self.sc_nodes)
         node_final_position = node_count - 1
         node = 0
@@ -100,14 +103,15 @@ class PerformanceTest(SidechainTestFramework):
         # Daisy Chain Topology
         if topology == NetworkTopology.DaisyChain or topology == NetworkTopology.Ring:
             while node < node_final_position:
-                logging.info(f"NODE CONNECTING: node[{node}] to node[{node+1}] - Final Node is [{node_final_position}]")
-                connect_sc_nodes(self.sc_nodes[node], node+1)
+                logging.info(
+                    f"NODE CONNECTING: node[{node}] to node[{node + 1}] - Final Node is [{node_final_position}]")
+                connect_sc_nodes(self.sc_nodes[node], node + 1)
                 if node == 0:
-                    self.create_node_connection_map(node, [node+1])
+                    self.create_node_connection_map(node, [node + 1])
                 else:
-                    self.create_node_connection_map(node, [node-1, node+1])
+                    self.create_node_connection_map(node, [node - 1, node + 1])
                 node += 1
-            self.create_node_connection_map(node_final_position, [node-1])
+            self.create_node_connection_map(node_final_position, [node - 1])
         # Ring Topology
         if topology == NetworkTopology.Ring:
             # Connect final node to first node
@@ -138,17 +142,25 @@ class PerformanceTest(SidechainTestFramework):
                 non_txs_creator.append(self.sc_nodes[index])
         return txs_creators, non_txs_creator
 
+    def find_forger_nodes(self):
+        forger_nodes = []
+        for index, node in enumerate(self.sc_nodes_list):
+            if node["forger"]:
+                forger_nodes.append(self.sc_nodes[index])
+        return forger_nodes
+
     def send_coins_to_multiple_destination(self, utxo_amount, txs_creator_nodes, non_creator_nodes):
 
-        for j in range (len(txs_creator_nodes)):
-            destination_address = non_creator_nodes[0].wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
+        for j in range(len(txs_creator_nodes)):
+            destination_address = non_creator_nodes[0].wallet_createPrivateKey25519()["result"]["proposition"][
+                "publicKey"]
             for i in range(self.initial_txs):
                 # Populate the mempool - so don't mine a block
                 sendCoinsToAddress(txs_creator_nodes[j], destination_address, utxo_amount, 0)
-                if (i%1000 == 0):
-                    print("Node "+str(j)+" sent txs: "+str(i))
+                if (i % 1000 == 0):
+                    print("Node " + str(j) + " sent txs: " + str(i))
             assert_equal(len(allTransactions(txs_creator_nodes[j], False)["transactionIds"]), self.initial_txs)
-            print("Node "+str(j)+" totally sent txs: "+str(self.initial_txs))
+            print("Node " + str(j) + " totally sent txs: " + str(self.initial_txs))
 
     def get_best_node_block_ids(self):
         block_ids = {}
@@ -157,11 +169,11 @@ class PerformanceTest(SidechainTestFramework):
             block_ids[self.sc_nodes.index(node)] = block["id"]
         pprint.pprint("Block ids: \n" + str(block_ids))
         return block_ids
-    
+
     def find_boxes_of_address(self, boxes, address):
         address_boxes = []
         for box in boxes:
-            if (box["proposition"]["publicKey"] == address):
+            if box["proposition"]["publicKey"] == address:
                 address_boxes.append(box)
         return address_boxes
 
@@ -172,11 +184,14 @@ class PerformanceTest(SidechainTestFramework):
             wallet_balance = 0
             for box in wallet_boxes:
                 wallet_balance += box["value"]
-            print(f"Node{index} Wallet Balance: {wallet_balance }")
+            print(f"Node{index} Wallet Balance: {wallet_balance}")
+
+    def get_node_mined_transactions_by_block_id(self, node, block_id):
+        result = http_block_findById(node, block_id)
+        return result["block"]["sidechainTransactions"]
 
     def run_test(self):
         mc_nodes = self.nodes
-        sc_nodes = self.sc_nodes
         self.set_topology()
 
         # Declare SC Addresses
@@ -193,17 +208,20 @@ class PerformanceTest(SidechainTestFramework):
             ft_addresses.append(txs_creators[i].wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"])
             forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id, mc_nodes[0],
                                           ft_addresses[i], ft_amount, mc_return_address)
-            txs_creator_addresses.append(txs_creators[i].wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"])     
+            txs_creator_addresses.append(
+                txs_creators[i].wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"])
         self.sc_sync_all()
 
         # Generate 1 SC block to include FTs.
-        generate_next_blocks(sc_nodes[0], "first node", 1)[0]
+        forger_nodes = self.find_forger_nodes()
+        # TODO: Cater for multiple forgers
+        generate_next_blocks(forger_nodes[0], "first node", 1)[0]
         self.sc_sync_all()
 
-        #Verify that every tx_creator node received the FT
+        # Verify that every tx_creator node received the FT
         for node in txs_creators:
             # Multiply ft_amount by 1e8 to get zentoshi value
-            assert_equal(http_wallet_balance(node), ft_amount*1e8)
+            assert_equal(http_wallet_balance(node), ft_amount * 1e8)
 
         ##########################################################
         ##################### TEST VERSION 1 #####################
@@ -215,46 +233,52 @@ class PerformanceTest(SidechainTestFramework):
         utxo_amount = ft_amount * 1e8 / self.initial_txs
         for i in range(len(txs_creator_addresses)):
 
-            #Get FT box id (we should have only 1 ZenBox right now)
+            # Get FT box id (we should have only 1 ZenBox right now)
             zen_boxes = http_wallet_allBoxesOfType(txs_creators[i], "ZenBox")
             ft_box = self.find_boxes_of_address(zen_boxes, ft_addresses[i])
             assert_true(len(ft_box), 0)
 
-            print("Creating inital UTXOs...")
+            print("Creating initial UTXOs...")
             created_utxos = 0
-            for _ in range(int(self.initial_txs / 998)):
-
-                # Create SidechainCoreTransaction that spend the split the FT box into many boxes. 
-                # We have 1k boxes limit per transaction = 1 input + 998 outputs + change output
-                outputs = [{"publicKey": txs_creator_addresses[i], "value": utxo_amount} for _ in range (998)]
-                outputs.append({"publicKey": ft_addresses[i], "value": ft_box[0]["value"] - utxo_amount * 998})
+            # We have 1k boxes limit per transaction = 1 input + 998 outputs + change output
+            max_transaction_output = 998
+            # TODO: Is this correct when multiple transaction creators exist?
+            for _ in range(int(self.initial_txs / max_transaction_output)):
+                # Create SidechainCoreTransaction that spend the split the FT box into many boxes.
+                outputs = [{"publicKey": txs_creator_addresses[i], "value": utxo_amount} for _ in
+                           range(max_transaction_output)]
+                outputs.append(
+                    {"publicKey": ft_addresses[i], "value": ft_box[0]["value"] - utxo_amount * max_transaction_output})
                 raw_tx = http_create_core_transaction(txs_creators[i], [{"boxId": ft_box[0]["id"]}], outputs)
                 res = http_send_transaction(txs_creators[i], raw_tx)
                 assert_true("transactionId" in res)
-                print("Sent "+res["transactionId"]+" with UTXO: 998")
+                print("Sent " + res["transactionId"] + " with UTXO: " + str(max_transaction_output))
 
                 self.sc_sync_all()
-                generate_next_blocks(sc_nodes[0], "first node", 1)[0]
+                # TODO: Cater for multiple forgers
+                generate_next_blocks(forger_nodes[0], "first node", 1)[0]
                 self.sc_sync_all()
 
-                created_utxos += 998
+                created_utxos += max_transaction_output
 
                 zen_boxes = http_wallet_allBoxesOfType(txs_creators[i], "ZenBox")
                 ft_box = self.find_boxes_of_address(zen_boxes, ft_addresses[i])
                 assert_true(len(ft_box), 0)
 
             remaining_utxos = self.initial_txs - created_utxos
-            if (remaining_utxos > 0):
-                raw_tx = http_create_core_transaction(txs_creators[i], [{"boxId": ft_box[0]["id"]}], [{"publicKey": txs_creator_addresses[i], "value": utxo_amount} for _ in range (remaining_utxos)])
+            if remaining_utxos > 0:
+                raw_tx = http_create_core_transaction(txs_creators[i], [{"boxId": ft_box[0]["id"]}],
+                                                      [{"publicKey": txs_creator_addresses[i], "value": utxo_amount} for
+                                                       _ in range(remaining_utxos)])
                 res = http_send_transaction(txs_creators[i], raw_tx)
                 assert_true("transactionId" in res)
-                print("Sent "+res["transactionId"]+ "with UTXO: "+str(remaining_utxos))
+                print("Sent " + res["transactionId"] + "with UTXO: " + str(remaining_utxos))
 
                 self.sc_sync_all()
-                generate_next_blocks(sc_nodes[0], "first node", 1)[0]
+                # TODO: Cater for multiple forgers
+                generate_next_blocks(forger_nodes[0], "first node", 1)[0]
                 self.sc_sync_all()
-      
-      
+
         # Check that every tx_creator node received the correct amount of UTXOs
         for i in range(len(txs_creators)):
             zen_boxes = http_wallet_allBoxesOfType(txs_creators[i], "ZenBox")
@@ -284,18 +308,27 @@ class PerformanceTest(SidechainTestFramework):
                 print(f"Forger found - Node{index} - Start Forging...")
                 http_start_forging(self.sc_nodes[index])
 
-        ######## RUN UNTIL NODE CREATORS MEMPOOLS ARE EMPTY ########
+        # Start timing
+        start_time = time.time()
 
-        # TODO Add maximum test run time to config, wait for time if not 0 or if 0 wait for mempool to be empty
-        # Wait until mempool empty - this should also mean that other nodes mempools are empty (differences will be performance issues)
-        end_test = False
-        while(not end_test):
-            end_test = True
-            for creator_node in txs_creators:
-                if (len(allTransactions(creator_node, False)["transactionIds"]) != 0):
-                    end_test = False
-                    break
-            sleep(self.block_rate - 2)
+        if self.test_type == TestType.Mempool:
+            ######## RUN UNTIL NODE CREATORS MEMPOOLS ARE EMPTY ########
+            # Wait until mempool empty - this should also mean that other nodes mempools are empty (differences will be performance issues)
+            end_test = False
+            while not end_test:
+                end_test = True
+                for creator_node in txs_creators:
+                    if len(allTransactions(creator_node, False)["transactionIds"]) != 0:
+                        end_test = False
+                        break
+                # TODO: Check this sleep is efficient
+                sleep(self.block_rate - 2)
+
+        elif self.test_type == TestType.Timed:
+            ######## RUN UNTIL TIMER END ########
+            test_run_time = self.perf_data["test_run_time"]
+            while time.time() - start_time < test_run_time:
+                sleep(1)
 
         # stop forging
         for index, node in enumerate(self.sc_nodes_list):
@@ -303,18 +336,21 @@ class PerformanceTest(SidechainTestFramework):
                 print(f"Stopping Forger Node{index}")
                 http_stop_forging(self.sc_nodes[index])
 
-        sleep(3)
-        
-        # Get information from all nodes
-        for i in range (len(self.sc_nodes)):
+        # Get end time
+        end_time = time.time()
 
+        sleep(3)
+
+        # Get information from all nodes
+        for i in range(len(self.sc_nodes)):
             # Retrieve node mempool
             mempool_transactions = allTransactions(self.sc_nodes[i], False)["transactionIds"]
             number_of_transactions = len(mempool_transactions)
             print(f"Node {i} mempool transactions remaining: {number_of_transactions}")
-            # TODO: print mempool of each node if we're running timed test
-            #if number_of_transactions > 0:
-                #print(f"Node {i} mempool transactions: {mempool_transactions}")
+            # Print mempool of each node if we're running timed test
+            if self.test_type == TestType.Timed:
+                if number_of_transactions > 0:
+                    print(f"Node {i} mempool transactions: {mempool_transactions}")
 
         # Take blockhash of every node and verify they are all the same
         test_end_block_ids = self.get_best_node_block_ids()
@@ -329,8 +365,35 @@ class PerformanceTest(SidechainTestFramework):
         # TODO: Run test for x minutes for x amount of transactions, take transactions in each block and divide by block_rate or 60s??
         # call block_findById starting with the last block take number of transactions and see if block id is equal to the block before we started the test
         # Otherwise call block_findById with field parentId which is the block before
+        if self.test_type == TestType.Timed:
 
-        #TODO: number of tx mined (prefilled mempool transactions - tx inserted into block) - only for timed test run
+            for node in self.sc_nodes:
+                node_index = self.sc_nodes.index(node)
+                start_block_id = test_start_block_ids[node_index]
+                current_block_id = test_end_block_ids[node_index]
+                total_mined_transactions = 0
+                # We don't count the first block, so start from 1
+                total_blocks_for_node = 1
+                print("### Node" + str(node_index) + " Test Results ###")
+                print("Node" + str(node_index) + " Mempool remaining transactions: " + str(
+                    len(allTransactions(node, False)["transactionIds"])))
+                while current_block_id != start_block_id:
+                    number_of_transactions_mined = len(
+                        self.get_node_mined_transactions_by_block_id(node, current_block_id))
+                    total_mined_transactions += number_of_transactions_mined
+                    print("Node" + str(node_index) + "- BlockId " + str(current_block_id) + " Mined Transactions: " +
+                          str(number_of_transactions_mined))
+                    total_blocks_for_node += 1
+                    current_block_id = http_block_findById(node, current_block_id)["block"]["parentId"]
+                print("Node" + str(node_index) + " Total Blocks: " + str(total_blocks_for_node))
+                print("Node" + str(node_index) + " Total Transactions Mined: " + str(total_mined_transactions))
+                print(f"Transactions NOT mined: {self.initial_txs - total_mined_transactions}")
+            print(f"\n###\nTEST RUN TIME: {end_time - start_time} seconds\n###")
+
+        # TODO: number of tx mined (prefilled mempool transactions - tx inserted into block) - only for timed test run
+        # if self.test_type == TestType.Timed:
+        #     for node in self.sc_nodes:
+        #         print("Node" + self.sc_nodes.index(node) + "Mempool remaining transactions: + " + str(len(allTransactions(node, False)["transactionIds"])))
 
 
 if __name__ == "__main__":
