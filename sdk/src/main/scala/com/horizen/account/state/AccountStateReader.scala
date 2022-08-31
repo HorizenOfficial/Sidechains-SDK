@@ -1,5 +1,6 @@
 package com.horizen.account.state
 
+import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.evm.interop.EvmLog
 import com.horizen.state.BaseStateReader
 
@@ -23,4 +24,6 @@ trait AccountStateReader extends BaseStateReader {
 
   def getBaseFee: BigInteger
   def getBlockGasLimit: BigInteger
+  def getTxFeesPerGas(tx: EthereumTransaction) : (BigInteger, BigInteger)
+
 }

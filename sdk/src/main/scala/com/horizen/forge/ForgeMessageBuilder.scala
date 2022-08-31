@@ -68,8 +68,6 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
         SidechainBlock.BLOCK_VERSION,
         timestamp,
         mainchainBlockReferencesData,
-        // TODO check, why this works?
-        //  sidechainTransactions.map(asInstanceOf),
         sidechainTransactions.map(x => x.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]),
         mainchainHeaders,
         ommers,
@@ -78,8 +76,6 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
         vrfProof,
         forgingStakeInfoMerklePath,
         new Array[Byte](32), // dummy feePaymentsHash value
-        // TODO check, why this works?
-        //companion.asInstanceOf)
         companion.asInstanceOf[SidechainTransactionsCompanion]
       ) match {
         case Success(blockTemplate) => blockTemplate.feeInfo
@@ -99,8 +95,6 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       SidechainBlock.BLOCK_VERSION,
       timestamp,
       mainchainBlockReferencesData,
-      // TODO check, why this works?
-      //  sidechainTransactions.map(asInstanceOf),
       sidechainTransactions.map(x => x.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]),
       mainchainHeaders,
       ommers,
@@ -109,8 +103,6 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       vrfProof,
       forgingStakeInfoMerklePath,
       feePaymentsHash,
-      // TODO check, why this works?
-      //companion.asInstanceOf)
       companion.asInstanceOf[SidechainTransactionsCompanion])
   }
 

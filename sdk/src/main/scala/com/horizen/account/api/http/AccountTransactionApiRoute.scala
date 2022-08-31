@@ -298,17 +298,21 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       applyOnNodeView { sidechainNodeView =>
         val valueInWei = ZenWeiConverter.convertZenniesToWei(body.forgerStakeInfo.value)
 
-        // TODO actual gas implementation
-        var maxFeePerGas = BigInteger.ONE
-        var maxPriorityFeePerGas = BigInteger.ONE
-        var gasLimit = BigInteger.ONE
+        // default gas related params
+        val baseFee = sidechainNodeView.getNodeState.getBaseFee
+        var maxPriorityFeePerGas = BigInteger.valueOf(120)
+        var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
+        var gasLimit = GasUtil.TxGasContractCreation
+
         if (body.gasInfo.isDefined) {
           maxFeePerGas = body.gasInfo.get.maxFeePerGas
           maxPriorityFeePerGas = body.gasInfo.get.maxPriorityFeePerGas
           gasLimit = body.gasInfo.get.gasLimit
         }
-        //TODO Probably getFittingSecret would need to take into account also gas
-        val secret = getFittingSecret(sidechainNodeView, None, valueInWei)
+        //getFittingSecret needs to take into account also gas
+        val secret = getFittingSecret(sidechainNodeView, None,
+          valueInWei.add(maxFeePerGas.multiply(gasLimit)))
+
         secret match {
           case Some(secret) =>
 
@@ -340,17 +344,19 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       // lock the view and try to create CoreTransaction
       applyOnNodeView { sidechainNodeView =>
         val valueInWei = BigInteger.ZERO
-        // TODO actual gas implementation
-        var maxFeePerGas = BigInteger.ONE
-        var maxPriorityFeePerGas = BigInteger.ONE
-        var gasLimit = BigInteger.ONE
+        // default gas related params
+        val baseFee = sidechainNodeView.getNodeState.getBaseFee
+        var maxPriorityFeePerGas = BigInteger.valueOf(120)
+        var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
+        var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
+
         if (body.gasInfo.isDefined) {
           maxFeePerGas = body.gasInfo.get.maxFeePerGas
           maxPriorityFeePerGas = body.gasInfo.get.maxPriorityFeePerGas
           gasLimit = body.gasInfo.get.gasLimit
         }
-        //TODO Probably getFittingSecret would need to take into account also gas
-        val secret = getFittingSecret(sidechainNodeView, None, valueInWei)
+        //getFittingSecret needs to take into account only gas
+        val secret = getFittingSecret(sidechainNodeView, None, (maxFeePerGas.multiply(gasLimit)))
         secret match {
           case Some(txCreatorSecret) =>
             val to = BytesUtils.toHexString(ForgerStakeMsgProcessor.ForgerStakeSmartContractAddress)

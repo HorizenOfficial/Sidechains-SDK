@@ -8,7 +8,7 @@ import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceip
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress}
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.{Account, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
+import com.horizen.account.utils.{Account, AccountBlockFeeInfo, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
 import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput, WithdrawalEpochCertificate}
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.evm.interop.EvmLog
@@ -16,7 +16,7 @@ import com.horizen.evm.{ResourceHandle, StateDB, StateStorageStrategy}
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.StateView
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
-import com.horizen.utils.{BlockFeeInfo, BytesUtils, WithdrawalEpochInfo}
+import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
 import scorex.core.VersionTag
 import scorex.util.ScorexLogging
 
@@ -252,8 +252,12 @@ class AccountStateView(
   override def addCertificate(cert: WithdrawalEpochCertificate): Unit =
     metadataStorageView.updateTopQualityCertificate(cert)
 
-  override def addFeeInfo(info: BlockFeeInfo): Unit =
-    metadataStorageView.addFeePayment(info)
+  override def addFeeInfo(info: AccountBlockFeeInfo): Unit = {
+    if (info.hasFeeContribution()) {
+      // do not store empty values which can arise in sc blocks without any tx
+      metadataStorageView.addFeePayment(info)
+    }
+  }
 
   override def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo): Unit =
     metadataStorageView.updateWithdrawalEpochInfo(withdrawalEpochInfo)
@@ -292,9 +296,17 @@ class AccountStateView(
 
   override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = metadataStorageView.getConsensusEpochNumber
 
-  override def getFeePayments(withdrawalEpoch: Int): Seq[BlockFeeInfo] =
-    metadataStorageView.getFeePayments(withdrawalEpoch)
+  override def getFeePayments(withdrawalEpoch: Int, blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None): Seq[AccountBlockFeeInfo] = {
+    var blockFeeInfoSeq = metadataStorageView.getFeePayments(withdrawalEpoch)
+    blockToAppendFeeInfo.foreach(blockFeeInfo =>
+      if (blockFeeInfo.hasFeeContribution() ) blockFeeInfoSeq = blockFeeInfoSeq :+ blockFeeInfo)
 
+    if(blockFeeInfoSeq.isEmpty) {
+      return Seq()
+    }
+
+    blockFeeInfoSeq
+  }
 
   override def getHeight: Int = metadataStorageView.getHeight
 
@@ -334,7 +346,16 @@ class AccountStateView(
 
   // TODO: get baseFee for the block header
   // TODO: currently a non-zero baseFee makes all the python tests fail, because they do not consider spending fees
-  override def getBaseFee: BigInteger = BigInteger.valueOf(0)
+  override def getBaseFee: BigInteger = BigInteger.valueOf(333000)
+
+  def getTxFeesPerGas(tx: EthereumTransaction) : (BigInteger, BigInteger) = {
+    if (tx.isEIP1559) {
+      val baseFee = getBaseFee
+      (baseFee, tx.getMaxPriorityFeePerGas)
+    } else {
+      (BigInteger.ZERO, tx.getGasPrice)
+    }
+  }
 
   // TODO: get gas limit from current block header
   override def getBlockGasLimit: BigInteger = BigInteger.valueOf(Account.GAS_LIMIT)

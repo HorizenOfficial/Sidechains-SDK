@@ -3,16 +3,18 @@ package com.horizen.account.state
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountState
+import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils}
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.evm._
 import com.horizen.evm.interop.EvmLog
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
-import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, ClosableResourceHandler, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import org.web3j.crypto.ContractUtils.generateContractAddress
 import scorex.core._
 import scorex.core.transaction.state.TransactionValidation
@@ -49,14 +51,8 @@ class AccountState(val params: NetworkParams,
     }
   }
 
-  def getTxFeesPerGas(tx: EthereumTransaction) : (BigInteger, BigInteger) = {
-    if (tx.isEIP1559) {
-      val baseFee = getBaseFee
-      (baseFee, tx.getMaxPriorityFeePerGas)
-    } else {
-      (BigInteger.ZERO, tx.getGasPrice)
-    }
-  }
+  override def getTxFeesPerGas(tx: EthereumTransaction) : (BigInteger, BigInteger) =
+     using(getView)(_.getTxFeesPerGas(tx))
 
   // Modifiers:
   override def applyModifier(mod: AccountBlock): Try[AccountState] = Try {
@@ -66,7 +62,9 @@ class AccountState(val params: NetworkParams,
     using(getView) { stateView =>
 
       if (stateView.hasCeased) {
-        throw new IllegalStateException(s"Can't apply Block ${mod.id}, because the sidechain has ceased.")
+        val errMsg = s"Can't apply Block ${mod.id}, because the sidechain has ceased."
+        log.error(errMsg)
+        throw new IllegalStateException(errMsg)
       }
 
       // Check Txs semantic validity first
@@ -105,24 +103,6 @@ class AccountState(val params: NetworkParams,
 
       val consensusEpochNum: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)
       stateView.updateConsensusEpochNumber(consensusEpochNum)
-
-      // If SC block has reached the end of the withdrawal epoch -> fee payments expected to be produced.
-      // Verify that Forger assumed the same fees to be paid as the current node does.
-      // If SC block is in the middle of the withdrawal epoch -> no fee payments hash expected to be defined.
-      val isWithdrawalEpochFinished: Boolean = WithdrawalEpochUtils.isEpochLastIndex(modWithdrawalEpochInfo, params)
-      if (isWithdrawalEpochFinished) {
-        // Note: that current block fee info is already in the view
-        // TODO: get the list of block info and recalculate the root of it
-        val feePayments = stateView.getFeePayments(modWithdrawalEpochInfo.epoch)
-        val feePaymentsHash: Array[Byte] = new Array[Byte](32) // TODO: analog of FeePaymentsUtils.calculateFeePaymentsHash(feePayments)
-
-        if (!mod.feePaymentsHash.sameElements(feePaymentsHash))
-          throw new IllegalArgumentException(s"Block ${mod.id} has feePaymentsHash different to expected one: ${BytesUtils.toHexString(feePaymentsHash)}")
-      } else {
-        // No fee payments expected
-        if (!mod.feePaymentsHash.sameElements(FeePaymentsUtils.DEFAULT_FEE_PAYMENTS_HASH))
-          throw new IllegalArgumentException(s"Block ${mod.id} has feePaymentsHash ${BytesUtils.toHexString(mod.feePaymentsHash)} defined when no fee payments expected.")
-      }
 
       for (mcBlockRefData <- mod.mainchainBlockReferencesData) {
         stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
@@ -185,20 +165,44 @@ class AccountState(val params: NetworkParams,
 
       log.debug(s"cumBaseFee=$cumBaseFee, cumForgerTips=$cumForgerTips")
 
-      // TODO: calculate and update fee info.
-      // TODO new case class AccountBlockFeeInfo with both cum contributions as input param and forger address as well
       // The two contributions will go like this:
       // - base -> forgers pool
       // - tip -> forger
-      // the distributions will work similarly to utxo model (which has 30%  - 70%)
-      // Note: we should save the total gas paid and the forgerAddress
-      stateView.addFeeInfo(BlockFeeInfo(0L, mod.header.forgingStakeInfo.blockSignPublicKey))
+      stateView.addFeeInfo(AccountBlockFeeInfo(cumBaseFee, cumForgerTips, mod.header.forgerAddress))
 
       // check stateRoot and receiptRoot against block header
       mod.verifyReceiptDataConsistency(receiptList.map(_.consensusDataReceipt))
 
       val stateRoot = stateView.getIntermediateRoot
       mod.verifyStateRootDataConsistency(stateRoot)
+
+      // If SC block has reached the end of the withdrawal epoch -> fee payments expected to be produced.
+      // If SC block is in the middle of the withdrawal epoch -> no fee payments hash expected to be defined.
+      val isWithdrawalEpochFinished: Boolean = WithdrawalEpochUtils.isEpochLastIndex(modWithdrawalEpochInfo, params)
+      if (isWithdrawalEpochFinished) {
+        // current block fee info is already in the view therefore we pass None as second param
+        val feePayments = stateView.getFeePayments(modWithdrawalEpochInfo.epoch, None)
+
+        // Verify that Forger assumed the same fees to be paid as the current node does.
+        val feePaymentsHash: Array[Byte] = AccountFeePaymentsUtils.calculateFeePaymentsHash(feePayments)
+
+        if (!mod.feePaymentsHash.sameElements(feePaymentsHash)) {
+          val errMsg = s"Block ${mod.id}: computed feePaymentsHash ${BytesUtils.toHexString(feePaymentsHash)} is different from the one in the block"
+          log.error(errMsg)
+          throw new IllegalArgumentException(errMsg)
+        }
+
+        // add rewards to forgers balance
+        val forgersPoolRewardsSeq : Seq[(AddressProposition, BigInteger)] = AccountFeePaymentsUtils.getForgersRewards(feePayments)
+        forgersPoolRewardsSeq.foreach( pair => stateView.addBalance(pair._1.address(), pair._2))
+
+      } else {
+        // No fee payments expected
+        if (!mod.feePaymentsHash.sameElements(AccountFeePaymentsUtils.DEFAULT_ACCOUNT_FEE_PAYMENTS_HASH)) {
+          val errMsg = s"Block ${mod.id} has feePaymentsHash ${BytesUtils.toHexString(mod.feePaymentsHash)} defined when no fee payments expected."
+          throw new IllegalArgumentException(errMsg)
+        }
+      }
 
       // eventually, store full receipts in the metaDataStorage indexed by txid
       stateView.updateTransactionReceipts(receiptList)
@@ -320,7 +324,7 @@ class AccountState(val params: NetworkParams,
     stateMetadataStorage.getConsensusEpochNumber
   }
 
-  override def getFeePayments(withdrawalEpoch: Int): Seq[BlockFeeInfo] = {
+  override def getFeePayments(withdrawalEpoch: Int, blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None): Seq[AccountBlockFeeInfo] = {
     stateMetadataStorage.getFeePayments(withdrawalEpoch)
   }
 
