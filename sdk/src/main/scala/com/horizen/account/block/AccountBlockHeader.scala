@@ -19,7 +19,6 @@ import scorex.crypto.hash.Blake2b256
 import scorex.util.ModifierId
 import scorex.util.serialization.{Reader, Writer}
 
-import java.math.BigInteger
 import scala.util.{Failure, Success, Try}
 
 @JsonView(Array(classOf[Views.Default]))
