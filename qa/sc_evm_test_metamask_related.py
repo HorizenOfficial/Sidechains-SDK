@@ -401,19 +401,31 @@ class SCEvmMetamaskTest(SidechainTestFramework):
         eoa_transfer(sc_node, evm_address, other_address, transfer_amount, static_call=True, generate_block=False)
         eoa_transfer(sc_node, evm_address, other_address, transfer_amount, call_method=CallMethod.RPC_LEGACY)
 
-        eoa_assert_native_balance(sc_node, evm_address, initial_balance - transfer_amount)
+        current_balance = int(sc_node.rpc_eth_getBalance(str(evm_address), "latest")['result'], 16)
+        total_gas_used = initial_balance - (current_balance + transfer_amount)
+
+        eoa_assert_native_balance(sc_node, evm_address, current_balance - (transfer_amount + total_gas_used))
         eoa_assert_native_balance(sc_node, other_address, transfer_amount)
 
         eoa_transfer(sc_node, evm_address, other_address, transfer_amount, static_call=True, generate_block=False)
         eoa_transfer(sc_node, evm_address, other_address, transfer_amount, call_method=CallMethod.RPC_EIP155)
 
-        eoa_assert_native_balance(sc_node, evm_address, initial_balance - 2 * transfer_amount)
+        total_gas_used += current_balance - (
+                int(sc_node.rpc_eth_getBalance(str(evm_address), "latest")['result'], 16) + transfer_amount)
+        current_balance = int(sc_node.rpc_eth_getBalance(str(evm_address), "latest")['result'], 16)
+
+        eoa_assert_native_balance(sc_node, evm_address,
+                                  initial_balance - (2 * transfer_amount + total_gas_used))
         eoa_assert_native_balance(sc_node, other_address, 2 * transfer_amount)
 
         eoa_transfer(sc_node, evm_address, other_address, transfer_amount, static_call=True, generate_block=False)
         eoa_transfer(sc_node, evm_address, other_address, transfer_amount, call_method=CallMethod.RPC_EIP1559)
 
-        eoa_assert_native_balance(sc_node, evm_address, initial_balance - 3 * transfer_amount)
+        total_gas_used += current_balance - (
+                int(sc_node.rpc_eth_getBalance(str(evm_address), "latest")['result'], 16) + transfer_amount)
+        current_balance = int(sc_node.rpc_eth_getBalance(str(evm_address), "latest")['result'], 16)
+
+        eoa_assert_native_balance(sc_node, evm_address, initial_balance - (3 * transfer_amount + total_gas_used))
         eoa_assert_native_balance(sc_node, other_address, 3 * transfer_amount)
 
         zero_address = '0x0000000000000000000000000000000000000000'
@@ -632,6 +644,5 @@ class SCEvmMetamaskTest(SidechainTestFramework):
                                     initial_balance - transfer_amount)
         res = compare_erc20_balance(sc_node, smart_contract, smart_contract_address, other_address, transfer_amount)
 
-
-if __name__ == "__main__":
-    SCEvmMetamaskTest().main()
+        if __name__ == "__main__":
+            SCEvmMetamaskTest().main()
