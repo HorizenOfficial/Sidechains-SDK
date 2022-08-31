@@ -1,7 +1,6 @@
 package com.horizen.account.receipt
 
 import scorex.crypto.hash.Keccak256
-
 import com.horizen.account.receipt.LogsBloom.BLOOM_FILTER_LENGTH
 import com.horizen.evm.interop.EvmLog
 import com.horizen.utils.BytesUtils
@@ -33,11 +32,20 @@ class LogsBloom() {
       })
   }
 
+  def setBytes(data: Array[Byte]): Unit = {
+    require(bloomFilter.length == BLOOM_FILTER_LENGTH)
+
+    bloomFilter.zipWithIndex
+      .foreach({ case (bloomByte, i) =>
+        bloomFilter(i) = (bloomByte | data(i)).toByte
+      })
+  }
+
   def contains(data: Array[Byte]): Boolean = {
     val (dataIndexes, dataValues) = getBloomFilterValues(data)
 
     dataIndexes.zipWithIndex.foreach({ case (dataIndex, i) =>
-      if (bloomFilter(dataIndex) != dataValues(i)) {
+      if (bloomFilter(dataIndex).&(dataValues(i)) != dataValues(i)) {
         return false
       }
     })
