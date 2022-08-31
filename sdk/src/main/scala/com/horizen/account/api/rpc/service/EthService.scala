@@ -24,7 +24,7 @@ import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.Transaction
 import com.horizen.transaction.exception.TransactionSemanticValidityException
-import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
+import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
 import org.web3j.crypto.Sign.SignatureData
 import org.web3j.crypto.{SignedRawTransaction, TransactionEncoder}
 import org.web3j.utils.Numeric
@@ -287,11 +287,17 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   }
 
   private def getStateViewAtTag[A](nodeView: NV, tag: String)(fun: (AccountStateView, BlockContext) ⇒ A): A = {
-    nodeView.history.getBlockById(getBlockIdByTag(nodeView, tag)).asScala match {
-      case Some(block) => using(nodeView.state.getStateDbViewFromRoot(block.header.stateRoot)) {
-        // TODO: get correct block and epoch numbers
-        tagStateView => fun(tagStateView, new BlockContext(block.header, 0, 0, 0))
-      }
+    val blockId = getBlockIdByTag(nodeView, tag)
+    nodeView.history.getBlockById(blockId).asScala match {
+      case Some(block) =>
+        val blockInfo = nodeView.history.blockInfoById(ModifierId(blockId))
+        val blockContext = new BlockContext(
+          block.header,
+          blockInfo.height,
+          TimeToEpochUtils.timeStampToEpochNumber(networkParams, blockInfo.timestamp),
+          blockInfo.withdrawalEpochInfo.epoch
+        )
+        using(nodeView.state.getStateDbViewFromRoot(block.header.stateRoot))(fun(_, blockContext))
       case None => throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "Invalid block tag parameter."))
     }
   }
