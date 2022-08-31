@@ -172,6 +172,9 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
         val future = sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)
         Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
           case Success(_) =>
+            if (body.reindex.isDefined && body.reindex.get){
+              sidechainNodeViewReindexer ? StartReindex()
+            }
             ApiResponseUtil.toResponse(RespCreatePrivateKey(secret.publicImage()))
           case Failure(e) =>
             ApiResponseUtil.toResponse(ErrorSecretAlreadyPresent("Failed to add the key.", JOptional.of(e)))
@@ -268,7 +271,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
    */
   def importSecrets: Route = (post & path("importSecrets")) {
     withAuth {
-      entity(as[ReqDumpWallet]) { body =>
+      entity(as[ReqImportWallet]) { body =>
         val reader = new Scanner(new File(body.path))
 
         //First collect every secrets and verify that their public image match with the corresponding public key in the file.
@@ -314,6 +317,9 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
                 errorDetail.add(ImportSecretsDetail(secret._2, e.getMessage))
             }
           })
+          if (body.reindex.isDefined && body.reindex.get && successfullyAdded  > 0){
+            sidechainNodeViewReindexer ? StartReindex()
+          }
           ApiResponseUtil.toResponse(RespImportSecrets(successfullyAdded, failedToAdd, errorDetail))
         }
       }
@@ -369,7 +375,7 @@ object SidechainWalletRestScheme {
   private[api] case class RespAllPublicKeys(propositions: Seq[Proposition]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqImportSecret(privKey: String) {
+  private[api] case class ReqImportSecret(privKey: String, reindex: Option[Boolean]) {
     require(privKey.nonEmpty, "Private key cannot be empty!")
   }
 
@@ -383,6 +389,11 @@ object SidechainWalletRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqDumpWallet(path: String) {
+    require(path.nonEmpty, "Path cannot be empty!")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqImportWallet(path: String, reindex: Option[Boolean]) {
     require(path.nonEmpty, "Path cannot be empty!")
   }
 
