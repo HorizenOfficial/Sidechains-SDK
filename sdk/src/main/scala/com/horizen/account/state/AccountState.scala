@@ -6,6 +6,7 @@ import com.horizen.account.node.NodeAccountState
 import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.account.utils.Account
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.evm._
@@ -122,16 +123,12 @@ class AccountState(val params: NetworkParams,
 
       // get also list of receipts, useful for computing the receiptRoot hash
       val receiptList = new ListBuffer[EthereumReceipt]()
-      val blockNumber = stateView.getHeight + 1
+      val blockNumber = stateMetadataStorage.getHeight + 1
       val blockHash = idToBytes(mod.id)
       var cumGasUsed = BigInteger.ZERO
-      val blockGasPool = new GasPool(stateView.getBlockGasLimit)
-      val header = mod.header
+      val blockGasPool = new GasPool(BigInteger.valueOf(mod.header.gasLimit))
       val blockContext = new BlockContext(
-        header.forgerAddress.address,
-        header.timestamp,
-        header.baseFee,
-        header.gasLimit,
+        mod.header,
         blockNumber,
         consensusEpochNumber,
         modWithdrawalEpochInfo.epoch
@@ -311,10 +308,6 @@ class AccountState(val params: NetworkParams,
     stateMetadataStorage.getFeePayments(withdrawalEpoch)
   }
 
-  override def getHeight: Int = {
-    stateMetadataStorage.getHeight
-  }
-
   private def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = using(getView)(_.getOrderedForgingStakeInfoSeq)
 
   // Returns lastBlockInEpoch and ConsensusEpochInfo for that epoch
@@ -357,24 +350,23 @@ class AccountState(val params: NetworkParams,
 
   override def getCode(address: Array[Byte]): Array[Byte] = using(getView)(_.getCode(address))
 
-  override def getBaseFee: BigInteger = using(getView)(_.getBaseFee)
-
-  override def getBlockGasLimit: BigInteger = using(getView)(_.getBlockGasLimit)
-
   override def validate(tx: SidechainTypes#SCAT): Try[Unit] = Try {
     tx.semanticValidity()
 
     if (tx.isInstanceOf[EthereumTransaction]) {
 
       val ethTx = tx.asInstanceOf[EthereumTransaction]
-      val blockGasPool = new GasPool(getBlockGasLimit)
+      val blockGasLimit = Account.GAS_LIMIT
+      val blockGasPool = new GasPool(BigInteger.valueOf(blockGasLimit))
       val blockContext = new BlockContext(
         // use the null address as forger
         new Array[Byte](32),
-        // TODO: what timestamp do we use here? just use "now()" or can we get the timestamp of the current tip
+        // TODO: what timestamp do we use here? just use "now()" or can we get the timestamp of the last block?
         0,
-        getBaseFee.longValueExact(),
-        getBlockGasLimit.longValueExact(),
+        // TODO: what baseFee do we use here? can we get the baseFee of the last block?
+        0,
+        // TODO: can we get the gas limit of the last block?
+        blockGasLimit,
         stateMetadataStorage.getHeight,
         // TODO: can the consensus epoch number be None here?
         stateMetadataStorage.getConsensusEpochNumber.get,

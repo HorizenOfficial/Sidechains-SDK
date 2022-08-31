@@ -34,7 +34,7 @@ public class EvmMessageProcessor implements MessageProcessor {
         var context = new EvmContext();
         context.coinbase = Address.FromBytes(blockContext.forgerAddress);
         context.time = BigInteger.valueOf(blockContext.timestamp);
-        context.baseFee = BigInteger.valueOf(blockContext.baseFee);
+        context.baseFee = blockContext.baseFee;
         context.gasLimit = BigInteger.valueOf(blockContext.blockGasLimit);
         context.blockNumber = BigInteger.valueOf(blockContext.blockNumber);
         // execute EVM

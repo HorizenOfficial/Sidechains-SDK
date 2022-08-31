@@ -78,8 +78,8 @@ class StateTransition(
       throw SenderNotEoaException(sender, view.getCodeHash(sender))
 
     // TODO: fee checks if message is "fake" (RPC calls)
-    if (msg.getGasFeeCap.compareTo(view.getBaseFee) < 0)
-      throw FeeCapTooLowException(sender, msg.getGasFeeCap, view.getBaseFee)
+    if (msg.getGasFeeCap.compareTo(blockContext.baseFee) < 0)
+      throw FeeCapTooLowException(sender, msg.getGasFeeCap, blockContext.baseFee)
   }
 
   private def buyGas(msg: Message): GasPool = {

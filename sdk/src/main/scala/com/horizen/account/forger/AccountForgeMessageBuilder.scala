@@ -20,15 +20,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils.{
-  ByteArrayWrapper,
-  ClosableResourceHandler,
-  DynamicTypedSerializer,
-  ForgingStakeMerklePathInfo,
-  ListSerializer,
-  MerklePath,
-  MerkleTree
-}
+import com.horizen.utils.{ByteArrayWrapper, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree}
 import scorex.core.NodeViewModifier
 import scorex.core.block.Block.{BlockId, Timestamp}
 import scorex.util.{ModifierId, ScorexLogging}
@@ -36,6 +28,7 @@ import scorex.util.{ModifierId, ScorexLogging}
 import java.math.BigInteger
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
+import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
 class AccountForgeMessageBuilder(
@@ -103,7 +96,7 @@ class AccountForgeMessageBuilder(
       timestamp,
       baseFee,
       gasLimit,
-      nodeView.state.getHeight + 1,
+      nodeView.history.getBlockHeightById(parentId).asScala.map(height => height + 1).getOrElse(0),
       nextConsensusEpochNumber,
       nodeView.state.getWithdrawalEpochInfo.epoch
     )

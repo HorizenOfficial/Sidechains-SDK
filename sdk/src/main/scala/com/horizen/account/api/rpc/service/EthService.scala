@@ -110,10 +110,10 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   }
 
   private def doCall[A](nodeView: NV, params: TransactionArgs, tag: String)(fun: (Array[Byte], AccountStateView) ⇒ A): A = {
-    getStateViewAtTag(nodeView, tag) { tagStateView =>
+    getStateViewAtTag(nodeView, tag) { (tagStateView, blockContext) =>
       try {
-        val msg = params.toMessage(tagStateView.getBaseFee)
-        fun(tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit)), tagStateView)
+        val msg = params.toMessage(blockContext.baseFee)
+        fun(tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit), blockContext), tagStateView)
       } catch {
         // throw on execution errors, also include evm revert reason if possible
         case reverted: ExecutionRevertedException => throw new RpcException(new RpcError(
@@ -205,9 +205,9 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
       val lowBound = GasUtil.TxGas.subtract(BigInteger.ONE)
       // Determine the highest gas limit can be used during the estimation.
       var highBound = params.gas
-      getStateViewAtTag(nodeView, tag) { tagStateView =>
+      getStateViewAtTag(nodeView, tag) { (tagStateView, blockContext) =>
         if (highBound == null || highBound.compareTo(GasUtil.TxGas) < 0) {
-          highBound = tagStateView.getBlockGasLimit
+          highBound = BigInteger.valueOf(blockContext.blockGasLimit)
         }
         // Normalize the max fee per gas the call is willing to spend.
         var feeCap = BigInteger.ZERO
@@ -270,7 +270,7 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   @RpcOptionalParameters(1)
   def GetBalance(address: Address, tag: String): Quantity = {
     applyOnAccountView { nodeView =>
-      getStateViewAtTag(nodeView, tag) { tagStateView =>
+      getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
         new Quantity(tagStateView.getBalance(address.toBytes))
       }
     }
@@ -280,16 +280,17 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   @RpcOptionalParameters(1)
   def getTransactionCount(address: Address, tag: String): Quantity = {
     applyOnAccountView { nodeView =>
-      getStateViewAtTag(nodeView, tag) { tagStateView =>
+      getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
         new Quantity(tagStateView.getNonce(address.toBytes))
       }
     }
   }
 
-  private def getStateViewAtTag[A](nodeView: NV, tag: String)(fun: AccountStateView ⇒ A): A = {
+  private def getStateViewAtTag[A](nodeView: NV, tag: String)(fun: (AccountStateView, BlockContext) ⇒ A): A = {
     nodeView.history.getBlockById(getBlockIdByTag(nodeView, tag)).asScala match {
       case Some(block) => using(nodeView.state.getStateDbViewFromRoot(block.header.stateRoot)) {
-        tagStateView => fun(tagStateView)
+        // TODO: get correct block and epoch numbers
+        tagStateView => fun(tagStateView, new BlockContext(block.header, 0, 0, 0))
       }
       case None => throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "Invalid block tag parameter."))
     }
@@ -312,7 +313,7 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   @RpcMethod("eth_gasPrice")
   def gasPrice: Quantity = {
     applyOnAccountView { nodeView =>
-      getStateViewAtTag(nodeView, "latest") { tagStateView => new Quantity(tagStateView.getBaseFee) }
+      getStateViewAtTag(nodeView, "latest") { (_, blockContext) => new Quantity(blockContext.baseFee) }
     }
   }
 
@@ -368,7 +369,7 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   @RpcOptionalParameters(1)
   def getCode(address: Address, tag: String): String = {
     applyOnAccountView { nodeView =>
-      getStateViewAtTag(nodeView,tag) { tagStateView =>
+      getStateViewAtTag(nodeView,tag) { (tagStateView, _) =>
           val code = tagStateView.getCode(address.toBytes)
           if (code == null)
             "0x"

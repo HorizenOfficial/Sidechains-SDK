@@ -140,7 +140,7 @@ class AccountStateView(
 
     val ethTx = tx.asInstanceOf[EthereumTransaction]
     val txHash = BytesUtils.fromHexString(ethTx.id)
-    val msg = ethTx.asMessage(getBaseFee)
+    val msg = ethTx.asMessage(blockContext.baseFee)
 
     // Tx context for stateDB, to know where to keep EvmLogs
     setupTxContext(txHash, txIndex)
@@ -295,9 +295,6 @@ class AccountStateView(
   override def getFeePayments(withdrawalEpoch: Int): Seq[BlockFeeInfo] =
     metadataStorageView.getFeePayments(withdrawalEpoch)
 
-
-  override def getHeight: Int = metadataStorageView.getHeight
-
   // account specific getters
   override def getNonce(address: Array[Byte]): BigInteger = {
     stateDb.getNonce(address)
@@ -331,13 +328,6 @@ class AccountStateView(
   override def getStateDbHandle: ResourceHandle = stateDb
 
   override def getIntermediateRoot: Array[Byte] = stateDb.getIntermediateRoot
-
-  // TODO: get baseFee for the block header
-  // TODO: currently a non-zero baseFee makes all the python tests fail, because they do not consider spending fees
-  override def getBaseFee: BigInteger = BigInteger.valueOf(0)
-
-  // TODO: get gas limit from current block header
-  override def getBlockGasLimit: BigInteger = BigInteger.valueOf(Account.GAS_LIMIT)
 
   def getRefund: BigInteger = stateDb.getRefund
 
