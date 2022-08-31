@@ -271,6 +271,7 @@ object EthereumConsensusDataReceipt {
     var bloomFilter = Array.fill[Byte](256)(0)
 
     evmLog.foreach(log => {
+      bloomFilter = addDataToBloomFilter(bloomFilter, log.address.toBytes)
       log.topics.foreach(topic => {
         bloomFilter = addDataToBloomFilter(bloomFilter, topic.toBytes)
       })
