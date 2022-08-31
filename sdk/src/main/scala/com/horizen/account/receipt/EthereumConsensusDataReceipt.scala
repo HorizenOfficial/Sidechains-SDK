@@ -225,15 +225,6 @@ object EthereumConsensusDataReceipt {
     result
   }
 
-  def bytesToShort(byte1: Byte, byte2: Byte): Short = {
-    ByteBuffer
-      .allocate(2)
-      .order(ByteOrder.BIG_ENDIAN)
-      .put(byte1)
-      .put(byte2)
-      .getShort(0)
-  }
-
   def getBloomFilterValues(data: Array[Byte]) = {
     // Copy first 3 pairs of bytes to hashBuffer
     val hashBuffer = Keccak256.hash(data)
@@ -245,11 +236,20 @@ object EthereumConsensusDataReceipt {
 
     // Calculate byte indexes
     val i1 =
-      256 - ((bytesToShort(hashBuffer(0), hashBuffer(1)) & 0x7ff) >> 3) - 1
+      256 - ((BytesUtils.getShort(
+        Array[Byte](hashBuffer(0), hashBuffer(1)),
+        0
+      ) & 0x7ff) >> 3) - 1
     val i2 =
-      256 - ((bytesToShort(hashBuffer(2), hashBuffer(3)) & 0x7ff) >> 3) - 1
+      256 - ((BytesUtils.getShort(
+        Array[Byte](hashBuffer(2), hashBuffer(3)),
+        0
+      ) & 0x7ff) >> 3) - 1
     val i3 =
-      256 - ((bytesToShort(hashBuffer(4), hashBuffer(5)) & 0x7ff) >> 3) - 1
+      256 - ((BytesUtils.getShort(
+        Array[Byte](hashBuffer(4), hashBuffer(5)),
+        0
+      ) & 0x7ff) >> 3) - 1
 
     (i1, v1, i2, v2, i3, v3)
   }
