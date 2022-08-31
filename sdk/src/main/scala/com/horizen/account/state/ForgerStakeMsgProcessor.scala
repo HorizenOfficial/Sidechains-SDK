@@ -360,7 +360,7 @@ object ForgerStakeMsgProcessor {
   val LinkedListTipKey: Array[Byte] = Blake2b256.hash("Tip")
   val LinkedListNullValue: Array[Byte] = Blake2b256.hash("Null")
 
-  val GetListOfForgersCmd: String = getABIMethodId("getAllForgersStakes")
+  val GetListOfForgersCmd: String = getABIMethodId("getAllForgersStakes()")
   val AddNewStakeCmd: String = getABIMethodId("delegate(bytes32,bytes32,bytes1,address)")
   val RemoveStakeCmd: String = getABIMethodId("withdraw(bytes32,bytes1,bytes32,bytes32)")
 
