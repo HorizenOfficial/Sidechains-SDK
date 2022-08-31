@@ -94,7 +94,7 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
           _.asInstanceOf[EthereumTransaction]
         }
         new EthereumBlock(
-          Numeric.prependHexPrefix(Integer.toHexString(nodeView.history.getBlockHeight(blockId).get())),
+          Numeric.prependHexPrefix(Integer.toHexString(nodeView.history.getBlockHeightById(blockId).get())),
           Numeric.prependHexPrefix(blockId),
           if (!hydratedTx) {
             transactions.map(tx => Numeric.prependHexPrefix(tx.id)).toList.asJava
