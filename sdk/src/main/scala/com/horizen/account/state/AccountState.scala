@@ -94,8 +94,8 @@ class AccountState(val params: NetworkParams,
       // Update view with the block info
       stateView.updateWithdrawalEpochInfo(modWithdrawalEpochInfo)
 
-      val consensusEpochNum: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)
-      stateView.updateConsensusEpochNumber(consensusEpochNum)
+      val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)
+      stateView.updateConsensusEpochNumber(consensusEpochNumber)
 
       // If SC block has reached the end of the withdrawal epoch -> fee payments expected to be produced.
       // Verify that Forger assumed the same fees to be paid as the current node does.
@@ -124,11 +124,21 @@ class AccountState(val params: NetworkParams,
       val receiptList = new ListBuffer[EthereumReceipt]()
       val blockNumber = stateView.getHeight + 1
       val blockHash = idToBytes(mod.id)
-      var cumGasUsed: BigInteger = BigInteger.ZERO
+      var cumGasUsed = BigInteger.ZERO
       val blockGasPool = new GasPool(stateView.getBlockGasLimit)
+      val header = mod.header
+      val blockContext = new BlockContext(
+        header.forgerAddress.address,
+        header.timestamp,
+        header.baseFee,
+        header.gasLimit,
+        blockNumber,
+        consensusEpochNumber,
+        modWithdrawalEpochInfo.epoch
+      )
 
       for ((tx, txIndex) <- mod.sidechainTransactions.zipWithIndex) {
-        stateView.applyTransaction(tx, txIndex, blockGasPool) match {
+        stateView.applyTransaction(tx, txIndex, blockGasPool, blockContext) match {
           case Success(consensusDataReceipt) =>
             val txGasUsed = consensusDataReceipt.cumulativeGasUsed.subtract(cumGasUsed)
             // update cumulative gas used so far
@@ -358,9 +368,18 @@ class AccountState(val params: NetworkParams,
 
       val ethTx = tx.asInstanceOf[EthereumTransaction]
       val blockGasPool = new GasPool(getBlockGasLimit)
+      val blockContext = new BlockContext(
+        new Array[Byte](32),
+        0,
+        getBaseFee.longValueExact(),
+        getBlockGasLimit.longValueExact(),
+        stateMetadataStorage.getHeight,
+        stateMetadataStorage.getConsensusEpochNumber.get,
+        stateMetadataStorage.getWithdrawalEpochInfo.epoch
+      )
 
       using(getView) { stateView =>
-        stateView.applyTransaction(tx, 0, blockGasPool) match {
+        stateView.applyTransaction(tx, 0, blockGasPool, blockContext) match {
           case Success(_) =>
             log.debug(s"tx=${ethTx.id} succesfully validate against state view")
 
