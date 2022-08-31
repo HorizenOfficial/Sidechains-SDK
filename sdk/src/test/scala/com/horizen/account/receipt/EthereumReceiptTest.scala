@@ -187,7 +187,7 @@ class EthereumReceiptTest
       //println("cumGas =" + cumGas.toString())
       val logsBloom = new Array[Byte](256)
       val logs = new ListBuffer[EvmLog]
-      receipts(i) = new EthereumConsensusDataReceipt(txType, status, cumGas, logs, logsBloom)
+      receipts(i) = new EthereumConsensusDataReceipt(txType, status, cumGas, logs,new LogsBloom(logsBloom))
       //println("i=" + i + receipts[i].toString())
     }
     receipts.toSeq

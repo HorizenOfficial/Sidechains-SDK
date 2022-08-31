@@ -42,7 +42,7 @@ trait ReceiptFixture {
     } else {
       new Array[Byte](0)
     }
-    val consensusDataReceipt = new EthereumConsensusDataReceipt(txType, 1, BigInteger.valueOf(1000), logs, new Array[Byte](256))
+    val consensusDataReceipt = new EthereumConsensusDataReceipt(txType, 1, BigInteger.valueOf(1000), logs, new LogsBloom())
     val receipt = EthereumReceipt(consensusDataReceipt,
       txHash, 33, Keccak256.hash("blockhash".getBytes).asInstanceOf[Array[Byte]], 22,
       BigInteger.valueOf(1234567),
@@ -57,7 +57,7 @@ trait ReceiptFixture {
     val logs = new ListBuffer[EvmLog]
     for (_ <- 1 to num_logs)
       logs += createTestEvmLog
-    new EthereumConsensusDataReceipt(txType, 1, BigInteger.valueOf(1000), logs, new Array[Byte](256))
+    new EthereumConsensusDataReceipt(txType, 1, BigInteger.valueOf(1000), logs, new LogsBloom())
   }
 
 }

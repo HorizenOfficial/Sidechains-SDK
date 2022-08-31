@@ -28,7 +28,8 @@ class LogsBloom() {
 
     bloomFilterIndexes.zipWithIndex
       .foreach({ case (bloomFilterIndex, i) =>
-        bloomFilter(bloomFilterIndex) |= bloomFilterValues(i)
+        bloomFilter(bloomFilterIndex) =
+          (bloomFilter(bloomFilterIndex) | bloomFilterValues(i)).toByte
       })
   }
 
