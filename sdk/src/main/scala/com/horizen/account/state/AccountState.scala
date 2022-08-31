@@ -369,11 +369,14 @@ class AccountState(val params: NetworkParams,
       val ethTx = tx.asInstanceOf[EthereumTransaction]
       val blockGasPool = new GasPool(getBlockGasLimit)
       val blockContext = new BlockContext(
+        // use the null address as forger
         new Array[Byte](32),
+        // TODO: what timestamp do we use here? just use "now()" or can we get the timestamp of the current tip
         0,
         getBaseFee.longValueExact(),
         getBlockGasLimit.longValueExact(),
         stateMetadataStorage.getHeight,
+        // TODO: can the consensus epoch number be None here?
         stateMetadataStorage.getConsensusEpochNumber.get,
         stateMetadataStorage.getWithdrawalEpochInfo.epoch
       )

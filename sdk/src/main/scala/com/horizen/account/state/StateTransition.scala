@@ -4,7 +4,12 @@ import com.horizen.account.utils.BigIntegerUtil
 
 import java.math.BigInteger
 
-class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProcessor], blockGasPool: GasPool) {
+class StateTransition(
+    view: AccountStateView,
+    messageProcessors: Seq[MessageProcessor],
+    blockGasPool: GasPool,
+    blockContext: BlockContext
+) {
 
   @throws(classOf[InvalidMessageException])
   @throws(classOf[ExecutionFailedException])
@@ -28,7 +33,7 @@ class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProc
         // create a snapshot to rollback to incase of execution errors
         val revisionId = view.snapshot
         try {
-          processor.process(msg, view, gasPool)
+          processor.process(msg, view, gasPool, blockContext)
         } catch {
           // if the processor throws ExecutionRevertedException we revert all changes
           case err: ExecutionRevertedException =>

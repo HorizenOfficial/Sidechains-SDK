@@ -118,8 +118,8 @@ class AccountStateView(
 
   @throws(classOf[InvalidMessageException])
   @throws(classOf[ExecutionFailedException])
-  def applyMessage(msg: Message, blockGasPool: GasPool): Array[Byte] = {
-    new StateTransition(this, messageProcessors, blockGasPool).transition(msg)
+  def applyMessage(msg: Message, blockGasPool: GasPool, blockContext: BlockContext): Array[Byte] = {
+    new StateTransition(this, messageProcessors, blockGasPool, blockContext).transition(msg)
   }
 
   /**
@@ -147,7 +147,7 @@ class AccountStateView(
 
     // apply message to state
     val status = try {
-      applyMessage(msg, blockGasPool)
+      applyMessage(msg, blockGasPool, blockContext)
       ReceiptStatus.SUCCESSFUL
     } catch {
       // any other exception will bubble up and invalidate the block
