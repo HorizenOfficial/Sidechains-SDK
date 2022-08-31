@@ -10,6 +10,7 @@ import com.horizen.account.api.http.AccountTransactionRestScheme.TransactionIdDT
 import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.account.api.rpc.types._
 import com.horizen.account.api.rpc.utils._
+import com.horizen.account.block.AccountBlock
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.receipt.EthereumReceipt
@@ -112,8 +113,10 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   private def doCall[A](nodeView: NV, params: TransactionArgs, tag: String)(fun: (Array[Byte], AccountStateView) ⇒ A): A = {
     getStateViewAtTag(nodeView, tag) { tagStateView =>
       try {
-        val msg = params.toMessage(tagStateView.getBaseFee)
-        fun(tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit)), tagStateView)
+        getBlockAtTag(nodeView, tag) { block =>
+          val msg = params.toMessage(BigInteger.valueOf(block.header.baseFee))
+          fun(tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit)), tagStateView)
+        }
       } catch {
         // throw on execution errors, also include evm revert reason if possible
         case reverted: ExecutionRevertedException => throw new RpcException(new RpcError(
@@ -295,6 +298,13 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
     }
   }
 
+  private def getBlockAtTag[A](nodeView: NV, tag: String)(fun: AccountBlock ⇒ A): A = {
+    nodeView.history.getBlockById(getBlockIdByTag(nodeView, tag)).asScala match {
+      case None => throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "Invalid block tag parameter."))
+      case Some(block) => fun(block)
+    }
+  }
+
   private def getBlockIdByTag(nodeView: NV, tag: String): String = {
     val history = nodeView.history
     val blockId = tag match {
@@ -312,7 +322,7 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   @RpcMethod("eth_gasPrice")
   def gasPrice: Quantity = {
     applyOnAccountView { nodeView =>
-      getStateViewAtTag(nodeView, "latest") { tagStateView => new Quantity(tagStateView.getBaseFee) }
+      getBlockAtTag(nodeView, "latest") { block => new Quantity(BigInteger.valueOf(block.header.baseFee))}
     }
   }
 

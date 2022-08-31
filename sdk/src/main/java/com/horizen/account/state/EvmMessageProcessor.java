@@ -30,7 +30,8 @@ public class EvmMessageProcessor implements MessageProcessor {
     public byte[] process(Message msg, BaseAccountStateView view, GasPool gas) throws ExecutionFailedException {
         // prepare context
         var context = new EvmContext();
-        context.baseFee = view.getBaseFee();
+        // TODO: baseFee will be passed within message - until then it is 0
+        context.baseFee = BigInteger.ZERO;
         // TODO: we need versioning for the block height:
         //  getHeight() currently always returns the block number of the latest block, independent of the state we're in
         //  this might lead to different results when replaying a transaction

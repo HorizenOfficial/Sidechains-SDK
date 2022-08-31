@@ -73,8 +73,9 @@ class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProc
       throw SenderNotEoaException(sender, view.getCodeHash(sender))
 
     // TODO: fee checks if message is "fake" (RPC calls)
-    if (msg.getGasFeeCap.compareTo(view.getBaseFee) < 0)
-      throw FeeCapTooLowException(sender, msg.getGasFeeCap, view.getBaseFee)
+    // TODO: baseFee will be passed within message - until then it is 0
+    if (msg.getGasFeeCap.compareTo(BigInteger.ZERO) < 0)
+      throw FeeCapTooLowException(sender, msg.getGasFeeCap, BigInteger.ZERO)
   }
 
   private def buyGas(msg: Message): GasPool = {
