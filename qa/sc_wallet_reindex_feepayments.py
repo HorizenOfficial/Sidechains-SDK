@@ -10,10 +10,6 @@ from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, generate_ne
 from httpCalls.wallet.balance import http_wallet_balance
 from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress
 from httpCalls.wallet.reindex import http_wallet_reindex, http_wallet_reindex_status, http_debug_reindex_step
-try:
-    import thread
-except ImportError:
-    import _thread as thread
 
 """
 The purpose of this test is to verify that a wallet reindex takes into consideration fee redeistribution boxes if 

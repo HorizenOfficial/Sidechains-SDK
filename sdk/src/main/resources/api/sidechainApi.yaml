@@ -1404,7 +1404,7 @@ paths:
       tags:
         - wallet
       summary: Start a full wallet reindex on the local node
-      description: If reindex was not already in progress, returns true and state and wallet are reindexed from the genesis block. If a reindex is in progress, no action is performed and returs false
+      description: If the reindex was not already in progress, returns true and StateStorage and WalletStorage are reindexed from the genesis block. If a reindex is in progress, no action is performed and returns false
       operationId: reindex
 
       responses:

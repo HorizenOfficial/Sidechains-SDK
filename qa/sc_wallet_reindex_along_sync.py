@@ -91,7 +91,7 @@ class SidechainWalletReindexSyncTest(SidechainTestFramework):
 
         assert_not_equal(best1, best2_0, "They are same already, quite weird")
 
-        print("simultate start reindex on node1")
+        print("simulate start reindex on node1")
         http_debug_reindex_step(sc_node1, self.API_KEY_NODE)
         reindexStatus = http_wallet_reindex_status(sc_node1, self.API_KEY_NODE)
         assert_equal(reindexStatus, 'ongoing')
