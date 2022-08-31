@@ -97,7 +97,7 @@ abstract class AbstractForgeMessageBuilder[
 
       val forgingResult = eligibleForgerOpt
         .map { case (forgingStakeMerklePathInfo, privateKey25519, vrfProof, _) =>
-          forgeBlock(nodeView, nextBlockTimestamp, branchPointInfo, forgingStakeMerklePathInfo, privateKey25519, vrfProof, timeout)
+          forgeBlock(nodeView, nextConsensusEpochNumber, nextBlockTimestamp, branchPointInfo, forgingStakeMerklePathInfo, privateKey25519, vrfProof, timeout)
         }
         .getOrElse(SkipSlot("No eligible forging stake found."))
       forgingResult
@@ -218,6 +218,7 @@ abstract class AbstractForgeMessageBuilder[
   }
 
   protected def forgeBlock(nodeView: View,
+                           nextConsensusEpochNumber: ConsensusEpochNumber,
                            timestamp: Long,
                            branchPointInfo: BranchPointInfo,
                            forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo,
@@ -304,6 +305,7 @@ abstract class AbstractForgeMessageBuilder[
     val tryBlock = createNewBlock(
       nodeView,
       branchPointInfo,
+      nextConsensusEpochNumber,
       isWithdrawalEpochLastBlock,
       parentBlockId,
       timestamp,
@@ -327,6 +329,7 @@ abstract class AbstractForgeMessageBuilder[
   def createNewBlock(
                      nodeView: View,
                      branchPointInfo: BranchPointInfo,
+                     nextConsensusEpochNumber: ConsensusEpochNumber,
                      isWithdrawalEpochLastBlock: Boolean,
                      parentBlockId: Block.BlockId,
                      timestamp: Block.Timestamp,

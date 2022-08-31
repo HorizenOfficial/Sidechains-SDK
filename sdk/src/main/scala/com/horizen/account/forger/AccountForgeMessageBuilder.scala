@@ -71,6 +71,7 @@ class AccountForgeMessageBuilder(
   override def createNewBlock(
       nodeView: View,
       branchPointInfo: BranchPointInfo,
+      nextConsensusEpochNumber: ConsensusEpochNumber,
       isWithdrawalEpochLastBlock: Boolean,
       parentId: BlockId,
       timestamp: Timestamp,
@@ -103,8 +104,7 @@ class AccountForgeMessageBuilder(
       baseFee,
       gasLimit,
       nodeView.state.getHeight + 1,
-      // TODO: can the consensus epoch number be None here?
-      nodeView.state.getConsensusEpochNumber.get,
+      nextConsensusEpochNumber,
       nodeView.state.getWithdrawalEpochInfo.epoch
     )
 
