@@ -114,7 +114,7 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
     getStateViewAtTag(nodeView, tag) { tagStateView =>
       try {
         getBlockAtTag(nodeView, tag) { block =>
-          val msg = params.toMessage(BigInteger.valueOf(block.header.baseFee))
+          val msg = params.toMessage(block.header.baseFee)
           fun(tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit)), tagStateView)
         }
       } catch {
@@ -322,7 +322,7 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   @RpcMethod("eth_gasPrice")
   def gasPrice: Quantity = {
     applyOnAccountView { nodeView =>
-      getBlockAtTag(nodeView, "latest") { block => new Quantity(BigInteger.valueOf(block.header.baseFee))}
+      getBlockAtTag(nodeView, "latest") { block => new Quantity(block.header.baseFee)}
     }
   }
 

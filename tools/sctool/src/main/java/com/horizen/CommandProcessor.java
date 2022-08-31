@@ -47,6 +47,7 @@ import scala.collection.mutable.ListBuffer;
 
 
 import java.io.*;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -631,8 +632,7 @@ public class CommandProcessor {
                           MainchainTxCrosschainOutputAddressUtil.getAccountAddress(
                                   sidechainCreation.getScCrOutput().address()));
 
-                // TODO: Add baseFee start value here
-                Long baseFee = 0L;
+                BigInteger baseFee = Account.INITIAL_BASE_FEE;
 
                 Long gasUsed = 0L;
 

@@ -78,7 +78,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     }
   }
 
-  def calculateBaseFee(nodeView: View, parentId: BlockId): Long = {
+  def calculateBaseFee(nodeView: View, parentId: BlockId): BigInteger = {
     // If the current block is the first block, return the InitialBaseFee.
     if (nodeView.history.getCurrentHeight < 2) {
       return Account.INITIAL_BASE_FEE
@@ -97,14 +97,18 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
       if (blockHeader.gasUsed > gasTarget) {
         // If the parent block used more gas than its target, the baseFee should increase by 12.5%
-        val baseFeeInc = (((blockHeader.gasUsed - gasTarget) * blockHeader.baseFee) / gasTarget) / 8
-
-        blockHeader.baseFee + baseFeeInc.max(1)
+        var baseFeeInc: BigInteger = BigInteger.valueOf(blockHeader.gasUsed - gasTarget)
+        baseFeeInc = baseFeeInc.multiply(blockHeader.baseFee)
+        baseFeeInc = baseFeeInc.divide(BigInteger.valueOf(gasTarget))
+        baseFeeInc = baseFeeInc.divide(BigInteger.valueOf(8))
+        blockHeader.baseFee.add(baseFeeInc.max(BigInteger.ONE))
       } else {
         // Otherwise if the parent block used less gas than its target, the baseFee should decrease by 12.5%
-        val baseFeeDec = (((gasTarget - blockHeader.gasUsed) * blockHeader.baseFee) / gasTarget) / 8
-
-        (blockHeader.baseFee - baseFeeDec).max(1)
+        var baseFeeDec: BigInteger = BigInteger.valueOf(gasTarget - blockHeader.gasUsed)
+        baseFeeDec = baseFeeDec.multiply(blockHeader.baseFee)
+        baseFeeDec = baseFeeDec.divide(BigInteger.valueOf(gasTarget))
+        baseFeeDec = baseFeeDec.divide(BigInteger.valueOf(8))
+        blockHeader.baseFee.subtract(baseFeeDec).max(BigInteger.ONE)
       }
     }
   }
@@ -246,7 +250,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH), // stateRoot TODO add constant
       new AddressProposition(new Array[Byte](Account.ADDRESS_SIZE)), // forgerAddress: PublicKeySecp256k1Proposition TODO add constant,
-      Long.MaxValue,
+      Account.INITIAL_BASE_FEE,
       Long.MaxValue,
       Long.MaxValue,
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
