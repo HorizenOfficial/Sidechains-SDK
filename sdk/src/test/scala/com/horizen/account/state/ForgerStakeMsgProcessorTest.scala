@@ -139,7 +139,7 @@ class ForgerStakeMsgProcessorTest
   @Test
   def testMethodIds(): Unit = {
     //The expected methodIds were calcolated using this site: https://emn178.github.io/online-tools/keccak_256.html
-    assertEquals("Wrong MethodId for GetListOfForgersCmd", "a64717f5", ForgerStakeMsgProcessor.GetListOfForgersCmd)
+    assertEquals("Wrong MethodId for GetListOfForgersCmd", "f6ad3c23", ForgerStakeMsgProcessor.GetListOfForgersCmd)
     assertEquals("Wrong MethodId for AddNewStakeCmd", "5ca748ff", ForgerStakeMsgProcessor.AddNewStakeCmd)
     assertEquals("Wrong MethodId for RemoveStakeCmd", "f7419d79", ForgerStakeMsgProcessor.RemoveStakeCmd)
   }
