@@ -15,6 +15,7 @@ from httpCalls.wallet.importSecrets import http_wallet_importSecrets
 from httpCalls.wallet.balance import http_wallet_balance
 from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress
 from SidechainTestFramework.sidechainauthproxy import SCAPIException
+from httpCalls.wallet.reindex import http_wallet_reindex_status
 
 """
     - Setup 2 SC Node.
@@ -274,7 +275,11 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
         self.sc_sync_all()
         balance_node1_beforeImport = http_wallet_balance(sc_node1, self.API_KEY_NODE1)
         http_wallet_importSecret(sc_node1, sc_address_new_secret, self.API_KEY_NODE1, True)
-        time.sleep(2)
+        #ensure the reindex ended correctly
+        reindexStatus = http_wallet_reindex_status(sc_node1, self.API_KEY_NODE1)
+        while reindexStatus != 'inactive' :
+            time.sleep(1)
+            reindexStatus = http_wallet_reindex_status(sc_node1, self.API_KEY_NODE1)
         #after an import + reindex the balance should by immediately updated
         balance_node1_afterImport = http_wallet_balance(sc_node1, self.API_KEY_NODE1)
         assert_true(balance_node1_afterImport == (balance_node1_beforeImport+1000))
