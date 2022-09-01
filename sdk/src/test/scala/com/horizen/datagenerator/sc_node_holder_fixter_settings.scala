@@ -11,7 +11,7 @@ import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.consensus._
 import com.horizen.secret.VrfKeyGenerator
 import org.junit.Test
-import scorex.core.block.Block
+import sparkz.core.block.Block
 import scorex.util.{ModifierId, bytesToId}
 
 

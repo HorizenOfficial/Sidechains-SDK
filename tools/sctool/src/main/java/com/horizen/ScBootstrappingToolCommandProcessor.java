@@ -701,7 +701,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
 
             String conf = templateConf +
-                          "\nscorex {\n" +
+                          "\nsparkz {\n" +
                           "\tgenesis {\n" +
                           "\t\tscGenesisBlockHex = \"" + scBlockHex + "\"\n" +
                           "\t\tscId = \"" + scId + "\"\n" +

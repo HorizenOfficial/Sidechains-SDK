@@ -21,8 +21,8 @@ Configuration:
     SC node connected to the first MC node.
 
 Test:
-    Before bootstrapping the SC, create 2 alien sidechains, one with version=0 the other with version=1 with a single
-    custom field elements cfg as 16 bits only.
+    Before bootstrapping the SC, create 3 alien sidechains, one with version=0, second and third with version=1 and
+     version=2 respectively with a single custom field elements cfg as 16 bits only.
     Advance their epoch mining 10 MC blocks and sends their certificates to the mainchain, so to have them both
     in the SC creation block. Verify that the bootstrapping tool is able to verify the sc commitment tree hash.
     Then create other two alien sidechains of both versions, sends certificates for all sidechains and continue forging
@@ -48,8 +48,8 @@ class SCGenesisInfoScVersions(SidechainTestFramework):
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length, btr_data_length=0
                                                         , sc_creation_version=1), sc_node_configuration)
         #----------------------------------------
-        # advance mc chain and reach sc version support fork
-        mc_node.generate(450)
+        # advance mc chain and reach sc version 2 support fork
+        mc_node.generate(480)
         self.mcTest = CertTestUtils(self.options.tmpdir)
 
         ret = create_alien_sidechain(self.mcTest, mc_node, scVersion=0, epochLength=10, customHexTag="5c00", feCfgList=[16])
@@ -64,6 +64,12 @@ class SCGenesisInfoScVersions(SidechainTestFramework):
         print("scid = {}".format(self.scid0_ver1))
         time.sleep(1)
 
+        ret = create_alien_sidechain(self.mcTest, mc_node, scVersion=2, epochLength=10, customHexTag="5c02", feCfgList=[16])
+        self.scid0_ver2 = ret['scid']
+        self.crtx2 = ret['txid']
+        print("scid = {}".format(self.scid0_ver2))
+        time.sleep(1)
+
         mc_node.generate(10)
 
         cert = create_certificate_for_alien_sc(self.mcTest, self.scid0_ver0, mc_node, fePatternArray=["003f"]) # b'00111111'
@@ -71,6 +77,10 @@ class SCGenesisInfoScVersions(SidechainTestFramework):
         time.sleep(1)
 
         cert = create_certificate_for_alien_sc(self.mcTest, self.scid0_ver1, mc_node, fePatternArray=["003f"]) # b'00111111'
+        print("cert = {}".format(cert))
+        time.sleep(1)
+
+        cert = create_certificate_for_alien_sc(self.mcTest, self.scid0_ver2, mc_node, fePatternArray=["003f"]) # b'00111111'
         print("cert = {}".format(cert))
         time.sleep(1)
 
@@ -95,28 +105,35 @@ class SCGenesisInfoScVersions(SidechainTestFramework):
         print("Mc height = {}".format(bheight))
         print("Mc block txs   = {}".format(bhex['tx']))
         print("Mc block certs = {}".format(bhex['cert']))
-        # check we have 2 transactions (coinbase + this sc creation tx) and 2 certificates for the alien sidechains
+        # check we have 2 transactions (coinbase + this sc creation tx) and 3 certificates for the alien sidechains
         # in the same block
         assert_equal(2, len(bhex["tx"]), "MC block expected to contain 2 transactions.")
-        assert_equal(2, len(bhex["cert"]), "MC block expected to contain 2 Certificates.")
+        assert_equal(3, len(bhex["cert"]), "MC block expected to contain 3 Certificates.")
 
-        ret = create_alien_sidechain(self.mcTest, mc_node, scVersion=0, epochLength=9, customHexTag="5c02", feCfgList=[16])
+        ret = create_alien_sidechain(self.mcTest, mc_node, scVersion=0, epochLength=9, customHexTag="5c03", feCfgList=[16])
         self.scid1_ver0 = ret['scid']
         crtx1 = ret['txid']
 
         assert_true(crtx1 in mc_node.getrawmempool(), "Sc Creation is expected to be added to mempool.")
 
-        ret = create_alien_sidechain(self.mcTest, mc_node, scVersion=1, epochLength=9, customHexTag="5c03", feCfgList=[16])
+        ret = create_alien_sidechain(self.mcTest, mc_node, scVersion=1, epochLength=9, customHexTag="5c04", feCfgList=[16])
         self.scid1_ver1 = ret['scid']
         crtx2 = ret['txid']
 
         assert_true(crtx2 in mc_node.getrawmempool(), "Sc Creation is expected to be added to mempool.")
+
+        ret = create_alien_sidechain(self.mcTest, mc_node, scVersion=2, epochLength=9, customHexTag="5c05", feCfgList=[16])
+        self.scid1_ver2 = ret['scid']
+        crtx3 = ret['txid']
+
+        assert_true(crtx3 in mc_node.getrawmempool(), "Sc Creation is expected to be added to mempool.")
 
         # Generate MC block and SC block
         mcblock_hash1 = mc_node.generate(1)[0]
 
         assert_true(crtx1 in mc_node.getblock(mcblock_hash1)['tx'])
         assert_true(crtx2 in mc_node.getblock(mcblock_hash1)['tx'])
+        assert_true(crtx3 in mc_node.getblock(mcblock_hash1)['tx'])
 
         scblock_id1 = generate_next_blocks(sc_node, "first node", 1)[0]
         check_mcreference_presence(mcblock_hash1, scblock_id1, sc_node)
@@ -132,8 +149,8 @@ class SCGenesisInfoScVersions(SidechainTestFramework):
 
         expEndEpochHeight = None
         scInfoItems = mc_node.getscinfo("*")['items']
-        # there are 4 alien scs + 1 bootstrapped here
-        assert_equal(5, len(scInfoItems), "Unexpected number of sc info in MC")
+        # there are 6 alien scs + 1 bootstrapped here
+        assert_equal(7, len(scInfoItems), "Unexpected number of sc info in MC")
         for it in scInfoItems:
             scid = it['scid']
             if expEndEpochHeight == None:
@@ -165,6 +182,9 @@ class SCGenesisInfoScVersions(SidechainTestFramework):
         create_certificate_for_alien_sc(self.mcTest, self.scid0_ver1, mc_node, fePatternArray=["0100"])
         time.sleep(1)
 
+        create_certificate_for_alien_sc(self.mcTest, self.scid0_ver2, mc_node, fePatternArray=["0100"])
+        time.sleep(1)
+
         # in version 0 we can have at most 3f for not to have an invalid fe module
         create_certificate_for_alien_sc(self.mcTest, self.scid1_ver0, mc_node, fePatternArray=["ff3f"])# b'1111 1111' '0011' 1111'
         time.sleep(1)
@@ -172,11 +192,14 @@ class SCGenesisInfoScVersions(SidechainTestFramework):
         create_certificate_for_alien_sc(self.mcTest, self.scid1_ver1, mc_node, fePatternArray=["ffff"])
         time.sleep(1)
 
+        create_certificate_for_alien_sc(self.mcTest, self.scid1_ver2, mc_node, fePatternArray=["ffff"])
+        time.sleep(1)
+
         # Generate MC block and verify that certificates are present
         we1_2_mcblock_hash = mc_node.generate(1)[0]
         assert_equal(0, mc_node.getmempoolinfo()["size"], "Certificate expected to be removed from MC node mempool.")
         assert_equal(1, len(mc_node.getblock(we1_2_mcblock_hash)["tx"]), "MC block expected to contain 1 transaction (the coinbase only).")
-        assert_equal(5, len(mc_node.getblock(we1_2_mcblock_hash)["cert"]), "MC block expected to contain 5 Certificates.")
+        assert_equal(7, len(mc_node.getblock(we1_2_mcblock_hash)["cert"]), "MC block expected to contain 5 Certificates.")
 
         #assert_equal(we0_certHash, mc_node.getblock(we1_2_mcblock_hash)["cert"][0], "MC block expected to contain certificate.")
         print("MC block with withdrawal certificates = {0}\n".format(str(mc_node.getblock(we1_2_mcblock_hash, False))))

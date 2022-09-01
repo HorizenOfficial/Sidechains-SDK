@@ -5,7 +5,7 @@ import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.api.http.SidechainBackupRestScheme.RespSidechainBlockIdForBackup
 import com.horizen.serialization.Views
-import scorex.core.settings.RESTApiSettings
+import sparkz.core.settings.RESTApiSettings
 import com.horizen.api.http.SidechainBackupErrorResponse.{ErrorRetrievingSidechainBlockIdForBackup, GenericBackupApiError}
 import com.horizen.utils.BytesUtils
 

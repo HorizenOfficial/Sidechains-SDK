@@ -5,7 +5,7 @@ import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import com.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
-import scorex.core.block.Block
+import sparkz.core.block.Block
 import scorex.util.{ModifierId, bytesToId}
 
 trait NetworkParams {
@@ -62,4 +62,7 @@ trait NetworkParams {
   // Sidechain forger restriction
   val restrictForgers: Boolean = false
   val allowedForgersList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = Seq()
+
+  //Max Withdrawal Boxes per certificate
+  final val maxWBsAllowed: Int = 3999
 }

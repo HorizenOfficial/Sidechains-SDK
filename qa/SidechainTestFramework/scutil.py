@@ -132,7 +132,7 @@ def launch_bootstrap_tool(command_name, json_parameters):
         raise Exception("Bootstrap tool error occurred")
 
 
-def launch_db_tool(dirName, command_name, json_parameters):
+def launch_db_tool(dirName, storageNames, command_name, json_parameters):
     '''
     we use "blockchain" postfix for specifying the dataDir (see qa/resources/template.conf:
         dataDir = "%(DIRECTORY)s/sc_node%(NODE_NUMBER)s/blockchain"
@@ -375,6 +375,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
     api_key_hash = ""
     if sc_node_config.api_key != "":
         api_key_hash = calculateApiKeyHash(sc_node_config.api_key)
+    genesis_secrets += sc_node_config.initial_private_keys
+
     config = tmpConfig % {
         'NODE_NUMBER': n,
         'DIRECTORY': dirname,
@@ -614,16 +616,14 @@ def connect_sc_nodes(from_connection, node_num, wait_for=25):
     """
     j = {"host": "127.0.0.1", \
          "port": str(sc_p2p_port(node_num))}
-    ip_port = "\"127.0.0.1:" + str(sc_p2p_port(node_num)) + "\""
-    print("Connecting to " + ip_port)
-    oldnum = len(from_connection.node_connectedPeers()["result"]["peers"])
+    ip_port = "127.0.0.1:" + str(sc_p2p_port(node_num))
+    print("Connecting to '" + ip_port + "'")
     from_connection.node_connect(json.dumps(j))
     start = time.time()
     while True:
         if time.time() - start >= wait_for:
             raise (TimeoutException("Trying to connect to node{0}".format(node_num)))
-        newnum = len(from_connection.node_connectedPeers()["result"]["peers"])
-        if newnum == (oldnum + 1):
+        if any(i for i in (from_connection.node_connectedPeers()["result"]["peers"]) if i.get("remoteAddress") == "/" + ip_port):
             break
         time.sleep(WAIT_CONST)
 

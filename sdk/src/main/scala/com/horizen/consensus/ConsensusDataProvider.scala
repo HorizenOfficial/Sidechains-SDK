@@ -10,8 +10,8 @@ import com.horizen.storage.SidechainBlockInfoProvider
 import com.horizen.utils.{LruCache, TimeToEpochUtils, Utils}
 import com.horizen.vrf.VrfOutput
 import com.horizen.utils.ByteArrayWrapper
-import scorex.core.block.Block
-import scorex.core.block.Block.Timestamp
+import sparkz.core.block.Block
+import sparkz.core.block.Block.Timestamp
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.compat.java8.OptionConverters._

@@ -7,8 +7,8 @@ import com.horizen.fork.ForkManager
 import com.horizen.params.NetworkParams
 import com.horizen.utils.TimeToEpochUtils
 import com.horizen.vrf.VrfOutput
-import scorex.core.block.Block
-import scorex.core.utils.TimeProvider
+import sparkz.core.block.Block
+import sparkz.core.utils.TimeProvider
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.util.Try

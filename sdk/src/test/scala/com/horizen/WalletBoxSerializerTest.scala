@@ -1,6 +1,6 @@
 package com.horizen
 
-import scorex.core.{NodeViewModifier, bytesToId, idToBytes}
+import sparkz.core.{NodeViewModifier, bytesToId, idToBytes}
 
 import com.horizen.box.{Box, BoxSerializer}
 import com.horizen.companion.SidechainBoxesCompanion

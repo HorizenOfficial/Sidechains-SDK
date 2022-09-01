@@ -6,7 +6,7 @@ import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.serialization.Views
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.transaction.{MC2SCAggregatedTransaction, MC2SCAggregatedTransactionSerializer}
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
+import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
 import scala.collection.JavaConverters._
@@ -22,7 +22,7 @@ case class MainchainBlockReferenceData(
                                         topQualityCertificate: Option[WithdrawalEpochCertificate]) extends BytesSerializable {
   override type M = MainchainBlockReferenceData
 
-  override def serializer: ScorexSerializer[MainchainBlockReferenceData] = MainchainBlockReferenceDataSerializer
+  override def serializer: SparkzSerializer[MainchainBlockReferenceData] = MainchainBlockReferenceDataSerializer
 
   override def hashCode(): Int = java.util.Arrays.hashCode(headerHash)
 
@@ -49,7 +49,7 @@ case class MainchainBlockReferenceData(
 }
 
 
-object MainchainBlockReferenceDataSerializer extends ScorexSerializer[MainchainBlockReferenceData] {
+object MainchainBlockReferenceDataSerializer extends SparkzSerializer[MainchainBlockReferenceData] {
   val HASH_BYTES_LENGTH: Int = 32
 
   override def serialize(obj: MainchainBlockReferenceData, w: Writer): Unit = {

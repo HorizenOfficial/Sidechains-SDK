@@ -8,8 +8,8 @@ import com.horizen.vrf.{VrfGeneratedDataProvider, VrfOutput}
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-import scorex.core.block.Block
-import scorex.core.consensus.ModifierSemanticValidity
+import sparkz.core.block.Block
+import sparkz.core.consensus.ModifierSemanticValidity
 import scorex.util.{ModifierId, bytesToId, idToBytes}
 
 class SidechainBlockInfoTest extends JUnitSuite with SidechainBlockInfoFixture {

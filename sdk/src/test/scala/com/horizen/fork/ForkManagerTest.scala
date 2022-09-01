@@ -14,6 +14,7 @@ class ForkManagerTest extends JUnitSuite {
   @Test
   def ForkManagerTest(): Unit = {
     val simpleForkConfigurator = new SimpleForkConfigurator
+    ForkManager.networkName = null
 
     var res = ForkManager.init(simpleForkConfigurator, "wrongname")
     assertEquals("Expected failure on ForkManager initialization", true, res.isFailure)

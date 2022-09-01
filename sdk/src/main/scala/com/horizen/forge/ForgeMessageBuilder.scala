@@ -14,12 +14,12 @@ import com.horizen.secret.{PrivateKey25519, VrfSecretKey}
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.{FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerkleTree, TimeToEpochUtils}
 import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainMemoryPoolEntry, SidechainState, SidechainWallet}
-import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
+import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.collection.JavaConverters._
 import com.horizen.vrf.VrfOutput
-import scorex.core.NodeViewModifier
+import sparkz.core.NodeViewModifier
 
 import scala.collection.mutable.ArrayBuffer
 import scala.util.{Failure, Success, Try}
@@ -301,7 +301,6 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     })
 
     val isWithdrawalEpochLastBlock: Boolean = mainchainReferenceData.size == withdrawalEpochMcBlocksLeft
-
     // Collect transactions if possible
     val transactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]] =
       if (isWithdrawalEpochLastBlock) {
@@ -315,7 +314,10 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
         Seq()
       } else { // SC block is in the middle of the epoch
         var txsCounter: Int = 0
-        nodeView.pool.take(nodeView.pool.size).filter(tx => {
+        val allowedWithdrawalRequestBoxes = nodeView.state.getAllowedWithdrawalRequestBoxes(mainchainBlockReferenceDataToRetrieve.size) - nodeView.state.getAlreadyMinedWithdrawalRequestBoxesInCurrentEpoch
+        //In case we reached the Sidechain Fork1 we filter the mempool txs considering also the WithdrawalBoxes allowed to be mined in the current block.
+        val mempoolTx = if (ForkManager.getSidechainConsensusEpochFork(TimeToEpochUtils.timeStampToEpochNumber(params, timestamp)).backwardTransferLimitEnabled())  nodeView.pool.takeWithWithdrawalBoxesLimit(allowedWithdrawalRequestBoxes) else nodeView.pool.take(nodeView.pool.size)
+        mempoolTx.filter(tx => {
           val txSize = tx.bytes.length + 4 // placeholder for Tx length
           txsCounter += 1
           if(txsCounter > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER || blockSize + txSize > SidechainBlock.MAX_BLOCK_SIZE)
