@@ -7,33 +7,28 @@ import com.horizen.box._
 import com.horizen.box.data.ZenBoxData
 import com.horizen.consensus._
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
+import com.horizen.forge.ForgerList
 import com.horizen.fork.ForkManager
 import com.horizen.node.NodeState
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.ApplicationState
 import com.horizen.storage.{BackupStorage, SidechainStateForgerBoxStorage, SidechainStateStorage}
-import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.transaction.{MC2SCAggregatedTransaction, OpenStakeTransaction, SidechainTransaction}
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import sparkz.core._
-import sparkz.core.transaction.state._
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging, bytesToId}
+import sparkz.core._
+import sparkz.core.transaction.state._
 
 import java.io.File
 import java.math.{BigDecimal, MathContext}
 import java.util
-import java.util.{Optional => JOptional}
-import com.horizen.box.data.ZenBoxData
-import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.forge.ForgerList
-
+import java.util.{ArrayList => JArrayList, Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
-import java.util.{ArrayList => JArrayList}
 
 
 class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
