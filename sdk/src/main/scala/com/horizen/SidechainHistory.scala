@@ -15,7 +15,6 @@ import sparkz.core.consensus.History._
 import sparkz.core.consensus.{History, ModifierSemanticValidity}
 import sparkz.core.validation.RecoverableModifierError
 import scorex.util.{ModifierId, ScorexLogging, idToBytes}
-
 import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
@@ -661,7 +660,7 @@ object SidechainHistory
       val nonceEpochInfo = ConsensusDataProvider.calculateNonceForGenesisBlock(params)
       var gHistory = new SidechainHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators).append(genesisBlock).map(_._1).get
       if (!isReindexing){
-        gHistory = gHistory.reportModifierIsValid(genesisBlock)
+        gHistory = gHistory.reportModifierIsValid(genesisBlock).get
       }
       gHistory.applyFullConsensusInfo(genesisBlock.id, FullConsensusEpochInfo(stakeEpochInfo, nonceEpochInfo))
     }

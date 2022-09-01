@@ -11,19 +11,17 @@ import com.horizen.storage._
 import com.horizen.utils.{BytesUtils, SDKModifiersCache}
 import com.horizen.validation._
 import com.horizen.wallet.ApplicationWallet
-import scorex.core.NodeViewHolder.DownloadRequest
-import scorex.core.NodeViewHolder.ReceivableMessages.{EliminateTransactions, LocallyGeneratedModifier, LocallyGeneratedTransaction, NewTransactions}
-import scorex.core.consensus.History.ProgressInfo
-import scorex.core.network.{ConnectedPeer, ModifiersStatus}
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages._
-import scorex.core.settings.ScorexSettings
-import scorex.core.transaction.Transaction
-import scorex.core.transaction.state.TransactionValidation
-import scorex.core.utils.NetworkTimeProvider
-import scorex.core.{ModifiersCache, idToVersion, versionToId}
-import scorex.core.{idToVersion, versionToId}
+import sparkz.core.NodeViewHolder.ReceivableMessages.{EliminateTransactions, LocallyGeneratedModifier, LocallyGeneratedTransaction, NewTransactions}
+import sparkz.core.consensus.History.ProgressInfo
+import sparkz.core.network.{ConnectedPeer, ModifiersStatus}
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
+import sparkz.core.settings.SparkzSettings
+import sparkz.core.transaction.Transaction
+import sparkz.core.transaction.state.TransactionValidation
+import sparkz.core.utils.NetworkTimeProvider
+import sparkz.core.{ModifiersCache, idToVersion, versionToId}
+import sparkz.core.{idToVersion, versionToId}
 import scorex.util.{ModifierId, ScorexLogging}
-
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
 
@@ -425,7 +423,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
           if (blokIdOptional.isPresent) {
             val blockOptional = history.getBlockById(blokIdOptional.get)
             if (blockOptional.isPresent) {
-              val progressInfo = ProgressInfo(None, Seq(), Seq(blockOptional.get()), Seq())
+              val progressInfo = ProgressInfo(None, Seq(), Seq(blockOptional.get()))
               val (newHistory, newStateTry, newWallet, blocksApplied) =
                 updateStateAndWallet(history(), minimalState(), vault(), progressInfo, IndexedSeq())
               newStateTry match {
@@ -584,12 +582,6 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     history().isReindexing()
   }
 
-  // This method is actually a copy-paste of parent NodeViewHolder.requestDownloads method.
-  protected def requestDownloads(pi: ProgressInfo[SidechainBlock]): Unit = {
-    pi.toDownload.foreach { case (tid, id) =>
-      context.system.eventStream.publish(DownloadRequest(tid, id))
-    }
-  }
 
   // This method is actually a copy-paste of parent NodeViewHolder.updateState method.
   // The difference is that State is updated together with Wallet.
@@ -704,9 +696,9 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
             case Success(stateAfterApply) => {
               log.debug("success: modifier applied to state, blockInfo: " + newHistory.blockInfoById(modToApply.id))
 
-            if (!isReindexing()){
-              context.system.eventStream.publish(SemanticallySuccessfulModifier(modToApply))
-            }
+              if (!isReindexing()) {
+                context.system.eventStream.publish(SemanticallySuccessfulModifier(modToApply))
+              }
 
               val stateWithdrawalEpochNumber: Int = stateAfterApply.getWithdrawalEpochInfo.epoch
               val (historyResult, walletResult) = if (stateAfterApply.isWithdrawalEpochLastIndex) {
@@ -726,22 +718,15 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
               // as a final step update the history (validity and best block info), in this way we can check
               // at the startup the consistency of state and history storage versions and be sure that also intermediate steps
               // are consistent
-              historyResult.reportModifierIsValid(modToApply).map { newHistory =>
-                log.debug("success: modifier applied to history, blockInfo " + newHistory.blockInfoById(modToApply.id))
-            val finalHistory : HIS=  if (isReindexing())  historyResult else
-                                {
-                                  // as a final step update the history (validity and best block info), in this way we can check
-                                   // at the startup the consistency of state and history storage versions and be sure that also intermediate steps
-                                  // are consistent
-                                  val historyAfterApply = historyResult.reportModifierIsValid(modToApply)
-                                  log.debug("success: modifier applied to history, blockInfo " + historyAfterApply.blockInfoById(modToApply.id))
-                                  historyAfterApply
-                                }
-            SidechainNodeUpdateInformation(finalHistory, stateAfterApply, walletResult, None, None, updateInfo.suffix :+ modToApply)
-
+              if (isReindexing()) {
+                Try(SidechainNodeUpdateInformation(historyResult, stateAfterApply, walletResult, None, None, updateInfo.suffix :+ modToApply))
+              } else {
+                historyResult.reportModifierIsValid(modToApply).map(finalHistory =>
+                  SidechainNodeUpdateInformation(finalHistory, stateAfterApply, walletResult, None, None, updateInfo.suffix :+ modToApply)
+                )
               }
-
             }
+
             case Failure(e) => {
               log.error(s"Could not apply modifier ${modToApply.id}, exception:" + e)
               newHistory.reportModifierIsInvalid(modToApply, progressInfo).map {
