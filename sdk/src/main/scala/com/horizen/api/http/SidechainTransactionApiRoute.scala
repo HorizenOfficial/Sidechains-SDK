@@ -23,7 +23,7 @@ import com.horizen.proposition._
 import com.horizen.serialization.Views
 import com.horizen.transaction._
 import com.horizen.utils.{BytesUtils, ZenCoinsUtils}
-import scorex.core.settings.RESTApiSettings
+import sparkz.core.settings.RESTApiSettings
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer

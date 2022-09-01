@@ -8,7 +8,7 @@ import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertFalse}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-import scorex.core.utils.ScorexEncoder
+import sparkz.core.utils.SparkzEncoder
 
 class Signature25519ScalaTest
   extends JUnitSuite
@@ -33,7 +33,7 @@ class Signature25519ScalaTest
     assertEquals("Json must contain only 1 signature.",
       1, node.findValues("signature").size())
     assertEquals("",
-      ScorexEncoder.default.encode(pr.signatureBytes), node.path("signature").asText())
+      SparkzEncoder.default.encode(pr.signatureBytes), node.path("signature").asText())
 
     // Test key
     val jsonKeyStr = serializer.serialize(key)

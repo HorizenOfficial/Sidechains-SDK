@@ -14,8 +14,8 @@ import com.horizen.state.ApplicationState
 import com.horizen.storage.{BackupStorage, SidechainStateForgerBoxStorage, SidechainStateStorage}
 import com.horizen.transaction.MC2SCAggregatedTransaction
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import scorex.core._
-import scorex.core.transaction.state._
+import sparkz.core._
+import sparkz.core.transaction.state._
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging, bytesToId}
 

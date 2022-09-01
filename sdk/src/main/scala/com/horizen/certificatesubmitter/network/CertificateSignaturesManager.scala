@@ -8,11 +8,11 @@ import com.horizen.certificatesubmitter.CertificateSubmitter.ReceivableMessages.
 import com.horizen.certificatesubmitter.CertificateSubmitter._
 import com.horizen.certificatesubmitter.network.CertificateSignaturesManager.InternalReceivableMessages.TryToSendGetCertificateSignatures
 import com.horizen.params.NetworkParams
-import scorex.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, SendToNetwork}
-import scorex.core.network.message.{Message, MessageSpec}
-import scorex.core.network.peer.PenaltyType
-import scorex.core.network._
-import scorex.core.settings.NetworkSettings
+import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, SendToNetwork}
+import sparkz.core.network.message.{Message, MessageSpec}
+import sparkz.core.network.peer.PenaltyType
+import sparkz.core.network._
+import sparkz.core.settings.NetworkSettings
 import scorex.util.ScorexLogging
 
 import scala.collection.mutable.ArrayBuffer

@@ -13,12 +13,12 @@ import com.horizen.secret.{PrivateKey25519, VrfSecretKey}
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.{FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerkleTree, TimeToEpochUtils}
 import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainMemoryPoolEntry, SidechainState, SidechainWallet}
-import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
+import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.collection.JavaConverters._
 import com.horizen.vrf.VrfOutput
-import scorex.core.NodeViewModifier
+import sparkz.core.NodeViewModifier
 
 import scala.collection.mutable.ArrayBuffer
 import scala.util.{Failure, Success, Try}
@@ -235,12 +235,12 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                          vrfProof: VrfProof,
                          timeout: Timeout): ForgeResult = {
     val parentBlockId: ModifierId = branchPointInfo.branchPointId
-    val parentBlockInfo: SidechainBlockInfo = nodeView.history.blockInfoById(branchPointInfo.branchPointId)
+    val parentBlockInfo: SidechainBlockInfo = nodeView.history.blockInfoById(parentBlockId)
     var withdrawalEpochMcBlocksLeft: Int = params.withdrawalEpochLength - parentBlockInfo.withdrawalEpochInfo.lastEpochIndex
     if (withdrawalEpochMcBlocksLeft == 0) // parent block is the last block of the epoch
       withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength
 
-    var blockSize: Int = precalculateBlockHeaderSize(branchPointInfo.branchPointId, timestamp, forgingStakeMerklePathInfo, vrfProof)
+    var blockSize: Int = precalculateBlockHeaderSize(parentBlockId, timestamp, forgingStakeMerklePathInfo, vrfProof)
     blockSize += 4 + 4 // placeholder for the MainchainReferenceData and Transactions sequences size values
 
     // Get all needed MainchainBlockHeaders from MC Node
@@ -260,7 +260,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     // Get Ommers in case the branch point is not the current best block
     var ommers: Seq[Ommer] = Seq()
     var blockId = nodeView.history.bestBlockId
-    while (blockId != branchPointInfo.branchPointId) {
+    while (blockId != parentBlockId) {
       val block = nodeView.history.getBlockById(blockId).get() // TODO: replace with method blockById with no Option
       blockId = block.parentId
       ommers = Ommer.toOmmer(block) +: ommers
@@ -302,8 +302,15 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     // Collect transactions if possible
     val transactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]] =
-      if (isWithdrawalEpochLastBlock) { // SC block is going to become the last block of the withdrawal epoch
-        Seq() // no SC Txs allowed
+      if (isWithdrawalEpochLastBlock) {
+        // SC block is going to become the last block of the withdrawal epoch
+        // No SC Txs allowed
+        Seq()
+      } else if(parentBlockId != nodeView.history.bestBlockId) {
+        // SC block extends the block behind the current tip (for example, in case of ommers).
+        // We can't be sure that transactions in the Mempool are valid against the block in the past.
+        // For example the ommerred Block contains Tx which output is going to be spent by another Tx in the Mempool.
+        Seq()
       } else { // SC block is in the middle of the epoch
         var txsCounter: Int = 0
         nodeView.pool.take(nodeView.pool.size).filter(tx => {
@@ -320,7 +327,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     val feePayments = if(isWithdrawalEpochLastBlock) {
       // Current block is expect to be the continuation of the current tip, so there are no ommers.
-      require(nodeView.history.bestBlockId == branchPointInfo.branchPointId, "Last block of the withdrawal epoch expect to be a continuation of the tip.")
+      require(nodeView.history.bestBlockId == parentBlockId, "Last block of the withdrawal epoch expect to be a continuation of the tip.")
       require(ommers.isEmpty, "No Ommers allowed for the last block of the withdrawal epoch.")
 
       val withdrawalEpochNumber: Int = nodeView.state.getWithdrawalEpochInfo.epoch

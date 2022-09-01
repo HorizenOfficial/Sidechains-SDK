@@ -26,6 +26,8 @@ public class DbTool {
     public static void main(String args[]) {
 
         // initialize log properties since this app uses log4j from sdk libraries
+        // - no log dir here
+        System.setProperty("logDir", "");
         // - default name for the log file
         String logFileName = System.getProperty("java.io.tmpdir") + File.separator + "db_tool.log";
         System.setProperty("logFilename", logFileName);

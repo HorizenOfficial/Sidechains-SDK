@@ -15,11 +15,11 @@ import org.junit.Assert._
 import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.core.network.{Broadcast, BroadcastExceptOf, ConnectedPeer, ConnectionDirection, ConnectionId, SendToPeer, SendToRandom}
-import scorex.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, SendToNetwork}
-import scorex.core.network.message.{Message, MessageSerializer}
-import scorex.core.network.peer.PenaltyType
-import scorex.core.settings.NetworkSettings
+import sparkz.core.network.{Broadcast, BroadcastExceptOf, ConnectedPeer, ConnectionDirection, ConnectionId, SendToPeer, SendToRandom}
+import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, SendToNetwork}
+import sparkz.core.network.message.{Message, MessageSerializer}
+import sparkz.core.network.peer.PenaltyType
+import sparkz.core.settings.NetworkSettings
 
 import java.net.InetSocketAddress
 import scala.collection.mutable.ArrayBuffer
@@ -31,7 +31,7 @@ import scala.util.Success
 class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
 
   implicit lazy val actorSystem: ActorSystem = ActorSystem("submitter-manager-actor-test")
-  implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("scorex.executionContext")
+  implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("sparkz.executionContext")
   implicit val timeout: Timeout = 100 milliseconds
 
   val pubKeysNumber = 5
@@ -39,7 +39,7 @@ class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
   val params: NetworkParams = getParams(pubKeysNumber)
   val getCertificateSignaturesSpec = new GetCertificateSignaturesSpec(pubKeysNumber)
   val certificateSignaturesSpec = new CertificateSignaturesSpec(pubKeysNumber)
-  val messageSerializer = new MessageSerializer(Seq(getCertificateSignaturesSpec, certificateSignaturesSpec), networkSettings.magicBytes)
+  val messageSerializer = new MessageSerializer(Seq(getCertificateSignaturesSpec, certificateSignaturesSpec), networkSettings.magicBytes, networkSettings.messageLengthBytesLimit)
 
   def roundTrip(msg: Message[_]): Message[_] = {
     messageSerializer.deserialize(messageSerializer.serialize(msg), msg.source) match {
@@ -51,6 +51,7 @@ class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
     val mockedSettings: NetworkSettings = mock[NetworkSettings]
     Mockito.when(mockedSettings.syncTimeout).thenReturn(Some(timeoutDuration))
     Mockito.when(mockedSettings.magicBytes).thenReturn(Array[Byte](12, 34, 56, 78))
+    Mockito.when(mockedSettings.messageLengthBytesLimit).thenReturn(16777216)
 
     mockedSettings
   }

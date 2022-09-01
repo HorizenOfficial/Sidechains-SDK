@@ -16,8 +16,8 @@ import org.mockito.Mockito
 import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedMempool, SemanticallySuccessfulModifier}
+import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedMempool, SemanticallySuccessfulModifier}
 
 import java.net.URI
 import java.util
@@ -522,13 +522,13 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
   def publishNewTipEvent(): Unit = {
     val block: SidechainBlock = mock[SidechainBlock]
     Mockito.when(block.id).thenReturn(utilMocks.genesisBlock.id)
-    actorSystem.eventStream.publish(SemanticallySuccessfulModifier[scorex.core.PersistentNodeViewModifier](block))
+    actorSystem.eventStream.publish(SemanticallySuccessfulModifier[sparkz.core.PersistentNodeViewModifier](block))
   }
 
   def publishNewTipEventWithFeePayments(): Unit = {
     val block: SidechainBlock = mock[SidechainBlock]
     Mockito.when(block.id).thenReturn(utilMocks.feePaymentsBlockId)
-    actorSystem.eventStream.publish(SemanticallySuccessfulModifier[scorex.core.PersistentNodeViewModifier](block))
+    actorSystem.eventStream.publish(SemanticallySuccessfulModifier[sparkz.core.PersistentNodeViewModifier](block))
   }
 
   def publishMempoolEvent(): Unit = {

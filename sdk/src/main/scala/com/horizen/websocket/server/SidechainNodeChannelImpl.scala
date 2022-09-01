@@ -16,8 +16,8 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 import com.horizen.serialization.SerializationUtil
 import com.horizen.websocket.server.WebSocketServerRef.sidechainNodeViewHolderRef
-import scorex.core.NodeViewHolder.CurrentView
-import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
+import sparkz.core.NodeViewHolder.CurrentView
+import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 
 import scala.language.postfixOps
 

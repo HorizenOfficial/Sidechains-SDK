@@ -13,7 +13,7 @@ import com.horizen.serialization.ApplicationJsonSerializer
 import org.junit.Assert.{assertEquals, assertTrue}
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-import scorex.core.utils.ScorexEncoder
+import sparkz.core.utils.SparkzEncoder
 
 class RegularTransactionScalaTest extends JUnitSuite with BoxFixture
 {
@@ -54,7 +54,7 @@ class RegularTransactionScalaTest extends JUnitSuite with BoxFixture
     try {
       val id = node.path("id").asText()
       assertEquals("Transaction id json value must be the same.",
-        ScorexEncoder.default.encode(transaction.id), id)
+        SparkzEncoder.default.encode(transaction.id), id)
     } catch {
       case _: Throwable => fail("Transaction id doesn't not found in json.")
     }

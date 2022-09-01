@@ -58,11 +58,11 @@
       <version>0.5.0</version>
       <scope>compile</scope>
     </dependency>
-    <!-- https://mvnrepository.com/artifact/org.scorexfoundation/scorex-core -->
+    <!-- https://mvnrepository.com/artifact/org.sparkzfoundation/sparkz-core -->
     <dependency>
       <groupId>io.horizen</groupId>
-      <artifactId>scorex-core_2.12</artifactId>
-      <version>2.0.0-RC6-140-fc052742-20220715-1836-SNAPSHOT</version>
+      <artifactId>sparkz-core_2.12</artifactId>
+      <version>2.0.0-RC7</version>
       <scope>compile</scope>
       <exclusions>
         <exclusion>
@@ -70,7 +70,7 @@
           <groupId>org.whispersystems</groupId>
         </exclusion>
         <!-- NOTE: this comes from scrypto and contains a vulnerability, we use bcprov-jdk15on:1.69 below,
-         this will be removed with merging scrypto into scorex-core -->
+         this will be removed with merging scrypto into sparkz-core -->
         <exclusion>
           <artifactId>bcprov-jdk15to18</artifactId>
           <groupId>org.bouncycastle</groupId>

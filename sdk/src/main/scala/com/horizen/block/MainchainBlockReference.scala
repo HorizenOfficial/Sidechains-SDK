@@ -8,11 +8,11 @@ import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
 import com.horizen.transaction.mainchain.{BwtRequest, ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
 import com.horizen.serialization.Views
-import scorex.core.serialization.BytesSerializable
+import sparkz.core.serialization.BytesSerializable
 import com.horizen.transaction.{MC2SCAggregatedTransaction, Transaction}
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, CompactSize}
-import scorex.core.serialization.ScorexSerializer
+import sparkz.core.serialization.SparkzSerializer
 import scorex.util.serialization.{Reader, Writer}
 import com.horizen.validation.{InconsistentMainchainBlockReferenceDataException, InvalidMainchainDataException}
 import scorex.util.ScorexLogging
@@ -40,7 +40,7 @@ case class MainchainBlockReference(
 
   override type M = MainchainBlockReference
 
-  override def serializer: ScorexSerializer[MainchainBlockReference] = MainchainBlockReferenceSerializer
+  override def serializer: SparkzSerializer[MainchainBlockReference] = MainchainBlockReferenceSerializer
 
   def semanticValidity(params: NetworkParams): Try[Unit] = Try {
     // Check that header is valid.
@@ -286,7 +286,7 @@ object MainchainBlockReference extends ScorexLogging {
   }
 }
 
-object MainchainBlockReferenceSerializer extends ScorexSerializer[MainchainBlockReference] {
+object MainchainBlockReferenceSerializer extends SparkzSerializer[MainchainBlockReference] {
   override def serialize(obj: MainchainBlockReference, w: Writer): Unit = {
     w.putInt(obj.header.bytes.length)
     w.putBytes(obj.header.bytes)

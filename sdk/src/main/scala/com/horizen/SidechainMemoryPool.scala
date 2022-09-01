@@ -7,14 +7,14 @@ import com.horizen.node.NodeMemoryPool
 import com.horizen.transaction.BoxTransaction
 import com.horizen.utils.MempoolMap
 import scorex.util.{ModifierId, ScorexLogging}
-import scorex.core.transaction.MempoolReader
+import sparkz.core.transaction.MempoolReader
 
 import scala.collection.concurrent.TrieMap
 import scala.util.{Failure, Success, Try}
 import scala.collection.JavaConverters._
 
 class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: MempoolSettings)
-  extends scorex.core.transaction.MemoryPool[SidechainTypes#SCBT, SidechainMemoryPool]
+  extends sparkz.core.transaction.MemoryPool[SidechainTypes#SCBT, SidechainMemoryPool]
   with SidechainTypes
   with NodeMemoryPool
   with ScorexLogging

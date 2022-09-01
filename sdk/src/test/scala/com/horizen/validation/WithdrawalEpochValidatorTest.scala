@@ -17,7 +17,7 @@ import org.junit.{Before, Ignore, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.core.consensus.ModifierSemanticValidity
+import sparkz.core.consensus.ModifierSemanticValidity
 import scorex.util.{ModifierId, bytesToId}
 
 import scala.io.Source

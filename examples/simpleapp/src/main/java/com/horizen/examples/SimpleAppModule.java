@@ -14,6 +14,7 @@ import com.horizen.SidechainAppStopper;
 import com.horizen.SidechainSettings;
 import com.horizen.api.http.ApplicationApiGroup;
 import com.horizen.box.*;
+import com.horizen.fork.ForkConfigurator;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.Secret;
 import com.horizen.secret.SecretSerializer;
@@ -43,7 +44,7 @@ public class SimpleAppModule extends SidechainAppModule
         HashMap<Byte, SecretSerializer<Secret>> customSecretSerializers = new HashMap<>();
         HashMap<Byte, TransactionSerializer<BoxTransaction<Proposition, Box<Proposition>>>> customTransactionSerializers = new HashMap<>();
 
-        String dataDirAbsolutePath = sidechainSettings.scorexSettings().dataDir().getAbsolutePath();
+        String dataDirAbsolutePath = sidechainSettings.sparkzSettings().dataDir().getAbsolutePath();
 
         // two distinct storages are used in application state and wallet in order to test a version
         // misalignment during startup and the recover logic
@@ -66,6 +67,8 @@ public class SimpleAppModule extends SidechainAppModule
         File historyStore = new File(dataDirAbsolutePath + "/history");
         File consensusStore = new File(dataDirAbsolutePath + "/consensusData");
         File backupStore = new File(dataDirAbsolutePath + "/backupStorage");
+
+        AppForkConfigurator forkConfigurator = new AppForkConfigurator();
 
 
         // Here I can add my custom rest api and/or override existing one
@@ -148,6 +151,10 @@ public class SimpleAppModule extends SidechainAppModule
         bind(SidechainAppStopper.class)
                 .annotatedWith(Names.named("ApplicationStopper"))
                 .toInstance(applicationStopper);
+
+        bind(ForkConfigurator.class)
+                .annotatedWith(Names.named("ForkConfiguration"))
+                .toInstance(forkConfigurator);
 
     }
 }

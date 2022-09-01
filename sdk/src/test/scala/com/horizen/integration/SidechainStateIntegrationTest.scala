@@ -21,7 +21,7 @@ import org.junit._
 import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.core.{bytesToId, bytesToVersion}
+import sparkz.core.{bytesToId, bytesToVersion}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer

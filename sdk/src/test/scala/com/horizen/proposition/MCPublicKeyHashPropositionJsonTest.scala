@@ -3,11 +3,10 @@ package com.horizen.proposition
 import com.fasterxml.jackson.databind.JsonNode
 import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams}
 import com.horizen.serialization.{ApplicationJsonSerializer, JsonHorizenPublicKeyHashSerializer}
-import com.horizen.utils.{BytesUtils, Ed25519}
+import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertArrayEquals, assertEquals, assertTrue}
 import org.junit.{Assert, Test}
 import org.scalatestplus.junit.JUnitSuite
-import scorex.core.utils.ScorexEncoder
 
 import java.util.Random
 
