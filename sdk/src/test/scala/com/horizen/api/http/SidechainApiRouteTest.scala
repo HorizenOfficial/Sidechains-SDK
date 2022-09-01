@@ -38,7 +38,7 @@ import sparkz.core.app.Version
 import sparkz.core.network.NetworkController.ReceivableMessages.{ConnectTo, GetConnectedPeers}
 import sparkz.core.network.peer.PeerInfo
 import sparkz.core.network.peer.PeerManager.ReceivableMessages.{GetAllPeers, GetBlacklistedPeers}
-import sparkz.core.network.{ConnectedPeer, Incoming, Outgoing, PeerSpec}
+import sparkz.core.network.{ConnectedPeer, ConnectionId, Incoming, Outgoing, PeerSpec}
 import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
 import sparkz.core.utils.NetworkTimeProvider
 import scorex.crypto.hash.Blake2b256
@@ -83,10 +83,18 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
     inetAddr2 -> peersInfo(1),
     inetAddr3 -> peersInfo(2)
   )
-  val connectedPeers: Seq[ConnectedPeer] = Seq(
-    ConnectedPeer(null, null, 0L, Some(peersInfo(0))),
-    ConnectedPeer(null, null, 0L, Some(peersInfo(2))),
+
+  val connectedPeerHandler: TestProbe = TestProbe()
+
+  val lastMessage1 = 123456
+  val lastMessage2 = 11223344
+
+  val connectedPeer: Array[ConnectedPeer] = Array(
+    ConnectedPeer(ConnectionId(inetAddr1, inetAddr1, Incoming), connectedPeerHandler.ref, lastMessage1, Some(peersInfo(0))),
+    ConnectedPeer(ConnectionId(inetAddr2, inetAddr3, Outgoing), connectedPeerHandler.ref, lastMessage2, Some(peersInfo(1)))
   )
+
+  val connectedPeers: Seq[ConnectedPeer] = Seq(connectedPeer(0), connectedPeer(1))
 
   val sidechainApiMockConfiguration: SidechainApiMockConfiguration = new SidechainApiMockConfiguration()
 
