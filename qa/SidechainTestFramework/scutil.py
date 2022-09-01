@@ -616,16 +616,14 @@ def connect_sc_nodes(from_connection, node_num, wait_for=25):
     """
     j = {"host": "127.0.0.1", \
          "port": str(sc_p2p_port(node_num))}
-    ip_port = "\"127.0.0.1:" + str(sc_p2p_port(node_num)) + "\""
-    print("Connecting to " + ip_port)
-    oldnum = len(from_connection.node_connectedPeers()["result"]["peers"])
+    ip_port = "127.0.0.1:" + str(sc_p2p_port(node_num))
+    print("Connecting to '" + ip_port + "'")
     from_connection.node_connect(json.dumps(j))
     start = time.time()
     while True:
         if time.time() - start >= wait_for:
             raise (TimeoutException("Trying to connect to node{0}".format(node_num)))
-        newnum = len(from_connection.node_connectedPeers()["result"]["peers"])
-        if newnum == (oldnum + 1):
+        if any(i for i in (from_connection.node_connectedPeers()["result"]["peers"]) if i.get("remoteAddress") == "/" + ip_port):
             break
         time.sleep(WAIT_CONST)
 

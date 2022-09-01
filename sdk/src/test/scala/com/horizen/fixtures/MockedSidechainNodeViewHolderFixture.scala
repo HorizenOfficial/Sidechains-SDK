@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen._
 import org.mockito.Mockito
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.core.settings.{NetworkSettings, ScorexSettings}
+import sparkz.core.settings.{NetworkSettings, SparkzSettings}
 
 class MockedSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                     history: SidechainHistory,
@@ -27,14 +27,14 @@ trait MockedSidechainNodeViewHolderFixture extends MockitoSugar {
   def getMockedSidechainNodeViewHolderRef(history: SidechainHistory, state: SidechainState, wallet: SidechainWallet, mempool: SidechainMemoryPool)
                                          (implicit actorSystem: ActorSystem): ActorRef = {
     val sidechainSettings = mock[SidechainSettings]
-    val scorexSettings = mock[ScorexSettings]
+    val sparkzSettings = mock[SparkzSettings]
     val networkSettings = mock[NetworkSettings]
     val walletSettings = mock[WalletSettings]
-    Mockito.when(sidechainSettings.scorexSettings)
+    Mockito.when(sidechainSettings.sparkzSettings)
       .thenAnswer(answer => {
-        scorexSettings
+        sparkzSettings
       })
-    Mockito.when(scorexSettings.network)
+    Mockito.when(sparkzSettings.network)
       .thenAnswer(answer => {
       networkSettings
     })

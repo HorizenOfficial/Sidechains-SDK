@@ -4,7 +4,7 @@ import com.horizen.box.data.ZenBoxData;
 import com.horizen.box.data.ZenBoxDataSerializer;
 import com.horizen.proof.Signature25519;
 import com.horizen.proof.Signature25519Serializer;
-import scorex.core.NodeViewModifier$;
+import sparkz.core.NodeViewModifier$;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 

@@ -17,14 +17,13 @@ import com.horizen.box.{Box, ZenBox, ForgerBox}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node.{NodeWallet, SidechainNodeView}
 import com.horizen.params.NetworkParams
-import com.horizen.proof.{Proof}
+import com.horizen.proof.Proof
 import com.horizen.proposition._
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
 import com.horizen.transaction._
+import sparkz.core.settings.RESTApiSettings
 import com.horizen.utils.{BytesUtils, ZenCoinsUtils, Pair => JPair}
-import scorex.core.settings.RESTApiSettings
-
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{Await, ExecutionContext, Future}

@@ -22,7 +22,7 @@ import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.core.{bytesToId, bytesToVersion}
+import sparkz.core.{bytesToId, bytesToVersion}
 import scorex.util.ModifierId
 
 import scala.collection.JavaConverters._

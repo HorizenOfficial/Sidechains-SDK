@@ -166,7 +166,7 @@ class SidechainWalletApiRouteTest extends SidechainApiRouteTest {
         .withEntity(
           SerializationUtil.serialize(ReqAllBoxes(Some("a_boxTypeClass"), Some(Seq("boxId_1", "boxId_2"))))) ~> sidechainWalletApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.InternalServerError.intValue
-        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        responseEntity.getContentType() shouldEqual ContentTypes.`text/plain(UTF-8)`
       }
     }
 

@@ -1,10 +1,10 @@
 package com.horizen.vrf;
 
-import scorex.core.serialization.ScorexSerializer;
+import sparkz.core.serialization.SparkzSerializer;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
-public class VrfOutputSerializer implements ScorexSerializer<VrfOutput> {
+public class VrfOutputSerializer implements SparkzSerializer<VrfOutput> {
     private static VrfOutputSerializer serializer;
 
     static {

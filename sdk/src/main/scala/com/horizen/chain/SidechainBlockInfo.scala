@@ -6,10 +6,10 @@ import com.horizen.block.SidechainBlock
 import com.horizen.serialization.{ModifierSemanticValiditySerializer, Views}
 import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochInfoSerializer}
 import com.horizen.vrf.{VrfOutput, VrfOutputSerializer}
-import scorex.core.NodeViewModifier
-import scorex.core.block.Block.Timestamp
-import scorex.core.consensus.ModifierSemanticValidity
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
+import sparkz.core.NodeViewModifier
+import sparkz.core.block.Block.Timestamp
+import sparkz.core.consensus.ModifierSemanticValidity
+import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.util.serialization.{Reader, Writer}
 import scorex.util.{ModifierId, bytesToId, idToBytes}
 import scala.collection.mutable.ArrayBuffer
@@ -31,7 +31,7 @@ case class SidechainBlockInfo(height: Int,
 
   override type M = SidechainBlockInfo
 
-  override lazy val serializer: ScorexSerializer[SidechainBlockInfo] = SidechainBlockInfoSerializer
+  override lazy val serializer: SparkzSerializer[SidechainBlockInfo] = SidechainBlockInfoSerializer
 
   lazy val mainchainHeaderHashes: Seq[MainchainHeaderHash] = {mainchainHeaderBaseInfo.map(info => info.hash)}
 }
@@ -46,7 +46,7 @@ object SidechainBlockInfo {
   }
 }
 
-object SidechainBlockInfoSerializer extends ScorexSerializer[SidechainBlockInfo] {
+object SidechainBlockInfoSerializer extends SparkzSerializer[SidechainBlockInfo] {
   override def serialize(obj: SidechainBlockInfo, w: Writer): Unit = {
     w.putInt(obj.height)
     w.putLong(obj.score)

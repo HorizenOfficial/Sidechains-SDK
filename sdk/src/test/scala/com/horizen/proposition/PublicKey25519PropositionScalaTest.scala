@@ -9,7 +9,7 @@ import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 
 import scala.collection.JavaConverters._
-import scorex.core.utils.ScorexEncoder
+import sparkz.core.utils.SparkzEncoder
 
 class PublicKey25519PropositionScalaTest
   extends JUnitSuite
@@ -34,7 +34,7 @@ class PublicKey25519PropositionScalaTest
     assertEquals("Json must contain only 1 publicKey.",
       1, node.findValues("publicKey").size())
     assertEquals("PublicKey json value must be the same.",
-      ScorexEncoder.default.encode(prop1.pubKeyBytes()), node.path("publicKey").asText())
+      SparkzEncoder.default.encode(prop1.pubKeyBytes()), node.path("publicKey").asText())
 
   }
 

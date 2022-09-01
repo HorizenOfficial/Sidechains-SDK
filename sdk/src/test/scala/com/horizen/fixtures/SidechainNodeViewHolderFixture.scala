@@ -20,8 +20,8 @@ import com.horizen.storage._
 import com.horizen.utils.BytesUtils
 import com.horizen.wallet.ApplicationWallet
 import com.horizen.{SidechainNodeViewHolderRef, SidechainSettings, SidechainSettingsReader, SidechainTypes, SidechainUtxoMerkleTreeProviderCSWEnabled, SidechainWalletCswDataProvider, SidechainWalletCswDataProviderCSWEnabled}
-import scorex.core.api.http.ApiRejectionHandler
-import scorex.core.utils.NetworkTimeProvider
+import sparkz.core.api.http.ApiRejectionHandler
+import sparkz.core.utils.NetworkTimeProvider
 
 import scala.concurrent.ExecutionContext
 
@@ -41,11 +41,11 @@ trait SidechainNodeViewHolderFixture
   implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
   implicit def rejectionHandler: RejectionHandler = ApiRejectionHandler.rejectionHandler
 
-  implicit val actorSystem: ActorSystem = ActorSystem(sidechainSettings.scorexSettings.network.agentName, CustomAkkaConfiguration.getCustomConfig())
-  implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("scorex.executionContext")
+  implicit val actorSystem: ActorSystem = ActorSystem(sidechainSettings.sparkzSettings.network.agentName, CustomAkkaConfiguration.getCustomConfig())
+  implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("sparkz.executionContext")
   implicit val materializer: ActorMaterializer = ActorMaterializer()
 
-  val timeProvider = new NetworkTimeProvider(sidechainSettings.scorexSettings.ntp)
+  val timeProvider = new NetworkTimeProvider(sidechainSettings.sparkzSettings.ntp)
 
   val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(new JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]]())
   val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(new JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]]())
@@ -141,7 +141,7 @@ trait SidechainNodeViewHolderFixture
   }
 
   def getSidechainTransactionApiRoute : SidechainTransactionApiRoute = {
-    SidechainTransactionApiRoute(sidechainSettings.scorexSettings.restApi, nodeViewHolderRef,
+    SidechainTransactionApiRoute(sidechainSettings.sparkzSettings.restApi, nodeViewHolderRef,
       sidechainTransactionActorRef, sidechainTransactionsCompanion, params)
   }
 

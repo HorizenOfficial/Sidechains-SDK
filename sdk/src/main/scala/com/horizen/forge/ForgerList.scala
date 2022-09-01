@@ -1,6 +1,6 @@
 package com.horizen.forge
 
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
+import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
 case class ForgerList(forgerIndexes: Array[Int]) extends BytesSerializable {
@@ -17,10 +17,10 @@ case class ForgerList(forgerIndexes: Array[Int]) extends BytesSerializable {
     ForgerList(forgerIndexes)
   }
 
-  override def serializer: ScorexSerializer[ForgerList] = ForgerListSerializer
+  override def serializer: SparkzSerializer[ForgerList] = ForgerListSerializer
 }
 
-object ForgerListSerializer extends ScorexSerializer[ForgerList] {
+object ForgerListSerializer extends SparkzSerializer[ForgerList] {
   override def serialize(obj: ForgerList, w: Writer): Unit = {
     w.putInt(obj.forgerIndexes.size)
     obj.forgerIndexes.foreach(index => {
