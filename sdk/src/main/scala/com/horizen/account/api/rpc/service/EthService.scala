@@ -113,10 +113,8 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   private def doCall[A](nodeView: NV, params: TransactionArgs, tag: String)(fun: (Array[Byte], AccountStateView) ⇒ A): A = {
     getStateViewAtTag(nodeView, tag) { tagStateView =>
       try {
-        getBlockAtTag(nodeView, tag) { block =>
-          val msg = params.toMessage(block.header.baseFee)
+          val msg = params.toMessage(getBlockAtTag(nodeView, tag).header.baseFee)
           fun(tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit)), tagStateView)
-        }
       } catch {
         // throw on execution errors, also include evm revert reason if possible
         case reverted: ExecutionRevertedException => throw new RpcException(new RpcError(
@@ -298,10 +296,10 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
     }
   }
 
-  private def getBlockAtTag[A](nodeView: NV, tag: String)(fun: AccountBlock ⇒ A): A = {
+  private def getBlockAtTag(nodeView: NV, tag: String) : AccountBlock = {
     nodeView.history.getBlockById(getBlockIdByTag(nodeView, tag)).asScala match {
       case None => throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "Invalid block tag parameter."))
-      case Some(block) => fun(block)
+      case Some(block) => block
     }
   }
 
@@ -322,7 +320,7 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   @RpcMethod("eth_gasPrice")
   def gasPrice: Quantity = {
     applyOnAccountView { nodeView =>
-      getBlockAtTag(nodeView, "latest") { block => new Quantity(block.header.baseFee) }
+      new Quantity(getBlockAtTag(nodeView, "latest").header.baseFee)
     }
   }
 

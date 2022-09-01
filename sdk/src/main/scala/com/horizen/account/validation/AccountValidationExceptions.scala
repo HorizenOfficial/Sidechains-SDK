@@ -8,3 +8,6 @@ class MissingTransactionSignatureException(message: String = "", cause: Option[T
 
 class InvalidTransactionChainIdException(message: String = "", cause: Option[Throwable] = None)
   extends InvalidBlockException(message, cause)
+
+class InvalidBaseFeeException(message: String = "", cause: Option[Throwable] = None)
+  extends InvalidBlockException(message, cause)
