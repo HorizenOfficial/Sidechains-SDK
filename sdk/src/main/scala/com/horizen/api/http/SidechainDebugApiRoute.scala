@@ -6,7 +6,7 @@ import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.SidechainNodeViewHolder.ReceivableMessages.ReindexStep
 import com.horizen.serialization.Views
-import scorex.core.settings.RESTApiSettings
+import sparkz.core.settings.RESTApiSettings
 import scala.concurrent.ExecutionContext
 
 

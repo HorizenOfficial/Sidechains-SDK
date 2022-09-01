@@ -468,7 +468,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "sendTransaction")
         .withHeaders(apiTokenHeader).withEntity(SerializationUtil.serialize(ReqSendTransactionPost("SOMEBYTES"))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.OK.intValue
-        responseEntity.getContentType() shouldEqual ContentTypes.`text/plain(UTF-8)`
+        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
         assertsOnSidechainErrorResponseSchema(entityAs[String], GenericTransactionError("", JOptional.empty()).code)
       }
       // companion.parseBytesTry(transactionBytes) -> FAILURE

@@ -12,10 +12,10 @@ import com.horizen.consensus.{ConsensusEpochAndSlot, ConsensusEpochNumber, Conse
 import com.horizen.forge.Forger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
 import com.horizen.params.NetworkParams
 import com.horizen.utils.TimeToEpochUtils
-import scorex.core.NodeViewHolder.ReceivableMessages
-import scorex.core.NodeViewHolder.ReceivableMessages.{GetNodeViewChanges, LocallyGeneratedModifier}
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.ChangedHistory
-import scorex.core.utils.NetworkTimeProvider
+import sparkz.core.NodeViewHolder.ReceivableMessages
+import sparkz.core.NodeViewHolder.ReceivableMessages.{GetNodeViewChanges, LocallyGeneratedModifier}
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.ChangedHistory
+import sparkz.core.utils.NetworkTimeProvider
 import scorex.util.ScorexLogging
 
 import scala.concurrent.ExecutionContext.Implicits.global

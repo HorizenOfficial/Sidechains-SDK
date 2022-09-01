@@ -1,13 +1,13 @@
 package com.horizen
 
-import scorex.core.NodeViewHolder.ReceivableMessages.{GetNodeViewChanges}
-import scorex.core.PersistentNodeViewModifier
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.ChangedHistory
+import sparkz.core.NodeViewHolder.ReceivableMessages.{GetNodeViewChanges}
+import sparkz.core.PersistentNodeViewModifier
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.ChangedHistory
 import scorex.util.ScorexLogging
 import scala.concurrent.ExecutionContext
 import scala.util.Success
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import scorex.core.consensus.{HistoryReader, SyncInfo}
+import sparkz.core.consensus.{HistoryReader, SyncInfo}
 import scala.reflect.ClassTag
 
 
