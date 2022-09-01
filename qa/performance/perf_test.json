@@ -2,7 +2,7 @@
   "test_type": 3,
   "test_run_time": 50,
   "block_rate": 30,
-  "initial_txs": 100000,
+  "initial_txs": 5000,
   "network_topology": 2,
   "nodes": [
     {

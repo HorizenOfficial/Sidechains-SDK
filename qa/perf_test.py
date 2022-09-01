@@ -1,7 +1,7 @@
 import logging
 import math
 import time
-from threading import Thread
+from multiprocessing import Pool, Value
 from time import sleep
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -20,6 +20,16 @@ from test_framework.util import start_nodes, \
 from SidechainTestFramework.scutil import assert_true, bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks, \
     deserialize_perf_test_json, connect_sc_nodes
 from performance.perf_data import NetworkTopology, TestType
+
+counter = Value('i', 0)
+errors = Value('i', 0)
+
+
+def init_globals(count, err):
+    global counter
+    global errors
+    counter = count
+    errors = err
 
 
 def get_node_configuration(mc_node, sc_node_data, perf_data):
@@ -57,6 +67,27 @@ def get_node_configuration(mc_node, sc_node_data, perf_data):
 
 def get_number_of_transactions_for_node(node):
     return len(allTransactions(node, False)["transactionIds"])
+
+
+def send_transactions_per_second(txs_creator_node, destination_address, utxo_amount, tps_per_process,
+                                 start_time, test_run_time):
+    while time.time() - start_time < test_run_time:
+        i = 0
+        tps_start_time = time.time()
+        while i < tps_per_process:
+            try:
+                sendCoinsToAddress(txs_creator_node, destination_address, utxo_amount, 0)
+            except Exception:
+                with errors.get_lock():
+                    errors.value += 1
+            with counter.get_lock():
+                counter.value += 1
+            i += 1
+        completion_time = time.time() - tps_start_time
+        # Remove execution time from the 1 second to get as close to X number of TPS as possible
+        if completion_time < 1:
+            sleep(1 - completion_time)
+
 
 class PerformanceTest(SidechainTestFramework):
     sc_nodes_bootstrap_info = None
@@ -185,7 +216,7 @@ class PerformanceTest(SidechainTestFramework):
             wallet_balance = 0
             for box in wallet_boxes:
                 wallet_balance += box["value"]
-            if(self.sc_nodes_list[index]["tx_creator"]):
+            if (self.sc_nodes_list[index]["tx_creator"]):
                 print(f"Node{index} (Transaction Creator) Wallet Balance: {wallet_balance}")
             else:
                 print(f"Node{index} Wallet Balance: {wallet_balance}")
@@ -194,21 +225,51 @@ class PerformanceTest(SidechainTestFramework):
         result = http_block_findById(node, block_id)
         return result["block"]["sidechainTransactions"]
 
-    def txs_creator_send_to_address(self, utxo_amount, txs_creator_node, non_creator_nodes, tps_per_node, start_time):
+    def txs_creator_send_to_address(self, utxo_amount, txs_creator_node, non_creator_nodes, tps_test):
+        node_index = self.sc_nodes.index(txs_creator_node)
         destination_address = non_creator_nodes[0].wallet_createPrivateKey25519()["result"]["proposition"][
             "publicKey"]
-        counter = 0
-        while counter < self.initial_txs and (time.time() - start_time < self.test_run_time):
-            start = 0
-            completion_time = 0
-            for _ in range(tps_per_node):
-                start = time.time()
-                sendCoinsToAddress(txs_creator_node, destination_address, utxo_amount, 0)
-                counter += tps_per_node
-                completion_time = time.time() - start
-            # Remove execution time from the 1 second to get as close to 1 second total as possible
-            sleep(1 - completion_time)
-            print(f"Actual time to send {tps_per_node} transactions to node (including sleep): {time.time() - start}")
+        start_time = time.time()
+
+        if tps_test:
+            max_tps_per_process = 50
+            tps = math.floor(self.initial_txs / self.test_run_time)
+            max_processes = math.ceil(tps / max_tps_per_process)
+            tps_per_process = math.ceil(tps / max_processes)
+
+            print(f"Running Throughput: {tps} Transactions Per Second for Creator Node(Node{node_index})...")
+            while counter.value < self.initial_txs and ((time.time() - start_time) < self.test_run_time):
+
+                with Pool(initializer=init_globals, initargs=(counter, errors)) as pool:
+                    i = 0
+                    args = []
+                    while i < max_processes:
+                        args.append((txs_creator_node, destination_address, utxo_amount,
+                                     tps_per_process, start_time, self.test_run_time))
+                        i += 1
+                    pool.starmap(send_transactions_per_second, args)
+
+                print(f"... Sent {counter.value} Transactions ...")
+                print(f"Timer: {time.time() - start_time} and counter {counter.value}")
+
+        else:
+            print(f"Firing all available transactions from Creator Node(Node{node_index}) to destination address...")
+            for _ in range(self.initial_txs):
+                with Pool(initializer=init_globals, initargs=(counter, errors)) as pool:
+                    args = [(txs_creator_node, destination_address, utxo_amount, 0)]
+                    while counter.value < self.initial_txs and ((time.time() - start_time) < self.test_run_time):
+                        try:
+                            pool.starmap(sendCoinsToAddress, args)
+                        except Exception:
+                            errors.value += 1
+                        counter.value += 1
+            print(f"Firing Transactions Ended After: {time.time() - start_time}")
+
+        if not tps_test:
+            print(f"Node{node_index} sent {counter.value} transactions out of a possible {self.initial_txs} "
+                  f"in {time.time() - start_time} seconds.")
+
+        print(f"Node{node_index} ERRORS ENCOUNTERED: {errors.value}")
 
     def run_test(self):
         mc_nodes = self.nodes
@@ -242,10 +303,6 @@ class PerformanceTest(SidechainTestFramework):
         for node in txs_creators:
             # Multiply ft_amount by 1e8 to get zentoshi value
             assert_equal(http_wallet_balance(node), ft_amount * 1e8)
-
-        ##########################################################
-        ##################### TEST VERSION 1 #####################
-        ##########################################################
 
         # Create many UTXOs in a single transaction to multiple addresses
         # Taking FT box and splitting into many UTXOs to enable the creation of multiple transactions for the next part
@@ -308,6 +365,7 @@ class PerformanceTest(SidechainTestFramework):
             # Populate the mempool
             print("Populating the mempool...")
             self.send_coins_to_multiple_destination(utxo_amount, txs_creators, non_txs_creators)
+            # Give mempool time to update
             sleep(3)
             print("Mempool ready!")
 
@@ -315,9 +373,9 @@ class PerformanceTest(SidechainTestFramework):
             for node in self.sc_nodes:
                 assert_equal(len(allTransactions(node, True)["transactions"]), self.initial_txs)
 
-            # Take best block id of every node and assert they all match
-            test_start_block_ids = self.get_best_node_block_ids()
-            assert_equal(len(set(test_start_block_ids.values())), 1)
+        # Take best block id of every node and assert they all match
+        test_start_block_ids = self.get_best_node_block_ids()
+        assert_equal(len(set(test_start_block_ids.values())), 1)
 
         # Output the wallet balance of each node
         print("Node Wallet Balances Before Test...")
@@ -331,6 +389,11 @@ class PerformanceTest(SidechainTestFramework):
 
         # Start timing
         start_time = time.time()
+        number_of_txs_creators = len(txs_creators)
+
+        ##########################################################
+        ##################### TEST VERSION 1 #####################
+        ##########################################################
 
         if self.test_type == TestType.Mempool:
             ######## RUN UNTIL NODE CREATORS MEMPOOLS ARE EMPTY ########
@@ -350,14 +413,19 @@ class PerformanceTest(SidechainTestFramework):
             while time.time() - start_time < self.test_run_time:
                 sleep(1)
 
-        elif self.test_type == TestType.Constant_Throughput:
+        ##########################################################
+        ##################### TEST VERSION 2 #####################
+        ##########################################################
+
+        elif self.test_type == TestType.Transactions_Per_Second:
             # 1 thread per txs_creator node sending transactions
-            number_of_txs_creators = len(txs_creators)
-            tps_per_node = math.floor(self.initial_txs / self.test_run_time)
-            print(f"Running Throughput: {tps_per_node} Transaction Per Second for each creator node")
             for i in range(number_of_txs_creators):
-                Thread(target=self.txs_creator_send_to_address(utxo_amount, txs_creators[i], non_txs_creators
-                                                               , tps_per_node, start_time)).start()
+                self.txs_creator_send_to_address(utxo_amount, txs_creators[i], non_txs_creators, True)
+
+        elif self.test_type == TestType.All_Transactions:
+            # 1 thread per txs_creator node sending transactions
+            for i in range(number_of_txs_creators):
+                self.txs_creator_send_to_address(utxo_amount, txs_creators[i], non_txs_creators, False)
 
         # stop forging
         for index, node in enumerate(self.sc_nodes_list):
@@ -367,7 +435,6 @@ class PerformanceTest(SidechainTestFramework):
 
         # Get end time
         end_time = time.time()
-
         sleep(3)
 
         # Get information from all nodes
@@ -391,30 +458,29 @@ class PerformanceTest(SidechainTestFramework):
         print("Node Wallet Balances After Test...")
         self.log_node_wallet_balances()
 
-        if self.test_type == TestType.Mempool_Timed:
-
-            for node in self.sc_nodes:
-                node_index = self.sc_nodes.index(node)
-                start_block_id = test_start_block_ids[node_index]
-                current_block_id = test_end_block_ids[node_index]
-                total_mined_transactions = 0
-                # We don't count the first block, so start from 1
-                total_blocks_for_node = 1
-                print("### Node" + str(node_index) + " Test Results ###")
-                print("Node" + str(node_index) + " Mempool remaining transactions: " + str(
-                    len(allTransactions(node, False)["transactionIds"])))
-                while current_block_id != start_block_id:
-                    number_of_transactions_mined = len(
-                        self.get_node_mined_transactions_by_block_id(node, current_block_id))
-                    total_mined_transactions += number_of_transactions_mined
-                    print("Node" + str(node_index) + "- BlockId " + str(current_block_id) + " Mined Transactions: " +
-                          str(number_of_transactions_mined))
-                    total_blocks_for_node += 1
-                    current_block_id = http_block_findById(node, current_block_id)["block"]["parentId"]
-                print("Node" + str(node_index) + " Total Blocks: " + str(total_blocks_for_node))
-                print("Node" + str(node_index) + " Total Transactions Mined: " + str(total_mined_transactions))
-                print(f"Transactions NOT mined: {self.initial_txs - total_mined_transactions}")
-            print(f"\n###\nTEST RUN TIME: {end_time - start_time} seconds\n###")
+        # OUTPUT TEST RESULTS
+        for node in self.sc_nodes:
+            node_index = self.sc_nodes.index(node)
+            start_block_id = test_start_block_ids[node_index]
+            current_block_id = test_end_block_ids[node_index]
+            total_mined_transactions = 0
+            # We don't count the first block, so start from 1
+            total_blocks_for_node = 1
+            print("### Node" + str(node_index) + " Test Results ###")
+            print("Node" + str(node_index) + " Mempool remaining transactions: " + str(
+                len(allTransactions(node, False)["transactionIds"])))
+            while current_block_id != start_block_id:
+                number_of_transactions_mined = len(
+                    self.get_node_mined_transactions_by_block_id(node, current_block_id))
+                total_mined_transactions += number_of_transactions_mined
+                print("Node" + str(node_index) + "- BlockId " + str(current_block_id) + " Mined Transactions: " +
+                      str(number_of_transactions_mined))
+                total_blocks_for_node += 1
+                current_block_id = http_block_findById(node, current_block_id)["block"]["parentId"]
+            print("Node" + str(node_index) + " Total Blocks: " + str(total_blocks_for_node))
+            print("Node" + str(node_index) + " Total Transactions Mined: " + str(total_mined_transactions))
+            print(f"Transactions NOT mined: {self.initial_txs - total_mined_transactions}")
+        print(f"\n###\nTEST RUN TIME: {end_time - start_time} seconds\n###")
 
 
 if __name__ == "__main__":
