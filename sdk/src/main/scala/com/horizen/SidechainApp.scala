@@ -262,6 +262,13 @@ class SidechainApp @Inject()
     log.warn("******** Ceased Sidechain Withdrawal (CSW) is DISABLED ***********")
   }
 
+  // Init ForkManager
+  // We need to have it initializes before the creation of the SidechainState
+  ForkManager.init(forkConfigurator, sidechainSettings.genesisData.mcNetwork) match {
+    case Success(_) =>
+    case Failure(exception) => throw exception
+  }
+
   // Init all storages
   protected val sidechainSecretStorage = new SidechainSecretStorage(
     //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/secret")),
@@ -371,12 +378,6 @@ class SidechainApp @Inject()
   //Websocket server for the Explorer
   if(sidechainSettings.websocket.wsServer) {
     val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocket.wsServerPort)
-  }
-
-  // Init ForkManager
-  ForkManager.init(forkConfigurator, sidechainSettings.genesisData.mcNetwork) match {
-    case Success(_) =>
-    case Failure(exception) => throw exception
   }
 
   // Init API

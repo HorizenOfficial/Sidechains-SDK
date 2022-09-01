@@ -62,4 +62,7 @@ trait NetworkParams {
   // Sidechain forger restriction
   val restrictForgers: Boolean = false
   val allowedForgersList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = Seq()
+
+  //Max Withdrawal Boxes per certificate
+  final val maxWBsAllowed: Int = 3999
 }
