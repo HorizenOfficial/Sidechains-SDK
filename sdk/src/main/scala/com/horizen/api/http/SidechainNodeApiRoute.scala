@@ -141,7 +141,7 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
             log.info("Stop command triggered...")
             sleep(500)
             log.info("Calling core application stop...")
-            app.sidechainStopAll()
+            app.sidechainStopAll(true)
             log.info("... core application stop returned")
           }
         }).start()

@@ -6,6 +6,7 @@ import com.horizen.box.Box
 import com.horizen.chain.{MainchainHeaderHash, SidechainBlockInfo}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
+import com.horizen.fork.ForkManager
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.Proposition
@@ -299,7 +300,6 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     })
 
     val isWithdrawalEpochLastBlock: Boolean = mainchainReferenceData.size == withdrawalEpochMcBlocksLeft
-
     // Collect transactions if possible
     val transactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]] =
       if (isWithdrawalEpochLastBlock) {
@@ -313,7 +313,10 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
         Seq()
       } else { // SC block is in the middle of the epoch
         var txsCounter: Int = 0
-        nodeView.pool.take(nodeView.pool.size).filter(tx => {
+        val allowedWithdrawalRequestBoxes = nodeView.state.getAllowedWithdrawalRequestBoxes(mainchainBlockReferenceDataToRetrieve.size) - nodeView.state.getAlreadyMinedWithdrawalRequestBoxesInCurrentEpoch
+        //In case we reached the Sidechain Fork1 we filter the mempool txs considering also the WithdrawalBoxes allowed to be mined in the current block.
+        val mempoolTx = if (ForkManager.getSidechainConsensusEpochFork(TimeToEpochUtils.timeStampToEpochNumber(params, timestamp)).backwardTransferLimitEnabled())  nodeView.pool.takeWithWithdrawalBoxesLimit(allowedWithdrawalRequestBoxes) else nodeView.pool.take(nodeView.pool.size)
+        mempoolTx.filter(tx => {
           val txSize = tx.bytes.length + 4 // placeholder for Tx length
           txsCounter += 1
           if(txsCounter > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER || blockSize + txSize > SidechainBlock.MAX_BLOCK_SIZE)

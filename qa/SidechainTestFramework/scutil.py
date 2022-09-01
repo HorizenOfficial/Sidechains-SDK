@@ -132,7 +132,7 @@ def launch_bootstrap_tool(command_name, json_parameters):
         raise Exception("Bootstrap tool error occurred")
 
 
-def launch_db_tool(dirName, command_name, json_parameters):
+def launch_db_tool(dirName, storageNames, command_name, json_parameters):
     '''
     we use "blockchain" postfix for specifying the dataDir (see qa/resources/template.conf:
         dataDir = "%(DIRECTORY)s/sc_node%(NODE_NUMBER)s/blockchain"
@@ -375,6 +375,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
     api_key_hash = ""
     if sc_node_config.api_key != "":
         api_key_hash = calculateApiKeyHash(sc_node_config.api_key)
+    genesis_secrets += sc_node_config.initial_private_keys
+
     config = tmpConfig % {
         'NODE_NUMBER': n,
         'DIRECTORY': dirname,

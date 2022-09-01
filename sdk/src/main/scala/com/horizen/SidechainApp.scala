@@ -2,14 +2,11 @@ package com.horizen
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
+
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
-import java.util.{HashMap => JHashMap, List => JList}
-
-import akka.actor.{ActorRef, ActorSystem}
-import akka.http.scaladsl.Http
+import java.util.{HashMap => JHashMap, List => JList, Map => JMap}
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
-import akka.stream.ActorMaterializer
 import akka.stream.ActorMaterializer
 import com.google.inject.Inject
 import com.google.inject.name.Named
@@ -22,9 +19,8 @@ import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.customconfig.CustomAkkaConfiguration
-import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
+import com.horizen.cryptolibprovider.CommonCircuit
 import com.horizen.csw.CswManagerRef
-import com.horizen.customconfig.CustomAkkaConfiguration
 import com.horizen.forge.{ForgerRef, MainchainSynchronizer}
 import com.horizen.helper._
 import com.horizen.network.SidechainNodeViewSynchronizer
@@ -38,7 +34,6 @@ import com.horizen.transaction._
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{BlockUtils, BytesUtils, Pair}
 import com.horizen.wallet.ApplicationWallet
-import com.horizen.websocket.client._
 import com.horizen.websocket.server.WebSocketServerRef
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.app.Application
@@ -50,26 +45,21 @@ import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.Transaction
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
 import scorex.util.ScorexLogging
-import java.lang.{Byte => JByte}
-import java.nio.file.{Files, Paths}
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.{HashMap => JHashMap, List => JList}
 
+import java.util.concurrent.atomic.AtomicBoolean
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.io.{Codec, Source}
-import com.horizen.network.SidechainNodeViewSynchronizer
 import com.horizen.websocket.client.{DefaultWebSocketReconnectionHandler, MainchainNodeChannelImpl, WebSocketChannel, WebSocketCommunicationClient, WebSocketConnector, WebSocketConnectorImpl, WebSocketReconnectionHandler}
-import com.horizen.websocket.server.WebSocketServerRef
-import com.horizen.serialization.JsonHorizenPublicKeyHashSerializer
-import com.horizen.transaction.mainchain.SidechainCreation
-import sparkz.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
-import java.util.concurrent.atomic.AtomicBoolean
-
 import com.horizen.fork.{ForkConfigurator, ForkManager}
+import org.apache.logging.log4j.LogManager
 
+import java.util.concurrent.TimeUnit
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
-
+import org.apache.logging.log4j.core.impl.Log4jContextFactory
+import org.apache.logging.log4j.core.util.DefaultShutdownCallbackRegistry
 
 class SidechainApp @Inject()
   (@Named("SidechainSettings") val sidechainSettings: SidechainSettings,
@@ -262,6 +252,13 @@ class SidechainApp @Inject()
     log.warn("******** Ceased Sidechain Withdrawal (CSW) is DISABLED ***********")
   }
 
+  // Init ForkManager
+  // We need to have it initializes before the creation of the SidechainState
+  ForkManager.init(forkConfigurator, sidechainSettings.genesisData.mcNetwork) match {
+    case Success(_) =>
+    case Failure(exception) => throw exception
+  }
+
   // Init all storages
   protected val sidechainSecretStorage = new SidechainSecretStorage(
     //openStorage(new JFile(s"${sidechainSettings.sparkzSettings.dataDir.getAbsolutePath}/secret")),
@@ -373,12 +370,6 @@ class SidechainApp @Inject()
     val webSocketServerActor: ActorRef = WebSocketServerRef(nodeViewHolderRef,sidechainSettings.websocket.wsServerPort)
   }
 
-  // Init ForkManager
-  ForkManager.init(forkConfigurator, sidechainSettings.genesisData.mcNetwork) match {
-    case Success(_) =>
-    case Failure(exception) => throw exception
-  }
-
   // Init API
   var rejectedApiRoutes : Seq[SidechainRejectionApiRoute] = Seq[SidechainRejectionApiRoute]()
   rejectedApiPaths.asScala.foreach(path => rejectedApiRoutes = rejectedApiRoutes :+ SidechainRejectionApiRoute(path.getKey, path.getValue, settings.restApi, nodeViewHolderRef))
@@ -413,7 +404,7 @@ class SidechainApp @Inject()
 
   override val swaggerConfig: String = Source.fromResource("api/sidechainApi.yaml")(Codec.UTF8).getLines.mkString("\n")
 
-  val shutdownHookThread = new Thread() {
+  val shutdownHookThread = new Thread("ShutdownHook-Thread") {
     override def run(): Unit = {
       log.error("Unexpected shutdown")
       sidechainStopAll()
@@ -434,15 +425,22 @@ class SidechainApp @Inject()
 
     Http().bindAndHandle(combinedRoute, bindAddress.getAddress.getHostAddress, bindAddress.getPort)
 
-    //on unexpected shutdown
+
+    //Remove the Logger shutdown hook
+    val factory = LogManager.getFactory
+    if (factory.isInstanceOf[Log4jContextFactory]) {
+      val contextFactory = factory.asInstanceOf[Log4jContextFactory]
+      contextFactory.getShutdownCallbackRegistry.asInstanceOf[DefaultShutdownCallbackRegistry].stop()
+    }
+
+    //Add a new Shutdown hook that closes all the storages and stops all the interfaces and actors.
     Runtime.getRuntime.addShutdownHook(shutdownHookThread)
   }
 
   val stopAllInProgress : AtomicBoolean = new AtomicBoolean(false)
 
   // this method does not override stopAll(), but it rewrites part of its contents
-  def sidechainStopAll(): Unit = synchronized {
-
+  def sidechainStopAll(fromEndpoint: Boolean = false): Unit = synchronized {
     val currentThreadId     = Thread.currentThread().getId()
     val shutdownHookThreadId = shutdownHookThread.getId()
 
@@ -460,16 +458,20 @@ class SidechainApp @Inject()
     networkControllerRef ! ShutdownNetwork
 
     log.info("Stopping actors")
-    actorSystem.terminate().onComplete { _ =>
-      synchronized {
-        log.info("Calling custom application stopAll...")
-        applicationStopper.stopAll()
+    actorSystem.terminate()
+    Await.result(actorSystem.whenTerminated, Duration(5, TimeUnit.SECONDS))
 
-        log.info("Closing all data storages...")
-        storageList.foreach(_.close())
+    synchronized {
+      log.info("Calling custom application stopAll...")
+      applicationStopper.stopAll()
 
-        log.info("Exiting from the app...")
-        System.out.println("SidechainApp is calling exit()...")
+      log.info("Closing all data storages...")
+      storageList.foreach(_.close())
+
+      log.info("Shutdown the logger...")
+      LogManager.shutdown()
+
+      if(fromEndpoint) {
         System.exit(0)
       }
     }

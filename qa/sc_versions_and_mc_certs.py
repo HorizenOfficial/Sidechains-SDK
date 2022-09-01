@@ -20,8 +20,8 @@ Configuration:
     SC node connected to the first MC node.
 
 Test:
-    Create 2 alien sidechains of version 0 and 1. Test that a MC referenced block containing 3 certificates, one from the local SC and
-    2 from the aliens with custom field elements of length less than  32 bytes, is correctly handled when forging takes
+    Create 3 alien sidechains of version 0, 1 and 2. Test that a MC referenced block containing 4 certificates, one from the local SC and
+    3 from the aliens with custom field elements of length less than  32 bytes, is correctly handled when forging takes
     place.    
 """
 
@@ -68,11 +68,17 @@ class SCVersionsAndMCCertificates(SidechainTestFramework):
         crtx2 = ret['txid']
         assert_true(crtx2 in mc_node.getrawmempool(), "Sc Creation is expected to be added to mempool.")
 
+        ret = create_alien_sidechain(self.mcTest, mc_node, scVersion=2, epochLength=self.sc_withdrawal_epoch_length-1, customHexTag="5c02", feCfgList=[128, 128])
+        self.scid_ver2 = ret['scid']
+        crtx3 = ret['txid']
+        assert_true(crtx3 in mc_node.getrawmempool(), "Sc Creation is expected to be added to mempool.")
+
         # Generate MC block and SC block
         mcblock_hash1 = mc_node.generate(1)[0]
 
         #assert_true(crtx1 in mc_node.getblock(mcblock_hash1)['tx'])
         assert_true(crtx2 in mc_node.getblock(mcblock_hash1)['tx'])
+        assert_true(crtx3 in mc_node.getblock(mcblock_hash1)['tx'])
 
         scblock_id1 = generate_next_blocks(sc_node, "first node", 1)[0]
         check_mcreference_presence(mcblock_hash1, scblock_id1, sc_node)
@@ -88,7 +94,7 @@ class SCVersionsAndMCCertificates(SidechainTestFramework):
 
         expEndEpochHeight = None
         scInfoItems = mc_node.getscinfo("*")['items']
-        assert_equal(3, len(scInfoItems), "Unexpected number of sc info in MC")
+        assert_equal(4, len(scInfoItems), "Unexpected number of sc info in MC")
         for it in scInfoItems:
             scid = it['scid']
             if expEndEpochHeight == None:
@@ -116,21 +122,24 @@ class SCVersionsAndMCCertificates(SidechainTestFramework):
 
         #-----------------------------------------------------------------------------------------------------------------------
         # in version 0 we must be careful not to have an invalid fe module, for instance 3f as last byte id ok (b'00111111')
-        cert1= create_certificate_for_alien_sc(self.mcTest, self.scid_ver0, mc_node, fePatternArray=["1c5478a72455c080282cef347940143f", "4b21c0f7bc8d1d4f02b7b0cc2e78073f"])
+        cert1 = create_certificate_for_alien_sc(self.mcTest, self.scid_ver0, mc_node, fePatternArray=["1c5478a72455c080282cef347940143f", "4b21c0f7bc8d1d4f02b7b0cc2e78073f"])
         time.sleep(1)
-        cert2= create_certificate_for_alien_sc(self.mcTest, self.scid_ver1, mc_node, fePatternArray=["1c5478a72455c080282cef34794014c8", "4b21c0f7bc8d1d4f02b7b0cc2e78072b"])
+        cert2 = create_certificate_for_alien_sc(self.mcTest, self.scid_ver1, mc_node, fePatternArray=["1c5478a72455c080282cef34794014c8", "4b21c0f7bc8d1d4f02b7b0cc2e78072b"])
+        time.sleep(1)
+        cert3 = create_certificate_for_alien_sc(self.mcTest, self.scid_ver2, mc_node, fePatternArray=["1c5478a72455c080282cef34794014c8", "4b21c0f7bc8d1d4f02b7b0cc2e78072b"])
         time.sleep(1)
 
         mempool = mc_node.getrawmempool()
         assert_true(cert1 in mempool)
         assert_true(cert2 in mempool)
+        assert_true(cert3 in mempool)
 
 
         # Generate MC block and verify that certificate is present
         we1_2_mcblock_hash = mc_node.generate(1)[0]
         assert_equal(0, mc_node.getmempoolinfo()["size"], "Certificate expected to be removed from MC node mempool.")
         assert_equal(1, len(mc_node.getblock(we1_2_mcblock_hash)["tx"]), "MC block expected to contain 1 transaction (the coinbase only).")
-        assert_equal(3, len(mc_node.getblock(we1_2_mcblock_hash)["cert"]), "MC block expected to contain 3 Certificates.")
+        assert_equal(4, len(mc_node.getblock(we1_2_mcblock_hash)["cert"]), "MC block expected to contain 4 Certificates.")
 
         print("MC block with withdrawal certificates for epoch 0 = {0}\n".format(str(mc_node.getblock(we1_2_mcblock_hash, False))))
 

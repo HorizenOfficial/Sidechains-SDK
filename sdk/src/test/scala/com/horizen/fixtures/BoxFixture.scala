@@ -60,7 +60,7 @@ trait BoxFixture
     val boxList: JList[ZenBox] = new JArrayList[ZenBox]()
 
     for (s <- secretList.asScala)
-      boxList.add(getZenBox(s.publicImage(), 1, Random.nextInt(100)))
+      boxList.add(getZenBox(s.publicImage(), 1, Random.nextInt(10000)))
 
     boxList
   }

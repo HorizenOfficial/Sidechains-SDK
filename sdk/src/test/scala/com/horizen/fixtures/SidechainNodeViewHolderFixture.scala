@@ -12,6 +12,7 @@ import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.customconfig.CustomAkkaConfiguration
 import com.horizen.customtypes.{DefaultApplicationState, DefaultApplicationWallet}
+import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams, TestNetParams}
 import com.horizen.secret.{PrivateKey25519Serializer, SecretSerializer}
 import com.horizen.state.ApplicationState
@@ -32,6 +33,10 @@ trait SidechainNodeViewHolderFixture
   val classLoader: ClassLoader = getClass.getClassLoader
 
   val sidechainSettings: SidechainSettings = SidechainSettingsReader.read(classLoader.getResource("sc_node_holder_fixter_settings.conf").getFile, None)
+
+  val simpleForkConfigurator = new SimpleForkConfigurator
+  val forkManagerUtil = new ForkManagerUtil()
+  forkManagerUtil.initializeForkManager(simpleForkConfigurator, "regtest")
 
   implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
   implicit def rejectionHandler: RejectionHandler = ApiRejectionHandler.rejectionHandler
