@@ -352,7 +352,11 @@ class AccountState(val params: NetworkParams,
   override def getBlockGasLimit: BigInteger = using(getView)(_.getBlockGasLimit)
 
   override def validate(tx: SidechainTypes#SCAT): Try[Unit] = Try {
-    tx.semanticValidity()
+    Try(tx.semanticValidity()) recoverWith {
+      case e: Throwable =>
+        log.debug("Transaction is not semantically valid" , e)
+        Failure(e)
+    }  get
 
     if (tx.isInstanceOf[EthereumTransaction]) {
       using(getView) { stateView =>

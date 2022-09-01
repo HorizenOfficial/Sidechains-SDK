@@ -3,20 +3,22 @@ package com.horizen.account.mempool
 import com.horizen.SidechainTypes
 import com.horizen.account.node.NodeAccountMemoryPool
 import com.horizen.account.state.AccountStateReader
+import com.horizen.account.transaction.EthereumTransaction
 import scorex.core.transaction.MempoolReader
-import scorex.util.ModifierId
+import scorex.util.{ModifierId, ScorexLogging}
 
 import java.math.BigInteger
 import java.util.{Comparator, Optional, List => JList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 class AccountMemoryPool(unconfirmed: MempoolMap, stateReader: AccountStateReader)
   extends scorex.core.transaction.MemoryPool[SidechainTypes#SCAT, AccountMemoryPool]
     with SidechainTypes
-    with NodeAccountMemoryPool {
+    with NodeAccountMemoryPool
+    with ScorexLogging{
   override type NVCT = AccountMemoryPool
 
   // Getters:
@@ -88,83 +90,17 @@ class AccountMemoryPool(unconfirmed: MempoolMap, stateReader: AccountStateReader
 
   override def put(tx: SidechainTypes#SCAT): Try[AccountMemoryPool] = {
     Try {
-      //Check if the same tx is already present
-      if (unconfirmed.all.contains(tx.id)) {
-        this
-      }
-      else {
 
-        var isRejected = false
-        if (!unconfirmed.nonces.contains(tx.getFrom)) {
-          val stateNonce = stateReader.getNonce(tx.getFrom.bytes())
-          val txsPerAccountMap = new mutable.TreeMap[BigInteger, ModifierId]()
-          txsPerAccountMap.put(tx.getNonce, tx.id)
-          if (stateNonce.equals(tx.getNonce)) {
-            unconfirmed.executableTxs.put(tx.getFrom, txsPerAccountMap)
-            unconfirmed.nonces.put(tx.getFrom, stateNonce.add(BigInteger.ONE))
-          }
-          else {
-            unconfirmed.nonExecutableTxs.put(tx.getFrom, txsPerAccountMap)
-            unconfirmed.nonces.put(tx.getFrom, stateNonce)
-          }
+      if (tx.isInstanceOf[EthereumTransaction]) {
+        val ethTx = tx.asInstanceOf[EthereumTransaction]
+        if (!unconfirmed.containsAccountInfo(ethTx.getFrom)) {
+          val stateNonce = stateReader.getNonce(ethTx.getFrom.address())
+          unconfirmed.initializeAccount(stateNonce, ethTx.getFrom)
         }
-        else {
-          val expectedNonce = unconfirmed.nonces.get(tx.getFrom).get
-          if (expectedNonce.equals(tx.getNonce)) {
-            val executableTxsMap = unconfirmed.executableTxs.get(tx.getFrom).getOrElse(new mutable.TreeMap[BigInteger, ModifierId]())
-            executableTxsMap.put(tx.getNonce, tx.id)
-            var nextNonce = expectedNonce.add(BigInteger.ONE)
-            //Check if some non executable tx can be promoted
-            unconfirmed.nonExecutableTxs.get(tx.getFrom).foreach(txs => {
-              while (txs.contains(nextNonce)) {
-                val promotedTxId = txs.remove(nextNonce).get
-                executableTxsMap.put(nextNonce, promotedTxId)
-                nextNonce = nextNonce.add(BigInteger.ONE)
-              }
-              if (txs.isEmpty) {
-                unconfirmed.nonExecutableTxs.remove(tx.getFrom)
-              }
-            }
-            )
-            unconfirmed.executableTxs.put(tx.getFrom, executableTxsMap)
-            unconfirmed.nonces.put(tx.getFrom, nextNonce)
-
-          }
-          else if (tx.getNonce.compareTo(expectedNonce) >= 0) {
-
-            val map = unconfirmed.nonExecutableTxs.get(tx.getFrom).getOrElse(new mutable.TreeMap[BigInteger, ModifierId]())
-            val oldTxIdOpt = map.get(tx.getNonce)
-            if (!oldTxIdOpt.isDefined || (unconfirmed.all.get(oldTxIdOpt.get).get.getGasPrice.compareTo(tx.getGasPrice) < 0)) {
-              map.put(tx.getNonce, tx.id)
-              unconfirmed.nonExecutableTxs.put(tx.getFrom, map)
-              unconfirmed.all.remove(oldTxIdOpt.get)
-            }
-            else {
-              //There is already a better tx, so this one is rejected
-              isRejected = true
-            }
-
-          }
-          else { //Another tx with the same nonce is already in the executable list
-            val map = unconfirmed.executableTxs.get(tx.getFrom).get
-            val oldTx = unconfirmed.all.get(map.get(tx.getNonce).get).get
-            if (oldTx.getGasPrice.compareTo(tx.getGasPrice) < 0) {
-              map.put(tx.getNonce, tx.id)
-              unconfirmed.all.remove(oldTx.id)
-            }
-            else
-              isRejected = true
-          }
-
-        }
-
-        if (!isRejected)
-          unconfirmed.all.put(tx.id, tx)
-
-        this
+        new AccountMemoryPool(unconfirmed.add(ethTx).get, stateReader)
       }
-
-
+      else
+        this
     }
 
   }
@@ -187,20 +123,12 @@ class AccountMemoryPool(unconfirmed: MempoolMap, stateReader: AccountStateReader
   }
 
   override def remove(tx: SidechainTypes#SCAT): AccountMemoryPool = {
-    if (unconfirmed.all.remove(tx.id).isDefined) {
-      if (!unconfirmed.nonExecutableTxs.get(tx.getFrom).forall(txsMap => txsMap.remove(tx.getNonce).isDefined)) {
-        val executableMap = unconfirmed.executableTxs.get(tx.getFrom).get
-        executableMap.remove(tx.getNonce)
-        unconfirmed.nonces.put(tx.getFrom, tx.getNonce)
-        var demotedTxId = executableMap.remove(tx.getNonce.add(BigInteger.ONE))
-        while (demotedTxId.isDefined) {
-          val demotedTx = unconfirmed.all.get(demotedTxId.get).get
-          unconfirmed.nonExecutableTxs.get(tx.getFrom).get.put(demotedTx.getNonce, demotedTxId.get)
-          demotedTxId = executableMap.remove(demotedTx.getNonce.add(BigInteger.ONE))
-        }
-      }
+    unconfirmed.remove(tx) match {
+      case Success(mempoolMap) => new AccountMemoryPool(mempoolMap, stateReader)
+      case Failure(e) =>
+        log.error(s"Exception while removing transaction ${tx} from MemPool", e)
+        throw e
     }
-    this
   }
 
   override def getTransactions: JList[SidechainTypes#SCAT] = {

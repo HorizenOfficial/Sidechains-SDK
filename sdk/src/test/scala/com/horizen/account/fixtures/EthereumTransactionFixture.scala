@@ -14,10 +14,14 @@ trait EthereumTransactionFixture {
     createSignedTransaction(rawTransaction, None)
   }
 
-  def createEIP1559Transaction(value: java.math.BigInteger, nonce: java.math.BigInteger = BigInteger.ZERO, pairOpt: Option[ECKeyPair] = None): EthereumTransaction = {
+  def createEIP1559Transaction(value: java.math.BigInteger,
+                               nonce: java.math.BigInteger = BigInteger.ZERO,
+                               pairOpt: Option[ECKeyPair] = None,
+                               gasFee: java.math.BigInteger = BigInteger.ONE,
+                               priorityGasFee: java.math.BigInteger = BigInteger.ONE): EthereumTransaction = {
 
     val rawTransaction = RawTransaction.createTransaction(1997, nonce, value, "", value
-    , "", value, value)
+    , "", priorityGasFee, gasFee)
     createSignedTransaction(rawTransaction, pairOpt)
   }
 

@@ -30,6 +30,7 @@ import java.util.Objects;
 @JsonIgnoreProperties({"transaction", "gasLimit"})
 @JsonView(Views.Default.class)
 public class EthereumTransaction extends AccountTransaction<AddressProposition, SignatureSecp256k1> {
+
     private final RawTransaction transaction;
 
     // depends on the transaction

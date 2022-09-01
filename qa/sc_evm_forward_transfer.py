@@ -23,7 +23,7 @@ Configuration: bootstrap 1 SC node and start it with genesis info extracted from
     - Start SC node with that genesis info
 
 Test:
-    - Execute forward tranfer to an EOA
+    - Execute forward transfer to an EOA
     - Verify account balance
     - Deploy Smart Contract
     - Execute forward transfer to the address of the smart contract
