@@ -1,8 +1,8 @@
 {
-  "test_type": 2,
-  "test_run_time": 180,
+  "test_type": 3,
+  "test_run_time": 50,
   "block_rate": 30,
-  "initial_txs": 999,
+  "initial_txs": 100000,
   "network_topology": 2,
   "nodes": [
     {
@@ -13,9 +13,7 @@
     {
       "latency_settings": 0,
       "forger": false,
-      "tx_creator": true,
-      "throughput": 1000,
-      "total_execution_time": 100
+      "tx_creator": true
     },
     {
       "latency_settings": 0,

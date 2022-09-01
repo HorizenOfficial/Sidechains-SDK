@@ -28,4 +28,5 @@ class NetworkTopology(Enum):
 
 class TestType(Enum):
     Mempool = 1
-    Timed = 2
+    Mempool_Timed = 2
+    Constant_Throughput = 3

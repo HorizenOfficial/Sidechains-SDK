@@ -9,6 +9,12 @@
     "nodes"
   ],
   "properties": {
+    "test_type": {
+      "type": "number"
+    },
+    "test_run_time": {
+      "type": "number"
+    },
     "block_rate": {
       "type": "number"
     },
@@ -33,12 +39,6 @@
           },
           "tx_creator": {
             "type": "boolean"
-          },
-          "throughput": {
-            "type": "number"
-          },
-          "total_execution_time": {
-            "type": "number"
           }
         },
         "required": [
