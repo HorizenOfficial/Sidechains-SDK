@@ -78,8 +78,8 @@ class SidechainCommitmentTree {
       btrList.toArray,
       certificate.customFieldsOpt(version).asJava,
       certificate.endCumulativeScTxCommitmentTreeRoot,
+      certificate.ftMinAmount, //TODO: temporal dirty porkaround until SC zendoo_commitment_tree_add_cert is fixed
       certificate.btrFee,
-      certificate.ftMinAmount
     )
   }
 

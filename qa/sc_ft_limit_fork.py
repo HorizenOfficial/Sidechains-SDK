@@ -6,10 +6,10 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
     SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, generate_next_blocks, generate_next_block
+    start_sc_nodes, generate_next_blocks, generate_next_block, check_wallet_coins_balance
 from httpCalls.block.forgingInfo import http_block_forging_info
 from test_framework.util import assert_equal, start_nodes, \
-    websocket_port_by_mc_node_index, assert_raises
+    websocket_port_by_mc_node_index
 
 """
 Check that after the hard fork, FT with amount < 54 satoshi is no longer possible
@@ -21,8 +21,10 @@ Test:
         - Before the fork, do a FT with 50 satoshi, it should not fail.
         - Generate a cert, check that ftScFee is 0
         - Switch to the next epoch, where the fork is enabled
+        - Before new cert is generated, it should be still possible to do a FT with 50 satoshi
         - Generate another cert, verify that ftScFee is 54 
         - Assert that FT with 50 satoshi fails
+        - Assert that FT with 55 satoshi succeeds
 """
 
 
@@ -60,8 +62,9 @@ class SCFTLimitFork(SidechainTestFramework):
         self.sync_all()
         mc_node = self.nodes[0]
         sc_node = self.sc_nodes[0]
+        _50cent = 0.00000050
 
-        self.do_ft(0.00000050)
+        self.do_ft(_50cent)
         self.generate_certificate()
 
         # check we are still in pre-fork epoch and cert has 0 ftScFee
@@ -71,22 +74,39 @@ class SCFTLimitFork(SidechainTestFramework):
         we0_cert = mc_node.getrawtransaction(we0_cert_hash, 1)
         assert_equal(we0_cert["cert"]["ftScFee"], 0)
 
-        # switch to the next consensus epoch, generate new cert, check that ftScFee is 54 now
+        # switch to the next consensus epoch
         generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
         forging_info = http_block_forging_info(sc_node)
         assert_equal(forging_info["bestEpochNumber"], 3)
+        check_wallet_coins_balance(sc_node, 100.00000050)
+
+        # before new cert is created, it should be possible to do Ft with 50 satoshi
+        self.do_ft(_50cent)
+
+        # generate new cert, it should contain new value for ftScFee = 54 satoshi
         self.generate_certificate()
         we0_cert_hash = mc_node.getrawmempool()[0]
         print("Withdrawal epoch 0 certificate hash = " + we0_cert_hash)
         we0_cert = mc_node.getrawtransaction(we0_cert_hash, 1)
         assert_equal(we0_cert["cert"]["ftScFee"], Decimal(54) / Decimal(100000000))
 
-        # skip a couple consensus epochs, try to do another FT with 50 satoshi, assert it fails
+        # get to the next withdrawal epoch to enable new certificate
+        self.sync_all()
+        mc_node.generate(9)
         generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
-        generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
-        generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
+        mc_node.generate(1)
+        generate_next_blocks(sc_node, "first node", 1)
+        # try to do another FT with 50 satoshi, assert it fails
+        try:
+            self.do_ft(_50cent)
+        except Exception as e:
+            assert_equal('16: bad-sc-tx-not-applicable', e.error['message'])
 
-        assert_raises(AssertionError, self.do_ft, 0.00000050)
+        # 55 satoshi and above should be successful
+        self.do_ft(0.00000055)
+        mc_node.generate(1)
+        generate_next_blocks(sc_node, "first node", 1)
+        check_wallet_coins_balance(sc_node, 100.00000155)
 
     def generate_certificate(self):
         mc_node = self.nodes[0]
@@ -108,6 +128,7 @@ class SCFTLimitFork(SidechainTestFramework):
         sc_node = self.sc_nodes[0]
         mc_node = self.nodes[0]
 
+        mempool_size_init = mc_node.getmempoolinfo()["size"]
         sc_address = sc_node.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
         ft_amount = amount
         mc_return_address = mc_node.getnewaddress()
@@ -119,7 +140,8 @@ class SCFTLimitFork(SidechainTestFramework):
             "mcReturnAddress": mc_return_address
         }]
         mc_node.sc_send(ft_args)
-        assert_equal(1, mc_node.getmempoolinfo()["size"], "Forward Transfer expected to be added to mempool.")
+        assert_equal(mempool_size_init + 1, mc_node.getmempoolinfo()["size"],
+                     "Forward Transfer expected to be added to mempool.")
 
 
 if __name__ == "__main__":

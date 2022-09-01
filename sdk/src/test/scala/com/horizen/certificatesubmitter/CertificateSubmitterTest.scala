@@ -13,7 +13,7 @@ import com.horizen.certificatesubmitter.CertificateSubmitter.Timers.CertificateG
 import com.horizen.certificatesubmitter.CertificateSubmitter._
 import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.fixtures.FieldElementFixture
-import com.horizen.fork.{ForkManager, SimpleForkConfigurator}
+import com.horizen.fork.{ForkConfigurator, ForkManager, SimpleForkConfigurator}
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.{CommonParams, NetworkParams, RegTestParams}
 import com.horizen.proposition.{Proposition, SchnorrProposition}
@@ -48,9 +48,12 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
   implicit lazy val actorSystem: ActorSystem = ActorSystem("submitter-actor-test")
   implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("scorex.executionContext")
   implicit val timeout: Timeout = 100 milliseconds
+  private var consensusEpochAtWhichForkIsApplied: Int = _
 
   @Before
   def init(): Unit = {
+    val forkConfigurator = new SimpleForkConfigurator()
+    consensusEpochAtWhichForkIsApplied = forkConfigurator.getSidechainFork1().regtestEpochNumber
     ForkManager.init(new SimpleForkConfigurator(), "regtest")
   }
 
@@ -705,18 +708,17 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
   @Test
   def getFtMinAmount(): Unit = {
     val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true, signerIsEnabled = true)
-    val consensusEpochForkAfter = 10
     val dustThreshold = ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE)
     val submitter: CertificateSubmitter = TestActorRef(Props(
         new CertificateSubmitter(mockedSettings, mock[ActorRef], mock[NetworkParams], mock[MainchainNodeChannel])
     )).underlyingActor
 
     assertEquals("Before the fork, ftMinAmount should be 0",
-      0, submitter.getFtMinAmount(consensusEpochForkAfter - 1))
+      0, submitter.getFtMinAmount(consensusEpochAtWhichForkIsApplied - 1))
     assertEquals(s"After the fork, ftMinAmount should be equal to dust threshold [$dustThreshold]",
-      dustThreshold, submitter.getFtMinAmount(consensusEpochForkAfter))
+      dustThreshold, submitter.getFtMinAmount(consensusEpochAtWhichForkIsApplied))
     assertEquals(s"After the fork, ftMinAmount should be equal to dust threshold [$dustThreshold]",
-      dustThreshold, submitter.getFtMinAmount(consensusEpochForkAfter + 1))
+      dustThreshold, submitter.getFtMinAmount(consensusEpochAtWhichForkIsApplied + 1))
   }
 
   @Test

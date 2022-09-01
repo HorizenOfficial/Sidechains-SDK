@@ -193,10 +193,10 @@ def run_tests(log_file):
     assert_equal(0, result, "sc_csw_in_fee_payment test failed!")
 
     result = run_test(SCDustThresholdFork())
-    assert_equal(0, result, "sc_csw_in_fee_payment test failed!")
+    assert_equal(0, result, "sc_dust_threshold_fork test failed!")
 
     result = run_test(SCFTLimitFork())
-    assert_equal(0, result, "sc_csw_in_fee_payment test failed!")
+    assert_equal(0, result, "sc_ft_limit_fork test failed!")
 
 if __name__ == "__main__":
     my_log_file = open("sc_test.log", "w")

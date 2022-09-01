@@ -263,7 +263,7 @@ class CertificateSubmitter(settings: SidechainSettings,
       val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(referencedWithdrawalEpochNumber)
 
       val btrFee: Long = getBtrFee(referencedWithdrawalEpochNumber)
-      val consensusEpochNumber = lastSidechainEpochNumberForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
+      val consensusEpochNumber = lastConsensusEpochNumberForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
       val ftMinAmount: Long = getFtMinAmount(consensusEpochNumber)
 
       val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
@@ -548,7 +548,7 @@ class CertificateSubmitter(settings: SidechainSettings,
     val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(status.referencedEpoch)
 
     val btrFee: Long = getBtrFee(status.referencedEpoch)
-    val consensusEpochNumber = lastSidechainEpochNumberForWithdrawalEpochNumber(history, status.referencedEpoch)
+    val consensusEpochNumber = lastConsensusEpochNumberForWithdrawalEpochNumber(history, status.referencedEpoch)
     val ftMinAmount: Long = getFtMinAmount(consensusEpochNumber)
     val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, status.referencedEpoch)
     val sidechainId = params.sidechainId
@@ -571,20 +571,20 @@ class CertificateSubmitter(settings: SidechainSettings,
       signersPublicKeyWithSignatures)
   }
 
-  private def lastSidechainEpochNumberForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): ConsensusEpochNumber = {
-    val headerInfo: MainchainHeaderInfo = getLastMainchainBlockHashForWithdrawalEpochNumber(history, withdrawalEpochNumber)
+  private def lastConsensusEpochNumberForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): ConsensusEpochNumber = {
+    val headerInfo: MainchainHeaderInfo = getLastMainchainBlockInfoForWithdrawalEpochNumber(history, withdrawalEpochNumber)
 
     val parentBlockInfo: SidechainBlockInfo = history.storage.blockInfoById(headerInfo.sidechainBlockId)
     TimeToEpochUtils.timeStampToEpochNumber(params, parentBlockInfo.timestamp)
   }
 
   private def lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): Array[Byte] = {
-    val headerInfo: MainchainHeaderInfo = getLastMainchainBlockHashForWithdrawalEpochNumber(history, withdrawalEpochNumber)
+    val headerInfo: MainchainHeaderInfo = getLastMainchainBlockInfoForWithdrawalEpochNumber(history, withdrawalEpochNumber)
 
     headerInfo.cumulativeCommTreeHash
   }
 
-  private def getLastMainchainBlockHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int) = {
+  private def getLastMainchainBlockInfoForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): MainchainHeaderInfo = {
     val mcBlockHash = withdrawalEpochNumber match {
       case -1 => params.parentHashOfGenesisMainchainBlock
       case _ => {
