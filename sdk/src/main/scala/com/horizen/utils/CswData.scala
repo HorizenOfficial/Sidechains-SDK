@@ -1,6 +1,6 @@
 package com.horizen.utils
 
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
+import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
 import java.util
@@ -22,7 +22,7 @@ case class UtxoCswData(boxId: Array[Byte],
                        utxoMerklePath: Array[Byte]) extends CswData {
   override type M = UtxoCswData
 
-  override def serializer: ScorexSerializer[UtxoCswData] = UtxoCswDataSerializer
+  override def serializer: SparkzSerializer[UtxoCswData] = UtxoCswDataSerializer
 
   override lazy val getNullifier: Array[Byte] = {
     val utxo: ScUtxoOutput = new ScUtxoOutput(spendingPubKey, amount, nonce, customHash)
@@ -67,7 +67,7 @@ case class ForwardTransferCswData(boxId: Array[Byte],
                                   ftMerklePath: Array[Byte]) extends CswData {
   override type M = ForwardTransferCswData
 
-  override def serializer: ScorexSerializer[ForwardTransferCswData] = ForwardTransferCswDataSerializer
+  override def serializer: SparkzSerializer[ForwardTransferCswData] = ForwardTransferCswDataSerializer
 
   override lazy val getNullifier: Array[Byte] = {
     val ft: ForwardTransferOutput = new ForwardTransferOutput(amount, BytesUtils.reverseBytes(receiverPubKeyReversed), paybackAddrDataHash, txHash, outIdx)
@@ -106,7 +106,7 @@ case class ForwardTransferCswData(boxId: Array[Byte],
   override def toString = s"ForwardTransferCswData(boxID = ${BytesUtils.toHexString(boxId)})"
 }
 
-object CswDataSerializer extends ScorexSerializer[CswData] {
+object CswDataSerializer extends SparkzSerializer[CswData] {
   override def serialize(obj: CswData, w: Writer): Unit = {
     obj match {
       case utxo: UtxoCswData =>
@@ -128,7 +128,7 @@ object CswDataSerializer extends ScorexSerializer[CswData] {
   }
 }
 
-object UtxoCswDataSerializer extends ScorexSerializer[UtxoCswData] {
+object UtxoCswDataSerializer extends SparkzSerializer[UtxoCswData] {
   override def serialize(obj: UtxoCswData, w: Writer): Unit = {
     w.putBytes(obj.boxId)
     w.putInt(obj.spendingPubKey.length)
@@ -160,7 +160,7 @@ object UtxoCswDataSerializer extends ScorexSerializer[UtxoCswData] {
 }
 
 
-object ForwardTransferCswDataSerializer extends ScorexSerializer[ForwardTransferCswData] {
+object ForwardTransferCswDataSerializer extends SparkzSerializer[ForwardTransferCswData] {
   override def serialize(obj: ForwardTransferCswData, w: Writer): Unit = {
     w.putBytes(obj.boxId)
     w.putLong(obj.amount)

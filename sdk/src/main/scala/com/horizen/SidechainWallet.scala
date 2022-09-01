@@ -12,8 +12,8 @@ import com.horizen.storage._
 import com.horizen.transaction.Transaction
 import com.horizen.utils._
 import com.horizen.wallet.ApplicationWallet
-import scorex.core.block.Block.Timestamp
-import scorex.core.{VersionTag, bytesToVersion, idToVersion, versionToBytes}
+import sparkz.core.block.Block.Timestamp
+import sparkz.core.{VersionTag, bytesToVersion, idToVersion, versionToBytes}
 import scorex.util.{ModifierId, ScorexLogging}
 
 import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
@@ -23,8 +23,8 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 
-trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.core.PersistentNodeViewModifier, W <: Wallet[S, P, TX, PMOD, W]]
-  extends scorex.core.transaction.wallet.Vault[TX, PMOD, W] {
+trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: sparkz.core.PersistentNodeViewModifier, W <: Wallet[S, P, TX, PMOD, W]]
+  extends sparkz.core.transaction.wallet.Vault[TX, PMOD, W] {
   self: W =>
 
   def addSecret(secret: S): Try[W]

@@ -2,8 +2,8 @@ package com.horizen.utils;
 
 import org.bouncycastle.util.Strings;
 import org.junit.Test;
-import scorex.core.serialization.BytesSerializable;
-import scorex.core.serialization.ScorexSerializer;
+import sparkz.core.serialization.BytesSerializable;
+import sparkz.core.serialization.SparkzSerializer;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
@@ -27,7 +27,7 @@ class ListSerializerTestObjectA implements BytesSerializable {
     }
 
     @Override
-    public ScorexSerializer serializer() {
+    public SparkzSerializer serializer() {
         return new ListSerializerTestObjectASerializer();
     }
 
@@ -48,7 +48,7 @@ class ListSerializerTestObjectA implements BytesSerializable {
     }
 }
 
-class ListSerializerTestObjectASerializer implements ScorexSerializer<ListSerializerTestObjectA> {
+class ListSerializerTestObjectASerializer implements SparkzSerializer<ListSerializerTestObjectA> {
 
     @Override
     public void serialize(ListSerializerTestObjectA obj, Writer writer) {
@@ -76,7 +76,7 @@ class ListSerializerTestObjectB implements BytesSerializable {
     }
 
     @Override
-    public ScorexSerializer serializer() {
+    public SparkzSerializer serializer() {
         return new ListSerializerTestObjectBSerializer();
     }
 
@@ -97,7 +97,7 @@ class ListSerializerTestObjectB implements BytesSerializable {
     }
 }
 
-class ListSerializerTestObjectBSerializer implements ScorexSerializer<ListSerializerTestObjectB> {
+class ListSerializerTestObjectBSerializer implements SparkzSerializer<ListSerializerTestObjectB> {
 
     /*
     @Override
@@ -159,9 +159,9 @@ public class ListSerializerTest {
         boolean exceptionOccurred = false;
         try {
             DynamicTypedSerializer serializersCompanion = new DynamicTypedSerializer<>(
-                    new HashMap<Byte, ScorexSerializer<BytesSerializable>>() {{
-                        put((byte)1, (ScorexSerializer)new ListSerializerTestObjectASerializer());
-                        put((byte)2, (ScorexSerializer)new ListSerializerTestObjectBSerializer());
+                    new HashMap<Byte, SparkzSerializer<BytesSerializable>>() {{
+                        put((byte)1, (SparkzSerializer)new ListSerializerTestObjectASerializer());
+                        put((byte)2, (SparkzSerializer)new ListSerializerTestObjectBSerializer());
                         }}, new HashMap<>()
             );
             new ListSerializer<>(serializersCompanion);
@@ -175,9 +175,9 @@ public class ListSerializerTest {
         // Test 2: try to create ListSerializer with valid parameters and with limits
         try {
             DynamicTypedSerializer serializersCompanion = new DynamicTypedSerializer<>(
-                    new HashMap<Byte, ScorexSerializer<BytesSerializable>>() {{
-                        put((byte)1, (ScorexSerializer)new ListSerializerTestObjectASerializer());
-                        put((byte)2, (ScorexSerializer)new ListSerializerTestObjectBSerializer());
+                    new HashMap<Byte, SparkzSerializer<BytesSerializable>>() {{
+                        put((byte)1, (SparkzSerializer)new ListSerializerTestObjectASerializer());
+                        put((byte)2, (SparkzSerializer)new ListSerializerTestObjectBSerializer());
                     }}, new HashMap<>()
             );
             new ListSerializer<>(serializersCompanion, 10);
@@ -191,9 +191,9 @@ public class ListSerializerTest {
         // Test 3: try to create ListSerializer with invalid parameters (serializers duplications)
         try {
             DynamicTypedSerializer serializersCompanion = new DynamicTypedSerializer<>(
-                    new HashMap<Byte, ScorexSerializer<BytesSerializable>>() {{
-                        put((byte)1, (ScorexSerializer)new ListSerializerTestObjectASerializer());
-                        put((byte)2, (ScorexSerializer)new ListSerializerTestObjectASerializer());
+                    new HashMap<Byte, SparkzSerializer<BytesSerializable>>() {{
+                        put((byte)1, (SparkzSerializer)new ListSerializerTestObjectASerializer());
+                        put((byte)2, (SparkzSerializer)new ListSerializerTestObjectASerializer());
                     }}, new HashMap<>()
             );
             new ListSerializer<>(serializersCompanion, 10);
@@ -207,7 +207,7 @@ public class ListSerializerTest {
     @Test
     public void ListSerializerTest_SerializationTestForSingleType() {
 
-        ListSerializer<BytesSerializable> listSerializer = new ListSerializer<>((ScorexSerializer)new ListSerializerTestObjectASerializer());
+        ListSerializer<BytesSerializable> listSerializer = new ListSerializer<>((SparkzSerializer)new ListSerializerTestObjectASerializer());
 
         // Test 1: empty list serialization test
         byte[] bytes = listSerializer.toBytes(new ArrayList<>());
@@ -231,9 +231,9 @@ public class ListSerializerTest {
     @Test
     public void ListSerializerTest_SerializationTestForMultipleTypes() {
         DynamicTypedSerializer serializersCompanion = new DynamicTypedSerializer<>(
-                new HashMap<Byte, ScorexSerializer<BytesSerializable>>() {{
-                    put((byte)1, (ScorexSerializer)new ListSerializerTestObjectASerializer());
-                    put((byte)2, (ScorexSerializer)new ListSerializerTestObjectBSerializer());
+                new HashMap<Byte, SparkzSerializer<BytesSerializable>>() {{
+                    put((byte)1, (SparkzSerializer)new ListSerializerTestObjectASerializer());
+                    put((byte)2, (SparkzSerializer)new ListSerializerTestObjectBSerializer());
                 }}, new HashMap<>()
         );
         ListSerializer<BytesSerializable> listSerializer = new ListSerializer<>(serializersCompanion);
@@ -263,8 +263,8 @@ public class ListSerializerTest {
     @Test
     public void ListSerializerTest_FailureSerializationTestForSingleType() {
 
-        ListSerializer<BytesSerializable> listSerializerWithLimits = new ListSerializer<>((ScorexSerializer)new ListSerializerTestObjectASerializer(), 2);
-        ListSerializer<BytesSerializable> listSerializer = new ListSerializer<>((ScorexSerializer)new ListSerializerTestObjectASerializer());
+        ListSerializer<BytesSerializable> listSerializerWithLimits = new ListSerializer<>((SparkzSerializer)new ListSerializerTestObjectASerializer(), 2);
+        ListSerializer<BytesSerializable> listSerializer = new ListSerializer<>((SparkzSerializer)new ListSerializerTestObjectASerializer());
 
         ArrayList<BytesSerializable> data = new ArrayList<>();
         data.add(new ListSerializerTestObjectA("test1"));
@@ -346,9 +346,9 @@ public class ListSerializerTest {
     @Test
     public void ListSerializerTest_FailureSerializationTestForMultipleTypes() {
         DynamicTypedSerializer serializersCompanion = new DynamicTypedSerializer<>(
-                new HashMap<Byte, ScorexSerializer<BytesSerializable>>() {{
-                    put((byte)1, (ScorexSerializer)new ListSerializerTestObjectASerializer());
-                    put((byte)2, (ScorexSerializer)new ListSerializerTestObjectBSerializer());
+                new HashMap<Byte, SparkzSerializer<BytesSerializable>>() {{
+                    put((byte)1, (SparkzSerializer)new ListSerializerTestObjectASerializer());
+                    put((byte)2, (SparkzSerializer)new ListSerializerTestObjectBSerializer());
                 }}, new HashMap<>()
         );
 

@@ -1,12 +1,12 @@
 package com.horizen.utils;
 
-import scorex.core.serialization.ScorexSerializer;
+import sparkz.core.serialization.SparkzSerializer;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-public class MerklePath implements scorex.core.serialization.BytesSerializable {
+public class MerklePath implements sparkz.core.serialization.BytesSerializable {
     List<Pair<Byte, byte[]>> merklePath;
 
     // Merkle Tree:
@@ -58,7 +58,7 @@ public class MerklePath implements scorex.core.serialization.BytesSerializable {
     }
 
     @Override
-    public ScorexSerializer serializer() {
+    public SparkzSerializer serializer() {
         return MerklePathSerializer.getSerializer();
     }
 

@@ -1,6 +1,6 @@
 package com.horizen
 
-import scorex.core.{NodeViewModifier, bytesToId, idToBytes}
+import sparkz.core.{NodeViewModifier, bytesToId, idToBytes}
 
 import com.horizen.fixtures.BoxFixture
 import com.horizen.utils.BytesUtils

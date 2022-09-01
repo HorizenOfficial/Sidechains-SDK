@@ -1,6 +1,5 @@
 package com.horizen.proposition;
 
-import com.horizen.cryptolibprovider.CryptoLibProvider;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 

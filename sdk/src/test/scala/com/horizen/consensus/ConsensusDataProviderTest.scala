@@ -12,7 +12,7 @@ import com.horizen.utils.{BytesUtils, TimeToEpochUtils, Utils}
 import com.horizen.vrf.VrfOutput
 import org.junit.Assert._
 import org.junit.Test
-import scorex.core.consensus.ModifierSemanticValidity
+import sparkz.core.consensus.ModifierSemanticValidity
 import scorex.util._
 
 import scala.annotation.tailrec

@@ -598,8 +598,8 @@ paths:
                   items:
                     type: object
                     required:
-                     - mainchainAddress
-                     - value
+                      - mainchainAddress
+                      - value
                     properties:
                       mainchainAddress:
                         type: string
@@ -688,8 +688,8 @@ paths:
                   items:
                     type: object
                     required:
-                     - mainchainAddress
-                     - value
+                      - mainchainAddress
+                      - value
                     properties:
                       mainchainAddress:
                         type: string
@@ -1114,43 +1114,43 @@ paths:
                 $ref: '#/components/schemas/SidechainApiError'
 
   /wallet/balanceOfType:
-      post:
-        tags:
-          - wallet
-        summary: the total balance of boxes of given type
-        description: Returns the global balance for given type of boxes
-        operationId: getBalance
-        requestBody:
+    post:
+      tags:
+        - wallet
+      summary: the total balance of boxes of given type
+      description: Returns the global balance for given type of boxes
+      operationId: getBalance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                boxType:
+                  description: Filter balance for given box type
+                  type: string
+      responses:
+        '200':
+          description: successful operation
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  boxType:
-                    description: Filter balance for given box type
-                    type: string
-        responses:
-          '200':
-            description: successful operation
-            content:
-              application/json:
-                schema:
-                  type: object
-                  properties:
-                    result:
-                      type: object
-                      properties:
-                        balance:
-                          type: integer
-                          format: int64
-                    error:
-                      $ref: '#/components/schemas/SidechainApiErrorResponse'
-          default:
-            description: any kind of http error
-            content:
-              application/json:
-                schema:
-                  $ref: '#/components/schemas/SidechainApiError'
+                  result:
+                    type: object
+                    properties:
+                      balance:
+                        type: integer
+                        format: int64
+                  error:
+                    $ref: '#/components/schemas/SidechainApiErrorResponse'
+        default:
+          description: any kind of http error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SidechainApiError'
 
   /wallet/createPrivateKey25519:
     post:
@@ -1606,31 +1606,6 @@ paths:
                     properties:
                       sidechainId:
                         type: string
-                    error:
-                      $ref: '#/components/schemas/SidechainApiErrorResponse'
-        default:
-          description: any kind of http error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SidechainApiError'
-
-  /node/stop:
-    post:
-      tags:
-        - node
-      summary: stop the node
-      description: stop the node in a gracefully way
-      operationId: stop
-      responses:
-        '200':
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  result:
                   error:
                     $ref: '#/components/schemas/SidechainApiErrorResponse'
         default:
@@ -1639,6 +1614,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SidechainApiError'
+
   # Mainchain references info
   /mainchain/bestBlockReferenceInfo:
     post:

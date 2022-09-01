@@ -3,7 +3,7 @@ package com.horizen.api.http
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.certificatesubmitter.CertificateSubmitter.ReceivableMessages.{DisableCertificateSigner, DisableSubmitter, EnableCertificateSigner, EnableSubmitter, GetCertificateGenerationState, IsCertificateSigningEnabled, IsSubmitterEnabled}
 import com.horizen.serialization.Views
-import scorex.core.settings.RESTApiSettings
+import sparkz.core.settings.RESTApiSettings
 
 import scala.concurrent.{Await, ExecutionContext}
 import scala.util.{Failure, Success, Try}

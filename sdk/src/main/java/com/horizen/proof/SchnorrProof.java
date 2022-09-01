@@ -31,4 +31,17 @@ public class SchnorrProof implements ProofOfKnowledge<SchnorrSecret, SchnorrProp
     public ProofSerializer serializer() {
         return SchnorrSignatureSerializer.getSerializer();
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        SchnorrProof that = (SchnorrProof) o;
+        return Arrays.equals(signature, that.signature);
+    }
+
+    @Override
+    public int hashCode() {
+        return Arrays.hashCode(signature);
+    }
 }

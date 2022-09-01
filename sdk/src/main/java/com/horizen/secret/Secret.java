@@ -10,7 +10,7 @@ import com.horizen.serialization.Views;
 @JsonView(Views.Default.class)
 @JsonIgnoreProperties({"secretTypeId", "serializer", "sign", "owns"})
 public interface Secret
-    extends scorex.core.serialization.BytesSerializable
+    extends sparkz.core.serialization.BytesSerializable
 {
     byte secretTypeId();
 
