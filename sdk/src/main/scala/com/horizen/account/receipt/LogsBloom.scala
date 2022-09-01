@@ -72,7 +72,7 @@ class LogsBloom() {
   }
 
   def getBloomFilter(): Array[Byte] = {
-    bloomFilter
+    bloomFilter.clone()
   }
 }
 
