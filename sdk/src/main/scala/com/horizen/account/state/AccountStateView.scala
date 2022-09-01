@@ -2,6 +2,7 @@ package com.horizen.account.state
 
 import com.google.common.primitives.Bytes
 import com.horizen.SidechainTypes
+import com.horizen.account.FeeUtils
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus
 import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceipt}
@@ -333,7 +334,7 @@ class AccountStateView(
   override def getIntermediateRoot: Array[Byte] = stateDb.getIntermediateRoot
 
   // TODO: get gas limit from current block header
-  override def getBlockGasLimit: BigInteger = BigInteger.valueOf(Account.GAS_LIMIT)
+  override def getBlockGasLimit: BigInteger = BigInteger.valueOf(FeeUtils.GAS_LIMIT)
 
   def getRefund: BigInteger = stateDb.getRefund
 

@@ -322,7 +322,7 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   @RpcMethod("eth_gasPrice")
   def gasPrice: Quantity = {
     applyOnAccountView { nodeView =>
-      getBlockAtTag(nodeView, "latest") { block => new Quantity(block.header.baseFee)}
+      getBlockAtTag(nodeView, "latest") { block => new Quantity(block.header.baseFee) }
     }
   }
 

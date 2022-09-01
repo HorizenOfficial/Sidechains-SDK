@@ -124,7 +124,7 @@ class SCEvmBootstrap(SidechainTestFramework):
         self.sc_sync_all()
         sc_best_block = sc_node_1.block_best()["result"]
         assert_equal(sc_best_block["height"], 2, "The best block has not the specified height.")
-        assert_equal(1000000000, sc_best_block['block']['header']['baseFee'])
+        assert_equal(875000000, sc_best_block['block']['header']['baseFee'])
         pprint.pprint(sc_best_block)
         pprint.pprint(sc_node_1.rpc_eth_getBalance(evm_hex_address, "1"))
 
@@ -149,7 +149,7 @@ class SCEvmBootstrap(SidechainTestFramework):
         sc_best_block = sc_node_1.block_best()["result"]
         pprint.pprint(sc_best_block)
 
-        assert_equal(875000000, sc_best_block['block']['header']['baseFee'])
+        assert_equal(765625000, sc_best_block['block']['header']['baseFee'])
 
         # balance is in wei
         initial_balance = http_wallet_balance(sc_node_1, evm_address)
@@ -217,7 +217,7 @@ class SCEvmBootstrap(SidechainTestFramework):
         # check if header contains correct gasUsed (2 * eoa to eoa transfer gas costs)
         assert_equal(21000*2, sc_best_block['block']['header']['gasUsed'])
 
-        assert_equal(765625000, sc_best_block['block']['header']['baseFee'])
+        assert_equal(669921875, sc_best_block['block']['header']['baseFee'])
 
         final_balance = http_wallet_balance(sc_node_1, evm_address)
         assert_equal(initial_balance - transferred_amount_in_wei, final_balance)

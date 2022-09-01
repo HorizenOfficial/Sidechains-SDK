@@ -1,6 +1,8 @@
 package com.horizen.account.forger
 
 import com.horizen.SidechainTypes
+import com.horizen.account.FeeUtils
+import com.horizen.account.FeeUtils.calculateBaseFee
 import com.horizen.account.block.AccountBlock.calculateReceiptRoot
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
@@ -29,7 +31,6 @@ import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 import java.math.BigInteger
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
-import scala.compat.java8.OptionConverters.RichOptionalGeneric
 import scala.util.{Failure, Success, Try}
 
 class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
@@ -75,41 +76,6 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       true // stop data collection
     else {
       false // continue data collection
-    }
-  }
-
-  def calculateBaseFee(nodeView: View, parentId: BlockId): BigInteger = {
-    // If the current block is the first block, return the InitialBaseFee.
-    if (nodeView.history.getCurrentHeight < 2) {
-      return Account.INITIAL_BASE_FEE
-    }
-
-    nodeView.history.getBlockById(parentId).asScala match {
-    case None => Account.INITIAL_BASE_FEE
-    case Some(block) =>
-      val blockHeader = block.header
-      val gasTarget = blockHeader.gasLimit / 2
-
-        // If the parent gasUsed is the same as the target, the baseFee remains unchanged
-      if (blockHeader.gasUsed == gasTarget) {
-        return blockHeader.baseFee
-      }
-
-      if (blockHeader.gasUsed > gasTarget) {
-        // If the parent block used more gas than its target, the baseFee should increase by 12.5%
-        var baseFeeInc: BigInteger = BigInteger.valueOf(blockHeader.gasUsed - gasTarget)
-        baseFeeInc = baseFeeInc.multiply(blockHeader.baseFee)
-        baseFeeInc = baseFeeInc.divide(BigInteger.valueOf(gasTarget))
-        baseFeeInc = baseFeeInc.divide(BigInteger.valueOf(8))
-        blockHeader.baseFee.add(baseFeeInc.max(BigInteger.ONE))
-      } else {
-        // Otherwise if the parent block used less gas than its target, the baseFee should decrease by 12.5%
-        var baseFeeDec: BigInteger = BigInteger.valueOf(gasTarget - blockHeader.gasUsed)
-        baseFeeDec = baseFeeDec.multiply(blockHeader.baseFee)
-        baseFeeDec = baseFeeDec.divide(BigInteger.valueOf(gasTarget))
-        baseFeeDec = baseFeeDec.divide(BigInteger.valueOf(8))
-        blockHeader.baseFee.subtract(baseFeeDec).max(BigInteger.ONE)
-      }
     }
   }
 
@@ -199,13 +165,13 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val forgerAddress = addressList.get(0).publicImage().asInstanceOf[AddressProposition]
 
     // 4. Calculate baseFee
-    val baseFee = calculateBaseFee(nodeView, parentId)
+    val baseFee = calculateBaseFee(nodeView.history, parentId)
 
     // 5. Get cumulativeGasUsed from last receipt in list if available
     val gasUsed = if (receiptList.size > 0) receiptList.last.cumulativeGasUsed.longValue() else 0
 
     // 6. Set gasLimit
-    val gasLimit = Account.GAS_LIMIT
+    val gasLimit = FeeUtils.GAS_LIMIT
 
     val block = AccountBlock.create(
       parentId,
@@ -250,7 +216,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH), // stateRoot TODO add constant
       new AddressProposition(new Array[Byte](Account.ADDRESS_SIZE)), // forgerAddress: PublicKeySecp256k1Proposition TODO add constant,
-      Account.INITIAL_BASE_FEE,
+      BigInteger.ONE.shiftLeft(256).subtract(BigInteger.ONE),
       Long.MaxValue,
       Long.MaxValue,
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),

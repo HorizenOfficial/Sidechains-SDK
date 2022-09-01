@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
+import com.horizen.account.FeeUtils;
 import com.horizen.account.block.AccountBlock;
 import com.horizen.account.block.AccountBlockHeader;
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion;
@@ -632,11 +633,11 @@ public class CommandProcessor {
                           MainchainTxCrosschainOutputAddressUtil.getAccountAddress(
                                   sidechainCreation.getScCrOutput().address()));
 
-                BigInteger baseFee = Account.INITIAL_BASE_FEE;
+                BigInteger baseFee = FeeUtils.INITIAL_BASE_FEE();
 
                 Long gasUsed = 0L;
 
-                Long gasLimit = Long.valueOf(Account.GAS_LIMIT);
+                Long gasLimit = Long.valueOf(FeeUtils.GAS_LIMIT());
 
                 SidechainAccountTransactionsCompanion sidechainTransactionsCompanion = new SidechainAccountTransactionsCompanion(new HashMap<>());
 
