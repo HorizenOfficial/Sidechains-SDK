@@ -57,16 +57,25 @@ class LogsBloom() {
       data: Array[Byte]
   ): (Array[Int], Array[Int]) = {
     val hashBuffer = Keccak256.hash(data)
+    val bloomFilterIndexes : Array[Int] = new Array[Int](3)
+
+    bloomFilterIndexes(0) = BLOOM_FILTER_LENGTH - ((BytesUtils.getShort(
+      Array[Byte](hashBuffer(0), hashBuffer(1)),
+      0
+    ) & 0x7ff) >> 3) - 1
+
+    bloomFilterIndexes(1) = BLOOM_FILTER_LENGTH - ((BytesUtils.getShort(
+      Array[Byte](hashBuffer(2), hashBuffer(3)),
+      0
+    ) & 0x7ff) >> 3) - 1
+
+    bloomFilterIndexes(2) = BLOOM_FILTER_LENGTH - ((BytesUtils.getShort(
+      Array[Byte](hashBuffer(4), hashBuffer(5)),
+      0
+    ) & 0x7ff) >> 3) - 1
 
     val bloomFilterValues: Array[Int] =
       Array(1, 3, 5).map(e => 1 << (hashBuffer(e) & 0x7))
-
-    val bloomFilterIndexes: Array[Int] = Array((0, 1), (2, 3), (4, 5)).map(e =>
-      BLOOM_FILTER_LENGTH - ((BytesUtils.getShort(
-        Array[Byte](hashBuffer(e._1), hashBuffer(e._2)),
-        0
-      ) & 0x7ff) >> 3) - 1
-    )
 
     (bloomFilterIndexes, bloomFilterValues)
   }
