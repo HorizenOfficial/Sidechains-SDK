@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import logging
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -88,15 +89,15 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
 
         # Wait for Certificates appearance
         time.sleep(5)
-        print("Waiting to start certificate generation.")
+        logging.info("Waiting to start certificate generation.")
         # The following line also checks Certificate Submitter Api during the node synchronization
         while not sc_submitter_node.submitter_isCertGenerationActive()["result"]["state"]:
             time.sleep(1)
 
         while mc_node.getmempoolinfo()["size"] < 1 and sc_submitter_node.submitter_isCertGenerationActive()["result"]["state"]:
-            print("Wait for certificates in the MC mempool...")
+            logging.info("Wait for certificates in the MC mempool...")
             if sc_submitter_node.submitter_isCertGenerationActive()["result"]["state"]:
-                print("sc_node generating certificate now.")
+                logging.info("sc_node generating certificate now.")
             time.sleep(2)
 
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificates was not added to MC node mempool.")
@@ -109,16 +110,16 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
         for i in range(10):
             self.do_cert_cycle(mc_node, sc_node1, sc_node1, self.sc_withdrawal_epoch_length - 1, 300)
 
-        print("Connecting nodes...")
+        logging.info("Connecting nodes...")
         connect_sc_nodes(sc_node1, 1)  # Connect SC nodes
 
-        print("Starting synchronization...")
+        logging.info("Starting synchronization...")
         time.sleep(20)
         # The following lines checks Certificate Submitter Api during the node synchronization
         assert_equal(True, sc_node2.submitter_isCertificateSubmitterEnabled()["result"]["enabled"])
         assert_equal(True, sc_node2.submitter_isCertificateSubmitterEnabled()["result"]["enabled"])
         sync_sc_blocks(self.sc_nodes, 500, True)
-        print("Synchronization finished.")
+        logging.info("Synchronization finished.")
 
         # Disable sc node 1 submitter
         sc_node1.submitter_disableCertificateSubmitter()
@@ -126,9 +127,9 @@ class ScCertSubmitterAfterSync2(SidechainTestFramework):
         # Check if Node 2 can submit certificate
         self.do_cert_cycle(mc_node, sc_node1, sc_node2, self.sc_withdrawal_epoch_length - 1, 5)
 
-        print("Node after synchronization was able to sign, collect signatures and emit certificate.")
+        logging.info("Node after synchronization was able to sign, collect signatures and emit certificate.")
 
-        print("Sleep for 20 seconds to check for potential errors after")
+        logging.info("Sleep for 20 seconds to check for potential errors after")
         time.sleep(20)
 
 

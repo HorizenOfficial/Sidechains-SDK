@@ -1,5 +1,6 @@
 
 #!/usr/bin/env python3
+import logging
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -129,7 +130,7 @@ class SCMempoolMaxSize(SidechainTestFramework):
         mempool_used_size = mempool_used_size + http_transaction_findById(sc_node2, lowestTxId)['transaction']['size']
 
         #send N others tx with higher fee until upper limit is exceeded
-        print("Filling mempool until 1MB limit...")
+        logging.info("Filling mempool until 1MB limit...")
         txInd = 0
         numInserted = 1
         while (mempool_used_size < mempool_max_size_bytes):
@@ -143,9 +144,9 @@ class SCMempoolMaxSize(SidechainTestFramework):
             txInd = txInd + 1
             numInserted = numInserted + 1
             if (txInd==100):
-                print("Inserted so far: "+str(numInserted)+ " txs - mempool size: "+str(mempool_used_size))
+                logging.info("Inserted so far: "+str(numInserted)+ " txs - mempool size: "+str(mempool_used_size))
                 txInd = 0
-        print("Inserted so far: "+str(numInserted)+ " txs - mempool size: "+str(mempool_used_size))
+        logging.info("Inserted so far: "+str(numInserted)+ " txs - mempool size: "+str(mempool_used_size))
 
         #check node2 contains all the txs
         memmpoolState = allTransactions(sc_node2, False)

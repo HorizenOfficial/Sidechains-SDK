@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import logging
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -73,9 +74,9 @@ class ScCertSubmitterAfterSync1(SidechainTestFramework):
 
         connect_sc_nodes(sc_node1, 1)  # Connect SC nodes
 
-        print("Starting synchronization...")
+        logging.info("Starting synchronization...")
         sync_sc_blocks(self.sc_nodes, 100, True)
-        print("Synchronization finished.")
+        logging.info("Synchronization finished.")
 
         mc_blocks_left_for_we = self.sc_withdrawal_epoch_length - 1  # minus genesis block
 
@@ -88,7 +89,7 @@ class ScCertSubmitterAfterSync1(SidechainTestFramework):
         self.sc_sync_all()  # Sync SC nodes
 
         # Generate MC blocks to switch WE epoch
-        print("mc blocks left = " + str(mc_blocks_left_for_we))
+        logging.info("mc blocks left = " + str(mc_blocks_left_for_we))
         mc_node.generate(mc_blocks_left_for_we + 1)
 
         # Generate 2 SC blocks on SC node and start them automatic cert creation.
@@ -100,14 +101,14 @@ class ScCertSubmitterAfterSync1(SidechainTestFramework):
         # Wait for Certificates appearance
         time.sleep(10)
         while mc_node.getmempoolinfo()["size"] < 1 and sc_node2.submitter_isCertGenerationActive()["result"]["state"]:
-            print("Wait for certificates in the MC mempool...")
+            logging.info("Wait for certificates in the MC mempool...")
             if sc_node2.submitter_isCertGenerationActive()["result"]["state"]:
-                print("sc_node2 generating certificate now.")
+                logging.info("sc_node2 generating certificate now.")
             time.sleep(2)
 
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificates was not added to MC node mempool.")
 
-        print("Node after synchronization was able to sign, collect signatures and emit certificate.")
+        logging.info("Node after synchronization was able to sign, collect signatures and emit certificate.")
 
 
 if __name__ == "__main__":
