@@ -11,7 +11,7 @@ import java.math.BigInteger
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
 import scala.util.Try
 
-case class AccountHistoryBlockValidator() extends HistoryBlockValidator[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock, AccountHistoryStorage, AccountHistory] {
+case class BaseFeeBlockValidator() extends HistoryBlockValidator[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock, AccountHistoryStorage, AccountHistory] {
   
   override def validate(block: AccountBlock, history: AccountHistory): Try[Unit] = Try {
     val baseFee = block.header.baseFee
