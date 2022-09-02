@@ -190,7 +190,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
           // fork length is more than params.maxHistoryRewritingLength
           (Seq[ModifierId](), Seq[ModifierId]())
         else
-          (newBestChain, storage.activeChainAfter(newBestChain.head))
+          (newBestChain, storage.activeChainAfter(newBestChain.head, None))
 
       case None => (Seq[ModifierId](), Seq[ModifierId]())
     }
@@ -284,7 +284,7 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
   override def continuationIds(info: SidechainSyncInfo, size: Int): ModifierIds = {
     info.knownBlockIds.find(id => storage.isInActiveChain(id)) match {
       case Some(commonBlockId) =>
-        storage.activeChainAfter(commonBlockId).tail.take(size).map(id => (SidechainBlock.ModifierTypeId, id))
+        storage.activeChainAfter(commonBlockId, Some(size + 1)).tail.map(id => (SidechainBlock.ModifierTypeId, id))
       case None =>
         //log.warn("Found chain without common block ids from remote")
         Seq()

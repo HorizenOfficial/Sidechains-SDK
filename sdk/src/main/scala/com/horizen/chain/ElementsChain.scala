@@ -71,16 +71,25 @@ class ElementsChain[ID, DATA <: LinkedElement[ID]](private var lastId: Option[ID
     lastId = Some(newId)
   }
 
-  def chainAfter(id: ID): Seq[ID] = {
+  def chainAfter(id: ID, limit: Option[Int]): Seq[ID] = {
     if (contains(id) && height > 0) {
       var res: Seq[ID] = Seq()
-
-      var currentHeight = heightById(id).get
-      while (currentHeight < height) {
+      val startHeight = heightById(id).get
+      var currentHeight = startHeight
+      val blockLimit = limit match {
+        case Some(number) =>
+          number
+        case None =>
+          height
+      }
+      while (currentHeight < height && res.size < blockLimit) {
         currentHeight += 1
         res = res :+ dataByHeight(currentHeight).get.getParentId
       }
-      res :+ bestId.get
+      if (height - startHeight +1 <= blockLimit) {
+        res = res :+ bestId.get
+      }
+      res
     }
     else {
       Seq()
