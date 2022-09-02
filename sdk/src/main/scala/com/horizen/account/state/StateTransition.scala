@@ -1,10 +1,12 @@
 package com.horizen.account.state
 
 import com.horizen.account.utils.BigIntegerUtil
+import com.horizen.utils.BytesUtils
+import scorex.util.ScorexLogging
 
 import java.math.BigInteger
 
-class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProcessor], blockGasPool: GasPool) {
+class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProcessor], blockGasPool: GasPool) extends ScorexLogging {
 
   @throws(classOf[InvalidMessageException])
   @throws(classOf[ExecutionFailedException])
@@ -97,6 +99,7 @@ class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProc
     }
     blockGasPool.subGas(gas)
     // prepay effective gas fees
+    log.debug(s"Prepaying $effectiveFees to sender ${BytesUtils.toHexString(sender)}")
     view.subBalance(sender, effectiveFees)
     // allocate gas for this transaction
     new GasPool(gas)
@@ -105,10 +108,19 @@ class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProc
   private def refundGas(msg: Message, gas: GasPool): Unit = {
     val usedGas = msg.getGasLimit.subtract(gas.getGas)
     // cap gas refund to a quotient of the used gas
-    gas.addGas(view.getRefund.min(usedGas.divide(GasUtil.RefundQuotientEIP3529)))
+    val refGas = view.getRefund.min(usedGas.divide(GasUtil.RefundQuotientEIP3529))
+    gas.addGas(refGas)
     // return funds for remaining gas, exchanged at the original rate.
     val remaining = gas.getGas.multiply(msg.getGasPrice)
-    view.addBalance(msg.getFrom.address(), remaining)
+    val sender = msg.getFrom.address()
+    log.debug(s"gas used: $usedGas, remaining gas: ${gas.getGas}, refGas: $refGas, gasPrice: ${msg.getGasPrice}")
+    log.debug(s"now refunding $remaining to sender ${BytesUtils.toHexString(sender)}")
+    if (remaining.compareTo(BigInteger.ZERO) > 0) {
+      view.addBalance(sender, remaining)
+      // the addBalance op subtracts gas, we have to restore it here otherwise remaining gas balance is wrong
+      gas.addGas(GasUtil.GasTBD)
+    }
+
     // return remaining gas to the gasPool of the current block so it is available for the next transaction
     blockGasPool.addGas(gas.getGas)
   }

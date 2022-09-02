@@ -203,7 +203,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val receiptsRoot: Array[Byte] = calculateReceiptRoot(receiptList)
 
     // TODO: 4. calculate baseFee
-    val baseFee = 0
+    val baseFee = nodeView.state.getBaseFee
 
     // 5. Get cumulativeGasUsed from last receipt in list if available
     val gasUsed = if (receiptList.nonEmpty) receiptList.last.cumulativeGasUsed.longValue() else 0
@@ -230,7 +230,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       stateRoot,
       receiptsRoot,
       forgerAddress,
-      baseFee,
+      baseFee.longValue(), // TODO to be changed into biginteger?
       gasUsed,
       gasLimit,
       companion.asInstanceOf[SidechainAccountTransactionsCompanion])

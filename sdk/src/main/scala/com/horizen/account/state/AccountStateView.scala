@@ -145,6 +145,7 @@ class AccountStateView(
     // Tx context for stateDB, to know where to keep EvmLogs
     setupTxContext(txHash, txIndex)
 
+    log.debug(s"applying msg: used pool gas ${blockGasPool.getUsedGas}")
     // apply message to state
     val status = try {
       applyMessage(msg, blockGasPool)
@@ -163,6 +164,8 @@ class AccountStateView(
     val consensusDataReceipt = new EthereumConsensusDataReceipt(
       ethTx.version(), status.id, blockGasPool.getUsedGas, getLogs(txHash))
     log.debug(s"Returning consensus data receipt: ${consensusDataReceipt.toString()}")
+    log.debug(s"applied msg: used pool gas ${blockGasPool.getUsedGas}")
+
     consensusDataReceipt
   }
 
@@ -193,7 +196,9 @@ class AccountStateView(
       case x if x == 0 => // amount is zero
       case x if x < 0 =>
         throw new ExecutionFailedException("cannot add negative amount to balance")
-      case _ => stateDb.addBalance(address, amount)
+      case _ =>
+        log.debug(s"Adding $amount to addr ${BytesUtils.toHexString(address)}")
+        stateDb.addBalance(address, amount)
     }
   }
 
@@ -208,7 +213,9 @@ class AccountStateView(
         throw new ExecutionFailedException("cannot subtract negative amount from balance")
       case x if x > 0 && stateDb.getBalance(address).compareTo(amount) < 0 =>
         throw new ExecutionFailedException("insufficient balance")
-      case _ => stateDb.subBalance(address, amount)
+      case _ =>
+        log.debug(s"Subtracting $amount to addr ${BytesUtils.toHexString(address)}")
+        stateDb.subBalance(address, amount)
     }
   }
 
@@ -253,10 +260,7 @@ class AccountStateView(
     metadataStorageView.updateTopQualityCertificate(cert)
 
   override def addFeeInfo(info: AccountBlockFeeInfo): Unit = {
-    if (info.hasFeeContribution()) {
-      // do not store empty values which can arise in sc blocks without any tx
-      metadataStorageView.addFeePayment(info)
-    }
+    metadataStorageView.addFeePayment(info)
   }
 
   override def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo): Unit =
@@ -298,8 +302,7 @@ class AccountStateView(
 
   override def getFeePayments(withdrawalEpoch: Int, blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None): Seq[AccountBlockFeeInfo] = {
     var blockFeeInfoSeq = metadataStorageView.getFeePayments(withdrawalEpoch)
-    blockToAppendFeeInfo.foreach(blockFeeInfo =>
-      if (blockFeeInfo.hasFeeContribution() ) blockFeeInfoSeq = blockFeeInfoSeq :+ blockFeeInfo)
+    blockToAppendFeeInfo.foreach(blockFeeInfo => blockFeeInfoSeq = blockFeeInfoSeq :+ blockFeeInfo)
 
     if(blockFeeInfoSeq.isEmpty) {
       return Seq()
