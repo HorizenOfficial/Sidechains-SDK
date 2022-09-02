@@ -1,0 +1,36 @@
+package com.horizen.account.utils
+
+import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
+import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
+import scorex.util.serialization.{Reader, Writer}
+
+import java.math.BigInteger
+
+case class AccountBlockFeeInfo(baseFee: BigInteger, forgerTips: BigInteger, forgerAddress: AddressProposition) extends BytesSerializable {
+  def hasFeeContribution(): Boolean = (baseFee.add(forgerTips).compareTo(BigInteger.ZERO) > 0)
+
+  override type M = AccountBlockFeeInfo
+
+  override def serializer: ScorexSerializer[AccountBlockFeeInfo] = AccountBlockFeeInfoSerializer
+}
+
+
+object AccountBlockFeeInfoSerializer extends ScorexSerializer[AccountBlockFeeInfo] {
+  override def serialize(obj: AccountBlockFeeInfo, w: Writer): Unit = {
+    w.putInt(obj.baseFee.toByteArray.length)
+    w.putBytes(obj.baseFee.toByteArray)
+    w.putInt(obj.forgerTips.toByteArray.length)
+    w.putBytes(obj.forgerTips.toByteArray)
+    AddressPropositionSerializer.getSerializer.serialize(obj.forgerAddress, w)
+  }
+
+  override def parse(r: Reader): AccountBlockFeeInfo = {
+    val baseFeeLength = r.getInt()
+    val baseFee = new BigInteger(r.getBytes(baseFeeLength))
+    val forgerTipsLength = r.getInt()
+    val forgerTips = new BigInteger(r.getBytes(forgerTipsLength))
+    val forgerRewardKey: AddressProposition = AddressPropositionSerializer.getSerializer.parse(r)
+
+    AccountBlockFeeInfo(baseFee, forgerTips, forgerRewardKey)
+  }
+}
