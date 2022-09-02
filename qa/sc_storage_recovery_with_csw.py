@@ -55,13 +55,14 @@ Test:
 """
 
 WITHDRAWAL_EPOCH_LENGTH = 10
+CUSTOM_STORAGE_NAMES = "appState1,appState2,appWallet1,appWallet2"
 
 
 def checkStoragesVersion(node, storages_list, expectedVersion):
     for name in storages_list:
         # get the last version of the storage
         json_params = {"storage": name}
-        ret = launch_db_tool(node.dataDir, "lastVersionID", json_params)
+        ret = launch_db_tool(node.dataDir, CUSTOM_STORAGE_NAMES, "lastVersionID", json_params)
         version = ret['version']
         #logging.info("{} --> {}".format(name, version))
         # check we got the expected version
@@ -72,14 +73,15 @@ def rollbackStorages(node, storages_list, numberOfVersionsToRollback):
     for name in storages_list:
         # get the version list up to the desired number
         json_params = {"storage": name, "numberOfVersionToRetrieve": numberOfVersionsToRollback}
-        versionsList = launch_db_tool(node.dataDir, "versionsList", json_params)["versionsList"]
+        versionsList = launch_db_tool(node.dataDir, CUSTOM_STORAGE_NAMES, "versionsList", json_params)["versionsList"]
 
         # get the target version to rollback to
         rollbackVersion = versionsList[-1]
         json_params = {"storage": name, "versionToRollback": rollbackVersion}
         logging.info("...Rollbacking storage \"{}\" to version {}".format(name, rollbackVersion))
-        ret = launch_db_tool(node.dataDir, "rollback", json_params)
+        ret = launch_db_tool(node.dataDir, CUSTOM_STORAGE_NAMES, "rollback", json_params)
         #logging.info("{} --> {}".format(name, rollbackVersion))
+
         # check that we did it correctly
         assert_equal(ret["versionCurrent"], rollbackVersion)
 
@@ -184,7 +186,7 @@ class StorageRecoveryWithCSWTest(SidechainTestFramework):
         # Check that wallet forging stake has the same block id in the rollback versions and precisely
         # one commit behind
         json_params = {"storage": "walletForgingStake", "numberOfVersionToRetrieve": 2}
-        versionsList = launch_db_tool(sc_node2.dataDir, "versionsList", json_params)["versionsList"]
+        versionsList = launch_db_tool(sc_node2.dataDir, CUSTOM_STORAGE_NAMES, "versionsList", json_params)["versionsList"]
         assert_true(genesis_sc_block_id in versionsList)
         assert_equal(genesis_sc_block_id, versionsList[-1])
 
@@ -318,7 +320,7 @@ class StorageRecoveryWithCSWTest(SidechainTestFramework):
         checkStoragesVersion(sc_node2, ["wallet"], rolbackBlockVersionId)
 
         json_params = {"storage": "walletForgingStake", "numberOfVersionToRetrieve": 2}
-        versionsList = launch_db_tool(sc_node2.dataDir, "versionsList", json_params)["versionsList"]
+        versionsList = launch_db_tool(sc_node2.dataDir, CUSTOM_STORAGE_NAMES, "versionsList", json_params)["versionsList"]
         assert_true(rolbackBlockVersionId in versionsList)
         # -- wallet forging stake is ahead by one version
         assert_equal(rolbackBlockVersionId, versionsList[-1])

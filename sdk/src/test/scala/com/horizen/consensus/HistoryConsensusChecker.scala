@@ -9,8 +9,8 @@ import com.horizen.fixtures.sidechainblock.generation.{FinishedEpochInfo, Genera
 import com.horizen.params.NetworkParams
 import com.horizen.storage.{InMemoryStorageAdapter, SidechainHistoryStorage}
 import com.horizen.validation.ConsensusValidator
-import scorex.core.utils.TimeProvider
-import scorex.core.utils.TimeProvider.Time
+import sparkz.core.utils.TimeProvider
+import sparkz.core.utils.TimeProvider.Time
 import scorex.util.ModifierId
 
 import scala.annotation.tailrec

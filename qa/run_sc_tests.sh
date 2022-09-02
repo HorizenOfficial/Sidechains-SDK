@@ -55,6 +55,8 @@ testScripts=(
     'sc_backward_transfer.py'
     'sc_blockid_for_backup.py'
     'sc_bootstrap.py'
+    'sc_bt_limit.py'
+    'sc_bt_limit_across_fork.py'
     'sc_bwt_minimum_value.py'
     'sc_ceased.py'
     'sc_cert_fee_conf.py'

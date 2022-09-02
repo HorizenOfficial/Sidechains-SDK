@@ -2,8 +2,8 @@ pom.xml.versionsBackup
 out/
 .idea/
 target/
-scorex.log
-scorex-errors.log
+sparkz.log
+sparkz-errors.log
 *.iml
 tools/sctool/dependency-reduced-pom.xml
 examples/simpleapp/dependency-reduced-pom.xml

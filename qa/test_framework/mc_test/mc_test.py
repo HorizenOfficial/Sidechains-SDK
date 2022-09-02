@@ -164,7 +164,7 @@ def get_field_element_with_padding(field_element, sidechain_version):
 
     if sidechain_version == 0:
         return field_element.rjust(FIELD_ELEMENT_STRING_SIZE, "0")
-    elif sidechain_version == 1:
+    elif (sidechain_version == 1) | (sidechain_version == 2):
         return field_element.ljust(FIELD_ELEMENT_STRING_SIZE, "0")
     else:
         assert(False)

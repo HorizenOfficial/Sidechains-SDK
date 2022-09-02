@@ -76,7 +76,7 @@ class SidechainBlockIdForBackupTest(SidechainTestFramework):
         generate_next_blocks(sc_node1, "first node", 1)
         self.sc_sync_all()
 
-        sc_creation_block_height = 450
+        sc_creation_block_height = 480
         sc_creation_block = mc_node1.getblock(str(sc_creation_block_height),2)
         assert_true(len(sc_creation_block["tx"][1]["vsc_ccout"]) == 1)
 

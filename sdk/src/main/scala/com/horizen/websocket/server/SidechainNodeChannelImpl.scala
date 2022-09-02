@@ -13,11 +13,11 @@ import com.horizen.chain.FeePaymentsInfo
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 import com.horizen.serialization.SerializationUtil
 import com.horizen.websocket.server.WebSocketServerRef.sidechainNodeViewHolderRef
-import scorex.core.NodeViewHolder.CurrentView
-import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
+import sparkz.core.NodeViewHolder.CurrentView
+import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 
 import scala.language.postfixOps
 
@@ -165,7 +165,7 @@ class SidechainNodeChannelImpl() extends SidechainNodeChannel with ScorexLogging
     eventPayload.set("block", blockJson)
     feePaymentsInfoOpt.foreach(feePaymentsInfo => {
       val feePaymentsTxJson = mapper.readTree(SerializationUtil.serialize(feePaymentsInfo.transaction))
-      eventPayload.set("feePayments", feePaymentsTxJson)
+      eventPayload.set[ObjectNode]("feePayments", feePaymentsTxJson)
     })
 
     eventPayload

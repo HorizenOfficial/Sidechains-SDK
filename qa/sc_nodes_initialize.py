@@ -32,7 +32,7 @@ class SidechainNodesInitializationTest(SidechainTestFramework):
         self.sc_nodes = self.sc_setup_nodes()
         #Connect nodes together
         logging.info("Connecting node0, node1 and node2...")
-        connect_sc_nodes(self.sc_nodes[0], 1) #In Scorex, it is just needed to call connect on one of the two
+        connect_sc_nodes(self.sc_nodes[0], 1)  # In Sparkz, it is just needed to call connect on one of the two
         connect_sc_nodes(self.sc_nodes[1], 2)
         connect_sc_nodes(self.sc_nodes[0], 2)
         self.sc_sync_all()
