@@ -57,12 +57,14 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
   }
 
   /**
+   * Method copied from the parent class with the addition of isReindexing check
+   *
    * Object ids coming from other node.
    * Filter out modifier ids that are already in process (requested, received or applied),
    * request unknown ids from peer and set this ids to requested state.
    */
   override protected def processInv(invData: InvData, peer: ConnectedPeer): Unit = {
-    if (this.isReindexing == true){
+    if (this.isReindexing){
       log.warn("Got data from peer while reindexing - will be discarded")
     }else {
       (mempoolReaderOpt, historyReaderOpt) match {
@@ -91,6 +93,8 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
 
 
   /**
+   * Method copied from the parent class with the addition of isReindexing check
+   *
    * Logic to process modifiers got from another peer.
    * Filter out non-requested modifiers (with a penalty to spamming peer),
    * parse modifiers and send valid modifiers to NodeViewHolder
@@ -112,7 +116,7 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
 
       case Some(serializer: SparkzSerializer[SidechainBlock]@unchecked) =>
         if (this.isReindexing){
-          log.info("Got transaction while reindexing - will be discarded")
+          log.info("Got block while reindexing - will be discarded")
         }else {
           // parse all modifiers and put them to modifiers cache
           val parsed: Iterable[SidechainBlock] = parseModifiers(requestedModifiers, serializer, remote)
@@ -126,6 +130,8 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
   }
 
   /**
+   * Method copied as-is  from the parent class to be used by the previous
+   *
    * Parse modifiers using specified serializer, check that its id is equal to the declared one,
    * penalize misbehaving peer for every incorrect modifier or additional bytes after the modifier,
    * call deliveryTracker.onReceive() for every correct modifier to update its status
@@ -156,6 +162,8 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
   }
 
   /**
+   * Method copied as-is  from the parent class to be used by the previous
+   *
    * Move `pmod` to `Invalid` if it is permanently invalid, to `Received` otherwise
    */
   @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
@@ -180,6 +188,8 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
   }
 
   /**
+   * Method copied as-is  from the parent class to be used by the previous
+   *
    * Get modifiers from remote peer,
    * filter out spam modifiers and penalize peer for spam
    *
