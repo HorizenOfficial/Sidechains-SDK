@@ -69,22 +69,18 @@ class AccountState(val params: NetworkParams,
       // Validate top quality certificate in the end of the submission window:
       // Reject block if it refers to the chain that conflicts with the top quality certificate content
       // Mark sidechain as ceased in case there is no certificate appeared within the submission window.
-      val currentWithdrawalEpochInfo = stateView.getWithdrawalEpochInfo
-      val modWithdrawalEpochInfo: WithdrawalEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, currentWithdrawalEpochInfo, params)
+      val parentWithdrawalEpochInfo = stateMetadataStorage.getWithdrawalEpochInfo
+      val modWithdrawalEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, parentWithdrawalEpochInfo, params)
 
       // If SC block has reached the certificate submission window end -> check the top quality certificate
       // Note: even if mod contains multiple McBlockRefData entries, we are sure they belongs to the same withdrawal epoch.
-      if (WithdrawalEpochUtils.hasReachedCertificateSubmissionWindowEnd(mod, currentWithdrawalEpochInfo, params)) {
+      if (WithdrawalEpochUtils.hasReachedCertificateSubmissionWindowEnd(mod, parentWithdrawalEpochInfo, params)) {
         val certReferencedEpochNumber = modWithdrawalEpochInfo.epoch - 1
 
-        // Top quality certificate may present in the current SC block or in the previous blocks or can be absent.
-        val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = mod.topQualityCertificateOpt.orElse(
-          stateView.certificate(certReferencedEpochNumber))
-
+        // Top quality certificate may be present in the current SC block or in the previous blocks or can be absent.
         // Check top quality certificate or notify that sidechain has ceased since we have no certificate in the end of the submission window.
-        topQualityCertificateOpt match {
-          case Some(cert) =>
-            validateTopQualityCertificate(cert, stateView)
+        mod.topQualityCertificateOpt.orElse(stateView.certificate(certReferencedEpochNumber)) match {
+          case Some(cert) => validateTopQualityCertificate(cert, stateView)
           case None =>
             log.info(s"In the end of the certificate submission window of epoch ${modWithdrawalEpochInfo.epoch} " +
               s"there are no certificates referenced to the epoch $certReferencedEpochNumber. Sidechain has ceased.")
@@ -281,9 +277,11 @@ class AccountState(val params: NetworkParams,
   override def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] =
     using(getView)(_.withdrawalRequests(withdrawalEpoch))
 
-  override def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
+  override def getFeePayments(withdrawalEpoch: Int): Seq[BlockFeeInfo] =
+    stateMetadataStorage.getFeePayments(withdrawalEpoch)
+
+  override def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] =
     stateMetadataStorage.getTopQualityCertificate(referencedWithdrawalEpoch)
-  }
 
   override def certificateTopQuality(referencedWithdrawalEpoch: Int): Long = {
     stateMetadataStorage.getTopQualityCertificate(referencedWithdrawalEpoch) match {
@@ -292,21 +290,11 @@ class AccountState(val params: NetworkParams,
     }
   }
 
-  override def getWithdrawalEpochInfo: WithdrawalEpochInfo = {
-    stateMetadataStorage.getWithdrawalEpochInfo
-  }
+  override def hasCeased: Boolean = stateMetadataStorage.hasCeased
 
-  override def hasCeased: Boolean = {
-    stateMetadataStorage.hasCeased
-  }
+  def getWithdrawalEpochInfo: WithdrawalEpochInfo = stateMetadataStorage.getWithdrawalEpochInfo
 
-  override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = {
-    stateMetadataStorage.getConsensusEpochNumber
-  }
-
-  override def getFeePayments(withdrawalEpoch: Int): Seq[BlockFeeInfo] = {
-    stateMetadataStorage.getFeePayments(withdrawalEpoch)
-  }
+  def getConsensusEpochNumber: Option[ConsensusEpochNumber] = stateMetadataStorage.getConsensusEpochNumber
 
   private def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = using(getView)(_.getOrderedForgingStakeInfoSeq)
 

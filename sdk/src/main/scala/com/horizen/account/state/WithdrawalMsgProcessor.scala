@@ -46,7 +46,7 @@ object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with Withdra
 
       case AddNewWithdrawalReqCmdSig =>
         gas.subGas(GasSpentForAddNewWithdrawalReqCmd)
-        execAddWithdrawalRequest(msg, view)
+        execAddWithdrawalRequest(msg, view, blockContext.withdrawalEpochNumber)
 
       case functionSig =>
         throw new ExecutionRevertedException(s"Requested function does not exist. Function signature: $functionSig")
@@ -102,9 +102,8 @@ object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with Withdra
     }
   }
 
-  protected def execAddWithdrawalRequest(msg: Message, view: BaseAccountStateView): Array[Byte] = {
+  protected def execAddWithdrawalRequest(msg: Message, view: BaseAccountStateView, currentEpochNum: Int): Array[Byte] = {
     checkWithdrawalRequestValidity(msg)
-    val currentEpochNum = view.getWithdrawalEpochInfo.epoch
     val numOfWithdrawalReqs = getWithdrawalEpochCounter(view, currentEpochNum)
     if (numOfWithdrawalReqs >= MaxWithdrawalReqsNumPerEpoch) {
       throw new ExecutionRevertedException("Reached maximum number of Withdrawal Requests per epoch: request is invalid")

@@ -286,11 +286,7 @@ class AccountStateView(
   override def certificateTopQuality(referencedWithdrawalEpoch: Int): Long =
     metadataStorageView.getTopQualityCertificate(referencedWithdrawalEpoch).map(_.quality).getOrElse(0)
 
-  override def getWithdrawalEpochInfo: WithdrawalEpochInfo = metadataStorageView.getWithdrawalEpochInfo
-
   override def hasCeased: Boolean = metadataStorageView.hasCeased
-
-  override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = metadataStorageView.getConsensusEpochNumber
 
   override def getFeePayments(withdrawalEpoch: Int): Seq[BlockFeeInfo] =
     metadataStorageView.getFeePayments(withdrawalEpoch)
