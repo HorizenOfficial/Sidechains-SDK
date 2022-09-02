@@ -10,8 +10,8 @@ public class BlockContext {
     public final BigInteger baseFee;
     public final long blockGasLimit;
     public final int blockNumber;
-    public final long consensusEpochNumber;
-    public final long withdrawalEpochNumber;
+    public final int consensusEpochNumber;
+    public final int withdrawalEpochNumber;
 
     public BlockContext(
             byte[] forgerAddress,
@@ -19,8 +19,8 @@ public class BlockContext {
             long baseFee,
             long blockGasLimit,
             int blockNumber,
-            long consensusEpochNumber,
-            long withdrawalEpochNumber
+            int consensusEpochNumber,
+            int withdrawalEpochNumber
     ) {
         this.forgerAddress = forgerAddress;
         this.timestamp = timestamp;
@@ -34,8 +34,8 @@ public class BlockContext {
     public BlockContext(
             AccountBlockHeader blockHeader,
             int blockNumber,
-            long consensusEpochNumber,
-            long withdrawalEpochNumber
+            int consensusEpochNumber,
+            int withdrawalEpochNumber
     ) {
         this(
                 blockHeader.forgerAddress().address(),
