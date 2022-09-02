@@ -838,7 +838,7 @@ network: {
  - bootstrap information of the sidechain nodes. An instance of SCBootstrapInfo (see sc_boostrap_info.py)    
 """
 
-
+#If we want to use a different block rate (not 120s) override this block_timestamp_rewind field.
 def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
                               block_timestamp_rewind=DefaultBlockTimestampRewind):
     log_info = LogInfo(options.logfilelevel, options.logconsolelevel)

@@ -22,7 +22,6 @@ import com.horizen.proposition._
 import com.horizen.serialization.Views
 import com.horizen.transaction._
 import com.horizen.utils.{BytesUtils, ZenCoinsUtils}
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SuccessfulTransaction
 import scorex.core.settings.RESTApiSettings
 
 import scala.collection.JavaConverters._
@@ -35,7 +34,6 @@ import java.util.{Optional => JOptional}
 case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                                         sidechainNodeViewHolderRef: ActorRef,
                                         sidechainTransactionActorRef: ActorRef,
-                                        sidechainNodeViewSynchronizer: ActorRef,
                                         companion: SidechainTransactionsCompanion,
                                         params: NetworkParams)
                                        (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
@@ -43,7 +41,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
   override val route: Route = (pathPrefix("transaction")) {
     allTransactions ~ findById ~ decodeTransactionBytes ~ createCoreTransaction ~ createCoreTransactionSimplified ~
-    sendCoinsToAddress ~ sendTransaction ~ withdrawCoins ~ makeForgerStake ~ spendForgingStake ~ broadcastMempool
+    sendCoinsToAddress ~ sendTransaction ~ withdrawCoins ~ makeForgerStake ~ spendForgingStake
   }
 
   /**
@@ -474,20 +472,6 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     }
   }
 
-  /**
-   * Used only for test purpose.
-   * Broadcast to the network all the transactions in the mempool
-   */
-  def broadcastMempool: Route = (post & path("broadcastMempool")) {
-    withAuth {
-      withNodeView { sidechainNodeView =>
-        sidechainNodeView.getNodeMemoryPool.getTransactions().forEach(tx =>{
-          sidechainNodeViewSynchronizer ! SuccessfulTransaction(tx)
-        })
-        ApiResponseUtil.toResponse(RespBroadcastMempool)
-      }
-    }
-  }
 
   // try to get the first PublicKey25519Proposition in the wallet
   // None - if not present.
@@ -674,9 +658,6 @@ object SidechainTransactionRestScheme {
     require(transactionInputs.nonEmpty, "Empty inputs list")
     require(regularOutputs.nonEmpty || forgerOutputs.nonEmpty, "Empty outputs")
   }
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] object RespBroadcastMempool extends SuccessResponse
 
 }
 
