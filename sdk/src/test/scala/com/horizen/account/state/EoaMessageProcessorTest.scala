@@ -89,7 +89,7 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
         assertEquals("Different amount found", msg.getValue, args.getArgument(1))
       })
 
-    val returnData = assertGas(BigInteger.ZERO)(EoaMessageProcessor.process(msg, mockStateView, _))
+    val returnData = assertGas(BigInteger.ZERO)(EoaMessageProcessor.process(msg, mockStateView, _, defaultBlockContext))
     assertArrayEquals("Different return data found", Array.emptyByteArray, returnData)
 
     // Test 2: Failure during subBalance
@@ -99,7 +99,7 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
       .thenAnswer(_ => {
         throw new Exception("something went error")
       })
-    assertThrows[Exception](withGas(EoaMessageProcessor.process(msg, mockStateView, _)))
+    assertThrows[Exception](withGas(EoaMessageProcessor.process(msg, mockStateView, _, defaultBlockContext)))
 
     // Test 3: Failure during addBalance
     Mockito.reset(mockStateView)
@@ -108,6 +108,6 @@ class EoaMessageProcessorTest extends JUnitSuite with MockitoSugar with SecretFi
       .thenAnswer(_ => {
         throw new Exception("something else went error")
       })
-    assertThrows[Exception](withGas(EoaMessageProcessor.process(msg, mockStateView, _)))
+    assertThrows[Exception](withGas(EoaMessageProcessor.process(msg, mockStateView, _, defaultBlockContext)))
   }
 }
