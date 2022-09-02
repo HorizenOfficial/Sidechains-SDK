@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import logging
 
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -77,7 +78,7 @@ class SCWsServer(SidechainTestFramework):
         return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
 
     def run_test(self):
-        print("SC ws server requests test is starting...")
+        logging.info("SC ws server requests test is starting...")
 
         mc_node = self.nodes[0]
         sc_node1 = self.sc_nodes[0]
@@ -103,7 +104,7 @@ class SCWsServer(SidechainTestFramework):
         ws_connection = ws.create_connection("ws://localhost:8025/")
 
         ######## Mempool requests test ########
-        print("######## Mempool requests test ########")
+        logging.info("######## Mempool requests test ########")
 
         # Test with empty mempool
 
@@ -223,7 +224,7 @@ class SCWsServer(SidechainTestFramework):
 
 
         ######## Get single block request test ########
-        print("######## Get single block request test ########")
+        logging.info("######## Get single block request test ########")
 
         # Test get single block request
 
@@ -303,7 +304,7 @@ class SCWsServer(SidechainTestFramework):
         assert_equal(response['responsePayload'], "Invalid parameter")
 
         ######## Get new block hashes request test ########
-        print("######## Get new block hashes request test ########")
+        logging.info("######## Get new block hashes request test ########")
         # Test with no hashes in common
 
         # Send get new block hashes request with non existing block hash
@@ -357,7 +358,7 @@ class SCWsServer(SidechainTestFramework):
         assert_equal(responsePayload['hashes'][0],self.blocks[1])
 
         ######## Websocket events tests ########
-        print("######## Websocket events test ########")
+        logging.info("######## Websocket events test ########")
 
         self.blocks.append(generate_next_blocks(sc_node1, "", 1)[0])
         self.sc_sync_all()
@@ -430,18 +431,18 @@ class SCWsServer(SidechainTestFramework):
         # Wait until Certificate will appear in MC node mempool
         time.sleep(10)
         while mc_node.getmempoolinfo()["size"] == 0 and sc_node1.submitter_isCertGenerationActive()["result"]["state"]:
-            print("Wait for certificate in mc mempool...")
+            logging.info("Wait for certificate in mc mempool...")
             time.sleep(2)
             sc_node1.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
 
         #Next epoch
-        print("#Next epoch")
+        logging.info("#Next epoch")
         assert_equal(mc_node.getscinfo(self.sc_nodes_bootstrap_info.sidechain_id)["items"][0]["state"], "ALIVE")
         assert_equal(mc_node.getscinfo(self.sc_nodes_bootstrap_info.sidechain_id)["items"][0]["epoch"], 1)
 
         #Test that we don't return feePayments if there aren't transactions in the epoch
-        print("#Test that we don't return feePayments if there aren't transactions in the epoch")
+        logging.info("#Test that we don't return feePayments if there aren't transactions in the epoch")
         mc_node.generate(9)
         lastBlock = generate_next_blocks(sc_node1, "", 1)[0]
         for i in range (0,2):

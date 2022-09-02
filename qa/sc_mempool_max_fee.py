@@ -1,5 +1,6 @@
 
 #!/usr/bin/env python3
+import logging
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -87,7 +88,7 @@ class SCMempoolMaxFee(SidechainTestFramework):
 
 
         # Test that we are not able to send a transaction with fee > max_fee in sc_node1
-        print("# Test that we are not able to send a transaction with fee > max_fee in sc_node1")
+        logging.info("# Test that we are not able to send a transaction with fee > max_fee in sc_node1")
         error = False
         try:
             sendCoinsToAddress(sc_node1, sc_address_2, 10, self.max_fee + 1)
@@ -96,7 +97,7 @@ class SCMempoolMaxFee(SidechainTestFramework):
         assert_true(error)
 
         # Test that we are able to send a transaction with fee = max_fee in sc_node1
-        print("# Test that we are able to send a transaction with fee = max_fee in sc_node1")
+        logging.info("# Test that we are able to send a transaction with fee = max_fee in sc_node1")
         sendCoinsToAddress(sc_node1, sc_address_2, 100, self.max_fee)
         self.sync_all()
         generate_next_blocks(sc_node1, "first node", 1)
@@ -104,19 +105,19 @@ class SCMempoolMaxFee(SidechainTestFramework):
 
 
         # Test that we are able to send a transaction with fee < max_fee in sc_node1
-        print("# Test that we are able to send a transaction with fee < max_fee in sc_node1")
+        logging.info("# Test that we are able to send a transaction with fee < max_fee in sc_node1")
         sendCoinsToAddress(sc_node1, sc_address_2, 100, self.max_fee - 1)
         self.sync_all()
         generate_next_blocks(sc_node1, "first node", 1)
         self.sc_sync_all()
 
         # Test that we are able to send a transaction with fee > max_fee in sc_node2 that didn't set the max_fee parameter
-        print("# Test that we are able to send a transaction with fee > max_fee in sc_node2 that didn't set the max_fee parameter")
+        logging.info("# Test that we are able to send a transaction with fee > max_fee in sc_node2 that didn't set the max_fee parameter")
         txid = sendCoinsToAddress(sc_node2, sc_address_1, 10, self.max_fee + 1)
         self.sync_all()
         
         # Verify that the sc_node1 included the transaction even if it has fee > than its max_fee
-        print("# Verify that the sc_node1 included the transaction even if it has fee > than its max_fee")
+        logging.info("# Verify that the sc_node1 included the transaction even if it has fee > than its max_fee")
         node_1_mempool = http_transaction_findById(sc_node2, txid)
         node_2_mempool = http_transaction_findById(sc_node1, txid)
         assert(len(node_1_mempool) > 0)

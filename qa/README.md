@@ -23,16 +23,18 @@ SIDECHAIN_SDK="/home/user/Sidechains-SDK"
 
 **Execution**
 
-You can run all tests using command.
+You can run all tests by running the following command from the qa directory:
 
 ```
-python run_sc_tests.py
+./run_sc_tests.sh
 ```
-    
-Or run individual test using command
+
+The log output for this test run can be found in the qa directory with the name "sc_test.log".
+
+Or run individual test using command:
 
 ```
-python <test.py>
+python3 <test.py> --logconsolelevel=info
 ```
 
 **Template configuration files**

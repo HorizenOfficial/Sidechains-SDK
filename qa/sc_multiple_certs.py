@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import logging
 import time
 import math
 
@@ -127,7 +128,7 @@ class SCMultipleCerts(SidechainTestFramework):
         generate_next_block(sc_node2, "second node")  # 1 MC block to reach the end of WE
 
         # Generate MC blocks to switch WE epoch
-        print("mc blocks left = " + str(mc_blocks_left_for_we))
+        logging.info("mc blocks left = " + str(mc_blocks_left_for_we))
         mc_block_hashes = mc_node.generate(mc_blocks_left_for_we + 1)
 
         # Generate 2 SC blocks on both SC nodes and start them automatic cert creation.
@@ -147,11 +148,11 @@ class SCMultipleCerts(SidechainTestFramework):
                (sc_node1.submitter_isCertGenerationActive()["result"]["state"]
                 or sc_node2.submitter_isCertGenerationActive()["result"]["state"])):
 
-            print("Wait for certificates in the MC mempool...")
+            logging.info("Wait for certificates in the MC mempool...")
             if (sc_node1.submitter_isCertGenerationActive()["result"]["state"]):
-                print("sc_node1 generating certificate now.")
+                logging.info("sc_node1 generating certificate now.")
             if (sc_node2.submitter_isCertGenerationActive()["result"]["state"]):
-                print("sc_node2 generating certificate now.")
+                logging.info("sc_node2 generating certificate now.")
 
             time.sleep(2)
             sc_node1.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
@@ -168,7 +169,7 @@ class SCMultipleCerts(SidechainTestFramework):
         # Generate MC block with certs
         mc_block_hash_with_certs = mc_node.generate(1)[0]
         mc_block_hash_with_certs_hex = mc_node.getblock(mc_block_hash_with_certs, False)
-        print("MC block with 2 Certificates: " + mc_block_hash_with_certs_hex)
+        logging.info("MC block with 2 Certificates: " + mc_block_hash_with_certs_hex)
         assert_equal(0, mc_node.getmempoolinfo()["size"], "Certificate expected to be removed from MC node mempool.")
         assert_equal(2, len(mc_node.getblock(mc_block_hash_with_certs)["cert"]), "MC block expected to contain 2 certs.")
 
@@ -187,7 +188,7 @@ class SCMultipleCerts(SidechainTestFramework):
         try:
             generate_next_block(sc_node2, "second node")
         except SCAPIException as e:
-            print("Expected SCAPIException: " + e.error)
+            logging.info("Expected SCAPIException: " + e.error)
             error_occur = True
 
         assert_true(error_occur, "Node 2 wrongly verified top quality cert as a valid one.")
