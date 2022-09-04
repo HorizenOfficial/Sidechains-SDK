@@ -3,8 +3,9 @@ from enum import Enum
 from typing_extensions import TypedDict
 
 
-class PerformanceData(TypedDict):
+class PerformanceData(TypedDict, total=False):
     test_type: str
+    max_tps_per_process: int
     test_run_time: int
     block_rate: int
     initial_txs: int
