@@ -21,10 +21,12 @@ from SidechainTestFramework.scutil import assert_true, bootstrap_sidechain_nodes
     deserialize_perf_test_json, connect_sc_nodes
 from performance.perf_data import NetworkTopology, TestType
 
+# Declare global thread safe values used for multiprocessing tps test
 counter = Value('i', 0)
 errors = Value('i', 0)
 
 
+# Initialise the threadsafe globals
 def init_globals(count, err):
     global counter
     global errors
@@ -71,9 +73,11 @@ def get_number_of_transactions_for_node(node):
 
 def send_transactions_per_second(txs_creator_node, destination_address, utxo_amount, tps_per_process,
                                  start_time, test_run_time):
+    # Run until
     while time.time() - start_time < test_run_time:
         i = 0
         tps_start_time = time.time()
+        # Send transactions until the maximum tps value has been reached for each process (thread).
         while i < tps_per_process:
             try:
                 sendCoinsToAddress(txs_creator_node, destination_address, utxo_amount, 0)
@@ -87,6 +91,10 @@ def send_transactions_per_second(txs_creator_node, destination_address, utxo_amo
         # Remove execution time from the 1 second to get as close to X number of TPS as possible
         if completion_time < 1:
             sleep(1 - completion_time)
+        # If completion time exceeds 1 second, it's no longer x transactions per second.
+        # Lower the max_tps_per_process config value until this value is under 1 second.
+        elif completion_time > 1:
+            print("WARNING:  Number of transactions sent has exceeded 1 second - decrease max_tps_per_process value.")
 
 
 class PerformanceTest(SidechainTestFramework):
@@ -164,7 +172,7 @@ class PerformanceTest(SidechainTestFramework):
         print(f"NETWORK TOPOLOGY CONNECTION MAP: {self.connection_map}")
         self.sc_sync_all()
 
-    def find_txs_creators(self):
+    def get_txs_creators_and_non_creators(self):
         txs_creators = []
         non_txs_creator = []
         for index, node in enumerate(self.sc_nodes_list):
@@ -181,7 +189,7 @@ class PerformanceTest(SidechainTestFramework):
                 forger_nodes.append(self.sc_nodes[index])
         return forger_nodes
 
-    def send_coins_to_multiple_destination(self, utxo_amount, txs_creator_nodes, non_creator_nodes):
+    def populate_mempool(self, utxo_amount, txs_creator_nodes, non_creator_nodes):
 
         for j in range(len(txs_creator_nodes)):
             destination_address = non_creator_nodes[0].wallet_createPrivateKey25519()["result"]["proposition"][
@@ -225,24 +233,32 @@ class PerformanceTest(SidechainTestFramework):
         result = http_block_findById(node, block_id)
         return result["block"]["sidechainTransactions"]
 
-    def txs_creator_send_to_address(self, utxo_amount, txs_creator_node, non_creator_nodes, tps_test):
+    def txs_creator_send_transactions_per_second_to_addresses(self, utxo_amount, txs_creator_node, non_creator_nodes,
+                                                              tps_test):
         node_index = self.sc_nodes.index(txs_creator_node)
         destination_address = non_creator_nodes[0].wallet_createPrivateKey25519()["result"]["proposition"][
             "publicKey"]
         start_time = time.time()
 
         if tps_test:
-            max_tps_per_process = 50
+            # Each process needs to be able to send a number of transactions per second, without going over 1 second.
+            # May need some fine-tuning depending on what machine this is running on. Default to 100.
+            max_tps_per_process = self.perf_data["max_tps_per_process"]
             tps = math.floor(self.initial_txs / self.test_run_time)
+            # Decide number of processes we need to use, as each process needs to be able to fire x transactions in
+            # 1 second or less. e.g. 100 tps and if each process can comfortably handle 10 transactions in
+            # under 1 second we need 10 processes running 10 tps in parallel to get 100 tps total.
             max_processes = math.ceil(tps / max_tps_per_process)
             tps_per_process = math.ceil(tps / max_processes)
 
             print(f"Running Throughput: {tps} Transactions Per Second for Creator Node(Node{node_index})...")
             while counter.value < self.initial_txs and ((time.time() - start_time) < self.test_run_time):
-
+                # Create the multiprocess pool
                 with Pool(initializer=init_globals, initargs=(counter, errors)) as pool:
                     i = 0
                     args = []
+                    # Add send_transactions_per_second arguments to args for each process required
+                    # starmap runs them all in parallel
                     while i < max_processes:
                         args.append((txs_creator_node, destination_address, utxo_amount,
                                      tps_per_process, start_time, self.test_run_time))
@@ -251,7 +267,7 @@ class PerformanceTest(SidechainTestFramework):
 
                 print(f"... Sent {counter.value} Transactions ...")
                 print(f"Timer: {time.time() - start_time} and counter {counter.value}")
-
+        # We're not interested in transactions per second, just fire all transactions as fast as possible
         else:
             print(f"Firing all available transactions from Creator Node(Node{node_index}) to destination address...")
             for _ in range(self.initial_txs):
@@ -280,7 +296,7 @@ class PerformanceTest(SidechainTestFramework):
         mc_return_address = mc_nodes[0].getnewaddress()
 
         # Get tx creator nodes and non tx creator nodes
-        txs_creators, non_txs_creators = self.find_txs_creators()
+        txs_creators, non_txs_creators = self.get_txs_creators_and_non_creators()
 
         # create 1 FT to every transaction creator node
         for i in range(len(txs_creators)):
@@ -293,7 +309,6 @@ class PerformanceTest(SidechainTestFramework):
 
         # Generate 1 SC block to include FTs.
         forger_nodes = self.find_forger_nodes()
-        # TODO: Cater for multiple forgers
         generate_next_blocks(forger_nodes[0], "first node", 1)[0]
         self.sc_sync_all()
 
@@ -362,7 +377,7 @@ class PerformanceTest(SidechainTestFramework):
         if self.test_type == TestType.Mempool or self.test_type == TestType.Mempool_Timed:
             # Populate the mempool
             print("Populating the mempool...")
-            self.send_coins_to_multiple_destination(utxo_amount, txs_creators, non_txs_creators)
+            self.populate_mempool(utxo_amount, txs_creators, non_txs_creators)
             # Give mempool time to update
             sleep(3)
             print("Mempool ready!")
@@ -418,12 +433,14 @@ class PerformanceTest(SidechainTestFramework):
         elif self.test_type == TestType.Transactions_Per_Second:
             # 1 thread per txs_creator node sending transactions
             for i in range(number_of_txs_creators):
-                self.txs_creator_send_to_address(utxo_amount, txs_creators[i], non_txs_creators, True)
+                self.txs_creator_send_transactions_per_second_to_addresses(utxo_amount, txs_creators[i],
+                                                                           non_txs_creators, True)
 
         elif self.test_type == TestType.All_Transactions:
             # 1 thread per txs_creator node sending transactions
             for i in range(number_of_txs_creators):
-                self.txs_creator_send_to_address(utxo_amount, txs_creators[i], non_txs_creators, False)
+                self.txs_creator_send_transactions_per_second_to_addresses(utxo_amount, txs_creators[i],
+                                                                           non_txs_creators, False)
 
         # stop forging
         for index, node in enumerate(self.sc_nodes_list):

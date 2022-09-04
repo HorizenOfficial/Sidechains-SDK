@@ -13,7 +13,6 @@ class PerformanceData(TypedDict):
 
 
 class NodeData(TypedDict, total=False):
-    latency_settings: int
     forger: bool
     tx_creator: bool
 
