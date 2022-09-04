@@ -10,7 +10,8 @@
   ],
   "properties": {
     "test_type": {
-      "type": "number"
+      "type": "string",
+      "enum": ["mempool", "mempool_timed", "transactions_per_second", "all_transactions"]
     },
     "test_run_time": {
       "type": "number"
@@ -22,7 +23,8 @@
       "type": "number"
     },
     "network_topology": {
-      "type": "number"
+      "type": "string",
+      "enum": ["daisy_chain", "ring", "star"]
     },
     "nodes": {
       "type": "array",
@@ -31,9 +33,6 @@
       "items": {
         "type": "object",
         "properties": {
-          "latency_settings": {
-            "type": "number"
-          },
           "forger": {
             "type": "boolean"
           },
@@ -42,7 +41,6 @@
           }
         },
         "required": [
-          "latency_settings",
           "forger",
           "tx_creator"
         ]

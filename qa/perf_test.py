@@ -264,8 +264,6 @@ class PerformanceTest(SidechainTestFramework):
                             errors.value += 1
                         counter.value += 1
             print(f"Firing Transactions Ended After: {time.time() - start_time}")
-
-        if not tps_test:
             print(f"Node{node_index} sent {counter.value} transactions out of a possible {self.initial_txs} "
                   f"in {time.time() - start_time} seconds.")
 

@@ -1,9 +1,9 @@
 {
-  "test_type": 3,
+  "test_type": "transactions_per_second",
   "test_run_time": 50,
   "block_rate": 30,
   "initial_txs": 5000,
-  "network_topology": 2,
+  "network_topology": "ring",
   "nodes": [
     {
       "latency_settings": 0,
