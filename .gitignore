@@ -17,4 +17,5 @@ log
 /examples/entrypoint.sh
 /examples/Dockerfile
 project/
+perf_test.json
 
