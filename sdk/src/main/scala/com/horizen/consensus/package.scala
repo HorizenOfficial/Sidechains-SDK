@@ -76,8 +76,10 @@ package object consensus {
       digest.update(fieldElement)
       fieldElement.freeFieldElement()
     }
-    val result = digest.finalizeHash().serializeFieldElement()
+    val hash = digest.finalizeHash()
+    val result = hash.serializeFieldElement()
     digest.freePoseidonHash()
+    hash.freeFieldElement()
     result
   }
 
