@@ -40,6 +40,7 @@ import scala.compat.java8.OptionConverters.RichOptionalGeneric
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
+import scala.util.control.Breaks.{break, breakable}
 import scala.util.{Failure, Success, Try}
 
 class EthService(
@@ -416,35 +417,57 @@ class EthService(
     }
   }
 
-  @RpcMethod("debug_traceTransaction")
-  @RpcOptionalParameters(1)
-  def traceTransaction(transactionHash: String) = {
-    val transaction = getTransactionByHash(transactionHash)
-
-    val currentBlockNumber = transaction.getBlockNumber()
-    val previousBlockNumber = currentBlockNumber - 1
+  @RpcMethod()
+  def traceBlockByNumber(blockNumber: String) = {
+    val previousBlockNumber = BigInteger.valueOf(blockNumber.toLong).subtract(BigInteger.ONE).toString()
 
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, previousBlockNumber) { tagStateView =>
         {
-          val currentBlock = nodeView.history.getBlockById(currentBlockNumber).get()
+          val currentBlock = nodeView.history.getBlockById(blockNumber).get()
+          val gasPool = new GasPool(BigInteger.valueOf(currentBlock.header.gasLimit))
           val transactionList = currentBlock.transactions
-          val gasPool = new GasPool(tagStateView.getBlockGasLimit)
 
           for (mcBlockRefData <- currentBlock.mainchainBlockReferencesData) {
             tagStateView.applyMainchainBlockReferenceData(mcBlockRefData).get
           }
 
-          transactionList.zipWithIndex.foreach({
-            case (tx, i) => {
+          transactionList.zipWithIndex.foreach({ case (tx, i) =>
+            tagStateView.applyTransaction(tx, i, gasPool)
+          })
+        }
+      }
+    }
+  }
+
+  @RpcMethod("debug_traceTransaction")
+  def traceTransaction(transactionHash: String) = {
+    val transaction = getTransactionByHash(transactionHash)
+
+    val currentBlockNumber = transaction.getBlockNumber()
+    val previousBlockNumber = BigInteger.valueOf(currentBlockNumber.toLong).subtract(BigInteger.ONE).toString()
+
+    applyOnAccountView { nodeView =>
+      getStateViewAtTag(nodeView, previousBlockNumber) { tagStateView =>
+        {
+          val currentBlock = nodeView.history.getBlockById(currentBlockNumber).get()
+          val gasPool = new GasPool(BigInteger.valueOf(currentBlock.header.gasLimit))
+          val transactionList = currentBlock.transactions
+
+          for (mcBlockRefData <- currentBlock.mainchainBlockReferencesData) {
+            tagStateView.applyMainchainBlockReferenceData(mcBlockRefData).get
+          }
+
+          breakable {
+            transactionList.zipWithIndex.foreach({ case (tx, i) =>
               val currentTransactionHash = BytesUtils.fromHexString(tx.id)
 
               if (currentTransactionHash == transactionHash)
-                return
+                break
 
               tagStateView.applyTransaction(tx, i, gasPool)
-            }
-          })
+            })
+          }
         }
       }
     }
