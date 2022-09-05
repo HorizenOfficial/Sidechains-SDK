@@ -49,7 +49,7 @@ func (c *EvmContext) setDefaults() {
 		c.BaseFee = (*hexutil.Big)(big.NewInt(params.InitialBaseFee))
 	}
 	if c.GasLimit == 0 {
-		c.GasLimit = (hexutil.Uint64)(math.MaxUint64)
+		c.GasLimit = (hexutil.Uint64)(math.MaxInt64)
 	}
 }
 
@@ -59,7 +59,7 @@ func (p *EvmParams) setDefaults() {
 		p.Value = (*hexutil.Big)(new(big.Int))
 	}
 	if p.Gas == 0 {
-		p.Gas = (hexutil.Uint64)(math.MaxUint64)
+		p.Gas = (hexutil.Uint64)(math.MaxInt64)
 	}
 	if p.GasPrice == nil {
 		p.GasPrice = (*hexutil.Big)(new(big.Int))
