@@ -2,22 +2,21 @@ package com.horizen.forge
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.TestProbe
-import akka.util.Timeout
-import com.horizen.{SidechainSettings, WebSocketSettings}
 import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.forge.Forger.ReceivableMessages.StartForging
 import com.horizen.params.NetworkParams
+import com.horizen.{SidechainSettings, WebSocketSettings}
 import org.junit.Test
 import org.mockito.Mockito.when
 import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar.mock
-import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
-import scorex.core.settings.{RESTApiSettings, ScorexSettings}
-import scorex.core.utils.NetworkTimeProvider
+import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
+import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
+import sparkz.core.utils.NetworkTimeProvider
 
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.duration.DurationInt
 
 class ForgerTest extends JUnitSuite with Matchers {
 
@@ -56,11 +55,11 @@ class ForgerTest extends JUnitSuite with Matchers {
   def prepareTestData(params: NetworkParams, timeProvider: NetworkTimeProvider): (ActorRef, TestProbe) = {
     val settings = mock[SidechainSettings]
     val webSocketSettings = mock[WebSocketSettings]
-    val scorexSettings = mock[ScorexSettings]
+    val scorexSettings = mock[SparkzSettings]
     val restApiSettings = mock[RESTApiSettings]
     when(settings.websocket).thenReturn(webSocketSettings)
     when(webSocketSettings.allowNoConnectionInRegtest).thenReturn(true)
-    when(settings.scorexSettings).thenReturn(scorexSettings)
+    when(settings.sparkzSettings).thenReturn(scorexSettings)
     when(scorexSettings.restApi).thenReturn(restApiSettings)
     when(restApiSettings.timeout).thenReturn(1.seconds)
     val viewHolder = TestProbe()

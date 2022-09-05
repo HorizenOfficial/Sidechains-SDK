@@ -89,6 +89,7 @@ testScripts=(
     'sc_withdrawal_epoch_last_block.py'
     'websocket_server.py'
     'websocket_server_fee_payments.py'
+    'sc_sync_after_fork.py'
 );
 
 # include extended tests
