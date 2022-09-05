@@ -7,7 +7,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/eth/tracers/logger"
 	"github.com/ethereum/go-ethereum/params"
+	"libevm/lib/geth_internal"
 	"math"
 	"math/big"
 	"time"
@@ -32,6 +34,7 @@ type EvmParams struct {
 	GasPrice   *hexutil.Big     `json:"gasPrice"`
 	AccessList types.AccessList `json:"accessList"`
 	Context    EvmContext       `json:"context"`
+	Trace      bool             `json:"trace"`
 }
 
 // setDefaults for parameters that were omitted
@@ -107,10 +110,11 @@ func defaultChainConfig() *params.ChainConfig {
 }
 
 type EvmResult struct {
-	UsedGas         uint64          `json:"usedGas"`
-	EvmError        string          `json:"evmError"`
-	ReturnData      []byte          `json:"returnData"`
-	ContractAddress *common.Address `json:"contractAddress"`
+	UsedGas         uint64                       `json:"usedGas"`
+	EvmError        string                       `json:"evmError"`
+	ReturnData      []byte                       `json:"returnData"`
+	ContractAddress *common.Address              `json:"contractAddress"`
+	TraceLogs       []geth_internal.StructLogRes `json:"traceLogs,omitempty"`
 }
 
 func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
@@ -129,9 +133,10 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		}
 		blockContext = params.getBlockContext()
 		chainConfig  = defaultChainConfig()
+		tracer       = logger.NewStructLogger(nil)
 		evmConfig    = vm.Config{
-			Debug:                   false,
-			Tracer:                  nil,
+			Debug:                   params.Trace,
+			Tracer:                  tracer,
 			NoBaseFee:               false,
 			EnablePreimageRecording: false,
 			JumpTable:               nil,
@@ -185,5 +190,6 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		EvmError:        evmError,
 		ReturnData:      returnData,
 		ContractAddress: contractAddress,
+		TraceLogs:       geth_internal.FormatLogs(tracer.StructLogs()),
 	}
 }
