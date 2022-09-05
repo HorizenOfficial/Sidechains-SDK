@@ -30,16 +30,22 @@ class BaseFeeBlockValidatorTest extends JUnitSuite {
 
     mockHelper = AccountMockDataHelper(false)
     mockedHistory = mockHelper.getMockedAccountHistory(Option.apply(mockedGenesisBlock).asJava)
+
+    // Test 3: Validation exception expected, no parent block found and block is not genesis block
+    assertThrows[InternalError] {
+      BaseFeeBlockValidator().validate(mockedBlock, mockedHistory).get
+    }
+
     mockedBlock = mockHelper.getMockedBlock(FeeUtils.INITIAL_BASE_FEE)
 
-    // Test 3: Successful validation, block is empty, therefore base fee did not change
+    // Test 4: Successful validation, assume gasUsed is same as last block, therefore base fee did not change
     assertTrue(BaseFeeBlockValidator().validate(mockedBlock, mockedHistory).isSuccess)
 
-    // Test 4: Successful validation, block is genesis block
+    // Test 5: Successful validation, block is one after genesis block with 12.5% decrease, meaning genesis block was empty
     mockedBlock = mockHelper.getMockedBlock(BigInteger.valueOf(875000000))
     assertTrue(BaseFeeBlockValidator().validate(mockedBlock, mockedHistory).isSuccess)
 
-    // Test 5: Validation exception expected, block base fee is out of adjustment range
+    // Test 6: Validation exception expected, block base fee is out of adjustment range
     mockedBlock = mockHelper.getMockedBlock(BigInteger.valueOf(531))
     assertThrows[InvalidBaseFeeException] {
       BaseFeeBlockValidator().validate(mockedBlock, mockedHistory).get
