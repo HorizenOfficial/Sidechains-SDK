@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import logging
 import shutil
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, assert_false, assert_true, initialize_chain_clean, start_nodes, websocket_port_by_mc_node_index, forward_transfer_to_sidechain
@@ -111,15 +112,15 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
         self.sc_sync_all()
 
         ##### TEST import/export secret ######
-        print("##### TEST import/export keys ######")
+        logging.info("##### TEST import/export keys ######")
 
         # Generate 1 address in sc_node2
-        print("# Generate 1 address in sc_node2")
+        logging.info("# Generate 1 address in sc_node2")
 
         sc_address_2 = http_wallet_createPrivateKey25519(sc_node2, self.API_KEY_NODE2)
  
         # Verify that we have this address inside sc_node2 but not in sc_node1
-        print("# Verify that we have this address inside sc_node2 but not in sc_node1")
+        logging.info("# Verify that we have this address inside sc_node2 but not in sc_node1")
 
         pkeys_node1 = http_wallet_allPublicKeys(sc_node1, self.API_KEY_NODE1)
         pkeys_node2 = http_wallet_allPublicKeys(sc_node2, self.API_KEY_NODE2)
@@ -128,7 +129,7 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
         assert_true(self.findAddress(pkeys_node2, sc_address_2))
 
         # Test authentication on exportSecret endpoint
-        print("# Test authentication on exportSecret endpoint")
+        logging.info("# Test authentication on exportSecret endpoint")
         exception = False
         try:
             http_wallet_exportSecret(sc_node2, sc_address_2, "fake_api_key")
@@ -138,12 +139,12 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
         
 
         # Call the endpoint exportSecret and store the secret of the new address
-        print("# Call the endpoint exportSecret and store the secret of the new address")
+        logging.info("# Call the endpoint exportSecret and store the secret of the new address")
 
         sc_secret_2 = http_wallet_exportSecret(sc_node2, sc_address_2, self.API_KEY_NODE2)
 
         # Test authentication on importSecret endpoint
-        print("# Test authentication on importSecret endpoint")
+        logging.info("# Test authentication on importSecret endpoint")
         exception = False
         try:
             http_wallet_importSecret(sc_node1, sc_secret_2, "fake_api_key")
@@ -152,14 +153,14 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
         assert_true(exception)
 
         # Import the secret in the sc_node1 and verify that it owns also the new address
-        print("# Import the secret in the sc_node1 and verify that it owns also the new address")
+        logging.info("# Import the secret in the sc_node1 and verify that it owns also the new address")
 
         http_wallet_importSecret(sc_node1, sc_secret_2, self.API_KEY_NODE1)
         pkeys_node1 = http_wallet_allPublicKeys(sc_node1, self.API_KEY_NODE1)
         assert_true(self.findAddress(pkeys_node1, sc_address_2))
 
         # Send some coins to this address and verify that the balance on sc_node1 is not changed while the sc_node2 has some balance now
-        print("# Send some coins to this address and verify that the balance on sc_node1 is not changed while the sc_node2 has some balance now")
+        logging.info("# Send some coins to this address and verify that the balance on sc_node1 is not changed while the sc_node2 has some balance now")
 
         balance_node1 = http_wallet_balance(sc_node1, self.API_KEY_NODE1)
         balance_node2 = http_wallet_balance(sc_node2, self.API_KEY_NODE2)
@@ -177,19 +178,19 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
         assert_equal(balance_node2_updated, 1000)
 
         ##### TEST import/dump secrets ######
-        print("##### TEST import/dump secrets ######")
+        logging.info("##### TEST import/dump secrets ######")
 
         DUMP_PATH = self.options.tmpdir+"/dumpSecrets"
         DUMP_PATH_CORRUPTED = self.options.tmpdir+"/dumpSecretsCorrupted"
 
         # Create a couple of new address on node 1
-        print("# Create a couple of new address on node 1")
+        logging.info("# Create a couple of new address on node 1")
 
         sc_address_3 = http_wallet_createPrivateKey25519(sc_node1, self.API_KEY_NODE1)
         sc_address_4 = http_wallet_createPrivateKey25519(sc_node1, self.API_KEY_NODE1)
 
         # Test authentication on dumpSecrets endpoint
-        print("# Test authentication on dumpSecrets endpoint")
+        logging.info("# Test authentication on dumpSecrets endpoint")
 
         exception = False
         try:
@@ -199,7 +200,7 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
         assert_true(exception)   
 
         # Test that we dumped all the secrets
-        print("# Test that we dumped all the secrets")
+        logging.info("# Test that we dumped all the secrets")
 
         http_wallet_dumpSecrets(sc_node1, DUMP_PATH, self.API_KEY_NODE1)
         key_list = self.readFile(DUMP_PATH)
@@ -219,7 +220,7 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
         assert_equal(common_addresses, len(key_list) - 4)
 
         # Test authentication on importSecrets endpoint
-        print("# Test authentication on importSecrets endpoint")
+        logging.info("# Test authentication on importSecrets endpoint")
 
         exception = False
         try:
@@ -229,7 +230,7 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
         assert_true(exception)           
 
         # Test that we stop the execution of importSecrets if the file is corrupted.
-        print("# Test that we stop the execution of importSecrets if the file is corrupted.")
+        logging.info("# Test that we stop the execution of importSecrets if the file is corrupted.")
         shutil.copyfile(DUMP_PATH, DUMP_PATH_CORRUPTED)
         f = open(DUMP_PATH_CORRUPTED, "a")
         f.write("Corrupted_line C_\n")
@@ -243,7 +244,7 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
         assert_true(exception)
 
         # Test that we imported in the sc_node2 only the 4 missing keys
-        print("# Test that we imported in the sc_node2 only the 4 missing keys")
+        logging.info("# Test that we imported in the sc_node2 only the 4 missing keys")
 
         result = http_wallet_importSecrets(sc_node2, DUMP_PATH, self.API_KEY_NODE2)
         assert_equal(result["successfullyAdded"], 4)

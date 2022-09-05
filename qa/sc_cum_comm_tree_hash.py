@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import logging
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
@@ -47,11 +48,11 @@ class SCCumCommTreeHash(SidechainTestFramework):
         # Test SC genesis block ScTxCumCommTreeHash compatibility with the one in MC
         mc_block_hash = mc_node.getbestblockhash()
         mc_block_json = mc_node.getblock(mc_block_hash)
-        print("Genesis SC block MC reference scTxsCommitment = {0}, scCumTreeHash = {1}\n".format(
+        logging.info("Genesis SC block MC reference scTxsCommitment = {0}, scCumTreeHash = {1}\n".format(
             mc_block_json["scTxsCommitment"], mc_block_json["scCumTreeHash"]))
 
         sc_mc_header_info = sc_node.mainchain_mainchainHeaderInfoByHash(json.dumps({"hash": mc_block_hash}))
-        print(json.dumps(sc_mc_header_info, indent=4, sort_keys=True))
+        logging.info(json.dumps(sc_mc_header_info, indent=4, sort_keys=True))
 
         assert_equal(mc_block_json["scCumTreeHash"],
                      sc_mc_header_info["result"]["mainchainHeaderInfo"]["cumulativeCommTreeHash"],
@@ -60,12 +61,12 @@ class SCCumCommTreeHash(SidechainTestFramework):
         # Test SC block with 1 MC header ScTxCumCommTreeHash compatibility
         mc_block_hash = mc_node.generate(1)[0]
         mc_block_json = mc_node.getblock(mc_block_hash)
-        print("Second SC block MC reference scTxsCommitment = {0}, scCumTreeHash = {1}\n".format(
+        logging.info("Second SC block MC reference scTxsCommitment = {0}, scCumTreeHash = {1}\n".format(
             mc_block_json["scTxsCommitment"], mc_block_json["scCumTreeHash"]))
 
         generate_next_block(sc_node, "scnode")
         sc_mc_header_info = sc_node.mainchain_mainchainHeaderInfoByHash(json.dumps({"hash": mc_block_hash}))
-        print(json.dumps(sc_mc_header_info, indent=4, sort_keys=True))
+        logging.info(json.dumps(sc_mc_header_info, indent=4, sort_keys=True))
         assert_equal(mc_block_json["scCumTreeHash"],
                      sc_mc_header_info["result"]["mainchainHeaderInfo"]["cumulativeCommTreeHash"],
                      "SC block mcref scCumTreeHash is different to the MC one")

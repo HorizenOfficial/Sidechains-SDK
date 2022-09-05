@@ -17,4 +17,4 @@ log
 /examples/entrypoint.sh
 /examples/Dockerfile
 project/
-
+sc_test.log
