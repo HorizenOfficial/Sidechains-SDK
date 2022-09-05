@@ -5,29 +5,32 @@
   "block_rate": 30,
   "initial_txs": 5000,
   "network_topology": "ring",
+  "latency_settings": {
+    "get_peer_spec": 0,
+    "peer_spec": 0,
+    "transaction": 0,
+    "block": 0,
+    "request_modifier_spec": 0,
+    "modifiers_spec": 0
+  },
   "nodes": [
     {
-      "latency_settings": 0,
       "forger": true,
       "tx_creator": false
     },
     {
-      "latency_settings": 0,
       "forger": false,
       "tx_creator": true
     },
     {
-      "latency_settings": 0,
       "forger": false,
       "tx_creator": false
     },
     {
-      "latency_settings": 0,
       "forger": false,
       "tx_creator": false
     },
     {
-      "latency_settings": 0,
       "forger": false,
       "tx_creator": false
     }

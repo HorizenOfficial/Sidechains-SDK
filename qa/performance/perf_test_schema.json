@@ -6,12 +6,18 @@
     "block_rate",
     "initial_txs",
     "network_topology",
+    "latency_settings",
     "nodes"
   ],
   "properties": {
     "test_type": {
       "type": "string",
-      "enum": ["mempool", "mempool_timed", "transactions_per_second", "all_transactions"]
+      "enum": [
+        "mempool",
+        "mempool_timed",
+        "transactions_per_second",
+        "all_transactions"
+      ]
     },
     "test_run_time": {
       "type": "number"
@@ -24,27 +30,63 @@
     },
     "network_topology": {
       "type": "string",
-      "enum": ["daisy_chain", "ring", "star"]
+      "enum": [
+        "daisy_chain",
+        "ring",
+        "star"
+      ]
     },
-    "nodes": {
-      "type": "array",
-      "minItems": 1,
-      "maxItems": 10,
-      "items": {
-        "type": "object",
-        "properties": {
-          "forger": {
-            "type": "boolean"
-          },
-          "tx_creator": {
-            "type": "boolean"
-          }
+    "latency_settings": {
+      "type": "object",
+      "properties": {
+        "get_peer_spec": {
+          "type": "number"
         },
-        "required": [
-          "forger",
-          "tx_creator"
-        ]
-      }
+        "peer_spec": {
+          "type": "number"
+        },
+        "transaction": {
+          "type": "number"
+        },
+        "block": {
+          "type": "number"
+        },
+        "request_modifier_spec": {
+          "type": "number"
+        },
+        "modifiers_spec": {
+          "type": "number"
+        }
+      },
+      "required":[
+        "get_peer_spec",
+        "peer_spec",
+        "transaction",
+        "block",
+        "request_modifier_spec",
+        "modifiers_spec"
+      ]
+    },
+      "nodes": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 10,
+        "items": {
+          "type": "object",
+          "properties": {
+            "forger": {
+              "type": "boolean"
+            },
+            "tx_creator": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "forger",
+            "tx_creator"
+          ]
+        }
     }
   }
 }
+

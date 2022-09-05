@@ -6,7 +6,7 @@ from time import sleep
 from requests import RequestException
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration
+    SCNetworkConfiguration, LatencyConfig
 from httpCalls.block.best import http_block_best
 from httpCalls.block.findBlockByID import http_block_findById
 from httpCalls.block.forging import http_start_forging, http_stop_forging
@@ -36,6 +36,17 @@ def init_globals(count, err):
     errors = err
 
 
+def get_latency_config(perf_data):
+    return LatencyConfig(
+        perf_data["latency_settings"]["get_peer_spec"],
+        perf_data["latency_settings"]["peer_spec"],
+        perf_data["latency_settings"]["transaction"],
+        perf_data["latency_settings"]["block"],
+        perf_data["latency_settings"]["request_modifier_spec"],
+        perf_data["latency_settings"]["modifiers_spec"]
+    )
+
+
 def get_node_configuration(mc_node, sc_node_data, perf_data):
     sc_nodes = list(sc_node_data)
     node_configuration = []
@@ -63,7 +74,7 @@ def get_node_configuration(mc_node, sc_node_data, perf_data):
                     address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
                 max_connections=max_connections,
                 block_rate=perf_data["block_rate"],
-                latency_settings=sc_node["latency_settings"]
+                latency_settings=get_latency_config(perf_data)
             )
         )
     return node_configuration
@@ -101,8 +112,7 @@ def send_transactions_per_second(txs_creator_node, destination_address, utxo_amo
 
 class PerformanceTest(SidechainTestFramework):
     sc_nodes_bootstrap_info = None
-    perf_test_data = deserialize_perf_test_json("./performance/perf_test.json")
-    perf_data = perf_test_data
+    perf_data = deserialize_perf_test_json("./performance/perf_test.json")
     test_type = TestType(perf_data["test_type"])
     sc_node_data = perf_data["nodes"]
     sc_nodes_list = list(sc_node_data)

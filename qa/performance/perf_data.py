@@ -1,21 +1,7 @@
 from __future__ import annotations
 from enum import Enum
-from typing_extensions import TypedDict
 
-
-class PerformanceData(TypedDict, total=False):
-    test_type: str
-    max_tps_per_process: int
-    test_run_time: int
-    block_rate: int
-    initial_txs: int
-    network_topology: str
-    nodes: list[NodeData]
-
-
-class NodeData(TypedDict, total=False):
-    forger: bool
-    tx_creator: bool
+from SidechainTestFramework.sc_boostrap_info import LatencyConfig
 
 
 class NetworkTopology(Enum):
