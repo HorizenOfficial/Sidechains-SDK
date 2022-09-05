@@ -14,7 +14,8 @@ if (process.env.PRIVATE_KEY) {
   networks["evm-benchmark"] = {
     url: `${process.env.RPC_ENDPOINT_URL}`,
     accounts: [`0x${process.env.PRIVATE_KEY}`],
-    gas: "auto"
+    gas: 100000,
+    gasPrice: 10,
   };
 }
 

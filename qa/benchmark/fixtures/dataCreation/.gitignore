@@ -10,3 +10,4 @@ artifacts
 
 #IntelliJ
 .idea
+package-lock.json
