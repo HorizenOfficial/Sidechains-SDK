@@ -42,27 +42,33 @@ import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
-
-class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuration, networkParams: NetworkParams, val sidechainSettings: SidechainSettings, val sidechainTransactionActorRef: ActorRef)
-  extends RpcService
-    with ClosableResourceHandler {
+class EthService(
+    val scNodeViewHolderRef: ActorRef,
+    val nvtimeout: FiniteDuration,
+    networkParams: NetworkParams,
+    val sidechainSettings: SidechainSettings,
+    val sidechainTransactionActorRef: ActorRef
+) extends RpcService
+      with ClosableResourceHandler {
   type NV = CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]
 
   def applyOnAccountView[R](functionToBeApplied: NV => R): R = {
     implicit val timeout: Timeout = new Timeout(nvtimeout)
-    val res = scNodeViewHolderRef.ask {
-      NodeViewHolder.ReceivableMessages.GetDataFromCurrentView { (nodeview: NV) =>
-        // wrap any exceptions
-        Try(functionToBeApplied(nodeview))
+    val res = scNodeViewHolderRef
+      .ask {
+        NodeViewHolder.ReceivableMessages.GetDataFromCurrentView { (nodeview: NV) =>
+          // wrap any exceptions
+          Try(functionToBeApplied(nodeview))
+        }
       }
-    }.asInstanceOf[Future[Try[R]]]
+      .asInstanceOf[Future[Try[R]]]
     // return result or rethrow potential exceptions
     Await.result(res, nvtimeout).get
   }
 
-  //function which describes default transaction representation for answer after adding the transaction to a memory pool
-  val defaultTransactionResponseRepresentation: Transaction => SuccessResponse = {
-    transaction => TransactionIdDTO(transaction.id)
+  // function which describes default transaction representation for answer after adding the transaction to a memory pool
+  val defaultTransactionResponseRepresentation: Transaction => SuccessResponse = { transaction =>
+    TransactionIdDTO(transaction.id)
   }
 
   @RpcMethod("eth_getBlockByNumber")
@@ -83,7 +89,12 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
     }
   }
 
-  private def constructEthBlockWithTransactions(nodeView: NV, stateView: AccountStateView, blockId: String, hydratedTx: Boolean): EthereumBlock = {
+  private def constructEthBlockWithTransactions(
+      nodeView: NV,
+      stateView: AccountStateView,
+      blockId: String,
+      hydratedTx: Boolean
+  ): EthereumBlock = {
     if (blockId == null) return null
     nodeView.history.getBlockById(blockId).asScala match {
       case None => null
@@ -99,12 +110,17 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
           if (!hydratedTx) {
             transactions.map(tx => Numeric.prependHexPrefix(tx.id)).toList.asJava
           } else {
-            transactions.flatMap(tx => stateView.getTransactionReceipt(Numeric.hexStringToByteArray(tx.id)) match {
-              case Some(receipt) => Some(new EthereumTransactionView(receipt, tx))
-              case None => None
-            }).toList.asJava
+            transactions
+              .flatMap(tx =>
+                stateView.getTransactionReceipt(Numeric.hexStringToByteArray(tx.id)) match {
+                  case Some(receipt) => Some(new EthereumTransactionView(receipt, tx))
+                  case None => None
+                }
+              )
+              .toList
+              .asJava
           },
-          block,
+          block
         )
     }
   }
@@ -116,12 +132,18 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
         fun(tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit), blockContext), tagStateView)
       } catch {
         // throw on execution errors, also include evm revert reason if possible
-        case reverted: ExecutionRevertedException => throw new RpcException(new RpcError(
-          RpcCode.ExecutionError.getCode, reverted.getMessage, Numeric.toHexString(reverted.revertReason)))
-        case err: ExecutionFailedException => throw new RpcException(new RpcError(
-          RpcCode.ExecutionError.getCode, err.getMessage, null))
-        case err: TransactionSemanticValidityException => throw new RpcException(new RpcError(
-          RpcCode.ExecutionError.getCode, err.getMessage, null))
+        case reverted: ExecutionRevertedException =>
+          throw new RpcException(
+            new RpcError(
+              RpcCode.ExecutionError.getCode,
+              reverted.getMessage,
+              Numeric.toHexString(reverted.revertReason)
+            )
+          )
+        case err: ExecutionFailedException =>
+          throw new RpcException(new RpcError(RpcCode.ExecutionError.getCode, err.getMessage, null))
+        case err: TransactionSemanticValidityException =>
+          throw new RpcException(new RpcError(RpcCode.ExecutionError.getCode, err.getMessage, null))
       }
     }
   }
@@ -130,8 +152,8 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   @RpcOptionalParameters(1)
   def call(params: TransactionArgs, tag: String): String = {
     applyOnAccountView { nodeView =>
-      doCall(nodeView, params, tag) {
-        (result, _) => if (result != null) Numeric.toHexString(result) else null
+      doCall(nodeView, params, tag) { (result, _) =>
+        if (result != null) Numeric.toHexString(result) else null
       }
     }
   }
@@ -163,18 +185,26 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
         case None =>
           return null
       }
-      "0x" + BytesUtils.toHexString(TransactionEncoder.encode(signedTx.getTransaction, signedTx.getTransaction.asInstanceOf[SignedRawTransaction].getSignatureData))
+      "0x" + BytesUtils.toHexString(
+        TransactionEncoder
+          .encode(signedTx.getTransaction, signedTx.getTransaction.asInstanceOf[SignedRawTransaction].getSignatureData)
+      )
     }
   }
 
-  private def getFittingSecret(wallet: AccountWallet, state: AccountState, fromAddress: Option[String], txValueInWei: BigInteger)
-  : Option[PrivateKeySecp256k1] = {
+  private def getFittingSecret(
+      wallet: AccountWallet,
+      state: AccountState,
+      fromAddress: Option[String],
+      txValueInWei: BigInteger
+  ): Option[PrivateKeySecp256k1] = {
     val allAccounts = wallet.secretsOfType(classOf[PrivateKeySecp256k1])
-    val secret = allAccounts.find(
-      a => (fromAddress.isEmpty ||
-        BytesUtils.toHexString(a.asInstanceOf[PrivateKeySecp256k1].publicImage
-          .address) == fromAddress.get) &&
-        state.getBalance(a.asInstanceOf[PrivateKeySecp256k1].publicImage.address).compareTo(txValueInWei) >= 0 // TODO account for gas
+    val secret = allAccounts.find(a =>
+      (fromAddress.isEmpty ||
+        BytesUtils.toHexString(a.asInstanceOf[PrivateKeySecp256k1].publicImage.address) == fromAddress.get) &&
+        state
+          .getBalance(a.asInstanceOf[PrivateKeySecp256k1].publicImage.address)
+          .compareTo(txValueInWei) >= 0 // TODO account for gas
     )
 
     if (secret.nonEmpty) Option.apply(secret.get.asInstanceOf[PrivateKeySecp256k1])
@@ -188,12 +218,7 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
     if (!tx.isEIP1559 && tx.isSigned && tx.getChainId != null) {
       signatureData = TransactionEncoder.createEip155SignatureData(signatureData, tx.getChainId)
     }
-    val signedTx = new EthereumTransaction(
-      new SignedRawTransaction(
-        tx.getTransaction.getTransaction,
-        signatureData
-      )
-    )
+    val signedTx = new EthereumTransaction(new SignedRawTransaction(tx.getTransaction.getTransaction, signatureData))
     signedTx
   }
 
@@ -212,7 +237,10 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
         // Normalize the max fee per gas the call is willing to spend.
         var feeCap = BigInteger.ZERO
         if (params.gasPrice != null && (params.maxFeePerGas != null || params.maxPriorityFeePerGas != null)) {
-          throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified"))
+          throw new RpcException(
+            RpcError
+              .fromCode(RpcCode.InvalidParams, "both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
+          )
         } else if (params.gasPrice != null) {
           feeCap = params.gasPrice
         } else if (params.maxFeePerGas != null) {
@@ -221,7 +249,8 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
         // Recap the highest gas limit with account's available balance.
         if (feeCap.bitLength() > 0) {
           val balance = tagStateView.getBalance(params.getFrom)
-          val available = if (params.value == null) { balance } else {
+          val available = if (params.value == null) { balance }
+          else {
             if (params.value.compareTo(balance) >= 0)
               throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "insufficient funds for transfer"))
             balance.subtract(params.value)
@@ -240,12 +269,13 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
       }
       // lambda that tests a given gas limit, returns true on successful execution, false on out-of-gas error
       // other exceptions are not caught as the call would not succeed with any amount of gas
-      val check = (gas: BigInteger) => try {
-        params.gas = gas
-        doCall(nodeView, params, tag) { (_, _) => true }
-      } catch {
-        case _: OutOfGasException => false
-      }
+      val check = (gas: BigInteger) =>
+        try {
+          params.gas = gas
+          doCall(nodeView, params, tag) { (_, _) => true }
+        } catch {
+          case _: OutOfGasException => false
+        }
       // Execute the binary search and hone in on an executable gas limit
       // We need to do a search because the gas required during execution is not necessarily equal to the consumed
       // gas after the execution. See https://github.com/ethereum/go-ethereum/commit/682875adff760a29a2bb0024190883e4b4dd5d72
@@ -326,9 +356,11 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   private def getTransactionAndReceipt[A](transactionHash: String)(f: (EthereumTransaction, EthereumReceipt) => A) = {
     applyOnAccountView { nodeView =>
       using(nodeView.state.getView) { stateView =>
-        stateView.getTransactionReceipt(Numeric.hexStringToByteArray(transactionHash))
+        stateView
+          .getTransactionReceipt(Numeric.hexStringToByteArray(transactionHash))
           .flatMap(receipt => {
-            nodeView.history.blockIdByHeight(receipt.blockNumber)
+            nodeView.history
+              .blockIdByHeight(receipt.blockNumber)
               .map(ModifierId(_))
               .flatMap(nodeView.history.getStorageBlockById)
               .map(_.transactions(receipt.transactionIndex).asInstanceOf[EthereumTransaction])
@@ -355,9 +387,9 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   }
 
   private def validateAndSendTransaction(
-        transaction: Transaction,
-        transactionResponseRepresentation: Transaction => SuccessResponse =
-        defaultTransactionResponseRepresentation) = {
+      transaction: Transaction,
+      transactionResponseRepresentation: Transaction => SuccessResponse = defaultTransactionResponseRepresentation
+  ) = {
     implicit val timeout: Timeout = 5 seconds
     val barrier = Await
       .result(sidechainTransactionActorRef ? BroadcastTransaction(transaction), timeout.duration)
@@ -365,9 +397,8 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
     onComplete(barrier) {
       // TODO: add correct responses
       case Success(_) => ApiResponseUtil.toResponse(transactionResponseRepresentation(transaction))
-      case Failure(exp) => ApiResponseUtil.toResponse(GenericTransactionError(
-        "GenericTransactionError",
-        JOptional.of(exp)))
+      case Failure(exp) =>
+        ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exp)))
     }
   }
 
@@ -381,6 +412,40 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
             "0x"
           else
             Numeric.toHexString(code)
+      }
+    }
+  }
+
+  @RpcMethod("debug_traceTransaction")
+  @RpcOptionalParameters(1)
+  def traceTransaction(transactionHash: String) = {
+    val transaction = getTransactionByHash(transactionHash)
+
+    val currentBlockNumber = transaction.getBlockNumber()
+    val previousBlockNumber = currentBlockNumber - 1
+
+    applyOnAccountView { nodeView =>
+      getStateViewAtTag(nodeView, previousBlockNumber) { tagStateView =>
+        {
+          val currentBlock = nodeView.history.getBlockById(currentBlockNumber).get()
+          val transactionList = currentBlock.transactions
+          val gasPool = new GasPool(tagStateView.getBlockGasLimit)
+
+          for (mcBlockRefData <- currentBlock.mainchainBlockReferencesData) {
+            tagStateView.applyMainchainBlockReferenceData(mcBlockRefData).get
+          }
+
+          transactionList.zipWithIndex.foreach({
+            case (tx, i) => {
+              val currentTransactionHash = BytesUtils.fromHexString(tx.id)
+
+              if (currentTransactionHash == transactionHash)
+                return
+
+              tagStateView.applyTransaction(tx, i, gasPool)
+            }
+          })
+        }
       }
     }
   }
