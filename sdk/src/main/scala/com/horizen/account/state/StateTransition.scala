@@ -8,9 +8,9 @@ class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProc
 
   @throws(classOf[InvalidMessageException])
   @throws(classOf[ExecutionFailedException])
-  def transition(msg: Message): Array[Byte] = {
+  def transition(msg: Message, fakeMsg: Boolean): Array[Byte] = {
     // do preliminary checks
-    preCheck(msg)
+    preCheck(msg, fakeMsg)
     // allocate gas for processing this message
     val gasPool = buyGas(msg)
     // consume intrinsic gas
@@ -46,7 +46,7 @@ class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProc
     }
   }
 
-  private def preCheck(msg: Message): Unit = {
+  private def preCheck(msg: Message, fakeMsg: Boolean): Unit = {
     // We are sure that transaction is semantically valid (so all the tx fields are valid)
     // and was successfully verified by ChainIdBlockSemanticValidator
 
@@ -54,14 +54,15 @@ class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProc
     val sender = msg.getFrom.address()
 
     // Check the nonce
-    // TODO: skip nonce checks if message is "fake" (RPC calls)
     val stateNonce = view.getNonce(sender)
-    val txNonce = msg.getNonce
-    val result = txNonce.compareTo(stateNonce)
-    if (result < 0) {
-      throw NonceTooLowException(sender, txNonce, stateNonce)
-    } else if (result > 0) {
-      throw NonceTooHighException(sender, txNonce, stateNonce)
+    if (!fakeMsg) {
+      val txNonce = msg.getNonce
+      val result = txNonce.compareTo(stateNonce)
+      if (result < 0) {
+        throw NonceTooLowException(sender, txNonce, stateNonce)
+      } else if (result > 0) {
+        throw NonceTooHighException(sender, txNonce, stateNonce)
+      }
     }
     // GETH and therefore StateDB use uint64 to store the nonce and perform an overflow check here using (nonce+1<nonce)
     // BigInteger will not overflow like that, so we just verify that the result after increment still fits into 64 bits
