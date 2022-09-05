@@ -1,5 +1,6 @@
 import logging
 import math
+import random
 import time
 from multiprocessing import Pool, Value
 from time import sleep
@@ -204,7 +205,7 @@ class PerformanceTest(SidechainTestFramework):
     def populate_mempool(self, utxo_amount, txs_creator_nodes, non_creator_nodes):
 
         for j in range(len(txs_creator_nodes)):
-            destination_address = http_wallet_createPrivateKey25519(non_creator_nodes[0])
+            destination_address = http_wallet_createPrivateKey25519(random.choice(non_creator_nodes))
             for i in range(self.initial_txs):
                 # Populate the mempool - so don't mine a block
                 sendCoinsToAddress(txs_creator_nodes[j], destination_address, utxo_amount, 0)
@@ -235,7 +236,7 @@ class PerformanceTest(SidechainTestFramework):
             wallet_balance = 0
             for box in wallet_boxes:
                 wallet_balance += box["value"]
-            if (self.sc_nodes_list[index]["tx_creator"]):
+            if self.sc_nodes_list[index]["tx_creator"]:
                 print(f"Node{index} (Transaction Creator) Wallet Balance: {wallet_balance}")
             else:
                 print(f"Node{index} Wallet Balance: {wallet_balance}")
@@ -247,7 +248,6 @@ class PerformanceTest(SidechainTestFramework):
     def txs_creator_send_transactions_per_second_to_addresses(self, utxo_amount, txs_creator_node, non_creator_nodes,
                                                               tps_test):
         node_index = self.sc_nodes.index(txs_creator_node)
-        destination_address = http_wallet_createPrivateKey25519(non_creator_nodes[0])
         start_time = time.time()
 
         if tps_test:
@@ -274,6 +274,8 @@ class PerformanceTest(SidechainTestFramework):
                     # Add send_transactions_per_second arguments to args for each process required
                     # starmap runs them all in parallel
                     while i < max_processes:
+                        # Create a single random node destination address per process
+                        destination_address = http_wallet_createPrivateKey25519(random.choice(non_creator_nodes))
                         args.append((txs_creator_node, destination_address, utxo_amount,
                                      tps_per_process, start_time, self.test_run_time))
                         i += 1
@@ -286,6 +288,8 @@ class PerformanceTest(SidechainTestFramework):
             print(f"Firing all available transactions from Creator Node(Node{node_index}) to destination address...")
             for _ in range(self.initial_txs):
                 with Pool(initializer=init_globals, initargs=(counter, errors)) as pool:
+                    # Create destination address for random node for each tx
+                    destination_address = http_wallet_createPrivateKey25519(random.choice(non_creator_nodes))
                     args = [(txs_creator_node, destination_address, utxo_amount, 0)]
                     while counter.value < self.initial_txs and ((time.time() - start_time) < self.test_run_time):
                         try:
