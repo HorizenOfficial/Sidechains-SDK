@@ -3,6 +3,7 @@ import math
 import time
 from multiprocessing import Pool, Value
 from time import sleep
+from requests import RequestException
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
@@ -15,6 +16,7 @@ from httpCalls.wallet.balance import http_wallet_balance
 from httpCalls.wallet.allBoxesOfType import http_wallet_allBoxesOfType
 from httpCalls.transaction.createCoreTransaction import http_create_core_transaction
 from httpCalls.transaction.sendTransaction import http_send_transaction
+from httpCalls.wallet.createPrivateKey25519 import http_wallet_createPrivateKey25519
 from test_framework.util import start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, assert_equal
 from SidechainTestFramework.scutil import assert_true, bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks, \
@@ -192,8 +194,7 @@ class PerformanceTest(SidechainTestFramework):
     def populate_mempool(self, utxo_amount, txs_creator_nodes, non_creator_nodes):
 
         for j in range(len(txs_creator_nodes)):
-            destination_address = non_creator_nodes[0].wallet_createPrivateKey25519()["result"]["proposition"][
-                "publicKey"]
+            destination_address = http_wallet_createPrivateKey25519(non_creator_nodes[0])
             for i in range(self.initial_txs):
                 # Populate the mempool - so don't mine a block
                 sendCoinsToAddress(txs_creator_nodes[j], destination_address, utxo_amount, 0)
@@ -236,14 +237,17 @@ class PerformanceTest(SidechainTestFramework):
     def txs_creator_send_transactions_per_second_to_addresses(self, utxo_amount, txs_creator_node, non_creator_nodes,
                                                               tps_test):
         node_index = self.sc_nodes.index(txs_creator_node)
-        destination_address = non_creator_nodes[0].wallet_createPrivateKey25519()["result"]["proposition"][
-            "publicKey"]
+        destination_address = http_wallet_createPrivateKey25519(non_creator_nodes[0])
         start_time = time.time()
 
         if tps_test:
             # Each process needs to be able to send a number of transactions per second, without going over 1 second.
             # May need some fine-tuning depending on what machine this is running on. Default to 100.
-            max_tps_per_process = self.perf_data["max_tps_per_process"]
+            try:
+                max_tps_per_process = self.perf_data["max_tps_per_process"]
+            except Exception:
+                raise ValueError("Value: 'max_tps_per_process' not found, ensure it's present in json config")
+
             tps = math.floor(self.initial_txs / self.test_run_time)
             # Decide number of processes we need to use, as each process needs to be able to fire x transactions in
             # 1 second or less. e.g. 100 tps and if each process can comfortably handle 10 transactions in
@@ -300,11 +304,11 @@ class PerformanceTest(SidechainTestFramework):
 
         # create 1 FT to every transaction creator node
         for i in range(len(txs_creators)):
-            ft_addresses.append(txs_creators[i].wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"])
+            ft_addresses.append(http_wallet_createPrivateKey25519(txs_creators[i]))
             forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id, mc_nodes[0],
                                           ft_addresses[i], ft_amount, mc_return_address)
             txs_creator_addresses.append(
-                txs_creators[i].wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"])
+                http_wallet_createPrivateKey25519(txs_creators[i]))
         self.sc_sync_all()
 
         # Generate 1 SC block to include FTs.
@@ -344,7 +348,6 @@ class PerformanceTest(SidechainTestFramework):
                 print("Sent " + res["transactionId"] + " with UTXO: " + str(max_transaction_output))
 
                 self.sc_sync_all()
-                # TODO: Cater for multiple forgers
                 generate_next_blocks(forger_nodes[0], "first node", 1)[0]
                 self.sc_sync_all()
 
@@ -364,7 +367,6 @@ class PerformanceTest(SidechainTestFramework):
                 print("Sent " + res["transactionId"] + "with UTXO: " + str(remaining_utxos))
 
                 self.sc_sync_all()
-                # TODO: Cater for multiple forgers
                 generate_next_blocks(forger_nodes[0], "first node", 1)[0]
                 self.sc_sync_all()
 
@@ -455,7 +457,10 @@ class PerformanceTest(SidechainTestFramework):
         # Get information from all nodes
         for i in range(len(self.sc_nodes)):
             # Retrieve node mempool
-            mempool_transactions = allTransactions(self.sc_nodes[i], False)["transactionIds"]
+            try:
+                mempool_transactions = allTransactions(self.sc_nodes[i], False)["transactionIds"]
+            except Exception:
+                raise RequestException("Unable to retrieve mempool transactions")
             number_of_transactions = len(mempool_transactions)
             print(f"Node {i} mempool transactions remaining: {number_of_transactions}")
             # Print mempool of each node if we're running timed test
