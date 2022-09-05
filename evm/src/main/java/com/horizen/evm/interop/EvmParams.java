@@ -9,7 +9,7 @@ public class EvmParams extends HandleParams {
     public Address to;
     public BigInteger value;
     public byte[] input;
-    public BigInteger gasLimit; // uint64
+    public BigInteger gas; // uint64
     public BigInteger gasPrice;
 
     public EvmContext context;
@@ -23,7 +23,7 @@ public class EvmParams extends HandleParams {
             byte[] to,
             BigInteger value,
             byte[] input,
-            BigInteger gasLimit,
+            BigInteger gas,
             BigInteger gasPrice,
             EvmContext context
     ) {
@@ -32,7 +32,7 @@ public class EvmParams extends HandleParams {
         this.to = Address.FromBytes(to);
         this.value = value;
         this.input = input;
-        this.gasLimit = gasLimit;
+        this.gas = gas;
         this.gasPrice = gasPrice;
         this.context = context;
     }
