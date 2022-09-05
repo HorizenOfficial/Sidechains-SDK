@@ -76,7 +76,7 @@ class AccountState(val params: NetworkParams,
       if (WithdrawalEpochUtils.hasReachedCertificateSubmissionWindowEnd(mod, currentWithdrawalEpochInfo, params)) {
         val certReferencedEpochNumber = modWithdrawalEpochInfo.epoch - 1
 
-        // Top quality certificate may present in the current SC block or in the previous blocks or can be absent.
+        // Top quality certificate may be present in the current SC block or in the previous blocks or can be absent.
         val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = mod.topQualityCertificateOpt.orElse(
           stateView.certificate(certReferencedEpochNumber))
 
