@@ -89,6 +89,8 @@ testScripts=(
     'sc_withdrawal_epoch_last_block.py'
     'websocket_server.py'
     'websocket_server_fee_payments.py'
+    'sc_dust_threshold_fork'
+    'sc_ft_limit_fork'
 );
 
 # include extended tests
