@@ -8,6 +8,7 @@ import com.horizen.account.api.rpc.handler.RpcHandler
 import com.horizen.account.api.rpc.request.RpcRequest
 import com.horizen.account.api.rpc.service.EthService
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
@@ -42,6 +43,7 @@ case class AccountEthRpcRoute(override val settings: RESTApiSettings,
     SidechainTypes#SCAT,
     AccountBlockHeader,
     AccountBlock,
+    AccountFeePaymentsInfo,
     NodeAccountHistory,
     NodeAccountState,
     NodeWalletBase,

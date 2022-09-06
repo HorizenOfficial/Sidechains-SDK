@@ -3,6 +3,7 @@ package com.horizen.account.forger
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock.calculateReceiptRoot
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
@@ -43,6 +44,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   )
     with ClosableResourceHandler
     with ScorexLogging {
+  type FPI = AccountFeePaymentsInfo
   type HSTOR = AccountHistoryStorage
   type VL = AccountWallet
   type HIS = AccountHistory

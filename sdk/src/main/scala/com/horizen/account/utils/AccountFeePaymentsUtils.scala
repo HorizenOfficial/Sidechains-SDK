@@ -1,5 +1,6 @@
 package com.horizen.account.utils
 
+import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.evm.TrieHasher
 import com.horizen.utils.MerkleTree
@@ -19,11 +20,11 @@ object AccountFeePaymentsUtils {
     }
   }
 
-  def getForgersRewards(blockFeeInfoSeq : Seq[AccountBlockFeeInfo]): Seq[(AddressProposition, BigInteger)] = {
+  def getForgersRewards(blockFeeInfoSeq : Seq[AccountBlockFeeInfo]): Seq[AccountFeePaymentsInfo] = {
     var poolFee: BigInteger = BigInteger.ZERO
-    val forgersBlockRewards: Seq[(AddressProposition, BigInteger)] = blockFeeInfoSeq.map(feeInfo => {
+    val forgersBlockRewards: Seq[AccountFeePaymentsInfo] = blockFeeInfoSeq.map(feeInfo => {
       poolFee = poolFee.add(feeInfo.baseFee)
-      (feeInfo.forgerAddress, feeInfo.forgerTips)
+      AccountFeePaymentsInfo(feeInfo.forgerAddress, feeInfo.forgerTips)
     })
 
     // Split poolFee in equal parts to be paid to forgers.
@@ -32,24 +33,24 @@ object AccountFeePaymentsUtils {
     val rest = poolFee.mod(BigInteger.valueOf(forgersBlockRewards.size)).longValue()
 
     // Calculate final fee for forger considering forger fee, pool fee and the undistributed satoshis
-    val allForgersRewards : Seq[(AddressProposition, BigInteger)] = forgersBlockRewards.zipWithIndex.map {
-      case (forgerBlockReward: (AddressProposition, BigInteger), index: Int) =>
-        val finalForgerFee = forgerBlockReward._2.add(forgerPoolFee).add(if(index < rest) BigInteger.ONE else BigInteger.ZERO)
-        (forgerBlockReward._1, finalForgerFee)
+    val allForgersRewards : Seq[AccountFeePaymentsInfo] = forgersBlockRewards.zipWithIndex.map {
+      case (forgerBlockReward: AccountFeePaymentsInfo, index: Int) =>
+        val finalForgerFee = forgerBlockReward.value.add(forgerPoolFee).add(if(index < rest) BigInteger.ONE else BigInteger.ZERO)
+        AccountFeePaymentsInfo(forgerBlockReward.address, finalForgerFee)
     }
 
     // Aggregate together payments for the same forger
-    val forgerKeys: Seq[AddressProposition] = allForgersRewards.map(_._1).distinct
+    val forgerKeys: Seq[AddressProposition] = allForgersRewards.map(_.address).distinct
 
-    val forgersRewards: Seq[(AddressProposition, BigInteger)] = forgerKeys.map {
+    val forgersRewards: Seq[AccountFeePaymentsInfo] = forgerKeys.map {
       forgerKey => { // consider this forger
         var forgerTotalFee = BigInteger.ZERO
         allForgersRewards.withFilter(
-          pair => forgerKey.equals(pair._1) // if the address is the one of this forger
+          info => forgerKey.equals(info.address) // if the address is the one of this forger
         ).foreach(
-          pair => forgerTotalFee = forgerTotalFee.add(pair._2) // increment the amount for this address
+          info => forgerTotalFee = forgerTotalFee.add(info.value) // increment the amount for this address
         )
-        (forgerKey, forgerTotalFee) // return the resulting entry
+        AccountFeePaymentsInfo(forgerKey, forgerTotalFee) // return the resulting entry
       }
     }
     forgersRewards

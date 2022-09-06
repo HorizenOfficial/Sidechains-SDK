@@ -8,6 +8,7 @@ import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.WalletBaseErrorResponse.ErrorSecretNotAdded
 import com.horizen.api.http.WalletBaseRestScheme.{ReqAllPropositions, RespAllPublicKeys, RespCreatePrivateKey25519, RespCreateVrfSecret}
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.node._
 import com.horizen.proposition.{Proposition, VrfPublicKey}
 import com.horizen.secret.{PrivateKey25519Creator, VrfKeyGenerator}
@@ -26,13 +27,14 @@ abstract class WalletBaseApiRoute[
   TX <: Transaction,
   H <: SidechainBlockHeaderBase,
   PM <: SidechainBlockBase[TX, H],
-  NH <: NodeHistoryBase[TX, H, PM],
+  FPI <: AbstractFeePaymentsInfo,
+  NH <: NodeHistoryBase[TX, H, PM, FPI],
   NS <: NodeStateBase,
   NW <: NodeWalletBase,
   NP <: NodeMemoryPoolBase[TX],
-  NV <: SidechainNodeViewBase[TX, H, PM, NH, NS, NW, NP]](override val settings: RESTApiSettings,
+  NV <: SidechainNodeViewBase[TX, H, PM, FPI, NH, NS, NW, NP]](override val settings: RESTApiSettings,
                                    sidechainNodeViewHolderRef: ActorRef)(implicit val context: ActorRefFactory, override val ec: ExecutionContext, override val tag: ClassTag[NV])
-  extends SidechainApiRoute[TX, H, PM, NH, NS, NW, NP, NV] {
+  extends SidechainApiRoute[TX, H, PM, FPI, NH, NS, NW, NP, NV] {
 
 
   /**

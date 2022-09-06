@@ -1,7 +1,7 @@
 package com.horizen.node;
 
 import com.horizen.block.*;
-import com.horizen.chain.FeePaymentsInfo;
+import com.horizen.chain.AbstractFeePaymentsInfo;
 import com.horizen.chain.MainchainHeaderInfo;
 import com.horizen.node.util.MainchainBlockReferenceInfo;
 import com.horizen.transaction.Transaction;
@@ -9,7 +9,11 @@ import com.horizen.transaction.Transaction;
 import java.util.List;
 import java.util.Optional;
 
-public interface NodeHistoryBase<TX extends Transaction, H extends SidechainBlockHeaderBase, PM extends SidechainBlockBase<TX,H>>  {
+public interface NodeHistoryBase<
+        TX extends Transaction,
+        H extends SidechainBlockHeaderBase,
+        PM extends SidechainBlockBase<TX,H>,
+        FPI extends AbstractFeePaymentsInfo>  {
 
     Optional<PM> getBlockById(String blockId);
 
@@ -23,7 +27,7 @@ public interface NodeHistoryBase<TX extends Transaction, H extends SidechainBloc
 
     int getCurrentHeight();
 
-    Optional<FeePaymentsInfo> getFeePaymentsInfo(String blockId);
+    Optional<FPI> getFeePaymentsInfo(String blockId);
 
     Optional<Integer> getBlockHeight(String blockId);
 

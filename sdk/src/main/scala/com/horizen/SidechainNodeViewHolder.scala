@@ -3,7 +3,7 @@ package com.horizen
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
-import com.horizen.chain.FeePaymentsInfo
+import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.consensus._
 import com.horizen.node._
 import com.horizen.params.NetworkParams
@@ -37,6 +37,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override type MS = SidechainState
   override type VL = SidechainWallet
   override type MP = SidechainMemoryPool
+  override type FPI = SidechainFeePaymentsInfo
 
   override def restoreState(): Option[(HIS, MS, VL, MP)] = for {
     history <- SidechainHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
@@ -71,6 +72,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       SidechainTypes#SCBT,
       SidechainBlockHeader,
       SidechainBlock,
+      SidechainFeePaymentsInfo,
       NodeHistory,
       NodeState,
       NodeWallet,
@@ -94,6 +96,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       SidechainTypes#SCBT,
       SidechainBlockHeader,
       SidechainBlock,
+      SidechainFeePaymentsInfo,
       NodeHistory,
       NodeState,
       NodeWallet,
@@ -118,6 +121,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       SidechainTypes#SCBT,
       SidechainBlockHeader,
       SidechainBlock,
+      SidechainFeePaymentsInfo,
       NodeHistory,
       NodeState,
       NodeWallet,
@@ -159,7 +163,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     val stateWithdrawalEpochNumber: Int = state.getWithdrawalEpochInfo.epoch
     if (state.isWithdrawalEpochLastIndex) {
       val feePayments = state.getFeePayments(stateWithdrawalEpochNumber)
-      val historyAfterUpdateFee = history.updateFeePaymentsInfo(modToApply.id, FeePaymentsInfo(feePayments))
+      val historyAfterUpdateFee = history.updateFeePaymentsInfo(modToApply.id, SidechainFeePaymentsInfo(feePayments))
 
       val walletAfterApply: VL = wallet.scanPersistent(modToApply, stateWithdrawalEpochNumber, feePayments, Some(state))
 

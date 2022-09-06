@@ -2,6 +2,7 @@ package com.horizen.account.state
 
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
+import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.node.NodeAccountState
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumReceipt
@@ -207,8 +208,8 @@ class AccountState(val params: NetworkParams,
       }
 
       // add rewards to forgers balance
-      val forgersPoolRewardsSeq : Seq[(AddressProposition, BigInteger)] = AccountFeePaymentsUtils.getForgersRewards(feePayments)
-      forgersPoolRewardsSeq.foreach( pair => stateView.addBalance(pair._1.address(), pair._2))
+      val forgersPoolRewardsSeq : Seq[AccountFeePaymentsInfo] = AccountFeePaymentsUtils.getForgersRewards(feePayments)
+      forgersPoolRewardsSeq.foreach( info => stateView.addBalance(info.address.address(), info.value))
 
     } else {
       // No fee payments expected

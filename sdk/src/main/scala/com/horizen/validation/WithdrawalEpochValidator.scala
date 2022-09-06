@@ -3,6 +3,7 @@ package com.horizen.validation
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.params.NetworkParams
 import com.horizen.AbstractHistory
+import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.cryptolibprovider.CommonCircuit
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
@@ -16,13 +17,14 @@ class WithdrawalEpochValidator[
   TX <: Transaction,
   H <: SidechainBlockHeaderBase,
   PMOD <: SidechainBlockBase[TX, H],
-  HSTOR <: AbstractHistoryStorage[PMOD, HSTOR],
-  HT <: AbstractHistory[TX, H, PMOD, HSTOR, HT]
+  FPI <: AbstractFeePaymentsInfo,
+  HSTOR <: AbstractHistoryStorage[PMOD, FPI, HSTOR],
+  HT <: AbstractHistory[TX, H, PMOD, FPI, HSTOR, HT]
 ]
 (
   params: NetworkParams
 )
-  extends HistoryBlockValidator[TX, H, PMOD, HSTOR, HT] {
+  extends HistoryBlockValidator[TX, H, PMOD, FPI, HSTOR, HT] {
 
   override def validate(block: PMOD, history: HT): Try[Unit] = Try {
     if (block.id.equals(params.sidechainGenesisBlockId))

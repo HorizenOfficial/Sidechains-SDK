@@ -7,6 +7,7 @@ import akka.pattern.ask
 import akka.http.scaladsl.server.Route
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainNodeViewBase}
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.transaction.Transaction
 
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -16,11 +17,12 @@ trait SidechainApiRoute[
   TX <: Transaction,
   H <: SidechainBlockHeaderBase,
   PM <: SidechainBlockBase[TX, H],
-  NH <: NodeHistoryBase[TX, H, PM],
+  FPI <: AbstractFeePaymentsInfo,
+  NH <: NodeHistoryBase[TX, H, PM, FPI],
   S <: NodeStateBase,
   W <: NodeWalletBase,
   P <: NodeMemoryPoolBase[TX],
-  NV <: SidechainNodeViewBase[TX, H, PM, NH, S, W, P]] extends ApiRoute with ApiDirectives {
+  NV <: SidechainNodeViewBase[TX, H, PM, FPI, NH, S, W, P]] extends ApiRoute with ApiDirectives {
 
 
   val sidechainNodeViewHolderRef: ActorRef

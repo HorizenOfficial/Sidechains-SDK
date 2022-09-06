@@ -2,6 +2,7 @@ package com.horizen.account
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
@@ -41,6 +42,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override type MS = AccountState
   override type VL = AccountWallet
   override type MP = AccountMemoryPool
+  override type FPI = AccountFeePaymentsInfo
 
   protected def messageProcessors(params: NetworkParams): Seq[MessageProcessor] = {
       MessageProcessorUtil.getMessageProcessorSeq(params, customMessageProcessors)
@@ -97,6 +99,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   // Scan modifier only, there is no need to notify AccountWallet about fees,
   // since account balances are tracked only in the AccountState.
   // TODO: do we need to notify History with fee payments info?
+  // YES
   override protected def scanBlockWithFeePayments(history: HIS, state: MS, wallet: VL, modToApply: AccountBlock): (HIS, VL) = {
     (history, wallet.scanPersistent(modToApply))
   }
@@ -106,6 +109,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       AccountTransaction[Proposition, Proof[Proposition]],
       AccountBlockHeader,
       AccountBlock,
+      AccountFeePaymentsInfo,
       NodeAccountHistory,
       NodeAccountState,
       NodeWalletBase,
@@ -129,6 +133,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       AccountTransaction[Proposition, Proof[Proposition]],
       AccountBlockHeader,
       AccountBlock,
+      AccountFeePaymentsInfo,
       NodeAccountHistory,
       NodeAccountState,
       NodeWalletBase,
@@ -153,6 +158,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       AccountTransaction[Proposition, Proof[Proposition]],
       AccountBlockHeader,
       AccountBlock,
+      AccountFeePaymentsInfo,
       NodeAccountHistory,
       NodeAccountState,
       NodeWalletBase,

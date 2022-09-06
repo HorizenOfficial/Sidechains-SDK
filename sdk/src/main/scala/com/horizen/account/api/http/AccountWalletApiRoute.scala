@@ -8,6 +8,7 @@ import com.horizen.account.api.http.AccountWalletErrorResponse.ErrorCouldNotGetB
 import com.horizen.account.api.http.AccountWalletRestScheme.{ReqGetBalance, ReqGetTotalBalance, RespCreatePrivateKeySecp256k1, RespGetBalance}
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainTypes}
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
@@ -35,6 +36,7 @@ case class AccountWalletApiRoute(override val settings: RESTApiSettings,
     SidechainTypes#SCAT,
     AccountBlockHeader,
     AccountBlock,
+    AccountFeePaymentsInfo,
     NodeAccountHistory,
     NodeAccountState,
     NodeWalletBase,

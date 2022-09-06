@@ -1,8 +1,10 @@
 package com.horizen.forge
 
 import akka.util.Timeout
+import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.block._
 import com.horizen.box.Box
+import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
 import com.horizen.params.NetworkParams
@@ -14,7 +16,7 @@ import com.horizen.transaction.{SidechainTransaction, Transaction, TransactionSe
 import com.horizen.utils.{DynamicTypedSerializer, FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree}
 import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainTypes, SidechainWallet}
 import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
-import scorex.util.{ModifierId}
+import scorex.util.ModifierId
 
 import scala.collection.JavaConverters._
 import scorex.core.NodeViewModifier
@@ -32,6 +34,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     SidechainBlock](
   mainchainSynchronizer, companion, params, allowNoWebsocketConnectionInRegtest
 ) {
+  type FPI = SidechainFeePaymentsInfo
   type HSTOR = SidechainHistoryStorage
   type VL = SidechainWallet
   type HIS = SidechainHistory
