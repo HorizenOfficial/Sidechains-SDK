@@ -4,6 +4,8 @@ import random
 import time
 from multiprocessing import Pool, Value
 from time import sleep
+
+import psutil
 from requests import RequestException
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -86,7 +88,11 @@ def get_number_of_transactions_for_node(node):
 
 
 def send_transactions_per_second(txs_creator_node, destination_address, utxo_amount, tps_per_process,
-                                 start_time, test_run_time):
+                                 start_time, test_run_time, process_to_map):
+    p = psutil.Process()
+    print(f"Mapping TPS Throughput generator to #{process_to_map}: {p}, affinity {p.cpu_affinity()}", flush=True)
+    p.cpu_affinity([process_to_map])
+    print(f"Process #{process_to_map}: TPS Throughput generator {process_to_map}, Generator affinity now {p.cpu_affinity()}", flush=True)
     # Run until
     while time.time() - start_time < test_run_time:
         i = 0
@@ -139,7 +145,7 @@ class PerformanceTest(SidechainTestFramework):
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720 * self.block_rate / 2)
 
     def sc_setup_nodes(self):
-        if(self.perf_data["use_multithreading"]):
+        if(self.perf_data["use_multiprocessing"]):
             return start_sc_nodes_with_multiprocessing(len(self.sc_node_data), self.options.tmpdir)
         else:
             return start_sc_nodes(len(self.sc_node_data), self.options.tmpdir)
@@ -275,7 +281,11 @@ class PerformanceTest(SidechainTestFramework):
                 # Create the multiprocess pool
                 with Pool(initializer=init_globals, initargs=(counter, errors)) as pool:
                     i = 0
+                    start_from_process = 0
                     args = []
+                    if(self.perf_data["use_multiprocessing"]):
+                        start_from_process = len(self.sc_nodes_list)
+
                     # Add send_transactions_per_second arguments to args for each process required
                     # starmap runs them all in parallel
                     while i < max_processes:
@@ -283,7 +293,7 @@ class PerformanceTest(SidechainTestFramework):
                             # Create a single random node destination address per process
                             destination_address = http_wallet_createPrivateKey25519(random.choice(non_creator_nodes))
                             args.append((tx_creator_node, destination_address, utxo_amount,
-                                        tps_per_process, start_time, self.test_run_time))
+                                        tps_per_process, start_time, self.test_run_time, start_from_process+i))
                         i += 1
                     pool.starmap(send_transactions_per_second, args)
 
