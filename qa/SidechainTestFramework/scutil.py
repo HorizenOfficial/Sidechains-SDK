@@ -1,4 +1,5 @@
 import os
+import pprint
 import sys
 
 import json
@@ -1090,3 +1091,43 @@ def get_account_balance(sc_node, address):
         json.dumps({"address": str(address)}))["result"]["balance"]
 
 
+def computeForgedTxFee(sc_node, tx_hash, tracing_on=False):
+    transactionJson = sc_node.rpc_eth_getTransactionByHash(tx_hash)['result']
+    if (transactionJson is None):
+        raise Exception('Error: Transaction {} not found (not yet forged?)'.format(tx_hash))
+    if tracing_on:
+        print("tx:")
+        pprint.pprint(transactionJson)
+
+    receiptJson = sc_node.rpc_eth_getTransactionReceipt(tx_hash)['result']
+    if (receiptJson is None):
+        raise Exception('Unexpected error: Receipt not found for transaction {}'.format(tx_hash))
+    if tracing_on:
+        print("receipt:")
+        pprint.pprint(receiptJson)
+
+    gasUsed = int(receiptJson['gasUsed'], 16)
+
+    if not 'gasPrice' in transactionJson:
+        # eip1559 transaction
+        block_hash = receiptJson['blockHash']
+        blockJson = sc_node.rpc_eth_getBlockByHash(block_hash, False)['result']
+        if (blockJson is None):
+            raise Exception('Unexpected error: block not found {}'.format(block_hash))
+        if tracing_on:
+            print("block:")
+            pprint.pprint(blockJson)
+
+        baseFeePerGas = int(blockJson['baseFeePerGas'], 16)
+        maxPriorityFeePerGas = int(transactionJson['maxPriorityFeePerGas'], 16)
+    else:
+        baseFeePerGas = 0
+        maxPriorityFeePerGas = int(transactionJson['gasPrice'], 16)
+
+    totalTxFee = (baseFeePerGas + maxPriorityFeePerGas) * gasUsed
+    forgersPoolFee = baseFeePerGas * gasUsed
+    forgerTip = maxPriorityFeePerGas * gasUsed
+    if tracing_on:
+        print("totalFee = {} (forgersPoolFee = {}, forgerTip = {}".format(totalTxFee, forgersPoolFee, forgerTip))
+
+    return totalTxFee, forgersPoolFee, forgerTip

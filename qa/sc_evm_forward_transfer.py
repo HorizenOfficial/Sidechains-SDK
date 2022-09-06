@@ -112,7 +112,7 @@ class SCEvmForwardTransfer(SidechainTestFramework):
         test_message = 'Initial message'
         tx_hash, smart_contract_address = smart_contract.deploy(sc_node, test_message,
                                                                 fromAddress=evm_address,
-                                                                gasLimit=100000000,
+                                                                gasLimit=10000000,
                                                                 gasPrice=10)
         generate_next_blocks(sc_node, "first node", 1)
 

@@ -2,6 +2,8 @@
 import pprint
 from decimal import Decimal
 
+from eth_utils import to_checksum_address
+
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract, EvmExecutionError
 from SidechainTestFramework.account.address_util import format_evm
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -37,8 +39,7 @@ def call_addr_uint_fn(node, smart_contract, contract_address, source_addr, addr,
                       method):
     if static_call:
         res = smart_contract.static_call(node, method, addr, uint,
-                                         fromAddress=source_addr,
-                                         gasLimit=1000000, gasPrice=10, toAddress=contract_address)
+                                         fromAddress=source_addr, toAddress=contract_address)
     else:
         res = smart_contract.call_function(node, method, addr, uint,
                                            fromAddress=source_addr,
@@ -53,8 +54,7 @@ def call_addr_addr_uint_fn(node, smart_contract, contract_address, source_addr, 
                            generate_block, method):
     if static_call:
         res = smart_contract.static_call(node, method, addr1, addr2, uint,
-                                         fromAddress=source_addr,
-                                         gasLimit=1000000, gasPrice=10, toAddress=contract_address)
+                                         fromAddress=source_addr, toAddress=contract_address)
     else:
         res = smart_contract.call_function(node, method, addr1, addr2, uint,
                                            fromAddress=source_addr,
@@ -120,17 +120,15 @@ def compare_balance(node, smart_contract, contract_address, account_address, exp
 def compare_allowance(node, smart_contract, contract_address, owner_address, allowed_address, expected_balance):
     print("Checking allowance of 0x{} from 0x{}...".format(allowed_address, owner_address))
     res = smart_contract.static_call(node, 'allowance(address,address)', owner_address, allowed_address,
-                                     fromAddress=allowed_address, gasLimit=1000000,
-                                     gasPrice=10, toAddress=contract_address)
+                                     fromAddress=allowed_address, toAddress=contract_address)
     print("Expected allowance: '{}', actual allowance: '{}'".format(expected_balance, res[0]))
-    assert_equal(res[0], expected_balance)
+    assert_equal(expected_balance, res[0])
     return res[0]
 
 
 def compare_total_supply(node, smart_contract, contract_address, sender_address, expected_supply):
     print("Checking total supply of token at 0x{}...".format(contract_address))
-    res = smart_contract.static_call(node, 'totalSupply()', fromAddress=sender_address, gasLimit=1000000,
-                                     gasPrice=10, toAddress=contract_address)
+    res = smart_contract.static_call(node, 'totalSupply()', fromAddress=sender_address, toAddress=contract_address)
     print("Expected supply: '{}', actual supply: '{}'".format(expected_supply, res[0]))
     assert_equal(res[0], expected_supply)
     return res[0]
@@ -236,6 +234,18 @@ class SCEvmERC20Contract(SidechainTestFramework):
 
         ret = sc_node.wallet_createPrivateKeySecp256k1()
         other_address = ret["result"]["proposition"]["address"]
+
+        # transfer some fund to other_address account otherwise it cannot create transactions
+        forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
+                                      self.nodes[0],
+                                      other_address,
+                                      ft_amount_in_zen,
+                                      mc_return_address)
+
+        generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
+        self.sc_sync_all()
+
+
         transfer_amount = 99
 
         # Testing normal transfer
@@ -276,7 +286,9 @@ class SCEvmERC20Contract(SidechainTestFramework):
 
         # Test transferFrom and approval
         approved_amount = 10
-        tx_hash = approve(sc_node, smart_contract, smart_contract_address, other_address, evm_address, approved_amount,
+        other_address_hex = '0x' + other_address
+
+        tx_hash = approve(sc_node, smart_contract, smart_contract_address, other_address_hex, evm_address, approved_amount,
                           static_call=False, generate_block=True)
         res = compare_balance(sc_node, smart_contract, smart_contract_address, other_address, transfer_amount)
 

@@ -111,10 +111,11 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
           receiptList += consensusDataReceipt
           txHashList += txHash
 
-        case Failure(_: GasLimitReached) =>
+        case Failure(e: GasLimitReached) =>
           // block gas limit reached
           // TODO: keep trying to fit transactions into the block: this TX did not fit, but another one might
           // skip all txs from the same account
+          log.debug(s"Could not apply tx, reason: ${e.getMessage}")
           listOfAccountsToSkip.append(tx.getFrom)
           return Success(receiptList, txHashList)
        case Failure(e: NonceTooLowException) =>
@@ -123,7 +124,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
         case Failure(e) =>
           // skip all txs from the same account
           listOfAccountsToSkip.append(tx.getFrom)
-          log.debug(s"Could not apply tx, reason: ${e.getMessage}. Skipping all next transactions from the same account because not executable anymore")
+          log.debug(s"Could not apply tx, reason: ${e.getMessage}. Skipping all next transactions from the same account because not executable anymore",e)
       }
     }
     (receiptList, txHashList)

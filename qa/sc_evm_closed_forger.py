@@ -82,7 +82,14 @@ class SCEvmClosedForgerList(SidechainTestFramework):
                 "blockSignPublicKey": blockSignPubKey,
                 "vrfPubKey": vrf_public_key,
                 "value": convertZenToZennies(amount)  # in Satoshi
+            },
+            "gasInfo": {
+                "gasLimit": 230000,
+                "maxFeePerGas": 1,
+                "maxPriorityFeePerGas": 1
+
             }
+
         }
         makeForgerStakeJsonRes = sc_node.transaction_makeForgerStake(json.dumps(forgerStakes))
         assert_true("result" in makeForgerStakeJsonRes)

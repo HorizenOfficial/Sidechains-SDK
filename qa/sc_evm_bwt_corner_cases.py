@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import pprint
 import time
 
 from SidechainTestFramework.account.httpCalls.transaction.allWithdrawRequests import all_withdrawal_requests
@@ -10,8 +11,9 @@ from SidechainTestFramework.sc_forging_util import *
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, generate_next_blocks, generate_next_block, \
-    AccountModelBlockVersion, EVM_APP_BINARY, convertZenToZennies, convertZenniesToWei
-from test_framework.util import assert_equal, assert_false, start_nodes, \
+    AccountModelBlockVersion, EVM_APP_BINARY, convertZenToZennies, convertZenniesToWei, \
+    computeForgedTxFee
+from test_framework.util import assert_equal,start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail
 
 """
@@ -66,6 +68,7 @@ class SCEvmBWTCornerCases(SidechainTestFramework):
     def sc_setup_nodes(self):
         return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir, binary=[EVM_APP_BINARY] * 2) #, extra_args=[['-agentlib']]
 
+
     def run_test(self):
         time.sleep(0.1)
         self.sync_all()
@@ -100,8 +103,10 @@ class SCEvmBWTCornerCases(SidechainTestFramework):
         new_balance = http_wallet_balance(sc_node, evm_address)
         assert_equal(ft_amount_in_wei, new_balance, "wrong balance")
 
+        initial_balance_in_wei = ft_amount_in_wei
+
         # *************** Test 1: Insufficient balance *****************
-        # Tries a withdrawal request with insufficient balance, the tx should not be created
+        # Try a withdrawal request with insufficient balance, the tx should not be created
         mc_address1 = mc_node.getnewaddress()
         bt_amount = ft_amount_in_zen + 3
         sc_bt_amount1 = convertZenToZennies(bt_amount)
@@ -118,10 +123,10 @@ class SCEvmBWTCornerCases(SidechainTestFramework):
 
         # verifies that the balance didn't change
         new_balance = http_wallet_balance(sc_node, evm_address)
-        assert_equal(ft_amount_in_wei, new_balance, "wrong balance")
+        assert_equal(initial_balance_in_wei, new_balance, "wrong balance")
 
         # *************** Test 2: Withdrawal amount under dust threshold *****************
-        # Tries a withdrawal request with amount under dust threshold (54 zennies), wr should not be created but the tx should be created
+        # Try a withdrawal request with amount under dust threshold (54 zennies), wr should not be created but the tx should be created
         bt_amount_in_zennies = 53
         res = withdrawcoins(sc_node, mc_address1, bt_amount_in_zennies)
         if "error" in res:
@@ -129,13 +134,23 @@ class SCEvmBWTCornerCases(SidechainTestFramework):
         tx_id = res["result"]["transactionId"]
 
         generate_next_block(sc_node, "first node")
+
+        # Checking the receipt
+        status = int(sc_node.rpc_eth_getTransactionReceipt(tx_id)['result']['status'], 16)
+        assert_equal(0, status, "Wrong tx status in receipt")
+        # TODO check event in the receipt
+
+        sc_node.block_best()
         # verifies that there are no withdrawal requests
         list_of_WR = all_withdrawal_requests(sc_node, current_epoch_number)["listOfWR"]
         assert_equal(0, len(list_of_WR))
 
-        # verifies that the balance didn't change TODO Gas should be removed
+        # verifies that the balance didn't change except for the consumed gas
         new_balance = http_wallet_balance(sc_node, evm_address)
-        assert_equal(ft_amount_in_wei, new_balance, "wrong balance")
+        #Retrieve how much gas was spent
+        gas_fee_paid, forgersPoolFee, forgerTip = computeForgedTxFee(sc_node, tx_id)
+
+        assert_equal(initial_balance_in_wei - gas_fee_paid, new_balance, "wrong balance")
 
         # Verifies there is the transaction in the block
 
@@ -147,6 +162,7 @@ class SCEvmBWTCornerCases(SidechainTestFramework):
 
         # *************** Test 5: Number of Withdrawal requests per epoch too big (e.g. > 3999)  *****************
         # TODO this test fails do to a bug releted to endianess that is solved in UTXO sidechain but still to be released in Evm
+        # TODO checking receipts and gas spent calculation
         # The test should be completed after the fix.
         # Please note that the checks on the balance after the WR are wrong because sometimes zennies/zen are used instead to wei. To be fixed.
         # Note 2: the amount of wr per block should be > 1000 for testing the fix on the forger in case the num of tx limit is crossed

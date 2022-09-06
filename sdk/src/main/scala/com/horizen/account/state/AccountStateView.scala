@@ -352,6 +352,8 @@ class AccountStateView(
 
   def disableGasTracking(): Unit = trackedGasPool = None
 
+  def isGasTrackingEnabled(): Boolean = trackedGasPool.isDefined
+
   @throws(classOf[OutOfGasException])
   private def useGas(gas: BigInteger): Unit = trackedGasPool match {
     case Some(gasPool) => gasPool.subGas(gas)

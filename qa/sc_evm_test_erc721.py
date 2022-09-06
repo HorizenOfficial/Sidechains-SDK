@@ -12,7 +12,7 @@ from test_framework.util import assert_equal, assert_true, start_nodes, websocke
     forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, \
     is_mainchain_block_included_in_sc_block, check_mainchain_block_reference_info, AccountModelBlockVersion, \
-    EVM_APP_BINARY, generate_next_blocks, generate_next_block
+    EVM_APP_BINARY, generate_next_blocks, generate_next_block, computeForgedTxFee
 
 """
 Check an EVM ERC721 Smart Contract.
@@ -155,7 +155,7 @@ def deploy_smart_contract(node, smart_contract, from_address, name, symbol, meta
     print("Deploying smart contract...")
     tx_hash, address = smart_contract.deploy(node, name, symbol, metadataURI,
                                              fromAddress=from_address,
-                                             gasLimit=100000000,
+                                             gasLimit=10000000,
                                              gasPrice=10)
     print("Generating next block...")
     generate_next_blocks(node, "first node", 1)
@@ -299,7 +299,8 @@ class SCEvmERC721Contract(SidechainTestFramework):
         ret = sc_node.wallet_createPrivateKeySecp256k1()
         other_address = ret["result"]["proposition"]["address"]
         pprint.pprint(sc_node.rpc_eth_getBalance(str(evm_address), "latest"))
-        pprint.pprint(sc_node.rpc_eth_getBalance(format_eoa(other_address), "latest"))
+        other_address_hex = '0x' + other_address
+        pprint.pprint(sc_node.rpc_eth_getBalance(other_address_hex, "latest"))
         sc_node.transaction_sendCoinsToAddress(json.dumps({
             'from': format_eoa(evm_address),
             'to': format_eoa(other_address),
@@ -307,7 +308,7 @@ class SCEvmERC721Contract(SidechainTestFramework):
         }))
         generate_next_block(sc_node, "first node", 1)
 
-        pprint.pprint(sc_node.rpc_eth_getBalance(format_eoa(other_address), "latest"))
+        pprint.pprint(sc_node.rpc_eth_getBalance(other_address_hex, "latest"))
 
         zero_address = '0x0000000000000000000000000000000000000000'
 
@@ -344,10 +345,13 @@ class SCEvmERC721Contract(SidechainTestFramework):
         tx_hash = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
                                minted_ids_user1[0], static_call=False, generate_block=True)
 
+        gas_fee_paid, forgersPoolFee, forgerTip = computeForgedTxFee(sc_node, tx_hash)
+
+
         res = compare_total_supply(sc_node, smart_contract, smart_contract_address, evm_address, 1)
         res = compare_ownerof(sc_node, smart_contract, smart_contract_address, other_address, minted_ids_user1[0],
                               evm_address)
-        last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance - minting_price)
+        last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance - minting_price - gas_fee_paid)
         last_balance = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address,
                                        last_balance + minting_amount)
 
@@ -356,6 +360,8 @@ class SCEvmERC721Contract(SidechainTestFramework):
                          static_call=True, generate_block=False)
         tx_hash = set_paused(sc_node, smart_contract, smart_contract_address, evm_address, paused=True,
                              static_call=False, generate_block=True)
+        gas_fee_paid_1, forgersPoolFee, forgerTip = computeForgedTxFee(sc_node, tx_hash)
+        pprint.pprint("gas_fee_paid_1 {}".format(gas_fee_paid_1))
         minted_ids_user1.append(2)
 
         exception_thrown = False
@@ -373,9 +379,10 @@ class SCEvmERC721Contract(SidechainTestFramework):
         # TODO check tx receipt once possible
         tx_hash = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
                                minted_ids_user1[1], static_call=False, generate_block=True)
-
+        gas_fee_paid_2, forgersPoolFee, forgerTip = computeForgedTxFee(sc_node, tx_hash)
+        pprint.pprint("gas_fee_paid {}".format(gas_fee_paid_2))
         res = compare_total_supply(sc_node, smart_contract, smart_contract_address, evm_address, 1)
-        last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance)
+        last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance - gas_fee_paid_1 - gas_fee_paid_2)
         last_balance = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address, last_balance)
 
         # Test unpausing and then minting (success)
@@ -383,6 +390,8 @@ class SCEvmERC721Contract(SidechainTestFramework):
                          static_call=True, generate_block=False)
         tx_hash = set_paused(sc_node, smart_contract, smart_contract_address, evm_address, paused=False,
                              static_call=False, generate_block=True)
+        gas_fee_paid_1, forgersPoolFee, forgerTip = computeForgedTxFee(sc_node, tx_hash)
+
         # TODO check execution before submitting proper transaction
         res = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
                            minted_ids_user1[1], static_call=True, generate_block=False)
@@ -390,10 +399,12 @@ class SCEvmERC721Contract(SidechainTestFramework):
         tx_hash = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
                                minted_ids_user1[1], static_call=False, generate_block=True)
 
+        gas_fee_paid_2, forgersPoolFee, forgerTip = computeForgedTxFee(sc_node, tx_hash)
+
         res = compare_total_supply(sc_node, smart_contract, smart_contract_address, evm_address, 2)
         res = compare_ownerof(sc_node, smart_contract, smart_contract_address, other_address, minted_ids_user1[1],
                               evm_address)
-        last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance - minting_price)
+        last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance - minting_price - gas_fee_paid_1 - gas_fee_paid_2)
         last_balance = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address,
                                        last_balance + minting_amount)
 
@@ -406,6 +417,8 @@ class SCEvmERC721Contract(SidechainTestFramework):
         tx_hash = transfer_token(sc_node, smart_contract, smart_contract_address, evm_address, from_address=evm_address,
                                  target_address=other_address, token_id=minted_ids_user1[0], static_call=False,
                                  generate_block=True)
+
+        gas_fee_paid, forgersPoolFee, forgerTip = computeForgedTxFee(sc_node, tx_hash)
         minted_ids_user2 = [minted_ids_user1[0]]
         minted_ids_user1 = [minted_ids_user1[1]]
         res = compare_total_supply(sc_node, smart_contract, smart_contract_address, evm_address, 2)
@@ -415,7 +428,7 @@ class SCEvmERC721Contract(SidechainTestFramework):
         res = compare_ownerof(sc_node, smart_contract, smart_contract_address, other_address, minted_ids_user2[0],
                               other_address)
 
-        last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance)
+        last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance - gas_fee_paid)
         last_balance = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address, last_balance - 1)
         last_balance = compare_balance(sc_node, smart_contract, smart_contract_address, other_address, last_balance)
 

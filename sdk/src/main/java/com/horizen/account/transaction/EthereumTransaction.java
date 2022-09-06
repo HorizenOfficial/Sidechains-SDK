@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.*;
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.state.GasUintOverflowException;
+import com.horizen.account.state.GasUtil;
 import com.horizen.account.state.Message;
 import com.horizen.account.utils.Account;
 import com.horizen.account.utils.BigIntegerUtil;
@@ -170,6 +171,11 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                         "legacy transaction with negative gasPrice", id()));
         }
 
+        if (getGasLimit().compareTo(GasUtil.intrinsicGas(getData(), getTo() == null)) < 0 ){
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "gas limit is below intrinsic gas", id()));
+        }
+
 
         if (this.getFrom() == null || this.getFrom().address().length != Account.ADDRESS_SIZE)
             throw new TransactionSemanticValidityException("Cannot create signed transaction without valid from address");
@@ -177,7 +183,6 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             throw new TransactionSemanticValidityException("Cannot create signed transaction with invalid " +
                     "signature");
 
-        //TODO add intrinsic gas check, if not already made in some other place
     }
 
     @Override

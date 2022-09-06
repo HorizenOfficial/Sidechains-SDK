@@ -1,22 +1,36 @@
 package com.horizen.evm.interop;
 
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
 import com.horizen.evm.utils.Address;
 import com.horizen.evm.utils.Converter;
 import com.horizen.evm.utils.Hash;
+
 import java.util.Arrays;
 
 public class EvmLog {
     public Address address;
+
+    @JsonSetter(nulls = Nulls.SKIP)
     public Hash[] topics;
+    @JsonSetter(nulls = Nulls.SKIP)
     public byte[] data;
 
-    public EvmLog (Address address, Hash[] topics, byte[] data) {
+    public EvmLog(Address address, Hash[] topics, byte[] data) {
         this.address = address;
         this.topics = topics;
-        this.data = data;
+        if (data != null) {
+            this.data = data;
+        }
+        else {
+            this.data = new byte[0];
+        }
     }
 
-    public EvmLog () { }
+    public EvmLog() {
+        topics = new Hash[0];
+        data = new byte[0];
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -33,7 +47,7 @@ public class EvmLog {
     public int hashCode() {
         int result = Arrays.hashCode(address.toBytes());
         for (int i = 0; i < topics.length; i++)
-          result = 31 * result + Arrays.hashCode(topics[i].toBytes());
+            result = 31 * result + Arrays.hashCode(topics[i].toBytes());
         result = 31 * result + Arrays.hashCode(data);
         return result;
     }
@@ -47,10 +61,11 @@ public class EvmLog {
         }
         topicsStr = topicsStr.concat("}");
 
+        String dataString = (data == null) ? "" : Converter.toHexString(data);
         return String.format(
                 "EvmLog (log consensus data) {address=%s, topics=%s, data=%s}",
                 Converter.toHexString(address.toBytes()),
                 topicsStr,
-                Converter.toHexString(data));
+                dataString);
     }
 }

@@ -301,6 +301,7 @@ abstract class AbstractForgeMessageBuilder[
       collectTransactionsFromMemPool(nodeView, blockSize)
     }
 
+    log.debug(s"Transactions to apply ${transactions}")
     val tryBlock = createNewBlock(
       nodeView,
       branchPointInfo,
