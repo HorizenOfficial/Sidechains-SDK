@@ -20,6 +20,8 @@ import com.horizen.account.utils.EthereumTransactionDecoder
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.{ApiResponseUtil, SuccessResponse}
+import com.horizen.evm.Evm
+import com.horizen.evm.interop.{EvmResult, EvmTraceLog}
 import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.Transaction
@@ -441,9 +443,9 @@ class EthService(
   }
 
   @RpcMethod("debug_traceTransaction")
-  def traceTransaction(transactionHash: String) = {
+  def traceTransaction(transactionHash: String): EvmResult = {
+    val evmResult: EvmResult = new EvmResult()
     val transaction = getTransactionByHash(transactionHash)
-
     val currentBlockNumber = transaction.getBlockNumber()
     val previousBlockNumber = BigInteger.valueOf(currentBlockNumber.toLong).subtract(BigInteger.ONE).toString()
 
@@ -452,23 +454,38 @@ class EthService(
         {
           val currentBlock = nodeView.history.getBlockById(currentBlockNumber).get()
           val gasPool = new GasPool(BigInteger.valueOf(currentBlock.header.gasLimit))
-          val transactionList = currentBlock.transactions
+          val transactions = currentBlock.transactions
 
           for (mcBlockRefData <- currentBlock.mainchainBlockReferencesData) {
             tagStateView.applyMainchainBlockReferenceData(mcBlockRefData).get
           }
 
           breakable {
-            transactionList.zipWithIndex.foreach({ case (tx, i) =>
-              val currentTransactionHash = BytesUtils.fromHexString(tx.id)
+            for ((tx, i) <- transactions.zipWithIndex) {
+              if (BytesUtils.fromHexString(tx.id) == transactionHash) {
+                val receipt = Evm
+                  .Trace(
+                    tagStateView.getStateDbHandle,
+                    tx.getFrom.bytes(),
+                    tx.getTo.bytes(),
+                    tx.getValue,
+                    tx.getData,
+                    tx.getGasLimit,
+                    tx.getGasPrice,
+                    null
+                  )
 
-              if (currentTransactionHash == transactionHash)
+                evmResult.traceLogs = receipt.traceLogs
+                evmResult.usedGas = receipt.usedGas
+                evmResult.returnData = receipt.returnData
+
                 break
-
+              }
               tagStateView.applyTransaction(tx, i, gasPool)
-            })
+            }
           }
         }
+        evmResult
       }
     }
   }
