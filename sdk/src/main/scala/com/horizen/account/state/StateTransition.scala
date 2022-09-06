@@ -8,9 +8,9 @@ class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProc
 
   @throws(classOf[InvalidMessageException])
   @throws(classOf[ExecutionFailedException])
-  def transition(msg: Message, fakeMsg: Boolean): Array[Byte] = {
+  def transition(msg: Message): Array[Byte] = {
     // do preliminary checks
-    preCheck(msg, fakeMsg)
+    preCheck(msg)
     // allocate gas for processing this message
     val gasPool = buyGas(msg)
     // consume intrinsic gas
@@ -46,7 +46,7 @@ class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProc
     }
   }
 
-  private def preCheck(msg: Message, fakeMsg: Boolean): Unit = {
+  private def preCheck(msg: Message): Unit = {
     // We are sure that transaction is semantically valid (so all the tx fields are valid)
     // and was successfully verified by ChainIdBlockSemanticValidator
 
@@ -55,7 +55,7 @@ class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProc
 
     // Check the nonce
     val stateNonce = view.getNonce(sender)
-    if (!fakeMsg) {
+    if (!msg.getIsFakeMsg) {
       val txNonce = msg.getNonce
       val result = txNonce.compareTo(stateNonce)
       if (result < 0) {

@@ -113,10 +113,10 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
     getStateViewAtTag(nodeView, tag) { tagStateView =>
       val msg = params.toMessage(tagStateView.getBaseFee)
       if (forwardErrors) {
-        fun(tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit), true), tagStateView)
+        fun(tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit)), tagStateView)
       } else {
         try {
-          fun(tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit), true), tagStateView)
+          fun(tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit)), tagStateView)
         } catch {
           // throw on execution errors, also include evm revert reason if possible
           case reverted: ExecutionRevertedException => throw new RpcException(new RpcError(

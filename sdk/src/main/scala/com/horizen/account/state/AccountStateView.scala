@@ -70,7 +70,8 @@ class AccountStateView(
             BigInteger.ZERO, // gasLimit
             stakedAmount,
             BigInteger.ONE.negate(), // a negative nonce value will rule out collision with real transactions
-            data)
+            data,
+            false)
 
           val returnData = forgerStakesProvider.addScCreationForgerStake(message, this)
           log.debug(s"sc creation forging stake added with stakeid: ${BytesUtils.toHexString(returnData)}")
@@ -118,8 +119,8 @@ class AccountStateView(
 
   @throws(classOf[InvalidMessageException])
   @throws(classOf[ExecutionFailedException])
-  def applyMessage(msg: Message, blockGasPool: GasPool, fakeMsg: Boolean): Array[Byte] = {
-    new StateTransition(this, messageProcessors, blockGasPool).transition(msg, fakeMsg)
+  def applyMessage(msg: Message, blockGasPool: GasPool): Array[Byte] = {
+    new StateTransition(this, messageProcessors, blockGasPool).transition(msg)
   }
 
   /**
@@ -147,7 +148,7 @@ class AccountStateView(
 
     // apply message to state
     val status = try {
-      applyMessage(msg, blockGasPool, false)
+      applyMessage(msg, blockGasPool)
       ReceiptStatus.SUCCESSFUL
     } catch {
       // any other exception will bubble up and invalidate the block
