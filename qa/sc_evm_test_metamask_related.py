@@ -250,7 +250,11 @@ def eoa_transfer(node, sender, receiver, amount, call_method: CallMethod = globa
 
 
 def eoa_assert_native_balance(node, address, expected_balance, tag='latest'):
-    res = node.rpc_eth_getBalance(format_eoa(address), tag)
+    res = node.rpc_eth_getBalance(format_evm(address), tag)
+
+    if "result" not in res:
+        raise RuntimeError("Something went wrong, see {}".format(str(res)))
+
     res = res['result']
     balance = int(res[2:], 16)
     assert_equal(expected_balance, balance, "Actual balance did not match expected balance")

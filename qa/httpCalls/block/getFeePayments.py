@@ -8,4 +8,8 @@ def http_block_getFeePayments(sidechain_node, block_id):
     }
     request = json.dumps(j)
     response = sidechain_node.block_getFeePayments(request)
-    return response["result"]
+
+    if "result" in response:
+        return response["result"]
+
+    raise RuntimeError("Something went wrong, see {}".format(str(response)))

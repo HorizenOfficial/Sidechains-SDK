@@ -676,8 +676,14 @@ Parameters:
 
 def check_wallet_coins_balance(sc_node, expected_wallet_balance):
     response = sc_node.wallet_coinsBalance()
-    balance = response["result"]
-    assert_equal(expected_wallet_balance * 100000000, int(balance["balance"]), "Unexpected coins balance")
+
+    if "result" in response:
+        balance = response["result"]
+        assert_equal(expected_wallet_balance * 100000000, int(balance["balance"]), "Unexpected coins balance")
+
+        return
+
+    raise RuntimeError("Something went wrong, see {}".format(str(response)))
 
 
 """
@@ -694,24 +700,31 @@ Parameters:
 
 def check_box_balance(sc_node, account, box_class_name, expected_boxes_count, expected_balance):
     response = sc_node.wallet_allBoxes()
-    boxes = response["result"]["boxes"]
-    boxes_balance = 0
-    boxes_count = 0
-    pub_key = account.publicKey
-    for box in boxes:
-        if box["proposition"]["publicKey"] == pub_key and (box_class_name is None or box["typeName"] == box_class_name):
-            box_value = box["value"]
-            assert_true(box_value > 0,
-                        "Non positive value for box: {0} with public key: {1}".format(box["id"], pub_key))
-            boxes_balance += box_value
-            boxes_count += 1
 
-    assert_equal(expected_boxes_count, boxes_count,
-                 "Unexpected number of boxes for public key {0}. Expected {1} but found {2}."
-                 .format(pub_key, expected_boxes_count, boxes_count))
-    assert_equal(expected_balance * 100000000, boxes_balance,
-                 "Unexpected sum of balances for public key {0}. Expected {1} but found {2}."
-                 .format(pub_key, expected_balance * 100000000, boxes_balance))
+    if "result" in response:
+        if "boxes" in response["result"]:
+            boxes = response["result"]["boxes"]
+            boxes_balance = 0
+            boxes_count = 0
+            pub_key = account.publicKey
+            for box in boxes:
+                if box["proposition"]["publicKey"] == pub_key and (box_class_name is None or box["typeName"] == box_class_name):
+                    box_value = box["value"]
+                    assert_true(box_value > 0,
+                                "Non positive value for box: {0} with public key: {1}".format(box["id"], pub_key))
+                    boxes_balance += box_value
+                    boxes_count += 1
+
+            assert_equal(expected_boxes_count, boxes_count,
+                         "Unexpected number of boxes for public key {0}. Expected {1} but found {2}."
+                         .format(pub_key, expected_boxes_count, boxes_count))
+            assert_equal(expected_balance * 100000000, boxes_balance,
+                         "Unexpected sum of balances for public key {0}. Expected {1} but found {2}."
+                         .format(pub_key, expected_balance * 100000000, boxes_balance))
+            return
+
+    raise RuntimeError("Something went wrong, see {}".format(str(response)))
+
 
 
 # In STF we need to create SC genesis block with a timestamp in the past to be able to forge next block
