@@ -5,7 +5,6 @@ from SidechainTestFramework.account.httpCalls.createEIP1559Transaction import cr
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
-from httpCalls.block.getFeePayments import http_block_getFeePayments2
 from test_framework.util import initialize_chain_clean, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, assert_true
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, \
