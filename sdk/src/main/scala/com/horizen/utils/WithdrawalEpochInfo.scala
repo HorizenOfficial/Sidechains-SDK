@@ -2,7 +2,7 @@ package com.horizen.utils
 
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.serialization.Views
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
+import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
 
@@ -12,11 +12,11 @@ case class WithdrawalEpochInfo(epoch: Int, // epoch number, SidechainBlock belon
                               ) extends BytesSerializable {
   override type M = WithdrawalEpochInfo
 
-  override def serializer: ScorexSerializer[WithdrawalEpochInfo] = WithdrawalEpochInfoSerializer
+  override def serializer: SparkzSerializer[WithdrawalEpochInfo] = WithdrawalEpochInfoSerializer
 }
 
 
-object WithdrawalEpochInfoSerializer extends ScorexSerializer[WithdrawalEpochInfo] {
+object WithdrawalEpochInfoSerializer extends SparkzSerializer[WithdrawalEpochInfo] {
   override def serialize(obj: WithdrawalEpochInfo, w: Writer): Unit = {
     w.putInt(obj.epoch)
     w.putInt(obj.lastEpochIndex)

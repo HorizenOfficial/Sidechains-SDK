@@ -15,7 +15,7 @@ import com.horizen.forge.Forger.ReceivableMessages.{GetForgingInfo, StartForging
 import com.horizen.forge.ForgingInfo
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
-import scorex.core.settings.RESTApiSettings
+import sparkz.core.settings.RESTApiSettings
 import scorex.util.ModifierId
 
 import java.util.{Optional => JOptional}

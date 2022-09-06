@@ -13,6 +13,7 @@ abstract class ForkConfigurator {
     val baseConsensusEpochNumbers = getBaseSidechainConsensusEpochNumbers()
     val fork1EpochNumbers = getSidechainFork1()
 
+    //Fork 1
     if ((fork1EpochNumbers.mainnetEpochNumber < baseConsensusEpochNumbers.mainnetEpochNumber) ||
                  (fork1EpochNumbers.testnetEpochNumber < baseConsensusEpochNumbers.testnetEpochNumber) ||
                  (fork1EpochNumbers.regtestEpochNumber < baseConsensusEpochNumbers.regtestEpochNumber))

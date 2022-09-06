@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import logging
 import time
 import math
 
@@ -106,7 +107,7 @@ class SCCeased(SidechainTestFramework):
         try:
             generate_next_block(sc_node, "first node")
         except SCAPIException as e:
-            print("Expected SCAPIException: " + e.error)
+            logging.info("Expected SCAPIException: " + e.error)
             error_occur = True
 
         assert_true(error_occur,

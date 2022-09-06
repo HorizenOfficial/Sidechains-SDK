@@ -1,7 +1,7 @@
 package com.horizen.utils
 
 import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
+import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
 
@@ -9,10 +9,10 @@ case class ForgingStakeMerklePathInfo(forgingStakeInfo: ForgingStakeInfo, merkle
 
   override type M = ForgingStakeMerklePathInfo
 
-  override def serializer: ScorexSerializer[ForgingStakeMerklePathInfo] = ForgerBoxMerklePathInfoSerializer
+  override def serializer: SparkzSerializer[ForgingStakeMerklePathInfo] = ForgerBoxMerklePathInfoSerializer
 }
 
-object ForgerBoxMerklePathInfoSerializer extends ScorexSerializer[ForgingStakeMerklePathInfo] {
+object ForgerBoxMerklePathInfoSerializer extends SparkzSerializer[ForgingStakeMerklePathInfo] {
   override def serialize(obj: ForgingStakeMerklePathInfo, w: Writer): Unit = {
     ForgingStakeInfoSerializer.serialize(obj.forgingStakeInfo, w)
     MerklePathSerializer.getSerializer.serialize(obj.merklePath, w)

@@ -150,7 +150,8 @@ class SCNodeConfiguration(object):
                  api_key=DEFAULT_API_KEY,
                  max_fee=10000000,
                  block_rate=120,
-                 latency_settings=LatencyConfig()):
+                 latency_settings=LatencyConfig(),
+                 initial_private_keys = []):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))
         self.mc_connection_info = mc_connection_info
@@ -167,7 +168,7 @@ class SCNodeConfiguration(object):
         self.mempool_min_fee_rate = mempool_min_fee_rate
         self.block_rate = block_rate
         self.latency_settings = latency_settings
-
+        self.initial_private_keys = initial_private_keys
 
 """
 The full network of many sidechain nodes connected to many mainchain nodes.

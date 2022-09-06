@@ -44,7 +44,7 @@ public class SimpleAppModule extends SidechainAppModule
         HashMap<Byte, SecretSerializer<Secret>> customSecretSerializers = new HashMap<>();
         HashMap<Byte, TransactionSerializer<BoxTransaction<Proposition, Box<Proposition>>>> customTransactionSerializers = new HashMap<>();
 
-        String dataDirAbsolutePath = sidechainSettings.scorexSettings().dataDir().getAbsolutePath();
+        String dataDirAbsolutePath = sidechainSettings.sparkzSettings().dataDir().getAbsolutePath();
 
         // two distinct storages are used in application state and wallet in order to test a version
         // misalignment during startup and the recover logic

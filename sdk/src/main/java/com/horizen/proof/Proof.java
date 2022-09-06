@@ -15,7 +15,7 @@ trait ProofOfKnowledge[S <: Secret, P <: ProofOfKnowledgeProposition[S]] extends
 
 @JsonView(Views.Default.class)
 public interface Proof<P extends Proposition>
-    extends scorex.core.transaction.proof.Proof<P>
+    extends sparkz.core.transaction.proof.Proof<P>
 {
     boolean isValid(P proposition, byte[] message);
 

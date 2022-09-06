@@ -1,3 +1,9 @@
+**0.4.1**
+1. CCTP: other sidechains with version 2+ are supported.
+2. API authentication behavior updated: can be disabled now.
+3. Swagger API schema fixed.
+4. DBTool: custom storages support added.
+
 **0.4.0**
 1. Memory pool improvement: upper bound size limit introduced (default 300Mb) altogether with cleanup strategy (the lowest fee rate transaction removed first).
 2. Memory pool improvement: minimum fee rate check added for incoming transactions. By default, is disabled.
@@ -6,7 +12,7 @@
 5. API freezing during node synchronization resolved.
 6. New API endpoints added for importing/exporting keys to/from the wallet.
 7. Forger sorts transactions by fee rate instead of fee.
-8. Wallet: max fee check added for locally generated transactions to prevent absurdly high fees. Max fee value is set in zennies. Default value is 10000000 (1 Zen).
+8. Wallet: max fee check added for locally generated transactions to prevent absurdly high fees. Max fee value is set in zennies. Default value is 10000000 (0.1 Zen).
 9. Custom propositions wallet management improved: complex multi-key propositions are now recognized.
 10. Peers spam detection mechanism improved: "trash" data detection in the end of the block/transaction added.
 11. Bootstrapping tool: dlog keys multiple initialization prevented.

@@ -25,7 +25,7 @@ import com.horizen.utils._
 import com.horizen.vrf._
 import com.horizen.cryptolibprovider.{CryptoLibProvider, VrfFunctions}
 import com.horizen.librustsidechains.FieldElement
-import scorex.core.block.Block
+import sparkz.core.block.Block
 import scorex.util.{ModifierId, bytesToId}
 
 import scala.collection.JavaConverters._

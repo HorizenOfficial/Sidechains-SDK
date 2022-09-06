@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import logging
+
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import assert_equal, assert_true, initialize_chain_clean, start_nodes, connect_nodes_bi, websocket_port_by_mc_node_index, forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import start_sc_nodes, generate_next_blocks, bootstrap_sidechain_nodes
@@ -58,7 +60,7 @@ class SidechainBlockIdForBackupTest(SidechainTestFramework):
         sc_address_1 = http_wallet_createPrivateKey25519(sc_node1)
 
         ####################### EPOCH 0 ####################
-        print("####################### EPOCH 0 ####################")
+        logging.info("####################### EPOCH 0 ####################")
 
         # Generate 1 SC block
         generate_next_blocks(sc_node1, "first node", 1)
@@ -74,12 +76,12 @@ class SidechainBlockIdForBackupTest(SidechainTestFramework):
         generate_next_blocks(sc_node1, "first node", 1)
         self.sc_sync_all()
 
-        sc_creation_block_height = 450
+        sc_creation_block_height = 480
         sc_creation_block = mc_node1.getblock(str(sc_creation_block_height),2)
         assert_true(len(sc_creation_block["tx"][1]["vsc_ccout"]) == 1)
 
         #Call the backup/getSidechainBlockIdForBackup endpoint and verify it returns an error (we still not have 2 epoch)
-        print("Call the backup/getSidechainBlockIdForBackup endpoint and verify it returns an error (we still not have 2 epoch)")
+        logging.info("Call the backup/getSidechainBlockIdForBackup endpoint and verify it returns an error (we still not have 2 epoch)")
         res = getBlockIdForBackup(sc_node1)
         assert_true("error" in res)
         assert_equal(res["error"]["code"], "0801")
@@ -101,18 +103,18 @@ class SidechainBlockIdForBackupTest(SidechainTestFramework):
         # Wait until Certificate will appear in MC node mempool
         time.sleep(10)
         while mc_node1.getmempoolinfo()["size"] == 0 and sc_node1.submitter_isCertGenerationActive()["result"]["state"]:
-            print("Wait for certificate in mc mempool...")
+            logging.info("Wait for certificate in mc mempool...")
             time.sleep(2)
             sc_node1.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(1, mc_node1.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
 
         ####################### EPOCH 1 ####################
-        print("####################### EPOCH 1 ####################")
+        logging.info("####################### EPOCH 1 ####################")
         assert_equal(mc_node1.getscinfo(self.sc_nodes_bootstrap_info.sidechain_id)["items"][0]["state"], "ALIVE")
         assert_equal(mc_node1.getscinfo(self.sc_nodes_bootstrap_info.sidechain_id)["items"][0]["epoch"], 1)
 
         #Call the backup/getSidechainBlockIdForBackup endpoint and verify it returns an error (we still not have 2 epoch)
-        print("Call the backup/getSidechainBlockIdForBackup endpoint and verify it returns an error (we still not have 2 epoch)")
+        logging.info("Call the backup/getSidechainBlockIdForBackup endpoint and verify it returns an error (we still not have 2 epoch)")
         res = getBlockIdForBackup(sc_node1)
         assert_true("error" in res)
         assert_equal(res["error"]["code"], "0801")
@@ -129,13 +131,13 @@ class SidechainBlockIdForBackupTest(SidechainTestFramework):
         # Wait until Certificate will appear in MC node mempool
         time.sleep(10)
         while mc_node1.getmempoolinfo()["size"] == 0 and sc_node1.submitter_isCertGenerationActive()["result"]["state"]:
-            print("Wait for certificate in mc mempool...")
+            logging.info("Wait for certificate in mc mempool...")
             time.sleep(2)
             sc_node1.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(1, mc_node1.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
 
         ####################### EPOCH 2 ####################
-        print("####################### EPOCH 2 ####################")
+        logging.info("####################### EPOCH 2 ####################")
         assert_equal(mc_node1.getscinfo(self.sc_nodes_bootstrap_info.sidechain_id)["items"][0]["state"], "ALIVE")
         assert_equal(mc_node1.getscinfo(self.sc_nodes_bootstrap_info.sidechain_id)["items"][0]["epoch"], 2)
         
@@ -156,18 +158,18 @@ class SidechainBlockIdForBackupTest(SidechainTestFramework):
         # Wait until Certificate will appear in MC node mempool
         time.sleep(10)
         while mc_node1.getmempoolinfo()["size"] == 0 and sc_node1.submitter_isCertGenerationActive()["result"]["state"]:
-            print("Wait for certificate in mc mempool...")
+            logging.info("Wait for certificate in mc mempool...")
             time.sleep(2)
             sc_node1.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(1, mc_node1.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
 
         ####################### EPOCH 3 ####################
-        print("####################### EPOCH 3 ####################")
+        logging.info("####################### EPOCH 3 ####################")
 
         #Call the backup/getSidechainBlockIdForBackup endpoint and verify it returns the blockIdToRollback
-        print("Call the backup/getSidechainBlockIdForBackup endpoint and verify it returns the blockIdToRollback")
+        logging.info("Call the backup/getSidechainBlockIdForBackup endpoint and verify it returns the blockIdToRollback")
         res = getBlockIdForBackup(sc_node1)
-        print(res)
+        logging.info(res)
         assert_equal(res["result"]["blockId"], blockIdToRollback)
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 import json
 #execute a transaction/makeForgerStake call
-def makeForgerStake(sidechainNode, address, blockSignPublicKey, vrfPublicKey, amount, fee, api_key = None):
+def makeForgerStake(sidechainNode, address, blockSignPublicKey, vrfPublicKey, amount, fee = 0, api_key = None):
       j = {\
             "outputs": [ \
               { \

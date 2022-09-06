@@ -127,6 +127,7 @@ class PerformanceTest(SidechainTestFramework):
         return start_nodes(1, self.options.tmpdir)
 
     def sc_setup_chain(self):
+        print("Initializing test directory "+self.options.tmpdir)
         mc_node = self.nodes[0]
         sc_nodes = get_node_configuration(mc_node, self.sc_node_data, self.perf_data)
 
@@ -142,7 +143,6 @@ class PerformanceTest(SidechainTestFramework):
             return start_sc_nodes_with_multiprocessing(len(self.sc_node_data), self.options.tmpdir)
         else:
             return start_sc_nodes(len(self.sc_node_data), self.options.tmpdir)
-
 
     def create_node_connection_map(self, key, values):
         for value in values:
