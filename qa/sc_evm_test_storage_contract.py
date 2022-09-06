@@ -137,12 +137,13 @@ class SCEvmStorageContract(SidechainTestFramework):
         test_message = 'Initial message'
         tx_hash, smart_contract_address = smart_contract.deploy(sc_node, test_message,
                                                                 fromAddress=evm_address,
-                                                                gasLimit=100000000,
+                                                                gasLimit=10000000,
                                                                 gasPrice=10)
         generate_next_blocks(sc_node, "first node", 1)
         print("Blocks mined - tx receipt will contain address")
         # TODO check logs (events)
         tx_receipt = sc_node.rpc_eth_getTransactionReceipt(tx_hash)
+
         # TODO check receipt address in checksum format
         assert_equal(format_evm(tx_receipt['result']['contractAddress']), smart_contract_address)
 
