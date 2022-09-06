@@ -644,5 +644,6 @@ class SCEvmMetamaskTest(SidechainTestFramework):
                                     initial_balance - transfer_amount)
         res = compare_erc20_balance(sc_node, smart_contract, smart_contract_address, other_address, transfer_amount)
 
-        if __name__ == "__main__":
-            SCEvmMetamaskTest().main()
+
+if __name__ == "__main__":
+    SCEvmMetamaskTest().main()
