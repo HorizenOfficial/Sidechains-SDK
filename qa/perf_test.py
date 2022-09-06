@@ -516,7 +516,7 @@ class PerformanceTest(SidechainTestFramework):
                 current_block_id = http_block_findById(node, current_block_id)["block"]["parentId"]
             print("Node" + str(node_index) + " Total Blocks: " + str(total_blocks_for_node))
             print("Node" + str(node_index) + " Total Transactions Mined: " + str(total_mined_transactions))
-            print(f"Transactions NOT mined: {self.initial_txs - total_mined_transactions}")
+            print(f"Transactions NOT mined: {self.initial_txs * len(txs_creators) - total_mined_transactions}")
         print(f"\n###\nTEST RUN TIME: {end_time - start_time} seconds\n###")
 
 
