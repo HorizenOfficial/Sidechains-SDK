@@ -389,10 +389,7 @@ class AccountStateView(
 
   @throws(classOf[OutOfGasException])
   private def useGas(gas: BigInteger): Unit = trackedGasPool match {
-    case Some(gasPool) =>
-      gasPool.subGas(gas)
-    case None =>
-      // gas tracking is disabled
-      log.debug("gas tracking disabled")
+    case Some(gasPool) => gasPool.subGas(gas)
+    case None => // gas tracking is disabled
   }
 }

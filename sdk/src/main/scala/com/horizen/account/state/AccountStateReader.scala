@@ -22,7 +22,7 @@ trait AccountStateReader extends BaseStateReader {
 
   def getHeight: Int
 
-  def getBaseFee: BigInteger
+  def getBaseFeePerGas: BigInteger
   def getBlockGasLimit: BigInteger
   def getTxFeesPerGas(tx: EthereumTransaction) : (BigInteger, BigInteger)
 
