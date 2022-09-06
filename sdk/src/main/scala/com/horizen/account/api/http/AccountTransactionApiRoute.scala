@@ -17,8 +17,8 @@ import com.horizen.account.proof.SignatureSecp256k1
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
-import com.horizen.account.transaction.{EthereumTransaction}
-import com.horizen.account.utils.{EthereumTransactionDecoder, EthereumTransactionUtils, ZenWeiConverter}
+import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.account.utils.{AccountBlockFeeInfo, EthereumTransactionDecoder, EthereumTransactionUtils, ZenWeiConverter}
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.SidechainTransactionErrorResponse.GenericTransactionError
@@ -33,11 +33,12 @@ import org.web3j.crypto.Sign.SignatureData
 import org.web3j.crypto.SignedRawTransaction
 import org.web3j.crypto.TransactionEncoder.createEip155SignatureData
 import scorex.core.settings.RESTApiSettings
+import scala.collection.JavaConverters._
+import scala.compat.java8.OptionConverters._
 
 import java.lang
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
-import scala.collection.JavaConverters._
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.reflect.ClassTag
@@ -131,7 +132,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       applyOnNodeView { sidechainNodeView =>
         val valueInWei = ZenWeiConverter.convertZenniesToWei(body.value)
         val destAddress = body.to
-        val gasPrice = sidechainNodeView.getNodeState.getBaseFee // TODO actual gas implementation
+        val gasPrice = sidechainNodeView.getNodeState.getBaseFeePerGas
         val gasLimit = GasUtil.TxGas
         // check if the fromAddress is either empty or it fits and the value is high enough
         val secret = getFittingSecret(sidechainNodeView, body.from, valueInWei)
@@ -180,14 +181,18 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     entity(as[ReqEIP1559Transaction]) { body =>
       // lock the view and try to create CoreTransaction
       applyOnNodeView { sidechainNodeView =>
+        val secret = getFittingSecret(sidechainNodeView, body.from, BigInteger.valueOf(body.value))
+
+        val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.get.publicImage.address))
+
         var signedTx: EthereumTransaction = new EthereumTransaction(
           params.chainId,
           body.to.orNull,
-          body.nonce,
+          nonce,
           body.gasLimit,
           body.maxPriorityFeePerGas,
           body.maxFeePerGas,
-          body.value,
+          BigInteger.valueOf(body.value),
           body.data,
           if (body.signature_v.isDefined)
             new SignatureData(
@@ -299,7 +304,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         val valueInWei = ZenWeiConverter.convertZenniesToWei(body.forgerStakeInfo.value)
 
         // default gas related params
-        val baseFee = sidechainNodeView.getNodeState.getBaseFee
+        val baseFee = sidechainNodeView.getNodeState.getBaseFeePerGas
         var maxPriorityFeePerGas = BigInteger.valueOf(120)
         var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
         var gasLimit = GasUtil.TxGasContractCreation
@@ -345,7 +350,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       applyOnNodeView { sidechainNodeView =>
         val valueInWei = BigInteger.ZERO
         // default gas related params
-        val baseFee = sidechainNodeView.getNodeState.getBaseFee
+        val baseFee = sidechainNodeView.getNodeState.getBaseFeePerGas
         var maxPriorityFeePerGas = BigInteger.valueOf(120)
         var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
         var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
@@ -416,10 +421,12 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         val valueInWei = ZenWeiConverter.convertZenniesToWei(body.withdrawalRequest.value)
         val gasInfo = body.gasInfo
 
-        // TODO actual gas implementation
-        var maxFeePerGas = BigInteger.ONE
-        var maxPriorityFeePerGas = BigInteger.ONE
-        var gasLimit = BigInteger.ONE
+        // default gas related params
+        val baseFee = sidechainNodeView.getNodeState.getBaseFeePerGas
+        var maxPriorityFeePerGas = BigInteger.valueOf(120)
+        var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
+        var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
+
         if (gasInfo.isDefined) {
           maxFeePerGas = gasInfo.get.maxFeePerGas
           maxPriorityFeePerGas = gasInfo.get.maxPriorityFeePerGas
@@ -693,11 +700,11 @@ object AccountTransactionRestScheme {
   private[api] case class ReqEIP1559Transaction(
                                                  from: Option[String],
                                                  to: Option[String],
-                                                 nonce: BigInteger,
+                                                 nonce: Option[BigInteger],
                                                  gasLimit: BigInteger,
                                                  maxPriorityFeePerGas: BigInteger,
                                                  maxFeePerGas: BigInteger,
-                                                 value: BigInteger,
+                                                 @JsonDeserialize(contentAs = classOf[lang.Long]) value: Long,
                                                  data: String,
                                                  signature_v: Option[Array[Byte]],
                                                  signature_r: Option[Array[Byte]],

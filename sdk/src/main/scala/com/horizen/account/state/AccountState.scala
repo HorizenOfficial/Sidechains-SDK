@@ -380,7 +380,7 @@ class AccountState(val params: NetworkParams,
 
   override def getCode(address: Array[Byte]): Array[Byte] = using(getView)(_.getCode(address))
 
-  override def getBaseFee: BigInteger = using(getView)(_.getBaseFee)
+  override def getBaseFeePerGas: BigInteger = using(getView)(_.getBaseFeePerGas)
 
   override def getBlockGasLimit: BigInteger = using(getView)(_.getBlockGasLimit)
 

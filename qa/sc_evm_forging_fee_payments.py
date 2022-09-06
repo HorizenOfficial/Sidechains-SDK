@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 import pprint
 
-
+from SidechainTestFramework.account.httpCalls.createEIP1559Transaction import createEIP1559Transaction
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
+from httpCalls.block.getFeePayments import http_block_getFeePayments2
 from test_framework.util import initialize_chain_clean, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain
+    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, assert_true
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, \
     connect_sc_nodes, generate_next_block, AccountModelBlockVersion, \
     EVM_APP_BINARY, convertZenToZennies, convertZenniesToWei, get_account_balance, generate_account_proposition, \
-    convertZenToWei
+    convertZenToWei, computeForgedTxFee
 from SidechainTestFramework.sc_forging_util import *
 
 import math
@@ -43,40 +44,6 @@ Test:
     - Check forger payments for the SC nodes.
 """
 
-
-def computeForgedTxFee(sc_node, tx_hash):
-    transactionJson = sc_node.rpc_eth_getTransactionByHash(tx_hash)['result']
-    if (transactionJson is None):
-        raise Exception('Error: Transaction {} not found (not yet forged?)'.format(tx_hash))
-    pprint.pprint(transactionJson)
-
-    receiptJson = sc_node.rpc_eth_getTransactionReceipt(tx_hash)['result']
-    if (receiptJson is None):
-        raise Exception('Unexpected error: Receipt not found for transaction {}'.format(tx_hash))
-    pprint.pprint(receiptJson)
-
-    gasUsed = int(receiptJson['gasUsed'], 16)
-
-    if not 'gasPrice' in transactionJson:
-      # eip1559 transaction
-      block_hash = receiptJson['blockHash']
-      blockJson = sc_node.rpc_eth_getBlockByHash(block_hash, False)['result']
-      if (blockJson is None):
-          raise Exception('Unexpected error: block not found {}'.format(block_hash))
-      pprint.pprint(blockJson)
-
-      baseFeePerGas = int(blockJson['baseFeePerGas'], 16)
-      maxPriorityFeePerGas = int(transactionJson['maxPriorityFeePerGas'], 16)
-    else:
-      baseFeePerGas = 0
-      maxPriorityFeePerGas = int(transactionJson['gasPrice'], 16)
-
-    totalTxFee = (baseFeePerGas+maxPriorityFeePerGas)*gasUsed
-    forgersPoolFee = baseFeePerGas*gasUsed
-    forgerTip = maxPriorityFeePerGas*gasUsed
-    print("fee= {}".format(totalTxFee))
-
-    return totalTxFee, forgersPoolFee, forgerTip
 
 
 
@@ -117,7 +84,7 @@ class ScEvmForgingFeePayments(SidechainTestFramework):
   def sc_setup_nodes(self):
       # Start 2 SC nodes
       return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir,
-                            binary=[EVM_APP_BINARY] * 2)#, extra_args=[['-agentlib'], []])
+                            binary=[EVM_APP_BINARY] * 2)#, extra_args=[[], ['-agentlib']])
 
   def run_test(self):
       mc_node = self.nodes[0]
@@ -185,22 +152,20 @@ class ScEvmForgingFeePayments(SidechainTestFramework):
           print("Forger stake created: " + json.dumps(makeForgerStakeJsonRes))
       self.sc_sync_all()
 
-      tx_hash = makeForgerStakeJsonRes['result']['transactionId']
+      tx_hash_0 = makeForgerStakeJsonRes['result']['transactionId']
 
       # Generate SC block
       generate_next_block(sc_node_1, "first node")
 
-      transactionFee_1, forgersPoolFee, forgerTip = computeForgedTxFee(sc_node_1, tx_hash)
+      transactionFee_0, forgersPoolFee, forgerTip = computeForgedTxFee(sc_node_1, tx_hash_0)
 
-      print("Fees: {}, {}, {}".format(transactionFee_1, forgersPoolFee, forgerTip))
-      pprint.pprint(get_account_balance(sc_node_2, evm_address_sc_node_2))
       pprint.pprint(sc_node_2.wallet_getTotalBalance())
 
       # balance now is initial (ft) minus forgerStake and fee
       assert_equal(
         sc_node_2.wallet_getTotalBalance()['result']['balance'],
         ft_amount_in_wei -
-        (forger_stake_amount_in_wei + transactionFee_1)
+        (forger_stake_amount_in_wei + transactionFee_0)
       )
 
       sc_block_fee_info.append(BlockFeeInfo(1, forgersPoolFee, forgerTip))
@@ -208,7 +173,6 @@ class ScEvmForgingFeePayments(SidechainTestFramework):
       # we now have 2 stakes, one from creation and one just added
       stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
       assert_equal(len(stakeList), 2)
-      pprint.pprint(stakeList)
 
       # Generate SC block on SC node 1 for the next consensus epoch
       generate_next_block(sc_node_1, "first node", force_switch_to_next_epoch=True)
@@ -216,48 +180,65 @@ class ScEvmForgingFeePayments(SidechainTestFramework):
 
       self.sc_sync_all()
 
-      transferred_amount = 0.022
-      transferred_amount_in_zennies = convertZenToZennies(transferred_amount)
-      transferred_amount_in_wei = convertZenniesToWei(transferred_amount_in_zennies)
-
       recipient_keys = generate_account_proposition("seed3", 1)[0]
       recipient_proposition = recipient_keys.proposition
-      print("Trying to send {} zen to address {}".format(transferred_amount, recipient_proposition))
+
+      # Create a legacy transaction moving some fund from SC2 address to an external address.
+      transferred_amount_in_zen_1 = 0.022
+      transferred_amount_in_zennies_1 = convertZenToZennies(transferred_amount_in_zen_1)
+      transferred_amount_in_wei_1 = convertZenniesToWei(transferred_amount_in_zennies_1)
 
       j = {
           "from": evm_address_sc_node_2,
           "to": recipient_proposition,
-          "value": transferred_amount_in_zennies
+          "value": transferred_amount_in_zennies_1
       }
       response = sc_node_2.transaction_sendCoinsToAddress(json.dumps(j))
-      print("tx sent:")
-      pprint.pprint(response)
+      tx_hash_1 = response['result']['transactionId']
+      self.sc_sync_all()
+
+       # Generate SC block on SC node 1
+      sc_middle_we_block_id = generate_next_block(sc_node_1, "first node")
+      self.sc_sync_all()
+
+      transactionFee_1, forgersPoolFee_1, forgerTip_1 = computeForgedTxFee(sc_node_1, tx_hash_1)
+      sc_block_fee_info.append(BlockFeeInfo(1, forgersPoolFee_1, forgerTip_1))
+
+      # Create a eip1559 transaction moving some fund from SC2 address to an external address.
+      # This also tests a too high maxPriorityFee value, which should be capped using maxFeePerGas
+      transferred_amount_in_zen_2 = 0.001
+      transferred_amount_in_wei_2 = convertZenToWei(transferred_amount_in_zen_2)
+
+      blockJson = sc_node_2.rpc_eth_getBlockByHash(sc_middle_we_block_id, False)['result']
+      if (blockJson is None):
+          raise Exception('Unexpected error: block not found {}'.format(sc_middle_we_block_id))
+      baseFeePerGas = int(blockJson['baseFeePerGas'], 16)
+
+      tx_hash_2 = createEIP1559Transaction(sc_node_2, fromAddress=evm_address_sc_node_2,
+                                           toAddress=recipient_proposition,
+                                           gasLimit=123400, maxPriorityFeePerGas=56700, maxFeePerGas=baseFeePerGas + 56690,
+                                           value=transferred_amount_in_wei_2)
       self.sc_sync_all()
 
       # Generate SC block on SC node 2 for the next consensus epoch
       sc_middle_we_block_id = generate_next_block(sc_node_2, "second node", force_switch_to_next_epoch=True)
       self.sc_sync_all()
 
-      tx_hash_2 = response['result']['transactionId']
-
-      transactionFee_2, forgersPoolFee, forgerTip = computeForgedTxFee(sc_node_1, tx_hash_2)
-      print("Fees: {}, {}, {}".format(transactionFee_2, forgersPoolFee, forgerTip))
-      sc_block_fee_info.append(BlockFeeInfo(2, forgersPoolFee, forgerTip))
+      transactionFee_2, forgersPoolFee_2, forgerTip_2 = computeForgedTxFee(sc_node_1, tx_hash_2)
+      sc_block_fee_info.append(BlockFeeInfo(2, forgersPoolFee_2, forgerTip_2))
 
       self.sc_sync_all()
 
       # Generate 3 MC block to reach the end of the withdrawal epoch
       mc_node.generate(3)
 
-      pprint.pprint(sc_node_1.wallet_getTotalBalance())
-      pprint.pprint(sc_node_2.wallet_getTotalBalance())
-
-      # balance now is initial (ft) without forgerStake and fee and without transferred amount and fee
+      # balance now is initial (ft) without forgerStake and fee and without transferred amounts and fees
       assert_equal(
           sc_node_2.wallet_getTotalBalance()['result']['balance'],
           ft_amount_in_wei -
-          (forger_stake_amount_in_wei + transactionFee_1) -
-          (transferred_amount_in_wei  + transactionFee_2)
+          (forger_stake_amount_in_wei + transactionFee_0) -
+          (transferred_amount_in_wei_1 + transactionFee_1) -
+          (transferred_amount_in_wei_2 + transactionFee_2)
       )
 
       # Collect SC node balances before fees redistribution
@@ -304,13 +285,10 @@ class ScEvmForgingFeePayments(SidechainTestFramework):
       print("SC1 bal before = {}, after = {}".format(sc_node_1_balance_before_payments, sc_node_1_balance_after_payments))
       print("SC2 bal before = {}, after = {}".format(sc_node_2_balance_before_payments, sc_node_2_balance_after_payments))
 
-      print("SC1 fees = {}".format(node_1_fees))
-      print("SC2 fees = {}".format(node_2_fees))
+      print("SC1 forger fees = {}".format(node_1_fees))
+      print("SC2 forger fees = {}".format(node_2_fees))
 
       assert_equal(node_1_fees + node_2_fees, total_fee)
-
-      assert_equal(sc_node_2_balance_after_payments, sc_node_2_balance_before_payments + node_2_fees,
-                   "Wrong fee payment amount for SC node 2")
 
       # Check forger fee payments
       assert_equal(sc_node_1_balance_after_payments, sc_node_1_balance_before_payments + node_1_fees,

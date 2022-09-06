@@ -112,7 +112,7 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   private def doCall[A](nodeView: NV, params: TransactionArgs, tag: String)(fun: (Array[Byte], AccountStateView) ⇒ A): A = {
     getStateViewAtTag(nodeView, tag) { tagStateView =>
       try {
-        val msg = params.toMessage(tagStateView.getBaseFee)
+        val msg = params.toMessage(tagStateView.getBaseFeePerGas)
         fun(tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit)), tagStateView)
       } catch {
         // throw on execution errors, also include evm revert reason if possible
@@ -312,7 +312,7 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   @RpcMethod("eth_gasPrice")
   def gasPrice: Quantity = {
     applyOnAccountView { nodeView =>
-      getStateViewAtTag(nodeView, "latest") { tagStateView => new Quantity(tagStateView.getBaseFee) }
+      getStateViewAtTag(nodeView, "latest") { tagStateView => new Quantity(tagStateView.getBaseFeePerGas) }
     }
   }
 

@@ -140,7 +140,7 @@ class AccountStateView(
 
     val ethTx = tx.asInstanceOf[EthereumTransaction]
     val txHash = BytesUtils.fromHexString(ethTx.id)
-    val msg = ethTx.asMessage(getBaseFee)
+    val msg = ethTx.asMessage(getBaseFeePerGas)
 
     // Tx context for stateDB, to know where to keep EvmLogs
     setupTxContext(txHash, txIndex)
@@ -349,12 +349,21 @@ class AccountStateView(
 
   // TODO: get baseFee for the block header
   // TODO: currently a non-zero baseFee makes all the python tests fail, because they do not consider spending fees
-  override def getBaseFee: BigInteger = BigInteger.valueOf(333000)
+  override def getBaseFeePerGas: BigInteger = BigInteger.valueOf(333000)
 
   def getTxFeesPerGas(tx: EthereumTransaction) : (BigInteger, BigInteger) = {
     if (tx.isEIP1559) {
-      val baseFee = getBaseFee
-      (baseFee, tx.getMaxPriorityFeePerGas)
+      val baseFeePerGas = getBaseFeePerGas
+      val maxFeePerGas = tx.getMaxFeePerGas
+      val maxPriorityFeePerGas = tx.getMaxPriorityFeePerGas
+      // if the Base Fee plus the Max Priority Fee exceeds the Max Fee, the Max Priority Fee will be reduced
+      // in order to maintain the upper bound of the Max Fee.
+      val forgerTipPerGas = if (baseFeePerGas.add(maxPriorityFeePerGas).compareTo(maxFeePerGas) > 0) {
+        maxFeePerGas.subtract(baseFeePerGas)
+      } else {
+        maxPriorityFeePerGas
+      }
+      (baseFeePerGas, forgerTipPerGas)
     } else {
       (BigInteger.ZERO, tx.getGasPrice)
     }
@@ -376,9 +385,14 @@ class AccountStateView(
 
   def disableGasTracking(): Unit = trackedGasPool = None
 
+  def isGasTrackingEnabled(): Boolean = trackedGasPool.isDefined
+
   @throws(classOf[OutOfGasException])
   private def useGas(gas: BigInteger): Unit = trackedGasPool match {
-    case Some(gasPool) => gasPool.subGas(gas)
-    case None => // gas tracking is disabled
+    case Some(gasPool) =>
+      gasPool.subGas(gas)
+    case None =>
+      // gas tracking is disabled
+      log.debug("gas tracking disabled")
   }
 }

@@ -124,9 +124,9 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
           // legacy TXes will have just the second contribution, given by user set gasPrice.
           // EIP1559 TXes have both.
-          val (txBaseFeePerGas, txMaxPriorityFeePerGas) = stateView.getTxFeesPerGas(ethTx)
+          val (txBaseFeePerGas, txForgerTipPerGas) = stateView.getTxFeesPerGas(ethTx)
           cumBaseFee = cumBaseFee.add(txBaseFeePerGas.multiply(txGasUsed))
-          cumForgerTips = cumForgerTips.add(txMaxPriorityFeePerGas.multiply(txGasUsed))
+          cumForgerTips = cumForgerTips.add(txForgerTipPerGas.multiply(txGasUsed))
 
         case Failure(_: GasLimitReached) =>
           // block gas limit reached
@@ -203,7 +203,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val receiptsRoot: Array[Byte] = calculateReceiptRoot(receiptList)
 
     // TODO: 4. calculate baseFee
-    val baseFee = nodeView.state.getBaseFee
+    val baseFee = nodeView.state.getBaseFeePerGas
 
     // 5. Get cumulativeGasUsed from last receipt in list if available
     val gasUsed = if (receiptList.nonEmpty) receiptList.last.cumulativeGasUsed.longValue() else 0

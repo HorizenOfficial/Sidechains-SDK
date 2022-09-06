@@ -75,8 +75,8 @@ class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProc
       throw SenderNotEoaException(sender, view.getCodeHash(sender))
 
     // TODO: fee checks if message is "fake" (RPC calls)
-    if (msg.getGasFeeCap.compareTo(view.getBaseFee) < 0)
-      throw FeeCapTooLowException(sender, msg.getGasFeeCap, view.getBaseFee)
+    if (msg.getGasFeeCap.compareTo(view.getBaseFeePerGas) < 0)
+      throw FeeCapTooLowException(sender, msg.getGasFeeCap, view.getBaseFeePerGas)
   }
 
   private def buyGas(msg: Message): GasPool = {
@@ -118,7 +118,8 @@ class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProc
     if (remaining.compareTo(BigInteger.ZERO) > 0) {
       view.addBalance(sender, remaining)
       // the addBalance op subtracts gas, we have to restore it here otherwise remaining gas balance is wrong
-      gas.addGas(GasUtil.GasTBD)
+      if (view.isGasTrackingEnabled())
+        gas.addGas(GasUtil.GasTBD)
     }
 
     // return remaining gas to the gasPool of the current block so it is available for the next transaction
