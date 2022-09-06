@@ -31,7 +31,6 @@ LEVEL_ALL = "all"
 # timeout in secs for rest api
 DEFAULT_REST_API_TIMEOUT = 5
 
-
 class TimeoutException(Exception):
     def __init__(self, operation):
         Exception.__init__(self)
@@ -88,7 +87,7 @@ def sync_sc_blocks(api_connections, wait_for=25, p=False):
             raise TimeoutException("Syncing blocks")
         counts = [int(x.block_best()["result"]["height"]) for x in api_connections]
         if p:
-            print(counts)
+            logging.info(counts)
         if counts == [counts[0]] * len(counts):
             break
         time.sleep(WAIT_CONST)
@@ -127,12 +126,12 @@ def launch_bootstrap_tool(command_name, json_parameters):
         jsone_node = json.loads(sc_bootstrap_output)
         return jsone_node
     except ValueError:
-        print("Bootstrap tool error occurred for command= {}\nparams: {}\nError: {}\n"
-              .format(command_name, json_param, sc_bootstrap_output.decode()))
+        logging.info("Bootstrap tool error occurred for command= {}\nparams: {}\nError: {}\n"
+                     .format(command_name, json_param, sc_bootstrap_output.decode()))
         raise Exception("Bootstrap tool error occurred")
 
 
-def launch_db_tool(dirName, command_name, json_parameters):
+def launch_db_tool(dirName, storageNames, command_name, json_parameters):
     '''
     we use "blockchain" postfix for specifying the dataDir (see qa/resources/template.conf:
         dataDir = "%(DIRECTORY)s/sc_node%(NODE_NUMBER)s/blockchain"
@@ -149,8 +148,8 @@ def launch_db_tool(dirName, command_name, json_parameters):
         jsone_node = json.loads(db_tool_output)
         return jsone_node
     except ValueError:
-        print("DB tool error occurred for command= {}\nparams: {}\nError: {}\n"
-              .format(command_name, json_param, db_tool_output.decode()))
+        logging.info("DB tool error occurred for command= {}\nparams: {}\nError: {}\n"
+                     .format(command_name, json_param, db_tool_output.decode()))
         raise Exception("DB tool error occurred")
 
 
@@ -354,9 +353,9 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
     websocket_config = sc_node_config.mc_connection_info
     if not os.path.isdir(datadir):
         os.makedirs(datadir)
-
-    customFileName = './resources/template_' + str(n + 1) + '.conf'
-    fileToOpen = './resources/template.conf'
+    resourcesDir = get_resources_dir()
+    customFileName = resourcesDir + '/template_' + str(n + 1) + '.conf'
+    fileToOpen = resourcesDir + '/template.conf'
     if os.path.isfile(customFileName):
         fileToOpen = customFileName
 
@@ -375,6 +374,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
     api_key_hash = ""
     if sc_node_config.api_key != "":
         api_key_hash = calculateApiKeyHash(sc_node_config.api_key)
+    genesis_secrets += sc_node_config.initial_private_keys
+
     config = tmpConfig % {
         'NODE_NUMBER': n,
         'DIRECTORY': dirname,
@@ -452,8 +453,8 @@ def initialize_default_sc_datadir(dirname, n, api_key):
     cert_keys_paths = cert_proof_keys_paths(ps_keys_dir, cert_threshold_sig_max_keys=7, isCSWEnabled=False)
     csw_keys_paths = csw_proof_keys_paths(ps_keys_dir,
                                           LARGE_WITHDRAWAL_EPOCH_LENGTH)  # withdrawal epoch length taken from the config file.
-
-    with open('./resources/template_predefined_genesis.conf', 'r') as templateFile:
+    resourcesDir = get_resources_dir()
+    with open(resourcesDir + '/template_predefined_genesis.conf', 'r') as templateFile:
         tmpConfig = templateFile.read()
     api_key_hash = ""
     if api_key != "":
@@ -522,11 +523,12 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     # Will we have  extra args for SC too ?
     datadir = os.path.join(dirname, "sc_node" + str(i))
     lib_separator = ":"
+
     if sys.platform.startswith('win'):
         lib_separator = ";"
-
+    examples_dir = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '../..', 'examples'))
     if binary is None:
-        binary = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.5.0-SNAPSHOT.jar" + lib_separator + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+        binary = f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-0.5.0-SNAPSHOT.jar" + lib_separator + f"{examples_dir}/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
     #        else if platform.system() == 'Linux':
     '''
     In order to effectively attach a debugger (e.g IntelliJ) to the simpleapp, it is necessary to start the process
@@ -618,16 +620,14 @@ def connect_sc_nodes(from_connection, node_num, wait_for=25):
     """
     j = {"host": "127.0.0.1", \
          "port": str(sc_p2p_port(node_num))}
-    ip_port = "\"127.0.0.1:" + str(sc_p2p_port(node_num)) + "\""
-    print("Connecting to " + ip_port)
-    oldnum = len(from_connection.node_connectedPeers()["result"]["peers"])
+    ip_port = "127.0.0.1:" + str(sc_p2p_port(node_num))
+    logging.info("Connecting to '" + ip_port + "'")
     from_connection.node_connect(json.dumps(j))
     start = time.time()
     while True:
         if time.time() - start >= wait_for:
             raise (TimeoutException("Trying to connect to node{0}".format(node_num)))
-        newnum = len(from_connection.node_connectedPeers()["result"]["peers"])
-        if newnum == (oldnum + 1):
+        if any(i for i in (from_connection.node_connectedPeers()["result"]["peers"]) if i.get("remoteAddress") == "/" + ip_port):
             break
         time.sleep(WAIT_CONST)
 
@@ -639,7 +639,7 @@ def disconnect_sc_nodes(from_connection, node_num):
     j = {"host": "127.0.0.1", \
          "port": str(sc_p2p_port(node_num))}
     ip_port = "\"127.0.0.1:" + str(sc_p2p_port(node_num)) + "\""
-    print("Disconnecting from " + ip_port)
+    logging.info("Disconnecting from " + ip_port)
     from_connection.node_disconnect(json.dumps(j))
 
 
@@ -838,7 +838,7 @@ network: {
 def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
                               block_timestamp_rewind=DefaultBlockTimestampRewind):
     log_info = LogInfo(options.logfilelevel, options.logconsolelevel)
-    print(options)
+    logging.info(options)
     total_number_of_sidechain_nodes = len(network.sc_nodes_configuration)
     sc_creation_info = network.sc_creation_info
     ps_keys_dir = os.getenv("SIDECHAIN_SDK", "..") + "/qa/ps_keys"
@@ -997,7 +997,7 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbo
     while "error" in forge_result and forge_result["error"]["code"] == "0105":
         if ("no forging stake" in forge_result["error"]["description"]):
             raise AssertionError("No forging stake for the epoch")
-        print("Skip block generation for epoch {epochNumber} slot {slotNumber}".format(epochNumber=next_epoch,
+        logging.info("Skip block generation for epoch {epochNumber} slot {slotNumber}".format(epochNumber=next_epoch,
                                                                                        slotNumber=next_slot))
         next_epoch, next_slot = get_next_epoch_slot(next_epoch, next_slot, slots_in_epoch)
         forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot))
@@ -1005,7 +1005,7 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbo
     assert_true("result" in forge_result, "Error during block generation for SC {0}".format(node_name))
     block_id = forge_result["result"]["blockId"]
     if verbose == True:
-        print("Successfully forged block with id {blockId}".format(blockId=block_id))
+        logging.info("Successfully forged block with id {blockId}".format(blockId=block_id))
     return forge_result["result"]["blockId"]
 
 
@@ -1066,7 +1066,7 @@ def create_alien_sidechain(mcTest, mc_node, scVersion, epochLength, customHexTag
     try:
         ret = mc_node.sc_create(cmdInput)
     except Exception as e:
-        print(e)
+        logging.error(e)
         assert_true(False)
     # self.sync_all()
     # time.sleep(1) # if we have one node the sync_all won't sleep
@@ -1078,9 +1078,9 @@ def create_alien_sidechain(mcTest, mc_node, scVersion, epochLength, customHexTag
 def create_certificate_for_alien_sc(mcTest, scid, mc_node, fePatternArray):
     epoch_number_1, epoch_cum_tree_hash_1, sc_version, constant, sc_tag = get_scinfo_data(scid, mc_node)
 
-    print("sc_tag[{}]".format(sc_tag))
-    print("constant={}".format(constant))
-    print("sc_version={}".format(sc_version))
+    logging.info("sc_tag[{}]".format(sc_tag))
+    logging.info("constant={}".format(constant))
+    logging.info("sc_version={}".format(sc_version))
 
     vCfe = fePatternArray
     vCmt = []
@@ -1107,7 +1107,7 @@ def create_certificate_for_alien_sc(mcTest, scid, mc_node, fePatternArray):
         end_cum_comm_tree_root=epoch_cum_tree_hash_1, constant=constant,
         pks=[], amounts=[], custom_fields=feList)
 
-    print("cum =", epoch_cum_tree_hash_1)
+    logging.info("cum =", epoch_cum_tree_hash_1)
     params = {
         'scid': scid,
         'quality': 10,
@@ -1123,12 +1123,11 @@ def create_certificate_for_alien_sc(mcTest, scid, mc_node, fePatternArray):
         signed_cert = mc_node.signrawtransaction(rawcert)
         cert = mc_node.sendrawtransaction(signed_cert['hex'])
     except Exception as e:
-        print("Send certificate failed with reason {}".format(e))
+        logging.error("Send certificate failed with reason {}".format(e))
         assert (False)
 
     assert_equal(True, cert in mc_node.getrawmempool())
     return cert
-
 
 def deserialize_perf_test_json(json_file):
     with open(json_file) as f:
@@ -1142,3 +1141,6 @@ def deserialize_perf_test_json(json_file):
         raise error
 
     return json_data
+
+def get_resources_dir():
+    return os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'resources'))

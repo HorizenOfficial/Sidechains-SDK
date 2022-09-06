@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import logging
 import time
 from decimal import Decimal
 
@@ -113,7 +114,7 @@ class SCCertNoCoinRecord(SidechainTestFramework):
         # Wait until Certificate will appear in MC node mempool
         time.sleep(10)
         while mc_node2.getmempoolinfo()["size"] == 0 and sc_node2.submitter_isCertGenerationActive()["result"]["state"]:
-            print("Wait for certificate in mc mempool...")
+            logging.info("Wait for certificate in mc mempool...")
             time.sleep(2)
             sc_node1.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(1, mc_node2.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
@@ -159,7 +160,7 @@ class SCCertNoCoinRecord(SidechainTestFramework):
         # Wait until Certificate will appear in MC node mempool
         time.sleep(10)
         while mc_node2.getmempoolinfo()["size"] == 0 and sc_node2.submitter_isCertGenerationActive()["result"]["state"]:
-            print("Wait for certificate in mc mempool...")
+            logging.info("Wait for certificate in mc mempool...")
             time.sleep(2)
             sc_node1.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(1, mc_node2.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")

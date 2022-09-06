@@ -338,7 +338,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "decodeTransactionBytes")
         .withEntity(SerializationUtil.serialize(ReqDecodeTransactionBytes("AAABBBCCC"))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.InternalServerError.intValue
-        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        responseEntity.getContentType() shouldEqual ContentTypes.`text/plain(UTF-8)`
       }
     }
 
@@ -468,7 +468,7 @@ class SidechainTransactionApiRouteTest extends SidechainApiRouteTest {
       Post(basePath + "sendTransaction")
         .withHeaders(apiTokenHeader).withEntity(SerializationUtil.serialize(ReqSendTransactionPost("SOMEBYTES"))) ~> sidechainTransactionApiRoute ~> check {
         status.intValue() shouldBe StatusCodes.InternalServerError.intValue
-        responseEntity.getContentType() shouldEqual ContentTypes.`application/json`
+        responseEntity.getContentType() shouldEqual ContentTypes.`text/plain(UTF-8)`
       }
       // companion.parseBytesTry(transactionBytes) -> FAILURE
       Post(basePath + "sendTransaction")

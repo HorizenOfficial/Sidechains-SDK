@@ -2,7 +2,7 @@ package com.horizen.utils
 
 import com.horizen.consensus.{ConsensusAbsoluteSlotNumber, ConsensusEpochAndSlot, ConsensusEpochNumber, ConsensusSlotNumber, intToConsensusAbsoluteSlotNumber, intToConsensusEpochNumber, intToConsensusSlotNumber}
 import com.horizen.params.NetworkParams
-import scorex.core.block.Block
+import sparkz.core.block.Block
 
 object TimeToEpochUtils {
   def epochInSeconds(params: NetworkParams): Long = {

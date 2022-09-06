@@ -6,7 +6,7 @@ import com.horizen.transaction.mainchain.SidechainCreationSerializer;
 import com.horizen.transaction.mainchain.SidechainRelatedMainchainOutput;
 import com.horizen.utils.DynamicTypedSerializer;
 import com.horizen.utils.ListSerializer;
-import scorex.core.serialization.ScorexSerializer;
+import sparkz.core.serialization.SparkzSerializer;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
@@ -21,10 +21,10 @@ public final class MC2SCAggregatedTransactionSerializer implements TransactionSe
     // Serializers definition
     private static ListSerializer<SidechainRelatedMainchainOutput> mc2scTransactionsSerializer = new ListSerializer<>(
             new DynamicTypedSerializer<>(
-                    new HashMap<Byte, ScorexSerializer<SidechainRelatedMainchainOutput>>() {{
-                        put((byte)1, (ScorexSerializer) SidechainCreationSerializer.getSerializer());
-                        put((byte)2, (ScorexSerializer) ForwardTransferSerializer.getSerializer());
-                        put((byte)3, (ScorexSerializer) BwtRequestSerializer.getSerializer());
+                    new HashMap<Byte, SparkzSerializer<SidechainRelatedMainchainOutput>>() {{
+                        put((byte)1, (SparkzSerializer) SidechainCreationSerializer.getSerializer());
+                        put((byte)2, (SparkzSerializer) ForwardTransferSerializer.getSerializer());
+                        put((byte)3, (SparkzSerializer) BwtRequestSerializer.getSerializer());
                     }}, new HashMap<>()
             ));
 

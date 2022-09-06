@@ -5,7 +5,7 @@ import com.horizen.proposition.PublicKey25519Proposition;
 import com.horizen.box.ZenBox;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import scala.Array;
-import scorex.core.serialization.ScorexSerializer;
+import sparkz.core.serialization.SparkzSerializer;
 
 import java.util.Collections;
 import java.util.List;
@@ -85,7 +85,7 @@ public class FeePaymentsTransaction extends BoxTransaction<PublicKey25519Proposi
     public Boolean isCustom() { return false; }
 
     @Override
-    public ScorexSerializer serializer() {
+    public SparkzSerializer serializer() {
         return FeePaymentsTransactionSerializer.getSerializer();
     }
 }

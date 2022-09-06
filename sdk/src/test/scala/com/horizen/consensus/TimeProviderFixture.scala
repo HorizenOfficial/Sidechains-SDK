@@ -1,7 +1,7 @@
 package com.horizen.consensus
 
-import scorex.core.utils.TimeProvider
-import scorex.core.utils.TimeProvider.Time
+import sparkz.core.utils.TimeProvider
+import sparkz.core.utils.TimeProvider.Time
 
 trait TimeProviderFixture {
   val timeProvider = new TimeProvider {

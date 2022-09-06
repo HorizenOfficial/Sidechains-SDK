@@ -20,7 +20,7 @@ import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.{BytesUtils, Pair, TestSidechainsVersionsManager}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.core.NodeViewHolder.CurrentView
+import sparkz.core.NodeViewHolder.CurrentView
 import scorex.util.{ModifierId, bytesToId, idToBytes}
 
 import scala.collection.JavaConverters._

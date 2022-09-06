@@ -184,7 +184,7 @@ class MCSCForging1(SidechainTestFramework):
 
         # Generate SC block
         scblock_id5 = generate_next_blocks(sc_node1, "first node", 1)[0]
-        # print(json.dumps(sc_node1.block_findById(blockId=scblock_id5), indent=4))
+        # logging.info(json.dumps(sc_node1.block_findById(blockId=scblock_id5), indent=4))
         check_scparent(scblock_id0, scblock_id5, sc_node1)
         # Verify that SC block contains newly created MC blocks as a MainchainHeaders and no MainchainRefData
         check_mcheaders_amount(5, scblock_id5, sc_node1)

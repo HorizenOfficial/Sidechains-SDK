@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import logging
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -150,10 +151,10 @@ class SCCswCeasedAtEpoch2(SidechainTestFramework):
 
         # Generate 8 more MC blocks to finish the first withdrawal epoch, then generate 1 more SC block to sync with MC.
         we0_end_mcblock_hash = mc_node.generate(epoch_mc_blocks_left)[-1]
-        print("End mc block hash in withdrawal epoch 0 = " + we0_end_mcblock_hash)
+        logging.info("End mc block hash in withdrawal epoch 0 = " + we0_end_mcblock_hash)
         we0_end_mcblock_json = mc_node.getblock(we0_end_mcblock_hash)
         we0_end_epoch_cum_sc_tx_comm_tree_root = we0_end_mcblock_json["scCumTreeHash"]
-        print("End cum sc tx cum comm tree root hash in withdrawal epoch 0 = " + we0_end_epoch_cum_sc_tx_comm_tree_root)
+        logging.info("End cum sc tx cum comm tree root hash in withdrawal epoch 0 = " + we0_end_epoch_cum_sc_tx_comm_tree_root)
         sc_block_id = generate_next_block(sc_node, "first node")
         check_mcreferencedata_presence(we0_end_mcblock_hash, sc_block_id, sc_node)
 
@@ -168,7 +169,7 @@ class SCCswCeasedAtEpoch2(SidechainTestFramework):
         # Wait until Certificate will appear in MC node mempool
         time.sleep(10)
         while mc_node.getmempoolinfo()["size"] == 0 and sc_node.submitter_isCertGenerationActive()["result"]["state"]:
-            print("Wait for certificate in mc mempool...")
+            logging.info("Wait for certificate in mc mempool...")
             time.sleep(2)
             sc_node.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
@@ -236,10 +237,10 @@ class SCCswCeasedAtEpoch2(SidechainTestFramework):
 
         # Generate more MC blocks to finish the second withdrawal epoch, then generate 1 more SC block to sync with MC.
         we1_end_mcblock_hash = mc_node.generate(epoch_mc_blocks_left)[-1]
-        print("End mc block hash in withdrawal epoch 1 = " + we1_end_mcblock_hash)
+        logging.info("End mc block hash in withdrawal epoch 1 = " + we1_end_mcblock_hash)
         we1_end_mcblock_json = mc_node.getblock(we1_end_mcblock_hash)
         we1_end_epoch_cum_sc_tx_comm_tree_root = we1_end_mcblock_json["scCumTreeHash"]
-        print("End cum sc tx cum comm tree root hash in withdrawal epoch 1 = " + we1_end_epoch_cum_sc_tx_comm_tree_root)
+        logging.info("End cum sc tx cum comm tree root hash in withdrawal epoch 1 = " + we1_end_epoch_cum_sc_tx_comm_tree_root)
         sc_block_id = generate_next_block(sc_node, "first node")
         check_mcreferencedata_presence(we1_end_mcblock_hash, sc_block_id, sc_node)
 
@@ -368,7 +369,7 @@ class SCCswCeasedAtEpoch2(SidechainTestFramework):
         # Wait for proofs generation completion.
         attempts = 150
         while not if_csws_were_generated(sc_node, csw_box_ids, allow_absent=True) and attempts > 0:
-            print("Wait for CSW proofs creation completion...")
+            logging.info("Wait for CSW proofs creation completion...")
             time.sleep(10)
             attempts -= 1
 
@@ -404,9 +405,9 @@ class SCCswCeasedAtEpoch2(SidechainTestFramework):
             sigRawtx = mc_node.signrawtransaction(funded_tx['hex'], None, None, "NONE")
             finalRawtx = mc_node.sendrawtransaction(sigRawtx['hex'])
 
-            print("sent csw 1 {} retrieving {} coins on MC node".format(finalRawtx, sc_csws[0]['amount']))
+            logging.info("sent csw 1 {} retrieving {} coins on MC node".format(finalRawtx, sc_csws[0]['amount']))
 
-            print("Check csw is in mempool...")
+            logging.info("Check csw is in mempool...")
             assert_true(finalRawtx in mc_node.getrawmempool())
 
             # MC has a limit per number of CSW in the mempool in regtest: ScMaxNumberOfCswInputsInMempool = 5

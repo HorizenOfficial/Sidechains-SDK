@@ -5,7 +5,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
 import com.horizen.utils.{BytesUtils, ListSerializer, MerkleTree, Utils}
 import com.horizen.validation.{InconsistentOmmerDataException, InvalidOmmerDataException}
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
+import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.util.serialization.{Reader, Writer}
 import scorex.util.idToBytes
 
@@ -22,7 +22,7 @@ case class Ommer(
                 ) extends OmmersContainer with BytesSerializable {
   override type M = Ommer
 
-  override def serializer: ScorexSerializer[Ommer] = OmmerSerializer
+  override def serializer: SparkzSerializer[Ommer] = OmmerSerializer
 
   lazy val id: Array[Byte] = idToBytes(header.id)
 
@@ -145,7 +145,7 @@ object Ommer {
 }
 
 
-object OmmerSerializer extends ScorexSerializer[Ommer] {
+object OmmerSerializer extends SparkzSerializer[Ommer] {
   private val mainchainHeaderListSerializer = new ListSerializer[MainchainHeader](MainchainHeaderSerializer)
   private val ommersListSerializer = new ListSerializer[Ommer](OmmerSerializer)
 

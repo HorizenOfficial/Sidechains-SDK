@@ -3,7 +3,7 @@ package com.horizen.api.http
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
-import scorex.core.settings.RESTApiSettings
+import sparkz.core.settings.RESTApiSettings
 
 import scala.concurrent.ExecutionContext
 

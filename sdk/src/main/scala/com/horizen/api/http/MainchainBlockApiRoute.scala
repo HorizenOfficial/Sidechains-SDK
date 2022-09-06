@@ -11,8 +11,8 @@ import com.horizen.chain.MainchainHeaderInfo
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
-import scorex.core.settings.RESTApiSettings
-import scorex.core.utils.ScorexEncoding
+import sparkz.core.settings.RESTApiSettings
+import sparkz.core.utils.SparkzEncoding
 
 import scala.compat.java8.OptionConverters._
 import scala.concurrent.ExecutionContext
@@ -21,7 +21,7 @@ import java.util.{Optional => JOptional}
 case class MainchainBlockApiRoute(override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef)
                                  (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute
-    with ScorexEncoding {
+    with SparkzEncoding {
 
   override val route: Route = pathPrefix("mainchain") {
       bestBlockReferenceInfo ~
