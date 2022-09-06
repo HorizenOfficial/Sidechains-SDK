@@ -1,5 +1,6 @@
 {
   "test_type": "transactions_per_second",
+  "use_multithreading": true,
   "max_tps_per_process": 100,
   "test_run_time": 50,
   "block_rate": 30,

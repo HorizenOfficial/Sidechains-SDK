@@ -138,8 +138,11 @@ class PerformanceTest(SidechainTestFramework):
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720 * self.block_rate / 2)
 
     def sc_setup_nodes(self):
-        # return start_sc_nodes(len(self.sc_node_data), self.options.tmpdir)
-        return start_sc_nodes_with_multiprocessing(len(self.sc_node_data), self.options.tmpdir)
+        if(self.perf_data["use_multithreading"]):
+            return start_sc_nodes_with_multiprocessing(len(self.sc_node_data), self.options.tmpdir)
+        else:
+            return start_sc_nodes(len(self.sc_node_data), self.options.tmpdir)
+
 
     def create_node_connection_map(self, key, values):
         for value in values:

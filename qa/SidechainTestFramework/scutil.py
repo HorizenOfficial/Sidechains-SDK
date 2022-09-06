@@ -573,22 +573,15 @@ def start_sc_nodes_with_multiprocessing(num_nodes, dirname, extra_args=None, rpc
     """
     if extra_args is None: extra_args = [None for i in range(num_nodes)]
     if binary is None: binary = [None for i in range(num_nodes)]
-    i = 0
-    args = []
 
-    with multiprocessing.Pool() as pool:
-        # noinspection PyProtectedMember
-        workers: int = pool._processes
-        print(f"Running pool with {workers} workers")
+    workers: int = multiprocessing.Pool()._processes
 
-        while i < num_nodes:
-            args.append((i, dirname, extra_args[i], rpchost, None, binary[i], print_output_to_file,auth_api_key, True, i+2))
-            i += 1
+    nodes = [
+        start_sc_node(i, dirname, extra_args[i], rpchost, binary=binary[i], print_output_to_file=print_output_to_file,
+                      auth_api_key=auth_api_key, use_multiprocessing=True, processor=i)
+        for i in range(num_nodes)]
 
-        nodes = pool.starmap(start_sc_node, args)
-        print("...MULTIPROCESSING NODES...")
     wait_for_sc_node_initialization(nodes)
-    pprint.pprint(nodes)
     return nodes
 
 
