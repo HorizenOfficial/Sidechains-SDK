@@ -21,7 +21,7 @@ from httpCalls.wallet.createPrivateKey25519 import http_wallet_createPrivateKey2
 from test_framework.util import start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, assert_equal
 from SidechainTestFramework.scutil import assert_true, bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks, \
-    deserialize_perf_test_json, connect_sc_nodes
+    deserialize_perf_test_json, connect_sc_nodes, start_sc_nodes_with_multiprocessing
 from performance.perf_data import NetworkTopology, TestType
 
 # Declare global thread safe values used for multiprocessing tps test
@@ -138,7 +138,8 @@ class PerformanceTest(SidechainTestFramework):
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720 * self.block_rate / 2)
 
     def sc_setup_nodes(self):
-        return start_sc_nodes(len(self.sc_node_data), self.options.tmpdir)
+        # return start_sc_nodes(len(self.sc_node_data), self.options.tmpdir)
+        return start_sc_nodes_with_multiprocessing(len(self.sc_node_data), self.options.tmpdir)
 
     def create_node_connection_map(self, key, values):
         for value in values:

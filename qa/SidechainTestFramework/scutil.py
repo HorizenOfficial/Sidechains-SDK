@@ -1,4 +1,8 @@
+import pprint
+
+import psutil
 import logging
+import multiprocessing
 import os
 import sys
 import json
@@ -515,7 +519,12 @@ def get_websocket_configuration(index, array_of_MCConnectionInfo):
 
 
 def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None, print_output_to_file=False,
-                  auth_api_key=None):
+                  auth_api_key=None, use_multiprocessing=False, processor=None):
+    if use_multiprocessing:
+        p = psutil.Process()
+        print(f"Process #{processor}: {p}, affinity {p.cpu_affinity()}", flush=True)
+        p.cpu_affinity([processor])
+        print(f"Process #{processor}: Set Node{i} affinity to {processor}, Node{i} affinity now {p.cpu_affinity()}", flush=True)
     """
     Start a SC node and returns API connection to it
     """
@@ -555,6 +564,32 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     proxy.url = url  # store URL on proxy for info
     proxy.dataDir = datadir  # store the name of the datadir
     return proxy
+
+
+def start_sc_nodes_with_multiprocessing(num_nodes, dirname, extra_args=None, rpchost=None, binary=None, print_output_to_file=False,
+                   auth_api_key=DEFAULT_API_KEY):
+    """
+    Start multiple SC clients, return connections to them
+    """
+    if extra_args is None: extra_args = [None for i in range(num_nodes)]
+    if binary is None: binary = [None for i in range(num_nodes)]
+    i = 0
+    args = []
+
+    with multiprocessing.Pool() as pool:
+        # noinspection PyProtectedMember
+        workers: int = pool._processes
+        print(f"Running pool with {workers} workers")
+
+        while i < num_nodes:
+            args.append((i, dirname, extra_args[i], rpchost, None, binary[i], print_output_to_file,auth_api_key, True, i+2))
+            i += 1
+
+        nodes = pool.starmap(start_sc_node, args)
+        print("...MULTIPROCESSING NODES...")
+    wait_for_sc_node_initialization(nodes)
+    pprint.pprint(nodes)
+    return nodes
 
 
 def start_sc_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=None, print_output_to_file=False,
