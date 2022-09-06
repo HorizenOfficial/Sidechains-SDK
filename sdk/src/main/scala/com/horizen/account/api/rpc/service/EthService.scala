@@ -419,15 +419,15 @@ class EthService(
     }
   }
 
-  @RpcMethod()
-  def traceBlockByNumber(blockNumber: String) = {
+  @RpcMethod("debug_traceBlockByNumber")
+  def traceBlockByNumber(blockNumber: String): Array[EvmResult] = {
+    val transactionResults: Array[EvmResult] = Array[EvmResult](0)
     val previousBlockNumber = BigInteger.valueOf(blockNumber.toLong).subtract(BigInteger.ONE).toString()
 
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, previousBlockNumber) { tagStateView =>
         {
           val currentBlock = nodeView.history.getBlockById(blockNumber).get()
-          val gasPool = new GasPool(BigInteger.valueOf(currentBlock.header.gasLimit))
           val transactionList = currentBlock.transactions
 
           for (mcBlockRefData <- currentBlock.mainchainBlockReferencesData) {
@@ -435,11 +435,22 @@ class EthService(
           }
 
           transactionList.zipWithIndex.foreach({ case (tx, i) =>
-            tagStateView.applyTransaction(tx, i, gasPool)
+            transactionResults(i) = Evm
+              .Trace(
+                tagStateView.getStateDbHandle,
+                tx.getFrom.bytes(),
+                tx.getTo.bytes(),
+                tx.getValue,
+                tx.getData,
+                tx.getGasLimit,
+                tx.getGasPrice,
+                null
+              )
           })
         }
       }
     }
+    transactionResults
   }
 
   @RpcMethod("debug_traceTransaction")
@@ -463,7 +474,7 @@ class EthService(
           breakable {
             for ((tx, i) <- transactions.zipWithIndex) {
               if (BytesUtils.fromHexString(tx.id) == transactionHash) {
-                val receipt = Evm
+                val txResult = Evm
                   .Trace(
                     tagStateView.getStateDbHandle,
                     tx.getFrom.bytes(),
@@ -475,9 +486,9 @@ class EthService(
                     null
                   )
 
-                evmResult.traceLogs = receipt.traceLogs
-                evmResult.usedGas = receipt.usedGas
-                evmResult.returnData = receipt.returnData
+                evmResult.traceLogs = txResult.traceLogs
+                evmResult.usedGas = txResult.usedGas
+                evmResult.returnData = txResult.returnData
 
                 break
               }
