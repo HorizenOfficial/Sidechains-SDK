@@ -14,7 +14,7 @@ from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, is_mainchain_block_included_in_sc_block, \
     check_mainchain_block_reference_info, \
     AccountModelBlockVersion, EVM_APP_BINARY, generate_next_blocks, generate_next_block, generate_account_proposition, \
-    convertZenniesToWei, convertZenToZennies, connect_sc_nodes
+    convertZenniesToWei, convertZenToZennies, connect_sc_nodes, computeForgedTxFee
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 
 """
@@ -195,7 +195,7 @@ class SCEvmBootstrap(SidechainTestFramework):
         request = json.dumps(j)
         response = sc_node_1.transaction_sendCoinsToAddress(request)
         print("tx sent:")
-        pprint.pprint(response)
+        tx_hash_1 = response['result']['transactionId']
         self.sc_sync_all()
 
         # request chainId via rpc route
@@ -214,8 +214,10 @@ class SCEvmBootstrap(SidechainTestFramework):
         # check if header contains correct gasUsed (2 * eoa to eoa transfer gas costs)
         assert_equal(21000*2, sc_best_block['block']['header']['gasUsed'])
 
+        transactionFee_1, forgersPoolFee_1, forgerTip_1 = computeForgedTxFee(sc_node_1, tx_hash_1)
+
         final_balance = http_wallet_balance(sc_node_1, evm_address)
-        assert_equal(initial_balance - transferred_amount_in_wei, final_balance)
+        assert_equal(initial_balance - transferred_amount_in_wei - transactionFee_1, final_balance)
 
 
 if __name__ == "__main__":
