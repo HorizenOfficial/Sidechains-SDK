@@ -60,6 +60,7 @@ public class EvmMessageProcessor implements MessageProcessor {
                     // returnData here will include the revert reason
                     throw new ExecutionRevertedException(returnData);
                 case "out of gas":
+                case "contract creation code storage out of gas":
                     throw new OutOfGasException();
                 default:
                     throw new ExecutionFailedException(result.evmError);

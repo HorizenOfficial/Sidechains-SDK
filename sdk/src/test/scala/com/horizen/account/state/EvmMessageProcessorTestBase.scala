@@ -19,7 +19,7 @@ trait EvmMessageProcessorTestBase {
     val price = BigInteger.ZERO
     val value = BigInteger.ZERO
     val nonce = BigInteger.ZERO
-    new Message(originAddress, to, price, price, price, gas, value, nonce, data)
+    new Message(originAddress, to, price, price, price, gas, value, nonce, data, false)
   }
 
   def getMessage(to: AddressProposition): Message = getMessage(to, null)

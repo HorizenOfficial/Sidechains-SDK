@@ -69,7 +69,8 @@ class ForgerStakeMsgProcessorTest
       dummyBigInteger, // gasLimit
       value,
       nonce,
-      data)
+      data,
+      false)
   }
 
   def randomNonce: BigInteger = randomU256

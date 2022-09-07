@@ -59,14 +59,15 @@ class StateTransition(
     val sender = msg.getFrom.address()
 
     // Check the nonce
-    // TODO: skip nonce checks if message is "fake" (RPC calls)
     val stateNonce = view.getNonce(sender)
-    val txNonce = msg.getNonce
-    val result = txNonce.compareTo(stateNonce)
-    if (result < 0) {
-      throw NonceTooLowException(sender, txNonce, stateNonce)
-    } else if (result > 0) {
-      throw NonceTooHighException(sender, txNonce, stateNonce)
+    if (!msg.getIsFakeMsg) {
+      val txNonce = msg.getNonce
+      val result = txNonce.compareTo(stateNonce)
+      if (result < 0) {
+        throw NonceTooLowException(sender, txNonce, stateNonce)
+      } else if (result > 0) {
+        throw NonceTooHighException(sender, txNonce, stateNonce)
+      }
     }
     // GETH and therefore StateDB use uint64 to store the nonce and perform an overflow check here using (nonce+1<nonce)
     // BigInteger will not overflow like that, so we just verify that the result after increment still fits into 64 bits

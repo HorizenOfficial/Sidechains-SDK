@@ -57,7 +57,20 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
       }
     }.asInstanceOf[Future[Try[R]]]
     // return result or rethrow potential exceptions
-    Await.result(res, nvtimeout).get
+    Await.result(res, nvtimeout) match {
+      case Failure(exception) => exception match {
+        case reverted: ExecutionRevertedException => throw new RpcException(new RpcError(
+          RpcCode.ExecutionError.getCode, exception.getMessage, Numeric.toHexString(reverted.revertReason)))
+        case err: ExecutionFailedException => throw new RpcException(new RpcError(
+          RpcCode.ExecutionError.getCode, err.getMessage, null))
+        case err: TransactionSemanticValidityException => throw new RpcException(new RpcError(
+          RpcCode.ExecutionError.getCode, err.getMessage, null))
+        case err: OutOfGasException => throw new RpcException(new RpcError(
+          RpcCode.ExecutionError.getCode, err.getMessage, null))
+        case _ => throw exception
+      }
+      case Success(value) => value
+    }
   }
 
   //function which describes default transaction representation for answer after adding the transaction to a memory pool
@@ -111,18 +124,8 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
 
   private def doCall[A](nodeView: NV, params: TransactionArgs, tag: String)(fun: (Array[Byte], AccountStateView) ⇒ A): A = {
     getStateViewAtTag(nodeView, tag) { (tagStateView, blockContext) =>
-      try {
-        val msg = params.toMessage(blockContext.baseFee)
-        fun(tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit), blockContext), tagStateView)
-      } catch {
-        // throw on execution errors, also include evm revert reason if possible
-        case reverted: ExecutionRevertedException => throw new RpcException(new RpcError(
-          RpcCode.ExecutionError.getCode, reverted.getMessage, Numeric.toHexString(reverted.revertReason)))
-        case err: ExecutionFailedException => throw new RpcException(new RpcError(
-          RpcCode.ExecutionError.getCode, err.getMessage, null))
-        case err: TransactionSemanticValidityException => throw new RpcException(new RpcError(
-          RpcCode.ExecutionError.getCode, err.getMessage, null))
-      }
+      val msg = params.toMessage(blockContext.baseFee)
+      fun(tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit), blockContext), tagStateView)
     }
   }
 
