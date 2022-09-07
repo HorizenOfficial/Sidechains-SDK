@@ -18,6 +18,8 @@ public class Message {
     private final BigInteger nonce;
     private final byte[] data;
 
+    private final boolean fakeMsg;
+
     public Message(
             AddressProposition from,
             AddressProposition to,
@@ -27,7 +29,8 @@ public class Message {
             BigInteger gasLimit,
             BigInteger value,
             BigInteger nonce,
-            byte[] data
+            byte[] data,
+            boolean fakeMsg
     ) {
         this.from = from;
         this.to = to;
@@ -38,6 +41,7 @@ public class Message {
         this.value = value;
         this.nonce = nonce;
         this.data = data == null ? null : Arrays.copyOf(data, data.length);
+        this.fakeMsg = fakeMsg;
     }
 
     public AddressProposition getFrom() {
@@ -75,4 +79,6 @@ public class Message {
     public byte[] getData() {
         return data;
     }
+
+    public boolean getIsFakeMsg() { return fakeMsg; }
 }

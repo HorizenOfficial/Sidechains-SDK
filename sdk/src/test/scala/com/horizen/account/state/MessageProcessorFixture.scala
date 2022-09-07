@@ -67,7 +67,8 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
       gasLimit,
       value,
       nonce,
-      data
+      data,
+      false
     )
   }
 
