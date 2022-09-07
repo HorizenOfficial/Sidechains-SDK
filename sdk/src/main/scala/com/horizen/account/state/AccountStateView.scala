@@ -164,8 +164,6 @@ class AccountStateView(
     } finally {
       // finalize pending changes, clear the journal and reset refund counter
       stateDb.finalizeChanges()
-      // make sure we disable automatic gas consumption in case a message processor enabled it
-      disableGasTracking()
     }
     val consensusDataReceipt = new EthereumConsensusDataReceipt(
       ethTx.version(), status.id, blockGasPool.getUsedGas, getLogs(txHash))

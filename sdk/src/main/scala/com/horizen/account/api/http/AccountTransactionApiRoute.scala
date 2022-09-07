@@ -183,7 +183,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     entity(as[ReqEIP1559Transaction]) { body =>
       // lock the view and try to create CoreTransaction
       applyOnNodeView { sidechainNodeView =>
-        val secret = getFittingSecret(sidechainNodeView, body.from, BigInteger.valueOf(body.value))
+        val secret = getFittingSecret(sidechainNodeView, body.from, body.value)
 
         val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.get.publicImage.address))
 
@@ -194,7 +194,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           body.gasLimit,
           body.maxPriorityFeePerGas,
           body.maxFeePerGas,
-          BigInteger.valueOf(body.value),
+          body.value,
           body.data,
           if (body.signature_v.isDefined)
             new SignatureData(
@@ -309,7 +309,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         val baseFee = sidechainNodeView.getNodeState.getBaseFeePerGas
         var maxPriorityFeePerGas = BigInteger.valueOf(120)
         var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
-        var gasLimit = GasUtil.TxGasContractCreation
+        var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
 
         if (body.gasInfo.isDefined) {
           maxFeePerGas = body.gasInfo.get.maxFeePerGas
@@ -706,7 +706,7 @@ object AccountTransactionRestScheme {
                                                  gasLimit: BigInteger,
                                                  maxPriorityFeePerGas: BigInteger,
                                                  maxFeePerGas: BigInteger,
-                                                 @JsonDeserialize(contentAs = classOf[lang.Long]) value: Long,
+                                                 value: BigInteger,
                                                  data: String,
                                                  signature_v: Option[Array[Byte]],
                                                  signature_r: Option[Array[Byte]],

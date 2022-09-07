@@ -44,15 +44,17 @@ object AccountFeePaymentsUtils {
 
     val forgersRewards: Seq[AccountFeePaymentsInfo] = forgerKeys.map {
       forgerKey => { // consider this forger
-        var forgerTotalFee = BigInteger.ZERO
-        allForgersRewards.withFilter(
-          info => forgerKey.equals(info.address) // if the address is the one of this forger
-        ).foreach(
-          info => forgerTotalFee = forgerTotalFee.add(info.value) // increment the amount for this address
-        )
-        AccountFeePaymentsInfo(forgerKey, forgerTotalFee) // return the resulting entry
+
+        // sum all rewards for this forger address
+        val forgerTotalFee = allForgersRewards
+          .filter(info => forgerKey.equals(info.address))
+          .foldLeft(BigInteger.ZERO)((sum, info) => sum.add(info.value))
+
+        // return the resulting entry
+        AccountFeePaymentsInfo(forgerKey, forgerTotalFee)
       }
     }
+
     forgersRewards
   }
 }
