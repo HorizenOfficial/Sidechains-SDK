@@ -1,0 +1,13 @@
+#!/bin/bash
+
+chmod +x ../perf_test.py
+export BITCOINCLI=/my/directory
+export BITCOIND=/my/directory
+export SIDECHAIN_SDK=/my/directory
+
+jq '.test_run_time = 30 | .initial_txs = 500 | .latency_settings.peer_spec = 0' perf_test.json
+(cd .. && python3.9 perf_test.py)
+jq '.test_run_time = 20 | .initial_txs = 250 | .latency_settings.peer_spec = 0' perf_test.json
+(cd .. && python3.9 perf_test.py)
+
+
