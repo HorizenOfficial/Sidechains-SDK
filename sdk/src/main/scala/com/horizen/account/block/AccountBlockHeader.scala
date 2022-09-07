@@ -19,6 +19,7 @@ import scorex.crypto.hash.Blake2b256
 import scorex.util.ModifierId
 import scorex.util.serialization.{Reader, Writer}
 
+import java.math.BigInteger
 import scala.util.{Failure, Success, Try}
 
 @JsonView(Array(classOf[Views.Default]))
@@ -35,7 +36,7 @@ case class AccountBlockHeader(
                                stateRoot: Array[Byte],
                                receiptsRoot: Array[Byte],
                                forgerAddress: AddressProposition,
-                               baseFee: Long,
+                               baseFee: BigInteger,
                                gasUsed: Long,
                                gasLimit: Long,
                                override val ommersMerkleRootHash: Array[Byte], // build on top of Ommer.id()
@@ -64,7 +65,7 @@ case class AccountBlockHeader(
       stateRoot,
       receiptsRoot,
       forgerAddress.bytes(),
-      Longs.toByteArray(baseFee),
+      baseFee.toByteArray,
       Longs.toByteArray(gasUsed),
       Longs.toByteArray(gasLimit),
       ommersMerkleRootHash,
@@ -127,7 +128,9 @@ object AccountBlockHeaderSerializer extends ScorexSerializer[AccountBlockHeader]
 
     AddressPropositionSerializer.getSerializer.serialize(obj.forgerAddress, w)
 
-    w.putLong(obj.baseFee)
+    val baseFee = obj.baseFee.toByteArray
+    w.putInt(baseFee.length)
+    w.putBytes(baseFee)
 
     w.putLong(obj.gasUsed)
 
@@ -168,7 +171,8 @@ object AccountBlockHeaderSerializer extends ScorexSerializer[AccountBlockHeader]
 
     val forgerAddress = AddressPropositionSerializer.getSerializer.parse(r)
 
-    val baseFee = r.getLong()
+    val baseFeeSize = r.getInt()
+    val baseFee = new BigInteger(r.getBytes(baseFeeSize))
 
     val gasUsed = r.getLong()
 

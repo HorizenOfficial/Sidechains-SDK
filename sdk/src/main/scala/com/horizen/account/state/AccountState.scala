@@ -1,12 +1,12 @@
 package com.horizen.account.state
 
 import com.horizen.SidechainTypes
+import com.horizen.account.FeeUtils
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountState
 import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.Account
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.evm._
@@ -344,7 +344,7 @@ class AccountState(val params: NetworkParams,
     if (tx.isInstanceOf[EthereumTransaction]) {
 
       val ethTx = tx.asInstanceOf[EthereumTransaction]
-      val blockGasLimit = Account.GAS_LIMIT
+      val blockGasLimit = FeeUtils.GAS_LIMIT
       val blockGasPool = new GasPool(BigInteger.valueOf(blockGasLimit))
       val blockContext = new BlockContext(
         // use the null address as forger
@@ -352,7 +352,7 @@ class AccountState(val params: NetworkParams,
         // TODO: what timestamp do we use here? just use "now()" or can we get the timestamp of the last block?
         0,
         // TODO: what baseFee do we use here? can we get the baseFee of the last block?
-        0,
+        BigInteger.ZERO,
         // TODO: can we get the gas limit of the last block?
         blockGasLimit,
         stateMetadataStorage.getHeight,
