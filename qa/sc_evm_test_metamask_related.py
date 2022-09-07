@@ -12,7 +12,7 @@ from test_framework.util import assert_equal, assert_true, start_nodes, websocke
     forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, \
     is_mainchain_block_included_in_sc_block, check_mainchain_block_reference_info, AccountModelBlockVersion, \
-    EVM_APP_BINARY, generate_next_blocks, generate_next_block
+    EVM_APP_BINARY, generate_next_blocks, generate_next_block, computeForgedTxGasUsed
 from SidechainTestFramework.account.eoa_util import eoa_transaction
 
 """
@@ -403,34 +403,35 @@ class SCEvmMetamaskTest(SidechainTestFramework):
         eoa_assert_native_balance(sc_node, other_address, 0)
 
         eoa_transfer(sc_node, evm_address, other_address, transfer_amount, static_call=True, generate_block=False)
-        eoa_transfer(sc_node, evm_address, other_address, transfer_amount, call_method=CallMethod.RPC_LEGACY)
+        tx_hash_legacy = eoa_transfer(sc_node, evm_address, other_address, transfer_amount,
+                                      call_method=CallMethod.RPC_LEGACY)
 
-        current_balance = int(sc_node.rpc_eth_getBalance(str(evm_address), "latest")['result'], 16)
-        total_gas_used = initial_balance - (current_balance + transfer_amount)
+        gas_used_legacy = computeForgedTxGasUsed(sc_node, tx_hash_legacy)
 
-        eoa_assert_native_balance(sc_node, evm_address, current_balance - (transfer_amount + total_gas_used))
+        eoa_assert_native_balance(sc_node, evm_address, initial_balance - (transfer_amount + gas_used_legacy))
         eoa_assert_native_balance(sc_node, other_address, transfer_amount)
 
         eoa_transfer(sc_node, evm_address, other_address, transfer_amount, static_call=True, generate_block=False)
-        eoa_transfer(sc_node, evm_address, other_address, transfer_amount, call_method=CallMethod.RPC_EIP155)
+        tx_hash_eip155 = eoa_transfer(sc_node, evm_address, other_address, transfer_amount,
+                                      call_method=CallMethod.RPC_EIP155)
 
-        total_gas_used += current_balance - (
-                int(sc_node.rpc_eth_getBalance(str(evm_address), "latest")['result'], 16) + transfer_amount)
-        current_balance = int(sc_node.rpc_eth_getBalance(str(evm_address), "latest")['result'], 16)
+        gas_used_eip155 = computeForgedTxGasUsed(sc_node, tx_hash_eip155)
 
         eoa_assert_native_balance(sc_node, evm_address,
-                                  initial_balance - (2 * transfer_amount + total_gas_used))
+                                  initial_balance - (2 * transfer_amount + gas_used_legacy + gas_used_eip155))
         eoa_assert_native_balance(sc_node, other_address, 2 * transfer_amount)
 
+        print(initial_balance - (2 * transfer_amount + gas_used_legacy + gas_used_eip155))
+
         eoa_transfer(sc_node, evm_address, other_address, transfer_amount, static_call=True, generate_block=False)
-        eoa_transfer(sc_node, evm_address, other_address, transfer_amount, call_method=CallMethod.RPC_EIP1559)
+        tx_hash_eip1559 = eoa_transfer(sc_node, evm_address, other_address, transfer_amount,
+                                       call_method=CallMethod.RPC_EIP1559)
 
-        total_gas_used += current_balance - (
-                int(sc_node.rpc_eth_getBalance(str(evm_address), "latest")['result'], 16) + transfer_amount)
-        current_balance = int(sc_node.rpc_eth_getBalance(str(evm_address), "latest")['result'], 16)
+        gas_used_eip1559 = computeForgedTxGasUsed(sc_node, tx_hash_eip1559)
 
-        eoa_assert_native_balance(sc_node, evm_address, initial_balance - (3 * transfer_amount + total_gas_used))
         eoa_assert_native_balance(sc_node, other_address, 3 * transfer_amount)
+        eoa_assert_native_balance(sc_node, evm_address, initial_balance - (
+                3 * transfer_amount + gas_used_legacy + gas_used_eip155 + gas_used_eip1559))
 
         zero_address = '0x0000000000000000000000000000000000000000'
 
