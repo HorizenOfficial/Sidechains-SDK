@@ -6,6 +6,8 @@ from multiprocessing import Pool, Value
 from time import sleep
 
 import psutil
+from os.path import exists
+import csv
 from requests import RequestException
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -50,39 +52,6 @@ def get_latency_config(perf_data):
     )
 
 
-def get_node_configuration(mc_node, sc_node_data, perf_data):
-    sc_nodes = list(sc_node_data)
-    node_configuration = []
-
-    topology = NetworkTopology(perf_data["network_topology"])
-    logging.info(f"Network Topology: {topology.name}")
-    max_connections = 0
-    last_index = sc_nodes.index(sc_node_data[-1])
-
-    for index, sc_node in enumerate(sc_nodes):
-        if (index == 0 or index == last_index) and topology == NetworkTopology.DaisyChain:
-            max_connections = 1
-        elif (index != 0 and index != last_index) and topology == NetworkTopology.DaisyChain:
-            max_connections = 2
-        elif topology == NetworkTopology.Ring:
-            max_connections = 2
-        elif index == 0 and topology == NetworkTopology.Star:
-            max_connections = len(sc_node_data) - 1
-        elif index != 0 and topology == NetworkTopology.Star:
-            max_connections = 1
-
-        node_configuration.append(
-            SCNodeConfiguration(
-                mc_connection_info=MCConnectionInfo(
-                    address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-                max_connections=max_connections,
-                block_rate=perf_data["block_rate"],
-                latency_settings=get_latency_config(perf_data)
-            )
-        )
-    return node_configuration
-
-
 def get_number_of_transactions_for_node(node):
     return len(allTransactions(node, False)["transactionIds"])
 
@@ -118,8 +87,10 @@ def send_transactions_per_second(txs_creator_node, destination_address, utxo_amo
 
 
 class PerformanceTest(SidechainTestFramework):
+    CONFIG_FILE = "./performance/perf_test.json"
+    CSV_FILE = "./tps_result.csv"
     sc_nodes_bootstrap_info = None
-    perf_data = deserialize_perf_test_json("./performance/perf_test.json")
+    perf_data = deserialize_perf_test_json(CONFIG_FILE)
     test_type = TestType(perf_data["test_type"])
     sc_node_data = perf_data["nodes"]
     sc_nodes_list = list(sc_node_data)
@@ -127,6 +98,64 @@ class PerformanceTest(SidechainTestFramework):
     test_run_time = perf_data["test_run_time"]
     block_rate = perf_data["block_rate"]
     connection_map = {}
+    topology = NetworkTopology(perf_data["network_topology"])
+    latency_settings=get_latency_config(perf_data)
+
+    csv_data = {"test_type": test_type, "max_tps_per_process": perf_data["max_tps_per_process"], "test_run_time": test_run_time, "block_rate": block_rate, "use_multiprocessing": perf_data["use_multiprocessing"], "initial_txs": initial_txs, "network_topology": topology,
+    "get_peer_spec_latency": latency_settings.get_peer_spec, "peer_spec_latency": latency_settings.peer_spec, "transaction_latency": latency_settings.transaction, "block_latency": latency_settings.block, "request_modifier_spec_latency": latency_settings.request_modifier_spec, "modifiers_spec_latency": latency_settings.modifiers_spec,
+    "n_nodes": len(sc_node_data), "n_forgers": sum(map(lambda x:x["forger"] == True, sc_nodes_list)), "n_tx_creator": sum(map(lambda x:x["tx_creator"] == True, sc_nodes_list)), "initial_balances": [],
+    "mined_transactions": 0, "mined_blocks": 0, "end_test_run_time": 0, "end_balances": [], "endpoint_calls": 0, "errors": 0, "not_mined_transactions": 0, "mempool_transactions": 0, "tps_total": 0, "tps_mined": 0, "blocks_ts": []
+    }
+
+    def fill_csv(self):
+        if(not exists(self.CSV_FILE)):
+            f = open(self.CSV_FILE, 'w')
+            writer = csv.writer(f)
+
+            # write the header
+            writer.writerow(list(self.csv_data.keys()))
+            # write values
+            writer.writerow(list(self.csv_data.values()))           
+
+            f.close()
+        else:
+            f = open(self.CSV_FILE, 'a')
+            writer = csv.writer(f)
+
+            # write values
+            writer.writerow(list(self.csv_data.values()))     
+
+    def get_node_configuration(self, mc_node):
+        sc_nodes = list(self.sc_node_data)
+        node_configuration = []
+
+        logging.info(f"Network Topology: {self.topology.name}")
+        max_connections = 0
+        last_index = sc_nodes.index(self.sc_node_data[-1])
+
+        for index, sc_node in enumerate(sc_nodes):
+            if (index == 0 or index == last_index) and self.topology == NetworkTopology.DaisyChain:
+                max_connections = 1
+            elif (index != 0 and index != last_index) and self.topology == NetworkTopology.DaisyChain:
+                max_connections = 2
+            elif self.topology == NetworkTopology.Ring:
+                max_connections = 2
+            elif index == 0 and self.topology == NetworkTopology.Star:
+                max_connections = len(self.sc_node_data) - 1
+            elif index != 0 and self.topology == NetworkTopology.Star:
+                max_connections = 1
+
+            node_configuration.append(
+                SCNodeConfiguration(
+                    mc_connection_info=MCConnectionInfo(
+                        address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
+                    max_connections=max_connections,
+                    block_rate=self.block_rate,
+                    latency_settings=self.latency_settings
+                )
+            )
+        return node_configuration
+
 
     def setup_nodes(self):
         # Start 1 MC node
@@ -135,7 +164,7 @@ class PerformanceTest(SidechainTestFramework):
     def sc_setup_chain(self):
         print("Initializing test directory "+self.options.tmpdir)
         mc_node = self.nodes[0]
-        sc_nodes = get_node_configuration(mc_node, self.sc_node_data, self.perf_data)
+        sc_nodes = self.get_node_configuration(mc_node)
 
         network = SCNetworkConfiguration(
             SCCreationInfo(mc_node, 100),
@@ -158,13 +187,12 @@ class PerformanceTest(SidechainTestFramework):
                 self.connection_map[key] = [value]
 
     def set_topology(self):
-        topology = NetworkTopology(self.perf_data["network_topology"])
         node_count = len(self.sc_nodes)
         node_final_position = node_count - 1
         node = 0
 
         # Daisy Chain Topology
-        if topology == NetworkTopology.DaisyChain or topology == NetworkTopology.Ring:
+        if self.topology == NetworkTopology.DaisyChain or self.topology == NetworkTopology.Ring:
             while node < node_final_position:
                 logging.info(
                     f"NODE CONNECTING: node[{node}] to node[{node + 1}] - Final Node is [{node_final_position}]")
@@ -176,13 +204,13 @@ class PerformanceTest(SidechainTestFramework):
                 node += 1
             self.create_node_connection_map(node_final_position, [node - 1])
         # Ring Topology
-        if topology == NetworkTopology.Ring:
+        if self.topology == NetworkTopology.Ring:
             # Connect final node to first node
             connect_sc_nodes(self.sc_nodes[node], 1)
             self.create_node_connection_map(0, [node])
             self.create_node_connection_map(node, [0])
         # Star Topology
-        if topology == NetworkTopology.Star:
+        if self.topology == NetworkTopology.Star:
             if node_count < 3:
                 raise Exception("Star Topology requires 3 or more nodes")
             while node < node_final_position:
@@ -240,16 +268,19 @@ class PerformanceTest(SidechainTestFramework):
         return address_boxes
 
     def log_node_wallet_balances(self):
+        balances = []
         # Output the balance of each node
         for index, node in enumerate(self.sc_nodes):
             wallet_boxes = http_wallet_allBoxesOfType(node, "ZenBox")
             wallet_balance = 0
             for box in wallet_boxes:
                 wallet_balance += box["value"]
+            balances.append(wallet_balance)
             if self.sc_nodes_list[index]["tx_creator"]:
                 print(f"Node{index} (Transaction Creator) Wallet Balance: {wallet_balance}")
             else:
                 print(f"Node{index} Wallet Balance: {wallet_balance}")
+        return balances
 
     def get_node_mined_transactions_by_block_id(self, node, block_id):
         result = http_block_findById(node, block_id)
@@ -426,7 +457,8 @@ class PerformanceTest(SidechainTestFramework):
 
         # Output the wallet balance of each node
         print("Node Wallet Balances Before Test...")
-        self.log_node_wallet_balances()
+        initial_balances = self.log_node_wallet_balances()
+        self.csv_data["initial_balances"] = initial_balances
 
         # Start forging on nodes where forger == true
         for index, node in enumerate(self.sc_nodes_list):
@@ -484,21 +516,6 @@ class PerformanceTest(SidechainTestFramework):
         end_time = time.time()
         sleep(10)
 
-        # Get information from all nodes
-        for i in range(len(self.sc_nodes)):
-            # Retrieve node mempool
-            try:
-                mempool = allTransactions(self.sc_nodes[i], False)
-                mempool_transactions = mempool["transactionIds"]
-            except Exception:
-                raise RequestException("Unable to retrieve mempool transactions")
-            number_of_transactions = len(mempool_transactions)
-            print(f"Node {i} mempool transactions remaining: {number_of_transactions}")
-            # Print mempool of each node if we're running timed test
-            if self.test_type == TestType.Mempool_Timed:
-                if number_of_transactions > 0:
-                    print(f"Node {i} mempool transactions: {mempool_transactions}")
-
         # Take blockhash of every node and verify they are all the same
         test_end_block_ids = self.get_best_node_block_ids()
         assert_equal(len(set(test_end_block_ids.values())), 1)
@@ -507,9 +524,14 @@ class PerformanceTest(SidechainTestFramework):
         # sum(balance of each node) => total ZEN present at the end of the test
         # Output the wallet balance of each node
         print("Node Wallet Balances After Test...")
-        self.log_node_wallet_balances()
+        end_balances = self.log_node_wallet_balances()
+        self.csv_data["end_balances"] = end_balances
 
         # OUTPUT TEST RESULTS
+        blocks_per_node = []
+        blocks_ts = []
+        mempool_transactions = []
+        iteration = 0
         for node in self.sc_nodes:
             node_index = self.sc_nodes.index(node)
             start_block_id = test_start_block_ids[node_index]
@@ -518,8 +540,12 @@ class PerformanceTest(SidechainTestFramework):
             # We don't count the first block, so start from 1
             total_blocks_for_node = 1
             print("### Node" + str(node_index) + " Test Results ###")
-            print("Node" + str(node_index) + " Mempool remaining transactions: " + str(
-                len(allTransactions(node, False)["transactionIds"])))
+
+            #Retrieve node mempool
+            mempool_txs = len(allTransactions(node, False)["transactionIds"])
+            print("Node" + str(node_index) + " Mempool remaining transactions: " + str(mempool_txs))
+            mempool_transactions.append(mempool_txs)
+
             while current_block_id != start_block_id:
                 number_of_transactions_mined = len(
                     self.get_node_mined_transactions_by_block_id(node, current_block_id))
@@ -527,12 +553,31 @@ class PerformanceTest(SidechainTestFramework):
                 print("Node" + str(node_index) + "- BlockId " + str(current_block_id) + " Mined Transactions: " +
                       str(number_of_transactions_mined))
                 total_blocks_for_node += 1
-                current_block_id = http_block_findById(node, current_block_id)["block"]["parentId"]
+                current_block = http_block_findById(node, current_block_id)["block"]
+                current_block_id = current_block["parentId"]
+                if (iteration == 0):
+                    blocks_ts.append(current_block["timestamp"])
+            blocks_per_node.append(total_blocks_for_node)
+            iteration += 1
             print("Node" + str(node_index) + " Total Blocks: " + str(total_blocks_for_node))
             print("Node" + str(node_index) + " Total Transactions Mined: " + str(total_mined_transactions))
-            print(f"Transactions NOT mined: {self.initial_txs * len(txs_creators) - total_mined_transactions}")
-        print(f"\n###\nTEST RUN TIME: {end_time - start_time} seconds\n###")
+        not_mined_transactions = self.initial_txs * len(txs_creators) - total_mined_transactions
+        print(f"Transactions NOT mined: {not_mined_transactions}")
+        test_run_time = end_time - start_time
+        print(f"\n###\nTEST RUN TIME: {test_run_time} seconds\n###")
 
+        self.csv_data["mined_transactions"] = total_mined_transactions
+        self.csv_data["end_test_run_time"] = test_run_time
+        self.csv_data["mined_blocks"] = blocks_per_node
+        self.csv_data["endpoint_calls"] = counter.value
+        self.csv_data["errors"] = errors.value
+        self.csv_data["not_mined_transactions"] = not_mined_transactions
+        self.csv_data["mempool_transactions"] = mempool_transactions
+        self.csv_data["tps_total"] = (mempool_transactions[0] + total_mined_transactions) / test_run_time
+        self.csv_data["tps_mined"] = total_mined_transactions / test_run_time
+        self.csv_data["blocks_ts"] = blocks_ts
+
+        self.fill_csv()
 
 if __name__ == "__main__":
     PerformanceTest().main()
