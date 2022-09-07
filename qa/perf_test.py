@@ -1,14 +1,11 @@
 import logging
-import math
 import random
 import time
 from multiprocessing import Pool, Value
 from time import sleep
-
 import psutil
 from os.path import exists
 import csv
-from requests import RequestException
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, LatencyConfig
@@ -56,18 +53,20 @@ def get_number_of_transactions_for_node(node):
     return len(allTransactions(node, False)["transactionIds"])
 
 
-def send_transactions_per_second(txs_creator_node, destination_address, utxo_amount, tps_per_process,
-                                 start_time, test_run_time, process_to_map):
+def send_transactions_per_second(txs_creator_node, destination_address, utxo_amount, max_tps_receivable_per_node,
+                                 start_time, test_run_time, process_to_map, creator_node_index, receiver_node_index):
     p = psutil.Process()
-    print(f"Mapping TPS Throughput generator to #{process_to_map}: {p}, affinity {p.cpu_affinity()}", flush=True)
     p.cpu_affinity([process_to_map])
-    print(f"Process #{process_to_map}: TPS Throughput generator {process_to_map}, Generator affinity now {p.cpu_affinity()}", flush=True)
+    print(f"Process #{process_to_map}: TPS Throughput generator {process_to_map}, Generator affinity now "
+          f"{p.cpu_affinity()}", flush=True)
+    print(f"Creator node (Node{creator_node_index}) sending {max_tps_receivable_per_node} TPS to Receiving Node"
+          f"(Node{receiver_node_index}) ...")
     # Run until
     while time.time() - start_time < test_run_time:
         i = 0
         tps_start_time = time.time()
-        # Send transactions until the maximum tps value has been reached for each process (thread).
-        while i < tps_per_process:
+        # Send transactions until the maximum tps receivable value has been reached
+        while i < max_tps_receivable_per_node:
             try:
                 sendCoinsToAddress(txs_creator_node, destination_address, utxo_amount, 0)
             except Exception:
@@ -81,9 +80,12 @@ def send_transactions_per_second(txs_creator_node, destination_address, utxo_amo
         if completion_time < 1:
             sleep(1 - completion_time)
         # If completion time exceeds 1 second, it's no longer x transactions per second.
-        # Lower the max_tps_per_process config value until this value is under 1 second.
+        # Lower the max_tps_receivable_per_node config value until this value is under 1 second.
         elif completion_time > 1:
-            print("WARNING:  Number of transactions sent has exceeded 1 second - decrease max_tps_per_process value.")
+            print("WARNING:  Number of transactions sent has exceeded 1 second - decrease "
+                  "max_tps_receivable_per_node value.")
+    print(f"- COMPLETED - Creator node (Node{creator_node_index}) sent {max_tps_receivable_per_node} "
+          f"TPS to Receiving Node (Node{receiver_node_index}) ...")
 
 
 class PerformanceTest(SidechainTestFramework):
@@ -99,23 +101,33 @@ class PerformanceTest(SidechainTestFramework):
     block_rate = perf_data["block_rate"]
     connection_map = {}
     topology = NetworkTopology(perf_data["network_topology"])
-    latency_settings=get_latency_config(perf_data)
+    latency_settings = get_latency_config(perf_data)
 
-    csv_data = {"test_type": test_type, "max_tps_per_process": perf_data["max_tps_per_process"], "test_run_time": test_run_time, "block_rate": block_rate, "use_multiprocessing": perf_data["use_multiprocessing"], "initial_txs": initial_txs, "network_topology": topology,
-    "get_peer_spec_latency": latency_settings.get_peer_spec, "peer_spec_latency": latency_settings.peer_spec, "transaction_latency": latency_settings.transaction, "block_latency": latency_settings.block, "request_modifier_spec_latency": latency_settings.request_modifier_spec, "modifiers_spec_latency": latency_settings.modifiers_spec,
-    "n_nodes": len(sc_node_data), "n_forgers": sum(map(lambda x:x["forger"] == True, sc_nodes_list)), "n_tx_creator": sum(map(lambda x:x["tx_creator"] == True, sc_nodes_list)), "initial_balances": [],
-    "mined_transactions": 0, "mined_blocks": 0, "end_test_run_time": 0, "end_balances": [], "endpoint_calls": 0, "errors": 0, "not_mined_transactions": 0, "mempool_transactions": 0, "tps_total": 0, "tps_mined": 0, "blocks_ts": []
-    }
+    csv_data = {"test_type": test_type, "max_tps_receivable_per_node": perf_data["max_tps_receivable_per_node"],
+                "test_run_time": test_run_time, "block_rate": block_rate,
+                "use_multiprocessing": perf_data["use_multiprocessing"], "initial_txs": initial_txs,
+                "network_topology": topology,
+                "get_peer_spec_latency": latency_settings.get_peer_spec,
+                "peer_spec_latency": latency_settings.peer_spec, "transaction_latency": latency_settings.transaction,
+                "block_latency": latency_settings.block,
+                "request_modifier_spec_latency": latency_settings.request_modifier_spec,
+                "modifiers_spec_latency": latency_settings.modifiers_spec,
+                "n_nodes": len(sc_node_data), "n_forgers": sum(map(lambda x: x["forger"] == True, sc_nodes_list)),
+                "n_tx_creator": sum(map(lambda x: x["tx_creator"] == True, sc_nodes_list)), "initial_balances": [],
+                "mined_transactions": 0, "mined_blocks": 0, "end_test_run_time": 0, "end_balances": [],
+                "endpoint_calls": 0, "errors": 0, "not_mined_transactions": 0, "mempool_transactions": 0,
+                "tps_total": 0, "tps_mined": 0, "blocks_ts": []
+                }
 
     def fill_csv(self):
-        if(not exists(self.CSV_FILE)):
+        if not exists(self.CSV_FILE):
             f = open(self.CSV_FILE, 'w')
             writer = csv.writer(f)
 
             # write the header
             writer.writerow(list(self.csv_data.keys()))
             # write values
-            writer.writerow(list(self.csv_data.values()))           
+            writer.writerow(list(self.csv_data.values()))
 
             f.close()
         else:
@@ -123,7 +135,7 @@ class PerformanceTest(SidechainTestFramework):
             writer = csv.writer(f)
 
             # write values
-            writer.writerow(list(self.csv_data.values()))     
+            writer.writerow(list(self.csv_data.values()))
 
     def get_node_configuration(self, mc_node):
         sc_nodes = list(self.sc_node_data)
@@ -156,13 +168,12 @@ class PerformanceTest(SidechainTestFramework):
             )
         return node_configuration
 
-
     def setup_nodes(self):
         # Start 1 MC node
         return start_nodes(1, self.options.tmpdir)
 
     def sc_setup_chain(self):
-        print("Initializing test directory "+self.options.tmpdir)
+        print("Initializing test directory " + self.options.tmpdir)
         mc_node = self.nodes[0]
         sc_nodes = self.get_node_configuration(mc_node)
 
@@ -174,7 +185,7 @@ class PerformanceTest(SidechainTestFramework):
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720 * self.block_rate / 2)
 
     def sc_setup_nodes(self):
-        if(self.perf_data["use_multiprocessing"]):
+        if self.perf_data["use_multiprocessing"]:
             return start_sc_nodes_with_multiprocessing(len(self.sc_node_data), self.options.tmpdir)
         else:
             return start_sc_nodes(len(self.sc_node_data), self.options.tmpdir)
@@ -247,7 +258,7 @@ class PerformanceTest(SidechainTestFramework):
             for i in range(self.initial_txs):
                 # Populate the mempool - so don't mine a block
                 sendCoinsToAddress(txs_creator_nodes[j], destination_address, utxo_amount, 0)
-                if (i % 1000 == 0):
+                if i % 1000 == 0:
                     print("Node " + str(j) + " sent txs: " + str(i))
             assert_equal(len(allTransactions(txs_creator_nodes[j], False)["transactionIds"]), self.initial_txs)
             print("Node " + str(j) + " totally sent txs: " + str(self.initial_txs))
@@ -286,60 +297,67 @@ class PerformanceTest(SidechainTestFramework):
         result = http_block_findById(node, block_id)
         return result["block"]["sidechainTransactions"]
 
-    def txs_creator_send_transactions_per_second_to_addresses(self, utxo_amount, txs_creator_nodes, non_creator_nodes,
-                                                              tps_test):
+    def txs_creator_send_transactions_per_second_to_addresses(self, utxo_amount, txs_creators, tps_test):
         start_time = time.time()
 
         if tps_test:
-            # Each process needs to be able to send a number of transactions per second, without going over 1 second.
-            # May need some fine-tuning depending on what machine this is running on. Default to 100.
+            # Each node needs to be able to receive a number of transactions per second, without going over 1 second, or
+            # timing out - May need some fine-tuning.
             try:
-                max_tps_per_process = self.perf_data["max_tps_per_process"]
+                max_tps_receivable_per_node = self.perf_data["max_tps_receivable_per_node"]
             except Exception:
-                raise ValueError("Value: 'max_tps_per_process' not found, ensure it's present in json config")
+                raise ValueError("Value: 'max_tps_receivable_per_node' not found, ensure it's present in json config")
 
-            tps = math.floor(self.initial_txs / self.test_run_time)
-            # Decide number of processes we need to use, as each process needs to be able to fire x transactions in
-            # 1 second or less. e.g. 100 tps and if each process can comfortably handle 10 transactions in
-            # under 1 second we need 10 processes running 10 tps in parallel to get 100 tps total.
-            max_processes = math.ceil(tps / max_tps_per_process)
-            tps_per_process = math.ceil(tps / max_processes)
+            for i in range(len(txs_creators)):
+                print(
+                    f"Running Throughput: {max_tps_receivable_per_node} Transactions Per Second for Creator Node(Node{i})...")
 
-            for i in range(len(txs_creator_nodes)):
-                print(f"Running Throughput: {tps} Transactions Per Second for Creator Node(Node{i})...")
-                
-            while counter.value < self.initial_txs * len(txs_creator_nodes) and ((time.time() - start_time) < self.test_run_time):
+            while counter.value < self.initial_txs * len(txs_creators) and (
+                    (time.time() - start_time) < self.test_run_time):
                 # Create the multiprocess pool
                 with Pool(initializer=init_globals, initargs=(counter, errors)) as pool:
-                    i = 0
                     start_from_process = 0
                     args = []
-                    if(self.perf_data["use_multiprocessing"]):
+                    if self.perf_data["use_multiprocessing"]:
+                        # Each node takes up 1 process, so we need to use the next available process
                         start_from_process = len(self.sc_nodes_list)
 
-                    # Add send_transactions_per_second arguments to args for each process required
+                    # Add send_transactions_per_second arguments to args for each tx_creator_node
                     # starmap runs them all in parallel
-                    while i < max_processes:
-                        for tx_creator_node in txs_creator_nodes:
+                    i = 0
+                    for index, node in enumerate(self.sc_nodes_list):
+                        if node["tx_creator"]:
+                            # Get node list without the current txs_creator_node
+                            if index == len(self.sc_nodes) - 1:
+                                node_to_send_to = 0
+                            else:
+                                node_to_send_to = index + 1
+
                             # Create a single random node destination address per process
-                            destination_address = http_wallet_createPrivateKey25519(random.choice(non_creator_nodes))
-                            args.append((tx_creator_node, destination_address, utxo_amount,
-                                        tps_per_process, start_time, self.test_run_time, start_from_process+i))
-                        i += 1
+                            destination_address = http_wallet_createPrivateKey25519(self.sc_nodes[node_to_send_to])
+                            args.append((self.sc_nodes[index], destination_address, utxo_amount,
+                                         max_tps_receivable_per_node, start_time, self.test_run_time, start_from_process
+                                         + i, index, node_to_send_to))
+
                     pool.starmap(send_transactions_per_second, args)
 
                 print(f"... Sent {counter.value} Transactions ...")
                 print(f"Timer: {time.time() - start_time} and counter {counter.value}")
-        # We're not interested in transactions per second, just fire all transactions as fast as possible
         else:
-            for i in range(len(txs_creator_nodes)):
-                print(f"Running Throughput: {tps} Transactions Per Second for Creator Node(Node{i})...")
+            # We're not interested in transactions per second, just fire all transactions as fast as possible
             for _ in range(self.initial_txs):
                 with Pool(initializer=init_globals, initargs=(counter, errors)) as pool:
-                    for tx_creator_node in txs_creator_nodes:
-                        # Create destination address for random node for each tx
-                        destination_address = http_wallet_createPrivateKey25519(random.choice(non_creator_nodes))
-                        args = [(tx_creator_node, destination_address, utxo_amount, 0)]
+                    for index, node in enumerate(self.sc_nodes_list):
+                        if node["tx_creator"]:
+                            # Get node list without the current txs_creator_node
+                            if index == len(self.sc_nodes) - 1:
+                                node_to_send_to = 0
+                            else:
+                                node_to_send_to = index + 1
+
+                            # Create a single random node destination address per process
+                            destination_address = http_wallet_createPrivateKey25519(self.sc_nodes[node_to_send_to])
+                            args = [(self.sc_nodes[index], destination_address, utxo_amount, 0)]
                         while counter.value < self.initial_txs and ((time.time() - start_time) < self.test_run_time):
                             try:
                                 pool.starmap(sendCoinsToAddress, args)
@@ -468,7 +486,6 @@ class PerformanceTest(SidechainTestFramework):
 
         # Start timing
         start_time = time.time()
-        number_of_txs_creators = len(txs_creators)
 
         ##########################################################
         ##################### TEST VERSION 1 #####################
@@ -498,13 +515,11 @@ class PerformanceTest(SidechainTestFramework):
 
         elif self.test_type == TestType.Transactions_Per_Second:
             # 1 thread per txs_creator node sending transactions
-            self.txs_creator_send_transactions_per_second_to_addresses(utxo_amount, txs_creators,
-                                                                           non_txs_creators, True)
+            self.txs_creator_send_transactions_per_second_to_addresses(utxo_amount, txs_creators, True)
 
         elif self.test_type == TestType.All_Transactions:
             # 1 thread per txs_creator node sending transactions
-            self.txs_creator_send_transactions_per_second_to_addresses(utxo_amount, txs_creators,
-                                                                           non_txs_creators, False)
+            self.txs_creator_send_transactions_per_second_to_addresses(utxo_amount, txs_creators, False)
 
         # stop forging
         for index, node in enumerate(self.sc_nodes_list):
@@ -514,7 +529,8 @@ class PerformanceTest(SidechainTestFramework):
 
         # Get end time
         end_time = time.time()
-        sleep(10)
+        # Give nodes time to recover
+        sleep(30)
 
         # Take blockhash of every node and verify they are all the same
         test_end_block_ids = self.get_best_node_block_ids()
@@ -541,7 +557,7 @@ class PerformanceTest(SidechainTestFramework):
             total_blocks_for_node = 1
             print("### Node" + str(node_index) + " Test Results ###")
 
-            #Retrieve node mempool
+            # Retrieve node mempool
             mempool_txs = len(allTransactions(node, False)["transactionIds"])
             print("Node" + str(node_index) + " Mempool remaining transactions: " + str(mempool_txs))
             mempool_transactions.append(mempool_txs)
@@ -578,6 +594,7 @@ class PerformanceTest(SidechainTestFramework):
         self.csv_data["blocks_ts"] = blocks_ts
 
         self.fill_csv()
+
 
 if __name__ == "__main__":
     PerformanceTest().main()

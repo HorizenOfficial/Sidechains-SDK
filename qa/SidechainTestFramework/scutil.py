@@ -523,9 +523,9 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
                   auth_api_key=None, use_multiprocessing=False, processor=None):
     if use_multiprocessing:
         p = psutil.Process()
-        print(f"Process #{processor}: {p}, affinity {p.cpu_affinity()}", flush=True)
         p.cpu_affinity([processor])
-        print(f"Process #{processor}: Set Node{i} affinity to {processor}, Node{i} affinity now {p.cpu_affinity()}", flush=True)
+        print(f"Process #{processor}: Set Node{i} affinity to {processor}, Node{i} affinity now {p.cpu_affinity()}",
+              flush=True)
     """
     Start a SC node and returns API connection to it
     """
