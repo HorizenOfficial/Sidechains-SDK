@@ -57,7 +57,20 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
       }
     }.asInstanceOf[Future[Try[R]]]
     // return result or rethrow potential exceptions
-    Await.result(res, nvtimeout).get
+    Await.result(res, nvtimeout) match {
+      case Failure(exception) => exception match {
+        case reverted: ExecutionRevertedException => throw new RpcException(new RpcError(
+          RpcCode.ExecutionError.getCode, exception.getMessage, Numeric.toHexString(reverted.revertReason)))
+        case err: ExecutionFailedException => throw new RpcException(new RpcError(
+          RpcCode.ExecutionError.getCode, err.getMessage, null))
+        case err: TransactionSemanticValidityException => throw new RpcException(new RpcError(
+          RpcCode.ExecutionError.getCode, err.getMessage, null))
+        case err: OutOfGasException => throw new RpcException(new RpcError(
+          RpcCode.ExecutionError.getCode, err.getMessage, null))
+        case _ => throw exception
+      }
+      case Success(value) => value
+    }
   }
 
   //function which describes default transaction representation for answer after adding the transaction to a memory pool
@@ -109,24 +122,10 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
     }
   }
 
-  private def doCall[A](nodeView: NV, params: TransactionArgs, tag: String, forwardErrors: Boolean)(fun: (Array[Byte], AccountStateView) ⇒ A): A = {
+  private def doCall[A](nodeView: NV, params: TransactionArgs, tag: String)(fun: (Array[Byte], AccountStateView) ⇒ A): A = {
     getStateViewAtTag(nodeView, tag) { tagStateView =>
       val msg = params.toMessage(tagStateView.getBaseFee)
-      if (forwardErrors) {
-        fun(tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit)), tagStateView)
-      } else {
-        try {
-          fun(tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit)), tagStateView)
-        } catch {
-          // throw on execution errors, also include evm revert reason if possible
-          case reverted: ExecutionRevertedException => throw new RpcException(new RpcError(
-            RpcCode.ExecutionError.getCode, reverted.getMessage, Numeric.toHexString(reverted.revertReason)))
-          case err: ExecutionFailedException => throw new RpcException(new RpcError(
-            RpcCode.ExecutionError.getCode, err.getMessage, null))
-          case err: TransactionSemanticValidityException => throw new RpcException(new RpcError(
-            RpcCode.ExecutionError.getCode, err.getMessage, null))
-        }
-      }
+      fun(tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit)), tagStateView)
     }
   }
 
@@ -134,7 +133,7 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   @RpcOptionalParameters(1)
   def call(params: TransactionArgs, tag: String): String = {
     applyOnAccountView { nodeView =>
-      doCall(nodeView, params, tag, false) {
+      doCall(nodeView, params, tag) {
         (result, _) => if (result != null) Numeric.toHexString(result) else null
       }
     }
@@ -246,7 +245,7 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
       // other exceptions are not caught as the call would not succeed with any amount of gas
       val check = (gas: BigInteger) => try {
         params.gas = gas
-        doCall(nodeView, params, tag, true) { (_, _) => true }
+        doCall(nodeView, params, tag) { (_, _) => true }
       } catch {
         case _: OutOfGasException => false
       }
