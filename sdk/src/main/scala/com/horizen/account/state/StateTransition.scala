@@ -43,6 +43,8 @@ class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProc
             throw err
           // any other exception will bubble up and invalidate the block
         } finally {
+          // make sure we disable automatic gas consumption in case a message processor enabled it
+          view.disableGasTracking()
           refundGas(msg, gasPool)
         }
     }
@@ -117,9 +119,6 @@ class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProc
     log.debug(s"now refunding $remaining to sender ${BytesUtils.toHexString(sender)}")
     if (remaining.compareTo(BigInteger.ZERO) > 0) {
       view.addBalance(sender, remaining)
-      // the addBalance op subtracts gas, we have to restore it here otherwise remaining gas balance is wrong
-      if (view.isGasTrackingEnabled())
-        gas.addGas(GasUtil.GasTBD)
     }
 
     // return remaining gas to the gasPool of the current block so it is available for the next transaction
