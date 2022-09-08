@@ -9,6 +9,7 @@ import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccoun
 import com.horizen.account.state.{AccountState, MessageProcessor, MessageProcessorUtil}
 import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
 import com.horizen.account.transaction.AccountTransaction
+import com.horizen.account.utils.{AccountFeePaymentsUtils, AccountPayment}
 import com.horizen.account.validation.ChainIdBlockSemanticValidator
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.consensus._
@@ -18,6 +19,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.proof.Proof
 import com.horizen.proposition.Proposition
 import com.horizen.storage.SidechainSecretStorage
+import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.validation.SemanticBlockValidator
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
 import scorex.core.utils.NetworkTimeProvider
@@ -98,10 +100,21 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   // Scan modifier only, there is no need to notify AccountWallet about fees,
   // since account balances are tracked only in the AccountState.
-  // TODO: do we need to notify History with fee payments info?
-  // YES
+  // But we need also to notify History with fee payments info
   override protected def scanBlockWithFeePayments(history: HIS, state: MS, wallet: VL, modToApply: AccountBlock): (HIS, VL) = {
-    (history, wallet.scanPersistent(modToApply))
+    val epochInfo = state.getWithdrawalEpochInfo
+    val isWithdrawalEpochLastIndex: Boolean = WithdrawalEpochUtils.isEpochLastIndex(epochInfo, params)
+    if (isWithdrawalEpochLastIndex) {
+      val epochNumber: Int = epochInfo.epoch
+      val feePayments = state.getFeePayments(epochNumber)
+      val forgersPoolRewardsSeq: Seq[AccountPayment] = AccountFeePaymentsUtils.getForgersRewards(feePayments)
+      log.debug(s"updating history with ${feePayments.size} fee payments to ${forgersPoolRewardsSeq.size} forgers for withdrawal epoch $epochNumber")
+      val historyAfterUpdateFee = history.updateFeePaymentsInfo(modToApply.id, AccountFeePaymentsInfo(forgersPoolRewardsSeq))
+
+      (historyAfterUpdateFee, wallet.scanPersistent(modToApply))
+    } else {
+      (history, wallet.scanPersistent(modToApply))
+    }
   }
 
   override protected def getCurrentSidechainNodeViewInfo: Receive = {

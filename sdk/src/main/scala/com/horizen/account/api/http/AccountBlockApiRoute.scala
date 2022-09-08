@@ -2,7 +2,7 @@ package com.horizen.account.api.http
 
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
-import com.fasterxml.jackson.annotation.JsonView
+import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.SidechainTypes
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
@@ -10,13 +10,12 @@ import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccoun
 import com.horizen.api.http.{ApiResponseUtil, BlockBaseApiRoute, SuccessResponse}
 import com.horizen.account.api.http.AccountBlockRestSchema._
 import com.horizen.account.chain.AccountFeePaymentsInfo
-import com.horizen.account.utils.AccountBlockFeeInfo
+import com.horizen.account.utils.AccountPayment
 import com.horizen.node.NodeWalletBase
 import com.horizen.serialization.Views
 import scorex.core.settings.RESTApiSettings
 
-import scala.collection.JavaConverters._
-import scala.compat.java8.OptionConverters._
+import scala.compat.java8.OptionConverters.RichOptionalGeneric
 import scala.concurrent.ExecutionContext
 
 
@@ -47,12 +46,8 @@ case class AccountBlockApiRoute(override val settings: RESTApiSettings,
     entity(as[ReqFeePayments]) { body =>
       applyOnNodeView { sidechainNodeView =>
         val sidechainHistory = sidechainNodeView.getNodeHistory
-        //val qqq = sidechainHistory.getFeePaymentsInfo(body.blockId).asScala.map(_.transaction.newBoxes().asScala).getOrElse(Seq())
-        val accountState = sidechainNodeView.getNodeState
-        val withdrawalEpochNumber: Int = accountState.getWithdrawalEpochInfo.epoch
-
-        val feePayments = accountState.getFeePayments(withdrawalEpochNumber)
-        ApiResponseUtil.toResponse(RespFeePayments(feePayments.toList))
+        val payments = sidechainHistory.getFeePaymentsInfo(body.blockId).asScala.map(_.payments).getOrElse(Seq())
+        ApiResponseUtil.toResponse(RespFeePayments(payments))
       }
     }
   }
@@ -67,7 +62,7 @@ object AccountBlockRestSchema {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespFeePayments(feePayments: Seq[AccountBlockFeeInfo]) extends SuccessResponse
+  private[api] case class RespFeePayments(feePayments: Seq[AccountPayment]) extends SuccessResponse
 }
 
 object SidechainBlockErrorResponse {

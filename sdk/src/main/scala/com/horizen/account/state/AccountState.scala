@@ -2,13 +2,11 @@ package com.horizen.account.state
 
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
-import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.node.NodeAccountState
-import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils}
+import com.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment}
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.evm._
@@ -208,7 +206,7 @@ class AccountState(val params: NetworkParams,
       }
 
       // add rewards to forgers balance
-      val forgersPoolRewardsSeq : Seq[AccountFeePaymentsInfo] = AccountFeePaymentsUtils.getForgersRewards(feePayments)
+      val forgersPoolRewardsSeq : Seq[AccountPayment] = AccountFeePaymentsUtils.getForgersRewards(feePayments)
       forgersPoolRewardsSeq.foreach( info => stateView.addBalance(info.address.address(), info.value))
 
     } else {

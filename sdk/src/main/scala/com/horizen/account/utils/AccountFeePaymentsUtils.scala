@@ -20,11 +20,11 @@ object AccountFeePaymentsUtils {
     }
   }
 
-  def getForgersRewards(blockFeeInfoSeq : Seq[AccountBlockFeeInfo]): Seq[AccountFeePaymentsInfo] = {
+  def getForgersRewards(blockFeeInfoSeq : Seq[AccountBlockFeeInfo]): Seq[AccountPayment] = {
     var poolFee: BigInteger = BigInteger.ZERO
-    val forgersBlockRewards: Seq[AccountFeePaymentsInfo] = blockFeeInfoSeq.map(feeInfo => {
+    val forgersBlockRewards: Seq[AccountPayment] = blockFeeInfoSeq.map(feeInfo => {
       poolFee = poolFee.add(feeInfo.baseFee)
-      AccountFeePaymentsInfo(feeInfo.forgerAddress, feeInfo.forgerTips)
+      AccountPayment(feeInfo.forgerAddress, feeInfo.forgerTips)
     })
 
     // Split poolFee in equal parts to be paid to forgers.
@@ -33,16 +33,16 @@ object AccountFeePaymentsUtils {
     val rest = poolFee.mod(BigInteger.valueOf(forgersBlockRewards.size)).longValue()
 
     // Calculate final fee for forger considering forger fee, pool fee and the undistributed satoshis
-    val allForgersRewards : Seq[AccountFeePaymentsInfo] = forgersBlockRewards.zipWithIndex.map {
-      case (forgerBlockReward: AccountFeePaymentsInfo, index: Int) =>
+    val allForgersRewards : Seq[AccountPayment] = forgersBlockRewards.zipWithIndex.map {
+      case (forgerBlockReward: AccountPayment, index: Int) =>
         val finalForgerFee = forgerBlockReward.value.add(forgerPoolFee).add(if(index < rest) BigInteger.ONE else BigInteger.ZERO)
-        AccountFeePaymentsInfo(forgerBlockReward.address, finalForgerFee)
+        AccountPayment(forgerBlockReward.address, finalForgerFee)
     }
 
     // Aggregate together payments for the same forger
     val forgerKeys: Seq[AddressProposition] = allForgersRewards.map(_.address).distinct
 
-    val forgersRewards: Seq[AccountFeePaymentsInfo] = forgerKeys.map {
+    val forgersRewards: Seq[AccountPayment] = forgerKeys.map {
       forgerKey => { // consider this forger
 
         // sum all rewards for this forger address
@@ -51,7 +51,7 @@ object AccountFeePaymentsUtils {
           .foldLeft(BigInteger.ZERO)((sum, info) => sum.add(info.value))
 
         // return the resulting entry
-        AccountFeePaymentsInfo(forgerKey, forgerTotalFee)
+        AccountPayment(forgerKey, forgerTotalFee)
       }
     }
 
