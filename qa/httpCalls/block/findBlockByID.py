@@ -3,7 +3,7 @@ import json
 
 # executes a  block/findById call
 def http_block_findById(sidechainNode, blockId):
-    j = { \
+    j = {
         "blockId": blockId
     }
     request = json.dumps(j)
