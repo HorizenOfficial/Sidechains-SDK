@@ -2,21 +2,21 @@ package com.horizen.account.utils
 
 import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.evm.TrieHasher
+import com.horizen.evm.{StateDB, TrieHasher}
 import com.horizen.utils.MerkleTree
 
 import java.math.BigInteger
 
 object AccountFeePaymentsUtils {
-  val DEFAULT_ACCOUNT_FEE_PAYMENTS_HASH: Array[Byte] = new Array[Byte](MerkleTree.ROOT_HASH_LENGTH)
+  val DEFAULT_ACCOUNT_FEE_PAYMENTS_HASH: Array[Byte] = StateDB.EMPTY_ROOT_HASH
 
-  def calculateFeePaymentsHash(feePayments: Seq[AccountBlockFeeInfo]): Array[Byte] = {
-    if(feePayments.isEmpty) {
+  def calculateFeePaymentsHash(feePaymentsInfo: Seq[AccountBlockFeeInfo]): Array[Byte] = {
+    if(feePaymentsInfo.isEmpty) {
       // No fees for the whole epoch, so no fee payments for the Forgers.
       DEFAULT_ACCOUNT_FEE_PAYMENTS_HASH
     } else {
       // turn seq elements into leaves and compute merkel root hash
-      TrieHasher.Root(feePayments.map(tx => tx.bytes).toArray)
+      TrieHasher.Root(feePaymentsInfo.map(info => info.bytes).toArray)
     }
   }
 

@@ -356,8 +356,9 @@ class AccountStateView(
   override def getBaseFeePerGas: BigInteger = BigInteger.valueOf(333000)
 
   def getTxFeesPerGas(tx: EthereumTransaction) : (BigInteger, BigInteger) = {
+    val baseFeePerGas = getBaseFeePerGas
+
     if (tx.isEIP1559) {
-      val baseFeePerGas = getBaseFeePerGas
       val maxFeePerGas = tx.getMaxFeePerGas
       val maxPriorityFeePerGas = tx.getMaxPriorityFeePerGas
       // if the Base Fee plus the Max Priority Fee exceeds the Max Fee, the Max Priority Fee will be reduced
@@ -369,7 +370,8 @@ class AccountStateView(
       }
       (baseFeePerGas, forgerTipPerGas)
     } else {
-      (BigInteger.ZERO, tx.getGasPrice)
+      // Even in legacy transactions the gasPrice has to be greater or equal to the base fee
+      (baseFeePerGas, tx.getGasPrice.subtract(baseFeePerGas))
     }
   }
 
@@ -388,8 +390,6 @@ class AccountStateView(
   def enableGasTracking(gasPool: GasPool): Unit = trackedGasPool = Some(gasPool)
 
   def disableGasTracking(): Unit = trackedGasPool = None
-
-  def isGasTrackingEnabled(): Boolean = trackedGasPool.isDefined
 
   @throws(classOf[OutOfGasException])
   private def useGas(gas: BigInteger): Unit = trackedGasPool match {
