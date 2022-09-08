@@ -71,6 +71,9 @@ class SidechainCommitmentTree {
       new BackwardTransfer(btrOutput.pubKeyHash, btrOutput.amount)
     )
 
+    //TODO: temporal dirty porkaround until SC zendoo_commitment_tree_add_cert is fixed.
+    //Order of arguments 'ftMinAmount' and 'btrFee' is swapped to be in wrong order
+    //to be consistent with wrong order on MC side
     commitmentTree.addCert(
       certificate.sidechainId,
       certificate.epochNumber,
@@ -78,7 +81,7 @@ class SidechainCommitmentTree {
       btrList.toArray,
       certificate.customFieldsOpt(version).asJava,
       certificate.endCumulativeScTxCommitmentTreeRoot,
-      certificate.ftMinAmount, //TODO: temporal dirty porkaround until SC zendoo_commitment_tree_add_cert is fixed
+      certificate.ftMinAmount,
       certificate.btrFee,
     )
   }
