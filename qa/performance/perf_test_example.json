@@ -1,7 +1,7 @@
 {
   "test_type": "transactions_per_second",
-  "use_multithreading": true,
-  "max_tps_receivable_per_node": 100,
+  "use_multiprocessing": true,
+  "initial_ft_amount": 200,
   "test_run_time": 50,
   "block_rate": 30,
   "initial_txs": 5000,

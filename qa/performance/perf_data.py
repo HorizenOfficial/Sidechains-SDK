@@ -1,8 +1,6 @@
 from __future__ import annotations
 from enum import Enum
 
-from SidechainTestFramework.sc_boostrap_info import LatencyConfig
-
 
 class NetworkTopology(Enum):
     DaisyChain = "daisy_chain"

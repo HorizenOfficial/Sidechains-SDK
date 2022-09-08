@@ -1,13 +1,21 @@
 #!/bin/bash
 
 chmod +x ../perf_test.py
-export BITCOINCLI=/my/directory
-export BITCOIND=/my/directory
-export SIDECHAIN_SDK=/my/directory
+export BITCOINCLI=
+export BITCOIND=BITCOIND=
+export SIDECHAIN_SDK=
 
-jq '.test_run_time = 30 | .initial_txs = 500 | .latency_settings.peer_spec = 0' perf_test.json
-(cd .. && python3.9 perf_test.py)
-jq '.test_run_time = 20 | .initial_txs = 250 | .latency_settings.peer_spec = 0' perf_test.json
-(cd .. && python3.9 perf_test.py)
+blockRate=(5 10 20 30 60)
+
+for rate in ${blockRate[@]}; do
+    jq --argjson rate $rate '.block_rate = $rate | .initial_txs = 500 | .latency_settings.peer_spec = 0' perf_test.json
+    (cd .. && python3.9 perf_test.py)
+done
+
+
+#jq '.test_run_time = 30 | .initial_txs = 500 | .latency_settings.peer_spec = 0' perf_test.json
+#(cd .. && python3.9 perf_test.py)
+#jq '.test_run_time = 20 | .initial_txs = 250 | .latency_settings.peer_spec = 0' perf_test.json
+#(cd .. && python3.9 perf_test.py)
 
 

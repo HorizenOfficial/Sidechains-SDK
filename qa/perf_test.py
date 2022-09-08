@@ -1,9 +1,9 @@
 import logging
+import math
 import random
 import time
 from multiprocessing import Pool, Value
 from time import sleep
-import psutil
 from os.path import exists
 import csv
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
@@ -53,20 +53,14 @@ def get_number_of_transactions_for_node(node):
     return len(allTransactions(node, False)["transactionIds"])
 
 
-def send_transactions_per_second(txs_creator_node, destination_address, utxo_amount, max_tps_receivable_per_node,
-                                 start_time, test_run_time, process_to_map, creator_node_index, receiver_node_index):
-    p = psutil.Process()
-    p.cpu_affinity([process_to_map])
-    print(f"Process #{process_to_map}: TPS Throughput generator {process_to_map}, Generator affinity now "
-          f"{p.cpu_affinity()}", flush=True)
-    print(f"Creator node (Node{creator_node_index}) sending {max_tps_receivable_per_node} TPS to Receiving Node"
-          f"(Node{receiver_node_index}) ...")
+def send_transactions_per_second(txs_creator_node, destination_address, utxo_amount, start_time, test_run_time,
+                                 transactions_per_second):
     # Run until
     while time.time() - start_time < test_run_time:
         i = 0
         tps_start_time = time.time()
-        # Send transactions until the maximum tps receivable value has been reached
-        while i < max_tps_receivable_per_node:
+        # Send transactions until the transactions_per_second value has been reached
+        while i < transactions_per_second:
             try:
                 sendCoinsToAddress(txs_creator_node, destination_address, utxo_amount, 0)
             except Exception:
@@ -80,12 +74,10 @@ def send_transactions_per_second(txs_creator_node, destination_address, utxo_amo
         if completion_time < 1:
             sleep(1 - completion_time)
         # If completion time exceeds 1 second, it's no longer x transactions per second.
-        # Lower the max_tps_receivable_per_node config value until this value is under 1 second.
+        # Adjust the initial_txs and test_run_time config values until this value is under 1 second.
         elif completion_time > 1:
-            print("WARNING:  Number of transactions sent has exceeded 1 second - decrease "
-                  "max_tps_receivable_per_node value.")
-    print(f"- COMPLETED - Creator node (Node{creator_node_index}) sent {max_tps_receivable_per_node} "
-          f"TPS to Receiving Node (Node{receiver_node_index}) ...")
+            print("WARNING:  Number of transactions sent has exceeded 1 second - Adjust the initial_txs and "
+                  "test_run_time config values ")
 
 
 class PerformanceTest(SidechainTestFramework):
@@ -94,6 +86,7 @@ class PerformanceTest(SidechainTestFramework):
     sc_nodes_bootstrap_info = None
     perf_data = deserialize_perf_test_json(CONFIG_FILE)
     test_type = TestType(perf_data["test_type"])
+    initial_ft_amount = perf_data["initial_ft_amount"]
     sc_node_data = perf_data["nodes"]
     sc_nodes_list = list(sc_node_data)
     initial_txs = perf_data["initial_txs"]
@@ -103,7 +96,8 @@ class PerformanceTest(SidechainTestFramework):
     topology = NetworkTopology(perf_data["network_topology"])
     latency_settings = get_latency_config(perf_data)
 
-    csv_data = {"test_type": test_type, "max_tps_receivable_per_node": perf_data["max_tps_receivable_per_node"],
+    csv_data = {"test_type": test_type,
+                "initial_ft_amount": initial_ft_amount,
                 "test_run_time": test_run_time, "block_rate": block_rate,
                 "use_multiprocessing": perf_data["use_multiprocessing"], "initial_txs": initial_txs,
                 "network_topology": topology,
@@ -301,44 +295,26 @@ class PerformanceTest(SidechainTestFramework):
         start_time = time.time()
 
         if tps_test:
-            # Each node needs to be able to receive a number of transactions per second, without going over 1 second, or
+            # Each node needs to be able to send a number of transactions per second, without going over 1 second, or
             # timing out - May need some fine-tuning.
-            try:
-                max_tps_receivable_per_node = self.perf_data["max_tps_receivable_per_node"]
-            except Exception:
-                raise ValueError("Value: 'max_tps_receivable_per_node' not found, ensure it's present in json config")
-
+            transactions_per_second = math.floor(self.initial_txs / self.test_run_time)
             for i in range(len(txs_creators)):
                 print(
-                    f"Running Throughput: {max_tps_receivable_per_node} Transactions Per Second for Creator Node(Node{i})...")
+                    f"Running Throughput: {transactions_per_second} Transactions Per Second for Creator "
+                    f"Node(Node{i})...")
 
             while counter.value < self.initial_txs * len(txs_creators) and (
                     (time.time() - start_time) < self.test_run_time):
                 # Create the multiprocess pool
                 with Pool(initializer=init_globals, initargs=(counter, errors)) as pool:
-                    start_from_process = 0
                     args = []
-                    if self.perf_data["use_multiprocessing"]:
-                        # Each node takes up 1 process, so we need to use the next available process
-                        start_from_process = len(self.sc_nodes_list)
-
                     # Add send_transactions_per_second arguments to args for each tx_creator_node
                     # starmap runs them all in parallel
-                    i = 0
-                    for index, node in enumerate(self.sc_nodes_list):
-                        if node["tx_creator"]:
-                            # Get node list without the current txs_creator_node
-                            if index == len(self.sc_nodes) - 1:
-                                node_to_send_to = 0
-                            else:
-                                node_to_send_to = index + 1
-
-                            # Create a single random node destination address per process
-                            destination_address = http_wallet_createPrivateKey25519(self.sc_nodes[node_to_send_to])
-                            args.append((self.sc_nodes[index], destination_address, utxo_amount,
-                                         max_tps_receivable_per_node, start_time, self.test_run_time, start_from_process
-                                         + i, index, node_to_send_to))
-
+                    for txs_creator in txs_creators:
+                        # Create a single random receiver node destination address
+                        destination_address = http_wallet_createPrivateKey25519(random.choice(self.sc_nodes))
+                        args.append((txs_creator, destination_address, utxo_amount, start_time,
+                                     self.test_run_time, transactions_per_second))
                     pool.starmap(send_transactions_per_second, args)
 
                 print(f"... Sent {counter.value} Transactions ...")
@@ -347,23 +323,18 @@ class PerformanceTest(SidechainTestFramework):
             # We're not interested in transactions per second, just fire all transactions as fast as possible
             for _ in range(self.initial_txs):
                 with Pool(initializer=init_globals, initargs=(counter, errors)) as pool:
-                    for index, node in enumerate(self.sc_nodes_list):
-                        if node["tx_creator"]:
-                            # Get node list without the current txs_creator_node
-                            if index == len(self.sc_nodes) - 1:
-                                node_to_send_to = 0
-                            else:
-                                node_to_send_to = index + 1
+                    args = []
+                    for txs_creator in txs_creators:
+                        # Create a single random node destination address per process
+                        destination_address = http_wallet_createPrivateKey25519(random.choice(self.sc_nodes))
+                        args = [(txs_creator, destination_address, utxo_amount, 0)]
 
-                            # Create a single random node destination address per process
-                            destination_address = http_wallet_createPrivateKey25519(self.sc_nodes[node_to_send_to])
-                            args = [(self.sc_nodes[index], destination_address, utxo_amount, 0)]
-                        while counter.value < self.initial_txs and ((time.time() - start_time) < self.test_run_time):
-                            try:
-                                pool.starmap(sendCoinsToAddress, args)
-                            except Exception:
-                                errors.value += 1
-                            counter.value += 1
+                    while counter.value < self.initial_txs and ((time.time() - start_time) < self.test_run_time):
+                        try:
+                            pool.starmap(sendCoinsToAddress, args)
+                        except Exception:
+                            errors.value += 1
+                        counter.value += 1
             print(f"Firing Transactions Ended After: {time.time() - start_time}")
             print(f"Total Nodes creator sent {counter.value} transactions out of a possible {self.initial_txs} "
                   f"in {time.time() - start_time} seconds.")
@@ -377,7 +348,7 @@ class PerformanceTest(SidechainTestFramework):
         # Declare SC Addresses
         txs_creator_addresses = []
         ft_addresses = []
-        ft_amount = 1000
+        ft_amount = self.initial_ft_amount
         mc_return_address = mc_nodes[0].getnewaddress()
 
         # Get tx creator nodes and non tx creator nodes
