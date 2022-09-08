@@ -345,11 +345,11 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
 
   @throws(classOf[ExecutionFailedException])
   override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
-    view.enableGasTracking(gas)
+    val gasView = new AccountStateViewGasTracked(view, gas)
     getFunctionSignature(msg.getData) match {
-      case GetListOfForgersCmd => doGetListOfForgersCmd(msg, view)
-      case AddNewStakeCmd => doAddNewStakeCmd(msg, view)
-      case RemoveStakeCmd => doRemoveStakeCmd(msg, view)
+      case GetListOfForgersCmd => doGetListOfForgersCmd(msg, gasView)
+      case AddNewStakeCmd => doAddNewStakeCmd(msg, gasView)
+      case RemoveStakeCmd => doRemoveStakeCmd(msg, gasView)
       case opCodeHex => throw new ExecutionRevertedException(s"op code $opCodeHex not supported")
     }
   }

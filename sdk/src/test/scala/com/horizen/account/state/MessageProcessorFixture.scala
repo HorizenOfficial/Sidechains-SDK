@@ -77,8 +77,8 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
   /**
    * Creates a large temporary gas pool and passes it into the given function.
    */
-  def withGas[A](fun: GasPool => A): A = {
-    fun(new GasPool(BigInteger.valueOf(1000000)))
+  def withGas[A](fun: GasPool => A, gasLimit: BigInteger = 1000000): A = {
+    fun(new GasPool(gasLimit))
   }
 
   /**
