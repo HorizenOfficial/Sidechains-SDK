@@ -19,7 +19,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.proof.Proof
 import com.horizen.proposition.Proposition
 import com.horizen.storage.SidechainSecretStorage
-import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.utils.WithdrawalEpochUtils
 import com.horizen.validation.SemanticBlockValidator
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
 import scorex.core.utils.NetworkTimeProvider
@@ -100,20 +100,26 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   // Scan modifier only, there is no need to notify AccountWallet about fees,
   // since account balances are tracked only in the AccountState.
-  // But we need also to notify History with fee payments info
+  // But we need also to notify History with fee payments, if any, info at the end of withdrawal epoch
   override protected def scanBlockWithFeePayments(history: HIS, state: MS, wallet: VL, modToApply: AccountBlock): (HIS, VL) = {
+    val walletAfterUpdate = wallet.scanPersistent(modToApply)
+
     val epochInfo = state.getWithdrawalEpochInfo
     val isWithdrawalEpochLastIndex: Boolean = WithdrawalEpochUtils.isEpochLastIndex(epochInfo, params)
     if (isWithdrawalEpochLastIndex) {
       val epochNumber: Int = epochInfo.epoch
       val feePayments = state.getFeePayments(epochNumber)
-      val forgersPoolRewardsSeq: Seq[AccountPayment] = AccountFeePaymentsUtils.getForgersRewards(feePayments)
-      log.debug(s"updating history with ${feePayments.size} fee payments to ${forgersPoolRewardsSeq.size} forgers for withdrawal epoch $epochNumber")
-      val historyAfterUpdateFee = history.updateFeePaymentsInfo(modToApply.id, AccountFeePaymentsInfo(forgersPoolRewardsSeq))
+      if (feePayments.nonEmpty) {
+        val forgersPoolRewardsSeq: Seq[AccountPayment] = AccountFeePaymentsUtils.getForgersRewards(feePayments)
+        log.debug(s"updating history with ${feePayments.size} fee payments to ${forgersPoolRewardsSeq.size} forgers for withdrawal epoch $epochNumber")
+        val historyAfterUpdateFee = history.updateFeePaymentsInfo(modToApply.id, AccountFeePaymentsInfo(forgersPoolRewardsSeq))
 
-      (historyAfterUpdateFee, wallet.scanPersistent(modToApply))
+        (historyAfterUpdateFee, walletAfterUpdate)
+      } else {
+        (history, walletAfterUpdate)
+      }
     } else {
-      (history, wallet.scanPersistent(modToApply))
+      (history, walletAfterUpdate)
     }
   }
 

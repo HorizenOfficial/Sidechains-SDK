@@ -1,9 +1,7 @@
 package com.horizen.account.utils
 
-import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.evm.{StateDB, TrieHasher}
-import com.horizen.utils.MerkleTree
 
 import java.math.BigInteger
 
@@ -21,6 +19,9 @@ object AccountFeePaymentsUtils {
   }
 
   def getForgersRewards(blockFeeInfoSeq : Seq[AccountBlockFeeInfo]): Seq[AccountPayment] = {
+    if (blockFeeInfoSeq.isEmpty)
+      return Seq()
+
     var poolFee: BigInteger = BigInteger.ZERO
     val forgersBlockRewards: Seq[AccountPayment] = blockFeeInfoSeq.map(feeInfo => {
       poolFee = poolFee.add(feeInfo.baseFee)

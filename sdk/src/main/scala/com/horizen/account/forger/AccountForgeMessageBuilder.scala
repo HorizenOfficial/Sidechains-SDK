@@ -55,13 +55,12 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                         view: AccountStateView,
                         sidechainTransactions: Seq[SidechainTypes#SCAT],
                         mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-                        inputBlockSize: Int,
-                        forgerAddress: AddressProposition)
-  : (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], AccountBlockFeeInfo) = {
+                        forgerAddress: AddressProposition
+                      ) : (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], AccountBlockFeeInfo) = {
 
     // we must ensure that all the tx we get from mempool are applicable to current state view
     // and we must stay below the block gas limit threshold, therefore we might have a subset of the input transactions
-    val (receiptList, listOfAppliedTxHash, cumBaseFee, cumForgerTips) = tryApplyAndGetBlockInfo(view, mainchainBlockReferencesData, sidechainTransactions, inputBlockSize).get
+    val (receiptList, listOfAppliedTxHash, cumBaseFee, cumForgerTips) = tryApplyAndGetBlockInfo(view, mainchainBlockReferencesData, sidechainTransactions).get
 
     // get only the transactions for which we got a receipt
     val appliedTransactions = sidechainTransactions.filter {
@@ -74,19 +73,11 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     (view.getIntermediateRoot, receiptList, appliedTransactions, AccountBlockFeeInfo(cumBaseFee, cumForgerTips, forgerAddress))
   }
 
-
-  def blockSizeExceeded(blockSize: Int, txCounter: Int): Boolean = {
-    if (txCounter > SidechainBlockBase.MAX_SIDECHAIN_TXS_NUMBER || blockSize > SidechainBlockBase.MAX_BLOCK_SIZE)
-      true // stop data collection
-    else {
-      false // continue data collection
-    }
-  }
-
-  private def tryApplyAndGetBlockInfo(stateView: AccountStateView,
-                                      mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-                                      sidechainTransactions: Seq[SidechainTypes#SCAT],
-                                      inputBlockSize: Int): Try[(Seq[EthereumConsensusDataReceipt], Seq[ByteArrayWrapper], BigInteger, BigInteger)] = Try {
+  private def tryApplyAndGetBlockInfo(
+                                       stateView: AccountStateView,
+                                       mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
+                                       sidechainTransactions: Seq[SidechainTypes#SCAT]) :
+  Try[(Seq[EthereumConsensusDataReceipt], Seq[ByteArrayWrapper], BigInteger, BigInteger)] = Try {
 
     for (mcBlockRefData <- mainchainBlockReferencesData) {
       stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
@@ -96,20 +87,12 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val txHashList = new ListBuffer[ByteArrayWrapper]()
 
     val blockGasPool = new GasPool(stateView.getBlockGasLimit)
-    var txsCounter: Int = 0
-    var blockSize: Int = inputBlockSize
 
     var cumGasUsed: BigInteger = BigInteger.ZERO
     var cumBaseFee: BigInteger = BigInteger.ZERO // cumulative base-fee, burned in eth, goes to forgers pool
     var cumForgerTips: BigInteger = BigInteger.ZERO  // cumulative max-priority-fee, is paid to block forger
 
     for ((tx, txIndex) <- sidechainTransactions.zipWithIndex) {
-
-      blockSize = blockSize + tx.bytes.length + 4 // placeholder for Tx length
-      txsCounter += 1
-
-      if (blockSizeExceeded(blockSize, txsCounter))
-        return Success(receiptList, txHashList, cumBaseFee, cumForgerTips)
 
       stateView.applyTransaction(tx, txIndex, blockGasPool) match {
         case Success(consensusDataReceipt) =>
@@ -181,8 +164,8 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
             // - the list of receipt of the transactions successfully applied ---> for getting the receiptsRoot
             // - the list of transactions successfully applied to the state ---> to be included in the forged block
             // - the fee info object related to this block
-            val resultTuple : (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], AccountBlockFeeInfo) = computeBlockInfo(
-              dummyView, sidechainTransactions, mainchainBlockReferencesData, inputBlockSize, forgerAddress)
+            val resultTuple : (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], AccountBlockFeeInfo) =
+              computeBlockInfo(dummyView, sidechainTransactions, mainchainBlockReferencesData, forgerAddress)
 
             val feePayments = if(isWithdrawalEpochLastBlock) {
               // Current block is expected to be the continuation of the current tip, so there are no ommers.

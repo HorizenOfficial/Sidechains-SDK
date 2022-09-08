@@ -11,12 +11,11 @@ import com.horizen.evm.TrieHasher
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, MerklePath}
+import com.horizen.utils.{BytesUtils, MerklePath}
 import com.horizen.validation.InconsistentSidechainBlockDataException
 import com.horizen.{ScorexEncoding, SidechainTypes, account}
 import scorex.core.block.Block
-import scorex.util.{ScorexLogging, idToBytes}
-import com.horizen.account.utils.Account
+import scorex.util.ScorexLogging
 
 import scala.util.Try
 

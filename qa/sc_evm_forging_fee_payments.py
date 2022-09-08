@@ -51,7 +51,7 @@ class ScEvmForgingFeePayments(SidechainTestFramework):
   number_of_mc_nodes = 1
   number_of_sidechain_nodes = 2
 
-  withdrawal_epoch_length = 5
+  withdrawal_epoch_length = 20
 
   def setup_chain(self):
       initialize_chain_clean(self.options.tmpdir, self.number_of_mc_nodes)
@@ -229,8 +229,8 @@ class ScEvmForgingFeePayments(SidechainTestFramework):
 
       self.sc_sync_all()
 
-      # Generate 3 MC block to reach the end of the withdrawal epoch
-      mc_node.generate(3)
+      # Generate some MC block to reach the end of the withdrawal epoch
+      mc_node.generate(self.withdrawal_epoch_length - 2)
 
       # balance now is initial (ft) without forgerStake and fee and without transferred amounts and fees
       assert_equal(
