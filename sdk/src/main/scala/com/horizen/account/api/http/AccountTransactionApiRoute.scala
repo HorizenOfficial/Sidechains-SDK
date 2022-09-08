@@ -128,11 +128,10 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
   def sendCoinsToAddress: Route = (post & path("sendCoinsToAddress")) {
     entity(as[ReqSendCoinsToAddress]) { body =>
       // lock the view and try to create EvmTransaction
-      // TODO also account for gas fees
       applyOnNodeView { sidechainNodeView =>
         val valueInWei = ZenWeiConverter.convertZenniesToWei(body.value)
         val destAddress = body.to
-        val gasPrice = sidechainNodeView.getNodeState.getBaseFeePerGas
+        val gasPrice = sidechainNodeView.getNodeState.getBaseFeePerGas.add(BigInteger.valueOf(200))
         val gasLimit = GasUtil.TxGas
         // check if the fromAddress is either empty or it fits and the value is high enough
         val secret = getFittingSecret(sidechainNodeView, body.from, valueInWei)

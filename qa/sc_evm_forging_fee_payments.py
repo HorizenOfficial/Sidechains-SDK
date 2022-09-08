@@ -272,6 +272,7 @@ class ScEvmForgingFeePayments(SidechainTestFramework):
           if idx < pool_fee % len(sc_block_fee_info):
               forger_fees[sc_block_fee.node] += 1
 
+          print("block {} fees: {}, {}".format(idx, sc_block_fee.baseFee, sc_block_fee.forgerTips))
 
 
       sc_node_1_balance_after_payments = sc_node_1.wallet_getTotalBalance()['result']['balance']
