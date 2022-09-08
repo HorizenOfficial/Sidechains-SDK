@@ -66,7 +66,7 @@ class ForgerTest extends JUnitSuite with Matchers {
     val mainchainSynchronizer = mock[MainchainSynchronizer]
     val companion = mock[SidechainTransactionsCompanion]
 
-    class ForgerTest(settings: SidechainSettings,
+    class ForgerUnderTest(settings: SidechainSettings,
                      viewHolderRef: ActorRef,
                      mainchainSynchronizer: MainchainSynchronizer,
                      companion: SidechainTransactionsCompanion,
@@ -77,7 +77,7 @@ class ForgerTest extends JUnitSuite with Matchers {
       }
     }
 
-    val testForger = system.actorOf(Props(new ForgerTest(settings, viewHolder.ref, mainchainSynchronizer, companion, timeProvider, params)))
-    (testForger, viewHolder)
+    val forgerUnderTest = system.actorOf(Props(new ForgerUnderTest(settings, viewHolder.ref, mainchainSynchronizer, companion, timeProvider, params)))
+    (forgerUnderTest, viewHolder)
   }
 }
