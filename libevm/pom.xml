@@ -56,7 +56,7 @@
           <excludeDefaultDirectories>true</excludeDefaultDirectories>
           <filesets>
             <fileset>
-              <directory>${basedir}${file.separator}pkg</directory>
+              <directory>${basedir}${file.separator}test${file.separator}compiled</directory>
             </fileset>
           </filesets>
         </configuration>
