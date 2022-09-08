@@ -4,11 +4,11 @@ import com.google.common.primitives.Ints
 import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion0, SidechainCreationVersion1, SidechainCreationVersion2}
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import com.horizen.params.{MainNetParams, RegTestParams, TestNetParams}
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, CurrentSidechainVersionOnly, CustomSidechainsVersions, SidechainVersionOne, SidechainVersionZero, TestSidechainsVersionsManager}
-import org.junit.{Ignore, Test}
-import org.junit.Assert.{assertEquals, assertFalse, assertTrue, fail => jFail}
-import org.scalatestplus.junit.JUnitSuite
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, CustomSidechainsVersions, SidechainVersionZero, TestSidechainsVersionsManager}
+import org.junit.Assert.{assertEquals, assertFalse, assertTrue, fail => jFail}
+import org.junit.Test
+import org.scalatestplus.junit.JUnitSuite
 
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
@@ -398,6 +398,29 @@ class MainchainBlockReferenceTest extends JUnitSuite {
     assertTrue("Block must not-contain lower quality certificate leaves.", mcblock2.data.lowerCertificateLeaves.isEmpty)
     assertTrue("Block must contain proof of existence.", mcblock2.data.existenceProof.isEmpty)
     assertTrue("Block must not contain proof of absence", mcblock2.data.absenceProof.isDefined)
+  }
+
+  @Test
+  def blockWithCertificateWithNonZeroScFee(): Unit = {
+    // Test: parse MC block with tx version -4 with a single certificate without backward transfers.
+    val mcBlockHex = Source.fromResource("new_mc_blocks/mc_block_with_certificate_with_non_zero_sc_fee")
+    val mcBlockBytes = BytesUtils.fromHexString(mcBlockHex.getLines().next())
+
+    val scId1 = new ByteArrayWrapper(Array[Byte](83, -85, 98, 31, 59, -8, 55, -118, 9, -94, -45, -86, -83, 55, 47, -9, 124, -86, 82, 26, 2, -90, -101, 85, 119, -21, 2, 100, -70, -53, -84, 9)) // LE
+    val params1 = RegTestParams(scId1.data)
+
+    val mcblockTry1 = MainchainBlockReference.create(mcBlockBytes, params1, TestSidechainsVersionsManager(params1))
+
+    assertTrue("Block expected to be parsed", mcblockTry1.isSuccess)
+    val mcblock1 = mcblockTry1.get
+
+    assertTrue("Block expected to be semantically valid", mcblock1.semanticValidity(params1).isSuccess)
+
+    assertTrue("Block must not contain transaction.", mcblock1.data.sidechainRelatedAggregatedTransaction.isEmpty)
+    assertTrue("Block must contain certificate.", mcblock1.data.topQualityCertificate.isDefined)
+    assertTrue("Block must not-contain lower quality certificate leaves.", mcblock1.data.lowerCertificateLeaves.isEmpty)
+    assertEquals("Block certificate must contain correct ft fee.", 54, mcblock1.data.topQualityCertificate.get.ftMinAmount)
+    assertEquals("Block certificate must contain correct btr fee.", 0, mcblock1.data.topQualityCertificate.get.btrFee)
   }
 
   @Test
