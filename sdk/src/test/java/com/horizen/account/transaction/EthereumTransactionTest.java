@@ -169,10 +169,10 @@ public class EthereumTransactionTest {
         EthereumTransaction ethereumTransactionDeserialize = EthereumTransactionSerializer.getSerializer().parseBytes(ethereumTransaction.bytes());
         assertArrayEquals(ethereumTransaction.messageToSign(), ethereumTransactionDeserialize.messageToSign());
 
-        // Test 7: getMaxFeePerGas should be null, as this is a legacy transaction
-        assertNull(ethereumTransaction.getMaxFeePerGas());
-        // Test 8: getMaxPriorityFeePerGas should be null, as this is a legacy transaction
-        assertNull(ethereumTransaction.getMaxPriorityFeePerGas());
+        // Test 7: getMaxFeePerGas should be equal to gas price, as this is a legacy transaction
+        assertEquals(ethereumTransaction.getGasPrice(), ethereumTransaction.getMaxFeePerGas());
+        // Test 8: getMaxPriorityFeePerGas should be equal to gas price, as this is a legacy transaction
+        assertEquals(ethereumTransaction.getGasPrice(), ethereumTransaction.getMaxPriorityFeePerGas());
         // Test 9: getChainId should be null, as this is a legacy transaction
         assertNull(ethereumTransaction.getChainId());
         // Test 10: getFrom should be null, as this is an unsigned tx

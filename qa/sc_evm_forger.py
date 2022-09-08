@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import pprint
 import time
 from decimal import Decimal
 
@@ -10,7 +11,8 @@ from test_framework.util import assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, AccountModelBlockVersion, EVM_APP_BINARY, generate_next_block, convertZenniesToWei, \
-    convertZenToZennies, connect_sc_nodes, convertZenToWei, ForgerStakeSmartContractAddress, get_account_balance
+    convertZenToZennies, connect_sc_nodes, convertZenToWei, ForgerStakeSmartContractAddress, get_account_balance, \
+    computeForgedTxFee, convertWeiToZen
 
 """
 Configuration: 
@@ -182,8 +184,8 @@ class SCEvmForger(SidechainTestFramework):
         initial_balance_2 = get_account_balance(sc_node_2, evm_address_sc_node_2)
         assert_equal(ft_amount_in_wei_2, initial_balance_2)
 
-        initial_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
-        assert_equal(ft_amount_in_wei, initial_balance)
+        initial_balance_1 = get_account_balance(sc_node_1, evm_address_sc_node_1)
+        assert_equal(ft_amount_in_wei, initial_balance_1)
 
         # try spending the stake by a sc node which does not own it
         forg_spend_res_2 = sc_node_2.transaction_spendForgingStake(
@@ -221,6 +223,7 @@ class SCEvmForger(SidechainTestFramework):
             fail("make forger stake failed: " + json.dumps(makeForgerStakeJsonRes))
         else:
             print("Forger stake created: " + json.dumps(makeForgerStakeJsonRes))
+        tx_hash = makeForgerStakeJsonRes['result']['transactionId']
         self.sc_sync_all()
 
         # Generate SC block on SC node (keep epoch)
@@ -228,12 +231,19 @@ class SCEvmForger(SidechainTestFramework):
         self.sc_sync_all()
         print_current_epoch_and_slot(sc_node_1)
 
+
         stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
-        assert_equal(len(stakeList), 2)
+        assert_equal(2, len(stakeList))
+
+        #Check balance
+        gas_fee_paid, _, _ = computeForgedTxFee(sc_node_1, tx_hash)
+        account_1_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
+        assert_equal(initial_balance_1 - convertZenToWei(forgerStake1_amount) - gas_fee_paid, account_1_balance)
+        initial_balance_1 = account_1_balance
 
         tx_cost_amount = 1
         forgerStake2_amount = ft_amount_in_zen - (
-            forgerStake1_amount) - tx_cost_amount  # Zen, 1 zen left for paying gas
+            forgerStake1_amount + convertWeiToZen(gas_fee_paid)) - tx_cost_amount  # Zen, 1 zen left for paying gas
         forgerStakes = {"forgerStakeInfo": {
             "ownerAddress": evm_address_sc_node_1,  # SC node 1 is an owner
             "blockSignPublicKey": sc2_blockSignPubKey,  # SC node 2 is a block signer
@@ -254,6 +264,7 @@ class SCEvmForger(SidechainTestFramework):
         else:
             print("Forger stake created: " + json.dumps(makeForgerStakeJsonRes))
         self.sc_sync_all()
+        tx_hash = makeForgerStakeJsonRes['result']['transactionId']
 
         # Generate SC block on SC node (keep epoch)
         generate_next_block(sc_node_1, "first node", force_switch_to_next_epoch=False)
@@ -262,7 +273,13 @@ class SCEvmForger(SidechainTestFramework):
 
         # we now have 3 stakes
         stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
-        assert_equal(len(stakeList), 3)
+        assert_equal(3, len(stakeList))
+
+        #Check balance
+        gas_fee_paid, _, _ = computeForgedTxFee(sc_node_1, tx_hash)
+        account_1_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
+        assert_equal(initial_balance_1 - convertZenToWei(forgerStake2_amount) - gas_fee_paid, account_1_balance)
+        initial_balance_1 = account_1_balance
 
         # Verify SC node 2 can not forge yet
         exception_occurs = False
@@ -328,6 +345,7 @@ class SCEvmForger(SidechainTestFramework):
         else:
             print("Forger stake removed: " + json.dumps(spendForgerStakeJsonRes))
         self.sc_sync_all()
+        tx_hash = spendForgerStakeJsonRes['result']['transactionId']
 
         # Generate SC block on SC node 1 (keep epoch)
         generate_next_block(sc_node_1, "first node", force_switch_to_next_epoch=False)
@@ -340,6 +358,12 @@ class SCEvmForger(SidechainTestFramework):
             convertZenToWei(forgerStake1_amount) +
             convertZenToWei(forgerStake2_amount),
             get_account_balance(sc_node_1, ForgerStakeSmartContractAddress))
+
+        #Check balance
+        gas_fee_paid, _, _ = computeForgedTxFee(sc_node_1, tx_hash)
+        account_1_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
+        assert_equal(initial_balance_1 - gas_fee_paid, account_1_balance)
+        initial_balance_1 = account_1_balance
 
         # Generate SC block on SC node 1 switching epoch
         generate_next_block(sc_node_1, "first node", force_switch_to_next_epoch=True)
@@ -363,15 +387,16 @@ class SCEvmForger(SidechainTestFramework):
             assert_true(exception_occurs, "No forging stakes expected for SC node 1.")
 
         stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
-        assert_equal(len(stakeList), 2)
+        assert_equal(2, len(stakeList))
 
         stakeId_1 = stakeList[0]['stakeId']
         stakeId_2 = stakeList[1]['stakeId']
 
         # balance is in wei
         final_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
-        #TODO find a way to calculate the tx fee
-        #assert_equal(convertZenToWei(tx_cost_amount), final_balance)
+        assert_equal(initial_balance_1, final_balance)
+        initial_balance_1 = final_balance
+
         bal_sc_cr_prop = get_account_balance(sc_node_1, sc_cr_owner_proposition)
         assert_equal(convertZenniesToWei(stakeAmount), bal_sc_cr_prop)
         assert_equal(
@@ -403,6 +428,12 @@ class SCEvmForger(SidechainTestFramework):
         stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
         assert_equal(len(stakeList), 1)
 
+        #Check balance
+        account_1_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
+        assert_equal(initial_balance_1 + convertZenToWei(forgerStake1_amount), account_1_balance)
+        initial_balance_1 = account_1_balance
+
+
         # TODO when we have no more ForgerStakes the SC is dead!!!
         # proposal: prevent spending of last stake (a minimal stake must be added beforehand)
         spendForgerStakeJsonRes = sc_node_1.transaction_spendForgingStake(
@@ -430,13 +461,10 @@ class SCEvmForger(SidechainTestFramework):
         assert_equal(len(stakeList), 0)
 
         # all balance is now at the expected owner address
-        final_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
-        #TODO find a way to calculate the tx fee
-        #assert_equal(
-            # convertZenToWei(forgerStake1_amount) +
-            # convertZenToWei(forgerStake2_amount) +
-            # convertZenToWei(tx_cost_amount),
-            # final_balance)
+
+        #Check balance
+        account_1_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
+        assert_equal(initial_balance_1 + convertZenToWei(forgerStake2_amount), account_1_balance)
 
         # Generate SC block on SC node keeping current epoch
         generate_next_block(sc_node_2, "first node", force_switch_to_next_epoch=False)

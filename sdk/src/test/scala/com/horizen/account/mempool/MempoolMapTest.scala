@@ -22,6 +22,53 @@ class MempoolMapTest
   def setUp(): Unit = {
   }
 
+
+  @Test
+  def testCanPayHigherFee(): Unit = {
+    val account1KeyPair = Keys.createEcKeyPair
+    val mempoolMap = MempoolMap()
+    val nonce = BigInteger.ZERO
+    val value = BigInteger.TEN
+
+    val lowerGasPrice = BigInteger.valueOf(53)
+    val higherGasPrice = lowerGasPrice.add(BigInteger.TEN)
+    // Legacy tx with legacy tx
+    val legacyTxHigherPrice = createLegacyTransaction(value, nonce, Some(higherGasPrice))
+    val legacyTxLowerPrice = createLegacyTransaction(value, nonce, Some(lowerGasPrice))
+
+    assertTrue(mempoolMap.canPayHigherFee(legacyTxHigherPrice, legacyTxLowerPrice))
+    assertFalse(mempoolMap.canPayHigherFee(legacyTxHigherPrice, legacyTxHigherPrice))
+    assertFalse(mempoolMap.canPayHigherFee(legacyTxLowerPrice, legacyTxHigherPrice))
+
+    val lowerGasFee = lowerGasPrice
+    val higherGasFee = higherGasPrice
+    val lowerGasTip = BigInteger.valueOf(54)
+    val higherGasTip = lowerGasTip.add(BigInteger.TEN)
+
+    // EIP1559 tx with EIP1559 tx
+    val eip1559TxHFeeLTip = createEIP1559Transaction(value, nonce, gasFee = higherGasFee, priorityGasFee = lowerGasTip)
+    val eip1559TxHFeeHTip = createEIP1559Transaction(value, nonce, gasFee = higherGasFee, priorityGasFee = higherGasTip)
+    val eip1559TxLFeeLTip = createEIP1559Transaction(value, nonce, gasFee = lowerGasFee, priorityGasFee = lowerGasTip)
+    val eip1559TxLFeeHTip = createEIP1559Transaction(value, nonce, gasFee = lowerGasFee, priorityGasFee = higherGasTip)
+
+    assertFalse(mempoolMap.canPayHigherFee(eip1559TxHFeeLTip, eip1559TxHFeeLTip))
+    assertFalse(mempoolMap.canPayHigherFee(eip1559TxHFeeLTip, eip1559TxLFeeHTip))
+    assertFalse(mempoolMap.canPayHigherFee(eip1559TxLFeeHTip, eip1559TxHFeeLTip))
+    assertFalse(mempoolMap.canPayHigherFee(eip1559TxLFeeHTip, eip1559TxLFeeLTip))
+    assertFalse(mempoolMap.canPayHigherFee(eip1559TxHFeeHTip, eip1559TxHFeeLTip))
+    assertFalse(mempoolMap.canPayHigherFee(eip1559TxHFeeHTip, eip1559TxLFeeHTip))
+    assertTrue(mempoolMap.canPayHigherFee(eip1559TxHFeeHTip, eip1559TxLFeeLTip))
+
+    //Mixed tx
+    assertFalse(mempoolMap.canPayHigherFee(eip1559TxHFeeHTip, legacyTxHigherPrice))
+    assertFalse(mempoolMap.canPayHigherFee(legacyTxHigherPrice, eip1559TxHFeeLTip))
+    assertFalse(mempoolMap.canPayHigherFee(legacyTxHigherPrice, eip1559TxHFeeLTip))
+    assertTrue(mempoolMap.canPayHigherFee(legacyTxHigherPrice, eip1559TxLFeeLTip))
+    assertTrue(mempoolMap.canPayHigherFee(eip1559TxHFeeHTip, legacyTxLowerPrice))
+
+  }
+
+
   @Test
   def testAddExecutableTx(): Unit = {
     val account1KeyPair = Keys.createEcKeyPair
@@ -161,7 +208,9 @@ class MempoolMapTest
     val value = BigInteger.TEN
 
     val nonExecNonce = BigInteger.TEN
-    val account1NonExecTransaction0 = createEIP1559Transaction(value, nonExecNonce, Option(account1KeyPair), BigInteger.valueOf(100), BigInteger.valueOf(80))
+    val nonExecGasFeeCap = BigInteger.valueOf(100)
+    val nonExecGasTipCap = BigInteger.valueOf(80)
+    val account1NonExecTransaction0 = createEIP1559Transaction(value, nonExecNonce, Option(account1KeyPair), nonExecGasFeeCap, nonExecGasTipCap)
     mempoolMap.initializeAccount(account1InitialStateNonce, account1NonExecTransaction0.getFrom)
     var res = mempoolMap.add(account1NonExecTransaction0)
     assertTrue("Adding transaction failed", res.isSuccess)
@@ -186,7 +235,8 @@ class MempoolMapTest
     assertTrue("Adding transaction failed", res.isSuccess)
     assertFalse("Mempool contains transaction with same gas fee", res.get.contains(account1NonExecTransactionSameNonceSameFee))
 
-    val account1NonExecTransactionSameNonceHigherFee = createEIP1559Transaction(BigInteger.valueOf(123), nonExecNonce, Option(account1KeyPair), account1NonExecTransaction0.getGasPrice.add(BigInteger.ONE), BigInteger.ONE)
+    val higherFee = account1NonExecTransaction0.getGasPrice.add(BigInteger.ONE)
+    val account1NonExecTransactionSameNonceHigherFee = createEIP1559Transaction(BigInteger.valueOf(123), nonExecNonce, Option(account1KeyPair), higherFee, higherFee)
     res = mempoolMap.add(account1NonExecTransactionSameNonceHigherFee)
     assertTrue("Adding transaction failed", res.isSuccess)
     assertTrue("Mempool doesn't contain transaction with higher gas fee", res.get.contains(account1NonExecTransactionSameNonceHigherFee))
@@ -209,12 +259,13 @@ class MempoolMapTest
     assertTrue("Adding transaction failed", res.isSuccess)
     assertFalse("Mempool contains exec transaction with lower gas fee", res.get.contains(account1ExecTransactionSameNonceLowerFee))
 
-    val account1ExecTransactionSameNonceSameFee = createEIP1559Transaction(BigInteger.valueOf(123), account1InitialStateNonce, Option(account1KeyPair), account1ExecTransaction0.getGasPrice, BigInteger.ONE)
+    val account1ExecTransactionSameNonceSameFee = createEIP1559Transaction(BigInteger.valueOf(123), account1InitialStateNonce, Option(account1KeyPair), account1ExecTransaction0.getGasPrice, account1ExecTransaction0.getGasPrice)
     res = mempoolMap.add(account1ExecTransactionSameNonceSameFee)
     assertTrue("Adding transaction failed", res.isSuccess)
     assertFalse("Mempool contains transaction with same gas fee", res.get.contains(account1ExecTransactionSameNonceSameFee))
 
-    val account1ExecTransactionSameNonceHigherFee = createEIP1559Transaction(BigInteger.valueOf(123), account1InitialStateNonce, Option(account1KeyPair), account1ExecTransaction0.getGasPrice.add(BigInteger.ONE), BigInteger.ONE)
+    val execTxHigherFee = account1ExecTransaction0.getGasPrice.add(BigInteger.ONE)
+    val account1ExecTransactionSameNonceHigherFee = createEIP1559Transaction(BigInteger.valueOf(123), account1InitialStateNonce, Option(account1KeyPair), execTxHigherFee, execTxHigherFee)
     res = mempoolMap.add(account1ExecTransactionSameNonceHigherFee)
     assertTrue("Adding transaction failed", res.isSuccess)
     assertTrue("Mempool doesn't contain transaction with higher gas fee", res.get.contains(account1ExecTransactionSameNonceHigherFee))

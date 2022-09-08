@@ -85,6 +85,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
   def getFittingSecret(nodeView: AccountNodeView, fromAddress: Option[String], txValueInWei: BigInteger)
   : Option[PrivateKeySecp256k1] = {
+
+
     val wallet = nodeView.getNodeWallet
     val allAccounts = wallet.secretsOfType(classOf[PrivateKeySecp256k1])
     val secret = allAccounts.find(
@@ -131,8 +133,13 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       applyOnNodeView { sidechainNodeView =>
         val valueInWei = ZenWeiConverter.convertZenniesToWei(body.value)
         val destAddress = body.to
-        val gasPrice = sidechainNodeView.getNodeState.getBaseFee // TODO actual gas implementation
-        val gasLimit = GasUtil.TxGas
+        var gasPrice = sidechainNodeView.getNodeState.getBaseFee // TODO actual gas implementation
+        var gasLimit = GasUtil.TxGas
+        if (body.gasInfo.isDefined) {
+          gasPrice = body.gasInfo.get.maxFeePerGas
+          gasLimit = body.gasInfo.get.gasLimit
+        }
+
         // check if the fromAddress is either empty or it fits and the value is high enough
         val txCost = valueInWei.add(gasPrice.multiply(gasLimit))
 
@@ -141,7 +148,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           case Some(secret) =>
             val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
             val isEIP155 = body.EIP155.getOrElse(false)
-
             val response = if (isEIP155) {
                 val tmpTx = new EthereumTransaction(
                   destAddress,
@@ -647,7 +653,9 @@ object AccountTransactionRestScheme {
                                                 nonce: Option[BigInteger],
                                                 to: String,
                                                 @JsonDeserialize(contentAs = classOf[lang.Long]) value: Long,
-                                                EIP155: Option[Boolean]) {
+                                                EIP155: Option[Boolean],
+                                                gasInfo: Option[EIP1559GasInfo]
+                                               ) {
     require(to.nonEmpty, "Empty destination address")
     require(value >= 0, "Negative value. Value must be >= 0")
   }

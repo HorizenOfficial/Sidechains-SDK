@@ -14,6 +14,7 @@ from sc_evm_test_erc721 import SCEvmERC721Contract
 from sc_evm_backward_transfer import SCEvmBackwardTransfer
 from sc_evm_forger import SCEvmForger
 from sc_evm_closed_forger import SCEvmClosedForgerList
+from sc_evm_orphan_txs import SCEvmOrphanTXS
 
 
 """
@@ -63,6 +64,8 @@ def run_tests(log_file):
     result = run_test(SCEvmStorageContract())
     assert_equal(0, result, "sc_evm_test_storage_contract test failed!")
 
+    result = run_test(SCEvmOrphanTXS())
+    assert_equal(0, result, "sc_evm_orphan_txs test failed!")
 
 
 if __name__ == "__main__":

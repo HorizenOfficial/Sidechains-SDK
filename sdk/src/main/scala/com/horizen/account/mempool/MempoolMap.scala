@@ -1,6 +1,7 @@
 package com.horizen.account.mempool
 
 import com.horizen.SidechainTypes
+import com.horizen.account.transaction.EthereumTransaction
 import scorex.util.{ModifierId, ScorexLogging}
 
 import java.math.BigInteger
@@ -67,7 +68,7 @@ case class MempoolMap() extends ScorexLogging {
         if (listOfTxs.contains(ethTransaction.getNonce)) {
           val oldTxId = listOfTxs.get(ethTransaction.getNonce).get
           val oldTx = all.get(oldTxId).get
-          if (oldTx.getGasPrice.compareTo(ethTransaction.getGasPrice) < 0) {
+          if (canPayHigherFee(ethTransaction, oldTx)) {
             log.debug(s"Replacing transaction ${oldTx} with ${ethTransaction}")
             all.remove(oldTxId)
             all.put(ethTransaction.id, ethTransaction)
@@ -83,7 +84,7 @@ case class MempoolMap() extends ScorexLogging {
         val listOfTxs = executableTxs.get(account).get
         val oldTxId = listOfTxs.get(ethTransaction.getNonce).get
         val oldTx = all.get(oldTxId).get
-        if (oldTx.getGasPrice.compareTo(ethTransaction.getGasPrice) < 0) {
+        if (canPayHigherFee(ethTransaction, oldTx)) {
           log.debug(s"Replacing transaction ${oldTx} with ${ethTransaction}")
           all.remove(oldTxId)
           all.put(ethTransaction.id, ethTransaction)
@@ -95,6 +96,14 @@ case class MempoolMap() extends ScorexLogging {
     this
   }
 
+  def canPayHigherFee(newTx: SidechainTypes#SCAT, oldTx: SidechainTypes#SCAT): Boolean = {
+    require(newTx.isInstanceOf[EthereumTransaction], "Transaction is not of type EthereumTransaction")
+    require(oldTx.isInstanceOf[EthereumTransaction], "Transaction is not of type EthereumTransaction")
+    val newEthTx = newTx.asInstanceOf[EthereumTransaction]
+    val oldEthTx = oldTx.asInstanceOf[EthereumTransaction]
+
+    newEthTx.getMaxFeePerGas.compareTo(oldEthTx.getMaxFeePerGas) > 0 && newEthTx.getMaxPriorityFeePerGas.compareTo(oldEthTx.getMaxPriorityFeePerGas) > 0
+  }
 
   def remove(ethTransaction: SidechainTypes#SCAT): Try[MempoolMap] = Try {
     if (all.remove(ethTransaction.id).isDefined) {

@@ -201,13 +201,17 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     public BigInteger getMaxFeePerGas() {
         if (this.isEIP1559())
             return this.eip1559Tx().getMaxFeePerGas();
-        return null;
+        else
+            //in Geth for Legacy tx gasFeeCap is equal to gasPrice
+            return this.legacyTx().getGasPrice();
     }
 
     public BigInteger getMaxPriorityFeePerGas() {
         if (this.isEIP1559())
             return this.eip1559Tx().getMaxPriorityFeePerGas();
-        return null;
+        else
+            //in Geth for Legacy tx MaxPriorityFee is equal to gasPrice
+            return this.legacyTx().getGasPrice();
     }
 
     public Long getChainId() {

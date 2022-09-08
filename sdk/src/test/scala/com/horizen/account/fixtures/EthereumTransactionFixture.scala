@@ -9,16 +9,17 @@ import java.math.BigInteger
 trait EthereumTransactionFixture {
 
 
-  def createLegacyTransaction(value: java.math.BigInteger, nonce: java.math.BigInteger = BigInteger.ZERO): EthereumTransaction = {
-    val rawTransaction = RawTransaction.createTransaction(nonce, value, value, "0x", value, "")
+  def createLegacyTransaction(value: BigInteger, nonce: BigInteger = BigInteger.ZERO, gasPrice: Option[BigInteger] = None): EthereumTransaction = {
+    val gasFee = gasPrice.getOrElse(value)
+    val rawTransaction = RawTransaction.createTransaction(nonce, gasFee, value, "0x", value, "")
     createSignedTransaction(rawTransaction, None)
   }
 
-  def createEIP1559Transaction(value: java.math.BigInteger,
-                               nonce: java.math.BigInteger = BigInteger.ZERO,
+  def createEIP1559Transaction(value: BigInteger,
+                               nonce: BigInteger = BigInteger.ZERO,
                                pairOpt: Option[ECKeyPair] = None,
-                               gasFee: java.math.BigInteger = BigInteger.ONE,
-                               priorityGasFee: java.math.BigInteger = BigInteger.ONE): EthereumTransaction = {
+                               gasFee: BigInteger = BigInteger.ONE,
+                               priorityGasFee: BigInteger = BigInteger.ONE): EthereumTransaction = {
 
     val rawTransaction = RawTransaction.createTransaction(1997, nonce, value, "", value
     , "", priorityGasFee, gasFee)

@@ -140,7 +140,6 @@ class SCEvmBWTCornerCases(SidechainTestFramework):
         assert_equal(0, status, "Wrong tx status in receipt")
         # TODO check event in the receipt
 
-        sc_node.block_best()
         # verifies that there are no withdrawal requests
         list_of_WR = all_withdrawal_requests(sc_node, current_epoch_number)["listOfWR"]
         assert_equal(0, len(list_of_WR))
