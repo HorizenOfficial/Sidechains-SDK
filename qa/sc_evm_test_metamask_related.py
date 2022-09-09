@@ -12,7 +12,7 @@ from test_framework.util import assert_equal, assert_true, start_nodes, websocke
     forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, \
     is_mainchain_block_included_in_sc_block, check_mainchain_block_reference_info, AccountModelBlockVersion, \
-    EVM_APP_BINARY, generate_next_blocks, generate_next_block
+    EVM_APP_BINARY, generate_next_blocks, generate_next_block, computeForgedTxGasUsed
 from SidechainTestFramework.account.eoa_util import eoa_transaction
 
 """
@@ -56,7 +56,6 @@ def mint_payable(node, smart_contract, contract_address, source_account, amount,
               "a token (id: {}) of collection {} to 0x{}".format(tokenid, contract_address, source_account))
         res = smart_contract.static_call(node, method, tokenid,
                                          fromAddress=source_account,
-                                         gasLimit=10000000, gasPrice=10,
                                          toAddress=contract_address,
                                          value=amount)
     else:
@@ -76,8 +75,7 @@ def compare_balance(node, smart_contract, contract_address, account_address, exp
     print("Checking balance of 0x{}...".format(account_address))
     res = smart_contract.static_call(node, 'balanceOf(address)', account_address,
                                      fromAddress=account_address,
-                                     gasLimit=10000000,
-                                     gasPrice=10, toAddress=contract_address)
+                                     toAddress=contract_address)
     print("Expected balance: '{}', actual balance: '{}'".format(expected_balance, res[0]))
     assert_equal(res[0], expected_balance)
     return res[0]
@@ -86,8 +84,7 @@ def compare_balance(node, smart_contract, contract_address, account_address, exp
 def compare_allowance(node, smart_contract, contract_address, owner_address, allowed_address, expected_balance):
     print("Checking allowance of 0x{} from 0x{}...".format(allowed_address, owner_address))
     res = smart_contract.static_call(node, 'allowance(address,address)', owner_address, allowed_address,
-                                     fromAddress=allowed_address, gasLimit=10000000,
-                                     gasPrice=10, toAddress=contract_address)
+                                     fromAddress=allowed_address, toAddress=contract_address)
     print("Expected allowance: '{}', actual allowance: '{}'".format(expected_balance, res[0]))
     assert_equal(res[0], expected_balance)
     return res[0]
@@ -96,8 +93,7 @@ def compare_allowance(node, smart_contract, contract_address, owner_address, all
 def call_noarg_fn(node, smart_contract, contract_address, sender_address, static_call, generate_block, method,
                   call_method=global_call_method):
     if static_call:
-        res = smart_contract.static_call(node, method, fromAddress=sender_address, gasLimit=10000000,
-                                         gasPrice=10, toAddress=contract_address)
+        res = smart_contract.static_call(node, method, fromAddress=sender_address, toAddress=contract_address)
     else:
         res = smart_contract.call_function(node, method, fromAddress=sender_address, gasLimit=10000000,
                                            gasPrice=10, maxFeePerGas=10, maxPriorityFeePerGas=1,
@@ -112,8 +108,7 @@ def call_noarg_fn(node, smart_contract, contract_address, sender_address, static
 def call_onearg_fn(node, smart_contract, contract_address, sender_address, static_call, generate_block, method, arg,
                    call_method=global_call_method):
     if static_call:
-        res = smart_contract.static_call(node, method, arg, fromAddress=sender_address, gasLimit=10000000,
-                                         gasPrice=10, toAddress=contract_address)
+        res = smart_contract.static_call(node, method, arg, fromAddress=sender_address, toAddress=contract_address)
     else:
         res = smart_contract.call_function(node, method, arg, fromAddress=sender_address, gasLimit=10000000,
                                            gasPrice=10, maxFeePerGas=10, maxPriorityFeePerGas=1,
@@ -225,7 +220,7 @@ def transfer_token(node, smart_contract, contract_address, sender_address, *, to
               "token (id: {}) from 0x{} to 0x{} via 0x{}".format(token_id, from_address, target_address,
                                                                  sender_address))
         res = smart_contract.static_call(node, method, from_address, target_address, token_id,
-                                         fromAddress=sender_address, gasLimit=10000000, gasPrice=10,
+                                         fromAddress=sender_address,
                                          toAddress=contract_address)
     else:
         print("Calling {}: transferring".format(method) +
@@ -255,7 +250,11 @@ def eoa_transfer(node, sender, receiver, amount, call_method: CallMethod = globa
 
 
 def eoa_assert_native_balance(node, address, expected_balance, tag='latest'):
-    res = node.rpc_eth_getBalance(format_eoa(address), tag)
+    res = node.rpc_eth_getBalance(format_evm(address), tag)
+
+    if "result" not in res:
+        raise RuntimeError("Something went wrong, see {}".format(str(res)))
+
     res = res['result']
     balance = int(res[2:], 16)
     assert_equal(expected_balance, balance, "Actual balance did not match expected balance")
@@ -265,8 +264,7 @@ def compare_erc20_balance(node, smart_contract, contract_address, account_addres
     print("Checking balance of 0x{}...".format(account_address))
     res = smart_contract.static_call(node, 'balanceOf(address)', account_address,
                                      fromAddress=account_address,
-                                     gasLimit=10000000,
-                                     gasPrice=10, toAddress=contract_address)
+                                     toAddress=contract_address)
     print("Expected balance: '{}', actual balance: '{}'".format(expected_balance, res[0]))
     assert_equal(res[0], expected_balance)
     return res[0]
@@ -293,8 +291,7 @@ def call_addr_uint_fn(node, smart_contract, contract_address, source_addr, addr,
                                            gasPrice=10, toAddress=contract_address)
     if static_call:
         res = smart_contract.static_call(node, method, addr, uint,
-                                         fromAddress=source_addr,
-                                         gasLimit=10000000, gasPrice=10, toAddress=contract_address)
+                                         fromAddress=source_addr, toAddress=contract_address)
     else:
         res = smart_contract.call_function(node, method, addr, uint,
                                            fromAddress=source_addr,
@@ -307,8 +304,7 @@ def call_addr_uint_fn(node, smart_contract, contract_address, source_addr, addr,
 
 def compare_erc20_total_supply(node, smart_contract, contract_address, sender_address, expected_supply):
     print("Checking total supply of token at 0x{}...".format(contract_address))
-    res = smart_contract.static_call(node, 'totalSupply()', fromAddress=sender_address, gasLimit=10000000,
-                                     gasPrice=10, toAddress=contract_address)
+    res = smart_contract.static_call(node, 'totalSupply()', fromAddress=sender_address, toAddress=contract_address)
     print("Expected supply: '{}', actual supply: '{}'".format(expected_supply, res[0]))
     assert_equal(res[0], expected_supply)
     return res[0]
@@ -407,22 +403,35 @@ class SCEvmMetamaskTest(SidechainTestFramework):
         eoa_assert_native_balance(sc_node, other_address, 0)
 
         eoa_transfer(sc_node, evm_address, other_address, transfer_amount, static_call=True, generate_block=False)
-        eoa_transfer(sc_node, evm_address, other_address, transfer_amount, call_method=CallMethod.RPC_LEGACY)
+        tx_hash_legacy = eoa_transfer(sc_node, evm_address, other_address, transfer_amount,
+                                      call_method=CallMethod.RPC_LEGACY)
 
-        eoa_assert_native_balance(sc_node, evm_address, initial_balance - transfer_amount)
+        gas_used_legacy = computeForgedTxGasUsed(sc_node, tx_hash_legacy)
+
+        eoa_assert_native_balance(sc_node, evm_address, initial_balance - (transfer_amount + gas_used_legacy))
         eoa_assert_native_balance(sc_node, other_address, transfer_amount)
 
         eoa_transfer(sc_node, evm_address, other_address, transfer_amount, static_call=True, generate_block=False)
-        eoa_transfer(sc_node, evm_address, other_address, transfer_amount, call_method=CallMethod.RPC_EIP155)
+        tx_hash_eip155 = eoa_transfer(sc_node, evm_address, other_address, transfer_amount,
+                                      call_method=CallMethod.RPC_EIP155)
 
-        eoa_assert_native_balance(sc_node, evm_address, initial_balance - 2 * transfer_amount)
+        gas_used_eip155 = computeForgedTxGasUsed(sc_node, tx_hash_eip155)
+
+        eoa_assert_native_balance(sc_node, evm_address,
+                                  initial_balance - (2 * transfer_amount + gas_used_legacy + gas_used_eip155))
         eoa_assert_native_balance(sc_node, other_address, 2 * transfer_amount)
 
-        eoa_transfer(sc_node, evm_address, other_address, transfer_amount, static_call=True, generate_block=False)
-        eoa_transfer(sc_node, evm_address, other_address, transfer_amount, call_method=CallMethod.RPC_EIP1559)
+        print(initial_balance - (2 * transfer_amount + gas_used_legacy + gas_used_eip155))
 
-        eoa_assert_native_balance(sc_node, evm_address, initial_balance - 3 * transfer_amount)
+        eoa_transfer(sc_node, evm_address, other_address, transfer_amount, static_call=True, generate_block=False)
+        tx_hash_eip1559 = eoa_transfer(sc_node, evm_address, other_address, transfer_amount,
+                                       call_method=CallMethod.RPC_EIP1559)
+
+        gas_used_eip1559 = computeForgedTxGasUsed(sc_node, tx_hash_eip1559)
+
         eoa_assert_native_balance(sc_node, other_address, 3 * transfer_amount)
+        eoa_assert_native_balance(sc_node, evm_address, initial_balance - (
+                3 * transfer_amount + gas_used_legacy + gas_used_eip155 + gas_used_eip1559))
 
         zero_address = '0x0000000000000000000000000000000000000000'
 

@@ -14,4 +14,9 @@ def sendCoinsToAddress(sidechainNode, address, amount, fee):
     }
     request = json.dumps(j)
     response = sidechainNode.transaction_sendCoinsToAddress(request)
-    return response["result"]["transactionId"]
+
+    if "result" in response:
+        if "transactionId" in response["result"]:
+            return response["result"]["transactionId"]
+
+    raise RuntimeError("Something went wrong, see {}".format(str(response)))
