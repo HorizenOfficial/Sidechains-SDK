@@ -15,18 +15,8 @@ case class BaseFeeBlockValidator() extends HistoryBlockValidator[SidechainTypes#
 
   override def validate(block: AccountBlock, history: AccountHistory): Try[Unit] = Try {
     val baseFee = block.header.baseFee
-    history.getBlockById(block.header.parentId).asScala match {
-      case None =>
-        if (!history.isGenesisBlock(block.id)) throw new InternalError(s"No block with id ${block.header.parentId} found")
-        if (baseFee.compareTo(FeeUtils.INITIAL_BASE_FEE) != 0)
-          throw new InvalidBaseFeeException(s"Initial base fee ${baseFee} invalid")
-      case Some(parentBlock) =>
-        val parentBaseFee = parentBlock.header.baseFee
-        val range = parentBaseFee.multiply(BigInteger.valueOf(125)).divide(BigInteger.valueOf(1000))
-        val lowerBound = parentBaseFee.subtract(range).max(BigInteger.ONE)
-        val upperBound = parentBaseFee.add(range).max(BigInteger.ONE)
-        if (baseFee.compareTo(lowerBound) < 0 || baseFee.compareTo(upperBound) > 0)
-          throw new InvalidBaseFeeException(s"Calculated base fee ${baseFee} of block with id ${block.id} is out of 12.5% adjustment range")
-    }
+    val expectedBaseFee: BigInteger = FeeUtils.calculateBaseFee(history, block.header.parentId)
+    if (baseFee.compareTo(expectedBaseFee) != 0)
+      throw new InvalidBaseFeeException(s"Calculated base fee ${baseFee} of block with id ${block.id} is invalid")
   }
 }

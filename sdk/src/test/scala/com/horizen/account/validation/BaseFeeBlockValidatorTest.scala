@@ -7,18 +7,22 @@ import com.horizen.account.utils.AccountMockDataHelper
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
+import scorex.util.bytesToId
+import org.web3j.utils.Numeric
 
 import java.math.BigInteger
 import scala.compat.java8.OptionConverters.RichOptionForJava8
 
 class BaseFeeBlockValidatorTest extends JUnitSuite {
+  val mockedGenesisBlock = AccountMockDataHelper(true).getMockedBlock(FeeUtils.INITIAL_BASE_FEE,
+    0, bytesToId(Numeric.hexStringToByteArray("123")) ,bytesToId(new Array[Byte](32)))
 
   @Test
-  def nonGenesisBlockCheck(): Unit = {
-    var mockHelper: AccountMockDataHelper = AccountMockDataHelper(true)
-    val mockedGenesisBlock = mockHelper.getMockedBlock(FeeUtils.INITIAL_BASE_FEE)
-    var mockedBlock: AccountBlock = mockHelper.getMockedBlock(BigInteger.ZERO)
-    var mockedHistory: AccountHistory = mockHelper.getMockedAccountHistory(Option.apply(mockedGenesisBlock).asJava)
+  def genesisBlockCheck(): Unit = {
+    val mockHelper: AccountMockDataHelper = AccountMockDataHelper(true)
+    val mockedBlock: AccountBlock = mockHelper.getMockedBlock(BigInteger.ZERO, 0,
+      bytesToId(Numeric.hexStringToByteArray("123")) ,bytesToId(new Array[Byte](32)))
+    val mockedHistory: AccountHistory = mockHelper.getMockedAccountHistory(Option.apply(mockedGenesisBlock).asJava)
 
     // Test 1: Successful validation, block is genesis block with initial base fee
     assertTrue(BaseFeeBlockValidator().validate(mockedGenesisBlock, mockedHistory).isSuccess)
@@ -27,28 +31,39 @@ class BaseFeeBlockValidatorTest extends JUnitSuite {
     assertThrows[InvalidBaseFeeException] {
       BaseFeeBlockValidator().validate(mockedBlock, mockedHistory).get
     }
+  }
 
-    mockHelper = AccountMockDataHelper(false)
-    mockedHistory = mockHelper.getMockedAccountHistory(Option.apply(mockedGenesisBlock).asJava)
+  @Test
+  def nonGenesisBlockCheck(): Unit = {
+    val mockHelper: AccountMockDataHelper = AccountMockDataHelper(false)
+    var mockedHistory: AccountHistory = mockHelper.getMockedAccountHistory(Option.apply(mockedGenesisBlock).asJava)
+    var mockedBlock = mockHelper.getMockedBlock(BigInteger.valueOf(875000000), FeeUtils.GAS_LIMIT / 2,
+      bytesToId(Numeric.hexStringToByteArray("456")), bytesToId(Numeric.hexStringToByteArray("123")))
 
-    // Test 3: Validation exception expected, no parent block found and block is not genesis block
-    assertThrows[InternalError] {
-      BaseFeeBlockValidator().validate(mockedBlock, mockedHistory).get
-    }
-
-    mockedBlock = mockHelper.getMockedBlock(FeeUtils.INITIAL_BASE_FEE)
-
-    // Test 4: Successful validation, assume gasUsed is same as last block, therefore base fee did not change
+    // Test 1: Successful validation, block is one after genesis block with 12.5% decrease, meaning genesis block was empty
     assertTrue(BaseFeeBlockValidator().validate(mockedBlock, mockedHistory).isSuccess)
 
-    // Test 5: Successful validation, block is one after genesis block with 12.5% decrease, meaning genesis block was empty
-    mockedBlock = mockHelper.getMockedBlock(BigInteger.valueOf(875000000))
+    mockedHistory = mockHelper.getMockedAccountHistory(Option.apply(mockedBlock).asJava)
+
+    // Test 2: Successful validation, last block is exactly 50% full, therefore base fee did not change
+    mockedBlock = mockHelper.getMockedBlock(BigInteger.valueOf(875000000), FeeUtils.GAS_LIMIT,
+      bytesToId(Numeric.hexStringToByteArray("789")), bytesToId(Numeric.hexStringToByteArray("456")))
     assertTrue(BaseFeeBlockValidator().validate(mockedBlock, mockedHistory).isSuccess)
 
-    // Test 6: Validation exception expected, block base fee is out of adjustment range
-    mockedBlock = mockHelper.getMockedBlock(BigInteger.valueOf(531))
+    mockedHistory = mockHelper.getMockedAccountHistory(Option.apply(mockedBlock).asJava)
+
+    // Test 3: Successful validation, last block was 100% full, therefore base fee did increase by 12.5%
+    mockedBlock = mockHelper.getMockedBlock(BigInteger.valueOf(984375000), FeeUtils.GAS_LIMIT/2,
+      bytesToId(Numeric.hexStringToByteArray("111")), bytesToId(Numeric.hexStringToByteArray("789")))
+    assertTrue(BaseFeeBlockValidator().validate(mockedBlock, mockedHistory).isSuccess)
+
+    mockedHistory = mockHelper.getMockedAccountHistory(Option.apply(mockedBlock).asJava)
+
+    // Test 4: Validation exception expected, last block was 50% full, but base fee did change
+    mockedBlock = mockHelper.getMockedBlock(FeeUtils.INITIAL_BASE_FEE, 0,
+      bytesToId(Numeric.hexStringToByteArray("222")), bytesToId(Numeric.hexStringToByteArray("111")))
     assertThrows[InvalidBaseFeeException] {
-      BaseFeeBlockValidator().validate(mockedBlock, mockedHistory).get
+      (BaseFeeBlockValidator().validate(mockedBlock, mockedHistory).get)
     }
   }
 }
