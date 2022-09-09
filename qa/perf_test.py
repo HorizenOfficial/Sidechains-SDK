@@ -111,7 +111,7 @@ class PerformanceTest(SidechainTestFramework):
                 "n_tx_creator": sum(map(lambda x: x["tx_creator"] == True, sc_nodes_list)), "initial_balances": [],
                 "mined_transactions": 0, "mined_blocks": 0, "end_test_run_time": 0, "end_balances": [],
                 "endpoint_calls": 0, "errors": 0, "not_mined_transactions": 0, "mempool_transactions": 0,
-                "tps_total": 0, "tps_mined": 0, "blocks_ts": []
+                "tps_total": 0, "tps_mined": 0, "blocks_ts": [], "node_api_errors": 0
                 }
 
     def fill_csv(self):
@@ -259,11 +259,20 @@ class PerformanceTest(SidechainTestFramework):
 
     def get_best_node_block_ids(self):
         block_ids = {}
+        index = 0
+        errors = 0
         for node in self.sc_nodes:
-            block = http_block_best(node)
-            block_ids[self.sc_nodes.index(node)] = block["id"]
+            try:
+                block = http_block_best(node)
+                block_ids[self.sc_nodes.index(node)] = block["id"]
+            except Exception as e:
+                print(f"Node API ERROR {index}")
+                errors += 1
+                block = http_block_best(node)
+                block_ids[self.sc_nodes.index(node)] = block["id"]
+            index += 1
         print("Block ids: " + str(block_ids))
-        return block_ids
+        return (block_ids, errors)
 
     def find_boxes_of_address(self, boxes, address):
         address_boxes = []
@@ -447,7 +456,7 @@ class PerformanceTest(SidechainTestFramework):
                 assert_equal(len(allTransactions(node, True)["transactions"]), self.initial_txs * len(txs_creators))
 
         # Take best block id of every node and assert they all match
-        test_start_block_ids = self.get_best_node_block_ids()
+        test_start_block_ids, _ = self.get_best_node_block_ids()
         assert_equal(len(set(test_start_block_ids.values())), 1)
 
         # Output the wallet balance of each node
@@ -510,7 +519,7 @@ class PerformanceTest(SidechainTestFramework):
         sleep(30)
 
         # Take blockhash of every node and verify they are all the same
-        test_end_block_ids = self.get_best_node_block_ids()
+        test_end_block_ids, api_errors = self.get_best_node_block_ids()
         assert_equal(len(set(test_end_block_ids.values())), 1)
 
         # TODO: Find balance for the node sender and receiver and verify that it's what we expect
@@ -569,6 +578,7 @@ class PerformanceTest(SidechainTestFramework):
         self.csv_data["tps_total"] = (mempool_transactions[0] + total_mined_transactions) / test_run_time
         self.csv_data["tps_mined"] = total_mined_transactions / test_run_time
         self.csv_data["blocks_ts"] = blocks_ts
+        self.csv_data["node_api_errors"] = api_errors
 
         self.fill_csv()
 
