@@ -53,7 +53,7 @@ def get_number_of_transactions_for_node(node):
     return len(allTransactions(node, False)["transactionIds"])
 
 
-def send_transactions_per_second(txs_creator_node, destination_address, utxo_amount, start_time, test_run_time,
+def send_transactions_per_second(txs_creator_node, destination_addresses, utxo_amount, start_time, test_run_time,
                                  transactions_per_second):
     # Run until
     while time.time() - start_time < test_run_time:
@@ -62,7 +62,8 @@ def send_transactions_per_second(txs_creator_node, destination_address, utxo_amo
         # Send transactions until the transactions_per_second value has been reached
         while i < transactions_per_second:
             try:
-                sendCoinsToAddress(txs_creator_node, destination_address, utxo_amount, 0)
+                # Send coins to random destination address
+                sendCoinsToAddress(txs_creator_node, random.choice(destination_addresses), utxo_amount, 0)
             except Exception:
                 with errors.get_lock():
                     errors.value += 1
@@ -309,11 +310,17 @@ class PerformanceTest(SidechainTestFramework):
                     args = []
                     # Add send_transactions_per_second arguments to args for each tx_creator_node
                     # starmap runs them all in parallel
-                    for txs_creator in txs_creators:
-                        # Create a single random receiver node destination address
-                        destination_address = http_wallet_createPrivateKey25519(random.choice(self.sc_nodes))
-                        args.append((txs_creator, destination_address, utxo_amount, start_time,
-                                     self.test_run_time, transactions_per_second))
+                    for index, sc_node in enumerate(self.sc_nodes_list):
+                        if sc_node["tx_creator"]:
+                            # Create array of destination addresses for all nodes excluding the one we send from
+                            sc_nodes = self.sc_nodes.copy()
+                            del sc_nodes[index]
+                            destination_addresses = []
+                            for node in sc_nodes:
+                                destination_addresses.append(http_wallet_createPrivateKey25519(node))
+
+                            args.append((self.sc_nodes[index], destination_addresses, utxo_amount, start_time,
+                                         self.test_run_time, transactions_per_second))
                     pool.starmap(send_transactions_per_second, args)
 
                 print(f"... Sent {counter.value} Transactions ...")
