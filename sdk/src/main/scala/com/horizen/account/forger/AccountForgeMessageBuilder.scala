@@ -116,8 +116,9 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
           return Success(receiptList, txHashList)
 
         case Failure(e) =>
-          // just skip this tx
-          log.debug("Could not apply tx, reason: " + e.getMessage)
+          // just skip this tx but remove any changes caused by the rejected tx
+          log.warn(s"Could not forge tx, reason: ${e.getMessage}", e)
+         //  txsCounter and  blockSize should be reset but (SPOILER ALERT!) they will be removed in a future PR
       }
     }
     (receiptList, txHashList)

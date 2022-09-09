@@ -151,25 +151,43 @@ class AccountStateView(
     // Tx context for stateDB, to know where to keep EvmLogs
     setupTxContext(txHash, txIndex)
 
-    // apply message to state
-    val status = try {
-      applyMessage(msg, blockGasPool)
-      ReceiptStatus.SUCCESSFUL
-    } catch {
-      // any other exception will bubble up and invalidate the block
-      case err: ExecutionFailedException =>
-        log.error(s"applying message failed, tx.id=${ethTx.id}", err)
-        ReceiptStatus.FAILED
-    } finally {
-      // finalize pending changes, clear the journal and reset refund counter
-      stateDb.finalizeChanges()
-      // make sure we disable automatic gas consumption in case a message processor enabled it
-      disableGasTracking()
+    val revisionId = snapshot
+    val initialBlockGas = blockGasPool.getGas
+    try {
+      // apply message to state
+      val status = try {
+        applyMessage(msg, blockGasPool)
+        ReceiptStatus.SUCCESSFUL
+      } catch {
+        // any other exception will bubble up and invalidate the block
+        case err: ExecutionFailedException =>
+          log.error(s"applying message failed, tx.id=${ethTx.id}", err)
+          ReceiptStatus.FAILED
+      } finally {
+        // finalize pending changes, clear the journal and reset refund counter
+        // make sure we disable automatic gas consumption in case a message processor enabled it
+        disableGasTracking()
+      }
+      val consensusDataReceipt = new EthereumConsensusDataReceipt(
+        ethTx.version(), status.id, blockGasPool.getUsedGas, getLogs(txHash))
+      log.debug(s"Returning consensus data receipt: ${consensusDataReceipt.toString()}")
+      consensusDataReceipt
     }
-    val consensusDataReceipt = new EthereumConsensusDataReceipt(
-      ethTx.version(), status.id, blockGasPool.getUsedGas, getLogs(txHash))
-    log.debug(s"Returning consensus data receipt: ${consensusDataReceipt.toString()}")
-    consensusDataReceipt
+    catch {
+      case e : Exception =>
+        // Whatever happened it is something that invalidates the state db.
+        // The caller can reject the whole block or, in case of forging, discard the tx.
+        // The state db returns in a consistent state.
+        log.error(s"Unexpected exception while applying tx ${tx}. Reverting the state...",e)
+        revertToSnapshot(revisionId)
+        //Restore gas
+        val usedGas = initialBlockGas.subtract(blockGasPool.getGas)
+        blockGasPool.addGas(usedGas)
+        throw e
+    }
+    finally {
+      stateDb.finalizeChanges()
+    }
   }
 
   override def isEoaAccount(address: Array[Byte]): Boolean = {

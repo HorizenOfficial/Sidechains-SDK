@@ -1,10 +1,12 @@
 package com.horizen.account.state
 
 import com.horizen.account.utils.BigIntegerUtil
+import scorex.util.ScorexLogging
 
 import java.math.BigInteger
 
-class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProcessor], blockGasPool: GasPool) {
+class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProcessor], blockGasPool: GasPool)
+extends ScorexLogging{
 
   @throws(classOf[InvalidMessageException])
   @throws(classOf[ExecutionFailedException])
@@ -21,11 +23,13 @@ class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProc
     gasPool.subGas(intrinsicGas)
     // find and execute the first matching processor
     messageProcessors.find(_.canProcess(msg, view)) match {
-      case None => throw new IllegalArgumentException("Unable to process message.")
+      case None =>
+        log.error(s"No message processor found for executing message ${msg}")
+        throw new IllegalArgumentException("Unable to process message.")
       case Some(processor) =>
         // increase the nonce by 1
         view.increaseNonce(msg.getFrom.address())
-        // create a snapshot to rollback to incase of execution errors
+        // create a snapshot to rollback to in case of execution errors
         val revisionId = view.snapshot
         try {
           processor.process(msg, view, gasPool)
