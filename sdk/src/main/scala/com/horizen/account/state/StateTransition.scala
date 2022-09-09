@@ -101,7 +101,6 @@ class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProc
     }
     blockGasPool.subGas(gas)
     // prepay effective gas fees
-    log.debug(s"Prepaying $effectiveFees to sender ${BytesUtils.toHexString(sender)}")
     view.subBalance(sender, effectiveFees)
     // allocate gas for this transaction
     new GasPool(gas)
@@ -110,17 +109,10 @@ class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProc
   private def refundGas(msg: Message, gas: GasPool): Unit = {
     val usedGas = msg.getGasLimit.subtract(gas.getGas)
     // cap gas refund to a quotient of the used gas
-    val refGas = view.getRefund.min(usedGas.divide(GasUtil.RefundQuotientEIP3529))
-    gas.addGas(refGas)
+    gas.addGas(view.getRefund.min(usedGas.divide(GasUtil.RefundQuotientEIP3529)))
     // return funds for remaining gas, exchanged at the original rate.
     val remaining = gas.getGas.multiply(msg.getGasPrice)
-    val sender = msg.getFrom.address()
-    log.debug(s"gas used: $usedGas, remaining gas: ${gas.getGas}, refGas: $refGas, gasPrice: ${msg.getGasPrice}")
-    log.debug(s"now refunding $remaining to sender ${BytesUtils.toHexString(sender)}")
-    if (remaining.compareTo(BigInteger.ZERO) > 0) {
-      view.addBalance(sender, remaining)
-    }
-
+    view.addBalance(msg.getFrom.address(), remaining)
     // return remaining gas to the gasPool of the current block so it is available for the next transaction
     blockGasPool.addGas(gas.getGas)
   }
