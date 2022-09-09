@@ -282,6 +282,8 @@ class SidechainHistory private (val storage: SidechainHistoryStorage,
 
 
   override def continuationIds(info: SidechainSyncInfo, size: Int): ModifierIds = {
+    if (size == Int.MaxValue)
+      throw new IllegalArgumentException("Can't ask for a number of blocks = Int.MaxInt!")
     info.knownBlockIds.find(id => storage.isInActiveChain(id)) match {
       case Some(commonBlockId) =>
         storage.activeChainAfter(commonBlockId, Some(size + 1)).tail.map(id => (SidechainBlock.ModifierTypeId, id))

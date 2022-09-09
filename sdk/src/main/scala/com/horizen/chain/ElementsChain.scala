@@ -86,7 +86,7 @@ class ElementsChain[ID, DATA <: LinkedElement[ID]](private var lastId: Option[ID
         currentHeight += 1
         res = res :+ dataByHeight(currentHeight).get.getParentId
       }
-      if (height - startHeight +1 <= blockLimit) {
+      if (res.size < blockLimit && currentHeight == height) {
         res = res :+ bestId.get
       }
       res
