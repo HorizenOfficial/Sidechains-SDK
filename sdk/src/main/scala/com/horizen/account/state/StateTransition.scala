@@ -17,9 +17,6 @@ class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProc
     val gasPool = buyGas(msg)
     // consume intrinsic gas
     val intrinsicGas = GasUtil.intrinsicGas(msg.getData, msg.getTo == null)
-    if (gasPool.getGas.compareTo(intrinsicGas) < 0) {
-      throw IntrinsicGasException(gasPool.getGas, intrinsicGas)
-    }
     gasPool.subGas(intrinsicGas)
     // find and execute the first matching processor
     messageProcessors.find(_.canProcess(msg, view)) match {
