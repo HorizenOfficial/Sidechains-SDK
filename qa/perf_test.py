@@ -248,13 +248,12 @@ class PerformanceTest(SidechainTestFramework):
     def populate_mempool(self, utxo_amount, txs_creator_nodes, non_creator_nodes):
 
         for j in range(len(txs_creator_nodes)):
-            destination_address = http_wallet_createPrivateKey25519(random.choice(non_creator_nodes))
+            destination_address = http_wallet_createPrivateKey25519(random.choice(self.sc_nodes))
             for i in range(self.initial_txs):
                 # Populate the mempool - so don't mine a block
                 sendCoinsToAddress(txs_creator_nodes[j], destination_address, utxo_amount, 0)
                 if i % 1000 == 0:
                     print("Node " + str(j) + " sent txs: " + str(i))
-            assert_equal(len(allTransactions(txs_creator_nodes[j], False)["transactionIds"]), self.initial_txs)
             print("Node " + str(j) + " totally sent txs: " + str(self.initial_txs))
 
     def get_best_node_block_ids(self):
@@ -438,7 +437,7 @@ class PerformanceTest(SidechainTestFramework):
 
             # Verify that all the nodes have the correct amount of transactions in the mempool
             for node in self.sc_nodes:
-                assert_equal(len(allTransactions(node, True)["transactions"]), self.initial_txs)
+                assert_equal(len(allTransactions(node, True)["transactions"]), self.initial_txs * len(txs_creators))
 
         # Take best block id of every node and assert they all match
         test_start_block_ids = self.get_best_node_block_ids()
