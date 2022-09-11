@@ -21,7 +21,7 @@ import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.{ApiResponseUtil, SuccessResponse}
 import com.horizen.evm.Evm
-import com.horizen.evm.interop.{EvmResult, EvmTraceLog}
+import com.horizen.evm.interop.{EvmContext, EvmResult, EvmTraceLog}
 import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.Transaction
@@ -421,7 +421,7 @@ class EthService(
 
   @RpcMethod("debug_traceBlockByNumber")
   def traceBlockByNumber(blockNumber: String): Array[EvmResult] = {
-    val transactionResults: Array[EvmResult] = Array[EvmResult](0)
+    val transactionResults: Array[EvmResult] = Array[EvmResult]()
     val previousBlockNumber = BigInteger.valueOf(blockNumber.toLong).subtract(BigInteger.ONE).toString()
 
     applyOnAccountView { nodeView =>
@@ -455,15 +455,20 @@ class EthService(
 
   @RpcMethod("debug_traceTransaction")
   def traceTransaction(transactionHash: String): EvmResult = {
+    val requestedTransaction = getTransactionAndReceipt(transactionHash) { (tx, receipt) =>
+      new EthereumTransactionView(receipt, tx)
+    }.orNull
+
+    val currentBlockId = Numeric.cleanHexPrefix(requestedTransaction.getBlockHash)
+    val currentBlockNumber = requestedTransaction.getBlockNumber
+    val previousBlockNumber = Numeric.cleanHexPrefix((java.lang.Long.decode(currentBlockNumber) - 1).toHexString)
+
     val evmResult: EvmResult = new EvmResult()
-    val transaction = getTransactionByHash(transactionHash)
-    val currentBlockNumber = transaction.getBlockNumber()
-    val previousBlockNumber = BigInteger.valueOf(currentBlockNumber.toLong).subtract(BigInteger.ONE).toString()
 
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, previousBlockNumber) { tagStateView =>
         {
-          val currentBlock = nodeView.history.getBlockById(currentBlockNumber).get()
+          val currentBlock = nodeView.history.getBlockById(currentBlockId).get()
           val gasPool = new GasPool(BigInteger.valueOf(currentBlock.header.gasLimit))
           val transactions = currentBlock.transactions
 
@@ -473,7 +478,7 @@ class EthService(
 
           breakable {
             for ((tx, i) <- transactions.zipWithIndex) {
-              if (BytesUtils.fromHexString(tx.id) == transactionHash) {
+              if (tx.id == Numeric.cleanHexPrefix(transactionHash)) {
                 val txResult = Evm
                   .Trace(
                     tagStateView.getStateDbHandle,
@@ -496,7 +501,8 @@ class EthService(
             }
           }
         }
-        evmResult
+
+        return evmResult
       }
     }
   }
