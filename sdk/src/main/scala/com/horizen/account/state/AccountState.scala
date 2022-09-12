@@ -69,12 +69,12 @@ class AccountState(val params: NetworkParams,
       // Validate top quality certificate in the end of the submission window:
       // Reject block if it refers to the chain that conflicts with the top quality certificate content
       // Mark sidechain as ceased in case there is no certificate appeared within the submission window.
-      val parentWithdrawalEpochInfo = stateMetadataStorage.getWithdrawalEpochInfo
-      val modWithdrawalEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, parentWithdrawalEpochInfo, params)
+      val currentWithdrawalEpochInfo = getWithdrawalEpochInfo
+      val modWithdrawalEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, currentWithdrawalEpochInfo, params)
 
       // If SC block has reached the certificate submission window end -> check the top quality certificate
       // Note: even if mod contains multiple McBlockRefData entries, we are sure they belongs to the same withdrawal epoch.
-      if (WithdrawalEpochUtils.hasReachedCertificateSubmissionWindowEnd(mod, parentWithdrawalEpochInfo, params)) {
+      if (WithdrawalEpochUtils.hasReachedCertificateSubmissionWindowEnd(mod, currentWithdrawalEpochInfo, params)) {
         val certReferencedEpochNumber = modWithdrawalEpochInfo.epoch - 1
 
         // Top quality certificate may be present in the current SC block or in the previous blocks or can be absent.
@@ -182,6 +182,10 @@ class AccountState(val params: NetworkParams,
 
       // eventually, store full receipts in the metaDataStorage indexed by txid
       stateView.updateTransactionReceipts(receiptList)
+
+      // update current base fee
+      // TODO: should use updated base fee based on consumed gas in the new block
+      stateView.updateBaseFee(BigInteger.valueOf(mod.header.baseFee))
 
       stateView.commit(idToVersion(mod.id)).get
 
@@ -344,24 +348,23 @@ class AccountState(val params: NetworkParams,
     if (tx.isInstanceOf[EthereumTransaction]) {
 
       val ethTx = tx.asInstanceOf[EthereumTransaction]
-      val blockGasLimit = Account.GAS_LIMIT
-      val blockGasPool = new GasPool(BigInteger.valueOf(blockGasLimit))
-      val blockContext = new BlockContext(
-        // use the null address as forger
-        new Array[Byte](32),
-        // TODO: what timestamp do we use here? just use "now()" or can we get the timestamp of the last block?
-        0,
-        // TODO: what baseFee do we use here? can we get the baseFee of the last block?
-        0,
-        // TODO: can we get the gas limit of the last block?
-        blockGasLimit,
-        stateMetadataStorage.getHeight,
-        // TODO: can the consensus epoch number be None here?
-        stateMetadataStorage.getConsensusEpochNumber.get,
-        stateMetadataStorage.getWithdrawalEpochInfo.epoch
-      )
+      val consensusEpoch = getConsensusEpochNumber.get
 
       using(getView) { stateView =>
+        val blockContext = new BlockContext(
+          // use the null address as forger
+          new Array[Byte](32),
+          // TODO: what timestamp do we use here? just use "now()" or can we get the timestamp of the last block?
+          0,
+          stateView.baseFee.longValueExact(),
+          Account.GAS_LIMIT,
+          stateMetadataStorage.getHeight + 1,
+          consensusEpoch,
+          stateMetadataStorage.getWithdrawalEpochInfo.epoch
+        )
+
+        val blockGasPool = new GasPool(BigInteger.valueOf(blockContext.blockGasLimit))
+
         stateView.applyTransaction(tx, 0, blockGasPool, blockContext) match {
           case Success(_) =>
             log.debug(s"tx=${ethTx.id} succesfully validate against state view")

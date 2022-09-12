@@ -267,6 +267,10 @@ class AccountStateView(
   def getTransactionReceipt(txHash: Array[Byte]): Option[EthereumReceipt] =
     metadataStorageView.getTransactionReceipt(txHash)
 
+  def updateBaseFee(baseFee: BigInteger): Unit = metadataStorageView.updateBaseFee(baseFee)
+
+  def baseFee: BigInteger = metadataStorageView.getBaseFee
+
   override def setCeased(): Unit = metadataStorageView.setCeased()
 
   override def commit(version: VersionTag): Try[Unit] = Try {

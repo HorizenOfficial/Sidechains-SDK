@@ -1,13 +1,13 @@
 package com.horizen.utils
 
-import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.block.{MainchainBlockReferenceData, SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.Transaction
 
 object WithdrawalEpochUtils {
 
   def getWithdrawalEpochInfo[TX <: Transaction](
-      block: SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase],
+      mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
       parentEpochInfo: WithdrawalEpochInfo,
       params: NetworkParams
   ): WithdrawalEpochInfo = {
@@ -15,7 +15,7 @@ object WithdrawalEpochUtils {
       if (parentEpochInfo.lastEpochIndex == params.withdrawalEpochLength)
         // Parent block is the last SC Block of withdrawal epoch.
         parentEpochInfo.epoch + 1
-      else if (parentEpochInfo.lastEpochIndex + block.mainchainBlockReferencesData.size > params.withdrawalEpochLength)
+      else if (parentEpochInfo.lastEpochIndex + mainchainBlockReferencesData.size > params.withdrawalEpochLength)
         // block mc block references lead to surpassing of the epoch length
         parentEpochInfo.epoch + 1
       else
@@ -26,14 +26,20 @@ object WithdrawalEpochUtils {
       if (withdrawalEpoch > parentEpochInfo.epoch)
         // New withdrawal epoch started
         // Note: in case of empty MC Block ref list index should be 0.
-        (parentEpochInfo.lastEpochIndex + block.mainchainBlockReferencesData.size) % params.withdrawalEpochLength
+        (parentEpochInfo.lastEpochIndex + mainchainBlockReferencesData.size) % params.withdrawalEpochLength
       else
         // Continue current withdrawal epoch
         // Note: in case of empty MC Block ref list index should be the same as for previous SC block.
-        parentEpochInfo.lastEpochIndex + block.mainchainBlockReferencesData.size
+        parentEpochInfo.lastEpochIndex + mainchainBlockReferencesData.size
 
     WithdrawalEpochInfo(withdrawalEpoch, withdrawalEpochIndex)
   }
+
+  def getWithdrawalEpochInfo[TX <: Transaction](
+      block: SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase],
+      parentEpochInfo: WithdrawalEpochInfo,
+      params: NetworkParams
+  ): WithdrawalEpochInfo = getWithdrawalEpochInfo(block.mainchainBlockReferencesData, parentEpochInfo, params)
 
   def hasReachedCertificateSubmissionWindowEnd(
       newEpochInfo: WithdrawalEpochInfo,

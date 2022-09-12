@@ -38,7 +38,6 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   override def createNewBlock(
                  nodeView: View,
                  branchPointInfo: BranchPointInfo,
-                 nextConsensusEpochNumber: ConsensusEpochNumber,
                  isWithdrawalEpochLastBlock: Boolean,
                  parentId: BlockId,
                  timestamp: Timestamp,
