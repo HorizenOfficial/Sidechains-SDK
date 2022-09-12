@@ -18,6 +18,6 @@ public class DebugTraceTransactionView {
         gas = Numeric.toHexStringWithPrefix(evmResult.usedGas);
         returnValue = Numeric.prependHexPrefix(BytesUtils.toHexString(evmResult.returnData));
 
-        structLogs = (Arrays.stream(evmResult.traceLogs).map(log -> new EthereumStructLog(log)).toArray());
+        structLogs = Arrays.stream(evmResult.traceLogs).map(log -> new EthereumStructLog(log)).toArray();
     }
 }

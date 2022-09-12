@@ -420,37 +420,38 @@ class EthService(
   }
 
   @RpcMethod("debug_traceBlockByNumber")
-  def traceBlockByNumber(blockNumber: String): Array[EvmResult] = {
-    val transactionResults: Array[EvmResult] = Array[EvmResult]()
-    val previousBlockNumber = BigInteger.valueOf(blockNumber.toLong).subtract(BigInteger.ONE).toString()
+  def traceBlockByNumber(blockNumber: String): DebugTraceBlockByIdView = {
+    val previousBlockNumber =
+      BigInteger.valueOf(Numeric.cleanHexPrefix(blockNumber).toLong).subtract(BigInteger.ONE).toString()
 
     applyOnAccountView { nodeView =>
-      getStateViewAtTag(nodeView, previousBlockNumber) { tagStateView =>
+      getStateViewAtTag(nodeView, Numeric.cleanHexPrefix(previousBlockNumber)) { tagStateView =>
         {
-          val currentBlock = nodeView.history.getBlockById(blockNumber).get()
+          val currentBlock =
+            nodeView.history.getBlockById(getBlockIdByTag(nodeView, Numeric.cleanHexPrefix(blockNumber))).get()
           val transactionList = currentBlock.transactions
 
           for (mcBlockRefData <- currentBlock.mainchainBlockReferencesData) {
             tagStateView.applyMainchainBlockReferenceData(mcBlockRefData).get
           }
 
-          transactionList.zipWithIndex.foreach({ case (tx, i) =>
-            transactionResults(i) = Evm
-              .Trace(
-                tagStateView.getStateDbHandle,
-                tx.getFrom.bytes(),
-                tx.getTo.bytes(),
-                tx.getValue,
-                tx.getData,
-                tx.getGasLimit,
-                tx.getGasPrice,
-                null
-              )
-          })
+          val evmResults = transactionList.map(tx =>
+            Evm.Trace(
+              tagStateView.getStateDbHandle,
+              tx.getFrom.bytes(),
+              tx.getTo.bytes(),
+              tx.getValue,
+              tx.getData,
+              tx.getGasLimit,
+              tx.getGasPrice,
+              null
+            )
+          )
+
+          new DebugTraceBlockByIdView(evmResults.toArray)
         }
       }
     }
-    transactionResults
   }
 
   @RpcMethod("debug_traceTransaction")
