@@ -131,7 +131,11 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         val valueInWei = ZenWeiConverter.convertZenniesToWei(body.value)
         val destAddress = body.to
         // TODO actual gas implementation
-        val gasPrice = BigInteger.valueOf(sidechainNodeView.getNodeHistory.getBestBlock.header.baseFee)
+        val gasPrice = {
+          val bestBlock = sidechainNodeView.getNodeHistory.getBestBlock
+          if (bestBlock == null) BigInteger.ZERO
+          else BigInteger.valueOf(bestBlock.header.baseFee)
+        }
         val gasLimit = GasUtil.TxGas
         // check if the fromAddress is either empty or it fits and the value is high enough
         val secret = getFittingSecret(sidechainNodeView, body.from, valueInWei)
