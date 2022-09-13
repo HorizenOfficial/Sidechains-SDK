@@ -12,6 +12,10 @@ from test_framework.util import assert_equal, assert_true, start_nodes, websocke
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, \
     is_mainchain_block_included_in_sc_block, check_mainchain_block_reference_info, AccountModelBlockVersion, \
     EVM_APP_BINARY, generate_next_blocks, generate_next_block
+from SidechainTestFramework.account.evm_util import CallMethod
+from SidechainTestFramework.account.eoa_util import eoa_transaction
+
+global_call_method = CallMethod.RPC_EIP155
 
 """
 Check an EVM ERC20 Smart Contract.
@@ -31,6 +35,18 @@ Test:
         - Check a reverting transfer (static_call + actual tx)
         - Check approval + transferFrom (static_call + actual tx)
 """
+
+
+def eoa_transfer(node, sender, receiver, amount, call_method: CallMethod = global_call_method,
+                 static_call: bool = False, generate_block: bool = True, tag: str = 'latest'):
+    if static_call:
+        res = eoa_transaction(node, from_addr=sender, to_addr=receiver, value=amount, static_call=True, tag=tag)
+    else:
+        res = eoa_transaction(node, from_addr=sender, to_addr=receiver, call_method=call_method, value=amount)
+        if generate_block:
+            print("generating next block...")
+            generate_next_blocks(node, "first node", 1)
+    return res
 
 
 def call_addr_uint_fn(node, smart_contract, contract_address, source_addr, addr, uint, static_call, generate_block,
@@ -240,7 +256,11 @@ class SCEvmDebugMethods(SidechainTestFramework):
 
         tx_hash = transfer_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
                                   transfer_amount, static_call=False, generate_block=True)
+        res = sc_node.rpc_debug_traceTransaction(tx_hash)
+        assert_true(res["result"])
 
+        tx_hash = eoa_transfer(sc_node, evm_address, other_address, transfer_amount, static_call=True,
+                               generate_block=False)
         res = sc_node.rpc_debug_traceTransaction(tx_hash)
         assert_true(res["result"])
 
