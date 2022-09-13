@@ -421,21 +421,21 @@ class EthService(
 
   @RpcMethod("debug_traceBlockByNumber")
   def traceBlockByNumber(blockNumber: String): DebugTraceBlockByIdView = {
-    val previousBlockNumber =
-      BigInteger.valueOf(Numeric.cleanHexPrefix(blockNumber).toLong).subtract(BigInteger.ONE).toString()
+    val currentBlockNumber = Numeric.cleanHexPrefix(blockNumber)
+    val previousBlockNumber = Numeric.cleanHexPrefix((java.lang.Long.decode(currentBlockNumber) - 1).toHexString)
 
     applyOnAccountView { nodeView =>
-      getStateViewAtTag(nodeView, Numeric.cleanHexPrefix(previousBlockNumber)) { tagStateView =>
+      getStateViewAtTag(nodeView, previousBlockNumber) { tagStateView =>
         {
-          val currentBlock =
-            nodeView.history.getBlockById(getBlockIdByTag(nodeView, Numeric.cleanHexPrefix(blockNumber))).get()
-          val transactionList = currentBlock.transactions
+          val requestedBlockId = getBlockIdByTag(nodeView, currentBlockNumber)
+          val requestedBlock = nodeView.history.getBlockById(requestedBlockId).get()
+          val transactions = requestedBlock.transactions
 
-          for (mcBlockRefData <- currentBlock.mainchainBlockReferencesData) {
+          for (mcBlockRefData <- requestedBlock.mainchainBlockReferencesData) {
             tagStateView.applyMainchainBlockReferenceData(mcBlockRefData).get
           }
 
-          val evmResults = transactionList.map(tx =>
+          val evmResults = transactions.map(tx =>
             Evm.Trace(
               tagStateView.getStateDbHandle,
               tx.getFrom.bytes(),
