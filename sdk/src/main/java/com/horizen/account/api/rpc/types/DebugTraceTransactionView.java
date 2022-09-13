@@ -16,8 +16,7 @@ public class DebugTraceTransactionView {
 
     public DebugTraceTransactionView(EvmResult evmResult) {
         gas = Numeric.toHexStringWithPrefix(evmResult.usedGas);
-        returnValue = Numeric.prependHexPrefix(BytesUtils.toHexString(evmResult.returnData));
-
+        returnValue = evmResult.returnData == null ? null : Numeric.prependHexPrefix(BytesUtils.toHexString(evmResult.returnData));
         structLogs = Arrays.stream(evmResult.traceLogs).map(log -> new EthereumStructLog(log)).toArray();
     }
 }

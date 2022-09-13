@@ -435,18 +435,19 @@ class EthService(
             tagStateView.applyMainchainBlockReferenceData(mcBlockRefData).get
           }
 
-          val evmResults = transactions.map(tx =>
+          val evmResults = transactions.map(tx => {
             Evm.Trace(
               tagStateView.getStateDbHandle,
               tx.getFrom.bytes(),
-              tx.getTo.bytes(),
+              if (tx.getTo == null) null
+              else tx.getTo.bytes(),
               tx.getValue,
               tx.getData,
               tx.getGasLimit,
               tx.getGasPrice,
               null
             )
-          )
+          })
 
           new DebugTraceBlockByIdView(evmResults.toArray)
         }
