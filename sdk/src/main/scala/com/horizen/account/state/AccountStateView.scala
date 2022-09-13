@@ -8,7 +8,7 @@ import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceip
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress}
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.{Account, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
+import com.horizen.account.utils.{MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
 import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput, WithdrawalEpochCertificate}
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.evm.interop.EvmLog
@@ -290,7 +290,11 @@ class AccountStateView(
   override def certificateTopQuality(referencedWithdrawalEpoch: Int): Long =
     metadataStorageView.getTopQualityCertificate(referencedWithdrawalEpoch).map(_.quality).getOrElse(0)
 
+  override def getWithdrawalEpochInfo: WithdrawalEpochInfo = metadataStorageView.getWithdrawalEpochInfo
+
   override def hasCeased: Boolean = metadataStorageView.hasCeased
+
+  override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = metadataStorageView.getConsensusEpochNumber
 
   override def getFeePayments(withdrawalEpoch: Int): Seq[BlockFeeInfo] =
     metadataStorageView.getFeePayments(withdrawalEpoch)

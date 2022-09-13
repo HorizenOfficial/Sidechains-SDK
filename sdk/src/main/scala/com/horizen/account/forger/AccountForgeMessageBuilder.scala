@@ -96,6 +96,7 @@ class AccountForgeMessageBuilder(
     val baseFee = 0
     val gasLimit = Account.GAS_LIMIT
 
+    // this will throw if parent block was not found
     val parentInfo = nodeView.history.blockInfoById(parentId)
     val blockContext = new BlockContext(
       forgerAddress.address(),
