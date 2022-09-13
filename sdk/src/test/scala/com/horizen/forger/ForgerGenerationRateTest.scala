@@ -38,7 +38,7 @@ class ForgerGenerationRateTest extends JUnitSuite {
       val vrfOutput = vrfProofAndHash.getValue
 
       // Check slot leadership
-      vrfProofCheckAgainstStake(vrfOutput, stake, totalStake)
+      vrfProofCheckAgainstStake(vrfOutput, stake, totalStake, stakePercentageFork = true)
     })
 
     assertEquals("Expected stakes result", slotNumber, stakes.count(s => s))
@@ -73,7 +73,7 @@ class ForgerGenerationRateTest extends JUnitSuite {
         val vrfOutput = vrfProofAndHash.getValue
 
         // Check slot leadership
-        vrfProofCheckAgainstStake(vrfOutput, stake, totalStake)
+        vrfProofCheckAgainstStake(vrfOutput, stake, totalStake, stakePercentageFork = true)
       })
 
       val slotsOccupied = slotRes.count(s => s)
@@ -111,7 +111,7 @@ class ForgerGenerationRateTest extends JUnitSuite {
         val vrfOutput = vrfProofAndHash.getValue
 
         // Check slot leadership
-        vrfProofCheckAgainstStake(vrfOutput, stake, totalStake)
+        vrfProofCheckAgainstStake(vrfOutput, stake, totalStake, stakePercentageFork = true)
       })
 
       println("Occupied forgers - %d".format(forgerRes.count(s => s)))
@@ -152,7 +152,7 @@ class ForgerGenerationRateTest extends JUnitSuite {
         val forgerStake = forgerPair._2
 
         // Check slot leadership
-        val proofRes = vrfProofCheckAgainstStake(vrfOutput, forgerStake, totalStake)
+        val proofRes = vrfProofCheckAgainstStake(vrfOutput, forgerStake, totalStake, stakePercentageFork = true)
         if (proofRes)
           forgersGenRate.put(forgerStake, forgersGenRate.get(forgerStake).get + 1)
 

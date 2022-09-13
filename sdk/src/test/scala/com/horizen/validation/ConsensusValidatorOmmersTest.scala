@@ -1,17 +1,17 @@
 package com.horizen.validation
 
 import java.util.Random
-
 import com.horizen.SidechainHistory
 import com.horizen.block.{Ommer, SidechainBlock, SidechainBlockHeader}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.consensus.{ConsensusEpochNumber, _}
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture, TransactionFixture}
+import com.horizen.fork.{ForkManager, SimpleForkConfigurator}
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.utils.TimeToEpochUtils
 import com.horizen.vrf.VrfOutput
 import org.junit.Assert.{assertEquals, fail => jFail}
-import org.junit.Test
+import org.junit.{Before, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
@@ -29,9 +29,13 @@ class ConsensusValidatorOmmersTest
 
   val consensusValidator: ConsensusValidator = new ConsensusValidator(timeProvider) {
     // always successful
-    override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {}
+    override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput, percentageForkApplied: Boolean): Unit = {}
   }
 
+  @Before
+  def init(): Unit = {
+    ForkManager.init(new SimpleForkConfigurator(), "regtest")
+  }
 
   @Test
   def emptyOmmersValidation(): Unit = {
@@ -90,7 +94,7 @@ class ConsensusValidatorOmmersTest
     Mockito.when(verifiedBlock.ommers).thenReturn(ommers)
 
     val currentEpochConsensusValidator = new ConsensusValidator(timeProvider) {
-      override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
+      override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput, percentageForkApplied: Boolean): Unit = {
         assertEquals("Different stakeConsensusEpochInfo expected", currentFullConsensusEpochInfo.stakeConsensusEpochInfo, stakeConsensusEpochInfo)
         assertEquals("Different vrfOutput expected", generateDummyVrfOutput(header), vrfOutput)
       }
@@ -108,7 +112,7 @@ class ConsensusValidatorOmmersTest
     val fsException = new Exception("ForgingStakeException")
     val forgingStakeFailConsensusValidator = new ConsensusValidator(timeProvider) {
       // always fail
-      override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = throw fsException
+      override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput, percentageForkApplied: Boolean): Unit = throw fsException
     }
 
     Try {
@@ -171,7 +175,7 @@ class ConsensusValidatorOmmersTest
     Mockito.when(verifiedBlock.ommers).thenReturn(ommers)
 
     val previousEpochConsensusValidator = new ConsensusValidator(timeProvider) {
-      override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
+      override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput, percentageForkApplied: Boolean): Unit = {
         assertEquals("Different stakeConsensusEpochInfo expected", previousFullConsensusEpochInfo.stakeConsensusEpochInfo, stakeConsensusEpochInfo)
         assertEquals("Different vrfOutput expected", generateDummyVrfOutput(header), vrfOutput)
       }
@@ -280,7 +284,7 @@ class ConsensusValidatorOmmersTest
     })
 
     var switchedEpochConsensusValidator = new ConsensusValidator(timeProvider) {
-      override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
+      override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput, percentageForkApplied: Boolean): Unit = {
         val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(history.params, header.timestamp)
         epochAndSlot.epochNumber match {
           case `previousEpochNumber` => assertEquals("Different stakeConsensusEpochInfo expected", previousFullConsensusEpochInfo.stakeConsensusEpochInfo, stakeConsensusEpochInfo)
@@ -342,7 +346,7 @@ class ConsensusValidatorOmmersTest
     })
 
     switchedEpochConsensusValidator = new ConsensusValidator(timeProvider) {
-      override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
+      override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput, percentageForkApplied: Boolean): Unit = {
         val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(history.params, header.timestamp)
         epochAndSlot.epochNumber match {
           case `previousEpochNumber` => assertEquals("Different stakeConsensusEpochInfo expected", previousFullConsensusEpochInfo.stakeConsensusEpochInfo, stakeConsensusEpochInfo)
@@ -457,7 +461,7 @@ class ConsensusValidatorOmmersTest
     })
 
     val switchedEpochConsensusValidator = new ConsensusValidator(timeProvider) {
-      override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
+      override private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput, percentageForkApplied: Boolean): Unit = {
         val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(history.params, header.timestamp)
         epochAndSlot.epochNumber match {
           case `previousEpochNumber` => assertEquals("Different stakeConsensusEpochInfo expected", previousFullConsensusEpochInfo.stakeConsensusEpochInfo, stakeConsensusEpochInfo)

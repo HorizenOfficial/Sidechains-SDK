@@ -1,4 +1,4 @@
-**Simple App**
+**Simple App** 
 ---------
 
 Simple app is a Java application that runs a basic Sidechain Node, able to receive and send coins from/to the mainchain ("Forward" and "Backward transfers"). It does not come with any application-specific code (e.g. custom boxes or transactions); that logic can be easily added to Simple App, and implement that way a complete, blockchain based distributed application.
