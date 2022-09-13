@@ -242,9 +242,10 @@ class SCEvmDebugMethods(SidechainTestFramework):
                                   transfer_amount, static_call=False, generate_block=True)
 
         res = sc_node.rpc_debug_traceTransaction(tx_hash)
-        res = sc_node.rpc_debug_traceBlockByNumber("0x4")
+        assert_true(res["result"])
 
-        print(res)
+        res = sc_node.rpc_debug_traceBlockByNumber("0x4")
+        assert_true(res["result"]["debugTraceTransactionViews"])
 
 
 if __name__ == "__main__":
