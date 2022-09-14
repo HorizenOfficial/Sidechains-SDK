@@ -92,10 +92,10 @@ def eoa_transaction(node, *,
                     from_addr: str,
                     to_addr: str,
                     value: int,
-                    gas: int = 2300,
+                    gas: int = 21000,
                     gas_price: int = 1,
-                    max_priority_fee_per_gas: int = None,
-                    max_fee_per_gas: int = None,
+                    max_priority_fee_per_gas: int = 1,
+                    max_fee_per_gas: int = 1,
                     data: str = '0x',
                     nonce: int = None,
                     tag='latest'):
@@ -104,11 +104,11 @@ def eoa_transaction(node, *,
     payload = ''
     from_addr = format_evm(from_addr)
     to_addr = format_evm(to_addr)
+
     if static_call:
         response = node.rpc_eth_call(
             __make_static_call_payload(from_addr=from_addr, to_addr=to_addr, nonce=nonce, gas_limit=gas, value=value,
                                        data=data, gas_price=gas_price), tag)
-        print(response)
         if 'result' in response:
             if response['result'] is not None and len(response['result']) > 0:
                 return response['result']
@@ -130,5 +130,10 @@ def eoa_transaction(node, *,
                                               max_priority_fee_per_gas=max_priority_fee_per_gas, chain_id=chain_id)
 
     response = node.rpc_eth_signTransaction(payload)
-    response = node.rpc_eth_sendRawTransaction(response['result'])
-    return response["result"]
+
+    if "result" in response:
+        response = node.rpc_eth_sendRawTransaction(response['result'])
+        if "result" in response:
+            return response["result"]
+
+    raise RuntimeError("Something went wrong, see {}".format(str(response)))

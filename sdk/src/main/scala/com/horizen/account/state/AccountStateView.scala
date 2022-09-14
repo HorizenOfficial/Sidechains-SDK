@@ -38,6 +38,12 @@ class AccountStateView(
 
   // modifiers
   override def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[Unit] = Try {
+
+    refData.topQualityCertificate.foreach(cert => {
+      log.debug(s"adding top quality cert to state: $cert.")
+      addCertificate(cert)
+    })
+
     refData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {
       aggTx.mc2scTransactionsOutputs().asScala.map {
         case sc: SidechainCreation =>

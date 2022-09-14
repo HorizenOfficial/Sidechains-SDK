@@ -92,8 +92,11 @@ class AccountState(
         val certReferencedEpochNumber = modWithdrawalEpochInfo.epoch - 1
 
         // Top quality certificate may be present in the current SC block or in the previous blocks or can be absent.
+        val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = mod.topQualityCertificateOpt.orElse(
+          stateView.certificate(certReferencedEpochNumber))
+
         // Check top quality certificate or notify that sidechain has ceased since we have no certificate in the end of the submission window.
-        mod.topQualityCertificateOpt.orElse(stateView.certificate(certReferencedEpochNumber)) match {
+        topQualityCertificateOpt match {
           case Some(cert) => validateTopQualityCertificate(cert, stateView)
           case None =>
             log.info(
