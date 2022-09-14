@@ -164,7 +164,7 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
         mockWithdrawalRequestsList.get(new ByteArrayWrapper(key))
       })
 
-    returnData = withGas(WithdrawalMsgProcessor.process(msg, mockStateView, _, defaultBlockContext))
+    returnData = withGas(WithdrawalMsgProcessor.process(msg, mockStateView, _, defaultBlockContext), 10000000)
     assertArrayEquals(WithdrawalRequestsListEncoder.encode(expectedListOfWR), returnData)
   }
 }
