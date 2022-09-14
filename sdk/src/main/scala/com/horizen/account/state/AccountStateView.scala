@@ -8,7 +8,7 @@ import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceip
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress}
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.{Account, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
+import com.horizen.account.utils.{MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
 import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput, WithdrawalEpochCertificate}
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.evm.interop.EvmLog
@@ -38,6 +38,12 @@ class AccountStateView(
 
   // modifiers
   override def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[Unit] = Try {
+
+    refData.topQualityCertificate.foreach(cert => {
+      log.debug(s"adding top quality cert to state: $cert.")
+      addCertificate(cert)
+    })
+
     refData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {
       aggTx.mc2scTransactionsOutputs().asScala.map {
         case sc: SidechainCreation =>
@@ -242,6 +248,10 @@ class AccountStateView(
   def getTransactionReceipt(txHash: Array[Byte]): Option[EthereumReceipt] =
     metadataStorageView.getTransactionReceipt(txHash)
 
+  def updateBaseFee(baseFee: BigInteger): Unit = metadataStorageView.updateBaseFee(baseFee)
+
+  def baseFee: BigInteger = metadataStorageView.getBaseFee
+
   override def setCeased(): Unit = metadataStorageView.setCeased()
 
   override def commit(version: VersionTag): Try[Unit] = Try {
@@ -261,7 +271,11 @@ class AccountStateView(
   override def certificateTopQuality(referencedWithdrawalEpoch: Int): Long =
     metadataStorageView.getTopQualityCertificate(referencedWithdrawalEpoch).map(_.quality).getOrElse(0)
 
+  override def getWithdrawalEpochInfo: WithdrawalEpochInfo = metadataStorageView.getWithdrawalEpochInfo
+
   override def hasCeased: Boolean = metadataStorageView.hasCeased
+
+  override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = metadataStorageView.getConsensusEpochNumber
 
   override def getFeePayments(withdrawalEpoch: Int): Seq[BlockFeeInfo] =
     metadataStorageView.getFeePayments(withdrawalEpoch)

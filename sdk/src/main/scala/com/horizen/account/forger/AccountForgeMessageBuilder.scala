@@ -22,7 +22,17 @@ import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils.{ByteArrayWrapper, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree}
+import com.horizen.utils.{
+  ByteArrayWrapper,
+  ClosableResourceHandler,
+  DynamicTypedSerializer,
+  ForgingStakeMerklePathInfo,
+  ListSerializer,
+  MerklePath,
+  MerkleTree,
+  TimeToEpochUtils,
+  WithdrawalEpochUtils
+}
 import scorex.core.NodeViewModifier
 import scorex.core.block.Block.{BlockId, Timestamp}
 import scorex.util.{ModifierId, ScorexLogging}
@@ -30,7 +40,6 @@ import scorex.util.{ModifierId, ScorexLogging}
 import java.math.BigInteger
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
-import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
 class AccountForgeMessageBuilder(
@@ -51,9 +60,6 @@ class AccountForgeMessageBuilder(
   type HIS = AccountHistory
   type MS = AccountState
   type MP = AccountMemoryPool
-  // TODO the stateRoot of the genesis block
-  val getGenesisBlockRootHash =
-    new Array[Byte](32)
 
   def blockSizeExceeded(blockSize: Int, txCounter: Int): Boolean = {
     if (txCounter > SidechainBlockBase.MAX_SIDECHAIN_TXS_NUMBER || blockSize > SidechainBlockBase.MAX_BLOCK_SIZE)
@@ -66,7 +72,6 @@ class AccountForgeMessageBuilder(
   override def createNewBlock(
       nodeView: View,
       branchPointInfo: BranchPointInfo,
-      nextConsensusEpochNumber: ConsensusEpochNumber,
       isWithdrawalEpochLastBlock: Boolean,
       parentId: BlockId,
       timestamp: Timestamp,
@@ -92,14 +97,18 @@ class AccountForgeMessageBuilder(
     val baseFee = calculateBaseFee(nodeView.history, parentId)
     val gasLimit = FeeUtils.GAS_LIMIT
 
+    // this will throw if parent block was not found
+    val parentInfo = nodeView.history.blockInfoById(parentId)
     val blockContext = new BlockContext(
       forgerAddress.address(),
       timestamp,
       baseFee,
       gasLimit,
-      nodeView.history.getBlockHeightById(parentId).asScala.map(height => height + 1).getOrElse(0),
-      nextConsensusEpochNumber,
-      nodeView.state.getWithdrawalEpochInfo.epoch
+      parentInfo.height + 1,
+      TimeToEpochUtils.timeStampToEpochNumber(params, timestamp),
+      WithdrawalEpochUtils
+        .getWithdrawalEpochInfo(mainchainBlockReferencesData, parentInfo.withdrawalEpochInfo, params)
+        .epoch
     )
 
     // create a view and try to apply all transactions in the list, the outputs will be:
