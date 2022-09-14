@@ -2,13 +2,13 @@ package com.horizen.integration
 
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap}
-
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus.{ConsensusDataStorage, NonceConsensusEpochInfo, StakeConsensusEpochInfo}
 import com.horizen.customtypes.SemanticallyInvalidTransactionSerializer
 import com.horizen.fixtures._
+import com.horizen.fork.{ForkManager, SimpleForkConfigurator}
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.storage.{InMemoryStorageAdapter, SidechainHistoryStorage, Storage}
 import com.horizen.transaction.TransactionSerializer
@@ -47,9 +47,9 @@ class SidechainHistoryTest extends JUnitSuite
   val sparkzSettings: SparkzSettings = mock[SparkzSettings]
   var storage: Storage = _
 
-
   @Before
   def setUp(): Unit = {
+    ForkManager.init(new SimpleForkConfigurator(), "regtest")
     // declare real genesis block id
     params = MainNetParams(new Array[Byte](32), genesisBlock.id, sidechainGenesisBlockTimestamp = 720 * 120)
 
@@ -63,7 +63,6 @@ class SidechainHistoryTest extends JUnitSuite
         tempDir()
       })
   }
-
 
   @Test
   def genesisTest(): Unit = {
@@ -85,7 +84,6 @@ class SidechainHistoryTest extends JUnitSuite
     assertTrue("Expected to contain the genesis block.", history.contains(genesisBlock.id))
     assertTrue("Check for genesis block was failed.", history.isGenesisBlock(genesisBlock.id))
   }
-
 
   @Test
   def appendTest(): Unit = {

@@ -5,8 +5,8 @@ import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
 case class NonceConsensusEpochInfo(consensusNonce: ConsensusNonce) extends BytesSerializable {
-  if (consensusNonce.length != consensusNonceLength) {
-      throw new IllegalArgumentException("Incorrect consensus nonce length, %d bytes expected, %d found.".format(consensusNonceLength, consensusNonce.length))
+  if (!consensusNonceAllowedLengths.contains(consensusNonce.length)) {
+      throw new IllegalArgumentException("Incorrect consensus nonce length, %d bytes expected, %d found.".format(consensusNonceAllowedLengths, consensusNonce.length))
   }
 
   override def toString: String = s"NonceConsensusEpochInfo(consensusNonce=${BytesUtils.toHexString(consensusNonce)}"
@@ -29,5 +29,5 @@ case class NonceConsensusEpochInfo(consensusNonce: ConsensusNonce) extends Bytes
 object NonceConsensusEpochInfoSerializer extends SparkzSerializer[NonceConsensusEpochInfo]{
   override def serialize(obj: NonceConsensusEpochInfo, w: Writer): Unit = w.putBytes(obj.consensusNonce)
 
-  override def parse(r: Reader): NonceConsensusEpochInfo = NonceConsensusEpochInfo(ConsensusNonce @@ r.getBytes(consensusNonceLength))
+  override def parse(r: Reader): NonceConsensusEpochInfo = NonceConsensusEpochInfo(ConsensusNonce @@ r.getBytes(r.remaining))
 }

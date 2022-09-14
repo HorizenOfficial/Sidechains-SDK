@@ -1,6 +1,7 @@
 package com.horizen.fork
 
 import com.horizen.utils.ZenCoinsUtils
+import com.horizen.librustsidechains.Constants
 
 /**
  * Sidechain Fork # 1
@@ -20,17 +21,22 @@ import com.horizen.utils.ZenCoinsUtils
  *  that let the current allowed forgers to vote for the forge opening.
  *  If the majority of the allowed forgers send this transactions, the forging operation is then opened to everyone.
  *
- * 3. ftMinAmount - Sidechain sends minimum FT amount as a parameter in a Certificate sent to Mainchain.
+ * 3. `nonceLength` - changes nonce length used for building VrfMessages from 8 to 32
+ *
+ * 4. `stakePercentageForkApplied` - security improvement for calculating minimum required stake percentage
+ *
+ * 5. ftMinAmount - Sidechain sends minimum FT amount as a parameter in a Certificate sent to Mainchain.
  *  Before the fork, minimum amount for Forward Transfer was 0, so it was possible to create a coin box which
  *  value is below the dust threshold (< 54 satoshi ATM), so the cost of verification is greater than the value itself.
  *  After the fork, ftMinAmount is set to min Dust threshold, and thus it will be impossible to create a FT
  *  with value below the dust threshold (< 54 satoshi ATM)
  *
- * 4. coinBoxMinAmount - we should prevent  creation of any kind of coin boxes on SC which value is too low,
+ * 6. coinBoxMinAmount - we should prevent  creation of any kind of coin boxes on SC which value is too low,
  *  so the cost of verification is greater than the value itself. We already have such check for WithdrawalRequestBox,
  *  but it was missing for all CoinBoxes.
  *  After the fork is applied, all CoinBoxes value will be checked against the dust threshold limit - 54 satoshis ATM.
  *
+ * @param epochNumber consensus epoch number at which this fork to be applied
  */
 class SidechainFork1(override val epochNumber: ForkConsensusEpochNumber) extends BaseConsensusEpochFork(epochNumber) {
 
@@ -38,8 +44,12 @@ class SidechainFork1(override val epochNumber: ForkConsensusEpochNumber) extends
 
   override def openStakeTransactionEnabled(): Boolean = true
 
-  override val ftMinAmount: Long = ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE)
+  override def nonceLength: Int = Constants.FIELD_ELEMENT_LENGTH()
 
-  override val coinBoxMinAmount: Long = ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE)
+  override def stakePercentageForkApplied: Boolean = true
+
+  override def ftMinAmount: Long = ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE)
+
+  override def coinBoxMinAmount: Long = ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE)
 
 }

@@ -76,8 +76,8 @@ object ForkManager {
     }
 
     private[fork] def reset(): Unit = {
-        networkName = null
-        mainchainForks= ListBuffer[BaseMainchainHeightFork]()
-        consensusEpochForks = ListBuffer[BaseConsensusEpochFork]()
+        this.networkName = null
+        this.mainchainForks = ListBuffer[BaseMainchainHeightFork]()
+        this.consensusEpochForks = ListBuffer[BaseConsensusEpochFork]()
     }
 }

@@ -1,17 +1,14 @@
 package com.horizen.fixtures.sidechainblock.generation
 
-import java.math.BigInteger
-import java.security.MessageDigest
-import java.time.Instant
-import java.util.Random
 import com.google.common.primitives.{Ints, Longs}
 import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 import com.horizen.block._
+import com.horizen.box.Box
 import com.horizen.box.data.ForgerBoxData
-import com.horizen.box.{Box, ForgerBox}
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
+import com.horizen.cryptolibprovider.{CryptoLibProvider, VrfFunctions}
 import com.horizen.fixtures._
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proof.{Signature25519, VrfProof}
@@ -19,15 +16,16 @@ import com.horizen.proposition.{Proposition, PublicKey25519Proposition, SchnorrP
 import com.horizen.secret.{PrivateKey25519, PrivateKey25519Creator, VrfKeyGenerator}
 import com.horizen.storage.InMemoryStorageAdapter
 import com.horizen.transaction.SidechainTransaction
-import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils
 import com.horizen.utils._
 import com.horizen.vrf._
-import com.horizen.cryptolibprovider.{CryptoLibProvider, VrfFunctions}
-import com.horizen.librustsidechains.FieldElement
-import sparkz.core.block.Block
 import scorex.util.{ModifierId, bytesToId}
+import sparkz.core.block.Block
 
+import java.math.BigInteger
+import java.security.MessageDigest
+import java.time.Instant
+import java.util.Random
 import scala.collection.JavaConverters._
 
 
@@ -104,7 +102,7 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
 
     val initialNonce: Array[Byte] = consensusDataStorage.getNonceConsensusEpochInfo(nextBlockNonceEpochId).get.consensusNonce
     val changedNonceBytes: Long = Longs.fromByteArray(initialNonce.take(Longs.BYTES)) + generationRules.corruption.consensusNonceShift
-    val nonce = Longs.toByteArray(changedNonceBytes)
+    val nonce = Array.concat(Longs.toByteArray(changedNonceBytes), initialNonce.splitAt(Longs.BYTES)._2)
 
     val consensusNonce: NonceConsensusEpochInfo = NonceConsensusEpochInfo(ConsensusNonce @@ nonce)
 
@@ -113,9 +111,10 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
     val possibleForger = (nextFreeSlotNumber to endSlot)
       .toStream
       .flatMap{currentSlot =>
-        val slotWithShift = intToConsensusSlotNumber(Math.min(currentSlot + generationRules.corruption.consensusSlotShift, params.consensusSlotsInEpoch))
+        val slotWithShift = generationRules.forcedTimestamp.map(TimeToEpochUtils.timeStampToSlotNumber(params, _))
+          .getOrElse(intToConsensusSlotNumber(Math.min(currentSlot + generationRules.corruption.consensusSlotShift, params.consensusSlotsInEpoch)))
         println(s"Process slot: ${slotWithShift}")
-        val res = forgersSet.getEligibleForger(slotWithShift, consensusNonce, totalStake, generationRules.corruption.getStakeCheckCorruptionFunction)
+        val res = forgersSet.getEligibleForger(slotWithShift, consensusNonce, totalStake, generationRules.corruption.getStakeCheckCorruptionFunction, nextEpochNumber)
         if (res.isEmpty) {println(s"No forger had been found for slot ${currentSlot}")}
         res.map{case(forger, proof, vrfOutput) => (forger, proof, vrfOutput, intToConsensusSlotNumber(currentSlot))}
       }
@@ -181,7 +180,9 @@ class SidechainBlocksGenerator private (val params: NetworkParams,
 
     val owner: PrivateKey25519 = forgingData.key
 
-    val forgingStake: ForgingStakeInfo = generationRules.corruption.forgingStakeCorruptionRules.map(getIncorrectForgingStake(forgingData.forgingStakeInfo, _)).getOrElse(forgingData.forgingStakeInfo)
+    val forgingStake: ForgingStakeInfo = generationRules.corruption.forgingStakeCorruptionRules
+      .map(getIncorrectForgingStake(forgingData.forgingStakeInfo, _))
+      .getOrElse(forgingData.forgingStakeInfo)
 
     val forgingStakeMerklePath: MerklePath =
       if (generationRules.corruption.merklePathFromPreviousEpoch) {

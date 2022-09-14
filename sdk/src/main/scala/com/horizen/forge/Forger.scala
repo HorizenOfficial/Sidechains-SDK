@@ -41,7 +41,10 @@ class Forger(settings: SidechainSettings,
       case Some(_) => log.info("Automatically forging already had been started")
       case None => {
         val newTimer = new Timer()
-        newTimer.scheduleAtFixedRate(forgingInitiatorTimerTask, 0, consensusMillisecondsInSlot)
+        val currentTime: Long = timeProvider.time() / 1000
+        val delay = TimeToEpochUtils.secondsRemainingInSlot(params, currentTime) * 1000
+        newTimer.schedule(forgingInitiatorTimerTask, 0L)
+        newTimer.scheduleAtFixedRate(forgingInitiatorTimerTask, delay, consensusMillisecondsInSlot)
         timerOpt = Some(newTimer)
         log.info("Automatically forging had been started")
       }

@@ -3,8 +3,10 @@ package com.horizen.fork
 class BaseConsensusEpochFork (val epochNumber: ForkConsensusEpochNumber) {
   def backwardTransferLimitEnabled(): Boolean = false
   def openStakeTransactionEnabled(): Boolean = false
-  val ftMinAmount: Long = 0
-  val coinBoxMinAmount: Long = 0
+  def ftMinAmount: Long = 0
+  def coinBoxMinAmount: Long = 0
+  def nonceLength: Int = 8
+  def stakePercentageForkApplied: Boolean = false
 }
 
 case class ForkConsensusEpochNumber(mainnetEpochNumber: Int, regtestEpochNumber: Int, testnetEpochNumber: Int) {}
