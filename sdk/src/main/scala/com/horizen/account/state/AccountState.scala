@@ -203,7 +203,7 @@ class AccountState(
 
       // update current base fee
       // TODO: should use updated base fee based on consumed gas in the new block
-      stateView.updateBaseFee(BigInteger.valueOf(mod.header.baseFee))
+      stateView.updateBaseFee(mod.header.baseFee)
 
       stateView.commit(idToVersion(mod.id)).get
 
@@ -382,8 +382,8 @@ class AccountState(
         // use the null address as forger
         new Array[Byte](32),
         TimeToEpochUtils.getTimeStampForEpochAndSlot(params, epochAndSlot.epochNumber, epochAndSlot.slotNumber),
-        stateView.baseFee.longValueExact(),
-        Account.GAS_LIMIT,
+        stateView.baseFee,
+        FeeUtils.GAS_LIMIT,
         stateMetadataStorage.getHeight + 1,
         epochAndSlot.epochNumber,
         stateMetadataStorage.getWithdrawalEpochInfo.epoch

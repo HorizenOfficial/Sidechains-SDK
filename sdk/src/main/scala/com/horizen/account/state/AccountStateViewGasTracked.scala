@@ -1,9 +1,7 @@
 package com.horizen.account.state
 
-import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.evm.ResourceHandle
 import com.horizen.evm.interop.EvmLog
-import com.horizen.utils.BlockFeeInfo
 
 import java.math.BigInteger
 
@@ -121,17 +119,4 @@ class AccountStateViewGasTracked(view: BaseAccountStateView, gas: GasPool) exten
   override def getLogs(txHash: Array[Byte]): Array[EvmLog] = view.getLogs(txHash)
 
   override def getIntermediateRoot: Array[Byte] = view.getIntermediateRoot
-
-  override def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] =
-    view.withdrawalRequests(withdrawalEpoch)
-
-  override def getFeePayments(withdrawalEpoch: Int): Seq[BlockFeeInfo] = view.getFeePayments(withdrawalEpoch)
-
-  override def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] =
-    view.certificate(referencedWithdrawalEpoch)
-
-  override def certificateTopQuality(referencedWithdrawalEpoch: Int): Long =
-    view.certificateTopQuality(referencedWithdrawalEpoch)
-
-  override def hasCeased: Boolean = view.hasCeased
 }
