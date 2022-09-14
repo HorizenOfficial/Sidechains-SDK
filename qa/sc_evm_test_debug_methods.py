@@ -259,8 +259,8 @@ class SCEvmDebugMethods(SidechainTestFramework):
         res = sc_node.rpc_debug_traceTransaction(tx_hash)
         assert_true(res["result"])
 
-        tx_hash = eoa_transfer(sc_node, evm_address, other_address, transfer_amount, static_call=True,
-                               generate_block=False)
+        tx_hash = eoa_transfer(sc_node, evm_address, other_address, transfer_amount, static_call=False,
+                               generate_block=True)
         res = sc_node.rpc_debug_traceTransaction(tx_hash)
         assert_true(res["result"])
 
