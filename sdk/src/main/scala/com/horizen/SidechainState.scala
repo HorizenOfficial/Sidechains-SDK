@@ -49,6 +49,9 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     with UtxoMerkleTreeView
 {
 
+  // TODO Every time when we finish the epoch we retrieve state of previous epoch + allKeyRotations, and update storage
+  // then call SidechainStateStorage.update()
+
   override type NVCT = SidechainState
 
   lazy val verificationKeyFullFilePath: String = {
