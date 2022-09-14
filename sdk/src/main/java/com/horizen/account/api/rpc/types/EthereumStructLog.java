@@ -26,9 +26,9 @@ public class EthereumStructLog {
         gas = Numeric.toHexStringWithPrefix(BigInteger.valueOf(ethereumStructLog.gas));
         gasCost = Numeric.toHexStringWithPrefix(BigInteger.valueOf(ethereumStructLog.gasCost));
         depth = Numeric.toHexStringWithPrefix(BigInteger.valueOf(ethereumStructLog.depth));
-        error = ethereumStructLog.error;
-        stack = ethereumStructLog.stack;
-        memory = ethereumStructLog.memory;
-        storage = ethereumStructLog.storage;
+        error = ethereumStructLog.error != null ? ethereumStructLog.error : "";
+        stack = ethereumStructLog.stack != null ? ethereumStructLog.stack : new String[]{""};
+        memory = ethereumStructLog.memory != null ? ethereumStructLog.memory : new String[]{""};
+        storage = ethereumStructLog.storage != null ? ethereumStructLog.storage : new HashMap<>();
     }
 }

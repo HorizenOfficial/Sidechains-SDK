@@ -256,16 +256,16 @@ class SCEvmDebugMethods(SidechainTestFramework):
 
         tx_hash = transfer_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
                                   transfer_amount, static_call=False, generate_block=True)
-        res = sc_node.rpc_debug_traceTransaction(tx_hash)
-        assert_true(res["result"])
+        res = sc_node.rpc_debug_traceTransaction(tx_hash)["result"]
+        assert_true("error" not in res)
 
         tx_hash = eoa_transfer(sc_node, evm_address, other_address, transfer_amount, static_call=False,
                                generate_block=True)
-        res = sc_node.rpc_debug_traceTransaction(tx_hash)
-        assert_true(res["result"])
+        res = sc_node.rpc_debug_traceTransaction(tx_hash)["result"]
+        assert_true("error" not in res)
 
-        res = sc_node.rpc_debug_traceBlockByNumber("0x4")
-        assert_true(res["result"]["debugTraceTransactionViews"])
+        res = sc_node.rpc_debug_traceBlockByNumber("0x4")["result"]
+        assert_true("error" not in res)
 
 
 if __name__ == "__main__":
