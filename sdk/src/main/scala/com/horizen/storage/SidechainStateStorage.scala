@@ -6,13 +6,11 @@ import com.horizen.SidechainTypes
 import com.horizen.backup.BoxIterator
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
 import com.horizen.box.{WithdrawalRequestBox, WithdrawalRequestBoxSerializer}
-import com.horizen.certificatesubmitter.keys._
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
 import com.horizen.forge.{ForgerList, ForgerListSerializer}
 import com.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
 import scorex.util.ScorexLogging
-
 import java.util.{ArrayList => JArrayList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
@@ -31,6 +29,8 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
   private[horizen] val withdrawalEpochInformationKey = Utils.calculateKey("withdrawalEpochInformation".getBytes)
   private val withdrawalRequestSerializer = new ListSerializer[WithdrawalRequestBox](WithdrawalRequestBoxSerializer.getSerializer)
+  private val keysRotationProofSerializer = new ListSerializer[KeyRotationProof](KeyRotationProofSerializer.getSerializer)
+  private val keysListSerializer = new ListSerializer[ActualKeys](ActualKeysSerializer.getSerializer)
 
   private[horizen] val consensusEpochKey = Utils.calculateKey("consensusEpoch".getBytes)
 
@@ -54,7 +54,6 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   private[horizen] def getKeyRotationProofKey(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): ByteArrayWrapper = {
     Utils.calculateKey(Bytes.concat("keyRotationProof".getBytes, Ints.toByteArray(withdrawalEpoch),
       Ints.toByteArray(indexOfSigner), Ints.toByteArray(keyType)))
-  }
 
   private[horizen] def getTopQualityCertificateKey(referencedWithdrawalEpoch: Int): ByteArrayWrapper = {
     Utils.calculateKey(Bytes.concat("topQualityCertificate".getBytes, Ints.toByteArray(referencedWithdrawalEpoch)))
@@ -297,7 +296,6 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       updateList.add(new JPair(getKeyRotationProofKey(withdrawalEpochInfo.epoch, keyRotationProof.index, keyRotationProof.keyType.id),
         new ByteArrayWrapper(KeyRotationProofSerializer.toBytes(keyRotationProof))))
     })
-
     // Store utxo tree merkle root if present
     utxoMerkleTreeRootOpt.foreach(merkleRoot => {
       updateList.add(new JPair(getUtxoMerkleTreeRootKey(withdrawalEpochInfo.epoch), new ByteArrayWrapper(merkleRoot)))
