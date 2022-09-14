@@ -9,9 +9,8 @@ import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumConsensusDataReceipt
 import com.horizen.account.secret.PrivateKeySecp256k1
-import com.horizen.account.state.{AccountState, AccountStateView, GasLimitReached, GasPool}
+import com.horizen.account.state._
 import com.horizen.account.storage.AccountHistoryStorage
-import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.Account
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block._
@@ -21,53 +20,44 @@ import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree}
+import com.horizen.utils.{
+  ByteArrayWrapper,
+  ClosableResourceHandler,
+  DynamicTypedSerializer,
+  ForgingStakeMerklePathInfo,
+  ListSerializer,
+  MerklePath,
+  MerkleTree,
+  TimeToEpochUtils,
+  WithdrawalEpochUtils
+}
 import scorex.core.NodeViewModifier
 import scorex.core.block.Block.{BlockId, Timestamp}
-import scorex.util.{ModifierId, ScorexLogging, idToBytes}
+import scorex.util.{ModifierId, ScorexLogging}
 
 import java.math.BigInteger
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
-class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
-                                 companion: SidechainAccountTransactionsCompanion,
-                                 params: NetworkParams,
-                                 allowNoWebsocketConnectionInRegtest: Boolean)
-  extends AbstractForgeMessageBuilder[
-    SidechainTypes#SCAT,
-    AccountBlockHeader,
-    AccountBlock](
-    mainchainSynchronizer, companion, params, allowNoWebsocketConnectionInRegtest
-  )
-    with ClosableResourceHandler
-    with ScorexLogging {
+class AccountForgeMessageBuilder(
+    mainchainSynchronizer: MainchainSynchronizer,
+    companion: SidechainAccountTransactionsCompanion,
+    params: NetworkParams,
+    allowNoWebsocketConnectionInRegtest: Boolean
+) extends AbstractForgeMessageBuilder[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock](
+      mainchainSynchronizer,
+      companion,
+      params,
+      allowNoWebsocketConnectionInRegtest
+    )
+      with ClosableResourceHandler
+      with ScorexLogging {
   type HSTOR = AccountHistoryStorage
   type VL = AccountWallet
   type HIS = AccountHistory
   type MS = AccountState
   type MP = AccountMemoryPool
-
-  def computeStateRoot(view: AccountStateView, sidechainTransactions: Seq[SidechainTypes#SCAT],
-                       mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-                       inputBlockSize: Int): (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT]) = {
-
-    // we must ensure that all the tx we get from mempool are applicable to current state view
-    // and we must stay below the block gas limit threshold, therefore we might have a subset of the input transactions
-    val (receiptList, listOfAppliedTxHash) = tryApplyAndGetReceipts(view, mainchainBlockReferencesData, sidechainTransactions, inputBlockSize).get
-
-    // get only the transactions for which we got a receipt
-    val appliedTransactions = sidechainTransactions.filter {
-      t => {
-        val txHash = idToBytes(t.id)
-        listOfAppliedTxHash.contains(new ByteArrayWrapper(txHash))
-      }
-    }
-
-    (view.getIntermediateRoot, receiptList, appliedTransactions)
-  }
-
 
   def blockSizeExceeded(blockSize: Int, txCounter: Int): Boolean = {
     if (txCounter > SidechainBlockBase.MAX_SIDECHAIN_TXS_NUMBER || blockSize > SidechainBlockBase.MAX_BLOCK_SIZE)
@@ -77,106 +67,79 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     }
   }
 
-  private def tryApplyAndGetReceipts(stateView: AccountStateView,
-                                     mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-                                     sidechainTransactions: Seq[SidechainTypes#SCAT],
-                                     inputBlockSize: Int): Try[(Seq[EthereumConsensusDataReceipt], Seq[ByteArrayWrapper])] = Try {
-
-    for (mcBlockRefData <- mainchainBlockReferencesData) {
-      stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
-    }
-
-    val receiptList = new ListBuffer[EthereumConsensusDataReceipt]()
-    val txHashList = new ListBuffer[ByteArrayWrapper]()
-
-    val blockGasPool = new GasPool(stateView.getBlockGasLimit)
-    var txsCounter: Int = 0
-    var blockSize: Int = inputBlockSize
-
-    for ((tx, txIndex) <- sidechainTransactions.zipWithIndex) {
-
-      blockSize = blockSize + tx.bytes.length + 4 // placeholder for Tx length
-      txsCounter += 1
-
-      if (blockSizeExceeded(blockSize, txsCounter))
-        return Success(receiptList, txHashList)
-
-      stateView.applyTransaction(tx, txIndex, blockGasPool) match {
-        case Success(consensusDataReceipt) =>
-
-          val ethTx = tx.asInstanceOf[EthereumTransaction]
-          val txHash = BytesUtils.fromHexString(ethTx.id)
-
-          receiptList += consensusDataReceipt
-          txHashList += txHash
-
-        case Failure(_: GasLimitReached) =>
-          // block gas limit reached
-          // TODO: keep trying to fit transactions into the block: this TX did not fit, but another one might
-          return Success(receiptList, txHashList)
-
-        case Failure(e) =>
-          // just skip this tx
-          log.debug("Could not apply tx, reason: " + e.getMessage)
-      }
-    }
-    (receiptList, txHashList)
-  }
-
   override def createNewBlock(
-                               nodeView: View,
-                               branchPointInfo: BranchPointInfo,
-                               isWithdrawalEpochLastBlock: Boolean,
-                               parentId: BlockId,
-                               timestamp: Timestamp,
-                               mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
-                               sidechainTransactions: Seq[SidechainTypes#SCAT],
-                               mainchainHeaders: Seq[MainchainHeader],
-                               ommers: Seq[Ommer[AccountBlockHeader]],
-                               ownerPrivateKey: PrivateKey25519,
-                               forgingStakeInfo: ForgingStakeInfo,
-                               vrfProof: VrfProof,
-                               forgingStakeInfoMerklePath: MerklePath,
-                               companion: DynamicTypedSerializer[SidechainTypes#SCAT, TransactionSerializer[SidechainTypes#SCAT]],
-                               inputBlockSize: Int,
-                               signatureOption: Option[Signature25519]): Try[SidechainBlockBase[SidechainTypes#SCAT, AccountBlockHeader]] = {
+      nodeView: View,
+      branchPointInfo: BranchPointInfo,
+      isWithdrawalEpochLastBlock: Boolean,
+      parentId: BlockId,
+      timestamp: Timestamp,
+      mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
+      sidechainTransactions: Seq[SidechainTypes#SCAT],
+      mainchainHeaders: Seq[MainchainHeader],
+      ommers: Seq[Ommer[AccountBlockHeader]],
+      ownerPrivateKey: PrivateKey25519,
+      forgingStakeInfo: ForgingStakeInfo,
+      vrfProof: VrfProof,
+      forgingStakeInfoMerklePath: MerklePath,
+      companion: DynamicTypedSerializer[SidechainTypes#SCAT, TransactionSerializer[SidechainTypes#SCAT]],
+      inputBlockSize: Int,
+      signatureOption: Option[Signature25519]
+  ): Try[SidechainBlockBase[SidechainTypes#SCAT, AccountBlockHeader]] = {
 
-    val feePaymentsHash: Array[Byte] = new Array[Byte](MerkleTree.ROOT_HASH_LENGTH)
-
-    // 1. create a view and try to apply all transactions in the list.
-    val (stateRoot, receiptList, appliedTxList)
-    : (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT]) = using(nodeView.state.getView) { dummyView =>
-      // the outputs will be:
-      // - the resulting stateRoot
-      // - the list of receipt of the transactions successfully applied ---> for getting the receiptsRoot
-      // - the list of transactions successfully applied to the state ---> to be included in the forged block
-      computeStateRoot(dummyView, sidechainTransactions, mainchainBlockReferencesData, inputBlockSize)
-    }
-    // 2. Compute the receipt root
-    val receiptsRoot: Array[Byte] = calculateReceiptRoot(receiptList)
-
-    // 3. As forger address take first address from the wallet
+    // As forger address take first address from the wallet
     val addressList = nodeView.vault.secretsOfType(classOf[PrivateKeySecp256k1])
     if (addressList.size() == 0)
       throw new IllegalArgumentException("No addresses in wallet!")
-
     val forgerAddress = addressList.get(0).publicImage().asInstanceOf[AddressProposition]
 
-    // TODO: 4. calculate baseFee
+    // TODO: calculate baseFee
     val baseFee = 0
-
-    // 5. Get cumulativeGasUsed from last receipt in list if available
-    val gasUsed = if (receiptList.size > 0) receiptList.last.cumulativeGasUsed.longValue() else 0
-
-    // 6. Set gasLimit
     val gasLimit = Account.GAS_LIMIT
+
+    // this will throw if parent block was not found
+    val parentInfo = nodeView.history.blockInfoById(parentId)
+    val blockContext = new BlockContext(
+      forgerAddress.address(),
+      timestamp,
+      baseFee,
+      gasLimit,
+      parentInfo.height + 1,
+      TimeToEpochUtils.timeStampToEpochNumber(params, timestamp),
+      WithdrawalEpochUtils
+        .getWithdrawalEpochInfo(mainchainBlockReferencesData, parentInfo.withdrawalEpochInfo, params)
+        .epoch
+    )
+
+    // create a view and try to apply all transactions in the list, the outputs will be:
+    // - the list of transactions successfully applied to the state ---> to be included in the forged block
+    // - the resulting state root hash
+    // - the resulting receipts root hash
+    // - total amount of gas used
+    val (appliedTransactions, stateRoot, receiptsRoot, gasUsed) = using(nodeView.state.getView) { stateView =>
+      // we must ensure that all the tx we get from mempool are applicable to current state view
+      // and we must stay below the block gas limit threshold, therefore we might have a subset of the input transactions
+      val (appliedTxList, receiptList) = tryApplyAndGetReceipts(
+        stateView,
+        mainchainBlockReferencesData,
+        sidechainTransactions,
+        inputBlockSize,
+        blockContext
+      ).get
+
+      // Get cumulativeGasUsed from last receipt in list if available
+      val gasUsed: Long = receiptList.lastOption.map(_.cumulativeGasUsed.longValue()).getOrElse(0)
+
+      (appliedTxList, stateView.getIntermediateRoot, calculateReceiptRoot(receiptList), gasUsed)
+    }
+
+    val feePaymentsHash: Array[Byte] = new Array[Byte](MerkleTree.ROOT_HASH_LENGTH)
 
     val block = AccountBlock.create(
       parentId,
       AccountBlock.ACCOUNT_BLOCK_VERSION,
       timestamp,
       mainchainBlockReferencesData,
-      appliedTxList,
+      appliedTransactions,
       mainchainHeaders,
       ommers,
       ownerPrivateKey,
@@ -190,16 +153,19 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       baseFee,
       gasUsed,
       gasLimit,
-      companion.asInstanceOf[SidechainAccountTransactionsCompanion])
+      companion.asInstanceOf[SidechainAccountTransactionsCompanion]
+    )
 
     block
 
   }
 
-  override def precalculateBlockHeaderSize(parentId: ModifierId,
-                                           timestamp: Long,
-                                           forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo,
-                                           vrfProof: VrfProof): Int = {
+  override def precalculateBlockHeaderSize(
+      parentId: ModifierId,
+      timestamp: Long,
+      forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo,
+      vrfProof: VrfProof
+  ): Int = {
     // Create block header template, setting dummy values where it is possible.
     // Note:  AccountBlockHeader length is not constant because of the forgingStakeMerklePathInfo.merklePath.
     val header = AccountBlockHeader(
@@ -213,7 +179,9 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH), // stateRoot TODO add constant
-      new AddressProposition(new Array[Byte](Account.ADDRESS_SIZE)), // forgerAddress: PublicKeySecp256k1Proposition TODO add constant,
+      new AddressProposition(
+        new Array[Byte](Account.ADDRESS_SIZE)
+      ), // forgerAddress: PublicKeySecp256k1Proposition TODO add constant,
       Long.MaxValue,
       Long.MaxValue,
       Long.MaxValue,
@@ -239,11 +207,11 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     ommersSerializer.toBytes(ommers.asJava).length
   }
 
-  // TODO the stateRoot of the genesis block
-  val getGenesisBlockRootHash =
-    new Array[Byte](32)
-
-  def getStateRoot(history: AccountHistory, forgedBlockTimestamp: Long, branchPointInfo: BranchPointInfo): Array[Byte] = {
+  def getStateRoot(
+      history: AccountHistory,
+      forgedBlockTimestamp: Long,
+      branchPointInfo: BranchPointInfo
+  ): Array[Byte] = {
     // For given epoch N we should get data from the ending of the epoch N-2.
     // genesis block is the single and the last block of epoch 1 - that is a special case:
     // Data from epoch 1 is also valid for epoch 2, so for epoch N==2, we should get info from epoch 1.
@@ -253,14 +221,22 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     lastBlock.get().header.stateRoot
   }
 
-  override def getForgingStakeMerklePathInfo(nextConsensusEpochNumber: ConsensusEpochNumber, wallet: AccountWallet, history: AccountHistory, state: AccountState, branchPointInfo: BranchPointInfo, nextBlockTimestamp: Long): Seq[ForgingStakeMerklePathInfo] = {
+  override def getForgingStakeMerklePathInfo(
+      nextConsensusEpochNumber: ConsensusEpochNumber,
+      wallet: AccountWallet,
+      history: AccountHistory,
+      state: AccountState,
+      branchPointInfo: BranchPointInfo,
+      nextBlockTimestamp: Long
+  ): Seq[ForgingStakeMerklePathInfo] = {
 
     // 1. get from history the state root from the header of the block of 2 epochs before
     val stateRoot = getStateRoot(history, nextBlockTimestamp, branchPointInfo)
 
     // 2. get from stateDb using root above the collection of all forger stakes (ordered)
-    val forgingStakeInfoSeq: Seq[ForgingStakeInfo] = using(state.getStateDbViewFromRoot(stateRoot)) { stateViewFromRoot =>
-      stateViewFromRoot.getOrderedForgingStakeInfoSeq
+    val forgingStakeInfoSeq: Seq[ForgingStakeInfo] = using(state.getStateDbViewFromRoot(stateRoot)) {
+      stateViewFromRoot =>
+        stateViewFromRoot.getOrderedForgingStakeInfoSeq
     }
 
     // 3. using wallet secrets, filter out the not-mine forging stakes
@@ -270,7 +246,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     val filteredForgingStakeInfoSeq = forgingStakeInfoSeq.filter(p => {
       walletPubKeys.contains(p.blockSignPublicKey) &&
-        walletPubKeys.contains(p.vrfPublicKey)
+      walletPubKeys.contains(p.vrfPublicKey)
     })
 
     // return an empty seq if we do not have forging stake, that is a legal (negative) result.
@@ -286,17 +262,57 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       filteredForgingStakeInfoSeq.flatMap(forgingStakeInfo => {
         merkleTreeLeaves.indexOf(new ByteArrayWrapper(forgingStakeInfo.hash)) match {
           case -1 => None // May occur in case Wallet doesn't contain information about blockSignKey and vrfKey
-          case index => Some(ForgingStakeMerklePathInfo(
-            forgingStakeInfo,
-            forgingStakeInfoTree.getMerklePathForLeaf(index)
-          ))
+          case index =>
+            Some(ForgingStakeMerklePathInfo(forgingStakeInfo, forgingStakeInfoTree.getMerklePathForLeaf(index)))
         }
       })
 
     forgingStakeMerklePathInfoSeq
   }
+
+  private def tryApplyAndGetReceipts(
+      stateView: AccountStateView,
+      mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
+      sidechainTransactions: Seq[SidechainTypes#SCAT],
+      inputBlockSize: Int,
+      blockContext: BlockContext
+  ): Try[(Seq[SidechainTypes#SCAT], Seq[EthereumConsensusDataReceipt])] = Try {
+
+    for (mcBlockRefData <- mainchainBlockReferencesData) {
+      stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
+    }
+
+    val appliedTransactions = new ListBuffer[SidechainTypes#SCAT]()
+    val receiptList = new ListBuffer[EthereumConsensusDataReceipt]()
+
+    val blockGasPool = new GasPool(BigInteger.valueOf(blockContext.blockGasLimit))
+    var txsCounter: Int = 0
+    var blockSize: Int = inputBlockSize
+
+    for ((tx, txIndex) <- sidechainTransactions.zipWithIndex) {
+
+      // placeholder for Tx length
+      blockSize = blockSize + tx.bytes.length + 4
+      txsCounter += 1
+
+      if (blockSizeExceeded(blockSize, txsCounter))
+        return Success(appliedTransactions, receiptList)
+
+      stateView.applyTransaction(tx, txIndex, blockGasPool, blockContext) match {
+        case Success(consensusDataReceipt) =>
+          appliedTransactions += tx
+          receiptList += consensusDataReceipt
+
+        case Failure(_: GasLimitReached) =>
+          // block gas limit reached
+          // TODO: keep trying to fit transactions into the block: this TX did not fit, but another one might
+          return Success(appliedTransactions, receiptList)
+
+        case Failure(e) =>
+          // just skip this tx
+          log.debug("Could not apply tx, reason: " + e.getMessage)
+      }
+    }
+    (appliedTransactions, receiptList)
+  }
 }
-
-
-
-

@@ -7,7 +7,7 @@ import com.horizen.utils.{BlockFeeInfo, WithdrawalEpochInfo}
 
 trait BaseStateReader {
   def getWithdrawalEpochInfo: WithdrawalEpochInfo
-
+  
   def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest]
 
   def getFeePayments(withdrawalEpoch: Int): Seq[BlockFeeInfo]

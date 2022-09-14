@@ -344,7 +344,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
   }
 
   @throws(classOf[ExecutionFailedException])
-  override def process(msg: Message, view: BaseAccountStateView, gas: GasPool): Array[Byte] = {
+  override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
     view.enableGasTracking(gas)
     getFunctionSignature(msg.getData) match {
       case GetListOfForgersCmd => doGetListOfForgersCmd(msg, view)

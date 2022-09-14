@@ -1,5 +1,6 @@
 package com.horizen.account.api.http
 
+import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.secret.PrivateKeySecp256k1
@@ -21,7 +22,7 @@ import java.util.Optional
 import scala.collection.JavaConverters._
 import scala.util.Random
 
-class AccountNodeViewUtilMocks extends MockitoSugar with BoxFixture with CompanionsFixture with SecretFixture{
+class AccountNodeViewUtilMocks extends MockitoSugar with BoxFixture with CompanionsFixture with SecretFixture {
 
   val ownerSecret: PrivateKeySecp256k1 = getPrivateKeySecp256k1(2222222)
   val ownerPublicKeyString: String = BytesUtils.toHexString(ownerSecret.publicImage().address())
@@ -35,22 +36,33 @@ class AccountNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compani
 
   val fittingSecret: PrivateKeySecp256k1 = getPrivateKeySecp256k1(10344)
 
-
   def getNodeHistoryMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeAccountHistory = {
-    val history: NodeAccountHistory = mock[NodeAccountHistory]
+    val history = mock[NodeAccountHistory]
+    val block = mock[AccountBlock]
+    val header = mock[AccountBlockHeader]
+    Mockito.when(history.getBestBlock).thenAnswer(_ => block)
+    Mockito.when(block.header).thenAnswer(_ => header)
+    Mockito.when(header.baseFee).thenAnswer(_ => 1234L)
     history
   }
-
 
   def getNodeStateMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): NodeAccountState = {
     val accountState = mock[NodeAccountState]
     Mockito.when(accountState.getListOfForgerStakes).thenAnswer(_ => listOfStakes)
     Mockito.when(accountState.withdrawalRequests(ArgumentMatchers.anyInt())).thenAnswer(_ => listOfWithdrawalRequests)
-    Mockito.when(accountState.getBalance(ArgumentMatchers.any[Array[Byte]])).thenAnswer(_ => ZenWeiConverter.MAX_MONEY_IN_WEI)//It has always enough money
-    Mockito.when(accountState.getNonce(ArgumentMatchers.any[Array[Byte]])).thenAnswer(_ => BigInteger.ONE)//It has always enough money
-    Mockito.when(accountState.getForgerStakeData(ArgumentMatchers.anyString())).thenAnswer(myStakeId =>
-      getListOfStakes.find(stake => BytesUtils.toHexString(stake.stakeId).equals(myStakeId.getArgument(0))).map(stakeInfo => stakeInfo.forgerStakeData))
-    Mockito.when(accountState.getBaseFee).thenAnswer(_ => BigInteger.ZERO) // TODO: base fee can be configurable
+    Mockito
+      .when(accountState.getBalance(ArgumentMatchers.any[Array[Byte]]))
+      .thenAnswer(_ => ZenWeiConverter.MAX_MONEY_IN_WEI) // It has always enough money
+    Mockito
+      .when(accountState.getNonce(ArgumentMatchers.any[Array[Byte]]))
+      .thenAnswer(_ => BigInteger.ONE) // It has always enough money
+    Mockito
+      .when(accountState.getForgerStakeData(ArgumentMatchers.anyString()))
+      .thenAnswer(myStakeId =>
+        getListOfStakes
+          .find(stake => BytesUtils.toHexString(stake.stakeId).equals(myStakeId.getArgument(0)))
+          .map(stakeInfo => stakeInfo.forgerStakeData)
+      )
     accountState
   }
 
@@ -83,7 +95,8 @@ class AccountNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compani
   def getListOfStakes: Seq[AccountForgingStakeInfo] = {
     val list: util.List[AccountForgingStakeInfo] = new util.ArrayList[AccountForgingStakeInfo]()
     val owner: AddressProposition = new AddressProposition(BytesUtils.fromHexString(ownerPublicKeyString))
-    val blockSignerProposition = new PublicKey25519Proposition(BytesUtils.fromHexString(blockSignerPropositionString)) // 32 bytes
+    val blockSignerProposition =
+      new PublicKey25519Proposition(BytesUtils.fromHexString(blockSignerPropositionString)) // 32 bytes
     val vrfPublicKey = new VrfPublicKey(BytesUtils.fromHexString(vrfPublicKeyString)) // 33 bytes
 
     val forgerKeys = ForgerPublicKeys(blockSignerProposition, vrfPublicKey)
@@ -92,7 +105,6 @@ class AccountNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compani
     list.add(stake)
     list.asScala
   }
-
 
   def getListOfWithdrawalRequests: Seq[WithdrawalRequest] = {
     val list: util.List[WithdrawalRequest] = new util.ArrayList[WithdrawalRequest]()
@@ -111,13 +123,12 @@ class AccountNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compani
     memoryPool
   }
 
-
   def getAccountNodeView(sidechainApiMockConfiguration: SidechainApiMockConfiguration): AccountNodeView =
     new AccountNodeView(
       getNodeHistoryMock(sidechainApiMockConfiguration),
       getNodeStateMock(sidechainApiMockConfiguration),
       getNodeWalletMock(sidechainApiMockConfiguration),
-      getNodeMemoryPoolMock(sidechainApiMockConfiguration))
-
+      getNodeMemoryPoolMock(sidechainApiMockConfiguration)
+    )
 
 }

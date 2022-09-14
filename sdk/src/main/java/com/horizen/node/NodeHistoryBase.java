@@ -25,8 +25,6 @@ public interface NodeHistoryBase<TX extends Transaction, H extends SidechainBloc
 
     Optional<FeePaymentsInfo> getFeePaymentsInfo(String blockId);
 
-    Optional<Integer> getBlockHeight(String blockId);
-
     int getMainchainCreationBlockHeight();
 
     Optional<MainchainBlockReferenceInfo> getBestMainchainBlockReferenceInfo();
