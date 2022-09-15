@@ -185,9 +185,8 @@ class EthereumReceiptTest
       val txType = i % 3
       val cumGas = BigInteger.valueOf(i).multiply(BigInteger.TEN.pow(3))
       //println("cumGas =" + cumGas.toString())
-      val logsBloom = new Array[Byte](256)
       val logs = new ListBuffer[EvmLog]
-      receipts(i) = new EthereumConsensusDataReceipt(txType, status, cumGas, logs, logsBloom)
+      receipts(i) = new EthereumConsensusDataReceipt(txType, status, cumGas, logs)
       //println("i=" + i + receipts[i].toString())
     }
     receipts.toSeq
