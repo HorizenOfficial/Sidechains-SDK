@@ -128,7 +128,9 @@ class EthService(
     }
   }
 
-  private def doCall[A](nodeView: NV, params: TransactionArgs, tag: String)(fun: (Array[Byte], AccountStateView) ⇒ A): A = {
+  private def doCall[A](nodeView: NV, params: TransactionArgs, tag: String)(
+      fun: (Array[Byte], AccountStateView) ⇒ A
+  ): A = {
     getStateViewAtTag(nodeView, tag) { (tagStateView, blockContext) =>
       try {
         val msg = params.toMessage(blockContext.baseFee)
@@ -409,12 +411,12 @@ class EthService(
   @RpcOptionalParameters(1)
   def getCode(address: Address, tag: String): String = {
     applyOnAccountView { nodeView =>
-      getStateViewAtTag(nodeView,tag) { (tagStateView, _) =>
-          val code = tagStateView.getCode(address.toBytes)
-          if (code == null)
-            "0x"
-          else
-            Numeric.toHexString(code)
+      getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
+        val code = tagStateView.getCode(address.toBytes)
+        if (code == null)
+          "0x"
+        else
+          Numeric.toHexString(code)
       }
     }
   }
@@ -426,11 +428,13 @@ class EthService(
       Numeric.cleanHexPrefix((Numeric.decodeQuantity(blockNumber).intValueExact() - 1).toHexString)
 
     applyOnAccountView { nodeView =>
-      getStateViewAtTag(nodeView, previousBlockNumber) { tagStateView =>
+      getStateViewAtTag(nodeView, previousBlockNumber) { (tagStateView, blockContext) =>
         {
           val requestedBlockId = getBlockIdByTag(nodeView, currentBlockNumber)
           val requestedBlock = nodeView.history.getBlockById(requestedBlockId).get()
           val transactions = requestedBlock.transactions
+
+          val evmContext = blockContext.getEvmContext
 
           for (mcBlockRefData <- requestedBlock.mainchainBlockReferencesData) {
             tagStateView.applyMainchainBlockReferenceData(mcBlockRefData).get
@@ -446,7 +450,7 @@ class EthService(
               tx.getData,
               tx.getGasLimit,
               tx.getGasPrice,
-              null
+              evmContext
             )
           })
 
@@ -470,7 +474,7 @@ class EthService(
     val evmResult: EvmResult = new EvmResult()
 
     applyOnAccountView { nodeView =>
-      getStateViewAtTag(nodeView, previousBlockNumber) { tagStateView =>
+      getStateViewAtTag(nodeView, previousBlockNumber) { (tagStateView, blockContext) =>
         {
           val currentBlock = nodeView.history.getBlockById(currentBlockId).get()
           val gasPool = new GasPool(BigInteger.valueOf(currentBlock.header.gasLimit))
@@ -482,6 +486,8 @@ class EthService(
 
           breakable {
             for ((tx, i) <- transactions.zipWithIndex) {
+              val evmContext = blockContext.getEvmContext
+
               if (tx.id == Numeric.cleanHexPrefix(transactionHash)) {
                 val txResult = Evm
                   .Trace(
@@ -493,7 +499,7 @@ class EthService(
                     tx.getData,
                     tx.getGasLimit,
                     tx.getGasPrice,
-                    null
+                    evmContext
                   )
 
                 evmResult.traceLogs = txResult.traceLogs
@@ -502,7 +508,7 @@ class EthService(
 
                 break
               }
-              tagStateView.applyTransaction(tx, i, gasPool)
+              tagStateView.applyTransaction(tx, i, gasPool, null)
             }
           }
 

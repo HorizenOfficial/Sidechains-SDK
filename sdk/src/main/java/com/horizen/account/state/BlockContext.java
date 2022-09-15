@@ -1,6 +1,7 @@
 package com.horizen.account.state;
 
 import com.horizen.account.block.AccountBlockHeader;
+import com.horizen.evm.interop.EvmContext;
 
 import java.math.BigInteger;
 
@@ -47,4 +48,15 @@ public class BlockContext {
                 withdrawalEpochNumber
         );
     }
+
+    public EvmContext getEvmContext() {
+        EvmContext evmContext = new EvmContext();
+
+        evmContext.baseFee = this.baseFee;
+        evmContext.blockNumber = BigInteger.valueOf(this.blockNumber);
+        evmContext.time = BigInteger.valueOf(this.timestamp);
+
+        return evmContext;
+    }
+
 }
