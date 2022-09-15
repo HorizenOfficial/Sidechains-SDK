@@ -122,10 +122,7 @@ object EthereumReceiptSerializer extends ScorexSerializer[EthereumReceipt]{
     for (_ <- 0 until numberOfLogs)
       logs += EvmLogUtils.parse(reader)
 
-    val bloomsLength: Int = reader.getInt
-    val blooms: Array[Byte] = reader.getBytes(bloomsLength)
-
-    val receipt: EthereumConsensusDataReceipt = EthereumConsensusDataReceipt(transactionType, status, cumGasUsed, logs, new LogsBloom(blooms))
+    val receipt: EthereumConsensusDataReceipt = new EthereumConsensusDataReceipt(transactionType, status, cumGasUsed, logs)
 
     val txHash: Array[Byte] = reader.getBytes(32)
     val txIndex: Int = reader.getInt
