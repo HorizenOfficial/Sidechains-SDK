@@ -1,5 +1,6 @@
 package com.horizen.account.receipt
 
+import com.horizen.account.receipt.LogsBloom.BLOOM_FILTER_LENGTH
 import com.horizen.utils.BytesUtils
 import org.junit.Assert._
 import org.junit._
@@ -66,6 +67,13 @@ class EthereumConsensusDataReceiptTest
 
     val bloomFilterHash2 = Keccak256.hash(bloomLog2.getBloomFilter())
     assertArrayEquals(bloomFilterHash, bloomFilterHash2)
+  }
+
+  @Test def bloomFilterEmptyTest(): Unit = {
+    val bloomLog = new LogsBloom()
+    val bloomFilter = bloomLog.getBloomFilter()
+
+    assertArrayEquals(bloomFilter, Array.fill[Byte](BLOOM_FILTER_LENGTH)(0))
   }
 
 }
