@@ -457,7 +457,7 @@ class EthService(
   }
 
   @RpcMethod("debug_traceTransaction")
-  def traceTransaction(transactionHash: String): DebugTraceTransactionView = {
+  def traceTransaction(transactionHash: String): Object = {
     val requestedTransaction = getTransactionAndReceipt(transactionHash) { (tx, receipt) =>
       new EthereumTransactionView(receipt, tx)
     }.orNull
@@ -505,8 +505,13 @@ class EthService(
               tagStateView.applyTransaction(tx, i, gasPool)
             }
           }
+
+          if (!evmResult.isEmpty) {
+            return f"Transaction ${transactionHash} not found"
+          }
+
+          new DebugTraceTransactionView(evmResult)
         }
-        new DebugTraceTransactionView(evmResult)
       }
     }
   }

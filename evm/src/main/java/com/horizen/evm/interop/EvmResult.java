@@ -10,4 +10,8 @@ public class EvmResult {
     public byte[] returnData;
     public Address contractAddress;
     public EvmTraceLog[] traceLogs;
+
+    public boolean isEmpty() {
+        return usedGas == null && evmError == null && returnData == null && contractAddress == null && traceLogs == null;
+    }
 }
