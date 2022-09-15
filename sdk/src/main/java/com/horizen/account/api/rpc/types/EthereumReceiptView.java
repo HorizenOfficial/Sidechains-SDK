@@ -40,7 +40,7 @@ public class EthereumReceiptView {
         gasUsed = Numeric.toHexStringWithPrefix(receipt.gasUsed());
         contractAddress = receipt.contractAddress().length != Account.ADDRESS_SIZE ? null : Numeric.toHexString(receipt.contractAddress());
         logs = receipt.deriveFullLogs().seq().toList();
-        logsBloom = Numeric.toHexString(receipt.consensusDataReceipt().logsBloom());
+        logsBloom = Numeric.toHexString(receipt.consensusDataReceipt().logsBloom().getBloomFilter());
         status = Numeric.prependHexPrefix(Integer.toHexString(receipt.consensusDataReceipt().status()));
         effectiveGasPrice = (tx.getGasPrice() != null) ? Numeric.toHexStringWithPrefix(tx.getGasPrice()) : null;
     }

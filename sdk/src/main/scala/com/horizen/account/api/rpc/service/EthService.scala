@@ -25,7 +25,7 @@ import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.Transaction
 import com.horizen.transaction.exception.TransactionSemanticValidityException
-import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
+import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
 import org.web3j.crypto.Sign.SignatureData
 import org.web3j.crypto.{SignedRawTransaction, TransactionEncoder}
 import org.web3j.utils.Numeric
@@ -95,7 +95,7 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
           _.asInstanceOf[EthereumTransaction]
         }
         new EthereumBlock(
-          Numeric.prependHexPrefix(Integer.toHexString(nodeView.history.getBlockHeight(blockId).get())),
+          Numeric.prependHexPrefix(Integer.toHexString(nodeView.history.getBlockHeightById(blockId).get())),
           Numeric.prependHexPrefix(blockId),
           if (!hydratedTx) {
             transactions.map(tx => Numeric.prependHexPrefix(tx.id)).toList.asJava
@@ -111,10 +111,10 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   }
 
   private def doCall[A](nodeView: NV, params: TransactionArgs, tag: String)(fun: (Array[Byte], AccountStateView) ⇒ A): A = {
-    getStateViewAtTag(nodeView, tag) { tagStateView =>
+    getStateViewAtTag(nodeView, tag) { (tagStateView, blockContext) =>
       try {
-          val msg = params.toMessage(getBlockAtTag(nodeView, tag).header.baseFee)
-          fun(tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit)), tagStateView)
+        val msg = params.toMessage(blockContext.baseFee)
+        fun(tagStateView.applyMessage(msg, new GasPool(msg.getGasLimit), blockContext), tagStateView)
       } catch {
         // throw on execution errors, also include evm revert reason if possible
         case reverted: ExecutionRevertedException => throw new RpcException(new RpcError(
@@ -206,9 +206,9 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
       val lowBound = GasUtil.TxGas.subtract(BigInteger.ONE)
       // Determine the highest gas limit can be used during the estimation.
       var highBound = params.gas
-      getStateViewAtTag(nodeView, tag) { tagStateView =>
+      getStateViewAtTag(nodeView, tag) { (tagStateView, blockContext) =>
         if (highBound == null || highBound.compareTo(GasUtil.TxGas) < 0) {
-          highBound = tagStateView.getBlockGasLimit
+          highBound = BigInteger.valueOf(blockContext.blockGasLimit)
         }
         // Normalize the max fee per gas the call is willing to spend.
         var feeCap = BigInteger.ZERO
@@ -271,7 +271,7 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   @RpcOptionalParameters(1)
   def GetBalance(address: Address, tag: String): Quantity = {
     applyOnAccountView { nodeView =>
-      getStateViewAtTag(nodeView, tag) { tagStateView =>
+      getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
         new Quantity(tagStateView.getBalance(address.toBytes))
       }
     }
@@ -281,25 +281,25 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   @RpcOptionalParameters(1)
   def getTransactionCount(address: Address, tag: String): Quantity = {
     applyOnAccountView { nodeView =>
-      getStateViewAtTag(nodeView, tag) { tagStateView =>
+      getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
         new Quantity(tagStateView.getNonce(address.toBytes))
       }
     }
   }
 
-  private def getStateViewAtTag[A](nodeView: NV, tag: String)(fun: AccountStateView ⇒ A): A = {
-    nodeView.history.getBlockById(getBlockIdByTag(nodeView, tag)).asScala match {
-      case Some(block) => using(nodeView.state.getStateDbViewFromRoot(block.header.stateRoot)) {
-        tagStateView => fun(tagStateView)
-      }
+  private def getStateViewAtTag[A](nodeView: NV, tag: String)(fun: (AccountStateView, BlockContext) ⇒ A): A = {
+    val blockId = getBlockIdByTag(nodeView, tag)
+    nodeView.history.getBlockById(blockId).asScala match {
+      case Some(block) =>
+        val blockInfo = nodeView.history.blockInfoById(ModifierId(blockId))
+        val blockContext = new BlockContext(
+          block.header,
+          blockInfo.height,
+          TimeToEpochUtils.timeStampToEpochNumber(networkParams, blockInfo.timestamp),
+          blockInfo.withdrawalEpochInfo.epoch
+        )
+        using(nodeView.state.getStateDbViewFromRoot(block.header.stateRoot))(fun(_, blockContext))
       case None => throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "Invalid block tag parameter."))
-    }
-  }
-
-  private def getBlockAtTag(nodeView: NV, tag: String) : AccountBlock = {
-    nodeView.history.getBlockById(getBlockIdByTag(nodeView, tag)).asScala match {
-      case None => throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, "Invalid block tag parameter."))
-      case Some(block) => block
     }
   }
 
@@ -320,7 +320,7 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   @RpcMethod("eth_gasPrice")
   def gasPrice: Quantity = {
     applyOnAccountView { nodeView =>
-      new Quantity(getBlockAtTag(nodeView, "latest").header.baseFee)
+      getStateViewAtTag(nodeView, "latest") { (_, blockContext) => new Quantity(blockContext.baseFee) }
     }
   }
 
@@ -376,7 +376,7 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   @RpcOptionalParameters(1)
   def getCode(address: Address, tag: String): String = {
     applyOnAccountView { nodeView =>
-      getStateViewAtTag(nodeView,tag) { tagStateView =>
+      getStateViewAtTag(nodeView,tag) { (tagStateView, _) =>
           val code = tagStateView.getCode(address.toBytes)
           if (code == null)
             "0x"

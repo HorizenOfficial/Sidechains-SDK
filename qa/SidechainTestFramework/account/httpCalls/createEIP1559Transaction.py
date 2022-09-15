@@ -21,4 +21,9 @@ def createEIP1559Transaction(sidechainNode, *, chainId, fromAddress=None, toAddr
     }
     request = json.dumps(j)
     response = sidechainNode.transaction_createEIP1559Transaction(request)
-    return response["result"]["transactionId"]
+
+    if "result" in response:
+        if "transactionId" in response["result"]:
+            return response["result"]["transactionId"]
+
+    raise RuntimeError("Something went wrong, see {}".format(str(response)))
