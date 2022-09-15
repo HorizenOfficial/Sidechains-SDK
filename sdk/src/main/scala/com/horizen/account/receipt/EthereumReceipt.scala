@@ -95,10 +95,6 @@ object EthereumReceiptSerializer extends ScorexSerializer[EthereumReceipt]{
     for (log <- receipt.consensusDataReceipt.logs)
       EvmLogUtils.serialize(log, writer)
 
-    val bloomBytes: Array[Byte] = receipt.consensusDataReceipt.logsBloom.getBloomFilter()
-    writer.putInt(bloomBytes.length)
-    writer.putBytes(bloomBytes)
-
     // non consensus data
     writer.putBytes(receipt.transactionHash)
     writer.putInt(receipt.transactionIndex)
