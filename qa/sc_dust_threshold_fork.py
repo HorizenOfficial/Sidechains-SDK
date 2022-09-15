@@ -6,9 +6,9 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
     SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, generate_next_block, check_wallet_coins_balance, connect_sc_nodes
+    start_sc_nodes, generate_next_block, check_wallet_coins_balance, connect_sc_nodes, disconnect_sc_nodes_bi
 from httpCalls.block.forgingInfo import http_block_forging_info
-from qa.httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress
+from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress
 from test_framework.util import assert_equal, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, assert_true
 
@@ -21,7 +21,9 @@ Configuration:
 Test:
     For the SC node:
         - Before the fork, do a transaction sc1 -> sc2 with 50 satoshi, it should not fail.
-        - Switch to the next epoch, where the fork is enabled
+        - Disconnect sc nodes, prepare transactions in each node mempools with amount > 50
+        - Forge a new block that activates the fork
+        - assert that mempool transactions are not applied and rejected
         - Assert that a transaction with 50 satoshi fails
         - Assert that a transaction with 100 satoshi works
 """
@@ -93,16 +95,24 @@ class SCDustThresholdFork(SidechainTestFramework):
         check_wallet_coins_balance(sc_node2, 0.00000050)
 
         # Create 2 more tx in mempools of sc1 and sc2 with value < 54 satoshi
-        sendCoinsToAddress(sc_node, sc_address_2, 0.00000037, fee=0)
-        sendCoinsToAddress(sc_node2, sc_address_1, 0.00000044, fee=0)
+        disconnect_sc_nodes_bi(self.sc_nodes, 0, 1)
+        sendCoinsToAddress(sc_node, sc_address_2, 37, fee=0)
+        sendCoinsToAddress(sc_node2, sc_address_1, 44, fee=0)
 
         # switch to the next consensus epoch
-        generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
+        new_block_id = generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
         forging_info = http_block_forging_info(sc_node)
-        assert_equal(forging_info["bestEpochNumber"], 3)
+        assert_equal(3, forging_info["bestEpochNumber"])
+
+        # check that new epoch block does not contain invalid transactions
+        new_block = sc_node.block_findById(blockId=new_block_id)
+        assert_equal(0, len(new_block['result']['block']['sidechainTransactions']))
 
         # assert that mempool transactions were rejected
+        connect_sc_nodes(self.sc_nodes[0], 1)
         self.sc_sync_all()
+        assert_equal(0, len(sc_node.transaction_allTransactions()['result']['transactions']))
+        assert_equal(0, len(sc_node2.transaction_allTransactions()['result']['transactions']))
         check_wallet_coins_balance(sc_node2, 0.00000050)
         check_wallet_coins_balance(sc_node, 199.99999950)
 

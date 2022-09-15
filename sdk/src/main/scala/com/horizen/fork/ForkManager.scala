@@ -75,7 +75,7 @@ object ForkManager {
         }
     }
 
-    private[fork] def reset(): Unit = {
+    private[horizen] def reset(): Unit = {
         this.networkName = null
         this.mainchainForks = ListBuffer[BaseMainchainHeightFork]()
         this.consensusEpochForks = ListBuffer[BaseConsensusEpochFork]()

@@ -277,6 +277,21 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     }
   }
 
+
+  def validateWithFork(tx: SidechainTypes#SCBT, consensusEpochNumber: ConsensusEpochNumber): Try[Unit] = Try {
+    val newBoxes = tx.newBoxes().asScala
+    val newCoinBoxes = newBoxes
+      .filter(box => box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]] || box.isInstanceOf[WithdrawalRequestBox])
+
+    val coinBoxMinAmount = ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).coinBoxMinAmount
+      newCoinBoxes.foreach { coinBox =>
+        if (coinBox.value() < coinBoxMinAmount)
+          throw new TransactionSemanticValidityException(s"Transaction [${tx.id()}] is semantically invalid: " +
+            s"Coin box value [${coinBox.value()}] is below the threshold[$coinBoxMinAmount].")
+      }
+
+  }
+
   // Note: Transactions validation in a context of inclusion in or exclusion from Mempool
   // Note 2: BT and FT is not included into memory pool and have another check rule.
   // TO DO: (almost the same as in NodeViewHolder)
@@ -336,24 +351,17 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         }
       }
 
-      val newBoxes = tx.newBoxes().asScala
-      val newCoinBoxes = newBoxes
-        .filter(box => box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]] || box.isInstanceOf[WithdrawalRequestBox])
-
       stateStorage.getConsensusEpochNumber match {
-        case Some(consensusEpochNumber) =>
-          val coinBoxMinAmount = ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).coinBoxMinAmount
-          newCoinBoxes.foreach { coinBox =>
-            if (coinBox.value() < coinBoxMinAmount)
-              throw new TransactionSemanticValidityException(s"Transaction [${tx.id()}] is semantically invalid: " +
-                s"Coin box value [${coinBox.value()}] is below the threshold[$coinBoxMinAmount].")
-          }
-        case None =>
-          throw new IllegalStateException("Can't retrieve Consensus Epoch related info form StateStorage.")
+        case Some(consensusEpochNumber) => validateWithFork(tx, consensusEpochNumber).get
+        case None => throw new IllegalStateException("Can't retrieve Consensus Epoch related info form StateStorage.")
       }
 
+      val newBoxes = tx.newBoxes().asScala
 
-      newCoinsBoxesAmount = newCoinBoxes.map(_.value()).sum
+      newCoinsBoxesAmount = newBoxes
+        .filter(box => box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]] || box.isInstanceOf[WithdrawalRequestBox])
+        .map(_.value()).sum
+
       if (closedCoinsBoxesAmount != newCoinsBoxesAmount + tx.fee())
         throw new Exception("Amounts sum of CoinsBoxes is incorrect. " +
           s"ClosedBox amount - $closedCoinsBoxesAmount, NewBoxesAmount - $newCoinsBoxesAmount, Fee - ${tx.fee()}")
