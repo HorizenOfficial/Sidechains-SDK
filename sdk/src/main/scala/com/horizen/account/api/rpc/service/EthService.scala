@@ -422,7 +422,8 @@ class EthService(
   @RpcMethod("debug_traceBlockByNumber")
   def traceBlockByNumber(blockNumber: String): DebugTraceBlockByIdView = {
     val currentBlockNumber = Numeric.cleanHexPrefix(blockNumber)
-    val previousBlockNumber = Numeric.cleanHexPrefix((java.lang.Long.decode(currentBlockNumber) - 1).toHexString)
+    val previousBlockNumber =
+      Numeric.cleanHexPrefix((Numeric.decodeQuantity(blockNumber).intValueExact() - 1).toHexString)
 
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, previousBlockNumber) { tagStateView =>
@@ -438,8 +439,7 @@ class EthService(
           val evmResults = transactions.map(tx => {
             Evm.Trace(
               tagStateView.getStateDbHandle,
-              if (tx.getFrom == null) null
-              else tx.getFrom.bytes(),
+              tx.getFrom.bytes(),
               if (tx.getTo == null) null
               else tx.getTo.bytes(),
               tx.getValue,
@@ -464,7 +464,8 @@ class EthService(
 
     val currentBlockId = Numeric.cleanHexPrefix(requestedTransaction.getBlockHash)
     val currentBlockNumber = requestedTransaction.getBlockNumber
-    val previousBlockNumber = Numeric.cleanHexPrefix((java.lang.Long.decode(currentBlockNumber) - 1).toHexString)
+    val previousBlockNumber =
+      Numeric.cleanHexPrefix((Numeric.decodeQuantity(currentBlockNumber).intValueExact() - 1).toHexString)
 
     val evmResult: EvmResult = new EvmResult()
 
@@ -485,8 +486,7 @@ class EthService(
                 val txResult = Evm
                   .Trace(
                     tagStateView.getStateDbHandle,
-                    if (tx.getFrom == null) null
-                    else tx.getFrom.bytes(),
+                    tx.getFrom.bytes(),
                     if (tx.getTo == null) null
                     else tx.getTo.bytes(),
                     tx.getValue,
