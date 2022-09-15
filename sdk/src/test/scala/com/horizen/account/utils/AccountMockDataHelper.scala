@@ -24,14 +24,15 @@ case class AccountMockDataHelper(genesis: Boolean) {
     history
   }
 
-  def getMockedBlock(baseFee: BigInteger, gasUsed: Long, blockId: scorex.util.ModifierId, parentBlockId: scorex.util.ModifierId): AccountBlock = {
+
+  def getMockedBlock(baseFee: BigInteger, gasUsed: Long, gasLimit: Long, blockId: scorex.util.ModifierId, parentBlockId: scorex.util.ModifierId): AccountBlock = {
     val block: AccountBlock = mock[AccountBlock]
     Mockito.when(block.header).thenReturn(mock[AccountBlockHeader])
     Mockito.when(block.header.parentId).thenReturn(parentBlockId)
     Mockito.when(block.id).thenReturn(blockId)
     Mockito.when(block.header.baseFee).thenReturn(baseFee)
     Mockito.when(block.header.gasUsed).thenReturn(gasUsed)
-    Mockito.when(block.header.gasLimit).thenReturn(FeeUtils.GAS_LIMIT)
+    Mockito.when(block.header.gasLimit).thenReturn(gasLimit)
     block
   }
 
