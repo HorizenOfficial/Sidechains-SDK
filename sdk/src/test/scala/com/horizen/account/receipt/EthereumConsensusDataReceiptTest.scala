@@ -40,7 +40,7 @@ class EthereumConsensusDataReceiptTest
     negative.foreach(s => assert(!bloomLog.contains(s.getBytes())))
 
     val bloomLog2 = new LogsBloom()
-    bloomLog2.setBytes(bloomLog.getBloomFilter())
+    bloomLog2.addBloomFilter(bloomLog)
 
     positive.foreach(s => assert(bloomLog2.contains(s.getBytes())))
     negative.foreach(s => assert(!bloomLog2.contains(s.getBytes())))
@@ -63,7 +63,7 @@ class EthereumConsensusDataReceiptTest
     assertArrayEquals(exp, bloomFilterHash)
 
     val bloomLog2 = new LogsBloom()
-    bloomLog2.setBytes(bloomLog.getBloomFilter())
+    bloomLog2.addBloomFilter(bloomLog)
 
     val bloomFilterHash2 = Keccak256.hash(bloomLog2.getBloomFilter())
     assertArrayEquals(bloomFilterHash, bloomFilterHash2)

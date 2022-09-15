@@ -12,7 +12,7 @@ class LogsBloom() {
     this()
 
     require(bloomFilter.length == BLOOM_FILTER_LENGTH)
-    this.bloomFilter = bloomFilter
+    this.bloomFilter = bloomFilter.clone()
   }
 
   def addLogToBloomFilter(log: EvmLog): Unit = {
@@ -32,12 +32,12 @@ class LogsBloom() {
       })
   }
 
-  def setBytes(data: Array[Byte]): Unit = {
-    require(bloomFilter.length == BLOOM_FILTER_LENGTH)
+  def addBloomFilter(bloomFilter: LogsBloom): Unit = {
+    val bloomBytes = bloomFilter.getBloomFilter()
 
-    bloomFilter.zipWithIndex
+    this.bloomFilter.zipWithIndex
       .foreach({ case (bloomByte, i) =>
-        bloomFilter(i) = (bloomByte | data(i)).toByte
+        this.bloomFilter(i) = (bloomByte | bloomBytes(i)).toByte
       })
   }
 
