@@ -9,4 +9,4 @@ class BaseConsensusEpochFork (val epochNumber: ForkConsensusEpochNumber) {
   def stakePercentageForkApplied: Boolean = false
 }
 
-case class ForkConsensusEpochNumber(mainnetEpochNumber: Int, regtestEpochNumber: Int, testnetEpochNumber: Int) {}
+case class ForkConsensusEpochNumber(regtestEpochNumber: Int, testnetEpochNumber: Int, mainnetEpochNumber: Int) {}

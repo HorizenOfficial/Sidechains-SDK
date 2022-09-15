@@ -6,11 +6,11 @@ class BaseMainchainHeightFork(val heights: MainchainForkHeight) {
   def getNewBlockVersion(): Int = {BaseMainchainHeightFork.BLOCK_VERSION}
 }
 
-case class MainchainForkHeight(mainnetHeight: Int, regtestHeight: Int, testnetHeight: Int){}
+case class MainchainForkHeight(regtestHeight: Int, testnetHeight: Int, mainnetHeight: Int) {}
 
 object BaseMainchainHeightFork {
   val CERT_VERSION : Int = 0xFFFFFFFB
   val TRANSACTION_VERSION : Int = 0xFFFFFFFC
   val BLOCK_VERSION: Int = 0x3
-  val DEFAULT_MAINCHAIN_FORK_HEIGHTS = MainchainForkHeight(1047624, 420, 926225)
+  val DEFAULT_MAINCHAIN_FORK_HEIGHTS = MainchainForkHeight(420, 926225, 1047624)
 }
