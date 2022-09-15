@@ -31,7 +31,6 @@ import com.horizen.transaction.Transaction
 import com.horizen.utils.BytesUtils
 import org.web3j.crypto.Sign.SignatureData
 import org.web3j.crypto.TransactionEncoder.createEip155SignatureData
-import org.web3j.crypto._
 import scorex.core.settings.RESTApiSettings
 
 import java.lang
