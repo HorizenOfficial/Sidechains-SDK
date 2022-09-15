@@ -7,31 +7,28 @@ import com.horizen.box._
 import com.horizen.box.data.ZenBoxData
 import com.horizen.consensus._
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
+import com.horizen.forge.ForgerList
 import com.horizen.fork.ForkManager
 import com.horizen.node.NodeState
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.ApplicationState
 import com.horizen.storage.{BackupStorage, SidechainStateForgerBoxStorage, SidechainStateStorage}
+import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.transaction.{MC2SCAggregatedTransaction, OpenStakeTransaction, SidechainTransaction}
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import sparkz.core._
-import sparkz.core.transaction.state._
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging, bytesToId}
+import sparkz.core._
+import sparkz.core.transaction.state._
 
 import java.io.File
 import java.math.{BigDecimal, MathContext}
 import java.util
-import java.util.{Optional => JOptional}
-import com.horizen.box.data.ZenBoxData
-import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.forge.ForgerList
-
+import java.util.{ArrayList => JArrayList, Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
-import java.util.{ArrayList => JArrayList}
 
 
 class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
@@ -280,6 +277,21 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     }
   }
 
+
+  def validateWithFork(tx: SidechainTypes#SCBT, consensusEpochNumber: ConsensusEpochNumber): Try[Unit] = Try {
+    val newBoxes = tx.newBoxes().asScala
+    val newCoinBoxes = newBoxes
+      .filter(box => box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]] || box.isInstanceOf[WithdrawalRequestBox])
+
+    val coinBoxMinAmount = ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).coinBoxMinAmount
+      newCoinBoxes.foreach { coinBox =>
+        if (coinBox.value() < coinBoxMinAmount)
+          throw new TransactionSemanticValidityException(s"Transaction [${tx.id()}] is semantically invalid: " +
+            s"Coin box value [${coinBox.value()}] is below the threshold[$coinBoxMinAmount].")
+      }
+
+  }
+
   // Note: Transactions validation in a context of inclusion in or exclusion from Mempool
   // Note 2: BT and FT is not included into memory pool and have another check rule.
   // TO DO: (almost the same as in NodeViewHolder)
@@ -337,6 +349,11 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           }
           case None => throw new Exception(s"Box ${u.closedBoxId()} is not found in state")
         }
+      }
+
+      stateStorage.getConsensusEpochNumber match {
+        case Some(consensusEpochNumber) => validateWithFork(tx, consensusEpochNumber).get
+        case None => throw new IllegalStateException("Can't retrieve Consensus Epoch related info form StateStorage.")
       }
 
       val newBoxes = tx.newBoxes().asScala
