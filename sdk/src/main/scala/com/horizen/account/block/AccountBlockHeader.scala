@@ -3,6 +3,7 @@ package com.horizen.account.block
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Longs}
+import com.horizen.account.FeeUtils
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
 import com.horizen.block.SidechainBlockHeaderBase
 import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
@@ -89,6 +90,15 @@ case class AccountBlockHeader(
         if (!signature.isValid(forgingStakeInfo.blockSignPublicKey, messageToSign))
           throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id signature is invalid.")
 
+        // check, that gas limit is valid
+        if (baseFee.compareTo(BigInteger.ZERO) == 1) {
+          if(gasLimit != FeeUtils.GAS_LIMIT)
+            throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $gasLimit is invalid.")
+          if(gasUsed < 0)
+            throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $gasUsed is below zero and therefore invalid.")
+          if(gasUsed > gasLimit)
+            throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $gasUsed is greater than $gasLimit and therefore invalid.")
+        }
       case Failure(exception) =>
         throw exception
     }
