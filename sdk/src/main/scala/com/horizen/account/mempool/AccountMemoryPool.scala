@@ -44,8 +44,8 @@ class AccountMemoryPool(unconfirmed: MempoolMap, stateReader: AccountStateReader
 
     val orderedQueue = new mutable.PriorityQueue[SidechainTypes#SCAT]()(Ordering.by(txOrder))
     unconfirmed.executableTxs.foreach(p => {
-      val tx = unconfirmed.all.get(p._2.values.head)
-      orderedQueue.enqueue(tx.get)
+      val tx = unconfirmed.all(p._2.values.head)
+      orderedQueue.enqueue(tx)
     })
     val txs = new ListBuffer[SidechainTypes#SCAT]()
 
@@ -53,10 +53,10 @@ class AccountMemoryPool(unconfirmed: MempoolMap, stateReader: AccountStateReader
     while (i <= limit && !orderedQueue.isEmpty) {
       val bestTx = orderedQueue.dequeue()
       txs.append(bestTx)
-      val nextTxIdOpt = unconfirmed.executableTxs.get(bestTx.getFrom).get.get(bestTx.getNonce.add(BigInteger.ONE))
+      val nextTxIdOpt = unconfirmed.executableTxs(bestTx.getFrom).get(bestTx.getNonce.add(BigInteger.ONE))
       if (nextTxIdOpt.isDefined) {
-        val tx = unconfirmed.all.get(nextTxIdOpt.get)
-        orderedQueue.enqueue(tx.get)
+        val tx = unconfirmed.all(nextTxIdOpt.get)
+        orderedQueue.enqueue(tx)
       }
       i += 1
     }

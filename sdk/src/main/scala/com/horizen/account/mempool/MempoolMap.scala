@@ -34,7 +34,7 @@ case class MempoolMap() extends ScorexLogging {
     if (!contains(ethTransaction)) {
 
       val account = ethTransaction.getFrom
-      val expectedNonce = nonces.get(account).get
+      val expectedNonce = nonces(account)
       if (expectedNonce.equals(ethTransaction.getNonce)) {
         all.put(ethTransaction.id, ethTransaction)
         val executableTxsPerAccount = executableTxs.get(account).getOrElse({
@@ -66,9 +66,9 @@ case class MempoolMap() extends ScorexLogging {
           txsPerAccountMap
         })
         if (listOfTxs.contains(ethTransaction.getNonce)) {
-          val oldTxId = listOfTxs.get(ethTransaction.getNonce).get
-          val oldTx = all.get(oldTxId).get
-          if (canPayHigherFee(ethTransaction, oldTx)) {
+          val oldTxId = listOfTxs(ethTransaction.getNonce)
+          val oldTx = all(oldTxId)
+          if (ethTransaction.canPayHigherFee(oldTx)) {
             log.debug(s"Replacing transaction ${oldTx} with ${ethTransaction}")
             all.remove(oldTxId)
             all.put(ethTransaction.id, ethTransaction)
@@ -81,10 +81,10 @@ case class MempoolMap() extends ScorexLogging {
         }
       }
       else {
-        val listOfTxs = executableTxs.get(account).get
-        val oldTxId = listOfTxs.get(ethTransaction.getNonce).get
-        val oldTx = all.get(oldTxId).get
-        if (canPayHigherFee(ethTransaction, oldTx)) {
+        val listOfTxs = executableTxs(account)
+        val oldTxId = listOfTxs(ethTransaction.getNonce)
+        val oldTx = all(oldTxId)
+        if (ethTransaction.canPayHigherFee(oldTx)) {
           log.debug(s"Replacing transaction ${oldTx} with ${ethTransaction}")
           all.remove(oldTxId)
           all.put(ethTransaction.id, ethTransaction)
@@ -96,18 +96,18 @@ case class MempoolMap() extends ScorexLogging {
     this
   }
 
-  def canPayHigherFee(newTx: SidechainTypes#SCAT, oldTx: SidechainTypes#SCAT): Boolean = {
-    require(newTx.isInstanceOf[EthereumTransaction], "Transaction is not of type EthereumTransaction")
-    require(oldTx.isInstanceOf[EthereumTransaction], "Transaction is not of type EthereumTransaction")
-    val newEthTx = newTx.asInstanceOf[EthereumTransaction]
-    val oldEthTx = oldTx.asInstanceOf[EthereumTransaction]
-
-    newEthTx.getMaxFeePerGas.compareTo(oldEthTx.getMaxFeePerGas) > 0 && newEthTx.getMaxPriorityFeePerGas.compareTo(oldEthTx.getMaxPriorityFeePerGas) > 0
-  }
+//  def canPayHigherFee(newTx: SidechainTypes#SCAT, oldTx: SidechainTypes#SCAT): Boolean = {
+//    require(newTx.isInstanceOf[EthereumTransaction], "Transaction is not of type EthereumTransaction")
+//    require(oldTx.isInstanceOf[EthereumTransaction], "Transaction is not of type EthereumTransaction")
+//    val newEthTx = newTx.asInstanceOf[EthereumTransaction]
+//    val oldEthTx = oldTx.asInstanceOf[EthereumTransaction]
+//
+//    newEthTx.getMaxFeePerGas.compareTo(oldEthTx.getMaxFeePerGas) > 0 && newEthTx.getMaxPriorityFeePerGas.compareTo(oldEthTx.getMaxPriorityFeePerGas) > 0
+//  }
 
   def remove(ethTransaction: SidechainTypes#SCAT): Try[MempoolMap] = Try {
     if (all.remove(ethTransaction.id).isDefined) {
-      if (nonces.get(ethTransaction.getFrom).get.compareTo(ethTransaction.getNonce) < 0){
+      if (nonces(ethTransaction.getFrom).compareTo(ethTransaction.getNonce) < 0){
         nonExecutableTxs.get(ethTransaction.getFrom).foreach(nonExecTxsPerAccount => {
             nonExecTxsPerAccount.remove(ethTransaction.getNonce)
             if (nonExecTxsPerAccount.isEmpty) {
@@ -124,7 +124,7 @@ case class MempoolMap() extends ScorexLogging {
           nonces.put(ethTransaction.getFrom, ethTransaction.getNonce)
           var demotedTxId = execTxsPerAccount.remove(ethTransaction.getNonce.add(BigInteger.ONE))
           while (demotedTxId.isDefined) {
-            val demotedTx = all.get(demotedTxId.get).get
+            val demotedTx = all(demotedTxId.get)
             val nonExecTxsPerAccount = nonExecutableTxs.get(ethTransaction.getFrom).getOrElse({
               val txsPerAccountMap = new mutable.TreeMap[BigInteger, ModifierId]()
               nonExecutableTxs.put(ethTransaction.getFrom, txsPerAccountMap)
@@ -146,4 +146,4 @@ case class MempoolMap() extends ScorexLogging {
   }
 
 
-  }
+}

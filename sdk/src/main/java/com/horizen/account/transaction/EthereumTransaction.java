@@ -317,6 +317,16 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return null;
     }
 
+    @Override
+    public boolean canPayHigherFee(AccountTransaction<AddressProposition, SignatureSecp256k1> tx) {
+        if (!(tx instanceof EthereumTransaction)) {
+            throw new IllegalArgumentException("Transaction is not of type EthereumTransaction");
+        }
+        EthereumTransaction ethTx = (EthereumTransaction)tx;
+
+        return getMaxFeePerGas().compareTo(ethTx.getMaxFeePerGas()) > 0 && getMaxPriorityFeePerGas().compareTo(ethTx.getMaxPriorityFeePerGas()) > 0;
+    }
+
     @JsonIgnore
     public Sign.SignatureData getSignatureData() {
         if (this.isSigned()) {

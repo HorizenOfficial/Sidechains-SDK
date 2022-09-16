@@ -25,4 +25,6 @@ public abstract class AccountTransaction<P extends Proposition, PR extends Proof
     public abstract byte[] getData();
 
     public abstract PR getSignature();
+
+    public abstract boolean canPayHigherFee(AccountTransaction<P,PR> tx);
 }
