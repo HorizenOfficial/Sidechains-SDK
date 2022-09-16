@@ -214,9 +214,24 @@ abstract class AbstractSidechainNodeViewHolder[
   // Check if the next modifier will change Consensus Epoch, so notify History and Wallet with current info.
   protected def applyConsensusEpochInfo(history: HIS, state: MS, wallet: VL, modToApply: PMOD): (HIS, VL)
 
+  def getFeePaymentsInfo(state: MS, epochNumber: Int) : FPI
+  def getScanPersistentWallet(modToApply: SidechainBlockBase[_ <: Transaction, _ <: SidechainBlockHeaderBase], stateOp: Option[MS], epochNumber: Int, wallet: VL) : VL
+  def isWithdrawalEpochLastIndex(state: MS) : Boolean
+  def getWithdrawalEpochNumber(state: MS) : Int
+
   // Check is the modifier ends the withdrawal epoch, so notify History and Wallet about fees to be payed.
   // Scan modifier by the Wallet considering the forger fee payments.
-  protected def scanBlockWithFeePayments(history: HIS, state: MS, wallet: VL, modToApply: PMOD): (HIS, VL)
+  protected def scanBlockWithFeePayments(history: HIS, state: MS, wallet: VL, modToApply: PMOD): (HIS, VL) = {
+    val stateWithdrawalEpochNumber: Int = getWithdrawalEpochNumber(state)
+    if (isWithdrawalEpochLastIndex(state)) {
+      val historyAfterUpdateFee = history.updateFeePaymentsInfo(modToApply.id, getFeePaymentsInfo(state, stateWithdrawalEpochNumber))
+      val walletAfterApply: VL = getScanPersistentWallet(modToApply, Some(state), stateWithdrawalEpochNumber, wallet)
+      (historyAfterUpdateFee, walletAfterApply)
+    } else {
+      val walletAfterApply: VL = getScanPersistentWallet(modToApply, None, stateWithdrawalEpochNumber, wallet)
+      (history, walletAfterApply)
+    }
+  }
 
 
 }

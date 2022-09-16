@@ -3,7 +3,6 @@ package com.horizen.account.state
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountState
-import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
@@ -400,7 +399,11 @@ class AccountState(val params: NetworkParams,
       }
     }
   }
-}
+
+  // Check that State is on the last index of the withdrawal epoch: last block applied have finished the epoch.
+  def isWithdrawalEpochLastIndex: Boolean = {
+    WithdrawalEpochUtils.isEpochLastIndex(getWithdrawalEpochInfo, params)
+  }}
 
 object AccountState extends ScorexLogging {
   private[horizen] def restoreState(stateMetadataStorage: AccountStateMetadataStorage,
