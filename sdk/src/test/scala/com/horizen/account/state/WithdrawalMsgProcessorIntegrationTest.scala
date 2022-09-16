@@ -1,5 +1,6 @@
 package com.horizen.account.state
 
+import com.horizen.account.FeeUtils
 import com.horizen.account.events.AddWithdrawalRequest
 import com.horizen.account.utils.{Account, ZenWeiConverter}
 import com.horizen.evm.interop.EvmLog
@@ -46,7 +47,7 @@ class WithdrawalMsgProcessorIntegrationTest
       WithdrawalMsgProcessor.init(view)
 
       val withdrawalEpoch = 102
-      val blockContext = new BlockContext(Array.fill(20)(0), 0, 0, Account.GAS_LIMIT, 0, 0, withdrawalEpoch)
+      val blockContext = new BlockContext(Array.fill(20)(0), 0, 0, FeeUtils.GAS_LIMIT, 0, 0, withdrawalEpoch)
 
       // GetListOfWithdrawalRequest without withdrawal requests yet
       val msgForListOfWR = listWithdrawalRequestsMessage(withdrawalEpoch)

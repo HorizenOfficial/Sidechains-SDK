@@ -1,6 +1,8 @@
 package com.horizen.account.forger
 
 import com.horizen.SidechainTypes
+import com.horizen.account.FeeUtils
+import com.horizen.account.FeeUtils.calculateBaseFee
 import com.horizen.account.block.AccountBlock.calculateReceiptRoot
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
@@ -92,9 +94,11 @@ class AccountForgeMessageBuilder(
       throw new IllegalArgumentException("No addresses in wallet!")
     val forgerAddress = addressList.get(0).publicImage().asInstanceOf[AddressProposition]
 
-    // TODO: calculate baseFee
-    val baseFee = 0
-    val gasLimit = Account.GAS_LIMIT
+    // 4. Calculate baseFee
+    val baseFee = calculateBaseFee(nodeView.history, parentId)
+
+    // 5. Set gasLimit
+    val gasLimit = FeeUtils.GAS_LIMIT
 
     // this will throw if parent block was not found
     val parentInfo = nodeView.history.blockInfoById(parentId)
@@ -179,10 +183,8 @@ class AccountForgeMessageBuilder(
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH), // stateRoot TODO add constant
-      new AddressProposition(
-        new Array[Byte](Account.ADDRESS_SIZE)
-      ), // forgerAddress: PublicKeySecp256k1Proposition TODO add constant,
-      Long.MaxValue,
+      new AddressProposition(new Array[Byte](Account.ADDRESS_SIZE)), // forgerAddress: PublicKeySecp256k1Proposition TODO add constant,
+      BigInteger.ONE.shiftLeft(256).subtract(BigInteger.ONE),
       Long.MaxValue,
       Long.MaxValue,
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),

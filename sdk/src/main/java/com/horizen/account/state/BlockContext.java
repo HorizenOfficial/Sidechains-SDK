@@ -16,7 +16,7 @@ public class BlockContext {
     public BlockContext(
             byte[] forgerAddress,
             long timestamp,
-            long baseFee,
+            BigInteger baseFee,
             long blockGasLimit,
             int blockNumber,
             int consensusEpochNumber,
@@ -24,7 +24,7 @@ public class BlockContext {
     ) {
         this.forgerAddress = forgerAddress;
         this.timestamp = timestamp;
-        this.baseFee = BigInteger.valueOf(baseFee);
+        this.baseFee = baseFee;
         this.blockGasLimit = blockGasLimit;
         this.blockNumber = blockNumber;
         this.consensusEpochNumber = consensusEpochNumber;

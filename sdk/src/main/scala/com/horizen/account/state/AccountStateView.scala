@@ -2,6 +2,7 @@ package com.horizen.account.state
 
 import com.google.common.primitives.Bytes
 import com.horizen.SidechainTypes
+import com.horizen.account.FeeUtils
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus
 import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceipt}

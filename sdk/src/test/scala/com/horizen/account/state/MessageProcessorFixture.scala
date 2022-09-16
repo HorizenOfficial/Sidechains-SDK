@@ -1,5 +1,6 @@
 package com.horizen.account.state
 
+import com.horizen.account.FeeUtils
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.utils.Account
@@ -22,7 +23,7 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
   val metadataStorageView: AccountStateMetadataStorageView = mock[AccountStateMetadataStorageView]
   val hashNull: Array[Byte] = Array.fill(32)(0)
   val origin: Array[Byte] = randomAddress
-  val defaultBlockContext = new BlockContext(Array.fill(20)(0), 0, 0, Account.GAS_LIMIT, 0, 0, 0)
+  val defaultBlockContext = new BlockContext(Array.fill(20)(0), 0, 0, FeeUtils.GAS_LIMIT, 0, 0, 0)
 
   def randomBytes(n: Int): Array[Byte] = {
     val bytes = new Array[Byte](n)

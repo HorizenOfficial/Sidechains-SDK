@@ -1,5 +1,6 @@
 package com.horizen.account.api.http
 
+import org.web3j.crypto._
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
@@ -30,7 +31,6 @@ import com.horizen.transaction.Transaction
 import com.horizen.utils.BytesUtils
 import org.web3j.crypto.Sign.SignatureData
 import org.web3j.crypto.TransactionEncoder.createEip155SignatureData
-import org.web3j.crypto._
 import scorex.core.settings.RESTApiSettings
 
 import java.lang
@@ -131,7 +131,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         val valueInWei = ZenWeiConverter.convertZenniesToWei(body.value)
         val destAddress = body.to
         // TODO actual gas implementation
-        val gasPrice = BigInteger.valueOf(sidechainNodeView.getNodeHistory.getBestBlock.header.baseFee)
+        val gasPrice = sidechainNodeView.getNodeHistory.getBestBlock.header.baseFee
         val gasLimit = GasUtil.TxGas
         // check if the fromAddress is either empty or it fits and the value is high enough
         val secret = getFittingSecret(sidechainNodeView, body.from, valueInWei)
