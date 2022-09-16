@@ -1,0 +1,177 @@
+package com.horizen.account.state
+
+import com.horizen.account.proposition.AddressProposition
+import com.horizen.account.storage.{AccountStateMetadataStorage, AccountStateMetadataStorageView}
+import com.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils}
+import com.horizen.evm.Database
+import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
+import com.horizen.params.MainNetParams
+import com.horizen.utils.BytesUtils
+import org.junit.Assert._
+import org.junit._
+import org.mockito.{ArgumentMatchers, Mockito}
+import org.scalatestplus.junit.JUnitSuite
+import org.scalatestplus.mockito.MockitoSugar
+import scorex.core.VersionTag
+
+import java.math.BigInteger
+
+
+
+class AccountStateTest
+  extends JUnitSuite
+    with SecretFixture
+    with TransactionFixture
+    with StoreFixture
+    with MockitoSugar
+    with SidechainTypesTestsExtension
+{
+
+  val params = MainNetParams()
+  var state: AccountState = _
+  val metadataStorage: AccountStateMetadataStorage = mock[AccountStateMetadataStorage]
+
+  @Before
+  def setUp(): Unit = {
+    val messageProcessors: Seq[MessageProcessor] = Seq()
+
+    val stateDbStorege: Database = mock[Database]
+    val versionTag: VersionTag = VersionTag @@ BytesUtils.toHexString(getVersion.data())
+
+    state = new AccountState(params, versionTag, metadataStorage, stateDbStorege, messageProcessors)
+  }
+
+  @Test
+  def feePayments(): Unit = {
+
+    // Test 1: No block fee info record in the storage
+    Mockito.when(metadataStorage.getFeePayments(ArgumentMatchers.any[Int]())).thenReturn(Seq())
+    var feePayments : Seq[AccountBlockFeeInfo] = state.getFeePayments(0)
+    assertEquals(s"Fee payments size expected to be different.", 0, feePayments.size)
+
+
+    // Test 2: with single block fee info record in the storage
+    Mockito.reset(metadataStorage)
+    val blockFeeInfo1: AccountBlockFeeInfo = AccountBlockFeeInfo(
+      BigInteger.valueOf(100), BigInteger.valueOf(50), getPrivateKeySecp256k1(1000).publicImage())
+    Mockito.when(state.getFeePayments(ArgumentMatchers.any[Int]())).thenReturn(Seq(blockFeeInfo1))
+
+    feePayments = state.getFeePayments(0)
+    assertEquals(s"Fee payments size expected to be different.", 1, feePayments.size)
+    assertEquals(s"Fee value for baseFee ${feePayments.head.baseFee} is wrong",
+      blockFeeInfo1.baseFee, feePayments.head.baseFee)
+    assertEquals(s"Fee value for baseFee ${feePayments.head.forgerTips} is wrong",
+      blockFeeInfo1.forgerTips, feePayments.head.forgerTips)
+
+
+    // Test 3: with multiple block fee info records for different forger keys in the storage
+    Mockito.reset(metadataStorage)
+    val blockFeeInfo2: AccountBlockFeeInfo = AccountBlockFeeInfo(
+      BigInteger.valueOf(101), BigInteger.valueOf(51), getPrivateKeySecp256k1(1001).publicImage())
+
+    // use value 103 in order to have a rounding in the pool quotas sum(baseFees) = 304 => 101 each quota and a remainder of 1 zat
+    val blockFeeInfo3: AccountBlockFeeInfo = AccountBlockFeeInfo(
+      BigInteger.valueOf(103), BigInteger.valueOf(52), getPrivateKeySecp256k1(1002).publicImage())
+
+    Mockito.when(metadataStorage.getFeePayments(ArgumentMatchers.any[Int]()))
+      .thenReturn(Seq(blockFeeInfo1, blockFeeInfo2, blockFeeInfo3))
+
+    feePayments = state.getFeePayments(0)
+    assertEquals(s"Fee payments size expected to be different.", 3, feePayments.size)
+
+    var totalFee =
+      blockFeeInfo1.baseFee.add(blockFeeInfo1.forgerTips).add(
+        blockFeeInfo2.baseFee.add(blockFeeInfo2.forgerTips).add(
+          blockFeeInfo3.baseFee.add(blockFeeInfo3.forgerTips)))
+
+    var forgerTotalFee = feePayments.foldLeft(BigInteger.ZERO)((sum, pair) => sum.add(pair.baseFee).add(pair.forgerTips))
+
+
+    assertEquals(s"Total fee value is wrong", totalFee, forgerTotalFee)
+
+    var forgersPoolRewardsSeq = AccountFeePaymentsUtils.getForgersRewards(feePayments)
+
+    var poolFee = blockFeeInfo1.baseFee.add(
+      blockFeeInfo2.baseFee.add(
+        blockFeeInfo3.baseFee))
+
+    val poolFeeQuota = poolFee.divide(BigInteger.valueOf(3))
+
+    val forger1Fee = blockFeeInfo1.forgerTips.add(poolFeeQuota).add(BigInteger.ONE)  // plus 1 undistributed satoshi
+    val forger2Fee = blockFeeInfo2.forgerTips.add(poolFeeQuota)
+    val forger3Fee = blockFeeInfo3.forgerTips.add(poolFeeQuota)
+
+    assertEquals(s"Fee value for forger1 is wrong", forger1Fee, forgersPoolRewardsSeq(0).value)
+    assertEquals(s"Fee value for forger2 is wrong", forger2Fee, forgersPoolRewardsSeq(1).value)
+    assertEquals(s"Fee value for forger3 is wrong", forger3Fee, forgersPoolRewardsSeq(2).value)
+
+
+
+    // Test 4: with multiple block fee info records for non-unique forger keys in the storage
+    Mockito.reset(metadataStorage)
+    // Block was created with the forger3 (second time in the epoch)
+    val blockFeeInfo4: AccountBlockFeeInfo = AccountBlockFeeInfo(
+      BigInteger.valueOf(50), BigInteger.valueOf(51), blockFeeInfo3.forgerAddress)
+
+    Mockito.when(metadataStorage.getFeePayments(ArgumentMatchers.any[Int]()))
+      .thenReturn(Seq(blockFeeInfo1, blockFeeInfo2, blockFeeInfo3, blockFeeInfo4))
+
+    feePayments = state.getFeePayments(0)
+
+    forgersPoolRewardsSeq = AccountFeePaymentsUtils.getForgersRewards(feePayments)
+
+    assertEquals(s"Fee payments size expected to be different.", 3, forgersPoolRewardsSeq.size)
+
+    totalFee =
+      blockFeeInfo1.baseFee.add(blockFeeInfo1.forgerTips).add(
+        blockFeeInfo2.baseFee.add(blockFeeInfo2.forgerTips).add(
+          blockFeeInfo3.baseFee.add(blockFeeInfo3.forgerTips).add(
+            blockFeeInfo4.baseFee.add(blockFeeInfo4.forgerTips))))
+
+    forgerTotalFee = feePayments.foldLeft(BigInteger.ZERO)((sum, pair) => sum.add(pair.baseFee).add(pair.forgerTips))
+
+    assertEquals(s"Total fee value is wrong", totalFee, forgerTotalFee)
+
+
+    // Test 5: with multiple block fee info records created by 2 unique forgers
+    val f1Addr = getPrivateKeySecp256k1(1111).publicImage()
+    val f2Addr = getPrivateKeySecp256k1(2222).publicImage()
+
+    val bfi1 = AccountBlockFeeInfo(
+      BigInteger.valueOf(100), BigInteger.valueOf(0), f1Addr)
+
+    val bfi2 = AccountBlockFeeInfo(
+      BigInteger.valueOf(200), BigInteger.valueOf(20), f1Addr)
+
+    val bfi3 = AccountBlockFeeInfo(
+      BigInteger.valueOf(300), BigInteger.valueOf(0), f1Addr)
+
+    val bfi4 = AccountBlockFeeInfo(
+      BigInteger.valueOf(100), BigInteger.valueOf(10), f2Addr)
+
+    val bfi5 = AccountBlockFeeInfo(
+      BigInteger.valueOf(200), BigInteger.valueOf(0), f2Addr)
+
+    Mockito.reset(metadataStorage)
+    Mockito.when(metadataStorage.getFeePayments(ArgumentMatchers.any[Int]()))
+      .thenReturn(Seq(bfi1, bfi2, bfi3, bfi4, bfi5))
+    feePayments = state.getFeePayments(0)
+    forgersPoolRewardsSeq = AccountFeePaymentsUtils.getForgersRewards(feePayments)
+
+    assertEquals(s"Fee payments size expected to be different.", 2, forgersPoolRewardsSeq.size)
+
+    totalFee =
+      bfi1.baseFee.add(bfi1.forgerTips).add(
+        bfi2.baseFee.add(bfi2.forgerTips).add(
+          bfi3.baseFee.add(bfi3.forgerTips).add(
+            bfi4.baseFee.add(bfi4.forgerTips).add(
+              bfi5.baseFee.add(bfi5.forgerTips)))))
+
+
+    forgerTotalFee = feePayments.foldLeft(BigInteger.ZERO)((sum, pair) => sum.add(pair.baseFee).add(pair.forgerTips))
+
+    assertEquals(s"Total fee value is wrong", totalFee, forgerTotalFee)
+
+  }
+
+}
