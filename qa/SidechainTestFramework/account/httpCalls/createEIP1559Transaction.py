@@ -2,11 +2,10 @@ import json
 
 
 # execute a transaction/createEIP1559Transaction call
-def createEIP1559Transaction(sidechainNode, *, chainId, fromAddress=None, toAddress=None, nonce, gasLimit,
+def createEIP1559Transaction(sidechainNode, *, fromAddress=None, toAddress=None, nonce, gasLimit,
                              maxPriorityFeePerGas, maxFeePerGas, value=0, data='', signature_v=None, signature_r=None,
                              signature_s=None):
     j = {
-        "chainId": chainId,
         "from": fromAddress,
         "to": toAddress,
         "nonce": nonce,

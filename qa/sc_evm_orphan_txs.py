@@ -6,13 +6,12 @@ from decimal import Decimal
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import assert_equal, assert_true, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail, assert_false
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, \
-    AccountModelBlockVersion, EVM_APP_BINARY, generate_next_blocks, generate_next_block, generate_account_proposition, \
-    convertZenniesToWei, convertZenToZennies, connect_sc_nodes, get_account_balance, convertZenToWei, \
-    disconnect_sc_nodes_bi
+    AccountModelBlockVersion, EVM_APP_BINARY, generate_next_block, convertZenToZennies, connect_sc_nodes
+from test_framework.util import assert_equal, assert_true, start_nodes, \
+    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail, assert_false
+from SidechainTestFramework.account.httpCalls.createEIP1559Transaction import createEIP1559Transaction
 
 """
 Configuration: 
@@ -24,11 +23,6 @@ Test:
     Test some negative scenario too
      
 """
-
-
-# helper method for EIP155 tx
-def getChainIdFromSignatureV(sigV):
-    return int((sigV - 35) / 2)
 
 
 class SCEvmOrphanTXS(SidechainTestFramework):
@@ -62,7 +56,6 @@ class SCEvmOrphanTXS(SidechainTestFramework):
     def sc_setup_nodes(self):
         return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
                               binary=[EVM_APP_BINARY] * 2)  # , extra_args=[['-agentlib'], []])
-
 
     def run_test(self):
 
@@ -149,7 +142,7 @@ class SCEvmOrphanTXS(SidechainTestFramework):
         response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
         assert_equal(0, len(response['result']['transactionIds']))
 
-        #Check that the transactions with highest gas price are included first in the block
+        # Check that the transactions with highest gas price are included first in the block
         # The expected order is: txC_0, txC_1, txC_2, txB_0, txA_0, txB_1, txB_2, txA_1, txA_2
 
         evm_address_scA = sc_node_1.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
@@ -204,12 +197,8 @@ class SCEvmOrphanTXS(SidechainTestFramework):
             fail("send failed: " + str(response))
         txA_1 = response['result']['transactionId']
 
-        j["nonce"] = 2
-        j["gasInfo"]["maxFeePerGas"] = 110
-        response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
-        if not 'result' in response:
-            fail("send failed: " + str(response))
-        txA_2 = response['result']['transactionId']
+        txA_2 = createEIP1559Transaction(sc_node_1, fromAddress=evm_address_scA, toAddress=evm_address_sc2,
+                                          nonce = 2, gasLimit = 230000, maxPriorityFeePerGas = 1, maxFeePerGas = 110, value=1)
 
         j["from"] = evm_address_scB
         j["nonce"] = 0
@@ -219,12 +208,9 @@ class SCEvmOrphanTXS(SidechainTestFramework):
             fail("send failed: " + str(response))
         txB_0 = response['result']['transactionId']
 
-        j["nonce"] = 1
-        j["gasInfo"]["maxFeePerGas"] = 2
-        response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
-        if not 'result' in response:
-            fail("send failed: " + str(response))
-        txB_1 = response['result']['transactionId']
+        txB_1 = createEIP1559Transaction(sc_node_1, fromAddress=evm_address_scB, toAddress=evm_address_sc2,
+                                          nonce = 1, gasLimit = 230000, maxPriorityFeePerGas = 1, maxFeePerGas = 2, value=1)
+
 
         j["nonce"] = 2
         j["gasInfo"]["maxFeePerGas"] = 190
@@ -233,30 +219,17 @@ class SCEvmOrphanTXS(SidechainTestFramework):
             fail("send failed: " + str(response))
         txB_2 = response['result']['transactionId']
 
-        j["from"] = evm_address_scC
-        j["nonce"] = 0
-        j["gasInfo"]["maxFeePerGas"] = 10
-        response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
-        if not 'result' in response:
-            fail("send failed: " + str(response))
-        txC_0 = response['result']['transactionId']
+        txC_0 = createEIP1559Transaction(sc_node_1, fromAddress=evm_address_scC, toAddress=evm_address_sc2,
+                                          nonce = 0, gasLimit = 230000, maxPriorityFeePerGas = 1, maxFeePerGas = 10, value=1)
 
-        j["nonce"] = 1
-        j["gasInfo"]["maxFeePerGas"] = 200
-        response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
-        if not 'result' in response:
-            fail("send failed: " + str(response))
-        txC_1 = response['result']['transactionId']
+        txC_1 = createEIP1559Transaction(sc_node_1, fromAddress=evm_address_scC, toAddress=evm_address_sc2,
+                                         nonce=1, gasLimit=230000, maxPriorityFeePerGas=1, maxFeePerGas=200, value=1)
+        txC_2 = createEIP1559Transaction(sc_node_1, fromAddress=evm_address_scC, toAddress=evm_address_sc2,
+                                         nonce=2, gasLimit=230000, maxPriorityFeePerGas=1, maxFeePerGas=6, value=1)
 
-        j["nonce"] = 2
-        j["gasInfo"]["maxFeePerGas"] = 6
-        response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
-        if not 'result' in response:
-            fail("send failed: " + str(response))
-        txC_2 = response['result']['transactionId']
 
         self.sc_sync_all()
-        # Generate SC block and check that FT appears in SCs node wallet
+
         generate_next_block(sc_node_1, "first node")
         self.sc_sync_all()
 
@@ -273,9 +246,8 @@ class SCEvmOrphanTXS(SidechainTestFramework):
         assert_equal(txA_1, txs_in_block[7]['id'])
         assert_equal(txA_2, txs_in_block[8]['id'])
 
-        #Check that a transaction with the same nonce of a tx already in the mempool can replace the old one just if it
-        #has an higher gas price
-
+        # Check that a transaction with the same nonce of a tx already in the mempool can replace the old one just if it
+        # has an higher gas price
 
         j["from"] = evm_address_scA
         j["nonce"] = 3
@@ -301,17 +273,13 @@ class SCEvmOrphanTXS(SidechainTestFramework):
         assert_true(newTxId in response['result']['transactionIds'])
 
         self.sc_sync_all()
-        # Generate SC block and check that FT appears in SCs node wallet
+
         generate_next_block(sc_node_1, "first node")
         self.sc_sync_all()
 
         txs_in_block = sc_node_1.block_best()["result"]["block"]["sidechainTransactions"]
         assert_equal(1, len(txs_in_block), "Wrong number of transactions in the block")
         assert_equal(newTxId, txs_in_block[0]['id'])
-
-
-
-
 
 
 if __name__ == "__main__":

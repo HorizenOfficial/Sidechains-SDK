@@ -12,8 +12,7 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, generate_next_blocks, generate_next_block, \
     AccountModelBlockVersion, EVM_APP_BINARY, is_mainchain_block_included_in_sc_block, assert_true, \
-    check_mainchain_block_reference_info, convertZenToZennies, convertZenniesToWei, convertZenToWei, computeForgedTxFee, \
-    convertWeiToZen
+    check_mainchain_block_reference_info, convertZenToZennies, convertZenniesToWei, computeForgedTxFee
 from test_framework.util import assert_equal, assert_false, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail
 
