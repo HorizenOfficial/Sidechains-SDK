@@ -362,15 +362,16 @@ class AccountState(val params: NetworkParams,
       using(getView) { stateView =>
         //Check the nonce
         val ethTx = tx.asInstanceOf[EthereumTransaction]
-        val stateNonce = stateView.getNonce(ethTx.getFrom.address())
+        val sender = ethTx.getFrom.address()
+        val stateNonce = stateView.getNonce(sender)
         if (stateNonce.compareTo(tx.getNonce) > 0) {
           val msg = s"Transaction nonce is too low: ${tx.getNonce}"
           log.error(msg)
-          throw NonceTooLowException(ethTx.getFrom.address(), tx.getNonce, stateNonce)
+          throw NonceTooLowException(sender, tx.getNonce, stateNonce)
         }
 
         val txCost = tx.getValue.add(tx.getGasLimit.multiply(tx.getGasPrice))
-        val currentBalance = stateView.getBalance(ethTx.getFrom.address())
+        val currentBalance = stateView.getBalance(sender)
         if (currentBalance.compareTo(txCost) < 0) {
           val msg = s"Insufficient funds for executing transaction: balance ${currentBalance}, tx cost ${txCost}"
           log.error(msg)

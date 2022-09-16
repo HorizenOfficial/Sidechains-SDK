@@ -226,8 +226,9 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
       throw new ExecutionRevertedException(s"Value is not a legal wei amount: ${msg.getValue.toString()}")
     }
 
+    val sender = msg.getFrom.address()
     // check also that sender account exists (unless we are staking in the sc creation phase)
-    if (!isGenesisScCreation && !view.accountExists(msg.getFrom.address())) {
+    if (!isGenesisScCreation && !view.accountExists(sender)) {
       throw new ExecutionRevertedException(s"Sender account does not exist: ${msg.getFrom.toString}")
     }
 
@@ -269,7 +270,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
       view.addBalance(contractAddress, stakedAmount)
     } else {
       // decrease the balance of `from` account by `tx.value`
-      view.subBalance(msg.getFrom.address(), stakedAmount)
+      view.subBalance(sender, stakedAmount)
       // increase the balance of the "forger stake smart contract” account
       view.addBalance(contractAddress, stakedAmount)
       // TODO add log ForgerStakeDelegation(StakeId, ...) to the StateView ???
