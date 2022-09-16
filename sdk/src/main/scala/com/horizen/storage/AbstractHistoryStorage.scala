@@ -1,7 +1,7 @@
 package com.horizen.storage
 
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.chain.{AbstractFeePaymentsInfo, ActiveChain, SidechainFeePaymentsInfo, FeePaymentsInfoSerializer, MainchainBlockReferenceDataInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, MainchainHeaderMetadata, SidechainBlockInfo, SidechainBlockInfoSerializer, byteArrayToMainchainHeaderHash}
+import com.horizen.chain.{AbstractFeePaymentsInfo, ActiveChain, MainchainBlockReferenceDataInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, MainchainHeaderMetadata, SidechainBlockInfo, SidechainBlockInfoSerializer, byteArrayToMainchainHeaderHash}
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.NetworkParams
 import com.horizen.utils.ByteArrayWrapper
@@ -30,6 +30,7 @@ abstract class AbstractHistoryStorage[
   ]  (
     storage: Storage,
     blockSerializer: ScorexSerializer[PM],
+    feePaymentsInfoSerializer: ScorexSerializer[FPI],
     params: NetworkParams
   )
   extends SidechainBlockInfoProvider with ScorexLogging {
@@ -274,7 +275,8 @@ abstract class AbstractHistoryStorage[
     this
   }
 
-  def getFeePaymentsInfo(blockId: ModifierId): Option[FPI]
+  def getFeePaymentsInfo(blockId: ModifierId): Option[FPI] =
+    storage.get(feePaymentsInfoKey(blockId)).asScala.flatMap(baw => feePaymentsInfoSerializer.parseBytesTry(baw.data).toOption)
 
   def semanticValidity(blockId: ModifierId): ModifierSemanticValidity = {
     blockInfoOptionById(blockId) match {

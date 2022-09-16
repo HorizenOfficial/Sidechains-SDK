@@ -1,7 +1,7 @@
 package com.horizen.storage
 
 import com.horizen.block.{SidechainBlockSerializer, _}
-import com.horizen.chain.{SidechainFeePaymentsInfo, FeePaymentsInfoSerializer}
+import com.horizen.chain.{FeePaymentsInfoSerializer, SidechainFeePaymentsInfo}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.params.NetworkParams
 import scorex.util.ModifierId
@@ -15,9 +15,8 @@ class SidechainHistoryStorage(storage: Storage,
   extends AbstractHistoryStorage[SidechainBlock, SidechainFeePaymentsInfo, SidechainHistoryStorage](
       storage,
       new SidechainBlockSerializer(sidechainTransactionsCompanion),
+        FeePaymentsInfoSerializer,
       params)
 {
-      override def getFeePaymentsInfo(blockId: ModifierId): Option[SidechainFeePaymentsInfo] = {
-            storage.get(feePaymentsInfoKey(blockId)).asScala.flatMap(baw => FeePaymentsInfoSerializer.parseBytesTry(baw.data).toOption)
-      }
+
 }

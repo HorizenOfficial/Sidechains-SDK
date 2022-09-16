@@ -15,9 +15,8 @@ class AccountHistoryStorage(storage: Storage,
   extends AbstractHistoryStorage[AccountBlock, AccountFeePaymentsInfo, AccountHistoryStorage](
     storage,
     new AccountBlockSerializer(sidechainTransactionsCompanion),
+      AccountFeePaymentsInfoSerializer,
     params)
 {
-    override def getFeePaymentsInfo(blockId: ModifierId): Option[AccountFeePaymentsInfo] = {
-        storage.get(feePaymentsInfoKey(blockId)).asScala.flatMap(baw => AccountFeePaymentsInfoSerializer.parseBytesTry(baw.data).toOption)
-    }
+
 }
