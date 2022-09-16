@@ -9,7 +9,7 @@ import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumConsensusDataReceipt
 import com.horizen.account.secret.PrivateKeySecp256k1
-import com.horizen.account.state.{AccountState, AccountStateView, GasLimitReached, GasPool}
+import com.horizen.account.state.{AccountState, AccountStateView, GasLimitReached, GasPool, GasUtil}
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.{Account, AccountBlockFeeInfo, AccountFeePaymentsUtils}
@@ -55,7 +55,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                         mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
                         inputBlockSize: Int,
                         forgerAddress: AddressProposition)
-  : (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], AccountBlockFeeInfo) = {
+  : (Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], AccountBlockFeeInfo) = {
 
     // we must ensure that all the tx we get from mempool are applicable to current state view
     // and we must stay below the block gas limit threshold, therefore we might have a subset of the input transactions
@@ -69,7 +69,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       }
     }
 
-    (view.getIntermediateRoot, receiptList, appliedTransactions, AccountBlockFeeInfo(cumBaseFee, cumForgerTips, forgerAddress))
+    (receiptList, appliedTransactions, AccountBlockFeeInfo(cumBaseFee, cumForgerTips, forgerAddress))
   }
 
 
@@ -122,9 +122,8 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
           // update cumulative gas used so far
           cumGasUsed = consensusDataReceipt.cumulativeGasUsed
 
-          // legacy TXes will have just the second contribution, given by user set gasPrice.
-          // EIP1559 TXes have both.
-          val (txBaseFeePerGas, txForgerTipPerGas) = stateView.getTxFeesPerGas(ethTx)
+          val baseFeePerGas = stateView.getBaseFeePerGas
+          val (txBaseFeePerGas, txForgerTipPerGas) = GasUtil.getTxFeesPerGas(ethTx, baseFeePerGas)
           cumBaseFee = cumBaseFee.add(txBaseFeePerGas.multiply(txGasUsed))
           cumForgerTips = cumForgerTips.add(txForgerTipPerGas.multiply(txGasUsed))
 
@@ -168,19 +167,21 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     val forgerAddress = addressList.get(0).publicImage().asInstanceOf[AddressProposition]
 
-    // 2. create a disposable view and try to apply all transactions in the list, collecting all data needed for
+    // 2. create a disposable view and try to apply all transactions in the list and apply fee payments if needed, collecting all data needed for
     //    going on with the forging of the block
     val (stateRoot, receiptList, appliedTxList, feePayments)
     : (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], Seq[AccountBlockFeeInfo]) = {
         using(nodeView.state.getView) {
           dummyView =>
             // the outputs will be:
-            // - the resulting stateRoot
             // - the list of receipt of the transactions successfully applied ---> for getting the receiptsRoot
             // - the list of transactions successfully applied to the state ---> to be included in the forged block
-            // - the fee info object related to this block
-            val resultTuple : (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], AccountBlockFeeInfo) = computeBlockInfo(
-              dummyView, sidechainTransactions, mainchainBlockReferencesData, inputBlockSize, forgerAddress)
+            // - the fee payments related to this block
+            val resultTuple : (Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], AccountBlockFeeInfo) =
+              computeBlockInfo(dummyView, sidechainTransactions, mainchainBlockReferencesData, inputBlockSize, forgerAddress)
+            val receiptList = resultTuple._1
+            val appliedTxList = resultTuple._2
+            val currentBlockPayments = resultTuple._3
 
             val feePayments = if(isWithdrawalEpochLastBlock) {
               // Current block is expected to be the continuation of the current tip, so there are no ommers.
@@ -190,12 +191,18 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
               val withdrawalEpochNumber: Int = dummyView.getWithdrawalEpochInfo.epoch
 
               // get all previous payments for current ending epoch and append the one of the current block
-              dummyView.getFeePayments(withdrawalEpochNumber, Some(resultTuple._4))
+              val feePayments = dummyView.getFeePayments(withdrawalEpochNumber, Some(currentBlockPayments))
+
+              // add rewards to forgers balance
+              val forgersPoolRewardsSeq : Seq[(AddressProposition, BigInteger)] = AccountFeePaymentsUtils.getForgersRewards(feePayments)
+              forgersPoolRewardsSeq.foreach( pair => dummyView.addBalance(pair._1.address(), pair._2))
+
+              feePayments
             } else {
               Seq()
             }
 
-            (resultTuple._1, resultTuple._2, resultTuple._3, feePayments)
+            (dummyView.getIntermediateRoot, receiptList, appliedTxList, feePayments)
         }
     }
 

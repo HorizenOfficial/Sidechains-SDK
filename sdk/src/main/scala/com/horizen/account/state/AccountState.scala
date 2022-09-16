@@ -51,9 +51,6 @@ class AccountState(val params: NetworkParams,
     }
   }
 
-  override def getTxFeesPerGas(tx: EthereumTransaction) : (BigInteger, BigInteger) =
-     using(getView)(_.getTxFeesPerGas(tx))
-
   // Modifiers:
   override def applyModifier(mod: AccountBlock): Try[AccountState] = Try {
     require(versionToBytes(version).sameElements(idToBytes(mod.parentId)),
@@ -147,9 +144,8 @@ class AccountState(val params: NetworkParams,
 
             receiptList += fullReceipt
 
-            // legacy TXes have just the second contribution, given by user set gasPrice.
-            // EIP1559 TXes have both.
-            val (txBaseFeePerGas, txMaxPriorityFeePerGas) = getTxFeesPerGas(ethTx)
+            val baseFeePerGas = getBaseFeePerGas
+            val (txBaseFeePerGas, txMaxPriorityFeePerGas) = GasUtil.getTxFeesPerGas(ethTx, baseFeePerGas)
             cumBaseFee = cumBaseFee.add(txBaseFeePerGas.multiply(txGasUsed))
             cumForgerTips = cumForgerTips.add(txMaxPriorityFeePerGas.multiply(txGasUsed))
 
@@ -171,14 +167,14 @@ class AccountState(val params: NetworkParams,
       // Note: store also entries with zero values, which can arise in sc blocks without any tx
       stateView.addFeeInfo(AccountBlockFeeInfo(cumBaseFee, cumForgerTips, mod.header.forgerAddress))
 
+      // If SC block has reached the end of the withdrawal epoch reward the forgers.
+      evalForgersReward(mod, modWithdrawalEpochInfo, stateView)
+
       // check stateRoot and receiptRoot against block header
       mod.verifyReceiptDataConsistency(receiptList.map(_.consensusDataReceipt))
 
       val stateRoot = stateView.getIntermediateRoot
       mod.verifyStateRootDataConsistency(stateRoot)
-
-      // If SC block has reached the end of the withdrawal epoch reward the forgers.
-      evalForgersReward(mod, modWithdrawalEpochInfo, stateView)
 
       // eventually, store full receipts in the metaDataStorage indexed by txid
       stateView.updateTransactionReceipts(receiptList)

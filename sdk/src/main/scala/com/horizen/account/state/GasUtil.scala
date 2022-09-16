@@ -1,5 +1,6 @@
 package com.horizen.account.state
 
+import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.BigIntegerUtil
 import com.horizen.evm.interop.EvmLog
 
@@ -57,4 +58,24 @@ object GasUtil {
   }
 
   def logGas(evmLog: EvmLog): BigInteger = LogGas.add(LogTopicGas.multiply(BigInteger.valueOf(evmLog.topics.length)))
+
+  def getTxFeesPerGas(tx: EthereumTransaction, baseFeePerGas: BigInteger): (BigInteger, BigInteger) = {
+
+    if (tx.isEIP1559) {
+      val maxFeePerGas = tx.getMaxFeePerGas
+      val maxPriorityFeePerGas = tx.getMaxPriorityFeePerGas
+      // if the Base Fee plus the Max Priority Fee exceeds the Max Fee, the Max Priority Fee will be reduced
+      // in order to maintain the upper bound of the Max Fee.
+      val forgerTipPerGas = if (baseFeePerGas.add(maxPriorityFeePerGas).compareTo(maxFeePerGas) > 0) {
+        maxFeePerGas.subtract(baseFeePerGas)
+      } else {
+        maxPriorityFeePerGas
+      }
+      (baseFeePerGas, forgerTipPerGas)
+    } else {
+      // Even in legacy transactions the gasPrice has to be greater or equal to the base fee
+      (baseFeePerGas, tx.getGasPrice.subtract(baseFeePerGas))
+    }
+  }
+
 }

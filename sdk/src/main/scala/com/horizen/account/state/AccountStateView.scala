@@ -308,10 +308,6 @@ class AccountStateView(
     var blockFeeInfoSeq = metadataStorageView.getFeePayments(withdrawalEpoch)
     blockToAppendFeeInfo.foreach(blockFeeInfo => blockFeeInfoSeq = blockFeeInfoSeq :+ blockFeeInfo)
 
-    if(blockFeeInfoSeq.isEmpty) {
-      return Seq()
-    }
-
     blockFeeInfoSeq
   }
 
@@ -355,25 +351,7 @@ class AccountStateView(
   // TODO: currently a non-zero baseFee makes all the python tests fail, because they do not consider spending fees
   override def getBaseFeePerGas: BigInteger = BigInteger.valueOf(333000)
 
-  def getTxFeesPerGas(tx: EthereumTransaction) : (BigInteger, BigInteger) = {
-    val baseFeePerGas = getBaseFeePerGas
 
-    if (tx.isEIP1559) {
-      val maxFeePerGas = tx.getMaxFeePerGas
-      val maxPriorityFeePerGas = tx.getMaxPriorityFeePerGas
-      // if the Base Fee plus the Max Priority Fee exceeds the Max Fee, the Max Priority Fee will be reduced
-      // in order to maintain the upper bound of the Max Fee.
-      val forgerTipPerGas = if (baseFeePerGas.add(maxPriorityFeePerGas).compareTo(maxFeePerGas) > 0) {
-        maxFeePerGas.subtract(baseFeePerGas)
-      } else {
-        maxPriorityFeePerGas
-      }
-      (baseFeePerGas, forgerTipPerGas)
-    } else {
-      // Even in legacy transactions the gasPrice has to be greater or equal to the base fee
-      (baseFeePerGas, tx.getGasPrice.subtract(baseFeePerGas))
-    }
-  }
 
   // TODO: get gas limit from current block header
   override def getBlockGasLimit: BigInteger = BigInteger.valueOf(Account.GAS_LIMIT)
