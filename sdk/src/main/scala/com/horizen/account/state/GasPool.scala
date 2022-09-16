@@ -19,19 +19,19 @@ class GasPool(initialGas: BigInteger) extends ScorexLogging {
     if (currentGas.compareTo(gas) < 0) {
       throw new OutOfGasException()
     }
-    log.debug(s"subtracting $gas from currentGas=$currentGas")
+    log.trace(s"subtracting $gas from currentGas=$currentGas")
     currentGas = currentGas.subtract(gas)
-    log.debug(s"---> currentGas=$currentGas")
+    log.trace(s"---> currentGas=$currentGas")
   }
 
   def addGas(gas: BigInteger): Unit = {
     if (gas.compareTo(BigInteger.ZERO) < 0)
       throw new IllegalArgumentException("cannot return a negative amount of gas")
-    log.debug(s"adding $gas to currentGas=$currentGas")
+    log.trace(s"adding $gas to currentGas=$currentGas")
     val sum = currentGas.add(gas)
     if (sum.compareTo(initialGas) > 0)
       throw new IllegalArgumentException("cannot return more gas than was used")
     currentGas = sum
-    log.debug(s"---> currentGas=$currentGas")
+    log.trace(s"---> currentGas=$currentGas")
   }
 }

@@ -237,7 +237,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       stateRoot,
       receiptsRoot,
       forgerAddress,
-      baseFee.longValue(), // TODO to be changed into biginteger?
+      baseFee.longValue(),
       gasUsed,
       gasLimit,
       companion.asInstanceOf[SidechainAccountTransactionsCompanion])
