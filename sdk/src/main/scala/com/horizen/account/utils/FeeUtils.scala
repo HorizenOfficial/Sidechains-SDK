@@ -1,5 +1,6 @@
 package com.horizen.account
 
+import com.horizen.account.block.AccountBlock
 import com.horizen.account.history.AccountHistory
 import scorex.core.block.Block.BlockId
 
@@ -19,30 +20,38 @@ object FeeUtils {
 
     history.getBlockById(parentId).asScala match {
       case None => INITIAL_BASE_FEE
-      case Some(block) =>
-        val blockHeader = block.header
-        val gasTarget = blockHeader.gasLimit / 2
+      case Some(block) => calculateBaseFeeForBlock(block)
+    }
+  }
 
-        // If the parent gasUsed is the same as the target, the baseFee remains unchanged
-        if (blockHeader.gasUsed == gasTarget) {
-          return blockHeader.baseFee
-        }
+  def calculateNextBaseFee(block: AccountBlock): BigInteger = {
+    if (block == null) INITIAL_BASE_FEE
+    else calculateBaseFeeForBlock(block)
+  }
 
-        if (blockHeader.gasUsed > gasTarget) {
-          // If the parent block used more gas than its target, the baseFee should increase
-          var baseFeeInc: BigInteger = BigInteger.valueOf(blockHeader.gasUsed - gasTarget)
-          baseFeeInc = baseFeeInc.multiply(blockHeader.baseFee)
-          baseFeeInc = baseFeeInc.divide(BigInteger.valueOf(gasTarget))
-          baseFeeInc = baseFeeInc.divide(BigInteger.valueOf(8))
-          blockHeader.baseFee.add(baseFeeInc.max(BigInteger.ONE))
-        } else {
-          // Otherwise if the parent block used less gas than its target, the baseFee should decrease
-          var baseFeeDec: BigInteger = BigInteger.valueOf(gasTarget - blockHeader.gasUsed)
-          baseFeeDec = baseFeeDec.multiply(blockHeader.baseFee)
-          baseFeeDec = baseFeeDec.divide(BigInteger.valueOf(gasTarget))
-          baseFeeDec = baseFeeDec.divide(BigInteger.valueOf(8))
-          blockHeader.baseFee.subtract(baseFeeDec).max(BigInteger.ONE)
-        }
+  private def calculateBaseFeeForBlock(block: AccountBlock): BigInteger = {
+    val blockHeader = block.header
+    val gasTarget = blockHeader.gasLimit / 2
+
+    // If the parent gasUsed is the same as the target, the baseFee remains unchanged
+    if (blockHeader.gasUsed == gasTarget) {
+      return blockHeader.baseFee
+    }
+
+    if (blockHeader.gasUsed > gasTarget) {
+      // If the parent block used more gas than its target, the baseFee should increase
+      var baseFeeInc: BigInteger = BigInteger.valueOf(blockHeader.gasUsed - gasTarget)
+      baseFeeInc = baseFeeInc.multiply(blockHeader.baseFee)
+      baseFeeInc = baseFeeInc.divide(BigInteger.valueOf(gasTarget))
+      baseFeeInc = baseFeeInc.divide(BigInteger.valueOf(8))
+      blockHeader.baseFee.add(baseFeeInc.max(BigInteger.ONE))
+    } else {
+      // Otherwise if the parent block used less gas than its target, the baseFee should decrease
+      var baseFeeDec: BigInteger = BigInteger.valueOf(gasTarget - blockHeader.gasUsed)
+      baseFeeDec = baseFeeDec.multiply(blockHeader.baseFee)
+      baseFeeDec = baseFeeDec.divide(BigInteger.valueOf(gasTarget))
+      baseFeeDec = baseFeeDec.divide(BigInteger.valueOf(8))
+      blockHeader.baseFee.subtract(baseFeeDec).max(BigInteger.ONE)
     }
   }
 }

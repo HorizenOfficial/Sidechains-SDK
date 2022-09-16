@@ -7,7 +7,6 @@ import com.horizen.account.node.NodeAccountState
 import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.Account
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.evm._
@@ -193,8 +192,7 @@ class AccountState(
       stateView.updateTransactionReceipts(receiptList)
 
       // update current base fee
-      // TODO: should use updated base fee based on consumed gas in the new block
-      stateView.updateBaseFee(mod.header.baseFee)
+      stateView.updateBaseFee(FeeUtils.calculateNextBaseFee(mod))
 
       stateView.commit(idToVersion(mod.id)).get
 
