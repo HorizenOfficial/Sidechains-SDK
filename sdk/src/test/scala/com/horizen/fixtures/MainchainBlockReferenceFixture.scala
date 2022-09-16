@@ -90,7 +90,7 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
       }
     }
 
-    val newReference = new MainchainBlockReference(header, MainchainBlockReferenceData(header.hash, None, None, None, Seq(), None)) {
+    val newReference = new MainchainBlockReference(header, MainchainBlockReferenceData(header.hash, None, None, None, Seq(), Seq())) {
       override def semanticValidity(params: NetworkParams): Try[Unit] = Success(Unit)
     }
 
@@ -117,7 +117,7 @@ trait MainchainBlockReferenceFixture extends MainchainHeaderFixture {
 
 
   def mainchainBlockReferenceWithMockedAggTx(ref: MainchainBlockReference): MainchainBlockReference = {
-    new MainchainBlockReference(ref.header, MainchainBlockReferenceData(ref.header.hash, Some(mock[MC2SCAggregatedTransaction]), None, None, Seq(), None)) {
+    new MainchainBlockReference(ref.header, MainchainBlockReferenceData(ref.header.hash, Some(mock[MC2SCAggregatedTransaction]), None, None, Seq(), Seq())) {
       override def semanticValidity(params: NetworkParams): Try[Unit] = Success(Unit)
     }
   }

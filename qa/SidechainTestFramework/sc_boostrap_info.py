@@ -30,7 +30,7 @@ class SCCreationInfo(object):
     # because of too complex circuit from MC perspective.
     def __init__(self, mc_node, forward_amount=100, withdrawal_epoch_length=LARGE_WITHDRAWAL_EPOCH_LENGTH,
                  btr_data_length=0, sc_creation_version=SC_CREATION_VERSION_1,
-                 cert_max_keys=7, cert_sig_threshold=5, csw_enabled=False):
+                 cert_max_keys=7, cert_sig_threshold=5, csw_enabled=False, non_ceasing=False):
         self.mc_node = mc_node
         self.forward_amount = forward_amount
         self.withdrawal_epoch_length = withdrawal_epoch_length
@@ -39,8 +39,10 @@ class SCCreationInfo(object):
         self.cert_max_keys = cert_max_keys
         self.cert_sig_threshold = cert_sig_threshold
         self.csw_enabled = csw_enabled
+        self.non_ceasing = non_ceasing
 
-
+        if (csw_enabled and non_ceasing):
+          raise RuntimeError('Cannot enable CSW and Non-ceasing sidechains simultaneously.')
 """
 Sidechain websocket configuration to be added inside the configuration file.
 The JSON representation is only for documentation.

@@ -161,7 +161,8 @@ class SidechainApp @Inject()
       restrictForgers = sidechainSettings.forger.restrictForgers,
       allowedForgersList = forgerList,
       sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
-      isCSWEnabled = isCSWEnabled
+      isCSWEnabled = isCSWEnabled,
+      isNonCeasing = sidechainSettings.genesisData.nonCeasing
     )
 
     case "testnet" => TestNetParams(
@@ -184,7 +185,8 @@ class SidechainApp @Inject()
       restrictForgers = sidechainSettings.forger.restrictForgers,
       allowedForgersList = forgerList,
       sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
-      isCSWEnabled = isCSWEnabled
+      isCSWEnabled = isCSWEnabled,
+      isNonCeasing = sidechainSettings.genesisData.nonCeasing
     )
 
     case "mainnet" => MainNetParams(
@@ -207,7 +209,8 @@ class SidechainApp @Inject()
       restrictForgers = sidechainSettings.forger.restrictForgers,
       allowedForgersList = forgerList,
       sidechainCreationVersion = sidechainCreationOutput.getScCrOutput.version,
-      isCSWEnabled = isCSWEnabled
+      isCSWEnabled = isCSWEnabled,
+      isNonCeasing = sidechainSettings.genesisData.nonCeasing
     )
     case _ => throw new IllegalArgumentException("Configuration file sparkz.genesis.mcNetwork parameter contains inconsistent value.")
   }

@@ -58,6 +58,7 @@ trait NetworkParams {
   val consensusSecondsInSlot: Int
   val consensusSlotsInEpoch: Int
   val initialCumulativeCommTreeHash: Array[Byte] // CumulativeCommTreeHash value before genesis block
+  val isNonCeasing: Boolean
 
   // Sidechain forger restriction
   val restrictForgers: Boolean = false

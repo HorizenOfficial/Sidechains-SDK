@@ -35,7 +35,7 @@ class SidechainBlock(override val header: SidechainBlockHeader,
 {
   def forgerPublicKey: PublicKey25519Proposition = header.forgingStakeInfo.blockSignPublicKey
 
-  lazy val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = mainchainBlockReferencesData.flatMap(_.topQualityCertificate).lastOption
+  lazy val topQualityCertificates: Seq[WithdrawalEpochCertificate] = mainchainBlockReferencesData.flatMap(_.topQualityCertificate).groupBy(_.epochNumber).map(gr => gr._2.lastOption.get).toSeq
 
   override type M = SidechainBlock
 

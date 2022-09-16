@@ -167,7 +167,7 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
 
         # Verify Certificate quality for epoch 0 on SC side
         mbrefdata = sc_node1.block_best()["result"]["block"]["mainchainBlockReferencesData"][0]
-        assert_equal(7, mbrefdata["topQualityCertificate"]["quality"], "Certificate quality is wrong.")
+        assert_equal(7, mbrefdata["topQualityCertificate"][0]["quality"], "Certificate quality is wrong.")
 
         # Exclude SC Node 4 from the network
         logging.info("Disconnecting SC Node 4 from the network.")
@@ -229,7 +229,7 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
 
         # Verify Certificate quality for epoch 0 on SC side
         mbrefdata = sc_node1.block_best()["result"]["block"]["mainchainBlockReferencesData"][0]
-        assert_equal(7, mbrefdata["topQualityCertificate"]["quality"], "Certificate quality is wrong.")
+        assert_equal(7, mbrefdata["topQualityCertificate"][0]["quality"], "Certificate quality is wrong.")
 
 
 if __name__ == "__main__":

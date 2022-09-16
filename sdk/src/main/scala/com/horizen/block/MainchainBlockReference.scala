@@ -55,7 +55,7 @@ case class MainchainBlockReference(
 
     if (header.version != MainchainBlockReference.SC_CERT_BLOCK_VERSION) {
       if (data.sidechainRelatedAggregatedTransaction.isDefined ||
-          data.topQualityCertificate.isDefined ||
+          data.topQualityCertificate.nonEmpty ||
           data.lowerCertificateLeaves.nonEmpty ||
           data.existenceProof.isDefined ||
           data.absenceProof.isDefined) {
@@ -112,7 +112,7 @@ case class MainchainBlockReference(
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader hashScTxsCommitment")
     } else { // Current sidechain was not mentioned in MainchainBlockReference.
       // Check for empty transaction and certificates.
-      if (data.sidechainRelatedAggregatedTransaction.isDefined || data.topQualityCertificate.isDefined || data.lowerCertificateLeaves.nonEmpty)
+      if (data.sidechainRelatedAggregatedTransaction.isDefined || data.topQualityCertificate.nonEmpty || data.lowerCertificateLeaves.nonEmpty)
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
 
       // Check for absence proof to be defined.
@@ -139,7 +139,7 @@ object MainchainBlockReference extends ScorexLogging {
           throw new IllegalArgumentException("Input data corrupted. There are unprocessed %d bytes.".format(mainchainBlockBytes.length - blockSize))
 
         if (header.version != SC_CERT_BLOCK_VERSION) {
-          val data: MainchainBlockReferenceData = MainchainBlockReferenceData(header.hash, None, None, None, Seq(), None)
+          val data: MainchainBlockReferenceData = MainchainBlockReferenceData(header.hash, None, None, None, Seq(), Seq())
           return Success(MainchainBlockReference(header, data))
         }
 
@@ -187,7 +187,8 @@ object MainchainBlockReference extends ScorexLogging {
           sidechainRelatedCrosschainOutputs.get(sidechainId).map(outputs => new MC2SCAggregatedTransaction(outputs.asJava, MC2SCAggregatedTransaction.MC2SC_AGGREGATED_TRANSACTION_VERSION))
         // Certificates for a given sidechain are ordered by quality: from lowest to highest.
         // So get the last sidechain related certificate if present
-        val topQualityCertificate: Option[WithdrawalEpochCertificate] = certificates.reverse.find(c => util.Arrays.equals(c.sidechainId, sidechainId.data))
+        certificates
+        val topQualityCertificate: Seq[WithdrawalEpochCertificate] = certificates.reverse.filter(c => util.Arrays.equals(c.sidechainId, sidechainId.data))
         // Get lower quality cert leaves if present.
         val certLeaves = commitmentTree.getCertLeaves(sidechainId.data)
         val lowerCertificateLeaves: Seq[Array[Byte]] = if(certLeaves.isEmpty) Seq() else certLeaves.init
@@ -208,7 +209,7 @@ object MainchainBlockReference extends ScorexLogging {
               None,
               scAbsenceProof,
               Seq(),
-              None)
+              Seq())
           }
 
         commitmentTree.free()

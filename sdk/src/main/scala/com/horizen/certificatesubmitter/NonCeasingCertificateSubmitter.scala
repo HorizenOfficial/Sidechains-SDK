@@ -38,14 +38,15 @@ import scala.util.{Failure, Random, Success, Try}
  * If `submitterEnabled` is `true`, it will try to generate and send the Certificate to MC node in case the proper amount of signatures were collected.
  * Must be singleton.
  */
-class CertificateSubmitter(settings: SidechainSettings,
+class NonCeasingCertificateSubmitter(settings: SidechainSettings,
                            sidechainNodeViewHolderRef: ActorRef,
                            params: NetworkParams,
                            mainchainChannel: MainchainNodeChannel)
                           (implicit ec: ExecutionContext) extends AbstractCertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel)
-                           with Timers with ScorexLogging {
+                          with Timers with ScorexLogging {
 
   import AbstractCertificateSubmitter.InternalReceivableMessages._
+  import AbstractCertificateSubmitter.ReceivableMessages._
   import AbstractCertificateSubmitter.Timers._
 
   private[certificatesubmitter] def newBlockArrived: Receive = {
@@ -104,86 +105,11 @@ class CertificateSubmitter(settings: SidechainSettings,
     Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getStatus), timeoutDuration).asInstanceOf[SubmissionWindowStatus]
   }
 
-  private def getCertificateTopQuality(epoch: Int): Try[Long] = {
-    mainchainChannel.getTopQualityCertificates(BytesUtils.toHexString(BytesUtils.reverseBytes(params.sidechainId)))
-      .map(topQualityCertificates => {
-        (topQualityCertificates.mempoolCertInfo, topQualityCertificates.chainCertInfo) match {
-          // case we have mempool cert for the given epoch return its quality.
-          case (Some(mempoolInfo), _) if mempoolInfo.epoch == epoch => mempoolInfo.quality
-          // case the mempool certificate epoch is a newer than submitter epoch thrown an exception
-          case (Some(mempoolInfo), _) if mempoolInfo.epoch > epoch =>
-            throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + mempoolInfo.quality)
-          // case we have chain cert for the given epoch return its quality.
-          case (_, Some(chainInfo)) if chainInfo.epoch == epoch => chainInfo.quality
-          // case the chain certificate epoch is a newer than submitter epoch thrown an exception
-          case (_, Some(chainInfo)) if chainInfo.epoch > epoch =>
-            throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + chainInfo.quality)
-          // no known certs
-          case _ => 0
-        }
-      })
-  }
-
-  private def checkQuality(status: SignaturesStatus): Boolean = {
-    if (status.knownSigs.size >= params.signersThreshold) {
-      getCertificateTopQuality(status.referencedEpoch) match {
-        case Success(currentCertificateTopQuality) =>
-          if (status.knownSigs.size > currentCertificateTopQuality)
-            return true
-        case Failure(e) => e match {
-          // May happen if there is a bug on MC side or the SDK code is inconsistent to the MC one.
-          case ex: WebsocketErrorResponseException =>
-            log.error("Mainchain error occurred while processed top quality certificates request(" + ex + ")")
-            // So we don't know the result
-            // Return true to keep submitter going and prevent SC ceasing
-            return true
-          // May happen during node synchronization and node behind for one epoch or more
-          case ex: ObsoleteWithdrawalEpochException =>
-            log.info("Sidechain is behind the Mainchain(" + ex + ")")
-            return false
-          // May happen if MC and SDK websocket protocol is inconsistent.
-          // Should never happen in production.
-          case ex: WebsocketInvalidErrorMessageException =>
-            log.error("Mainchain error message is inconsistent to SC implementation(" + ex + ")")
-            // So we don't know the result
-            // Return true to keep submitter going and prevent SC ceasing
-            return true
-          // Various connection errors
-          case other =>
-            log.error("Unable to retrieve actual top quality certificates from Mainchain(" + other + ")")
-            return false
-        }
-      }
-    }
-    false
-  }
-
-  private[certificatesubmitter] def tryToScheduleCertificateGeneration: Receive = {
-    // Do nothing if submitter is disabled or submission is in progress (scheduled or generating the proof)
-    case TryToScheduleCertificateGeneration if !submitterEnabled ||
-      certGenerationState || timers.isTimerActive(CertificateGenerationTimer) => // do nothing
-
-    // In other case check and schedule
-    case TryToScheduleCertificateGeneration =>
-      signaturesStatus match {
-        case Some(status) =>
-          if (checkQuality(status)) {
-            val delay = Random.nextInt(15) + 5 // random delay from 5 to 20 seconds
-            log.info(s"Scheduling Certificate generation in $delay seconds")
-            timers.startSingleTimer(CertificateGenerationTimer, TryToGenerateCertificate, FiniteDuration(delay, SECONDS))
-            context.system.eventStream.publish(CertificateSubmissionStarted)
-          }
-        case None =>
-          log.warn("Trying to schedule certificate generation being outside Certificate submission window.")
-      }
-  }
-
   private[certificatesubmitter] def tryToGenerateCertificate: Receive = {
     case TryToGenerateCertificate => Try {
       signaturesStatus match {
         case Some(status) =>
           // Check quality again, in case better Certificate appeared.
-          if (checkQuality(status)) {
             def getProofGenerationData(sidechainNodeView: View): DataForProofGeneration = buildDataForProofGeneration(sidechainNodeView, status)
 
             val dataForProofGeneration = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getProofGenerationData), timeoutDuration)
@@ -234,9 +160,6 @@ class CertificateSubmitter(settings: SidechainSettings,
                 context.system.eventStream.publish(CertificateSubmissionStopped)
               }
             }).start()
-          } else {
-            context.system.eventStream.publish(CertificateSubmissionStopped)
-          }
         case None => // Can occur while during the random delay the Node went out of the Window.
           log.debug("Can't generate Certificate because of being outside the Certificate submission window.")
           context.system.eventStream.publish(CertificateSubmissionStopped)
@@ -248,14 +171,115 @@ class CertificateSubmitter(settings: SidechainSettings,
         context.system.eventStream.publish(CertificateSubmissionStopped)
     }
   }
+
+  private[certificatesubmitter] def tryToScheduleCertificateGeneration: Receive = {
+    // Do nothing if submitter is disabled or submission is in progress (scheduled or generating the proof)
+    case TryToScheduleCertificateGeneration if !submitterEnabled ||
+      certGenerationState || timers.isTimerActive(CertificateGenerationTimer) => // do nothing
+
+    // In other case check and schedule
+    case TryToScheduleCertificateGeneration =>
+      signaturesStatus match {
+        case Some(status) => {
+            val delay = Random.nextInt(15) + 5 // random delay from 5 to 20 seconds
+            log.info(s"Scheduling Certificate generation in $delay seconds")
+            timers.startSingleTimer(CertificateGenerationTimer, TryToGenerateCertificate, FiniteDuration(delay, SECONDS))
+            context.system.eventStream.publish(CertificateSubmissionStarted)
+          }
+        case None =>
+          log.warn("Trying to schedule certificate generation being outside Certificate submission window.")
+      }
+  }
 }
 
+object NonCeasingCertificateSubmitter {
+  // Events:
+  sealed trait SubmitterEvent
 
-object CertificateSubmitterRef {
+  // Certificate submission status events
+  sealed trait CertificateSubmissionEvent extends SubmitterEvent
+
+  case object CertificateSubmissionStarted extends CertificateSubmissionEvent
+
+  case object CertificateSubmissionStopped extends CertificateSubmissionEvent
+
+  // Certificate signature broadcasting events
+  case class BroadcastLocallyGeneratedSignature(info: CertificateSignatureFromRemoteInfo) extends SubmitterEvent
+
+
+  // Response for SignatureFromRemote message
+  sealed trait SignatureProcessingStatus
+
+  case object ValidSignature extends SignatureProcessingStatus
+
+  case object KnownSignature extends SignatureProcessingStatus
+
+  case object DifferentMessageToSign extends SignatureProcessingStatus
+
+  case object InvalidPublicKeyIndex extends SignatureProcessingStatus
+
+  case object InvalidSignature extends SignatureProcessingStatus
+
+  case object SubmitterIsOutsideSubmissionWindow extends SignatureProcessingStatus
+
+  // Data
+  private case class SubmissionWindowStatus(withdrawalEpochInfo: WithdrawalEpochInfo, isInWindow: Boolean)
+
+  case class SignaturesStatus(referencedEpoch: Int, messageToSign: Array[Byte], knownSigs: ArrayBuffer[CertificateSignatureInfo])
+
+  case class CertificateSignatureInfo(pubKeyIndex: Int, signature: SchnorrProof)
+
+  case class CertificateSignatureFromRemoteInfo(pubKeyIndex: Int, messageToSign: Array[Byte], signature: SchnorrProof) {
+    require(pubKeyIndex >= 0, "pubKeyIndex can't be negative value.")
+    require(messageToSign.length == FieldElementUtils.fieldElementLength(), "messageToSign has invalid length")
+  }
+
+  case class ObsoleteWithdrawalEpochException(message: String = "", cause: Option[Throwable] = None)
+    extends RuntimeException(message, cause.orNull)
+
+  // Internal interface
+  private[certificatesubmitter] object Timers {
+    object CertificateGenerationTimer
+  }
+
+  private[certificatesubmitter] object InternalReceivableMessages {
+    case class LocallyGeneratedSignature(info: CertificateSignatureInfo)
+
+    case object TryToScheduleCertificateGeneration
+
+    case object TryToGenerateCertificate
+
+  }
+
+  // Public interface
+  object ReceivableMessages {
+    case class SignatureFromRemote(remoteSigInfo: CertificateSignatureFromRemoteInfo)
+
+    case object GetCertificateGenerationState
+
+    case object GetSignaturesStatus
+
+    // messages to set/check submitter
+    case object EnableSubmitter
+
+    case object DisableSubmitter
+
+    case object IsSubmitterEnabled
+
+    // messages to set/check certificate signer
+    case object EnableCertificateSigner
+
+    case object DisableCertificateSigner
+
+    case object IsCertificateSigningEnabled
+  }
+}
+
+object NonCeasingCertificateSubmitterRef {
   def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit ec: ExecutionContext): Props =
-    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel)).withMailbox("akka.actor.deployment.submitter-prio-mailbox")
+    Props(new NonCeasingCertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel)).withMailbox("akka.actor.deployment.submitter-prio-mailbox")
 
   def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)

@@ -436,6 +436,7 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                       "\t\t\"secret\": <secret hex>, - private key to sign the sc genesis block\n" +
                       "\t\t\"vrfSecret\": <vrf secret hex>, secret vrf key\n" +
                       "\t\t\"info\": <sc genesis info hex> - hex data retrieved from MC RPC call 'getscgenesisinfo'\n" +
+                      "\t\t\"virtualWithdrawalEpochLength\": positive integers - Optional. Should be 100 or higher.\n" +
                       "\t\t\"updateconfig\": boolean - Optional. Default false. If true, put the results in a copy of source config.\n" +
                       "\t\t\"sourceconfig\": <path to in config file> - expected if 'updateconfig' = true.\n" +
                       "\t\t\"resultconfig\": <path to out config file> - expected if 'updateconfig' = true.\n" +
@@ -500,6 +501,17 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
         } catch (Exception e) {
             printGenesisInfoUsageMsg("'vrfSecret' value is broken. Can't deserialize the key.");
             return;
+        }
+
+        boolean isNonCeasing = false;
+        int virtualWithdrawalEpochLength = 0;
+        if (json.has("virtualWithdrawalEpochLength") && json.get("virtualWithdrawalEpochLength").isInt()) {
+            virtualWithdrawalEpochLength = json.get("virtualWithdrawalEpochLength").asInt();
+
+            if (virtualWithdrawalEpochLength <= 100) {
+                printGenesisInfoUsageMsg("'virtualWithdrawalEpochLength' is less than 100.");
+                return;
+            }
         }
 
         boolean shouldUpdateConfig = json.has("updateconfig") && json.get("updateconfig").asBoolean();
@@ -629,6 +641,18 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
                 return;
             }
 
+            isNonCeasing = (withdrawalEpochLength == 0);
+
+            if (isNonCeasing && virtualWithdrawalEpochLength == 0) {
+                printGenesisInfoUsageMsg("For nonCeasing Sidechains VirtualWithdrawalEpochLength should be specified.");
+                return;
+            }
+
+            if (!isNonCeasing && virtualWithdrawalEpochLength != 0) {
+                printGenesisInfoUsageMsg("For ceasing Sidechains VirtualWithdrawalEpochLength should not be specified.");
+                return;
+            }
+
             String sidechainBlockHex = BytesUtils.toHexString(sidechainBlock.bytes());
 
 
@@ -638,7 +662,8 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             resJson.put("powData", powData);
             resJson.put("mcBlockHeight", mcBlockHeight);
             resJson.put("mcNetwork", mcNetworkName);
-            resJson.put("withdrawalEpochLength", withdrawalEpochLength);
+            resJson.put("isNonCeasing", isNonCeasing);
+            resJson.put("withdrawalEpochLength", isNonCeasing ? virtualWithdrawalEpochLength : withdrawalEpochLength);
             resJson.put("initialCumulativeCommTreeHash", BytesUtils.toHexString(initialCumulativeCommTreeHash));
             String res = resJson.toString();
             printer.print(res);
@@ -676,11 +701,11 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
     private NetworkParams getNetworkParams(byte network, byte[] scId) {
         switch(network) {
             case 0: // mainnet
-                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, 0, null, null, null, null, null, null, null, false, null, null,true);
+                return new MainNetParams(scId, null, null, null, null, 1, 0,100, 120, 720, null, 0, null, null, null, null, null, null, null, false, null, null,true, false);
             case 1: // testnet
-                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null, null, null, null, null, false, null, null,true);
+                return new TestNetParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null, null, null, null, null, false, null, null,true, false);
             case 2: // regtest
-                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null, null, null, null, null, false, null, null,true);
+                return new RegTestParams(scId, null, null, null, null, 1, 0, 100, 120, 720, null, 0, null, null, null, null, null, null, null, false, null, null,true, false);
             default:
                 throw new IllegalStateException("Unexpected network type: " + network);
         }

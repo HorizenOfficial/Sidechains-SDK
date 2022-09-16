@@ -209,7 +209,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
              boxIdsRemoveSet: Set[ByteArrayWrapper],
              withdrawalRequestAppendSeq: Seq[WithdrawalRequestBox],
              consensusEpoch: ConsensusEpochNumber,
-             topQualityCertificateOpt: Option[WithdrawalEpochCertificate],
+             topQualityCertificates: Seq[WithdrawalEpochCertificate],
              blockFeeInfo: BlockFeeInfo,
              utxoMerkleTreeRootOpt: Option[Array[Byte]],
              scHasCeased: Boolean,
@@ -284,7 +284,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
 
     // Store the top quality cert for epoch if present
-    topQualityCertificateOpt.foreach(certificate =>
+    topQualityCertificates.foreach(certificate =>
       updateList.add(new JPair(getTopQualityCertificateKey(certificate.epochNumber),
         WithdrawalEpochCertificateSerializer.toBytes(certificate)))
     )

@@ -1,7 +1,7 @@
 package com.horizen.api.http
 
 import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.certificatesubmitter.CertificateSubmitter.ReceivableMessages.{DisableCertificateSigner, DisableSubmitter, EnableCertificateSigner, EnableSubmitter, GetCertificateGenerationState, IsCertificateSigningEnabled, IsSubmitterEnabled}
+import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.ReceivableMessages.{DisableCertificateSigner, DisableSubmitter, EnableCertificateSigner, EnableSubmitter, GetCertificateGenerationState, IsCertificateSigningEnabled, IsSubmitterEnabled}
 import com.horizen.serialization.Views
 import sparkz.core.settings.RESTApiSettings
 

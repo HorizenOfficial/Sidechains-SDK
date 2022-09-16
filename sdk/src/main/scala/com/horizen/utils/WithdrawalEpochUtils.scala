@@ -41,7 +41,11 @@ object WithdrawalEpochUtils {
 
   // Certificate can be sent only when mc block is in a specific position in the Withdrawal epoch
   def inSubmitCertificateWindow(withdrawalEpochInfo: WithdrawalEpochInfo, params: NetworkParams): Boolean = {
-    (withdrawalEpochInfo.epoch > 0) && (withdrawalEpochInfo.lastEpochIndex <= certificateSubmissionWindowLength(params))
+    val onCeasingSubmissionDelay = 10 // TBD length
+    params.isNonCeasing match {
+      case true => (withdrawalEpochInfo.epoch > 0) && (withdrawalEpochInfo.lastEpochIndex > onCeasingSubmissionDelay)
+      case false => (withdrawalEpochInfo.epoch > 0) && (withdrawalEpochInfo.lastEpochIndex <= certificateSubmissionWindowLength (params) )
+    }
   }
 
   def certificateSubmissionWindowLength(params: NetworkParams): Int = {

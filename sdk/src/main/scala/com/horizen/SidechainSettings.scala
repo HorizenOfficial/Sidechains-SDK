@@ -22,7 +22,8 @@ case class GenesisDataSettings(scGenesisBlockHex: String,
                                powData: String,
                                mcNetwork: String,
                                withdrawalEpochLength: Int,
-                               initialCumulativeCommTreeHash: String
+                               initialCumulativeCommTreeHash: String,
+                               nonCeasing: Boolean = false
                               )
 
 case class WithdrawalEpochCertificateSettings(submitterIsEnabled: Boolean,

@@ -32,7 +32,8 @@ case class TestNetParams(
                           override val restrictForgers: Boolean = false,
                           override val allowedForgersList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = Seq(),
                           override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1,
-                          override val isCSWEnabled: Boolean = true
+                          override val isCSWEnabled: Boolean = true,
+                          override val isNonCeasing: Boolean = false
                         ) extends NetworkParams {
   override val EquihashN: Int = 200
   override val EquihashK: Int = 9
