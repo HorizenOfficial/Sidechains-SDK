@@ -110,9 +110,8 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       val epochNumber: Int = epochInfo.epoch
       val feePayments = state.getFeePayments(epochNumber)
       if (feePayments.nonEmpty) {
-        val forgersPoolRewardsSeq: Seq[AccountPayment] = AccountFeePaymentsUtils.getForgersRewards(feePayments)
-        log.debug(s"updating history with ${feePayments.size} fee payments to ${forgersPoolRewardsSeq.size} forgers for withdrawal epoch $epochNumber")
-        val historyAfterUpdateFee = history.updateFeePaymentsInfo(modToApply.id, AccountFeePaymentsInfo(forgersPoolRewardsSeq))
+        log.debug(s"updating history with ${feePayments.size} fee payments to ${feePayments.size} forgers for withdrawal epoch $epochNumber")
+        val historyAfterUpdateFee = history.updateFeePaymentsInfo(modToApply.id, AccountFeePaymentsInfo(feePayments))
 
         (historyAfterUpdateFee, walletAfterUpdate)
       } else {

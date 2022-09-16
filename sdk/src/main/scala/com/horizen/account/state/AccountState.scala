@@ -3,6 +3,7 @@ package com.horizen.account.state
 import com.horizen.SidechainTypes
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountState
+import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
@@ -202,8 +203,7 @@ class AccountState(val params: NetworkParams,
       }
 
       // add rewards to forgers balance
-      val forgersPoolRewardsSeq : Seq[AccountPayment] = AccountFeePaymentsUtils.getForgersRewards(feePayments)
-      forgersPoolRewardsSeq.foreach( info => stateView.addBalance(info.address.address(), info.value))
+      feePayments.foreach(payment => stateView.addBalance(payment.addressBytes, payment.value))
 
     } else {
       // No fee payments expected
@@ -325,8 +325,9 @@ class AccountState(val params: NetworkParams,
     stateMetadataStorage.getConsensusEpochNumber
   }
 
-  override def getFeePayments(withdrawalEpoch: Int, blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None): Seq[AccountBlockFeeInfo] = {
-    stateMetadataStorage.getFeePayments(withdrawalEpoch)
+  override def getFeePayments(withdrawalEpoch: Int, blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None): Seq[AccountPayment] = {
+    val feePaymentInfoSeq = stateMetadataStorage.getFeePayments(withdrawalEpoch)
+    AccountFeePaymentsUtils.getForgersRewards(feePaymentInfoSeq)
   }
 
   override def getHeight: Int = {

@@ -11,5 +11,6 @@ import java.math.BigInteger
 case class AccountPayment(address: AddressProposition, value: BigInteger) extends BytesSerializable {
   override type M = AccountPayment
   override def serializer: ScorexSerializer[AccountPayment] = AccountPaymentSerializer.getSerializer
+  def addressBytes: Array[Byte] = address.address()
 }
 

@@ -13,7 +13,7 @@ import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state.{AccountState, AccountStateView, GasLimitReached, GasPool, GasUtil}
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.{Account, AccountBlockFeeInfo, AccountFeePaymentsUtils}
+import com.horizen.account.utils.{Account, AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block._
 import com.horizen.consensus._
@@ -155,7 +155,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     // 2. create a disposable view and try to apply all transactions in the list and apply fee payments if needed, collecting all data needed for
     //    going on with the forging of the block
     val (stateRoot, receiptList, appliedTxList, feePayments)
-    : (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], Seq[AccountBlockFeeInfo]) = {
+    : (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], Seq[AccountPayment]) = {
         using(nodeView.state.getView) {
           dummyView =>
             // the outputs will be:
@@ -180,8 +180,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
               val feePayments = dummyView.getFeePayments(withdrawalEpochNumber, Some(currentBlockPayments))
 
               // add rewards to forgers balance
-              val forgersPoolRewardsSeq = AccountFeePaymentsUtils.getForgersRewards(feePayments)
-              forgersPoolRewardsSeq.foreach( pair => dummyView.addBalance(pair.address.address(), pair.value))
+              feePayments.foreach(payment => dummyView.addBalance(payment.addressBytes, payment.value))
 
               feePayments
             } else {

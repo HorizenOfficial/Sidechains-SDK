@@ -8,13 +8,13 @@ import java.math.BigInteger
 object AccountFeePaymentsUtils {
   val DEFAULT_ACCOUNT_FEE_PAYMENTS_HASH: Array[Byte] = StateDB.EMPTY_ROOT_HASH
 
-  def calculateFeePaymentsHash(feePaymentsInfo: Seq[AccountBlockFeeInfo]): Array[Byte] = {
-    if(feePaymentsInfo.isEmpty) {
+  def calculateFeePaymentsHash(feePayments: Seq[AccountPayment]): Array[Byte] = {
+    if(feePayments.isEmpty) {
       // No fees for the whole epoch, so no fee payments for the Forgers.
       DEFAULT_ACCOUNT_FEE_PAYMENTS_HASH
     } else {
       // turn seq elements into leaves and compute merkel root hash
-      TrieHasher.Root(feePaymentsInfo.map(info => info.bytes).toArray)
+      TrieHasher.Root(feePayments.map(payment => payment.bytes).toArray)
     }
   }
 
