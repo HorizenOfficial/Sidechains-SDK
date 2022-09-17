@@ -17,21 +17,9 @@ public final class Evm {
             byte[] input,
             BigInteger gasLimit,
             BigInteger gasPrice,
-            EvmContext context
+            EvmContext context,
+            boolean trace
     ) {
-        return LibEvm.evmApply(stateDBHandle.handle, from, to, value, input, gasLimit, gasPrice, context, false);
-    }
-
-    public static EvmResult Trace(
-            ResourceHandle stateDBHandle,
-            byte[] from,
-            byte[] to,
-            BigInteger value,
-            byte[] input,
-            BigInteger gasLimit,
-            BigInteger gasPrice,
-            EvmContext context
-    ) {
-        return LibEvm.evmApply(stateDBHandle.handle, from, to, value, input, gasLimit, gasPrice, context, true);
+        return LibEvm.evmApply(stateDBHandle.handle, from, to, value, input, gasLimit, gasPrice, context, trace);
     }
 }

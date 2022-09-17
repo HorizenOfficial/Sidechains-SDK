@@ -47,7 +47,8 @@ public class EvmMessageProcessor implements MessageProcessor {
                 // use gas from the pool not the message, because intrinsic gas was already spent at this point
                 gas.getGas(),
                 msg.getGasPrice(),
-                context
+                context,
+                false
         );
         var returnData = result.returnData == null ? new byte[0] : result.returnData;
         // consume gas the EVM has used:

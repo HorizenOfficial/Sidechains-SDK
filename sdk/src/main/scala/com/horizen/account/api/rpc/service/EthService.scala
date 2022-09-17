@@ -441,7 +441,7 @@ class EthService(
           }
 
           val evmResults = transactions.map(tx => {
-            Evm.Trace(
+            Evm.Apply(
               tagStateView.getStateDbHandle,
               tx.getFrom.bytes(),
               if (tx.getTo == null) null
@@ -450,7 +450,8 @@ class EthService(
               tx.getData,
               tx.getGasLimit,
               tx.getGasPrice,
-              evmContext
+              evmContext,
+              true
             )
           })
 
@@ -490,7 +491,7 @@ class EthService(
 
               if (tx.id == Numeric.cleanHexPrefix(transactionHash)) {
                 val txResult = Evm
-                  .Trace(
+                  .Apply(
                     tagStateView.getStateDbHandle,
                     tx.getFrom.bytes(),
                     if (tx.getTo == null) null
@@ -499,7 +500,8 @@ class EthService(
                     tx.getData,
                     tx.getGasLimit,
                     tx.getGasPrice,
-                    evmContext
+                    evmContext,
+                    true
                   )
 
                 evmResult.traceLogs = txResult.traceLogs
