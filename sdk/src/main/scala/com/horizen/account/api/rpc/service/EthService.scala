@@ -433,26 +433,17 @@ class EthService(
           val requestedBlockId = getBlockIdByTag(nodeView, currentBlockNumber)
           val requestedBlock = nodeView.history.getBlockById(requestedBlockId).get()
           val transactions = requestedBlock.transactions
-
-          val evmContext = blockContext.getEvmContext
+          val gasPool = new GasPool(BigInteger.valueOf(requestedBlock.header.gasLimit))
 
           for (mcBlockRefData <- requestedBlock.mainchainBlockReferencesData) {
             tagStateView.applyMainchainBlockReferenceData(mcBlockRefData).get
           }
 
-          val evmResults = transactions.map(tx => {
-            Evm.Apply(
-              tagStateView.getStateDbHandle,
-              tx.getFrom.bytes(),
-              if (tx.getTo == null) null
-              else tx.getTo.bytes(),
-              tx.getValue,
-              tx.getData,
-              tx.getGasLimit,
-              tx.getGasPrice,
-              evmContext,
-              true
-            )
+          blockContext.setTrace(true)
+
+          val evmResults = transactions.zipWithIndex.map({ case (tx, i) =>
+            tagStateView.applyTransaction(tx, i, gasPool, blockContext)
+            blockContext.getEvmResult
           })
 
           new DebugTraceBlockByIdView(evmResults.toArray)
@@ -487,30 +478,14 @@ class EthService(
 
           breakable {
             for ((tx, i) <- transactions.zipWithIndex) {
-              val evmContext = blockContext.getEvmContext
-
               if (tx.id == Numeric.cleanHexPrefix(transactionHash)) {
-                val txResult = Evm
-                  .Apply(
-                    tagStateView.getStateDbHandle,
-                    tx.getFrom.bytes(),
-                    if (tx.getTo == null) null
-                    else tx.getTo.bytes(),
-                    tx.getValue,
-                    tx.getData,
-                    tx.getGasLimit,
-                    tx.getGasPrice,
-                    evmContext,
-                    true
-                  )
-
-                evmResult.traceLogs = txResult.traceLogs
-                evmResult.usedGas = txResult.usedGas
-                evmResult.returnData = txResult.returnData
+                blockContext.setTrace(true)
+                tagStateView.applyTransaction(tx, i, gasPool, blockContext)
 
                 break
               }
-              tagStateView.applyTransaction(tx, i, gasPool, null)
+
+              tagStateView.applyTransaction(tx, i, gasPool, blockContext)
             }
           }
 

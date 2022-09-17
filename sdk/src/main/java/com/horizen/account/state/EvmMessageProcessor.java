@@ -48,8 +48,9 @@ public class EvmMessageProcessor implements MessageProcessor {
                 gas.getGas(),
                 msg.getGasPrice(),
                 context,
-                false
+                blockContext.isTrace()
         );
+        blockContext.setEvmResult(result);
         var returnData = result.returnData == null ? new byte[0] : result.returnData;
         // consume gas the EVM has used:
         // the EVM will never consume more gas than is available, hence this should never throw

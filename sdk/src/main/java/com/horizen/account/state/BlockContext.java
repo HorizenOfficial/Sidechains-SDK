@@ -2,6 +2,7 @@ package com.horizen.account.state;
 
 import com.horizen.account.block.AccountBlockHeader;
 import com.horizen.evm.interop.EvmContext;
+import com.horizen.evm.interop.EvmResult;
 
 import java.math.BigInteger;
 
@@ -13,6 +14,8 @@ public class BlockContext {
     public final int blockNumber;
     public final int consensusEpochNumber;
     public final int withdrawalEpochNumber;
+    private boolean trace;
+    private EvmResult evmResult;
 
     public BlockContext(
             byte[] forgerAddress,
@@ -49,14 +52,20 @@ public class BlockContext {
         );
     }
 
-    public EvmContext getEvmContext() {
-        EvmContext evmContext = new EvmContext();
+    public boolean isTrace() {
+        return trace;
+    }
 
-        evmContext.baseFee = this.baseFee;
-        evmContext.blockNumber = BigInteger.valueOf(this.blockNumber);
-        evmContext.time = BigInteger.valueOf(this.timestamp);
+    public void setTrace(boolean trace) {
+        this.trace = trace;
+    }
 
-        return evmContext;
+    public EvmResult getEvmResult() {
+        return evmResult;
+    }
+
+    public void setEvmResult(EvmResult evmResult) {
+        this.evmResult = evmResult;
     }
 
 }
