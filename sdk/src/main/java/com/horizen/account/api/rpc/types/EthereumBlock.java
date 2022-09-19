@@ -5,6 +5,7 @@ import com.horizen.account.block.AccountBlock;
 import com.horizen.serialization.Views;
 import org.web3j.utils.Numeric;
 
+import java.math.BigInteger;
 import java.util.List;
 
 @JsonView(Views.Default.class)
@@ -34,6 +35,7 @@ public class EthereumBlock {
     private String baseFeePerGas;
 
     public EthereumBlock(String number, String hash, List<?> transactions, AccountBlock block) {
+        var blockHeader = block.header();
         this.number = number;
         this.hash = hash;
         this.parentHash = Numeric.prependHexPrefix((String) block.parentId());
@@ -47,8 +49,8 @@ public class EthereumBlock {
         this.mixHash = "0x0";
         this.extraData = "0x0";
         this.size = Numeric.prependHexPrefix(Integer.toHexString(block.header().bytes().length));
-        this.gasLimit = "0x5208";
-        this.gasUsed = "0x1";
+        this.gasLimit = Numeric.toHexStringWithPrefix(BigInteger.valueOf(blockHeader.gasLimit()));
+        this.gasUsed = Numeric.toHexStringWithPrefix(BigInteger.valueOf(blockHeader.gasUsed()));
         this.timestamp = Numeric.prependHexPrefix(Long.toHexString(block.timestamp()));
         this.transactions = transactions;
     }

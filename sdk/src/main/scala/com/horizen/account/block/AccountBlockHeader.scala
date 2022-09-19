@@ -3,6 +3,7 @@ package com.horizen.account.block
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Longs}
+import com.horizen.account.FeeUtils
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
 import com.horizen.block.SidechainBlockHeaderBase
 import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
@@ -19,6 +20,7 @@ import scorex.crypto.hash.Blake2b256
 import scorex.util.ModifierId
 import scorex.util.serialization.{Reader, Writer}
 
+import java.math.BigInteger
 import scala.util.{Failure, Success, Try}
 
 @JsonView(Array(classOf[Views.Default]))
@@ -35,7 +37,7 @@ case class AccountBlockHeader(
                                stateRoot: Array[Byte],
                                receiptsRoot: Array[Byte],
                                forgerAddress: AddressProposition,
-                               baseFee: Long,
+                               baseFee: BigInteger,
                                gasUsed: Long,
                                gasLimit: Long,
                                override val ommersMerkleRootHash: Array[Byte], // build on top of Ommer.id()
@@ -64,7 +66,7 @@ case class AccountBlockHeader(
       stateRoot,
       receiptsRoot,
       forgerAddress.bytes(),
-      Longs.toByteArray(baseFee),
+      baseFee.toByteArray,
       Longs.toByteArray(gasUsed),
       Longs.toByteArray(gasLimit),
       ommersMerkleRootHash,
@@ -88,6 +90,15 @@ case class AccountBlockHeader(
         if (!signature.isValid(forgingStakeInfo.blockSignPublicKey, messageToSign))
           throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id signature is invalid.")
 
+        // check, that gas limit is valid
+        if (baseFee.compareTo(BigInteger.ZERO) == 1) {
+          if(gasLimit != FeeUtils.GAS_LIMIT)
+            throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $gasLimit is invalid.")
+          if(gasUsed < 0)
+            throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $gasUsed is below zero and therefore invalid.")
+          if(gasUsed > gasLimit)
+            throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $gasUsed is greater than $gasLimit and therefore invalid.")
+        }
       case Failure(exception) =>
         throw exception
     }
@@ -127,7 +138,9 @@ object AccountBlockHeaderSerializer extends ScorexSerializer[AccountBlockHeader]
 
     AddressPropositionSerializer.getSerializer.serialize(obj.forgerAddress, w)
 
-    w.putLong(obj.baseFee)
+    val baseFee = obj.baseFee.toByteArray
+    w.putInt(baseFee.length)
+    w.putBytes(baseFee)
 
     w.putLong(obj.gasUsed)
 
@@ -168,7 +181,8 @@ object AccountBlockHeaderSerializer extends ScorexSerializer[AccountBlockHeader]
 
     val forgerAddress = AddressPropositionSerializer.getSerializer.parse(r)
 
-    val baseFee = r.getLong()
+    val baseFeeSize = r.getInt()
+    val baseFee = new BigInteger(r.getBytes(baseFeeSize))
 
     val gasUsed = r.getLong()
 

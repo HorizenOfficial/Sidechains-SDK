@@ -1,29 +1,19 @@
 package com.horizen.account.state
 
 import com.horizen.SidechainTypes
+import com.horizen.account.FeeUtils
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountState
 import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.Account
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.evm._
 import com.horizen.evm.interop.EvmLog
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
-import com.horizen.utils.{
-  BlockFeeInfo,
-  ByteArrayWrapper,
-  BytesUtils,
-  ClosableResourceHandler,
-  FeePaymentsUtils,
-  MerkleTree,
-  TimeToEpochUtils,
-  WithdrawalEpochInfo,
-  WithdrawalEpochUtils
-}
+import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, ClosableResourceHandler, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import org.web3j.crypto.ContractUtils.generateContractAddress
 import scorex.core._
 import scorex.core.transaction.state.TransactionValidation
@@ -202,8 +192,7 @@ class AccountState(
       stateView.updateTransactionReceipts(receiptList)
 
       // update current base fee
-      // TODO: should use updated base fee based on consumed gas in the new block
-      stateView.updateBaseFee(BigInteger.valueOf(mod.header.baseFee))
+      stateView.updateBaseFee(FeeUtils.calculateNextBaseFee(mod))
 
       stateView.commit(idToVersion(mod.id)).get
 
@@ -382,8 +371,8 @@ class AccountState(
         // use the null address as forger
         new Array[Byte](32),
         TimeToEpochUtils.getTimeStampForEpochAndSlot(params, epochAndSlot.epochNumber, epochAndSlot.slotNumber),
-        stateView.baseFee.longValueExact(),
-        Account.GAS_LIMIT,
+        stateView.baseFee,
+        FeeUtils.GAS_LIMIT,
         stateMetadataStorage.getHeight + 1,
         epochAndSlot.epochNumber,
         stateMetadataStorage.getWithdrawalEpochInfo.epoch

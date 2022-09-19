@@ -42,7 +42,7 @@ class AccountNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compani
     val header = mock[AccountBlockHeader]
     Mockito.when(history.getBestBlock).thenAnswer(_ => block)
     Mockito.when(block.header).thenAnswer(_ => header)
-    Mockito.when(header.baseFee).thenAnswer(_ => 1234L)
+    Mockito.when(header.baseFee).thenAnswer(_ => BigInteger.valueOf(1234L))
     history
   }
 
