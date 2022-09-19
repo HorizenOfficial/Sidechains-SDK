@@ -966,8 +966,8 @@ def bootstrap_sidechain_node(dirname, n, bootstrap_info, sc_node_configuration,
     initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration, log_info, rest_api_timeout)
 
 
-def generate_forging_request(epoch, slot):
-    return json.dumps({"epochNumber": epoch, "slotNumber": slot})
+def generate_forging_request(epoch, slot, forced_tx):
+    return json.dumps({"epochNumber": epoch, "slotNumber": slot, "transactionsBytes": forced_tx})
 
 
 def get_next_epoch_slot(epoch, slot, slots_in_epoch, force_switch_to_next_epoch=False):
@@ -980,7 +980,7 @@ def get_next_epoch_slot(epoch, slot, slots_in_epoch, force_switch_to_next_epoch=
     return next_epoch, next_slot
 
 
-def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbose=True):
+def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbose=True, forced_tx=None):
     forging_info = node.block_forgingInfo()["result"]
     slots_in_epoch = forging_info["consensusSlotsInEpoch"]
     best_slot = forging_info["bestSlotNumber"]
@@ -988,7 +988,7 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbo
 
     next_epoch, next_slot = get_next_epoch_slot(best_epoch, best_slot, slots_in_epoch, force_switch_to_next_epoch)
 
-    forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot))
+    forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot, forced_tx))
 
     # "while" will break if whole epoch no generated block, due changed error code
     while "error" in forge_result and forge_result["error"]["code"] == "0105":

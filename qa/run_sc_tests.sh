@@ -92,6 +92,7 @@ testScripts=(
     'sc_sync_after_fork.py'
     'sc_dust_threshold_fork'
     'sc_ft_limit_fork'
+    'sc_fork_one_forced_tx'
 );
 
 # include extended tests
