@@ -463,8 +463,6 @@ class EthService(
     val previousBlockNumber =
       Numeric.cleanHexPrefix((Numeric.decodeQuantity(currentBlockNumber).intValueExact() - 1).toHexString)
 
-    val evmResult: EvmResult = new EvmResult()
-
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, previousBlockNumber) { (tagStateView, blockContext) =>
         {
@@ -489,11 +487,11 @@ class EthService(
             }
           }
 
-          if (!evmResult.isEmpty) {
+          if (!blockContext.getEvmResult.isEmpty) {
             return f"Transaction ${transactionHash} not found"
           }
 
-          new DebugTraceTransactionView(evmResult)
+          new DebugTraceTransactionView(blockContext.getEvmResult)
         }
       }
     }
