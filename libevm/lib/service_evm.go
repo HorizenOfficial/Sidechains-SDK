@@ -15,6 +15,13 @@ import (
 	"time"
 )
 
+type TraceParams struct {
+	EnableMemory     bool `json:"enableMemory"`
+	DisableStack     bool `json:"disableStack"`
+	DisableStorage   bool `json:"disableStorage"`
+	EnableReturnData bool `json:"enableReturnData"`
+}
+
 type EvmContext struct {
 	Difficulty  *hexutil.Big   `json:"difficulty"`
 	Coinbase    common.Address `json:"coinbase"`
@@ -26,15 +33,16 @@ type EvmContext struct {
 
 type EvmParams struct {
 	HandleParams
-	From       common.Address   `json:"from"`
-	To         *common.Address  `json:"to"`
-	Value      *hexutil.Big     `json:"value"`
-	Input      []byte           `json:"input"`
-	Gas        hexutil.Uint64   `json:"gas"`
-	GasPrice   *hexutil.Big     `json:"gasPrice"`
-	AccessList types.AccessList `json:"accessList"`
-	Context    EvmContext       `json:"context"`
-	Trace      bool             `json:"trace"`
+	From          common.Address   `json:"from"`
+	To            *common.Address  `json:"to"`
+	Value         *hexutil.Big     `json:"value"`
+	Input         []byte           `json:"input"`
+	Gas           hexutil.Uint64   `json:"gas"`
+	GasPrice      *hexutil.Big     `json:"gasPrice"`
+	AccessList    types.AccessList `json:"accessList"`
+	Context       EvmContext       `json:"context"`
+	Trace         bool             `json:"trace"`
+	TxTraceParams TraceParams      `json:"traceParams"`
 }
 
 // setDefaults for parameters that were omitted
@@ -185,11 +193,31 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		evmError = vmerr.Error()
 	}
 
+	traceLogs := geth_internal.FormatLogs(tracer.StructLogs())
+	if params.Trace == true {
+
+		if params.TxTraceParams.DisableStack == true {
+			traceLogs.Stack = nil
+		}
+
+		if params.TxTraceParams.EnableMemory == false {
+			traceLogs.Stack = nil
+		}
+
+		if params.TxTraceParams.DisableStorage == true {
+			traceLogs.Storage = nil
+		}
+
+		if params.TxTraceParams.EnableReturnData == false {
+			traceLogs.ReturnData = nil
+		}
+	}
+
 	return nil, &EvmResult{
 		UsedGas:         uint64(params.Gas) - gas,
 		EvmError:        evmError,
 		ReturnData:      returnData,
 		ContractAddress: contractAddress,
-		TraceLogs:       geth_internal.FormatLogs(tracer.StructLogs()),
+		TraceLogs:       traceLogs,
 	}
 }
