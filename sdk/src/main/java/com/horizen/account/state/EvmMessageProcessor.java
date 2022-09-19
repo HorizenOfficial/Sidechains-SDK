@@ -48,7 +48,7 @@ public class EvmMessageProcessor implements MessageProcessor {
                 gas.getGas(),
                 msg.getGasPrice(),
                 context,
-                blockContext.isTrace()
+                blockContext.getTraceParams()
         );
         blockContext.setEvmResult(result);
         var returnData = result.returnData == null ? new byte[0] : result.returnData;

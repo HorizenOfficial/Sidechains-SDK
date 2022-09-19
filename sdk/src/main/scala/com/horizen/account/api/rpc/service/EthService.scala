@@ -21,7 +21,7 @@ import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.{ApiResponseUtil, SuccessResponse}
 import com.horizen.evm.Evm
-import com.horizen.evm.interop.{EvmContext, EvmResult, EvmTraceLog}
+import com.horizen.evm.interop.{EvmContext, EvmResult, EvmTraceLog, TraceParams}
 import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.Transaction
@@ -422,7 +422,8 @@ class EthService(
   }
 
   @RpcMethod("debug_traceBlockByNumber")
-  def traceBlockByNumber(blockNumber: String): DebugTraceBlockByIdView = {
+  @RpcOptionalParameters(1)
+  def traceBlockByNumber(blockNumber: String, traceParams: TraceParams): DebugTraceBlockByIdView = {
     val currentBlockNumber = Numeric.cleanHexPrefix(blockNumber)
     val previousBlockNumber =
       Numeric.cleanHexPrefix((Numeric.decodeQuantity(blockNumber).intValueExact() - 1).toHexString)
@@ -439,7 +440,7 @@ class EthService(
             tagStateView.applyMainchainBlockReferenceData(mcBlockRefData).get
           }
 
-          blockContext.setTrace(true)
+          blockContext.setTraceParams(traceParams)
 
           val evmResults = transactions.zipWithIndex.map({ case (tx, i) =>
             tagStateView.applyTransaction(tx, i, gasPool, blockContext)
@@ -453,7 +454,8 @@ class EthService(
   }
 
   @RpcMethod("debug_traceTransaction")
-  def traceTransaction(transactionHash: String): Object = {
+  @RpcOptionalParameters(1)
+  def traceTransaction(transactionHash: String, traceParams: TraceParams) = {
     val requestedTransaction = getTransactionAndReceipt(transactionHash) { (tx, receipt) =>
       new EthereumTransactionView(receipt, tx)
     }.orNull
@@ -477,7 +479,7 @@ class EthService(
           breakable {
             for ((tx, i) <- transactions.zipWithIndex) {
               if (tx.id == Numeric.cleanHexPrefix(transactionHash)) {
-                blockContext.setTrace(true)
+                blockContext.setTraceParams(traceParams)
                 tagStateView.applyTransaction(tx, i, gasPool, blockContext)
 
                 break
@@ -485,10 +487,6 @@ class EthService(
 
               tagStateView.applyTransaction(tx, i, gasPool, blockContext)
             }
-          }
-
-          if (!blockContext.getEvmResult.isEmpty) {
-            return f"Transaction ${transactionHash} not found"
           }
 
           new DebugTraceTransactionView(blockContext.getEvmResult)
