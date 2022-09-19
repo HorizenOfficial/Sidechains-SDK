@@ -103,8 +103,8 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     AccountFeePaymentsInfo(feePayments)
   }
 
-  override def getScanPersistentWallet(modToApply: SidechainBlockBase[_ <: Transaction, _ <: SidechainBlockHeaderBase], stateOp: Option[MS], epochNumber: Int, wallet: VL) : VL = {
-    wallet.scanPersistent(modToApply.asInstanceOf[AccountBlock])
+  override def getScanPersistentWallet(modToApply: AccountBlock, stateOp: Option[MS], epochNumber: Int, wallet: VL) : VL = {
+    wallet.scanPersistent(modToApply)
   }
 
   override def isWithdrawalEpochLastIndex(state: MS) : Boolean = state.isWithdrawalEpochLastIndex

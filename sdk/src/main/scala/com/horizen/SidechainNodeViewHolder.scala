@@ -163,12 +163,12 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     SidechainFeePaymentsInfo(feePayments)
   }
 
-  def getScanPersistentWallet(modToApply: SidechainBlockBase[_ <: Transaction, _ <: SidechainBlockHeaderBase], stateOp: Option[MS], epochNumber: Int, wallet: VL) : VL = {
+  override def getScanPersistentWallet(modToApply: SidechainBlock, stateOp: Option[MS], epochNumber: Int, wallet: VL) : VL = {
     stateOp match {
       case Some(state) =>
-        wallet.scanPersistent(modToApply.asInstanceOf[SidechainBlock], epochNumber, state.getFeePayments(epochNumber), stateOp)
+        wallet.scanPersistent(modToApply, epochNumber, state.getFeePayments(epochNumber), stateOp)
       case None =>
-        wallet.scanPersistent(modToApply.asInstanceOf[SidechainBlock], epochNumber, Seq(), None)
+        wallet.scanPersistent(modToApply, epochNumber, Seq(), None)
     }
   }
 

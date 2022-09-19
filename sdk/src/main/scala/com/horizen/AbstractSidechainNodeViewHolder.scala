@@ -215,7 +215,7 @@ abstract class AbstractSidechainNodeViewHolder[
   protected def applyConsensusEpochInfo(history: HIS, state: MS, wallet: VL, modToApply: PMOD): (HIS, VL)
 
   def getFeePaymentsInfo(state: MS, epochNumber: Int) : FPI
-  def getScanPersistentWallet(modToApply: SidechainBlockBase[_ <: Transaction, _ <: SidechainBlockHeaderBase], stateOp: Option[MS], epochNumber: Int, wallet: VL) : VL
+  def getScanPersistentWallet(modToApply: PMOD, stateOp: Option[MS], epochNumber: Int, wallet: VL) : VL
   def isWithdrawalEpochLastIndex(state: MS) : Boolean
   def getWithdrawalEpochNumber(state: MS) : Int
 
