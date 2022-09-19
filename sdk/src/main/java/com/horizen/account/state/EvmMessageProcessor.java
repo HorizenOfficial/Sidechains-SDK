@@ -2,6 +2,7 @@ package com.horizen.account.state;
 
 import com.horizen.evm.Evm;
 import com.horizen.evm.interop.EvmContext;
+import com.horizen.evm.utils.Address;
 
 import java.math.BigInteger;
 
@@ -27,15 +28,17 @@ public class EvmMessageProcessor implements MessageProcessor {
     }
 
     @Override
-    public byte[] process(Message msg, BaseAccountStateView view, GasPool gas) throws ExecutionFailedException {
+    public byte[] process(Message msg, BaseAccountStateView view, GasPool gas, BlockContext blockContext)
+            throws ExecutionFailedException {
         // prepare context
         var context = new EvmContext();
-        context.baseFee = view.getBaseFeePerGas();
-        // TODO: we need versioning for the block height:
-        //  getHeight() currently always returns the block number of the latest block, independent of the state we're in
-        //  this might lead to different results when replaying a transaction
-        context.blockNumber = BigInteger.valueOf(view.getHeight()).add(BigInteger.ONE);
-        context.gasLimit = view.getBlockGasLimit();
+
+        context.coinbase = Address.FromBytes(blockContext.forgerAddress);
+        context.time = BigInteger.valueOf(blockContext.timestamp);
+        context.baseFee = blockContext.baseFee;
+        context.gasLimit = BigInteger.valueOf(blockContext.blockGasLimit);
+        context.blockNumber = BigInteger.valueOf(blockContext.blockNumber);
+
         // execute EVM
         var result = Evm.Apply(
                 view.getStateDbHandle(),

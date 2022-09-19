@@ -18,7 +18,9 @@ import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.{AccountBlockFeeInfo, EthereumTransactionDecoder, EthereumTransactionUtils, ZenWeiConverter}
+
+import com.horizen.account.utils.{EthereumTransactionDecoder, EthereumTransactionUtils, ZenWeiConverter}
+
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.SidechainTransactionErrorResponse.GenericTransactionError
@@ -30,7 +32,6 @@ import com.horizen.serialization.Views
 import com.horizen.transaction.Transaction
 import com.horizen.utils.BytesUtils
 import org.web3j.crypto.Sign.SignatureData
-import org.web3j.crypto.SignedRawTransaction
 import org.web3j.crypto.TransactionEncoder.createEip155SignatureData
 import scorex.core.settings.RESTApiSettings
 import scala.collection.JavaConverters._
@@ -78,7 +79,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         if (body.format.getOrElse(true)) {
           ApiResponseUtil.toResponse(RespAllTransactions(unconfirmedTxs.asScala.toList))
         } else {
-          ApiResponseUtil.toResponse(RespAllTransactionIds(unconfirmedTxs.asScala.toList.map(tx => tx.id.toString)))
+          ApiResponseUtil.toResponse(RespAllTransactionIds(unconfirmedTxs.asScala.toList.map(_.id)))
         }
       }
     }
@@ -131,7 +132,10 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       applyOnNodeView { sidechainNodeView =>
         val valueInWei = ZenWeiConverter.convertZenniesToWei(body.value)
         val destAddress = body.to
-        val gasPrice = sidechainNodeView.getNodeState.getBaseFeePerGas.add(BigInteger.valueOf(200))
+
+        // TODO actual gas implementation
+        val gasPrice = sidechainNodeView.getNodeHistory.getBestBlock.header.baseFee
+
         val gasLimit = GasUtil.TxGas
         // check if the fromAddress is either empty or it fits and the value is high enough
         val secret = getFittingSecret(sidechainNodeView, body.from, valueInWei)
@@ -303,7 +307,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         val valueInWei = ZenWeiConverter.convertZenniesToWei(body.forgerStakeInfo.value)
 
         // default gas related params
-        val baseFee = sidechainNodeView.getNodeState.getBaseFeePerGas
+        val baseFee = sidechainNodeView.getNodeHistory.getBestBlock.header.baseFee
         var maxPriorityFeePerGas = GasUtil.GasForgerStakeMaxPriorityFee
         var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
         var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
@@ -349,7 +353,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       applyOnNodeView { sidechainNodeView =>
         val valueInWei = BigInteger.ZERO
         // default gas related params
-        val baseFee = sidechainNodeView.getNodeState.getBaseFeePerGas
+        val baseFee = sidechainNodeView.getNodeHistory.getBestBlock.header.baseFee
         var maxPriorityFeePerGas = BigInteger.valueOf(120)
         var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
         var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
@@ -421,7 +425,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
         val gasInfo = body.gasInfo
 
         // default gas related params
-        val baseFee = sidechainNodeView.getNodeState.getBaseFeePerGas
+        val baseFee = sidechainNodeView.getNodeHistory.getBestBlock.header.baseFee
         var maxPriorityFeePerGas = BigInteger.valueOf(120)
         var maxFeePerGas = BigInteger.TWO.multiply(baseFee).add(maxPriorityFeePerGas)
         var gasLimit = BigInteger.TWO.multiply(GasUtil.TxGas)
@@ -539,7 +543,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     transaction => TransactionIdDTO(transaction.id)
   }
   //function which describes default transaction representation for answer after adding the transaction to a memory pool
-  val rawTransactionResponseRepresentation: (EthereumTransaction => SuccessResponse) = {
+  val rawTransactionResponseRepresentation: EthereumTransaction => SuccessResponse = {
     transaction =>
       RawTransactionOutput("0x" + BytesUtils.toHexString(TransactionEncoder.encode(
         transaction.getTransaction,

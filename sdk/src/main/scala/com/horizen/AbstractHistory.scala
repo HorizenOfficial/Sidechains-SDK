@@ -410,17 +410,12 @@ abstract class AbstractHistory[
     }
   }
 
-
   override def getCurrentHeight: Int = {
     height
   }
 
   def getFeePaymentsInfo(blockId: String): java.util.Optional[FeePaymentsInfo] = {
     feePaymentsInfo(ModifierId @@ blockId).asJava
-  }
-
-  override def getBlockHeight(blockId: String): java.util.Optional[Integer] = {
-    storage.blockInfoOptionById(ModifierId(blockId)).map(info => Integer.valueOf(info.height)).asJava
   }
 
   def updateFeePaymentsInfo(blockId: ModifierId, feePaymentsInfo: FeePaymentsInfo): HT = {

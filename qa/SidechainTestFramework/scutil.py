@@ -19,14 +19,14 @@ from test_framework.util import initialize_new_sidechain_in_mainchain, get_spend
 WAIT_CONST = 1
 
 # log levels of the log4j trace system used by java applications
-LEVEL_OFF   = "off"
+LEVEL_OFF = "off"
 LEVEL_FATAL = "fatal"
 LEVEL_ERROR = "error"
-LEVEL_WARN  = "warn"
-LEVEL_INFO  = "info"
+LEVEL_WARN = "warn"
+LEVEL_INFO = "info"
 LEVEL_DEBUG = "debug"
 LEVEL_TRACE = "trace"
-LEVEL_ALL   = "all"
+LEVEL_ALL = "all"
 
 # timeout in secs for rest api
 DEFAULT_REST_API_TIMEOUT = 5
@@ -114,7 +114,6 @@ def sync_sc_mempools(api_connections, wait_for=25):
 
 
 sidechainclient_processes = {}
-
 
 
 def launch_bootstrap_tool(command_name, json_parameters):
@@ -207,6 +206,7 @@ def generate_vrf_secrets(seed, number_of_vrf_keys):
         vrf_keys.append(VrfAccount(secret["vrfSecret"], secret["vrfPublicKey"]))
     return vrf_keys
 
+
 def generate_account_proposition(seed, number_of_acc_props):
     acc_props = []
     secrets = []
@@ -218,6 +218,7 @@ def generate_account_proposition(seed, number_of_acc_props):
         secret = secrets[i]
         acc_props.append(AccountKey(secret["accountSecret"], secret["accountProposition"]))
     return acc_props
+
 
 # Maybe should we give the possibility to customize the configuration file by adding more fields ?
 
@@ -291,6 +292,8 @@ Parameters:
  - bootstrap_info: an instance of SCBootstrapInfo (see sc_bootstrap_info.py)
  - websocket_config: an instance of MCConnectionInfo (see sc_boostrap_info.py)
 """
+
+
 def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_config=SCNodeConfiguration(),
                           log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT):
     apiAddress = "127.0.0.1"
@@ -363,7 +366,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "RESTRICT_FORGERS": ("true" if sc_node_config.forger_options.restrict_forgers else "false"),
         "ALLOWED_FORGERS_LIST": sc_node_config.forger_options.allowed_forgers,
     }
-    config = config.replace("'","")
+    config = config.replace("'", "")
     config = config.replace("NEW_LINE", "\n")
     configsData.append({
         "name": "node" + str(n),
@@ -395,7 +398,8 @@ def initialize_default_sc_datadir(dirname, n):
     if not os.path.isdir(ps_keys_dir):
         os.makedirs(ps_keys_dir)
     cert_keys_paths = cert_proof_keys_paths(ps_keys_dir)
-    csw_keys_paths = csw_proof_keys_paths(ps_keys_dir, LARGE_WITHDRAWAL_EPOCH_LENGTH)  # withdrawal epoch length taken from the config file.
+    csw_keys_paths = csw_proof_keys_paths(ps_keys_dir,
+                                          LARGE_WITHDRAWAL_EPOCH_LENGTH)  # withdrawal epoch length taken from the config file.
 
     with open('./resources/template_predefined_genesis.conf', 'r') as templateFile:
         tmpConfig = templateFile.read()
@@ -451,14 +455,16 @@ def initialize_sc_chain_clean(test_dir, num_nodes, genesis_secrets, genesis_info
 def get_websocket_configuration(index, array_of_MCConnectionInfo):
     return array_of_MCConnectionInfo[index] if index < len(array_of_MCConnectionInfo) else MCConnectionInfo()
 
+
 def get_lib_separator():
     lib_separator = ":"
     if sys.platform.startswith('win'):
         lib_separator = ";"
     return lib_separator
 
+
 SIMPLE_APP_BINARY = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.3.2.jar" + get_lib_separator() + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
-EVM_APP_BINARY =    "../examples/evmapp/target/sidechains-sdk-evmapp-0.3.2.jar" + get_lib_separator() + "../examples/evmapp/target/lib/* com.horizen.examples.EvmApp"
+EVM_APP_BINARY = "../examples/evmapp/target/sidechains-sdk-evmapp-0.3.2.jar" + get_lib_separator() + "../examples/evmapp/target/lib/* com.horizen.examples.EvmApp"
 
 
 def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None, print_output_to_file=False):
@@ -486,7 +492,7 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     The --add-opens VM option remove this warning.
     '''
     bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + dbg_agent_opt + ' -cp ' + binary + " " + (
-                datadir + ('/node%s.conf' % i))
+            datadir + ('/node%s.conf' % i))
 
     if print_output_to_file:
         with open(datadir + "/log_out.txt", "wb") as out, open(datadir + "/log_err.txt", "wb") as err:
@@ -677,8 +683,14 @@ Parameters:
 
 def check_wallet_coins_balance(sc_node, expected_wallet_balance):
     response = sc_node.wallet_coinsBalance()
-    balance = response["result"]
-    assert_equal(expected_wallet_balance * 100000000, int(balance["balance"]), "Unexpected coins balance")
+
+    if "result" in response:
+        balance = response["result"]
+        assert_equal(expected_wallet_balance * 100000000, int(balance["balance"]), "Unexpected coins balance")
+
+        return
+
+    raise RuntimeError("Something went wrong, see {}".format(str(response)))
 
 
 """
@@ -695,24 +707,31 @@ Parameters:
 
 def check_box_balance(sc_node, account, box_class_name, expected_boxes_count, expected_balance):
     response = sc_node.wallet_allBoxes()
-    boxes = response["result"]["boxes"]
-    boxes_balance = 0
-    boxes_count = 0
-    pub_key = account.publicKey
-    for box in boxes:
-        if box["proposition"]["publicKey"] == pub_key and (box_class_name is None or box["typeName"] == box_class_name):
-            box_value = box["value"]
-            assert_true(box_value > 0,
-                        "Non positive value for box: {0} with public key: {1}".format(box["id"], pub_key))
-            boxes_balance += box_value
-            boxes_count += 1
 
-    assert_equal(expected_boxes_count, boxes_count,
-                 "Unexpected number of boxes for public key {0}. Expected {1} but found {2}."
-                 .format(pub_key, expected_boxes_count, boxes_count))
-    assert_equal(expected_balance * 100000000, boxes_balance,
-                 "Unexpected sum of balances for public key {0}. Expected {1} but found {2}."
-                 .format(pub_key, expected_balance * 100000000, boxes_balance))
+    if "result" in response:
+        if "boxes" in response["result"]:
+            boxes = response["result"]["boxes"]
+            boxes_balance = 0
+            boxes_count = 0
+            pub_key = account.publicKey
+            for box in boxes:
+                if box["proposition"]["publicKey"] == pub_key and (
+                        box_class_name is None or box["typeName"] == box_class_name):
+                    box_value = box["value"]
+                    assert_true(box_value > 0,
+                                "Non positive value for box: {0} with public key: {1}".format(box["id"], pub_key))
+                    boxes_balance += box_value
+                    boxes_count += 1
+
+            assert_equal(expected_boxes_count, boxes_count,
+                         "Unexpected number of boxes for public key {0}. Expected {1} but found {2}."
+                         .format(pub_key, expected_boxes_count, boxes_count))
+            assert_equal(expected_balance * 100000000, boxes_balance,
+                         "Unexpected sum of balances for public key {0}. Expected {1} but found {2}."
+                         .format(pub_key, expected_balance * 100000000, boxes_balance))
+            return
+
+    raise RuntimeError("Something went wrong, see {}".format(str(response)))
 
 
 # In STF we need to create SC genesis block with a timestamp in the past to be able to forge next block
@@ -723,7 +742,6 @@ DefaultBlockTimestampRewind = 720 * 120 / 2
 UtxoModelBlockVersion = 1
 AccountModelBlockVersion = 2
 DefaultBlockVersion = UtxoModelBlockVersion
-
 
 """
 Bootstrap a network of sidechain nodes.
@@ -774,8 +792,10 @@ network: {
  Output:
  - bootstrap information of the sidechain nodes. An instance of SCBootstrapInfo (see sc_boostrap_info.py)    
 """
+
+
 def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
-                              block_timestamp_rewind=DefaultBlockTimestampRewind, blockversion = DefaultBlockVersion):
+                              block_timestamp_rewind=DefaultBlockTimestampRewind, blockversion=DefaultBlockVersion):
     log_info = LogInfo(options.logfilelevel, options.logconsolelevel)
     print(options)
     total_number_of_sidechain_nodes = len(network.sc_nodes_configuration)
@@ -839,7 +859,8 @@ Parameters:
 """
 
 
-def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, csw_keys_paths, blockversion=DefaultBlockVersion):
+def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, csw_keys_paths,
+                     blockversion=DefaultBlockVersion):
     accounts = generate_secrets("seed", 1)
     vrf_keys = generate_vrf_secrets("seed", 1)
     genesis_account = accounts[0]
@@ -890,6 +911,7 @@ Parameters:
  - rest_api_timeout: optional, SC node api timeout, 5 seconds by default.
  
 """
+
 
 def bootstrap_sidechain_node(dirname, n, bootstrap_info, sc_node_configuration,
                              log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT):
@@ -1055,27 +1077,33 @@ def create_certificate_for_alien_sc(mcTest, scid, mc_node, fePatternArray):
     assert_equal(True, cert in mc_node.getrawmempool())
     return cert
 
+
 # 10 ^ 10
-ZENNY_TO_WEI_MULTIPLIER = 10**10
+ZENNY_TO_WEI_MULTIPLIER = 10 ** 10
 
 # 10^8
 from test_framework.util import COIN
 
+
 def convertZenToZennies(valueInZen):
     return int(round(valueInZen * COIN))
+
 
 def convertZenniesToWei(valueInZennies):
     return int(round(ZENNY_TO_WEI_MULTIPLIER * valueInZennies))
 
+
 def convertZenToWei(valueInZen):
     return convertZenniesToWei(convertZenToZennies(valueInZen))
 
+
 def convertWeiToZen(valueInWei):
-    valueInZen = (valueInWei/ZENNY_TO_WEI_MULTIPLIER)/COIN
-    if valueInZen < 1/COIN:
+    valueInZen = (valueInWei / ZENNY_TO_WEI_MULTIPLIER) / COIN
+    if valueInZen < 1 / COIN:
         return 0
     else:
         return valueInZen
+
 
 def convertZenniesToZen(valueInZennies):
     return (valueInZennies / COIN)
@@ -1086,9 +1114,27 @@ def convertZenniesToZen(valueInZennies):
 WithdrawalReqSmartContractAddress = "0000000000000000000011111111111111111111"
 ForgerStakeSmartContractAddress = "0000000000000000000022222222222222222222"
 
+
 def get_account_balance(sc_node, address):
     return sc_node.wallet_getBalance(
         json.dumps({"address": str(address)}))["result"]["balance"]
+
+def computeForgedTxGasUsed(sc_node, tx_hash, tracing_on=False):
+    transactionJson = sc_node.rpc_eth_getTransactionByHash(tx_hash)['result']
+    if (transactionJson is None):
+        raise Exception('Error: Transaction {} not found (not yet forged?)'.format(tx_hash))
+    if tracing_on:
+        print("tx:")
+        pprint.pprint(transactionJson)
+
+    receiptJson = sc_node.rpc_eth_getTransactionReceipt(tx_hash)['result']
+    if (receiptJson is None):
+        raise Exception('Unexpected error: Receipt not found for transaction {}'.format(tx_hash))
+    if tracing_on:
+        print("receipt:")
+        pprint.pprint(receiptJson)
+
+    return int(receiptJson['gasUsed'], 16)
 
 def computeForgedTxFee(sc_node, tx_hash, tracing_on=False):
     resp = sc_node.rpc_eth_getTransactionByHash(tx_hash)
@@ -1151,5 +1197,4 @@ def computeForgedTxFee(sc_node, tx_hash, tracing_on=False):
         print("totalFee = {} (forgersPoolFee = {}, forgerTip = {}".format(totalTxFee, forgersPoolFee, forgerTip))
 
     return totalTxFee, forgersPoolFee, forgerTip
-
 

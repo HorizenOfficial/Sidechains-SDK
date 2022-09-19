@@ -8,7 +8,8 @@ import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceip
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress}
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.{Account, AccountBlockFeeInfo, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
+
+import com.horizen.account.utils.{AccountBlockFeeInfo, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
 import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput, WithdrawalEpochCertificate}
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.evm.interop.EvmLog
@@ -124,8 +125,8 @@ class AccountStateView(
 
   @throws(classOf[InvalidMessageException])
   @throws(classOf[ExecutionFailedException])
-  def applyMessage(msg: Message, blockGasPool: GasPool): Array[Byte] = {
-    new StateTransition(this, messageProcessors, blockGasPool).transition(msg)
+  def applyMessage(msg: Message, blockGasPool: GasPool, blockContext: BlockContext): Array[Byte] = {
+    new StateTransition(this, messageProcessors, blockGasPool, blockContext).transition(msg)
   }
 
   /**
@@ -140,13 +141,13 @@ class AccountStateView(
    *    - not enough gas for intrinsic gas
    *    - block gas limit reached
    */
-  override def applyTransaction(tx: SidechainTypes#SCAT, txIndex: Int, blockGasPool: GasPool): Try[EthereumConsensusDataReceipt] = Try {
+  override def applyTransaction(tx: SidechainTypes#SCAT, txIndex: Int, blockGasPool: GasPool, blockContext: BlockContext): Try[EthereumConsensusDataReceipt] = Try {
     if (!tx.isInstanceOf[EthereumTransaction])
       throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
 
     val ethTx = tx.asInstanceOf[EthereumTransaction]
     val txHash = BytesUtils.fromHexString(ethTx.id)
-    val msg = ethTx.asMessage(getBaseFeePerGas)
+    val msg = ethTx.asMessage(blockContext.baseFee)
 
     // Tx context for stateDB, to know where to keep EvmLogs
     setupTxContext(txHash, txIndex)
@@ -154,7 +155,7 @@ class AccountStateView(
     log.debug(s"applying msg: used pool gas ${blockGasPool.getUsedGas}")
     // apply message to state
     val status = try {
-      applyMessage(msg, blockGasPool)
+      applyMessage(msg, blockGasPool, blockContext)
       ReceiptStatus.SUCCESSFUL
     } catch {
       // any other exception will bubble up and invalidate the block
@@ -279,6 +280,10 @@ class AccountStateView(
   def getTransactionReceipt(txHash: Array[Byte]): Option[EthereumReceipt] =
     metadataStorageView.getTransactionReceipt(txHash)
 
+  def updateBaseFee(baseFee: BigInteger): Unit = metadataStorageView.updateBaseFee(baseFee)
+
+  def baseFee: BigInteger = metadataStorageView.getBaseFee
+
   override def setCeased(): Unit = metadataStorageView.setCeased()
 
   override def commit(version: VersionTag): Try[Unit] = Try {
@@ -310,8 +315,6 @@ class AccountStateView(
 
     blockFeeInfoSeq
   }
-
-  override def getHeight: Int = metadataStorageView.getHeight
 
   // account specific getters
   override def getNonce(address: Array[Byte]): BigInteger = {
@@ -346,15 +349,6 @@ class AccountStateView(
   override def getStateDbHandle: ResourceHandle = stateDb
 
   override def getIntermediateRoot: Array[Byte] = stateDb.getIntermediateRoot
-
-  // TODO: get baseFee for the block header
-  // TODO: currently a non-zero baseFee makes all the python tests fail, because they do not consider spending fees
-  override def getBaseFeePerGas: BigInteger = BigInteger.valueOf(333000)
-
-
-
-  // TODO: get gas limit from current block header
-  override def getBlockGasLimit: BigInteger = BigInteger.valueOf(Account.GAS_LIMIT)
 
   def getRefund: BigInteger = stateDb.getRefund
 

@@ -1,7 +1,7 @@
 package com.horizen.account.state
 
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.storage.{AccountStateMetadataStorage, AccountStateMetadataStorageView}
+import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils}
 import com.horizen.evm.Database
 import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
@@ -13,6 +13,7 @@ import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import scorex.core.VersionTag
+import scorex.core.utils.NetworkTimeProvider
 
 import java.math.BigInteger
 
@@ -27,7 +28,7 @@ class AccountStateTest
     with SidechainTypesTestsExtension
 {
 
-  val params = MainNetParams()
+  val params: MainNetParams = MainNetParams()
   var state: AccountState = _
   val metadataStorage: AccountStateMetadataStorage = mock[AccountStateMetadataStorage]
 
@@ -37,8 +38,9 @@ class AccountStateTest
 
     val stateDbStorege: Database = mock[Database]
     val versionTag: VersionTag = VersionTag @@ BytesUtils.toHexString(getVersion.data())
+    val mockedTimeProvider: NetworkTimeProvider = mock[NetworkTimeProvider]
 
-    state = new AccountState(params, versionTag, metadataStorage, stateDbStorege, messageProcessors)
+    state = new AccountState(params, mockedTimeProvider, versionTag, metadataStorage, stateDbStorege, messageProcessors)
   }
 
   @Test
@@ -91,7 +93,7 @@ class AccountStateTest
 
     var forgersPoolRewardsSeq: Seq[(AddressProposition, BigInteger)] = AccountFeePaymentsUtils.getForgersRewards(feePayments)
 
-    var poolFee = blockFeeInfo1.baseFee.add(
+    val poolFee = blockFeeInfo1.baseFee.add(
       blockFeeInfo2.baseFee.add(
         blockFeeInfo3.baseFee))
 
