@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "test_type",
+    "block_rate",
+    "initial_txs",
+    "network_topology",
+    "nodes"
+  ],
+  "properties": {
+    "test_type": {
+      "type": "string",
+      "enum": ["mempool", "mempool_timed", "transactions_per_second", "all_transactions"]
+    },
+    "test_run_time": {
+      "type": "number"
+    },
+    "block_rate": {
+      "type": "number"
+    },
+    "initial_txs": {
+      "type": "number"
+    },
+    "network_topology": {
+      "type": "string",
+      "enum": ["daisy_chain", "ring", "star"]
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "properties": {
+          "forger": {
+            "type": "boolean"
+          },
+          "tx_creator": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "forger",
+          "tx_creator"
+        ]
+      }
+    }
+  }
+}

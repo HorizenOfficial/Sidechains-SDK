@@ -15,6 +15,8 @@ from contextlib import closing
 
 from SidechainTestFramework.sidechainauthproxy import SidechainAuthServiceProxy
 from test_framework.mc_test.mc_test import generate_random_field_element_hex, get_field_element_with_padding
+from test_framework.util import initialize_new_sidechain_in_mainchain, get_spendable, swap_bytes, assert_equal
+from performance.perf_data import PerformanceData
 from test_framework.util import get_spendable, swap_bytes, assert_equal, initialize_new_sidechain_in_mainchain
 from eth_utils import add_0x_prefix
 
@@ -1346,6 +1348,21 @@ def computeForgedTxFee(sc_node, tx_hash, tracing_on=False):
         logging.info("totalFee = {} (forgersPoolFee = {}, forgerTip = {}".format(totalTxFee, forgersPoolFee, forgerTip))
 
     return totalTxFee, forgersPoolFee, forgerTip
+
+def deserialize_perf_test_json(json_file):
+    with open(json_file) as f:
+        json_data = json.load(f)
+    with open('./performance/perf_test_schema.json', 'r') as schema_file:
+        schema = json.load(schema_file)
+    try:
+        validate(instance=json_data, schema=schema)
+    except jsonschema.exceptions.ValidationError as error:
+        logging.error("Failed to validate perf_test.json {}".format(error))
+        raise error
+
+    perf_data: dict[str, PerformanceData] = json_data
+    return perf_data
+
 
 def get_resources_dir():
     return os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'resources'))
