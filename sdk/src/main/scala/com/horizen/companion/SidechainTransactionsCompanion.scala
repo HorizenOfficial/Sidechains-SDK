@@ -15,5 +15,6 @@ case class SidechainTransactionsCompanion(customTransactionSerializers: JHashMap
       put(MC2SCAggregatedTransactionId.id(), MC2SCAggregatedTransactionSerializer.getSerializer.asInstanceOf[TransactionSerializer[SidechainTypes#SCBT]])
       put(SidechainCoreTransactionId.id(), SidechainCoreTransactionSerializer.getSerializer.asInstanceOf[TransactionSerializer[SidechainTypes#SCBT]])
       put(OpenStakeTransactionId.id(), OpenStakeTransactionSerializer.getSerializer.asInstanceOf[TransactionSerializer[SidechainTypes#SCBT]])
+      put(SidechainCoreTransactionExtendedId.id(), SidechainCoreTransactionExtendedSerializer.getSerializer.asInstanceOf[TransactionSerializer[SidechainTypes#SCBT]])
     }},
     customTransactionSerializers)

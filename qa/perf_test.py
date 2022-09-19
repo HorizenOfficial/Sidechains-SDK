@@ -13,7 +13,7 @@ from httpCalls.block.best import http_block_best
 from httpCalls.block.findBlockByID import http_block_findById
 from httpCalls.block.forging import http_start_forging, http_stop_forging
 from httpCalls.transaction.allTransactions import allTransactions
-from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress
+from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress, sendCoinsToAddressExtended
 from httpCalls.wallet.balance import http_wallet_balance
 from httpCalls.wallet.allBoxesOfType import http_wallet_allBoxesOfType
 from httpCalls.transaction.createCoreTransaction import http_create_core_transaction
@@ -54,7 +54,7 @@ def get_number_of_transactions_for_node(node):
 
 
 def send_transactions_per_second(txs_creator_node, destination_addresses, utxo_amount, start_time, test_run_time,
-                                 transactions_per_second):
+                                 transactions_per_second, extended_transaction = False):
     # Run until
     while time.time() - start_time < test_run_time:
         i = 0
@@ -63,7 +63,10 @@ def send_transactions_per_second(txs_creator_node, destination_addresses, utxo_a
         while i < transactions_per_second:
             try:
                 # Send coins to random destination address
-                sendCoinsToAddress(txs_creator_node, random.choice(destination_addresses), utxo_amount, 0)
+                if (extended_transaction):
+                    sendCoinsToAddressExtended(txs_creator_node, random.choice(destination_addresses), utxo_amount, 0)
+                else:
+                    sendCoinsToAddress(txs_creator_node, random.choice(destination_addresses), utxo_amount, 0)
             except Exception:
                 with errors.get_lock():
                     errors.value += 1
@@ -93,6 +96,7 @@ class PerformanceTest(SidechainTestFramework):
     initial_txs = perf_data["initial_txs"]
     test_run_time = perf_data["test_run_time"]
     block_rate = perf_data["block_rate"]
+    extended_transaction = perf_data["extended_transaction"]
     connection_map = {}
     topology = NetworkTopology(perf_data["network_topology"])
     latency_settings = get_latency_config(perf_data)
@@ -111,7 +115,7 @@ class PerformanceTest(SidechainTestFramework):
                 "n_tx_creator": sum(map(lambda x: x["tx_creator"] == True, sc_nodes_list)), "initial_balances": [],
                 "mined_transactions": 0, "mined_blocks": 0, "end_test_run_time": 0, "end_balances": [],
                 "endpoint_calls": 0, "errors": 0, "not_mined_transactions": 0, "mempool_transactions": 0,
-                "tps_total": 0, "tps_mined": 0, "blocks_ts": [], "node_api_errors": 0
+                "tps_total": 0, "tps_mined": 0, "blocks_ts": [], "node_api_errors": 0, "extended_transaction": extended_transaction
                 }
 
     def fill_csv(self):
@@ -339,7 +343,7 @@ class PerformanceTest(SidechainTestFramework):
                                 destination_addresses.append(http_wallet_createPrivateKey25519(node))
 
                             args.append((self.sc_nodes[index], destination_addresses, utxo_amount, start_time,
-                                         self.test_run_time, transactions_per_second))
+                                         self.test_run_time, transactions_per_second, self.extended_transaction))
                     pool.starmap(send_transactions_per_second, args)
 
                 print(f"... Sent {counter.value} Transactions ...")

@@ -28,6 +28,9 @@
     "initial_txs": {
       "type": "number"
     },
+    "extended_transaction": {
+      "type": "boolean"
+    },
     "network_topology": {
       "type": "string",
       "enum": [

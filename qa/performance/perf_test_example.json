@@ -5,6 +5,7 @@
   "test_run_time": 50,
   "block_rate": 30,
   "initial_txs": 5000,
+  "extended_transaction": false,
   "network_topology": "ring",
   "latency_settings": {
     "get_peer_spec": 0,

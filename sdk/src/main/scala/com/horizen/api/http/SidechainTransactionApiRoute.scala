@@ -41,7 +41,8 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
   override val route: Route = (pathPrefix("transaction")) {
     allTransactions ~ findById ~ decodeTransactionBytes ~ createCoreTransaction ~ createCoreTransactionSimplified ~
-    sendCoinsToAddress ~ sendTransaction ~ withdrawCoins ~ makeForgerStake ~ spendForgingStake ~ createOpenStakeTransaction ~ createOpenStakeTransactionSimplified
+    sendCoinsToAddress ~ sendTransaction ~ withdrawCoins ~ makeForgerStake ~ spendForgingStake ~ createOpenStakeTransaction ~ createOpenStakeTransactionSimplified ~
+    sendCoinsToAddressExtended
   }
 
   /**
@@ -267,7 +268,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
           getChangeAddress(wallet) match {
             case Some(changeAddress) =>
-              createCoreTransaction(outputList, withdrawalRequestList, forgerOutputList, fee, changeAddress, wallet, sidechainNodeView) match {
+              createCoreTransaction(outputList, withdrawalRequestList, forgerOutputList, fee, changeAddress, wallet, sidechainNodeView, Option.empty) match {
                 case Success(transaction) =>
                   if (body.format.getOrElse(false))
                     ApiResponseUtil.toResponse(TransactionDTO(transaction))
@@ -279,6 +280,29 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
               ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError",
                 JOptional.of(new IllegalStateException("Can't find change address in wallet. Please, create a PrivateKey secret first."))))
           }
+        }
+      }
+    }
+  }
+
+  def sendCoinsToAddressExtended: Route = (post & path("sendCoinsToAddressExtended")) {
+    withAuth {
+      entity(as[ReqSendCoinsToAddress]) { body =>
+        // lock the view and try to create CoreTransaction
+        applyOnNodeView { sidechainNodeView =>
+          val outputList = body.outputs
+          val fee = body.fee
+          val wallet = sidechainNodeView.getNodeWallet
+
+          getChangeAddress(wallet) match {
+            case Some(changeAddress) =>
+              createCoreTransaction(outputList, List(), List(), fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView, Option(true))
+            case None =>
+              Failure(new IllegalStateException("Can't find change address in wallet. Please, create a PrivateKey secret first."))
+          }
+        } match {
+          case Success(transaction) => validateAndSendTransaction(transaction)
+          case Failure(e) => ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(e)))
         }
       }
     }
@@ -299,7 +323,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
           getChangeAddress(wallet) match {
             case Some(changeAddress) =>
-              createCoreTransaction(outputList, List(), List(), fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView)
+              createCoreTransaction(outputList, List(), List(), fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView, Option.empty)
             case None =>
               Failure(new IllegalStateException("Can't find change address in wallet. Please, create a PrivateKey secret first."))
           }
@@ -322,7 +346,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
           getChangeAddress(wallet) match {
             case Some(changeAddress) =>
-              createCoreTransaction(List(), withdrawalOutputsList, List(), fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView)
+              createCoreTransaction(List(), withdrawalOutputsList, List(), fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView, Option.empty)
             case None =>
               Failure(new IllegalStateException("Can't find change address in wallet. Please, create a PrivateKey secret first."))
           }
@@ -345,7 +369,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
           getChangeAddress(wallet) match {
             case Some(changeAddress) =>
-              createCoreTransaction(List(), List(), forgerOutputsList, fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView)
+              createCoreTransaction(List(), List(), forgerOutputsList, fee.getOrElse(0L), changeAddress, wallet, sidechainNodeView, Option.empty)
             case None =>
               Failure(new IllegalStateException("Can't find change address in wallet. Please, create a PrivateKey secret first."))
           }
@@ -588,10 +612,12 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                                     fee: Long,
                                     changeAddress: PublicKey25519Proposition,
                                     wallet: NodeWallet,
-                                    sidechainNodeView: SidechainNodeView): Try[SidechainCoreTransaction] = Try {
+                                    sidechainNodeView: SidechainNodeView,
+                                    extended: Option[Boolean]): Try[SidechainTypes#SCBT] = Try {
 
     val memoryPool = sidechainNodeView.getNodeMemoryPool
     val boxIdsToExclude: JArrayList[Array[scala.Byte]] = new JArrayList()
+    val extendedSidechainCoreTransaction = extended.getOrElse(false)
 
     for(transaction <- memoryPool.getTransactions().asScala)
       for(id <- transaction.boxIdsToOpen().asScala)
@@ -661,7 +687,10 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
       wallet.secretByPublicKey25519Proposition(box.proposition()).get().sign(messageToSign).asInstanceOf[Proof[Proposition]]
     })
 
-    new SidechainCoreTransaction(boxIds, outputs, proofs.asJava, fee, SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION)
+    if (extendedSidechainCoreTransaction)
+      new SidechainCoreTransactionExtended(boxIds, outputs, proofs.asJava, fee, SidechainCoreTransactionExtended.SIDECHAIN_CORE_TRANSACTION_EXTENDED_VERSION)
+    else
+      new SidechainCoreTransaction(boxIds, outputs, proofs.asJava, fee, SidechainCoreTransaction.SIDECHAIN_CORE_TRANSACTION_VERSION)
   }
 }
 
