@@ -40,6 +40,7 @@ import scorex.util.{ModifierId, ScorexLogging}
 import java.math.BigInteger
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
+import scala.util.control.Breaks.{break, breakable}
 import scala.util.{Failure, Success, Try}
 
 class AccountForgeMessageBuilder(
@@ -182,8 +183,10 @@ class AccountForgeMessageBuilder(
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
-      new Array[Byte](MerkleTree.ROOT_HASH_LENGTH), // stateRoot TODO add constant
-      new AddressProposition(new Array[Byte](Account.ADDRESS_SIZE)), // forgerAddress: PublicKeySecp256k1Proposition TODO add constant,
+      // stateRoot TODO add constant
+      new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
+      // forgerAddress: PublicKeySecp256k1Proposition TODO add constant
+      new AddressProposition(new Array[Byte](Account.ADDRESS_SIZE)),
       BigInteger.ONE.shiftLeft(256).subtract(BigInteger.ONE),
       Long.MaxValue,
       Long.MaxValue,
@@ -285,36 +288,36 @@ class AccountForgeMessageBuilder(
     }
 
     val appliedTransactions = new ListBuffer[SidechainTypes#SCAT]()
-    val receiptList = new ListBuffer[EthereumConsensusDataReceipt]()
-
+    val receipts = new ListBuffer[EthereumConsensusDataReceipt]()
+    var blockSize = inputBlockSize
     val blockGasPool = new GasPool(BigInteger.valueOf(blockContext.blockGasLimit))
-    var txsCounter: Int = 0
-    var blockSize: Int = inputBlockSize
 
-    for ((tx, txIndex) <- sidechainTransactions.zipWithIndex) {
+    breakable {
+      for (tx <- sidechainTransactions) {
+        // stop if the remaining gas in the block is less than the bare minimum
+        if (blockGasPool.getGas.compareTo(GasUtil.TxGas) < 0) break
 
-      // placeholder for Tx length
-      blockSize = blockSize + tx.bytes.length + 4
-      txsCounter += 1
+        // stop if the block gets too large
+        val txSize = tx.bytes.length + 4
+        if (blockSizeExceeded(blockSize + txSize, appliedTransactions.length + 1)) break
 
-      if (blockSizeExceeded(blockSize, txsCounter))
-        return Success(appliedTransactions, receiptList)
+        stateView.applyTransaction(tx, appliedTransactions.length, blockGasPool, blockContext) match {
+          case Success(receipt) =>
+            appliedTransactions += tx
+            receipts += receipt
+            blockSize += txSize
 
-      stateView.applyTransaction(tx, txIndex, blockGasPool, blockContext) match {
-        case Success(consensusDataReceipt) =>
-          appliedTransactions += tx
-          receiptList += consensusDataReceipt
+          // block gas limit reached, but keep trying to fit transactions into the block:
+          // this transaction did not fit, but another one might
+          case Failure(_: GasLimitReached) =>
 
-        case Failure(_: GasLimitReached) =>
-          // block gas limit reached
-          // TODO: keep trying to fit transactions into the block: this TX did not fit, but another one might
-          return Success(appliedTransactions, receiptList)
-
-        case Failure(e) =>
-          // just skip this tx
-          log.debug("Could not apply tx, reason: " + e.getMessage)
+          // just skip this transaction
+          case Failure(e) => log.debug("Could not apply tx, reason: " + e.getMessage)
+        }
       }
     }
-    (appliedTransactions, receiptList)
+
+    // return successfully applied transactions including their receipts
+    (appliedTransactions, receipts)
   }
 }
