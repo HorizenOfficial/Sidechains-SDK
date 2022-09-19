@@ -137,7 +137,7 @@ class PerformanceTest(SidechainTestFramework):
         node_configuration = []
 
         logging.info(f"Network Topology: {self.topology.name}")
-        max_connections = 0
+        max_connections = 100
         last_index = sc_nodes.index(self.sc_node_data[-1])
 
         for index, sc_node in enumerate(sc_nodes):
@@ -226,6 +226,16 @@ class PerformanceTest(SidechainTestFramework):
                 self.create_node_connection_map(0, [node])
                 self.create_node_connection_map(node, [0])
                 node += 1
+        # P2P Topology
+        if self.topology == NetworkTopology.PeerToPeer:
+            for i in range(0,node_count):
+                for j in range(0,node_count):
+                    existing_node_connection = j in self.connection_map
+                    if (i != j and (existing_node_connection and i not in self.connection_map[j] or not existing_node_connection)):
+                        print(f"Connect {i} to {j}")
+                        connect_sc_nodes(self.sc_nodes[i], j)
+                        self.create_node_connection_map(i, [j])
+
         print(f"NETWORK TOPOLOGY CONNECTION MAP: {self.connection_map}")
         self.sc_sync_all()
 

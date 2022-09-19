@@ -33,7 +33,8 @@
       "enum": [
         "daisy_chain",
         "ring",
-        "star"
+        "star",
+        "p2p"
       ]
     },
     "latency_settings": {

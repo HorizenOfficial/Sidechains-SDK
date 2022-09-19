@@ -6,6 +6,7 @@ class NetworkTopology(Enum):
     DaisyChain = "daisy_chain"
     Ring = "ring"
     Star = "star"
+    PeerToPeer = "p2p"
 
 
 class TestType(Enum):
