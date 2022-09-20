@@ -15,11 +15,7 @@ Build SDK components by using command (in the root of the Sidechains-SDK folder)
 
 Run Bootstrapping tool using command: 
 
-<<<<<<< HEAD
-`java -jar tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.4.2.jar`
-=======
 `java -jar tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.5.0-SNAPSHOT.jar`
->>>>>>> dev
 
 All other commands are performed as commands for Bootstrapping tool in next format: `"command name"  "parameters for command in JSON format"`.
 For any help you could use command `help`, for exit just print `exit`
