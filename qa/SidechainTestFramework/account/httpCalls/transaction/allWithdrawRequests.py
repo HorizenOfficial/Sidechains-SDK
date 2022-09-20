@@ -8,4 +8,8 @@ def all_withdrawal_requests(sidechain_node, epoch_number):
     }
     request = json.dumps(j)
     response = sidechain_node.transaction_allWithdrawalRequests(request)
-    return response["result"]
+
+    if "result" in response:
+        return response["result"]
+
+    raise RuntimeError("Something went wrong, see {}".format(str(response)))

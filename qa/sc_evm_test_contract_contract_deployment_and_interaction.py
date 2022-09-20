@@ -54,7 +54,7 @@ def deploy_child(node, smart_contract_type, smart_contract_address, from_address
     method = 'deployContract()'
     if static_call:
         print("Read-only calling {}: testing deployment of a child contract".format(method))
-        res = smart_contract_type.static_call(node, method, fromAddress=from_address, gasLimit=10000000, gasPrice=10,
+        res = smart_contract_type.static_call(node, method, fromAddress=from_address,
                                               toAddress=smart_contract_address)
     else:
         print("Calling {}: deploying a child contract".format(method))
@@ -72,8 +72,8 @@ def update_parent_secret(node, smart_contract_type, smart_contract_address, from
     method = 'setParentSecret(string)'
     if static_call:
         print("Read-only calling {}: testing setting the secret to {} via a child contract".format(method, new_secret))
-        res = smart_contract_type.static_call(node, method, new_secret, fromAddress=from_address, gasLimit=10000000,
-                                              gasPrice=10, toAddress=smart_contract_address)
+        res = smart_contract_type.static_call(node, method, new_secret, fromAddress=from_address,
+                                              toAddress=smart_contract_address)
     else:
         print("Calling {}: setting the secret to {} via a child contract".format(method, new_secret))
         res = smart_contract_type.call_function(node, method, new_secret, fromAddress=from_address, gasLimit=10000000,
@@ -88,7 +88,7 @@ def update_parent_secret(node, smart_contract_type, smart_contract_address, from
 def get_secret(node, smart_contract_type, smart_contract_address, from_address):
     method = 'checkParentSecret()'
     print("Getting parent secret via function {} on contract {}".format(method, smart_contract_address))
-    res = smart_contract_type.static_call(node, method, fromAddress=from_address, gasLimit=10000000, gasPrice=10,
+    res = smart_contract_type.static_call(node, method, fromAddress=from_address,
                                           toAddress=smart_contract_address[2:])[0]
     print("Parent secret: {}".format(res))
     return res
@@ -105,7 +105,7 @@ def compare_secret(node, smart_contract_type, smart_contract_address, from_addre
 def get_children(node, smart_contract_type, smart_contract_address, from_address):
     method = 'getChildren()'
     print("Getting children via function {}".format(method))
-    res = list(smart_contract_type.static_call(node, method, fromAddress=from_address, gasLimit=10000000, gasPrice=10,
+    res = list(smart_contract_type.static_call(node, method, fromAddress=from_address,
                                                toAddress=smart_contract_address)[0])
     print("Children: {}".format(res))
     return res

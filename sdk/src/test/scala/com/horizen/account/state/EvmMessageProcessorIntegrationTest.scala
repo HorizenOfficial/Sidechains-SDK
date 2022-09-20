@@ -44,7 +44,7 @@ class EvmMessageProcessorIntegrationTest extends MessageProcessorFixture with Ev
       initialValue(initialValue.length - 1) = 42
       // add constructor arguments to the end of the deployment code
       val msg = getMessage(null, deployCode ++ initialValue)
-      val result = assertGas(138826)(stateView.applyMessage(msg, _))
+      val result = assertGas(138826)(stateView.applyMessage(msg, _, defaultBlockContext))
       assertNotNull("result should not be null", result)
     }
   }

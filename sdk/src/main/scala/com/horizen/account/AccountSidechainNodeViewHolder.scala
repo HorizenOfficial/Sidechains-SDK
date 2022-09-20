@@ -8,7 +8,7 @@ import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccoun
 import com.horizen.account.state.{AccountState, MessageProcessor, MessageProcessorUtil}
 import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
 import com.horizen.account.transaction.AccountTransaction
-import com.horizen.account.validation.ChainIdBlockSemanticValidator
+import com.horizen.account.validation.{BaseFeeBlockValidator, ChainIdBlockSemanticValidator}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.consensus._
 import com.horizen.evm.Database
@@ -17,7 +17,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.proof.Proof
 import com.horizen.proposition.Proposition
 import com.horizen.storage.SidechainSecretStorage
-import com.horizen.validation.SemanticBlockValidator
+import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ModifierId
@@ -50,16 +50,20 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     ChainIdBlockSemanticValidator(params) +: super.semanticBlockValidators(params)
   }
 
+  override def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock, AccountHistoryStorage, AccountHistory]] = {
+    BaseFeeBlockValidator() +: super.historyBlockValidators(params)
+  }
+
   override def restoreState(): Option[(HIS, MS, VL, MP)] = for {
     history <- AccountHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
-    state <- AccountState.restoreState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params)
+    state <- AccountState.restoreState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, timeProvider)
     wallet <- AccountWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes, secretStorage)
     pool <- Some(AccountMemoryPool.emptyPool)
   } yield (history, state, wallet, pool)
 
   override protected def genesisState: (HIS, MS, VL, MP) = {
     val result = for {
-      state <- AccountState.createGenesisState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, genesisBlock)
+      state <- AccountState.createGenesisState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, timeProvider, genesisBlock)
 
       (_: ModifierId, consensusEpochInfo: ConsensusEpochInfo) <- Success(state.getCurrentConsensusEpochInfo)
 
