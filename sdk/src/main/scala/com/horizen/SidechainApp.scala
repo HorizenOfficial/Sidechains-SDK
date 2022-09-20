@@ -54,7 +54,7 @@ import com.horizen.websocket.client.{DefaultWebSocketReconnectionHandler, Mainch
 import org.apache.logging.log4j.LogManager
 
 import java.util.concurrent.TimeUnit
-import scala.concurrent.Await
+import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 import org.apache.logging.log4j.core.impl.Log4jContextFactory

@@ -97,25 +97,11 @@ class LatencyConfig(object):
         self.modifiers_spec = modifiers_spec
 
     def to_config(self):
-        settings = ""
-        settings += "get_peer_spec " + str(self.get_peer_spec)
-        settings += " peer_spec " + str(self.peer_spec)
-        settings += " transaction " + str(self.transaction)
-        settings += " block " + str(self.block)
-        settings += " request_modifier_spec " + str(self.request_modifier_spec)
-        settings += " modifiers_spec " + str(self.modifiers_spec)
-
-        return settings
+        return '{ NEW_LINE        GetPeersSpec = '+ str(self.get_peer_spec) + 'NEW_LINE        PeerSpec = ' + str(self.peer_spec) + 'NEW_LINE        Transaction = ' + str(self.transaction) + 'NEW_LINE        Block = ' + str(self.block) + 'NEW_LINE        RequestModifierSpec = ' + str(self.request_modifier_spec) + 'NEW_LINE        ModifiersSpec = ' + str(self.modifiers_spec) + 'NEW_LINE    }'
 
     def default_string(self):
-        settings = ""
-        settings += "get_peer_spec " + str(0)
-        settings += " peer_spec " + str(0)
-        settings += " transaction " + str(0)
-        settings += " block " + str(0)
-        settings += " request_modifier_spec " + str(0)
-        settings += " modifiers_spec " + str(0)
-        return settings
+        return '{ NEW_LINE        GetPeersSpec = '+ str(0) + 'NEW_LINE        PeerSpec = ' + str(0) + 'NEW_LINE        Transaction = ' + str(0) + 'NEW_LINE        Block = ' + str(0) + 'NEW_LINE        RequestModifierSpec = ' + str(0) + 'NEW_LINE        ModifiersSpec = ' + str(0) + 'NEW_LINE    }'
+
 
 
 """
@@ -150,7 +136,7 @@ class SCNodeConfiguration(object):
                  api_key=DEFAULT_API_KEY,
                  max_fee=10000000,
                  block_rate=120,
-                 latency_settings=LatencyConfig(),
+                 latency_settings=LatencyConfig(0,0,0,0,0,0),
                  initial_private_keys = []):
         if submitter_private_keys_indexes is None:
             submitter_private_keys_indexes = list(range(7))
