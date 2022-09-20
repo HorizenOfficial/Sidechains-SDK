@@ -51,20 +51,11 @@ public class EvmMessageProcessor implements MessageProcessor {
         var returnData = result.returnData == null ? new byte[0] : result.returnData;
         // consume gas the EVM has used:
         // the EVM will never consume more gas than is available, hence this should never throw
-        // and OutOfGasException is manually thrown if the EVM reported "out of gas"
+        // and ExecutionFailedException is thrown if the EVM reported "out of gas"
         gas.subGas(result.usedGas);
-        if (!result.evmError.isEmpty()) {
-            switch (result.evmError) {
-                case "execution reverted":
-                    // returnData here will include the revert reason
-                    throw new ExecutionRevertedException(returnData);
-                case "out of gas":
-                case "contract creation code storage out of gas":
-                    throw new OutOfGasException();
-                default:
-                    throw new ExecutionFailedException(result.evmError);
-            }
-        }
+        if (result.reverted) throw new ExecutionRevertedException(returnData);
+        else if(!result.evmError.isEmpty())
+            throw new ExecutionFailedException(result.evmError);
         return returnData;
     }
 }

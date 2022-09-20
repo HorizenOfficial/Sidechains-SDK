@@ -59,13 +59,9 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
     // return result or rethrow potential exceptions
     Await.result(res, nvtimeout) match {
       case Failure(exception) => exception match {
-        case reverted: ExecutionRevertedException => throw new RpcException(new RpcError(
-          RpcCode.ExecutionError.getCode, exception.getMessage, Numeric.toHexString(reverted.revertReason)))
         case err: ExecutionFailedException => throw new RpcException(new RpcError(
           RpcCode.ExecutionError.getCode, err.getMessage, null))
-        case err: TransactionSemanticValidityException => throw new RpcException(new RpcError(
-          RpcCode.ExecutionError.getCode, err.getMessage, null))
-        case err: OutOfGasException => throw new RpcException(new RpcError(
+        case err: IntrinsicGasException => throw new RpcException(new RpcError(
           RpcCode.ExecutionError.getCode, err.getMessage, null))
         case _ => throw exception
       }
@@ -208,6 +204,8 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
       val lowBound = GasUtil.TxGas.subtract(BigInteger.ONE)
       // Determine the highest gas limit can be used during the estimation.
       var highBound = params.gas
+      // we need to set nonce to one, because we substract by one in the evm call
+      params.nonce = BigInteger.ONE
       getStateViewAtTag(nodeView, tag) { tagStateView =>
         if (highBound == null || highBound.compareTo(GasUtil.TxGas) < 0) {
           highBound = tagStateView.getBlockGasLimit
@@ -247,7 +245,8 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
         params.gas = gas
         doCall(nodeView, params, tag) { (_, _) => true }
       } catch {
-        case _: OutOfGasException => false
+        case _: ExecutionFailedException => false
+        case _: IntrinsicGasException => false
       }
       // Execute the binary search and hone in on an executable gas limit
       // We need to do a search because the gas required during execution is not necessarily equal to the consumed

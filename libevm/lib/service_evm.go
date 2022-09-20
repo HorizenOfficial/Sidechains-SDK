@@ -111,6 +111,7 @@ type EvmResult struct {
 	EvmError        string          `json:"evmError"`
 	ReturnData      []byte          `json:"returnData"`
 	ContractAddress *common.Address `json:"contractAddress"`
+	Reverted        bool            `json:"reverted"`
 }
 
 func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
@@ -185,5 +186,6 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		EvmError:        evmError,
 		ReturnData:      returnData,
 		ContractAddress: contractAddress,
+		Reverted:        vmerr == vm.ErrExecutionReverted,
 	}
 }
