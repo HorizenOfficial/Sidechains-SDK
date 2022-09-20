@@ -24,6 +24,10 @@ def createEIP1559Transaction(sidechainNode, *, fromAddress=None, toAddress=None,
         j["nonce"] = nonce
     request = json.dumps(j)
     response = sidechainNode.transaction_createEIP1559Transaction(request)
-    if not 'result' in response:
-      raise RuntimeError("Transaction failed")
-    return response["result"]["transactionId"]
+
+    if "result" in response:
+        if "transactionId" in response["result"]:
+            return response["result"]["transactionId"]
+
+    raise RuntimeError("Something went wrong, see {}".format(str(response)))
+

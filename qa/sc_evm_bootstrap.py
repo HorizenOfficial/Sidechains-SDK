@@ -124,6 +124,7 @@ class SCEvmBootstrap(SidechainTestFramework):
         self.sc_sync_all()
         sc_best_block = sc_node_1.block_best()["result"]
         assert_equal(sc_best_block["height"], 2, "The best block has not the specified height.")
+        assert_equal(875000000, sc_best_block['block']['header']['baseFee'])
         pprint.pprint(sc_best_block)
         pprint.pprint(sc_node_1.rpc_eth_getBalance(evm_hex_address, "1"))
 
@@ -147,6 +148,8 @@ class SCEvmBootstrap(SidechainTestFramework):
 
         sc_best_block = sc_node_1.block_best()["result"]
         pprint.pprint(sc_best_block)
+
+        assert_equal(765625000, sc_best_block['block']['header']['baseFee'])
 
         # balance is in wei
         initial_balance = http_wallet_balance(sc_node_1, evm_address)
@@ -197,6 +200,7 @@ class SCEvmBootstrap(SidechainTestFramework):
         print("tx sent:")
         tx_hash_1 = response['result']['transactionId']
         self.sc_sync_all()
+        tx_hash = response['result']['transactionId']
 
         # request chainId via rpc route
         print("rpc response:")
@@ -214,10 +218,11 @@ class SCEvmBootstrap(SidechainTestFramework):
         # check if header contains correct gasUsed (2 * eoa to eoa transfer gas costs)
         assert_equal(21000*2, sc_best_block['block']['header']['gasUsed'])
 
-        transactionFee_1, forgersPoolFee_1, forgerTip_1 = computeForgedTxFee(sc_node_1, tx_hash_1)
+        assert_equal(669921875, sc_best_block['block']['header']['baseFee'])
+        transactionFee, _, _ = computeForgedTxFee(sc_node_1, tx_hash)
 
         final_balance = http_wallet_balance(sc_node_1, evm_address)
-        assert_equal(initial_balance - transferred_amount_in_wei - transactionFee_1, final_balance)
+        assert_equal(initial_balance - transferred_amount_in_wei - transactionFee, final_balance)
 
 
 if __name__ == "__main__":

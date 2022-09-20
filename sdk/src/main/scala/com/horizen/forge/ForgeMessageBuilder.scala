@@ -1,7 +1,6 @@
 package com.horizen.forge
 
-import akka.util.Timeout
-import com.horizen.account.chain.AccountFeePaymentsInfo
+
 import com.horizen.block._
 import com.horizen.box.Box
 import com.horizen.chain.SidechainFeePaymentsInfo
@@ -12,16 +11,13 @@ import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.Proposition
 import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.SidechainHistoryStorage
-import com.horizen.transaction.{SidechainTransaction, Transaction, TransactionSerializer}
+import com.horizen.transaction.{SidechainTransaction, TransactionSerializer}
 import com.horizen.utils.{DynamicTypedSerializer, FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree}
 import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainTypes, SidechainWallet}
-import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.util.ModifierId
-
 import scala.collection.JavaConverters._
 import scorex.core.NodeViewModifier
 import scorex.core.block.Block.{BlockId, Timestamp}
-
 import scala.util.{Failure, Success, Try}
 
 class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
@@ -52,8 +48,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                  mainchainHeaders: Seq[MainchainHeader],
                  ommers: Seq[Ommer[SidechainBlockHeader]],
                  ownerPrivateKey: PrivateKey25519,
-                 forgingStakeInfo: ForgingStakeInfo,
-                 vrfProof: VrfProof,
+                 forgingStakeInfo: ForgingStakeInfo, vrfProof: VrfProof,
                  forgingStakeInfoMerklePath: MerklePath,
                  companion: DynamicTypedSerializer[SidechainTypes#SCBT, TransactionSerializer[SidechainTypes#SCBT]],
                  inputBlockSize: Int,

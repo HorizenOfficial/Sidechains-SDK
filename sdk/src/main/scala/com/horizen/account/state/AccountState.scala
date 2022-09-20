@@ -1,6 +1,7 @@
 package com.horizen.account.state
 
 import com.horizen.SidechainTypes
+import com.horizen.account.FeeUtils
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountState
 import com.horizen.account.receipt.EthereumReceipt
@@ -17,6 +18,7 @@ import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler,
 import org.web3j.crypto.ContractUtils.generateContractAddress
 import scorex.core._
 import scorex.core.transaction.state.TransactionValidation
+import scorex.core.utils.NetworkTimeProvider
 import scorex.util.{ModifierId, ScorexLogging}
 
 import java.math.BigInteger
@@ -25,16 +27,18 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
-class AccountState(val params: NetworkParams,
-                   override val version: VersionTag,
-                   stateMetadataStorage: AccountStateMetadataStorage,
-                   stateDbStorage: Database,
-                   messageProcessors: Seq[MessageProcessor])
-  extends State[SidechainTypes#SCAT, AccountBlock, AccountStateView, AccountState]
-    with TransactionValidation[SidechainTypes#SCAT]
-    with NodeAccountState
-    with ClosableResourceHandler
-    with ScorexLogging {
+class AccountState(
+    val params: NetworkParams,
+    timeProvider: NetworkTimeProvider,
+    override val version: VersionTag,
+    stateMetadataStorage: AccountStateMetadataStorage,
+    stateDbStorage: Database,
+    messageProcessors: Seq[MessageProcessor]
+) extends State[SidechainTypes#SCAT, AccountBlock, AccountStateView, AccountState]
+      with TransactionValidation[SidechainTypes#SCAT]
+      with NodeAccountState
+      with ClosableResourceHandler
+      with ScorexLogging {
 
   override type NVCT = AccountState
 
@@ -52,11 +56,12 @@ class AccountState(val params: NetworkParams,
 
   // Modifiers:
   override def applyModifier(mod: AccountBlock): Try[AccountState] = Try {
-    require(versionToBytes(version).sameElements(idToBytes(mod.parentId)),
-      s"Incorrect state version!: ${mod.parentId} found, " + s"$version expected")
+    require(
+      versionToBytes(version).sameElements(idToBytes(mod.parentId)),
+      s"Incorrect state version!: ${mod.parentId} found, " + s"$version expected"
+    )
 
     using(getView) { stateView =>
-
       if (stateView.hasCeased) {
         val errMsg = s"Can't apply Block ${mod.id}, because the sidechain has ceased."
         log.error(errMsg)
@@ -71,8 +76,8 @@ class AccountState(val params: NetworkParams,
       // Validate top quality certificate in the end of the submission window:
       // Reject block if it refers to the chain that conflicts with the top quality certificate content
       // Mark sidechain as ceased in case there is no certificate appeared within the submission window.
-      val currentWithdrawalEpochInfo = stateView.getWithdrawalEpochInfo
-      val modWithdrawalEpochInfo: WithdrawalEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, currentWithdrawalEpochInfo, params)
+      val currentWithdrawalEpochInfo = getWithdrawalEpochInfo
+      val modWithdrawalEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, currentWithdrawalEpochInfo, params)
 
       // If SC block has reached the certificate submission window end -> check the top quality certificate
       // Note: even if mod contains multiple McBlockRefData entries, we are sure they belongs to the same withdrawal epoch.
@@ -85,11 +90,12 @@ class AccountState(val params: NetworkParams,
 
         // Check top quality certificate or notify that sidechain has ceased since we have no certificate in the end of the submission window.
         topQualityCertificateOpt match {
-          case Some(cert) =>
-            validateTopQualityCertificate(cert, stateView)
+          case Some(cert) => validateTopQualityCertificate(cert, stateView)
           case None =>
-            log.info(s"In the end of the certificate submission window of epoch ${modWithdrawalEpochInfo.epoch} " +
-              s"there are no certificates referenced to the epoch $certReferencedEpochNumber. Sidechain has ceased.")
+            log.info(
+              s"In the end of the certificate submission window of epoch ${modWithdrawalEpochInfo.epoch} " +
+                s"there are no certificates referenced to the epoch $certReferencedEpochNumber. Sidechain has ceased."
+            )
             stateView.setCeased()
         }
       }
@@ -97,8 +103,9 @@ class AccountState(val params: NetworkParams,
       // Update view with the block info
       stateView.updateWithdrawalEpochInfo(modWithdrawalEpochInfo)
 
-      val consensusEpochNum: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)
-      stateView.updateConsensusEpochNumber(consensusEpochNum)
+      val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)
+      stateView.updateConsensusEpochNumber(consensusEpochNumber)
+
 
       for (mcBlockRefData <- mod.mainchainBlockReferencesData) {
         stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
@@ -106,15 +113,18 @@ class AccountState(val params: NetworkParams,
 
       // get also list of receipts, useful for computing the receiptRoot hash
       val receiptList = new ListBuffer[EthereumReceipt]()
-      val blockNumber = stateView.getHeight + 1
+      val blockNumber = stateMetadataStorage.getHeight + 1
       val blockHash = idToBytes(mod.id)
+
       var cumGasUsed: BigInteger = BigInteger.ZERO
       var cumBaseFee: BigInteger = BigInteger.ZERO // cumulative base-fee, burned in eth, goes to forgers pool
       var cumForgerTips: BigInteger = BigInteger.ZERO  // cumulative max-priority-fee, is paid to block forger
-      val blockGasPool = new GasPool(stateView.getBlockGasLimit)
+
+      val blockGasPool = new GasPool(BigInteger.valueOf(mod.header.gasLimit))
+      val blockContext = new BlockContext(mod.header, blockNumber, consensusEpochNumber, modWithdrawalEpochInfo.epoch)
 
       for ((tx, txIndex) <- mod.sidechainTransactions.zipWithIndex) {
-        stateView.applyTransaction(tx, txIndex, blockGasPool) match {
+        stateView.applyTransaction(tx, txIndex, blockGasPool, blockContext) match {
           case Success(consensusDataReceipt) =>
             val txGasUsed = consensusDataReceipt.cumulativeGasUsed.subtract(cumGasUsed)
             // update cumulative gas used so far
@@ -136,14 +146,14 @@ class AccountState(val params: NetworkParams,
             }
 
             // get a receipt obj with non consensus data (logs updated too)
-            val fullReceipt = EthereumReceipt(consensusDataReceipt,
-              txHash, txIndex, blockHash, blockNumber, txGasUsed, contractAddress)
+            val fullReceipt =
+              EthereumReceipt(consensusDataReceipt, txHash, txIndex, blockHash, blockNumber, txGasUsed, contractAddress)
 
             log.debug(s"Adding to receipt list: ${fullReceipt.toString()}")
 
             receiptList += fullReceipt
 
-            val baseFeePerGas = getBaseFeePerGas
+            val baseFeePerGas = blockContext.baseFee
             val (txBaseFeePerGas, txMaxPriorityFeePerGas) = GasUtil.getTxFeesPerGas(ethTx, baseFeePerGas)
             cumBaseFee = cumBaseFee.add(txBaseFeePerGas.multiply(txGasUsed))
             cumForgerTips = cumForgerTips.add(txMaxPriorityFeePerGas.multiply(txGasUsed))
@@ -178,11 +188,22 @@ class AccountState(val params: NetworkParams,
       // eventually, store full receipts in the metaDataStorage indexed by txid
       stateView.updateTransactionReceipts(receiptList)
 
+      // update current base fee
+      stateView.updateBaseFee(FeeUtils.calculateNextBaseFee(mod))
+
       stateView.commit(idToVersion(mod.id)).get
 
-      new AccountState(params, idToVersion(mod.id), stateMetadataStorage, stateDbStorage, messageProcessors)
+      new AccountState(
+        params,
+        timeProvider,
+        idToVersion(mod.id),
+        stateMetadataStorage,
+        stateDbStorage,
+        messageProcessors
+      )
     }
   }
+
 
   private def evalForgersReward(mod: AccountBlock, modWithdrawalEpochInfo: WithdrawalEpochInfo, stateView: AccountStateView): Unit = {
     // If SC block has reached the end of the withdrawal epoch -> fee payments expected to be produced.
@@ -213,7 +234,11 @@ class AccountState(val params: NetworkParams,
     }
   }
 
-  private def validateTopQualityCertificate(topQualityCertificate: WithdrawalEpochCertificate, stateView: AccountStateView): Unit = {
+  private def validateTopQualityCertificate(
+      topQualityCertificate: WithdrawalEpochCertificate,
+      stateView: AccountStateView
+  ): Unit = {
+
     val certReferencedEpochNumber: Int = topQualityCertificate.epochNumber
 
     // Check that the top quality certificate data is relevant to the SC active chain cert data.
@@ -223,20 +248,25 @@ class AccountState(val params: NetworkParams,
 
     // Simple size check
     if (topQualityCertificate.backwardTransferOutputs.size != expectedWithdrawalRequests.size) {
-      throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate backward transfers " +
-        s"number ${topQualityCertificate.backwardTransferOutputs.size} is different than expected ${expectedWithdrawalRequests.size}. " +
-        s"Node's active chain is the fork from MC perspective.")
+      throw new IllegalStateException(
+        s"Epoch $certReferencedEpochNumber top quality certificate backward transfers " +
+          s"number ${topQualityCertificate.backwardTransferOutputs.size} is different than expected ${expectedWithdrawalRequests.size}. " +
+          s"Node's active chain is the fork from MC perspective."
+      )
     }
 
     // Check that BTs are identical for both Cert and State
     topQualityCertificate.backwardTransferOutputs.zip(expectedWithdrawalRequests).foreach {
-      case (certOutput, expectedWithdrawalRequest) => {
-        if (certOutput.amount != expectedWithdrawalRequest.valueInZennies ||
-          !util.Arrays.equals(certOutput.pubKeyHash, expectedWithdrawalRequest.proposition.bytes())) {
-          throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate backward transfers " +
-            s"data is different than expected. Node's active chain is the fork from MC perspective.")
+      case (certOutput, expectedWithdrawalRequest) =>
+        if (
+          certOutput.amount != expectedWithdrawalRequest.valueInZennies ||
+          !util.Arrays.equals(certOutput.pubKeyHash, expectedWithdrawalRequest.proposition.bytes())
+        ) {
+          throw new IllegalStateException(
+            s"Epoch $certReferencedEpochNumber top quality certificate backward transfers " +
+              s"data is different than expected. Node's active chain is the fork from MC perspective."
+          )
         }
-      }
     }
 
     // TODO: no CSW support expected for the Eth sidechain
@@ -265,20 +295,13 @@ class AccountState(val params: NetworkParams,
     blockConsensusEpoch != currentConsensusEpoch
   }
 
-  override def rollbackTo(version: VersionTag): Try[AccountState] = {
-    Try {
-      require(version != null, "Version to rollback to must be NOT NULL.")
-      val newMetaState = stateMetadataStorage.rollback(new ByteArrayWrapper(versionToBytes(version))).get
-
-      new AccountState(params, version,
-        newMetaState,
-        stateDbStorage,
-        messageProcessors)
-    }.recoverWith({
-      case exception =>
-        log.error("Exception was thrown during rollback.", exception)
-        Failure(exception)
-    })
+  override def rollbackTo(version: VersionTag): Try[AccountState] = Try {
+    require(version != null, "Version to rollback to must be NOT NULL.")
+    val newMetaState = stateMetadataStorage.rollback(new ByteArrayWrapper(versionToBytes(version))).get
+    new AccountState(params, timeProvider, version, newMetaState, stateDbStorage, messageProcessors)
+  } recoverWith { case exception =>
+    log.error("Exception was thrown during rollback.", exception)
+    Failure(exception)
   }
 
   // versions part
@@ -301,9 +324,8 @@ class AccountState(val params: NetworkParams,
   override def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] =
     using(getView)(_.withdrawalRequests(withdrawalEpoch))
 
-  override def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
+  override def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] =
     stateMetadataStorage.getTopQualityCertificate(referencedWithdrawalEpoch)
-  }
 
   override def certificateTopQuality(referencedWithdrawalEpoch: Int): Long = {
     stateMetadataStorage.getTopQualityCertificate(referencedWithdrawalEpoch) match {
@@ -312,26 +334,16 @@ class AccountState(val params: NetworkParams,
     }
   }
 
-  override def getWithdrawalEpochInfo: WithdrawalEpochInfo = {
-    stateMetadataStorage.getWithdrawalEpochInfo
-  }
-
-  override def hasCeased: Boolean = {
-    stateMetadataStorage.hasCeased
-  }
-
-  override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = {
-    stateMetadataStorage.getConsensusEpochNumber
-  }
+  override def hasCeased: Boolean = stateMetadataStorage.hasCeased
 
   override def getFeePayments(withdrawalEpoch: Int, blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None): Seq[AccountPayment] = {
     val feePaymentInfoSeq = stateMetadataStorage.getFeePayments(withdrawalEpoch)
     AccountFeePaymentsUtils.getForgersRewards(feePaymentInfoSeq)
   }
 
-  override def getHeight: Int = {
-    stateMetadataStorage.getHeight
-  }
+  def getWithdrawalEpochInfo: WithdrawalEpochInfo = stateMetadataStorage.getWithdrawalEpochInfo
+
+  def getConsensusEpochNumber: Option[ConsensusEpochNumber] = stateMetadataStorage.getConsensusEpochNumber
 
   private def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = using(getView)(_.getOrderedForgingStakeInfoSeq)
 
@@ -349,7 +361,8 @@ class AccountState(val params: NetworkParams,
         val consensusEpochInfo = ConsensusEpochInfo(
           consensusEpochNumber,
           MerkleTree.createMerkleTree(forgingStakes.map(info => info.hash).asJava),
-          forgingStakes.map(_.stakeAmount).sum)
+          forgingStakes.map(_.stakeAmount).sum
+        )
         (lastBlockInEpoch, consensusEpochInfo)
       case _ =>
         throw new IllegalStateException("Can't retrieve Consensus Epoch related info form StateStorage.")
@@ -375,27 +388,35 @@ class AccountState(val params: NetworkParams,
 
   override def getCode(address: Array[Byte]): Array[Byte] = using(getView)(_.getCode(address))
 
-  override def getBaseFeePerGas: BigInteger = using(getView)(_.getBaseFeePerGas)
-
-  override def getBlockGasLimit: BigInteger = using(getView)(_.getBlockGasLimit)
-
   override def validate(tx: SidechainTypes#SCAT): Try[Unit] = Try {
     tx.semanticValidity()
 
-    if (tx.isInstanceOf[EthereumTransaction]) {
+    if (!tx.isInstanceOf[EthereumTransaction]) return Success()
+    val ethTx = tx.asInstanceOf[EthereumTransaction]
+    val currentTime = timeProvider.time() / 1000
+    val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params, currentTime)
 
-      val ethTx = tx.asInstanceOf[EthereumTransaction]
-      val blockGasPool = new GasPool(getBlockGasLimit)
+    using(getView) { stateView =>
+      val blockContext = new BlockContext(
+        // use the null address as forger
+        new Array[Byte](32),
+        TimeToEpochUtils.getTimeStampForEpochAndSlot(params, epochAndSlot.epochNumber, epochAndSlot.slotNumber),
+        stateView.baseFee,
+        FeeUtils.GAS_LIMIT,
+        stateMetadataStorage.getHeight + 1,
+        epochAndSlot.epochNumber,
+        stateMetadataStorage.getWithdrawalEpochInfo.epoch
+      )
 
-      using(getView) { stateView =>
-        stateView.applyTransaction(tx, 0, blockGasPool) match {
-          case Success(_) =>
-            log.debug(s"tx=${ethTx.id} succesfully validate against state view")
+      val blockGasPool = new GasPool(BigInteger.valueOf(blockContext.blockGasLimit))
 
-          case Failure(e) =>
-            log.error("Could not validate tx agaist state view: ", e)
-            throw new IllegalArgumentException(e)
-        }
+      stateView.applyTransaction(tx, 0, blockGasPool, blockContext) match {
+        case Success(_) =>
+          log.debug(s"tx=${ethTx.id} succesfully validate against state view")
+
+        case Failure(e) =>
+          log.error("Could not validate tx agaist state view: ", e)
+          throw new IllegalArgumentException(e)
       }
     }
   }
@@ -406,29 +427,52 @@ class AccountState(val params: NetworkParams,
   }}
 
 object AccountState extends ScorexLogging {
-  private[horizen] def restoreState(stateMetadataStorage: AccountStateMetadataStorage,
-                                    stateDbStorage: Database,
-                                    messageProcessors: Seq[MessageProcessor],
-                                    params: NetworkParams): Option[AccountState] = {
-
-    if (!stateMetadataStorage.isEmpty) {
-      Some(new AccountState(params, bytesToVersion(stateMetadataStorage.lastVersionId.get.data), stateMetadataStorage,
-        stateDbStorage, messageProcessors))
-    } else
-      None
-  }
-
-  private[horizen] def createGenesisState(stateMetadataStorage: AccountStateMetadataStorage,
-                                          stateDbStorage: Database,
-                                          messageProcessors: Seq[MessageProcessor],
-                                          params: NetworkParams,
-                                          genesisBlock: AccountBlock): Try[AccountState] = Try {
+  private[horizen] def restoreState(
+      stateMetadataStorage: AccountStateMetadataStorage,
+      stateDbStorage: Database,
+      messageProcessors: Seq[MessageProcessor],
+      params: NetworkParams,
+      timeProvider: NetworkTimeProvider
+  ): Option[AccountState] = {
 
     if (stateMetadataStorage.isEmpty) {
-      new AccountState(params, idToVersion(genesisBlock.parentId), stateMetadataStorage, stateDbStorage, messageProcessors)
-        .initProcessors(idToVersion(genesisBlock.parentId)).get
-        .applyModifier(genesisBlock).get
-    } else
-      throw new RuntimeException("State metadata storage is not empty!")
+      None
+    } else {
+      Some(
+        new AccountState(
+          params,
+          timeProvider,
+          bytesToVersion(stateMetadataStorage.lastVersionId.get.data),
+          stateMetadataStorage,
+          stateDbStorage,
+          messageProcessors
+        )
+      )
+    }
+  }
+
+  private[horizen] def createGenesisState(
+      stateMetadataStorage: AccountStateMetadataStorage,
+      stateDbStorage: Database,
+      messageProcessors: Seq[MessageProcessor],
+      params: NetworkParams,
+      timeProvider: NetworkTimeProvider,
+      genesisBlock: AccountBlock
+  ): Try[AccountState] = Try {
+
+    if (!stateMetadataStorage.isEmpty) throw new RuntimeException("State metadata storage is not empty!")
+
+    new AccountState(
+      params,
+      timeProvider,
+      idToVersion(genesisBlock.parentId),
+      stateMetadataStorage,
+      stateDbStorage,
+      messageProcessors
+    )
+      .initProcessors(idToVersion(genesisBlock.parentId))
+      .get
+      .applyModifier(genesisBlock)
+      .get
   }
 }

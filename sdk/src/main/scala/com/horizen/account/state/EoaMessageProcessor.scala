@@ -20,7 +20,12 @@ object EoaMessageProcessor extends MessageProcessor with ScorexLogging {
   }
 
   @throws(classOf[ExecutionFailedException])
-  override def process(msg: Message, view: BaseAccountStateView, gas: GasPool): Array[Byte] = {
+  override def process(
+      msg: Message,
+      view: BaseAccountStateView,
+      gas: GasPool,
+      blockContext: BlockContext
+  ): Array[Byte] = {
     view.subBalance(msg.getFrom.address(), msg.getValue)
     view.addBalance(msg.getTo.address(), msg.getValue)
     Array.emptyByteArray

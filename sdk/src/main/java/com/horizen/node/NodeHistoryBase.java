@@ -29,8 +29,6 @@ public interface NodeHistoryBase<
 
     Optional<FPI> getFeePaymentsInfo(String blockId);
 
-    Optional<Integer> getBlockHeight(String blockId);
-
     int getMainchainCreationBlockHeight();
 
     Optional<MainchainBlockReferenceInfo> getBestMainchainBlockReferenceInfo();

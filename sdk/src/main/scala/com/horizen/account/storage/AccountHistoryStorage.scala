@@ -5,7 +5,6 @@ import com.horizen.account.chain.{AccountFeePaymentsInfo, AccountFeePaymentsInfo
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.params.NetworkParams
 import com.horizen.storage.{AbstractHistoryStorage, Storage}
-import scorex.util.ModifierId
 
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
 

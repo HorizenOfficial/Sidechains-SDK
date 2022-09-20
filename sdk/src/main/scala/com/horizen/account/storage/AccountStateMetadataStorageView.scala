@@ -12,6 +12,7 @@ import scorex.core._
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
 
+import java.math.BigInteger
 import java.util.{ArrayList => JArrayList}
 import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters._
@@ -27,6 +28,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private[horizen] val withdrawalEpochInformationKey = calculateKey("withdrawalEpochInformation".getBytes)
   private[horizen] val consensusEpochKey = calculateKey("consensusEpoch".getBytes)
   private[horizen] val accountStateRootKey = calculateKey("accountStateRoot".getBytes)
+  private[horizen] val baseFeeKey = calculateKey("baseFee".getBytes)
 
   private val undefinedBlockFeeInfoCounter: Int = -1
 
@@ -37,14 +39,12 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private[horizen] var consensusEpochOpt: Option[ConsensusEpochNumber] = None
   private[horizen] var accountStateRootOpt: Option[Array[Byte]] = None
   private[horizen] var receiptsOpt: Option[Seq[EthereumReceipt]] = None
+  private[horizen] var baseFeeOpt: Option[BigInteger] = None
 
   // all getters same as in StateMetadataStorage, but looking first in the cached/dirty entries in memory
 
   override def getWithdrawalEpochInfo: WithdrawalEpochInfo = {
-    withdrawalEpochInfoOpt match {
-      case None => getWithdrawalEpochInfoFromStorage.getOrElse(WithdrawalEpochInfo(0, 0))
-      case Some(res) => res
-    }
+    withdrawalEpochInfoOpt.orElse(getWithdrawalEpochInfoFromStorage).getOrElse(WithdrawalEpochInfo(0, 0))
   }
 
   private[horizen] def getWithdrawalEpochInfoFromStorage: Option[WithdrawalEpochInfo] = {
@@ -108,10 +108,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   }
 
   override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = {
-    consensusEpochOpt match {
-      case Some(_) => consensusEpochOpt
-      case _ => getConsensusEpochNumberFromStorage
-    }
+    consensusEpochOpt.orElse(getConsensusEpochNumberFromStorage)
   }
 
   private[horizen] def getConsensusEpochNumberFromStorage: Option[ConsensusEpochNumber] = {
@@ -129,9 +126,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     }
   }
 
-  override def hasCeased: Boolean = {
-    hasCeasedOpt.getOrElse(storage.get(ceasingStateKey).isPresent)
-  }
+  override def hasCeased: Boolean = hasCeasedOpt.getOrElse(storage.get(ceasingStateKey).isPresent)
 
   override def getHeight: Int = {
     storage.get(heightKey).asScala.map(baw => Ints.fromByteArray(baw.data)).getOrElse(0)
@@ -188,6 +183,19 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     accountStateRootOpt = Some(accountStateRoot)
   }
 
+  def updateBaseFee(baseFee: BigInteger): Unit = {
+    baseFeeOpt = Some(baseFee)
+  }
+
+  def getBaseFromFromStorage: Option[BigInteger] = {
+    storage.get(baseFeeKey).asScala.map(wrapper => new BigInteger(wrapper.data))
+  }
+
+  def getBaseFee: BigInteger = {
+    // TODO: default to initial base fee, not zero
+    baseFeeOpt.orElse(getBaseFromFromStorage).getOrElse(BigInteger.ZERO)
+  }
+
   def setCeased(): Unit = hasCeasedOpt = Some(true)
 
   // update the database with "dirty" records new values
@@ -212,6 +220,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     consensusEpochOpt = None
     accountStateRootOpt = None
     receiptsOpt = None
+    baseFeeOpt = None
   }
 
   private[horizen] def saveToStorage(version: ByteArrayWrapper): Unit = {
@@ -294,6 +303,8 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
           updateList.add(new JPair(key, value))
         }
     })
+
+    baseFeeOpt.foreach(baseFee => updateList.add(new JPair(baseFeeKey, new ByteArrayWrapper(baseFee.toByteArray))))
 
     storage.update(version, updateList, removeList)
 

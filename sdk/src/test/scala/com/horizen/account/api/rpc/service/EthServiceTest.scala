@@ -6,11 +6,7 @@ import com.horizen.SidechainSettings
 import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.account.api.rpc.request.RpcRequest
 import com.horizen.account.api.rpc.types.Quantity
-import com.horizen.account.history.AccountHistory
-import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.node.AccountNodeView
-import com.horizen.account.state.{AccountState, AccountStateView}
-import com.horizen.account.wallet.AccountWallet
 import com.horizen.fixtures.{FieldElementFixture, MockedSidechainNodeViewHolderFixture}
 import com.horizen.params.{NetworkParams, RegTestParams}
 import org.junit.Assert.assertEquals
@@ -18,10 +14,8 @@ import org.junit.{Before, Test}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import org.web3j.utils.Numeric
-import scorex.core.NodeViewHolder.CurrentView
-
 import java.math.BigInteger
-import scala.concurrent.duration.{Duration, FiniteDuration, SECONDS}
+import scala.concurrent.duration.{FiniteDuration, SECONDS}
 
 // TODO: we need full coverage of eth rpc service. Every method with both success and fail cases
 class EthServiceTest extends JUnitSuite

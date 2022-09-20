@@ -11,7 +11,7 @@ import java.math.BigInteger
 
 trait BaseStateReader {
   def getWithdrawalEpochInfo: WithdrawalEpochInfo
-
+  
   def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest]
 
   def getFeePayments(withdrawalEpoch: Int, blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None): Seq[AccountPayment]
