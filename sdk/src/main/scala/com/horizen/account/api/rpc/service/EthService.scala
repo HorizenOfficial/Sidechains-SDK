@@ -59,6 +59,8 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
     // return result or rethrow potential exceptions
     Await.result(res, nvtimeout) match {
       case Failure(exception) => exception match {
+        case reverted: ExecutionRevertedException => throw new RpcException(new RpcError(
+          RpcCode.ExecutionError.getCode, reverted.getMessage, Numeric.toHexString(reverted.revertReason)))
         case err: ExecutionFailedException => throw new RpcException(new RpcError(
           RpcCode.ExecutionError.getCode, err.getMessage, null))
         case err: IntrinsicGasException => throw new RpcException(new RpcError(
