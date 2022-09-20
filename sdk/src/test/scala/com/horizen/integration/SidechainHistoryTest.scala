@@ -493,7 +493,7 @@ class SidechainHistoryTest extends JUnitSuite
     var comparisonResult: History.HistoryComparisonResult = history2.compare(history1SyncInfo)
     assertEquals("History 1 chain expected to be older then history 2 chain", History.Older, comparisonResult)
     // Verify history2 continuationIds for history1 info
-    var continuationIds = history2.continuationIds(history1SyncInfo, Int.MaxValue)
+    var continuationIds = history2.continuationIds(history1SyncInfo, Int.MaxValue -1)
     assertTrue("History 2 continuation Ids for history 1 info expected to be empty.", continuationIds.isEmpty)
 
 
@@ -501,7 +501,7 @@ class SidechainHistoryTest extends JUnitSuite
     comparisonResult = history1.compare(history1SyncInfo)
     assertEquals("History 1 chain expected to equal to itself", History.Equal, comparisonResult)
     // Verify history1 continuationIds for its info
-    continuationIds = history1.continuationIds(history1SyncInfo, Int.MaxValue)
+    continuationIds = history1.continuationIds(history1SyncInfo, Int.MaxValue -1)
     assertTrue("History 1 continuation Ids for itself info expected to be empty.", continuationIds.isEmpty)
 
 
@@ -515,7 +515,7 @@ class SidechainHistoryTest extends JUnitSuite
     comparisonResult = history1.compare(history2SyncInfo)
     assertEquals("History 2 chain expected to be younger then history 1 chain", History.Younger, comparisonResult)
     // Verify history1 continuationIds for history2 info
-    continuationIds = history1.continuationIds(history2SyncInfo, Int.MaxValue)
+    continuationIds = history1.continuationIds(history2SyncInfo, Int.MaxValue -1)
     assertTrue("History 1 continuation Ids for history 2 info expected to be defined.", continuationIds.nonEmpty)
     assertEquals("History 1 continuation Ids for history 2 info expected to be with given size empty.", 1, continuationIds.size)
     assertEquals("History 1 continuation Ids for history 2 should contain different data.", history1blockSeq.last.id, continuationIds.head._2)
@@ -538,7 +538,7 @@ class SidechainHistoryTest extends JUnitSuite
     comparisonResult = history2.compare(history1SyncInfo)
     assertEquals("History 1 chain expected to be younger then history 2 chain", History.Fork, comparisonResult)
     // Verify history2 continuationIds for history1 info
-    continuationIds = history2.continuationIds(history1SyncInfo, Int.MaxValue)
+    continuationIds = history2.continuationIds(history1SyncInfo, Int.MaxValue -1)
     assertEquals("History 1 continuation Ids for history 2 info expected to be with given size empty.", 1, continuationIds.size)
     assertEquals("History 1 continuation Ids for history 2 should contain different data.", history2blockSeq.last.id, continuationIds.head._2)
 
@@ -554,7 +554,7 @@ class SidechainHistoryTest extends JUnitSuite
     comparisonResult = history2.compare(history1SyncInfo)
     assertEquals("History 1 chain expected to be equal then history 2 chain", History.Equal, comparisonResult)
     // Verify history2 continuationIds for history1 info
-    continuationIds = history2.continuationIds(history1SyncInfo, Int.MaxValue)
+    continuationIds = history2.continuationIds(history1SyncInfo, Int.MaxValue -1)
     assertEquals("History 1 continuation Ids for history 2 info expected to be with given size empty.", 1, continuationIds.size)
     assertEquals("History 1 continuation Ids for history 2 should contain different data.", history2blockSeq.last.id, continuationIds.head._2)
   }
