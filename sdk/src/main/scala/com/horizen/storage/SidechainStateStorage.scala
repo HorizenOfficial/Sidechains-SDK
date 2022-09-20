@@ -5,12 +5,12 @@ import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.SidechainTypes
 import com.horizen.backup.BoxIterator
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
-import com.horizen.box.{ActualKeysSerializer, WithdrawalRequestBox, WithdrawalRequestBoxSerializer}
+import com.horizen.box.{WithdrawalRequestBox, WithdrawalRequestBoxSerializer}
+import com.horizen.certificatesubmitter.keys._
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
 import com.horizen.forge.{ForgerList, ForgerListSerializer}
 import com.horizen.proposition.SchnorrProposition
-import com.horizen.schnorrnative.SchnorrSignature
 import com.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
 import scorex.util.ScorexLogging
 
@@ -34,8 +34,6 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
   private[horizen] val withdrawalEpochInformationKey = Utils.calculateKey("withdrawalEpochInformation".getBytes)
   private val withdrawalRequestSerializer = new ListSerializer[WithdrawalRequestBox](WithdrawalRequestBoxSerializer.getSerializer)
-  private val keysRotationProofSerializer = new ListSerializer[KeyRotationProof](KeyRotationProofSerializer.getSerializer)
-  private val keysListSerializer = new ListSerializer[ActualKeys](ActualKeysSerializer.getSerializer)
 
   private[horizen] val consensusEpochKey = Utils.calculateKey("consensusEpoch".getBytes)
 
@@ -51,6 +49,22 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   private[horizen] def getWithdrawalRequestsKey(withdrawalEpoch: Int, counter: Int): ByteArrayWrapper = {
     Utils.calculateKey(Bytes.concat("withdrawalRequests".getBytes, Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
   }
+
+  abstract class CertificateSubmitter {
+    val signersPublicKeys = ActualKeys(mutable.IndexedSeq[SchnorrProposition](/*signingKeys*/), mutable.IndexedSeq[SchnorrProposition](/*masterKeys*/));
+    def getSignerPublicKeys(): ActualKeys = {
+      signersPublicKeys
+    }
+    def getMessage() {}
+
+    def tryToGenerateCertificate(): Unit = {
+      buildDataForProofGeneration()
+      generateProof()
+    }
+  }
+
+  class ThresholdSigCircuitSubmitter extends CertificateSubmitter
+  class ThresholdSigCircuitSubmitterWithKeyRotation extends CertificateSubmitter
 
   private[horizen] def getKeys(withdrawalEpoch: Int, counter: Int): ByteArrayWrapper = {
     Utils.calculateKey(Bytes.concat("keys".getBytes, Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
@@ -160,7 +174,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       storage.get(getTopQualityCertificateKey(withdrawalEpoch)).asScala match {
         case Some(baw) =>
           WithdrawalEpochCertificateSerializer.parseBytesTry(baw.data) match {
-            case Success(actualKeys: ActualKeys) => Option(actualKeys.signingKey)
+            case Success(actualKeys: ActualKeys) => Option(actualKeys.signingKeys)
             case Failure(exception) =>
               log.error("Error while withdrawal epoch certificate signing keys parsing.", exception)
               Option.empty
@@ -241,16 +255,6 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       case None => Option.empty
     }
   }
-// typeOfKey
-  abstract class KeyRotationProof{
-    val index: Int
-    val newValueOfKey: SchnorrProposition
-    val signingKeySignature: SchnorrSignature
-    val masterKeySignature: SchnorrSignature
-  }
-  case class MasterKeyRotationProof(index: Int, newValueOfKey: SchnorrProposition, signingKeySignature: SchnorrSignature, masterKeySignature: SchnorrSignature) extends KeyRotationProof
-  case class SigningKeyRotationProof(index: Int, newValueOfKey: SchnorrProposition, signingKeySignature: SchnorrSignature, masterKeySignature: SchnorrSignature) extends KeyRotationProof
-  case class ActualKeys(signingKey: mutable.IndexedSeq[SchnorrProposition], masterKeys: mutable.IndexedSeq[SchnorrProposition])
 
   def update(version: ByteArrayWrapper,
              withdrawalEpochInfo: WithdrawalEpochInfo,
@@ -303,20 +307,20 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
     (keyRotationProofs, actualKeys) match {
 
-      case (Some(keyRotationProofsDefined: Seq[KeyRotationProof]), Some(actualKeys: ActualKeys)) =>
-        keyRotationProofsDefined.foreach(keyRotationProof => {
+      case (Some(keyRotationProofs: Seq[KeyRotationProof]), Some(actualKeys: ActualKeys)) =>
+        keyRotationProofs.foreach(keyRotationProof => {
           updateList.add(new JPair(getKeys(withdrawalEpochInfo.epoch, getWithdrawalEpochCounter(withdrawalEpochInfo.epoch) + 1),
-            new ByteArrayWrapper(keysRotationProofSerializer.toBytes(keyRotationProof))))
+            new ByteArrayWrapper(KeyRotationProofSerializer.toBytes(keyRotationProof))))
 
           keyRotationProof match {
-            case masterKeyRotationProof: MasterKeyRotationProof =>
-              actualKeys.masterKeys.update(masterKeyRotationProof.index, masterKeyRotationProof.newValueOfKey)
-            case signingKeyRotationProof: SigningKeyRotationProof =>
-              actualKeys.masterKeys.update(signingKeyRotationProof.index, signingKeyRotationProof.newValueOfKey)
+            case keyRotationProof if keyRotationProof.keyType == KeyRotationProofType.MasterKeyRotationProofType =>
+              actualKeys.masterKeys.updated(keyRotationProof.index, keyRotationProof.newValueOfKey)
+            case keyRotationProof if keyRotationProof.keyType == KeyRotationProofType.SigningKeyRotationProofType =>
+              actualKeys.signingKeys.updated(keyRotationProof.index, keyRotationProof.newValueOfKey)
           }
         })
-        updateList.add(new JPair(getKeys(withdrawalEpochInfo.epoch, ),
-          new ByteArrayWrapper(keysSerializer.toBytes(actualKeys))))
+        updateList.add(new JPair(getKeys(withdrawalEpochInfo.epoch, getWithdrawalEpochCounter(withdrawalEpochInfo.epoch) + 1),
+          new ByteArrayWrapper(ActualKeysSerializer.toBytes(actualKeys))))
       case _ => _
     }
 
