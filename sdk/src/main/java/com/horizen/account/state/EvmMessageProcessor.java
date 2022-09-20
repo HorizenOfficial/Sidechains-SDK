@@ -55,8 +55,7 @@ public class EvmMessageProcessor implements MessageProcessor {
         // and ExecutionFailedException is thrown if the EVM reported "out of gas"
         gas.subGas(result.usedGas);
         if (result.reverted) throw new ExecutionRevertedException(returnData);
-        else if(!result.evmError.isEmpty())
-            throw new ExecutionFailedException(result.evmError);
+        if(!result.evmError.isEmpty()) throw new ExecutionFailedException(result.evmError);
         return returnData;
     }
 }
