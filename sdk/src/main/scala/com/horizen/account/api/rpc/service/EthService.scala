@@ -19,6 +19,7 @@ import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.EthereumTransactionDecoder
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
+import com.horizen.api.http.SidechainTransactionErrorResponse.ErrorNotFoundTransactionId
 import com.horizen.api.http.{ApiResponseUtil, SuccessResponse}
 import com.horizen.evm.Evm
 import com.horizen.evm.interop.{EvmContext, EvmResult, EvmTraceLog, TraceParams}
@@ -433,6 +434,11 @@ class EthService(
         {
           val requestedBlockId = getBlockIdByTag(nodeView, currentBlockNumber)
           val requestedBlock = nodeView.history.getBlockById(requestedBlockId).get()
+
+          if (requestedBlock == None) {
+            throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock, s"block ${requestedBlockId} not found"))
+          }
+
           val transactions = requestedBlock.transactions
           val gasPool = new GasPool(BigInteger.valueOf(requestedBlock.header.gasLimit))
 
@@ -455,7 +461,7 @@ class EthService(
 
   @RpcMethod("debug_traceTransaction")
   @RpcOptionalParameters(1)
-  def traceTransaction(transactionHash: String, traceParams: TraceParams) = {
+  def traceTransaction(transactionHash: String, traceParams: TraceParams): Object = {
     val requestedTransaction = getTransactionAndReceipt(transactionHash) { (tx, receipt) =>
       new EthereumTransactionView(receipt, tx)
     }.orNull
@@ -464,6 +470,7 @@ class EthService(
     val currentBlockNumber = requestedTransaction.getBlockNumber
     val previousBlockNumber =
       Numeric.cleanHexPrefix((Numeric.decodeQuantity(currentBlockNumber).intValueExact() - 1).toHexString)
+    var txFound = false
 
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, previousBlockNumber) { (tagStateView, blockContext) =>
@@ -481,12 +488,22 @@ class EthService(
               if (tx.id == Numeric.cleanHexPrefix(transactionHash)) {
                 blockContext.setTraceParams(traceParams)
                 tagStateView.applyTransaction(tx, i, gasPool, blockContext)
+                txFound = true
 
                 break
               }
 
               tagStateView.applyTransaction(tx, i, gasPool, blockContext)
             }
+          }
+
+          if (!txFound) {
+            return ApiResponseUtil.toResponse(
+              ErrorNotFoundTransactionId(
+                f"Transaction ${Numeric.cleanHexPrefix(transactionHash)} not found",
+                JOptional.empty()
+              )
+            )
           }
 
           new DebugTraceTransactionView(blockContext.getEvmResult)
