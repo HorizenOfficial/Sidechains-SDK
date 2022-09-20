@@ -13,7 +13,7 @@ import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, VrfSecretKey}
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.{FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerkleTree, TimeToEpochUtils}
-import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
+import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainTypes, SidechainWallet}
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.util.{ModifierId, ScorexLogging}
 
@@ -32,8 +32,8 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
   case class BranchPointInfo(branchPointId: ModifierId, referenceDataToInclude: Seq[MainchainHeaderHash], headersToInclude: Seq[MainchainHeaderHash])
 
-  def buildForgeMessageForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber, timeout: Timeout): ForgeMessageType = {
-    val forgingFunctionForEpochAndSlot: View => ForgeResult = tryToForgeNextBlock(consensusEpochNumber, consensusSlotNumber, timeout)
+  def buildForgeMessageForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber, timeout: Timeout, forcedTx: Iterable[SidechainTypes#SCBT]): ForgeMessageType = {
+    val forgingFunctionForEpochAndSlot: View => ForgeResult = tryToForgeNextBlock(consensusEpochNumber, consensusSlotNumber, timeout, forcedTx)
 
     val forgeMessage: ForgeMessageType =
       GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, ForgeResult](forgingFunctionForEpochAndSlot)
@@ -41,7 +41,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     forgeMessage
   }
 
-  protected def tryToForgeNextBlock(nextConsensusEpochNumber: ConsensusEpochNumber, nextConsensusSlotNumber: ConsensusSlotNumber, timeout: Timeout)(nodeView: View): ForgeResult = Try {
+  protected def tryToForgeNextBlock(nextConsensusEpochNumber: ConsensusEpochNumber, nextConsensusSlotNumber: ConsensusSlotNumber, timeout: Timeout, forcedTx: Iterable[SidechainTypes#SCBT])(nodeView: View): ForgeResult = Try {
     log.info(s"Try to forge block for epoch $nextConsensusEpochNumber with slot $nextConsensusSlotNumber")
 
     val branchPointInfo: BranchPointInfo = getBranchPointInfo(nodeView.history) match {
@@ -87,7 +87,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
       val forgingResult = eligibleForgerOpt
         .map { case (forgingStakeMerklePathInfo, privateKey25519, vrfProof, _) =>
-          forgeBlock(nodeView, nextBlockTimestamp, branchPointInfo, forgingStakeMerklePathInfo, privateKey25519, vrfProof, timeout)
+          forgeBlock(nodeView, nextBlockTimestamp, branchPointInfo, forgingStakeMerklePathInfo, privateKey25519, vrfProof, timeout, forcedTx)
         }
         .getOrElse(SkipSlot("No eligible forging stake found."))
       forgingResult
@@ -235,7 +235,8 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                          forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo,
                          blockSignPrivateKey: PrivateKey25519,
                          vrfProof: VrfProof,
-                         timeout: Timeout): ForgeResult = {
+                         timeout: Timeout,
+                         forcedTx: Iterable[SidechainTypes#SCBT]): ForgeResult = {
     val parentBlockId: ModifierId = branchPointInfo.branchPointId
     val parentBlockInfo: SidechainBlockInfo = nodeView.history.blockInfoById(parentBlockId)
     var withdrawalEpochMcBlocksLeft: Int = params.withdrawalEpochLength - parentBlockInfo.withdrawalEpochInfo.lastEpochIndex
@@ -322,8 +323,9 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
             nodeView.pool.takeWithWithdrawalBoxesLimit(allowedWithdrawalRequestBoxes)
           else
             nodeView.pool.take(nodeView.pool.size)
-        mempoolTx
+        (mempoolTx
           .filter(nodeView.state.validateWithFork(_, consensusEpochNumber).isSuccess)
+          ++ forcedTx)
           .filter(tx => {
             val txSize = tx.bytes.length + 4 // placeholder for Tx length
             txsCounter += 1
@@ -333,7 +335,8 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
               blockSize += txSize
               true // continue data collection
             }
-          }).map(tx => tx.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]).toSeq // TO DO: problems with types
+          })
+          .map(tx => tx.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]).toSeq // TO DO: problems with types
       }
 
     val feePayments = if (isWithdrawalEpochLastBlock) {

@@ -237,6 +237,7 @@ class SidechainStateTest
     Mockito.when(mutualityMockedBlock.mainchainBlockReferencesData).thenReturn(Seq())
     Mockito.when(mutualityMockedBlock.parentId).thenReturn(bytesToId(stateVersion.last.data))
     Mockito.when(mutualityMockedBlock.id).thenReturn(ModifierId @@ "testBlock")
+    Mockito.when(mutualityMockedBlock.timestamp).thenReturn(86401)
 
     val secret = getPrivateKey25519List(1).get(0)
     val boxAndSecret = Seq((getZenBox(secret.publicImage(), 1, Random.nextInt(100)), secret))
