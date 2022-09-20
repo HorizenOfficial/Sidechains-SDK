@@ -5,8 +5,8 @@
     "test_type",
     "block_rate",
     "initial_txs",
+    "extended_transaction",
     "network_topology",
-    "latency_settings",
     "nodes"
   ],
   "properties": {
@@ -40,56 +40,57 @@
         "p2p"
       ]
     },
-    "latency_settings": {
-      "type": "object",
-      "properties": {
-        "get_peer_spec": {
-          "type": "number"
-        },
-        "peer_spec": {
-          "type": "number"
-        },
-        "transaction": {
-          "type": "number"
-        },
-        "block": {
-          "type": "number"
-        },
-        "request_modifier_spec": {
-          "type": "number"
-        },
-        "modifiers_spec": {
-          "type": "number"
-        }
-      },
-      "required":[
-        "get_peer_spec",
-        "peer_spec",
-        "transaction",
-        "block",
-        "request_modifier_spec",
-        "modifiers_spec"
-      ]
-    },
-      "nodes": {
-        "type": "array",
-        "minItems": 1,
-        "maxItems": 20,
-        "items": {
-          "type": "object",
-          "properties": {
-            "forger": {
-              "type": "boolean"
-            },
-            "tx_creator": {
-              "type": "boolean"
-            }
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "properties": {
+          "forger": {
+            "type": "boolean"
           },
-          "required": [
-            "forger",
-            "tx_creator"
-          ]
-        }
+          "tx_creator": {
+            "type": "boolean"
+          },
+          "latency_settings": {
+            "type": "object",
+            "properties": {
+              "get_peer_spec": {
+                "type": "number"
+              },
+              "peer_spec": {
+                "type": "number"
+              },
+              "transaction": {
+                "type": "number"
+              },
+              "block": {
+                "type": "number"
+              },
+              "request_modifier_spec": {
+                "type": "number"
+              },
+              "modifiers_spec": {
+                "type": "number"
+              }
+            },
+            "required":[
+              "get_peer_spec",
+              "peer_spec",
+              "transaction",
+              "block",
+              "request_modifier_spec",
+              "modifiers_spec"
+            ]
+          }
+        },
+        "required": [
+          "forger",
+          "tx_creator",
+          "latency_settings"
+        ]
+      }
     }
   }
 }
