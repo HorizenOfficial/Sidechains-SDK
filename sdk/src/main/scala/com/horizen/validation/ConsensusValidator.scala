@@ -3,11 +3,12 @@ import com.horizen.SidechainHistory
 import com.horizen.block.{OmmersContainer, SidechainBlock, SidechainBlockHeader}
 import com.horizen.chain.SidechainBlockInfo
 import com.horizen.consensus._
+import com.horizen.fork.ForkManager
 import com.horizen.params.NetworkParams
 import com.horizen.utils.TimeToEpochUtils
 import com.horizen.vrf.VrfOutput
-import scorex.core.block.Block
-import scorex.core.utils.TimeProvider
+import sparkz.core.block.Block
+import sparkz.core.utils.TimeProvider
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.util.Try
@@ -43,7 +44,9 @@ class ConsensusValidator(timeProvider: TimeProvider) extends HistoryBlockValidat
     val vrfOutput: VrfOutput = history.getVrfOutput(verifiedBlock.header, currentConsensusEpochInfo.nonceConsensusEpochInfo)
       .getOrElse(throw new IllegalStateException(s"VRF check for block ${verifiedBlock.id} had been failed"))
 
-    verifyForgingStakeInfo(verifiedBlock.header, currentConsensusEpochInfo.stakeConsensusEpochInfo, vrfOutput)
+    val consensusEpoch = TimeToEpochUtils.timeStampToEpochNumber(history.params, verifiedBlock.timestamp)
+    val stakePercentageForkApplied = ForkManager.getSidechainConsensusEpochFork(consensusEpoch).stakePercentageForkApplied
+    verifyForgingStakeInfo(verifiedBlock.header, currentConsensusEpochInfo.stakeConsensusEpochInfo, vrfOutput, stakePercentageForkApplied)
 
     val lastBlockInPreviousConsensusEpochInfo: SidechainBlockInfo = history.blockInfoById(history.getLastBlockInPreviousConsensusEpoch(verifiedBlock.timestamp, verifiedBlock.parentId))
     val previousFullConsensusEpochInfo: FullConsensusEpochInfo = history.getFullConsensusEpochInfoForBlock(lastBlockInPreviousConsensusEpochInfo.timestamp, lastBlockInPreviousConsensusEpochInfo.parentId)
@@ -130,7 +133,9 @@ class ConsensusValidator(timeProvider: TimeProvider) extends HistoryBlockValidat
 
       val ommerVrfOutput: VrfOutput = history.getVrfOutput(ommer.header, ommerCurrentFullConsensusEpochInfo.nonceConsensusEpochInfo)
         .getOrElse(throw new IllegalStateException(s"VRF check for Ommer ${ommer.header.id} had been failed"))
-      verifyForgingStakeInfo(ommer.header, ommerCurrentFullConsensusEpochInfo.stakeConsensusEpochInfo, ommerVrfOutput)
+
+      val stakePercentageForkApplied = ForkManager.getSidechainConsensusEpochFork(ommersContainerEpochNumber).stakePercentageForkApplied
+      verifyForgingStakeInfo(ommer.header, ommerCurrentFullConsensusEpochInfo.stakeConsensusEpochInfo, ommerVrfOutput, stakePercentageForkApplied)
 
       verifyOmmers(ommer, ommerCurrentFullConsensusEpochInfo, ommerPreviousFullConsensusEpochInfoOpt,
         bestKnownParentId, bestKnownParentInfo, history, accumulator)
@@ -145,7 +150,7 @@ class ConsensusValidator(timeProvider: TimeProvider) extends HistoryBlockValidat
   }
 
   //Verify that forging stake info in block is correct (including stake), exist in history and had enough stake to be forger
-  private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput): Unit = {
+  private[horizen] def verifyForgingStakeInfo(header: SidechainBlockHeader, stakeConsensusEpochInfo: StakeConsensusEpochInfo, vrfOutput: VrfOutput, percentageForkApplied: Boolean): Unit = {
     log.debug(s"Verify Forger box against root hash: ${stakeConsensusEpochInfo.rootHash} by merkle path ${header.forgingStakeMerklePath.bytes().deep.mkString}")
 
     val forgingStakeIsCorrect = stakeConsensusEpochInfo.rootHash.sameElements(header.forgingStakeMerklePath.apply(header.forgingStakeInfo.hash))
@@ -156,7 +161,7 @@ class ConsensusValidator(timeProvider: TimeProvider) extends HistoryBlockValidat
 
     val value = header.forgingStakeInfo.stakeAmount
 
-    val stakeIsEnough = vrfProofCheckAgainstStake(vrfOutput, value, stakeConsensusEpochInfo.totalStake)
+    val stakeIsEnough = vrfProofCheckAgainstStake(vrfOutput, value, stakeConsensusEpochInfo.totalStake, percentageForkApplied)
     if (!stakeIsEnough) {
       throw new IllegalArgumentException(
         s"Stake value in forger box in block ${header.id} is not enough for to be forger.")

@@ -40,7 +40,7 @@ While we keep monitoring the memory footprint of the proofs generation process, 
  - After the installation, just run `export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1` before starting the sidechain node, or run the sidechain node adding `LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1` at the beginning of the java command line as follows:
 
 ```
-LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1 java -cp ./target/sidechains-sdk-simpleapp-0.4.2.jar:./target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
+LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1 java -cp ./target/sidechains-sdk-simpleapp-0.5.0-SNAPSHOT.jar:./target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
 ```
  - In the folder `ci` you will find the script `run_sc.sh` to automatically check and use jemalloc library while starting the sidechain node. 
 
@@ -59,6 +59,22 @@ The project has a Maven module structure and consists of 4 modules:
 2) ScBootstrappingTool - A tool that supports the creation of a sidechain configuration file that allows the synchronization with the mainchain network
 3) [Simple App](examples/simpleapp/README.md) - An example application without any specific custom logic that runs a node. The node can be connected to the mainchain network or isolated from it
 4) Q/A - [Sidechain Test Framework](qa/README.md) for sidechain testing via RPC/REST commands
+
+**Configuration**
+
+If you need to run the sidechain node as a **docker container** or behind a **NAT** the hostname and port pair that the node binds to will be different from the “logical” host name and port pair that is used to connect to the system from the outside. This requires special configuration that sets both the logical and the bind pairs for remoting.
+You need to set the *declaredAddress* field with the host machine's address.
+```
+sparkz {
+    dataDir = /tmp/sparkz/data/blockchain
+    logDir = /tmp/sparkz/data/log
+	...
+    network {
+        nodeName = "node name"
+        bindAddress = "127.0.0.1:9084"
+        declaredAddress = "45.123.0.0:9084"
+    }
+```
 
 **Examples**
 

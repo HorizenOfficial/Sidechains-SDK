@@ -1,7 +1,7 @@
 package com.horizen.params
 
 import com.horizen.utils.Utils
-import scorex.core.NodeViewModifier
+import sparkz.core.NodeViewModifier
 
 object CommonParams {
   val mainchainBlockHashLength: Int = Utils.SHA256_LENGTH

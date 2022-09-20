@@ -24,10 +24,10 @@ import org.junit.{Assert, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.core.NodeViewHolder.CurrentView
-import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.ChangedState
-import scorex.core.settings.{RESTApiSettings, ScorexSettings}
+import sparkz.core.NodeViewHolder.CurrentView
+import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.ChangedState
+import sparkz.core.settings.{RESTApiSettings, SparkzSettings}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}
@@ -37,7 +37,7 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
   with MainchainBlockReferenceFixture with SidechainBlockFixture {
 
   implicit lazy val actorSystem: ActorSystem = ActorSystem("csw-actor-test")
-  implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("scorex.executionContext")
+  implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("sparkz.executionContext")
   implicit val timeout: Timeout = 300 milliseconds
 
   case object WatchOk
@@ -62,10 +62,10 @@ class CswManagerTest extends JUnitSuite with MockitoSugar with CswDataFixture
     Mockito.when(mockedRESTSettings.timeout).thenReturn(timeoutDuration)
 
     val mockedSidechainSettings: SidechainSettings = mock[SidechainSettings]
-    Mockito.when(mockedSidechainSettings.scorexSettings).thenAnswer(_ => {
-      val mockedScorexSettings: ScorexSettings = mock[ScorexSettings]
-      Mockito.when(mockedScorexSettings.restApi).thenAnswer(_ => mockedRESTSettings)
-      mockedScorexSettings
+    Mockito.when(mockedSidechainSettings.sparkzSettings).thenAnswer(_ => {
+      val mockedSparkzSettings: SparkzSettings = mock[SparkzSettings]
+      Mockito.when(mockedSparkzSettings.restApi).thenAnswer(_ => mockedRESTSettings)
+      mockedSparkzSettings
     })
 
     mockedSidechainSettings

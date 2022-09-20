@@ -1,6 +1,6 @@
-
 #!/usr/bin/env python3
 import json
+import logging
 import pprint
 import time
 
@@ -63,7 +63,7 @@ class SCForgerFeerate(SidechainTestFramework):
             txid = ret["result"]["transactionId"]
             return txid
         except Exception as e:
-            print("Exception: " + e.error)
+            logging.error("Exception: " + e.error)
 
 
     def run_test(self):
@@ -73,7 +73,7 @@ class SCForgerFeerate(SidechainTestFramework):
         sc_node = self.sc_nodes[0]
 
         scblock_id = generate_next_blocks(sc_node, "first node", 1)[0]
-        print(scblock_id)
+        logging.info(scblock_id)
 
         # create FT to SC for creating some utxo to spend
         sc_address = sc_node.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
@@ -117,7 +117,7 @@ class SCForgerFeerate(SidechainTestFramework):
         check_box_balance(sc_node, Account("", sc_address), "ZenBox", 5, 150)
 
         sc_send_amount = 1  # Zen
-        print("\nSending {} satoshi ({} Zen) inside sidechain...".format(sc_send_amount * COIN, sc_send_amount))
+        logging.info("\nSending {} satoshi ({} Zen) inside sidechain...".format(sc_send_amount * COIN, sc_send_amount))
         sc_address = sc_node.wallet_allPublicKeys()["result"]["propositions"][-1]["publicKey"]
 
         tx1 = self.send_coins(sc_node, sc_address, amount=111111, fee=100, numberOfOutputs=5)
@@ -130,7 +130,7 @@ class SCForgerFeerate(SidechainTestFramework):
 
         tx5 = self.send_coins(sc_node, sc_address, amount=333333, fee=99, numberOfOutputs=1)
 
-        print("Generating SC Block with send coins transaction...")
+        logging.info("Generating SC Block with send coins transaction...")
         scblock_id2 = generate_next_blocks(sc_node, "first node", 1)[0]
         res = sc_node.block_findById(blockId=scblock_id2)
         txList = res['result']['block']['sidechainTransactions']
@@ -139,7 +139,7 @@ class SCForgerFeerate(SidechainTestFramework):
         minFeeRate = 100000000
         for tx in txList:
             feeRate = tx['fee'] / tx['size']
-            print("tx feeRate = {}".format(feeRate))
+            logging.info("tx feeRate = {}".format(feeRate))
             assert_true(feeRate < minFeeRate)
             minFeeRate = feeRate
 

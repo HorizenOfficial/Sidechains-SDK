@@ -2,7 +2,7 @@ package com.horizen.box.data;
 
 import com.horizen.box.Box;
 import com.horizen.proposition.Proposition;
-import scorex.core.serialization.BytesSerializable;
+import sparkz.core.serialization.BytesSerializable;
 
 public interface BoxData<P extends Proposition, B extends Box<P>> extends BytesSerializable {
 

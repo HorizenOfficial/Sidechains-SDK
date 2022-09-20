@@ -6,19 +6,20 @@ import com.horizen.box.Box
 import com.horizen.chain.{MainchainHeaderHash, SidechainBlockInfo}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
+import com.horizen.fork.ForkManager
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.proposition.Proposition
 import com.horizen.secret.{PrivateKey25519, VrfSecretKey}
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.{FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerkleTree, TimeToEpochUtils}
-import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainMemoryPoolEntry, SidechainState, SidechainWallet}
-import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
+import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
+import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.collection.JavaConverters._
 import com.horizen.vrf.VrfOutput
-import scorex.core.NodeViewModifier
+import sparkz.core.NodeViewModifier
 
 import scala.collection.mutable.ArrayBuffer
 import scala.util.{Failure, Success, Try}
@@ -32,12 +33,12 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   case class BranchPointInfo(branchPointId: ModifierId, referenceDataToInclude: Seq[MainchainHeaderHash], headersToInclude: Seq[MainchainHeaderHash])
 
   def buildForgeMessageForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber, timeout: Timeout): ForgeMessageType = {
-      val forgingFunctionForEpochAndSlot: View => ForgeResult = tryToForgeNextBlock(consensusEpochNumber, consensusSlotNumber, timeout)
+    val forgingFunctionForEpochAndSlot: View => ForgeResult = tryToForgeNextBlock(consensusEpochNumber, consensusSlotNumber, timeout)
 
-      val forgeMessage: ForgeMessageType =
-        GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, ForgeResult](forgingFunctionForEpochAndSlot)
+    val forgeMessage: ForgeMessageType =
+      GetDataFromCurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool, ForgeResult](forgingFunctionForEpochAndSlot)
 
-      forgeMessage
+    forgeMessage
   }
 
   protected def tryToForgeNextBlock(nextConsensusEpochNumber: ConsensusEpochNumber, nextConsensusSlotNumber: ConsensusSlotNumber, timeout: Timeout)(nodeView: View): ForgeResult = Try {
@@ -51,8 +52,8 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val parentBlockId: ModifierId = branchPointInfo.branchPointId
     val parentBlockInfo = nodeView.history.blockInfoById(parentBlockId)
 
-    checkNextEpochAndSlot(parentBlockInfo.timestamp,nodeView.history.bestBlockInfo.timestamp,
-        nextConsensusEpochNumber, nextConsensusSlotNumber) match {
+    checkNextEpochAndSlot(parentBlockInfo.timestamp, nodeView.history.bestBlockInfo.timestamp,
+      nextConsensusEpochNumber, nextConsensusSlotNumber) match {
       case Some(forgeFailure) => return forgeFailure
       case _ => // checks passed
     }
@@ -75,9 +76,10 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       val ownedForgingDataView: Seq[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof, VrfOutput)]
       = forgingStakeMerklePathInfoSeq.view.flatMap(forgingStakeMerklePathInfo => getSecretsAndProof(sidechainWallet, vrfMessage, forgingStakeMerklePathInfo))
 
+      val percentageForkApplied = ForkManager.getSidechainConsensusEpochFork(nextConsensusEpochNumber).stakePercentageForkApplied
       val eligibleForgingDataView: Seq[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof, VrfOutput)]
       = ownedForgingDataView.filter { case (forgingStakeMerklePathInfo, _, _, vrfOutput) =>
-        vrfProofCheckAgainstStake(vrfOutput, forgingStakeMerklePathInfo.forgingStakeInfo.stakeAmount, totalStake)
+        vrfProofCheckAgainstStake(vrfOutput, forgingStakeMerklePathInfo.forgingStakeInfo.stakeAmount, totalStake, percentageForkApplied)
       }
 
 
@@ -91,13 +93,13 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       forgingResult
     }
   } match {
-      case Success(result) => {
-        log.info(s"Forge result is: $result")
-        result
-      }
-      case Failure(ex) => {
-        log.error(s"Failed to forge block for ${nextConsensusEpochNumber} epoch ${nextConsensusSlotNumber} slot due:" , ex)
-        ForgeFailed(ex)
+    case Success(result) => {
+      log.info(s"Forge result is: $result")
+      result
+    }
+    case Failure(ex) => {
+      log.error(s"Failed to forge block for ${nextConsensusEpochNumber} epoch ${nextConsensusSlotNumber} slot due:", ex)
+      ForgeFailed(ex)
     }
   }
 
@@ -126,20 +128,20 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val currentTipBlockEpochAndSlot: ConsensusEpochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params, currentTipBlockTimestamp)
     val nextBlockEpochAndSlot: ConsensusEpochAndSlot = ConsensusEpochAndSlot(nextEpochNumber, nextSlotNumber)
 
-    if(parentBlockEpochAndSlot > nextBlockEpochAndSlot) {
-      return Some(ForgeFailed(new IllegalArgumentException (s"Try to forge block with incorrect epochAndSlot $nextBlockEpochAndSlot which are equal or less than parent block epochAndSlot: $parentBlockEpochAndSlot")))
+    if (parentBlockEpochAndSlot > nextBlockEpochAndSlot) {
+      return Some(ForgeFailed(new IllegalArgumentException(s"Try to forge block with incorrect epochAndSlot $nextBlockEpochAndSlot which are equal or less than parent block epochAndSlot: $parentBlockEpochAndSlot")))
     }
 
-    if(parentBlockEpochAndSlot == nextBlockEpochAndSlot) {
+    if (parentBlockEpochAndSlot == nextBlockEpochAndSlot) {
       return Some(SkipSlot(s"Chain tip with $nextBlockEpochAndSlot has been generated already."))
     }
 
     if ((nextEpochNumber - parentBlockEpochAndSlot.epochNumber) > 1) {
-      return Some(ForgeFailed(new IllegalArgumentException (s"Forging is not possible, because of whole consensus epoch is missed: current epoch = $nextEpochNumber, parent epoch = ${parentBlockEpochAndSlot.epochNumber}")))
+      return Some(ForgeFailed(new IllegalArgumentException(s"Forging is not possible, because of whole consensus epoch is missed: current epoch = $nextEpochNumber, parent epoch = ${parentBlockEpochAndSlot.epochNumber}")))
     }
 
-    if(currentTipBlockEpochAndSlot >= nextBlockEpochAndSlot) {
-      return Some(ForgeFailed(new IllegalArgumentException (s"Try to forge block with incorrect epochAndSlot $nextBlockEpochAndSlot which are equal or less than last ommer epochAndSlot: $currentTipBlockEpochAndSlot")))
+    if (currentTipBlockEpochAndSlot >= nextBlockEpochAndSlot) {
+      return Some(ForgeFailed(new IllegalArgumentException(s"Try to forge block with incorrect epochAndSlot $nextBlockEpochAndSlot which are equal or less than last ommer epochAndSlot: $currentTipBlockEpochAndSlot")))
     }
 
     None
@@ -160,7 +162,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       }
 
     // Check that there is no orphaned mainchain headers: SC most recent mainchain header is a part of MC active chain
-    if(bestMainchainCommonPointHash == bestMainchainHeaderInfo.hash) {
+    if (bestMainchainCommonPointHash == bestMainchainHeaderInfo.hash) {
       val branchPointId: ModifierId = history.bestBlockId
       var withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength - history.bestBlockInfo.withdrawalEpochInfo.lastEpochIndex
       if (withdrawalEpochMcBlocksLeft == 0) // current best block is the last block of the epoch
@@ -226,7 +228,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     header.bytes.length
   }
-  
+
   private def forgeBlock(nodeView: View,
                          timestamp: Long,
                          branchPointInfo: BranchPointInfo,
@@ -235,12 +237,12 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                          vrfProof: VrfProof,
                          timeout: Timeout): ForgeResult = {
     val parentBlockId: ModifierId = branchPointInfo.branchPointId
-    val parentBlockInfo: SidechainBlockInfo = nodeView.history.blockInfoById(branchPointInfo.branchPointId)
+    val parentBlockInfo: SidechainBlockInfo = nodeView.history.blockInfoById(parentBlockId)
     var withdrawalEpochMcBlocksLeft: Int = params.withdrawalEpochLength - parentBlockInfo.withdrawalEpochInfo.lastEpochIndex
     if (withdrawalEpochMcBlocksLeft == 0) // parent block is the last block of the epoch
       withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength
 
-    var blockSize: Int = precalculateBlockHeaderSize(branchPointInfo.branchPointId, timestamp, forgingStakeMerklePathInfo, vrfProof)
+    var blockSize: Int = precalculateBlockHeaderSize(parentBlockId, timestamp, forgingStakeMerklePathInfo, vrfProof)
     blockSize += 4 + 4 // placeholder for the MainchainReferenceData and Transactions sequences size values
 
     // Get all needed MainchainBlockHeaders from MC Node
@@ -260,7 +262,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     // Get Ommers in case the branch point is not the current best block
     var ommers: Seq[Ommer] = Seq()
     var blockId = nodeView.history.bestBlockId
-    while (blockId != branchPointInfo.branchPointId) {
+    while (blockId != parentBlockId) {
       val block = nodeView.history.getBlockById(blockId).get() // TODO: replace with method blockById with no Option
       blockId = block.parentId
       ommers = Ommer.toOmmer(block) +: ommers
@@ -283,7 +285,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       mainchainSynchronizer.getMainchainBlockReference(hash) match {
         case Success(ref) => {
           val refDataSize = ref.data.bytes.length + 4 // placeholder for MainchainReferenceData length
-          if(blockSize + refDataSize > SidechainBlock.MAX_BLOCK_SIZE)
+          if (blockSize + refDataSize > SidechainBlock.MAX_BLOCK_SIZE)
             false // stop data collection
           else {
             mainchainReferenceData.append(ref.data)
@@ -299,28 +301,44 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     })
 
     val isWithdrawalEpochLastBlock: Boolean = mainchainReferenceData.size == withdrawalEpochMcBlocksLeft
-
     // Collect transactions if possible
     val transactions: Seq[SidechainTransaction[Proposition, Box[Proposition]]] =
-      if (isWithdrawalEpochLastBlock) { // SC block is going to become the last block of the withdrawal epoch
-        Seq() // no SC Txs allowed
+      if (isWithdrawalEpochLastBlock) {
+        // SC block is going to become the last block of the withdrawal epoch
+        // No SC Txs allowed
+        Seq()
+      } else if (parentBlockId != nodeView.history.bestBlockId) {
+        // SC block extends the block behind the current tip (for example, in case of ommers).
+        // We can't be sure that transactions in the Mempool are valid against the block in the past.
+        // For example the ommerred Block contains Tx which output is going to be spent by another Tx in the Mempool.
+        Seq()
       } else { // SC block is in the middle of the epoch
         var txsCounter: Int = 0
-        nodeView.pool.take(nodeView.pool.size).filter(tx => {
-          val txSize = tx.bytes.length + 4 // placeholder for Tx length
-          txsCounter += 1
-          if(txsCounter > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER || blockSize + txSize > SidechainBlock.MAX_BLOCK_SIZE)
-            false // stop data collection
-          else {
-            blockSize += txSize
-            true // continue data collection
-          }
-        }).map(tx => tx.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]).toSeq // TO DO: problems with types
+        val allowedWithdrawalRequestBoxes = nodeView.state.getAllowedWithdrawalRequestBoxes(mainchainBlockReferenceDataToRetrieve.size) - nodeView.state.getAlreadyMinedWithdrawalRequestBoxesInCurrentEpoch
+        val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, timestamp)
+        val mempoolTx =
+          if (ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).backwardTransferLimitEnabled())
+            //In case we reached the Sidechain Fork1 we filter the mempool txs considering also the WithdrawalBoxes allowed to be mined in the current block.
+            nodeView.pool.takeWithWithdrawalBoxesLimit(allowedWithdrawalRequestBoxes)
+          else
+            nodeView.pool.take(nodeView.pool.size)
+        mempoolTx
+          .filter(nodeView.state.validateWithFork(_, consensusEpochNumber).isSuccess)
+          .filter(tx => {
+            val txSize = tx.bytes.length + 4 // placeholder for Tx length
+            txsCounter += 1
+            if (txsCounter > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER || blockSize + txSize > SidechainBlock.MAX_BLOCK_SIZE)
+              false // stop data collection
+            else {
+              blockSize += txSize
+              true // continue data collection
+            }
+          }).map(tx => tx.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]).toSeq // TO DO: problems with types
       }
 
-    val feePayments = if(isWithdrawalEpochLastBlock) {
+    val feePayments = if (isWithdrawalEpochLastBlock) {
       // Current block is expect to be the continuation of the current tip, so there are no ommers.
-      require(nodeView.history.bestBlockId == branchPointInfo.branchPointId, "Last block of the withdrawal epoch expect to be a continuation of the tip.")
+      require(nodeView.history.bestBlockId == parentBlockId, "Last block of the withdrawal epoch expect to be a continuation of the tip.")
       require(ommers.isEmpty, "No Ommers allowed for the last block of the withdrawal epoch.")
 
       val withdrawalEpochNumber: Int = nodeView.state.getWithdrawalEpochInfo.epoch

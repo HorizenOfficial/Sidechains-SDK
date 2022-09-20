@@ -1,14 +1,14 @@
 package com.horizen.utils;
 
-import scorex.core.serialization.BytesSerializable;
-import scorex.core.serialization.ScorexSerializer;
+import sparkz.core.serialization.BytesSerializable;
+import sparkz.core.serialization.SparkzSerializer;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class DynamicTypedSerializer<T extends BytesSerializable, S extends ScorexSerializer<T>> implements ScorexSerializer<T> {
+public class DynamicTypedSerializer<T extends BytesSerializable, S extends SparkzSerializer<T>> implements SparkzSerializer<T> {
     protected HashMap<Byte, S> coreSerializers; // unique core key : core serializer
     protected HashMap<Class, Byte> coreSerializersClasses; // core serializer class : unique core key
 
@@ -39,7 +39,7 @@ public class DynamicTypedSerializer<T extends BytesSerializable, S extends Score
 
     @Override
     public void serialize(T obj, Writer writer) {
-        ScorexSerializer serializer = obj.serializer();
+        SparkzSerializer serializer = obj.serializer();
         // Core serializer found
         if(coreSerializersClasses.containsKey(serializer.getClass())) {
             byte idOfSerializer = coreSerializersClasses.get(serializer.getClass());

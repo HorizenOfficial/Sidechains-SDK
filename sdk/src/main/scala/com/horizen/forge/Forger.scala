@@ -11,9 +11,9 @@ import com.horizen.consensus.{ConsensusEpochAndSlot, ConsensusEpochNumber, Conse
 import com.horizen.forge.Forger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
 import com.horizen.params.NetworkParams
 import com.horizen.utils.TimeToEpochUtils
-import scorex.core.NodeViewHolder.ReceivableMessages
-import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
-import scorex.core.utils.NetworkTimeProvider
+import sparkz.core.NodeViewHolder.ReceivableMessages
+import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
+import sparkz.core.utils.NetworkTimeProvider
 import scorex.util.ScorexLogging
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -28,7 +28,7 @@ class Forger(settings: SidechainSettings,
              timeProvider: NetworkTimeProvider,
              val params: NetworkParams) extends Actor with ScorexLogging {
   val forgeMessageBuilder: ForgeMessageBuilder = new ForgeMessageBuilder(mainchainSynchronizer, companion, params, settings.websocket.allowNoConnectionInRegtest)
-  val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
+  val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
 
 
@@ -41,7 +41,10 @@ class Forger(settings: SidechainSettings,
       case Some(_) => log.info("Automatically forging already had been started")
       case None => {
         val newTimer = new Timer()
-        newTimer.scheduleAtFixedRate(forgingInitiatorTimerTask, 0, consensusMillisecondsInSlot)
+        val currentTime: Long = timeProvider.time() / 1000
+        val delay = TimeToEpochUtils.secondsRemainingInSlot(params, currentTime) * 1000
+        newTimer.schedule(forgingInitiatorTimerTask, 0L)
+        newTimer.scheduleAtFixedRate(forgingInitiatorTimerTask, delay, consensusMillisecondsInSlot)
         timerOpt = Some(newTimer)
         log.info("Automatically forging had been started")
       }

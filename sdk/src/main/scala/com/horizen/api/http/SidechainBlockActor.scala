@@ -6,8 +6,8 @@ import akka.util.Timeout
 import com.horizen.block.SidechainBlock
 import com.horizen.forge.Forger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot
 import com.horizen.{SidechainHistory, SidechainSettings, SidechainSyncInfo}
-import scorex.core.PersistentNodeViewModifier
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedHistory, SemanticallyFailedModification, SyntacticallyFailedModification}
+import sparkz.core.PersistentNodeViewModifier
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedHistory, SemanticallyFailedModification, SyntacticallyFailedModification}
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.collection.concurrent.TrieMap
@@ -26,7 +26,7 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier, SI <: SidechainSyn
 
   private var submitBlockPromises: TrieMap[ModifierId, Promise[Try[ModifierId]]] = TrieMap()
 
-  lazy val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
+  lazy val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
   implicit lazy val timeout: Timeout = Timeout(timeoutDuration)
 
   override def preStart(): Unit = {

@@ -23,7 +23,7 @@ class SCAPIException(Exception):
         self.error = sc_api_error
         
 """
-   Adaption of AuthServiceProxy class from BTF for Scorex REST API. Differences are very minimal:
+   Adaption of AuthServiceProxy class from BTF for SDK REST API. Differences are very minimal:
    1) Method names follows a path-like style. Therefore method names are passed to __call__ method with underscores
       and the method will replace them with slashes;
    2) Auth header must be a string that hashes to the field "api-key-hash" specified in each SC node conf file. If

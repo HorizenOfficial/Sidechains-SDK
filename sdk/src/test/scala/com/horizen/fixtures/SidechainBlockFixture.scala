@@ -17,8 +17,8 @@ import com.horizen.secret.{VrfKeyGenerator, VrfSecretKey}
 import com.horizen.transaction.{SidechainTransaction, TransactionSerializer}
 import com.horizen.utils._
 import com.horizen.vrf.VrfOutput
-import scorex.core.block.Block
-import scorex.core.consensus.ModifierSemanticValidity
+import sparkz.core.block.Block
+import sparkz.core.consensus.ModifierSemanticValidity
 import scorex.util.{ModifierId, bytesToId}
 
 import scala.util.{Failure, Random, Try}

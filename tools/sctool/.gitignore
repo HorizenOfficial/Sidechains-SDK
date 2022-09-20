@@ -1,8 +1,8 @@
 out/
 .idea/
 target/
-scorex.log
-scorex-errors.log
+sparkz.log
+sparkz-errors.log
 .project
 .classpath
 .settings/
