@@ -9,6 +9,11 @@ import com.horizen.box.{WithdrawalRequestBox, WithdrawalRequestBoxSerializer}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
 import com.horizen.forge.{ForgerList, ForgerListSerializer}
+import com.horizen.certificatesubmitter.keys._
+import com.horizen.companion.SidechainBoxesCompanion
+import com.horizen.consensus._
+import com.horizen.forge.{ForgerList, ForgerListSerializer}
+import com.horizen.proposition.SchnorrProposition
 import com.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
 import scorex.util.ScorexLogging
 import java.util.{ArrayList => JArrayList}
@@ -29,8 +34,6 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
   private[horizen] val withdrawalEpochInformationKey = Utils.calculateKey("withdrawalEpochInformation".getBytes)
   private val withdrawalRequestSerializer = new ListSerializer[WithdrawalRequestBox](WithdrawalRequestBoxSerializer.getSerializer)
-  private val keysRotationProofSerializer = new ListSerializer[KeyRotationProof](KeyRotationProofSerializer.getSerializer)
-  private val keysListSerializer = new ListSerializer[ActualKeys](ActualKeysSerializer.getSerializer)
 
   private[horizen] val consensusEpochKey = Utils.calculateKey("consensusEpoch".getBytes)
 
@@ -48,6 +51,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     Utils.calculateKey(Bytes.concat("withdrawalRequests".getBytes, Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
   }
 
+<<<<<<< HEAD
   private[horizen] def getCertifierKey(withdrawalEpoch: Int): ByteArrayWrapper = {
     Utils.calculateKey(Bytes.concat("certificateKeys".getBytes, Ints.toByteArray(withdrawalEpoch)))
   }
