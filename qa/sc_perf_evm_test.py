@@ -21,6 +21,7 @@ from test_framework.util import start_nodes, \
 from SidechainTestFramework.scutil import assert_true, bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks, \
     deserialize_perf_test_json, connect_sc_nodes, convertZenniesToWei, convertZenToZennies, AccountModelBlockVersion, EVM_APP_BINARY
 from performance.perf_data import NetworkTopology, TestType
+from SidechainTestFramework.account.address_util import format_evm
 
 # Declare global thread safe values used for multiprocessing tps test
 counter = Value('i', 0)
@@ -50,19 +51,25 @@ def get_number_of_transactions_for_node(node):
 def send_transactions_per_second(txs_creator_node, destination_address, tx_amount, tps_per_process,
                                  start_time, test_run_time):
     # Run until
+    print("HERE!!!!!!!!!!!!!!!!!!!!!!!!!")
+    print("tps_per_process")
+    print(tps_per_process)
+    nonce = int(txs_creator_node.rpc_eth_getTransactionCount(format_evm(destination_address), 'latest')['result'], 16)
     while time.time() - start_time < test_run_time:
         i = 0
         tps_start_time = time.time()
         # Send transactions until the maximum tps value has been reached for each process (thread).
         while i < tps_per_process:
             try:
-                sendCoinsToAddressAccount(txs_creator_node, destination_address, tx_amount, i)
+                #print(i)
+                sendCoinsToAddressAccount(txs_creator_node, destination_address, tx_amount, nonce)
             except Exception:
                 with errors.get_lock():
                     errors.value += 1
             with counter.get_lock():
                 counter.value += 1
             i += 1
+            nonce  += 1
         completion_time = time.time() - tps_start_time
         # Remove execution time from the 1 second to get as close to X number of TPS as possible
         if completion_time < 1:
@@ -316,12 +323,18 @@ class PerformanceTest(SidechainTestFramework):
             # Each process needs to be able to send a number of transactions per second, without going over 1 second.
             # May need some fine-tuning depending on what machine this is running on. Default to 100.
             max_tps_per_process = self.perf_data["max_tps_per_process"]
+            print(max_tps_per_process)
             tps = math.floor(self.initial_txs / self.test_run_time)
+            print(self.initial_txs)
+            print(self.test_run_time)
+            print(tps)
             # Decide number of processes we need to use, as each process needs to be able to fire x transactions in
             # 1 second or less. e.g. 100 tps and if each process can comfortably handle 10 transactions in
             # under 1 second we need 10 processes running 10 tps in parallel to get 100 tps total.
             max_processes = math.ceil(tps / max_tps_per_process)
+            print(max_processes)
             tps_per_process = math.ceil(tps / max_processes)
+            print(tps_per_process)
 
             print(f"Running Throughput: {tps} Transactions Per Second for Creator Node(Node{node_index})...")
 
