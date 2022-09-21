@@ -94,7 +94,12 @@ class PerformanceTest(SidechainTestFramework):
                 "test_run_time": test_run_time, "block_rate": block_rate,
                 "use_multiprocessing": perf_data["use_multiprocessing"], "initial_txs": initial_txs,
                 "network_topology": topology,
-                "latency_settings": 0,
+                "get_peer_spec_latency": [],
+                "peer_spec_latency": [],
+                "transaction_latency": [],
+                "block_latency": [],
+                "request_modifier_spec_latency": [],
+                "modifiers_spec_latency": [],
                 "n_nodes": len(sc_node_data), "n_forgers": sum(map(lambda x: x["forger"] == True, sc_nodes_list)),
                 "n_tx_creator": sum(map(lambda x: x["tx_creator"] == True, sc_nodes_list)), "initial_balances": [],
                 "mined_transactions": 0, "mined_blocks": 0, "end_test_run_time": 0, "end_balances": [],
@@ -559,18 +564,6 @@ class PerformanceTest(SidechainTestFramework):
             total_blocks_for_node = 1
             print("### Node" + str(node_index) + " Test Results ###")
 
-            # Get latency configuration values
-            latency_configurations = self.get_latency_config()
-            for config in latency_configurations:
-                latency_config.append(
-                    "Node" + str(latency_configurations.index(config)) + " Latency Settings -"
-                    " get_peer_spec: " + str(config.get_peer_spec) +
-                    " transaction: " + str(config.transaction) +
-                    " block: " + str(config.block) +
-                    " request_modifier_spec: " + str(config.request_modifier_spec) +
-                    " modifiers_spec: " + str(config.modifiers_spec)
-                )
-
             # Retrieve node mempool
             mempool_txs = len(allTransactions(node, False)["transactionIds"])
             print("Node" + str(node_index) + " Mempool remaining transactions: " + str(mempool_txs))
@@ -595,7 +588,6 @@ class PerformanceTest(SidechainTestFramework):
         print(f"Transactions NOT mined: {not_mined_transactions}")
         test_run_time = end_time - start_time
         print(f"\n###\nTEST RUN TIME: {test_run_time} seconds\n###")
-        self.csv_data["latency_settings"] = latency_config
         self.csv_data["mined_transactions"] = total_mined_transactions
         self.csv_data["end_test_run_time"] = test_run_time
         self.csv_data["mined_blocks"] = blocks_per_node
@@ -607,6 +599,17 @@ class PerformanceTest(SidechainTestFramework):
         self.csv_data["tps_mined"] = total_mined_transactions / test_run_time
         self.csv_data["blocks_ts"] = blocks_ts
         self.csv_data["node_api_errors"] = api_errors
+
+        # Get latency configuration values
+        latency_configurations = self.get_latency_config()
+        for config in latency_configurations:
+            self.csv_data["get_peer_spec_latency"].append(config.get_peer_spec)
+            self.csv_data["peer_spec_latency"].append(config.peer_spec)
+            self.csv_data["transaction_latency"].append(config.transaction)
+            self.csv_data["block_latency"].append(config.block)
+            self.csv_data["request_modifier_spec_latency"].append(config.request_modifier_spec)
+            self.csv_data["modifiers_spec_latency"].append(config.modifiers_spec)
+
 
         self.fill_csv()
 
