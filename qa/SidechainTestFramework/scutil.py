@@ -522,9 +522,14 @@ def get_websocket_configuration(index, array_of_MCConnectionInfo):
 def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None, print_output_to_file=False,
                   auth_api_key=None, use_multiprocessing=False, processor=None):
     if use_multiprocessing:
+        if i == 0:
+            processors = [i, i+1]
+        else:
+            first_available_process = i * 2
+            processors = [first_available_process, first_available_process + 1]
         p = psutil.Process()
-        p.cpu_affinity([processor])
-        print(f"Process #{processor}: Set Node{i} affinity to {processor}, Node{i} affinity now {p.cpu_affinity()}",
+        p.cpu_affinity(processors)
+        print(f"Processes #{processors}: Set Node{i} affinity to {processors}, Node{i} affinity now {p.cpu_affinity()}",
               flush=True)
     """
     Start a SC node and returns API connection to it
@@ -577,8 +582,11 @@ def start_sc_nodes_with_multiprocessing(num_nodes, dirname, extra_args=None, rpc
     if binary is None: binary = [None for i in range(num_nodes)]
 
     processors: int = multiprocessing.Pool()._processes
-
-    print(f"Available processors: {processors}")
+    processors_available = processors/2
+    print(f"Available processors (2 threads each): {processors_available}")
+    print(f"Number of Nodes: {num_nodes}")
+    if processors_available / num_nodes < 1:
+        print("WARNING: Number of Nodes exceeds available Processors")
 
     nodes = [
         start_sc_node(i, dirname, extra_args[i], rpchost, binary=binary[i], print_output_to_file=print_output_to_file,
