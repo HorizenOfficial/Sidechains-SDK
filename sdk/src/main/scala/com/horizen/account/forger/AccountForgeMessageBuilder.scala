@@ -271,8 +271,10 @@ class AccountForgeMessageBuilder(
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
-      new Array[Byte](MerkleTree.ROOT_HASH_LENGTH), // stateRoot TODO add constant
-      new AddressProposition(new Array[Byte](Account.ADDRESS_SIZE)), // forgerAddress: PublicKeySecp256k1Proposition TODO add constant,
+      // stateRoot TODO add constant
+      new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
+      // forgerAddress: PublicKeySecp256k1Proposition TODO add constant
+      new AddressProposition(new Array[Byte](Account.ADDRESS_SIZE)),
       BigInteger.ONE.shiftLeft(256).subtract(BigInteger.ONE),
       Long.MaxValue,
       Long.MaxValue,
@@ -360,5 +362,4 @@ class AccountForgeMessageBuilder(
 
     forgingStakeMerklePathInfoSeq
   }
-
 }
