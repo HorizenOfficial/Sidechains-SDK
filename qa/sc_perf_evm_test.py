@@ -58,7 +58,6 @@ def send_transactions_per_second(txs_creator_node, destination_address, tx_amoun
         # Send transactions until the maximum tps value has been reached for each process (thread).
         while i < tps_per_process:
             try:
-                #print(i)
                 sendCoinsToAddressAccount(txs_creator_node, destination_address, tx_amount, nonce)
             except Exception:
                 with errors.get_lock():
@@ -320,18 +319,12 @@ class PerformanceTest(SidechainTestFramework):
             # Each process needs to be able to send a number of transactions per second, without going over 1 second.
             # May need some fine-tuning depending on what machine this is running on. Default to 100.
             max_tps_per_process = self.perf_data["max_tps_per_process"]
-            print(max_tps_per_process)
             tps = math.floor(self.initial_txs / self.test_run_time)
-            print(self.initial_txs)
-            print(self.test_run_time)
-            print(tps)
             # Decide number of processes we need to use, as each process needs to be able to fire x transactions in
             # 1 second or less. e.g. 100 tps and if each process can comfortably handle 10 transactions in
             # under 1 second we need 10 processes running 10 tps in parallel to get 100 tps total.
             max_processes = math.ceil(tps / max_tps_per_process)
-            print(max_processes)
             tps_per_process = math.ceil(tps / max_processes)
-            print(tps_per_process)
 
             print(f"Running Throughput: {tps} Transactions Per Second for Creator Node(Node{node_index})...")
 
