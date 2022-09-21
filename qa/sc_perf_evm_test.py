@@ -51,9 +51,6 @@ def get_number_of_transactions_for_node(node):
 def send_transactions_per_second(txs_creator_node, destination_address, tx_amount, tps_per_process,
                                  start_time, test_run_time):
     # Run until
-    print("HERE!!!!!!!!!!!!!!!!!!!!!!!!!")
-    print("tps_per_process")
-    print(tps_per_process)
     nonce = int(txs_creator_node.rpc_eth_getTransactionCount(format_evm(destination_address), 'latest')['result'], 16)
     while time.time() - start_time < test_run_time:
         i = 0
