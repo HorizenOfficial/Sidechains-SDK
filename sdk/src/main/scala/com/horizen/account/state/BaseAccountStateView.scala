@@ -12,7 +12,7 @@ trait BaseAccountStateView extends AccountStateReader {
   def isEoaAccount(address: Array[Byte]): Boolean
   def isSmartContractAccount(address: Array[Byte]): Boolean
 
-  def addAccount(address: Array[Byte], codeHash: Array[Byte]): Unit
+  def addAccount(address: Array[Byte], code: Array[Byte]): Unit
   def increaseNonce(address: Array[Byte]): Unit
 
   @throws(classOf[ExecutionFailedException])

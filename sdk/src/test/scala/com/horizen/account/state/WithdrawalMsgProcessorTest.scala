@@ -41,8 +41,8 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
           WithdrawalMsgProcessor.contractAddress,
           args.getArgument(0))
         assertArrayEquals(
-          "Different code hash expected.",
-          WithdrawalMsgProcessor.contractCodeHash,
+          "Different code expected.",
+          WithdrawalMsgProcessor.contractCode,
           args.getArgument(1))
       })
     WithdrawalMsgProcessor.init(mockStateView)
