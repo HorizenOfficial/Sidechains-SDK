@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Longs}
 import com.horizen.account.FeeUtils
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
+import com.horizen.account.receipt.LogsBloom
 import com.horizen.block.SidechainBlockHeaderBase
 import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import com.horizen.params.NetworkParams
@@ -43,6 +44,7 @@ case class AccountBlockHeader(
                                override val ommersMerkleRootHash: Array[Byte], // build on top of Ommer.id()
                                override val ommersCumulativeScore: Long, // to be able to calculate the score of the block without having the full SB. For future
                                override val feePaymentsHash: Array[Byte], // hash of the fee payments created during applying this block to the state. zeros by default.
+                               logsBloom: LogsBloom,
                                override val signature: Signature25519
                                ) extends SidechainBlockHeaderBase with BytesSerializable {
 
@@ -194,6 +196,8 @@ object AccountBlockHeaderSerializer extends ScorexSerializer[AccountBlockHeader]
 
     val feePaymentsHash: Array[Byte] = r.getBytes(NodeViewModifier.ModifierIdSize)
 
+    val logsBloom: LogsBloom = new LogsBloom(r.getBytes(LogsBloom.BLOOM_FILTER_LENGTH))
+
     val signature: Signature25519 = Signature25519Serializer.getSerializer.parse(r)
 
     AccountBlockHeader(
@@ -214,6 +218,7 @@ object AccountBlockHeaderSerializer extends ScorexSerializer[AccountBlockHeader]
       ommersMerkleRootHash,
       ommersCumulativeScore,
       feePaymentsHash,
+      logsBloom,
       signature)
   }
 }

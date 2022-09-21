@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.account.block.AccountBlock.calculateReceiptRoot
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.EthereumConsensusDataReceipt
+import com.horizen.account.receipt.{EthereumConsensusDataReceipt, LogsBloom}
 import com.horizen.block._
 import com.horizen.consensus.ForgingStakeInfo
 import com.horizen.evm.TrieHasher
@@ -93,6 +93,7 @@ object AccountBlock extends ScorexEncoding {
              gasUsed: Long,
              gasLimit: Long,
              companion: SidechainAccountTransactionsCompanion,
+             logsBloom: LogsBloom,
              signatureOption: Option[Signature25519] = None // TO DO: later we should think about different unsigned/signed blocks creation methods
             ): Try[AccountBlock] = Try {
     require(mainchainBlockReferencesData != null)
@@ -132,6 +133,7 @@ object AccountBlock extends ScorexEncoding {
           ommersMerkleRootHash,
           ommers.map(_.score).sum,
           feePaymentsHash,
+          logsBloom,
           new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH)) // empty signature
         )
 
@@ -157,6 +159,7 @@ object AccountBlock extends ScorexEncoding {
       ommersMerkleRootHash,
       ommers.map(_.score).sum,
       feePaymentsHash,
+      logsBloom,
       signature
     )
 
