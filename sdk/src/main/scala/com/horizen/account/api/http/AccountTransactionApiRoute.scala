@@ -11,6 +11,7 @@ import com.horizen.SidechainTypes
 import com.horizen.account.api.http.AccountTransactionErrorResponse._
 import com.horizen.account.api.http.AccountTransactionRestScheme._
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.account.proof.SignatureSecp256k1
@@ -34,9 +35,9 @@ import com.horizen.utils.BytesUtils
 import org.web3j.crypto.Sign.SignatureData
 import org.web3j.crypto.TransactionEncoder.createEip155SignatureData
 import scorex.core.settings.RESTApiSettings
+
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
-
 import java.lang
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
@@ -55,6 +56,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
     SidechainTypes#SCAT,
     AccountBlockHeader,
     AccountBlock,
+    AccountFeePaymentsInfo,
     NodeAccountHistory,
     NodeAccountState,
     NodeWalletBase,

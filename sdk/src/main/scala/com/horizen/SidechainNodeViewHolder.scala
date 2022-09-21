@@ -2,13 +2,14 @@ package com.horizen
 
 
 import akka.actor.{ActorRef, ActorSystem, Props}
-import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
-import com.horizen.chain.FeePaymentsInfo
+import com.horizen.block.{SidechainBlock, SidechainBlockBase, SidechainBlockHeader, SidechainBlockHeaderBase}
+import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.consensus._
 import com.horizen.node._
 import com.horizen.params.NetworkParams
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
+import com.horizen.transaction.Transaction
 import com.horizen.wallet.ApplicationWallet
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ModifierId
@@ -37,6 +38,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override type MS = SidechainState
   override type VL = SidechainWallet
   override type MP = SidechainMemoryPool
+  override type FPI = SidechainFeePaymentsInfo
 
   override def restoreState(): Option[(HIS, MS, VL, MP)] = for {
     history <- SidechainHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
@@ -71,6 +73,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       SidechainTypes#SCBT,
       SidechainBlockHeader,
       SidechainBlock,
+      SidechainFeePaymentsInfo,
       NodeHistory,
       NodeState,
       NodeWallet,
@@ -94,6 +97,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       SidechainTypes#SCBT,
       SidechainBlockHeader,
       SidechainBlock,
+      SidechainFeePaymentsInfo,
       NodeHistory,
       NodeState,
       NodeWallet,
@@ -118,6 +122,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       SidechainTypes#SCBT,
       SidechainBlockHeader,
       SidechainBlock,
+      SidechainFeePaymentsInfo,
       NodeHistory,
       NodeState,
       NodeWallet,
@@ -153,23 +158,22 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       (history, wallet)
   }
 
-  // Check is the modifier ends the withdrawal epoch, so notify History and Wallet about fees to be payed.
-  // Scan modifier by the Wallet considering the forger fee payments.
-  override protected def scanBlockWithFeePayments(history: HIS, state: MS, wallet: VL, modToApply: SidechainBlock): (HIS, VL) = {
-    val stateWithdrawalEpochNumber: Int = state.getWithdrawalEpochInfo.epoch
-    if (state.isWithdrawalEpochLastIndex) {
-      val feePayments = state.getFeePayments(stateWithdrawalEpochNumber)
-      val historyAfterUpdateFee = history.updateFeePaymentsInfo(modToApply.id, FeePaymentsInfo(feePayments))
+  override def getFeePaymentsInfo(state: MS, epochNumber: Int) : FPI = {
+    val feePayments = state.getFeePayments(epochNumber)
+    SidechainFeePaymentsInfo(feePayments)
+  }
 
-      val walletAfterApply: VL = wallet.scanPersistent(modToApply, stateWithdrawalEpochNumber, feePayments, Some(state))
-
-      (historyAfterUpdateFee, walletAfterApply)
-    } else {
-      val walletAfterApply: VL = wallet.scanPersistent(modToApply, stateWithdrawalEpochNumber, Seq(), None)
-      (history, walletAfterApply)
+  override def getScanPersistentWallet(modToApply: SidechainBlock, stateOp: Option[MS], epochNumber: Int, wallet: VL) : VL = {
+    stateOp match {
+      case Some(state) =>
+        wallet.scanPersistent(modToApply, epochNumber, state.getFeePayments(epochNumber), stateOp)
+      case None =>
+        wallet.scanPersistent(modToApply, epochNumber, Seq(), None)
     }
   }
 
+  override def isWithdrawalEpochLastIndex(state: MS) : Boolean = state.isWithdrawalEpochLastIndex
+  override def getWithdrawalEpochNumber(state: MS) : Int = state.getWithdrawalEpochInfo.epoch
 }
 
 object SidechainNodeViewHolderRef {

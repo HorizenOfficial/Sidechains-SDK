@@ -198,7 +198,7 @@ class SCEvmBootstrap(SidechainTestFramework):
         request = json.dumps(j)
         response = sc_node_1.transaction_sendCoinsToAddress(request)
         print("tx sent:")
-        pprint.pprint(response)
+        tx_hash_1 = response['result']['transactionId']
         self.sc_sync_all()
         tx_hash = response['result']['transactionId']
 

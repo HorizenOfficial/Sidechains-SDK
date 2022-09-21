@@ -5,8 +5,9 @@ from SidechainTestFramework.account.httpCalls.createEIP1559Transaction import cr
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
+from httpCalls.block.getFeePayments import http_block_getFeePayments
 from test_framework.util import initialize_chain_clean, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, assert_true
+    websocket_port_by_mc_node_index, forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, \
     connect_sc_nodes, generate_next_block, AccountModelBlockVersion, \
     EVM_APP_BINARY, convertZenToZennies, convertZenniesToWei, get_account_balance, generate_account_proposition, \
@@ -50,7 +51,7 @@ class ScEvmForgingFeePayments(SidechainTestFramework):
   number_of_mc_nodes = 1
   number_of_sidechain_nodes = 2
 
-  withdrawal_epoch_length = 5
+  withdrawal_epoch_length = 20
 
   def setup_chain(self):
       initialize_chain_clean(self.options.tmpdir, self.number_of_mc_nodes)
@@ -228,8 +229,8 @@ class ScEvmForgingFeePayments(SidechainTestFramework):
 
       self.sc_sync_all()
 
-      # Generate 3 MC block to reach the end of the withdrawal epoch
-      mc_node.generate(3)
+      # Generate some MC block to reach the end of the withdrawal epoch
+      mc_node.generate(self.withdrawal_epoch_length - 2)
 
       # balance now is initial (ft) without forgerStake and fee and without transferred amounts and fees
       assert_equal(
@@ -296,27 +297,35 @@ class ScEvmForgingFeePayments(SidechainTestFramework):
       assert_equal(sc_node_2_balance_after_payments, sc_node_2_balance_before_payments + node_2_fees,
                    "Wrong fee payment amount for SC node 2")
 
-      '''
-      TODO enable when API will be ready
       # Check fee payments from API perspective
       # Non-last block of the epoch:
-      api_fee_payments_node1 = http_block_getFeePayments2(sc_node_1, sc_middle_we_block_id)['feePayments']
+      api_fee_payments_node1 = http_block_getFeePayments(sc_node_1, sc_middle_we_block_id)['feePayments']
+      pprint.pprint(api_fee_payments_node1)
+
       assert_equal(0, len(api_fee_payments_node1),
                    "No fee payments expected to be found for the block in the middle of WE")
-      api_fee_payments_node2 = http_block_getFeePayments2(sc_node_2, sc_middle_we_block_id)['feePayments']
+
+      api_fee_payments_node2 = http_block_getFeePayments(sc_node_2, sc_middle_we_block_id)['feePayments']
+      pprint.pprint(api_fee_payments_node2)
+
+
       assert_equal(0, len(api_fee_payments_node2),
                    "No fee payments expected to be found for the block in the middle of WE")
 
+
       # Last block of the epoch:
-      api_fee_payments_node1 = http_block_getFeePayments2(sc_node_1, sc_last_we_block_id)['feePayments']
-      api_fee_payments_node2 = http_block_getFeePayments2(sc_node_2, sc_last_we_block_id)['feePayments']
+      api_fee_payments_node1 = http_block_getFeePayments(sc_node_1, sc_last_we_block_id)['feePayments']
+      api_fee_payments_node2 = http_block_getFeePayments(sc_node_2, sc_last_we_block_id)['feePayments']
+      pprint.pprint(api_fee_payments_node1)
+      pprint.pprint(api_fee_payments_node2)
+
       assert_equal(api_fee_payments_node1, api_fee_payments_node2,
                    "SC nodes have different view on the fee payments")
 
       for i in range(1, len(forger_fees) + 1):
           assert_equal(forger_fees[i], api_fee_payments_node1[i - 1]['value'],
                        "Different fee value found for payment " + str(i))
-      '''
+
 
 
 if __name__ == "__main__":

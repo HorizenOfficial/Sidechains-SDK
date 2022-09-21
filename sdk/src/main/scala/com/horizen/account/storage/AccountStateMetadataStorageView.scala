@@ -275,7 +275,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     // If withdrawal epoch switched to the next one, then perform some database clean-up:
     // 1) remove outdated topQualityCertificate retrieved 3 epochs before and referenced to the 4 epochs before.
     //    Note: we should keep last 2 epoch certificates, so in case SC has ceased we have an access to the last active cert.
-    // 2) remove outdated AccountBlockFeeInfo records
+    // 2) remove outdated AccountBlockFeeInfo records, the relevant forger fee payments have been stored in history by node view holder
     withdrawalEpochInfoOpt match {
       case Some(epochInfo) =>
         val isWithdrawalEpochSwitched: Boolean = getWithdrawalEpochInfoFromStorage match {

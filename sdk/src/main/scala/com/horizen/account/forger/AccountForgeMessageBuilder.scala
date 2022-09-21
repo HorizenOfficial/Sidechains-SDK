@@ -5,6 +5,7 @@ import com.horizen.account.FeeUtils
 import com.horizen.account.FeeUtils.calculateBaseFee
 import com.horizen.account.block.AccountBlock.calculateReceiptRoot
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
@@ -14,7 +15,7 @@ import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.{Account, AccountBlockFeeInfo, AccountFeePaymentsUtils}
+import com.horizen.account.utils.{Account, AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block._
 import com.horizen.consensus._
@@ -46,6 +47,7 @@ class AccountForgeMessageBuilder(
     )
       with ClosableResourceHandler
       with ScorexLogging {
+  type FPI = AccountFeePaymentsInfo
   type HSTOR = AccountHistoryStorage
   type VL = AccountWallet
   type HIS = AccountHistory
@@ -63,6 +65,7 @@ class AccountForgeMessageBuilder(
 
     // we must ensure that all the tx we get from mempool are applicable to current state view
     // and we must stay below the block gas limit threshold, therefore we might have a subset of the input transactions
+
     val (receiptList, listOfAppliedTxHash, cumBaseFee, cumForgerTips) =
       tryApplyAndGetBlockInfo(view, mainchainBlockReferencesData, sidechainTransactions, blockContext).get
 
@@ -77,14 +80,10 @@ class AccountForgeMessageBuilder(
     (receiptList, appliedTransactions, AccountBlockFeeInfo(cumBaseFee, cumForgerTips, forgerAddress))
   }
 
-
-
   private def tryApplyAndGetBlockInfo(stateView: AccountStateView,
                                       mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
                                       sidechainTransactions: Seq[SidechainTypes#SCAT],
                                       blockContext: BlockContext)
-
-
   : Try[(Seq[EthereumConsensusDataReceipt], Seq[ByteArrayWrapper], BigInteger, BigInteger)] = Try {
 
     for (mcBlockRefData <- mainchainBlockReferencesData) {
@@ -183,7 +182,7 @@ class AccountForgeMessageBuilder(
     // 5. create a disposable view and try to apply all transactions in the list and apply fee payments if needed, collecting all data needed for
     //    going on with the forging of the block
     val (stateRoot, receiptList, appliedTxList, feePayments)
-    : (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], Seq[AccountBlockFeeInfo]) = {
+    : (Array[Byte], Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], Seq[AccountPayment]) = {
         using(nodeView.state.getView) {
           dummyView =>
             // the outputs of the next call will be:
@@ -192,6 +191,7 @@ class AccountForgeMessageBuilder(
             // - the fee payments related to this block
             val resultTuple : (Seq[EthereumConsensusDataReceipt], Seq[SidechainTypes#SCAT], AccountBlockFeeInfo) =
               computeBlockInfo(dummyView, sidechainTransactions, mainchainBlockReferencesData, blockContext, forgerAddress)
+
             val receiptList = resultTuple._1
             val appliedTxList = resultTuple._2
             val currentBlockPayments = resultTuple._3
@@ -207,8 +207,7 @@ class AccountForgeMessageBuilder(
               val feePayments = dummyView.getFeePayments(withdrawalEpochNumber, Some(currentBlockPayments))
 
               // add rewards to forgers balance
-              val forgersPoolRewardsSeq : Seq[(AddressProposition, BigInteger)] = AccountFeePaymentsUtils.getForgersRewards(feePayments)
-              forgersPoolRewardsSeq.foreach( pair => dummyView.addBalance(pair._1.address(), pair._2))
+              feePayments.foreach(payment => dummyView.addBalance(payment.addressBytes, payment.value))
 
               feePayments
             } else {

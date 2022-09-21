@@ -4,11 +4,10 @@ import com.horizen.SidechainTypes
 import com.horizen.account.FeeUtils
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountState
-import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils}
+import com.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment}
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.evm._
@@ -224,8 +223,7 @@ class AccountState(
       }
 
       // add rewards to forgers balance
-      val forgersPoolRewardsSeq : Seq[(AddressProposition, BigInteger)] = AccountFeePaymentsUtils.getForgersRewards(feePayments)
-      forgersPoolRewardsSeq.foreach( pair => stateView.addBalance(pair._1.address(), pair._2))
+      feePayments.foreach(payment => stateView.addBalance(payment.addressBytes, payment.value))
 
     } else {
       // No fee payments expected
@@ -338,8 +336,9 @@ class AccountState(
 
   override def hasCeased: Boolean = stateMetadataStorage.hasCeased
 
-  override def getFeePayments(withdrawalEpoch: Int, blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None): Seq[AccountBlockFeeInfo] = {
-    stateMetadataStorage.getFeePayments(withdrawalEpoch)
+  override def getFeePayments(withdrawalEpoch: Int, blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None): Seq[AccountPayment] = {
+    val feePaymentInfoSeq = stateMetadataStorage.getFeePayments(withdrawalEpoch)
+    AccountFeePaymentsUtils.getForgersRewards(feePaymentInfoSeq)
   }
 
   def getWithdrawalEpochInfo: WithdrawalEpochInfo = stateMetadataStorage.getWithdrawalEpochInfo
@@ -421,7 +420,11 @@ class AccountState(
       }
     }
   }
-}
+
+  // Check that State is on the last index of the withdrawal epoch: last block applied have finished the epoch.
+  def isWithdrawalEpochLastIndex: Boolean = {
+    WithdrawalEpochUtils.isEpochLastIndex(getWithdrawalEpochInfo, params)
+  }}
 
 object AccountState extends ScorexLogging {
   private[horizen] def restoreState(

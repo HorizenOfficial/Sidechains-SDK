@@ -1,7 +1,9 @@
 package com.horizen.forge
 
+
 import com.horizen.block._
 import com.horizen.box.Box
+import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
 import com.horizen.params.NetworkParams
@@ -11,12 +13,11 @@ import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.transaction.{SidechainTransaction, TransactionSerializer}
 import com.horizen.utils.{DynamicTypedSerializer, FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree}
-import com.horizen._
+import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainTypes, SidechainWallet}
+import scorex.util.ModifierId
+import scala.collection.JavaConverters._
 import scorex.core.NodeViewModifier
 import scorex.core.block.Block.{BlockId, Timestamp}
-import scorex.util.ModifierId
-
-import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
 class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
@@ -29,6 +30,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     SidechainBlock](
   mainchainSynchronizer, companion, params, allowNoWebsocketConnectionInRegtest
 ) {
+  type FPI = SidechainFeePaymentsInfo
   type HSTOR = SidechainHistoryStorage
   type VL = SidechainWallet
   type HIS = SidechainHistory
@@ -46,8 +48,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                  mainchainHeaders: Seq[MainchainHeader],
                  ommers: Seq[Ommer[SidechainBlockHeader]],
                  ownerPrivateKey: PrivateKey25519,
-                 forgingStakeInfo: ForgingStakeInfo,
-                 vrfProof: VrfProof,
+                 forgingStakeInfo: ForgingStakeInfo, vrfProof: VrfProof,
                  forgingStakeInfoMerklePath: MerklePath,
                  companion: DynamicTypedSerializer[SidechainTypes#SCBT, TransactionSerializer[SidechainTypes#SCBT]],
                  inputBlockSize: Int,

@@ -1,7 +1,7 @@
 package com.horizen.storage
 
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.chain.{ActiveChain, FeePaymentsInfo, FeePaymentsInfoSerializer, MainchainBlockReferenceDataInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, MainchainHeaderMetadata, SidechainBlockInfo, SidechainBlockInfoSerializer, byteArrayToMainchainHeaderHash}
+import com.horizen.chain.{AbstractFeePaymentsInfo, ActiveChain, MainchainBlockReferenceDataInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, MainchainHeaderMetadata, SidechainBlockInfo, SidechainBlockInfoSerializer, byteArrayToMainchainHeaderHash}
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.NetworkParams
 import com.horizen.utils.ByteArrayWrapper
@@ -23,10 +23,14 @@ trait SidechainBlockInfoProvider {
   def blockInfoById(blockId: ModifierId): SidechainBlockInfo
 }
 
-class AbstractHistoryStorage[PM <: SidechainBlockBase[_ <: Transaction, _ <: SidechainBlockHeaderBase], S <: AbstractHistoryStorage[PM, S]]
-  (
+abstract class AbstractHistoryStorage[
+  PM <: SidechainBlockBase[_ <: Transaction, _ <: SidechainBlockHeaderBase],
+  FPI <: AbstractFeePaymentsInfo,
+  S <: AbstractHistoryStorage[PM, FPI, S]
+  ]  (
     storage: Storage,
     blockSerializer: ScorexSerializer[PM],
+    feePaymentsInfoSerializer: ScorexSerializer[FPI],
     params: NetworkParams
   )
   extends SidechainBlockInfoProvider with ScorexLogging {
@@ -67,7 +71,7 @@ class AbstractHistoryStorage[PM <: SidechainBlockBase[_ <: Transaction, _ <: Sid
 
   private def blockInfoKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"blockInfo$blockId"))
 
-  private def feePaymentsInfoKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"feePaymentsInfo$blockId"))
+  protected def feePaymentsInfoKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"feePaymentsInfo$blockId"))
 
   private def nextVersion: Array[Byte] = {
     val version = new Array[Byte](32)
@@ -262,7 +266,7 @@ class AbstractHistoryStorage[PM <: SidechainBlockBase[_ <: Transaction, _ <: Sid
     this
   }
 
-  def updateFeePaymentsInfo(blockId: ModifierId, feePaymentsInfo: FeePaymentsInfo): Try[S] = Try {
+  def updateFeePaymentsInfo(blockId: ModifierId, feePaymentsInfo: FPI): Try[S] = Try {
     storage.update(
       nextVersion,
       java.util.Arrays.asList(new JPair(new ByteArrayWrapper(feePaymentsInfoKey(blockId)), new ByteArrayWrapper(feePaymentsInfo.bytes))),
@@ -271,9 +275,8 @@ class AbstractHistoryStorage[PM <: SidechainBlockBase[_ <: Transaction, _ <: Sid
     this
   }
 
-  def getFeePaymentsInfo(blockId: ModifierId): Option[FeePaymentsInfo] = {
-    storage.get(feePaymentsInfoKey(blockId)).asScala.flatMap(baw => FeePaymentsInfoSerializer.parseBytesTry(baw.data).toOption)
-  }
+  def getFeePaymentsInfo(blockId: ModifierId): Option[FPI] =
+    storage.get(feePaymentsInfoKey(blockId)).asScala.flatMap(baw => feePaymentsInfoSerializer.parseBytesTry(baw.data).toOption)
 
   def semanticValidity(blockId: ModifierId): ModifierSemanticValidity = {
     blockInfoOptionById(blockId) match {

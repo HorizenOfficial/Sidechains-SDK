@@ -1,8 +1,8 @@
 package com.horizen.forge
 
-import com.horizen.{AbstractHistory, SidechainHistory}
+import com.horizen.AbstractHistory
 import com.horizen.block.{MainchainBlockReference, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.chain.{MainchainHeaderHash, byteArrayToMainchainHeaderHash}
+import com.horizen.chain.{AbstractFeePaymentsInfo, MainchainHeaderHash, byteArrayToMainchainHeaderHash}
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
 import com.horizen.utils.BytesUtils
@@ -15,8 +15,8 @@ import scala.util.{Failure, Success, Try}
 class MainchainSynchronizer(mainchainNodeChannel: MainchainNodeChannel) {
   // Get divergent mainchain suffix between SC Node and MC Node
   // Return last common header with height + divergent suffix
-  def getMainchainDivergentSuffix[TX <: Transaction, H <: SidechainBlockHeaderBase, PM <: SidechainBlockBase[TX, H], HSTOR <: AbstractHistoryStorage[PM, HSTOR], HIS <: AbstractHistory[TX, H, PM, HSTOR, HIS]]
-  (history: AbstractHistory[TX, H, PM, HSTOR, HIS], limit: Int): Try[(Int, Seq[MainchainHeaderHash])] = Try {
+  def getMainchainDivergentSuffix[TX <: Transaction, H <: SidechainBlockHeaderBase, PM <: SidechainBlockBase[TX, H], FPI <: AbstractFeePaymentsInfo, HSTOR <: AbstractHistoryStorage[PM, FPI, HSTOR], HIS <: AbstractHistory[TX, H, PM, FPI, HSTOR, HIS]]
+  (history: AbstractHistory[TX, H, PM, FPI, HSTOR, HIS], limit: Int): Try[(Int, Seq[MainchainHeaderHash])] = Try {
     val (_: Int, commonHashHex: String) = getMainchainCommonBlockHashAndHeight(history).get
     mainchainNodeChannel.getNewBlockHashes(Seq(commonHashHex), limit) match {
       case Success((height, hashes)) => (height, hashes.map(hex => byteArrayToMainchainHeaderHash(BytesUtils.fromHexString(hex))))
@@ -25,8 +25,8 @@ class MainchainSynchronizer(mainchainNodeChannel: MainchainNodeChannel) {
   }
 
   // Return common block height and hash as a hex string.
-  def getMainchainCommonBlockHashAndHeight[TX <: Transaction, H <: SidechainBlockHeaderBase, PM <: SidechainBlockBase[TX, H], HSTOR <: AbstractHistoryStorage[PM, HSTOR], HIS <: AbstractHistory[TX, H, PM, HSTOR, HIS]]
-     (history: AbstractHistory[TX, H, PM, HSTOR, HIS]): Try[(Int, String)] = Try {
+  def getMainchainCommonBlockHashAndHeight[TX <: Transaction, H <: SidechainBlockHeaderBase, PM <: SidechainBlockBase[TX, H], FPI <: AbstractFeePaymentsInfo, HSTOR <: AbstractHistoryStorage[PM, FPI, HSTOR], HIS <: AbstractHistory[TX, H, PM, FPI, HSTOR, HIS]]
+     (history: AbstractHistory[TX, H, PM, FPI, HSTOR, HIS]): Try[(Int, String)] = Try {
     // Bitcoin-style Locator is ordered from tip to genesis
     val locatorHashes: Seq[String] = history.getMainchainHashesLocator.map(baw => BytesUtils.toHexString(baw.data))
     val (commonHeight, commonHashHex) = mainchainNodeChannel.getBestCommonPoint(locatorHashes).get
@@ -80,7 +80,7 @@ class MainchainSynchronizer(mainchainNodeChannel: MainchainNodeChannel) {
     for(group <- strHashes.grouped(MainchainSynchronizer.HEADERS_REQUEST_LIMIT)) {
       mainchainNodeChannel.getBlockHeaders(group) match {
         case Success(received_headers) => headers ++= received_headers
-        case Failure(ex) => throw new IllegalStateException(s"Can't retrieve group of headers for specified hashes. Reason: ${ex.getMessage()}", ex)
+        case Failure(ex) => throw new IllegalStateException(s"Can't retrieve group of headers for specified hashes. Reason: ${ex.getMessage}", ex)
       }
     }
 
