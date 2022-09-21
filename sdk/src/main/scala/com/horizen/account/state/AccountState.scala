@@ -4,7 +4,7 @@ import com.horizen.SidechainTypes
 import com.horizen.account.FeeUtils
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountState
-import com.horizen.account.receipt.EthereumReceipt
+import com.horizen.account.receipt.{EthereumReceipt, LogsBloom}
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment}
@@ -15,6 +15,17 @@ import com.horizen.evm.interop.EvmLog
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.utils.{
+  BlockFeeInfo,
+  ByteArrayWrapper,
+  BytesUtils,
+  ClosableResourceHandler,
+  FeePaymentsUtils,
+  MerkleTree,
+  TimeToEpochUtils,
+  WithdrawalEpochInfo,
+  WithdrawalEpochUtils
+}
 import org.web3j.crypto.ContractUtils.generateContractAddress
 import scorex.core._
 import scorex.core.transaction.state.TransactionValidation
@@ -85,8 +96,8 @@ class AccountState(
         val certReferencedEpochNumber = modWithdrawalEpochInfo.epoch - 1
 
         // Top quality certificate may be present in the current SC block or in the previous blocks or can be absent.
-        val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = mod.topQualityCertificateOpt.orElse(
-          stateView.certificate(certReferencedEpochNumber))
+        val topQualityCertificateOpt: Option[WithdrawalEpochCertificate] =
+          mod.topQualityCertificateOpt.orElse(stateView.certificate(certReferencedEpochNumber))
 
         // Check top quality certificate or notify that sidechain has ceased since we have no certificate in the end of the submission window.
         topQualityCertificateOpt match {
@@ -178,6 +189,10 @@ class AccountState(
 
       // If SC block has reached the end of the withdrawal epoch reward the forgers.
       evalForgersReward(mod, modWithdrawalEpochInfo, stateView)
+
+      val logsBloom = LogsBloom.fromEthereumReceipt(receiptList)
+
+      require(logsBloom.equals(mod.header.logsBloom), "Provided logs bloom doesn't match the calculated one")
 
       // check stateRoot and receiptRoot against block header
       mod.verifyReceiptDataConsistency(receiptList.map(_.consensusDataReceipt))

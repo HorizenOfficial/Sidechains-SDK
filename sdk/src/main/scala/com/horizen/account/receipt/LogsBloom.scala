@@ -20,15 +20,12 @@ class LogsBloom() {
     log.topics.foreach(topic => addBytesToBloomFilter(topic.toBytes))
   }
 
-  def addBytesToBloomFilter(
-      data: Array[Byte]
-  ): Unit = {
+  def addBytesToBloomFilter(data: Array[Byte]): Unit = {
     val (bloomFilterIndexes, bloomFilterValues) = getBloomFilterValues(data)
 
     bloomFilterIndexes.zipWithIndex
       .foreach({ case (bloomFilterIndex, i) =>
-        bloomFilter(bloomFilterIndex) =
-          (bloomFilter(bloomFilterIndex) | bloomFilterValues(i)).toByte
+        bloomFilter(bloomFilterIndex) = (bloomFilter(bloomFilterIndex) | bloomFilterValues(i)).toByte
       })
   }
 
@@ -53,26 +50,18 @@ class LogsBloom() {
     true
   }
 
-  private def getBloomFilterValues(
-      data: Array[Byte]
-  ): (Array[Int], Array[Int]) = {
+  private def getBloomFilterValues(data: Array[Byte]): (Array[Int], Array[Int]) = {
     val hashBuffer = Keccak256.hash(data)
-    val bloomFilterIndexes : Array[Int] = new Array[Int](3)
+    val bloomFilterIndexes: Array[Int] = new Array[Int](3)
 
-    bloomFilterIndexes(0) = BLOOM_FILTER_LENGTH - ((BytesUtils.getShort(
-      Array[Byte](hashBuffer(0), hashBuffer(1)),
-      0
-    ) & 0x7ff) >> 3) - 1
+    bloomFilterIndexes(0) =
+      BLOOM_FILTER_LENGTH - ((BytesUtils.getShort(Array[Byte](hashBuffer(0), hashBuffer(1)), 0) & 0x7ff) >> 3) - 1
 
-    bloomFilterIndexes(1) = BLOOM_FILTER_LENGTH - ((BytesUtils.getShort(
-      Array[Byte](hashBuffer(2), hashBuffer(3)),
-      0
-    ) & 0x7ff) >> 3) - 1
+    bloomFilterIndexes(1) =
+      BLOOM_FILTER_LENGTH - ((BytesUtils.getShort(Array[Byte](hashBuffer(2), hashBuffer(3)), 0) & 0x7ff) >> 3) - 1
 
-    bloomFilterIndexes(2) = BLOOM_FILTER_LENGTH - ((BytesUtils.getShort(
-      Array[Byte](hashBuffer(4), hashBuffer(5)),
-      0
-    ) & 0x7ff) >> 3) - 1
+    bloomFilterIndexes(2) =
+      BLOOM_FILTER_LENGTH - ((BytesUtils.getShort(Array[Byte](hashBuffer(4), hashBuffer(5)), 0) & 0x7ff) >> 3) - 1
 
     val bloomFilterValues: Array[Int] =
       Array(1, 3, 5).map(e => 1 << (hashBuffer(e) & 0x7))
@@ -82,6 +71,13 @@ class LogsBloom() {
 
   def getBloomFilter(): Array[Byte] = {
     bloomFilter.clone()
+  }
+
+  override def equals(obj: Any): Boolean = {
+    obj match {
+      case l: LogsBloom => (this.bloomFilter diff l.getBloomFilter()).isEmpty
+      case _ => false
+    }
   }
 }
 
@@ -98,9 +94,7 @@ object LogsBloom {
     logsBloom
   }
 
-  def fromEthereumReceipt(
-      ethereumReceipts: Seq[EthereumReceipt]
-  ): LogsBloom = {
+  def fromEthereumReceipt(ethereumReceipts: Seq[EthereumReceipt]): LogsBloom = {
     val logsBloom = new LogsBloom()
 
     ethereumReceipts.foreach(receipt => {
