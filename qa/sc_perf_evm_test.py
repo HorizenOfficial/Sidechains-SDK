@@ -370,7 +370,7 @@ class PerformanceTest(SidechainTestFramework):
         # Declare SC Addresses
         txs_creator_addresses = []
         ft_addresses = []
-        ft_amount = 1000
+        ft_amount = self.initial_ft_amount
         mc_return_address = mc_nodes[0].getnewaddress()
 
         # Get tx creator nodes and non tx creator nodes
