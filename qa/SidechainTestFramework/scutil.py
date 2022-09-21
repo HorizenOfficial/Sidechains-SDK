@@ -997,7 +997,7 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbo
         logging.info("Skip block generation for epoch {epochNumber} slot {slotNumber}".format(epochNumber=next_epoch,
                                                                                        slotNumber=next_slot))
         next_epoch, next_slot = get_next_epoch_slot(next_epoch, next_slot, slots_in_epoch)
-        forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot))
+        forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot, forced_tx))
 
     assert_true("result" in forge_result, "Error during block generation for SC {0}".format(node_name))
     block_id = forge_result["result"]["blockId"]
