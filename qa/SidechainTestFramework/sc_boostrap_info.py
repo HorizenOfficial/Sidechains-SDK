@@ -72,6 +72,38 @@ class SCForgerConfiguration(object):
         for forger in allowed_forgers:
             self.allowed_forgers.append('{ blockSignProposition = "'+forger[0]+'" NEW_LINE vrfPublicKey = "'+forger[1]+'" }')
 
+"""
+Configuration that enables the possibility to setup the latency on the sidechain network
+"""
+class LatencyConfig(object):
+    def __init__(self, get_peer_spec=0, peer_spec=0, transaction=0, block=0, request_modifier_spec=0, modifiers_spec=0):
+        self.get_peer_spec = get_peer_spec
+        self.peer_spec = peer_spec
+        self.transaction = transaction
+        self.block = block
+        self.request_modifier_spec = request_modifier_spec
+        self.modifiers_spec = modifiers_spec
+
+    def to_config(self):
+        settings = ""
+        settings += "get_peer_spec " + str(self.get_peer_spec)
+        settings += " peer_spec " + str(self.peer_spec)
+        settings += " transaction " + str(self.transaction)
+        settings += " block " + str(self.block)
+        settings += " request_modifier_spec " + str(self.request_modifier_spec)
+        settings += " modifiers_spec " + str(self.modifiers_spec)
+
+        return settings
+
+    def default_string(self):
+        settings = ""
+        settings += "get_peer_spec " + str(0)
+        settings += " peer_spec " + str(0)
+        settings += " transaction " + str(0)
+        settings += " block " + str(0)
+        settings += " request_modifier_spec " + str(0)
+        settings += " modifiers_spec " + str(0)
+        return settings
 
 """
 Information needed to start a sidechain node connected to specific mainchain node.

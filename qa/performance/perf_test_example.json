@@ -1,33 +1,39 @@
 {
   "test_type": "transactions_per_second",
-  "max_tps_per_process": 100,
-  "test_run_time": 50,
+  "use_multiprocessing": true,
+  "initial_ft_amount": 200,
+  "test_run_time": 500,
+  "max_tps_per_process": 20,
   "block_rate": 30,
-  "initial_txs": 5000,
+  "initial_txs": 200,
+  "extended_transaction": false,
   "network_topology": "ring",
+  "latency_settings": {
+    "get_peer_spec": 0,
+    "peer_spec": 0,
+    "transaction": 0,
+    "block": 0,
+    "request_modifier_spec": 0,
+    "modifiers_spec": 0
+  },
   "nodes": [
     {
-      "latency_settings": 0,
       "forger": true,
       "tx_creator": false
     },
     {
-      "latency_settings": 0,
       "forger": false,
       "tx_creator": true
     },
     {
-      "latency_settings": 0,
       "forger": false,
       "tx_creator": false
     },
     {
-      "latency_settings": 0,
       "forger": false,
       "tx_creator": false
     },
     {
-      "latency_settings": 0,
       "forger": false,
       "tx_creator": false
     }
