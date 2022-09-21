@@ -32,11 +32,13 @@ public class EvmMessageProcessor implements MessageProcessor {
             throws ExecutionFailedException {
         // prepare context
         var context = new EvmContext();
+
         context.coinbase = Address.FromBytes(blockContext.forgerAddress);
         context.time = BigInteger.valueOf(blockContext.timestamp);
         context.baseFee = blockContext.baseFee;
         context.gasLimit = BigInteger.valueOf(blockContext.blockGasLimit);
         context.blockNumber = BigInteger.valueOf(blockContext.blockNumber);
+
         // execute EVM
         var result = Evm.Apply(
                 view.getStateDbHandle(),

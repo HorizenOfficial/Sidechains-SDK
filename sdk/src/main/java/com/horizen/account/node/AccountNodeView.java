@@ -3,6 +3,7 @@ package com.horizen.account.node;
 import com.horizen.SidechainNodeViewBase;
 import com.horizen.account.block.AccountBlock;
 import com.horizen.account.block.AccountBlockHeader;
+import com.horizen.account.chain.AccountFeePaymentsInfo;
 import com.horizen.account.transaction.AccountTransaction;
 import com.horizen.node.NodeWalletBase;
 import com.horizen.proof.Proof;
@@ -13,6 +14,7 @@ public class AccountNodeView implements
                 AccountTransaction<Proposition, Proof<Proposition>>,
                 AccountBlockHeader,
                 AccountBlock,
+                AccountFeePaymentsInfo,
                 NodeAccountHistory,
                 NodeAccountState,
                 NodeWalletBase,

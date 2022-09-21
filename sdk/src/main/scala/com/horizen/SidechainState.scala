@@ -483,7 +483,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     // The rest N satoshis must be paid to the first N forgers (1 satoshi each)
     val rest = poolFee % forgersBlockRewards.size
 
-    // Calculate final fee for foger considering forger fee, pool fee and the undistributed satoshis
+    // Calculate final fee for forger considering forger fee, pool fee and the undistributed satoshis
     val forgersRewards = forgersBlockRewards.zipWithIndex.map {
       case (forgerBlockReward: (PublicKey25519Proposition, Long), index: Int) =>
         val finalForgerFee = forgerBlockReward._2 + forgerPoolFee + (if(index < rest) 1 else 0)

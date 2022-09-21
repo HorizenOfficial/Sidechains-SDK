@@ -1,10 +1,11 @@
 package com.horizen.account.storage
 
 import com.horizen.account.receipt.EthereumReceipt
+import com.horizen.account.utils.AccountBlockFeeInfo
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.storage.Storage
-import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, WithdrawalEpochInfo}
+import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo}
 import scorex.util.ScorexLogging
 
 import scala.collection.JavaConverters._
@@ -33,7 +34,7 @@ class AccountStateMetadataStorage(storage: Storage) extends AccountStateMetadata
 
   override def getWithdrawalEpochInfo: WithdrawalEpochInfo = getView.getWithdrawalEpochInfo
 
-  override def getFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo] = getView.getFeePayments(withdrawalEpochNumber)
+  override def getFeePayments(withdrawalEpochNumber: Int): Seq[AccountBlockFeeInfo] = getView.getFeePayments(withdrawalEpochNumber)
 
   override def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = getView.getTopQualityCertificate(referencedWithdrawalEpoch)
 

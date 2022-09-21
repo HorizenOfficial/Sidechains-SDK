@@ -15,8 +15,7 @@ import com.horizen.utils.{BytesUtils, MerklePath}
 import com.horizen.validation.InconsistentSidechainBlockDataException
 import com.horizen.{ScorexEncoding, SidechainTypes, account}
 import scorex.core.block.Block
-import scorex.util.{ScorexLogging}
-
+import scorex.util.ScorexLogging
 import java.math.BigInteger
 import scala.util.Try
 

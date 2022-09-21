@@ -10,6 +10,7 @@ import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.ReceivableM
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.Timers.CertificateGenerationTimer
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter._
 import com.horizen.certnative.BackwardTransfer
+import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.NetworkParams
@@ -55,8 +56,9 @@ abstract class AbstractCertificateSubmitter[
                            mainchainChannel: MainchainNodeChannel)
   (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging
 {
-  type HSTOR <: AbstractHistoryStorage[PM, HSTOR]
-  type HIS <: AbstractHistory[TX, H, PM, HSTOR, HIS]
+  type FPI <: AbstractFeePaymentsInfo
+  type HSTOR <: AbstractHistoryStorage[PM, FPI, HSTOR]
+  type HIS <: AbstractHistory[TX, H, PM, FPI, HSTOR, HIS]
   type MS <: MinimalState[PM, MS]
   type VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PM, VL]
   type MP <: MemoryPool[TX, MP]

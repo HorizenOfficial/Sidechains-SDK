@@ -1136,44 +1136,65 @@ def computeForgedTxGasUsed(sc_node, tx_hash, tracing_on=False):
 
     return int(receiptJson['gasUsed'], 16)
 
-
 def computeForgedTxFee(sc_node, tx_hash, tracing_on=False):
-    transactionJson = sc_node.rpc_eth_getTransactionByHash(tx_hash)['result']
+    resp = sc_node.rpc_eth_getTransactionByHash(tx_hash)
+    if not 'result' in resp:
+        raise Exception('Rpc eth_getTransactionByHash cmd failed: {}'.format(json.dumps(resp, indent=2)))
+
+    transactionJson = resp['result']
     if (transactionJson is None):
         raise Exception('Error: Transaction {} not found (not yet forged?)'.format(tx_hash))
     if tracing_on:
         print("tx:")
         pprint.pprint(transactionJson)
 
-    receiptJson = sc_node.rpc_eth_getTransactionReceipt(tx_hash)['result']
+    resp = sc_node.rpc_eth_getTransactionReceipt(tx_hash)
+    if not 'result' in resp:
+        raise Exception('Rpc eth_getTransactionReceipt cmd failed:{}'.format(json.dumps(resp, indent=2)))
+
+    receiptJson = resp['result']
     if (receiptJson is None):
         raise Exception('Unexpected error: Receipt not found for transaction {}'.format(tx_hash))
     if tracing_on:
         print("receipt:")
         pprint.pprint(receiptJson)
 
-    gasUsed = computeForgedTxGasUsed(sc_node, tx_hash, tracing_on)
+    gasUsed = int(receiptJson['gasUsed'], 16)
+
+    block_hash = receiptJson['blockHash']
+    resp = sc_node.rpc_eth_getBlockByHash(block_hash, False)
+    if not 'result' in resp:
+        raise Exception('Rpc eth_getBlockByHash cmd failed:{}'.format(json.dumps(resp, indent=2)))
+
+    blockJson = resp['result']
+    if (blockJson is None):
+        raise Exception('Unexpected error: block not found {}'.format(block_hash))
+    if tracing_on:
+        print("block:")
+        pprint.pprint(blockJson)
+
+    baseFeePerGas = int(blockJson['baseFeePerGas'], 16)
 
     if not 'gasPrice' in transactionJson:
-        # eip1559 transaction
-        block_hash = receiptJson['blockHash']
-        blockJson = sc_node.rpc_eth_getBlockByHash(block_hash, False)['result']
-        if (blockJson is None):
-            raise Exception('Unexpected error: block not found {}'.format(block_hash))
-        if tracing_on:
-            print("block:")
-            pprint.pprint(blockJson)
+      # eip1559 transaction
+      forgerTipPerGas = int(transactionJson['maxPriorityFeePerGas'], 16)
+      maxFeePerGas = int(transactionJson['maxFeePerGas'], 16)
 
-        baseFeePerGas = int(blockJson['baseFeePerGas'], 16)
-        maxPriorityFeePerGas = int(transactionJson['maxPriorityFeePerGas'], 16)
+      # if the Base Fee plus the Max Priority Fee exceeds the Max Fee, the Max Priority Fee will be reduced
+      # in order to maintain the upper bound of the Max Fee.
+      if baseFeePerGas+forgerTipPerGas > maxFeePerGas:
+          forgerTipPerGas = maxFeePerGas - baseFeePerGas
     else:
-        baseFeePerGas = 0
-        maxPriorityFeePerGas = int(transactionJson['gasPrice'], 16)
+      # legacy transaction
+      gasPrice = int(transactionJson['gasPrice'], 16)
+      assert_true(gasPrice >= baseFeePerGas)
+      forgerTipPerGas = gasPrice - baseFeePerGas
 
-    totalTxFee = (baseFeePerGas + maxPriorityFeePerGas) * gasUsed
-    forgersPoolFee = baseFeePerGas * gasUsed
-    forgerTip = maxPriorityFeePerGas * gasUsed
+    totalTxFee = (baseFeePerGas+forgerTipPerGas)*gasUsed
+    forgersPoolFee = baseFeePerGas*gasUsed
+    forgerTip = forgerTipPerGas*gasUsed
     if tracing_on:
         print("totalFee = {} (forgersPoolFee = {}, forgerTip = {}".format(totalTxFee, forgersPoolFee, forgerTip))
 
     return totalTxFee, forgersPoolFee, forgerTip
+

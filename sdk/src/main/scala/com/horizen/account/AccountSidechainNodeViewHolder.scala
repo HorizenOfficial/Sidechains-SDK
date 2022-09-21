@@ -2,6 +2,7 @@ package com.horizen.account
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
@@ -17,11 +18,11 @@ import com.horizen.params.NetworkParams
 import com.horizen.proof.Proof
 import com.horizen.proposition.Proposition
 import com.horizen.storage.SidechainSecretStorage
-import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
+import com.horizen.validation.SemanticBlockValidator
+import com.horizen.validation.HistoryBlockValidator
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ModifierId
-
 import scala.util.Success
 
 class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
@@ -41,6 +42,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override type MS = AccountState
   override type VL = AccountWallet
   override type MP = AccountMemoryPool
+  override type FPI = AccountFeePaymentsInfo
 
   protected def messageProcessors(params: NetworkParams): Seq[MessageProcessor] = {
       MessageProcessorUtil.getMessageProcessorSeq(params, customMessageProcessors)
@@ -50,7 +52,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     ChainIdBlockSemanticValidator(params) +: super.semanticBlockValidators(params)
   }
 
-  override def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock, AccountHistoryStorage, AccountHistory]] = {
+  override def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock, AccountFeePaymentsInfo, AccountHistoryStorage, AccountHistory]] = {
     BaseFeeBlockValidator() +: super.historyBlockValidators(params)
   }
 
@@ -98,18 +100,24 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     (historyAfterConsensusInfoApply, wallet)
   }
 
-  // Scan modifier only, there is no need to notify AccountWallet about fees,
-  // since account balances are tracked only in the AccountState.
-  // TODO: do we need to notify History with fee payments info?
-  override protected def scanBlockWithFeePayments(history: HIS, state: MS, wallet: VL, modToApply: AccountBlock): (HIS, VL) = {
-    (history, wallet.scanPersistent(modToApply))
+  override def getFeePaymentsInfo(state: MS, epochNumber: Int) : FPI = {
+    val feePayments = state.getFeePayments(epochNumber)
+    AccountFeePaymentsInfo(feePayments)
   }
+
+  override def getScanPersistentWallet(modToApply: AccountBlock, stateOp: Option[MS], epochNumber: Int, wallet: VL) : VL = {
+    wallet.scanPersistent(modToApply)
+  }
+
+  override def isWithdrawalEpochLastIndex(state: MS) : Boolean = state.isWithdrawalEpochLastIndex
+  override def getWithdrawalEpochNumber(state: MS) : Int = state.getWithdrawalEpochInfo.epoch
 
   override protected def getCurrentSidechainNodeViewInfo: Receive = {
     case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView[
       AccountTransaction[Proposition, Proof[Proposition]],
       AccountBlockHeader,
       AccountBlock,
+      AccountFeePaymentsInfo,
       NodeAccountHistory,
       NodeAccountState,
       NodeWalletBase,
@@ -133,6 +141,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       AccountTransaction[Proposition, Proof[Proposition]],
       AccountBlockHeader,
       AccountBlock,
+      AccountFeePaymentsInfo,
       NodeAccountHistory,
       NodeAccountState,
       NodeWalletBase,
@@ -157,6 +166,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       AccountTransaction[Proposition, Proof[Proposition]],
       AccountBlockHeader,
       AccountBlock,
+      AccountFeePaymentsInfo,
       NodeAccountHistory,
       NodeAccountState,
       NodeWalletBase,

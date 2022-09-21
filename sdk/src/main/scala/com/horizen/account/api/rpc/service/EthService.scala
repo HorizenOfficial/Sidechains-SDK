@@ -10,7 +10,6 @@ import com.horizen.account.api.http.AccountTransactionRestScheme.TransactionIdDT
 import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.account.api.rpc.types._
 import com.horizen.account.api.rpc.utils._
-import com.horizen.account.block.AccountBlock
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.receipt.EthereumReceipt
