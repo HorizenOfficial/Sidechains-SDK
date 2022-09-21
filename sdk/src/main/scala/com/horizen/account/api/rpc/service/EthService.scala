@@ -63,8 +63,6 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
           RpcCode.ExecutionError.getCode, reverted.getMessage, Numeric.toHexString(reverted.revertReason)))
         case err: ExecutionFailedException => throw new RpcException(new RpcError(
           RpcCode.ExecutionError.getCode, err.getMessage, null))
-        case err: IntrinsicGasException => throw new RpcException(new RpcError(
-          RpcCode.ExecutionError.getCode, err.getMessage, null))
         case err: TransactionSemanticValidityException => throw new RpcException(new RpcError(
           RpcCode.ExecutionError.getCode, err.getMessage, null))
         case _ => throw exception
@@ -208,8 +206,6 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
       val lowBound = GasUtil.TxGas.subtract(BigInteger.ONE)
       // Determine the highest gas limit can be used during the estimation.
       var highBound = params.gas
-      // we need to set nonce to one, because we substract by one in the evm call
-      params.nonce = BigInteger.ONE
       getStateViewAtTag(nodeView, tag) { (tagStateView, blockContext) =>
         if (highBound == null || highBound.compareTo(GasUtil.TxGas) < 0) {
           highBound = BigInteger.valueOf(blockContext.blockGasLimit)
