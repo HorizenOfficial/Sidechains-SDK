@@ -1,8 +1,8 @@
 package com.horizen.account.state
 
 import com.horizen.account.utils.BigIntegerUtil
-import java.math.BigInteger
 
+import java.math.BigInteger
 
 class StateTransition(
     view: AccountStateView,
@@ -10,7 +10,6 @@ class StateTransition(
     blockGasPool: GasPool,
     blockContext: BlockContext
 ) {
-
 
   @throws(classOf[InvalidMessageException])
   @throws(classOf[ExecutionFailedException])
@@ -47,8 +46,6 @@ class StateTransition(
             throw err
           // any other exception will bubble up and invalidate the block
         } finally {
-          // make sure we disable automatic gas consumption in case a message processor enabled it
-          view.disableGasTracking()
           refundGas(msg, gasPool)
         }
     }
@@ -66,25 +63,20 @@ class StateTransition(
     if (!msg.getIsFakeMsg) {
       val txNonce = msg.getNonce
       val result = txNonce.compareTo(stateNonce)
-      if (result < 0) {
-        throw NonceTooLowException(sender, txNonce, stateNonce)
-      } else if (result > 0) {
-        throw NonceTooHighException(sender, txNonce, stateNonce)
-      }
+      if (result < 0) throw NonceTooLowException(sender, txNonce, stateNonce)
+      if (result > 0) throw NonceTooHighException(sender, txNonce, stateNonce)
+      // GETH and therefore StateDB use uint64 to store the nonce and perform an overflow check here using (nonce+1<nonce)
+      // BigInteger will not overflow like that, so we just verify that the result after increment still fits into 64 bits
+      if (!BigIntegerUtil.isUint64(stateNonce.add(BigInteger.ONE))) throw NonceMaxException(sender, stateNonce)
+      // Check that the sender is an EOA
+      if (!view.isEoaAccount(sender))
+        throw SenderNotEoaException(sender, view.getCodeHash(sender))
     }
-    // GETH and therefore StateDB use uint64 to store the nonce and perform an overflow check here using (nonce+1<nonce)
-    // BigInteger will not overflow like that, so we just verify that the result after increment still fits into 64 bits
-    if (!BigIntegerUtil.isUint64(stateNonce.add(BigInteger.ONE)))
-      throw NonceMaxException(sender, stateNonce)
 
-    // Check that the sender is an EOA
-    if (!view.isEoaAccount(sender))
-      throw SenderNotEoaException(sender, view.getCodeHash(sender))
-
-    // TODO: fee checks if message is "fake" (RPC calls)
-    if (msg.getGasFeeCap.compareTo(blockContext.baseFee) < 0)
-      throw FeeCapTooLowException(sender, msg.getGasFeeCap, blockContext.baseFee)
-
+    if (!msg.getIsFakeMsg || msg.getGasFeeCap.bitLength() > 0) {
+      if (msg.getGasFeeCap.compareTo(blockContext.baseFee) < 0)
+        throw FeeCapTooLowException(sender, msg.getGasFeeCap, blockContext.baseFee)
+    }
   }
 
   private def buyGas(msg: Message): GasPool = {
