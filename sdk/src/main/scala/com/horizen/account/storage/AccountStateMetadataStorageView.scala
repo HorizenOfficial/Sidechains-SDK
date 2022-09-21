@@ -276,7 +276,6 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     // 1) remove outdated topQualityCertificate retrieved 3 epochs before and referenced to the 4 epochs before.
     //    Note: we should keep last 2 epoch certificates, so in case SC has ceased we have an access to the last active cert.
     // 2) remove outdated AccountBlockFeeInfo records, the relevant forger fee payments have been stored in history by node view holder
-
     withdrawalEpochInfoOpt match {
       case Some(epochInfo) =>
         val isWithdrawalEpochSwitched: Boolean = getWithdrawalEpochInfoFromStorage match {
@@ -287,6 +286,8 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
           val certEpochNumberToRemove: Int = epochInfo.epoch - 4
           removeList.add(getTopQualityCertificateKey(certEpochNumberToRemove))
 
+          // TODO: is it safe to remove outdated AccountBlockFeeInfo?
+          //       Can it have an impact in case we need to debug_block (eth rpc call) with fee payments in the past?
           val blockFeeInfoEpochToRemove: Int = epochInfo.epoch - 1
           for (counter <- 0 to getBlockFeeInfoCounter(blockFeeInfoEpochToRemove)) {
             removeList.add(getBlockFeeInfoKey(blockFeeInfoEpochToRemove, counter))
