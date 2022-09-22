@@ -92,6 +92,15 @@ func (p *EvmParams) getBlockContext() vm.BlockContext {
 	}
 }
 
+func (t *TraceParams) getTraceConfig() logger.Config {
+	return logger.Config{
+		EnableMemory:     t.EnableMemory,
+		DisableStack:     t.DisableStack,
+		DisableStorage:   t.DisableStorage,
+		EnableReturnData: t.EnableReturnData,
+	}
+}
+
 func mockBlockHashFn(n uint64) common.Hash {
 	// TODO: fetch real block hashes
 	return common.BytesToHash(crypto.Keccak256([]byte(new(big.Int).SetUint64(n).String())))
@@ -141,7 +150,7 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		}
 		blockContext = params.getBlockContext()
 		chainConfig  = defaultChainConfig()
-		tracer       = logger.NewStructLogger(nil)
+		tracer       = logger.NewStructLogger(params.TxTraceParams.getTraceConfig())
 		evmConfig    = vm.Config{
 			Debug:                   params.Trace,
 			Tracer:                  tracer,
@@ -193,31 +202,11 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		evmError = vmerr.Error()
 	}
 
-	traceLogs := geth_internal.FormatLogs(tracer.StructLogs())
-	if params.Trace == true {
-
-		if params.TxTraceParams.DisableStack == true {
-			traceLogs.Stack = nil
-		}
-
-		if params.TxTraceParams.EnableMemory == false {
-			traceLogs.Stack = nil
-		}
-
-		if params.TxTraceParams.DisableStorage == true {
-			traceLogs.Storage = nil
-		}
-
-		if params.TxTraceParams.EnableReturnData == false {
-			traceLogs.ReturnData = nil
-		}
-	}
-
 	return nil, &EvmResult{
 		UsedGas:         uint64(params.Gas) - gas,
 		EvmError:        evmError,
 		ReturnData:      returnData,
 		ContractAddress: contractAddress,
-		TraceLogs:       traceLogs,
+		TraceLogs:       geth_internal.FormatLogs(tracer.StructLogs()),
 	}
 }
