@@ -105,7 +105,8 @@ class PerformanceTest(SidechainTestFramework):
                 "mined_transactions": 0, "mined_blocks": 0, "end_test_run_time": 0, "end_balances": [],
                 "endpoint_calls": 0, "errors": 0, "not_mined_transactions": 0, "mempool_transactions": 0,
                 "tps_total": 0, "tps_mined": 0, "blocks_ts": [], "node_api_errors": 0,
-                "extended_transaction": extended_transaction
+                "extended_transaction": extended_transaction,
+                "mined_txs": []
                 }
 
     def get_latency_config(self):
@@ -580,6 +581,7 @@ class PerformanceTest(SidechainTestFramework):
                 current_block_id = current_block["parentId"]
                 if (iteration == 0):
                     blocks_ts.append(current_block["timestamp"])
+                    self.csv_data["mined_txs"].append(number_of_transactions_mined)
             blocks_per_node.append(total_blocks_for_node)
             iteration += 1
             print("Node" + str(node_index) + " Total Blocks: " + str(total_blocks_for_node))
