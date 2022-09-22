@@ -177,14 +177,14 @@ class SCEvmOrphanTXS(SidechainTestFramework):
             "to": evm_address_sc2,
             "value": 1,
             "gasInfo": {
-                "gasLimit": 230000,
-                "maxPriorityFeePerGas": 1
+                "gasLimit": 230000
             }
         }
 
         j["from"] = evm_address_scA
         j["nonce"] = 0
         j["gasInfo"]["maxFeePerGas"] = 3
+        j["gasInfo"]["maxPriorityFeePerGas"] = 3
         response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
         if not 'result' in response:
             fail("send failed: " + str(response))
@@ -192,40 +192,43 @@ class SCEvmOrphanTXS(SidechainTestFramework):
 
         j["nonce"] = 1
         j["gasInfo"]["maxFeePerGas"] = 1
+        j["gasInfo"]["maxPriorityFeePerGas"] = 1
         response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
         if not 'result' in response:
             fail("send failed: " + str(response))
         txA_1 = response['result']['transactionId']
 
         txA_2 = createEIP1559Transaction(sc_node_1, fromAddress=evm_address_scA, toAddress=evm_address_sc2,
-                                          nonce = 2, gasLimit = 230000, maxPriorityFeePerGas = 1, maxFeePerGas = 110, value=1)
+                                          nonce = 2, gasLimit = 230000, maxPriorityFeePerGas = 110, maxFeePerGas = 1100, value=1)
 
         j["from"] = evm_address_scB
         j["nonce"] = 0
         j["gasInfo"]["maxFeePerGas"] = 5
+        j["gasInfo"]["maxPriorityFeePerGas"] = 5
         response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
         if not 'result' in response:
             fail("send failed: " + str(response))
         txB_0 = response['result']['transactionId']
 
         txB_1 = createEIP1559Transaction(sc_node_1, fromAddress=evm_address_scB, toAddress=evm_address_sc2,
-                                          nonce = 1, gasLimit = 230000, maxPriorityFeePerGas = 1, maxFeePerGas = 2, value=1)
+                                          nonce = 1, gasLimit = 230000, maxPriorityFeePerGas = 2, maxFeePerGas = 20, value=1)
 
 
         j["nonce"] = 2
         j["gasInfo"]["maxFeePerGas"] = 190
+        j["gasInfo"]["maxPriorityFeePerGas"] = 190
         response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
         if not 'result' in response:
             fail("send failed: " + str(response))
         txB_2 = response['result']['transactionId']
 
         txC_0 = createEIP1559Transaction(sc_node_1, fromAddress=evm_address_scC, toAddress=evm_address_sc2,
-                                          nonce = 0, gasLimit = 230000, maxPriorityFeePerGas = 1, maxFeePerGas = 10, value=1)
+                                          nonce = 0, gasLimit = 230000, maxPriorityFeePerGas = 10, maxFeePerGas = 100, value=1)
 
         txC_1 = createEIP1559Transaction(sc_node_1, fromAddress=evm_address_scC, toAddress=evm_address_sc2,
-                                         nonce=1, gasLimit=230000, maxPriorityFeePerGas=1, maxFeePerGas=200, value=1)
+                                         nonce=1, gasLimit=230000, maxPriorityFeePerGas=200, maxFeePerGas=2000, value=1)
         txC_2 = createEIP1559Transaction(sc_node_1, fromAddress=evm_address_scC, toAddress=evm_address_sc2,
-                                         nonce=2, gasLimit=230000, maxPriorityFeePerGas=1, maxFeePerGas=6, value=1)
+                                         nonce=2, gasLimit=230000, maxPriorityFeePerGas=6, maxFeePerGas=60, value=1)
 
 
         self.sc_sync_all()

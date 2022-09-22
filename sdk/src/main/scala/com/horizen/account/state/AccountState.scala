@@ -352,11 +352,7 @@ class AccountState(val params: NetworkParams,
   override def getBlockGasLimit: BigInteger = using(getView)(_.getBlockGasLimit)
 
   override def validate(tx: SidechainTypes#SCAT): Try[Unit] = Try {
-    Try(tx.semanticValidity()) recoverWith {
-      case e: Throwable =>
-        log.debug("Transaction is not semantically valid" , e)
-        Failure(e)
-    }  get
+    tx.semanticValidity()
 
     if (tx.isInstanceOf[EthereumTransaction]) {
       using(getView) { stateView =>
@@ -365,20 +361,25 @@ class AccountState(val params: NetworkParams,
         val sender = ethTx.getFrom.address()
         val stateNonce = stateView.getNonce(sender)
         if (stateNonce.compareTo(tx.getNonce) > 0) {
-          val msg = s"Transaction nonce is too low: ${tx.getNonce}"
-          log.error(msg)
           throw NonceTooLowException(sender, tx.getNonce, stateNonce)
         }
 
+        //Check the balance
         val txCost = tx.getValue.add(tx.getGasLimit.multiply(tx.getGasPrice))
         val currentBalance = stateView.getBalance(sender)
         if (currentBalance.compareTo(txCost) < 0) {
-          val msg = s"Insufficient funds for executing transaction: balance ${currentBalance}, tx cost ${txCost}"
-          log.error(msg)
-          throw new IllegalArgumentException(msg)
+          throw new IllegalArgumentException(s"Insufficient funds for executing transaction: balance $currentBalance, tx cost $txCost")
         }
+
+        // Check that the sender is an EOA
+        if (!stateView.isEoaAccount(sender))
+          throw SenderNotEoaException(sender, stateView.getCodeHash(sender))
+
       }
     }
+  } recoverWith { case t =>
+    log.debug(s"Not valid transaction ${tx.id}", t)
+    Failure(t)
   }
 }
 

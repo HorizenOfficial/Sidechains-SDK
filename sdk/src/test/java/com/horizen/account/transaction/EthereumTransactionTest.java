@@ -571,8 +571,8 @@ public class EthereumTransactionTest {
 
         EthereumTransactionFixture txFixture = new EthereumTransactionFixture() {};
         // Legacy tx with legacy tx
-        var legacyTxHigherPrice = txFixture.createLegacyTransaction(value, nonce, new Some(higherGasPrice));
-        var legacyTxLowerPrice = txFixture.createLegacyTransaction(value, nonce, new Some(lowerGasPrice));
+        var legacyTxHigherPrice = txFixture.createLegacyTransaction(value, nonce, Option.empty(), new Some(higherGasPrice));
+        var legacyTxLowerPrice = txFixture.createLegacyTransaction(value, nonce,  Option.empty(), new Some(lowerGasPrice));
 
         assertTrue(legacyTxHigherPrice.canPayHigherFee(legacyTxLowerPrice));
         assertFalse(legacyTxHigherPrice.canPayHigherFee(legacyTxHigherPrice));

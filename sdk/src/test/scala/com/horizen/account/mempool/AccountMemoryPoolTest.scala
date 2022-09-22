@@ -27,6 +27,7 @@ class AccountMemoryPoolTest
 
     val initialStateNonce = BigInteger.ZERO
     val stateViewMock = mock[AccountStateReader]
+    Mockito.when(stateViewMock.getBaseFee).thenReturn(BigInteger.ZERO)
     Mockito.when(stateViewMock.getNonce(ArgumentMatchers.any[Array[Byte]])).thenReturn(initialStateNonce)
 
     val accountMemoryPool = AccountMemoryPool.createEmptyMempool(stateViewMock)
@@ -39,7 +40,7 @@ class AccountMemoryPoolTest
     val account1KeyPair = Keys.createEcKeyPair
 
 
-    val account1ExecTransaction0 = createEIP1559Transaction(value, initialStateNonce, Option(account1KeyPair), gasFee = BigInteger.valueOf(3))
+    val account1ExecTransaction0 = createEIP1559Transaction(value, initialStateNonce, Option(account1KeyPair), gasFee = BigInteger.valueOf(3), priorityGasFee = BigInteger.valueOf(3))
     assertTrue(accountMemoryPool.put(account1ExecTransaction0).isSuccess)
 
     var listOfExecTxs = accountMemoryPool.take(10).toList
@@ -56,7 +57,7 @@ class AccountMemoryPoolTest
 
     val account1ExecTransaction1 = createEIP1559Transaction(value, account1ExecTransaction0.getNonce.add(BigInteger.ONE), Option(account1KeyPair), gasFee = BigInteger.valueOf(1))
     assertTrue(accountMemoryPool.put(account1ExecTransaction1).isSuccess)
-    val account1ExecTransaction2 = createEIP1559Transaction(value, account1ExecTransaction1.getNonce.add(BigInteger.ONE), Option(account1KeyPair), gasFee = BigInteger.valueOf(110))
+    val account1ExecTransaction2 = createEIP1559Transaction(value, account1ExecTransaction1.getNonce.add(BigInteger.ONE), Option(account1KeyPair), gasFee = BigInteger.valueOf(1000), priorityGasFee = BigInteger.valueOf(110))
     assertTrue(accountMemoryPool.put(account1ExecTransaction2).isSuccess)
 
     listOfExecTxs = accountMemoryPool.take(10).toList
@@ -74,17 +75,17 @@ class AccountMemoryPoolTest
     //Create txs for other accounts and verify that the list is ordered by nonce and gas price
     //The expected order is: tx3_0, tx3_1, tx3_2, tx2_0, tx1_0, tx2_1, tx2_2, tx1_1, tx1_2
     val account2KeyPair = Keys.createEcKeyPair
-    val account2ExecTransaction0 = createEIP1559Transaction(value, initialStateNonce, Option(account2KeyPair), gasFee = BigInteger.valueOf(5))
-    val account2ExecTransaction1 = createEIP1559Transaction(value, account2ExecTransaction0.getNonce.add(BigInteger.ONE), Option(account2KeyPair), gasFee = BigInteger.valueOf(2))
-    val account2ExecTransaction2 = createEIP1559Transaction(value, account2ExecTransaction1.getNonce.add(BigInteger.ONE), Option(account2KeyPair), gasFee = BigInteger.valueOf(190))
+    val account2ExecTransaction0 = createEIP1559Transaction(value, initialStateNonce, Option(account2KeyPair), gasFee = BigInteger.valueOf(25), priorityGasFee = BigInteger.valueOf(5))
+    val account2ExecTransaction1 = createEIP1559Transaction(value, account2ExecTransaction0.getNonce.add(BigInteger.ONE), Option(account2KeyPair), gasFee = BigInteger.valueOf(2), priorityGasFee = BigInteger.valueOf(2))
+    val account2ExecTransaction2 = createEIP1559Transaction(value, account2ExecTransaction1.getNonce.add(BigInteger.ONE), Option(account2KeyPair), gasFee = BigInteger.valueOf(990), priorityGasFee = BigInteger.valueOf(2))
     assertTrue(accountMemoryPool.put(account2ExecTransaction1).isSuccess)
     assertTrue(accountMemoryPool.put(account2ExecTransaction2).isSuccess)
     assertTrue(accountMemoryPool.put(account2ExecTransaction0).isSuccess)
 
     val account3KeyPair = Keys.createEcKeyPair
-    val account3ExecTransaction0 = createEIP1559Transaction(value, initialStateNonce, Option(account3KeyPair), gasFee = BigInteger.valueOf(10))
-    val account3ExecTransaction1 = createEIP1559Transaction(value, account3ExecTransaction0.getNonce.add(BigInteger.ONE), Option(account3KeyPair), gasFee = BigInteger.valueOf(200))
-    val account3ExecTransaction2 = createEIP1559Transaction(value, account3ExecTransaction1.getNonce.add(BigInteger.ONE), Option(account3KeyPair), gasFee = BigInteger.valueOf(6))
+    val account3ExecTransaction0 = createEIP1559Transaction(value, initialStateNonce, Option(account3KeyPair), gasFee = BigInteger.valueOf(10), priorityGasFee = BigInteger.valueOf(10))
+    val account3ExecTransaction1 = createEIP1559Transaction(value, account3ExecTransaction0.getNonce.add(BigInteger.ONE), Option(account3KeyPair), gasFee = BigInteger.valueOf(2200), priorityGasFee = BigInteger.valueOf(200))
+    val account3ExecTransaction2 = createEIP1559Transaction(value, account3ExecTransaction1.getNonce.add(BigInteger.ONE), Option(account3KeyPair), gasFee = BigInteger.valueOf(60), priorityGasFee = BigInteger.valueOf(6))
     assertTrue(accountMemoryPool.put(account3ExecTransaction0).isSuccess)
     assertTrue(accountMemoryPool.put(account3ExecTransaction2).isSuccess)
     assertTrue(accountMemoryPool.put(account3ExecTransaction1).isSuccess)

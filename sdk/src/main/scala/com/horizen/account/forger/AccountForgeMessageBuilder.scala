@@ -9,7 +9,7 @@ import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumConsensusDataReceipt
 import com.horizen.account.secret.PrivateKeySecp256k1
-import com.horizen.account.state.{AccountState, AccountStateView, GasLimitReached, GasPool, NonceTooLowException}
+import com.horizen.account.state._
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils.Account
@@ -26,8 +26,8 @@ import scorex.core.NodeViewModifier
 import scorex.core.block.Block.{BlockId, Timestamp}
 import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 
-import java.math.BigInteger
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
@@ -92,7 +92,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val blockGasPool = new GasPool(stateView.getBlockGasLimit)
     var txsCounter: Int = 0
     var blockSize: Int = inputBlockSize
-    val listOfAccountsToSkip = new ListBuffer[SidechainTypes#SCP]
+    val listOfAccountsToSkip = new mutable.HashSet[SidechainTypes#SCP]
 
     for ((tx, txIndex) <- sidechainTransactions.zipWithIndex if !listOfAccountsToSkip.contains(tx.getFrom)) {
 
@@ -113,17 +113,21 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
         case Failure(e: GasLimitReached) =>
           // block gas limit reached
-          // TODO: keep trying to fit transactions into the block: this TX did not fit, but another one might
-          // skip all txs from the same account
+          // keep trying to fit transactions into the block: this TX did not fit, but another one might
           log.debug(s"Could not apply tx, reason: ${e.getMessage}")
-          listOfAccountsToSkip.append(tx.getFrom)
+          // skip all txs from the same account
+          listOfAccountsToSkip += tx.getFrom
+        case Failure(e: FeeCapTooLowException) =>
+          // stop forging because all the remaining txs cannot be executed for the nonce, if they are from the same account, or,
+          // if they are from other accounts, they will have a lower fee cap
+          log.debug(s"Could not apply tx, reason: ${e.getMessage}")
           return Success(receiptList, txHashList)
-       case Failure(e: NonceTooLowException) =>
+        case Failure(e: NonceTooLowException) =>
           // just skip this tx
          log.debug(s"Could not apply tx, reason: ${e.getMessage}")
         case Failure(e) =>
           // skip all txs from the same account
-          listOfAccountsToSkip.append(tx.getFrom)
+          listOfAccountsToSkip += tx.getFrom
           log.debug(s"Could not apply tx, reason: ${e.getMessage}. Skipping all next transactions from the same account because not executable anymore",e)
       }
     }
@@ -173,7 +177,7 @@ class AccountForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     val baseFee = 0
 
     // 5. Get cumulativeGasUsed from last receipt in list if available
-    val gasUsed = if (receiptList.size > 0) receiptList.last.cumulativeGasUsed.longValue() else 0
+    val gasUsed = if (receiptList.nonEmpty) receiptList.last.cumulativeGasUsed.longValue() else 0
 
     // 6. Set gasLimit
     val gasLimit = Account.GAS_LIMIT
