@@ -65,10 +65,6 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
   }
 
-  class ThresholdSigCircuitSubmitter extends CertificateSubmitter
-
-  class ThresholdSigCircuitSubmitterWithKeyRotation extends CertificateSubmitter
-
   private[horizen] def getKeys(withdrawalEpoch: Int, counter: Int): ByteArrayWrapper = {
     Utils.calculateKey(Bytes.concat("keys".getBytes, Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
   }

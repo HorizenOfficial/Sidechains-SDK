@@ -8,6 +8,7 @@ import com.horizen._
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter._
+import com.horizen.certificatesubmitter.submitters.ThresholdSigCircuitSubmitter
 import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.NetworkParams
@@ -21,6 +22,7 @@ import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 import scorex.util.ScorexLogging
+
 import java.io.File
 import java.util
 import java.util.Optional
@@ -38,7 +40,7 @@ import scala.util.{Failure, Random, Success, Try}
  * If `submitterEnabled` is `true`, it will try to generate and send the Certificate to MC node in case the proper amount of signatures were collected.
  * Must be singleton.
  */
-class CertificateSubmitter(settings: SidechainSettings,
+abstract class CertificateSubmitter(settings: SidechainSettings,
                            sidechainNodeViewHolderRef: ActorRef,
                            params: NetworkParams,
                            mainchainChannel: MainchainNodeChannel)
@@ -587,9 +589,7 @@ class CertificateSubmitter(settings: SidechainSettings,
         case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)
       }.unzip
 
-    log.info(s"Start generating proof with parameters: dataForProofGeneration = ${
-      dataForProofGeneration
-    }, " +
+    log.info(s"Start generating proof with parameters: dataForProofGeneration = $dataForProofGeneration, " +
       s"signersThreshold = ${
         params.signersThreshold
       }. " +
@@ -718,8 +718,13 @@ object CertificateSubmitter {
 object CertificateSubmitterRef {
   def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
-           (implicit ec: ExecutionContext): Props =
-    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel)).withMailbox("akka.actor.deployment.submitter-prio-mailbox")
+           (implicit ec: ExecutionContext): Props = {
+    if(settings.withdrawalEpochCertificateSettings.typeOfCircuit == "WithoutKeyRotation") {
+      Props(new ThresholdSigCircuitSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel)).withMailbox("akka.actor.deployment.submitter-prio-mailbox")
+    } else {
+      Props(new ThresholdSigCircuitSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel)).withMailbox("akka.actor.deployment.submitter-prio-mailbox")
+    }
+  }
 
   def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
