@@ -14,13 +14,17 @@ from test_framework.util import assert_equal, assert_true, start_nodes, \
 from SidechainTestFramework.account.httpCalls.createEIP1559Transaction import createEIP1559Transaction
 
 """
+Test that the Sidechain can manage orphan transactions correctly
 Configuration: 
     - 2 SC nodes connected with each other
     - 1 MC node
 
 Test:
-    Test some positive scenario for the transfer of funds from EOA to EOA accounts
-    Test some negative scenario too
+    - Create an orphan tx and test that it is included in the mempool but is not included in a block
+    - Create the missing transaction and check that now both are included in a block
+    - Check that the transactions in a block are ordered by effective gas tip
+    - Check that a transaction with the same nonce of a tx already in the mempool can replace the old one just if it
+    has an higher effective gas tip
      
 """
 
@@ -142,7 +146,7 @@ class SCEvmOrphanTXS(SidechainTestFramework):
         response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
         assert_equal(0, len(response['result']['transactionIds']))
 
-        # Check that the transactions with highest gas price are included first in the block
+        # Check that the transactions with the highest effective gas tip are included first in the block
         # The expected order is: txC_0, txC_1, txC_2, txB_0, txA_0, txB_1, txB_2, txA_1, txA_2
 
         evm_address_scA = sc_node_1.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
@@ -169,7 +173,6 @@ class SCEvmOrphanTXS(SidechainTestFramework):
                                       generate_block=True)
         self.sync_all()
 
-        # Generate SC block and check that FT appears in SCs node wallet
         generate_next_block(sc_node_1, "first node")
         self.sc_sync_all()
 
@@ -250,7 +253,7 @@ class SCEvmOrphanTXS(SidechainTestFramework):
         assert_equal(txA_2, txs_in_block[8]['id'])
 
         # Check that a transaction with the same nonce of a tx already in the mempool can replace the old one just if it
-        # has an higher gas price
+        # has an higher effective gas tip
 
         j["from"] = evm_address_scA
         j["nonce"] = 3
