@@ -222,7 +222,7 @@ class PerformanceTest(SidechainTestFramework):
         # Ring Topology
         if self.topology == NetworkTopology.Ring:
             # Connect final node to first node
-            connect_sc_nodes(self.sc_nodes[node], 1)
+            connect_sc_nodes(self.sc_nodes[node], 0)
             self.create_node_connection_map(0, [node])
             self.create_node_connection_map(node, [0])
         # Star Topology
