@@ -6,16 +6,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TraceParams {
-    @JsonProperty("enableMemory")
-    final boolean enableMemory;
-    @JsonProperty("disableStack")
-    final boolean disableStack;
-    @JsonProperty("disableStorage")
-    public boolean disableStorage;
-    @JsonProperty("enableReturnData")
-    public boolean enableReturnData;
+    public final boolean enableMemory;
+    public final boolean disableStack;
+    public final boolean disableStorage;
+    public final boolean enableReturnData;
 
-    @JsonCreator()
     public TraceParams() {
         enableMemory = true;
         disableStack = false;
@@ -23,7 +18,6 @@ public class TraceParams {
         enableReturnData = true;
     }
 
-    @JsonCreator()
     public TraceParams(boolean enableMemory, boolean disableStack, boolean disableStorage, boolean enableReturnData) {
         this.enableMemory = enableMemory;
         this.disableStack = disableStack;
