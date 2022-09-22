@@ -8,7 +8,7 @@ import com.horizen._
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter._
-import com.horizen.certificatesubmitter.submitters.ThresholdSigCircuitSubmitter
+import com.horizen.certificatesubmitter.submitters.{ThresholdSigCircuitSubmitter, ThresholdSigCircuitSubmitterWithKeyRotation}
 import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.NetworkParams
@@ -719,10 +719,10 @@ object CertificateSubmitterRef {
   def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit ec: ExecutionContext): Props = {
-    if(settings.withdrawalEpochCertificateSettings.typeOfCircuit == "WithoutKeyRotation") {
+    if(settings.withdrawalEpochCertificateSettings.typeOfCircuit == TypeOfCertificateSubmitter.NaiveThresholdSignatureCircuit) {
       Props(new ThresholdSigCircuitSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel)).withMailbox("akka.actor.deployment.submitter-prio-mailbox")
     } else {
-      Props(new ThresholdSigCircuitSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel)).withMailbox("akka.actor.deployment.submitter-prio-mailbox")
+      Props(new ThresholdSigCircuitSubmitterWithKeyRotation(settings, sidechainNodeViewHolderRef, params, mainchainChannel)).withMailbox("akka.actor.deployment.submitter-prio-mailbox")
     }
   }
 
@@ -735,4 +735,10 @@ object CertificateSubmitterRef {
             mainchainChannel: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
     system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel).withMailbox("akka.actor.deployment.submitter-prio-mailbox"), name)
+}
+
+object TypeOfCertificateSubmitter extends Enumeration {
+  type TypeOfCertificateSubmitter = Value
+
+  val NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation = Value
 }
