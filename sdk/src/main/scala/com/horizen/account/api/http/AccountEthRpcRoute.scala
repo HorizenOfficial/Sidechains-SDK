@@ -12,10 +12,11 @@ import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccoun
 import com.horizen.account.state.MessageProcessor
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.{ApiResponseUtil, SidechainApiRoute}
+import com.horizen.api.http.{SidechainApiResponse, SidechainApiRoute}
 import com.horizen.evm.LevelDBDatabase
 import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
+import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.ClosableResourceHandler
 import com.horizen.{SidechainSettings, SidechainTypes}
 import scorex.core.settings.RESTApiSettings
@@ -69,10 +70,11 @@ case class AccountEthRpcRoute(
   def ethRpc: Route = post {
     entity(as[JsonNode]) { body =>
       val req = new RpcRequest(body)
-      log.debug(s">> $req")
+      log.debug(s"request >> $body")
       val res = rpcHandler.apply(req)
-      log.debug(s"<< $res")
-      ApiResponseUtil.toResponseWithoutResultWrapper(res);
+      val json = SerializationUtil.serialize(res)
+      log.debug(s"response << $json")
+      SidechainApiResponse(json);
     }
   }
 
