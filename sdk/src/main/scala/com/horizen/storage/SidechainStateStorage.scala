@@ -24,8 +24,7 @@ import scala.util._
 class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: SidechainBoxesCompanion)
   extends ScorexLogging
     with SidechainStorageInfo
-    with SidechainTypes
-{
+    with SidechainTypes {
   // Version - block Id
   // Key - byte array box Id
 
@@ -42,6 +41,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   private[horizen] val forgerListIndexKey = Utils.calculateKey("forgerListIndexKey".getBytes)
 
   private val undefinedWithdrawalEpochCounter: Int = -1
+
   private[horizen] def getWithdrawalEpochCounterKey(withdrawalEpoch: Int): ByteArrayWrapper = {
     Utils.calculateKey(Bytes.concat("withdrawalEpochCounter".getBytes, Ints.toByteArray(withdrawalEpoch)))
   }
@@ -52,9 +52,11 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
   abstract class CertificateSubmitter {
     val signersPublicKeys = ActualKeys(mutable.IndexedSeq[SchnorrProposition](/*signingKeys*/), mutable.IndexedSeq[SchnorrProposition](/*masterKeys*/));
+
     def getSignerPublicKeys(): ActualKeys = {
       signersPublicKeys
     }
+
     def getMessage() {}
 
     def tryToGenerateCertificate(): Unit = {
@@ -64,6 +66,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   }
 
   class ThresholdSigCircuitSubmitter extends CertificateSubmitter
+
   class ThresholdSigCircuitSubmitterWithKeyRotation extends CertificateSubmitter
 
   private[horizen] def getKeys(withdrawalEpoch: Int, counter: Int): ByteArrayWrapper = {
@@ -75,6 +78,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   }
 
   private val undefinedBlockFeeInfoCounter: Int = -1
+
   private[horizen] def getBlockFeeInfoCounterKey(withdrawalEpochNumber: Int): ByteArrayWrapper = {
     Utils.calculateKey(Bytes.concat("blockFeeInfoCounter".getBytes, Ints.toByteArray(withdrawalEpochNumber)))
   }
@@ -88,7 +92,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   }
 
 
-  def getBox(boxId : Array[Byte]) : Option[SidechainTypes#SCB] = {
+  def getBox(boxId: Array[Byte]): Option[SidechainTypes#SCB] = {
     storage.get(Utils.calculateKey(boxId)) match {
       case v if v.isPresent =>
         sidechainBoxesCompanion.parseBytesTry(v.get().data) match {
@@ -137,7 +141,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   def getFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo] = {
     val blockFees: ListBuffer[BlockFeeInfo] = ListBuffer()
     val lastCounter = getBlockFeeInfoCounter(withdrawalEpochNumber)
-    for(counter <- 0 to lastCounter) {
+    for (counter <- 0 to lastCounter) {
       storage.get(getBlockFeeInfoKey(withdrawalEpochNumber, counter)).asScala match {
         case Some(baw) => BlockFeeInfoSerializer.parseBytesTry(baw.data) match {
           case Success(info) => blockFees.append(info)
@@ -154,7 +158,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     // Aggregate withdrawal requests until reaching the counter, where the key is not present in the storage.
     val withdrawalRequests: ListBuffer[WithdrawalRequestBox] = ListBuffer()
     val lastCounter: Int = getWithdrawalEpochCounter(withdrawalEpoch)
-    for(counter <- 0 to lastCounter) {
+    for (counter <- 0 to lastCounter) {
       storage.get(getWithdrawalRequestsKey(withdrawalEpoch, counter)).asScala match {
         case Some(baw) =>
           withdrawalRequestSerializer.parseBytesTry(baw.data) match {
@@ -170,23 +174,23 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     withdrawalRequests
   }
 
-    def getSigningKeys(withdrawalEpoch: Int): Seq[SchnorrProposition] = {
-      storage.get(getTopQualityCertificateKey(withdrawalEpoch)).asScala match {
-        case Some(baw) =>
-          WithdrawalEpochCertificateSerializer.parseBytesTry(baw.data) match {
-            case Success(actualKeys: ActualKeys) => Option(actualKeys.signingKeys)
-            case Failure(exception) =>
-              log.error("Error while withdrawal epoch certificate signing keys parsing.", exception)
-              Option.empty
-          }
-        case _ => Option.empty
-      }
-  }
-
-  def getMasterKeys(withdrawalEpoch: Int): Seq[SchnorrProposition] = {
+  def getSigningKeys(withdrawalEpoch: Int): Option[Seq[SchnorrProposition]] = {
     storage.get(getTopQualityCertificateKey(withdrawalEpoch)).asScala match {
       case Some(baw) =>
-        WithdrawalEpochCertificateSerializer.parseBytesTry(baw.data) match {
+        ActualKeysSerializer.parseBytesTry(baw.data) match {
+          case Success(actualKeys: ActualKeys) => Option(actualKeys.signingKeys)
+          case Failure(exception) =>
+            log.error("Error while withdrawal epoch certificate signing keys parsing.", exception)
+            Option.empty
+        }
+      case _ => Option.empty
+    }
+  }
+
+  def getMasterKeys(withdrawalEpoch: Int): Option[Seq[SchnorrProposition]] = {
+    storage.get(getTopQualityCertificateKey(withdrawalEpoch)).asScala match {
+      case Some(baw) =>
+        ActualKeysSerializer.parseBytesTry(baw.data) match {
           case Success(actualKeys: ActualKeys) => Option(actualKeys.masterKeys)
           case Failure(exception) =>
             log.error("Error while withdrawal epoch certificate master keys parsing.", exception)
@@ -196,8 +200,17 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
   }
 
-  def getListOfKeyRotationProofs(withdrawalEpoch: Int): Seq[KeyRotationProof] = {
-    return Seq[KeyRotationProof]
+  def getListOfKeyRotationProofs(withdrawalEpoch: Int): Option[Seq[KeyRotationProof]]= {
+    storage.get(getTopQualityCertificateKey(withdrawalEpoch)).asScala match {
+      case Some(baw) =>
+        KeyRotationProofSerializer.parseBytesTry(baw.data) match {
+          case Success(keyRotationProofs: Seq[KeyRotationProof]) => Option(keyRotationProofs)
+          case Failure(exception) =>
+            log.error("Error while withdrawal epoch certificate master keys parsing.", exception)
+            Option.empty
+        }
+      case _ => Option.empty
+    }
   }
 
   def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
@@ -280,7 +293,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     require(blockFeeInfo != null, "BlockFeeInfo must be NOT NULL.")
 
     val removeList = new JArrayList[ByteArrayWrapper]()
-    val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
+    val updateList = new JArrayList[JPair[ByteArrayWrapper, ByteArrayWrapper]]()
 
     // Update boxes data
     for (r <- boxIdsRemoveSet)
@@ -371,12 +384,12 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       new ByteArrayWrapper(BlockFeeInfoSerializer.toBytes(blockFeeInfo))))
 
     // Update Consensus related data
-    if(getConsensusEpochNumber.getOrElse(intToConsensusEpochNumber(0)) != consensusEpoch) {
+    if (getConsensusEpochNumber.getOrElse(intToConsensusEpochNumber(0)) != consensusEpoch) {
       updateList.add(new JPair(consensusEpochKey, new ByteArrayWrapper(Ints.toByteArray(consensusEpoch))))
     }
 
     // If sidechain has ceased set the flag
-    if(scHasCeased)
+    if (scHasCeased)
       updateList.add(new JPair(ceasingStateKey, new ByteArrayWrapper(Array.emptyByteArray)))
 
     //Set ForgerList indexes
@@ -395,11 +408,11 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     this
   }
 
-  override def lastVersionId : Option[ByteArrayWrapper] = {
+  override def lastVersionId: Option[ByteArrayWrapper] = {
     storage.lastVersionID().asScala
   }
 
-  def rollbackVersions() : Seq[ByteArrayWrapper] = {
+  def rollbackVersions(): Seq[ByteArrayWrapper] = {
     storage.rollbackVersions().asScala.toList
   }
 
@@ -407,7 +420,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     storage.rollbackVersions(maxNumberOfVersions).asScala.toList
   }
 
-  def rollback (version : ByteArrayWrapper) : Try[SidechainStateStorage] = Try {
+  def rollback(version: ByteArrayWrapper): Try[SidechainStateStorage] = Try {
     require(version != null, "Version to rollback to must be NOT NULL.")
     storage.rollback(version)
     this
@@ -421,31 +434,31 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
    * This function restores the unspent boxes that come from a ceased sidechain by saving
    * them into the SidechainStateStorage
    *
-   * @param backupStorage: storage containing the boxes saved from the ceased sidechain
+   * @param backupStorage : storage containing the boxes saved from the ceased sidechain
    */
   def restoreBackup(backupStorageBoxIterator: BoxIterator, lastVersion: Array[Byte]): Unit = {
     val removeList = new JArrayList[ByteArrayWrapper]()
-    val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
+    val updateList = new JArrayList[JPair[ByteArrayWrapper, ByteArrayWrapper]]()
     val lastVersionWrapper = new ByteArrayWrapper(lastVersion)
 
     var optionalBox = backupStorageBoxIterator.nextBox
-    while(optionalBox.isPresent) {
+    while (optionalBox.isPresent) {
       val box = optionalBox.get.getBox
       updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](Utils.calculateKey(box.id()),
         new ByteArrayWrapper(sidechainBoxesCompanion.toBytes(box))))
-      log.info("Restore Box id "+box.boxTypeId())
+      log.info("Restore Box id " + box.boxTypeId())
       optionalBox = backupStorageBoxIterator.nextBox
       if (updateList.size() == leveldb.Constants.BatchSize) {
         if (optionalBox.isPresent)
-          storage.update(new ByteArrayWrapper(Utils.nextVersion),updateList, removeList)
+          storage.update(new ByteArrayWrapper(Utils.nextVersion), updateList, removeList)
         else
-          storage.update(lastVersionWrapper,updateList, removeList)
+          storage.update(lastVersionWrapper, updateList, removeList)
         updateList.clear()
       }
     }
 
     if (updateList.size() != 0)
-      storage.update(lastVersionWrapper,updateList, removeList)
+      storage.update(lastVersionWrapper, updateList, removeList)
     log.info("SidechainStateStorage restore completed successfully!")
   }
 }
