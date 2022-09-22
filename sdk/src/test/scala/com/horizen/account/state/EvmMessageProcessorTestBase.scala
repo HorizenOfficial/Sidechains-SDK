@@ -15,11 +15,13 @@ trait EvmMessageProcessorTestBase {
   val contractAddress: AddressProposition = toProposition("00000000000000000000000000000000FFFFFF04")
 
   def getMessage(to: AddressProposition, data: Array[Byte]): Message = {
-    val gas = BigInteger.valueOf(200000)
-    val price = BigInteger.ZERO
+    val gasLimit = BigInteger.valueOf(1000000)
+    val gasPrice = BigInteger.ZERO
+    val gasFeeCap = BigInteger.valueOf(1000001)
+    val gasTipCap = BigInteger.ZERO
     val value = BigInteger.ZERO
     val nonce = BigInteger.ZERO
-    new Message(originAddress, to, price, price, price, gas, value, nonce, data, false)
+    new Message(originAddress, to, gasPrice, gasFeeCap, gasTipCap, gasLimit, value, nonce, data, false)
   }
 
   def getMessage(to: AddressProposition): Message = getMessage(to, null)

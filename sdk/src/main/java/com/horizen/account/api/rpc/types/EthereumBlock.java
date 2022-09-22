@@ -53,6 +53,7 @@ public class EthereumBlock {
         this.gasUsed = Numeric.toHexStringWithPrefix(BigInteger.valueOf(blockHeader.gasUsed()));
         this.timestamp = Numeric.prependHexPrefix(Long.toHexString(block.timestamp()));
         this.transactions = transactions;
+        this.baseFeePerGas = Numeric.toHexStringWithPrefix(blockHeader.baseFee());
     }
 
     public String getNumber() {

@@ -12,6 +12,7 @@ import com.horizen.proposition.{Proposition, VrfPublicKey}
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import com.horizen.SidechainTypes
+import com.horizen.chain.SidechainFeePaymentsInfo
 import scorex.core.settings.RESTApiSettings
 
 import scala.collection.JavaConverters._
@@ -25,6 +26,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
     SidechainTypes#SCBT,
     SidechainBlockHeader,
     SidechainBlock,
+    SidechainFeePaymentsInfo,
     NodeHistory,
     NodeState,
     NodeWallet,

@@ -47,7 +47,7 @@ class EoaMessageProcessorIntegrationTest
   @Test
   def process(): Unit = {
     val value = BigInteger.valueOf(1337)
-    val initialBalance = BigInteger.valueOf(10000000)
+    val initialBalance = new BigInteger("2000000000000")
     val to = getAddressProposition(12345L).address()
     val msg = getMessage(to, value, Array.emptyByteArray)
     val sender = msg.getFrom.address()
