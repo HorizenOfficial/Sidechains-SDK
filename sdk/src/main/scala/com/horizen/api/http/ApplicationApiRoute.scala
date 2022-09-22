@@ -10,10 +10,10 @@ import com.horizen.box.Box
 import com.horizen.node._
 import com.horizen.proposition.Proposition
 import com.horizen.transaction.BoxTransaction
-import scorex.core.api.http.{ApiDirectives, ApiRoute}
-import scorex.core.settings.RESTApiSettings
-import scorex.core.utils.ScorexEncoding
-
+import sparkz.core.api.http.{ApiDirectives, ApiRoute}
+import sparkz.core.settings.RESTApiSettings
+import sparkz.core.utils.SparkzEncoding
+import com.horizen.node.SidechainNodeView
 import scala.collection.JavaConverters._
 import scala.concurrent.{Await, Future}
 
@@ -21,8 +21,9 @@ case class ApplicationApiRoute(override val settings: RESTApiSettings, applicati
                               (implicit val context: ActorRefFactory)
   extends ApiRoute
     with ApiDirectives
-    with ScorexEncoding
+    with SparkzEncoding
     with FunctionsApplierOnSidechainNodeView {
+
 
   override def route: Route = convertRoutes
 

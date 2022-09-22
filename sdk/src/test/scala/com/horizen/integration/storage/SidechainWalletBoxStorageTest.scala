@@ -40,7 +40,7 @@ class SidechainWalletBoxStorageTest
       sidechainWalletBoxStorage.update(version1, zenWbList ++ customWbList, List[Array[Byte]]()).isSuccess)
 
     // Test storage content
-    assertEquals("Storage must have specified version.", version1, sidechainWalletBoxStorage.lastVersionId.get())
+    assertEquals("Storage must have specified version.", version1, sidechainWalletBoxStorage.lastVersionId.get)
     var wbl1 = sidechainWalletBoxStorage.getAll
     assertEquals("Storage must contain 6 items.", 6, wbl1.size)
     for(wb <- zenWbList ++ customWbList)
@@ -58,7 +58,7 @@ class SidechainWalletBoxStorageTest
     assertTrue("Remove operation must be successful.",
       sidechainWalletBoxStorage.update(version2, List[WalletBox](), customWbList.map(_.box.id())).isSuccess)
 
-    assertEquals("Storage must have specified version.", version2, sidechainWalletBoxStorage.lastVersionId.get())
+    assertEquals("Storage must have specified version.", version2, sidechainWalletBoxStorage.lastVersionId.get)
     wbl1 = sidechainWalletBoxStorage.getAll
     assertEquals("Storage must contain 3 items.", 3, wbl1.size)
     for(wb <- zenWbList)
@@ -78,7 +78,7 @@ class SidechainWalletBoxStorageTest
     // TEST SCENARIO 3: Test rollback functionality
     assertTrue("Rollback operation must be successful.", sidechainWalletBoxStorage.rollback(version1).isSuccess)
 
-    assertEquals("Storage must have specified version.", version1, sidechainWalletBoxStorage.lastVersionId.get())
+    assertEquals("Storage must have specified version.", version1, sidechainWalletBoxStorage.lastVersionId.get)
     var wbl2 : List[WalletBox] = sidechainWalletBoxStorage.getAll
     assertEquals("Storage must contain 6 items.", 6, wbl2.size)
     for(wb <- zenWbList ++ customWbList)

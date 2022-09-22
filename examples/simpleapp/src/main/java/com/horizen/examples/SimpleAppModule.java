@@ -5,16 +5,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
-
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-
 import com.horizen.SidechainAppModule;
+import com.horizen.SidechainAppStopper;
 import com.horizen.SidechainSettings;
-import com.horizen.account.transaction.AccountTransaction;
 import com.horizen.api.http.ApplicationApiGroup;
 import com.horizen.box.*;
-import com.horizen.proof.Proof;
+import com.horizen.fork.ForkConfigurator;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.Secret;
 import com.horizen.secret.SecretSerializer;
@@ -44,10 +42,18 @@ public class SimpleAppModule extends SidechainAppModule
         HashMap<Byte, SecretSerializer<Secret>> customSecretSerializers = new HashMap<>();
         HashMap<Byte, TransactionSerializer<BoxTransaction<Proposition, Box<Proposition>>>> customTransactionSerializers = new HashMap<>();
 
-        ApplicationWallet defaultApplicationWallet = new DefaultApplicationWallet();
-        ApplicationState defaultApplicationState = new DefaultApplicationState();
+        String dataDirAbsolutePath = sidechainSettings.sparkzSettings().dataDir().getAbsolutePath();
 
-        String dataDirAbsolutePath = sidechainSettings.scorexSettings().dataDir().getAbsolutePath();
+        // two distinct storages are used in application state and wallet in order to test a version
+        // misalignment during startup and the recover logic
+        File appWalletStorage1 = new File(dataDirAbsolutePath + "/appWallet1");
+        File appWalletStorage2 = new File(dataDirAbsolutePath + "/appWallet2");
+        DefaultApplicationWallet defaultApplicationWallet = new DefaultApplicationWallet(appWalletStorage1, appWalletStorage2);
+
+        File appStateStorage1 = new File(dataDirAbsolutePath + "/appState1");
+        File appStateStorage2 = new File(dataDirAbsolutePath + "/appState2");
+        DefaultApplicationState defaultApplicationState = new DefaultApplicationState(appStateStorage1, appStateStorage2);
+
         File secretStore = new File(dataDirAbsolutePath + "/secret");
         File walletBoxStore = new File(dataDirAbsolutePath + "/wallet");
         File walletTransactionStore = new File(dataDirAbsolutePath + "/walletTransaction");
@@ -58,7 +64,9 @@ public class SimpleAppModule extends SidechainAppModule
         File stateUtxoMerkleTreeStore = new File(dataDirAbsolutePath + "/stateUtxoMerkleTree");
         File historyStore = new File(dataDirAbsolutePath + "/history");
         File consensusStore = new File(dataDirAbsolutePath + "/consensusData");
+        File backupStore = new File(dataDirAbsolutePath + "/backupStorage");
 
+        AppForkConfigurator forkConfigurator = new AppForkConfigurator();
 
 
         // Here I can add my custom rest api and/or override existing one
@@ -69,7 +77,9 @@ public class SimpleAppModule extends SidechainAppModule
         // For example new Pair("wallet, "allBoxes");
         List<Pair<String, String>> rejectedApiPaths = new ArrayList<>();
 
-
+        // use a custom object which implements the stopAll() method
+        SidechainAppStopper applicationStopper = new SimpleAppStopper(
+                defaultApplicationState, defaultApplicationWallet);
 
         bind(SidechainSettings.class)
                 .annotatedWith(Names.named("SidechainSettings"))
@@ -124,6 +134,9 @@ public class SimpleAppModule extends SidechainAppModule
         bind(Storage.class)
                 .annotatedWith(Names.named("ConsensusStorage"))
                 .toInstance(new VersionedLevelDbStorageAdapter(consensusStore));
+        bind(Storage.class)
+                .annotatedWith(Names.named("BackupStorage"))
+                .toInstance(new VersionedLevelDbStorageAdapter(backupStore));
 
         bind(new TypeLiteral<List<ApplicationApiGroup>> () {})
                 .annotatedWith(Names.named("CustomApiGroups"))
@@ -132,5 +145,14 @@ public class SimpleAppModule extends SidechainAppModule
         bind(new TypeLiteral<List<Pair<String, String>>> () {})
                 .annotatedWith(Names.named("RejectedApiPaths"))
                 .toInstance(rejectedApiPaths);
+
+        bind(SidechainAppStopper.class)
+                .annotatedWith(Names.named("ApplicationStopper"))
+                .toInstance(applicationStopper);
+
+        bind(ForkConfigurator.class)
+                .annotatedWith(Names.named("ForkConfiguration"))
+                .toInstance(forkConfigurator);
+
     }
 }

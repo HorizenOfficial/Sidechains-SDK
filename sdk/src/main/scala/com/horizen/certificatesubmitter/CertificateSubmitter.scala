@@ -10,6 +10,8 @@ import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.websocket.client.MainchainNodeChannel
 
 import scala.concurrent.ExecutionContext
+import java.util.Optional
+import scala.compat.java8.OptionConverters._
 import scala.language.postfixOps
 
 
@@ -23,12 +25,15 @@ class CertificateSubmitter(settings: SidechainSettings,
     SidechainBlockHeader,
     SidechainBlock
   ](settings, sidechainNodeViewHolderRef, params, mainchainChannel) {
+
+
   type HSTOR = SidechainHistoryStorage
   type VL = SidechainWallet
   type HIS = SidechainHistory
   type MS = SidechainState
   type MP = SidechainMemoryPool
   type PM = SidechainBlock
+
 
   override def preStart(): Unit = {
     super.preStart()
@@ -39,30 +44,45 @@ class CertificateSubmitter(settings: SidechainSettings,
   }
 
   override def postStop(): Unit = {
+    log.debug("Certificate Submitter actor is stopping...")
     super.postStop()
   }
 
-  override def getUtxoMerkleTreeRoot(state: SidechainState, referencedEpoch: Int): Array[Byte] =
-    state.utxoMerkleTreeRoot(referencedEpoch).get
+  override def getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber: Int, state: SidechainState): Optional[Array[Byte]] = {
+    if (params.isCSWEnabled) {
+      state.utxoMerkleTreeRoot(referencedWithdrawalEpochNumber) match {
+        case x: Some[Array[Byte]] => x.asJava
+        case None =>
+          log.error("UtxoMerkleTreeRoot is not defined even if CSW is enabled")
+          throw new IllegalStateException("UtxoMerkleTreeRoot is not defined")
+      }
+    }
+    else {
+      Optional.empty()
+    }
+  }
 
   override def getWithdrawalRequests(state: SidechainState, referencedEpochNumber: Int): Seq[BackwardTransfer] =
     state.withdrawalRequests(referencedEpochNumber).map(box => new BackwardTransfer(box.proposition.bytes, box.value))
 
 }
 
+
 object CertificateSubmitterRef {
   def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit ec: ExecutionContext): Props =
-    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel))
+
+    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel)).withMailbox("akka.actor.deployment.submitter-prio-mailbox")
+
 
   def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel))
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel).withMailbox("akka.actor.deployment.submitter-prio-mailbox"))
 
   def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel), name)
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel).withMailbox("akka.actor.deployment.submitter-prio-mailbox"), name)
 }

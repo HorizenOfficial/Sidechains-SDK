@@ -3,8 +3,8 @@ package com.horizen.api.http
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.transaction.Transaction
-import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, SuccessfulTransaction}
+import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{FailedTransaction, SuccessfulTransaction}
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.collection.concurrent.TrieMap
@@ -20,13 +20,17 @@ class SidechainTransactionActor[T <: Transaction](sidechainNodeViewHolderRef: Ac
     context.system.eventStream.subscribe(self, classOf[FailedTransaction])
   }
 
+  override def postStop(): Unit = {
+    log.debug("SidechainTransaction actor is stopping...")
+    super.postStop()
+  }
+
   protected def broadcastTransaction: Receive = {
     case BroadcastTransaction(transaction) =>
       val promise = Promise[ModifierId]
       val future = promise.future
       transactionMap(transaction.id) = promise
       sender() ! future
-
       sidechainNodeViewHolderRef ! LocallyGeneratedTransaction[Transaction](transaction)
   }
 

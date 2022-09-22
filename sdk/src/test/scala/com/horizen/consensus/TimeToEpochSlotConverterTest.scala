@@ -4,14 +4,13 @@ import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, Si
 
 import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
-import com.horizen.librustsidechains.FieldElement
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.SchnorrProposition
 import com.horizen.utils.TimeToEpochUtils
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
-import scorex.core.block.Block
+import sparkz.core.block.Block
 import scorex.util.{ModifierId, bytesToId}
 
 class TimeToEpochSlotConverterTest extends JUnitSuite {
@@ -27,7 +26,7 @@ class TimeToEpochSlotConverterTest extends JUnitSuite {
     override val mainchainCreationBlockHeight: Int = 1
     override val EquihashN: Int = 200
     override val EquihashK: Int = 9
-    override val EquihashVarIntLength: Int = 3
+    override val EquihashCompactSizeLength: Int = 3
     override val EquihashSolutionLength: Int = 1344
     override val withdrawalEpochLength: Int = 100
     override val powLimit: BigInteger = new BigInteger("07ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16)
@@ -46,6 +45,7 @@ class TimeToEpochSlotConverterTest extends JUnitSuite {
     override val cswVerificationKeyFilePath: String = ""
     override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1
     override val chainId: Long = 11111111
+    override val isCSWEnabled: Boolean = true
   }
 
   private def checkSlotAndEpoch(timeStamp: Block.Timestamp,
@@ -57,7 +57,7 @@ class TimeToEpochSlotConverterTest extends JUnitSuite {
 
   @Test
   def checkSlotAndEpoch(): Unit = {
-    implicit val params = StubbedNetParams(sidechainGenesisBlockTimestamp = 1990, consensusSecondsInSlot = 10, consensusSlotsInEpoch = 100)
+    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = 1990, consensusSecondsInSlot = 10, consensusSlotsInEpoch = 100)
 
     assertEquals(" Seconds in epoch shall be as expected", 1000, TimeToEpochUtils.epochInSeconds(params))
     checkSlotAndEpoch(1990, 100, 1)
@@ -78,7 +78,7 @@ class TimeToEpochSlotConverterTest extends JUnitSuite {
 
   @Test
   def checkSlotAndEpoch2(): Unit = {
-    implicit val params = StubbedNetParams(sidechainGenesisBlockTimestamp = 61, consensusSecondsInSlot = 3, consensusSlotsInEpoch = 8)
+    implicit val params: StubbedNetParams = StubbedNetParams(sidechainGenesisBlockTimestamp = 61, consensusSecondsInSlot = 3, consensusSlotsInEpoch = 8)
 
     assertEquals(" Seconds in epoch shall be as expected", 24, TimeToEpochUtils.epochInSeconds(params))
     checkSlotAndEpoch(90, 1, 3)

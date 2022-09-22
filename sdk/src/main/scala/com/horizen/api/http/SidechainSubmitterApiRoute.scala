@@ -1,19 +1,21 @@
 package com.horizen.api.http
 
+
+import com.fasterxml.jackson.annotation.JsonView
+import com.horizen.certificatesubmitter.CertificateSubmitter.ReceivableMessages.{DisableCertificateSigner, DisableSubmitter, EnableCertificateSigner, EnableSubmitter, GetCertificateGenerationState, IsCertificateSigningEnabled, IsSubmitterEnabled}
+import com.horizen.serialization.Views
+import sparkz.core.settings.RESTApiSettings
+
+import scala.concurrent.Await
+import scala.util.{Failure, Success, Try}
+import java.util.{Optional => JOptional}
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
-import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.api.http.SidechainDebugErrorResponse.{ErrorRetrievingCertGenerationState, ErrorRetrievingCertSignerState, ErrorRetrievingCertSubmitterState}
 import com.horizen.api.http.SidechainDebugRestScheme.{RespCertGenerationState, RespCertSignerState, RespCertSubmitterState, RespSubmitterOk}
-import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.ReceivableMessages._
-import com.horizen.serialization.Views
-import scorex.core.api.http.{ApiDirectives, ApiRoute}
-import scorex.core.settings.RESTApiSettings
+import sparkz.core.api.http.{ApiDirectives, ApiRoute}
 
-import java.util.{Optional => JOptional}
-import scala.concurrent.Await
-import scala.util.{Failure, Success, Try}
 
 case class SidechainSubmitterApiRoute(override val settings: RESTApiSettings, certSubmitterRef: ActorRef, sidechainNodeViewHolderRef: ActorRef)
                                      (implicit val context: ActorRefFactory)

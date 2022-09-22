@@ -8,11 +8,11 @@ import com.horizen.params.NetworkParams
 import com.horizen.proposition.Proposition
 import com.horizen.transaction.mainchain.{BwtRequest, ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
 import com.horizen.serialization.Views
-import scorex.core.serialization.BytesSerializable
+import sparkz.core.serialization.BytesSerializable
 import com.horizen.transaction.{MC2SCAggregatedTransaction, Transaction}
 import com.horizen.transaction.exception.TransactionSemanticValidityException
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, VarInt}
-import scorex.core.serialization.ScorexSerializer
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, CompactSize}
+import sparkz.core.serialization.SparkzSerializer
 import scorex.util.serialization.{Reader, Writer}
 import com.horizen.validation.{InconsistentMainchainBlockReferenceDataException, InvalidMainchainDataException}
 import scorex.util.ScorexLogging
@@ -40,7 +40,7 @@ case class MainchainBlockReference(
 
   override type M = MainchainBlockReference
 
-  override def serializer: ScorexSerializer[MainchainBlockReference] = MainchainBlockReferenceSerializer
+  override def serializer: SparkzSerializer[MainchainBlockReference] = MainchainBlockReferenceSerializer
 
   def semanticValidity(params: NetworkParams): Try[Unit] = Try {
     // Check that header is valid.
@@ -251,7 +251,7 @@ object MainchainBlockReference extends ScorexLogging {
       case Success(header) =>
         offset += header.mainchainHeaderBytes.length
 
-        val transactionsCount: VarInt = BytesUtils.getReversedVarInt(mainchainBlockBytes, offset)
+        val transactionsCount: CompactSize = BytesUtils.getCompactSize(mainchainBlockBytes, offset)
         offset += transactionsCount.size()
 
         // parse transactions
@@ -267,7 +267,7 @@ object MainchainBlockReference extends ScorexLogging {
 
         // Parse certificates only if version is the same as specified and there is bytes to parse.
         if (header.version == SC_CERT_BLOCK_VERSION) {
-            val certificatesCount: VarInt = BytesUtils.getReversedVarInt(mainchainBlockBytes, offset)
+            val certificatesCount: CompactSize = BytesUtils.getCompactSize(mainchainBlockBytes, offset)
             offset += certificatesCount.size()
 
             while (certificates.size < certificatesCount.value()) {
@@ -286,7 +286,7 @@ object MainchainBlockReference extends ScorexLogging {
   }
 }
 
-object MainchainBlockReferenceSerializer extends ScorexSerializer[MainchainBlockReference] {
+object MainchainBlockReferenceSerializer extends SparkzSerializer[MainchainBlockReference] {
   override def serialize(obj: MainchainBlockReference, w: Writer): Unit = {
     w.putInt(obj.header.bytes.length)
     w.putBytes(obj.header.bytes)

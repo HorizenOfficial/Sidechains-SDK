@@ -11,13 +11,13 @@ class SidechainRejectionApiRouteTest extends SidechainApiRouteTest {
   "The Api" should {
 
     "reply at /coinsBalance" in {
-      Post(basePath + "coinsBalance") ~> (sidechainWalletApiRoute ~ walletCoinsBalanceApiRejected) ~> check {
-        response shouldEqual ((Post(basePath + "coinsBalance") ~> sidechainWalletApiRoute).response)
+      Post(basePath + "coinsBalance").withHeaders(apiTokenHeader) ~> (sidechainWalletApiRoute ~ walletCoinsBalanceApiRejected) ~> check {
+        response shouldEqual ((Post(basePath + "coinsBalance").withHeaders(apiTokenHeader) ~> sidechainWalletApiRoute).response)
       }
     }
 
     "reject and reply with http error" in {
-      Post(basePath + "coinsBalance") ~> Route.seal({
+      Post(basePath + "coinsBalance").withHeaders(apiTokenHeader) ~> Route.seal({
         walletCoinsBalanceApiRejected ~ sidechainWalletApiRoute
       }) ~> check {
         status.intValue() shouldBe StatusCodes.NotFound.intValue

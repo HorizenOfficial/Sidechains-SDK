@@ -6,7 +6,8 @@ import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainHistoryStorage
-import scorex.core.utils.NetworkTimeProvider
+import sparkz.core.utils.NetworkTimeProvider
+
 
 class Forger(settings: SidechainSettings,
              viewHolderRef: ActorRef,
@@ -22,6 +23,7 @@ class Forger(settings: SidechainSettings,
   override type VL = SidechainWallet
   override type MP = SidechainMemoryPool
 }
+
 
 object ForgerRef {
   def props(settings: SidechainSettings,

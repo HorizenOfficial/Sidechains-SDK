@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
-import json
+import logging
 import time
-import math
 from decimal import Decimal
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from SidechainTestFramework.sidechainauthproxy import SCAPIException
-from test_framework.util import fail, assert_false, assert_true, start_nodes, \
+from test_framework.util import start_nodes, \
     websocket_port_by_mc_node_index, connect_nodes_bi, initialize_chain_clean
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, generate_next_block, connect_sc_nodes, disconnect_sc_nodes_bi, sync_sc_blocks
+    start_sc_nodes, generate_next_block, connect_sc_nodes
 from SidechainTestFramework.sc_forging_util import *
 
 """
@@ -116,7 +114,7 @@ class SCCertNoCoinRecord(SidechainTestFramework):
         # Wait until Certificate will appear in MC node mempool
         time.sleep(10)
         while mc_node2.getmempoolinfo()["size"] == 0 and sc_node2.submitter_isCertGenerationActive()["result"]["state"]:
-            print("Wait for certificate in mc mempool...")
+            logging.info("Wait for certificate in mc mempool...")
             time.sleep(2)
             sc_node1.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(1, mc_node2.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
@@ -162,7 +160,7 @@ class SCCertNoCoinRecord(SidechainTestFramework):
         # Wait until Certificate will appear in MC node mempool
         time.sleep(10)
         while mc_node2.getmempoolinfo()["size"] == 0 and sc_node2.submitter_isCertGenerationActive()["result"]["state"]:
-            print("Wait for certificate in mc mempool...")
+            logging.info("Wait for certificate in mc mempool...")
             time.sleep(2)
             sc_node1.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(1, mc_node2.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")

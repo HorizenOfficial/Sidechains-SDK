@@ -3,7 +3,7 @@ package com.horizen.block
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 import com.horizen.commitmenttreenative.{CustomBitvectorElementsConfig, CustomFieldElementsConfig}
-import com.horizen.utils.{BytesUtils, Utils, VarInt}
+import com.horizen.utils.{BytesUtils, Utils, CompactSize}
 import com.horizen.librustsidechains.{Utils => ScCryptoUtils}
 import com.horizen.serialization.{ReverseBytesOptSerializer, ReverseBytesSerializer}
 
@@ -47,7 +47,7 @@ object MainchainTxSidechainCreationCrosschainOutputData {
     val address: Array[Byte] = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + 32)
     currentOffset += 32
 
-    val customCreationDataLength: VarInt = BytesUtils.getReversedVarInt(sidechainCreationOutputBytes, currentOffset)
+    val customCreationDataLength: CompactSize = BytesUtils.getCompactSize(sidechainCreationOutputBytes, currentOffset)
     currentOffset += customCreationDataLength.size()
 
     val customCreationData: Array[Byte] = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + customCreationDataLength.value().intValue())
@@ -56,7 +56,7 @@ object MainchainTxSidechainCreationCrosschainOutputData {
     val constantPresence: Boolean = sidechainCreationOutputBytes(currentOffset) == 1
     currentOffset += 1
     val constantOpt: Option[Array[Byte]] = if(constantPresence) {
-      val constantLength: VarInt = BytesUtils.getReversedVarInt(sidechainCreationOutputBytes, currentOffset)
+      val constantLength: CompactSize = BytesUtils.getCompactSize(sidechainCreationOutputBytes, currentOffset)
       currentOffset += constantLength.size()
       val constant = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + constantLength.value().intValue())
       currentOffset += constantLength.value().intValue()
@@ -65,7 +65,7 @@ object MainchainTxSidechainCreationCrosschainOutputData {
       None
     }
 
-    val certVkSize: VarInt = BytesUtils.getReversedVarInt(sidechainCreationOutputBytes, currentOffset)
+    val certVkSize: CompactSize = BytesUtils.getCompactSize(sidechainCreationOutputBytes, currentOffset)
     currentOffset += certVkSize.size()
     val certVk: Array[Byte] = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + certVkSize.value().intValue())
     currentOffset += certVkSize.value().intValue()
@@ -73,7 +73,7 @@ object MainchainTxSidechainCreationCrosschainOutputData {
     val ceasedVkPresence: Boolean = sidechainCreationOutputBytes(currentOffset) == 1
     currentOffset += 1
     val ceasedVk: Option[Array[Byte]] = if(ceasedVkPresence) {
-      val ceasedVkSize: VarInt = BytesUtils.getReversedVarInt(sidechainCreationOutputBytes, currentOffset)
+      val ceasedVkSize: CompactSize = BytesUtils.getCompactSize(sidechainCreationOutputBytes, currentOffset)
       currentOffset += ceasedVkSize.size()
       val ceasedVk = sidechainCreationOutputBytes.slice(currentOffset, currentOffset + ceasedVkSize.value().intValue())
       currentOffset += ceasedVkSize.value().intValue()
@@ -82,7 +82,7 @@ object MainchainTxSidechainCreationCrosschainOutputData {
       None
     }
 
-    val fieldElementCertificateFieldConfigsLength: VarInt = BytesUtils.getReversedVarInt(sidechainCreationOutputBytes, currentOffset)
+    val fieldElementCertificateFieldConfigsLength: CompactSize = BytesUtils.getCompactSize(sidechainCreationOutputBytes, currentOffset)
     currentOffset += fieldElementCertificateFieldConfigsLength.size()
 
     val fieldElementCertificateFieldConfigs: Seq[CustomFieldElementsConfig] =
@@ -92,7 +92,7 @@ object MainchainTxSidechainCreationCrosschainOutputData {
         new CustomFieldElementsConfig(nBits)
       })
 
-    val bitVectorCertificateFieldConfigsLength: VarInt = BytesUtils.getReversedVarInt(sidechainCreationOutputBytes, currentOffset)
+    val bitVectorCertificateFieldConfigsLength: CompactSize = BytesUtils.getCompactSize(sidechainCreationOutputBytes, currentOffset)
     currentOffset += bitVectorCertificateFieldConfigsLength.size()
 
     val bitVectorCertificateFieldConfigs: Seq[CustomBitvectorElementsConfig] =

@@ -5,11 +5,10 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen.forge.AbstractForger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot
 import com.horizen.{SidechainSettings, SidechainSyncInfo}
-import scorex.core.PersistentNodeViewModifier
-import scorex.core.consensus.HistoryReader
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedHistory, SemanticallyFailedModification, SyntacticallyFailedModification}
+import sparkz.core.PersistentNodeViewModifier
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedHistory, SemanticallyFailedModification, SyntacticallyFailedModification}
 import scorex.util.{ModifierId, ScorexLogging}
-
+import sparkz.core.consensus.HistoryReader
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}
@@ -25,7 +24,7 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier : ClassTag, SI <: S
   private val generatedBlocksPromises: TrieMap[ModifierId, Promise[Try[Seq[ModifierId]]]] = TrieMap()
   private val submitBlockPromises: TrieMap[ModifierId, Promise[Try[ModifierId]]] = TrieMap()
 
-  lazy val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
+  lazy val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
   implicit lazy val timeout: Timeout = Timeout(timeoutDuration)
 
   override def preStart(): Unit = {
@@ -34,7 +33,13 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier : ClassTag, SI <: S
     context.system.eventStream.subscribe(self, classOf[ChangedHistory[HR]])
   }
 
+  override def postStop(): Unit = {
+    log.debug("SidechainBlock Actor is stopping...")
+    super.postStop()
+  }
+
   def processBlockFailedEvent(sidechainBlock: PMOD, throwable: Throwable): Unit = {
+
     if (submitBlockPromises.contains(sidechainBlock.id) || generatedBlocksPromises.contains(sidechainBlock.id)) {
       submitBlockPromises.get(sidechainBlock.id) match {
         case Some(p) =>
@@ -133,3 +138,4 @@ object SidechainBlockActorRef {
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
     system.actorOf(props[PMOD, SI, HR](settings, sidechainNodeViewHolderRef, sidechainForgerRef))
 }
+

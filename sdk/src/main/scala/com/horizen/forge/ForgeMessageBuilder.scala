@@ -12,11 +12,15 @@ import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.transaction.{SidechainTransaction, TransactionSerializer}
 import com.horizen.utils.{DynamicTypedSerializer, FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree}
 import com.horizen._
-import scorex.core.NodeViewModifier
-import scorex.core.block.Block.{BlockId, Timestamp}
+import com.horizen.chain.MainchainHeaderHash
 import scorex.util.ModifierId
-
+import com.horizen.fork.ForkManager
+import com.horizen.utils.TimeToEpochUtils
+import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
 import scala.collection.JavaConverters._
+import sparkz.core.NodeViewModifier
+import sparkz.core.block.Block
+import sparkz.core.block.Block.BlockId
 import scala.util.{Failure, Success, Try}
 
 class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
@@ -40,7 +44,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                  branchPointInfo: BranchPointInfo,
                  isWithdrawalEpochLastBlock: Boolean,
                  parentId: BlockId,
-                 timestamp: Timestamp,
+                 timestamp: Block.Timestamp,
                  mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
                  sidechainTransactions: Seq[SidechainTypes#SCBT],
                  mainchainHeaders: Seq[MainchainHeader],
@@ -50,6 +54,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                  vrfProof: VrfProof,
                  forgingStakeInfoMerklePath: MerklePath,
                  companion: DynamicTypedSerializer[SidechainTypes#SCBT, TransactionSerializer[SidechainTypes#SCBT]],
+                 feePaymentsHash: Array[Byte],
                  inputBlockSize: Int,
                  signatureOption: Option[Signature25519]) : Try[SidechainBlockBase[SidechainTypes#SCBT, SidechainBlockHeader]] =
   {
@@ -135,21 +140,41 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     header.bytes.length
   }
 
-  override def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int): Seq[SidechainTypes#SCBT] =
-  {
-    var blockSize: Int = blockSizeIn
-    var txsCounter: Int = 0
-    nodeView.pool.take(nodeView.pool.size).filter(tx => {
-      val txSize = tx.bytes.length + 4 // placeholder for Tx length
-      txsCounter += 1
-      if (txsCounter > SidechainBlockBase.MAX_SIDECHAIN_TXS_NUMBER || blockSize + txSize > SidechainBlockBase.MAX_BLOCK_SIZE)
-        false // stop data collection
-      else {
-        blockSize += txSize
-        true // continue data collection
-      }
-    }).toSeq
+  override def getFeePaymentHash(nodeView: View, block: SidechainBlock): Array[Byte] = {
+    val withdrawalEpochNumber: Int = nodeView.state.getWithdrawalEpochInfo.epoch
+    val feePayments = nodeView.state.getFeePayments(withdrawalEpochNumber, Some(block.feeInfo))
+    FeePaymentsUtils.calculateFeePaymentsHash(feePayments)
   }
+
+  def getZeroFeePaymentsHash(): Array[Byte] =
+    FeePaymentsUtils.calculateFeePaymentsHash(Seq())
+
+  override def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int, mainchainBlockReferenceDataToRetrieve: Seq[MainchainHeaderHash], timestamp: Long) : Seq[SidechainTypes#SCBT] = {
+    var blockSize: Int = blockSizeIn
+
+    var txsCounter: Int = 0
+    val allowedWithdrawalRequestBoxes = nodeView.state.getAllowedWithdrawalRequestBoxes(mainchainBlockReferenceDataToRetrieve.size) - nodeView.state.getAlreadyMinedWithdrawalRequestBoxesInCurrentEpoch
+    val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, timestamp)
+    val mempoolTx =
+      if (ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).backwardTransferLimitEnabled())
+      //In case we reached the Sidechain Fork1 we filter the mempool txs considering also the WithdrawalBoxes allowed to be mined in the current block.
+        nodeView.pool.takeWithWithdrawalBoxesLimit(allowedWithdrawalRequestBoxes)
+      else
+        nodeView.pool.take(nodeView.pool.size)
+    mempoolTx
+      .filter(nodeView.state.validateWithFork(_, consensusEpochNumber).isSuccess)
+      .filter(tx => {
+        val txSize = tx.bytes.length + 4 // placeholder for Tx length
+        txsCounter += 1
+        if (txsCounter > SidechainBlockBase.MAX_SIDECHAIN_TXS_NUMBER || blockSize + txSize > SidechainBlockBase.MAX_BLOCK_SIZE)
+          false // stop data collection
+        else {
+          blockSize += txSize
+          true // continue data collection
+        }
+      }).map(tx => tx.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]).toSeq // TODO: problems with types
+  }
+
 
   override def getOmmersSize(ommers: Seq[Ommer[SidechainBlockHeader]]): Int = {
     val ommersSerializer = new ListSerializer[Ommer[SidechainBlockHeader]](OmmerSerializer)

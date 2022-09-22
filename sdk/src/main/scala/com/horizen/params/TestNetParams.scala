@@ -5,7 +5,7 @@ import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import com.horizen.cryptolibprovider.CumulativeHashFunctions
 import com.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
-import scorex.core.block.Block
+import sparkz.core.block.Block
 import scorex.util.ModifierId
 import scorex.util.bytesToId
 
@@ -32,11 +32,12 @@ case class TestNetParams(
                           override val restrictForgers: Boolean = false,
                           override val allowedForgersList: Seq[(PublicKey25519Proposition, VrfPublicKey)] = Seq(),
                           override val sidechainCreationVersion: SidechainCreationVersion = SidechainCreationVersion1,
-                          override val chainId: Long = 22222222
+                          override val chainId: Long = 22222222,
+                          override val isCSWEnabled: Boolean = true
                         ) extends NetworkParams {
   override val EquihashN: Int = 200
   override val EquihashK: Int = 9
-  override val EquihashVarIntLength: Int = 3
+  override val EquihashCompactSizeLength: Int = 3
   override val EquihashSolutionLength: Int = 1344
 
   override val powLimit: BigInteger = new BigInteger("07ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16)

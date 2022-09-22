@@ -1,22 +1,20 @@
 package com.horizen.storage
 
-import java.util.Optional
-import java.util.{ArrayList => JArrayList, List => JList}
-
-import com.horizen.utils.{Pair => JPair}
-
-import scala.collection.JavaConverters._
 import com.horizen.SidechainTypes
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.utils.ByteArrayWrapper
-import scorex.crypto.hash.Blake2b256
-import scorex.util.{ModifierId, ScorexLogging, idToBytes}
+import com.horizen.utils.{ByteArrayWrapper, Pair => JPair}
+import java.util.{ArrayList => JArrayList}
+import com.horizen.utils.Utils
 
+import scala.collection.JavaConverters._
+import scorex.util.{ModifierId, ScorexLogging, idToBytes}
+import scala.compat.java8.OptionConverters.RichOptionalGeneric
 import scala.util.{Failure, Success, Try}
 
 class SidechainWalletTransactionStorage (storage : Storage, sidechainTransactionsCompanion: SidechainTransactionsCompanion)
 extends SidechainTypes
-with ScorexLogging
+  with SidechainStorageInfo
+  with ScorexLogging
 {
   // Version - block Id
   // Key - byte array transaction Id
@@ -25,12 +23,9 @@ with ScorexLogging
   require(storage != null, "Storage must be NOT NULL.")
   require(sidechainTransactionsCompanion != null, "SidechainTransactionsCompanion must be NOT NULL.")
 
-  def calculateKey(transactionId : Array[Byte]) : ByteArrayWrapper = {
-    new ByteArrayWrapper(Blake2b256.hash(transactionId))
-  }
 
   def get (transactionId : Array[Byte]) : Option[SidechainTypes#SCBT] = {
-    storage.get(calculateKey(transactionId)) match {
+    storage.get(Utils.calculateKey(transactionId)) match {
       case v if v.isPresent => {
         sidechainTransactionsCompanion.parseBytesTry(v.get().data) match {
           case Success(transaction) => Option(transaction.asInstanceOf[SidechainTypes#SCBT])
@@ -52,7 +47,7 @@ with ScorexLogging
     val updateList = new JArrayList[JPair[ByteArrayWrapper,ByteArrayWrapper]]()
 
     for (tx <- transactionUpdateList)
-      updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](calculateKey(idToBytes(ModifierId @@ tx.id)),
+      updateList.add(new JPair[ByteArrayWrapper, ByteArrayWrapper](Utils.calculateKey(idToBytes(ModifierId @@ tx.id)),
         new ByteArrayWrapper(sidechainTransactionsCompanion.toBytes(tx))))
 
     storage.update(version,
@@ -62,8 +57,8 @@ with ScorexLogging
     this
   }
 
-  def lastVersionId : Optional[ByteArrayWrapper] = {
-    storage.lastVersionID()
+  override def lastVersionId : Option[ByteArrayWrapper] = {
+    storage.lastVersionID().asScala
   }
 
   def rollbackVersions : List[ByteArrayWrapper] = {

@@ -1,3 +1,39 @@
+**0.4.1**
+1. CCTP: other sidechains with version 2+ are supported.
+2. API authentication behavior updated: can be disabled now.
+3. Swagger API schema fixed.
+4. DBTool: custom storages support added.
+
+**0.4.0**
+1. Memory pool improvement: upper bound size limit introduced (default 300Mb) altogether with cleanup strategy (the lowest fee rate transaction removed first).
+2. Memory pool improvement: minimum fee rate check added for incoming transactions. By default, is disabled.
+3. CSW is optional. Sidechains without CSW support are available now. Note: keep using CSW feature in real environment to have a possibility to withdraw coins in case of ceasing.
+4. API Authorization added to the coin critical endpoints, like keys management, transaction creation and submission, csw creation, etc.
+5. API freezing during node synchronization resolved.
+6. New API endpoints added for importing/exporting keys to/from the wallet.
+7. Forger sorts transactions by fee rate instead of fee.
+8. Wallet: max fee check added for locally generated transactions to prevent absurdly high fees. Max fee value is set in zennies. Default value is 10000000 (0.1 Zen).
+9. Custom propositions wallet management improved: complex multi-key propositions are now recognized.
+10. Peers spam detection mechanism improved: "trash" data detection in the end of the block/transaction added.
+11. Bootstrapping tool: dlog keys multiple initialization prevented.
+12. Extra verbosity added to the API responses.
+13. Logging system improved. Application specific configs are allowed.
+14. FeePayments visibility bug fixed: wrongly added fee payments to the block info when there were no payment at all.
+
+**0.3.5**
+1. Snark keys generation fixed: circuit specific segment size added.
+
+**0.3.4**
+1. Added the possibility to perform a backup of a sidechain non coin-boxes and restore these boxes into a new bootstrapped sidechain of the same type.
+2. log4j version updated.
+
+**0.3.3**
+1. Mainchain block deserialization fix: CompactSize usage issue.
+2. Bootstrapping tool improvement: scgenesisinfo data parsing.
+3. Added logic for checking storages consistency at node startup, and trying to recover the situation for instance if a crash happened during update procedure.
+4. CertificateSubmitter on active sync improvement in `getMessageToSign` method.
+5. Added HTTP API for stopping the SC node and a hook for calling custom application stop procedure.
+
 **0.3.2**
 1. CertificateSubmitter and CertificateSignaturesManager actors restart strategy and failures processing improvement. 
 
@@ -23,7 +59,7 @@
 **Beta changes**
 1. Mainchain synchronization: added backward transfer support with Withdrawal certificate with threshold signature zero-knowledge proof by using [zendoo-sc-cryptolib](https://github.com/HorizenOfficial/zendoo-sc-cryptolib)
 2. Added [Latus Proof-of-Stake consensus protocol](https://www.horizen.global/assets/files/Horizen-Sidechain-Zendoo-A_zk-SNARK-Verifiable-Cross-Chain-Transfer-Protocol.pdf)  for sidechain based on [Ouroboros Praos](https://eprint.iacr.org/2017/573.pdf) consensus protocol which supporting forks in Sidechain and Mainchain. Autoforging for Sidechain node is added as well.
-3. Reworked Transactions structure: introduced SidechainCoreTranscation, Boxes structure was improved/changed now three types of boxes are present by default: zen box, withdrawal request box and forger box. Forger box is used for consensus forger selection.
+3. Reworked Transactions structure: introduced SidechainCoreTransaction, Boxes structure was improved/changed now three types of boxes are present by default: zen box, withdrawal request box and forger box. Forger box is used for consensus forger selection.
 
 
 **Alpha features**

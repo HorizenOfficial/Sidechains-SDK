@@ -1,6 +1,6 @@
 import json
 #execute a transaction/makeForgerStake call
-def makeForgerStake(sidechainNode, address, blockSignPublicKey, vrfPublicKey, amount, fee):
+def makeForgerStake(sidechainNode, address, blockSignPublicKey, vrfPublicKey, amount, fee = 0, api_key = None):
       j = {\
             "outputs": [ \
               { \
@@ -13,5 +13,8 @@ def makeForgerStake(sidechainNode, address, blockSignPublicKey, vrfPublicKey, am
             "fee": fee \
       }
       request = json.dumps(j)
-      response = sidechainNode.transaction_makeForgerStake(request)
+      if (api_key != None):
+        response = sidechainNode.transaction_makeForgerStake(request, api_key)
+      else:
+        response = sidechainNode.transaction_makeForgerStake(request)
       return response

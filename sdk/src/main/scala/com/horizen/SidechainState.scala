@@ -1,29 +1,31 @@
 package com.horizen
 
 import com.google.common.primitives.{Bytes, Ints}
-
-import java.io.File
-import java.util
-import java.util.{Optional => JOptional}
+import com.horizen.backup.BoxIterator
 import com.horizen.block.{SidechainBlock, WithdrawalEpochCertificate}
-import com.horizen.box.{Box, CoinsBox, ForgerBox, WithdrawalRequestBox, ZenBox}
+import com.horizen.box._
+import com.horizen.box.data.ZenBoxData
 import com.horizen.consensus._
+import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
+import com.horizen.forge.ForgerList
+import com.horizen.fork.ForkManager
 import com.horizen.node.NodeState
 import com.horizen.params.NetworkParams
 import com.horizen.proposition.{Proposition, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.ApplicationState
-import com.horizen.storage.{SidechainStateForgerBoxStorage, SidechainStateStorage, SidechainStateUtxoMerkleTreeStorage}
-import com.horizen.transaction.MC2SCAggregatedTransaction
+import com.horizen.storage.{BackupStorage, SidechainStateForgerBoxStorage, SidechainStateStorage}
+import com.horizen.transaction.exception.TransactionSemanticValidityException
+import com.horizen.transaction.{MC2SCAggregatedTransaction, OpenStakeTransaction, SidechainTransaction}
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import scorex.core._
-import scorex.core.transaction.state.{BoxStateChangeOperation, BoxStateChanges, Insertion, MinimalState, ModifierValidation, Removal, TransactionValidation}
 import scorex.crypto.hash.Blake2b256
-import scorex.util.{ModifierId, ScorexLogging}
+import scorex.util.{ModifierId, ScorexLogging, bytesToId}
+import sparkz.core._
+import sparkz.core.transaction.state._
 
+import java.io.File
 import java.math.{BigDecimal, MathContext}
-import com.horizen.box.data.ZenBoxData
-import com.horizen.cryptolibprovider.CryptoLibProvider
-
+import java.util
+import java.util.{ArrayList => JArrayList, Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
@@ -31,7 +33,7 @@ import scala.util.{Failure, Success, Try}
 
 class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
                                        forgerBoxStorage: SidechainStateForgerBoxStorage,
-                                       utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
+                                       utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
                                        val params: NetworkParams,
                                        override val version: VersionTag,
                                        val applicationState: ApplicationState)
@@ -43,8 +45,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     with ScorexLogging
     with UtxoMerkleTreeView
 {
-
-  checkVersion()
 
   override type NVCT = SidechainState
 
@@ -61,34 +61,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       log.info(s"Verification key file at location: ${verificationFile.getAbsolutePath}")
       verificationFile.getAbsolutePath
     }
-  }
-
-  private def checkVersion(): Unit = {
-    val versionBytes = versionToBytes(version)
-
-    require({
-      stateStorage.lastVersionId match {
-        case Some(storageVersion) => storageVersion.data.sameElements(versionBytes)
-        case None => true
-      }
-    },
-      s"Specified version is invalid. StateStorage version ${stateStorage.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != $version")
-
-    require({
-      forgerBoxStorage.lastVersionId match {
-        case Some(storageVersion) => storageVersion.data.sameElements(versionBytes)
-        case None => true
-      }
-    },
-      s"Specified version is invalid. StateForgerBoxStorage version ${forgerBoxStorage.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != $version")
-
-    require({
-      utxoMerkleTreeStorage.lastVersionId match {
-        case Some(storageVersion) => storageVersion.data.sameElements(versionBytes)
-        case None => true
-      }
-    },
-      s"Specified version is invalid. UtxoMerkleTreeStorage version ${utxoMerkleTreeStorage.lastVersionId.map(w => bytesToVersion(w.data)).getOrElse(version)} != $version")
   }
 
   // Note: emit tx.semanticValidity for each tx
@@ -119,7 +91,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   }
 
   override def utxoMerklePath(boxId: Array[Byte]): Option[Array[Byte]] = {
-    utxoMerkleTreeStorage.getMerklePath(boxId)
+    utxoMerkleTreeProvider.getMerklePath(boxId)
   }
 
   def hasCeased: Boolean = stateStorage.hasCeased
@@ -147,7 +119,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   // Validate block itself: version and semanticValidity for block
   override def validate(mod: SidechainBlock): Try[Unit] = Try {
     require(versionToBytes(version).sameElements(idToBytes(mod.parentId)),
-      s"Incorrect state version!: ${mod.parentId} found, " + s"${version} expected")
+      s"Incorrect state version!: ${mod.parentId} found, " + s"$version expected")
 
     if(hasCeased) {
       throw new IllegalStateException(s"Can't apply Block ${mod.id}, because the sidechain has ceased.")
@@ -155,7 +127,6 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
     validateBlockTransactionsMutuality(mod)
     mod.transactions.foreach(tx => validate(tx).get)
-
 
     val currentWithdrawalEpochInfo = stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0))
     val modWithdrawalEpochInfo = WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, currentWithdrawalEpochInfo, params)
@@ -209,6 +180,53 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     if (allInputBoxesIds.size != allInputBoxesIds.toSet.size) {
       throw new IllegalArgumentException(s"Block ${mod.id} contains duplicated input boxes to open")
     }
+
+    //Check that we don't have multiple openStake transactions with the same forgerIndex
+    if (openStakeTransactionEnabled) {
+      val forgerListIndexes = new JArrayList[Int]()
+      mod.transactions.foreach(tx => {
+        if (tx.isInstanceOf[OpenStakeTransaction]) {
+          val openStakeTransaction = tx.asInstanceOf[OpenStakeTransaction]
+          if (forgerListIndexes.contains(openStakeTransaction.getForgerIndex))
+            throw new IllegalArgumentException(s"Block ${mod.id} contains OpenStakeTransactions with duplicated forgerIndex")
+          forgerListIndexes.add(openStakeTransaction.getForgerIndex)
+        }
+      })
+    }
+
+    if (ForkManager.getSidechainConsensusEpochFork(TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)).backwardTransferLimitEnabled())
+      checkWithdrawalBoxesAllowed(mod)
+  }
+
+  private def checkWithdrawalBoxesAllowed(mod: SidechainBlock): Unit = {
+    val alreadyMinedWBs = getAlreadyMinedWithdrawalRequestBoxesInCurrentEpoch
+    val mainchainBlockReferenceInBlock = mod.mainchainBlockReferencesData.size
+    val allowedWBs = getAllowedWithdrawalRequestBoxes(mainchainBlockReferenceInBlock)
+    var blockWBs = alreadyMinedWBs
+    mod.transactions.foreach(tx => {
+      blockWBs += tx.newBoxes().asScala.count(box => box.isInstanceOf[WithdrawalRequestBox])
+      if (blockWBs > allowedWBs) {
+        throw new IllegalStateException(s"Exceeded the maximum number of WithdrawalBoxes allowed!")
+      }
+    })
+  }
+
+  def getAlreadyMinedWithdrawalRequestBoxesInCurrentEpoch: Int = {
+    stateStorage.getWithdrawalRequests(getWithdrawalEpochInfo.epoch).size
+  }
+
+  def getAllowedWithdrawalRequestBoxes(numberOfMainchainBlockReferenceInBlock: Int): Int = {
+    Math.min(params.maxWBsAllowed,
+            (params.maxWBsAllowed * (getWithdrawalEpochInfo.lastEpochIndex + numberOfMainchainBlockReferenceInBlock)) / (params.withdrawalEpochLength - 1))
+  }
+
+  def openStakeTransactionEnabled: Boolean = {
+    stateStorage.getConsensusEpochNumber match {
+      case Some(consensusEpochNumber) =>
+        ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).openStakeTransactionEnabled()
+      case None =>
+        false
+    }
   }
 
   private def validateTopQualityCertificate(topQualityCertificate: WithdrawalEpochCertificate, certReferencedEpochNumber: Int): Unit = {
@@ -228,30 +246,50 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
     // Check that BTs are identical for both Cert and State
     topQualityCertificate.backwardTransferOutputs.zip(expectedWithdrawalRequests).foreach {
-      case (certOutput, expectedWithdrawalRequestBox) => {
+      case (certOutput, expectedWithdrawalRequestBox) =>
         if(certOutput.amount != expectedWithdrawalRequestBox.value() ||
               !util.Arrays.equals(certOutput.pubKeyHash, expectedWithdrawalRequestBox.proposition().bytes())) {
           throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate backward transfers " +
             s"data is different than expected. Node's active chain is the fork from MC perspective.")
         }
+    }
+
+    if (params.isCSWEnabled) {
+      if (topQualityCertificate.fieldElementCertificateFields.size != CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW)
+        throw new IllegalArgumentException(s"Top quality certificate should contain exactly ${CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW} custom fields.")
+
+      utxoMerkleTreeRoot(certReferencedEpochNumber) match {
+        case Some(expectedMerkleTreeRoot) =>
+          val certUtxoMerkleRoot = CryptoLibProvider.sigProofThresholdCircuitFunctions.reconstructUtxoMerkleTreeRoot(
+            topQualityCertificate.fieldElementCertificateFields.head.fieldElementBytes(params.sidechainCreationVersion),
+            topQualityCertificate.fieldElementCertificateFields(1).fieldElementBytes(params.sidechainCreationVersion)
+          )
+          if (!expectedMerkleTreeRoot.sameElements(certUtxoMerkleRoot))
+            throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate utxo merkle tree root " +
+              s"data is different than expected. Node's active chain is the fork from MC perspective.")
+        case None =>
+          throw new IllegalArgumentException(s"There is no utxo merkle tree root stored for the referenced epoch $certReferencedEpochNumber.")
       }
     }
-
-    if(topQualityCertificate.fieldElementCertificateFields.size != 2)
-      throw new IllegalArgumentException(s"Top quality certificate should contain exactly 2 custom fields.")
-
-    utxoMerkleTreeRoot(certReferencedEpochNumber) match {
-      case Some(expectedMerkleTreeRoot) =>
-        val certUtxoMerkleRoot = CryptoLibProvider.sigProofThresholdCircuitFunctions.reconstructUtxoMerkleTreeRoot(
-          topQualityCertificate.fieldElementCertificateFields.head.fieldElementBytes(params.sidechainCreationVersion),
-          topQualityCertificate.fieldElementCertificateFields(1).fieldElementBytes(params.sidechainCreationVersion)
-        )
-        if(!expectedMerkleTreeRoot.sameElements(certUtxoMerkleRoot))
-          throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate utxo merkle tree root " +
-            s"data is different than expected. Node's active chain is the fork from MC perspective.")
-      case None =>
-        throw new IllegalArgumentException(s"There is no utxo merkle tree root stored for the referenced epoch $certReferencedEpochNumber.")
+    else {
+      if (topQualityCertificate.fieldElementCertificateFields.size != CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW )
+        throw new IllegalArgumentException(s"Top quality certificate should contain exactly ${CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW} custom fields when ceased sidechain withdrawal is disabled.")
     }
+  }
+
+
+  def validateWithFork(tx: SidechainTypes#SCBT, consensusEpochNumber: ConsensusEpochNumber): Try[Unit] = Try {
+    val newBoxes = tx.newBoxes().asScala
+    val newCoinBoxes = newBoxes
+      .filter(box => box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]] || box.isInstanceOf[WithdrawalRequestBox])
+
+    val coinBoxMinAmount = ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).coinBoxMinAmount
+      newCoinBoxes.foreach { coinBox =>
+        if (coinBox.value() < coinBoxMinAmount)
+          throw new TransactionSemanticValidityException(s"Transaction [${tx.id()}] is semantically invalid: " +
+            s"Coin box value [${coinBox.value()}] is below the threshold[$coinBoxMinAmount].")
+      }
+
   }
 
   // Note: Transactions validation in a context of inclusion in or exclusion from Mempool
@@ -269,6 +307,37 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
     if (!tx.isInstanceOf[MC2SCAggregatedTransaction]) {
 
+      if (tx.isInstanceOf[OpenStakeTransaction]) {
+        if (!openStakeTransactionEnabled)
+          throw new Exception("OpenStakeTransaction is still not allowed in this consensus epoch!")
+        if (isForgingOpen())
+          throw new Exception("OpenStakeTransactions are not allowed because the forger operation has already been opened!")
+        val openStakeTransaction = tx.asInstanceOf[OpenStakeTransaction]
+        if (openStakeTransaction.getForgerIndex >= params.allowedForgersList.size || openStakeTransaction.getForgerIndex < 0) {
+          throw new Exception("ForgerIndex in OpenStakeTransaction is out of bound!")
+        }
+        stateStorage.getForgerList match {
+          case Some(forgerList) =>
+            if (openStakeTransaction.getForgerIndex >= forgerList.forgerIndexes.length) {
+              throw new Exception("OpenStakeTransaction forgerIndex out of bound!")
+            }
+            if (forgerList.forgerIndexes(openStakeTransaction.getForgerIndex) == 1) {
+              throw new Exception("Forger already opened the stake!")
+            }
+          case None =>
+            throw new Exception("Forger list was not found in the Storage!")
+        }
+        stateStorage.getBox(openStakeTransaction.getInputId) match {
+          case Some(closedBox) =>
+            if (!closedBox.proposition().asInstanceOf[PublicKey25519Proposition]
+              .equals(params.allowedForgersList(openStakeTransaction.getForgerIndex)._1)) {
+              throw new Exception("OpenStakeTransaction input doesn't match the forgerIndex!")
+            }
+          case None =>
+            throw new Exception("Input box not found!")
+        }
+      }
+
       for (u <- tx.unlockers().asScala) {
         closedBox(u.closedBoxId()) match {
           case Some(box) => {
@@ -282,6 +351,11 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         }
       }
 
+      stateStorage.getConsensusEpochNumber match {
+        case Some(consensusEpochNumber) => validateWithFork(tx, consensusEpochNumber).get
+        case None => throw new IllegalStateException("Can't retrieve Consensus Epoch related info form StateStorage.")
+      }
+
       val newBoxes = tx.newBoxes().asScala
 
       newCoinsBoxesAmount = newBoxes
@@ -292,10 +366,11 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         throw new Exception("Amounts sum of CoinsBoxes is incorrect. " +
           s"ClosedBox amount - $closedCoinsBoxesAmount, NewBoxesAmount - $newCoinsBoxesAmount, Fee - ${tx.fee()}")
 
+      lazy val isForgerOpen = isForgingOpen()
       newBoxes
         .filter(box => box.isInstanceOf[ForgerBox])
         .foreach(forgerBox => {
-          if (params.restrictForgers) {
+          if (!isForgerOpen) {
             val vrfPublicKey: VrfPublicKey = forgerBox.vrfPubKey()
             val blockSignProposition: PublicKey25519Proposition = forgerBox.blockSignProposition()
             if (!params.allowedForgersList.contains((blockSignProposition, vrfPublicKey))) {
@@ -303,10 +378,25 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
             }
           }
         })
-
     }
 
     applicationState.validate(this, tx)
+  }
+
+  //Check if the majority of the allowed forgers opened the stake to everyone
+  def isForgingOpen(): Boolean = {
+    if (!params.restrictForgers)
+      true
+    else {
+      val nOpenForger: Int = stateStorage.getForgerList match {
+        case Some(forgerList: ForgerList) =>
+          forgerList.forgerIndexes.sum
+        case None =>
+          log.error("No forgerList found in the Storage!")
+          0
+      }
+      nOpenForger > params.allowedForgersList.size / 2
+    }
   }
 
   override def applyModifier(mod: SidechainBlock): Try[SidechainState] = {
@@ -318,10 +408,23 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           WithdrawalEpochUtils.getWithdrawalEpochInfo(mod, stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)), params),
           TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp),
           mod.topQualityCertificateOpt,
-          mod.feeInfo
+          mod.feeInfo,
+          getRestrictForgerIndexToUpdate(mod.sidechainTransactions)
         )
       })
     }
+  }
+
+  //Take the list of transactions inside a block and calculate the forgerList indexes to update
+  def getRestrictForgerIndexToUpdate(txs:  Seq[SidechainTransaction[Proposition, Box[Proposition]]]): Array[Int] = {
+      txs.flatMap(tx => {
+        if (tx.isInstanceOf[OpenStakeTransaction]) {
+          val openStakeTransaction: OpenStakeTransaction = tx.asInstanceOf[OpenStakeTransaction]
+          Some(openStakeTransaction.getForgerIndex)
+        } else {
+          None
+        }
+      }).toArray
   }
 
   // apply global changes and delegate SDK unknown part to Sidechain.applyChanges(...)
@@ -335,7 +438,9 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
                             withdrawalEpochInfo: WithdrawalEpochInfo,
                             consensusEpoch: ConsensusEpochNumber,
                             topQualityCertificateOpt: Option[WithdrawalEpochCertificate],
-                            blockFeeInfo: BlockFeeInfo): Try[SidechainState] = Try {
+                            blockFeeInfo: BlockFeeInfo,
+                            forgerListIndexes: Array[Int]
+                  ): Try[SidechainState] = Try {
     val version = new ByteArrayWrapper(versionToBytes(newVersion))
     var boxesToAppend = changes.toAppend.map(_.box)
 
@@ -366,31 +471,33 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         otherBoxesToAppend.append(box)
     })
 
-    val coinBoxesToAppend = boxesToAppend.filter(box => box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]])
-
     applicationState.onApplyChanges(this,
       version.data,
       boxesToAppend.asJava,
       changes.toRemove.map(_.boxId.array).asJava) match {
       case Success(appState) =>
         val boxIdsToRemoveSet = changes.toRemove.map(r => new ByteArrayWrapper(r.boxId)).toSet
-        val updatedUtxoMerkleTreeStorage = utxoMerkleTreeStorage.update(version, coinBoxesToAppend, boxIdsToRemoveSet).get
+
+        val updatedUtxoMerkleTreeProvider = utxoMerkleTreeProvider.update(version, boxesToAppend, boxIdsToRemoveSet).get
         val utxoMerkleTreeRootOpt: Option[Array[Byte]] = if(isWithdrawalEpochFinished) {
-          Some(updatedUtxoMerkleTreeStorage.getMerkleTreeRoot)
+          updatedUtxoMerkleTreeProvider.getMerkleTreeRoot
         } else {
           None
         }
 
         new SidechainState(
           stateStorage.update(version, withdrawalEpochInfo, otherBoxesToAppend.toSet, boxIdsToRemoveSet,
-            withdrawalRequestsToAppend, consensusEpoch, topQualityCertificateOpt, blockFeeInfo, utxoMerkleTreeRootOpt, scHasCeased).get,
+            withdrawalRequestsToAppend, consensusEpoch, topQualityCertificateOpt, blockFeeInfo, utxoMerkleTreeRootOpt, scHasCeased, forgerListIndexes, params.allowedForgersList.size).get,
           forgerBoxStorage.update(version, forgerBoxesToAppend, boxIdsToRemoveSet).get,
-          updatedUtxoMerkleTreeStorage,
+          updatedUtxoMerkleTreeProvider,
           params,
           newVersion,
           appState
         )
-      case Failure(exception) => throw exception
+      case Failure(exception) => {
+        log.error("call to onApplyChanges() method has failed: ", exception)
+        throw exception
+      }
     }
   }.recoverWith{
     case exception =>
@@ -404,16 +511,28 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   override def rollbackTo(to: VersionTag): Try[SidechainState] = Try {
     require(to != null, "Version to rollback to must be NOT NULL.")
+    log.debug(s"rolling back state to version = ${to}")
     val version = BytesUtils.fromHexString(to)
+    val bawVersion = new ByteArrayWrapper(version)
+
+    val forgerBoxStorageNew = forgerBoxStorage.rollback(bawVersion).get
+    val stateStorageNew = stateStorage.rollback(bawVersion).get
+    val utxoMerkleTreeProviderNew = utxoMerkleTreeProvider.rollback(bawVersion).get
+
     applicationState.onRollback(version) match {
-      case Success(appState) => new SidechainState(
-        stateStorage.rollback(new ByteArrayWrapper(version)).get,
-        forgerBoxStorage.rollback(new ByteArrayWrapper(version)).get,
-        utxoMerkleTreeStorage.rollback(new ByteArrayWrapper(version)).get,
-        params,
-        to,
-        appState)
-      case Failure(exception) => throw exception
+      case Success(appState) => {
+        new SidechainState(
+          stateStorageNew,
+          forgerBoxStorageNew,
+          utxoMerkleTreeProviderNew,
+          params,
+          to,
+          appState)
+      }
+      case Failure(exception) => {
+        log.error("call to applicationState.onRollback() method has failed: ", exception)
+        throw exception
+      }
     }
   }.recoverWith{case exception =>
     log.error("Exception was thrown during rollback.", exception)
@@ -458,6 +577,45 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   // Check that State is on the last index of the withdrawal epoch: last block applied have finished the epoch.
   def isWithdrawalEpochLastIndex: Boolean = {
     WithdrawalEpochUtils.isEpochLastIndex(stateStorage.getWithdrawalEpochInfo.getOrElse(WithdrawalEpochInfo(0,0)), params)
+  }
+
+  // Check that all storages are consistent and in case try some rollbacks.
+  // Return the state and common version, throw an exception if some unrecoverable misalignment has been detected
+  def ensureStorageConsistencyAfterRestore: Try[(SidechainState)] = Try {
+    // updates are in order:
+    //      appState--> utxoMerkleTreeStorage --> stateStorage --> forgerBoxStorage
+
+    // get the version of the last updated storage and check that the others have the same
+    // version
+    val versionFbBytes = forgerBoxStorage.lastVersionId.get.data()
+    val appStateVersionOk = applicationState.checkStoragesVersion(versionFbBytes)
+
+    val versionFb = bytesToId(versionFbBytes)
+
+    if (appStateVersionOk) {
+      // appState is aligned with the last storage version, require that also intermediate storages have the same version
+
+      if (params.isCSWEnabled) {
+        val versionUmt = bytesToId(utxoMerkleTreeProvider.lastVersionId.get.data())
+        require(versionFb == versionUmt, "ForgerBox and Utxo storage versions must be aligned")
+      }
+
+      val versionSt  = bytesToId(stateStorage.lastVersionId.get.data())
+      require(versionFb == versionSt, "ForgerBox and State storage versions must be aligned")
+      require(versionFb == versionToId(version), "ForgerBox version and SidechainState version attribute must be aligned")
+      log.debug("All state storages are consistent")
+
+      this
+    } else {
+      log.debug("state storages are not consistent")
+
+      val rolledBackState = rollbackTo(idToVersion(versionFb))
+      if (rolledBackState.isFailure) {
+        throw new IllegalStateException("Could not rollback state")
+      } else {
+        rolledBackState.get
+      }
+    }
   }
 
   // Collect Fee payments while appending the last withdrawal epoch block (optional), considering that block fee info as well.
@@ -507,6 +665,18 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         new ZenBox(data, nonce)
     }.filter(box => box.value() > 0)
   }
+
+  def restoreBackup(backupStorageBoxIterator: BoxIterator, lastVersion: Array[Byte]): Try[SidechainState] = Try {
+    stateStorage.restoreBackup(backupStorageBoxIterator, lastVersion)
+    backupStorageBoxIterator.seekToFirst()
+    applicationState.onBackupRestore(backupStorageBoxIterator) match {
+      case Success(_) =>
+        this
+      case Failure(e) =>
+        log.error("Error during the backup restore inside the SidechainState", e)
+        throw e
+    }
+  }
 }
 
 object SidechainState
@@ -519,7 +689,7 @@ object SidechainState
         (sr ++ tx.unlockers().asScala.map(_.closedBoxId()), sa ++ tx.newBoxes().asScala, f + tx.fee())
       }
 
-    // calculate list of ID of unlokers' boxes -> toRemove
+    // calculate list of ID of unlockers' boxes -> toRemove
     // calculate list of new boxes -> toAppend
     // calculate the rewards for Miner/Forger -> create another regular tx OR Forger need to add his Reward during block creation
     @SuppressWarnings(Array("org.wartremover.warts.Product","org.wartremover.warts.Serializable"))
@@ -531,33 +701,37 @@ object SidechainState
 
     // Q: Do we need to call some static method of ApplicationState?
     // A: Probably yes. To remove some out of date boxes, like VoretBallotRight box for previous voting epoch.
-    // Note: we need to implement a lot of limitation for changes from ApplicationState (only deletion, only non coin realted boxes, etc.)
+    // Note: we need to implement a lot of limitation for changes from ApplicationState (only deletion, only non coin related boxes, etc.)
   }
 
   private[horizen] def restoreState(stateStorage: SidechainStateStorage,
                                     forgerBoxStorage: SidechainStateForgerBoxStorage,
-                                    utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
+                                    utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
                                     params: NetworkParams,
                                     applicationState: ApplicationState): Option[SidechainState] = {
 
-    if (!stateStorage.isEmpty)
-      Some(new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage,
+    if (!stateStorage.isEmpty) {
+      Some(new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeProvider,
         params, bytesToVersion(stateStorage.lastVersionId.get.data), applicationState))
-    else
+    } else
       None
   }
 
   private[horizen] def createGenesisState(stateStorage: SidechainStateStorage,
                                           forgerBoxStorage: SidechainStateForgerBoxStorage,
-                                          utxoMerkleTreeStorage: SidechainStateUtxoMerkleTreeStorage,
+                                          utxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider,
+                                          backupStorage: BackupStorage,
                                           params: NetworkParams,
                                           applicationState: ApplicationState,
                                           genesisBlock: SidechainBlock): Try[SidechainState] = Try {
 
-    if (stateStorage.isEmpty)
-      new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeStorage, params, idToVersion(genesisBlock.parentId), applicationState)
-        .applyModifier(genesisBlock).get
-    else
+    if (stateStorage.isEmpty) {
+      var state = new SidechainState(stateStorage, forgerBoxStorage, utxoMerkleTreeProvider, params, idToVersion(genesisBlock.parentId), applicationState)
+      if (!backupStorage.isEmpty) {
+        state = state.restoreBackup(backupStorage.getBoxIterator, versionToBytes(idToVersion(genesisBlock.parentId))).get
+      }
+      state.applyModifier(genesisBlock).get
+    } else
       throw new RuntimeException("State storage is not empty!")
   }
 

@@ -11,10 +11,10 @@ import com.horizen.serialization.Views
 import com.horizen.transaction.SidechainTransaction
 import com.horizen.utils.{BlockFeeInfo, ListSerializer, MerklePath, MerkleTree, Utils}
 import com.horizen.validation.InconsistentSidechainBlockDataException
-import com.horizen.{ScorexEncoding, SidechainTypes}
-import scorex.core.block.Block
-import scorex.core.serialization.ScorexSerializer
-import scorex.core.idToBytes
+import com.horizen.{SidechainTypes, SparkzEncoding}
+import sparkz.core.block.Block
+import sparkz.core.serialization.SparkzSerializer
+import sparkz.core.idToBytes
 import scorex.util.ModifierId
 import scorex.util.serialization.{Reader, Writer}
 
@@ -66,7 +66,8 @@ class SidechainBlock(override val header: SidechainBlockHeader,
 }
 
 
-object SidechainBlock extends ScorexEncoding {
+
+object SidechainBlock extends SparkzEncoding {
 
   val BLOCK_VERSION: Block.Version = 1: Byte
 
@@ -159,8 +160,8 @@ object SidechainBlock extends ScorexEncoding {
 }
 
 
+class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extends SparkzSerializer[SidechainBlock] with SidechainTypes {
 
-class SidechainBlockSerializer(companion: SidechainTransactionsCompanion) extends ScorexSerializer[SidechainBlock] with SidechainTypes {
   require(companion != null, "SidechainTransactionsCompanion must be NOT NULL.")
   private val mcBlocksDataSerializer: ListSerializer[MainchainBlockReferenceData] = new ListSerializer[MainchainBlockReferenceData](
     MainchainBlockReferenceDataSerializer

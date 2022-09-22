@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.horizen</groupId>
   <artifactId>sidechains-sdk</artifactId>
-  <version>0.3.2</version>
+  <version>0.5.0-SNAPSHOT</version>
   <name>${project.groupId}:${project.artifactId}</name>
   <description>Zendoo is a unique sidechain and scaling solution developed by Horizen. The Zendoo ${project.artifactId} is a framework that supports the creation of sidechains and their custom business logic, with the Horizen public blockchain as the mainchain.</description>
   <url>https://github.com/${project.github.organization}/${project.artifactId}</url>
@@ -58,29 +58,22 @@
       <version>0.5.0</version>
       <scope>compile</scope>
     </dependency>
-    <!-- https://mvnrepository.com/artifact/io.circe/circe-core -->
+    <!-- https://mvnrepository.com/artifact/org.sparkzfoundation/sparkz-core -->
     <dependency>
-      <groupId>io.circe</groupId>
-      <artifactId>circe-core_2.12</artifactId>
-      <version>0.9.0</version>
-      <scope>compile</scope>
-    </dependency>
-    <!-- https://mvnrepository.com/artifact/org.scorexfoundation/scorex-core -->
-    <dependency>
-      <groupId>org.scorexfoundation</groupId>
-      <artifactId>scorex-core_2.12</artifactId>
-      <version>2.0.0-RC6</version>
+      <groupId>io.horizen</groupId>
+      <artifactId>sparkz-core_2.12</artifactId>
+      <version>2.0.0-RC8</version>
       <scope>compile</scope>
       <exclusions>
         <exclusion>
           <artifactId>curve25519-java</artifactId>
           <groupId>org.whispersystems</groupId>
         </exclusion>
-        <!-- NOTE: because of bug in Scorex RC6 maven dependencies, we should force to include
-        different version of circe-core -->
+        <!-- NOTE: this comes from scrypto and contains a vulnerability, we use bcprov-jdk15on:1.69 below,
+         this will be removed with merging scrypto into sparkz-core -->
         <exclusion>
-          <artifactId>circe-core_2.1</artifactId>
-          <groupId>io.circe</groupId>
+          <artifactId>bcprov-jdk15to18</artifactId>
+          <groupId>org.bouncycastle</groupId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -94,7 +87,13 @@
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-core</artifactId>
-      <version>2.17.0</version>
+      <version>2.17.1</version>
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>2.7</version>
     </dependency>
     <!-- https://mvnrepository.com/artifact/com.google.guava/guava -->
     <dependency>
@@ -161,21 +160,33 @@
     <dependency>
       <groupId>com.typesafe.akka</groupId>
       <artifactId>akka-testkit_2.12</artifactId>
-      <version>2.5.24</version>
+      <version>2.6.19</version>
       <scope>test</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-http-testkit -->
     <dependency>
       <groupId>com.typesafe.akka</groupId>
       <artifactId>akka-http-testkit_2.12</artifactId>
-      <version>10.1.9</version>
+      <version>10.2.9</version>
       <scope>test</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/com.typesafe.akka/akka-http-jackson -->
     <dependency>
       <groupId>com.typesafe.akka</groupId>
       <artifactId>akka-http-jackson_2.12</artifactId>
-      <version>10.1.9</version>
+      <version>10.2.9</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-databind</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.13.3</version>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.mockito/mockito-core -->
     <dependency>
@@ -195,7 +206,7 @@
     <dependency>
       <groupId>com.fasterxml.jackson.module</groupId>
       <artifactId>jackson-module-scala_2.12</artifactId>
-      <version>2.9.9</version>
+      <version>2.13.3</version>
     </dependency>
 
     <!-- https://mvnrepository.com/artifact/org.glassfish.tyrus.bundles/tyrus-standalone-client -->
@@ -340,6 +351,7 @@
           <!-- generated on regtest on 31.05.2021 using MC qa/sc_csw_actcertdata.py -->
           <include>mctx_v-4_csw</include>
           <include>mctx_v-4_csw_without_actcertdata</include>
+          <include>mctx_v-4_with_many_tx_outputs</include>
           <!-- generated on regtest on 28.05.2021 using test_data_generators/sc_backward_transfer.py.py -->
           <include>cert_no_bts</include>
           <!-- generated on regtest on 28.05.2021 using test_data_generators/sc_backward_transfer.py.py -->
@@ -363,6 +375,7 @@
           <include>new_mc_blocks/mc_block_with_certificate_with_custom_fields</include>
           <!-- generated on regtest on 15.03.2022 using MC sc_getscgenesisinfo.py -->
           <include>new_mc_blocks/mc_block_with_certificate_with_custom_fields_mixed_sc_versions</include>
+          <include>new_mc_blocks/mc_block_with_certificate_with_non_zero_sc_fee</include>
           <include>backward_transfer_certificate_empty</include>
           <include>backward_transfer_certificate_non_empty</include>
           <include>log4j2-test.xml</include>

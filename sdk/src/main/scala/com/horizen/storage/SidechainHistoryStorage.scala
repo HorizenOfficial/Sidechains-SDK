@@ -1,8 +1,9 @@
 package com.horizen.storage
 
-import com.horizen.block.{SidechainBlockSerializer, _}
+import com.horizen.block.{SidechainBlock, SidechainBlockSerializer}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.params.NetworkParams
+
 
 
 class SidechainHistoryStorage(storage: Storage,
@@ -12,3 +13,4 @@ class SidechainHistoryStorage(storage: Storage,
       storage,
       new SidechainBlockSerializer(sidechainTransactionsCompanion),
       params)
+

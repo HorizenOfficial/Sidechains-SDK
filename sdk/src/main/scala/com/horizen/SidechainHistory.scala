@@ -8,7 +8,6 @@ import com.horizen.params.{NetworkParams, NetworkParamsUtils}
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import scorex.util.{ModifierId, ScorexLogging}
-
 import scala.util.Try
 
 
@@ -17,11 +16,12 @@ class SidechainHistory private (storage: SidechainHistoryStorage,
                                 params: NetworkParams,
                                 semanticBlockValidators: Seq[SemanticBlockValidator[SidechainBlock]],
                                 historyBlockValidators: Seq[HistoryBlockValidator[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistoryStorage, SidechainHistory]])
-  extends com.horizen.AbstractHistory[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistoryStorage, SidechainHistory](
+  extends AbstractHistory[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistoryStorage, SidechainHistory](
     storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
+
   with NetworkParamsUtils
   with ConsensusDataProvider
-  with scorex.core.utils.ScorexEncoding
+  with sparkz.core.utils.SparkzEncoding
   with NodeHistory
   with ScorexLogging
 {
@@ -30,7 +30,6 @@ class SidechainHistory private (storage: SidechainHistoryStorage,
 
   override def makeNewHistory(storage: SidechainHistoryStorage, consensusDataStorage: ConsensusDataStorage): SidechainHistory =
       new SidechainHistory(storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
-
 
   override def searchTransactionInsideSidechainBlock(transactionId: String, blockId: String): JOptional[SidechainTypes#SCBT] = {
     storage.blockById(ModifierId(blockId)) match {
@@ -93,12 +92,12 @@ object SidechainHistory
                                       genesisBlock: SidechainBlock,
                                       semanticBlockValidators: Seq[SemanticBlockValidator[SidechainBlock]],
                                       historyBlockValidators: Seq[HistoryBlockValidator[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistoryStorage, SidechainHistory]],
-                                      stakeEpochInfo: StakeConsensusEpochInfo) : Try[SidechainHistory] = Try {
-
+                                      stakeEpochInfo: StakeConsensusEpochInfo) : Try[SidechainHistory] = {
     if (historyStorage.isEmpty) {
       val nonceEpochInfo = ConsensusDataProvider.calculateNonceForGenesisBlock(params)
       new SidechainHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
-        .append(genesisBlock).map(_._1).get.reportModifierIsValid(genesisBlock).applyFullConsensusInfo(genesisBlock.id, FullConsensusEpochInfo(stakeEpochInfo, nonceEpochInfo))
+        .append(genesisBlock).map(_._1).get.reportModifierIsValid(genesisBlock)
+        .map(_.applyFullConsensusInfo(genesisBlock.id, FullConsensusEpochInfo(stakeEpochInfo, nonceEpochInfo)))
     }
     else
       throw new RuntimeException("History storage is not empty!")

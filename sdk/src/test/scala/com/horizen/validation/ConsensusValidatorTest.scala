@@ -1,23 +1,26 @@
 package com.horizen.validation
 
-import java.time.Instant
-import java.util.Random
-
 import com.horizen.SidechainHistory
 import com.horizen.block.SidechainBlock
 import com.horizen.consensus.{FullConsensusEpochInfo, HistoryConsensusChecker}
 import com.horizen.fixtures.VrfGenerator
 import com.horizen.fixtures.sidechainblock.generation.{ForgingStakeCorruptionRules, GenerationRules, SidechainBlocksGenerator}
+import com.horizen.fork.{ForkManager, SimpleForkConfigurator}
 import com.horizen.params.TestNetParams
-import org.junit.Test
+import org.junit.{Before, Test}
 import org.scalatestplus.junit.JUnitSuite
 
+import java.time.Instant
+import java.util.Random
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
 class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
   val rnd = new Random(20)
   val maximumAvailableShift = 2
+
+  ForkManager.reset()
+  ForkManager.init(new SimpleForkConfigurator(), "regtest")
 
   private def createHistoryWithBlocksNoForksAndPossibleNextForger(epochSizeInSlots: Int, slotLengthInSeconds: Int, totalBlocksCount: Int, blocksInHistoryCount: Int):
   (SidechainHistory, mutable.Buffer[SidechainBlocksGenerator], mutable.Buffer[SidechainBlock]) = {
@@ -43,7 +46,8 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
 
   private def createHistoryWithBlocksNoForks(rnd: Random, epochSizeInSlots: Int, slotLengthInSeconds: Int, totalBlockCount: Int, blocksInHistoryCount: Int):
     (SidechainHistory, mutable.Buffer[SidechainBlocksGenerator], mutable.Buffer[SidechainBlock]) = {
-    val genesisTimestamp: Int = 1583987714
+
+    val genesisTimestamp: Long = Instant.now.getEpochSecond - (slotLengthInSeconds * totalBlockCount)
 
     val initialParams = TestNetParams(
       consensusSlotsInEpoch = epochSizeInSlots,
@@ -81,6 +85,23 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
   }
 
   @Test
+  def blockInFutureCheck(): Unit = {
+    val epochSizeInSlots = 15
+    val slotLengthInSeconds = 20
+    val totalBlocks = epochSizeInSlots * 4 - 2
+    val (history: SidechainHistory, generators: Seq[SidechainBlocksGenerator], _) = createHistoryWithBlocksNoForksAndPossibleNextForger(epochSizeInSlots, slotLengthInSeconds, totalBlocks, totalBlocks - maximumAvailableShift)
+
+    val lastGenerator = generators.last
+
+    println("Test blockInFuture")
+    val blockInFuture = generateBlockInTheFuture(lastGenerator, Instant.now().getEpochSecond + slotLengthInSeconds)
+    history.append(blockInFuture).failed.get match {
+      case expected: SidechainBlockSlotInFutureException => assert(expected.getMessage == "Block had been generated in the future")
+      case nonExpected => assert(false, s"Got incorrect exception: $nonExpected")
+    }
+  }
+
+  @Test
   def nonGenesisBlockCheck(): Unit = {
     val epochSizeInSlots = 15
     val slotLengthInSeconds = 20
@@ -110,16 +131,6 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
       case expected: IllegalStateException => assert(expected.getMessage == "Whole epoch had been skipped")
       case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
     }
-
-    println("Test blockInFuture")
-    // TODO: Current test is wrong, timestamp is hardcoded to have persistent tests, so now instead of "Block in future" we have "Whole epoch had been skipped".
-    // TODO: restore and fix
-    /*val blockInFuture = generateBlockInTheFuture(lastGenerator)
-    history.append(blockInFuture).failed.get match {
-      case expected: IllegalArgumentException => assert(expected.getMessage == "Block had been generated in the future")
-      case nonExpected => assert(false, s"Got incorrect exception: ${nonExpected}")
-    }*/
-
 
     /////////// VRF verification /////////////////
     println("Test blockGeneratedWithIncorrectNonce")
@@ -175,8 +186,8 @@ class ConsensusValidatorTest extends JUnitSuite with HistoryConsensusChecker {
   }
 
   // TODO: this corruption doesn't work anymore, because vrf is verified before timestamp now.
-  def generateBlockInTheFuture(generator: SidechainBlocksGenerator): SidechainBlock = {
-    val generationRules = GenerationRules.generateCorrectGenerationRules(rnd, generator.getNotSpentBoxes).copy(forcedTimestamp = Some(Instant.now.getEpochSecond + 1000))
+  def generateBlockInTheFuture(generator: SidechainBlocksGenerator, forcedTimestamp: Long): SidechainBlock = {
+    val generationRules = GenerationRules.generateCorrectGenerationRules(rnd, generator.getNotSpentBoxes).copy(forcedTimestamp = Some(forcedTimestamp))
     generateBlock(generationRules, generator)._2
   }
 

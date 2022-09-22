@@ -10,16 +10,18 @@ import com.horizen.block.{ProofOfWorkVerifier, SidechainBlock, SidechainBlockSer
 import com.horizen.box.BoxSerializer
 import com.horizen.companion.{SidechainBoxesCompanion, SidechainSecretsCompanion, SidechainTransactionsCompanion}
 import com.horizen.consensus.ConsensusDataStorage
+import com.horizen.customconfig.CustomAkkaConfiguration
 import com.horizen.customtypes.{DefaultApplicationState, DefaultApplicationWallet}
+import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.params.{MainNetParams, NetworkParams, RegTestParams, TestNetParams}
 import com.horizen.secret.{PrivateKey25519Serializer, SecretSerializer}
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.utils.BytesUtils
 import com.horizen.wallet.ApplicationWallet
-import com.horizen.{SidechainNodeViewHolderRef, SidechainSettings, SidechainSettingsReader, SidechainTypes}
-import scorex.core.api.http.ApiRejectionHandler
-import scorex.core.utils.NetworkTimeProvider
+import com.horizen.{SidechainNodeViewHolderRef, SidechainSettings, SidechainSettingsReader, SidechainTypes, SidechainUtxoMerkleTreeProviderCSWEnabled, SidechainWalletCswDataProvider, SidechainWalletCswDataProviderCSWEnabled}
+import sparkz.core.api.http.ApiRejectionHandler
+import sparkz.core.utils.NetworkTimeProvider
 
 import scala.concurrent.ExecutionContext
 
@@ -32,14 +34,18 @@ trait SidechainNodeViewHolderFixture
 
   val sidechainSettings: SidechainSettings = SidechainSettingsReader.read(classLoader.getResource("sc_node_holder_fixter_settings.conf").getFile, None)
 
+  val simpleForkConfigurator = new SimpleForkConfigurator
+  val forkManagerUtil = new ForkManagerUtil()
+  forkManagerUtil.initializeForkManager(simpleForkConfigurator, "regtest")
+
   implicit def exceptionHandler: ExceptionHandler = SidechainApiErrorHandler.exceptionHandler
   implicit def rejectionHandler: RejectionHandler = ApiRejectionHandler.rejectionHandler
 
-  implicit val actorSystem: ActorSystem = ActorSystem(sidechainSettings.scorexSettings.network.agentName)
-  implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("scorex.executionContext")
+  implicit val actorSystem: ActorSystem = ActorSystem(sidechainSettings.sparkzSettings.network.agentName, CustomAkkaConfiguration.getCustomConfig())
+  implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("sparkz.executionContext")
   implicit val materializer: ActorMaterializer = ActorMaterializer()
 
-  val timeProvider = new NetworkTimeProvider(sidechainSettings.scorexSettings.ntp)
+  val timeProvider = new NetworkTimeProvider(sidechainSettings.sparkzSettings.ntp)
 
   val sidechainBoxesCompanion: SidechainBoxesCompanion =  SidechainBoxesCompanion(new JHashMap[JByte, BoxSerializer[SidechainTypes#SCB]]())
   val sidechainSecretsCompanion: SidechainSecretsCompanion = SidechainSecretsCompanion(new JHashMap[JByte, SecretSerializer[SidechainTypes#SCS]]())
@@ -94,12 +100,14 @@ trait SidechainNodeViewHolderFixture
   val sidechainWalletBoxStorage = new SidechainWalletBoxStorage(getStorage(), sidechainBoxesCompanion)
   val sidechainStateStorage = new SidechainStateStorage(getStorage(), sidechainBoxesCompanion)
   val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(getStorage())
-  val sidechainStateUtxoMerkleTreeStorage = new SidechainStateUtxoMerkleTreeStorage(getStorage())
+  val sidechainStateUtxoMerkleTreeProvider: SidechainUtxoMerkleTreeProviderCSWEnabled = SidechainUtxoMerkleTreeProviderCSWEnabled(new SidechainStateUtxoMerkleTreeStorage(getStorage()))
+
   val sidechainHistoryStorage = new SidechainHistoryStorage(getStorage(), sidechainTransactionsCompanion, params)
   val consensusDataStorage = new ConsensusDataStorage(getStorage())
   val sidechainWalletTransactionStorage = new SidechainWalletTransactionStorage(getStorage(), sidechainTransactionsCompanion)
   val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(getStorage())
-  val cswDataStorage = new SidechainWalletCswDataStorage(getStorage())
+  val cswDataProvider: SidechainWalletCswDataProvider = SidechainWalletCswDataProviderCSWEnabled(new SidechainWalletCswDataStorage(getStorage()))
+  val backupStorage = new BackupStorage(getStorage(), sidechainBoxesCompanion)
 
   // Append genesis secrets if we start the node first time
   if(sidechainSecretStorage.isEmpty) {
@@ -113,12 +121,13 @@ trait SidechainNodeViewHolderFixture
     consensusDataStorage,
     sidechainStateStorage,
     sidechainStateForgerBoxStorage,
-    sidechainStateUtxoMerkleTreeStorage,
+    sidechainStateUtxoMerkleTreeProvider,
     sidechainWalletBoxStorage,
     sidechainSecretStorage,
     sidechainWalletTransactionStorage,
     forgingBoxesMerklePathStorage,
-    cswDataStorage,
+    cswDataProvider,
+    backupStorage,
     params,
     timeProvider,
     defaultApplicationWallet,
@@ -132,7 +141,7 @@ trait SidechainNodeViewHolderFixture
   }
 
   def getSidechainTransactionApiRoute : SidechainTransactionApiRoute = {
-    SidechainTransactionApiRoute(sidechainSettings.scorexSettings.restApi, nodeViewHolderRef,
+    SidechainTransactionApiRoute(sidechainSettings.sparkzSettings.restApi, nodeViewHolderRef,
       sidechainTransactionActorRef, sidechainTransactionsCompanion, params)
   }
 

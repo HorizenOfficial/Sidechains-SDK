@@ -1,7 +1,6 @@
 package com.horizen.websocket.server
 
 import akka.actor.{ActorRef, ActorSystem}
-import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
@@ -11,14 +10,14 @@ import com.horizen.block.SidechainBlock
 import com.horizen.transaction.RegularTransaction
 import com.horizen.utils.CountDownLatchController
 import org.glassfish.tyrus.client.ClientManager
-import org.junit.Assert.{assertArrayEquals, assertEquals, assertFalse, assertTrue}
+import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.{After, Assert, Test}
 import org.mockito.Mockito
 import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedMempool, SemanticallySuccessfulModifier}
+import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedMempool, SemanticallySuccessfulModifier}
 
 import java.net.URI
 import java.util
@@ -37,14 +36,12 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
   val utilMocks = new NodeViewHolderUtilMocks()
   val mempoolTxs: Seq[RegularTransaction] = utilMocks.transactionList.asScala
 
-  mockedSidechainNodeViewHolder.setAutoPilot(new testkit.TestActor.AutoPilot {
-    override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
-      msg match {
-        case GetDataFromCurrentView(f) =>
-          sender ! f(utilMocks.getNodeView(sidechainApiMockConfiguration))
-      }
-      TestActor.KeepRunning
+  mockedSidechainNodeViewHolder.setAutoPilot((sender: ActorRef, msg: Any) => {
+    msg match {
+      case GetDataFromCurrentView(f) =>
+        sender ! f(utilMocks.getNodeView(sidechainApiMockConfiguration))
     }
+    TestActor.KeepRunning
   })
   val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
   private val server: ActorRef = WebSocketServerRef(mockedSidechainNodeViewHolderRef, 9025)
@@ -90,7 +87,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
 
     var json = mapper.readTree(endpoint.receivedMessage.get(0))
 
-    assertTrue(checkStaticResponseFields(json, ERROR_MESSAGE.code, -1, -1))
+    checkStaticResponseFields(json, ERROR_MESSAGE.code, -1, -1)
 
     assertTrue(json.has("errorCode"))
     assertEquals(5, json.get("errorCode").asInt())
@@ -112,7 +109,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
     assertTrue("No message received.", countDownController.await(5000))
 
     json = mapper.readTree(endpoint.receivedMessage.get(1))
-    assertTrue(checkStaticResponseFields(json, ERROR_MESSAGE.code, 0, GET_RAW_MEMPOOL.code))
+    checkStaticResponseFields(json, ERROR_MESSAGE.code, 0, GET_RAW_MEMPOOL.code)
 
     assertTrue(json.has("errorCode"))
     assertEquals(5, json.get("errorCode").asInt())
@@ -145,7 +142,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
     // Check response
     val json = mapper.readTree(endpoint.receivedMessage.get(0))
 
-    assertTrue(checkStaticResponseFields(json, RESPONSE_MESSAGE.code, 0, GET_RAW_MEMPOOL.code))
+    checkStaticResponseFields(json, RESPONSE_MESSAGE.code, 0, GET_RAW_MEMPOOL.code)
 
     assertTrue(json.has("responsePayload"))
     val responsePayload = json.get("responsePayload")
@@ -188,7 +185,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
 
     val json = mapper.readTree(endpoint.receivedMessage.get(0))
 
-    assertTrue(checkStaticResponseFields(json, RESPONSE_MESSAGE.code, 0, GET_MEMPOOL_TXS.code))
+    checkStaticResponseFields(json, RESPONSE_MESSAGE.code, 0, GET_MEMPOOL_TXS.code)
 
     assertTrue(json.has("responsePayload"))
     val responsePayload = json.get("responsePayload")
@@ -226,7 +223,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
 
     var json = mapper.readTree(endpoint.receivedMessage.get(0))
 
-    assertTrue(checkStaticResponseFields(json, RESPONSE_MESSAGE.code, 0, GET_SINGLE_BLOCK_REQUEST_TYPE.code))
+    checkStaticResponseFields(json, RESPONSE_MESSAGE.code, 0, GET_SINGLE_BLOCK_REQUEST_TYPE.code)
 
     assertTrue(json.has("responsePayload"))
     var responsePayload = json.get("responsePayload")
@@ -250,7 +247,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
 
     json = mapper.readTree(endpoint.receivedMessage.get(1))
 
-    assertTrue(checkStaticResponseFields(json, RESPONSE_MESSAGE.code, 0, GET_SINGLE_BLOCK_REQUEST_TYPE.code))
+    checkStaticResponseFields(json, RESPONSE_MESSAGE.code, 0, GET_SINGLE_BLOCK_REQUEST_TYPE.code)
 
     assertTrue(json.has("responsePayload"))
     responsePayload = json.get("responsePayload")
@@ -284,7 +281,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
 
     var json = mapper.readTree(endpoint.receivedMessage.get(0))
 
-    assertTrue(checkStaticResponseFields(json, RESPONSE_MESSAGE.code, 0, GET_SINGLE_BLOCK_REQUEST_TYPE.code))
+    checkStaticResponseFields(json, RESPONSE_MESSAGE.code, 0, GET_SINGLE_BLOCK_REQUEST_TYPE.code)
 
     assertTrue(json.has("responsePayload"))
     val responsePayload = json.get("responsePayload")
@@ -325,7 +322,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
 
     var json = mapper.readTree(endpoint.receivedMessage.get(0))
 
-    assertTrue(checkStaticResponseFields(json, RESPONSE_MESSAGE.code, 0, GET_NEW_BLOCK_HASHES_REQUEST_TYPE.code))
+    checkStaticResponseFields(json, RESPONSE_MESSAGE.code, 0, GET_NEW_BLOCK_HASHES_REQUEST_TYPE.code)
 
     assertTrue(json.has("responsePayload"))
     val responsePayload = json.get("responsePayload")
@@ -340,7 +337,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
     assertTrue("No message received.", countDownController.await(5000))
     json = mapper.readTree(endpoint.receivedMessage.get(1))
 
-    assertTrue(checkStaticResponseFields(json, ERROR_MESSAGE.code, 0, GET_NEW_BLOCK_HASHES_REQUEST_TYPE.code))
+    checkStaticResponseFields(json, ERROR_MESSAGE.code, 0, GET_NEW_BLOCK_HASHES_REQUEST_TYPE.code)
     assertTrue(json.has("errorCode"))
     assertEquals(4, json.get("errorCode").asInt())
     assertTrue(json.has("responsePayload"))
@@ -368,7 +365,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
     assertTrue("No event message received.", countDownController.await(5000))
     val tipJson = mapper.readTree(endpoint.receivedMessage.get(endpoint.receivedMessage.size() - 1))
 
-    assertTrue(checkStaticResponseFields(tipJson, EVENT_MESSAGE.code, -1, 0))
+    checkStaticResponseFields(tipJson, EVENT_MESSAGE.code, -1, 0)
 
     assertTrue(tipJson.has("eventPayload"))
     var eventPayload = tipJson.get("eventPayload")
@@ -384,7 +381,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
     assertTrue("No event message received.", countDownController.await(5000))
     val tipWithFeePaymentsJson = mapper.readTree(endpoint.receivedMessage.get(endpoint.receivedMessage.size() - 1))
 
-    assertTrue(checkStaticResponseFields(tipWithFeePaymentsJson, EVENT_MESSAGE.code, -1, 0))
+    checkStaticResponseFields(tipWithFeePaymentsJson, EVENT_MESSAGE.code, -1, 0)
 
     assertTrue(tipWithFeePaymentsJson.has("eventPayload"))
     eventPayload = tipWithFeePaymentsJson.get("eventPayload")
@@ -408,7 +405,7 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
     assertTrue("No event message received.", countDownController.await(5000))
     val mempoolJson = mapper.readTree(endpoint.receivedMessage.get(endpoint.receivedMessage.size() - 1))
 
-    assertTrue(checkStaticResponseFields(mempoolJson, EVENT_MESSAGE.code, -1, 2))
+    checkStaticResponseFields(mempoolJson, EVENT_MESSAGE.code, -1, 2)
 
     assertTrue(mempoolJson.has("eventPayload"))
     eventPayload = mempoolJson.get("eventPayload")
@@ -482,20 +479,20 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
     val request1 = mapper.readTree(endpoint.receivedMessage.get(0))
     val request2 = mapper.readTree(endpoint2.receivedMessage.get(0))
 
-    assertTrue(checkStaticResponseFields(request1, RESPONSE_MESSAGE.code, 0, 0))
-    assertTrue(checkStaticResponseFields(request2, RESPONSE_MESSAGE.code, 1, 5))
+    checkStaticResponseFields(request1, RESPONSE_MESSAGE.code, 0, 0)
+    checkStaticResponseFields(request2, RESPONSE_MESSAGE.code, 1, 5)
 
     val event1Of1 = mapper.readTree(endpoint.receivedMessage.get(1))
     val event1Of2 = mapper.readTree(endpoint2.receivedMessage.get(1))
 
-    assertTrue(checkStaticResponseFields(event1Of1, EVENT_MESSAGE.code, -1, 0))
-    assertTrue(checkStaticResponseFields(event1Of2, EVENT_MESSAGE.code, -1, 0))
+    checkStaticResponseFields(event1Of1, EVENT_MESSAGE.code, -1, 0)
+    checkStaticResponseFields(event1Of2, EVENT_MESSAGE.code, -1, 0)
 
     val event2Of1 = mapper.readTree(endpoint.receivedMessage.get(2))
     val event2Of2 = mapper.readTree(endpoint2.receivedMessage.get(2))
 
-    assertTrue(checkStaticResponseFields(event2Of1, EVENT_MESSAGE.code, -1, 2))
-    assertTrue(checkStaticResponseFields(event2Of2, EVENT_MESSAGE.code, -1, 2))
+    checkStaticResponseFields(event2Of1, EVENT_MESSAGE.code, -1, 2)
+    checkStaticResponseFields(event2Of2, EVENT_MESSAGE.code, -1, 2)
 
     // Disconnect client 2
     session2.close()
@@ -509,9 +506,9 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
     assertEquals(5, endpoint.receivedMessage.size())
 
     val event4Of1 = mapper.readTree(endpoint.receivedMessage.get(3))
-    assertTrue(checkStaticResponseFields(event4Of1, EVENT_MESSAGE.code, -1, 0))
+    checkStaticResponseFields(event4Of1, EVENT_MESSAGE.code, -1, 0)
     val event5Of1 = mapper.readTree(endpoint.receivedMessage.get(4))
-    assertTrue(checkStaticResponseFields(event5Of1, EVENT_MESSAGE.code, -1, 2))
+    checkStaticResponseFields(event5Of1, EVENT_MESSAGE.code, -1, 2)
 
     // Disconnect client 1
     session.close()
@@ -525,32 +522,33 @@ class WebSocketServerEndpointTest extends JUnitSuite with MockitoSugar with Befo
   def publishNewTipEvent(): Unit = {
     val block: SidechainBlock = mock[SidechainBlock]
     Mockito.when(block.id).thenReturn(utilMocks.genesisBlock.id)
-    actorSystem.eventStream.publish(SemanticallySuccessfulModifier[scorex.core.PersistentNodeViewModifier](block))
+    actorSystem.eventStream.publish(SemanticallySuccessfulModifier[sparkz.core.PersistentNodeViewModifier](block))
   }
 
   def publishNewTipEventWithFeePayments(): Unit = {
     val block: SidechainBlock = mock[SidechainBlock]
     Mockito.when(block.id).thenReturn(utilMocks.feePaymentsBlockId)
-    actorSystem.eventStream.publish(SemanticallySuccessfulModifier[scorex.core.PersistentNodeViewModifier](block))
+    actorSystem.eventStream.publish(SemanticallySuccessfulModifier[sparkz.core.PersistentNodeViewModifier](block))
   }
 
   def publishMempoolEvent(): Unit = {
     actorSystem.eventStream.publish(ChangedMempool[SidechainMemoryPool](mock[SidechainMemoryPool]))
   }
 
-  private def checkStaticResponseFields(json: JsonNode, msgType: Int, requestId: Int, answerType: Int): Boolean = {
-    if (requestId == -1)
-      json.has("msgType") &&
-        msgType == json.get("msgType").asInt() &&
-        json.has("answerType") &&
-        answerType == json.get("answerType").asInt()
-    else
-      json.has("msgType") &&
-        msgType == json.get("msgType").asInt() &&
-        json.has("requestId") &&
-        requestId == json.get("requestId").asInt() &&
-        json.has("answerType") &&
-        answerType == json.get("answerType").asInt()
+  private def checkStaticResponseFields(json: JsonNode, msgType: Int, requestId: Int, answerType: Int): Unit = {
+    if (requestId == -1) {
+      assertTrue("Json is missing a required field msgType", json.has("msgType"))
+      assertEquals("Json field msgType value is incorrect", msgType, json.get("msgType").asInt())
+      assertTrue("Json is missing a required field answerType", json.has("answerType"))
+      assertEquals("Json field answerType value is incorrect", answerType, json.get("answerType").asInt())
+    } else {
+      assertTrue("Json is missing a required field msgType", json.has("msgType"))
+      assertEquals("Json field msgType value is incorrect", msgType, json.get("msgType").asInt())
+      assertTrue("Json is missing a required field requestId", json.has("requestId"))
+      assertEquals("Json field requestId value is incorrect", requestId, json.get("requestId").asInt())
+      assertTrue("Json is missing a required field answerType", json.has("answerType"))
+      assertEquals("Json field answerType value is incorrect", answerType, json.get("answerType").asInt())
+    }
   }
 }
 

@@ -7,7 +7,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
 import com.horizen.utils.{BytesUtils, Utils}
 import com.horizen.validation.{InvalidMainchainHeaderException, MainchainHeaderTimestampInFutureException}
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
+import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
 import scala.util.Try
@@ -34,7 +34,7 @@ class MainchainHeader(
 
   override type M = MainchainHeader
 
-  override def serializer: ScorexSerializer[MainchainHeader] = MainchainHeaderSerializer
+  override def serializer: SparkzSerializer[MainchainHeader] = MainchainHeaderSerializer
 
   // IMPORTANT:
   // Current method must firstly check for critical errors, that will permanently invalidate MainchainHeader.
@@ -53,7 +53,7 @@ class MainchainHeader(
 
     // check equihash for header bytes without solution part
     if (!new Equihash(params.EquihashN, params.EquihashK).checkEquihashSolution(
-      mainchainHeaderBytes.slice(0, mainchainHeaderBytes.length - params.EquihashVarIntLength - params.EquihashSolutionLength),
+      mainchainHeaderBytes.slice(0, mainchainHeaderBytes.length - params.EquihashCompactSizeLength - params.EquihashSolutionLength),
       solution)
     )
       throw new InvalidMainchainHeaderException(s"MainchainHeader $hashHex Equihash solution is invalid.")
@@ -109,8 +109,7 @@ object MainchainHeader {
     val nonce: Array[Byte] = BytesUtils.reverseBytes(headerBytes.slice(currentOffset, currentOffset + 32))
     currentOffset += 32
 
-    // @TODO check: getReversedVarInt works correctly with BytesUtils.fromVarInt (not reversed)
-    val solutionLength = BytesUtils.getReversedVarInt(headerBytes, currentOffset)
+    val solutionLength = BytesUtils.getCompactSize(headerBytes, currentOffset)
     currentOffset += solutionLength.size()
 
     val solution: Array[Byte] = headerBytes.slice(currentOffset, currentOffset + solutionLength.value().intValue())
@@ -120,7 +119,7 @@ object MainchainHeader {
   }
 }
 
-object MainchainHeaderSerializer extends ScorexSerializer[MainchainHeader] {
+object MainchainHeaderSerializer extends SparkzSerializer[MainchainHeader] {
   override def serialize(obj: MainchainHeader, w: Writer): Unit = {
     val bytes: Array[Byte] = obj.mainchainHeaderBytes
     w.putInt(bytes.length)

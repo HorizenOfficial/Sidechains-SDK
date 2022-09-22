@@ -1,19 +1,23 @@
 package com.horizen.chain
 
-import com.horizen.block.{SidechainBlock, SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.horizen.cryptolibprovider.CumulativeHashFunctions
+import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
 import com.horizen.transaction.Transaction
+import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
 import scala.collection.mutable.ArrayBuffer
 
+@JsonView(Array(classOf[Views.Default]))
+@JsonIgnoreProperties(Array("serializer"))
 case class MainchainHeaderBaseInfo (hash: MainchainHeaderHash,
                                     cumulativeCommTreeHash: Array[Byte]) extends BytesSerializable {
   override type M = MainchainHeaderBaseInfo
 
-  override lazy val serializer: ScorexSerializer[MainchainHeaderBaseInfo] = MainchainHeaderBaseInfoSerializer
+  override lazy val serializer: SparkzSerializer[MainchainHeaderBaseInfo] = MainchainHeaderBaseInfoSerializer
 
   override def equals(obj: Any): Boolean = {
     obj match {
@@ -40,7 +44,7 @@ object MainchainHeaderBaseInfo {
   }
 }
 
-object MainchainHeaderBaseInfoSerializer extends ScorexSerializer[MainchainHeaderBaseInfo] {
+object MainchainHeaderBaseInfoSerializer extends SparkzSerializer[MainchainHeaderBaseInfo] {
   override def serialize(obj: MainchainHeaderBaseInfo, w: Writer): Unit = {
     w.putBytes(obj.hash.data)
     w.putBytes(obj.cumulativeCommTreeHash)

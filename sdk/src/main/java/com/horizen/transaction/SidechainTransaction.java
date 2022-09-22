@@ -85,6 +85,7 @@ abstract public class SidechainTransaction<P extends Proposition, B extends Box<
         long coinsCumulatedValue = 0;
         long withdrawalThreshold = ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE);
         List<B> boxes = newBoxes();
+        int numberOfWithdrawalRequestBoxes = 0;
         for(int i = 0; i < boxes.size(); i++) {
             B box = boxes.get(i);
             if(box.nonce() != getNewBoxNonce(box.proposition(), i)) {
@@ -93,10 +94,12 @@ abstract public class SidechainTransaction<P extends Proposition, B extends Box<
             }
             // check coins box value
             if(box instanceof CoinsBox || box instanceof WithdrawalRequestBox) {
-                if (box instanceof WithdrawalRequestBox
-                        && box.value() < withdrawalThreshold) {
-                    throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                            "Withdrawal request box [%d] value is below the threshhold[%d].", id(), i, withdrawalThreshold));
+                if (box instanceof WithdrawalRequestBox) {
+                    numberOfWithdrawalRequestBoxes += 1;
+                    if (box.value() < withdrawalThreshold) {
+                        throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                                "Withdrawal request box [%d] value is below the threshhold[%d].", id(), i, withdrawalThreshold));
+                    }
                 }
                 if(!ZenCoinsUtils.isValidMoneyRange(box.value()))
                     throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
@@ -117,6 +120,10 @@ abstract public class SidechainTransaction<P extends Proposition, B extends Box<
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "fee is negative.", id()));
 
+        //At the moment we have max 1000 output boxes so we never reach this case.
+        if (numberOfWithdrawalRequestBoxes > MAX_WITHDRAWAL_BOXES_ALLOWED) {
+            throw new TransactionSemanticValidityException(String.format("Exceed the maximum withdrawal request boxes per epoch ([%d] out of [%d])", numberOfWithdrawalRequestBoxes, MAX_WITHDRAWAL_BOXES_ALLOWED));
+        }
         transactionSemanticValidity();
     }
 }

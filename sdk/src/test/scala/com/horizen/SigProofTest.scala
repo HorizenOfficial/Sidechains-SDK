@@ -4,13 +4,13 @@ import com.google.common.io.Files
 import com.horizen.certnative.BackwardTransfer
 import com.horizen.cryptolibprovider.SchnorrFunctions.KeyType
 import com.horizen.cryptolibprovider.{CryptoLibProvider, SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitImplZendoo}
+import com.horizen.cryptolibprovider.CommonCircuit
 import com.horizen.fixtures.FieldElementFixture
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.schnorrnative.SchnorrSecretKey
 import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertTrue, fail}
 import org.junit.{After, Ignore, Test}
-
 import java.io._
 import java.util.Optional
 import java.{lang, util}
@@ -63,20 +63,20 @@ class SigProofTest {
   @Ignore
   @Test
   def simpleCheck(): Unit = {
-    val keyPairsLen = 7
-    val threshold = 5 //hardcoded value
+    val keyPairsLen = 9
+    val threshold = 6 //hardcoded value
 
     val keyPairs = (0 until keyPairsLen).view.map(buildSchnorrPrivateKey).map(secret => (secret, secret.getPublicKey))
     val publicKeysBytes: util.List[Array[Byte]] = keyPairs.map(_._2.serializePublicKey()).toList.asJava
 
     val sysConstant = sigCircuit.generateSysDataConstant(publicKeysBytes, threshold)
 
-    val epochNumber: Int = 10;
-    val btrFee: Long = 100;
-    val ftMinAmount: Long = 100;
+    val epochNumber: Int = 10
+    val btrFee: Long = 100
+    val ftMinAmount: Long = 100
     val endCumulativeScTxCommTreeRoot = FieldElementFixture.generateFieldElement()
     val sidechainId = FieldElementFixture.generateFieldElement()
-    val utxoMerkleTreeRoot = FieldElementFixture.generateFieldElement()
+    val utxoMerkleTreeRoot = Optional.of(FieldElementFixture.generateFieldElement())
 
     val wb: util.List[BackwardTransfer] = Seq(new BackwardTransfer((new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte))).bytes(), 2345)).asJava
 
@@ -98,7 +98,7 @@ class SigProofTest {
     }
 
     println(s"Generating Marlin snark keys. Path: pk=$provingKeyPath, vk=$verificationKeyPath")
-    if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(keyPairsLen, provingKeyPath, verificationKeyPath)) {
+    if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(keyPairsLen, provingKeyPath, verificationKeyPath, CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW)) {
       fail("Error occurred during snark keys generation.")
     }
 
@@ -110,6 +110,36 @@ class SigProofTest {
       proofAndQuality.getValue, proofAndQuality.getKey, true, verificationKeyPath, true)
 
     assertTrue("Proof verification expected to be successfully", result)
+
+    println("Testing without utxoMerkleTreeRoot (as with CSW disabled)...")
+    val utxoMerkleTreeRootCSWDisabled = Optional.empty[Array[Byte]]()
+
+    val messageToBeSignedCSWDisabled = sigCircuit.generateMessageToBeSigned(wb, sidechainId, epochNumber, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, utxoMerkleTreeRootCSWDisabled)
+
+    val signaturesCSWDisabled: util.List[Optional[Array[Byte]]] = (keyPairs
+      .map{case (secret, public) => schnorrFunctions.sign(secret.serializeSecretKey(), public.serializePublicKey(), messageToBeSignedCSWDisabled)}
+      .map(b => Optional.of(b))
+      .take(threshold)
+      .toList ++ emptySigs)
+      .asJava
+
+    println(s"Generating Marlin snark keys. Path: pk=$provingKeyPath, vk=$verificationKeyPath")
+    if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(keyPairsLen, provingKeyPath, verificationKeyPath, CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW)) {
+      fail("Error occurred during snark keys generation.")
+    }
+
+    println("Generating snark proof...")
+    val proofAndQualityCSWDisabled: utils.Pair[Array[Byte], lang.Long] = sigCircuit.createProof(wb, sidechainId, epochNumber, endCumulativeScTxCommTreeRoot,
+      btrFee, ftMinAmount, utxoMerkleTreeRootCSWDisabled, signaturesCSWDisabled, publicKeysBytes, threshold, provingKeyPath, true, true)
+
+    val resultCSWDisabled = sigCircuit.verifyProof(wb, sidechainId, epochNumber, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, utxoMerkleTreeRootCSWDisabled, sysConstant,
+      proofAndQualityCSWDisabled.getValue, proofAndQualityCSWDisabled.getKey, true, verificationKeyPath, true)
+
+    assertTrue("Proof verification failed - CSW disabled", resultCSWDisabled)
+
   }
+
+
+
 
 }

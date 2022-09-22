@@ -1,13 +1,18 @@
 package com.horizen.api.http
 
 import akka.actor.ActorRef
-import com.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase, SidechainNodeView}
-import scorex.core.api.http.{ApiDirectives, ApiRoute}
+
+import com.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
+import sparkz.core.api.http.{ApiDirectives, ApiRoute}
 import akka.pattern.ask
 import akka.http.scaladsl.server.Route
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainNodeViewBase}
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.transaction.Transaction
+import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
+import sparkz.core.NodeViewHolder.CurrentView
+import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
+
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.reflect.ClassTag
@@ -65,6 +70,15 @@ trait SidechainApiRoute[
       .mapTo[NV]
   }
 
+
+  type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
+
+  def withView(f: View => Route): Route = onSuccess(sidechainViewAsync())(f)
+
+  protected def sidechainViewAsync(): Future[View] = {
+    def f(v: View) = v
+    (sidechainNodeViewHolderRef ? GetDataFromCurrentView(f)).mapTo[View]
+  }
 
 }
 

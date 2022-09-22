@@ -1,12 +1,12 @@
 package com.horizen.node.util;
 
-import com.horizen.CommonParams;
-import scorex.core.serialization.ScorexSerializer;
+import com.horizen.params.CommonParams;
+import sparkz.core.serialization.SparkzSerializer;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
 
-public class MainchainBlockReferenceInfoSerializer implements ScorexSerializer<MainchainBlockReferenceInfo> {
+public class MainchainBlockReferenceInfoSerializer implements SparkzSerializer<MainchainBlockReferenceInfo> {
     private static MainchainBlockReferenceInfoSerializer serializer;
 
     static {
@@ -17,7 +17,7 @@ public class MainchainBlockReferenceInfoSerializer implements ScorexSerializer<M
         super();
     }
 
-    public static ScorexSerializer getSerializer() {
+    public static SparkzSerializer getSerializer() {
         return serializer;
     }
 

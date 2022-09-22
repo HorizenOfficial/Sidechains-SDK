@@ -1,11 +1,11 @@
 package com.horizen.secret;
 
-import scorex.core.serialization.ScorexSerializer;
+import sparkz.core.serialization.SparkzSerializer;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
 public interface SecretSerializer<S extends Secret>
-    extends ScorexSerializer<S>
+    extends SparkzSerializer<S>
 {
     @Override
     void serialize(S secret, Writer writer);

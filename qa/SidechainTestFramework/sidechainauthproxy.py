@@ -25,7 +25,7 @@ class SCAPIException(Exception):
         self.error = sc_api_error
         
 """
-   Adaption of AuthServiceProxy class from BTF for Scorex REST API. Differences are very minimal:
+   Adaption of AuthServiceProxy class from BTF for SDK REST API. Differences are very minimal:
    1) Method names follows a path-like style. Therefore method names are passed to __call__ method with underscores
       and the method will replace them with slashes;
    2) Auth header must be a string that hashes to the field "api-key-hash" specified in each SC node conf file. If
@@ -36,10 +36,11 @@ class SCAPIException(Exception):
 class SidechainAuthServiceProxy(object):
     __id_count = 0
 
-    def __init__(self, service_url, service_name=None, timeout=HTTP_TIMEOUT, connection=None):
+    def __init__(self, service_url, service_name=None, timeout=HTTP_TIMEOUT, connection=None, auth_api_key=None):
         self.__service_url = service_url
         self.__service_name = service_name
         self.__url = urlparse.urlparse(service_url)
+        self.auth_api_key = auth_api_key
         if self.__url.port is None:
             port = 80
         else:
@@ -71,9 +72,9 @@ class SidechainAuthServiceProxy(object):
             raise AttributeError
         if self.__service_name is not None:
             name = "%s.%s" % (self.__service_name, name)
-        return SidechainAuthServiceProxy(self.__service_url, name, connection=self.__conn)
+        return SidechainAuthServiceProxy(self.__service_url, name, connection=self.__conn, auth_api_key=self.auth_api_key)
 
-    def _request(self, method, path, postdata):
+    def _request(self, method, path, postdata, api_key):
         '''
         Do a HTTP request, with retry if we get disconnected (e.g. due to a timeout).
         This is a workaround for https://bugs.python.org/issue3566 which is fixed in Python 3.5.
@@ -82,7 +83,12 @@ class SidechainAuthServiceProxy(object):
         headers = {'Host': self.__url.hostname,
                    'User-Agent': USER_AGENT,
                    'Authorization': self.__auth_header,
-                   'Content-type': 'application/json'}
+                   'Content-type': 'application/json',}
+        if api_key != None:
+            headers.update({"api_key":api_key})
+        elif self.auth_api_key != None:
+            headers.update({"api_key":self.auth_api_key})
+
         try:
             self.__conn.request(method, path, postdata, headers)
             return self._get_response()
@@ -117,11 +123,14 @@ class SidechainAuthServiceProxy(object):
         else:
             path = "/" + path.replace("_","/") #Replacing underscores with slashes to correctly format the Rest API request
         postdata = None
+        auth = None
         if len(args) > 0:
             postdata = args[0]
+        if len(args) > 1:
+                auth = args[1]
         if len(kwargs) > 0:
             postdata = json.dumps(kwargs)
-        response = self._request(method, path, postdata)
+        response = self._request(method, path, postdata, auth)
         return response
 
     def _get_response(self):

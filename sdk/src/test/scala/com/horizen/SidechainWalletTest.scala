@@ -1,32 +1,33 @@
 package com.horizen
 
-import java.lang.{Byte => JByte}
-import java.util
-import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
-import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, SidechainCommitmentTree}
+import com.horizen.block.SidechainBlock
 import com.horizen.box._
 import com.horizen.box.data.{BoxData, ZenBoxData}
 import com.horizen.companion._
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.customtypes._
 import com.horizen.fixtures._
-import com.horizen.params.MainNetParams
+import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.proposition._
 import com.horizen.secret.{PrivateKey25519, Secret, SecretSerializer}
 import com.horizen.storage._
-import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation, SidechainRelatedMainchainOutput}
-import com.horizen.transaction.{BoxTransaction, MC2SCAggregatedTransaction, RegularTransaction}
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, CswData, ForgingStakeMerklePathInfo, ForwardTransferCswData, MerklePath, MerkleTree, Pair, UtxoCswData}
+import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
+import com.horizen.transaction.{BoxTransaction, RegularTransaction}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ForgingStakeMerklePathInfo, MerklePath, MerkleTree, Pair}
 import com.horizen.wallet.ApplicationWallet
 import org.junit.Assert._
 import org.junit._
+import org.junit.rules.TemporaryFolder
 import org.mockito._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
-import scorex.core.{VersionTag, bytesToId}
+import sparkz.core.{VersionTag, bytesToId, bytesToVersion}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ModifierId
 
+import java.lang.{Byte => JByte}
+import java.util
+import java.util.{ArrayList => JArrayList, HashMap => JHashMap, List => JList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Random, Success, Try}
@@ -48,8 +49,10 @@ class SidechainWalletTest
   val boxList = new ListBuffer[WalletBox]()
   val storedBoxList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
   val boxVersions = new ListBuffer[ByteArrayWrapper]()
+  val boxToRestoreList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
 
   val secretList = new ListBuffer[Secret]()
+  val customSecretList = new ListBuffer[Secret]()
   val storedSecretList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
   val secretVersions = new ListBuffer[ByteArrayWrapper]()
 
@@ -69,6 +72,10 @@ class SidechainWalletTest
 
   val params = MainNetParams()
 
+  val _temporaryFolder = new TemporaryFolder()
+
+  @Rule  def temporaryFolder = _temporaryFolder
+
   def boxIdToMerklePath(boxId: Array[Byte]): Array[Byte] = BytesUtils.reverseBytes(boxId)
 
   @Before
@@ -76,6 +83,8 @@ class SidechainWalletTest
 
     // Set base Secrets data
     secretList ++= getPrivateKey25519List(5).asScala
+    customSecretList ++= getCustomPrivateKeyList(5).asScala
+
     secretVersions += getVersion
 
     for (s <- secretList) {
@@ -123,6 +132,10 @@ class SidechainWalletTest
     boxList ++= getWalletBoxList(getZenBoxList(secretList.map(_.asInstanceOf[PrivateKey25519]).asJava)).asScala
     boxList += getWalletBox(getForgerBox(secretList.head.asInstanceOf[PrivateKey25519].publicImage()))
 
+    val customBoxList = new ListBuffer[SidechainTypes#SCB]()
+    customBoxList ++= getCustomBoxListWithPrivateKeys(customSecretList.map(_.asInstanceOf[CustomPrivateKey]).asJava).asScala.map(_.asInstanceOf[SidechainTypes#SCB])
+    customBoxList += getCustomBox.asInstanceOf[SidechainTypes#SCB] //This box shouldn't be included in the 'scanBackup' test result
+
     boxVersions += getVersion
 
     for (b <- boxList) {
@@ -134,6 +147,13 @@ class SidechainWalletTest
       })
     }
 
+    for (b <- customBoxList) {
+      boxToRestoreList.append({
+        val key = new ByteArrayWrapper(Blake2b256.hash(b.id()))
+        val value = new ByteArrayWrapper(sidechainBoxesCompanion.toBytes(b))
+        new Pair(key,value)
+      })
+    }
 
     // Mock get and update methods of BoxStorage
     Mockito.when(mockedBoxStorage.getAll).thenReturn(storedBoxList.asJava)
@@ -173,7 +193,8 @@ class SidechainWalletTest
     val mockedSecretStorage: SidechainSecretStorage = mock[SidechainSecretStorage]
     val mockedWalletTransactionStorage: SidechainWalletTransactionStorage = mock[SidechainWalletTransactionStorage]
     val mockedForgingBoxesInfoStorage: ForgingBoxesInfoStorage = mock[ForgingBoxesInfoStorage]
-    val mockedCswDataStorage: SidechainWalletCswDataStorage = mock[SidechainWalletCswDataStorage]
+    val mockedCswDataProvider: SidechainWalletCswDataProvider = mock[SidechainWalletCswDataProvider]
+    val mockedVersion: VersionTag = bytesToVersion(Array[Byte](32))
     val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
 
     val sidechainWallet = new SidechainWallet("seed".getBytes,
@@ -181,8 +202,9 @@ class SidechainWalletTest
       mockedSecretStorage,
       mockedWalletTransactionStorage,
       mockedForgingBoxesInfoStorage,
-      mockedCswDataStorage,
+      mockedCswDataProvider,
       params,
+      mockedVersion,
       mockedApplicationWallet)
 
     // Prepare list of transactions:
@@ -324,55 +346,194 @@ class SidechainWalletTest
           Success(mockedForgingBoxesInfoStorage)
         })
 
-    Mockito.when(mockedCswDataStorage.update(
+    Mockito.when(mockedCswDataProvider.update(
+      ArgumentMatchers.any[SidechainBlock],
       ArgumentMatchers.any[ByteArrayWrapper](),
       ArgumentMatchers.any[Int],
-      ArgumentMatchers.any[Seq[CswData]]))
+      ArgumentMatchers.any[NetworkParams],
+      ArgumentMatchers.any[SidechainWallet],
+      ArgumentMatchers.any[Option[UtxoMerkleTreeView]]))
       .thenAnswer(answer => {
-        val version = answer.getArgument(0).asInstanceOf[ByteArrayWrapper]
-        val withdrawalEpoch = answer.getArgument(1).asInstanceOf[Int]
-        val cswData = answer.getArgument(2).asInstanceOf[Seq[CswData]]
+        val modifier = answer.getArgument(0).asInstanceOf[SidechainBlock]
+        val version = answer.getArgument(1).asInstanceOf[ByteArrayWrapper]
+        val withdrawalEpoch = answer.getArgument(2).asInstanceOf[Int]
+        val netParam = answer.getArgument(3).asInstanceOf[NetworkParams]
+        val wallet = answer.getArgument(4).asInstanceOf[SidechainWallet]
+        val utxoMerkleTreeViewOpt = answer.getArgument(5).asInstanceOf[Option[UtxoMerkleTreeView]]
 
+        assertEquals("ScanPersistent on SidechainWalletCswDataStorage.update(...) actual modifier is wrong.",
+          mockedBlock, modifier)
         assertEquals("ScanPersistent on SidechainWalletCswDataStorage.update(...) actual version is wrong.",
           new ByteArrayWrapper(blockId), version)
         assertEquals("ScanPersistent on SidechainWalletCswDataStorage.update(...) withdrawalEpoch version is wrong.",
           withdrawalEpochNumber, withdrawalEpoch)
-        assertTrue("ScanPersistent on SidechainWalletCswDataStorage.update(...) actual cswData seq is wrong.", cswData.isEmpty)
+        assertEquals("ScanPersistent on SidechainWalletCswDataStorage.update(...) actual NetworkParams are wrong.",
+          params, netParam)
+        assertEquals("ScanPersistent on SidechainWalletCswDataStorage.update(...) actual SidechainWallet is wrong.",
+          sidechainWallet, wallet)
+        assertFalse("ScanPersistent on SidechainWalletCswDataStorage.update(...) actual UtxoMerkleTreeView is defined.",
+          utxoMerkleTreeViewOpt.isDefined)
 
-        Success(mockedCswDataStorage)
+        Success(mockedCswDataProvider)
       })
 
     sidechainWallet.scanPersistent(mockedBlock, withdrawalEpochNumber, feePaymentBoxes, None)
 
 
     // Test: Last WE block
-    val utxoMerkleTreeView: UtxoMerkleTreeView = mock[UtxoMerkleTreeView]
-    Mockito.when(utxoMerkleTreeView.utxoMerklePath(ArgumentMatchers.any[Array[Byte]]())).thenAnswer(args => {
+    val mockedUtxoMerkleTreeView: UtxoMerkleTreeView = mock[UtxoMerkleTreeView]
+    Mockito.when(mockedUtxoMerkleTreeView.utxoMerklePath(ArgumentMatchers.any[Array[Byte]]())).thenAnswer(args => {
       val boxId: Array[Byte] = args.getArgument(0)
       Some(boxIdToMerklePath(boxId))
     })
 
-    Mockito.reset(mockedCswDataStorage)
-    Mockito.when(mockedCswDataStorage.update(
+    Mockito.reset(mockedCswDataProvider)
+    Mockito.when(mockedCswDataProvider.update(
+      ArgumentMatchers.any[SidechainBlock],
       ArgumentMatchers.any[ByteArrayWrapper](),
       ArgumentMatchers.any[Int],
-      ArgumentMatchers.any[Seq[CswData]]))
+      ArgumentMatchers.any[NetworkParams],
+      ArgumentMatchers.any[SidechainWallet],
+      ArgumentMatchers.any[Option[UtxoMerkleTreeView]]))
       .thenAnswer(answer => {
-        val version = answer.getArgument(0).asInstanceOf[ByteArrayWrapper]
-        val withdrawalEpoch = answer.getArgument(1).asInstanceOf[Int]
-        val cswData = answer.getArgument(2).asInstanceOf[Seq[CswData]]
+        val modifier = answer.getArgument(0).asInstanceOf[SidechainBlock]
+        val version = answer.getArgument(1).asInstanceOf[ByteArrayWrapper]
+        val withdrawalEpoch = answer.getArgument(2).asInstanceOf[Int]
+        val netParam = answer.getArgument(3).asInstanceOf[NetworkParams]
+        val wallet = answer.getArgument(4).asInstanceOf[SidechainWallet]
+        val utxoMerkleTreeView = answer.getArgument(5).asInstanceOf[Option[UtxoMerkleTreeView]].get
 
+
+        assertEquals("ScanPersistent on SidechainWalletCswDataStorage.update(...) actual modifier is wrong.",
+          mockedBlock, modifier)
         assertEquals("ScanPersistent on SidechainWalletCswDataStorage.update(...) actual version is wrong.",
           new ByteArrayWrapper(blockId), version)
         assertEquals("ScanPersistent on SidechainWalletCswDataStorage.update(...) withdrawalEpoch version is wrong.",
           withdrawalEpochNumber, withdrawalEpoch)
-        assertEquals("ScanPersistent on SidechainWalletCswDataStorage.update(...) actual cswData seq is wrong.",
-          mockedWalletBoxStorage.getAll.size, cswData.size)
+        assertEquals("ScanPersistent on SidechainWalletCswDataStorage.update(...) actual NetworkParams are wrong.",
+          params, netParam)
+        assertEquals("ScanPersistent on SidechainWalletCswDataStorage.update(...) actual SidechainWallet is wrong.",
+          sidechainWallet, wallet)
+        assertEquals("ScanPersistent on SidechainWalletCswDataStorage.update(...) actual UtxoMerkleTreeView is wrong.",
+          mockedUtxoMerkleTreeView, utxoMerkleTreeView)
 
-        Success(mockedCswDataStorage)
+        Success(mockedCswDataProvider)
       })
 
-    sidechainWallet.scanPersistent(mockedBlock, withdrawalEpochNumber, feePaymentBoxes, Some(utxoMerkleTreeView))
+    sidechainWallet.scanPersistent(mockedBlock, withdrawalEpochNumber, feePaymentBoxes, Some(mockedUtxoMerkleTreeView))
+  }
+
+  @Test
+  def testScanBackUpNonCoinBoxes(): Unit = {
+    val mockedSecretStorage: SidechainSecretStorage = mock[SidechainSecretStorage]
+    val mockedWalletTransactionStorage: SidechainWalletTransactionStorage = mock[SidechainWalletTransactionStorage]
+    val mockedForgingBoxesInfoStorage: ForgingBoxesInfoStorage = mock[ForgingBoxesInfoStorage]
+    val mockedCswDataProvider: SidechainWalletCswDataProvider = mock[SidechainWalletCswDataProvider]
+    val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
+    val mockedVersion: VersionTag = bytesToVersion(Array[Byte](32))
+
+    Mockito.when(mockedSecretStorage.getAll).thenAnswer(_=>customSecretList.toList)
+
+    //Create temporary WalletBoxStorage
+    val walletBoxStorageFile = temporaryFolder.newFolder("walletBoxStorage")
+    val walletBoxStorage = new SidechainWalletBoxStorage(new VersionedLevelDbStorageAdapter(walletBoxStorageFile), sidechainBoxesCompanion)
+
+    //Create temporary BackupStorage
+    val backupStorageFile = temporaryFolder.newFolder("backupStorage")
+    val backupStorage = new BackupStorage(new VersionedLevelDbStorageAdapter(backupStorageFile), sidechainBoxesCompanion)
+
+    boxToRestoreList.append(new Pair[ByteArrayWrapper, ByteArrayWrapper](new ByteArrayWrapper("key1".getBytes), new ByteArrayWrapper("value1".getBytes)))
+    backupStorage.update(getVersion, boxToRestoreList.asJava).get
+
+    val sidechainWallet = new SidechainWallet("seed".getBytes,
+      walletBoxStorage,
+      mockedSecretStorage,
+      mockedWalletTransactionStorage,
+      mockedForgingBoxesInfoStorage,
+      mockedCswDataProvider,
+      params,
+      mockedVersion,
+      mockedApplicationWallet)
+
+    // Mock get and update methods of SecretStorage
+    sidechainWallet.scanBackUp(backupStorage.getBoxIterator, System.currentTimeMillis())
+
+    assertTrue("Box stored to the backupStorage should be 7: 5 regular box + 1 new address + 1 fake ",boxToRestoreList.size == 7)
+    val storedBoxes = readStorage(walletBoxStorage)
+
+    //Verify that we did take only the 5 Boxes
+    assertEquals("SidechainWalletBoxStorage should contains only the 5 CustomBoxes!",5, storedBoxes.size())
+    val publicKeys = customSecretList.map(_.asInstanceOf[CustomPrivateKey].publicImage()).asJava
+    storedBoxes.forEach(box => {
+      assertTrue("Restored Boxes propositions should be inside our wallet!", publicKeys.contains(box.box.proposition()))
+    })
+  }
+
+  @Test
+  def testScanBackUpCoinBoxes(): Unit = {
+    val mockedSecretStorage: SidechainSecretStorage = mock[SidechainSecretStorage]
+    val mockedWalletTransactionStorage: SidechainWalletTransactionStorage = mock[SidechainWalletTransactionStorage]
+    val mockedForgingBoxesInfoStorage: ForgingBoxesInfoStorage = mock[ForgingBoxesInfoStorage]
+    val mockedCswDataProvider: SidechainWalletCswDataProvider = mock[SidechainWalletCswDataProvider]
+    val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
+    val mockedVersion: VersionTag = bytesToVersion(Array[Byte](32))
+    Mockito.when(mockedSecretStorage.getAll).thenAnswer(_=>secretList.toList)
+
+    //Create temporary WalletBoxStorage
+    val walletBoxStorageFile = temporaryFolder.newFolder("walletBoxStorage")
+    val walletBoxStorage = new SidechainWalletBoxStorage(new VersionedLevelDbStorageAdapter(walletBoxStorageFile), sidechainBoxesCompanion)
+
+    //Create temporary BackupStorage
+    val backupStorageFile = temporaryFolder.newFolder("backupStorage")
+    val backupStorage = new BackupStorage(new VersionedLevelDbStorageAdapter(backupStorageFile), sidechainBoxesCompanion)
+
+    //Serialize ZenBoxes
+    val zenBoxSerializedList = new ListBuffer[Pair[ByteArrayWrapper, ByteArrayWrapper]]()
+    for (b <- boxList) {
+      zenBoxSerializedList.append({
+        val key = new ByteArrayWrapper(Blake2b256.hash(b.box.id()))
+        val value = new ByteArrayWrapper(sidechainBoxesCompanion.toBytes(b.box))
+        new Pair(key,value)
+      })
+    }
+    backupStorage.update(getVersion, zenBoxSerializedList.asJava).get
+
+    val sidechainWallet = new SidechainWallet("seed".getBytes,
+      walletBoxStorage,
+      mockedSecretStorage,
+      mockedWalletTransactionStorage,
+      mockedForgingBoxesInfoStorage,
+      mockedCswDataProvider,
+      params,
+      mockedVersion,
+      mockedApplicationWallet)
+
+    var exceptionThrown = false
+    sidechainWallet.scanBackUp(backupStorage.getBoxIterator, System.currentTimeMillis()) match {
+      case Failure(_) =>
+        exceptionThrown = true
+      case Success(_) =>
+        fail()
+    }
+    assertTrue("CoinBoxes should not be restored!",exceptionThrown)
+  }
+
+  def readStorage(walletBoxStorage: SidechainWalletBoxStorage): JArrayList[WalletBox] = {
+    val walletBoxStorageIterator: StorageIterator = walletBoxStorage.getIterator
+    walletBoxStorageIterator.seekToFirst()
+
+    val walletBoxSerializer: WalletBoxSerializer = new WalletBoxSerializer(sidechainBoxesCompanion)
+    val storedBoxes = new JArrayList[WalletBox]()
+    while(walletBoxStorageIterator.hasNext) {
+      val entry = walletBoxStorageIterator.next()
+      val box: Try[WalletBox] = walletBoxSerializer.parseBytesTry(entry.getValue)
+
+      if(box.isSuccess) {
+        val currBox: WalletBox = box.get
+        storedBoxes.add(currBox)
+      }
+    }
+    storedBoxes
   }
 
   @Test
@@ -381,7 +542,8 @@ class SidechainWalletTest
     val mockedSecretStorage: SidechainSecretStorage = mock[SidechainSecretStorage]
     val mockedWalletTransactionStorage: SidechainWalletTransactionStorage = mock[SidechainWalletTransactionStorage]
     val mockedForgingBoxesMerklePathStorage: ForgingBoxesInfoStorage = mock[ForgingBoxesInfoStorage]
-    val mockedCswDataStorage: SidechainWalletCswDataStorage = mock[SidechainWalletCswDataStorage]
+    val mockedSidechainWalletCswDataProvider: SidechainWalletCswDataProvider = mock[SidechainWalletCswDataProvider]
+    val mockedVersion: VersionTag = bytesToVersion(Array[Byte](32))
     val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
 
     val sidechainWallet = new SidechainWallet(
@@ -390,8 +552,9 @@ class SidechainWalletTest
       mockedSecretStorage,
       mockedWalletTransactionStorage,
       mockedForgingBoxesMerklePathStorage,
-      mockedCswDataStorage,
+      mockedSidechainWalletCswDataProvider,
       params,
+      mockedVersion,
       mockedApplicationWallet)
 
     val expectedException = new IllegalArgumentException("on rollback exception")
@@ -415,7 +578,7 @@ class SidechainWalletTest
         Success(mockedWalletBoxStorage)
       })
       // For Test 2:
-      .thenAnswer(answer => throw expectedException)
+      .thenAnswer(_ => throw expectedException)
 
     // Prepare what we expect to receive in ApplicationWallet.onRollback
     Mockito.when(mockedApplicationWallet.onRollback(
@@ -429,7 +592,7 @@ class SidechainWalletTest
           new ByteArrayWrapper(version))
       })
       // For Test 2:
-      .thenAnswer(answer => rollbackEventOccurred = true)
+      .thenAnswer(_ => rollbackEventOccurred = true)
 
 
     // Prepare what we expect to receive in SidechainWalletTransactionStorage.rollback
@@ -455,14 +618,14 @@ class SidechainWalletTest
       })
 
     // Prepare what we expect to receive in SidechainWalletCswDataStorage.rollback
-    Mockito.when(mockedCswDataStorage.rollback(
+    Mockito.when(mockedSidechainWalletCswDataProvider.rollback(
       ArgumentMatchers.any[ByteArrayWrapper]()))
       .thenAnswer(answer => {
         val version = answer.getArgument(0).asInstanceOf[ByteArrayWrapper]
-        assertEquals("Rollback on SidechainWalletCswDataStorage.rollback(...) actual version is wrong.",
+        assertEquals("Rollback on mockedSidechainWalletCswDataProvider.rollback(...) actual version is wrong.",
           new ByteArrayWrapper(blockId), version)
 
-        Success(mockedCswDataStorage)
+        Success(mockedSidechainWalletCswDataProvider)
       })
 
 
@@ -509,19 +672,22 @@ class SidechainWalletTest
     Mockito.when(mockedBlock.id)
       .thenReturn(bytesToId(blockId))
 
+    val mockedVersion: VersionTag = bytesToVersion(Array[Byte](32))
+
     val sidechainWallet = new SidechainWallet("seed".getBytes, new SidechainWalletBoxStorage(mockedBoxStorage, sidechainBoxesCompanion),
       new SidechainSecretStorage(mockedSecretStorage, sidechainSecretsCompanion),
       new SidechainWalletTransactionStorage(mockedTransactionStorage, sidechainTransactionsCompanion),
       new ForgingBoxesInfoStorage(mockedForgingBoxesMerklePathStorage),
-      new SidechainWalletCswDataStorage(mockedCswDataStorage),
+      SidechainWalletCswDataProviderCSWEnabled(new SidechainWalletCswDataStorage(mockedCswDataStorage)),
       params,
+      mockedVersion,
       new CustomApplicationWallet())
 
     sidechainWallet.scanPersistent(mockedBlock, withdrawalEpochNumber, Seq(), None)
 
     val wbl = sidechainWallet.boxes()
 
-    assertEquals("Wallet must contain specified count of WallectBoxes.", boxList.size, wbl.size)
+    assertEquals("Wallet must contain specified count of WalletBoxes.", boxList.size, wbl.size)
     assertTrue("Wallet must contain all specified WalletBoxes.",
       wbl.asJavaCollection.containsAll(boxList.slice(3, 5).asJavaCollection))
     assertTrue("Wallet must contain all specified WalletBoxes.",
@@ -530,27 +696,91 @@ class SidechainWalletTest
   }
 
   @Test
+  def testScanPersistentWithCSWDisabled() : Unit = {
+    val mockedBlock : SidechainBlock = mock[SidechainBlock]
+    val blockId = Array[Byte](32)
+    val from : JList[Pair[ZenBox, PrivateKey25519]] = new JArrayList()
+    val to: JList[BoxData[_ <: Proposition, _ <: Box[_ <: Proposition]]] = new JArrayList()
+
+    Random.nextBytes(blockId)
+
+    var inputsAmount: Long = 0L
+    for (i <- 0 to 2) {
+      from.add(new Pair(boxList(i).box.asInstanceOf[ZenBox], secretList(i).asInstanceOf[PrivateKey25519]))
+      inputsAmount += boxList(i).box.value()
+    }
+
+    var outputsAmount: Long = 0L
+    for (i <- 0 to 2) {
+      val value = 10L
+      to.add(new ZenBoxData(secretList(i).publicImage().asInstanceOf[PublicKey25519Proposition], value))
+      outputsAmount += value
+    }
+
+    val tx : RegularTransaction = RegularTransaction.create(from, to, inputsAmount - outputsAmount)
+
+    Mockito.when(mockedBlock.transactions)
+      .thenReturn(Seq(tx.asInstanceOf[BoxTransaction[Proposition, Box[Proposition]]]))
+
+    Mockito.when(mockedBlock.mainchainBlockReferencesData).thenReturn(Seq())
+
+    Mockito.when(mockedBlock.id)
+      .thenReturn(bytesToId(blockId))
+    val mockedVersion: VersionTag = bytesToVersion(Array[Byte](32))
+
+    val sidechainWallet = new SidechainWallet("seed".getBytes, new SidechainWalletBoxStorage(mockedBoxStorage, sidechainBoxesCompanion),
+      new SidechainSecretStorage(mockedSecretStorage, sidechainSecretsCompanion),
+      new SidechainWalletTransactionStorage(mockedTransactionStorage, sidechainTransactionsCompanion),
+      new ForgingBoxesInfoStorage(mockedForgingBoxesMerklePathStorage),
+      SidechainWalletCswDataProviderCSWDisabled(),
+      MainNetParams(isCSWEnabled = false),
+      mockedVersion,
+      new CustomApplicationWallet())
+
+    sidechainWallet.scanPersistent(mockedBlock, withdrawalEpochNumber, Seq(), None)
+
+    val wbl = sidechainWallet.boxes()
+
+    assertEquals("Wallet must contain specified count of WalletBoxes.", boxList.size, wbl.size)
+    assertTrue("Wallet must contain all specified WalletBoxes.",
+      wbl.asJavaCollection.containsAll(boxList.slice(3, 5).asJavaCollection))
+    assertTrue("Wallet must contain all specified WalletBoxes.",
+      wbl.map(_.box).asJavaCollection.containsAll(tx.newBoxes))
+
+    assertTrue("Wallet must not contain CSW Data",sidechainWallet.getCswData(withdrawalEpochNumber).isEmpty)
+
+  }
+
+
+
+  @Test
   def testSecrets(): Unit = {
     val mockedWalletBoxStorage1: SidechainWalletBoxStorage = mock[SidechainWalletBoxStorage]
     val mockedSecretStorage1: SidechainSecretStorage = mock[SidechainSecretStorage]
     val mockedWalletTransactionStorage1: SidechainWalletTransactionStorage = mock[SidechainWalletTransactionStorage]
     val mockedForgingBoxesMerklePathStorage1: ForgingBoxesInfoStorage = mock[ForgingBoxesInfoStorage]
     val mockedCswDataStorage1: SidechainWalletCswDataStorage = mock[SidechainWalletCswDataStorage]
+    val mockedVersion: VersionTag = bytesToVersion(Array[Byte](32))
     val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
     val sidechainWallet = new SidechainWallet("seed".getBytes(), mockedWalletBoxStorage1, mockedSecretStorage1,
-      mockedWalletTransactionStorage1, mockedForgingBoxesMerklePathStorage1, mockedCswDataStorage1, params, mockedApplicationWallet)
+      mockedWalletTransactionStorage1, mockedForgingBoxesMerklePathStorage1, SidechainWalletCswDataProviderCSWEnabled(mockedCswDataStorage1), params, mockedVersion, mockedApplicationWallet)
     val secret1 = getPrivateKey25519("testSeed1".getBytes())
     val secret2 = getPrivateKey25519("testSeed2".getBytes())
 
 
-    // Test 1: test secret(proposition) and secretByPublicKey(proposition)
+    // Test 1: test secret(proposition) and secretByPublicKey25519Proposition(proposition)
     Mockito.when(mockedSecretStorage1.get(secret1.publicImage())).thenReturn(Some(secret1))
+    Mockito.when(mockedSecretStorage1.getAll).thenReturn(List(secret1, secret2))
 
     var actualSecret = sidechainWallet.secret(secret1.publicImage()).get
     assertEquals("SidechainWallet failed to retrieve a proper Secret.", secret1, actualSecret)
 
-    actualSecret = sidechainWallet.secretByPublicKey(secret1.publicImage()).get
+    actualSecret = sidechainWallet.secretByPublicKey25519Proposition(secret1.publicImage()).get
     assertEquals("SidechainWallet failed to retrieve a proper Secret.", secret1, actualSecret)
+
+    val retList =  sidechainWallet.secretsByProposition(secret1.publicImage())
+    assertEquals("SidechainWallet failed to retrieve a proper Secret.", 1, retList.size())
+    assertEquals("SidechainWallet failed to retrieve a proper Secret.", secret1, retList.get(0))
 
 
     // Test 2: test secrets(), publicKeys(), allSecrets(), secretsOfType(type)
@@ -565,10 +795,10 @@ class SidechainWalletTest
     val actualSecretsJava = sidechainWallet.allSecrets()
     assertEquals("SidechainWallet failed to retrieve a proper Secrets.", util.Arrays.asList(secret1, secret2), actualSecretsJava)
 
-    var actualPrivateKeysJava = sidechainWallet.secretsOfType(classOf[PrivateKey25519])
+    val actualPrivateKeysJava = sidechainWallet.secretsOfType(classOf[PrivateKey25519])
     assertEquals("SidechainWallet failed to retrieve a proper Secrets.", util.Arrays.asList(secret1, secret2), actualPrivateKeysJava)
 
-    var actualCustomKeysJava = sidechainWallet.secretsOfType(classOf[CustomPrivateKey])
+    val actualCustomKeysJava = sidechainWallet.secretsOfType(classOf[CustomPrivateKey])
     assertEquals("SidechainWallet failed to retrieve a proper Secrets.", util.Arrays.asList(), actualCustomKeysJava)
 
 
@@ -637,36 +867,44 @@ class SidechainWalletTest
     val mockedWalletTransactionStorage1: SidechainWalletTransactionStorage = mock[SidechainWalletTransactionStorage]
     val mockedForgingBoxesMerklePathStorage1: ForgingBoxesInfoStorage = mock[ForgingBoxesInfoStorage]
     val mockedCswDataStorage1: SidechainWalletCswDataStorage = mock[SidechainWalletCswDataStorage]
+    val mockedVersion: VersionTag = bytesToVersion(Array[Byte](32))
+
     val sidechainWallet = new SidechainWallet("seed".getBytes(), mockedWalletBoxStorage1, mockedSecretStorage1,
-      mockedWalletTransactionStorage1, mockedForgingBoxesMerklePathStorage1, mockedCswDataStorage1, params, new CustomApplicationWallet())
+      mockedWalletTransactionStorage1, mockedForgingBoxesMerklePathStorage1, SidechainWalletCswDataProviderCSWEnabled(mockedCswDataStorage1), params, mockedVersion, new CustomApplicationWallet())
     val walletBoxZen1 = getWalletBox(classOf[ZenBox])
     val walletBoxZen2 = getWalletBox(classOf[ZenBox])
-    val walletBoxCustom = getWalletBox(classOf[ZenBox])
+    val walletBoxZen3 = getWalletBox(classOf[ZenBox])
+    val walletBoxCustom = getWalletBox(classOf[CustomBox])
 
 
     // Test 1: test test boxes(), allBoxes(), allBoxes(boxIdsToExclude)
-    Mockito.when(mockedWalletBoxStorage1.getAll).thenReturn(List(walletBoxZen1, walletBoxZen2, walletBoxCustom))
+    Mockito.when(mockedWalletBoxStorage1.getAll).thenReturn(List(walletBoxZen1, walletBoxZen2, walletBoxZen3, walletBoxCustom))
 
     val actualBoxes = sidechainWallet.boxes()
     assertEquals("SidechainWallet failed to retrieve a proper Boxes.",
-      List(walletBoxZen1, walletBoxZen2, walletBoxCustom), actualBoxes)
+      List(walletBoxZen1, walletBoxZen2, walletBoxZen3, walletBoxCustom), actualBoxes)
 
     val actualBoxesJava = sidechainWallet.allBoxes
     assertEquals("SidechainWallet failed to retrieve a proper Boxes.",
-      util.Arrays.asList(walletBoxZen1.box, walletBoxZen2.box, walletBoxCustom.box), actualBoxesJava)
+      util.Arrays.asList(walletBoxZen1.box, walletBoxZen2.box, walletBoxZen3.box, walletBoxCustom.box), actualBoxesJava)
 
     // exclude id of walletBoxZen1
     val actualBoxesWithExcludeJava = sidechainWallet.allBoxes(util.Arrays.asList(walletBoxZen1.box.id()))
     assertEquals("SidechainWallet failed to retrieve a proper Boxes with excluded ids.",
-      util.Arrays.asList(walletBoxZen2.box, walletBoxCustom.box), actualBoxesWithExcludeJava)
+      util.Arrays.asList(walletBoxZen2.box, walletBoxZen3.box, walletBoxCustom.box), actualBoxesWithExcludeJava)
 
 
     // Test 2: test boxesOfType(type) and boxesOfType(type, boxIdsToExclude)
     Mockito.when(mockedWalletBoxStorage1.getByType(classOf[ZenBox])).thenReturn(List(walletBoxZen1, walletBoxZen2))
+    Mockito.when(mockedWalletBoxStorage1.getByType(classOf[CustomBox])).thenReturn(List(walletBoxCustom))
 
     val actualBoxesByTypeJava = sidechainWallet.boxesOfType(classOf[ZenBox])
     assertEquals("SidechainWallet failed to retrieve a proper Boxes of type ZenBox.",
       util.Arrays.asList(walletBoxZen1.box, walletBoxZen2.box), actualBoxesByTypeJava)
+
+    val actualCustomBoxesByTypeJava = sidechainWallet.boxesOfType(classOf[CustomBox])
+    assertEquals("SidechainWallet failed to retrieve a proper Boxes of type CustomBox.",
+      util.Arrays.asList(walletBoxCustom.box), actualCustomBoxesByTypeJava)
 
     val actualBoxesByTypeWithExcludeJava = sidechainWallet.boxesOfType(classOf[ZenBox], util.Arrays.asList(walletBoxZen1.box.id()))
     assertEquals("SidechainWallet failed to retrieve a proper Boxes of type ZenBox with excluded ids.",
@@ -687,7 +925,8 @@ class SidechainWalletTest
     val mockedSecretStorage: SidechainSecretStorage = mock[SidechainSecretStorage]
     val mockedWalletTransactionStorage: SidechainWalletTransactionStorage = mock[SidechainWalletTransactionStorage]
     val mockedForgingBoxesMerklePathStorage: ForgingBoxesInfoStorage = mock[ForgingBoxesInfoStorage]
-    val mockedCswDataStorage: SidechainWalletCswDataStorage = mock[SidechainWalletCswDataStorage]
+    val mockedSidechainWalletCswDataProvider: SidechainWalletCswDataProvider = mock[SidechainWalletCswDataProvider]
+    val mockedVersion: VersionTag = bytesToVersion(Array[Byte](32))
     val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
 
     val sidechainWallet = new SidechainWallet(
@@ -696,8 +935,9 @@ class SidechainWalletTest
       mockedSecretStorage,
       mockedWalletTransactionStorage,
       mockedForgingBoxesMerklePathStorage,
-      mockedCswDataStorage,
+      mockedSidechainWalletCswDataProvider,
       params,
+      mockedVersion,
       mockedApplicationWallet)
 
 
@@ -745,7 +985,8 @@ class SidechainWalletTest
     val mockedSecretStorage: SidechainSecretStorage = mock[SidechainSecretStorage]
     val mockedWalletTransactionStorage: SidechainWalletTransactionStorage = mock[SidechainWalletTransactionStorage]
     val mockedForgingBoxesInfoStorage: ForgingBoxesInfoStorage = mock[ForgingBoxesInfoStorage]
-    val mockedCswDataStorage: SidechainWalletCswDataStorage = mock[SidechainWalletCswDataStorage]
+    val mockedSidechainWalletCswDataProvider: SidechainWalletCswDataProvider = mock[SidechainWalletCswDataProvider]
+    val mockedVersion: VersionTag = bytesToVersion(Array[Byte](32))
     val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
 
     val sidechainWallet = new SidechainWallet(
@@ -754,8 +995,9 @@ class SidechainWalletTest
       mockedSecretStorage,
       mockedWalletTransactionStorage,
       mockedForgingBoxesInfoStorage,
-      mockedCswDataStorage,
+      mockedSidechainWalletCswDataProvider,
       params,
+      mockedVersion,
       mockedApplicationWallet)
 
 
@@ -803,127 +1045,5 @@ class SidechainWalletTest
       })
 
     sidechainWallet.applyConsensusEpochInfo(epochInfo)
-  }
-
-  @Test
-  def testCalculateUtxoCswData(): Unit = {
-    val mockedWalletBoxStorage: SidechainWalletBoxStorage = mock[SidechainWalletBoxStorage]
-    val mockedSecretStorage: SidechainSecretStorage = mock[SidechainSecretStorage]
-    val mockedWalletTransactionStorage: SidechainWalletTransactionStorage = mock[SidechainWalletTransactionStorage]
-    val mockedForgingBoxesInfoStorage: ForgingBoxesInfoStorage = mock[ForgingBoxesInfoStorage]
-    val mockedCswDataStorage: SidechainWalletCswDataStorage = mock[SidechainWalletCswDataStorage]
-    val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
-
-    val sidechainWallet = new SidechainWallet("seed".getBytes,
-      mockedWalletBoxStorage,
-      mockedSecretStorage,
-      mockedWalletTransactionStorage,
-      mockedForgingBoxesInfoStorage,
-      mockedCswDataStorage,
-      params,
-      mockedApplicationWallet)
-
-    val boxes: Seq[SidechainTypes#SCB] = Seq(
-      getCustomBox.asInstanceOf[SidechainTypes#SCB], // non-coin box
-      getZenBox,    // coin box
-      getForgerBox, // coin box
-      getCustomBox.asInstanceOf[SidechainTypes#SCB] // non-coin box
-    )
-
-    val walletBoxes = boxes.map(box => new WalletBox(box, createdAt = 123456789L))
-    Mockito.when(mockedWalletBoxStorage.getAll).thenReturn(walletBoxes.toList)
-
-    val utxoMerkleTreeView: UtxoMerkleTreeView = mock[UtxoMerkleTreeView]
-    Mockito.when(utxoMerkleTreeView.utxoMerklePath(ArgumentMatchers.any[Array[Byte]]())).thenAnswer(args => {
-      val boxId: Array[Byte] = args.getArgument(0)
-      Some(boxIdToMerklePath(boxId))
-    })
-
-    val expectedCswData = boxes.filter(_.isInstanceOf[CoinsBox[_]]).map(b => walletBoxToCswData(b, utxoMerkleTreeView))
-    val cswData = sidechainWallet.calculateUtxoCswData(utxoMerkleTreeView)
-
-    assertEquals("Different CSW data found.", expectedCswData, cswData)
-  }
-
-  @Test
-  def testCalculateForwardTransferCswData(): Unit = {
-    val mockedWalletBoxStorage: SidechainWalletBoxStorage = mock[SidechainWalletBoxStorage]
-    val mockedSecretStorage: SidechainSecretStorage = mock[SidechainSecretStorage]
-    val mockedWalletTransactionStorage: SidechainWalletTransactionStorage = mock[SidechainWalletTransactionStorage]
-    val mockedForgingBoxesInfoStorage: ForgingBoxesInfoStorage = mock[ForgingBoxesInfoStorage]
-    val mockedCswDataStorage: SidechainWalletCswDataStorage = mock[SidechainWalletCswDataStorage]
-    val mockedApplicationWallet: ApplicationWallet = mock[ApplicationWallet]
-
-    val sidechainWallet = new SidechainWallet("seed".getBytes,
-      mockedWalletBoxStorage,
-      mockedSecretStorage,
-      mockedWalletTransactionStorage,
-      mockedForgingBoxesInfoStorage,
-      mockedCswDataStorage,
-      params,
-      mockedApplicationWallet)
-
-    val pubKeys: Set[SidechainTypes#SCP] = Set(
-      getPrivateKey25519.publicImage(),
-      getPrivateKey25519.publicImage(),
-      getPrivateKey25519.publicImage()
-    )
-
-
-    // Test 1: RefData without MC2SCAggTx
-    val emptyRefData: MainchainBlockReferenceData = MainchainBlockReferenceData(null, sidechainRelatedAggregatedTransaction = None, None, None, Seq(), None)
-    assertTrue("No CSW data expected to be found.", sidechainWallet.calculateForwardTransferCswData(Seq(emptyRefData), pubKeys).isEmpty)
-
-
-    // Test 2: RefData with MC2SCAggTx, but with related ScCr, but without related FTs
-    val scCr1: SidechainCreation = mock[SidechainCreation]
-    Mockito.when(scCr1.getBox).thenReturn(getForgerBox(pubKeys.head.asInstanceOf[PublicKey25519Proposition]))
-    val ft1: ForwardTransfer = getForwardTransfer(getPrivateKey25519.publicImage(), params.sidechainId)
-    val ft2: ForwardTransfer = getForwardTransfer(getPrivateKey25519.publicImage(), params.sidechainId)
-
-    var mc2scTransactionsOutputs: Seq[SidechainRelatedMainchainOutput[_ <: Box[_ <: Proposition]]] = Seq(scCr1, ft1, ft2)
-    var aggTx = new MC2SCAggregatedTransaction(mc2scTransactionsOutputs.asJava, MC2SCAggregatedTransaction.MC2SC_AGGREGATED_TRANSACTION_VERSION)
-
-    val refData: MainchainBlockReferenceData = MainchainBlockReferenceData(null, Some(aggTx), None, None, Seq(), None)
-    assertTrue("No CSW data expected to be found.", sidechainWallet.calculateForwardTransferCswData(Seq(refData), pubKeys).isEmpty)
-
-
-    // Test 2: RefData with MC2SCAggTx with wallet related FTs
-    // Define FT outputs related to us
-    val walletFt1: ForwardTransfer = getForwardTransfer(pubKeys.head.asInstanceOf[PublicKey25519Proposition], params.sidechainId)
-    val walletFt2: ForwardTransfer = getForwardTransfer(pubKeys.last.asInstanceOf[PublicKey25519Proposition], params.sidechainId)
-
-    mc2scTransactionsOutputs = Seq(walletFt1, ft1, ft2, walletFt2)
-    aggTx = new MC2SCAggregatedTransaction(mc2scTransactionsOutputs.asJava, MC2SCAggregatedTransaction.MC2SC_AGGREGATED_TRANSACTION_VERSION)
-
-    val refDataWithFTs: MainchainBlockReferenceData = MainchainBlockReferenceData(null, Some(aggTx), None, None, Seq(), None)
-
-    val commTree = refDataWithFTs.commitmentTree(params.sidechainId, params.sidechainCreationVersion)
-    val expectedCswData = Seq(
-      ftToCswData(walletFt1, 0, commTree),
-      ftToCswData(walletFt2, 3, commTree)
-    )
-    commTree.free()
-
-    val cswData: Seq[CswData] = sidechainWallet.calculateForwardTransferCswData(Seq(refDataWithFTs), pubKeys)
-    assertEquals("Different CSW data expected.", expectedCswData, cswData)
-  }
-
-
-  def ftToCswData(ft: ForwardTransfer, leafIdx: Int, commitmentTree: SidechainCommitmentTree): CswData = {
-    val scCommitmentMerklePath = commitmentTree.getSidechainCommitmentMerklePath(params.sidechainId).get
-    val btrCommitment = commitmentTree.getBtrCommitment(params.sidechainId).get
-    val certCommitment = commitmentTree.getCertCommitment(params.sidechainId).get
-    val scCrCommitment = commitmentTree.getScCrCommitment(params.sidechainId).get
-    val ftMerklePath = commitmentTree.getForwardTransferMerklePath(params.sidechainId, leafIdx).get
-
-    ForwardTransferCswData(ft.getBox.id(), ft.getFtOutput.amount, ft.getFtOutput.propositionBytes, ft.getFtOutput.mcReturnAddress,
-      ft.transactionHash(), ft.transactionIndex(), scCommitmentMerklePath, btrCommitment,
-      certCommitment, scCrCommitment, ftMerklePath)
-  }
-
-  def walletBoxToCswData(box: SidechainTypes#SCB, view: UtxoMerkleTreeView): CswData = {
-    UtxoCswData(box.id(), box.proposition().bytes, box.value(), box.nonce(),
-      box.customFieldsHash(), view.utxoMerklePath(box.id()).get)
   }
 }
