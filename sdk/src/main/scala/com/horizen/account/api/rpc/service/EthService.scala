@@ -21,10 +21,12 @@ import com.horizen.account.utils.EthereumTransactionDecoder
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.{ApiResponseUtil, SuccessResponse}
+import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput}
 import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
-import com.horizen.transaction.Transaction
+import com.horizen.transaction.{MC2SCAggregatedTransaction, Transaction}
 import com.horizen.transaction.exception.TransactionSemanticValidityException
+import com.horizen.transaction.mainchain.ForwardTransfer
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
 import org.web3j.crypto.Sign.SignatureData
 import org.web3j.crypto.{SignedRawTransaction, TransactionEncoder}
@@ -37,6 +39,7 @@ import java.math.BigInteger
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
+import scala.collection.mutable
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{Await, Future}
@@ -384,5 +387,27 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
             Numeric.toHexString(code)
       }
     }
+  }
+
+  @RpcMethod("eth_getForwardTransfers")
+  def getForwardTransfers(blockId: String): ForwardTransfersView = {
+    if (blockId == null) return null
+    var transactions: Seq[ForwardTransfer] = Seq()
+    applyOnAccountView { nodeView =>
+      nodeView.history.getBlockById(getBlockIdByTag(nodeView, blockId)).asScala match {
+        case None => return null
+        case Some(block) =>
+          for (refDataWithFTs <- block.mainchainBlockReferencesData) {
+            refDataWithFTs.sidechainRelatedAggregatedTransaction match {
+              case Some(tx) => transactions = transactions ++ tx.mc2scTransactionsOutputs().filter {
+                _.isInstanceOf[ForwardTransfer]
+              } map {
+                _.asInstanceOf[ForwardTransfer]
+              }
+            }
+          }
+      }
+    }
+    new ForwardTransfersView(transactions.asJava)
   }
 }

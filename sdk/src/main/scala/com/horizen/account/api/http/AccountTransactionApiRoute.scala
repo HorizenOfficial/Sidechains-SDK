@@ -4,12 +4,13 @@ import org.web3j.crypto._
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
-import com.fasterxml.jackson.annotation.JsonView
+import com.fasterxml.jackson.annotation.{JsonUnwrapped, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.google.common.primitives.Bytes
 import com.horizen.SidechainTypes
 import com.horizen.account.api.http.AccountTransactionErrorResponse._
 import com.horizen.account.api.http.AccountTransactionRestScheme._
+import com.horizen.account.api.rpc.types.ForwardTransfersView
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
@@ -28,6 +29,7 @@ import com.horizen.params.NetworkParams
 import com.horizen.proposition.{MCPublicKeyHashPropositionSerializer, PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.serialization.Views
 import com.horizen.transaction.Transaction
+import com.horizen.transaction.mainchain.ForwardTransfer
 import com.horizen.utils.BytesUtils
 import org.web3j.crypto.Sign.SignatureData
 import org.web3j.crypto.TransactionEncoder.createEip155SignatureData
@@ -62,7 +64,7 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
 
   override val route: Route = pathPrefix("transaction") {
-    allTransactions ~ sendCoinsToAddress ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendRawTransaction ~
+    allTransactions ~ sendCoinsToAddress ~ getForwardTransfers ~ createEIP1559Transaction ~ createLegacyTransaction ~ sendRawTransaction ~
       signTransaction ~ makeForgerStake ~ withdrawCoins ~ spendForgingStake ~ createSmartContract ~ allWithdrawalRequests ~ allForgingStakes
   }
 
@@ -95,6 +97,28 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
     if (secret.nonEmpty) Option.apply(secret.get.asInstanceOf[PrivateKeySecp256k1])
     else Option.empty[PrivateKeySecp256k1]
+  }
+
+  def getForwardTransfers: Route = (post & path("getForwardTransfers")) {
+    entity(as[ReqAllWithdrawalRequests]) { body =>
+      withNodeView { sidechainNodeView =>
+        val accountHistory = sidechainNodeView.getNodeHistory
+        val blockId = accountHistory.getBlockIdByHeight(body.epochNum)
+        val block = accountHistory.getBlockById(blockId.orElse(null)).orElse(null)
+        if (block == null) return null
+        var transactions: Seq[ForwardTransfer] = Seq()
+        for (refDataWithFTs <- block.mainchainBlockReferencesData) {
+          refDataWithFTs.sidechainRelatedAggregatedTransaction match {
+            case Some(tx) => transactions = transactions ++ tx.mc2scTransactionsOutputs().filter {
+              _.isInstanceOf[ForwardTransfer]
+            } map {
+              _.asInstanceOf[ForwardTransfer]
+            }
+          }
+        }
+        ApiResponseUtil.toResponse(RespAllForwardTransfers(new ForwardTransfersView(transactions.asJava)))
+      }
+    }
   }
 
   def signTransactionWithSecret(secret: PrivateKeySecp256k1, tx: EthereumTransaction): EthereumTransaction = {
@@ -555,6 +579,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
 
 object AccountTransactionRestScheme {
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespAllForwardTransfers(@JsonUnwrapped listOfFWT: ForwardTransfersView) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqAllTransactions(format: Option[Boolean]) extends SuccessResponse
