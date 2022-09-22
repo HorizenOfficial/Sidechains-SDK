@@ -464,13 +464,21 @@ class EthService(
   def traceTransaction(transactionHash: String, traceParams: TraceParams): Object = {
     val requestedTransaction = getTransactionAndReceipt(transactionHash) { (tx, receipt) =>
       new EthereumTransactionView(receipt, tx)
-    }.orNull
+    } match {
+      case Some(tx) => tx
+      case None =>
+        return ApiResponseUtil.toResponse(
+          ErrorNotFoundTransactionId(
+            f"Transaction ${Numeric.cleanHexPrefix(transactionHash)} not found",
+            JOptional.empty()
+          )
+        )
+    }
 
     val currentBlockId = Numeric.cleanHexPrefix(requestedTransaction.getBlockHash)
     val currentBlockNumber = requestedTransaction.getBlockNumber
     val previousBlockNumber =
       Numeric.cleanHexPrefix((Numeric.decodeQuantity(currentBlockNumber).intValueExact() - 1).toHexString)
-    var txFound = false
 
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, previousBlockNumber) { (tagStateView, blockContext) =>
@@ -488,22 +496,12 @@ class EthService(
               if (tx.id == Numeric.cleanHexPrefix(transactionHash)) {
                 blockContext.setTraceParams(traceParams)
                 tagStateView.applyTransaction(tx, i, gasPool, blockContext)
-                txFound = true
 
                 break
               }
 
               tagStateView.applyTransaction(tx, i, gasPool, blockContext)
             }
-          }
-
-          if (!txFound) {
-            return ApiResponseUtil.toResponse(
-              ErrorNotFoundTransactionId(
-                f"Transaction ${Numeric.cleanHexPrefix(transactionHash)} not found",
-                JOptional.empty()
-              )
-            )
           }
 
           new DebugTraceTransactionView(blockContext.getEvmResult)
