@@ -12,11 +12,11 @@ import java.util.Arrays;
 public class DebugTraceTransactionView {
     public String gas;
     public String returnValue;
-    public Object[] structLogs;
+    public EthereumStructLog[] structLogs;
 
     public DebugTraceTransactionView(EvmResult evmResult) {
         gas = Numeric.toHexStringWithPrefix(evmResult.usedGas);
         returnValue = evmResult.returnData != null ? Numeric.prependHexPrefix(BytesUtils.toHexString(evmResult.returnData)) : "";
-        structLogs = evmResult.traceLogs != null ? Arrays.stream(evmResult.traceLogs).map(log -> new EthereumStructLog(log)).toArray() : null;
+        structLogs = evmResult.traceLogs != null ? (EthereumStructLog[]) Arrays.stream(evmResult.traceLogs).map(log -> new EthereumStructLog(log)).toArray() : null;
     }
 }

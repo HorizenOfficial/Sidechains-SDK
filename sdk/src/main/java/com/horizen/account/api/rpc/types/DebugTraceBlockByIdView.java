@@ -8,9 +8,9 @@ import java.util.Arrays;
 
 @JsonView(Views.Default.class)
 public class DebugTraceBlockByIdView {
-    public Object[] debugTraceTransactionViews;
+    public DebugTraceTransactionView[] debugTraceTransactionViews;
 
     public DebugTraceBlockByIdView(EvmResult[] evmResult) {
-        debugTraceTransactionViews = Arrays.stream(evmResult).map(r -> new DebugTraceTransactionView(r)).toArray();
+        debugTraceTransactionViews = (DebugTraceTransactionView[]) Arrays.stream(evmResult).map(r -> new DebugTraceTransactionView(r)).toArray();
     }
 }
