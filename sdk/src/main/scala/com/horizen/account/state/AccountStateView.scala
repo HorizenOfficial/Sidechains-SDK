@@ -2,14 +2,13 @@ package com.horizen.account.state
 
 import com.google.common.primitives.Bytes
 import com.horizen.SidechainTypes
-import com.horizen.account.FeeUtils
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus
 import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceipt}
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress}
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.{MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
+import com.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
 import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput, WithdrawalEpochCertificate}
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.evm.interop.EvmLog
@@ -17,7 +16,7 @@ import com.horizen.evm.{ResourceHandle, StateDB, StateStorageStrategy}
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.StateView
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
-import com.horizen.utils.{BlockFeeInfo, BytesUtils, WithdrawalEpochInfo}
+import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
 import scorex.core.VersionTag
 import scorex.util.ScorexLogging
 
@@ -153,6 +152,7 @@ class AccountStateView(
     // Tx context for stateDB, to know where to keep EvmLogs
     setupTxContext(txHash, txIndex)
 
+    log.debug(s"applying msg: used pool gas ${blockGasPool.getUsedGas}")
     // apply message to state
     val status = try {
       applyMessage(msg, blockGasPool, blockContext)
@@ -165,12 +165,12 @@ class AccountStateView(
     } finally {
       // finalize pending changes, clear the journal and reset refund counter
       stateDb.finalizeChanges()
-      // make sure we disable automatic gas consumption in case a message processor enabled it
-      disableGasTracking()
     }
     val consensusDataReceipt = new EthereumConsensusDataReceipt(
       ethTx.version(), status.id, blockGasPool.getUsedGas, getLogs(txHash))
     log.debug(s"Returning consensus data receipt: ${consensusDataReceipt.toString()}")
+    log.debug(s"applied msg: used pool gas ${blockGasPool.getUsedGas}")
+
     consensusDataReceipt
   }
 
@@ -201,7 +201,9 @@ class AccountStateView(
       case x if x == 0 => // amount is zero
       case x if x < 0 =>
         throw new ExecutionFailedException("cannot add negative amount to balance")
-      case _ => stateDb.addBalance(address, amount)
+      case _ =>
+        log.debug(s"Adding $amount to addr ${BytesUtils.toHexString(address)}")
+        stateDb.addBalance(address, amount)
     }
   }
 
@@ -216,7 +218,9 @@ class AccountStateView(
         throw new ExecutionFailedException("cannot subtract negative amount from balance")
       case x if x > 0 && stateDb.getBalance(address).compareTo(amount) < 0 =>
         throw new ExecutionFailedException("insufficient balance")
-      case _ => stateDb.subBalance(address, amount)
+      case _ =>
+        log.debug(s"Subtracting $amount to addr ${BytesUtils.toHexString(address)}")
+        stateDb.subBalance(address, amount)
     }
   }
 
@@ -260,8 +264,9 @@ class AccountStateView(
   override def addCertificate(cert: WithdrawalEpochCertificate): Unit =
     metadataStorageView.updateTopQualityCertificate(cert)
 
-  override def addFeeInfo(info: BlockFeeInfo): Unit =
+  override def addFeeInfo(info: AccountBlockFeeInfo): Unit = {
     metadataStorageView.addFeePayment(info)
+  }
 
   override def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo): Unit =
     metadataStorageView.updateWithdrawalEpochInfo(withdrawalEpochInfo)
@@ -304,8 +309,11 @@ class AccountStateView(
 
   override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = metadataStorageView.getConsensusEpochNumber
 
-  override def getFeePayments(withdrawalEpoch: Int): Seq[BlockFeeInfo] =
-    metadataStorageView.getFeePayments(withdrawalEpoch)
+  override def getFeePayments(withdrawalEpoch: Int, blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None): Seq[AccountPayment] = {
+    var blockFeeInfoSeq = metadataStorageView.getFeePayments(withdrawalEpoch)
+    blockToAppendFeeInfo.foreach(blockFeeInfo => blockFeeInfoSeq = blockFeeInfoSeq :+ blockFeeInfo)
+    AccountFeePaymentsUtils.getForgersRewards(blockFeeInfoSeq)
+  }
 
   // account specific getters
   override def getNonce(address: Array[Byte]): BigInteger = {

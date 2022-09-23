@@ -178,6 +178,7 @@ class SCEvmBootstrap(SidechainTestFramework):
         assert_equal(-32602, response['error']['code'])
 
         # Test estimating forging stake
+        # data from AccountTransactionApiRouteTest
         request = {
             "from": "0x" + evm_address,
             "data": "0x5ca748ff1122334455669988112233445566778811223344556677881122334455667788aabbddddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff00123400000000000000000000000000000000000000000000000000000000000000000000000000000000000000b876fa045fcd3d15a3b6ea51497e06244af17978",
@@ -189,6 +190,7 @@ class SCEvmBootstrap(SidechainTestFramework):
         assert_equal('0x1c9c380', response['result'])
 
         # Test estimating SC to MC withdrawal
+        # data from AccountTransactionApiRouteTest
         request = {
             "from": "0x" + evm_address,
             "data": "0x9950a60f9988b9e8e729c83ecccb1c9549c46ed226f14de7000000000000000000000000",

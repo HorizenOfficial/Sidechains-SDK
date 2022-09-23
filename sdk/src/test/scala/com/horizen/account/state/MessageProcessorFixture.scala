@@ -59,13 +59,15 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
       nonce: BigInteger = BigInteger.ZERO
   ): Message = {
     val gasPrice = BigInteger.ZERO
+    val gasFeeCap = BigInteger.valueOf(1000001)
+    val gasTipCap = BigInteger.ZERO
     val gasLimit = BigInteger.valueOf(1000000)
     new Message(
       new AddressProposition(origin),
       if (to == null) null else new AddressProposition(to),
       gasPrice,
-      gasPrice,
-      gasPrice,
+      gasFeeCap,
+      gasTipCap,
       gasLimit,
       value,
       nonce,

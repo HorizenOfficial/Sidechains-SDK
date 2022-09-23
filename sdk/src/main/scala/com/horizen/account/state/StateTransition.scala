@@ -1,8 +1,8 @@
 package com.horizen.account.state
 
 import com.horizen.account.utils.BigIntegerUtil
-
 import java.math.BigInteger
+
 
 class StateTransition(
     view: AccountStateView,
@@ -10,6 +10,7 @@ class StateTransition(
     blockGasPool: GasPool,
     blockContext: BlockContext
 ) {
+
 
   @throws(classOf[InvalidMessageException])
   @throws(classOf[ExecutionFailedException])
@@ -46,6 +47,8 @@ class StateTransition(
             throw err
           // any other exception will bubble up and invalidate the block
         } finally {
+          // make sure we disable automatic gas consumption in case a message processor enabled it
+          view.disableGasTracking()
           refundGas(msg, gasPool)
         }
     }
@@ -81,6 +84,7 @@ class StateTransition(
     // TODO: fee checks if message is "fake" (RPC calls)
     if (msg.getGasFeeCap.compareTo(blockContext.baseFee) < 0)
       throw FeeCapTooLowException(sender, msg.getGasFeeCap, blockContext.baseFee)
+
   }
 
   private def buyGas(msg: Message): GasPool = {

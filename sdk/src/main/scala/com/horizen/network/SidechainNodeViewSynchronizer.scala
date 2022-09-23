@@ -3,10 +3,8 @@ package com.horizen.network
 import akka.actor.{ActorRef, ActorRefFactory, Props}
 import com.horizen._
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
+import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.storage.SidechainHistoryStorage
-import com.horizen.validation.{BlockInFutureException, InconsistentDataException}
-import scorex.core.network.NodeViewSynchronizer
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SyntacticallyFailedModification
 import scorex.core.serialization.ScorexSerializer
 import scorex.core.settings.NetworkSettings
 import scorex.core.transaction.MempoolReader
@@ -24,7 +22,9 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
   extends AbstractSidechainNodeViewSynchronizer[
     SidechainTypes#SCBT,
     SidechainBlockHeader,
-    SidechainBlock, MempoolReader[SidechainTypes#SCBT], SidechainHistoryStorage, SidechainHistory](networkControllerRef, viewHolderRef, syncInfoSpec, networkSettings, timeProvider, modifierSerializers){
+    SidechainBlock, MempoolReader[SidechainTypes#SCBT],
+    SidechainFeePaymentsInfo,
+    SidechainHistoryStorage, SidechainHistory](networkControllerRef, viewHolderRef, syncInfoSpec, networkSettings, timeProvider, modifierSerializers){
  }
 
 

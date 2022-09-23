@@ -218,7 +218,10 @@ class SCEvmForger(SidechainTestFramework):
         stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
         assert_equal(len(stakeList), 2)
 
-        forgerStake2_amount = ft_amount_in_zen - forgerStake1_amount  # Zen
+        # reserve a small amount for fee payments
+        amount_for_fees_zen = Decimal('0.01')
+        
+        forgerStake2_amount = ft_amount_in_zen - forgerStake1_amount - amount_for_fees_zen  # Zen
         forgerStakes = {"forgerStakeInfo": {
             "ownerAddress": evm_address_sc_node_1,  # SC node 1 is an owner
             "blockSignPublicKey": sc2_blockSignPubKey,  # SC node 2 is a block signer
@@ -340,8 +343,10 @@ class SCEvmForger(SidechainTestFramework):
         stakeId_2 = stakeList[1]['stakeId']
 
         # balance is in wei
-        final_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
-        assert_equal(0, final_balance)
+        balance_with_remainder = get_account_balance(sc_node_1, evm_address_sc_node_1)
+        # resulting balance should be slightly less than the amount reserved for fees, since we paid some
+        assert_true(balance_with_remainder < convertZenToWei(amount_for_fees_zen))
+
         bal_sc_cr_prop = get_account_balance(sc_node_1, sc_cr_owner_proposition)
         assert_equal(convertZenniesToWei(stakeAmount), bal_sc_cr_prop)
         assert_equal(
@@ -387,10 +392,12 @@ class SCEvmForger(SidechainTestFramework):
 
         # all balance is now at the expected owner address
         final_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
+
         assert_equal(
             convertZenToWei(forgerStake1_amount) +
             convertZenToWei(forgerStake2_amount),
-            final_balance)
+            final_balance - balance_with_remainder)
+
 
         # Generate SC block on SC node keeping current epoch
         generate_next_block(sc_node_2, "first node", force_switch_to_next_epoch=False)
