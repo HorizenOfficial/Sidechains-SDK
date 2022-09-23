@@ -173,8 +173,12 @@ abstract class AbstractHistory[
       val toRemove = currentChainSuffix.tail.map(id => getStorageBlockById(id).get)
       val toApply = newChainSuffix.tail.map(id => getStorageBlockById(id).get) ++ Seq(block)
 
-      require(toRemove.nonEmpty)
       require(toApply.nonEmpty)
+      if(toRemove.isEmpty) {
+        // usually it should not be empty, but there is the case when we are just applying a valid block whose id
+        // had been rollbacked from state, for instance after an ungraceful node shutdown during storage update
+        log.warn(s"No blocks to remove from current chain, we are just applying: ${toApply.map(b => b.id).mkString(", ")}")
+      }
 
       ProgressInfo[PM](rollbackPoint, toRemove, toApply)
     } else {
@@ -256,10 +260,14 @@ abstract class AbstractHistory[
   override def contains(id: ModifierId): Boolean = storage.blockInfoOptionById(id).isDefined
 
   override def applicableTry(block: PM): Try[Unit] = {
-    if (!contains(block.parentId))
-      Failure(new RecoverableModifierError("Parent block is not in history yet"))
-    else
+    if (!contains(block.parentId)) {
+      log.debug("Parent block "  + block.parentId + " IS NOT in history yet")
+      Failure(new RecoverableModifierError("Parent block IS NOT in history yet"))
+    }
+    else {
+      log.debug("Parent " + block.parentId + " IS in history")
       Success(Unit)
+    }
   }
 
   def blockIdByHeight(height: Int): Option[String] = {

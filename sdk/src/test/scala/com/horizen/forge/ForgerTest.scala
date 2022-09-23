@@ -66,23 +66,20 @@ class ForgerTest extends JUnitSuite with Matchers {
     val mainchainSynchronizer = mock[MainchainSynchronizer]
     val companion = mock[SidechainTransactionsCompanion]
 
-    /*
+    val forgeMessageBuilder: ForgeMessageBuilder = new ForgeMessageBuilder(mainchainSynchronizer, companion, params, settings.websocket.allowNoConnectionInRegtest)
+
     class ForgerUnderTest(settings: SidechainSettings,
                      viewHolderRef: ActorRef,
                      mainchainSynchronizer: MainchainSynchronizer,
                      companion: SidechainTransactionsCompanion,
                      timeProvider: NetworkTimeProvider,
-                     params: NetworkParams) extends Forger(settings, viewHolderRef, mainchainSynchronizer, companion, timeProvider, params) {
+                     params: NetworkParams) extends Forger(settings, viewHolderRef, forgeMessageBuilder, timeProvider, params) {
       override protected def tryToCreateBlockNow(): Unit = {
         viewHolderRef ! LocallyGeneratedModifier[SidechainBlock](null)
       }
     }
 
-     */
-
-    //val forgerUnderTest = system.actorOf(Props(new ForgerUnderTest(settings, viewHolder.ref, mainchainSynchronizer, companion, timeProvider, params)))
-    // TODO FOR MERGE
-    val forgerUnderTest: ActorRef = ForgerRef("Forger", settings, viewHolder.ref, mainchainSynchronizer, companion, timeProvider, params)
+    val forgerUnderTest = system.actorOf(Props(new ForgerUnderTest(settings, viewHolder.ref, mainchainSynchronizer, companion, timeProvider, params)))
 
     (forgerUnderTest, viewHolder)
   }
