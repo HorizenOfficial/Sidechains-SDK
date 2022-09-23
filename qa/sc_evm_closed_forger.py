@@ -74,8 +74,7 @@ class SCEvmClosedForgerList(SidechainTestFramework):
         return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
                               binary=[EVM_APP_BINARY] * 2)#, extra_args=[['-agentlib'], []])
 
-    def tryMakeForgetStake(self, sc_node, owner_address, blockSignPubKey, vrf_public_key, amount, gas_limit=230000, max_fee_per_gas=1,
-                  max_priority_fee_per_gas=1):
+    def tryMakeForgetStake(self, sc_node, owner_address, blockSignPubKey, vrf_public_key, amount):
         # a transaction with a forger stake info not compliant with the closed forger list will be successfully
         # included in a block but the receipt will then report a 'failed' status.
         forgerStakes = {"forgerStakeInfo": {
@@ -83,14 +82,7 @@ class SCEvmClosedForgerList(SidechainTestFramework):
                 "blockSignPublicKey": blockSignPubKey,
                 "vrfPubKey": vrf_public_key,
                 "value": convertZenToZennies(amount)  # in Satoshi
-            },
-            "gasInfo": {
-                "gasLimit": gas_limit,
-                "maxFeePerGas": max_fee_per_gas,
-                "maxPriorityFeePerGas": max_priority_fee_per_gas
-
             }
-
         }
         makeForgerStakeJsonRes = sc_node.transaction_makeForgerStake(json.dumps(forgerStakes))
         assert_true("result" in makeForgerStakeJsonRes)

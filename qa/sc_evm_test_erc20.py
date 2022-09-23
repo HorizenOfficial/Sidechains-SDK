@@ -39,11 +39,12 @@ def call_addr_uint_fn(node, smart_contract, contract_address, source_addr, addr,
                       method):
     if static_call:
         res = smart_contract.static_call(node, method, addr, uint,
-                                         fromAddress=source_addr, toAddress=contract_address)
+                                         fromAddress=source_addr, toAddress=contract_address,
+                                             gasPrice=900000000)
     else:
         res = smart_contract.call_function(node, method, addr, uint,
                                            fromAddress=source_addr,
-                                           gasLimit=1000000, gasPrice=10, toAddress=contract_address)
+                                           gasLimit=1000000, gasPrice=900000000, toAddress=contract_address)
     if generate_block:
         print("generating next block...")
         generate_next_blocks(node, "first node", 1)
@@ -54,11 +55,12 @@ def call_addr_addr_uint_fn(node, smart_contract, contract_address, source_addr, 
                            generate_block, method):
     if static_call:
         res = smart_contract.static_call(node, method, addr1, addr2, uint,
-                                         fromAddress=source_addr, toAddress=contract_address)
+                                         fromAddress=source_addr, toAddress=contract_address,
+                                             gasPrice=900000000)
     else:
         res = smart_contract.call_function(node, method, addr1, addr2, uint,
                                            fromAddress=source_addr,
-                                           gasLimit=1000000, gasPrice=10, toAddress=contract_address)
+                                           gasLimit=1000000, gasPrice=900000000, toAddress=contract_address)
     if generate_block:
         print("generating next block...")
         generate_next_blocks(node, "first node", 1)
@@ -111,7 +113,8 @@ def approve(node, smart_contract, contract_address, source_account, target_accou
 def compare_balance(node, smart_contract, contract_address, account_address, expected_balance):
     print("Checking balance of 0x{}...".format(account_address))
     res = smart_contract.static_call(node, 'balanceOf(address)', account_address,
-                                     fromAddress=account_address, toAddress=contract_address)
+                                     fromAddress=account_address, toAddress=contract_address,
+                                             gasPrice=900000000)
     print("Expected balance: '{}', actual balance: '{}'".format(expected_balance, res[0]))
     assert_equal(res[0], expected_balance)
     return res[0]
@@ -120,7 +123,8 @@ def compare_balance(node, smart_contract, contract_address, account_address, exp
 def compare_allowance(node, smart_contract, contract_address, owner_address, allowed_address, expected_balance):
     print("Checking allowance of 0x{} from 0x{}...".format(allowed_address, owner_address))
     res = smart_contract.static_call(node, 'allowance(address,address)', owner_address, allowed_address,
-                                     fromAddress=allowed_address, toAddress=contract_address)
+                                     fromAddress=allowed_address, toAddress=contract_address,
+                                             gasPrice=900000000)
     print("Expected allowance: '{}', actual allowance: '{}'".format(expected_balance, res[0]))
     assert_equal(expected_balance, res[0])
     return res[0]
@@ -128,7 +132,8 @@ def compare_allowance(node, smart_contract, contract_address, owner_address, all
 
 def compare_total_supply(node, smart_contract, contract_address, sender_address, expected_supply):
     print("Checking total supply of token at 0x{}...".format(contract_address))
-    res = smart_contract.static_call(node, 'totalSupply()', fromAddress=sender_address, toAddress=contract_address)
+    res = smart_contract.static_call(node, 'totalSupply()', fromAddress=sender_address, toAddress=contract_address,
+                                             gasPrice=900000000)
     print("Expected supply: '{}', actual supply: '{}'".format(expected_supply, res[0]))
     assert_equal(res[0], expected_supply)
     return res[0]
@@ -139,7 +144,7 @@ def deploy_smart_contract(node, smart_contract, from_address):
     tx_hash, address = smart_contract.deploy(node,
                                              fromAddress=from_address,
                                              gasLimit=10000000,
-                                             gasPrice=10)
+                                             gasPrice=900000000)
     print("Generating next block...")
     generate_next_blocks(node, "first node", 1)
     # TODO check logs when implemented (events)

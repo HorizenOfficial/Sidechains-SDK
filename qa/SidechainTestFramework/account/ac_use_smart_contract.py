@@ -124,8 +124,8 @@ class SmartContract:
             response = node.rpc_eth_sendRawTransaction(response['result'])
             if "result" in response:
                 return response["result"]
-        raise RuntimeError("Something went wrong, see {}".format(str(response)))
 
+        raise RuntimeError("Something went wrong, see {}".format(str(response)))
 
     def static_call(self, node, functionName: str, *args, fromAddress: str, nonce: int = None, toAddress: str,
                     gasLimit: int = 0, gasPrice: int = 0, value: int = 0, tag: str = 'latest'):
@@ -246,12 +246,12 @@ class SmartContract:
                                                  max_fee_per_gas=maxFeePerGas,
                                                  max_priority_fee_per_gas=maxPriorityFeePerGas, gas=gasLimit, data=data,
                                                  value=value))
+
         if "result" in response:
             response = node.rpc_eth_sendRawTransaction(response['result'])
             if "result" in response:
                 return response["result"], to_checksum_address(mk_contract_address(fromAddress, nonce))
         raise RuntimeError("Something went wrong, see {}".format(str(response)))
-
 
     def __str__(self):
         string_rep = self.Name

@@ -1,12 +1,11 @@
 package com.horizen.account.state
 
+import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.evm.interop.EvmLog
-import com.horizen.state.BaseStateReader
 
 import java.math.BigInteger
 
-trait AccountStateReader extends BaseStateReader {
-
+trait AccountStateReader {
   def getNonce(address: Array[Byte]): BigInteger
   def getBalance(address: Array[Byte]): BigInteger
   def getCodeHash(address: Array[Byte]): Array[Byte]
@@ -18,9 +17,6 @@ trait AccountStateReader extends BaseStateReader {
 
   def getLogs(txHash: Array[Byte]): Array[EvmLog]
   def getIntermediateRoot: Array[Byte]
+  def baseFee: BigInteger
 
-  def getHeight: Int
-
-  def getBaseFee: BigInteger
-  def getBlockGasLimit: BigInteger
 }

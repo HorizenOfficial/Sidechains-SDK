@@ -220,7 +220,7 @@ class SCEvmBackwardTransfer(SidechainTestFramework):
 
         # Check the balance has changed
         # Retrieve how much gas was spent
-        gas_fee_paid, forgersPoolFee, forgerTip = computeForgedTxFee(sc_node, tx_id)
+        gas_fee_paid, _, _ = computeForgedTxFee(sc_node, tx_id)
         expected_new_balance = ft_amount_in_wei - convertZenniesToWei(sc_bt_amount_in_zennies_1) - gas_fee_paid
         new_balance = http_wallet_balance(sc_node, evm_address)
         assert_equal(expected_new_balance, new_balance,  "wrong balance after first withdrawal request")

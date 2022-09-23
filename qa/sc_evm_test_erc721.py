@@ -12,7 +12,7 @@ from test_framework.util import assert_equal, assert_true, start_nodes, websocke
     forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, \
     is_mainchain_block_included_in_sc_block, check_mainchain_block_reference_info, AccountModelBlockVersion, \
-    EVM_APP_BINARY, generate_next_blocks, generate_next_block, computeForgedTxFee
+    EVM_APP_BINARY, generate_next_blocks, generate_next_block, computeForgedTxFee, convertZenToZennies
 
 """
 Check an EVM ERC721 Smart Contract.
@@ -46,16 +46,16 @@ def mint_payable(node, smart_contract, contract_address, source_account, amount,
               "a token (id: {}) of collection {} to 0x{}".format(tokenid, contract_address, source_account))
         res = smart_contract.static_call(node, method, tokenid,
                                          fromAddress=source_account,
-                                         gasLimit=10000000, gasPrice=10,
                                          toAddress=contract_address,
-                                         value=amount)
+                                         value=amount,
+                                           gasPrice=900000000)
     else:
         print(
             "Calling {}: minting of a token (id: {}) of collection {} to 0x{}".format(method, tokenid, contract_address,
                                                                                       source_account))
         res = smart_contract.call_function(node, method, tokenid,
                                            fromAddress=source_account,
-                                           gasLimit=10000000, gasPrice=10,
+                                           gasLimit=10000000, gasPrice=900000000,
                                            toAddress=contract_address,
                                            value=amount)
 
@@ -69,8 +69,8 @@ def compare_balance(node, smart_contract, contract_address, account_address, exp
     print("Checking balance of 0x{}...".format(account_address))
     res = smart_contract.static_call(node, 'balanceOf(address)', account_address,
                                      fromAddress=account_address,
-                                     gasLimit=10000000,
-                                     gasPrice=10, toAddress=contract_address)
+                                     toAddress=contract_address,
+                                           gasPrice=900000000)
     print("Expected balance: '{}', actual balance: '{}'".format(expected_balance, res[0]))
     assert_equal(res[0], expected_balance)
     return res[0]
@@ -79,8 +79,8 @@ def compare_balance(node, smart_contract, contract_address, account_address, exp
 def compare_allowance(node, smart_contract, contract_address, owner_address, allowed_address, expected_balance):
     print("Checking allowance of 0x{} from 0x{}...".format(allowed_address, owner_address))
     res = smart_contract.static_call(node, 'allowance(address,address)', owner_address, allowed_address,
-                                     fromAddress=allowed_address, gasLimit=10000000,
-                                     gasPrice=10, toAddress=contract_address)
+                                     fromAddress=allowed_address, toAddress=contract_address,
+                                      gasPrice=900000000)
     print("Expected allowance: '{}', actual allowance: '{}'".format(expected_balance, res[0]))
     assert_equal(res[0], expected_balance)
     return res[0]
@@ -88,11 +88,11 @@ def compare_allowance(node, smart_contract, contract_address, owner_address, all
 
 def call_noarg_fn(node, smart_contract, contract_address, sender_address, static_call, generate_block, method):
     if static_call:
-        res = smart_contract.static_call(node, method, fromAddress=sender_address, gasLimit=10000000,
-                                         gasPrice=10, toAddress=contract_address)
+        res = smart_contract.static_call(node, method, fromAddress=sender_address, toAddress=contract_address,
+                                         gasLimit=100000, gasPrice=900000000)
     else:
         res = smart_contract.call_function(node, method, fromAddress=sender_address, gasLimit=10000000,
-                                           gasPrice=10, toAddress=contract_address)
+                                           gasPrice=900000000, toAddress=contract_address)
     if generate_block:
         print("generating next block...")
         generate_next_blocks(node, "first node", 1)
@@ -102,11 +102,11 @@ def call_noarg_fn(node, smart_contract, contract_address, sender_address, static
 
 def call_onearg_fn(node, smart_contract, contract_address, sender_address, static_call, generate_block, method, arg):
     if static_call:
-        res = smart_contract.static_call(node, method, arg, fromAddress=sender_address, gasLimit=10000000,
-                                         gasPrice=10, toAddress=contract_address)
+        res = smart_contract.static_call(node, method, arg, fromAddress=sender_address, toAddress=contract_address,
+                                           gasPrice=900000000)
     else:
         res = smart_contract.call_function(node, method, arg, fromAddress=sender_address, gasLimit=10000000,
-                                           gasPrice=10, toAddress=contract_address)
+                                           gasPrice=900000000, toAddress=contract_address)
     if generate_block:
         print("generating next block...")
         generate_next_blocks(node, "first node", 1)
@@ -156,7 +156,7 @@ def deploy_smart_contract(node, smart_contract, from_address, name, symbol, meta
     tx_hash, address = smart_contract.deploy(node, name, symbol, metadataURI,
                                              fromAddress=from_address,
                                              gasLimit=10000000,
-                                             gasPrice=10)
+                                             gasPrice=900000000)
     print("Generating next block...")
     generate_next_blocks(node, "first node", 1)
     # TODO check logs when implemented (events)
@@ -208,14 +208,15 @@ def transfer_token(node, smart_contract, contract_address, sender_address, *, to
               "token (id: {}) from 0x{} to 0x{} via 0x{}".format(token_id, from_address, target_address,
                                                                  sender_address))
         res = smart_contract.static_call(node, method, from_address, target_address, token_id,
-                                         fromAddress=sender_address, gasLimit=10000000, gasPrice=10,
-                                         toAddress=contract_address)
+                                         fromAddress=sender_address,
+                                         toAddress=contract_address,
+                                           gasPrice=900000000)
     else:
         print("Calling {}: transferring".format(method) +
               "token (id: {}) from 0x{} to 0x{} via 0x{}".format(token_id, from_address, target_address,
                                                                  sender_address))
         res = smart_contract.call_function(node, method, from_address, target_address, token_id,
-                                           fromAddress=sender_address, gasLimit=10000000, gasPrice=10,
+                                           fromAddress=sender_address, gasLimit=10000000, gasPrice=900000000,
                                            toAddress=contract_address)
 
     if generate_block:
@@ -281,7 +282,7 @@ class SCEvmERC721Contract(SidechainTestFramework):
         ret = sc_node.wallet_allPublicKeys()
         pprint.pprint(ret)
 
-        ft_amount_in_zen = Decimal("33.22")
+        ft_amount_in_zen = Decimal("330.22")
 
         # transfer some fund from MC to SC using the evm address created before
         forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
@@ -304,7 +305,7 @@ class SCEvmERC721Contract(SidechainTestFramework):
         sc_node.transaction_sendCoinsToAddress(json.dumps({
             'from': format_eoa(evm_address),
             'to': format_eoa(other_address),
-            'value': 1
+            'value': convertZenToZennies(30)
         }))
         generate_next_block(sc_node, "first node", 1)
 

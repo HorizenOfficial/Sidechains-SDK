@@ -6,7 +6,14 @@ import scorex.util.ScorexLogging
 
 import java.math.BigInteger
 
-class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProcessor], blockGasPool: GasPool) extends ScorexLogging{
+
+class StateTransition(
+    view: AccountStateView,
+    messageProcessors: Seq[MessageProcessor],
+    blockGasPool: GasPool,
+    blockContext: BlockContext
+) extends ScorexLogging{
+
 
   @throws(classOf[InvalidMessageException])
   @throws(classOf[ExecutionFailedException])
@@ -27,7 +34,7 @@ class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProc
         // create a snapshot to rollback to incase of execution errors
         val revisionId = view.snapshot
         try {
-          processor.process(msg, view, gasPool)
+          processor.process(msg, view, gasPool, blockContext)
         } catch {
           // if the processor throws ExecutionRevertedException we revert all changes
           case err: ExecutionRevertedException =>
@@ -40,6 +47,8 @@ class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProc
             throw err
           // any other exception will bubble up and invalidate the block
         } finally {
+          // make sure we disable automatic gas consumption in case a message processor enabled it
+          view.disableGasTracking()
           refundGas(msg, gasPool)
         }
     }
@@ -72,8 +81,9 @@ class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProc
       throw SenderNotEoaException(sender, view.getCodeHash(sender))
 
     // TODO: fee checks if message is "fake" (RPC calls)
-    if (msg.getGasFeeCap.compareTo(view.getBaseFee) < 0)
-      throw FeeCapTooLowException(sender, msg.getGasFeeCap, view.getBaseFee)
+    if (msg.getGasFeeCap.compareTo(blockContext.baseFee) < 0)
+      throw FeeCapTooLowException(sender, msg.getGasFeeCap, blockContext.baseFee)
+
   }
 
   private def buyGas(msg: Message): GasPool = {
@@ -102,23 +112,12 @@ class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProc
   }
 
   private def refundGas(msg: Message, gas: GasPool): Unit = {
-    val usedGas = msg.getGasLimit.subtract(gas.getGas)
     // cap gas refund to a quotient of the used gas
-    val refGas = view.getRefund.min(usedGas.divide(GasUtil.RefundQuotientEIP3529))
-    gas.addGas(refGas)
+    gas.addGas(view.getRefund.min(gas.getUsedGas.divide(GasUtil.RefundQuotientEIP3529)))
     // return funds for remaining gas, exchanged at the original rate.
     val remaining = gas.getGas.multiply(msg.getGasPrice)
-    val sender = msg.getFrom.address()
-    log.debug(s"gas used: $usedGas, remaining gas: ${gas.getGas}, refGas: $refGas, gasPrice: ${msg.getGasPrice}")
-    log.debug(s"now refunding $remaining to sender ${BytesUtils.toHexString(sender)}")
-    if (remaining.compareTo(BigInteger.ZERO) > 0) {
-      view.addBalance(sender, remaining)
-      // the addBalance op subtracts gas, we have to restore it here otherwise remaining gas balance is wrong
-      if (view.isGasTrackingEnabled())
-        gas.addGas(GasUtil.GasTBD)
-    }
+    view.addBalance(msg.getFrom.address(), remaining)
     // return remaining gas to the gasPool of the current block so it is available for the next transaction
     blockGasPool.addGas(gas.getGas)
   }
-
 }

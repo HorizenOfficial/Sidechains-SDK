@@ -37,11 +37,12 @@ Test:
 def set_storage_value(node, smart_contract, address, tx_sender, new_value, *, static_call=False, generate_block=True):
     if static_call:
         print("Testing setting smart contract storage to {} in a static call".format(new_value))
-        res = smart_contract.static_call(node, 'set(string)', new_value, fromAddress=tx_sender, toAddress=address)
+        res = smart_contract.static_call(node, 'set(string)', new_value, fromAddress=tx_sender, toAddress=address,
+                                         gasPrice=900000000)
     else:
         print("Setting smart contract storage to {}".format(new_value))
         res = smart_contract.call_function(node, 'set(string)', new_value, fromAddress=tx_sender,
-                                           gasLimit=10000000, gasPrice=10, toAddress=address)
+                                           gasLimit=10000000, gasPrice=900000000, toAddress=address)
     if generate_block:
         print("generating next block...")
         generate_next_blocks(node, "first node", 1)
@@ -54,7 +55,7 @@ def set_storage_value(node, smart_contract, address, tx_sender, new_value, *, st
 
 def check_storage_value(node, smart_contract, address, tx_sender, expected_value):
     print("Checking stored value...")
-    res = smart_contract.static_call(node, 'get()', fromAddress=tx_sender, toAddress=address)
+    res = smart_contract.static_call(node, 'get()', fromAddress=tx_sender, toAddress=address,gasPrice=900000000)
     print("Expected stored value: \"{}\", actual stored value: \"{}\"".format(expected_value, res[0]))
     return res[0]
 
@@ -138,7 +139,7 @@ class SCEvmStorageContract(SidechainTestFramework):
         tx_hash, smart_contract_address = smart_contract.deploy(sc_node, test_message,
                                                                 fromAddress=evm_address,
                                                                 gasLimit=10000000,
-                                                                gasPrice=10)
+                                                                gasPrice=900000000)
         generate_next_blocks(sc_node, "first node", 1)
         print("Blocks mined - tx receipt will contain address")
         # TODO check logs (events)

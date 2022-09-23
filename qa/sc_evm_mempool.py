@@ -115,13 +115,7 @@ class SCEvmMempool(SidechainTestFramework):
             "blockSignPublicKey": sc2_blockSignPubKey,  # SC node 2 is a block signer
             "vrfPubKey": sc2_vrfPubKey,
             "value": convertZenToZennies(forgerStake_amount)  # in Satoshi
-        },
-            "gasInfo": {
-                "gasLimit": 230000,
-                "maxFeePerGas": 1,
-                "maxPriorityFeePerGas": 1
-
-            }
+        }
         }
         makeForgerStakeJsonRes = sc_node_1.transaction_makeForgerStake(json.dumps(forgerStakes))
         nonce_addr_1 += 1
@@ -143,9 +137,9 @@ class SCEvmMempool(SidechainTestFramework):
         common_tx_list = []
         for i in range(4):
             common_tx_list.append(createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=evm_address_sc2,
-                                          nonce = nonce_addr_1, gasLimit = 230000, maxPriorityFeePerGas = 110, maxFeePerGas = 1100, value=1))
+                                          nonce = nonce_addr_1, gasLimit = 230000, maxPriorityFeePerGas = 900000000, maxFeePerGas = 900000000, value=1))
             common_tx_list.append(createEIP1559Transaction(sc_node_2, fromAddress=evm_address_sc2, toAddress=evm_address_sc1,
-                                          nonce = nonce_addr_2, gasLimit = 230000, maxPriorityFeePerGas = 110, maxFeePerGas = 1100, value=1))
+                                          nonce = nonce_addr_2, gasLimit = 230000, maxPriorityFeePerGas = 900000000, maxFeePerGas = 900000000, value=1))
             nonce_addr_1 += 1
             nonce_addr_2 += 1
 
@@ -163,14 +157,14 @@ class SCEvmMempool(SidechainTestFramework):
         # Create txs on node 1
         for i in range(3):
             createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=evm_address_sc2,
-                                          nonce = nonce_addr_1, gasLimit = 230000, maxPriorityFeePerGas = 110, maxFeePerGas = 1100, value=1)
+                                          nonce = nonce_addr_1, gasLimit = 230000, maxPriorityFeePerGas = 900000000, maxFeePerGas = 900000000, value=1)
             nonce_addr_1 += 1
 
         # Create txs on node 2
         node_2_tx_list = []
         for i in range(5):
            node_2_tx_list.append(createEIP1559Transaction(sc_node_2, fromAddress=evm_address_sc2, toAddress=evm_address_sc1,
-                                          nonce = nonce_addr_2, gasLimit = 230000, maxPriorityFeePerGas = 110, maxFeePerGas = 1100, value=1))
+                                          nonce = nonce_addr_2, gasLimit = 230000, maxPriorityFeePerGas = 900000000, maxFeePerGas = 900000000, value=1))
            nonce_addr_2 += 1
 
         print("Mempool node 1 after disconnection")
@@ -211,9 +205,9 @@ class SCEvmMempool(SidechainTestFramework):
         common_tx_list = []
         for i in range(4):
             common_tx_list.append(createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=evm_address_sc2,
-                                          nonce = nonce_addr_1, gasLimit = 230000, maxPriorityFeePerGas = 110, maxFeePerGas = 1100, value=1))
+                                          nonce = nonce_addr_1, gasLimit = 230000, maxPriorityFeePerGas = 900000000, maxFeePerGas = 900000000, value=1))
             common_tx_list.append(createEIP1559Transaction(sc_node_2, fromAddress=evm_address_sc2, toAddress=evm_address_sc1,
-                                          nonce = nonce_addr_2, gasLimit = 230000, maxPriorityFeePerGas = 110, maxFeePerGas = 1100, value=1))
+                                          nonce = nonce_addr_2, gasLimit = 230000, maxPriorityFeePerGas = 900000000, maxFeePerGas = 900000000, value=1))
             nonce_addr_1 += 1
             nonce_addr_2 += 1
 
@@ -224,7 +218,7 @@ class SCEvmMempool(SidechainTestFramework):
         node_1_tx_list = []
         for i in range(3):
             node_1_tx_list.append(createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=evm_address_sc2,
-                                          nonce = nonce_addr_1, gasLimit = 230000, maxPriorityFeePerGas = 110, maxFeePerGas = 1100, value=1))
+                                          nonce = nonce_addr_1, gasLimit = 230000, maxPriorityFeePerGas = 900000000, maxFeePerGas = 900000000, value=1))
             nonce_addr_1 += 1
 
         # Create a block on node 1
@@ -238,7 +232,7 @@ class SCEvmMempool(SidechainTestFramework):
         node_2_tx_list = []
         for i in range(3):
             node_2_tx_list.append(createEIP1559Transaction(sc_node_2, fromAddress=evm_address_sc2, toAddress=evm_address_sc2,
-                                          nonce = nonce_addr_2, gasLimit = 230000, maxPriorityFeePerGas = 110, maxFeePerGas = 1100, value=1))
+                                          nonce = nonce_addr_2, gasLimit = 230000, maxPriorityFeePerGas = 900000000, maxFeePerGas = 900000000, value=1))
             nonce_addr_2 += 1
         generate_next_block(sc_node_2, "second node")
 
@@ -246,7 +240,7 @@ class SCEvmMempool(SidechainTestFramework):
         node_2_tx_list_2 = []
         for i in range(5):
            node_2_tx_list_2.append(createEIP1559Transaction(sc_node_2, fromAddress=evm_address_sc2, toAddress=evm_address_sc1,
-                                          nonce = nonce_addr_2, gasLimit = 230000, maxPriorityFeePerGas = 110, maxFeePerGas = 1100, value=1))
+                                          nonce = nonce_addr_2, gasLimit = 230000, maxPriorityFeePerGas = 900000000, maxFeePerGas = 900000000, value=1))
            nonce_addr_2 += 1
 
         # Create another block on node 2

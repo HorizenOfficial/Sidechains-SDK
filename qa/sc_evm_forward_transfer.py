@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import json
 import pprint
 from decimal import Decimal
 
@@ -113,8 +114,18 @@ class SCEvmForwardTransfer(SidechainTestFramework):
         tx_hash, smart_contract_address = smart_contract.deploy(sc_node, test_message,
                                                                 fromAddress=evm_address,
                                                                 gasLimit=10000000,
-                                                                gasPrice=10)
+                                                                gasPrice=900000000)
+
+        self.sc_sync_all()
+        print("Mempool node before")
+        response = sc_node.transaction_allTransactions(json.dumps({"format": True}))
+        pprint.pprint(response)
+
         generate_next_blocks(sc_node, "first node", 1)
+        self.sc_sync_all()
+        print("Mempool node after")
+        response = sc_node.transaction_allTransactions(json.dumps({"format": True}))
+        pprint.pprint(response)
 
         # verify smart contract has a balance of zero
         balance = sc_node.rpc_eth_getBalance(smart_contract_address, "latest")

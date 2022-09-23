@@ -6,6 +6,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen.{Wallet, _}
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.consensus.{ConsensusEpochAndSlot, ConsensusEpochNumber, ConsensusSlotNumber}
 import com.horizen.forge.AbstractForger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
 import com.horizen.params.NetworkParams
@@ -34,8 +35,9 @@ abstract class AbstractForger[
              timeProvider: NetworkTimeProvider,
              val params: NetworkParams) extends Actor with ScorexLogging
 {
-  type HSTOR <: AbstractHistoryStorage[PM, HSTOR]
-  type HIS <: AbstractHistory[TX, H, PM, HSTOR, HIS]
+  type FPI <: AbstractFeePaymentsInfo
+  type HSTOR <: AbstractHistoryStorage[PM, FPI, HSTOR]
+  type HIS <: AbstractHistory[TX, H, PM, FPI, HSTOR, HIS]
   type MS <: MinimalState[PM, MS]
   type VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PM, VL]
   type MP <: MemoryPool[TX, MP]

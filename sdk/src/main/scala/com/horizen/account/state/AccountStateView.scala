@@ -8,7 +8,7 @@ import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceip
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress}
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.{Account, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
+import com.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
 import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput, WithdrawalEpochCertificate}
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.evm.interop.EvmLog
@@ -16,7 +16,7 @@ import com.horizen.evm.{ResourceHandle, StateDB, StateStorageStrategy}
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.StateView
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
-import com.horizen.utils.{BlockFeeInfo, BytesUtils, WithdrawalEpochInfo}
+import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
 import scorex.core.VersionTag
 import scorex.util.ScorexLogging
 
@@ -38,6 +38,12 @@ class AccountStateView(
 
   // modifiers
   override def applyMainchainBlockReferenceData(refData: MainchainBlockReferenceData): Try[Unit] = Try {
+
+    refData.topQualityCertificate.foreach(cert => {
+      log.debug(s"adding top quality cert to state: $cert.")
+      addCertificate(cert)
+    })
+
     refData.sidechainRelatedAggregatedTransaction.foreach(aggTx => {
       aggTx.mc2scTransactionsOutputs().asScala.map {
         case sc: SidechainCreation =>
@@ -118,8 +124,8 @@ class AccountStateView(
 
   @throws(classOf[InvalidMessageException])
   @throws(classOf[ExecutionFailedException])
-  def applyMessage(msg: Message, blockGasPool: GasPool): Array[Byte] = {
-    new StateTransition(this, messageProcessors, blockGasPool).transition(msg)
+  def applyMessage(msg: Message, blockGasPool: GasPool, blockContext: BlockContext): Array[Byte] = {
+    new StateTransition(this, messageProcessors, blockGasPool, blockContext).transition(msg)
   }
 
   /**
@@ -134,20 +140,21 @@ class AccountStateView(
    *    - not enough gas for intrinsic gas
    *    - block gas limit reached
    */
-  override def applyTransaction(tx: SidechainTypes#SCAT, txIndex: Int, blockGasPool: GasPool): Try[EthereumConsensusDataReceipt] = Try {
+  override def applyTransaction(tx: SidechainTypes#SCAT, txIndex: Int, blockGasPool: GasPool, blockContext: BlockContext): Try[EthereumConsensusDataReceipt] = Try {
     if (!tx.isInstanceOf[EthereumTransaction])
       throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
 
     val ethTx = tx.asInstanceOf[EthereumTransaction]
     val txHash = BytesUtils.fromHexString(ethTx.id)
-    val msg = ethTx.asMessage(getBaseFee)
+    val msg = ethTx.asMessage(blockContext.baseFee)
 
     // Tx context for stateDB, to know where to keep EvmLogs
     setupTxContext(txHash, txIndex)
 
+    log.debug(s"applying msg: used pool gas ${blockGasPool.getUsedGas}")
     // apply message to state
     val status = try {
-      applyMessage(msg, blockGasPool)
+      applyMessage(msg, blockGasPool, blockContext)
       ReceiptStatus.SUCCESSFUL
     } catch {
       // any other exception will bubble up and invalidate the block
@@ -157,12 +164,12 @@ class AccountStateView(
     } finally {
       // finalize pending changes, clear the journal and reset refund counter
       stateDb.finalizeChanges()
-      // make sure we disable automatic gas consumption in case a message processor enabled it
-      disableGasTracking()
     }
     val consensusDataReceipt = new EthereumConsensusDataReceipt(
       ethTx.version(), status.id, blockGasPool.getUsedGas, getLogs(txHash))
     log.debug(s"Returning consensus data receipt: ${consensusDataReceipt.toString()}")
+    log.debug(s"applied msg: used pool gas ${blockGasPool.getUsedGas}")
+
     consensusDataReceipt
   }
 
@@ -193,7 +200,9 @@ class AccountStateView(
       case x if x == 0 => // amount is zero
       case x if x < 0 =>
         throw new ExecutionFailedException("cannot add negative amount to balance")
-      case _ => stateDb.addBalance(address, amount)
+      case _ =>
+        log.debug(s"Adding $amount to addr ${BytesUtils.toHexString(address)}")
+        stateDb.addBalance(address, amount)
     }
   }
 
@@ -208,7 +217,9 @@ class AccountStateView(
         throw new ExecutionFailedException("cannot subtract negative amount from balance")
       case x if x > 0 && stateDb.getBalance(address).compareTo(amount) < 0 =>
         throw new ExecutionFailedException("insufficient balance")
-      case _ => stateDb.subBalance(address, amount)
+      case _ =>
+        log.debug(s"Subtracting $amount to addr ${BytesUtils.toHexString(address)}")
+        stateDb.subBalance(address, amount)
     }
   }
 
@@ -252,8 +263,9 @@ class AccountStateView(
   override def addCertificate(cert: WithdrawalEpochCertificate): Unit =
     metadataStorageView.updateTopQualityCertificate(cert)
 
-  override def addFeeInfo(info: BlockFeeInfo): Unit =
+  override def addFeeInfo(info: AccountBlockFeeInfo): Unit = {
     metadataStorageView.addFeePayment(info)
+  }
 
   override def updateWithdrawalEpochInfo(withdrawalEpochInfo: WithdrawalEpochInfo): Unit =
     metadataStorageView.updateWithdrawalEpochInfo(withdrawalEpochInfo)
@@ -266,6 +278,10 @@ class AccountStateView(
 
   def getTransactionReceipt(txHash: Array[Byte]): Option[EthereumReceipt] =
     metadataStorageView.getTransactionReceipt(txHash)
+
+  def updateBaseFee(baseFee: BigInteger): Unit = metadataStorageView.updateBaseFee(baseFee)
+
+  def baseFee: BigInteger = metadataStorageView.getBaseFee
 
   override def setCeased(): Unit = metadataStorageView.setCeased()
 
@@ -292,11 +308,11 @@ class AccountStateView(
 
   override def getConsensusEpochNumber: Option[ConsensusEpochNumber] = metadataStorageView.getConsensusEpochNumber
 
-  override def getFeePayments(withdrawalEpoch: Int): Seq[BlockFeeInfo] =
-    metadataStorageView.getFeePayments(withdrawalEpoch)
-
-
-  override def getHeight: Int = metadataStorageView.getHeight
+  override def getFeePayments(withdrawalEpoch: Int, blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None): Seq[AccountPayment] = {
+    var blockFeeInfoSeq = metadataStorageView.getFeePayments(withdrawalEpoch)
+    blockToAppendFeeInfo.foreach(blockFeeInfo => blockFeeInfoSeq = blockFeeInfoSeq :+ blockFeeInfo)
+    AccountFeePaymentsUtils.getForgersRewards(blockFeeInfoSeq)
+  }
 
   // account specific getters
   override def getNonce(address: Array[Byte]): BigInteger = {
@@ -332,13 +348,6 @@ class AccountStateView(
 
   override def getIntermediateRoot: Array[Byte] = stateDb.getIntermediateRoot
 
-  // TODO: get baseFee for the block header
-  // TODO: currently a non-zero baseFee makes all the python tests fail, because they do not consider spending fees
-  override def getBaseFee: BigInteger = BigInteger.valueOf(0)
-
-  // TODO: get gas limit from current block header
-  override def getBlockGasLimit: BigInteger = BigInteger.valueOf(Account.GAS_LIMIT)
-
   def getRefund: BigInteger = stateDb.getRefund
 
   def snapshot: Int = stateDb.snapshot()
@@ -351,8 +360,6 @@ class AccountStateView(
   def enableGasTracking(gasPool: GasPool): Unit = trackedGasPool = Some(gasPool)
 
   def disableGasTracking(): Unit = trackedGasPool = None
-
-  def isGasTrackingEnabled(): Boolean = trackedGasPool.isDefined
 
   @throws(classOf[OutOfGasException])
   private def useGas(gas: BigInteger): Unit = trackedGasPool match {

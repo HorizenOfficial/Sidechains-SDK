@@ -151,10 +151,10 @@ class MempoolMap(stateReader: AccountStateReader) extends ScorexLogging {
     def txOrder(tx: SidechainTypes#SCAT) = {
       if (tx.isInstanceOf[EthereumTransaction]){
         val ethTx = tx.asInstanceOf[EthereumTransaction]
-        ethTx.getMaxFeePerGas.subtract(stateReader.getBaseFee).min(ethTx.getMaxPriorityFeePerGas)
+        ethTx.getMaxFeePerGas.subtract(stateReader.baseFee).min(ethTx.getMaxPriorityFeePerGas)
       }
       else
-        tx.getGasPrice.subtract(stateReader.getBaseFee)
+        tx.getGasPrice.subtract(stateReader.baseFee)
     }
 
     val orderedQueue = new mutable.PriorityQueue[SidechainTypes#SCAT]()(Ordering.by(txOrder))

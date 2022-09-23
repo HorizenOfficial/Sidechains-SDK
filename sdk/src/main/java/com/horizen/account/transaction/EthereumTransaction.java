@@ -146,39 +146,37 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "smart contract declaration transaction without data", id()));
 
-        if (isEIP1559()) {
-            if (getMaxFeePerGas().signum() < 0)
-                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                        "eip1559 transaction with negative maxFeePerGas", id()));
-            if (getMaxPriorityFeePerGas().signum() < 0)
-                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                        "eip1559 transaction with negative maxPriorityFeePerGas", id()));
-            if (getMaxFeePerGas().bitLength() > 256)
-                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                        "eip1559 transaction maxFeePerGas bit length [%d] is too high", id(), getMaxFeePerGas().bitLength()));
+        if (getMaxFeePerGas().signum() < 0)
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "eip1559 transaction with negative maxFeePerGas", id()));
+        if (getMaxPriorityFeePerGas().signum() < 0)
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "eip1559 transaction with negative maxPriorityFeePerGas", id()));
+        if (getMaxFeePerGas().bitLength() > 256)
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "eip1559 transaction maxFeePerGas bit length [%d] is too high", id(), getMaxFeePerGas().bitLength()));
 
-            if (getMaxPriorityFeePerGas().bitLength() > 256)
-                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                        "eip1559 transaction maxPriorityFeePerGas bit length [%d] is too high", id(), getMaxPriorityFeePerGas().bitLength()));
+        if (getMaxPriorityFeePerGas().bitLength() > 256)
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "eip1559 transaction maxPriorityFeePerGas bit length [%d] is too high", id(), getMaxPriorityFeePerGas().bitLength()));
 
-            if (getMaxFeePerGas().compareTo(getMaxPriorityFeePerGas()) < 0)
-                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                                "eip1559 transaction max priority fee per gas [%s] higher than max fee per gas [%s]",
-                        id(), getMaxPriorityFeePerGas(), getMaxFeePerGas()));
-        } else { // legacy transaction
-            if (getGasPrice().signum() < 0)
-                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                        "legacy transaction with negative gasPrice", id()));
-        }
+        if (getMaxFeePerGas().compareTo(getMaxPriorityFeePerGas()) < 0)
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                            "eip1559 transaction max priority fee per gas [%s] higher than max fee per gas [%s]",
+                    id(), getMaxPriorityFeePerGas(), getMaxFeePerGas()));
 
-        if (getGasLimit().compareTo(GasUtil.intrinsicGas(getData(), getTo() == null)) < 0 ){
+        if (getGasLimit().compareTo(GasUtil.intrinsicGas(getData(), getTo() == null)) < 0) {
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "gas limit is below intrinsic gas", id()));
         }
 
-
-        if (this.getFrom() == null || this.getFrom().address().length != Account.ADDRESS_SIZE)
-            throw new TransactionSemanticValidityException("Cannot create signed transaction without valid from address");
+        try {
+            if (this.getFrom() == null || this.getFrom().address().length != Account.ADDRESS_SIZE)
+                throw new TransactionSemanticValidityException("Cannot create signed transaction without valid from address");
+        } catch (org.web3j.crypto.exception.CryptoWeb3jException e) {
+            // for instance badly constructed tx having wrong type
+            throw new TransactionSemanticValidityException("Cannot create signed transaction without valid from address: " + e.getMessage());
+        }
         if (!this.getSignature().isValid(this.getFrom(), this.messageToSign()))
             throw new TransactionSemanticValidityException("Cannot create signed transaction with invalid " +
                     "signature");
@@ -322,7 +320,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         if (!(tx instanceof EthereumTransaction)) {
             throw new IllegalArgumentException("Transaction is not of type EthereumTransaction");
         }
-        EthereumTransaction ethTx = (EthereumTransaction)tx;
+        EthereumTransaction ethTx = (EthereumTransaction) tx;
 
         return getMaxFeePerGas().compareTo(ethTx.getMaxFeePerGas()) > 0 && getMaxPriorityFeePerGas().compareTo(ethTx.getMaxPriorityFeePerGas()) > 0;
     }
@@ -340,9 +338,17 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     // used in json representation of signature fields. In case of EIP155 tx getV() returns the value carrying the chainId
-    public byte[] getV() { return (getSignatureData() != null) ? getSignatureData().getV() : null; }
-    public byte[] getR() { return (getSignatureData() != null) ? getSignatureData().getR() : null; }
-    public byte[] getS() { return (getSignatureData() != null) ? getSignatureData().getS() : null; }
+    public byte[] getV() {
+        return (getSignatureData() != null) ? getSignatureData().getV() : null;
+    }
+
+    public byte[] getR() {
+        return (getSignatureData() != null) ? getSignatureData().getR() : null;
+    }
+
+    public byte[] getS() {
+        return (getSignatureData() != null) ? getSignatureData().getS() : null;
+    }
 
     @Override
     public String toString() {

@@ -186,52 +186,52 @@ class SCEvmOrphanTXS(SidechainTestFramework):
 
         j["from"] = evm_address_scA
         j["nonce"] = 0
-        j["gasInfo"]["maxFeePerGas"] = 3
-        j["gasInfo"]["maxPriorityFeePerGas"] = 3
+        j["gasInfo"]["maxFeePerGas"] = 900000003
+        j["gasInfo"]["maxPriorityFeePerGas"] = 900000003
         response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
         if not 'result' in response:
             fail("send failed: " + str(response))
         txA_0 = response['result']['transactionId']
 
         j["nonce"] = 1
-        j["gasInfo"]["maxFeePerGas"] = 1
-        j["gasInfo"]["maxPriorityFeePerGas"] = 1
+        j["gasInfo"]["maxFeePerGas"] = 900000001
+        j["gasInfo"]["maxPriorityFeePerGas"] = 900000001
         response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
         if not 'result' in response:
             fail("send failed: " + str(response))
         txA_1 = response['result']['transactionId']
 
         txA_2 = createEIP1559Transaction(sc_node_1, fromAddress=evm_address_scA, toAddress=evm_address_sc2,
-                                          nonce = 2, gasLimit = 230000, maxPriorityFeePerGas = 110, maxFeePerGas = 1100, value=1)
+                                          nonce = 2, gasLimit = 230000, maxPriorityFeePerGas = 900000110, maxFeePerGas = 900001100, value=1)
 
         j["from"] = evm_address_scB
         j["nonce"] = 0
-        j["gasInfo"]["maxFeePerGas"] = 5
-        j["gasInfo"]["maxPriorityFeePerGas"] = 5
+        j["gasInfo"]["maxFeePerGas"] = 900000005
+        j["gasInfo"]["maxPriorityFeePerGas"] = 900000005
         response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
         if not 'result' in response:
             fail("send failed: " + str(response))
         txB_0 = response['result']['transactionId']
 
         txB_1 = createEIP1559Transaction(sc_node_1, fromAddress=evm_address_scB, toAddress=evm_address_sc2,
-                                          nonce = 1, gasLimit = 230000, maxPriorityFeePerGas = 2, maxFeePerGas = 20, value=1)
+                                          nonce = 1, gasLimit = 230000, maxPriorityFeePerGas = 900000002, maxFeePerGas = 900000002, value=1)
 
 
         j["nonce"] = 2
-        j["gasInfo"]["maxFeePerGas"] = 190
-        j["gasInfo"]["maxPriorityFeePerGas"] = 190
+        j["gasInfo"]["maxFeePerGas"] = 900000190
+        j["gasInfo"]["maxPriorityFeePerGas"] = 900000190
         response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
         if not 'result' in response:
             fail("send failed: " + str(response))
         txB_2 = response['result']['transactionId']
 
         txC_0 = createEIP1559Transaction(sc_node_1, fromAddress=evm_address_scC, toAddress=evm_address_sc2,
-                                          nonce = 0, gasLimit = 230000, maxPriorityFeePerGas = 10, maxFeePerGas = 100, value=1)
+                                          nonce = 0, gasLimit = 230000, maxPriorityFeePerGas = 900000010, maxFeePerGas = 900000100, value=1)
 
         txC_1 = createEIP1559Transaction(sc_node_1, fromAddress=evm_address_scC, toAddress=evm_address_sc2,
-                                         nonce=1, gasLimit=230000, maxPriorityFeePerGas=200, maxFeePerGas=2000, value=1)
+                                         nonce=1, gasLimit=230000, maxPriorityFeePerGas=900000200, maxFeePerGas=900002000, value=1)
         txC_2 = createEIP1559Transaction(sc_node_1, fromAddress=evm_address_scC, toAddress=evm_address_sc2,
-                                         nonce=2, gasLimit=230000, maxPriorityFeePerGas=6, maxFeePerGas=60, value=1)
+                                         nonce=2, gasLimit=230000, maxPriorityFeePerGas=900000006, maxFeePerGas=900000060, value=1)
 
 
         self.sc_sync_all()
@@ -241,6 +241,7 @@ class SCEvmOrphanTXS(SidechainTestFramework):
 
         txs_in_block = sc_node_1.block_best()["result"]["block"]["sidechainTransactions"]
 
+        pprint.pprint(txs_in_block)
         assert_equal(9, len(txs_in_block), "Wrong number of transactions in the block")
         assert_equal(txC_0, txs_in_block[0]['id'])
         assert_equal(txC_1, txs_in_block[1]['id'])
@@ -257,7 +258,7 @@ class SCEvmOrphanTXS(SidechainTestFramework):
 
         j["from"] = evm_address_scA
         j["nonce"] = 3
-        j["gasInfo"]["maxFeePerGas"] = 300
+        j["gasInfo"]["maxFeePerGas"] = 900000000
         response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
         if not 'result' in response:
             fail("send failed: " + str(response))
@@ -267,7 +268,7 @@ class SCEvmOrphanTXS(SidechainTestFramework):
         response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
         assert_true(oldTxId in response['result']['transactionIds'])
 
-        j["gasInfo"]["maxFeePerGas"] = 500
+        j["gasInfo"]["maxFeePerGas"] = 900000500
         response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
         if not 'result' in response:
             fail("send failed: " + str(response))
