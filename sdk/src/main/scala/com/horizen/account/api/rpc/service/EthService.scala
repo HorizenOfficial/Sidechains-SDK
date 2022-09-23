@@ -30,7 +30,7 @@ import org.web3j.crypto.{SignedRawTransaction, TransactionEncoder}
 import org.web3j.utils.Numeric
 import scorex.core.NodeViewHolder
 import scorex.core.NodeViewHolder.CurrentView
-import scorex.util.ModifierId
+import scorex.util.{ModifierId, ScorexLogging}
 
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
@@ -45,7 +45,8 @@ import scala.util.{Failure, Success, Try}
 
 class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuration, networkParams: NetworkParams, val sidechainSettings: SidechainSettings, val sidechainTransactionActorRef: ActorRef)
   extends RpcService
-    with ClosableResourceHandler {
+    with ClosableResourceHandler
+      with ScorexLogging {
   type NV = CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]
 
   def applyOnAccountView[R](functionToBeApplied: NV => R): R = {
@@ -65,7 +66,9 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
           RpcCode.ExecutionError.getCode, err.getMessage, null))
         case err: TransactionSemanticValidityException => throw new RpcException(new RpcError(
           RpcCode.ExecutionError.getCode, err.getMessage, null))
-        case _ => throw exception
+        case _ =>
+          log.error("unexpected exception", exception)
+          throw exception
       }
       case Success(value) => value
     }
