@@ -9,7 +9,7 @@ import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, Sidec
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.data.{BoxData, ZenBoxData}
 import com.horizen.box.{Box, ForgerBox, ZenBox}
-import com.horizen.chain.{FeePaymentsInfo, SidechainBlockInfo}
+import com.horizen.chain.{SidechainFeePaymentsInfo, SidechainBlockInfo}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.fixtures.{BoxFixture, CompanionsFixture, ForgerBoxFixture, MerkleTreeFixture, SidechainBlockInfoFixture, VrfGenerator}
 import com.horizen.node.util.MainchainBlockReferenceInfo
@@ -81,7 +81,7 @@ class NodeViewHolderUtilMocks extends MockitoSugar with BoxFixture with Companio
 
   val feePaymentsBlockId: ModifierId = getRandomModifier()
   val feePaymentsBlockHeight: Int = 10000
-  val feePaymentsInfo: FeePaymentsInfo = FeePaymentsInfo(Seq(getZenBox, getZenBox, getZenBox))
+  val feePaymentsInfo: SidechainFeePaymentsInfo = SidechainFeePaymentsInfo(Seq(getZenBox, getZenBox, getZenBox))
 
   def getNodeHistoryMock(sidechainApiMockConfiguration: SidechainApiMockConfiguration): SidechainHistory = {
     val history: SidechainHistory = mock[SidechainHistory]

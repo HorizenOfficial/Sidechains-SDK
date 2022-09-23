@@ -3,6 +3,7 @@ package com.horizen.block
 import java.math.BigInteger
 import com.google.common.primitives.UnsignedInts
 import com.horizen.SidechainTypes
+import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.fixtures.{MainchainHeaderFixture, MainchainHeaderForPoWTest}
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.proposition.SchnorrProposition
@@ -205,25 +206,25 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
     // Test 1: Check SCBlock without MainchainHeader and Ommers
     var block = createSCBlockForPowTest(scblocks.last.id, "", Seq())
     assertTrue("SC block without MainchainHeaders expected to have valid PoW Target.",
-      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistoryStorage](block, storage, params))
+      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainFeePaymentsInfo, SidechainHistoryStorage](block, storage, params))
 
 
     // Test 2: Check SCBlock with 1 valid MainchainHeader
     block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(powRelatedDataList(28)))
     assertTrue("SC block with 1 valid MainchainHeader expected to have valid PoW Target.",
-      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistoryStorage](block, storage, params))
+      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainFeePaymentsInfo, SidechainHistoryStorage](block, storage, params))
 
 
     // Test 3: Check SCBlock with multiple valid MainchainHeaders
     block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(powRelatedDataList(28), powRelatedDataList(29)))
     assertTrue("SC block with 2 valid MainchainHeaders expected to have valid PoW Target.",
-      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistoryStorage](block, storage, params))
+      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainFeePaymentsInfo, SidechainHistoryStorage](block, storage, params))
 
 
     // Test 4: Check SCBlock, that contains 1 MainchainHeader that doesn't follow last MainchainHeaders in the chain
     block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(powRelatedDataList(29))) // Block (28) is missed
     assertFalse("SC block with MainchainHeader that doesn't follow last MainchainHeader in the chain expected to have invalid PoW Target.",
-      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistoryStorage](block, storage, params))
+      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainFeePaymentsInfo, SidechainHistoryStorage](block, storage, params))
 
 
     // Test 5: Check SCBlock, that contains 1 MainchainHeader with invalid target(bits)
@@ -231,13 +232,13 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
       powRelatedDataList(28).copy(bits = 0x1c111ca1) // 0x1c111cab is valid one
     ))
     assertFalse("SC block, that contains 1 MainchainHeader with invalid target(bits), expected to have invalid PoW Target.",
-      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistoryStorage](block, storage, params))
+      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainFeePaymentsInfo, SidechainHistoryStorage](block, storage, params))
 
 
     // Test 6: Check SCBlock, that contains 1 MainchainHeader with invalid prev block reference
     block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(20).mcblockhash, Seq(powRelatedDataList(28))) // 20 -> 27
     assertFalse("SC block, that contains 1 MainchainHeader with invalid prev block reference, expected to have invalid PoW Target.",
-      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistoryStorage](block, storage, params))
+      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainFeePaymentsInfo, SidechainHistoryStorage](block, storage, params))
 
 
     // Test 7: Check SCBlock with valid Ommers
@@ -250,7 +251,7 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
     )
     block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(powRelatedDataList(28), powRelatedDataList(29), powRelatedDataList(30)), ommers)
     assertTrue("SC block with valid Ommers expected to have valid PoW Target.",
-      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistoryStorage](block, storage, params))
+      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainFeePaymentsInfo, SidechainHistoryStorage](block, storage, params))
 
     // 2 Ommers with 1 MainchainHeader each
     ommers = generateOmmersSeqForPowTest(
@@ -262,7 +263,7 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
      )
     block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(powRelatedDataList(28), powRelatedDataList(29), powRelatedDataList(30)), ommers)
     assertTrue("SC block with valid Ommers expected to have valid PoW Target.",
-      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistoryStorage](block, storage, params))
+      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainFeePaymentsInfo, SidechainHistoryStorage](block, storage, params))
 
     // 3 Ommers with different MainchainHeaders amount
     ommers = generateOmmersSeqForPowTest(
@@ -275,7 +276,7 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
     )
     block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(powRelatedDataList(28), powRelatedDataList(29), powRelatedDataList(30)), ommers)
     assertTrue("SC block with valid Ommers expected to have valid PoW Target.",
-      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistoryStorage](block, storage, params))
+      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainFeePaymentsInfo, SidechainHistoryStorage](block, storage, params))
 
     // 2 valid Ommers, first with valid sub ommers
     val firstOmmerSubOmmers = generateOmmersSeqForPowTest(
@@ -293,7 +294,7 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
     )
     block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(powRelatedDataList(28), powRelatedDataList(29), powRelatedDataList(30)), ommers)
     assertTrue("SC block with valid Ommers expected to have valid PoW Target.",
-      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistoryStorage](block, storage, params))
+      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainFeePaymentsInfo, SidechainHistoryStorage](block, storage, params))
 
     // Test 8: Check SCBlock with invalid Ommers
     // Ommers headers are not a consistent chain: Ommer has inconsistent MainchainHeaders - (29) is missed
@@ -305,7 +306,7 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
     )
     block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(powRelatedDataList(28), powRelatedDataList(29), powRelatedDataList(30)), ommers)
     assertFalse("SC block with invalid Ommers expected to have valid PoW Target.",
-      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistoryStorage](block, storage, params))
+      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainFeePaymentsInfo, SidechainHistoryStorage](block, storage, params))
 
     // Ommers headers are not a consistent chain: inconsistency between Ommers - MainchainHeaders (29) is missed
     ommers = generateOmmersSeqForPowTest(
@@ -317,7 +318,7 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
     )
     block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(powRelatedDataList(28), powRelatedDataList(29), powRelatedDataList(30)), ommers)
     assertFalse("SC block with invalid Ommers expected to have valid PoW Target.",
-      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistoryStorage](block, storage, params))
+      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainFeePaymentsInfo, SidechainHistoryStorage](block, storage, params))
 
     // Ommers first header doesn't follow the same parent as first Block header: (28) is missed in Ommers
     ommers = generateOmmersSeqForPowTest(
@@ -329,7 +330,7 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
     )
     block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(powRelatedDataList(28), powRelatedDataList(29), powRelatedDataList(30)), ommers)
     assertFalse("SC block with invalid Ommers expected to have valid PoW Target.",
-      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistoryStorage](block, storage, params))
+      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainFeePaymentsInfo, SidechainHistoryStorage](block, storage, params))
 
 
     // 2 valid Ommers, first with invalid sub ommers
@@ -348,7 +349,7 @@ class ProofOfWorkVerifierTest extends JUnitSuite with MainchainHeaderFixture wit
     )
     block = createSCBlockForPowTest(scblocks.last.id, powRelatedDataList(27).mcblockhash, Seq(powRelatedDataList(28), powRelatedDataList(29), powRelatedDataList(30)), ommers)
     assertFalse("SC block with invalid Ommers expected to have valid PoW Target.",
-      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistoryStorage](block, storage, params))
+      ProofOfWorkVerifier.checkNextWorkRequired[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainFeePaymentsInfo, SidechainHistoryStorage](block, storage, params))
   }
 
   private def createSCBlockForPowTest(prevSCBlockId: String,

@@ -3,6 +3,7 @@ package com.horizen.account.network
 import akka.actor.{ActorRef, ActorRefFactory, Props}
 import com.horizen._
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.network.AbstractSidechainNodeViewSynchronizer
@@ -23,7 +24,12 @@ class AccountNodeViewSynchronizer(networkControllerRef: ActorRef,
   extends AbstractSidechainNodeViewSynchronizer[
     SidechainTypes#SCAT,
     AccountBlockHeader,
-    AccountBlock, MempoolReader[SidechainTypes#SCAT], AccountHistoryStorage, AccountHistory](networkControllerRef, viewHolderRef, syncInfoSpec, networkSettings, timeProvider, modifierSerializers){
+    AccountBlock,
+    MempoolReader[SidechainTypes#SCAT],
+    AccountFeePaymentsInfo,
+    AccountHistoryStorage,
+    AccountHistory
+  ](networkControllerRef, viewHolderRef, syncInfoSpec, networkSettings, timeProvider, modifierSerializers){
  }
 
 object AccountNodeViewSynchronizer {

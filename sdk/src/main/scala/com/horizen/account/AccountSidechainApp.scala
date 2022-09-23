@@ -4,9 +4,10 @@ import akka.actor.ActorRef
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.horizen._
-import com.horizen.account.api.http.{AccountEthRpcRoute, AccountBlockApiRoute, AccountTransactionApiRoute, AccountWalletApiRoute}
+import com.horizen.account.api.http.{AccountBlockApiRoute, AccountEthRpcRoute, AccountTransactionApiRoute, AccountWalletApiRoute}
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader, AccountBlockSerializer}
 import com.horizen.account.certificatesubmitter.AccountCertificateSubmitterRef
+import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.forger.AccountForgerRef
 import com.horizen.account.history.AccountHistory
@@ -159,18 +160,15 @@ class AccountSidechainApp @Inject()
   customApiGroups.asScala.foreach(apiRoute => applicationApiRoutes = applicationApiRoutes :+ ApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
 
   var coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
-    MainchainBlockApiRoute[TX,
-      AccountBlockHeader,PMOD,NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef),
-    SidechainBlockApiRoute[TX,
-      AccountBlockHeader,PMOD,NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
+    MainchainBlockApiRoute[TX, AccountBlockHeader,PMOD, AccountFeePaymentsInfo, NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef),
+    AccountBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi),
     AccountTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainAccountTransactionsCompanion, params),
     // TODO there can be only one of them since both has the 'wallet' tag in the path. Fix this. 
     //SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
     AccountWalletApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef),
-    AccountEthRpcRoute(settings.restApi, nodeViewHolderRef, sidechainSettings, params, sidechainTransactionActorRef, stateMetadataStorage, stateDbStorage, customMessageProcessors.asScala),
-    AccountBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainAccountTransactionsCompanion, params)
+    AccountEthRpcRoute(settings.restApi, nodeViewHolderRef, sidechainSettings, params, sidechainTransactionActorRef, stateMetadataStorage, stateDbStorage, customMessageProcessors.asScala)
   )
 
   // In order to provide the feature to override core api and exclude some other apis,

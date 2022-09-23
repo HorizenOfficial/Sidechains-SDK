@@ -3,7 +3,7 @@ package com.horizen.validation
 import java.util.Random
 import com.horizen.{SidechainHistory, SidechainTypes}
 import com.horizen.block.{Ommer, SidechainBlock, SidechainBlockHeader, SidechainBlockHeaderBase}
-import com.horizen.chain.SidechainBlockInfo
+import com.horizen.chain.{SidechainBlockInfo, SidechainFeePaymentsInfo}
 import com.horizen.consensus.{ConsensusEpochNumber, _}
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture, TransactionFixture}
 import com.horizen.params.{MainNetParams, NetworkParams}
@@ -27,7 +27,7 @@ class ConsensusValidatorOmmersTest
     with SidechainBlockFixture
     with TimeProviderFixture {
 
-  type BoxConsensusValidator = ConsensusValidator[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistoryStorage, SidechainHistory]
+  type BoxConsensusValidator = ConsensusValidator[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainFeePaymentsInfo, SidechainHistoryStorage, SidechainHistory]
 
   val consensusValidator: BoxConsensusValidator = new BoxConsensusValidator(timeProvider) {
     // always successful

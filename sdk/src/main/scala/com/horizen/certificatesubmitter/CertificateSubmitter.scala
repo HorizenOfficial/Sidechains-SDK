@@ -3,8 +3,10 @@ package com.horizen.certificatesubmitter
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen._
+import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.certnative.BackwardTransfer
+import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.websocket.client.MainchainNodeChannel
@@ -23,6 +25,7 @@ class CertificateSubmitter(settings: SidechainSettings,
     SidechainBlockHeader,
     SidechainBlock
   ](settings, sidechainNodeViewHolderRef, params, mainchainChannel) {
+  type FPI = SidechainFeePaymentsInfo
   type HSTOR = SidechainHistoryStorage
   type VL = SidechainWallet
   type HIS = SidechainHistory

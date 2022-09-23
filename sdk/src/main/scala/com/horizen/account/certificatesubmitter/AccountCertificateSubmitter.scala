@@ -3,6 +3,7 @@ package com.horizen.account.certificatesubmitter
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen._
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.state.AccountState
@@ -29,6 +30,7 @@ class AccountCertificateSubmitter(settings: SidechainSettings,
     AccountBlockHeader,
     AccountBlock
   ](settings, sidechainNodeViewHolderRef, params, mainchainChannel) {
+  type FPI = AccountFeePaymentsInfo
   type HSTOR = AccountHistoryStorage
   type VL = AccountWallet
   type HIS = AccountHistory
