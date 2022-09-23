@@ -47,19 +47,15 @@ def get_number_of_transactions_for_node(node):
     return len(allTransactions(node, False)["transactionIds"])
 
 
-def send_transactions_per_second(txs_creator_node, destination_address, tx_amount, tps_per_process,
-                                 start_time, test_run_time):
+def send_transactions_per_second(txs_creator_node, destination_address, tx_amount, start_time, test_run_time,
+                                 transactions_per_second, extended_transaction=False):
     # Run until
     while time.time() - start_time < test_run_time:
         i = 0
         tps_start_time = time.time()
-        # Send transactions until the maximum tps value has been reached for each process (thread).
-        while i < tps_per_process:
+        # Send transactions until the transactions_per_second value has been reached
+        while i < transactions_per_second:
             try:
-                #print('i ', i)
-                #print('function nonce ', nonce)
-                #print('rpc nonce ', int(txs_creator_node.rpc_eth_getTransactionCount(format_evm(destination_address), 'latest')['result'], 16))
-                #print('counter ', counter.value)
                 sendCoinsToAddressAccount(txs_creator_node, destination_address, tx_amount, counter.value)
             except Exception:
                 with errors.get_lock():
@@ -312,60 +308,57 @@ class PerformanceTest(SidechainTestFramework):
         result = http_block_findById(node, block_id)
         return result["block"]["sidechainTransactions"]
 
-    def txs_creator_send_transactions_per_second_to_addresses(self, tx_amount, txs_creator_node, non_creator_nodes,
+    def txs_creator_send_transactions_per_second_to_addresses(self, tx_amount, txs_creator_nodes, non_creator_nodes,
                                                               tps_test):
-        node_index = self.sc_nodes.index(txs_creator_node)
+
         destination_address = non_creator_nodes[0].wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
         start_time = time.time()
 
         if tps_test:
-            # Each process needs to be able to send a number of transactions per second, without going over 1 second.
-            # May need some fine-tuning depending on what machine this is running on. Default to 100.
-            max_tps_per_process = self.perf_data["max_tps_per_process"]
-            tps = math.floor(self.initial_txs / self.test_run_time)
-            # Decide number of processes we need to use, as each process needs to be able to fire x transactions in
-            # 1 second or less. e.g. 100 tps and if each process can comfortably handle 10 transactions in
-            # under 1 second we need 10 processes running 10 tps in parallel to get 100 tps total.
-            max_processes = math.ceil(tps / max_tps_per_process)
-            tps_per_process = math.ceil(tps / max_processes)
+            # Each node needs to be able to send a number of transactions per second, without going over 1 second, or
+            # timing out - May need some fine-tuning.
+            transactions_per_second = math.floor(self.initial_txs / self.test_run_time)
+            for i in range(len(txs_creator_nodes)):
+                print(
+                    f"Running Throughput: {transactions_per_second} Transactions Per Second for Creator "
+                    f"Node(Node{i})...")
 
-            print(f"Running Throughput: {tps} Transactions Per Second for Creator Node(Node{node_index})...")
-
-            while counter.value < self.initial_txs and ((time.time() - start_time) < self.test_run_time):
+            while counter.value < self.initial_txs * len(txs_creator_nodes) and (
+                    (time.time() - start_time) < self.test_run_time):
                 # Create the multiprocess pool
                 with Pool(initializer=init_globals, initargs=(counter, errors)) as pool:
-                    i = 0
                     args = []
-                    # Add send_transactions_per_second arguments to args for each process required
+                    # Add send_transactions_per_second arguments to args for each tx_creator_node
                     # starmap runs them all in parallel
-                    # nonce = int(txs_creator_node.rpc_eth_getTransactionCount(format_evm(destination_address), 'latest')['result'], 16)
-                    while i < max_processes:
-                        args.append((txs_creator_node, destination_address, tx_amount,
-                                     tps_per_process, start_time, self.test_run_time))
-                        i += 1
+                    for index, sc_node in enumerate(self.sc_nodes_list):
+                        if sc_node["tx_creator"]:
+                            # Create array of destination addresses for all nodes excluding the one we send from
+                            sc_nodes = self.sc_nodes.copy()
+                            del sc_nodes[index]
+                            args.append((self.sc_nodes[index], destination_address, tx_amount, start_time,
+                                         self.test_run_time, transactions_per_second))
                     pool.starmap(send_transactions_per_second, args)
 
                 print(f"... Sent {counter.value} Transactions ...")
                 print(f"Timer: {time.time() - start_time} and counter {counter.value}")
+
         # We're not interested in transactions per second, just fire all transactions as fast as possible
         else:
-            print(f"Firing all available transactions from Creator Node(Node{node_index}) to destination address...")
             for _ in range(self.initial_txs):
                 with Pool(initializer=init_globals, initargs=(counter, errors)) as pool:
                     i = 0
                     args = [(txs_creator_node, destination_address, tx_amount, i)]
                     while counter.value < self.initial_txs and ((time.time() - start_time) < self.test_run_time):
                         try:
-                            pool.starmap(sendCoinsToAddressAccount(), args)
+                            pool.starmap(sendCoinsToAddressAccount, args)
                         except Exception:
                             errors.value += 1
                         counter.value += 1
-                        i += 1
             print(f"Firing Transactions Ended After: {time.time() - start_time}")
-            print(f"Node{node_index} sent {counter.value} transactions out of a possible {self.initial_txs} "
+            print(f"Total Nodes creator sent {counter.value} transactions out of a possible {self.initial_txs} "
                   f"in {time.time() - start_time} seconds.")
 
-        print(f"Node{node_index} ERRORS ENCOUNTERED: {errors.value}")
+        print(f"Total Nodes creator ERRORS ENCOUNTERED: {errors.value}")
 
     def run_test(self):
         mc_nodes = self.nodes
@@ -466,15 +459,11 @@ class PerformanceTest(SidechainTestFramework):
 
         elif self.test_type == TestType.Transactions_Per_Second:
             # 1 thread per txs_creator node sending transactions
-            for i in range(number_of_txs_creators):
-                self.txs_creator_send_transactions_per_second_to_addresses(tx_amount, txs_creators[i],
-                                                                           non_txs_creators, True)
+            self.txs_creator_send_transactions_per_second_to_addresses(tx_amount, txs_creators, non_txs_creators, True)
 
         elif self.test_type == TestType.All_Transactions:
             # 1 thread per txs_creator node sending transactions
-            for i in range(number_of_txs_creators):
-                self.txs_creator_send_transactions_per_second_to_addresses(tx_amount, txs_creators[i],
-                                                                           non_txs_creators, False)
+            self.txs_creator_send_transactions_per_second_to_addresses(tx_amount, txs_creators, non_txs_creators, False)
 
         # stop forging
         for index, node in enumerate(self.sc_nodes_list):
