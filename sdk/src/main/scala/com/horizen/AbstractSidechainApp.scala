@@ -121,7 +121,7 @@ abstract class AbstractSidechainApp
       genesisPoWData = genesisPowData,
       mainchainCreationBlockHeight = sidechainSettings.genesisData.mcBlockHeight,
       sidechainGenesisBlockTimestamp = genesisBlock.timestamp,
-      consensusSecondsInSlot = consensusSecondsInSlot,
+      consensusSecondsInSlot = sidechainSettings.forger.forgingFrequencyInSeconds,
       withdrawalEpochLength = sidechainSettings.genesisData.withdrawalEpochLength,
       signersPublicKeys = signersPublicKeys,
       signersThreshold = sidechainSettings.withdrawalEpochCertificateSettings.signersThreshold,

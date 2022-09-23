@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import json
 import logging
 import math
 import time
@@ -18,7 +17,7 @@ from httpCalls.transaction.sendCoinsToAddressAccount import sendCoinsToAddressAc
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 from test_framework.util import start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, assert_equal
-from SidechainTestFramework.scutil import assert_true, bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks, \
+from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, start_sc_nodes_with_multiprocessing, generate_next_blocks, \
     deserialize_perf_test_json, connect_sc_nodes, convertZenniesToWei, convertZenToZennies, AccountModelBlockVersion, EVM_APP_BINARY
 from performance.perf_data import NetworkTopology, TestType
 from SidechainTestFramework.account.address_util import format_evm
@@ -51,21 +50,23 @@ def get_number_of_transactions_for_node(node):
 def send_transactions_per_second(txs_creator_node, destination_address, tx_amount, tps_per_process,
                                  start_time, test_run_time):
     # Run until
-    nonce = int(txs_creator_node.rpc_eth_getTransactionCount(format_evm(destination_address), 'latest')['result'], 16)
     while time.time() - start_time < test_run_time:
         i = 0
         tps_start_time = time.time()
         # Send transactions until the maximum tps value has been reached for each process (thread).
         while i < tps_per_process:
             try:
-                sendCoinsToAddressAccount(txs_creator_node, destination_address, tx_amount, nonce)
+                #print('i ', i)
+                #print('function nonce ', nonce)
+                #print('rpc nonce ', int(txs_creator_node.rpc_eth_getTransactionCount(format_evm(destination_address), 'latest')['result'], 16))
+                #print('counter ', counter.value)
+                sendCoinsToAddressAccount(txs_creator_node, destination_address, tx_amount, counter.value)
             except Exception:
                 with errors.get_lock():
                     errors.value += 1
             with counter.get_lock():
                 counter.value += 1
             i += 1
-            nonce  += 1
         completion_time = time.time() - tps_start_time
         # Remove execution time from the 1 second to get as close to X number of TPS as possible
         if completion_time < 1:
@@ -180,7 +181,11 @@ class PerformanceTest(SidechainTestFramework):
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, block_timestamp_rewind=720*self.block_rate/2, blockversion=AccountModelBlockVersion)
 
     def sc_setup_nodes(self):
-        return start_sc_nodes(len(self.sc_node_data), dirname=self.options.tmpdir, binary=[EVM_APP_BINARY]*len(self.sc_node_data))
+        if self.perf_data["use_multiprocessing"]:
+            return start_sc_nodes_with_multiprocessing(len(self.sc_node_data), dirname=self.options.tmpdir, binary=[EVM_APP_BINARY]*len(self.sc_node_data))
+        else:
+            return start_sc_nodes(len(self.sc_node_data), dirname=self.options.tmpdir, binary=[EVM_APP_BINARY]*len(self.sc_node_data))
+        #return start_sc_nodes(len(self.sc_node_data), dirname=self.options.tmpdir, binary=[EVM_APP_BINARY]*len(self.sc_node_data))
 
     def create_node_connection_map(self, key, values):
         for value in values:
@@ -210,7 +215,7 @@ class PerformanceTest(SidechainTestFramework):
         # Ring Topology
         if topology == NetworkTopology.Ring:
             # Connect final node to first node
-            connect_sc_nodes(self.sc_nodes[node], 1)
+            connect_sc_nodes(self.sc_nodes[node], 0)
             self.create_node_connection_map(0, [node])
             self.create_node_connection_map(node, [0])
         # Star Topology
@@ -288,8 +293,6 @@ class PerformanceTest(SidechainTestFramework):
         for addresses in addresses_list:
             if 'address' in addresses:
                 wallet_balance += http_wallet_balance(node, addresses['address'])
-        print('HERE in node_wallet_balances_account')
-        print(wallet_balance)
         return wallet_balance
 
     def log_node_wallet_balances_account(self):
@@ -335,6 +338,7 @@ class PerformanceTest(SidechainTestFramework):
                     args = []
                     # Add send_transactions_per_second arguments to args for each process required
                     # starmap runs them all in parallel
+                    # nonce = int(txs_creator_node.rpc_eth_getTransactionCount(format_evm(destination_address), 'latest')['result'], 16)
                     while i < max_processes:
                         args.append((txs_creator_node, destination_address, tx_amount,
                                      tps_per_process, start_time, self.test_run_time))

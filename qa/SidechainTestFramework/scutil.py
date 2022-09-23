@@ -1,12 +1,20 @@
 import logging
 import os
+import pprint
 import sys
 import json
 
+import psutil
+import multiprocessing
 from decimal import Decimal
 from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, Account, AccountKey, \
     VrfAccount, SchnorrAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths, \
     LARGE_WITHDRAWAL_EPOCH_LENGTH, DEFAULT_API_KEY, SCNetworkConfiguration
+import jsonschema
+from jsonschema.validators import validate
+from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
+    VrfAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths, LARGE_WITHDRAWAL_EPOCH_LENGTH, AccountKey
+from SidechainTestFramework.sidechainauthproxy import SidechainAuthServiceProxy
 
 import subprocess
 import time
@@ -38,12 +46,6 @@ DEFAULT_REST_API_TIMEOUT = 5
 # max P2P message size for a Modifier
 DEFAULT_MAX_PACKET_SIZE = 5242980
 
-SLOTS_IN_EPOCH = 720
-SIMPLE_APP_SLOT_TIME = 120  # seconds
-EVM_APP_SLOT_TIME = 12  # seconds
-
-DEFAULT_SIMPLE_APP_GENESIS_TIMESTAMP_REWIND = SLOTS_IN_EPOCH * SIMPLE_APP_SLOT_TIME * 5  # 5 epochs
-DEFAULT_EVM_APP_GENESIS_TIMESTAMP_REWIND = SLOTS_IN_EPOCH * EVM_APP_SLOT_TIME * 5  # 5 epochs
 class TimeoutException(Exception):
     def __init__(self, operation):
         Exception.__init__(self)
@@ -240,7 +242,6 @@ def generate_vrf_secrets(seed, number_of_vrf_keys):
         vrf_keys.append(VrfAccount(secret["vrfSecret"], secret["vrfPublicKey"]))
     return vrf_keys
 
-
 def generate_account_proposition(seed, number_of_acc_props):
     acc_props = []
     secrets = []
@@ -367,8 +368,6 @@ Parameters:
  - bootstrap_info: an instance of SCBootstrapInfo (see sc_bootstrap_info.py)
  - websocket_config: an instance of MCConnectionInfo (see sc_boostrap_info.py)
 """
-
-
 def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_config=SCNodeConfiguration(),
                           log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT):
     apiAddress = "127.0.0.1"
@@ -543,8 +542,6 @@ def initialize_sc_chain_clean(test_dir, num_nodes, genesis_secrets, genesis_info
 def get_websocket_configuration(index, array_of_MCConnectionInfo):
     return array_of_MCConnectionInfo[index] if index < len(array_of_MCConnectionInfo) else MCConnectionInfo()
 
-
-
 def get_lib_separator():
     lib_separator = ":"
     if sys.platform.startswith('win'):
@@ -559,10 +556,7 @@ EVM_APP_BINARY = get_examples_dir() + "/evmapp/target/sidechains-sdk-evmapp-0.5.
 
 
 
-
-def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None, print_output_to_file=False,
-                  auth_api_key=None):
-
+def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None, print_output_to_file=False):
     """
     Start a SC node and returns API connection to it
     """

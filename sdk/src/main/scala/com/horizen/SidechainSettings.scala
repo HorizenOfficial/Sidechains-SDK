@@ -39,7 +39,9 @@ case class WithdrawalEpochCertificateSettings(submitterIsEnabled: Boolean,
 
 case class ForgerSettings(automaticForging: Boolean = false,
                           restrictForgers: Boolean = false,
-                          allowedForgersList: Seq[ForgerKeysData] = Seq())
+                          allowedForgersList: Seq[ForgerKeysData] = Seq(),
+                          forgingFrequencyInSeconds: Int = 120
+                         )
 
 case class MempoolSettings(maxSize: Int = 300, minFeeRate: Long = 0)
 
