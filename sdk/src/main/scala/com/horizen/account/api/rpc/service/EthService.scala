@@ -10,7 +10,6 @@ import com.horizen.account.api.http.AccountTransactionRestScheme.TransactionIdDT
 import com.horizen.account.api.rpc.handler.RpcException
 import com.horizen.account.api.rpc.types._
 import com.horizen.account.api.rpc.utils._
-import com.horizen.account.block.AccountBlock
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.receipt.EthereumReceipt
@@ -29,8 +28,8 @@ import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
 import org.web3j.crypto.Sign.SignatureData
 import org.web3j.crypto.{SignedRawTransaction, TransactionEncoder}
 import org.web3j.utils.Numeric
-import scorex.core.NodeViewHolder
-import scorex.core.NodeViewHolder.CurrentView
+import sparkz.core.NodeViewHolder
+import sparkz.core.NodeViewHolder.CurrentView
 import scorex.util.ModifierId
 
 import java.math.BigInteger

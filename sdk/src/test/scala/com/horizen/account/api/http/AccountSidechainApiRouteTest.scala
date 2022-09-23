@@ -6,7 +6,7 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
-import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentNodeView, LocallyGeneratedSecret}
+import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
 import com.horizen.SidechainTypes
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
@@ -26,7 +26,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.junit.JUnitRunner
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.core.settings.RESTApiSettings
+import sparkz.core.settings.RESTApiSettings
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -90,7 +90,7 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
   mockedSidechainNodeViewHolder.setAutoPilot(new testkit.TestActor.AutoPilot {
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
-        case m: GetDataFromCurrentNodeView[
+        case m: GetDataFromCurrentSidechainNodeView[
           AccountTransaction[Proposition, Proof[Proposition]],
           AccountBlockHeader,
           AccountBlock,
@@ -101,7 +101,7 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
           AccountNodeView,
           _] @unchecked =>
           m match {
-            case GetDataFromCurrentNodeView(f) =>
+            case GetDataFromCurrentSidechainNodeView(f) =>
               if (sidechainApiMockConfiguration.getShould_nodeViewHolder_GetDataFromCurrentNodeView_reply()) {
                 sender ! f(utilMocks.getAccountNodeView(sidechainApiMockConfiguration))
               }

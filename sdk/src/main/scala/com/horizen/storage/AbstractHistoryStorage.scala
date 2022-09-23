@@ -5,19 +5,20 @@ import com.horizen.chain.{ActiveChain, FeePaymentsInfo, FeePaymentsInfoSerialize
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.NetworkParams
 import com.horizen.utils.ByteArrayWrapper
-import scorex.core.consensus.ModifierSemanticValidity
-import scorex.core.serialization.ScorexSerializer
+import sparkz.core.consensus.ModifierSemanticValidity
 import com.horizen.transaction.Transaction
+import com.horizen.utils.Utils.nextVersion
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.java8.OptionConverters._
-import scala.util.{Failure, Random, Success, Try}
+import scala.util.{Failure, Success, Try}
 import com.horizen.utils._
 
 import java.util.{ArrayList => JArrayList, List => JList}
 import com.horizen.utils.{Pair => JPair}
+import sparkz.core.serialization.SparkzSerializer
 
 trait SidechainBlockInfoProvider {
   def blockInfoById(blockId: ModifierId): SidechainBlockInfo
@@ -26,10 +27,12 @@ trait SidechainBlockInfoProvider {
 class AbstractHistoryStorage[PM <: SidechainBlockBase[_ <: Transaction, _ <: SidechainBlockHeaderBase], S <: AbstractHistoryStorage[PM, S]]
   (
     storage: Storage,
-    blockSerializer: ScorexSerializer[PM],
+    blockSerializer: SparkzSerializer[PM],
     params: NetworkParams
   )
-  extends SidechainBlockInfoProvider with ScorexLogging {
+  extends SidechainBlockInfoProvider
+    with SidechainStorageInfo
+    with ScorexLogging {
   this: S =>
   // Version - RandomBytes(32)
 
@@ -68,12 +71,6 @@ class AbstractHistoryStorage[PM <: SidechainBlockBase[_ <: Transaction, _ <: Sid
   private def blockInfoKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"blockInfo$blockId"))
 
   private def feePaymentsInfoKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"feePaymentsInfo$blockId"))
-
-  private def nextVersion: Array[Byte] = {
-    val version = new Array[Byte](32)
-    Random.nextBytes(version)
-    version
-  }
 
   def height: Int = activeChain.height
 
@@ -308,4 +305,8 @@ class AbstractHistoryStorage[PM <: SidechainBlockBase[_ <: Transaction, _ <: Sid
   }
 
   def isEmpty: Boolean = storage.isEmpty
+
+  override def lastVersionId : Option[ByteArrayWrapper] = {
+    storage.lastVersionID().asScala
+  }
 }

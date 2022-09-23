@@ -27,11 +27,11 @@ import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.transaction._
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{BlockUtils, BytesUtils, Pair}
-import scorex.core.api.http.ApiRoute
-import scorex.core.serialization.ScorexSerializer
-import scorex.core.settings.ScorexSettings
-import scorex.core.transaction.Transaction
-import scorex.core.{ModifierTypeId, NodeViewModifier}
+import sparkz.core.api.http.ApiRoute
+import sparkz.core.serialization.SparkzSerializer
+import sparkz.core.settings.SparkzSettings
+import sparkz.core.transaction.Transaction
+import sparkz.core.{ModifierTypeId, NodeViewModifier}
 
 import java.io.File
 import java.lang.{Byte => JByte}
@@ -64,7 +64,7 @@ class AccountSidechainApp @Inject()
   override type PMOD = AccountBlock
   override type NVHT = AccountSidechainNodeViewHolder
 
-  override implicit lazy val settings: ScorexSettings = sidechainSettings.scorexSettings
+  override implicit lazy val settings: SparkzSettings = sidechainSettings.sparkzSettings
 
   private val storageList = mutable.ListBuffer[Storage]()
 
@@ -82,7 +82,7 @@ class AccountSidechainApp @Inject()
     case Failure(exception) => throw new IllegalArgumentException("Genesis block specified in the configuration file has no Sidechain Creation info.", exception)
   }
 
-  val dataDirAbsolutePath: String = sidechainSettings.scorexSettings.dataDir.getAbsolutePath
+  val dataDirAbsolutePath: String = sidechainSettings.sparkzSettings.dataDir.getAbsolutePath
   val secretStore = new File(dataDirAbsolutePath + "/secret")
   val metaStateStore = new File(dataDirAbsolutePath + "/state")
   val historyStore = new File(dataDirAbsolutePath + "/history")
@@ -129,7 +129,7 @@ class AccountSidechainApp @Inject()
     genesisBlock
     ) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
-  def modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =
+  def modifierSerializers: Map[ModifierTypeId, SparkzSerializer[_ <: NodeViewModifier]] =
     Map(SidechainBlockBase.ModifierTypeId -> new AccountBlockSerializer(sidechainAccountTransactionsCompanion),
       Transaction.ModifierTypeId -> sidechainAccountTransactionsCompanion)
 
@@ -147,7 +147,7 @@ class AccountSidechainApp @Inject()
 
   // Init Certificate Submitter
   val certificateSubmitterRef: ActorRef = AccountCertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
-  val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.scorexSettings.network)
+  val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.sparkzSettings.network)
 
   // Init API
   var rejectedApiRoutes : Seq[SidechainRejectionApiRoute] = Seq[SidechainRejectionApiRoute]()
@@ -163,7 +163,7 @@ class AccountSidechainApp @Inject()
       AccountBlockHeader,PMOD,NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef),
     SidechainBlockApiRoute[TX,
       AccountBlockHeader,PMOD,NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
-    SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi),
+    SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params),
     AccountTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainAccountTransactionsCompanion, params),
     // TODO there can be only one of them since both has the 'wallet' tag in the path. Fix this. 
     //SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
@@ -187,4 +187,7 @@ class AccountSidechainApp @Inject()
   }
 
   actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
+
+  override def sidechainStopAll(fromEndpoint: Boolean): Unit = ???
+
 }

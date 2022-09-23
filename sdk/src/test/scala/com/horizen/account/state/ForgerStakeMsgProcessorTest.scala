@@ -19,7 +19,7 @@ import org.scalatestplus.mockito._
 import org.web3j.abi.datatypes.Type
 import org.web3j.abi.{FunctionReturnDecoder, TypeReference}
 import org.web3j.crypto.{ECKeyPair, Keys, Sign}
-import scorex.core.bytesToVersion
+import sparkz.core.bytesToVersion
 import scorex.crypto.hash.Keccak256
 
 import java.math.BigInteger

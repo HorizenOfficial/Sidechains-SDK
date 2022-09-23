@@ -1,19 +1,17 @@
 package com.horizen.account.state
 
-import com.horizen.account.FeeUtils
+import com.horizen.account.utils.FeeUtils
 import com.horizen.account.events.AddWithdrawalRequest
-import com.horizen.account.utils.{Account, ZenWeiConverter}
+import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.evm.interop.EvmLog
-import com.horizen.utils.{BytesUtils, ClosableResourceHandler, WithdrawalEpochInfo}
+import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
 import org.junit.Assert._
 import org.junit._
-import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
 import org.web3j.abi.datatypes.Type
 import org.web3j.abi.{FunctionReturnDecoder, TypeReference}
 import scorex.crypto.hash.Keccak256
-
 import java.math.BigInteger
 import java.util
 

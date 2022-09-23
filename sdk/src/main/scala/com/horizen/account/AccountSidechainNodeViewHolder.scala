@@ -16,11 +16,11 @@ import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
 import com.horizen.proof.Proof
 import com.horizen.proposition.Proposition
-import com.horizen.storage.SidechainSecretStorage
+import com.horizen.storage.{SidechainSecretStorage, SidechainStorageInfo}
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
-import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ModifierId
+import sparkz.core.utils.NetworkTimeProvider
 
 import scala.util.Success
 
@@ -106,7 +106,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   }
 
   override protected def getCurrentSidechainNodeViewInfo: Receive = {
-    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView[
+    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView[
       AccountTransaction[Proposition, Proof[Proposition]],
       AccountBlockHeader,
       AccountBlock,
@@ -117,7 +117,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       AccountNodeView,
       _] @unchecked =>
       msg match {
-        case AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView(f) => try {
+        case AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView(f) => try {
           val l: AccountNodeView = new AccountNodeView(history(), minimalState(), vault(), memoryPool())
           sender() ! f(l)
         }
@@ -175,6 +175,14 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       }
   }
 
+  // TODO
+  override val listOfStorageInfo: Seq[SidechainStorageInfo] = Seq()
+
+  override def dumpStorages: Unit = ???
+
+  override def getStorageVersions: Map[String, String] = ???
+
+  override def processLocallyGeneratedTransaction: Receive = ???
 }
 
 object AccountNodeViewHolderRef {

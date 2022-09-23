@@ -1,11 +1,7 @@
 package com.horizen.account.receipt
 
 import com.horizen.evm.interop.EvmLog
-import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
-import scorex.core.serialization.ScorexSerializer
-import scorex.util.serialization.{Reader, Writer}
-
 import java.util
 
 case class EthereumLog(

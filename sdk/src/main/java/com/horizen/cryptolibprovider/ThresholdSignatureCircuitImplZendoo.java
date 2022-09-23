@@ -75,7 +75,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
                                             long btrFee,
                                             long ftMinAmount,
                                             Optional<byte[]> utxoMerkleTreeRoot) {
-        
+
         BackwardTransfer[] backwardTransfers = bt.toArray(BackwardTransfer[]::new);
 
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);

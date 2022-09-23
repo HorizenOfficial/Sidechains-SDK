@@ -12,7 +12,7 @@ import org.junit._
 import org.mockito._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
-import scorex.core.VersionTag
+import sparkz.core.VersionTag
 import scorex.crypto.hash.Blake2b256
 
 import java.lang.{Byte => JByte}

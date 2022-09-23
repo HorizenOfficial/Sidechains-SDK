@@ -2,31 +2,25 @@ package com.horizen.network
 
 import akka.actor.ActorRef
 import com.horizen._
-import com.horizen.block.{SidechainBlock, SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
 import com.horizen.validation.{BlockInFutureException, InconsistentDataException}
-import scorex.core.consensus.{HistoryReader, SyncInfo}
-import scorex.core.network.NodeViewSynchronizer
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SyntacticallyFailedModification
-import scorex.core.network.message.SyncInfoMessageSpec
-import scorex.core.serialization.ScorexSerializer
-import scorex.core.settings.NetworkSettings
-import scorex.core.transaction.MempoolReader
-import scorex.core.transaction.state.MinimalState
-import scorex.core.utils.NetworkTimeProvider
-import scorex.core.{ModifierTypeId, NodeViewModifier}
+import sparkz.core.network.NodeViewSynchronizer
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SyntacticallyFailedModification
+import sparkz.core.serialization.SparkzSerializer
+import sparkz.core.settings.NetworkSettings
+import sparkz.core.transaction.MempoolReader
+import sparkz.core.utils.NetworkTimeProvider
+import sparkz.core.{ModifierTypeId, NodeViewModifier}
 
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
 abstract class AbstractSidechainNodeViewSynchronizer[
   TX <: Transaction,
-  //SI <: SyncInfo,
-  //SIS <: SyncInfoMessageSpec[SI],
   H <: SidechainBlockHeaderBase,
   PMOD <: SidechainBlockBase[TX, H],
-  //HR <: HistoryReader[PMOD, SI],
   MR <: MempoolReader[TX]  : ClassTag,
   HSTOR <: AbstractHistoryStorage[PMOD, HSTOR],
   HIS <: AbstractHistory[TX, H, PMOD, HSTOR, HIS] : ClassTag]
@@ -36,11 +30,10 @@ abstract class AbstractSidechainNodeViewSynchronizer[
   syncInfoSpec: SidechainSyncInfoMessageSpec.type,
   networkSettings: NetworkSettings,
   timeProvider: NetworkTimeProvider,
-  modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]])(implicit ec: ExecutionContext)
+  modifierSerializers: Map[ModifierTypeId, SparkzSerializer[_ <: NodeViewModifier]])(implicit ec: ExecutionContext)
   extends NodeViewSynchronizer[TX, SidechainSyncInfo, SidechainSyncInfoMessageSpec.type,
     PMOD, HIS, MR](networkControllerRef, viewHolderRef, syncInfoSpec, networkSettings, timeProvider, modifierSerializers)
 {
-  override protected val deliveryTracker = new SidechainDeliveryTracker(context.system, deliveryTimeout, maxDeliveryChecks, self)
 
   private val onSyntacticallyFailedModifier: Receive = {
     case SyntacticallyFailedModification(mod, exception) =>

@@ -6,7 +6,7 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper, SerializationFeature}
-import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentNodeView, GetStorageVersions, LocallyGeneratedSecret}
+import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, GetStorageVersions, LocallyGeneratedSecret}
 import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSidechainBlocks, SubmitSidechainBlock}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
@@ -135,7 +135,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   mockedSidechainNodeViewHolder.setAutoPilot(new testkit.TestActor.AutoPilot {
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
-        case m: GetDataFromCurrentNodeView[
+        case m: GetDataFromCurrentSidechainNodeView[
           BoxTransaction[Proposition, Box[Proposition]],
           SidechainBlockHeader,
           SidechainBlock,
@@ -146,7 +146,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
           SidechainNodeView,
           _] @unchecked=>
           m match {
-            case GetDataFromCurrentNodeView(f) =>
+            case GetDataFromCurrentSidechainNodeView(f) =>
               if (sidechainApiMockConfiguration.getShould_nodeViewHolder_GetDataFromCurrentNodeView_reply()) {
                 sender ! f(utilMocks.getSidechainNodeView(sidechainApiMockConfiguration))
               }

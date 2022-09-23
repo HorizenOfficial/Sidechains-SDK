@@ -3,7 +3,7 @@ package com.horizen.account.block
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Longs}
-import com.horizen.account.FeeUtils
+import com.horizen.account.utils.FeeUtils
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
 import com.horizen.block.SidechainBlockHeaderBase
 import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
@@ -13,9 +13,9 @@ import com.horizen.serialization.{MerklePathJsonSerializer, ScorexModifierIdSeri
 import com.horizen.utils.{MerklePath, MerklePathSerializer, MerkleTree}
 import com.horizen.validation.InvalidSidechainBlockHeaderException
 import org.bouncycastle.pqc.math.linearalgebra.ByteUtils
-import scorex.core.block.Block
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
-import scorex.core.{NodeViewModifier, bytesToId, idToBytes}
+import sparkz.core.block.Block
+import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
+import sparkz.core.{NodeViewModifier, bytesToId, idToBytes}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ModifierId
 import scorex.util.serialization.{Reader, Writer}
@@ -48,7 +48,7 @@ case class AccountBlockHeader(
 
   override type M = AccountBlockHeader
 
-  override def serializer: ScorexSerializer[AccountBlockHeader] = AccountBlockHeaderSerializer
+  override def serializer: SparkzSerializer[AccountBlockHeader] = AccountBlockHeaderSerializer
 
   @JsonSerialize(using = classOf[ScorexModifierIdSerializer])
   override lazy val id: ModifierId = bytesToId(Blake2b256(Bytes.concat(messageToSign, signature.bytes)))
@@ -114,7 +114,7 @@ case class AccountBlockHeader(
 }
 
 
-object AccountBlockHeaderSerializer extends ScorexSerializer[AccountBlockHeader] {
+object AccountBlockHeaderSerializer extends SparkzSerializer[AccountBlockHeader] {
   override def serialize(obj: AccountBlockHeader, w: Writer): Unit = {
     w.put(obj.version)
 

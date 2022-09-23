@@ -15,6 +15,7 @@ import com.horizen.certnative.BackwardTransfer
 import com.horizen.params.NetworkParams
 import com.horizen.websocket.client.MainchainNodeChannel
 
+import java.util.Optional
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 
@@ -48,8 +49,7 @@ class AccountCertificateSubmitter(settings: SidechainSettings,
     super.postStop()
   }
 
-  override def getUtxoMerkleTreeRoot(state: AccountState, referencedEpoch: Int): Array[Byte] =
-    new Array[Byte](0)
+  override def getUtxoMerkleTreeRoot(referencedEpoch: Int, state: AccountState): Optional[Array[Byte]] = Optional.empty()
 
   override def getWithdrawalRequests(state: AccountState, referencedEpochNumber: Int): Seq[BackwardTransfer] =
     state.withdrawalRequests(referencedEpochNumber).map(request => new BackwardTransfer(request.proposition.bytes, request.valueInZennies))

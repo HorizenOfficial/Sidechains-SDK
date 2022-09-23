@@ -5,7 +5,7 @@ import com.horizen.account.block.AccountBlock
 import com.horizen.node.NodeWalletBase
 import com.horizen.storage.SidechainSecretStorage
 import com.horizen.{AbstractWallet, SidechainTypes}
-import scorex.core.VersionTag
+import sparkz.core.VersionTag
 import scorex.util.ScorexLogging
 
 import scala.util.Try

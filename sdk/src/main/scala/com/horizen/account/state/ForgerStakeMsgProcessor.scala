@@ -17,7 +17,7 @@ import org.web3j.abi.TypeReference
 import org.web3j.abi.datatypes.generated.{Bytes1, Bytes32, Uint256}
 import org.web3j.abi.datatypes.{Address, StaticStruct, Type}
 import org.web3j.utils.Numeric
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
+import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.crypto.hash.{Blake2b256, Keccak256}
 import scorex.util.serialization.{Reader, Writer}
 
@@ -387,7 +387,7 @@ case class AccountForgingStakeInfo(
 
   override type M = AccountForgingStakeInfo
 
-  override def serializer: ScorexSerializer[AccountForgingStakeInfo] = AccountForgingStakeInfoSerializer
+  override def serializer: SparkzSerializer[AccountForgingStakeInfo] = AccountForgingStakeInfoSerializer
 
   override def toString: String = "%s(stakeId: %s, forgerStakeData: %s)"
     .format(this.getClass.toString, BytesUtils.toHexString(stakeId), forgerStakeData)
@@ -430,7 +430,7 @@ object AccountForgingStakeInfoListEncoder extends ABIListEncoder[AccountForgingS
   override def getAbiClass: Class[StaticStruct] = classOf[StaticStruct]
 }
 
-object AccountForgingStakeInfoSerializer extends ScorexSerializer[AccountForgingStakeInfo] {
+object AccountForgingStakeInfoSerializer extends SparkzSerializer[AccountForgingStakeInfo] {
 
   override def serialize(s: AccountForgingStakeInfo, w: Writer): Unit = {
     w.putBytes(s.stakeId)
@@ -469,11 +469,11 @@ case class ForgerPublicKeys(
     )
   }
 
-  override def serializer: ScorexSerializer[ForgerPublicKeys] = ForgerPublicKeysSerializer
+  override def serializer: SparkzSerializer[ForgerPublicKeys] = ForgerPublicKeysSerializer
 
 }
 
-object ForgerPublicKeysSerializer extends ScorexSerializer[ForgerPublicKeys] {
+object ForgerPublicKeysSerializer extends SparkzSerializer[ForgerPublicKeys] {
 
   override def serialize(s: ForgerPublicKeys, w: Writer): Unit = {
     PublicKey25519PropositionSerializer.getSerializer.serialize(s.blockSignPublicKey, w)
@@ -582,13 +582,13 @@ case class ForgerStakeData(
 
   override type M = ForgerStakeData
 
-  override def serializer: ScorexSerializer[ForgerStakeData] = ForgerStakeDataSerializer
+  override def serializer: SparkzSerializer[ForgerStakeData] = ForgerStakeDataSerializer
 
   override def toString: String = "%s(forgerPubKeys: %s, ownerAddress: %s, stakedAmount: %s)"
     .format(this.getClass.toString, forgerPublicKeys, ownerPublicKey, stakedAmount)
 }
 
-object ForgerStakeDataSerializer extends ScorexSerializer[ForgerStakeData] {
+object ForgerStakeDataSerializer extends SparkzSerializer[ForgerStakeData] {
   override def serialize(s: ForgerStakeData, w: Writer): Unit = {
     ForgerPublicKeysSerializer.serialize(s.forgerPublicKeys, w)
     AddressPropositionSerializer.getSerializer.serialize(s.ownerPublicKey, w)
@@ -664,14 +664,14 @@ case class LinkedListNode(dataKey: Array[Byte], previousNodeKey: Array[Byte], ne
 
   override type M = LinkedListNode
 
-  override def serializer: ScorexSerializer[LinkedListNode] = LinkedListNodeSerializer
+  override def serializer: SparkzSerializer[LinkedListNode] = LinkedListNodeSerializer
 
   override def toString: String = "%s(dataKey: %s, previousNodeKey: %s, nextNodeKey: %s)"
     .format(this.getClass.toString, BytesUtils.toHexString(dataKey),
       BytesUtils.toHexString(previousNodeKey), BytesUtils.toHexString(nextNodeKey))
 }
 
-object LinkedListNodeSerializer extends ScorexSerializer[LinkedListNode] {
+object LinkedListNodeSerializer extends SparkzSerializer[LinkedListNode] {
   override def serialize(s: LinkedListNode, w: Writer): Unit = {
     w.putBytes(s.dataKey)
     w.putBytes(s.previousNodeKey)

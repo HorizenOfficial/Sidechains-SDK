@@ -6,8 +6,8 @@ import com.horizen.api.http._
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.certificatesubmitter.network.{CertificateSignaturesSpec, GetCertificateSignaturesSpec}
 import com.horizen.companion._
-import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.forge. MainchainSynchronizer
+import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
+import com.horizen.forge.MainchainSynchronizer
 import com.horizen.params._
 import com.horizen.proposition._
 import com.horizen.secret.SecretSerializer
@@ -17,14 +17,15 @@ import com.horizen.transaction._
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{BytesUtils, Pair}
 import com.horizen.websocket.client._
-import scorex.core.app.Application
-import scorex.core.network.PeerFeature
-import scorex.core.network.message.MessageSpec
-import scorex.core.settings.ScorexSettings
+import sparkz.core.app.Application
+import sparkz.core.network.PeerFeature
+import sparkz.core.network.message.MessageSpec
+import sparkz.core.settings.SparkzSettings
 import scorex.util.ScorexLogging
 
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.{HashMap => JHashMap, List => JList}
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -44,7 +45,7 @@ abstract class AbstractSidechainApp
   override type TX <: Transaction
   override type PMOD <: SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase]
 
-  override implicit lazy val settings: ScorexSettings = sidechainSettings.scorexSettings
+  override implicit lazy val settings: SparkzSettings = sidechainSettings.sparkzSettings
 
   private val storageList = mutable.ListBuffer[Storage]()
 
@@ -55,6 +56,9 @@ abstract class AbstractSidechainApp
   override implicit def rejectionHandler: RejectionHandler = SidechainApiRejectionHandler.rejectionHandler
 
   override protected lazy val features: Seq[PeerFeature] = Seq()
+
+  val stopAllInProgress : AtomicBoolean = new AtomicBoolean(false)
+  def sidechainStopAll(fromEndpoint: Boolean = false): Unit
 
   override protected lazy val additionalMessageSpecs: Seq[MessageSpec[_]] = Seq(
     SidechainSyncInfoMessageSpec,
@@ -166,8 +170,9 @@ abstract class AbstractSidechainApp
   // Generate snark keys only if were not present before.
   if (!Files.exists(Paths.get(params.certVerificationKeyFilePath)) || !Files.exists(Paths.get(params.certProvingKeyFilePath))) {
     log.info("Generating Cert snark keys. It may take some time.")
+    val expectedNumOfCustomFields = if (params.isCSWEnabled) CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_ENABLED_CSW else CommonCircuit.CUSTOM_FIELDS_NUMBER_WITH_DISABLED_CSW
     if (!CryptoLibProvider.sigProofThresholdCircuitFunctions.generateCoboundaryMarlinSnarkKeys(
-        sidechainSettings.withdrawalEpochCertificateSettings.maxPks, params.certProvingKeyFilePath, params.certVerificationKeyFilePath)) {
+        sidechainSettings.withdrawalEpochCertificateSettings.maxPks, params.certProvingKeyFilePath, params.certVerificationKeyFilePath, expectedNumOfCustomFields)) {
       throw new IllegalArgumentException("Can't generate Cert Coboundary Marlin ProvingSystem snark keys.")
     }
   }

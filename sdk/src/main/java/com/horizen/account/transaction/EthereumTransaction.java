@@ -178,6 +178,11 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     @Override
+    public long size() {
+        return serializer().toBytes(this).length;
+    }
+
+    @Override
     public BigInteger getNonce() {
         return this.transaction.getNonce();
     }

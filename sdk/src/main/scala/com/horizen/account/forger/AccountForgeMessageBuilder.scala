@@ -1,8 +1,8 @@
 package com.horizen.account.forger
 
 import com.horizen.SidechainTypes
-import com.horizen.account.FeeUtils
-import com.horizen.account.FeeUtils.calculateBaseFee
+import com.horizen.account.utils.FeeUtils
+import com.horizen.account.utils.FeeUtils.calculateBaseFee
 import com.horizen.account.block.AccountBlock.calculateReceiptRoot
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
@@ -16,25 +16,16 @@ import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.utils.Account
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block._
+import com.horizen.chain.MainchainHeaderHash
 import com.horizen.consensus._
 import com.horizen.forge.{AbstractForgeMessageBuilder, MainchainSynchronizer}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.transaction.TransactionSerializer
-import com.horizen.utils.{
-  ByteArrayWrapper,
-  ClosableResourceHandler,
-  DynamicTypedSerializer,
-  ForgingStakeMerklePathInfo,
-  ListSerializer,
-  MerklePath,
-  MerkleTree,
-  TimeToEpochUtils,
-  WithdrawalEpochUtils
-}
-import scorex.core.NodeViewModifier
-import scorex.core.block.Block.{BlockId, Timestamp}
+import com.horizen.utils.{ByteArrayWrapper, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochUtils}
+import sparkz.core.NodeViewModifier
+import sparkz.core.block.Block.{BlockId, Timestamp}
 import scorex.util.{ModifierId, ScorexLogging}
 
 import java.math.BigInteger
@@ -85,6 +76,7 @@ class AccountForgeMessageBuilder(
       vrfProof: VrfProof,
       forgingStakeInfoMerklePath: MerklePath,
       companion: DynamicTypedSerializer[SidechainTypes#SCAT, TransactionSerializer[SidechainTypes#SCAT]],
+      feePaymentsHash: Array[Byte],
       inputBlockSize: Int,
       signatureOption: Option[Signature25519]
   ): Try[SidechainBlockBase[SidechainTypes#SCAT, AccountBlockHeader]] = {
@@ -199,7 +191,7 @@ class AccountForgeMessageBuilder(
     header.bytes.length
   }
 
-  override def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int): Seq[SidechainTypes#SCAT] = {
+  override def collectTransactionsFromMemPool(nodeView: View, blockSize: Int, mainchainBlockReferenceDataToRetrieve: Seq[MainchainHeaderHash], timestamp: Long): Seq[SidechainTypes#SCAT] = {
     // no checks of the block size here, these txes are the candidates and their inclusion
     // will be attempted by forger
 
@@ -223,7 +215,7 @@ class AccountForgeMessageBuilder(
     val parentId = branchPointInfo.branchPointId
     val lastBlockId = history.getLastBlockIdOfPrePreviousEpochs(forgedBlockTimestamp, parentId)
     val lastBlock = history.getBlockById(lastBlockId)
-    lastBlock.get().header.stateRoot
+    lastBlock.get.header.stateRoot
   }
 
   override def getForgingStakeMerklePathInfo(
@@ -320,4 +312,8 @@ class AccountForgeMessageBuilder(
     // return successfully applied transactions including their receipts
     (appliedTransactions, receipts)
   }
+
+  override def getFeePaymentHash(nodeView: View, block: SidechainBlockBase[SidechainTypes#SCAT, _ <: SidechainBlockHeaderBase]): Array[Byte] = ???
+
+  override def getZeroFeePaymentsHash(): Array[Byte] = ???
 }

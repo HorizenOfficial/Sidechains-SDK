@@ -13,8 +13,8 @@ import scala.collection.JavaConverters._
 import scala.language.postfixOps
 import scala.util.Try
 
-trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: scorex.core.PersistentNodeViewModifier, W <: Wallet[S, P, TX, PMOD, W]]
-  extends scorex.core.transaction.wallet.Vault[TX, PMOD, W] {
+trait Wallet[S <: Secret, P <: Proposition, TX <: Transaction, PMOD <: sparkz.core.PersistentNodeViewModifier, W <: Wallet[S, P, TX, PMOD, W]]
+  extends sparkz.core.transaction.wallet.Vault[TX, PMOD, W] {
   self: W =>
 
   def addSecret(secret: S): Try[W]

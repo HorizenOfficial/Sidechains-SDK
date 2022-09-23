@@ -7,7 +7,7 @@ import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificate
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.storage.Storage
 import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
-import scorex.core._
+import sparkz.core._
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
 

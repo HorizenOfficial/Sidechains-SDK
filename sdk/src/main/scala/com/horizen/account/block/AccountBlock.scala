@@ -13,9 +13,10 @@ import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
 import com.horizen.utils.{BytesUtils, MerklePath}
 import com.horizen.validation.InconsistentSidechainBlockDataException
-import com.horizen.{ScorexEncoding, SidechainTypes, account}
-import scorex.core.block.Block
-import scorex.util.{ScorexLogging}
+import com.horizen.{SidechainTypes, account}
+import sparkz.core.block.Block
+import scorex.util.ScorexLogging
+import sparkz.core.utils.SparkzEncoding
 
 import java.math.BigInteger
 import scala.util.Try
@@ -71,7 +72,7 @@ class AccountBlock(override val header: AccountBlockHeader,
 }
 
 
-object AccountBlock extends ScorexEncoding {
+object AccountBlock extends SparkzEncoding {
 
   val ACCOUNT_BLOCK_VERSION: Block.Version = 2: Byte
 

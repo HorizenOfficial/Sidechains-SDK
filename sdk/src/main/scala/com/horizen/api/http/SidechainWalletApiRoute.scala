@@ -10,7 +10,7 @@ import com.horizen.api.http.SidechainWalletRestScheme._
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.box.Box
 import com.horizen.node._
-import com.horizen.proposition.{Proposition, VrfPublicKey}
+import com.horizen.proposition.Proposition
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import com.horizen.SidechainTypes
@@ -248,15 +248,6 @@ object SidechainWalletRestScheme {
   private[api] case class RespCreatePrivateKey(proposition: Proposition) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespCreateVrfSecret(proposition: VrfPublicKey) extends SuccessResponse
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqAllPropositions(proptype: Option[String])
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespAllPublicKeys(propositions: Seq[Proposition]) extends SuccessResponse
-
-  @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqImportSecret(privKey: String) {
     require(privKey.nonEmpty, "Private key cannot be empty!")
   }
@@ -282,10 +273,6 @@ object SidechainWalletRestScheme {
 }
 
 object SidechainWalletErrorResponse {
-
-  case class ErrorSecretNotAdded(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
-    override val code: String = "0301"
-  }
 
   case class ErrorSecretAlreadyPresent(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0302"

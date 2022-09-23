@@ -8,7 +8,7 @@ import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.consensus._
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
-import scorex.util.{ModifierId, ScorexLogging}
+import scorex.util.{ModifierId, ScorexEncoding, ScorexLogging}
 
 import scala.util.Try
 
@@ -22,7 +22,7 @@ extends com.horizen.AbstractHistory[SidechainTypes#SCAT, AccountBlockHeader, Acc
     storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
   with NetworkParamsUtils
   with ConsensusDataProvider
-  with scorex.core.utils.ScorexEncoding
+  with ScorexEncoding
   with NodeAccountHistory
   with ScorexLogging
 {
@@ -88,12 +88,13 @@ object AccountHistory
                                             genesisBlock: AccountBlock,
                                             semanticBlockValidators: Seq[SemanticBlockValidator[AccountBlock]],
                                             historyBlockValidators: Seq[HistoryBlockValidator[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock, AccountHistoryStorage, AccountHistory]],
-                                            stakeEpochInfo: StakeConsensusEpochInfo) : Try[AccountHistory] = Try {
+                                            stakeEpochInfo: StakeConsensusEpochInfo) : Try[AccountHistory] = {
 
     if (historyStorage.isEmpty) {
       val nonceEpochInfo = ConsensusDataProvider.calculateNonceForGenesisBlock(params)
       new AccountHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
-        .append(genesisBlock).map(_._1).get.reportModifierIsValid(genesisBlock).applyFullConsensusInfo(genesisBlock.id, FullConsensusEpochInfo(stakeEpochInfo, nonceEpochInfo))
+        .append(genesisBlock).map(_._1).get.reportModifierIsValid(genesisBlock)
+      .map(_.applyFullConsensusInfo(genesisBlock.id, FullConsensusEpochInfo(stakeEpochInfo, nonceEpochInfo)))
     }
     else
       throw new RuntimeException("History storage is not empty!")

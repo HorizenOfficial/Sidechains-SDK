@@ -11,12 +11,11 @@ import com.horizen.storage.leveldb.Algos.encoder
 import com.horizen.transaction.Transaction
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
-import scorex.core.NodeViewModifier
-import scorex.core.consensus.History._
-import scorex.core.consensus.{History, ModifierSemanticValidity}
-import scorex.core.validation.RecoverableModifierError
+import sparkz.core.NodeViewModifier
+import sparkz.core.consensus.History._
+import sparkz.core.consensus.{History, ModifierSemanticValidity}
+import sparkz.core.validation.RecoverableModifierError
 import scorex.util.{ModifierId, ScorexLogging, idToBytes}
-
 import java.util.Optional
 import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters.RichOptionForJava8
@@ -36,7 +35,7 @@ abstract class AbstractHistory[
     val semanticBlockValidators: Seq[SemanticBlockValidator[PM]],
     val historyBlockValidators: Seq[HistoryBlockValidator[TX, H, PM, HSTOR, HT]]
   )
-    extends scorex.core.consensus.History[PM, SidechainSyncInfo, HT]
+    extends sparkz.core.consensus.History[PM, SidechainSyncInfo, HT]
       with NetworkParamsUtils
       with ConsensusDataProvider
       with NodeHistoryBase[TX, H, PM]
@@ -56,6 +55,8 @@ abstract class AbstractHistory[
 
   def bestBlockInfo: SidechainBlockInfo = storage.bestBlockInfo
 
+  def isInActiveChain(blockId: String): Boolean = storage.isInActiveChain(ModifierId(blockId))
+
   override def append(block: PM): Try[(HT, ProgressInfo[PM])] = Try {
     for(validator <- semanticBlockValidators)
       validator.validate(block).get
@@ -72,7 +73,7 @@ abstract class AbstractHistory[
       if(isGenesisBlock(block.id)) {
         (
           storage.update(block, AbstractHistory.calculateGenesisBlockInfo(block, params)),
-          ProgressInfo(None, Seq(), Seq(block), Seq())
+          ProgressInfo(None, Seq(), Seq(block))
         )
       }
       else {
@@ -82,7 +83,7 @@ abstract class AbstractHistory[
         if (block.parentId.equals(bestBlockId)) {
           (
             storage.update(block, blockInfo),
-            ProgressInfo(None, Seq(), Seq(block), Seq())
+            ProgressInfo(None, Seq(), Seq(block))
           )
         } else {
           // Check if retrieved block is the best one, but from another chain
@@ -98,7 +99,7 @@ abstract class AbstractHistory[
                 (
                   storage.update(block, blockInfo),
                   // TO DO: we should somehow prevent growing of such chain (penalize the peer?)
-                  ProgressInfo[PM](None, Seq(), Seq(), Seq())
+                  ProgressInfo[PM](None, Seq(), Seq())
                 )
 
             }
@@ -106,7 +107,7 @@ abstract class AbstractHistory[
             // We retrieved block from another chain that is not the best one
             (
               storage.update(block, blockInfo),
-              ProgressInfo[PM](None, Seq(), Seq(), Seq())
+              ProgressInfo[PM](None, Seq(), Seq())
             )
           }
         }
@@ -175,10 +176,10 @@ abstract class AbstractHistory[
       require(toRemove.nonEmpty)
       require(toApply.nonEmpty)
 
-      ProgressInfo[PM](rollbackPoint, toRemove, toApply, Seq())
+      ProgressInfo[PM](rollbackPoint, toRemove, toApply)
     } else {
       //log.info(s"Orphaned block $block from invalid suffix")
-      ProgressInfo[PM](None, Seq(), Seq(), Seq())
+      ProgressInfo[PM](None, Seq(), Seq())
     }
   }
 
@@ -204,7 +205,7 @@ abstract class AbstractHistory[
   // Go back though chain and get block ids until condition 'until' or reaching the limit
   // None if parent block is not in chain
   // Note: work faster for active chain back (looks inside memory) and slower for fork chain (looks inside disk)
-  private def chainBack(blockId: ModifierId,
+  def chainBack(blockId: ModifierId,
                         until: ModifierId => Boolean,
                         limit: Int): Option[Seq[ModifierId]] = { // to do
     var acc: Seq[ModifierId] = Seq(blockId)
@@ -223,13 +224,13 @@ abstract class AbstractHistory[
     Some(acc)
   }
 
-  def reportModifierIsValid(block: PM): HT = {
-    var newStorage = storage.updateSemanticValidity(block, ModifierSemanticValidity.Valid).get
-    newStorage = newStorage.setAsBestBlock(block, storage.blockInfoById(block.id)).get
-    makeNewHistory(newStorage, consensusDataStorage)
+  override def reportModifierIsValid(block: PM): Try[HT] = {
+    storage.updateSemanticValidity(block, ModifierSemanticValidity.Valid)
+      .flatMap(_.setAsBestBlock(block, storage.blockInfoById(block.id)))
+      .map(newStorage => makeNewHistory(newStorage, consensusDataStorage))
   }
 
-  override def reportModifierIsInvalid(modifier: PM, progressInfo: History.ProgressInfo[PM]): (HT, History.ProgressInfo[PM]) = { // to do
+  override def reportModifierIsInvalid(modifier: PM, progressInfo: History.ProgressInfo[PM]): Try[(HT, History.ProgressInfo[PM])] =  Try { // to do
     val newHistory: HT = Try {
       val newStorage = storage.updateSemanticValidity(modifier, ModifierSemanticValidity.Invalid).get
       makeNewHistory(newStorage, consensusDataStorage)
@@ -246,7 +247,7 @@ abstract class AbstractHistory[
     // Remove blocks, that were applied before current invalid one
     // Apply blocks, that were part of ActiveChain
     // skip blocks to Download, that are part of wrong chain we tried to apply.
-    val newProgressInfo = ProgressInfo(progressInfo.branchPoint, progressInfo.toApply.takeWhile(block => !block.id.equals(modifier.id)), progressInfo.toRemove, Seq())
+    val newProgressInfo = ProgressInfo(progressInfo.branchPoint, progressInfo.toApply.takeWhile(block => !block.id.equals(modifier.id)), progressInfo.toRemove)
     newHistory -> newProgressInfo
   }
 
@@ -376,6 +377,10 @@ abstract class AbstractHistory[
 
   override def getBlockById(blockId: String): Optional[PM] = {
     getStorageBlockById(ModifierId(blockId)).asJava
+  }
+
+  override def getBlockInfoById(blockId: String): Optional[SidechainBlockInfo] = {
+    getStorageBlockInfoById(ModifierId(blockId)).asJava
   }
 
   override def getLastBlockIds(count: Int): java.util.List[String] = {
@@ -523,6 +528,7 @@ abstract class AbstractHistory[
   }
 
   def getStorageBlockById(blockId: ModifierId): Option[PM] = storage.blockById(blockId)
+  def getStorageBlockInfoById(blockId: ModifierId): Option[SidechainBlockInfo] = storage.blockInfoOptionById(blockId)
 
   def modifierById(blockId: ModifierId): Option[PM] = getStorageBlockById(blockId)
 

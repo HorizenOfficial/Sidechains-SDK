@@ -1,17 +1,16 @@
 package com.horizen.account.state
 
-import com.horizen.account.FeeUtils
+import com.horizen.account.utils.FeeUtils
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.utils.Account
 import com.horizen.evm.utils.Hash
 import com.horizen.evm.{MemoryDatabase, StateDB}
-import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
+import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
 import org.junit.Assert.assertEquals
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.web3j.abi.datatypes.Type
 import org.web3j.abi.{EventEncoder, FunctionReturnDecoder, TypeReference}
-
 import java.math.BigInteger
 import scala.language.implicitConversions
 import scala.util.Random

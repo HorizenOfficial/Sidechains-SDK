@@ -240,7 +240,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   }
 
   override protected def getCurrentSidechainNodeViewInfo: Receive = {
-    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView[
+    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView[
       SidechainTypes#SCBT,
       SidechainBlockHeader,
       SidechainBlock,
@@ -251,7 +251,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       SidechainNodeView,
       _] @unchecked =>
       msg match {
-        case AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView(f) => try {
+        case AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView(f) => try {
           val l: SidechainNodeView = new SidechainNodeView(history(), minimalState(), vault(), memoryPool(), applicationState, applicationWallet)
           sender() ! f(l)
         }

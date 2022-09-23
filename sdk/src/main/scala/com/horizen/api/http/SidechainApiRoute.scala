@@ -43,7 +43,7 @@ trait SidechainApiRoute[
    */
   def applyOnNodeView[R](functionToBeApplied: NV => R): R = {
     try {
-      val res = (sidechainNodeViewHolderRef ? AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView(functionToBeApplied)).asInstanceOf[Future[R]]
+      val res = (sidechainNodeViewHolderRef ? AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView(functionToBeApplied)).asInstanceOf[Future[R]]
       val result = Await.result[R](res, settings.timeout)
       result
     }
@@ -66,7 +66,7 @@ trait SidechainApiRoute[
     def f(v: NV) = v
 
 
-    (sidechainNodeViewHolderRef ? AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView(f))
+    (sidechainNodeViewHolderRef ? AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView(f))
       .mapTo[NV]
   }
 

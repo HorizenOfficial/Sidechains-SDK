@@ -6,7 +6,7 @@ import com.horizen.block.{MainchainBlockReferenceData, WithdrawalEpochCertificat
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.transaction.Transaction
 import com.horizen.utils.{BlockFeeInfo, WithdrawalEpochInfo}
-import scorex.core.VersionTag
+import sparkz.core.VersionTag
 
 import scala.util.Try
 

@@ -4,12 +4,12 @@ import com.horizen.SidechainTypes
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.block.{AccountOmmerSerializer, MainchainBlockReferenceData, MainchainBlockReferenceDataSerializer, MainchainHeader, MainchainHeaderSerializer, Ommer, SidechainBlockBase}
 import com.horizen.utils.ListSerializer
-import scorex.core.serialization.ScorexSerializer
+import sparkz.core.serialization.SparkzSerializer
 import scorex.util.serialization.{Reader, Writer}
 
 import scala.collection.JavaConverters._
 
-class AccountBlockSerializer(companion: SidechainAccountTransactionsCompanion) extends ScorexSerializer[AccountBlock] with SidechainTypes {
+class AccountBlockSerializer(companion: SidechainAccountTransactionsCompanion) extends SparkzSerializer[AccountBlock] with SidechainTypes {
   require(companion != null, "SidechainAccountTransactionsCompanion must be NOT NULL.")
 
   private val mcBlocksDataSerializer: ListSerializer[MainchainBlockReferenceData] = new ListSerializer[MainchainBlockReferenceData](

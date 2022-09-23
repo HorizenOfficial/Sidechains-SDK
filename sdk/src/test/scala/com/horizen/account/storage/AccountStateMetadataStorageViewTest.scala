@@ -12,7 +12,7 @@ import org.junit.Assert._
 import org.junit._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.core._
+import sparkz.core._
 
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.io.Source

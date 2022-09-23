@@ -352,7 +352,7 @@ class SidechainApp @Inject()
       SidechainBlockHeader,PMOD,NodeHistory,NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView](settings.restApi, nodeViewHolderRef),
     SidechainBlockApiRoute[TX,
       SidechainBlockHeader,PMOD,NodeHistory,NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView](settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
-    SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, this, params),
+    SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params),
     SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
     SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef),
@@ -406,10 +406,9 @@ class SidechainApp @Inject()
     Runtime.getRuntime.addShutdownHook(shutdownHookThread)
   }
 
-  val stopAllInProgress : AtomicBoolean = new AtomicBoolean(false)
 
   // this method does not override stopAll(), but it rewrites part of its contents
-  def sidechainStopAll(fromEndpoint: Boolean = false): Unit = synchronized {
+  override def sidechainStopAll(fromEndpoint: Boolean = false): Unit = synchronized {
     val currentThreadId     = Thread.currentThread().getId()
     val shutdownHookThreadId = shutdownHookThread.getId()
 
@@ -444,12 +443,6 @@ class SidechainApp @Inject()
         System.exit(0)
       }
     }
-  }
-
-
-  private def registerStorage(storage: Storage) : Storage = {
-    storageList += storage
-    storage
   }
 
   def getTransactionSubmitProvider: TransactionSubmitProvider = transactionSubmitProvider

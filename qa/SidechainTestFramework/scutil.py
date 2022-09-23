@@ -994,8 +994,8 @@ def create_sidechain(sc_creation_info, block_timestamp_rewind, cert_keys_paths, 
         csw_verification_key,
         sc_creation_info.btr_data_length,
         sc_creation_info.sc_creation_version,
-        evm_account_public_key,
-        sc_creation_info.csw_enabled)
+        sc_creation_info.csw_enabled,
+        evm_account_public_key)
 
 
     genesis_data = generate_genesis_data(genesis_info[0], genesis_account.secret, vrf_key.secret,

@@ -4,6 +4,7 @@ import akka.util.Timeout
 import com.horizen.block._
 import com.horizen.chain.{MainchainHeaderHash, SidechainBlockInfo}
 import com.horizen.consensus._
+import com.horizen.fork.ForkManager
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.{PrivateKey25519, VrfSecretKey}
@@ -12,11 +13,11 @@ import com.horizen.transaction.{Transaction, TransactionSerializer}
 import com.horizen.utils.{DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, TimeToEpochUtils}
 import com.horizen.vrf.VrfOutput
 import com.horizen.{AbstractHistory, AbstractWallet}
-import scorex.core.NodeViewHolder.CurrentView
-import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
-import scorex.core.block.Block
-import scorex.core.transaction.MemoryPool
-import scorex.core.transaction.state.MinimalState
+import sparkz.core.NodeViewHolder.CurrentView
+import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
+import sparkz.core.block.Block
+import sparkz.core.transaction.MemoryPool
+import sparkz.core.transaction.state.MinimalState
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.collection.JavaConverters._
@@ -87,9 +88,10 @@ abstract class AbstractForgeMessageBuilder[
       val ownedForgingDataView: Seq[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof, VrfOutput)]
       = forgingStakeMerklePathInfoSeq.view.flatMap(forgingStakeMerklePathInfo => getSecretsAndProof(nodeView.vault, vrfMessage, forgingStakeMerklePathInfo))
 
+      val percentageForkApplied = ForkManager.getSidechainConsensusEpochFork(nextConsensusEpochNumber).stakePercentageForkApplied
       val eligibleForgingDataView: Seq[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof, VrfOutput)]
       = ownedForgingDataView.filter { case (forgingStakeMerklePathInfo, _, _, vrfOutput) =>
-        vrfProofCheckAgainstStake(vrfOutput, forgingStakeMerklePathInfo.forgingStakeInfo.stakeAmount, totalStake)
+        vrfProofCheckAgainstStake(vrfOutput, forgingStakeMerklePathInfo.forgingStakeInfo.stakeAmount, totalStake, percentageForkApplied)
       }
 
 
@@ -217,6 +219,10 @@ abstract class AbstractForgeMessageBuilder[
     }
   }
 
+  def getFeePaymentHash(nodeView: View, block: SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase]): Array[Byte]
+
+  def getZeroFeePaymentsHash(): Array[Byte]
+
   protected def forgeBlock(nodeView: View,
                            timestamp: Long,
                            branchPointInfo: BranchPointInfo,
@@ -251,7 +257,7 @@ abstract class AbstractForgeMessageBuilder[
     var ommers: Seq[Ommer[H]] = Seq()
     var blockId = nodeView.history.bestBlockId
     while (blockId != branchPointInfo.branchPointId) {
-      val block = nodeView.history.getBlockById(blockId).get() // TODO: replace with method blockById with no Option
+      val block = nodeView.history.getBlockById(blockId).get // TODO: replace with method blockById with no Option
       blockId = block.parentId
       ommers = Ommer.toOmmer(block) +: ommers
     }
@@ -290,15 +296,48 @@ abstract class AbstractForgeMessageBuilder[
     })
 
     val isWithdrawalEpochLastBlock: Boolean = mainchainReferenceData.size == withdrawalEpochMcBlocksLeft
-    val forkOngoing: Boolean = (blockId != branchPointInfo.branchPointId)
 
-    val transactions: Seq[TX] = if (
-      isWithdrawalEpochLastBlock || // SC block is going to become the last block of the withdrawal epoch
-      forkOngoing // a fork is ongoing, the tip state is not fully reliable
-    ) {
+    val transactions: Seq[TX] = if (isWithdrawalEpochLastBlock) {
       Seq() // no SC Txs allowed
+    } else if (parentBlockId != nodeView.history.bestBlockId) {
+      // SC block extends the block behind the current tip (for example, in case of ommers).
+      // We can't be sure that transactions in the Mempool are valid against the block in the past.
+      // For example the ommerred Block contains Tx which output is going to be spent by another Tx in the Mempool.
+      Seq()
     } else {
-      collectTransactionsFromMemPool(nodeView, blockSize)
+      collectTransactionsFromMemPool(nodeView, blockSize, mainchainBlockReferenceDataToRetrieve, timestamp)
+    }
+
+    val feePaymentsHash: Array[Byte] = if (isWithdrawalEpochLastBlock) {
+      // Current block is expect to be the continuation of the current tip, so there are no ommers.
+      require(nodeView.history.bestBlockId == parentBlockId, "Last block of the withdrawal epoch expect to be a continuation of the tip.")
+      require(ommers.isEmpty, "No Ommers allowed for the last block of the withdrawal epoch.")
+
+      val tryBlock = createNewBlock(
+        nodeView,
+        branchPointInfo,
+        isWithdrawalEpochLastBlock,
+        parentBlockId,
+        timestamp,
+        mainchainReferenceData,
+        transactions,
+        mainchainHeaders,
+        ommers,
+        blockSignPrivateKey,
+        forgingStakeMerklePathInfo.forgingStakeInfo,
+        vrfProof,
+        forgingStakeMerklePathInfo.merklePath,
+        companion,
+        new Array[Byte](32), // dummy feePaymentsHash value
+        blockSize)
+
+      tryBlock match {
+        case Success(block) => getFeePaymentHash(nodeView, block)
+        case Failure(exception) => return ForgeFailed(exception)
+      }
+
+    } else{
+      getZeroFeePaymentsHash()
     }
 
     val tryBlock = createNewBlock(
@@ -316,6 +355,7 @@ abstract class AbstractForgeMessageBuilder[
       vrfProof,
       forgingStakeMerklePathInfo.merklePath,
       companion,
+      feePaymentsHash,
       blockSize)
 
     tryBlock match {
@@ -339,6 +379,7 @@ abstract class AbstractForgeMessageBuilder[
                      vrfProof: VrfProof,
                      forgingStakeInfoMerklePath: MerklePath,
                      companion: DynamicTypedSerializer[TX,  TransactionSerializer[TX]],
+                     feePaymentsHash: Array[Byte],
                      inputBlockSize: Int,
                      signatureOption: Option[Signature25519] = None
                     ): Try[SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase]]
@@ -350,8 +391,7 @@ abstract class AbstractForgeMessageBuilder[
                       forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo,
                       vrfProof: VrfProof): Int
 
-  def collectTransactionsFromMemPool(nodeView: View, blockSize: Int): Seq[TX]
-
+  def collectTransactionsFromMemPool(nodeView: View, blockSize: Int, mainchainBlockReferenceDataToRetrieve: Seq[MainchainHeaderHash], timestamp: Long): Seq[TX]
 
   def getOmmersSize(ommers: Seq[Ommer[H]]) : Int
 

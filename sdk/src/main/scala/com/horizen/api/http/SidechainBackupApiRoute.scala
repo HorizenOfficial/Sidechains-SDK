@@ -3,6 +3,7 @@ package com.horizen.api.http
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import com.fasterxml.jackson.annotation.JsonView
+import com.horizen.SidechainNodeViewBase
 import com.horizen.api.http.SidechainBackupRestScheme.RespSidechainBlockIdForBackup
 import com.horizen.serialization.Views
 import sparkz.core.settings.RESTApiSettings
@@ -11,7 +12,6 @@ import com.horizen.utils.BytesUtils
 
 import java.util.{Optional => JOptional}
 import scala.concurrent.ExecutionContext
-
 import com.horizen.api.http.SidechainBackupRestScheme.{ReqGetInitialBoxes, RespGetInitialBoxes}
 import com.horizen.box.Box
 import com.horizen.proposition.Proposition
@@ -19,12 +19,25 @@ import com.horizen.proposition.Proposition
 import scala.util.{Failure, Success, Try}
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.backup.BoxIterator
-import scala.collection.JavaConverters._
+import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
+import com.horizen.transaction.Transaction
 
-case class SidechainBackupApiRoute(override val settings: RESTApiSettings,
+import scala.collection.JavaConverters._
+import scala.reflect.ClassTag
+
+case class SidechainBackupApiRoute[
+  TX <: Transaction,
+  H <: SidechainBlockHeaderBase,
+  PM <: SidechainBlockBase[TX, H],
+  NH <: NodeHistoryBase[TX, H, PM],
+  NS <: NodeStateBase,
+  NW <: NodeWalletBase,
+  NP <: NodeMemoryPoolBase[TX],
+  NV <: SidechainNodeViewBase[TX, H, PM, NH, NS, NW, NP]](override val settings: RESTApiSettings,
                                 sidechainNodeViewHolderRef: ActorRef,
                                 boxIterator: BoxIterator)
-                               (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
+                               (implicit val context: ActorRefFactory, override val ec: ExecutionContext, override val tag: ClassTag[NV]) extends SidechainApiRoute[TX, H, PM, NH, NS, NW, NP, NV] {
   override val route: Route = pathPrefix("backup") {
     getSidechainBlockIdForBackup ~ getRestoredBoxes
   }

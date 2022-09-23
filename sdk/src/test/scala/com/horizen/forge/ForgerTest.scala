@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.TestProbe
 import com.horizen.block.SidechainBlock
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.forge.Forger.ReceivableMessages.StartForging
+import com.horizen.forge.AbstractForger.ReceivableMessages.StartForging
 import com.horizen.params.NetworkParams
 import com.horizen.{SidechainSettings, WebSocketSettings}
 import org.junit.Test
@@ -66,6 +66,7 @@ class ForgerTest extends JUnitSuite with Matchers {
     val mainchainSynchronizer = mock[MainchainSynchronizer]
     val companion = mock[SidechainTransactionsCompanion]
 
+    /*
     class ForgerUnderTest(settings: SidechainSettings,
                      viewHolderRef: ActorRef,
                      mainchainSynchronizer: MainchainSynchronizer,
@@ -77,7 +78,12 @@ class ForgerTest extends JUnitSuite with Matchers {
       }
     }
 
-    val forgerUnderTest = system.actorOf(Props(new ForgerUnderTest(settings, viewHolder.ref, mainchainSynchronizer, companion, timeProvider, params)))
+     */
+
+    //val forgerUnderTest = system.actorOf(Props(new ForgerUnderTest(settings, viewHolder.ref, mainchainSynchronizer, companion, timeProvider, params)))
+    // TODO FOR MERGE
+    val forgerUnderTest: ActorRef = ForgerRef("Forger", settings, viewHolder.ref, mainchainSynchronizer, companion, timeProvider, params)
+
     (forgerUnderTest, viewHolder)
   }
 }

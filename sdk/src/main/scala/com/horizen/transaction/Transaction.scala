@@ -10,6 +10,6 @@ abstract class Transaction
 
   @throws[TransactionSemanticValidityException]
   def semanticValidity(): Unit
-  
+
   def size(): Long
 }

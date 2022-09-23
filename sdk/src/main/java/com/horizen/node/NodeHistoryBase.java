@@ -3,6 +3,7 @@ package com.horizen.node;
 import com.horizen.block.*;
 import com.horizen.chain.FeePaymentsInfo;
 import com.horizen.chain.MainchainHeaderInfo;
+import com.horizen.chain.SidechainBlockInfo;
 import com.horizen.node.util.MainchainBlockReferenceInfo;
 import com.horizen.transaction.Transaction;
 
@@ -12,6 +13,10 @@ import java.util.Optional;
 public interface NodeHistoryBase<TX extends Transaction, H extends SidechainBlockHeaderBase, PM extends SidechainBlockBase<TX,H>>  {
 
     Optional<PM> getBlockById(String blockId);
+
+    Optional<SidechainBlockInfo> getBlockInfoById(String blockId);
+
+    boolean isInActiveChain(String blockId);
 
     PM getBestBlock();
 

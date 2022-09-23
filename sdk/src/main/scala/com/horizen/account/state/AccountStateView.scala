@@ -2,7 +2,6 @@ package com.horizen.account.state
 
 import com.google.common.primitives.Bytes
 import com.horizen.SidechainTypes
-import com.horizen.account.FeeUtils
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.receipt.EthereumConsensusDataReceipt.ReceiptStatus
 import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceipt}
@@ -18,7 +17,7 @@ import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.StateView
 import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.{BlockFeeInfo, BytesUtils, WithdrawalEpochInfo}
-import scorex.core.VersionTag
+import sparkz.core.VersionTag
 import scorex.util.ScorexLogging
 
 import java.math.BigInteger

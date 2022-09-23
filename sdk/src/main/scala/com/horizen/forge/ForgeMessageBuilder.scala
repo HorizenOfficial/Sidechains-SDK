@@ -140,9 +140,9 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     header.bytes.length
   }
 
-  override def getFeePaymentHash(nodeView: View, block: SidechainBlock): Array[Byte] = {
+  override def getFeePaymentHash(nodeView: View, block: SidechainBlockBase[SidechainTypes#SCBT, _ <: SidechainBlockHeaderBase]): Array[Byte] = {
     val withdrawalEpochNumber: Int = nodeView.state.getWithdrawalEpochInfo.epoch
-    val feePayments = nodeView.state.getFeePayments(withdrawalEpochNumber, Some(block.feeInfo))
+    val feePayments = nodeView.state.getFeePayments(withdrawalEpochNumber, Some(block.asInstanceOf[SidechainBlock].feeInfo))
     FeePaymentsUtils.calculateFeePaymentsHash(feePayments)
   }
 

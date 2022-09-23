@@ -14,7 +14,7 @@ import com.horizen.secret.{PrivateKey25519Creator, VrfKeyGenerator}
 import com.horizen.serialization.Views
 import com.horizen.transaction.Transaction
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainNodeViewBase, SidechainTypes}
-import scorex.core.settings.RESTApiSettings
+import sparkz.core.settings.RESTApiSettings
 
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters._

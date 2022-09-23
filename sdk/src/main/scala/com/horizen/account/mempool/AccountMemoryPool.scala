@@ -2,7 +2,7 @@ package com.horizen.account.mempool
 
 import com.horizen.SidechainTypes
 import com.horizen.account.node.NodeAccountMemoryPool
-import scorex.core.transaction.MempoolReader
+import sparkz.core.transaction.MempoolReader
 import scorex.util.ModifierId
 
 import java.util.{Comparator, Optional, List => JList}
@@ -11,7 +11,7 @@ import scala.collection.concurrent.TrieMap
 import scala.util.{Failure, Success, Try}
 
 class AccountMemoryPool(unconfirmed: TrieMap[String, SidechainTypes#SCAT])
-  extends scorex.core.transaction.MemoryPool[SidechainTypes#SCAT, AccountMemoryPool]
+  extends sparkz.core.transaction.MemoryPool[SidechainTypes#SCAT, AccountMemoryPool]
   with SidechainTypes
   with NodeAccountMemoryPool
 {
