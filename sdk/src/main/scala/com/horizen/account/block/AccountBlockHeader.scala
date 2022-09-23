@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.google.common.primitives.{Bytes, Longs}
 import com.horizen.account.FeeUtils
 import com.horizen.account.proposition.{AddressProposition, AddressPropositionSerializer}
-import com.horizen.account.receipt.LogsBloom
+import com.horizen.account.receipt.{LogsBloom, LogsBloomSerializer}
 import com.horizen.block.SidechainBlockHeaderBase
 import com.horizen.consensus.{ForgingStakeInfo, ForgingStakeInfoSerializer}
 import com.horizen.params.NetworkParams
@@ -154,6 +154,8 @@ object AccountBlockHeaderSerializer extends ScorexSerializer[AccountBlockHeader]
 
     w.putBytes(obj.feePaymentsHash)
 
+    LogsBloomSerializer.serialize(obj.logsBloom, w)
+
     Signature25519Serializer.getSerializer.serialize(obj.signature, w)
   }
 
@@ -196,7 +198,7 @@ object AccountBlockHeaderSerializer extends ScorexSerializer[AccountBlockHeader]
 
     val feePaymentsHash: Array[Byte] = r.getBytes(NodeViewModifier.ModifierIdSize)
 
-    val logsBloom: LogsBloom = new LogsBloom(r.getBytes(LogsBloom.BLOOM_FILTER_LENGTH))
+    val logsBloom: LogsBloom = LogsBloomSerializer.parse(r)
 
     val signature: Signature25519 = Signature25519Serializer.getSerializer.parse(r)
 

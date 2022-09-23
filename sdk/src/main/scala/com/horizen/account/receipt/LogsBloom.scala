@@ -4,9 +4,14 @@ import scorex.crypto.hash.Keccak256
 import com.horizen.account.receipt.LogsBloom.BLOOM_FILTER_LENGTH
 import com.horizen.evm.interop.EvmLog
 import com.horizen.utils.BytesUtils
+import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
+import scorex.util.serialization.{Reader, Writer}
 
-class LogsBloom() {
+class LogsBloom() extends BytesSerializable {
   private var bloomFilter = Array.fill[Byte](BLOOM_FILTER_LENGTH)(0)
+
+  override type M = LogsBloom
+  override def serializer: ScorexSerializer[LogsBloom] = LogsBloomSerializer
 
   def this(bloomFilter: Array[Byte]) = {
     this()
@@ -104,5 +109,16 @@ object LogsBloom {
     })
 
     logsBloom
+  }
+}
+
+object LogsBloomSerializer extends ScorexSerializer[LogsBloom] {
+  override def serialize(obj: LogsBloom, w: Writer): Unit = {
+    w.putBytes(obj.getBloomFilter())
+  }
+
+  override def parse(r: Reader): LogsBloom = {
+    val bloomFilter = r.getBytes(BLOOM_FILTER_LENGTH)
+    new LogsBloom(bloomFilter)
   }
 }

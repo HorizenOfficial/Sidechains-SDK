@@ -15,17 +15,7 @@ import com.horizen.evm.interop.EvmLog
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
-import com.horizen.utils.{
-  BlockFeeInfo,
-  ByteArrayWrapper,
-  BytesUtils,
-  ClosableResourceHandler,
-  FeePaymentsUtils,
-  MerkleTree,
-  TimeToEpochUtils,
-  WithdrawalEpochInfo,
-  WithdrawalEpochUtils
-}
+
 import org.web3j.crypto.ContractUtils.generateContractAddress
 import scorex.core._
 import scorex.core.transaction.state.TransactionValidation
