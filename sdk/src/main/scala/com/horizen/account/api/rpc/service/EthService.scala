@@ -60,12 +60,10 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
     Await.result(res, nvtimeout) match {
       case Failure(exception) => exception match {
         case reverted: ExecutionRevertedException => throw new RpcException(new RpcError(
-          RpcCode.ExecutionError.getCode, exception.getMessage, Numeric.toHexString(reverted.revertReason)))
+          RpcCode.ExecutionError.getCode, reverted.getMessage, Numeric.toHexString(reverted.revertReason)))
         case err: ExecutionFailedException => throw new RpcException(new RpcError(
           RpcCode.ExecutionError.getCode, err.getMessage, null))
         case err: TransactionSemanticValidityException => throw new RpcException(new RpcError(
-          RpcCode.ExecutionError.getCode, err.getMessage, null))
-        case err: OutOfGasException => throw new RpcException(new RpcError(
           RpcCode.ExecutionError.getCode, err.getMessage, null))
         case _ => throw exception
       }
@@ -247,14 +245,15 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
         params.gas = gas
         doCall(nodeView, params, tag) { (_, _) => true }
       } catch {
-        case _: OutOfGasException => false
+        case _: ExecutionFailedException => false
+        case _: IntrinsicGasException => false
       }
       // Execute the binary search and hone in on an executable gas limit
       // We need to do a search because the gas required during execution is not necessarily equal to the consumed
       // gas after the execution. See https://github.com/ethereum/go-ethereum/commit/682875adff760a29a2bb0024190883e4b4dd5d72
       val requiredGasLimit = binarySearch(lowBound, highBound)(check)
       // Reject the transaction as invalid if it still fails at the highest allowance
-      if (requiredGasLimit == highBound && check(highBound)) {
+      if (requiredGasLimit == highBound && !check(highBound)) {
         throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, s"gas required exceeds allowance ($highBound)"))
       }
       new Quantity(requiredGasLimit)

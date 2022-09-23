@@ -45,7 +45,7 @@ object GasUtil {
     var gas = if (isContractCreation) TxGasContractCreation else TxGas
 
     // Bump the required gas by the amount of transactional data
-    if (data.length > 0) {
+    if (data != null && data.length > 0) {
       // Zero and non-zero bytes are priced differently
       val nonZeroElements = data.count(_.signum != 0)
       val zeroElements = data.length - nonZeroElements
