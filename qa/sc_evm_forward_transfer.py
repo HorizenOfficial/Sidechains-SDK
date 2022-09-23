@@ -104,6 +104,9 @@ class SCEvmForwardTransfer(SidechainTestFramework):
         pprint.pprint(balance)
         assert_equal("0x1cd0525fe2e7a0000", balance["result"], "FT to EOA failed")
 
+        forward_transfer = sc_node.rpc_eth_getForwardTransfers("latest")['result']['forwardTransfers']['0']
+        assert_equal("0xc601b280", forward_transfer['value'])
+
         # Deploy Smart Contract
         smart_contract_type = 'StorageTestContract'
         print(f"Creating smart contract utilities for {smart_contract_type}")
