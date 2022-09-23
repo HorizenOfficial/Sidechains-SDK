@@ -467,12 +467,7 @@ class EthService(
     } match {
       case Some(tx) => tx
       case None =>
-        return ApiResponseUtil.toResponse(
-          ErrorNotFoundTransactionId(
-            f"Transaction ${Numeric.cleanHexPrefix(transactionHash)} not found",
-            JOptional.empty()
-          )
-        )
+        throw new RpcException(RpcError.fromCode(RpcCode.ExecutionError, f"transaction ${transactionHash} not found"))
     }
 
     val currentBlockId = Numeric.cleanHexPrefix(requestedTransaction.getBlockHash)
