@@ -408,6 +408,6 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
           }
       }
     }
-    new ForwardTransfersView(transactions.asJava)
+    new ForwardTransfersView(transactions.asJava, false)
   }
 }

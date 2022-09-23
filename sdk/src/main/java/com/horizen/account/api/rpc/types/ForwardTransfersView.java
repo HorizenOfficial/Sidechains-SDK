@@ -15,9 +15,16 @@ import java.util.*;
 @JsonView(Views.Default.class)
 public class ForwardTransfersView {
     private final TreeMap<Integer, ForwardTransferData> forwardTransfers = new TreeMap();
-    public ForwardTransfersView(List<ForwardTransfer> transactions) {
-        transactions.forEach(txOutput -> forwardTransfers.put(forwardTransfers.size(), new ForwardTransferData(Numeric.toHexString(Arrays.copyOf(txOutput.getFtOutput().propositionBytes(), Address.LENGTH)),
-                Numeric.toHexStringWithPrefix(BigInteger.valueOf(txOutput.getFtOutput().amount())))));
+
+    public ForwardTransfersView(List<ForwardTransfer> transactions, boolean noPrefix) {
+        if (noPrefix)
+            transactions.forEach(txOutput -> forwardTransfers.put(forwardTransfers.size(),
+                    new ForwardTransferData(Numeric.toHexStringNoPrefix(Arrays.copyOf(txOutput.getFtOutput().propositionBytes(), Address.LENGTH)),
+                    String.valueOf(txOutput.getFtOutput().amount()))));
+        else
+            transactions.forEach(txOutput -> forwardTransfers.put(forwardTransfers.size(),
+                    new ForwardTransferData(Numeric.toHexString(Arrays.copyOf(txOutput.getFtOutput().propositionBytes(), Address.LENGTH)),
+                    Numeric.toHexStringWithPrefix(BigInteger.valueOf(txOutput.getFtOutput().amount())))));
     }
 
     public TreeMap<Integer, ForwardTransferData> getForwardTransfers() {
