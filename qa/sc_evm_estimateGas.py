@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import json
 import pprint
 from decimal import Decimal
 
@@ -17,9 +16,9 @@ from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
 """
 Check the EVM estimateGas RPC method.
 
-Configuration: bootstrap 1 SC node and start it with genesis info extracted from a mainchain node.
+Configuration: bootstrap 2 SC node and start it with genesis info extracted from a mainchain node.
     - Mine some blocks to reach hard fork
-    - Create 1 SC node
+    - Create 2 SC node
     - Extract genesis info
     - Start SC node with that genesis info
 
@@ -104,7 +103,6 @@ class SCEvmBootstrap(SidechainTestFramework):
         pprint.pprint(ret)
 
         ft_amount_in_zen = Decimal("33.22")
-        ft_amount_in_zennies = convertZenToZennies(ft_amount_in_zen)
 
         # transfer some fund from MC to SC using the evm address created before
         forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
@@ -181,25 +179,24 @@ class SCEvmBootstrap(SidechainTestFramework):
         # data from AccountTransactionApiRouteTest
         request = {
             "from": "0x" + evm_address,
-            "data": "0x5ca748ff1122334455669988112233445566778811223344556677881122334455667788aabbddddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff00123400000000000000000000000000000000000000000000000000000000000000000000000000000000000000b876fa045fcd3d15a3b6ea51497e06244af17978",
+            "data": "5ca748ff1122334455669988112233445566778811223344556677881122334455667788aabbddddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff00123400000000000000000000000000000000000000000000000000000000000000000000000000000000000000bbdf1daf64ed9d6e30f80b93f647b8bc6ea13191",
             "to": "0x0000000000000000000022222222222222222222",
-            "value": "0x1",
-            "gasPrice": "0x4B9ACA00"
+            "value": "0xE8D4A51000",
+            "nonce": "0x1"
         }
         response = sc_node_1.rpc_eth_estimateGas(request)
-        assert_equal('0x1c9c380', response['result'])
+        assert_equal('0x67b4', response['result'])
 
         # Test estimating SC to MC withdrawal
         # data from AccountTransactionApiRouteTest
         request = {
             "from": "0x" + evm_address,
-            "data": "0x9950a60f9988b9e8e729c83ecccb1c9549c46ed226f14de7000000000000000000000000",
+            "data": "0x9950a60fdbcbaf2b14a48cfc24941ef5acfdac0a8c590255000000000000000000000000",
             "to": "0x0000000000000000000011111111111111111111",
-            "value": "0x1",
-            "gasPrice": "0x4B9ACA00"
+            "value": "0xE8D4A51000"
         }
         response = sc_node_1.rpc_eth_estimateGas(request)
-        assert_equal('0x1c9c380', response['result'])
+        assert_equal('0x5e77', response['result'])
 
 if __name__ == "__main__":
     SCEvmBootstrap().main()
