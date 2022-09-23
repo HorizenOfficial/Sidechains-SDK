@@ -169,8 +169,8 @@ class SCEvmBootstrap(SidechainTestFramework):
             "gasPrice": "0x4B9ACA00"
         }
 
-        # result from ethereum mainnet node execution - Internal error: insufficient funds for gas * price + value: address 0x2eebcc96b488045368c94cd327f55ecd012c1e32, have 0, want 1
-        # -32603 = Internal error
+        # result from ethereum mainnet node execution - Invalid params: insufficient funds for transfer
+        # -32602 = Invalid params
         response = sc_node_1.rpc_eth_estimateGas(request)
         print(response['error'])
         assert_equal(-32602, response['error']['code'])
@@ -186,6 +186,20 @@ class SCEvmBootstrap(SidechainTestFramework):
         }
         response = sc_node_1.rpc_eth_estimateGas(request)
         assert_equal('0x67b4', response['result'])
+
+        # Test estimating forging stake with invalid value - Invalid params: gas required exceeds allowance (max gas limit)
+        # -32602 = Invalid params
+        # data from AccountTransactionApiRouteTest
+        request = {
+            "from": "0x" + evm_address,
+            "data": "5ca748ff1122334455669988112233445566778811223344556677881122334455667788aabbddddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff00123400000000000000000000000000000000000000000000000000000000000000000000000000000000000000bbdf1daf64ed9d6e30f80b93f647b8bc6ea13191",
+            "to": "0x0000000000000000000022222222222222222222",
+            "value": "0x1",
+            "nonce": "0x1"
+        }
+        response = sc_node_1.rpc_eth_estimateGas(request)
+        print(response['error'])
+        assert_equal(-32602, response['error']['code'])
 
         # Test estimating SC to MC withdrawal
         # data from AccountTransactionApiRouteTest
