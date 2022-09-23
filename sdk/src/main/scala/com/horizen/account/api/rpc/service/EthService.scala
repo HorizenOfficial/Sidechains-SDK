@@ -253,7 +253,7 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
       // gas after the execution. See https://github.com/ethereum/go-ethereum/commit/682875adff760a29a2bb0024190883e4b4dd5d72
       val requiredGasLimit = binarySearch(lowBound, highBound)(check)
       // Reject the transaction as invalid if it still fails at the highest allowance
-      if (requiredGasLimit == highBound && check(highBound)) {
+      if (requiredGasLimit == highBound && !check(highBound)) {
         throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, s"gas required exceeds allowance ($highBound)"))
       }
       new Quantity(requiredGasLimit)
