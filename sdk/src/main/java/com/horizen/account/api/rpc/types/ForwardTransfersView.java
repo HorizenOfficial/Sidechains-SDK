@@ -10,12 +10,12 @@ import com.horizen.transaction.mainchain.ForwardTransfer;
 import org.web3j.utils.Numeric;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.TreeMap;
 
 @JsonView(Views.Default.class)
 public class ForwardTransfersView {
-    private final TreeMap<Integer, ForwardTransferData> forwardTransfers = new TreeMap();
+    private final List<ForwardTransferData> forwardTransfers = new ArrayList<>();
 
     public ForwardTransfersView(List<ForwardTransfer> transactions, boolean noPrefix) {
         for (int i = 0; i < transactions.size(); i++) {
@@ -32,11 +32,11 @@ public class ForwardTransfersView {
                 to = Numeric.toHexString(address.address());
                 value = Numeric.toHexStringWithPrefix(weiValue);
             }
-            forwardTransfers.put(i, new ForwardTransferData(to, value));
+            forwardTransfers.add(new ForwardTransferData(to, value));
         }
     }
 
-    public TreeMap<Integer, ForwardTransferData> getForwardTransfers() {
+    public List<ForwardTransferData> getForwardTransfers() {
         return this.forwardTransfers;
     }
 
