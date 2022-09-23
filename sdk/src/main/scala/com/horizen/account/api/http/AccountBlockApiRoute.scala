@@ -10,17 +10,16 @@ import com.horizen.account.api.rpc.types.ForwardTransfersView
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
-import com.horizen.account.utils.AccountPayment
+import com.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
+import com.horizen.account.utils.{AccountPayment}
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.{ApiResponseUtil, BlockBaseApiRoute, ErrorResponse, SuccessResponse}
 import com.horizen.node.NodeWalletBase
 import com.horizen.serialization.Views
-import com.horizen.transaction.mainchain.ForwardTransfer
 import scorex.core.settings.RESTApiSettings
 
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters._
-import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
 import scala.concurrent.ExecutionContext
 
@@ -52,17 +51,7 @@ case class AccountBlockApiRoute(override val settings: RESTApiSettings,
         val block = sidechainNodeView.getNodeHistory.getBlockById(body.blockId)
         if (block.isEmpty) ApiResponseUtil.toResponse(ErrorNoBlockFound("ErrorNoBlockFound", JOptional.empty()))
         else {
-          var transactions: Seq[ForwardTransfer] = Seq()
-          for (refDataWithFTs <- block.get().mainchainBlockReferencesData) {
-            refDataWithFTs.sidechainRelatedAggregatedTransaction match {
-              case Some(tx) => transactions = transactions ++ tx.mc2scTransactionsOutputs().filter {
-                _.isInstanceOf[ForwardTransfer]
-              } map {
-                _.asInstanceOf[ForwardTransfer]
-              }
-            }
-          }
-          ApiResponseUtil.toResponse(RespAllForwardTransfers(new ForwardTransfersView(transactions.asJava, true)))
+          ApiResponseUtil.toResponse(RespAllForwardTransfers(new ForwardTransfersView(getForwardTransfersForBlock(block.get()).asJava, true)))
         }
       }
     }
