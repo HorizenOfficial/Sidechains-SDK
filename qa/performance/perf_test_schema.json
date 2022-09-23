@@ -31,6 +31,9 @@
     "extended_transaction": {
       "type": "boolean"
     },
+    "big_transaction": {
+      "type": "boolean"
+    },
     "network_topology": {
       "type": "string",
       "enum": [

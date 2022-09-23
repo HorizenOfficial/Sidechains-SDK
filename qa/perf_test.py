@@ -1,6 +1,7 @@
 import logging
 import math
 import random
+import pprint
 import time
 from multiprocessing import Pool, Value
 from time import sleep
@@ -13,7 +14,7 @@ from httpCalls.block.best import http_block_best
 from httpCalls.block.findBlockByID import http_block_findById
 from httpCalls.block.forging import http_start_forging, http_stop_forging
 from httpCalls.transaction.allTransactions import allTransactions
-from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress, sendCoinsToAddressExtended
+from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress, sendCoinsToAddressExtended, sendCointsToMultipleAddress
 from httpCalls.wallet.balance import http_wallet_balance
 from httpCalls.wallet.allBoxesOfType import http_wallet_allBoxesOfType
 from httpCalls.transaction.createCoreTransaction import http_create_core_transaction
@@ -43,7 +44,7 @@ def get_number_of_transactions_for_node(node):
 
 
 def send_transactions_per_second(txs_creator_node, destination_addresses, utxo_amount, start_time, test_run_time,
-                                 transactions_per_second, extended_transaction=False):
+                                 transactions_per_second, extended_transaction=False, big_transaction=False):
     # Run until
     while time.time() - start_time < test_run_time:
         i = 0
@@ -51,8 +52,9 @@ def send_transactions_per_second(txs_creator_node, destination_addresses, utxo_a
         # Send transactions until the transactions_per_second value has been reached
         while i < transactions_per_second:
             try:
-                # Send coins to random destination address
-                if (extended_transaction):
+                if (big_transaction):
+                    sendCointsToMultipleAddress(txs_creator_node, destination_addresses, [utxo_amount for _ in range(len(destination_addresses))], 0)
+                elif (extended_transaction):
                     sendCoinsToAddressExtended(txs_creator_node, random.choice(destination_addresses), utxo_amount, 0)
                 else:
                     sendCoinsToAddress(txs_creator_node, random.choice(destination_addresses), utxo_amount, 0)
@@ -74,6 +76,7 @@ def send_transactions_per_second(txs_creator_node, destination_addresses, utxo_a
 
 
 class PerformanceTest(SidechainTestFramework):
+    MAX_TRANSACTION_OUTPUT = 998
     CONFIG_FILE = "./performance/perf_test.json"
     CSV_FILE = "./tps_result.csv"
     sc_nodes_bootstrap_info = None
@@ -86,6 +89,7 @@ class PerformanceTest(SidechainTestFramework):
     test_run_time = perf_data["test_run_time"]
     block_rate = perf_data["block_rate"]
     extended_transaction = perf_data["extended_transaction"]
+    big_transaction = perf_data["big_transaction"]
     connection_map = {}
     topology = NetworkTopology(perf_data["network_topology"])
 
@@ -106,7 +110,8 @@ class PerformanceTest(SidechainTestFramework):
                 "endpoint_calls": 0, "errors": 0, "not_mined_transactions": 0, "mempool_transactions": 0,
                 "tps_total": 0, "tps_mined": 0, "blocks_ts": [], "node_api_errors": 0,
                 "extended_transaction": extended_transaction,
-                "mined_txs": []
+                "mined_txs": [],
+                "big_transaction": big_transaction
                 }
 
     def get_latency_config(self):
@@ -150,7 +155,7 @@ class PerformanceTest(SidechainTestFramework):
         last_index = sc_nodes.index(self.sc_node_data[-1])
         latency_configurations = self.get_latency_config()
 
-        for index, sc_node in enumerate(sc_nodes):
+        for index, _ in enumerate(sc_nodes):
             if (index == 0 or index == last_index) and self.topology == NetworkTopology.DaisyChain:
                 max_connections = 1
             elif (index != 0 and index != last_index) and self.topology == NetworkTopology.DaisyChain:
@@ -324,6 +329,10 @@ class PerformanceTest(SidechainTestFramework):
     def txs_creator_send_transactions_per_second_to_addresses(self, utxo_amount, txs_creators, tps_test):
         start_time = time.time()
 
+        #If we want to have a big transaction of 10 outputs we need to multiply the transaction output value by 10
+        #if self.big_transaction:
+        #    utxo_amount = utxo_amount * 10
+
         if tps_test:
             # Each node needs to be able to send a number of transactions per second, without going over 1 second, or
             # timing out - May need some fine-tuning.
@@ -341,16 +350,21 @@ class PerformanceTest(SidechainTestFramework):
                     # Add send_transactions_per_second arguments to args for each tx_creator_node
                     # starmap runs them all in parallel
                     for index, sc_node in enumerate(self.sc_nodes_list):
+                        destination_addresses = []
                         if sc_node["tx_creator"]:
-                            # Create array of destination addresses for all nodes excluding the one we send from
-                            sc_nodes = self.sc_nodes.copy()
-                            del sc_nodes[index]
-                            destination_addresses = []
-                            for node in sc_nodes:
-                                destination_addresses.append(http_wallet_createPrivateKey25519(node))
+                            if self.big_transaction:
+                                for i in range (0, 10):
+                                    destination_addresses.append(http_wallet_createPrivateKey25519(self.sc_nodes[index]))
+                            else:
+                                # Create array of destination addresses for all nodes excluding the one we send from
+                                sc_nodes = self.sc_nodes.copy()
+                                del sc_nodes[index]
+                                destination_addresses = []
+                                for node in sc_nodes:
+                                    destination_addresses.append(http_wallet_createPrivateKey25519(node))
 
                             args.append((self.sc_nodes[index], destination_addresses, utxo_amount, start_time,
-                                         self.test_run_time, transactions_per_second, self.extended_transaction))
+                                         self.test_run_time, transactions_per_second, self.extended_transaction, self.big_transaction))
                     pool.starmap(send_transactions_per_second, args)
 
                 print(f"... Sent {counter.value} Transactions ...")
@@ -412,7 +426,15 @@ class PerformanceTest(SidechainTestFramework):
         # Create many UTXOs in a single transaction to multiple addresses
         # Taking FT box and splitting into many UTXOs to enable the creation of multiple transactions for the next part
         # of the test (population of the mempool)
-        utxo_amount = ft_amount * 1e8 / self.initial_txs
+        if self.big_transaction:
+            utxo_amount = (ft_amount * 1e8 / self.initial_txs) / 10
+            tx_to_create = int(self.initial_txs * 10 / self.MAX_TRANSACTION_OUTPUT)
+            utxo_to_create = self.initial_txs * 10
+        else:
+            utxo_amount = ft_amount * 1e8 / self.initial_txs
+            tx_to_create = int(self.initial_txs / self.MAX_TRANSACTION_OUTPUT)
+            utxo_to_create = self.initial_txs
+
         for i in range(len(txs_creator_addresses)):
 
             # Get FT box id (we should have only 1 ZenBox right now)
@@ -423,29 +445,28 @@ class PerformanceTest(SidechainTestFramework):
             print("Creating initial UTXOs...")
             created_utxos = 0
             # We have 1k boxes limit per transaction = 1 input + 998 outputs + change output
-            max_transaction_output = 998
-            for _ in range(int(self.initial_txs / max_transaction_output)):
+            for _ in range(tx_to_create):
                 # Create SidechainCoreTransaction that spend the split the FT box into many boxes.
                 outputs = [{"publicKey": txs_creator_addresses[i], "value": utxo_amount} for _ in
-                           range(max_transaction_output)]
+                           range(self.MAX_TRANSACTION_OUTPUT)]
                 outputs.append(
-                    {"publicKey": ft_addresses[i], "value": ft_box[0]["value"] - utxo_amount * max_transaction_output})
+                    {"publicKey": ft_addresses[i], "value": ft_box[0]["value"] - utxo_amount * self.MAX_TRANSACTION_OUTPUT})
                 raw_tx = http_create_core_transaction(txs_creators[i], [{"boxId": ft_box[0]["id"]}], outputs)
                 res = http_send_transaction(txs_creators[i], raw_tx)
                 assert_true("transactionId" in res)
-                print("Sent " + res["transactionId"] + " with UTXO: " + str(max_transaction_output))
+                print("Sent " + res["transactionId"] + " with UTXO: " + str(self.MAX_TRANSACTION_OUTPUT))
 
                 self.sc_sync_all()
                 generate_next_blocks(forger_nodes[0], "first node", 1)[0]
                 self.sc_sync_all()
 
-                created_utxos += max_transaction_output
+                created_utxos += self.MAX_TRANSACTION_OUTPUT
 
                 zen_boxes = http_wallet_allBoxesOfType(txs_creators[i], "ZenBox")
                 ft_box = self.find_boxes_of_address(zen_boxes, ft_addresses[i])
                 assert_true(len(ft_box), 0)
 
-            remaining_utxos = self.initial_txs - created_utxos
+            remaining_utxos = utxo_to_create - created_utxos
             if remaining_utxos > 0:
                 raw_tx = http_create_core_transaction(txs_creators[i], [{"boxId": ft_box[0]["id"]}],
                                                       [{"publicKey": txs_creator_addresses[i], "value": utxo_amount} for
@@ -462,8 +483,7 @@ class PerformanceTest(SidechainTestFramework):
         for i in range(len(txs_creators)):
             zen_boxes = http_wallet_allBoxesOfType(txs_creators[i], "ZenBox")
             filtered_boxes = self.find_boxes_of_address(zen_boxes, txs_creator_addresses[i])
-            assert_equal(len(filtered_boxes), self.initial_txs)
-
+            assert_equal(len(filtered_boxes), utxo_to_create)
         if self.test_type == TestType.Mempool or self.test_type == TestType.Mempool_Timed:
             # Populate the mempool
             print("Populating the mempool...")
@@ -571,6 +591,10 @@ class PerformanceTest(SidechainTestFramework):
             mempool_transactions.append(mempool_txs)
 
             while current_block_id != start_block_id:
+                txs = self.get_node_mined_transactions_by_block_id(node, current_block_id)
+                if (iteration == 0 and len(txs) > 0):
+                    for tx in txs:
+                        pprint.pprint("NEW BOXES "+str(len(tx["newBoxes"]))+" UNLOCKERS "+str(len(tx["unlockers"])))
                 number_of_transactions_mined = len(
                     self.get_node_mined_transactions_by_block_id(node, current_block_id))
                 total_mined_transactions += number_of_transactions_mined

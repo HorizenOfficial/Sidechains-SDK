@@ -6,6 +6,7 @@
   "block_rate": 30,
   "initial_txs": 5000,
   "extended_transaction": false,
+  "big_transaction": false,
   "network_topology": "ring",
   "nodes": [
     {
