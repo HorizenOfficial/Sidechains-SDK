@@ -37,7 +37,7 @@ type EvmParams struct {
 	To            *common.Address  `json:"to"`
 	Value         *hexutil.Big     `json:"value"`
 	Input         []byte           `json:"input"`
-	Gas           hexutil.Uint64   `json:"gas"`
+	Gas           hexutil.Uint64   `json:"availableGas"`
 	GasPrice      *hexutil.Big     `json:"gasPrice"`
 	AccessList    types.AccessList `json:"accessList"`
 	Context       EvmContext       `json:"context"`
