@@ -92,8 +92,8 @@ func (p *EvmParams) getBlockContext() vm.BlockContext {
 	}
 }
 
-func (t *TraceParams) getTraceConfig() logger.Config {
-	return logger.Config{
+func (t *TraceParams) getTraceConfig() *logger.Config {
+	return &logger.Config{
 		EnableMemory:     t.EnableMemory,
 		DisableStack:     t.DisableStack,
 		DisableStorage:   t.DisableStorage,
