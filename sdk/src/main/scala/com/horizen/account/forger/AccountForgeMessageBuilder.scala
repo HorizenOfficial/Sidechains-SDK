@@ -227,8 +227,10 @@ class AccountForgeMessageBuilder(
     // 8. set the fee payments hash
     val feePaymentsHash: Array[Byte] = AccountFeePaymentsUtils.calculateFeePaymentsHash(feePayments)
 
-    val logsBloomList = receiptList.map(r => r.logsBloom)
-    val logsBloom = logsBloomList.reduce((p, c) => p.addBloomFilter(c))
+    val logsBloom = new LogsBloom()
+    val logsBloomSeq = receiptList.map(r => r.logsBloom)
+
+    logsBloomSeq.foreach(l => logsBloom.addBloomFilter(l))
 
     val block = AccountBlock.create(
       parentId,
