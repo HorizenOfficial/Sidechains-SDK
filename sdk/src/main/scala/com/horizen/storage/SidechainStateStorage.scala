@@ -16,7 +16,6 @@ import scorex.util.ScorexLogging
 
 import java.util.{ArrayList => JArrayList}
 import scala.collection.JavaConverters._
-import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters._
 import scala.util._
@@ -48,21 +47,6 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
   private[horizen] def getWithdrawalRequestsKey(withdrawalEpoch: Int, counter: Int): ByteArrayWrapper = {
     Utils.calculateKey(Bytes.concat("withdrawalRequests".getBytes, Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
-  }
-
-  abstract class CertificateSubmitter {
-    val signersPublicKeys = ActualKeys(mutable.IndexedSeq[SchnorrProposition](/*signingKeys*/), mutable.IndexedSeq[SchnorrProposition](/*masterKeys*/));
-
-    def getSignerPublicKeys(): ActualKeys = {
-      signersPublicKeys
-    }
-
-    def getMessage() {}
-
-    def tryToGenerateCertificate(): Unit = {
-      buildDataForProofGeneration()
-      generateProof()
-    }
   }
 
   private[horizen] def getKeys(withdrawalEpoch: Int, counter: Int): ByteArrayWrapper = {

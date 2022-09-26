@@ -103,11 +103,9 @@ class SigProofTest {
     }
 
     println("Generating snark proof...")
-    val proofAndQuality: utils.Pair[Array[Byte], lang.Long] = sigCircuit.createProof(wb, sidechainId, epochNumber, endCumulativeScTxCommTreeRoot,
-      btrFee, ftMinAmount, utxoMerkleTreeRoot, signatures, publicKeysBytes, threshold, provingKeyPath, true, true)
+    val proofAndQuality: utils.Pair[Array[Byte], lang.Long] = sigCircuit.createProof(wb, sidechainId, epochNumber, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, utxoMerkleTreeRoot, signatures, publicKeysBytes, threshold, provingKeyPath, true, true)
 
-    val result = sigCircuit.verifyProof(wb, sidechainId, epochNumber, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, utxoMerkleTreeRoot, sysConstant,
-      proofAndQuality.getValue, proofAndQuality.getKey, true, verificationKeyPath, true)
+    val result = sigCircuit.verifyProof(wb, sidechainId, epochNumber, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, utxoMerkleTreeRoot, sysConstant, proofAndQuality.getValue, proofAndQuality.getKey, true, verificationKeyPath, true)
 
     assertTrue("Proof verification expected to be successfully", result)
 
@@ -129,11 +127,9 @@ class SigProofTest {
     }
 
     println("Generating snark proof...")
-    val proofAndQualityCSWDisabled: utils.Pair[Array[Byte], lang.Long] = sigCircuit.createProof(wb, sidechainId, epochNumber, endCumulativeScTxCommTreeRoot,
-      btrFee, ftMinAmount, utxoMerkleTreeRootCSWDisabled, signaturesCSWDisabled, publicKeysBytes, threshold, provingKeyPath, true, true)
+    val proofAndQualityCSWDisabled: utils.Pair[Array[Byte], lang.Long] = sigCircuit.createProof(wb, sidechainId, epochNumber, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, utxoMerkleTreeRootCSWDisabled, signaturesCSWDisabled, publicKeysBytes, threshold, provingKeyPath, true, true)
 
-    val resultCSWDisabled = sigCircuit.verifyProof(wb, sidechainId, epochNumber, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, utxoMerkleTreeRootCSWDisabled, sysConstant,
-      proofAndQualityCSWDisabled.getValue, proofAndQualityCSWDisabled.getKey, true, verificationKeyPath, true)
+    val resultCSWDisabled = sigCircuit.verifyProof(wb, sidechainId, epochNumber, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, utxoMerkleTreeRootCSWDisabled, sysConstant, proofAndQualityCSWDisabled.getValue, proofAndQualityCSWDisabled.getKey, true, verificationKeyPath, true)
 
     assertTrue("Proof verification failed - CSW disabled", resultCSWDisabled)
 

@@ -14,5 +14,8 @@ class ThresholdSigCircuitSubmitterWithKeyRotation(settings: SidechainSettings,
                                                   mainchainChannel: MainchainNodeChannel)
                                                  (implicit ec: ExecutionContext)
   extends CertificateSubmitter(settings, sidechainNodeViewHolderRef, params: NetworkParams, mainchainChannel){
-
+  override protected def buildDataForProofGeneration(sidechainNodeView: View, status: CertificateSubmitter.SignaturesStatus): DataForProofGenerationWithKeyRotation = {
+    ???
+    // read actual keys from SidechainStorage
+  }
 }

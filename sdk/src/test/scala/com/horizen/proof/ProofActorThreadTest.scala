@@ -122,21 +122,7 @@ private class ProofThreadActorReceiver
   }
 
   private def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
-    CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(
-      dataForProofGeneration.withdrawalRequests.asJava,
-      dataForProofGeneration.sidechainId,
-      dataForProofGeneration.processedEpochNumber,
-      dataForProofGeneration.endCumulativeEpochBlockHash, // Pass block hash in LE endianness
-      0, // long btrFee
-      0, // long ftMinAmount
-      Optional.of(dataForProofGeneration.merkelTreeRoot), // utxoMerkleTreeRoot
-      dataForProofGeneration.signatures, // List<Optional<byte[]>> schnorrSignatureBytesList
-      dataForProofGeneration.publicKeysBytes, // List<byte[]> schnorrPublicKeysBytesList
-      dataForProofGeneration.threshold, //long threshold
-      ProofThreadActorReceiver.provingKeyPath, // String provingKeyPath
-      true, //boolean checkProvingKey
-      true //boolean zk
-    )
+    CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(dataForProofGeneration.withdrawalRequests.asJava, dataForProofGeneration.sidechainId, dataForProofGeneration.processedEpochNumber, dataForProofGeneration.endCumulativeEpochBlockHash, 0, 0, Optional.of(dataForProofGeneration.merkelTreeRoot), dataForProofGeneration.signatures, dataForProofGeneration.publicKeysBytes, dataForProofGeneration.threshold, ProofThreadActorReceiver.provingKeyPath, true, true)
   }
 }
 

@@ -49,7 +49,9 @@ object CertificateRequestCreator {
              withdrawalRequestBoxes: Seq[WithdrawalRequestBox],
              ftMinAmount: Long,
              btrFee: Long,
-             utxoMerkleTreeRoot: Optional[Array[Byte]],
+             utxoMerkleTreeRoot: List[Array[Byte]], // TODO customFields: Seq[Array[Bytes]] -
+            // without key rotation CryptoLibProvider.sigProofThresholdCircuitFunctions.getCertificateCustomFields(utxoMerkleTreeRoot).toSeq, 0or2 elements
+            // with key rotation - keysMerkleRoot (publicSignerKeys + publicMasterKeys) 1element
              fee: Option[String],
              params: NetworkParams) : SendCertificateRequest = {
     SendCertificateRequest(

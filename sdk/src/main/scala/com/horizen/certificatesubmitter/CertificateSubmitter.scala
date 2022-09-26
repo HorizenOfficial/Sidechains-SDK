@@ -40,7 +40,8 @@ import scala.util.{Failure, Random, Success, Try}
  * If `submitterEnabled` is `true`, it will try to generate and send the Certificate to MC node in case the proper amount of signatures were collected.
  * Must be singleton.
  */
-abstract class CertificateSubmitter(settings: SidechainSettings,
+//type D extends DataForProofGeneration
+abstract class CertificateSubmitter[D](settings: SidechainSettings,
                            sidechainNodeViewHolderRef: ActorRef,
                            params: NetworkParams,
                            mainchainChannel: MainchainNodeChannel)
@@ -247,10 +248,10 @@ abstract class CertificateSubmitter(settings: SidechainSettings,
   }
 
   // No MBTRs support, so no sense to specify btrFee different to zero.
-  private def getBtrFee(referencedWithdrawalEpochNumber: Int): Long = 0
+  protected def getBtrFee(referencedWithdrawalEpochNumber: Int): Long = 0
 
   // Every positive value FT is allowed.
-  private def getFtMinAmount(referencedWithdrawalEpochNumber: Int): Long = 0
+  protected def getFtMinAmount(referencedWithdrawalEpochNumber: Int): Long = 0
 
   private def getMessageToSign(referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
     def getMessage(sidechainNodeView: View): Try[Array[Byte]] = Try {
@@ -280,20 +281,13 @@ abstract class CertificateSubmitter(settings: SidechainSettings,
       }
 
 
-      CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(
-        withdrawalRequests.asJava,
-        sidechainId,
-        referencedWithdrawalEpochNumber,
-        endEpochCumCommTreeHash,
-        btrFee,
-        ftMinAmount,
-        utxoMerkleTreeRoot)
+      CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(withdrawalRequests.asJava, sidechainId, referencedWithdrawalEpochNumber, endEpochCumCommTreeHash, btrFee, ftMinAmount, utxoMerkleTreeRoot)
     }
 
     Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getMessage), timeoutDuration).asInstanceOf[Try[Array[Byte]]].get
   }
 
-  private def getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber: Int, state: SidechainState): Optional[Array[Byte]] = {
+  protected def getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber: Int, state: SidechainState): Optional[Array[Byte]] = {
     if (params.isCSWEnabled) {
       state.utxoMerkleTreeRoot(referencedWithdrawalEpochNumber) match {
         case x: Some[Array[Byte]] => x.asJava
@@ -477,9 +471,10 @@ abstract class CertificateSubmitter(settings: SidechainSettings,
                   dataForProofGeneration.withdrawalRequests,
                   dataForProofGeneration.ftMinAmount,
                   dataForProofGeneration.btrFee,
-                  dataForProofGeneration.utxoMerkleTreeRoot,
                   certificateFee,
-                  params)
+                  params
+                // TODO getCustomFields (dataForProofGeneration.utxoMerkleTreeRoot)
+                  )
 
                 log.info(s"Backward transfer certificate request was successfully created for epoch number ${
                   certificateRequest.epochNumber
@@ -514,14 +509,18 @@ abstract class CertificateSubmitter(settings: SidechainSettings,
     }
   }
 
-  case class DataForProofGeneration(referencedEpochNumber: Int,
+  case class DataForProofGenerationWithKeyRotation extends DataForProofGeneration()
+  case class DataForProofGenerationWithoutKeyRotation()
+  // TODO trait with 2 children
+  abstract class DataForProofGeneration(referencedEpochNumber: Int,
                                     sidechainId: Array[Byte],
                                     withdrawalRequests: Seq[WithdrawalRequestBox],
                                     endEpochCumCommTreeHash: Array[Byte],
                                     btrFee: Long,
                                     ftMinAmount: Long,
-                                    utxoMerkleTreeRoot: Optional[Array[Byte]],
-                                    schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])]) {
+                                    utxoMerkleTreeRoot: Optional[Array[Byte]], // TODO circuit dependent
+                                    schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])] // TODO circuit dependent
+   ) {
 
     override def toString: String = {
       val utxoMerkleTreeRootString = if (utxoMerkleTreeRoot.isPresent) BytesUtils.toHexString(utxoMerkleTreeRoot.get()) else "None"
@@ -532,41 +531,14 @@ abstract class CertificateSubmitter(settings: SidechainSettings,
         s"endEpochCumCommTreeHash = ${BytesUtils.toHexString(endEpochCumCommTreeHash)}, " +
         s"btrFee = $btrFee, " +
         s"ftMinAmount = $ftMinAmount, " +
-        s"utxoMerkleTreeRoot = ${utxoMerkleTreeRootString}, " +
+        s"utxoMerkleTreeRoot = ${utxoMerkleTreeRootString}, " + // from this field different fields for 2 circuits
         s"number of schnorrKeyPairs = ${schnorrKeyPairs.size})"
     }
   }
 
-  private def buildDataForProofGeneration(sidechainNodeView: View, status: SignaturesStatus): DataForProofGeneration = {
-    val history = sidechainNodeView.history
-    val state = sidechainNodeView.state
+  protected def buildDataForProofGeneration(sidechainNodeView: View, status: SignaturesStatus): DataForProofGeneration
 
-    val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(status.referencedEpoch)
-
-    val btrFee: Long = getBtrFee(status.referencedEpoch)
-    val ftMinAmount: Long = getFtMinAmount(status.referencedEpoch)
-    val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, status.referencedEpoch)
-    val sidechainId = params.sidechainId
-    val utxoMerkleTreeRoot: Optional[Array[Byte]] = getUtxoMerkleTreeRoot(status.referencedEpoch, state)
-
-
-    val signersPublicKeyWithSignatures = params.signersPublicKeys.zipWithIndex.map {
-      case (pubKey, pubKeyIndex) =>
-        (pubKey, status.knownSigs.find(info => info.pubKeyIndex == pubKeyIndex).map(_.signature))
-    }
-
-    DataForProofGeneration(
-      status.referencedEpoch,
-      sidechainId,
-      withdrawalRequests,
-      endEpochCumCommTreeHash,
-      btrFee,
-      ftMinAmount,
-      utxoMerkleTreeRoot,
-      signersPublicKeyWithSignatures)
-  }
-
-  private def lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): Array[Byte] = {
+  protected def lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): Array[Byte] = {
     val mcBlockHash = withdrawalEpochNumber match {
       case -1 => params.parentHashOfGenesisMainchainBlock
       case _ => {
@@ -583,7 +555,8 @@ abstract class CertificateSubmitter(settings: SidechainSettings,
     headerInfo.cumulativeCommTreeHash
   }
 
-  private def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
+  // todo abstract method
+  protected def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
     val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
       dataForProofGeneration.schnorrKeyPairs.map {
         case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)
@@ -596,20 +569,7 @@ abstract class CertificateSubmitter(settings: SidechainSettings,
       s"It can take a while.")
 
     //create and return proof with quality
-    CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(
-      dataForProofGeneration.withdrawalRequests.asJava,
-      dataForProofGeneration.sidechainId,
-      dataForProofGeneration.referencedEpochNumber,
-      dataForProofGeneration.endEpochCumCommTreeHash,
-      dataForProofGeneration.btrFee,
-      dataForProofGeneration.ftMinAmount,
-      dataForProofGeneration.utxoMerkleTreeRoot,
-      signaturesBytes.asJava,
-      signersPublicKeysBytes.asJava,
-      params.signersThreshold,
-      provingFileAbsolutePath,
-      true,
-      true)
+    CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(schnorrSignatureBytesList = signaturesBytes.asJava, schnorrPublicKeysBytesList = signersPublicKeysBytes.asJava, threshold = params.signersThreshold, provingKeyPath = provingFileAbsolutePath, checkProvingKey = true, zk = true)
   }
 
   def submitterStatus: Receive = {
