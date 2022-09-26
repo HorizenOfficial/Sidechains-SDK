@@ -149,7 +149,6 @@ class AccountForgeMessageBuilder(
       forgingStakeInfoMerklePath: MerklePath,
       companion: DynamicTypedSerializer[SidechainTypes#SCAT, TransactionSerializer[SidechainTypes#SCAT]],
       inputBlockSize: Int,
-      logsBloom: LogsBloom,
       signatureOption: Option[Signature25519]
   ): Try[SidechainBlockBase[SidechainTypes#SCAT, AccountBlockHeader]] = {
 
@@ -227,6 +226,9 @@ class AccountForgeMessageBuilder(
 
     // 8. set the fee payments hash
     val feePaymentsHash: Array[Byte] = AccountFeePaymentsUtils.calculateFeePaymentsHash(feePayments)
+
+    val logsBloomList = receiptList.map(r => r.logsBloom)
+    val logsBloom = logsBloomList.reduce((p, c) => p.addBloomFilter(c))
 
     val block = AccountBlock.create(
       parentId,

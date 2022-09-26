@@ -16,7 +16,6 @@ import com.horizen.utils.{DynamicTypedSerializer, FeePaymentsUtils, ForgingStake
 import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainTypes, SidechainWallet}
 import scorex.util.ModifierId
 import scala.collection.JavaConverters._
-import com.horizen.account.receipt.LogsBloom
 import scorex.core.NodeViewModifier
 import scorex.core.block.Block.{BlockId, Timestamp}
 import scala.util.{Failure, Success, Try}
@@ -53,7 +52,6 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                  forgingStakeInfoMerklePath: MerklePath,
                  companion: DynamicTypedSerializer[SidechainTypes#SCBT, TransactionSerializer[SidechainTypes#SCBT]],
                  inputBlockSize: Int,
-                 logsBloom: LogsBloom,
                  signatureOption: Option[Signature25519]) : Try[SidechainBlockBase[SidechainTypes#SCBT, SidechainBlockHeader]] =
   {
     val feePayments = if(isWithdrawalEpochLastBlock) {

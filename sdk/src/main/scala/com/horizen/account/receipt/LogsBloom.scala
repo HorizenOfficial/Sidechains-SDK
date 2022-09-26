@@ -34,13 +34,15 @@ class LogsBloom() extends BytesSerializable {
       })
   }
 
-  def addBloomFilter(bloomFilter: LogsBloom): Unit = {
+  def addBloomFilter(bloomFilter: LogsBloom): LogsBloom = {
     val bloomBytes = bloomFilter.getBloomFilter()
 
     this.bloomFilter.zipWithIndex
       .foreach({ case (bloomByte, i) =>
         this.bloomFilter(i) = (bloomByte | bloomBytes(i)).toByte
       })
+
+    this
   }
 
   def contains(data: Array[Byte]): Boolean = {

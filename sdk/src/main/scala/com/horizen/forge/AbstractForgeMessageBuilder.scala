@@ -318,8 +318,7 @@ abstract class AbstractForgeMessageBuilder[
       vrfProof,
       forgingStakeMerklePathInfo.merklePath,
       companion,
-      blockSize,
-      new LogsBloom()
+      blockSize
     )
 
     tryBlock match {
@@ -344,7 +343,6 @@ abstract class AbstractForgeMessageBuilder[
                      forgingStakeInfoMerklePath: MerklePath,
                      companion: DynamicTypedSerializer[TX,  TransactionSerializer[TX]],
                      inputBlockSize: Int,
-                     logsBloom: LogsBloom,
                      signatureOption: Option[Signature25519] = None
                     ): Try[SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase]]
 
