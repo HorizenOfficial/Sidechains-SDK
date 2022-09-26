@@ -49,7 +49,7 @@ public interface ThresholdSignatureCircuit {
 
     boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath, int customFieldsNum);
 
-    List<byte[]> getCertificateCustomFields(Seq<byte[]> utxoMerkleTreeRoot);
+    List<byte[]> getCertificateCustomFields(Seq<byte[]> customFields);
 
     byte[] reconstructUtxoMerkleTreeRoot(byte[] fe1Bytes, byte[] fe2Bytes);
 }

@@ -12,7 +12,6 @@ import com.horizen.utils.{BytesUtils, TimeToEpochUtils}
 import scorex.util.ScorexLogging
 import sparkz.core.NodeViewHolder.CurrentView
 
-import java.io.File
 import scala.compat.java8.OptionConverters.RichOptionalGeneric
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Try

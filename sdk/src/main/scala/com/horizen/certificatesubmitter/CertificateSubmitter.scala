@@ -7,15 +7,12 @@ import akka.util.Timeout
 import com.horizen._
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.certificatesubmitter.CertificateSubmitter._
-<<<<<<< HEAD
 import com.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateDataWithoutKeyRotation}
 import com.horizen.certificatesubmitter.strategies.{KeyRotationStrategy, WithKeyRotationStrategy, WithoutKeyRotationStrategy}
 import com.horizen.cryptolibprovider.utils.{FieldElementUtils, TypeOfCircuit}
-=======
 import com.horizen.certificatesubmitter.dataproof.DataForProofGeneration
 import com.horizen.certificatesubmitter.submitters.{ThresholdSigCircuitSubmitter, ThresholdSigCircuitSubmitterWithKeyRotation}
 import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
->>>>>>> DataForProofGenerationWithoutKeyRotation
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
