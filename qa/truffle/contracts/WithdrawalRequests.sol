@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 pragma solidity 0.8.17;
 
 // fake contract address: 0x0000000000000000000011111111111111111111
