@@ -1,6 +1,5 @@
 package com.horizen.account.api.http
 
-import org.web3j.crypto._
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
@@ -19,9 +18,7 @@ import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
-
 import com.horizen.account.utils.{EthereumTransactionDecoder, EthereumTransactionUtils, ZenWeiConverter}
-
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.SidechainTransactionErrorResponse.GenericTransactionError
@@ -34,13 +31,13 @@ import com.horizen.transaction.Transaction
 import com.horizen.utils.BytesUtils
 import org.web3j.crypto.Sign.SignatureData
 import org.web3j.crypto.TransactionEncoder.createEip155SignatureData
+import org.web3j.crypto._
 import scorex.core.settings.RESTApiSettings
 
-import scala.collection.JavaConverters._
-import scala.compat.java8.OptionConverters._
 import java.lang
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
+import scala.collection.JavaConverters._
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.reflect.ClassTag
@@ -134,10 +131,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       applyOnNodeView { sidechainNodeView =>
         val valueInWei = ZenWeiConverter.convertZenniesToWei(body.value)
         val destAddress = body.to
-
         // TODO actual gas implementation
         val gasPrice = sidechainNodeView.getNodeHistory.getBestBlock.header.baseFee
-
         val gasLimit = GasUtil.TxGas
         // check if the fromAddress is either empty or it fits and the value is high enough
         val secret = getFittingSecret(sidechainNodeView, body.from, valueInWei)

@@ -42,7 +42,7 @@ class AccountNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compani
     val header = mock[AccountBlockHeader]
     Mockito.when(history.getBestBlock).thenAnswer(_ => block)
     Mockito.when(block.header).thenAnswer(_ => header)
-    Mockito.when(header.baseFee).thenAnswer(_ => BigInteger.valueOf(1234L))
+    Mockito.when(header.baseFee).thenAnswer(_ => BigInteger.valueOf(1234))
     history
   }
 
@@ -50,7 +50,6 @@ class AccountNodeViewUtilMocks extends MockitoSugar with BoxFixture with Compani
     val accountState = mock[NodeAccountState]
     Mockito.when(accountState.getListOfForgerStakes).thenAnswer(_ => listOfStakes)
     Mockito.when(accountState.withdrawalRequests(ArgumentMatchers.anyInt())).thenAnswer(_ => listOfWithdrawalRequests)
-
     Mockito
       .when(accountState.getBalance(ArgumentMatchers.any[Array[Byte]]))
       .thenAnswer(_ => ZenWeiConverter.MAX_MONEY_IN_WEI) // It has always enough money
