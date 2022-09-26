@@ -132,6 +132,7 @@ type EvmResult struct {
 	ReturnData      []byte                       `json:"returnData"`
 	ContractAddress *common.Address              `json:"contractAddress"`
 	TraceLogs       []geth_internal.StructLogRes `json:"traceLogs,omitempty"`
+	Reverted        bool                         `json:"reverted"`
 }
 
 func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
@@ -208,5 +209,6 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		ReturnData:      returnData,
 		ContractAddress: contractAddress,
 		TraceLogs:       geth_internal.FormatLogs(tracer.StructLogs()),
+		Reverted:        vmerr == vm.ErrExecutionReverted,
 	}
 }

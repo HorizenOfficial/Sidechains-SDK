@@ -2,6 +2,7 @@ package com.horizen.validation
 
 import com.horizen.AbstractHistory
 import com.horizen.block.{ProofOfWorkVerifier, SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.params.NetworkParams
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
@@ -14,16 +15,17 @@ class MainchainPoWValidator[
   TX <: Transaction,
   H <: SidechainBlockHeaderBase,
   PMOD <: SidechainBlockBase[TX, H],
-  HSTOR <: AbstractHistoryStorage[PMOD, HSTOR],
-  HT <: AbstractHistory[TX, H, PMOD, HSTOR, HT]
+  FPI <: AbstractFeePaymentsInfo,
+  HSTOR <: AbstractHistoryStorage[PMOD, FPI, HSTOR],
+  HT <: AbstractHistory[TX, H, PMOD, FPI, HSTOR, HT]
 ]
 (
   params: NetworkParams
 )
-  extends HistoryBlockValidator[TX, H, PMOD, HSTOR, HT] {
+  extends HistoryBlockValidator[TX, H, PMOD, FPI, HSTOR, HT] {
 
   override def validate(block: PMOD, history: HT): Try[Unit] = {
-    if(ProofOfWorkVerifier.checkNextWorkRequired[TX, H, PMOD, HSTOR](block, history.storage, params)) {
+    if(ProofOfWorkVerifier.checkNextWorkRequired[TX, H, PMOD, FPI, HSTOR](block, history.storage, params)) {
       Success(Unit)
     }
     else {

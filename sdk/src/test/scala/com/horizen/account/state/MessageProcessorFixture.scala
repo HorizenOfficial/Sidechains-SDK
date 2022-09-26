@@ -1,11 +1,12 @@
 package com.horizen.account.state
 
+import com.horizen.account.FeeUtils
 import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.utils.Account
 import com.horizen.evm.utils.Hash
 import com.horizen.evm.{MemoryDatabase, StateDB}
-import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
+import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
 import org.junit.Assert.assertEquals
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.web3j.abi.datatypes.Type
@@ -22,7 +23,7 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
   val metadataStorageView: AccountStateMetadataStorageView = mock[AccountStateMetadataStorageView]
   val hashNull: Array[Byte] = Array.fill(32)(0)
   val origin: Array[Byte] = randomAddress
-  val defaultBlockContext = new BlockContext(Array.fill(20)(0), 0, 0, Account.GAS_LIMIT, 0, 0, 0)
+  val defaultBlockContext = new BlockContext(Array.fill(20)(0), 0, 0, FeeUtils.GAS_LIMIT, 0, 0, 0)
 
   def randomBytes(n: Int): Array[Byte] = {
     val bytes = new Array[Byte](n)
@@ -58,32 +59,34 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
       nonce: BigInteger = BigInteger.ZERO
   ): Message = {
     val gasPrice = BigInteger.ZERO
+    val gasFeeCap = BigInteger.valueOf(1000001)
+    val gasTipCap = BigInteger.ZERO
     val gasLimit = BigInteger.valueOf(1000000)
     new Message(
       new AddressProposition(origin),
       if (to == null) null else new AddressProposition(to),
       gasPrice,
-      gasPrice,
-      gasPrice,
+      gasFeeCap,
+      gasTipCap,
       gasLimit,
       value,
       nonce,
-      data
+      data,
+      false
     )
   }
 
   /**
    * Creates a large temporary gas pool and passes it into the given function.
    */
-  def withGas[A](fun: GasPool => A): A = {
-    fun(new GasPool(BigInteger.valueOf(1000000)))
+  def withGas[A](fun: GasPool => A, gasLimit: BigInteger = 1000000): A = {
+    fun(new GasPool(gasLimit))
   }
 
   /**
    * Creates a large temporary gas pool and verifies the amount of total gas consumed.
-   * TODO: enable gas checks again
    */
-  def assertGas[A](expectedGas: BigInteger = BigInteger.ZERO, enfore: Boolean = false)(fun: GasPool => A): A = {
+  def assertGas[A](expectedGas: BigInteger, enfore: Boolean = true)(fun: GasPool => A): A = {
     withGas { gas =>
       try {
         fun(gas)

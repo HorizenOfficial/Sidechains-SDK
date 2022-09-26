@@ -38,7 +38,12 @@ class EvmMessageProcessorIntegrationTest extends MessageProcessorFixture with Ev
 
   @Test
   def testProcess(): Unit = {
+
+    val initialBalance = new BigInteger("2000000000000")
+
     usingView(new EvmMessageProcessor) { stateView =>
+      stateView.addBalance(originAddress.address(), initialBalance)
+
       // smart contract constructor has one argument (256-bit uint)
       val initialValue = Array.fill(32) { 0.toByte }
       initialValue(initialValue.length - 1) = 42

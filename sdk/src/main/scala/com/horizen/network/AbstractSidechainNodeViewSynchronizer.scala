@@ -3,6 +3,7 @@ package com.horizen.network
 import akka.actor.ActorRef
 import com.horizen._
 import com.horizen.block.{SidechainBlock, SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
 import com.horizen.validation.{BlockInFutureException, InconsistentDataException}
@@ -28,8 +29,9 @@ abstract class AbstractSidechainNodeViewSynchronizer[
   PMOD <: SidechainBlockBase[TX, H],
   //HR <: HistoryReader[PMOD, SI],
   MR <: MempoolReader[TX]  : ClassTag,
-  HSTOR <: AbstractHistoryStorage[PMOD, HSTOR],
-  HIS <: AbstractHistory[TX, H, PMOD, HSTOR, HIS] : ClassTag]
+  FPI <: AbstractFeePaymentsInfo,
+  HSTOR <: AbstractHistoryStorage[PMOD, FPI, HSTOR],
+  HIS <: AbstractHistory[TX, H, PMOD, FPI, HSTOR, HIS] : ClassTag]
 (
   networkControllerRef: ActorRef,
   viewHolderRef: ActorRef,

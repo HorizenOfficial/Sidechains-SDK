@@ -2,6 +2,7 @@ package com.horizen.block
 
 import java.math.BigInteger
 import com.google.common.primitives.UnsignedInts
+import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.params.NetworkParams
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
@@ -33,7 +34,8 @@ object ProofOfWorkVerifier {
   def checkNextWorkRequired[TX <: Transaction,
     H <: SidechainBlockHeaderBase,
     PMOD <: SidechainBlockBase[TX, H],
-    HSTOR <: AbstractHistoryStorage[PMOD, HSTOR]](block: PMOD,
+    FPI <: AbstractFeePaymentsInfo,
+    HSTOR <: AbstractHistoryStorage[PMOD, FPI, HSTOR]](block: PMOD,
                                                   historyStorage: HSTOR,
                                                   params: NetworkParams): Boolean = {
     if(block.mainchainHeaders.isEmpty)

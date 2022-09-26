@@ -1,12 +1,12 @@
 package com.horizen.account.state
 
+import com.horizen.account.FeeUtils
 import com.horizen.account.events.AddWithdrawalRequest
-import com.horizen.account.utils.{Account, ZenWeiConverter}
+import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.evm.interop.EvmLog
-import com.horizen.utils.{BytesUtils, ClosableResourceHandler, WithdrawalEpochInfo}
+import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
 import org.junit.Assert._
 import org.junit._
-import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
 import org.web3j.abi.datatypes.Type
@@ -46,7 +46,7 @@ class WithdrawalMsgProcessorIntegrationTest
       WithdrawalMsgProcessor.init(view)
 
       val withdrawalEpoch = 102
-      val blockContext = new BlockContext(Array.fill(20)(0), 0, 0, Account.GAS_LIMIT, 0, 0, withdrawalEpoch)
+      val blockContext = new BlockContext(Array.fill(20)(0), 0, 0, FeeUtils.GAS_LIMIT, 0, 0, withdrawalEpoch)
 
       // GetListOfWithdrawalRequest without withdrawal requests yet
       val msgForListOfWR = listWithdrawalRequestsMessage(withdrawalEpoch)
