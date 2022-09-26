@@ -37,7 +37,7 @@ type EvmParams struct {
 	To            *common.Address  `json:"to"`
 	Value         *hexutil.Big     `json:"value"`
 	Input         []byte           `json:"input"`
-	Gas           hexutil.Uint64   `json:"availableGas"`
+	AvailableGas  hexutil.Uint64   `json:"availableGas"`
 	GasPrice      *hexutil.Big     `json:"gasPrice"`
 	AccessList    types.AccessList `json:"accessList"`
 	Context       EvmContext       `json:"context"`
@@ -69,8 +69,8 @@ func (p *EvmParams) setDefaults() {
 	if p.Value == nil {
 		p.Value = (*hexutil.Big)(new(big.Int))
 	}
-	if p.Gas == 0 {
-		p.Gas = (hexutil.Uint64)(math.MaxInt64)
+	if p.AvailableGas == 0 {
+		p.AvailableGas = (hexutil.Uint64)(math.MaxInt64)
 	}
 	if p.GasPrice == nil {
 		p.GasPrice = (*hexutil.Big)(new(big.Int))
@@ -161,7 +161,7 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		}
 		evm              = vm.NewEVM(blockContext, txContext, statedb, chainConfig, evmConfig)
 		sender           = vm.AccountRef(params.From)
-		gas              = uint64(params.Gas)
+		gas              = uint64(params.AvailableGas)
 		contractCreation = params.To == nil
 	)
 
@@ -203,7 +203,7 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 	}
 
 	return nil, &EvmResult{
-		UsedGas:         uint64(params.Gas) - gas,
+		UsedGas:         uint64(params.AvailableGas) - gas,
 		EvmError:        evmError,
 		ReturnData:      returnData,
 		ContractAddress: contractAddress,
