@@ -8,20 +8,20 @@ import com.horizen._
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter._
+import com.horizen.certificatesubmitter.dataproof.DataForProofGeneration
 import com.horizen.certificatesubmitter.submitters.{ThresholdSigCircuitSubmitter, ThresholdSigCircuitSubmitterWithKeyRotation}
 import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
-import com.horizen.proposition.SchnorrProposition
 import com.horizen.secret.SchnorrSecret
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.websocket.client.{MainchainNodeChannel, WebsocketErrorResponseException, WebsocketInvalidErrorMessageException}
+import scorex.util.ScorexLogging
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
-import scorex.util.ScorexLogging
 
 import java.io.File
 import java.util
@@ -40,12 +40,11 @@ import scala.util.{Failure, Random, Success, Try}
  * If `submitterEnabled` is `true`, it will try to generate and send the Certificate to MC node in case the proper amount of signatures were collected.
  * Must be singleton.
  */
-//type D extends DataForProofGeneration
-abstract class CertificateSubmitter[D](settings: SidechainSettings,
-                           sidechainNodeViewHolderRef: ActorRef,
-                           params: NetworkParams,
-                           mainchainChannel: MainchainNodeChannel)
-                          (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging {
+abstract class CertificateSubmitter[T <: DataForProofGeneration](settings: SidechainSettings,
+                                       sidechainNodeViewHolderRef: ActorRef,
+                                       params: NetworkParams,
+                                       mainchainChannel: MainchainNodeChannel)
+                                      (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging {
 
   import CertificateSubmitter.InternalReceivableMessages._
   import CertificateSubmitter.ReceivableMessages._
@@ -88,7 +87,7 @@ abstract class CertificateSubmitter[D](settings: SidechainSettings,
   override def postStop(): Unit = {
     log.debug("Certificate Submitter actor is stopping...")
     super.postStop()
-    if(timers.isTimerActive(CertificateGenerationTimer)) {
+    if (timers.isTimerActive(CertificateGenerationTimer)) {
       context.system.eventStream.publish(CertificateSubmissionStopped)
     }
   }
@@ -106,16 +105,16 @@ abstract class CertificateSubmitter[D](settings: SidechainSettings,
 
   private[certificatesubmitter] def workingCycle: Receive = {
     onCertificateSubmissionEvent orElse
-    newBlockArrived orElse
-    locallyGeneratedSignature orElse
-    signatureFromRemote orElse
-    tryToScheduleCertificateGeneration orElse
-    tryToGenerateCertificate orElse
-    getCertGenerationState orElse
-    getSignaturesStatus orElse
-    submitterStatus orElse
-    signerStatus orElse
-    reportStrangeInput
+      newBlockArrived orElse
+      locallyGeneratedSignature orElse
+      signatureFromRemote orElse
+      tryToScheduleCertificateGeneration orElse
+      tryToGenerateCertificate orElse
+      getCertGenerationState orElse
+      getSignaturesStatus orElse
+      submitterStatus orElse
+      signerStatus orElse
+      reportStrangeInput
   }
 
   protected def checkSubmitter: Receive = {
@@ -371,12 +370,12 @@ abstract class CertificateSubmitter[D](settings: SidechainSettings,
           case (Some(mempoolInfo), _) if mempoolInfo.epoch == epoch => mempoolInfo.quality
           // case the mempool certificate epoch is a newer than submitter epoch thrown an exception
           case (Some(mempoolInfo), _) if mempoolInfo.epoch > epoch =>
-          throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + mempoolInfo.quality)
+            throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + mempoolInfo.quality)
           // case we have chain cert for the given epoch return its quality.
           case (_, Some(chainInfo)) if chainInfo.epoch == epoch => chainInfo.quality
           // case the chain certificate epoch is a newer than submitter epoch thrown an exception
           case (_, Some(chainInfo)) if chainInfo.epoch > epoch =>
-          throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + chainInfo.quality)
+            throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + chainInfo.quality)
           // no known certs
           case _ => 0
         }
@@ -445,8 +444,8 @@ abstract class CertificateSubmitter[D](settings: SidechainSettings,
           if (checkQuality(status)) {
             def getProofGenerationData(sidechainNodeView: View): DataForProofGeneration = buildDataForProofGeneration(sidechainNodeView, status)
 
-            val dataForProofGeneration = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getProofGenerationData), timeoutDuration)
-              .asInstanceOf[DataForProofGeneration]
+            val dataForProofGeneration: T = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getProofGenerationData), timeoutDuration)
+              .asInstanceOf[T]
             log.debug(s"Retrieved data for certificate proof calculation: $dataForProofGeneration")
 
             // Run the time consuming part of proof generation and certificate submission in a background
@@ -473,8 +472,8 @@ abstract class CertificateSubmitter[D](settings: SidechainSettings,
                   dataForProofGeneration.btrFee,
                   certificateFee,
                   params
-                // TODO getCustomFields (dataForProofGeneration.utxoMerkleTreeRoot)
-                  )
+                  // TODO getCustomFields (dataForProofGeneration.utxoMerkleTreeRoot)
+                )
 
                 log.info(s"Backward transfer certificate request was successfully created for epoch number ${
                   certificateRequest.epochNumber
@@ -506,33 +505,6 @@ abstract class CertificateSubmitter[D](settings: SidechainSettings,
       case Failure(exception) =>
         log.error("Certificate creation failed.", exception)
         context.system.eventStream.publish(CertificateSubmissionStopped)
-    }
-  }
-
-  case class DataForProofGenerationWithKeyRotation extends DataForProofGeneration()
-  case class DataForProofGenerationWithoutKeyRotation()
-  // TODO trait with 2 children
-  abstract class DataForProofGeneration(referencedEpochNumber: Int,
-                                    sidechainId: Array[Byte],
-                                    withdrawalRequests: Seq[WithdrawalRequestBox],
-                                    endEpochCumCommTreeHash: Array[Byte],
-                                    btrFee: Long,
-                                    ftMinAmount: Long,
-                                    utxoMerkleTreeRoot: Optional[Array[Byte]], // TODO circuit dependent
-                                    schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])] // TODO circuit dependent
-   ) {
-
-    override def toString: String = {
-      val utxoMerkleTreeRootString = if (utxoMerkleTreeRoot.isPresent) BytesUtils.toHexString(utxoMerkleTreeRoot.get()) else "None"
-      "DataForProofGeneration(" +
-        s"referencedEpochNumber = $referencedEpochNumber, " +
-        s"sidechainId = $sidechainId, " +
-        s"withdrawalRequests = {${withdrawalRequests.mkString(",")}}, " +
-        s"endEpochCumCommTreeHash = ${BytesUtils.toHexString(endEpochCumCommTreeHash)}, " +
-        s"btrFee = $btrFee, " +
-        s"ftMinAmount = $ftMinAmount, " +
-        s"utxoMerkleTreeRoot = ${utxoMerkleTreeRootString}, " + // from this field different fields for 2 circuits
-        s"number of schnorrKeyPairs = ${schnorrKeyPairs.size})"
     }
   }
 
@@ -679,7 +651,7 @@ object CertificateSubmitterRef {
   def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit ec: ExecutionContext): Props = {
-    if(settings.withdrawalEpochCertificateSettings.typeOfCircuit == TypeOfCertificateSubmitter.NaiveThresholdSignatureCircuit) {
+    if (settings.withdrawalEpochCertificateSettings.typeOfCircuit == TypeOfCertificateSubmitter.NaiveThresholdSignatureCircuit) {
       Props(new ThresholdSigCircuitSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel)).withMailbox("akka.actor.deployment.submitter-prio-mailbox")
     } else {
       Props(new ThresholdSigCircuitSubmitterWithKeyRotation(settings, sidechainNodeViewHolderRef, params, mainchainChannel)).withMailbox("akka.actor.deployment.submitter-prio-mailbox")
