@@ -12,6 +12,7 @@ import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.evm._
 import com.horizen.evm.interop.EvmLog
+import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
@@ -399,7 +400,7 @@ class AccountState(
     using(getView) { stateView =>
       val blockContext = new BlockContext(
         // use the null address as forger
-        new Array[Byte](32),
+        new Array[Byte](Address.LENGTH),
         TimeToEpochUtils.getTimeStampForEpochAndSlot(params, epochAndSlot.epochNumber, epochAndSlot.slotNumber),
         stateView.baseFee,
         FeeUtils.GAS_LIMIT,

@@ -238,6 +238,10 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     val vrfPublicKey: VrfPublicKey = cmdInput.forgerPublicKeys.vrfPublicKey
     val ownerAddress: AddressProposition = cmdInput.ownerAddress
 
+    if (!view.isEoaAccount(ownerAddress.address())) {
+      throw new ExecutionRevertedException(s"Owner account is not an EOA")
+    }
+
     // TODO decide whether we need to check also genesis case (also UTXO model)
     if (!isGenesisScCreation && networkParams.restrictForgers) {
       // check that the delegation arguments satisfy the restricted list of forgers.
