@@ -62,7 +62,7 @@ func TestInvoke(t *testing.T) {
 		From:         user,
 		To:           nil,
 		Input:        test.StorageContractDeploy(initialValue),
-		Gas:          200000,
+		AvailableGas: 200000,
 		GasPrice:     (*hexutil.Big)(big.NewInt(1000000000)),
 	}).(*lib.EvmResult)
 	if result.EvmError != "" {
@@ -83,7 +83,7 @@ func TestInvoke(t *testing.T) {
 		From:         user,
 		To:           result.ContractAddress,
 		Input:        test.StorageContractStore(anotherValue),
-		Gas:          200000,
+		AvailableGas: 200000,
 		GasPrice:     (*hexutil.Big)(big.NewInt(1000000000)),
 	})
 	// call function to retrieve value
@@ -92,7 +92,7 @@ func TestInvoke(t *testing.T) {
 		From:         user,
 		To:           result.ContractAddress,
 		Input:        test.StorageContractRetrieve(),
-		Gas:          200000,
+		AvailableGas: 200000,
 		GasPrice:     (*hexutil.Big)(big.NewInt(1000000000)),
 	}).(*lib.EvmResult)
 	if resultRetrieve.EvmError != "" {
