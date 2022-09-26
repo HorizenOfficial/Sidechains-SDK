@@ -2,6 +2,7 @@ package com.horizen.cryptolibprovider;
 
 import com.horizen.box.WithdrawalRequestBox;
 import com.horizen.utils.Pair;
+import scala.collection.Seq;
 
 import java.util.List;
 import java.util.Optional;
@@ -13,7 +14,7 @@ public interface ThresholdSignatureCircuit {
                                      byte[] endCumulativeScTxCommTreeRoot,
                                      long btrFee,
                                      long ftMinAmount,
-                                     Optional<byte[]> utxoMerkleTreeRoot);
+                                     Seq<byte[]> customParameters);
 
     //None elements for schnorrSignatureBytesList if no secret key available, thus schnorrSignatureBytesList.size() == schnorrPublicKeysBytesList.size()
     //threshold is the same as in generateSysDataConstant
@@ -23,7 +24,7 @@ public interface ThresholdSignatureCircuit {
                                    byte[] endCumulativeScTxCommTreeRoot,
                                    long btrFee,
                                    long ftMinAmount,
-                                   Optional<byte[]> utxoMerkleTreeRoot,
+                                   Seq<byte[]> customParameters,
                                    List<Optional<byte[]>> schnorrSignatureBytesList,
                                    List<byte[]> schnorrPublicKeysBytesList,
                                    long threshold,
@@ -37,7 +38,7 @@ public interface ThresholdSignatureCircuit {
                         byte[] endCumulativeScTxCommTreeRoot,
                         long btrFee,
                         long ftMinAmount,
-                        Optional<byte[]> utxoMerkleTreeRoot,
+                        Seq<byte[]> customFields,
                         byte[] constant,
                         long quality, byte[] proof,
                         boolean checkProof,
@@ -48,7 +49,7 @@ public interface ThresholdSignatureCircuit {
 
     boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath, int customFieldsNum);
 
-    List<byte[]> getCertificateCustomFields(Optional<byte[]> utxoMerkleTreeRoot);
+    List<byte[]> getCertificateCustomFields(Seq<byte[]> utxoMerkleTreeRoot);
 
     byte[] reconstructUtxoMerkleTreeRoot(byte[] fe1Bytes, byte[] fe2Bytes);
 }
