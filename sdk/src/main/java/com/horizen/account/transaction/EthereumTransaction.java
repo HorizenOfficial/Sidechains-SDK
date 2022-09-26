@@ -381,7 +381,8 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                 getGasLimit(),
                 getValue(),
                 getNonce(),
-                getData()
+                getData(),
+                false
         );
     }
 }

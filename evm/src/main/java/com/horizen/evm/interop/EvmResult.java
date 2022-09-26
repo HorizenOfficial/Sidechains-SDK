@@ -9,4 +9,5 @@ public class EvmResult {
     public String evmError;
     public byte[] returnData;
     public Address contractAddress;
+    public Boolean reverted;
 }

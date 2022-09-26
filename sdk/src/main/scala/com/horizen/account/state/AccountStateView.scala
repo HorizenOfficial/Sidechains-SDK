@@ -76,7 +76,8 @@ class AccountStateView(
             BigInteger.ZERO, // gasLimit
             stakedAmount,
             BigInteger.ONE.negate(), // a negative nonce value will rule out collision with real transactions
-            data)
+            data,
+            false)
 
           val returnData = forgerStakesProvider.addScCreationForgerStake(message, this)
           log.debug(s"sc creation forging stake added with stakeid: ${BytesUtils.toHexString(returnData)}")
