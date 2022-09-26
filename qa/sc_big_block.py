@@ -45,6 +45,7 @@ class BigBlockTest(SidechainTestFramework):
         network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 500),
                                          sc_node_configuration,
                                          sc_node_configuration)
+        self.options.restapitimeout = 20
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
 
 
@@ -134,7 +135,7 @@ class BigBlockTest(SidechainTestFramework):
         address_node2 = http_wallet_createPrivateKey25519(sc_node2)
         transactions_bytes = 0
 
-        for i in range(500):
+        for i in range(1000):
             res = sendCointsToMultipleAddress(sc_node1, [address_node2 for _ in range(10)], [utxo_amount for _ in range(10)], 0)
             print("Created tx: "+res)
             tx = http_transaction_findById(sc_node1, res)
@@ -153,7 +154,7 @@ class BigBlockTest(SidechainTestFramework):
         block_node1 = http_block_best(sc_node1)
         block_node2 = http_block_best(sc_node2)
         assert_equal(block_node1, block_node2)
-        assert_equal(len(block_node1["sidechainTransactions"]), 500)
+        assert_equal(len(block_node1["sidechainTransactions"]), 1000)
 
 if __name__ == "__main__":
     BigBlockTest().main()
