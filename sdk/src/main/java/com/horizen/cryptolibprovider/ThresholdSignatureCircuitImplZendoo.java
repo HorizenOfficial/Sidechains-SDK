@@ -29,8 +29,8 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     }
 
     @Override
-    public List<byte[]> getCertificateCustomFields(Seq<byte[]> utxoMerkleTreeRoot) {
-        List<FieldElement> fes = prepareCustomFieldElements(utxoMerkleTreeRoot);
+    public List<byte[]> getCertificateCustomFields(Seq<byte[]> customFields) {
+        List<FieldElement> fes = prepareCustomFieldElements(customFields);
         List<byte[]> fesBytes = fes.stream().map(FieldElement::serializeFieldElement).collect(Collectors.toList());
         fes.forEach(FieldElement::freeFieldElement);
         return fesBytes;

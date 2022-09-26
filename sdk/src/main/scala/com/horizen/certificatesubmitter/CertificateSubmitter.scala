@@ -470,9 +470,9 @@ abstract class CertificateSubmitter[T <: DataForProofGeneration](settings: Sidec
                   dataForProofGeneration.withdrawalRequests,
                   dataForProofGeneration.ftMinAmount,
                   dataForProofGeneration.btrFee,
+                  dataForProofGeneration.customFields,
                   certificateFee,
                   params
-                  // TODO getCustomFields (dataForProofGeneration.utxoMerkleTreeRoot)
                 )
 
                 log.info(s"Backward transfer certificate request was successfully created for epoch number ${

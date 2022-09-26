@@ -2,14 +2,12 @@ package com.horizen.mainchain.api
 
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.box.WithdrawalRequestBox
+import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.params.NetworkParams
 import com.horizen.serialization.Views
-
-import java.math.BigDecimal
-import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.utils.BytesUtils
 
-import java.util.Optional
+import java.math.BigDecimal
 import scala.collection.convert.ImplicitConversions._
 
 
@@ -49,7 +47,7 @@ object CertificateRequestCreator {
              withdrawalRequestBoxes: Seq[WithdrawalRequestBox],
              ftMinAmount: Long,
              btrFee: Long,
-             utxoMerkleTreeRoot: List[Array[Byte]], // TODO customFields: Seq[Array[Bytes]] -
+             customFields: Seq[Array[Byte]],
             // without key rotation CryptoLibProvider.sigProofThresholdCircuitFunctions.getCertificateCustomFields(utxoMerkleTreeRoot).toSeq, 0or2 elements
             // with key rotation - keysMerkleRoot (publicSignerKeys + publicMasterKeys) 1element
              fee: Option[String],
@@ -66,7 +64,7 @@ object CertificateRequestCreator {
         val pubKeyAddress: String = BytesUtils.toHorizenPublicKeyAddress(wrb.proposition().bytes(), params)
         BackwardTransferEntry(pubKeyAddress, new BigDecimal(wrb.value()).divide(ZEN_COINS_DIVISOR).toPlainString)
       }),
-      CryptoLibProvider.sigProofThresholdCircuitFunctions.getCertificateCustomFields(utxoMerkleTreeRoot).toSeq,
+      CryptoLibProvider.sigProofThresholdCircuitFunctions.getCertificateCustomFields(customFields).toSeq,
       Seq(), // No bitvectors support for Threshold signature proofs
       new BigDecimal(ftMinAmount).divide(ZEN_COINS_DIVISOR).toPlainString,
       new BigDecimal(btrFee).divide(ZEN_COINS_DIVISOR).toPlainString,
