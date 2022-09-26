@@ -70,40 +70,6 @@ class EthereumReceiptTest
     assertEquals(receipt.hashCode(), decodedReceipt.hashCode())
   }
 
-  @Test
-  def receiptTestDeriveNonConsensusDataLogs() : Unit = {
-    val NUM_LOGS = 2
-    val consensusDataReceipt = createTestEthereumConsensusDataReceipt(ReceiptTxType.DynamicFeeTxType.id, NUM_LOGS)
-    val txHash = new Array[Byte](32)
-    Random.nextBytes(txHash)
-
-    val ethereumReceipt = EthereumReceipt(consensusDataReceipt, txHash, transactionIndex = 1,
-      Keccak256.hash("blockhash".getBytes).asInstanceOf[Array[Byte]], 22, BigInteger.valueOf(1234567), BytesUtils.fromHexString("1122334455667788990011223344556677889900"))
-    // println(receipt1)
-
-    // we have just consensus data in logs
-    val logs = ethereumReceipt.consensusDataReceipt.logs
-    assertEquals(logs.size, 2)
-
-    val fullLogs = ethereumReceipt.deriveFullLogs
-    //println(receipt2)
-
-    // after deriving logs we have log index and the same non consensus data as the parent receipt
-    assertEquals(fullLogs.size, logs.size)
-    assertEquals(BytesUtils.toHexString(fullLogs(0).consensusDataLog.address.toBytes), BytesUtils.toHexString(logs(0).address.toBytes))
-    assertEquals(BytesUtils.toHexString(fullLogs(1).consensusDataLog.address.toBytes), BytesUtils.toHexString(logs(1).address.toBytes))
-
-    assertEquals(fullLogs(0).logIndex, 0)
-    assertEquals(fullLogs(1).logIndex, 1)
-
-    assertEquals(BytesUtils.toHexString(fullLogs(0).transactionHash), BytesUtils.toHexString(ethereumReceipt.transactionHash))
-    assertEquals(BytesUtils.toHexString(fullLogs(1).transactionHash), BytesUtils.toHexString(ethereumReceipt.transactionHash))
-
-    assertEquals(fullLogs(0).blockNumber, ethereumReceipt.blockNumber)
-    assertEquals(fullLogs(1).blockNumber, ethereumReceipt.blockNumber)
-
-  }
-
   @Test def receiptSimpleEncodeDecodeType0Test(): Unit = {
     val receipt = createTestEthereumReceipt(ReceiptTxType.LegacyTxType.id)
     val encodedReceipt = EthereumConsensusDataReceipt.rlpEncode(receipt.consensusDataReceipt)

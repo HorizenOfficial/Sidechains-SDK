@@ -1,35 +1,35 @@
 package com.horizen.account.api.rpc.types;
 
 import com.fasterxml.jackson.annotation.JsonView;
-import com.horizen.account.receipt.EthereumLog;
 import com.horizen.account.receipt.EthereumReceipt;
 import com.horizen.account.transaction.EthereumTransaction;
 import com.horizen.account.utils.Account;
 import com.horizen.serialization.Views;
 import org.web3j.utils.Numeric;
-import scala.collection.immutable.List;
+import scala.collection.JavaConverters;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @JsonView(Views.Default.class)
 public class EthereumReceiptView {
-    private String transactionHash;
-    private String transactionIndex;
-    private String blockHash;
-    private String blockNumber;
-    private String from;
-    private String to;
-    private String cumulativeGasUsed;
-    private String gasUsed;
-    private String contractAddress;
-    private List<EthereumLog> logs;
-    private String logsBloom;
-    private String root;
-    private String status;
-    private String effectiveGasPrice;
-
-    public EthereumReceiptView() {
-    }
+    public final String type;
+    public final String transactionHash;
+    public final String transactionIndex;
+    public final String blockHash;
+    public final String blockNumber;
+    public final String from;
+    public final String to;
+    public final String cumulativeGasUsed;
+    public final String gasUsed;
+    public final String contractAddress;
+    public final List<EthereumLogView> logs;
+    public final String logsBloom;
+    public final String status;
+    public final String effectiveGasPrice;
 
     public EthereumReceiptView(EthereumReceipt receipt, EthereumTransaction tx) {
+        type = Numeric.toHexString(new byte[]{tx.version()});
         transactionHash = Numeric.toHexString(receipt.transactionHash());
         transactionIndex = Numeric.prependHexPrefix(Integer.toHexString(receipt.transactionIndex()));
         blockHash = Numeric.toHexString(receipt.blockHash());
@@ -39,65 +39,13 @@ public class EthereumReceiptView {
         cumulativeGasUsed = Numeric.toHexStringWithPrefix(receipt.consensusDataReceipt().cumulativeGasUsed());
         gasUsed = Numeric.toHexStringWithPrefix(receipt.gasUsed());
         contractAddress = receipt.contractAddress().length != Account.ADDRESS_SIZE ? null : Numeric.toHexString(receipt.contractAddress());
-        logs = receipt.deriveFullLogs().seq().toList();
+        var consensusLogs = JavaConverters.seqAsJavaList(receipt.consensusDataReceipt().logs());
+        logs = new ArrayList<>(consensusLogs.size());
+        for (var i = 0; i < consensusLogs.size(); i++) {
+            logs.add(new EthereumLogView(receipt, consensusLogs.get(i), i));
+        }
         logsBloom = Numeric.toHexString(receipt.consensusDataReceipt().logsBloom().getBloomFilter());
         status = Numeric.prependHexPrefix(Integer.toHexString(receipt.consensusDataReceipt().status()));
         effectiveGasPrice = (tx.getGasPrice() != null) ? Numeric.toHexStringWithPrefix(tx.getGasPrice()) : null;
-    }
-
-    public String getTransactionHash() {
-        return this.transactionHash;
-    }
-
-    public String getTransactionIndex() {
-        return this.transactionIndex;
-    }
-
-    public String getBlockHash() {
-        return this.blockHash;
-    }
-
-    public String getBlockNumber() {
-        return this.blockNumber;
-    }
-
-    public String getFrom() {
-        return this.from;
-    }
-
-    public String getTo() {
-        return this.to;
-    }
-
-    public String getCumulativeGasUsed() {
-        return this.cumulativeGasUsed;
-    }
-
-    public String getGasUsed() {
-        return this.gasUsed;
-    }
-
-    public String getContractAddress() {
-        return this.contractAddress;
-    }
-
-    public List<EthereumLog> getLogs() {
-        return this.logs;
-    }
-
-    public String getLogsBloom() {
-        return this.logsBloom;
-    }
-
-    public String getRoot() {
-        return this.root;
-    }
-
-    public String getStatus() {
-        return this.status;
-    }
-
-    public String getEffectiveGasPrice() {
-        return this.effectiveGasPrice;
     }
 }
