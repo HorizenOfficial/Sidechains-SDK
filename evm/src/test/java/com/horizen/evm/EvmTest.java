@@ -1,6 +1,7 @@
 package com.horizen.evm;
 
 import com.horizen.evm.interop.EvmResult;
+import com.horizen.evm.interop.TraceParams;
 import org.junit.Test;
 
 import java.math.BigInteger;
@@ -73,7 +74,7 @@ public class EvmTest extends LibEvmTestBase {
                 assertEquals("", result.evmError);
 
                 // call "retrieve" on the contract to fetch the value we just set
-                result = Evm.Apply(statedb, addr2, contractAddress, null, funcRetrieve, gasLimit, gasPrice, null, null);
+                result = Evm.Apply(statedb, addr2, contractAddress, null, funcRetrieve, gasLimit, gasPrice, null, new TraceParams());
                 assertEquals("", result.evmError);
                 assertEquals(hex(anotherValue), hex(result.returnData));
                 assertNotNull(result.traceLogs);

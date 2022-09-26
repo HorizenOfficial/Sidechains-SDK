@@ -41,8 +41,7 @@ type EvmParams struct {
 	GasPrice      *hexutil.Big     `json:"gasPrice"`
 	AccessList    types.AccessList `json:"accessList"`
 	Context       EvmContext       `json:"context"`
-	Trace         bool             `json:"trace"`
-	TxTraceParams TraceParams      `json:"traceParams"`
+	TxTraceParams *TraceParams     `json:"traceParams"`
 }
 
 // setDefaults for parameters that were omitted
@@ -101,6 +100,14 @@ func (t *TraceParams) getTraceConfig() *logger.Config {
 	}
 }
 
+func getTracer(t *TraceParams) *logger.Config {
+	if t == nil {
+		return nil
+	}
+
+	return t.getTraceConfig()
+}
+
 func mockBlockHashFn(n uint64) common.Hash {
 	// TODO: fetch real block hashes
 	return common.BytesToHash(crypto.Keccak256([]byte(new(big.Int).SetUint64(n).String())))
@@ -151,9 +158,9 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		}
 		blockContext = params.getBlockContext()
 		chainConfig  = defaultChainConfig()
-		tracer       = logger.NewStructLogger(params.TxTraceParams.getTraceConfig())
+		tracer       = logger.NewStructLogger(getTracer(params.TxTraceParams))
 		evmConfig    = vm.Config{
-			Debug:                   params.Trace,
+			Debug:                   params.TxTraceParams != nil,
 			Tracer:                  tracer,
 			NoBaseFee:               false,
 			EnablePreimageRecording: false,
