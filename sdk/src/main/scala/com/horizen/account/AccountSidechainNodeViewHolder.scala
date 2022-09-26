@@ -20,6 +20,7 @@ import com.horizen.storage.{SidechainSecretStorage, SidechainStorageInfo}
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
 import scorex.util.ModifierId
+import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import sparkz.core.utils.NetworkTimeProvider
 
 import scala.util.Success
@@ -175,14 +176,30 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       }
   }
 
-  // TODO
+  // TODO FOR MERGE
   override val listOfStorageInfo: Seq[SidechainStorageInfo] = Seq()
 
   override def dumpStorages: Unit = ???
 
   override def getStorageVersions: Map[String, String] = ???
 
-  override def processLocallyGeneratedTransaction: Receive = ???
+  override def processLocallyGeneratedTransaction: Receive = {
+    case newTxs: LocallyGeneratedTransaction[SidechainTypes#SCAT] =>
+      newTxs.txs.foreach(tx => {
+        // TODO FOR MERGE - Any custom implementation?
+        /*
+        if (tx.fee() > maxTxFee)
+          context.system.eventStream.publish(FailedTransaction(tx.asInstanceOf[Transaction].id, new IllegalArgumentException(s"Transaction ${tx.id()} with fee of ${tx.fee()} exceed the predefined MaxFee of ${maxTxFee}"),
+            immediateFailure = true))
+        else
+
+         */
+        log.info(s"Got locally generated tx ${tx.id} of type ${tx.modifierTypeId}")
+
+        txModify(tx)
+
+      })
+  }
 }
 
 object AccountNodeViewHolderRef {

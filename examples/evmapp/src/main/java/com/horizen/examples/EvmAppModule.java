@@ -3,12 +3,14 @@ package com.horizen.examples;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import com.horizen.ChainInfo;
+import com.horizen.SidechainAppStopper;
 import com.horizen.SidechainSettings;
 import com.horizen.account.AccountAppModule;
 import com.horizen.account.state.EvmMessageProcessor;
 import com.horizen.account.state.MessageProcessor;
 import com.horizen.account.transaction.AccountTransaction;
 import com.horizen.api.http.ApplicationApiGroup;
+import com.horizen.fork.ForkConfigurator;
 import com.horizen.proof.Proof;
 import com.horizen.proposition.Proposition;
 import com.horizen.secret.Secret;
@@ -17,6 +19,7 @@ import com.horizen.settings.SettingsReader;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.utils.Pair;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -38,6 +41,20 @@ public class EvmAppModule extends AccountAppModule {
         HashMap<Byte, TransactionSerializer<AccountTransaction<Proposition, Proof<Proposition>>>>
                 customAccountTransactionSerializers = new HashMap<>();
 
+        String dataDirAbsolutePath = sidechainSettings.sparkzSettings().dataDir().getAbsolutePath();
+
+        // two distinct storages are used in application state and wallet in order to test a version
+        // misalignment during startup and the recover logic
+        File appWalletStorage1 = new File(dataDirAbsolutePath + "/appWallet1");
+        File appWalletStorage2 = new File(dataDirAbsolutePath + "/appWallet2");
+        DefaultApplicationWallet defaultApplicationWallet = new DefaultApplicationWallet(appWalletStorage1, appWalletStorage2);
+
+        File appStateStorage1 = new File(dataDirAbsolutePath + "/appState1");
+        File appStateStorage2 = new File(dataDirAbsolutePath + "/appState2");
+        DefaultApplicationState defaultApplicationState = new DefaultApplicationState(appStateStorage1, appStateStorage2);
+
+        AppForkConfigurator forkConfigurator = new AppForkConfigurator();
+
         // Here I can add my custom rest api and/or override existing one
         List<ApplicationApiGroup> customApiGroups = new ArrayList<>();
 
@@ -51,6 +68,10 @@ public class EvmAppModule extends AccountAppModule {
         // Here I can add my custom logic to manage EthereumTransaction content.
         List<MessageProcessor> customMessageProcessors = new ArrayList<>();
         customMessageProcessors.add(new EvmMessageProcessor());
+
+        // use a custom object which implements the stopAll() method
+        SidechainAppStopper applicationStopper = new EvmAppStopper(
+                defaultApplicationState, defaultApplicationWallet);
 
         bind(SidechainSettings.class)
                 .annotatedWith(Names.named("SidechainSettings"))
@@ -71,6 +92,14 @@ public class EvmAppModule extends AccountAppModule {
         bind(new TypeLiteral<List<Pair<String, String>>>() {})
                 .annotatedWith(Names.named("RejectedApiPaths"))
                 .toInstance(rejectedApiPaths);
+
+        bind(SidechainAppStopper.class)
+                .annotatedWith(Names.named("ApplicationStopper"))
+                .toInstance(applicationStopper);
+
+        bind(ForkConfigurator.class)
+                .annotatedWith(Names.named("ForkConfiguration"))
+                .toInstance(forkConfigurator);
 
         bind(ChainInfo.class)
                 .annotatedWith(Names.named("ChainInfo"))

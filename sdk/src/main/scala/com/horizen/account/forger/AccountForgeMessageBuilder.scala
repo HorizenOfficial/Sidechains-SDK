@@ -313,7 +313,9 @@ class AccountForgeMessageBuilder(
     (appliedTransactions, receipts)
   }
 
-  override def getFeePaymentHash(nodeView: View, block: SidechainBlockBase[SidechainTypes#SCAT, _ <: SidechainBlockHeaderBase]): Array[Byte] = ???
+  override def getFeePaymentHash(nodeView: View, block: SidechainBlockBase[SidechainTypes#SCAT, _ <: SidechainBlockHeaderBase]): Array[Byte] = {
+    new Array[Byte](MerkleTree.ROOT_HASH_LENGTH)
+  }
 
-  override def getZeroFeePaymentsHash(): Array[Byte] = ???
+  override def getZeroFeePaymentsHash(): Array[Byte] = new Array[Byte](MerkleTree.ROOT_HASH_LENGTH)
 }
