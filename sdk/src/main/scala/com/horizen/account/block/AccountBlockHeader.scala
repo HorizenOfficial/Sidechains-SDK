@@ -73,7 +73,8 @@ case class AccountBlockHeader(
       Longs.toByteArray(gasLimit),
       ommersMerkleRootHash,
       Longs.toByteArray(ommersCumulativeScore),
-      feePaymentsHash
+      feePaymentsHash,
+      logsBloom.getBloomFilter()
     )
   }
 
