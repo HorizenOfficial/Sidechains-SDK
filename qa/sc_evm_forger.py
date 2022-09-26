@@ -1,12 +1,22 @@
 #!/usr/bin/env python3
 import json
+import pprint
 import time
 from decimal import Decimal
 from unicodedata import decimal
 
+from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
+from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
+    start_sc_nodes, AccountModelBlockVersion, EVM_APP_BINARY, generate_next_block, convertZenniesToWei, \
+    convertZenToZennies, connect_sc_nodes, convertZenToWei, ForgerStakeSmartContractAddress, get_account_balance, \
+    WithdrawalReqSmartContractAddress
+from sc_evm_test_contract_contract_deployment_and_interaction import deploy_smart_contract, random_byte_string
+from SidechainTestFramework.account.address_util import format_evm, format_eoa
+from test_framework.util import assert_equal, assert_true, start_nodes, \
+    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, AccountModelBlockVersion, EVM_APP_BINARY, generate_next_block, convertZenniesToWei, \
     convertZenToZennies, connect_sc_nodes, convertZenToWei, ForgerStakeSmartContractAddress, get_account_balance, \
@@ -193,18 +203,84 @@ class SCEvmForger(SidechainTestFramework):
         assert_true('error' in forg_spend_res_2, "The command should fail")
         assert_equal(forg_spend_res_2['error']['description'], "Forger Stake Owner not found")
 
-        # SC1 Delegate 300 Zen and 200 Zen to SC node 2 - expected stake is 500 Zen
+        # Try to delegate stake to a fake smart contract. It should fail.
         sc2_blockSignPubKey = sc_node_2.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
         sc2_vrfPubKey = sc_node_2.wallet_createVrfSecret()["result"]["proposition"]["publicKey"]
 
         forgerStake1_amount = 300  # Zen
         forgerStakes = {"forgerStakeInfo": {
-            "ownerAddress": evm_address_sc_node_1,  # SC node 1 is an owner
+            "ownerAddress": WithdrawalReqSmartContractAddress,  # SC node 1 is an owner
             "blockSignPublicKey": sc2_blockSignPubKey,  # SC node 2 is a block signer
             "vrfPubKey": sc2_vrfPubKey,
             "value": convertZenToZennies(forgerStake1_amount)  # in Satoshi
         }
         }
+
+        makeForgerStakeJsonRes = sc_node_1.transaction_makeForgerStake(json.dumps(forgerStakes))
+        if "result" not in makeForgerStakeJsonRes:
+            fail("make forger stake with fake smart contract as owner should create a tx: " + json.dumps(makeForgerStakeJsonRes))
+        else:
+            print("Transaction created as expected")
+        generate_next_block(sc_node_1, "first node")
+        self.sc_sync_all()
+
+        # Checking the receipt
+        status = int(sc_node_1.rpc_eth_getTransactionReceipt(makeForgerStakeJsonRes['result']['transactionId'])['result']['status'], 16)
+        assert_equal(0, status, "Make forger stake with fake smart contract as owner should create a failed tx")
+
+        # Check balance
+        gas_fee_paid, _, _ = computeForgedTxFee(sc_node_1, makeForgerStakeJsonRes['result']['transactionId'])
+        account_1_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
+        assert_equal(initial_balance_1 - gas_fee_paid, account_1_balance)
+        initial_balance_1 = account_1_balance
+
+        # Try to delegate stake to a smart contract. It should fail.
+        initial_secret = random_byte_string(length=20)
+        smart_contract_type = 'TestDeployingContract'
+        smart_contract_type = SmartContract(smart_contract_type)
+
+        tx_hash, smart_contract_address = smart_contract_type.deploy(sc_node_1, initial_secret,
+                                                      fromAddress=format_evm(evm_address_sc_node_1),
+                                                      gasLimit=10000000,
+                                                      gasPrice=900000000)
+        self.sc_sync_all()
+        generate_next_block(sc_node_1, "first node")
+
+        self.sc_sync_all()
+        # Check balance
+        gas_fee_paid, _, _ = computeForgedTxFee(sc_node_1, tx_hash)
+        account_1_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
+        assert_equal(initial_balance_1 - gas_fee_paid, account_1_balance)
+        initial_balance_1 = account_1_balance
+
+        forgerStakes["forgerStakeInfo"]["ownerAddress"] = format_eoa(smart_contract_address)
+
+        makeForgerStakeJsonRes = sc_node_1.transaction_makeForgerStake(json.dumps(forgerStakes))
+
+        if "result" not in makeForgerStakeJsonRes:
+            fail("make forger stake with fake smart contract as owner should create a tx: " + json.dumps(
+                makeForgerStakeJsonRes))
+        else:
+            print("Transaction created as expected")
+        generate_next_block(sc_node_1, "first node")
+        self.sc_sync_all()
+
+        # Checking the receipt
+        status = int(
+            sc_node_1.rpc_eth_getTransactionReceipt(makeForgerStakeJsonRes['result']['transactionId'])['result'][
+                'status'], 16)
+        assert_equal(0, status, "Make forger stake with fake smart contract as owner should create a failed tx")
+
+        # Check balance
+        gas_fee_paid, _, _ = computeForgedTxFee(sc_node_1, makeForgerStakeJsonRes['result']['transactionId'])
+        account_1_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
+        assert_equal(initial_balance_1 - gas_fee_paid, account_1_balance)
+        initial_balance_1 = account_1_balance
+
+        # SC1 Delegate 300 Zen and 200 Zen to SC node 2 - expected stake is 500 Zen
+
+        forgerStake1_amount = 300  # Zen
+        forgerStakes["forgerStakeInfo"]["ownerAddress"] = evm_address_sc_node_1
         makeForgerStakeJsonRes = sc_node_1.transaction_makeForgerStake(json.dumps(forgerStakes))
         if "result" not in makeForgerStakeJsonRes:
             fail("make forger stake failed: " + json.dumps(makeForgerStakeJsonRes))

@@ -8,7 +8,7 @@ import com.horizen.account.receipt.{EthereumConsensusDataReceipt, EthereumReceip
 import com.horizen.account.state.ForgerStakeMsgProcessor.{AddNewStakeCmd, ForgerStakeSmartContractAddress}
 import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment, MainchainTxCrosschainOutputAddressUtil, ZenWeiConverter}
+import com.horizen.account.utils._
 import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput, WithdrawalEpochCertificate}
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
 import com.horizen.evm.interop.EvmLog
@@ -76,7 +76,8 @@ class AccountStateView(
             BigInteger.ZERO, // gasLimit
             stakedAmount,
             BigInteger.ONE.negate(), // a negative nonce value will rule out collision with real transactions
-            data)
+            data,
+            false)
 
           val returnData = forgerStakesProvider.addScCreationForgerStake(message, this)
           log.debug(s"sc creation forging stake added with stakeid: ${BytesUtils.toHexString(returnData)}")
@@ -173,29 +174,21 @@ class AccountStateView(
     consensusDataReceipt
   }
 
-  override def isEoaAccount(address: Array[Byte]): Boolean = {
-    stateDb.isEoaAccount(address)
-  }
+  override def isEoaAccount(address: Array[Byte]): Boolean = stateDb.isEoaAccount(address)
 
-  override def isSmartContractAccount(address: Array[Byte]): Boolean = {
-    stateDb.isSmartContractAccount(address)
-  }
+  override def isSmartContractAccount(address: Array[Byte]): Boolean = stateDb.isSmartContractAccount(address)
 
-  override def accountExists(address: Array[Byte]): Boolean = {
-    !stateDb.isEmpty(address)
-  }
+  override def accountExists(address: Array[Byte]): Boolean = !stateDb.isEmpty(address)
 
   // account modifiers:
-  override def addAccount(address: Array[Byte], codeHash: Array[Byte]): Unit = {
+  override def addAccount(address: Array[Byte], codeHash: Array[Byte]): Unit =
     stateDb.setCodeHash(address, codeHash)
-  }
 
   override def increaseNonce(address: Array[Byte]): Unit =
     stateDb.setNonce(address, getNonce(address).add(BigInteger.ONE))
 
   @throws(classOf[ExecutionFailedException])
   override def addBalance(address: Array[Byte], amount: BigInteger): Unit = {
-    useGas(GasUtil.GasTBD)
     amount.compareTo(BigInteger.ZERO) match {
       case x if x == 0 => // amount is zero
       case x if x < 0 =>
@@ -208,7 +201,6 @@ class AccountStateView(
 
   @throws(classOf[ExecutionFailedException])
   override def subBalance(address: Array[Byte], amount: BigInteger): Unit = {
-    useGas(GasUtil.GasTBD)
     // stateDb lib does not do any sanity check, and negative balances might arise (and java/go json IF does not correctly handle it)
     // TODO: for the time being do the checks here, later they will be done in the caller stack
     amount.compareTo(BigInteger.ZERO) match {
@@ -223,41 +215,26 @@ class AccountStateView(
     }
   }
 
-  @throws(classOf[OutOfGasException])
-  override def getAccountStorage(address: Array[Byte], key: Array[Byte]): Array[Byte] = {
-    useGas(GasUtil.GasTBD)
+  override def getAccountStorage(address: Array[Byte], key: Array[Byte]): Array[Byte] =
     stateDb.getStorage(address, key, StateStorageStrategy.RAW)
-  }
 
-  @throws(classOf[OutOfGasException])
-  override def getAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Array[Byte] = {
-    useGas(GasUtil.GasTBD)
+  override def getAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Array[Byte] =
     stateDb.getStorage(address, key, StateStorageStrategy.CHUNKED)
-  }
 
-  @throws(classOf[OutOfGasException])
-  override def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit = {
-    useGas(GasUtil.GasTBD)
+  override def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit =
     stateDb.setStorage(address, key, value, StateStorageStrategy.RAW)
-  }
 
-  @throws(classOf[OutOfGasException])
-  override def updateAccountStorageBytes(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit = {
-    useGas(GasUtil.GasTBD)
+
+  override def updateAccountStorageBytes(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit =
     stateDb.setStorage(address, key, value, StateStorageStrategy.CHUNKED)
-  }
 
-  @throws(classOf[OutOfGasException])
-  override def removeAccountStorage(address: Array[Byte], key: Array[Byte]): Unit = {
-    useGas(GasUtil.GasTBD)
+
+  override def removeAccountStorage(address: Array[Byte], key: Array[Byte]): Unit =
     stateDb.removeStorage(address, key, StateStorageStrategy.RAW)
-  }
 
-  @throws(classOf[OutOfGasException])
-  override def removeAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Unit = {
-    useGas(GasUtil.GasTBD)
+
+  override def removeAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Unit =
     stateDb.removeStorage(address, key, StateStorageStrategy.CHUNKED)
-  }
 
   // out-of-the-box helpers
   override def addCertificate(cert: WithdrawalEpochCertificate): Unit =
@@ -315,31 +292,19 @@ class AccountStateView(
   }
 
   // account specific getters
-  override def getNonce(address: Array[Byte]): BigInteger = {
-    stateDb.getNonce(address)
-  }
+  override def getNonce(address: Array[Byte]): BigInteger = stateDb.getNonce(address)
 
-  override def getBalance(address: Array[Byte]): BigInteger = {
-    stateDb.getBalance(address)
-  }
+  override def getBalance(address: Array[Byte]): BigInteger = stateDb.getBalance(address)
 
-  override def getCodeHash(address: Array[Byte]): Array[Byte] = {
-    stateDb.getCodeHash(address)
-  }
+  override def getCodeHash(address: Array[Byte]): Array[Byte] = stateDb.getCodeHash(address)
 
-  override def getCode(address: Array[Byte]): Array[Byte] = {
-    stateDb.getCode(address)
-  }
+  override def getCode(address: Array[Byte]): Array[Byte] = stateDb.getCode(address)
 
   override def getAccountStateRoot: Array[Byte] = metadataStorageView.getAccountStateRoot
 
   override def getLogs(txHash: Array[Byte]): Array[EvmLog] = stateDb.getLogs(txHash)
 
-  @throws(classOf[OutOfGasException])
-  override def addLog(evmLog: EvmLog): Unit = {
-    useGas(GasUtil.logGas(evmLog))
-    stateDb.addLog(evmLog)
-  }
+  override def addLog(evmLog: EvmLog): Unit = stateDb.addLog(evmLog)
 
   // when a method is called on a closed handle, LibEvm throws an exception
   override def close(): Unit = stateDb.close()
@@ -353,17 +318,4 @@ class AccountStateView(
   def snapshot: Int = stateDb.snapshot()
 
   def revertToSnapshot(revisionId: Int): Unit = stateDb.revertToSnapshot(revisionId)
-
-  // used automatic gas consumption
-  private var trackedGasPool: Option[GasPool] = None
-
-  def enableGasTracking(gasPool: GasPool): Unit = trackedGasPool = Some(gasPool)
-
-  def disableGasTracking(): Unit = trackedGasPool = None
-
-  @throws(classOf[OutOfGasException])
-  private def useGas(gas: BigInteger): Unit = trackedGasPool match {
-    case Some(gasPool) => gasPool.subGas(gas)
-    case None => // gas tracking is disabled
-  }
 }

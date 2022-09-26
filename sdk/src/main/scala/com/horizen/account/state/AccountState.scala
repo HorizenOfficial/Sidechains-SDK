@@ -12,6 +12,7 @@ import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.evm._
 import com.horizen.evm.interop.EvmLog
+import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
@@ -235,9 +236,9 @@ class AccountState(
   }
 
   private def validateTopQualityCertificate(
-                                             topQualityCertificate: WithdrawalEpochCertificate,
-                                             stateView: AccountStateView
-                                           ): Unit = {
+      topQualityCertificate: WithdrawalEpochCertificate,
+      stateView: AccountStateView
+  ): Unit = {
 
     val certReferencedEpochNumber: Int = topQualityCertificate.epochNumber
 

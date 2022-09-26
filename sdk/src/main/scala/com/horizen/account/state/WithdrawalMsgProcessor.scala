@@ -38,15 +38,15 @@ object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with Withdra
   @throws(classOf[ExecutionFailedException])
   override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
     //TODO: check errors in Ethereum, maybe for some kind of errors there a predefined types or codes
-    view.enableGasTracking(gas)
+    val gasView = new AccountStateViewGasTracked(view, gas)
     getFunctionSignature(msg.getData) match {
       case GetListOfWithdrawalReqsCmdSig =>
         gas.subGas(GasSpentForGetListOfWithdrawalReqsCmd)
-        execGetListOfWithdrawalReqRecords(msg, view)
+        execGetListOfWithdrawalReqRecords(msg, gasView)
 
       case AddNewWithdrawalReqCmdSig =>
         gas.subGas(GasSpentForAddNewWithdrawalReqCmd)
-        execAddWithdrawalRequest(msg, view, blockContext.withdrawalEpochNumber)
+        execAddWithdrawalRequest(msg, gasView, blockContext.withdrawalEpochNumber)
 
       case functionSig =>
         throw new ExecutionRevertedException(s"Requested function does not exist. Function signature: $functionSig")

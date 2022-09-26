@@ -133,11 +133,10 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       applyOnNodeView { sidechainNodeView =>
         val valueInWei = ZenWeiConverter.convertZenniesToWei(body.value)
         val destAddress = body.to
-
         // TODO actual gas implementation
+        var gasLimit = GasUtil.TxGas
         var gasPrice = sidechainNodeView.getNodeHistory.getBestBlock.header.baseFee
 
-        var gasLimit = GasUtil.TxGas
         if (body.gasInfo.isDefined) {
           gasPrice = body.gasInfo.get.maxFeePerGas
           gasLimit = body.gasInfo.get.gasLimit
