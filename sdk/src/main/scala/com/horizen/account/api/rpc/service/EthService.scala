@@ -389,13 +389,11 @@ class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuratio
   @RpcMethod("eth_getForwardTransfers")
   def getForwardTransfers(blockId: String): ForwardTransfersView = {
     if (blockId == null) return null
-    var forwardTransfersView: ForwardTransfersView = null
     applyOnAccountView { nodeView =>
       nodeView.history.getBlockById(getBlockIdByTag(nodeView, blockId)).asScala match {
-        case Some(block) =>
-          forwardTransfersView = new ForwardTransfersView(getForwardTransfersForBlock(block).asJava, false)
+        case Some(block) => new ForwardTransfersView(getForwardTransfersForBlock(block).asJava, false)
+        case None => null
       }
     }
-    forwardTransfersView
   }
 }

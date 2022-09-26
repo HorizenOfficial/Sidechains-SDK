@@ -50,9 +50,11 @@ case class AccountBlockApiRoute(override val settings: RESTApiSettings,
       withNodeView { sidechainNodeView =>
         val block = sidechainNodeView.getNodeHistory.getBlockById(body.blockId)
         if (block.isEmpty) ApiResponseUtil.toResponse(ErrorNoBlockFound("ErrorNoBlockFound", JOptional.empty()))
-        else {
-          ApiResponseUtil.toResponse(RespAllForwardTransfers(new ForwardTransfersView(getForwardTransfersForBlock(block.get()).asJava, true)))
-        }
+        else ApiResponseUtil.toResponse(
+          RespAllForwardTransfers(new ForwardTransfersView(
+            getForwardTransfersForBlock(block.get()).asJava, true)
+          )
+        )
       }
     }
   }
