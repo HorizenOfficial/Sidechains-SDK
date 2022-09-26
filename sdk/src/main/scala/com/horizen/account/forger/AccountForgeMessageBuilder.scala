@@ -99,9 +99,9 @@ class AccountForgeMessageBuilder(
     var cumGasUsed: BigInteger = BigInteger.ZERO
     var cumBaseFee: BigInteger = BigInteger.ZERO // cumulative base-fee, burned in eth, goes to forgers pool
     var cumForgerTips: BigInteger = BigInteger.ZERO  // cumulative max-priority-fee, is paid to block forger
-    val listOfAccountsToSkip = new mutable.HashSet[SidechainTypes#SCP]
+    val accountsToSkip = new mutable.HashSet[SidechainTypes#SCP]
 
-    for ((tx, txIndex) <- sidechainTransactions.zipWithIndex if !listOfAccountsToSkip.contains(tx.getFrom)) {
+    for ((tx, txIndex) <- sidechainTransactions.zipWithIndex if !accountsToSkip.contains(tx.getFrom)) {
 
       stateView.applyTransaction(tx, txIndex, blockGasPool, blockContext) match {
         case Success(consensusDataReceipt) =>
@@ -126,18 +126,18 @@ class AccountForgeMessageBuilder(
           // keep trying to fit transactions into the block: this TX did not fit, but another one might
           log.trace(s"Could not apply tx, reason: ${e.getMessage}")
           // skip all txs from the same account
-          listOfAccountsToSkip += tx.getFrom
+          accountsToSkip += tx.getFrom
         case Failure(e: FeeCapTooLowException) =>
           // stop forging because all the remaining txs cannot be executed for the nonce, if they are from the same account, or,
           // if they are from other accounts, they will have a lower fee cap
           log.trace(s"Could not apply tx, reason: ${e.getMessage}")
           return Success(receiptList, txHashList, cumBaseFee, cumForgerTips)
         case Failure(e: NonceTooLowException) =>
-          // just skip this tx
-         log.trace(s"Could not apply tx, reason: ${e.getMessage}")
+          //SHOULD NEVER HAPPEN, but in case just skip this tx
+         log.error(s"******** Could not apply tx for NonceTooLowException ******* : ${e.getMessage}")
         case Failure(e) =>
           // skip all txs from the same account
-          listOfAccountsToSkip += tx.getFrom
+          accountsToSkip += tx.getFrom
           log.trace(s"Could not apply tx, reason: ${e.getMessage}. Skipping all next transactions from the same account because not executable anymore",e)
       }
     }

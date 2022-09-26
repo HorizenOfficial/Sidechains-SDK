@@ -34,6 +34,47 @@ class MempoolMapTest
   }
 
   @Test
+  def testCanPayHigherFee(): Unit = {
+    val mempoolMap = new MempoolMap(stateViewMock)
+
+    val nonce = BigInteger.ZERO
+    val value = BigInteger.TEN
+    val lowerGasPrice = BigInteger.valueOf(53)
+    val higherGasPrice = lowerGasPrice.add(BigInteger.TEN)
+
+
+    // Legacy tx with legacy tx
+    val legacyTxHigherPrice = createLegacyTransaction(value, nonce, Option.empty, Some(higherGasPrice))
+    val legacyTxLowerPrice = createLegacyTransaction(value, nonce, Option.empty, Some(lowerGasPrice))
+    assertTrue(mempoolMap.canPayHigherFee(legacyTxHigherPrice, legacyTxLowerPrice))
+    assertFalse(mempoolMap.canPayHigherFee(legacyTxHigherPrice, legacyTxHigherPrice))
+    assertFalse(mempoolMap.canPayHigherFee(legacyTxLowerPrice, legacyTxHigherPrice))
+    val lowerGasFee = lowerGasPrice
+    val higherGasFee = higherGasPrice
+    val lowerGasTip = BigInteger.valueOf(54)
+    val higherGasTip = lowerGasTip.add(BigInteger.TEN)
+    // EIP1559 tx with EIP1559 tx
+    val eip1559TxHFeeLTip = createEIP1559Transaction(value, nonce, Option.empty, higherGasFee, lowerGasTip)
+    val eip1559TxHFeeHTip = createEIP1559Transaction(value, nonce, Option.empty, higherGasFee, higherGasTip)
+    val eip1559TxLFeeLTip = createEIP1559Transaction(value, nonce, Option.empty, lowerGasFee, lowerGasTip)
+    val eip1559TxLFeeHTip = createEIP1559Transaction(value, nonce, Option.empty, lowerGasFee, higherGasTip)
+    assertFalse(mempoolMap.canPayHigherFee(eip1559TxHFeeLTip, eip1559TxHFeeLTip))
+    assertFalse(mempoolMap.canPayHigherFee(eip1559TxHFeeLTip, eip1559TxLFeeHTip))
+    assertFalse(mempoolMap.canPayHigherFee(eip1559TxLFeeHTip, eip1559TxHFeeLTip))
+    assertFalse(mempoolMap.canPayHigherFee(eip1559TxLFeeHTip, eip1559TxLFeeLTip))
+    assertFalse(mempoolMap.canPayHigherFee(eip1559TxHFeeHTip, eip1559TxHFeeLTip))
+    assertFalse(mempoolMap.canPayHigherFee(eip1559TxHFeeHTip, eip1559TxLFeeHTip))
+    assertTrue(mempoolMap.canPayHigherFee(eip1559TxHFeeHTip, eip1559TxLFeeLTip))
+    //Mixed tx
+    assertFalse(mempoolMap.canPayHigherFee(eip1559TxHFeeHTip, legacyTxHigherPrice))
+    assertFalse(mempoolMap.canPayHigherFee(legacyTxHigherPrice,eip1559TxHFeeLTip))
+    assertFalse(mempoolMap.canPayHigherFee(legacyTxHigherPrice,eip1559TxHFeeLTip))
+    assertTrue(mempoolMap.canPayHigherFee(legacyTxHigherPrice,eip1559TxLFeeLTip))
+    assertTrue(mempoolMap.canPayHigherFee(eip1559TxHFeeHTip,legacyTxLowerPrice))
+  }
+
+
+  @Test
   def testAddExecutableTx(): Unit = {
     var mempoolMap = new MempoolMap(stateViewMock)
 
@@ -914,5 +955,6 @@ class MempoolMapTest
     )
 
   }
+
 
 }

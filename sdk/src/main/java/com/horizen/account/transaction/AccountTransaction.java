@@ -12,6 +12,7 @@ public abstract class AccountTransaction<P extends Proposition, PR extends Proof
 
     public abstract BigInteger getNonce();
 
+    /* Price per unit of gas a user is willing to pay for their transaction to be executed. */
     public abstract BigInteger getGasPrice();
 
     public abstract BigInteger getGasLimit();
@@ -26,6 +27,16 @@ public abstract class AccountTransaction<P extends Proposition, PR extends Proof
 
     public abstract PR getSignature();
 
-    public abstract boolean canPayHigherFee(AccountTransaction<P,PR> tx);
+    /* Maximum fee per unit of gas a user is willing to pay for their transaction to be executed.
+    * It must be greater or equal than the sum of the base fee and the priority fee ("tip").
+    * It is used together with max priority fee per gas*/
+    public abstract BigInteger getMaxFeePerGas();
+
+    /* Optional fee per unit of gas a user is willing to pay for their transaction to be executed, in addition to base
+    fee. It is the part of the gas fee paid directly to the block forger. In case the sum of base fee and priority fee
+    is greater than max fee per gas, the user will pay just max fee per gas, thus the effective priority fee will be
+    max fee - base fee.
+   */
+    public abstract BigInteger getMaxPriorityFeePerGas();
 
 }

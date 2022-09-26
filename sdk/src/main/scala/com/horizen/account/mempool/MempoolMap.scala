@@ -67,7 +67,7 @@ class MempoolMap(stateReader: AccountStateReader) extends ScorexLogging {
         if (listOfTxs.contains(ethTransaction.getNonce)) {
           val oldTxId = listOfTxs(ethTransaction.getNonce)
           val oldTx = all(oldTxId)
-          if (ethTransaction.canPayHigherFee(oldTx)) {
+          if (canPayHigherFee(ethTransaction, oldTx)){
             log.trace(s"Replacing transaction $oldTx with $ethTransaction")
             all.remove(oldTxId)
             all.put(ethTransaction.id, ethTransaction)
@@ -83,7 +83,7 @@ class MempoolMap(stateReader: AccountStateReader) extends ScorexLogging {
         val listOfTxs = executableTxs(account)
         val oldTxId = listOfTxs(ethTransaction.getNonce)
         val oldTx = all(oldTxId)
-        if (ethTransaction.canPayHigherFee(oldTx)) {
+        if (canPayHigherFee(ethTransaction, oldTx)){
           log.trace(s"Replacing transaction $oldTx with $ethTransaction")
           all.remove(oldTxId)
           all.put(ethTransaction.id, ethTransaction)
@@ -149,12 +149,7 @@ class MempoolMap(stateReader: AccountStateReader) extends ScorexLogging {
   def takeExecutableTxs(limit: Int): Iterable[SidechainTypes#SCAT] = {
 
     def txOrder(tx: SidechainTypes#SCAT) = {
-      if (tx.isInstanceOf[EthereumTransaction]){
-        val ethTx = tx.asInstanceOf[EthereumTransaction]
-        ethTx.getMaxFeePerGas.subtract(stateReader.baseFee).min(ethTx.getMaxPriorityFeePerGas)
-      }
-      else
-        tx.getGasPrice.subtract(stateReader.baseFee)
+      tx.getMaxFeePerGas.subtract(stateReader.baseFee).min(tx.getMaxPriorityFeePerGas)
     }
 
     val orderedQueue = new mutable.PriorityQueue[SidechainTypes#SCAT]()(Ordering.by(txOrder))
@@ -178,4 +173,8 @@ class MempoolMap(stateReader: AccountStateReader) extends ScorexLogging {
     txs
   }
 
+  def canPayHigherFee(newTx: SidechainTypes#SCAT, oldTx: SidechainTypes#SCAT): Boolean = {
+     (newTx.getMaxFeePerGas.compareTo(oldTx.getMaxFeePerGas) > 0) &&
+      (newTx.getMaxPriorityFeePerGas.compareTo(oldTx.getMaxPriorityFeePerGas) > 0)
+    }
 }

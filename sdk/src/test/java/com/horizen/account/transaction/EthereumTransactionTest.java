@@ -561,51 +561,6 @@ public class EthereumTransactionTest {
     }
 
 
-    @Test
-    public void  testCanPayHigherFee() {
-        BigInteger nonce = BigInteger.ZERO;
-        BigInteger value = BigInteger.TEN;
-
-        BigInteger lowerGasPrice = BigInteger.valueOf(53);
-        BigInteger higherGasPrice = lowerGasPrice.add(BigInteger.TEN);
-
-        EthereumTransactionFixture txFixture = new EthereumTransactionFixture() {};
-        // Legacy tx with legacy tx
-        var legacyTxHigherPrice = txFixture.createLegacyTransaction(value, nonce, Option.empty(), new Some(higherGasPrice));
-        var legacyTxLowerPrice = txFixture.createLegacyTransaction(value, nonce,  Option.empty(), new Some(lowerGasPrice));
-
-        assertTrue(legacyTxHigherPrice.canPayHigherFee(legacyTxLowerPrice));
-        assertFalse(legacyTxHigherPrice.canPayHigherFee(legacyTxHigherPrice));
-        assertFalse(legacyTxLowerPrice.canPayHigherFee(legacyTxHigherPrice));
-
-        var lowerGasFee = lowerGasPrice;
-        var higherGasFee = higherGasPrice;
-        var lowerGasTip = BigInteger.valueOf(54);
-        var higherGasTip = lowerGasTip.add(BigInteger.TEN);
-
-        // EIP1559 tx with EIP1559 tx
-        var eip1559TxHFeeLTip = txFixture.createEIP1559Transaction(value, nonce, Option.empty(), higherGasFee, lowerGasTip);
-        var eip1559TxHFeeHTip = txFixture.createEIP1559Transaction(value, nonce, Option.empty(), higherGasFee, higherGasTip);
-        var eip1559TxLFeeLTip = txFixture.createEIP1559Transaction(value, nonce, Option.empty(), lowerGasFee, lowerGasTip);
-        var eip1559TxLFeeHTip = txFixture.createEIP1559Transaction(value, nonce, Option.empty(), lowerGasFee, higherGasTip);
-
-        assertFalse(eip1559TxHFeeLTip.canPayHigherFee(eip1559TxHFeeLTip));
-        assertFalse(eip1559TxHFeeLTip.canPayHigherFee(eip1559TxLFeeHTip));
-        assertFalse(eip1559TxLFeeHTip.canPayHigherFee(eip1559TxHFeeLTip));
-        assertFalse(eip1559TxLFeeHTip.canPayHigherFee(eip1559TxLFeeLTip));
-        assertFalse(eip1559TxHFeeHTip.canPayHigherFee(eip1559TxHFeeLTip));
-        assertFalse(eip1559TxHFeeHTip.canPayHigherFee(eip1559TxLFeeHTip));
-        assertTrue(eip1559TxHFeeHTip.canPayHigherFee(eip1559TxLFeeLTip));
-
-        //Mixed tx
-        assertFalse(eip1559TxHFeeHTip.canPayHigherFee(legacyTxHigherPrice));
-        assertFalse(legacyTxHigherPrice.canPayHigherFee(eip1559TxHFeeLTip));
-        assertFalse(legacyTxHigherPrice.canPayHigherFee(eip1559TxHFeeLTip));
-        assertTrue(legacyTxHigherPrice.canPayHigherFee(eip1559TxLFeeLTip));
-        assertTrue(eip1559TxHFeeHTip.canPayHigherFee(legacyTxLowerPrice));
-
-    }
-
 
 
 }
