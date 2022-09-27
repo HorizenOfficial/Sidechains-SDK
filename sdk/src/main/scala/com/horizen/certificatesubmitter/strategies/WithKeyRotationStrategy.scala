@@ -17,20 +17,35 @@ import scala.concurrent.Await
 import scala.util.{Failure, Success, Try}
 
 class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams) extends KeyRotationStrategy(settings, params) {
-  protected def generateProof(dataForProofGeneration: DataForProofGenerationWithKeyRotation): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
+  private def generateProof(dataForProofGeneration: DataForProofGenerationWithKeyRotation): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
     val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
       dataForProofGeneration.schnorrKeyPairs.map {
         case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)
       }.unzip
 
-    log.info(s"Start generating proof with parameters: dataForProofGeneration = $dataForProofGeneration, " +
+    log.info(s"Start generating proof with parameters: dataForProofGeneration = ${
+      dataForProofGeneration
+    }, " +
       s"signersThreshold = ${
         params.signersThreshold
       }. " +
       s"It can take a while.")
 
     //create and return proof with quality
-    CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(schnorrSignatureBytesList = signaturesBytes.asJava, schnorrPublicKeysBytesList = signersPublicKeysBytes.asJava, threshold = params.signersThreshold, provingKeyPath = provingFileAbsolutePath, checkProvingKey = true, zk = true)
+    CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(
+      dataForProofGeneration.withdrawalRequests.asJava,
+      dataForProofGeneration.sidechainId,
+      dataForProofGeneration.referencedEpochNumber,
+      dataForProofGeneration.endEpochCumCommTreeHash,
+      dataForProofGeneration.btrFee,
+      dataForProofGeneration.ftMinAmount,
+      dataForProofGeneration.customFields,
+      signaturesBytes.asJava,
+      signersPublicKeysBytes.asJava,
+      params.signersThreshold,
+      provingFileAbsolutePath,
+      true,
+      true)
   }
 
   def buildDataForProofGeneration(sidechainNodeView: View, status: SignaturesStatus): DataForProofGenerationWithKeyRotation = {

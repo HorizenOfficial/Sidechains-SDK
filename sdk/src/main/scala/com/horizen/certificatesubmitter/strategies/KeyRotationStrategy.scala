@@ -9,6 +9,7 @@ import com.horizen._
 import scorex.util.ScorexLogging
 import sparkz.core.NodeViewHolder.CurrentView
 
+import java.io.File
 import java.util.Optional
 import scala.compat.java8.OptionConverters.{RichOptionForJava8, RichOptionalGeneric}
 import scala.concurrent.duration.FiniteDuration
@@ -60,5 +61,21 @@ abstract class KeyRotationStrategy(settings: SidechainSettings, params: NetworkP
     val headerInfo = history.mainchainHeaderInfoByHash(mcBlockHash).getOrElse(throw new IllegalStateException("Missed MC Cumulative Hash"))
 
     headerInfo.cumulativeCommTreeHash
+  }
+
+  var provingFileAbsolutePath: String = {
+    if (params.certProvingKeyFilePath.isEmpty) {
+      throw new IllegalStateException(s"Proving key file name is not set")
+    }
+
+    val provingFile: File = new File(params.certProvingKeyFilePath)
+    if (!provingFile.canRead) {
+      throw new IllegalStateException(s"Proving key file at path ${provingFile.getAbsolutePath} is not exist or can't be read")
+      ""
+    } else {
+      provingFileAbsolutePath = provingFile.getAbsolutePath
+      log.debug(s"Found proving key file at location: $provingFileAbsolutePath")
+      provingFileAbsolutePath
+    }
   }
 }

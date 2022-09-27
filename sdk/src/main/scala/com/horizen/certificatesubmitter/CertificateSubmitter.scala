@@ -53,8 +53,6 @@ class CertificateSubmitter[T <: DataForProofGeneration](settings: SidechainSetti
   val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
 
-  private var provingFileAbsolutePath: String = _
-
   private[certificatesubmitter] var submitterEnabled: Boolean = settings.withdrawalEpochCertificateSettings.submitterIsEnabled
   private[certificatesubmitter] var certificateSigningEnabled: Boolean = settings.withdrawalEpochCertificateSettings.certificateSigningIsEnabled
 
@@ -78,7 +76,7 @@ class CertificateSubmitter[T <: DataForProofGeneration](settings: SidechainSetti
     super.postRestart(reason)
     log.error("CertificateSubmitter was restarted because of: ", reason)
     // Switch to the working cycle, otherwise Submitter will stuck on initialization phase.
-    loadProvingFilePath()
+//    loadProvingFilePath()
     context.become(workingCycle)
   }
 
@@ -143,21 +141,6 @@ class CertificateSubmitter[T <: DataForProofGeneration](settings: SidechainSetti
     }
 
     loadProvingFilePath()
-  }
-
-  private def loadProvingFilePath(): Unit = {
-    if (params.certProvingKeyFilePath.isEmpty) {
-      throw new IllegalStateException(s"Proving key file name is not set")
-    }
-
-    val provingFile: File = new File(params.certProvingKeyFilePath)
-    if (!provingFile.canRead) {
-      throw new IllegalStateException(s"Proving key file at path ${provingFile.getAbsolutePath} is not exist or can't be read")
-    }
-    else {
-      provingFileAbsolutePath = provingFile.getAbsolutePath
-      log.debug(s"Found proving key file at location: $provingFileAbsolutePath")
-    }
   }
 
   private def getSidechainCreationTransaction(history: SidechainHistory): SidechainCreation = {
