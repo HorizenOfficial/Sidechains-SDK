@@ -158,8 +158,8 @@ class SidechainBlock(override val header: SidechainBlockHeader,
       case Failure(e) => throw e
     }
 
-//    if(sidechainTransactions.size > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER)
-//      throw new InvalidSidechainBlockDataException(s"SidechainBlock $id sidechain transactions amount exceeds the limit.")
+    if(sidechainTransactions.size > SidechainBlock.MAX_SIDECHAIN_TXS_NUMBER)
+      throw new InvalidSidechainBlockDataException(s"SidechainBlock $id sidechain transactions amount exceeds the limit.")
 
     // Check Block size
     val blockSize: Int = bytes.length
@@ -205,7 +205,7 @@ object SidechainBlock extends SparkzEncoding {
   // SC Max block size is enough to include at least 2 MC block ref data full of SC outputs + Top quality cert -> ~2.3MB each
   // Also it is more than enough to process Ommers for very long MC forks (2000+)
   val MAX_BLOCK_SIZE: Int = 5000000
-  val MAX_SIDECHAIN_TXS_NUMBER: Int = 1000000
+  val MAX_SIDECHAIN_TXS_NUMBER: Int = 2000
   val ModifierTypeId: ModifierTypeId = sparkz.core.ModifierTypeId @@ 3.toByte
   val BLOCK_VERSION: Block.Version = 1: Byte
   val BlockIdHexStringLength = 64
