@@ -177,6 +177,7 @@ class SCEvmBootstrap(SidechainTestFramework):
 
         # Test estimating forging stake
         # data from AccountTransactionApiRouteTest
+        # TODO check why this is incorrect and returns 0x67b6
         request = {
             "from": "0x" + evm_address,
             "data": "5ca748ff1122334455669988112233445566778811223344556677881122334455667788aabbddddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff00123400000000000000000000000000000000000000000000000000000000000000000000000000000000000000bbdf1daf64ed9d6e30f80b93f647b8bc6ea13191",

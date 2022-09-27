@@ -78,7 +78,7 @@ class SCEvmEOA2EOA(SidechainTestFramework):
             "to": to_addr,
             "value": amount_in_zennies,
         }
-        if nonce:
+        if nonce is not None:
             j["nonce"] = nonce
         if isEIP155:
             j["EIP155"] = True
@@ -104,26 +104,25 @@ class SCEvmEOA2EOA(SidechainTestFramework):
         final_balance_to = get_account_balance(to_sc_node, to_addr)
 
         # check receipt, meanwhile do some check on amounts
-        # TODO take gas into account
         receipt = from_sc_node.rpc_eth_getTransactionReceipt(tx_hash)
         if print_json_results:
             pprint.pprint(receipt)
         status = int(receipt['result']['status'], 16)
-        gas_fee_paid, _, _ = computeForgedTxFee(from_sc_node, tx_hash)
+        gasUsed = int(receipt['result']['gasUsed'][2:], 16) * int(receipt['result']['effectiveGasPrice'][2:], 16)
         if status == 0:
-            # failed, there should be no balance modifications
             assert_equal(initial_balance_to, final_balance_to)
-            assert_equal(initial_balance_from - gas_fee_paid, final_balance_from)
+            assert_equal(initial_balance_from - gasUsed, final_balance_from)
             return (False, "receipt status FAILED", tx_hash)
         elif status == 1:
+            
             # success, check we have expected balances
             if from_addr != to_addr:
                 cond_to = (initial_balance_to + amount_in_wei) == final_balance_to
-                cond_from = (initial_balance_from - amount_in_wei - gas_fee_paid) == final_balance_from
+                cond_from = (initial_balance_from - amount_in_wei - gasUsed) == final_balance_from
             else:
                 # using same address do not change balances
-                cond_to = initial_balance_to - gas_fee_paid == final_balance_to
-                cond_from = initial_balance_from - gas_fee_paid == final_balance_from
+                cond_to = (initial_balance_to - gasUsed) == final_balance_to
+                cond_from = (initial_balance_from - gasUsed) == final_balance_from
             assert_true(cond_to)
             assert_true(cond_from)
 
@@ -198,16 +197,17 @@ class SCEvmEOA2EOA(SidechainTestFramework):
         sigV = int(txJsonResult['v'], 16)
         assert_equal(chainId, getChainIdFromSignatureV(sigV))
 
-        # TODO when gas charging will be enabled, this must fail since the sender has not enough balance
-        # for payoing the gas
+        #negative cases
+
         print("Create an EOA to EOA transaction moving all the from balance")
         transferred_amount_in_zen = convertWeiToZen(get_account_balance(sc_node_1, evm_address_sc1))
         ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc2,
                                     transferred_amount_in_zen)
-        assert_false(ret)
+        if not ret:
+            print("Expected failure: {}".format(msg))
+        else:
+            fail("EOA2EOA of the whole balance should not work due to gas consummation")
 
-
-        #negative cases
 
         print("Create an EOA to EOA transaction with an invalid from address (not owned) ==> SHOULD FAIL")
         transferred_amount_in_zen = Decimal('1')
@@ -239,7 +239,7 @@ class SCEvmEOA2EOA(SidechainTestFramework):
         print("Create an EOA to EOA transaction moving some fund with too low a nonce ==> SHOULD FAIL")
         transferred_amount_in_zen = Decimal('33')
         ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc2,
-                                    transferred_amount_in_zen, nonce=1)
+                                    transferred_amount_in_zen, nonce=0)
         if not ret:
             print("Expected failure: {}".format(msg))
         else:

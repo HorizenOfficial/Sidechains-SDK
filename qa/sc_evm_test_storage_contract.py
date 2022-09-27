@@ -42,7 +42,7 @@ def set_storage_value(node, smart_contract, address, tx_sender, new_value, *, st
     else:
         print("Setting smart contract storage to {}".format(new_value))
         res = smart_contract.call_function(node, 'set(string)', new_value, fromAddress=tx_sender,
-                                           gasLimit=10000000, gasPrice=900000000, toAddress=address)
+                                           gasLimit=10000000, toAddress=address)
     if generate_block:
         print("generating next block...")
         generate_next_blocks(node, "first node", 1)
@@ -117,7 +117,7 @@ class SCEvmStorageContract(SidechainTestFramework):
         ret = sc_node.wallet_allPublicKeys()
         pprint.pprint(ret)
 
-        ft_amount_in_zen = Decimal("33.22")
+        ft_amount_in_zen = Decimal("3000")
         # transfer some fund from MC to SC using the evm address created before
         forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
                                       self.nodes[0],
@@ -136,10 +136,12 @@ class SCEvmStorageContract(SidechainTestFramework):
         smart_contract = SmartContract(smart_contract_type)
         print(smart_contract)
         test_message = 'Initial message'
+
+        estimated_gas = smart_contract.estimate_gas(sc_node, 'constructor', test_message,
+                                                                fromAddress=evm_address)
         tx_hash, smart_contract_address = smart_contract.deploy(sc_node, test_message,
                                                                 fromAddress=evm_address,
-                                                                gasLimit=10000000,
-                                                                gasPrice=900000000)
+                                                                gasLimit=estimated_gas)
         generate_next_blocks(sc_node, "first node", 1)
         print("Blocks mined - tx receipt will contain address")
         # TODO check logs (events)
