@@ -192,7 +192,7 @@ class PerformanceTest(SidechainTestFramework):
             *sc_nodes
         )
 
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720 * self.block_rate / 2)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720 * self.block_rate)
 
     def sc_setup_nodes(self):
         if self.perf_data["use_multiprocessing"]:
@@ -272,13 +272,16 @@ class PerformanceTest(SidechainTestFramework):
                 forger_nodes.append(self.sc_nodes[index])
         return forger_nodes
 
-    def populate_mempool(self, utxo_amount, txs_creator_nodes, non_creator_nodes):
+    def populate_mempool(self, utxo_amount, txs_creator_nodes, extended_transaction):
 
         for j in range(len(txs_creator_nodes)):
             destination_address = http_wallet_createPrivateKey25519(random.choice(self.sc_nodes))
             for i in range(self.initial_txs):
                 # Populate the mempool - so don't mine a block
-                sendCoinsToAddress(txs_creator_nodes[j], destination_address, utxo_amount, 0)
+                if (extended_transaction):
+                    sendCoinsToAddressExtended(txs_creator_nodes[j], destination_address, utxo_amount, 0)
+                else:
+                    sendCoinsToAddress(txs_creator_nodes[j], destination_address, utxo_amount, 0)
                 if i % 1000 == 0:
                     print("Node " + str(j) + " sent txs: " + str(i))
             print("Node " + str(j) + " totally sent txs: " + str(self.initial_txs))
@@ -487,7 +490,7 @@ class PerformanceTest(SidechainTestFramework):
         if self.test_type == TestType.Mempool or self.test_type == TestType.Mempool_Timed:
             # Populate the mempool
             print("Populating the mempool...")
-            self.populate_mempool(utxo_amount, txs_creators, non_txs_creators)
+            self.populate_mempool(utxo_amount, txs_creators, self.extended_transaction)
             # Give mempool time to update
             sleep(3)
             print("Mempool ready!")
@@ -571,7 +574,6 @@ class PerformanceTest(SidechainTestFramework):
         self.csv_data["end_balances"] = end_balances
 
         # OUTPUT TEST RESULTS
-        latency_config = []
         blocks_per_node = []
         blocks_ts = []
         mempool_transactions = []
@@ -591,10 +593,6 @@ class PerformanceTest(SidechainTestFramework):
             mempool_transactions.append(mempool_txs)
 
             while current_block_id != start_block_id:
-                txs = self.get_node_mined_transactions_by_block_id(node, current_block_id)
-                if (iteration == 0 and len(txs) > 0):
-                    for tx in txs:
-                        pprint.pprint("NEW BOXES "+str(len(tx["newBoxes"]))+" UNLOCKERS "+str(len(tx["unlockers"])))
                 number_of_transactions_mined = len(
                     self.get_node_mined_transactions_by_block_id(node, current_block_id))
                 total_mined_transactions += number_of_transactions_mined
