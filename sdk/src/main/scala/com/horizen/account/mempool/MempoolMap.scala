@@ -12,6 +12,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
+// TODO: check the usage of AccountStateReader instance here and in the mempool. Consider the stateReader as an immutable object that may become outdated after the state has been updated.
 class MempoolMap(stateReader: AccountStateReader) extends ScorexLogging {
   type TxIdByNonceMap = mutable.SortedMap[BigInteger, ModifierId]
 
