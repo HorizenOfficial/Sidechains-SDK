@@ -528,7 +528,11 @@ class PerformanceTest(SidechainTestFramework):
             while not end_test:
                 end_test = True
                 for creator_node in txs_creators:
-                    if len(allTransactions(creator_node, False)["transactionIds"]) != 0:
+                    try:
+                        mempool = allTransactions(creator_node, False)["transactionIds"]
+                    except Exception as e:
+                        mempool = allTransactions(creator_node, False)["transactionIds"]
+                    if len(mempool) != 0:
                         end_test = False
                         break
                 # TODO: Check this sleep is efficient
