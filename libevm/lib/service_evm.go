@@ -7,11 +7,20 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/eth/tracers/logger"
 	"github.com/ethereum/go-ethereum/params"
+	"libevm/lib/geth_internal"
 	"math"
 	"math/big"
 	"time"
 )
+
+type TraceParams struct {
+	EnableMemory     bool `json:"enableMemory"`
+	DisableStack     bool `json:"disableStack"`
+	DisableStorage   bool `json:"disableStorage"`
+	EnableReturnData bool `json:"enableReturnData"`
+}
 
 type EvmContext struct {
 	Difficulty  *hexutil.Big   `json:"difficulty"`
@@ -24,14 +33,15 @@ type EvmContext struct {
 
 type EvmParams struct {
 	HandleParams
-	From       common.Address   `json:"from"`
-	To         *common.Address  `json:"to"`
-	Value      *hexutil.Big     `json:"value"`
-	Input      []byte           `json:"input"`
-	GasLimit   hexutil.Uint64   `json:"gasLimit"`
-	GasPrice   *hexutil.Big     `json:"gasPrice"`
-	AccessList types.AccessList `json:"accessList"`
-	Context    EvmContext       `json:"context"`
+	From          common.Address   `json:"from"`
+	To            *common.Address  `json:"to"`
+	Value         *hexutil.Big     `json:"value"`
+	Input         []byte           `json:"input"`
+	AvailableGas  hexutil.Uint64   `json:"availableGas"`
+	GasPrice      *hexutil.Big     `json:"gasPrice"`
+	AccessList    types.AccessList `json:"accessList"`
+	Context       EvmContext       `json:"context"`
+	TxTraceParams *TraceParams     `json:"traceParams"`
 }
 
 // setDefaults for parameters that were omitted
@@ -49,7 +59,7 @@ func (c *EvmContext) setDefaults() {
 		c.BaseFee = (*hexutil.Big)(big.NewInt(params.InitialBaseFee))
 	}
 	if c.GasLimit == 0 {
-		c.GasLimit = (hexutil.Uint64)(math.MaxUint64)
+		c.GasLimit = (hexutil.Uint64)(math.MaxInt64)
 	}
 }
 
@@ -58,8 +68,8 @@ func (p *EvmParams) setDefaults() {
 	if p.Value == nil {
 		p.Value = (*hexutil.Big)(new(big.Int))
 	}
-	if p.GasLimit == 0 {
-		p.GasLimit = (hexutil.Uint64)(math.MaxUint64)
+	if p.AvailableGas == 0 {
+		p.AvailableGas = (hexutil.Uint64)(math.MaxInt64)
 	}
 	if p.GasPrice == nil {
 		p.GasPrice = (*hexutil.Big)(new(big.Int))
@@ -79,6 +89,23 @@ func (p *EvmParams) getBlockContext() vm.BlockContext {
 		GasLimit:    uint64(p.Context.GasLimit),
 		BaseFee:     p.Context.BaseFee.ToInt(),
 	}
+}
+
+func (t *TraceParams) getTraceConfig() *logger.Config {
+	return &logger.Config{
+		EnableMemory:     t.EnableMemory,
+		DisableStack:     t.DisableStack,
+		DisableStorage:   t.DisableStorage,
+		EnableReturnData: t.EnableReturnData,
+	}
+}
+
+func getTracer(t *TraceParams) *logger.Config {
+	if t == nil {
+		return nil
+	}
+
+	return t.getTraceConfig()
 }
 
 func mockBlockHashFn(n uint64) common.Hash {
@@ -107,11 +134,12 @@ func defaultChainConfig() *params.ChainConfig {
 }
 
 type EvmResult struct {
-	UsedGas         uint64          `json:"usedGas"`
-	EvmError        string          `json:"evmError"`
-	ReturnData      []byte          `json:"returnData"`
-	ContractAddress *common.Address `json:"contractAddress"`
-	Reverted        bool            `json:"reverted"`
+	UsedGas         uint64                       `json:"usedGas"`
+	EvmError        string                       `json:"evmError"`
+	ReturnData      []byte                       `json:"returnData"`
+	ContractAddress *common.Address              `json:"contractAddress"`
+	TraceLogs       []geth_internal.StructLogRes `json:"traceLogs,omitempty"`
+	Reverted        bool                         `json:"reverted"`
 }
 
 func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
@@ -130,9 +158,10 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		}
 		blockContext = params.getBlockContext()
 		chainConfig  = defaultChainConfig()
+		tracer       = logger.NewStructLogger(getTracer(params.TxTraceParams))
 		evmConfig    = vm.Config{
-			Debug:                   false,
-			Tracer:                  nil,
+			Debug:                   params.TxTraceParams != nil,
+			Tracer:                  tracer,
 			NoBaseFee:               false,
 			EnablePreimageRecording: false,
 			JumpTable:               nil,
@@ -140,7 +169,7 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 		}
 		evm              = vm.NewEVM(blockContext, txContext, statedb, chainConfig, evmConfig)
 		sender           = vm.AccountRef(params.From)
-		gas              = uint64(params.GasLimit)
+		gas              = uint64(params.AvailableGas)
 		contractCreation = params.To == nil
 	)
 
@@ -182,10 +211,11 @@ func (s *Service) EvmApply(params EvmParams) (error, *EvmResult) {
 	}
 
 	return nil, &EvmResult{
-		UsedGas:         uint64(params.GasLimit) - gas,
+		UsedGas:         uint64(params.AvailableGas) - gas,
 		EvmError:        evmError,
 		ReturnData:      returnData,
 		ContractAddress: contractAddress,
+		TraceLogs:       geth_internal.FormatLogs(tracer.StructLogs()),
 		Reverted:        vmerr == vm.ErrExecutionReverted,
 	}
 }
