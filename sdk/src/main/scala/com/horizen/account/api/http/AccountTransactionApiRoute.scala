@@ -3,7 +3,7 @@ package com.horizen.account.api.http
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
-import com.fasterxml.jackson.annotation.JsonView
+import com.fasterxml.jackson.annotation.{JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.google.common.primitives.Bytes
 import com.horizen.SidechainTypes
@@ -589,7 +589,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
 
 object AccountTransactionRestScheme {
-
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqAllTransactions(format: Option[Boolean]) extends SuccessResponse
 
