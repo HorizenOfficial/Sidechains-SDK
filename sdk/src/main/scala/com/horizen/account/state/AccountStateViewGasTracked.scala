@@ -104,6 +104,7 @@ class AccountStateViewGasTracked(view: BaseAccountStateView, gas: GasPool) exten
     view.removeAccountStorageBytes(address, key)
   }
 
+
   @throws(classOf[OutOfGasException])
   override def addLog(evmLog: EvmLog): Unit = {
     gas.subGas(GasUtil.logGas(evmLog))
@@ -119,4 +120,8 @@ class AccountStateViewGasTracked(view: BaseAccountStateView, gas: GasPool) exten
   override def getLogs(txHash: Array[Byte]): Array[EvmLog] = view.getLogs(txHash)
 
   override def getIntermediateRoot: Array[Byte] = view.getIntermediateRoot
+
+  override def baseFee: BigInteger = view.baseFee
+
+
 }

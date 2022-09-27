@@ -3,6 +3,8 @@ import pprint
 import random
 from decimal import Decimal
 
+from eth_utils import to_checksum_address
+
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
 from SidechainTestFramework.account.address_util import format_evm
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -39,8 +41,8 @@ def deploy_smart_contract(node, smart_contract_type, from_address, initial_secre
     print("Deploying smart contract with initial secret {}...".format(initial_secret))
     tx_hash, address = smart_contract_type.deploy(node, initial_secret,
                                                   fromAddress=from_address,
-                                                  gasLimit=100000000,
-                                                  gasPrice=10)
+                                                  gasLimit=10000000,
+                                                  gasPrice=900000000)
     print("Generating next block...")
     generate_next_blocks(node, "first node", 1)
     tx_receipt = node.rpc_eth_getTransactionReceipt(tx_hash)
@@ -55,10 +57,11 @@ def deploy_child(node, smart_contract_type, smart_contract_address, from_address
     if static_call:
         print("Read-only calling {}: testing deployment of a child contract".format(method))
         res = smart_contract_type.static_call(node, method, fromAddress=from_address,
-                                              toAddress=smart_contract_address)
+                                              toAddress=smart_contract_address,
+                                               gasPrice = 900000000)
     else:
         print("Calling {}: deploying a child contract".format(method))
-        res = smart_contract_type.call_function(node, method, fromAddress=from_address, gasLimit=10000000, gasPrice=10,
+        res = smart_contract_type.call_function(node, method, fromAddress=from_address, gasLimit=10000000, gasPrice=900000000,
                                                 toAddress=smart_contract_address)
     if generate_block:
         print("generating next block...")
@@ -73,11 +76,12 @@ def update_parent_secret(node, smart_contract_type, smart_contract_address, from
     if static_call:
         print("Read-only calling {}: testing setting the secret to {} via a child contract".format(method, new_secret))
         res = smart_contract_type.static_call(node, method, new_secret, fromAddress=from_address,
-                                              toAddress=smart_contract_address)
+                                              toAddress=smart_contract_address,
+                                               gasPrice = 900000000)
     else:
         print("Calling {}: setting the secret to {} via a child contract".format(method, new_secret))
         res = smart_contract_type.call_function(node, method, new_secret, fromAddress=from_address, gasLimit=10000000,
-                                                gasPrice=10, toAddress=smart_contract_address)
+                                                gasPrice=900000000, toAddress=smart_contract_address)
     if generate_block:
         print("generating next block...")
         generate_next_blocks(node, "first node", 1)
@@ -89,7 +93,8 @@ def get_secret(node, smart_contract_type, smart_contract_address, from_address):
     method = 'checkParentSecret()'
     print("Getting parent secret via function {} on contract {}".format(method, smart_contract_address))
     res = smart_contract_type.static_call(node, method, fromAddress=from_address,
-                                          toAddress=smart_contract_address[2:])[0]
+                                          toAddress=smart_contract_address[2:],
+                                               gasPrice = 900000000)[0]
     print("Parent secret: {}".format(res))
     return res
 
@@ -106,7 +111,8 @@ def get_children(node, smart_contract_type, smart_contract_address, from_address
     method = 'getChildren()'
     print("Getting children via function {}".format(method))
     res = list(smart_contract_type.static_call(node, method, fromAddress=from_address,
-                                               toAddress=smart_contract_address)[0])
+                                               toAddress=smart_contract_address,
+                                               gasPrice = 900000000)[0])
     print("Children: {}".format(res))
     return res
 
@@ -208,7 +214,8 @@ class SCEvmDeployingContract(SidechainTestFramework):
         # testing deployment
         initial_secret = random_byte_string(length=20)
         number_of_children = 0
-        parent_contract_address = deploy_smart_contract(sc_node, parent_smart_contract_type, evm_address,
+        evm_hex_address = to_checksum_address(evm_address)
+        parent_contract_address = deploy_smart_contract(sc_node, parent_smart_contract_type, evm_hex_address,
                                                         initial_secret)
         # asserting that there are no initial children
         children = assert_child_count(sc_node, parent_smart_contract_type, parent_contract_address, evm_address,
@@ -220,7 +227,7 @@ class SCEvmDeployingContract(SidechainTestFramework):
         res = deploy_child(sc_node, parent_smart_contract_type, parent_contract_address, evm_address,
                            static_call=True, generate_block=False)
         # TODO when receipts are implemented - check receipt indicates success and emits logs
-        tx_hash = deploy_child(sc_node, parent_smart_contract_type, parent_contract_address, evm_address,
+        tx_hash = deploy_child(sc_node, parent_smart_contract_type, parent_contract_address, evm_hex_address,
                                static_call=False, generate_block=True)
 
         number_of_children += 1
@@ -235,7 +242,7 @@ class SCEvmDeployingContract(SidechainTestFramework):
         res = deploy_child(sc_node, parent_smart_contract_type, parent_contract_address, evm_address,
                            static_call=True, generate_block=False)
         # TODO when receipts are implemented - check receipt indicates success and emits logs
-        tx_hash = deploy_child(sc_node, parent_smart_contract_type, parent_contract_address, evm_address,
+        tx_hash = deploy_child(sc_node, parent_smart_contract_type, parent_contract_address, evm_hex_address,
                                static_call=False, generate_block=True)
 
         number_of_children += 1
@@ -251,7 +258,7 @@ class SCEvmDeployingContract(SidechainTestFramework):
         res = update_parent_secret(sc_node, child_smart_contract_type, children[-1], evm_address,
                                    new_secret=new_secret, static_call=True, generate_block=False)
         # TODO when receipts are implemented - check receipt indicates success and emits logs
-        tx_hash = update_parent_secret(sc_node, child_smart_contract_type, children[-1], evm_address,
+        tx_hash = update_parent_secret(sc_node, child_smart_contract_type, children[-1], evm_hex_address,
                                        new_secret=new_secret, static_call=False, generate_block=True)
 
         compare_secret(sc_node, child_smart_contract_type, children[-1], evm_address, new_secret)

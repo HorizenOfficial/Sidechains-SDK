@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import json
 import pprint
 import json
 from decimal import Decimal
@@ -24,7 +25,7 @@ Configuration: bootstrap 1 SC node and start it with genesis info extracted from
     - Start SC node with that genesis info
 
 Test:
-    - Execute forward tranfer to an EOA
+    - Execute forward transfer to an EOA
     - Verify account balance
     - Verify forward transfer
     - Deploy Smart Contract
@@ -128,9 +129,19 @@ class SCEvmForwardTransfer(SidechainTestFramework):
         test_message = 'Initial message'
         tx_hash, smart_contract_address = smart_contract.deploy(sc_node, test_message,
                                                                 fromAddress=evm_address,
-                                                                gasLimit=100000000,
-                                                                gasPrice=10)
+                                                                gasLimit=10000000,
+                                                                gasPrice=900000000)
+
+        self.sc_sync_all()
+        print("Mempool node before")
+        response = sc_node.transaction_allTransactions(json.dumps({"format": True}))
+        pprint.pprint(response)
+
         generate_next_blocks(sc_node, "first node", 1)
+        self.sc_sync_all()
+        print("Mempool node after")
+        response = sc_node.transaction_allTransactions(json.dumps({"format": True}))
+        pprint.pprint(response)
 
         # verify smart contract has a balance of zero
         balance = sc_node.rpc_eth_getBalance(smart_contract_address, "latest")

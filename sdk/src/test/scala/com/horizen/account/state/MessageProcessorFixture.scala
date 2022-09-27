@@ -86,12 +86,12 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
   /**
    * Creates a large temporary gas pool and verifies the amount of total gas consumed.
    */
-  def assertGas[A](expectedGas: BigInteger, enfore: Boolean = true)(fun: GasPool => A): A = {
+  def assertGas[A](expectedGas: BigInteger, enforce: Boolean = true)(fun: GasPool => A): A = {
     withGas { gas =>
       try {
         fun(gas)
       } finally {
-        if (enfore) {
+        if (enforce) {
           assertEquals("Unexpected gas consumption", expectedGas, gas.getUsedGas)
         } else {
           println("consumed gas: " + gas.getUsedGas)
