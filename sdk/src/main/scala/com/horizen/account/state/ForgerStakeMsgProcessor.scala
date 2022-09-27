@@ -37,7 +37,7 @@ trait ForgerStakesProvider {
 case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContractMsgProcessor with ForgerStakesProvider {
 
   override val contractAddress: Array[Byte] = ForgerStakeSmartContractAddress
-  override val contractCodeHash: Array[Byte] = Keccak256.hash("ForgerStakeSmartContractCodeHash")
+  override val contractCode: Array[Byte] = Keccak256.hash("ForgerStakeSmartContractCode")
 
   val networkParams: NetworkParams = params
 

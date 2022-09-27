@@ -34,7 +34,7 @@ import org.web3j.crypto.{SignedRawTransaction, TransactionEncoder}
 import org.web3j.utils.Numeric
 import scorex.core.NodeViewHolder
 import scorex.core.NodeViewHolder.CurrentView
-import scorex.util.ModifierId
+import scorex.util.{ModifierId, ScorexLogging}
 
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
@@ -47,14 +47,11 @@ import scala.language.postfixOps
 import scala.util.control.Breaks.{break, breakable}
 import scala.util.{Failure, Success, Try}
 
-class EthService(
-    val scNodeViewHolderRef: ActorRef,
-    val nvtimeout: FiniteDuration,
-    networkParams: NetworkParams,
-    val sidechainSettings: SidechainSettings,
-    val sidechainTransactionActorRef: ActorRef
-) extends RpcService
-      with ClosableResourceHandler {
+
+class EthService(val scNodeViewHolderRef: ActorRef, val nvtimeout: FiniteDuration, networkParams: NetworkParams, val sidechainSettings: SidechainSettings, val sidechainTransactionActorRef: ActorRef)
+  extends RpcService
+    with ClosableResourceHandler
+      with ScorexLogging {
   type NV = CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]
 
   def applyOnAccountView[R](functionToBeApplied: NV => R): R = {
@@ -69,22 +66,17 @@ class EthService(
       .asInstanceOf[Future[Try[R]]]
     // return result or rethrow potential exceptions
     Await.result(res, nvtimeout) match {
-      case Failure(exception) =>
-        exception match {
-          case reverted: ExecutionRevertedException =>
-            throw new RpcException(
-              new RpcError(
-                RpcCode.ExecutionError.getCode,
-                reverted.getMessage,
-                Numeric.toHexString(reverted.revertReason)
-              )
-            )
-          case err: ExecutionFailedException =>
-            throw new RpcException(new RpcError(RpcCode.ExecutionError.getCode, err.getMessage, null))
-          case err: TransactionSemanticValidityException =>
-            throw new RpcException(new RpcError(RpcCode.ExecutionError.getCode, err.getMessage, null))
-          case _ => throw exception
-        }
+      case Failure(exception) => exception match {
+        case reverted: ExecutionRevertedException => throw new RpcException(new RpcError(
+          RpcCode.ExecutionError.getCode, reverted.getMessage, Numeric.toHexString(reverted.revertReason)))
+        case err: ExecutionFailedException => throw new RpcException(new RpcError(
+          RpcCode.ExecutionError.getCode, err.getMessage, null))
+        case err: TransactionSemanticValidityException => throw new RpcException(new RpcError(
+          RpcCode.ExecutionError.getCode, err.getMessage, null))
+        case _ =>
+          log.error("unexpected exception", exception)
+          throw exception
+      }
       case Success(value) => value
     }
   }
