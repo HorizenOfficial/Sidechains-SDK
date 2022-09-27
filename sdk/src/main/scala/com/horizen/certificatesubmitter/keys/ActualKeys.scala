@@ -8,6 +8,10 @@ case class ActualKeys(signingKeys: Vector[SchnorrProposition], masterKeys: Vecto
   override type M = ActualKeys
 
   override def serializer: SparkzSerializer[ActualKeys] = ActualKeysSerializer
+
+  def getMerkleRootOfPublicKeys(): Array[Byte] = {
+
+  }
 }
 
 object ActualKeysSerializer extends SparkzSerializer[ActualKeys] {
