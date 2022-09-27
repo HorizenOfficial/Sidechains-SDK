@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import pprint
+import json
 from decimal import Decimal
 
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract, EvmExecutionError
@@ -25,6 +26,7 @@ Configuration: bootstrap 1 SC node and start it with genesis info extracted from
 Test:
     - Execute forward tranfer to an EOA
     - Verify account balance
+    - Verify forward transfer
     - Deploy Smart Contract
     - Execute forward transfer to the address of the smart contract
     - Verify balance of the smart contract account has not changed
@@ -96,13 +98,27 @@ class SCEvmForwardTransfer(SidechainTestFramework):
                                       ft_amount_in_zen,
                                       mc_return_address)
 
-        generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
+        blockId = generate_next_block(sc_node, "first node", force_switch_to_next_epoch=True)
         self.sc_sync_all()
 
         # verify forward transfer was received
         balance = sc_node.rpc_eth_getBalance(evm_address, "latest")
         pprint.pprint(balance)
         assert_equal("0x1cd0525fe2e7a0000", balance["result"], "FT to EOA failed")
+
+        # verify forward transfer is contained in block and contains given value and to address via rpc
+        forward_transfer = sc_node.rpc_eth_getForwardTransfers("latest")['result']['forwardTransfers'][0]
+        assert_equal("0x1cd0525fe2e7a0000", forward_transfer['value'])
+        assert_equal(evm_address.lower(), forward_transfer['to'])
+
+        # verify forward transfer is contained in block and contains given value and to address via api
+        j = {
+            "blockId": blockId
+        }
+        request = json.dumps(j)
+        forward_transfer = sc_node.block_getForwardTransfers(request)['result']['forwardTransfers'][0]
+        assert_equal('33220000000000000000', forward_transfer['value'])
+        assert_equal(format_eoa(evm_address), forward_transfer['to'])
 
         # Deploy Smart Contract
         smart_contract_type = 'StorageTestContract'

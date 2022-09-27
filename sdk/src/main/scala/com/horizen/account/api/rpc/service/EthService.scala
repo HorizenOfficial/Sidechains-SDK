@@ -16,6 +16,7 @@ import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
 import com.horizen.account.utils.EthereumTransactionDecoder
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
@@ -25,7 +26,7 @@ import com.horizen.evm.Evm
 import com.horizen.evm.interop.{EvmContext, EvmResult, EvmTraceLog, TraceParams}
 import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
-import com.horizen.transaction.Transaction
+import com.horizen.transaction.{Transaction}
 import com.horizen.transaction.exception.TransactionSemanticValidityException
 import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
 import org.web3j.crypto.Sign.SignatureData
@@ -504,6 +505,17 @@ class EthService(
 
           new DebugTraceTransactionView(blockContext.getEvmResult)
         }
+      }
+    }
+  }
+
+  @RpcMethod("eth_getForwardTransfers")
+  def getForwardTransfers(blockId: String): ForwardTransfersView = {
+    if (blockId == null) return null
+    applyOnAccountView { nodeView =>
+      nodeView.history.getBlockById(getBlockIdByTag(nodeView, blockId)).asScala match {
+        case Some(block) => new ForwardTransfersView(getForwardTransfersForBlock(block).asJava, false)
+        case None => null
       }
     }
   }
