@@ -539,8 +539,8 @@ def get_lib_separator():
     return lib_separator
 
 
-SIMPLE_APP_BINARY = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.3.2.jar" + get_lib_separator() + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
-EVM_APP_BINARY = "../examples/evmapp/target/sidechains-sdk-evmapp-0.3.2.jar" + get_lib_separator() + "../examples/evmapp/target/lib/* com.horizen.examples.EvmApp"
+SIMPLE_APP_BINARY = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.5.0-SNAPSHOT.jar" + get_lib_separator() + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+EVM_APP_BINARY = "../examples/evmapp/target/sidechains-sdk-evmapp-0.5.0-SNAPSHOT.jar" + get_lib_separator() + "../examples/evmapp/target/lib/* com.horizen.examples.EvmApp"
 
 
 

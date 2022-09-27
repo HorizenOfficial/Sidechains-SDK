@@ -7,7 +7,7 @@ import akka.util.Timeout
 import com.horizen.{Wallet, _}
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.consensus.{ConsensusEpochAndSlot, ConsensusEpochNumber, ConsensusSlotNumber}
-import com.horizen.forge.AbstractForger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
+import com.horizen.forge.AbstractForger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging}
 import com.horizen.params.NetworkParams
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
@@ -122,8 +122,7 @@ abstract class AbstractForger[
     }
   }
 
-  protected def processTryForgeNextBlockForEpochAndSlotMessage: Receive = {
-    case TryForgeNextBlockForEpochAndSlot(epochNumber, slotNumber, forcedTx) => tryToCreateBlockForEpochAndSlot(epochNumber, slotNumber, Some(sender()), timeout, forcedTx)  }
+  protected def processTryForgeNextBlockForEpochAndSlotMessage: Receive 
 
   protected def tryToCreateBlockNow(): Unit = {
     val currentTime: Long = timeProvider.time() / 1000
@@ -199,7 +198,7 @@ object AbstractForger extends ScorexLogging {
   object ReceivableMessages {
     case object StartForging
     case object StopForging
-    case class  TryForgeNextBlockForEpochAndSlot[TX](consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber, forcedTx: Iterable[TX])
+    case class TryForgeNextBlockForEpochAndSlot[TX](consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber, forcedTx: Iterable[TX])
     case object GetForgingInfo
   }
 }
