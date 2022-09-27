@@ -9,5 +9,10 @@ public class EvmResult {
     public String evmError;
     public byte[] returnData;
     public Address contractAddress;
+    public EvmTraceLog[] traceLogs;
     public Boolean reverted;
+    
+    public boolean isEmpty() {
+        return usedGas == null && evmError == null && returnData == null && contractAddress == null && traceLogs == null;
+    }
 }

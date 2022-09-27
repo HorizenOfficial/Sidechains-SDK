@@ -197,12 +197,14 @@ func TestStateStorage(t *testing.T) {
 	)
 	err, dbHandle := instance.OpenMemoryDB()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+	defer func() {
+		_ = instance.CloseDatabase(DatabaseParams{DatabaseHandle: dbHandle})
+	}()
 	for _, value := range values {
 		testStorageSetCommitWrite(t, instance, dbHandle, addr, key, value)
 	}
-	_ = instance.CloseDatabase(DatabaseParams{DatabaseHandle: dbHandle})
 }
 
 func TestStateStorageBytes(t *testing.T) {
@@ -220,12 +222,14 @@ func TestStateStorageBytes(t *testing.T) {
 	)
 	err, dbHandle := instance.OpenMemoryDB()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+	defer func() {
+		_ = instance.CloseDatabase(DatabaseParams{DatabaseHandle: dbHandle})
+	}()
 	for _, value := range values {
 		testStorageBytesSetCommitWrite(t, instance, dbHandle, addr, key, value)
 	}
-	_ = instance.CloseDatabase(DatabaseParams{DatabaseHandle: dbHandle})
 }
 
 func TestRawStateDB(t *testing.T) {
@@ -235,7 +239,13 @@ func TestRawStateDB(t *testing.T) {
 		key      = common.BytesToHash(crypto.Keccak256(common.Hex2Bytes("00112233")))
 		value    = common.HexToHash("0x1234")
 	)
-	_, dbHandle := instance.OpenLevelDB(LevelDBParams{Path: t.TempDir()})
+	err, dbHandle := instance.OpenLevelDB(LevelDBParams{Path: t.TempDir()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_ = instance.CloseDatabase(DatabaseParams{DatabaseHandle: dbHandle})
+	}()
 	_, db := instance.databases.Get(dbHandle)
 	statedb, _ := state.New(common.Hash{}, db.database, nil)
 	initialCodeHash := statedb.GetCodeHash(addr)
@@ -266,5 +276,4 @@ func TestRawStateDB(t *testing.T) {
 	if committedValue != value {
 		t.Error("value not committed correctly")
 	}
-	_ = instance.CloseDatabase(DatabaseParams{DatabaseHandle: dbHandle})
 }

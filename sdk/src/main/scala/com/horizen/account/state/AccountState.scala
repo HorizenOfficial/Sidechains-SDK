@@ -119,7 +119,7 @@ class AccountState(
 
       var cumGasUsed: BigInteger = BigInteger.ZERO
       var cumBaseFee: BigInteger = BigInteger.ZERO // cumulative base-fee, burned in eth, goes to forgers pool
-      var cumForgerTips: BigInteger = BigInteger.ZERO  // cumulative max-priority-fee, is paid to block forger
+      var cumForgerTips: BigInteger = BigInteger.ZERO // cumulative max-priority-fee, is paid to block forger
 
       val blockGasPool = new GasPool(BigInteger.valueOf(mod.header.gasLimit))
       val blockContext = new BlockContext(mod.header, blockNumber, consensusEpochNumber, modWithdrawalEpochInfo.epoch)
@@ -261,7 +261,7 @@ class AccountState(
       case (certOutput, expectedWithdrawalRequest) =>
         if (
           certOutput.amount != expectedWithdrawalRequest.valueInZennies ||
-          !util.Arrays.equals(certOutput.pubKeyHash, expectedWithdrawalRequest.proposition.bytes())
+            !util.Arrays.equals(certOutput.pubKeyHash, expectedWithdrawalRequest.proposition.bytes())
         ) {
           throw new IllegalStateException(
             s"Epoch $certReferencedEpochNumber top quality certificate backward transfers " +
@@ -389,43 +389,43 @@ class AccountState(
 
   override def getCode(address: Array[Byte]): Array[Byte] = using(getView)(_.getCode(address))
 
+  override def baseFee: BigInteger = using(getView)(_.baseFee)
+
   override def validate(tx: SidechainTypes#SCAT): Try[Unit] = Try {
     tx.semanticValidity()
 
     if (!tx.isInstanceOf[EthereumTransaction]) return Success()
-    val ethTx = tx.asInstanceOf[EthereumTransaction]
-    val currentTime = timeProvider.time() / 1000
-    val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params, currentTime)
 
     using(getView) { stateView =>
-      val blockContext = new BlockContext(
-        // use the null address as forger
-        new Array[Byte](Address.LENGTH),
-        TimeToEpochUtils.getTimeStampForEpochAndSlot(params, epochAndSlot.epochNumber, epochAndSlot.slotNumber),
-        stateView.baseFee,
-        FeeUtils.GAS_LIMIT,
-        stateMetadataStorage.getHeight + 1,
-        epochAndSlot.epochNumber,
-        stateMetadataStorage.getWithdrawalEpochInfo.epoch
-      )
+        //Check the nonce
+        val ethTx = tx.asInstanceOf[EthereumTransaction]
+        val sender = ethTx.getFrom.address()
+        val stateNonce = stateView.getNonce(sender)
+        if (stateNonce.compareTo(tx.getNonce) > 0) {
+          throw NonceTooLowException(sender, tx.getNonce, stateNonce)
+        }
+        //Check the balance
+        val maxTxCost = tx.getValue.add(tx.getGasLimit.multiply(tx.getGasPrice))
+        val currentBalance = stateView.getBalance(sender)
+        if (currentBalance.compareTo(maxTxCost) < 0) {
+          throw new IllegalArgumentException(s"Insufficient funds for executing transaction: balance $currentBalance, tx cost $maxTxCost")
+        }
 
-      val blockGasPool = new GasPool(BigInteger.valueOf(blockContext.blockGasLimit))
+        // Check that the sender is an EOA
+        if (!stateView.isEoaAccount(sender))
+          throw SenderNotEoaException(sender, stateView.getCodeHash(sender))
 
-      stateView.applyTransaction(tx, 0, blockGasPool, blockContext) match {
-        case Success(_) =>
-          log.debug(s"tx=${ethTx.id} succesfully validate against state view")
-
-        case Failure(e) =>
-          log.error("Could not validate tx agaist state view: ", e)
-          throw new IllegalArgumentException(e)
       }
-    }
+  } recoverWith { case t =>
+    log.debug(s"Not valid transaction ${tx.id}", t)
+    Failure(t)
   }
 
   // Check that State is on the last index of the withdrawal epoch: last block applied have finished the epoch.
   def isWithdrawalEpochLastIndex: Boolean = {
     WithdrawalEpochUtils.isEpochLastIndex(getWithdrawalEpochInfo, params)
-  }}
+  }
+}
 
 object AccountState extends ScorexLogging {
   private[horizen] def restoreState(
