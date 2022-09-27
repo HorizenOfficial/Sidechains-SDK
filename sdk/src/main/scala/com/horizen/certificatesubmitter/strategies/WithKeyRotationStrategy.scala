@@ -5,6 +5,7 @@ import com.horizen.SidechainSettings
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
 import com.horizen.certificatesubmitter.dataproof.{DataForProofGeneration, DataForProofGenerationWithKeyRotation}
+import com.horizen.certificatesubmitter.keys.ActualKeys
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.params.NetworkParams
 import com.horizen.websocket.server.WebSocketServerRef.sidechainNodeViewHolderRef
@@ -41,12 +42,10 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       dataForProofGeneration.btrFee,
       dataForProofGeneration.ftMinAmount,
       dataForProofGeneration.customFields,
-      signaturesBytes.asJava,
-      signersPublicKeysBytes.asJava,
-      params.signersThreshold,
-      provingFileAbsolutePath,
-      true,
-      true)
+      signature1,
+      signature2,
+      signature3
+    )
   }
 
   override def buildDataForProofGeneration(sidechainNodeView: View, status: SignaturesStatus): DataForProofGenerationWithKeyRotation = {
@@ -59,7 +58,6 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
     val ftMinAmount: Long = getFtMinAmount(status.referencedEpoch)
     val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, status.referencedEpoch)
     val sidechainId = params.sidechainId
-    val utxoMerkleTreeRoot: Seq[Array[Byte]] = getUtxoMerkleTreeRoot(status.referencedEpoch, state)
 
 
     val signersPublicKeyWithSignatures = params.signersPublicKeys.zipWithIndex.map {
@@ -73,7 +71,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       endEpochCumCommTreeHash,
       btrFee,
       ftMinAmount,
-      utxoMerkleTreeRoot,
+      ActualKeys.getMerkleRootOfPublicKeys(),
       signersPublicKeyWithSignatures)
   }
 
@@ -90,9 +88,9 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
       val sidechainId = params.sidechainId
 
-      val utxoMerkleTreeRoot: Seq[Array[Byte]] = {
+      val publicKeysMerkleTreeRoot: Array[Byte] = {
         Try {
-          getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber, state)
+          ActualKeys.getMerkleRootOfPublicKeys()
         } match {
           case Failure(e: IllegalStateException) =>
             throw new Exception("CertificateSubmitter is too late against the State. " +
@@ -105,7 +103,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       }
 
 
-      CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(withdrawalRequests.asJava, sidechainId, referencedWithdrawalEpochNumber, endEpochCumCommTreeHash, btrFee, ftMinAmount, utxoMerkleTreeRoot)
+      CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(withdrawalRequests.asJava, sidechainId, referencedWithdrawalEpochNumber, endEpochCumCommTreeHash, btrFee, ftMinAmount, publicKeysMerkleTreeRoot)
     }
 
     Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getMessage), settings.sparkzSettings.restApi.timeout).asInstanceOf[Try[Array[Byte]]].get
