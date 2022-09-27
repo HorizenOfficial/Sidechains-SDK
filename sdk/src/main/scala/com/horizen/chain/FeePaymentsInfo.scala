@@ -1,7 +1,7 @@
 package com.horizen.chain
 
 import com.horizen.box.ZenBox
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
+import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.util.serialization.{Reader, Writer}
 import com.horizen.transaction.FeePaymentsTransaction
 import com.horizen.transaction.FeePaymentsTransactionSerializer
@@ -11,7 +11,7 @@ import scala.collection.JavaConverters._
 case class FeePaymentsInfo(transaction: FeePaymentsTransaction) extends BytesSerializable {
   override type M = FeePaymentsInfo
 
-  override def serializer: ScorexSerializer[M] = FeePaymentsInfoSerializer
+  override def serializer: SparkzSerializer[M] = FeePaymentsInfoSerializer
 }
 
 object FeePaymentsInfo {
@@ -21,7 +21,7 @@ object FeePaymentsInfo {
 }
 
 
-object FeePaymentsInfoSerializer extends ScorexSerializer[FeePaymentsInfo] {
+object FeePaymentsInfoSerializer extends SparkzSerializer[FeePaymentsInfo] {
   override def serialize(feePaymentsInfo: FeePaymentsInfo, w: Writer): Unit = {
     FeePaymentsTransactionSerializer.getSerializer.serialize(feePaymentsInfo.transaction, w)
   }

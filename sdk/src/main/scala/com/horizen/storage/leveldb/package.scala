@@ -1,6 +1,6 @@
 package com.horizen.storage
 
-import scorex.core.utils.ScorexEncoding
+import sparkz.core.utils.SparkzEncoding
 import scorex.crypto.hash.Blake2b256
 
 /**
@@ -15,7 +15,7 @@ package object leveldb {
     val BatchSize: Int = 10000
   }
 
-  object Algos extends ScorexEncoding {
+  object Algos extends SparkzEncoding {
 
     type HF = Blake2b256.type
 

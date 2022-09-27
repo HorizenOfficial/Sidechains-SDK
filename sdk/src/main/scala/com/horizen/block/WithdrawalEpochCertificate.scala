@@ -6,8 +6,8 @@ import com.google.common.primitives.Bytes
 import com.horizen.block.SidechainCreationVersions.{SidechainCreationVersion, SidechainCreationVersion0, SidechainCreationVersion1, SidechainCreationVersion2}
 import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.serialization.{ReverseBytesSerializer, Views}
-import com.horizen.utils.{BytesUtils, CompactSize, Utils}
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
+import com.horizen.utils.{BytesUtils, Utils, CompactSize}
+import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.util.serialization.{Reader, Writer}
 import com.horizen.librustsidechains.{Utils => ScCryptoUtils}
 import scorex.util.ScorexLogging
@@ -62,7 +62,7 @@ case class WithdrawalEpochCertificate
 {
   override type M = WithdrawalEpochCertificate
 
-  override def serializer: ScorexSerializer[WithdrawalEpochCertificate] = WithdrawalEpochCertificateSerializer
+  override def serializer: SparkzSerializer[WithdrawalEpochCertificate] = WithdrawalEpochCertificateSerializer
 
   def size: Int = certificateBytes.length
 
@@ -193,7 +193,7 @@ object WithdrawalEpochCertificate {
 }
 
 object WithdrawalEpochCertificateSerializer
-  extends ScorexSerializer[WithdrawalEpochCertificate]
+  extends SparkzSerializer[WithdrawalEpochCertificate]
 {
   override def serialize(certificate: WithdrawalEpochCertificate, w: Writer): Unit = {
     val certBytes:Array[Byte] = certificate.certificateBytes

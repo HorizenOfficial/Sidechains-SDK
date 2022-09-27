@@ -1,4 +1,4 @@
-**Simple App**
+**Simple App** 
 ---------
 
 Simple app is a Java application that runs a basic Sidechain Node, able to receive and send coins from/to the mainchain ("Forward" and "Backward transfers"). It does not come with any application-specific code (e.g. custom boxes or transactions); that logic can be easily added to Simple App, and implement that way a complete, blockchain based distributed application.
@@ -19,12 +19,12 @@ Otherwise, to run SimpleApp outside the IDE:
     * (Windows)
         ```
         cd Sidechains-SDK\examples\simpleapp
-        java -cp ./target/sidechains-sdk-simpleapp-0.4.3.jar;./target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
+        java -cp ./target/sidechains-sdk-simpleapp-0.5.0-SNAPSHOT.jar;./target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
         ```
     * (Linux)
         ```
         cd ./Sidechains-SDK/examples/simpleapp
-        java -cp ./target/sidechains-sdk-simpleapp-0.4.3.jar:./target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
+        java -cp ./target/sidechains-sdk-simpleapp-0.5.0-SNAPSHOT.jar:./target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
         ```
         On some Linux OSs during backward transfers certificates proofs generation a extremely big RAM consumption may happen, that will lead to the process force killing by the OS.
 
@@ -36,7 +36,7 @@ While we keep monitoring the memory footprint of the proofs generation process, 
 	     - After the installation, just run `export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1` before starting the sidechain node, or run the sidechain node adding `LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1` at the beginning of the java command line as follows:
 
 	     ```
-	     LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1 java -cp ./target/sidechains-sdk-simpleapp-0.4.3.jar:./target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
+	     LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.1 java -cp ./target/sidechains-sdk-simpleapp-0.5.0-SNAPSHOT.jar:./target/lib/* com.horizen.examples.SimpleApp <path_to_config_file>
 	     ```
 	      - In the folder `ci` you will find the script `run_sc.sh` to automatically check and use jemalloc library while starting the sidechain node.
 

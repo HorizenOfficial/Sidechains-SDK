@@ -2,12 +2,12 @@ package com.horizen.api.http
 
 import akka.actor.ActorRef
 import com.horizen.node.SidechainNodeView
-import scorex.core.api.http.{ApiDirectives, ApiRoute}
+import sparkz.core.api.http.{ApiDirectives, ApiRoute}
 import akka.pattern.ask
 import akka.http.scaladsl.server.Route
 import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
-import scorex.core.NodeViewHolder.CurrentView
-import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
+import sparkz.core.NodeViewHolder.CurrentView
+import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 

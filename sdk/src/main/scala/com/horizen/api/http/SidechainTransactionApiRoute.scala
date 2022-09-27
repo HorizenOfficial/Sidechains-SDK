@@ -2,7 +2,6 @@ package com.horizen.api.http
 
 import java.lang
 import java.util.{Collections, ArrayList => JArrayList, List => JList}
-
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
@@ -20,11 +19,11 @@ import com.horizen.node.{NodeWallet, SidechainNodeView}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.Proof
 import com.horizen.proposition._
+import com.horizen.secret.PrivateKey25519
 import com.horizen.serialization.Views
 import com.horizen.transaction._
-import com.horizen.utils.{BytesUtils, ZenCoinsUtils}
-import scorex.core.settings.RESTApiSettings
-
+import sparkz.core.settings.RESTApiSettings
+import com.horizen.utils.{BytesUtils, ZenCoinsUtils, Pair => JPair}
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -42,7 +41,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
   override val route: Route = (pathPrefix("transaction")) {
     allTransactions ~ findById ~ decodeTransactionBytes ~ createCoreTransaction ~ createCoreTransactionSimplified ~
-    sendCoinsToAddress ~ sendTransaction ~ withdrawCoins ~ makeForgerStake ~ spendForgingStake
+    sendCoinsToAddress ~ sendTransaction ~ withdrawCoins ~ makeForgerStake ~ spendForgingStake ~ createOpenStakeTransaction ~ createOpenStakeTransactionSimplified
   }
 
   /**
@@ -305,7 +304,15 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
               Failure(new IllegalStateException("Can't find change address in wallet. Please, create a PrivateKey secret first."))
           }
         } match {
-          case Success(transaction) => validateAndSendTransaction(transaction)
+          case Success(transaction) =>
+            if (body.automaticSend.getOrElse(true)) {
+              validateAndSendTransaction(transaction)
+            } else {
+              if (body.format.getOrElse(false))
+                ApiResponseUtil.toResponse(TransactionDTO(transaction))
+              else
+                ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(transaction))))
+            }
           case Failure(e) => ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(e)))
         }
       }
@@ -473,6 +480,108 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
     }
   }
 
+  def createOpenStakeTransaction: Route = (post & path("createOpenStakeTransaction")) {
+    withAuth {
+      entity(as[ReqOpenStake]) { body =>
+        buildOpenStakeTransaction(body) match {
+          case Success(tx) =>
+            if (body.automaticSend.getOrElse(true)) {
+              validateAndSendTransaction(tx.asInstanceOf[SidechainTypes#SCBT])
+            } else {
+              if (body.format.getOrElse(false))
+                ApiResponseUtil.toResponse(TransactionDTO(tx.asInstanceOf[SCBT]))
+              else
+                ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(tx.asInstanceOf[SCBT]))))
+            }
+          case Failure(exception) =>
+            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exception)))
+        }
+      }
+    }
+  }
+
+  def createOpenStakeTransactionSimplified: Route = (post & path("createOpenStakeTransactionSimplified")) {
+    withAuth {
+      entity(as[ReqOpenStakeSimplified]) { body =>
+        buildOpenStakeTransactionSimplified(body) match {
+          case Success(tx) =>
+            if (body.automaticSend.getOrElse(true)) {
+              validateAndSendTransaction(tx.asInstanceOf[SidechainTypes#SCBT])
+            } else {
+              if (body.format.getOrElse(false))
+                ApiResponseUtil.toResponse(TransactionDTO(tx.asInstanceOf[SCBT]))
+              else
+                ApiResponseUtil.toResponse(TransactionBytesDTO(BytesUtils.toHexString(companion.toBytes(tx.asInstanceOf[SCBT]))))
+            }
+          case Failure(exception) =>
+            ApiResponseUtil.toResponse(GenericTransactionError("GenericTransactionError", JOptional.of(exception)))     }
+      }
+    }
+  }
+
+  private def buildOpenStakeTransactionSimplified(body: ReqOpenStakeSimplified): Try[OpenStakeTransaction] = {
+    applyOnNodeView { sidechainNodeView =>
+      val wallet = sidechainNodeView.getNodeWallet
+
+      //Collect input box
+      wallet.allBoxes().asScala
+        .find(box => box.proposition().equals(PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(body.forgerProposition)))
+          && box.value() >= body.fee.getOrElse(0L)) match {
+        case Some(inputBox) =>
+          //Collect input private key
+          val inputPrivateKey = wallet.secretByPublicKey25519Proposition(inputBox.proposition().asInstanceOf[PublicKey25519Proposition]).get().asInstanceOf[PrivateKey25519]
+          //Create openStakeTransaction
+          createAndSignOpenStakeTransaction(inputBox, inputPrivateKey, body.forgerProposition, body.forgerIndex, body.fee)
+        case None =>
+          throw new IllegalArgumentException("Unable to find input for Proposition "+body.forgerProposition)
+      }
+    }
+  }
+
+  /**
+   * Create and sign a openStakeTransaction
+   * @return a signed OpenStakeTransaction or a GenericTransactionError
+   */
+  private def buildOpenStakeTransaction(body: ReqOpenStake): Try[OpenStakeTransaction] = {
+    applyOnNodeView { sidechainNodeView =>
+      val wallet = sidechainNodeView.getNodeWallet
+
+      //Collect input box
+      wallet.allBoxes().asScala
+        .find(box => BytesUtils.toHexString(box.id()).equals(body.transactionInput.boxId)) match {
+        case Some(inputBox) =>
+          //Collect input private key
+          val inputPrivateKey = wallet.secretByPublicKey25519Proposition(inputBox.proposition().asInstanceOf[PublicKey25519Proposition]).get().asInstanceOf[PrivateKey25519]
+          //Create openStakeTransaction
+          createAndSignOpenStakeTransaction(inputBox, inputPrivateKey, body.regularOutputProposition, body.forgerIndex, body.fee)
+        case None =>
+          throw new IllegalArgumentException("Unable to find input!")
+      }
+    }
+  }
+
+
+  private def createAndSignOpenStakeTransaction(inputBox: Box[Proposition], inputPrivateKey: PrivateKey25519, outputProposition: String,
+                                                forgerIndex: Int, inputFee: Option[Long]): Try[OpenStakeTransaction] = {
+    //Collect fee
+    val fee = inputFee.getOrElse(0L)
+    if (fee < 0) {
+      throw new IllegalArgumentException("Fee can't be negative!")
+    }
+    if (fee > inputBox.value) {
+      throw new IllegalArgumentException("Fee can't be greater than the input!")
+    }
+
+    Try {
+      //Create the openStakeTransaction
+      OpenStakeTransaction.create(new JPair[ZenBox,PrivateKey25519](inputBox.asInstanceOf[ZenBox],inputPrivateKey),
+        PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(outputProposition)),
+        forgerIndex,
+        fee
+      )
+    }
+  }
+
   // try to get the first PublicKey25519Proposition in the wallet
   // None - if not present.
   private def getChangeAddress(wallet: NodeWallet): Option[PublicKey25519Proposition] = {
@@ -505,7 +614,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
 
     withdrawalRequestBoxDataList.foreach(element => {
       if(element.value < ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE))
-        throw new IllegalArgumentException("Withdrawal transaction amount is below the MC dust threshold value.")
+        throw new IllegalArgumentException(s"Withdrawal transaction amount ${element.value} is below the MC dust threshold value: ${ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE)}")
 
       outputs.add(new WithdrawalRequestBoxData(
         // Keep in mind that check MC rpc `getnewaddress` returns standard address with hash inside in LE
@@ -625,6 +734,8 @@ object SidechainTransactionRestScheme {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqSendCoinsToAddress(outputs: List[TransactionOutput],
+                                                automaticSend: Option[Boolean],
+                                                format: Option[Boolean],
                                                 @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
     require(outputs.nonEmpty, "Empty outputs list")
     require(fee.getOrElse(0L) >= 0, "Negative fee. Fee must be >= 0")
@@ -659,6 +770,27 @@ object SidechainTransactionRestScheme {
     require(regularOutputs.nonEmpty || forgerOutputs.nonEmpty, "Empty outputs")
   }
 
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqOpenStake(transactionInput: TransactionInput,
+                                       regularOutputProposition: String,
+                                       forgerIndex: Int,
+                                       format: Option[Boolean],
+                                       automaticSend: Option[Boolean],
+                                       @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
+    require(transactionInput != null, "Empty input")
+    require(regularOutputProposition.nonEmpty, "Empty regularOutputProposition")
+    require(forgerIndex >= 0, "Forger list index negative")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqOpenStakeSimplified(forgerProposition: String,
+                                       forgerIndex: Int,
+                                       format: Option[Boolean],
+                                       automaticSend: Option[Boolean],
+                                       @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Option[Long]) {
+    require(forgerProposition.nonEmpty, "Empty forgerProposition")
+    require(forgerIndex >= 0, "Forger list index negative")
+  }
 }
 
 object SidechainTransactionErrorResponse {

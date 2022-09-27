@@ -23,7 +23,21 @@ else
     echo "WARNING: Starting container processes as root. This has some security implications and goes against docker best practice."
 fi
 
+# Installing dependency for EVM project
+if [ -d /build/libevm ]; then
+  echo "" && echo "=== Installing apt dependencies for EVM project!!! ===" && echo ""
+  apt-get update
+  DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y software-properties-common
+  add-apt-repository -y ppa:ethereum/ethereum
+  apt-get update
+  DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y gcc libc6-dev solc
+  apt-get -y clean
+  apt-get -y autoclean
+  rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb
+fi
+
 # Print information
+echo "" && echo "=== Environment Info ===" && echo ""
 java --version
 echo
 lscpu

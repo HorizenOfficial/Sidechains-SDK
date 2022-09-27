@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import logging
 import os
 
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
@@ -33,33 +34,33 @@ class SidechainNodeApiTest(SidechainTestFramework):
         return start_sc_nodes(1, self.options.tmpdir)
 
     def run_test(self):
-        
-        print("Node initialization...")
+
+        logging.info("Node initialization...")
         sc_node_name = "node0"
         sc_node = self.sc_nodes[0]
 
         #Node generates some blocks, then checking the best block height in chain
-        print("Generating new blocks...")
+        logging.info("Generating new blocks...")
         blocks = generate_next_blocks(sc_node, sc_node_name, 3)
-        print("OK\n")
+        logging.info("OK\n")
 
 
-        print("Getting the new best block...")
+        logging.info("Getting the new best block...")
         sc_node_best_block_id = sc_node.block_best()["result"]["block"]["id"]
         sc_node_best_block_height = sc_node.block_best()["result"]["height"]
-        print("-->Node best block id: {0}".format(sc_node_best_block_id))
-        print("-->Node best block height: {0}".format(sc_node_best_block_height))
+        logging.info("-->Node best block id: {0}".format(sc_node_best_block_id))
+        logging.info("-->Node best block height: {0}".format(sc_node_best_block_height))
 
-        print("Checking that the height returned by findById api is the same returned by best api")
-        print("-->Calling findById API...")
+        logging.info("Checking that the height returned by findById api is the same returned by best api")
+        logging.info("-->Calling findById API...")
 
         block_height = http_block_findById(sc_node,sc_node_best_block_id)["height"]
-        print("-->Node best block height from findById: {0}".format(block_height))
+        logging.info("-->Node best block height from findById: {0}".format(block_height))
 
         assert_equal(sc_node_best_block_height, block_height, "The best block height returned from findById is not the same as the one from best.")
-        print("OK\n")
+        logging.info("OK\n")
 
-        print("-->Calling findBlockInfoById API...")
+        logging.info("-->Calling findBlockInfoById API...")
 
         j = {
             "blockId": sc_node_best_block_id
@@ -70,11 +71,11 @@ class SidechainNodeApiTest(SidechainTestFramework):
         assert_equal(block_height,block_info_result["result"]["blockInfo"]["height"])
         is_in_active_chain = block_info_result["result"]["isInActiveChain"]
         assert_true(is_in_active_chain, "The best block is not in the active chain.")
-        print("OK\n")
+        logging.info("OK\n")
 
-        print("-->Calling storageVersions API...")
+        logging.info("-->Calling storageVersions API...")
         storage_versions_result = sc_node.node_storageVersions()["result"]["listOfVersions"]
-        print(storage_versions_result)
+        logging.info(storage_versions_result)
         assert_equal(storage_versions_result["SidechainStateForgerBoxStorage"], sc_node_best_block_id)
         assert_equal(storage_versions_result["SidechainWalletBoxStorage"], sc_node_best_block_id)
         assert_equal(storage_versions_result["SidechainStateStorage"], sc_node_best_block_id)
@@ -89,9 +90,9 @@ class SidechainNodeApiTest(SidechainTestFramework):
         #SidechainHistoryStorage use random versions, we cannot predict them.
         #ConsensusDataStorage use random versions, we cannot predict them.
 
-        print("OK\n")
+        logging.info("OK\n")
 
-        print("-->Calling sidechainId API...")
+        logging.info("-->Calling sidechainId API...")
         sidechain_id_result = sc_node.node_sidechainId()
 
         #Getting the sidechain_id from the sidechain configuration file
@@ -106,7 +107,7 @@ class SidechainNodeApiTest(SidechainTestFramework):
         sidechain_id = line.split('=')[1].strip(" \n\"")
 
         assert_equal(sidechain_id, sidechain_id_result["result"]["sidechainId"], "Returned sidechain_id is different from the one in the configuration file")
-        print("OK\n")
+        logging.info("OK\n")
 
 
 if __name__ == "__main__":

@@ -1,13 +1,14 @@
-import pprint
-import time
-from time import sleep
+#!/usr/bin/env python3
+
+import logging
+
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
 from httpCalls.block.best import http_block_best
 from httpCalls.transaction.sendCoinsToAddress import sendCointsToMultipleAddress
 from httpCalls.transaction.createCoreTransaction import http_create_core_transaction
-from httpCalls.transaction.sendTransaction import http_send_transaction
+from httpCalls.transaction.sendTransaction import sendTransaction
 from httpCalls.transaction.findTransactionByID import http_transaction_findById
 from httpCalls.wallet.allBoxesOfType import http_wallet_allBoxesOfType
 from httpCalls.wallet.createPrivateKey25519 import http_wallet_createPrivateKey25519
@@ -32,7 +33,6 @@ class BigBlockTest(SidechainTestFramework):
         return start_nodes(1, self.options.tmpdir)
 
     def sc_setup_chain(self):
-        print("Initializing test directory " + self.options.tmpdir)
         # Bootstrap new SC, specify SC node 1 and SC node 2 connection to MC node 1
         mc_node_1 = self.nodes[0]
 
@@ -102,8 +102,8 @@ class BigBlockTest(SidechainTestFramework):
             outputs.append(
                 {"publicKey": ft_address, "value": ft_box[0]["value"] - utxo_amount * self.MAX_TRANSACTION_OUTPUT})
 
-            raw_tx = http_create_core_transaction(sc_node1, [{"boxId": ft_box[0]["id"]}], outputs)
-            res = http_send_transaction(sc_node1, raw_tx)
+            raw_tx = http_create_core_transaction(sc_node1, [{"boxId": ft_box[0]["id"]}], outputs)["transactionBytes"]
+            res = sendTransaction(sc_node1, raw_tx)["result"]
             assert_true("transactionId" in res)
 
             self.sc_sync_all()
@@ -120,8 +120,8 @@ class BigBlockTest(SidechainTestFramework):
         if remaining_utxos > 0:
             raw_tx = http_create_core_transaction(sc_node1, [{"boxId": ft_box[0]["id"]}],
                                                     [{"publicKey": receiver_address, "value": utxo_amount} for
-                                                    _ in range(remaining_utxos)])
-            res = http_send_transaction(sc_node1, raw_tx)
+                                                    _ in range(remaining_utxos)])["transactionBytes"]
+            res = sendTransaction(sc_node1, raw_tx)["result"]
             assert_true("transactionId" in res)
 
             self.sc_sync_all()
@@ -137,7 +137,7 @@ class BigBlockTest(SidechainTestFramework):
 
         for i in range(1000):
             res = sendCointsToMultipleAddress(sc_node1, [address_node2 for _ in range(10)], [utxo_amount for _ in range(10)], 0)
-            print("Created tx: "+res)
+            logging.info("Created tx: "+res)
             tx = http_transaction_findById(sc_node1, res)
             tx_bytes = http_transaction_findById(sc_node1, res, False)
             transactions_bytes += len(tx_bytes["transactionBytes"])
@@ -145,7 +145,7 @@ class BigBlockTest(SidechainTestFramework):
             assert_equal(len(tx["transaction"]["unlockers"]), 10)
             self.sc_sync_all()
 
-        print("Total created transactions bytes "+str(transactions_bytes))
+        logging.info("Total created transactions bytes "+str(transactions_bytes))
         #Verify that our transactions exceed 1MB of size
         assert_true(transactions_bytes > 1048576)
         generate_next_blocks(sc_node1, "first node", 1)[0]

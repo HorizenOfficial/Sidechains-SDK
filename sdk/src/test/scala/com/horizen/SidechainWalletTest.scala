@@ -21,7 +21,7 @@ import org.junit.rules.TemporaryFolder
 import org.mockito._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
-import scorex.core.{VersionTag, bytesToId, bytesToVersion}
+import sparkz.core.{VersionTag, bytesToId, bytesToVersion}
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ModifierId
 

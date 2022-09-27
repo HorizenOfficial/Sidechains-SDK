@@ -1,6 +1,6 @@
 package com.horizen.storage.leveldb
 
-import scorex.core.serialization.ScorexSerializer
+import sparkz.core.serialization.SparkzSerializer
 import scorex.util.serialization.{Reader, Writer}
 
 /**
@@ -15,7 +15,7 @@ final case class ChangeSet(insertedKeys: Seq[Array[Byte]],
                            removed: Seq[(Array[Byte], Array[Byte])],
                            altered: Seq[(Array[Byte], Array[Byte])])
 
-object ChangeSetSerializer extends ScorexSerializer[ChangeSet] {
+object ChangeSetSerializer extends SparkzSerializer[ChangeSet] {
 
   override def serialize(obj: ChangeSet, w: Writer): Unit = {
     w.putUInt(obj.insertedKeys.size)

@@ -7,7 +7,7 @@ import java.util.{Optional => JOptional}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
-import scorex.core.settings.{ScorexSettings, SettingsReaders}
+import sparkz.core.settings.{SparkzSettings, SettingsReaders}
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.compat.java8.OptionConverters.toScala
@@ -20,17 +20,17 @@ object SidechainSettingsReader
   protected val sidechainSettingsName = "sidechain-sdk-settings.conf"
 
   def fromConfig(config: Config): SidechainSettings = {
-    val webSocketConnectorConfigurationSettings = config.as[WebSocketSettings]("scorex.websocket")
-    val scorexSettings = config.as[ScorexSettings]("scorex")
-    val genesisSettings = config.as[GenesisDataSettings]("scorex.genesis")
-    val certificateSettings = config.as[WithdrawalEpochCertificateSettings]("scorex.withdrawalEpochCertificate")
-    val mempoolSettings = config.as[MempoolSettings]("scorex.mempool")
-    val walletSettings = config.as[WalletSettings]("scorex.wallet")
-    val forgerSettings = config.as[ForgerSettings]("scorex.forger")
-    val cswSettings = config.as[CeasedSidechainWithdrawalSettings]("scorex.csw")
-    val logInfoSettings = config.as[LogInfoSettings]("scorex.logInfo")
+    val webSocketConnectorConfigurationSettings = config.as[WebSocketSettings]("sparkz.websocket")
+    val sparkzSettings = config.as[SparkzSettings]("sparkz")
+    val genesisSettings = config.as[GenesisDataSettings]("sparkz.genesis")
+    val certificateSettings = config.as[WithdrawalEpochCertificateSettings]("sparkz.withdrawalEpochCertificate")
+    val mempoolSettings = config.as[MempoolSettings]("sparkz.mempool")
+    val walletSettings = config.as[WalletSettings]("sparkz.wallet")
+    val forgerSettings = config.as[ForgerSettings]("sparkz.forger")
+    val cswSettings = config.as[CeasedSidechainWithdrawalSettings]("sparkz.csw")
+    val logInfoSettings = config.as[LogInfoSettings]("sparkz.logInfo")
 
-    SidechainSettings(scorexSettings, genesisSettings, webSocketConnectorConfigurationSettings, certificateSettings,
+    SidechainSettings(sparkzSettings, genesisSettings, webSocketConnectorConfigurationSettings, certificateSettings,
       mempoolSettings, walletSettings, forgerSettings, cswSettings, logInfoSettings)
   }
 
