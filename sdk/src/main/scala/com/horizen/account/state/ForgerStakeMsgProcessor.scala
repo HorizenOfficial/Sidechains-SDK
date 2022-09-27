@@ -108,18 +108,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     val newTip = Blake2b256.hash(stakeId)
 
     // modify previous node (if any) to point at this one
-    if (!linkedListNodeRefIsNull(oldTip)) {
-      val previousNode = findLinkedListNode(view, oldTip).get
-
-      val modPreviousNode = LinkedListNode(
-        previousNode.dataKey,
-        previousNode.previousNodeKey,
-        newTip
-      )
-
-      // store the modified previous node
-      view.updateAccountStorageBytes(contractAddress, oldTip,
-        LinkedListNodeSerializer.toBytes(modPreviousNode))
+    modifyNode(view, oldTip) { previousNode =>
+      LinkedListNode(previousNode.dataKey, previousNode.previousNodeKey, newTip)
     }
 
     // update list tip, now it is this newly added one
@@ -148,6 +138,22 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
       ForgerStakeDataSerializer.toBytes(forgerStakeData))
   }
 
+  private def modifyNode(view: BaseAccountStateView, nodeId: Array[Byte])(
+      modify: LinkedListNode => LinkedListNode
+  ): Option[Unit] = {
+    if (linkedListNodeRefIsNull(nodeId)) return None
+    // find original node
+    findLinkedListNode(view, nodeId)
+      // if the node was not found we want to revert execution
+      .orElse(throw new ExecutionRevertedException(s"Failed to update node: ${Numeric.toHexString(nodeId)}"))
+      // modify node
+      .map(modify)
+      // serialize modified node
+      .map(LinkedListNodeSerializer.toBytes)
+      // overwrite the modified node
+      .map(view.updateAccountStorageBytes(contractAddress, nodeId, _))
+  }
+
   def removeForgerStake(view: BaseAccountStateView, stakeId: Array[Byte]): Unit = {
     val nodeToRemoveId = Blake2b256.hash(stakeId)
 
@@ -156,34 +162,14 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     val nodeToRemove = findLinkedListNode(view, nodeToRemoveId).get
 
     // modify previous node if any
-    if (!linkedListNodeRefIsNull(nodeToRemove.previousNodeKey)) {
-      val prevNodeId = nodeToRemove.previousNodeKey
-      val previousNode = findLinkedListNode(view, prevNodeId).get
-
-      val modPreviousNode = LinkedListNode(
-        previousNode.dataKey,
-        previousNode.previousNodeKey,
-        nodeToRemove.nextNodeKey)
-
-      // store the modified previous node
-      view.updateAccountStorageBytes(contractAddress, prevNodeId,
-        LinkedListNodeSerializer.toBytes(modPreviousNode))
+    modifyNode(view, nodeToRemove.previousNodeKey) { previousNode =>
+      LinkedListNode(previousNode.dataKey, previousNode.previousNodeKey, nodeToRemove.nextNodeKey)
     }
 
     // modify next node if any
-    if (!linkedListNodeRefIsNull(nodeToRemove.nextNodeKey)) {
-      val nextNodeId = nodeToRemove.nextNodeKey
-      val nextNode = findLinkedListNode(view, nextNodeId).get
-
-      val modNextNode = LinkedListNode(
-        nextNode.dataKey,
-        nodeToRemove.previousNodeKey,
-        nextNode.nextNodeKey)
-
-      // store the modified next node
-      view.updateAccountStorageBytes(contractAddress, nextNodeId,
-        LinkedListNodeSerializer.toBytes(modNextNode))
-    } else {
+    modifyNode(view, nodeToRemove.nextNodeKey) { nextNode =>
+      LinkedListNode(nextNode.dataKey, nodeToRemove.previousNodeKey, nextNode.nextNodeKey)
+    } getOrElse {
       // if there is no next node, we update the linked list tip to point to the previous node, promoted to be the new tip
       view.updateAccountStorage(contractAddress, LinkedListTipKey, nodeToRemove.previousNodeKey)
     }
