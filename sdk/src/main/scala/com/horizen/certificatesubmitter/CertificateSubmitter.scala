@@ -6,11 +6,10 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen._
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
-import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter._
-import com.horizen.certificatesubmitter.dataproof.DataForProofGeneration
-import com.horizen.certificatesubmitter.submitters.{ThresholdSigCircuitSubmitter, ThresholdSigCircuitSubmitterWithKeyRotation}
-import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
+import com.horizen.certificatesubmitter.dataproof.{DataForProofGeneration, DataForProofGenerationWithKeyRotation, DataForProofGenerationWithoutKeyRotation}
+import com.horizen.certificatesubmitter.strategies.{KeyRotationStrategy, NoKeyRotationStrategy, WithKeyRotationStrategy}
+import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
@@ -25,8 +24,6 @@ import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallyS
 
 import java.io.File
 import java.util
-import java.util.Optional
-import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.Platform.EOL
 import scala.compat.java8.OptionConverters._
@@ -40,11 +37,12 @@ import scala.util.{Failure, Random, Success, Try}
  * If `submitterEnabled` is `true`, it will try to generate and send the Certificate to MC node in case the proper amount of signatures were collected.
  * Must be singleton.
  */
-abstract class CertificateSubmitter[T <: DataForProofGeneration](settings: SidechainSettings,
-                                       sidechainNodeViewHolderRef: ActorRef,
-                                       params: NetworkParams,
-                                       mainchainChannel: MainchainNodeChannel)
-                                      (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging {
+class CertificateSubmitter[T <: DataForProofGeneration](settings: SidechainSettings,
+                                                                 sidechainNodeViewHolderRef: ActorRef,
+                                                                 params: NetworkParams,
+                                                                 mainchainChannel: MainchainNodeChannel,
+                                                                 keyRotationStrategy: KeyRotationStrategy)
+                                                                (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging {
 
   import CertificateSubmitter.InternalReceivableMessages._
   import CertificateSubmitter.ReceivableMessages._
@@ -199,7 +197,7 @@ abstract class CertificateSubmitter[T <: DataForProofGeneration](settings: Sidec
               case Some(_) => // do nothing
               case None =>
                 val referencedWithdrawalEpochNumber = submissionWindowStatus.withdrawalEpochInfo.epoch - 1
-                getMessageToSign(referencedWithdrawalEpochNumber) match {
+                keyRotationStrategy.getMessageToSign(referencedWithdrawalEpochNumber) match {
                   case Success(messageToSign) =>
                     signaturesStatus = Some(SignaturesStatus(referencedWithdrawalEpochNumber, messageToSign, ArrayBuffer()))
 
@@ -244,60 +242,6 @@ abstract class CertificateSubmitter[T <: DataForProofGeneration](settings: Sidec
     }
 
     Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getStatus), timeoutDuration).asInstanceOf[SubmissionWindowStatus]
-  }
-
-  // No MBTRs support, so no sense to specify btrFee different to zero.
-  protected def getBtrFee(referencedWithdrawalEpochNumber: Int): Long = 0
-
-  // Every positive value FT is allowed.
-  protected def getFtMinAmount(referencedWithdrawalEpochNumber: Int): Long = 0
-
-  private def getMessageToSign(referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
-    def getMessage(sidechainNodeView: View): Try[Array[Byte]] = Try {
-      val history = sidechainNodeView.history
-      val state = sidechainNodeView.state
-
-      val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(referencedWithdrawalEpochNumber)
-
-      val btrFee: Long = getBtrFee(referencedWithdrawalEpochNumber)
-      val ftMinAmount: Long = getFtMinAmount(referencedWithdrawalEpochNumber)
-
-      val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
-      val sidechainId = params.sidechainId
-
-      val utxoMerkleTreeRoot: Optional[Array[Byte]] = {
-        Try {
-          getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber, state)
-        } match {
-          case Failure(e: IllegalStateException) =>
-            throw new Exception("CertificateSubmitter is too late against the State. " +
-              s"No utxo merkle tree root for requested epoch $referencedWithdrawalEpochNumber. " +
-              s"Current epoch is ${state.getWithdrawalEpochInfo.epoch}")
-          case Failure(exception) => log.error("Exception while getting utxoMerkleTreeRoot", exception)
-            throw new Exception(exception)
-          case Success(value) => value
-        }
-      }
-
-
-      CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(withdrawalRequests.asJava, sidechainId, referencedWithdrawalEpochNumber, endEpochCumCommTreeHash, btrFee, ftMinAmount, utxoMerkleTreeRoot)
-    }
-
-    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getMessage), timeoutDuration).asInstanceOf[Try[Array[Byte]]].get
-  }
-
-  protected def getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber: Int, state: SidechainState): Optional[Array[Byte]] = {
-    if (params.isCSWEnabled) {
-      state.utxoMerkleTreeRoot(referencedWithdrawalEpochNumber) match {
-        case x: Some[Array[Byte]] => x.asJava
-        case None =>
-          log.error("UtxoMerkleTreeRoot is not defined even if CSW is enabled")
-          throw new IllegalStateException("UtxoMerkleTreeRoot is not defined")
-      }
-    }
-    else {
-      Optional.empty()
-    }
   }
 
   private def calculateSignatures(messageToSign: Array[Byte]): Try[Seq[CertificateSignatureInfo]] = Try {
@@ -442,7 +386,7 @@ abstract class CertificateSubmitter[T <: DataForProofGeneration](settings: Sidec
         case Some(status) =>
           // Check quality again, in case better Certificate appeared.
           if (checkQuality(status)) {
-            def getProofGenerationData(sidechainNodeView: View): DataForProofGeneration = buildDataForProofGeneration(sidechainNodeView, status)
+            def getProofGenerationData(sidechainNodeView: View): DataForProofGeneration = keyRotationStrategy.buildDataForProofGeneration(sidechainNodeView, status)
 
             val dataForProofGeneration = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getProofGenerationData), timeoutDuration)
               .asInstanceOf[T]
@@ -454,7 +398,7 @@ abstract class CertificateSubmitter[T <: DataForProofGeneration](settings: Sidec
               override def run(): Unit = {
                 var proofWithQuality: com.horizen.utils.Pair[Array[Byte], java.lang.Long] = null
                 try {
-                  proofWithQuality = generateProof(dataForProofGeneration)
+                  proofWithQuality = keyRotationStrategy.generateProof(dataForProofGeneration)
                 } catch {
                   case e: Exception =>
                     log.error("Proof creation failed.", e)
@@ -506,42 +450,6 @@ abstract class CertificateSubmitter[T <: DataForProofGeneration](settings: Sidec
         log.error("Certificate creation failed.", exception)
         context.system.eventStream.publish(CertificateSubmissionStopped)
     }
-  }
-
-  protected def buildDataForProofGeneration(sidechainNodeView: View, status: SignaturesStatus): DataForProofGeneration
-
-  protected def lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): Array[Byte] = {
-    val mcBlockHash = withdrawalEpochNumber match {
-      case -1 => params.parentHashOfGenesisMainchainBlock
-      case _ => {
-        val mcHeight = params.mainchainCreationBlockHeight + (withdrawalEpochNumber + 1) * params.withdrawalEpochLength - 1
-        history.getMainchainBlockReferenceInfoByMainchainBlockHeight(mcHeight).asScala.map(_.getMainchainHeaderHash).getOrElse(throw new IllegalStateException("Information for Mc is missed"))
-      }
-    }
-    log.debug(s"Last MC block hash for withdrawal epoch number $withdrawalEpochNumber is ${
-      BytesUtils.toHexString(mcBlockHash)
-    }")
-
-    val headerInfo = history.mainchainHeaderInfoByHash(mcBlockHash).getOrElse(throw new IllegalStateException("Missed MC Cumulative Hash"))
-
-    headerInfo.cumulativeCommTreeHash
-  }
-
-  // todo abstract method
-  protected def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
-    val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
-      dataForProofGeneration.schnorrKeyPairs.map {
-        case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)
-      }.unzip
-
-    log.info(s"Start generating proof with parameters: dataForProofGeneration = $dataForProofGeneration, " +
-      s"signersThreshold = ${
-        params.signersThreshold
-      }. " +
-      s"It can take a while.")
-
-    //create and return proof with quality
-    CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(schnorrSignatureBytesList = signaturesBytes.asJava, schnorrPublicKeysBytesList = signersPublicKeysBytes.asJava, threshold = params.signersThreshold, provingKeyPath = provingFileAbsolutePath, checkProvingKey = true, zk = true)
   }
 
   def submitterStatus: Receive = {
@@ -652,9 +560,15 @@ object CertificateSubmitterRef {
             mainchainChannel: MainchainNodeChannel)
            (implicit ec: ExecutionContext): Props = {
     if (settings.withdrawalEpochCertificateSettings.typeOfCircuit == TypeOfCertificateSubmitter.NaiveThresholdSignatureCircuit) {
-      Props(new ThresholdSigCircuitSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel)).withMailbox("akka.actor.deployment.submitter-prio-mailbox")
+      val noKeyRotationStrategy = new NoKeyRotationStrategy(settings, params)
+      Props(new CertificateSubmitter[DataForProofGenerationWithoutKeyRotation]
+      (settings, sidechainNodeViewHolderRef, params, mainchainChannel, noKeyRotationStrategy))
+        .withMailbox("akka.actor.deployment.submitter-prio-mailbox")
     } else {
-      Props(new ThresholdSigCircuitSubmitterWithKeyRotation(settings, sidechainNodeViewHolderRef, params, mainchainChannel)).withMailbox("akka.actor.deployment.submitter-prio-mailbox")
+      val withKeyRotationStrategy = new WithKeyRotationStrategy(settings, params)
+      Props(new CertificateSubmitter[DataForProofGenerationWithKeyRotation]
+      (settings, sidechainNodeViewHolderRef, params, mainchainChannel, withKeyRotationStrategy))
+        .withMailbox("akka.actor.deployment.submitter-prio-mailbox")
     }
   }
 

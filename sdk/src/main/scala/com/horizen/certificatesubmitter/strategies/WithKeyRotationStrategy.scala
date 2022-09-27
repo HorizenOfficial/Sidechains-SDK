@@ -1,22 +1,23 @@
 package com.horizen.certificatesubmitter.strategies
 
+import akka.pattern.ask
 import com.horizen.SidechainSettings
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
-import com.horizen.certificatesubmitter.dataproof.{DataForProofGeneration, DataForProofGenerationWithoutKeyRotation}
+import com.horizen.certificatesubmitter.dataproof.DataForProofGenerationWithKeyRotation
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.params.NetworkParams
 import com.horizen.websocket.server.WebSocketServerRef.sidechainNodeViewHolderRef
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 
-import scala.collection.JavaConverters._
 import java.util.Optional
+import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.concurrent.Await
 import scala.util.{Failure, Success, Try}
 
-class NoKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams) extends KeyRotationStrategy(settings, params) {
-  protected def generateProof(dataForProofGeneration: DataForProofGenerationWithoutKeyRotation): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
+class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams) extends KeyRotationStrategy(settings, params) {
+  protected def generateProof(dataForProofGeneration: DataForProofGenerationWithKeyRotation): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
     val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
       dataForProofGeneration.schnorrKeyPairs.map {
         case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)
@@ -32,7 +33,7 @@ class NoKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams) 
     CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(schnorrSignatureBytesList = signaturesBytes.asJava, schnorrPublicKeysBytesList = signersPublicKeysBytes.asJava, threshold = params.signersThreshold, provingKeyPath = provingFileAbsolutePath, checkProvingKey = true, zk = true)
   }
 
-  def buildDataForProofGeneration(sidechainNodeView: View, status: SignaturesStatus): DataForProofGenerationWithoutKeyRotation = {
+  def buildDataForProofGeneration(sidechainNodeView: View, status: SignaturesStatus): DataForProofGenerationWithKeyRotation = {
     val history = sidechainNodeView.history
     val state = sidechainNodeView.state
 
@@ -82,6 +83,6 @@ class NoKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams) 
       CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(withdrawalRequests.asJava, sidechainId, referencedWithdrawalEpochNumber, endEpochCumCommTreeHash, btrFee, ftMinAmount, utxoMerkleTreeRoot)
     }
 
-    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getMessage), timeoutDuration).asInstanceOf[Try[Array[Byte]]].get
+    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getMessage), settings.sparkzSettings.restApi.timeout).asInstanceOf[Try[Array[Byte]]].get
   }
 }

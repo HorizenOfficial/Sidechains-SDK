@@ -6,14 +6,14 @@ import com.horizen.proposition.SchnorrProposition
 import com.horizen.utils.BytesUtils
 
 
-case class DataForProofGenerationWithKeyRotation(referencedEpochNumber: Int,
-                                                 sidechainId: Array[Byte],
-                                                 withdrawalRequests: Seq[WithdrawalRequestBox],
-                                                 endEpochCumCommTreeHash: Array[Byte],
-                                                 btrFee: Long,
-                                                 ftMinAmount: Long,
-                                                 customFields: Seq[Array[Byte]],
-                                                 schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])])
+case class DataForProofGenerationWithKeyRotation(override val referencedEpochNumber: Int,
+                                                 override val sidechainId: Array[Byte],
+                                                 override val withdrawalRequests: Seq[WithdrawalRequestBox],
+                                                 override val endEpochCumCommTreeHash: Array[Byte],
+                                                 override val btrFee: Long,
+                                                 override val ftMinAmount: Long,
+                                                 override val customFields: Seq[Array[Byte]],
+                                                 override val schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])])
   extends DataForProofGeneration (referencedEpochNumber, sidechainId, withdrawalRequests, endEpochCumCommTreeHash, btrFee, ftMinAmount, customFields, schnorrKeyPairs) {
   override def toString: String = {
     "DataForProofGeneration(" +
@@ -23,7 +23,7 @@ case class DataForProofGenerationWithKeyRotation(referencedEpochNumber: Int,
       s"endEpochCumCommTreeHash = ${BytesUtils.toHexString(endEpochCumCommTreeHash)}, " +
       s"btrFee = $btrFee, " +
       s"ftMinAmount = $ftMinAmount, " +
-      s"utxoMerkleTreeRoot = ${customFields.map(BytesUtils.toHexString)}, " + // from this field different fields for 2 circuits
+      s"customFields = ${customFields.map(BytesUtils.toHexString)}, " + // from this field different fields for 2 circuits
       s"number of schnorrKeyPairs = ${schnorrKeyPairs.size})"
   }
 }
