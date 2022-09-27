@@ -11,13 +11,13 @@ import sparkz.core.idToVersion
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.settings.SparkzSettings
+
 import scala.util.{Failure, Success, Try}
 
 abstract class AbstractSidechainNodeViewHolder[
   TX <: Transaction, H <: SidechainBlockHeaderBase, PMOD <: SidechainBlockBase[TX, H]]
 (
   sidechainSettings: SidechainSettings,
-  params: NetworkParams,
   timeProvider: NetworkTimeProvider
 )
   extends sparkz.core.NodeViewHolder[TX, PMOD]
@@ -30,8 +30,9 @@ abstract class AbstractSidechainNodeViewHolder[
 
   protected var applyingBlock: Boolean = false
 
-  val maxTxFee = sidechainSettings.wallet.maxTxFee
+  val maxTxFee: Long = sidechainSettings.wallet.maxTxFee
   val listOfStorageInfo: Seq[SidechainStorageInfo]
+
 
   case class SidechainNodeUpdateInformation(history: HIS,
                                             state: MS,
@@ -51,7 +52,7 @@ abstract class AbstractSidechainNodeViewHolder[
     new ConsensusValidator(timeProvider)
   )
 
-  def dumpStorages: Unit
+  def dumpStorages(): Unit
 
   def getStorageVersions: Map[String, String]
 
@@ -149,10 +150,12 @@ abstract class AbstractSidechainNodeViewHolder[
                 val newMemPool = updateMemPool(progressInfo.toRemove, blocksApplied, memoryPool(), newState)
                 // Note: in parent NodeViewHolder.pmodModify wallet was updated here.
 
-                log.info(s"Persistent modifier ${pmod.encodedId} applied successfully")
+                log.info(s"Persistent modifier ${pmod.encodedId} applied successfully, now updating node view")
                 updateNodeView(Some(newHistory), Some(newState), Some(newWallet), Some(newMemPool))
 
-
+                log.debug(s"Current mempool size: ${newMemPool.size} transactions")
+              // TODO FOR MERGE: usedSizeKBytes()/usedPercentage() should be moved into sparkz.core.transaction.MemoryPool
+              // - ${newMemPool.usedSizeKBytes}kb (${newMemPool.usedPercentage}%)")
               case Failure(e) =>
                 log.warn(s"Can`t apply persistent modifier (id: ${pmod.encodedId}, contents: $pmod) to minimal state", e)
                 updateNodeView(updatedHistory = Some(newHistory))
@@ -178,29 +181,34 @@ abstract class AbstractSidechainNodeViewHolder[
                                    progressInfo: ProgressInfo[PMOD],
                                    suffixApplied: IndexedSeq[PMOD]): (HIS, Try[MS], VL, Seq[PMOD]) = {
 
-    // Do rollback if chain switchapplyStateAndWallet needed
-    val (stateToApplyTry: Try[MS], walletToApplyTry: Try[VL], suffixTrimmed: IndexedSeq[PMOD]) = if (progressInfo.chainSwitchingNeeded) {
+    // Do rollback if chain switch needed
+    val (walletToApplyTry: Try[VL], stateToApplyTry: Try[MS], suffixTrimmed: IndexedSeq[PMOD]) = if (progressInfo.chainSwitchingNeeded) {
       @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
       val branchingPoint = progressInfo.branchPoint.get //todo: .get
       if (state.version != branchingPoint) {
+        log.debug(s"chain reorg needed, rolling back state and wallet to branching point: ${branchingPoint}")
         (
-          state.rollbackTo(idToVersion(branchingPoint)),
           wallet.rollback(idToVersion(branchingPoint)),
+          state.rollbackTo(idToVersion(branchingPoint)),
           trimChainSuffix(suffixApplied, branchingPoint)
         )
-      } else (Success(state), Success(wallet), IndexedSeq())
-    } else (Success(state), Success(wallet), suffixApplied)
+      } else (Success(wallet), Success(state), IndexedSeq())
+    } else (Success(wallet), Success(state), suffixApplied)
 
     (stateToApplyTry, walletToApplyTry) match {
       case (Success(stateToApply), Success(walletToApply)) =>
-        val nodeUpdateInfo = applyStateAndWallet(history, stateToApply, walletToApply, suffixTrimmed, progressInfo).get
-
-        nodeUpdateInfo.failedMod match {
-          case Some(_) =>
-            @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
-            val alternativeProgressInfo = nodeUpdateInfo.alternativeProgressInfo.get
-            updateStateAndWallet(nodeUpdateInfo.history, nodeUpdateInfo.state, nodeUpdateInfo.wallet, alternativeProgressInfo, nodeUpdateInfo.suffix)
-          case None => (nodeUpdateInfo.history, Success(nodeUpdateInfo.state), nodeUpdateInfo.wallet, nodeUpdateInfo.suffix)
+        log.debug("calling applyStateAndWallet")
+        applyStateAndWallet(history, stateToApply, walletToApply, suffixTrimmed, progressInfo) match {
+          case Success(nodeUpdateInfo) =>
+            nodeUpdateInfo.failedMod match {
+              case Some(_) =>
+                @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
+                val alternativeProgressInfo = nodeUpdateInfo.alternativeProgressInfo.get
+                updateStateAndWallet(nodeUpdateInfo.history, nodeUpdateInfo.state, nodeUpdateInfo.wallet, alternativeProgressInfo, nodeUpdateInfo.suffix)
+              case None => (nodeUpdateInfo.history, Success(nodeUpdateInfo.state), nodeUpdateInfo.wallet, nodeUpdateInfo.suffix)
+            }
+          case Failure(ex) =>
+            (history, Failure(ex), wallet, suffixTrimmed)
         }
       case (Failure(e), _) =>
         log.error("State rollback failed: ", e)
@@ -227,29 +235,7 @@ abstract class AbstractSidechainNodeViewHolder[
                                     stateToApply: MS,
                                     walletToApply: VL,
                                     suffixTrimmed: IndexedSeq[PMOD],
-                                    progressInfo: ProgressInfo[PMOD]): Try[SidechainNodeUpdateInformation] = Try {
-    val updateInfoSample = SidechainNodeUpdateInformation(history, stateToApply, walletToApply, None, None, suffixTrimmed)
-    progressInfo.toApply.foldLeft(updateInfoSample) { case (updateInfo, modToApply) =>
-      if (updateInfo.failedMod.isEmpty) {
-        val (newHistory, newWallet) = applyConsensusEpochInfo(updateInfo.history, updateInfo.state, updateInfo.wallet, modToApply)
-
-        updateInfo.state.applyModifier(modToApply) match {
-          case Success(stateAfterApply) =>
-            val historyAfterApply = newHistory.reportModifierIsValid(modToApply).get
-            context.system.eventStream.publish(SemanticallySuccessfulModifier(modToApply))
-
-            val (historyAfterUpdateFee, walletAfterApply) = scanBlockWithFeePayments(historyAfterApply, stateAfterApply, newWallet, modToApply)
-            SidechainNodeUpdateInformation(historyAfterUpdateFee, stateAfterApply, walletAfterApply, None, None, updateInfo.suffix :+ modToApply)
-
-          case Failure(e) =>
-            log.error(s"Failed to apply block ${modToApply.id} to the state.", e)
-            val (historyAfterApply, newProgressInfo) = newHistory.reportModifierIsInvalid(modToApply, progressInfo).get
-            context.system.eventStream.publish(SemanticallyFailedModification(modToApply, e))
-            SidechainNodeUpdateInformation(historyAfterApply, updateInfo.state, newWallet, Some(modToApply), Some(newProgressInfo), updateInfo.suffix)
-        }
-      } else updateInfo
-    }
-  }
+                                    progressInfo: ProgressInfo[PMOD]): Try[SidechainNodeUpdateInformation]
 
 
   // Check if the next modifier will change Consensus Epoch, so notify History and Wallet with current info.

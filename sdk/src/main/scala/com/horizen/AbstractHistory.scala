@@ -55,8 +55,6 @@ abstract class AbstractHistory[
 
   def bestBlockInfo: SidechainBlockInfo = storage.bestBlockInfo
 
-  def isInActiveChain(blockId: String): Boolean = storage.isInActiveChain(ModifierId(blockId))
-
   override def append(block: PM): Try[(HT, ProgressInfo[PM])] = Try {
     for(validator <- semanticBlockValidators)
       validator.validate(block).get
@@ -94,14 +92,14 @@ abstract class AbstractHistory[
                   storage.update(block, blockInfo),
                   progInfo
                 )
-              case Failure(e) =>
-                //log.error("New best block found, but it can not be applied: %s".format(e.getMessage))
+              case Failure(e) => {
+                log.error("New best block found, but it can not be applied: %s".format(e.getMessage), e)
                 (
                   storage.update(block, blockInfo),
                   // TO DO: we should somehow prevent growing of such chain (penalize the peer?)
                   ProgressInfo[PM](None, Seq(), Seq())
                 )
-
+              }
             }
           } else {
             // We retrieved block from another chain that is not the best one
@@ -391,6 +389,8 @@ abstract class AbstractHistory[
   override def getBlockInfoById(blockId: String): Optional[SidechainBlockInfo] = {
     getStorageBlockInfoById(ModifierId(blockId)).asJava
   }
+
+  override def isInActiveChain(blockId: String): Boolean = storage.isInActiveChain(ModifierId(blockId))
 
   override def getLastBlockIds(count: Int): java.util.List[String] = {
     val blockList = new java.util.ArrayList[String]()

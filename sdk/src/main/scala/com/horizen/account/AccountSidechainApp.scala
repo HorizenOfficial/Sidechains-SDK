@@ -21,6 +21,7 @@ import com.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.evm.LevelDBDatabase
 import com.horizen.fork.ForkConfigurator
+import com.horizen.helper.{TransactionSubmitProvider, TransactionSubmitProviderImpl}
 import com.horizen.node.NodeWalletBase
 import com.horizen.secret.SecretSerializer
 import com.horizen.storage._
@@ -29,7 +30,6 @@ import com.horizen.transaction._
 import com.horizen.utils.{BytesUtils, Pair}
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.serialization.SparkzSerializer
-import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.Transaction
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
 
@@ -66,11 +66,9 @@ class AccountSidechainApp @Inject()
   override type PMOD = AccountBlock
   override type NVHT = AccountSidechainNodeViewHolder
 
-  override implicit lazy val settings: SparkzSettings = sidechainSettings.sparkzSettings
-
   private val storageList = mutable.ListBuffer[Storage]()
 
-  log.info(s"Starting application with settings \n$sidechainSettings")
+  log.info(s"Starting account application with settings \n$sidechainSettings")
 
   protected lazy val sidechainAccountTransactionsCompanion: SidechainAccountTransactionsCompanion = SidechainAccountTransactionsCompanion(customAccountTransactionSerializers)
 
@@ -78,6 +76,8 @@ class AccountSidechainApp @Inject()
   lazy val genesisBlock: AccountBlock = new AccountBlockSerializer(sidechainAccountTransactionsCompanion).parseBytes(
       BytesUtils.fromHexString(sidechainSettings.genesisData.scGenesisBlockHex)
     )
+
+  require (!isCSWEnabled, "Ceased Sidechain Withdrawal (CSW) should not be enabled in AccountSidechainApp!")
 
   val dataDirAbsolutePath: String = sidechainSettings.sparkzSettings.dataDir.getAbsolutePath
   val secretStore = new File(dataDirAbsolutePath + "/secret")
@@ -164,10 +164,12 @@ class AccountSidechainApp @Inject()
     AccountEthRpcRoute(settings.restApi, nodeViewHolderRef, sidechainSettings, params, sidechainTransactionActorRef, stateMetadataStorage, stateDbStorage, customMessageProcessors.asScala)
   )
 
+  /*
   override def stopAll(): Unit = {
     super.stopAll()
     storageList.foreach(_.close())
   }
+   */
 
   actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 }

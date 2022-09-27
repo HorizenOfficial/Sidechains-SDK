@@ -39,7 +39,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                               applicationState: ApplicationState,
                               genesisBlock: SidechainBlock)
 
-  extends AbstractSidechainNodeViewHolder[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock](sidechainSettings, params, timeProvider) {
+  extends AbstractSidechainNodeViewHolder[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock](sidechainSettings, timeProvider) {
   override type HSTOR = SidechainHistoryStorage
   override type HIS = SidechainHistory
   override type MS = SidechainState
@@ -284,25 +284,6 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
         }
       }
   }
-
-  /**
-   * Process new modifiers from remote.
-   * Put all candidates to modifiersCache and then try to apply as much modifiers from cache as possible.
-   * Clear cache if it's size exceeds size limit.
-   * Publish `ModifiersProcessingResult` message with all just applied and removed from cache modifiers.
-   */
-  override def processRemoteModifiers: Receive = {
-    case sparkz.core.NodeViewHolder.ReceivableMessages.ModifiersFromRemote(mods: Seq[SidechainBlock]) =>
-      mods.foreach(m => modifiersCache.put(m.id, m))
-
-      log.debug(s"Cache size before: ${modifiersCache.size}")
-
-      if (!applyingBlock) {
-        applyingBlock = true
-        self ! AbstractSidechainNodeViewHolder.InternalReceivableMessages.ApplyModifier(Seq())
-      }
-  }
-
 
   override protected def applyBiFunctionOnNodeView[T, A]: Receive = {
     case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.ApplyBiFunctionOnNodeView[

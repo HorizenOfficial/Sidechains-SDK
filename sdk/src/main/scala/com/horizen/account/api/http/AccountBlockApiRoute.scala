@@ -9,9 +9,9 @@ import com.horizen.SidechainTypes
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.api.http.BlockBaseErrorResponse.ErrorBlockNotCreated
-import com.horizen.api.http.{ApiResponseUtil, BlockBaseApiRoute, SuccessResponse}
+import com.horizen.api.http.{ApiResponseUtil, BlockBaseApiRoute}
 import com.horizen.api.http.JacksonSupport._
-import com.horizen.box.ZenBox
+import com.horizen.block.SidechainBlockBase
 import com.horizen.consensus.{intToConsensusEpochNumber, intToConsensusSlotNumber}
 import com.horizen.forge.AbstractForger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot
 import com.horizen.node.NodeWalletBase
@@ -41,7 +41,7 @@ case class AccountBlockApiRoute(
     NodeAccountState,
     NodeWalletBase,
     NodeAccountMemoryPool,
-    AccountNodeView] (settings, sidechainNodeViewHolderRef, sidechainBlockActorRef, forgerRef){
+    AccountNodeView] (settings, forgerRef){
 
   override val route: Route = pathPrefix("block") {
     findById ~ findLastIds ~ findIdByHeight ~ getBestBlockInfo ~ findBlockInfoById ~ startForging ~ stopForging ~ generateBlockForEpochNumberAndSlot ~ getForgingInfo
@@ -49,13 +49,11 @@ case class AccountBlockApiRoute(
 
   def generateBlockForEpochNumberAndSlot: Route = (post & path("generate")) {
     entity(as[ReqGenerateByEpochAndSlot]) { body =>
-      // TODO FOR MERGE checkit
+      // TODO FOR MERGE checkit and possibly move to base class
 
       val forcedTx: Iterable[SidechainTypes#SCAT] = body.transactionsBytes
         .map(txBytes => companion.parseBytesTry(BytesUtils.fromHexString(txBytes)))
         .flatten(maybeTx => maybeTx.map(Seq(_)).getOrElse(None))
-
-
 
       val future = sidechainBlockActorRef ? TryForgeNextBlockForEpochAndSlot(intToConsensusEpochNumber(body.epochNumber), intToConsensusSlotNumber(body.slotNumber), forcedTx)
       val submitResultFuture = Await.result(future, timeout.duration).asInstanceOf[Future[Try[ModifierId]]]
@@ -75,10 +73,7 @@ object AccountBlockRestSchema {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqFeePayments(blockId: String) {
-    require(blockId.length == 64, s"Invalid id $blockId. Id length must be 64")
+    require(blockId.length == SidechainBlockBase.BlockIdHexStringLength, s"Invalid id $blockId. Id length must be 64")
   }
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespFeePayments(feePayments: Seq[ZenBox]) extends SuccessResponse
 
 }

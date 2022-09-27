@@ -8,7 +8,6 @@ import com.horizen.block.{SidechainBlock, SidechainBlockBase, SidechainBlockHead
 import com.horizen.box.BoxSerializer
 import com.horizen.certificatesubmitter.CertificateSubmitterRef
 import com.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
-import akka.actor.ActorSystem
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
 import java.util.{HashMap => JHashMap, List => JList}
@@ -16,7 +15,6 @@ import com.horizen.backup.BoxIterator
 import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.cryptolibprovider.CryptoLibProvider
-import com.horizen.customconfig.CustomAkkaConfiguration
 import com.horizen.csw.CswManagerRef
 import com.horizen.forge.ForgerRef
 import com.horizen.helper._
@@ -24,7 +22,6 @@ import com.horizen.network.SidechainNodeViewSynchronizer
 import com.horizen.node._
 import com.horizen.params._
 import com.horizen.secret.SecretSerializer
-import com.horizen.serialization.JsonHorizenPublicKeyHashSerializer
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.transaction._
@@ -36,7 +33,6 @@ import com.horizen.fork.ForkConfigurator
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
 import sparkz.core.serialization.SparkzSerializer
-import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.Transaction
 
 class SidechainApp @Inject()
@@ -80,10 +76,6 @@ class SidechainApp @Inject()
   override type PMOD = SidechainBlock
   override type NVHT = SidechainNodeViewHolder
 
-  override implicit lazy val settings: SparkzSettings = sidechainSettings.sparkzSettings
-
-  override protected implicit lazy val actorSystem: ActorSystem = ActorSystem(settings.network.agentName, CustomAkkaConfiguration.getCustomConfig())
-
   log.info(s"Starting application with settings \n$sidechainSettings")
 
   protected lazy val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
@@ -93,9 +85,6 @@ class SidechainApp @Inject()
   lazy val genesisBlock: SidechainBlock = new SidechainBlockSerializer(sidechainTransactionsCompanion).parseBytes(
       BytesUtils.fromHexString(sidechainSettings.genesisData.scGenesisBlockHex)
     )
-
-  // Configure Horizen address json serializer specifying proper network type.
-  JsonHorizenPublicKeyHashSerializer.setNetworkType(params)
 
   if (isCSWEnabled) {
     log.info("Ceased Sidechain Withdrawal (CSW) is enabled")
@@ -120,12 +109,6 @@ class SidechainApp @Inject()
   else {
     log.warn("******** Ceased Sidechain Withdrawal (CSW) is DISABLED ***********")
   }
-
-
-  // Init CSW manager
-  //lazy val cswManager: ActorRef = CswManagerRef(sidechainSettings, params, nodeViewHolderRef)
-  //lazy val cswManager: Option[ActorRef] = if (isCSWEnabled) Some(CswManagerRef(sidechainSettings, params, nodeViewHolderRef)) else None
-
 
   // Init all storages
   protected val sidechainSecretStorage = new SidechainSecretStorage(
@@ -235,6 +218,7 @@ class SidechainApp @Inject()
     SidechainBackupApiRoute(settings.restApi, nodeViewHolderRef, boxIterator)
   )
 
+  // specific to Sidechain app only
   val nodeViewProvider : NodeViewProvider = new NodeViewProviderImpl(nodeViewHolderRef)
   val secretSubmitProvider: SecretSubmitProvider = new SecretSubmitProviderImpl(nodeViewHolderRef)
   val transactionSubmitProvider : TransactionSubmitProvider = new TransactionSubmitProviderImpl(sidechainTransactionActorRef)

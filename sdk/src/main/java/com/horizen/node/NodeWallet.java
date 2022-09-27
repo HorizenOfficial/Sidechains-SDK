@@ -34,11 +34,4 @@ public interface NodeWallet extends NodeWalletBase {
     <S extends Secret> List<S> secretsByProposition(ProofOfKnowledgeProposition<S> proposition);
 
     <S extends Secret> Optional<S> secretByPublicKeyBytes(byte[] proposition);
-
-    List<Secret> allSecrets();
-
-    List<Secret> secretsOfType(Class<? extends Secret> type);
-
-    byte[] walletSeed();
-
 }

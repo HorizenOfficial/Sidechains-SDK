@@ -35,8 +35,6 @@ abstract class BlockBaseApiRoute[
   NP <: NodeMemoryPoolBase[TX],
   NV <: SidechainNodeViewBase[TX, H, PM, NH, NS, NW, NP]](
                                   override val settings: RESTApiSettings,
-                                  sidechainNodeViewHolderRef: ActorRef,
-                                  sidechainBlockActorRef: ActorRef,
                                   forgerRef: ActorRef)
                                  (implicit val context: ActorRefFactory, override val ec: ExecutionContext, override val tag: ClassTag[NV])
   extends SidechainApiRoute[TX, H, PM, NH, NS, NW, NP, NV] {
@@ -255,6 +253,11 @@ object BlockBaseRestSchema {
   @JsonView(Array(classOf[Views.Default]))
   private[api] object RespGenerateSkipSlot extends SuccessResponse {
     val result = "No block is generated due no eligible forger box are present, skip slot"
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqFeePayments(blockId: String) {
+    require(blockId.length == SidechainBlockBase.BlockIdHexStringLength, s"Invalid id $blockId. Id length must be ${SidechainBlockBase.BlockIdHexStringLength}")
   }
 
 }

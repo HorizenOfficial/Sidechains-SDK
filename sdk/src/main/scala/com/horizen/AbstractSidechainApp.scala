@@ -1,6 +1,7 @@
 package com.horizen
 
 
+import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.{ExceptionHandler, RejectionHandler}
 import akka.stream.ActorMaterializer
@@ -9,8 +10,10 @@ import com.horizen.block.{ProofOfWorkVerifier, SidechainBlockBase, SidechainBloc
 import com.horizen.certificatesubmitter.network.{CertificateSignaturesSpec, GetCertificateSignaturesSpec}
 import com.horizen.companion._
 import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
+import com.horizen.customconfig.CustomAkkaConfiguration
 import com.horizen.forge.MainchainSynchronizer
 import com.horizen.fork.{ForkConfigurator, ForkManager}
+import com.horizen.helper.{NodeViewProvider, NodeViewProviderImpl, SecretSubmitProvider, SecretSubmitProviderImpl}
 import com.horizen.params._
 import com.horizen.proposition._
 import com.horizen.secret.SecretSerializer
@@ -30,6 +33,7 @@ import sparkz.core.settings.SparkzSettings
 import scorex.util.ScorexLogging
 import sparkz.core.api.http.ApiRoute
 import sparkz.core.network.NetworkController.ReceivableMessages.ShutdownNetwork
+
 import java.lang.{Byte => JByte}
 import java.nio.file.{Files, Paths}
 import java.util.concurrent.TimeUnit
@@ -58,6 +62,7 @@ abstract class AbstractSidechainApp
   override type PMOD <: SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase]
 
   override implicit lazy val settings: SparkzSettings = sidechainSettings.sparkzSettings
+  override protected implicit lazy val actorSystem: ActorSystem = ActorSystem(settings.network.agentName, CustomAkkaConfiguration.getCustomConfig())
 
   private val storageList = mutable.ListBuffer[Storage]()
 
@@ -103,7 +108,7 @@ abstract class AbstractSidechainApp
     (PublicKey25519PropositionSerializer.getSerializer.parseBytes(BytesUtils.fromHexString(el.blockSignProposition)), VrfPublicKeySerializer.getSerializer.parseBytes(BytesUtils.fromHexString(el.vrfPublicKey))))
 
   // Init proper NetworkParams depend on MC network
-  val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
+  lazy val params: NetworkParams = sidechainSettings.genesisData.mcNetwork match {
     case "regtest" => RegTestParams(
       sidechainId = BytesUtils.reverseBytes(BytesUtils.fromHexString(sidechainSettings.genesisData.scId)),
       sidechainGenesisBlockId = genesisBlock.id,
@@ -254,7 +259,6 @@ abstract class AbstractSidechainApp
 
   override val swaggerConfig: String = Source.fromResource("api/sidechainApi.yaml")(Codec.UTF8).getLines.mkString("\n")
 
-
   var rejectedApiRoutes : Seq[SidechainRejectionApiRoute] = Seq[SidechainRejectionApiRoute]()
   var applicationApiRoutes : Seq[ApplicationApiRoute] = Seq[ApplicationApiRoute]()
   var coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute]()
@@ -336,7 +340,6 @@ abstract class AbstractSidechainApp
       }
     }
   }
-
 
   protected def registerStorage(storage: Storage) : Storage = {
     storageList += storage

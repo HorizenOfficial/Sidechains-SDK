@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.api.http.BlockBaseRestSchema.{ReqGenerateByEpochAndSlot, RespGenerate}
+import com.horizen.api.http.BlockBaseRestSchema.{ReqFeePayments, ReqGenerateByEpochAndSlot, RespGenerate}
 import com.horizen.SidechainTypes
 import com.horizen.api.http.BlockBaseErrorResponse.ErrorBlockNotCreated
 import com.horizen.api.http.JacksonSupport._
@@ -42,7 +42,7 @@ case class SidechainBlockApiRoute(
     NodeState,
     NodeWallet,
     NodeMemoryPool,
-    SidechainNodeView] (settings, sidechainNodeViewHolderRef, sidechainBlockActorRef, forgerRef){
+    SidechainNodeView] (settings, forgerRef){
 
   override val route: Route = pathPrefix("block") {
 
@@ -65,8 +65,6 @@ case class SidechainBlockApiRoute(
 
   def generateBlockForEpochNumberAndSlot: Route = (post & path("generate")) {
     entity(as[ReqGenerateByEpochAndSlot]) { body =>
-      // TODO FOR MERGE generalize it
-
       val forcedTx: Iterable[SidechainTypes#SCBT] = body.transactionsBytes
         .map(txBytes => companion.parseBytesTry(BytesUtils.fromHexString(txBytes)))
         .flatten(maybeTx => maybeTx.map(Seq(_)).getOrElse(None))
@@ -87,10 +85,6 @@ case class SidechainBlockApiRoute(
 
 object SidechainBlockRestSchema {
 
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqFeePayments(blockId: String) {
-    require(blockId.length == 64, s"Invalid id $blockId. Id length must be 64")
-  }
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespFeePayments(feePayments: Seq[ZenBox]) extends SuccessResponse
