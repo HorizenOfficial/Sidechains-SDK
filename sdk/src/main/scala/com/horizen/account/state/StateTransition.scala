@@ -1,15 +1,19 @@
 package com.horizen.account.state
 
 import com.horizen.account.utils.BigIntegerUtil
+import com.horizen.utils.BytesUtils
+import scorex.util.ScorexLogging
+
 
 import java.math.BigInteger
+
 
 class StateTransition(
     view: AccountStateView,
     messageProcessors: Seq[MessageProcessor],
     blockGasPool: GasPool,
     blockContext: BlockContext
-) {
+) extends ScorexLogging{
 
   @throws(classOf[InvalidMessageException])
   @throws(classOf[ExecutionFailedException])
@@ -20,9 +24,6 @@ class StateTransition(
     val gasPool = buyGas(msg)
     // consume intrinsic gas
     val intrinsicGas = GasUtil.intrinsicGas(msg.getData, msg.getTo == null)
-    if (gasPool.getGas.compareTo(intrinsicGas) < 0) {
-      throw IntrinsicGasException(gasPool.getGas, intrinsicGas)
-    }
     gasPool.subGas(intrinsicGas)
     // find and execute the first matching processor
     messageProcessors.find(_.canProcess(msg, view)) match {

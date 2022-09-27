@@ -207,7 +207,7 @@ class ForgerStakeMsgProcessorTest
       val msg = getMessage(contractAddress, validWeiAmount, BytesUtils.fromHexString(AddNewStakeCmd) ++ data, randomNonce)
 
       // positive case, verify we can add the stake to view
-      val returnData = assertGas(4850) {
+      val returnData = assertGas(5550) {
         forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext)
       }
       assertNotNull(returnData)
@@ -244,7 +244,7 @@ class ForgerStakeMsgProcessorTest
         ForgerStakeData(ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
           ownerAddressProposition, validWeiAmount))
 
-      val returnData2 = assertGas(5350) {
+      val returnData2 = assertGas(6050) {
         forgerStakeMessageProcessor.process(msg2, view, _, defaultBlockContext)
       }
       assertNotNull(returnData2)
@@ -340,7 +340,7 @@ class ForgerStakeMsgProcessorTest
         data, randomNonce, validWeiAmount)
 
       // should fail because forger is not in the allowed list
-      assertGas(700) { gas =>
+      assertGas(1400) { gas =>
         assertThrows[ExecutionFailedException] {
           forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)
         }
@@ -449,7 +449,7 @@ class ForgerStakeMsgProcessorTest
         data, randomNonce, validWeiAmount)
 
       // should fail because staked amount is not a zat amount
-      assertGas(4150) { gas =>
+      assertGas(4850) { gas =>
         assertThrows[ExecutionFailedException] {
           forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)
         }
@@ -495,7 +495,7 @@ class ForgerStakeMsgProcessorTest
         BytesUtils.fromHexString(AddNewStakeCmd),
         data, randomNonce, validWeiAmount)
 
-       assertGas(250) { gas =>
+       assertGas(1400) { gas =>
         assertThrows[ExecutionRevertedException] {
           forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)
         }

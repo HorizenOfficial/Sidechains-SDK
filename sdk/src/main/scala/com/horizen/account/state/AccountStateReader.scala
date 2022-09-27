@@ -17,4 +17,6 @@ trait AccountStateReader {
 
   def getLogs(txHash: Array[Byte]): Array[EvmLog]
   def getIntermediateRoot: Array[Byte]
+  def baseFee: BigInteger
+
 }
