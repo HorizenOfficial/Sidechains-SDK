@@ -50,19 +50,21 @@ def get_number_of_transactions_for_node(node):
 def send_transactions_per_second(txs_creator_node, destination_address, tx_amount, start_time, test_run_time,
                                  transactions_per_second, extended_transaction=False):
     # Run until
+    nonce = 0
     while time.time() - start_time < test_run_time:
         i = 0
         tps_start_time = time.time()
         # Send transactions until the transactions_per_second value has been reached
         while i < transactions_per_second:
             try:
-                sendCoinsToAddressAccount(txs_creator_node, destination_address, tx_amount, counter.value)
+                sendCoinsToAddressAccount(txs_creator_node, destination_address, tx_amount, nonce)
             except Exception:
                 with errors.get_lock():
                     errors.value += 1
             with counter.get_lock():
                 counter.value += 1
             i += 1
+            nonce += 1
         completion_time = time.time() - tps_start_time
         # Remove execution time from the 1 second to get as close to X number of TPS as possible
         if completion_time < 1:
