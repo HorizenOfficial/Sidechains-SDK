@@ -55,8 +55,6 @@ class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
   val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
 
-  private var provingFileAbsolutePath: String = _
-
   private[certificatesubmitter] var submitterEnabled: Boolean = settings.withdrawalEpochCertificateSettings.submitterIsEnabled
   private[certificatesubmitter] var certificateSigningEnabled: Boolean = settings.withdrawalEpochCertificateSettings.certificateSigningIsEnabled
 
@@ -80,7 +78,7 @@ class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
     super.postRestart(reason)
     log.error("CertificateSubmitter was restarted because of: ", reason)
     // Switch to the working cycle, otherwise Submitter will stuck on initialization phase.
-    loadProvingFilePath()
+//    loadProvingFilePath()
     context.become(workingCycle)
   }
 
