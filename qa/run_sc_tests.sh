@@ -93,6 +93,7 @@ testScripts=(
     'sc_dust_threshold_fork.py'
     'sc_ft_limit_fork.py'
     'sc_fork_one_forced_tx.py'
+    'sc_big_block.py'
 );
 
 # include extended tests
