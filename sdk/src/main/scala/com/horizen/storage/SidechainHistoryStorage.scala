@@ -4,8 +4,6 @@ import com.horizen.block.{SidechainBlock, SidechainBlockSerializer}
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.params.NetworkParams
 
-
-
 class SidechainHistoryStorage(storage: Storage,
                               sidechainTransactionsCompanion: SidechainTransactionsCompanion,
                               params: NetworkParams)

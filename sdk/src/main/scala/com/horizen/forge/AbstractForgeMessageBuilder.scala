@@ -44,8 +44,8 @@ abstract class AbstractForgeMessageBuilder[
 
   type ForgeMessageType = GetDataFromCurrentView[ HIS,  MS,  VL,  MP, ForgeResult]
 
-  def buildForgeMessageForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber, timeout: Timeout): ForgeMessageType = {
-    val forgingFunctionForEpochAndSlot: View => ForgeResult = tryToForgeNextBlock(consensusEpochNumber, consensusSlotNumber, timeout)
+  def buildForgeMessageForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber, timeout: Timeout, forcedTx: Iterable[TX]): ForgeMessageType = {
+    val forgingFunctionForEpochAndSlot: View => ForgeResult = tryToForgeNextBlock(consensusEpochNumber, consensusSlotNumber, timeout, forcedTx)
 
     val forgeMessage: ForgeMessageType =
       GetDataFromCurrentView[ HIS,  MS,  VL,  MP, ForgeResult](forgingFunctionForEpochAndSlot)
@@ -55,7 +55,7 @@ abstract class AbstractForgeMessageBuilder[
 
   case class BranchPointInfo(branchPointId: ModifierId, referenceDataToInclude: Seq[MainchainHeaderHash], headersToInclude: Seq[MainchainHeaderHash])
 
-  protected def tryToForgeNextBlock(nextConsensusEpochNumber: ConsensusEpochNumber, nextConsensusSlotNumber: ConsensusSlotNumber, timeout: Timeout)(nodeView: View): ForgeResult = Try {
+  protected def tryToForgeNextBlock(nextConsensusEpochNumber: ConsensusEpochNumber, nextConsensusSlotNumber: ConsensusSlotNumber, timeout: Timeout, forcedTx: Iterable[TX])(nodeView: View): ForgeResult = Try {
     log.info(s"Try to forge block for epoch $nextConsensusEpochNumber with slot $nextConsensusSlotNumber")
 
     val branchPointInfo: BranchPointInfo = getBranchPointInfo(nodeView.history) match {
@@ -99,7 +99,7 @@ abstract class AbstractForgeMessageBuilder[
 
       val forgingResult = eligibleForgerOpt
         .map { case (forgingStakeMerklePathInfo, privateKey25519, vrfProof, _) =>
-          forgeBlock(nodeView, nextBlockTimestamp, branchPointInfo, forgingStakeMerklePathInfo, privateKey25519, vrfProof, timeout)
+          forgeBlock(nodeView, nextBlockTimestamp, branchPointInfo, forgingStakeMerklePathInfo, privateKey25519, vrfProof, timeout, forcedTx)
         }
         .getOrElse(SkipSlot("No eligible forging stake found."))
       forgingResult
@@ -229,7 +229,8 @@ abstract class AbstractForgeMessageBuilder[
                            forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo,
                            blockSignPrivateKey: PrivateKey25519,
                            vrfProof: VrfProof,
-                           timeout: Timeout): ForgeResult = {
+                           timeout: Timeout,
+                           forcedTx: Iterable[TX]): ForgeResult = {
     val parentBlockId: ModifierId = branchPointInfo.branchPointId
     val parentBlockInfo: SidechainBlockInfo = nodeView.history.blockInfoById(branchPointInfo.branchPointId)
     var withdrawalEpochMcBlocksLeft: Int = params.withdrawalEpochLength - parentBlockInfo.withdrawalEpochInfo.lastEpochIndex
@@ -305,7 +306,7 @@ abstract class AbstractForgeMessageBuilder[
       // For example the ommerred Block contains Tx which output is going to be spent by another Tx in the Mempool.
       Seq()
     } else {
-      collectTransactionsFromMemPool(nodeView, blockSize, mainchainBlockReferenceDataToRetrieve, timestamp)
+      collectTransactionsFromMemPool(nodeView, blockSize, mainchainBlockReferenceDataToRetrieve, timestamp, forcedTx)
     }
 
     val feePaymentsHash: Array[Byte] = if (isWithdrawalEpochLastBlock) {
@@ -391,7 +392,7 @@ abstract class AbstractForgeMessageBuilder[
                       forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo,
                       vrfProof: VrfProof): Int
 
-  def collectTransactionsFromMemPool(nodeView: View, blockSize: Int, mainchainBlockReferenceDataToRetrieve: Seq[MainchainHeaderHash], timestamp: Long): Seq[TX]
+  def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int, mainchainBlockReferenceDataToRetrieve: Seq[MainchainHeaderHash], timestamp: Long, forcedTx: Iterable[TX]) : Seq[TX]
 
   def getOmmersSize(ommers: Seq[Ommer[H]]) : Int
 

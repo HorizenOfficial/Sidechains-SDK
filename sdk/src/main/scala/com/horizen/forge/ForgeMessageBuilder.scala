@@ -11,16 +11,16 @@ import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.transaction.{SidechainTransaction, TransactionSerializer}
 import com.horizen.utils.{DynamicTypedSerializer, FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree}
-import com.horizen._
 import com.horizen.chain.MainchainHeaderHash
 import scorex.util.ModifierId
 import com.horizen.fork.ForkManager
 import com.horizen.utils.TimeToEpochUtils
-import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet}
+import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet, SidechainTypes}
 import scala.collection.JavaConverters._
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block
 import sparkz.core.block.Block.BlockId
+
 import scala.util.{Failure, Success, Try}
 
 class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
@@ -149,7 +149,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
   def getZeroFeePaymentsHash(): Array[Byte] =
     FeePaymentsUtils.calculateFeePaymentsHash(Seq())
 
-  override def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int, mainchainBlockReferenceDataToRetrieve: Seq[MainchainHeaderHash], timestamp: Long) : Seq[SidechainTypes#SCBT] = {
+  override def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int, mainchainBlockReferenceDataToRetrieve: Seq[MainchainHeaderHash], timestamp: Long, forcedTx: Iterable[SidechainTypes#SCBT]) : Seq[SidechainTypes#SCBT] = {
     var blockSize: Int = blockSizeIn
 
     var txsCounter: Int = 0
@@ -161,8 +161,9 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
         nodeView.pool.takeWithWithdrawalBoxesLimit(allowedWithdrawalRequestBoxes)
       else
         nodeView.pool.take(nodeView.pool.size)
-    mempoolTx
+    (mempoolTx
       .filter(nodeView.state.validateWithFork(_, consensusEpochNumber).isSuccess)
+      ++ forcedTx)
       .filter(tx => {
         val txSize = tx.bytes.length + 4 // placeholder for Tx length
         txsCounter += 1
@@ -172,9 +173,10 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
           blockSize += txSize
           true // continue data collection
         }
-      }).map(tx => tx.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]).toSeq // TODO: problems with types
-  }
 
+      })
+      .map(tx => tx.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]).toSeq // TODO: problems with types
+  }
 
   override def getOmmersSize(ommers: Seq[Ommer[SidechainBlockHeader]]): Int = {
     val ommersSerializer = new ListSerializer[Ommer[SidechainBlockHeader]](OmmerSerializer)

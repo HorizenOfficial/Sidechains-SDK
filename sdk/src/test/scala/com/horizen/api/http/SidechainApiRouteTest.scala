@@ -277,7 +277,9 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   mockedSidechainBlockActor.setAutoPilot(new testkit.TestActor.AutoPilot {
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
-        case AbstractForger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot(epoch, slot) => {
+
+        case AbstractForger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot(epoch, slot, _) => {
+
           sidechainApiMockConfiguration.blockActor_ForgingEpochAndSlot_reply.get(ConsensusEpochAndSlot(epoch, slot)) match {
             case Some(blockIdTry) => sender ! Future[Try[ModifierId]] {
               blockIdTry
@@ -385,7 +387,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   val sidechainTransactionApiRoute: Route = SidechainTransactionApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainTransactionActorRef,
     sidechainTransactionsCompanion, params).route
   val sidechainBlockApiRoute: Route = SidechainBlockApiRoute[BoxTransaction[Proposition, Box[Proposition]],
-    SidechainBlockHeader,SidechainBlock,NodeHistory,NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView](mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, mockedSidechainBlockForgerActorRef).route
+    SidechainBlockHeader,SidechainBlock,NodeHistory,NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView](mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, sidechainTransactionsCompanion, mockedSidechainBlockForgerActorRef).route
   val mainchainBlockApiRoute: Route = MainchainBlockApiRoute[BoxTransaction[Proposition, Box[Proposition]],
     SidechainBlockHeader,SidechainBlock,NodeHistory,NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView](mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val sidechainWalletApiRoute: Route = SidechainWalletApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, sidechainSecretsCompanion).route
@@ -393,8 +395,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
 
   val sidechainNodeApiRoute: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainApp, params).route
 
-  //val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, mockedSidechainBlockForgerActorRef).route
-  //val mainchainBlockApiRoute: Route = MainchainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
+
   val applicationApiRoute: Route = ApplicationApiRoute(mockedRESTSettings, new SimpleCustomApi(), mockedSidechainNodeViewHolderRef).route
   val sidechainCswApiRoute: Route = SidechainCswApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedCswManagerActorRef, params).route
   val sidechainBackupApiRoute: Route = SidechainBackupApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedBoxIterator).route

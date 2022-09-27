@@ -143,7 +143,7 @@ class AbstractHistoryStorage[PM <: SidechainBlockBase[_ <: Transaction, _ <: Sid
 
   def activeChainBlockId(height: Int): Option[ModifierId] = activeChain.idByHeight(height)
 
-  def activeChainAfter(blockId: ModifierId): Seq[ModifierId] = activeChain.chainAfter(blockId)
+  def activeChainAfter(blockId: ModifierId, limit: Option[Int]): Seq[ModifierId] = activeChain.chainAfter(blockId, limit)
 
   def getSidechainBlockContainingMainchainHeader(mainchainHeaderHash: Array[Byte]): Option[PM] = {
     activeChain.idByMcHeader(byteArrayToMainchainHeaderHash(mainchainHeaderHash)).flatMap(blockById)

@@ -92,7 +92,7 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier : ClassTag, SI <: S
   }
 
   protected def processTryForgeNextBlockForEpochAndSlotMessage: Receive = {
-    case messageToForger @ TryForgeNextBlockForEpochAndSlot(_, _) =>
+    case messageToForger @ TryForgeNextBlockForEpochAndSlot(epochNumber, slotNumber, forcedTx) => 
       val blockCreationFuture = forgerRef ? messageToForger
       val blockCreationResult = Await.result(blockCreationFuture, timeoutDuration).asInstanceOf[Try[ModifierId]]
       blockCreationResult match {

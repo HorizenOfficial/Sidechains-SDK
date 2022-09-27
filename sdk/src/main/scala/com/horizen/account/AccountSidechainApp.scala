@@ -4,7 +4,7 @@ import akka.actor.ActorRef
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.horizen._
-import com.horizen.account.api.http.{AccountEthRpcRoute, AccountTransactionApiRoute, AccountWalletApiRoute}
+import com.horizen.account.api.http.{AccountBlockApiRoute, AccountEthRpcRoute, AccountTransactionApiRoute, AccountWalletApiRoute}
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader, AccountBlockSerializer}
 import com.horizen.account.certificatesubmitter.AccountCertificateSubmitterRef
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
@@ -32,6 +32,7 @@ import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.settings.SparkzSettings
 import sparkz.core.transaction.Transaction
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
+
 import java.io.File
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}
@@ -155,12 +156,9 @@ class AccountSidechainApp @Inject()
   coreApiRoutes = Seq[ApiRoute](
     MainchainBlockApiRoute[TX,
       AccountBlockHeader,PMOD,NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef),
-    SidechainBlockApiRoute[TX,
-      AccountBlockHeader,PMOD,NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
+    AccountBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainAccountTransactionsCompanion, sidechainBlockForgerActorRef),
     SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params),
     AccountTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainAccountTransactionsCompanion, params),
-    // TODO there can be only one of them since both has the 'wallet' tag in the path. Fix this. 
-    //SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
     AccountWalletApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef),
     AccountEthRpcRoute(settings.restApi, nodeViewHolderRef, sidechainSettings, params, sidechainTransactionActorRef, stateMetadataStorage, stateDbStorage, customMessageProcessors.asScala)

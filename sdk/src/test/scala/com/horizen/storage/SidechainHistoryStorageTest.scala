@@ -346,13 +346,13 @@ class SidechainHistoryStorageTest extends JUnitSuite with MockitoSugar with Side
 
     // Test 11: get activeChainFrom
     // active chain from genesis block
-    assertEquals("Storage returned wrong active chain size", height, historyStorage.activeChainAfter(activeChainBlockList.head.id).size)
+    assertEquals("Storage returned wrong active chain size", height, historyStorage.activeChainAfter(activeChainBlockList.head.id, None).size)
     // active chain from 5th block
-    assertEquals("Storage returned wrong active chain size", height - 4, historyStorage.activeChainAfter(activeChainBlockList(4).id).size)
+    assertEquals("Storage returned wrong active chain size", height - 4, historyStorage.activeChainAfter(activeChainBlockList(4).id, None).size)
     // active chain last block id height
-    assertEquals("Storage returned wrong active chain size", 1, historyStorage.activeChainAfter(activeChainBlockList.last.id).size)
+    assertEquals("Storage returned wrong active chain size", 1, historyStorage.activeChainAfter(activeChainBlockList.last.id, None).size)
     // active chain from fork last block id
-    assertTrue("Storage active chain from forked block should be empty", historyStorage.activeChainAfter(forkChainBlockList.last.id).isEmpty)
+    assertTrue("Storage active chain from forked block should be empty", historyStorage.activeChainAfter(forkChainBlockList.last.id, None).isEmpty)
 
 
     // Test 12: get semanticValidity

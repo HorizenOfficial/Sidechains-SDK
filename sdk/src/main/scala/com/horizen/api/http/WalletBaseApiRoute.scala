@@ -30,8 +30,10 @@ abstract class WalletBaseApiRoute[
   NS <: NodeStateBase,
   NW <: NodeWalletBase,
   NP <: NodeMemoryPoolBase[TX],
-  NV <: SidechainNodeViewBase[TX, H, PM, NH, NS, NW, NP]](override val settings: RESTApiSettings,
-                                   sidechainNodeViewHolderRef: ActorRef)(implicit val context: ActorRefFactory, override val ec: ExecutionContext, override val tag: ClassTag[NV])
+  NV <: SidechainNodeViewBase[TX, H, PM, NH, NS, NW, NP]](
+                                   override val settings: RESTApiSettings,
+                                   sidechainNodeViewHolderRef: ActorRef
+                        )(implicit val context: ActorRefFactory, override val ec: ExecutionContext, override val tag: ClassTag[NV])
   extends SidechainApiRoute[TX, H, PM, NH, NS, NW, NP, NV] {
 
 

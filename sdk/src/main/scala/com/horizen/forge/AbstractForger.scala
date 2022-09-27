@@ -123,25 +123,24 @@ abstract class AbstractForger[
   }
 
   protected def processTryForgeNextBlockForEpochAndSlotMessage: Receive = {
-    case TryForgeNextBlockForEpochAndSlot(epochNumber, slotNumber) => tryToCreateBlockForEpochAndSlot(epochNumber, slotNumber, Some(sender()), timeout)
-  }
+    case TryForgeNextBlockForEpochAndSlot(epochNumber, slotNumber, forcedTx) => tryToCreateBlockForEpochAndSlot(epochNumber, slotNumber, Some(sender()), timeout, forcedTx)  }
 
   protected def tryToCreateBlockNow(): Unit = {
     val currentTime: Long = timeProvider.time() / 1000
     val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params, currentTime)
     log.info(s"Send TryForgeNextBlockForEpochAndSlot message with epoch and slot ${epochAndSlot}")
-    tryToCreateBlockForEpochAndSlot(epochAndSlot.epochNumber, epochAndSlot.slotNumber, None, timeout)
-  }
+    tryToCreateBlockForEpochAndSlot(epochAndSlot.epochNumber, epochAndSlot.slotNumber, None, timeout, Seq())  }
 
-  def getForgedBlockAsFuture(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, blockCreationTimeout: Timeout) : Future[ForgeResult] = {
-    val forgeMessage: AbstractForgeMessageBuilder[TX, H, PM]#ForgeMessageType = forgeMessageBuilder.buildForgeMessageForEpochAndSlot(epochNumber, slot, blockCreationTimeout)
+  def getForgedBlockAsFuture(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, blockCreationTimeout: Timeout, forcedTx: Iterable[TX]) : Future[ForgeResult] = {
+    val forgeMessage: AbstractForgeMessageBuilder[TX, H, PM]#ForgeMessageType = forgeMessageBuilder.buildForgeMessageForEpochAndSlot(epochNumber, slot, blockCreationTimeout, forcedTx)
     val forgedBlockAsFuture = (viewHolderRef ? forgeMessage).asInstanceOf[Future[ForgeResult]]
     forgedBlockAsFuture
   }
 
-  protected def tryToCreateBlockForEpochAndSlot(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, respondsToOpt: Option[ActorRef], blockCreationTimeout: Timeout): Unit = {
+  protected def tryToCreateBlockForEpochAndSlot(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, respondsToOpt: Option[ActorRef], blockCreationTimeout: Timeout, forcedTx: Iterable[TX]): Unit = {
+    val forgeMessage = forgeMessageBuilder.buildForgeMessageForEpochAndSlot(epochNumber, slot, blockCreationTimeout, forcedTx)
 
-    val forgedBlockAsFuture = getForgedBlockAsFuture(epochNumber, slot, blockCreationTimeout)
+    val forgedBlockAsFuture = getForgedBlockAsFuture(epochNumber, slot, blockCreationTimeout, forcedTx)
 
     forgedBlockAsFuture.onComplete{
       case Success(ForgeSuccess(block)) => {
@@ -200,7 +199,7 @@ object AbstractForger extends ScorexLogging {
   object ReceivableMessages {
     case object StartForging
     case object StopForging
-    case class  TryForgeNextBlockForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber)
+    case class  TryForgeNextBlockForEpochAndSlot[TX](consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber, forcedTx: Iterable[TX])
     case object GetForgingInfo
   }
 }

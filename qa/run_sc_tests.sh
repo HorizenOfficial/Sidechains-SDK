@@ -90,8 +90,9 @@ testScripts=(
     'websocket_server.py'
     'websocket_server_fee_payments.py'
     'sc_sync_after_fork.py'
-    'sc_dust_threshold_fork'
-    'sc_ft_limit_fork'
+    'sc_dust_threshold_fork.py'
+    'sc_ft_limit_fork.py'
+    'sc_fork_one_forced_tx.py'
 );
 
 # include extended tests
