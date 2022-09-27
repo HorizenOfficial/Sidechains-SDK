@@ -5,8 +5,13 @@ import scorex.util.ScorexLogging
 
 import java.math.BigInteger
 
-class StateTransition(view: AccountStateView, messageProcessors: Seq[MessageProcessor], blockGasPool: GasPool)
-extends ScorexLogging{
+class StateTransition(
+    view: AccountStateView,
+    messageProcessors: Seq[MessageProcessor],
+    blockGasPool: GasPool,
+    blockContext: BlockContext
+) extends ScorexLogging {
+
 
   @throws(classOf[InvalidMessageException])
   @throws(classOf[ExecutionFailedException])
@@ -32,7 +37,7 @@ extends ScorexLogging{
         // create a snapshot to rollback to in case of execution errors
         val revisionId = view.snapshot
         try {
-          processor.process(msg, view, gasPool)
+          processor.process(msg, view, gasPool, blockContext)
         } catch {
           // if the processor throws ExecutionRevertedException we revert all changes
           case err: ExecutionRevertedException =>
@@ -58,27 +63,24 @@ extends ScorexLogging{
     val sender = msg.getFrom.address()
 
     // Check the nonce
-    // TODO: skip nonce checks if message is "fake" (RPC calls)
     val stateNonce = view.getNonce(sender)
-    val txNonce = msg.getNonce
-    val result = txNonce.compareTo(stateNonce)
-    if (result < 0) {
-      throw NonceTooLowException(sender, txNonce, stateNonce)
-    } else if (result > 0) {
-      throw NonceTooHighException(sender, txNonce, stateNonce)
+    if (!msg.getIsFakeMsg) {
+      val txNonce = msg.getNonce
+      val result = txNonce.compareTo(stateNonce)
+      if (result < 0) throw NonceTooLowException(sender, txNonce, stateNonce)
+      if (result > 0) throw NonceTooHighException(sender, txNonce, stateNonce)
+      // GETH and therefore StateDB use uint64 to store the nonce and perform an overflow check here using (nonce+1<nonce)
+      // BigInteger will not overflow like that, so we just verify that the result after increment still fits into 64 bits
+      if (!BigIntegerUtil.isUint64(stateNonce.add(BigInteger.ONE))) throw NonceMaxException(sender, stateNonce)
+      // Check that the sender is an EOA
+      if (!view.isEoaAccount(sender))
+        throw SenderNotEoaException(sender, view.getCodeHash(sender))
     }
-    // GETH and therefore StateDB use uint64 to store the nonce and perform an overflow check here using (nonce+1<nonce)
-    // BigInteger will not overflow like that, so we just verify that the result after increment still fits into 64 bits
-    if (!BigIntegerUtil.isUint64(stateNonce.add(BigInteger.ONE)))
-      throw NonceMaxException(sender, stateNonce)
 
-    // Check that the sender is an EOA
-    if (!view.isEoaAccount(sender))
-      throw SenderNotEoaException(sender, view.getCodeHash(sender))
-
-    // TODO: fee checks if message is "fake" (RPC calls)
-    if (msg.getGasFeeCap.compareTo(view.getBaseFee) < 0)
-      throw FeeCapTooLowException(sender, msg.getGasFeeCap, view.getBaseFee)
+    if (!msg.getIsFakeMsg || msg.getGasFeeCap.bitLength() > 0) {
+      if (msg.getGasFeeCap.compareTo(blockContext.baseFee) < 0)
+        throw FeeCapTooLowException(sender, msg.getGasFeeCap, blockContext.baseFee)
+    }
   }
 
   private def buyGas(msg: Message): GasPool = {
@@ -107,9 +109,8 @@ extends ScorexLogging{
   }
 
   private def refundGas(msg: Message, gas: GasPool): Unit = {
-    val usedGas = msg.getGasLimit.subtract(gas.getGas)
     // cap gas refund to a quotient of the used gas
-    gas.addGas(view.getRefund.min(usedGas.divide(GasUtil.RefundQuotientEIP3529)))
+    gas.addGas(view.getRefund.min(gas.getUsedGas.divide(GasUtil.RefundQuotientEIP3529)))
     // return funds for remaining gas, exchanged at the original rate.
     val remaining = gas.getGas.multiply(msg.getGasPrice)
     view.addBalance(msg.getFrom.address(), remaining)

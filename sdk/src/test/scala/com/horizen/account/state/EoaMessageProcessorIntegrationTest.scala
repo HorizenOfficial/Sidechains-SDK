@@ -47,14 +47,14 @@ class EoaMessageProcessorIntegrationTest
   @Test
   def process(): Unit = {
     val value = BigInteger.valueOf(1337)
-    val initialBalance = BigInteger.valueOf(10000000)
+    val initialBalance = new BigInteger("2000000000000")
     val to = getAddressProposition(12345L).address()
     val msg = getMessage(to, value, Array.emptyByteArray)
     val sender = msg.getFrom.address()
 
     usingView(EoaMessageProcessor) { view =>
       view.addBalance(sender, initialBalance)
-      val returnData = assertGas(GasUtil.TxGas)(view.applyMessage(msg, _))
+      val returnData = assertGas(GasUtil.TxGas)(view.applyMessage(msg, _, defaultBlockContext))
       assertArrayEquals("Different return data found", Array.emptyByteArray, returnData)
       assertEquals("Different from account value found", initialBalance.subtract(value), view.getBalance(sender))
       assertEquals("Different to account value found", value, view.getBalance(msg.getTo.address()))

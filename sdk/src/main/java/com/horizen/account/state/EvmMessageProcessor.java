@@ -2,6 +2,7 @@ package com.horizen.account.state;
 
 import com.horizen.evm.Evm;
 import com.horizen.evm.interop.EvmContext;
+import com.horizen.evm.utils.Address;
 
 import java.math.BigInteger;
 
@@ -27,15 +28,15 @@ public class EvmMessageProcessor implements MessageProcessor {
     }
 
     @Override
-    public byte[] process(Message msg, BaseAccountStateView view, GasPool gas) throws ExecutionFailedException {
+    public byte[] process(Message msg, BaseAccountStateView view, GasPool gas, BlockContext blockContext)
+            throws ExecutionFailedException {
         // prepare context
         var context = new EvmContext();
-        context.baseFee = view.getBaseFee();
-        // TODO: we need versioning for the block height:
-        //  getHeight() currently always returns the block number of the latest block, independent of the state we're in
-        //  this might lead to different results when replaying a transaction
-        context.blockNumber = BigInteger.valueOf(view.getHeight()).add(BigInteger.ONE);
-        context.gasLimit = view.getBlockGasLimit();
+        context.coinbase = Address.FromBytes(blockContext.forgerAddress);
+        context.time = BigInteger.valueOf(blockContext.timestamp);
+        context.baseFee = blockContext.baseFee;
+        context.gasLimit = BigInteger.valueOf(blockContext.blockGasLimit);
+        context.blockNumber = BigInteger.valueOf(blockContext.blockNumber);
         // execute EVM
         var result = Evm.Apply(
                 view.getStateDbHandle(),
@@ -46,24 +47,17 @@ public class EvmMessageProcessor implements MessageProcessor {
                 // use gas from the pool not the message, because intrinsic gas was already spent at this point
                 gas.getGas(),
                 msg.getGasPrice(),
-                context
+                context,
+                blockContext.getTraceParams()
         );
+        blockContext.setEvmResult(result);
         var returnData = result.returnData == null ? new byte[0] : result.returnData;
         // consume gas the EVM has used:
         // the EVM will never consume more gas than is available, hence this should never throw
-        // and OutOfGasException is manually thrown if the EVM reported "out of gas"
+        // and ExecutionFailedException is thrown if the EVM reported "out of gas"
         gas.subGas(result.usedGas);
-        if (!result.evmError.isEmpty()) {
-            switch (result.evmError) {
-                case "execution reverted":
-                    // returnData here will include the revert reason
-                    throw new ExecutionRevertedException(returnData);
-                case "out of gas":
-                    throw new OutOfGasException();
-                default:
-                    throw new ExecutionFailedException(result.evmError);
-            }
-        }
+        if (result.reverted) throw new ExecutionRevertedException(returnData);
+        if(!result.evmError.isEmpty()) throw new ExecutionFailedException(result.evmError);
         return returnData;
     }
 }

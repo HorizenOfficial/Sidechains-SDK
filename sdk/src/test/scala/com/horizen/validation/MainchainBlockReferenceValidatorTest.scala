@@ -3,7 +3,7 @@ package com.horizen.validation
 import java.util.{Optional => JOptional}
 import com.horizen.{SidechainHistory, SidechainTypes}
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlock, SidechainBlockHeader}
-import com.horizen.chain.{MainchainHeaderBaseInfo, SidechainBlockInfo}
+import com.horizen.chain.{MainchainHeaderBaseInfo, SidechainBlockInfo, SidechainFeePaymentsInfo}
 import com.horizen.fixtures.{FieldElementFixture, MainchainBlockReferenceFixture, SidechainBlockInfoFixture, VrfGenerator}
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.poseidonnative.PoseidonHash
@@ -26,7 +26,7 @@ class MainchainBlockReferenceValidatorTest
   with MainchainBlockReferenceFixture
   with SidechainBlockInfoFixture {
 
-  type BoxMainchainBlockReferenceValidator = MainchainBlockReferenceValidator[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistoryStorage, SidechainHistory]
+  type BoxMainchainBlockReferenceValidator = MainchainBlockReferenceValidator[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainFeePaymentsInfo, SidechainHistoryStorage, SidechainHistory]
 
   val genesisParentBlockId: ModifierId = bytesToId(new Array[Byte](32))
   val genesisBlockId: ModifierId = bytesToId(new Array[Byte](32))

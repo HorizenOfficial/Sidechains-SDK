@@ -238,6 +238,10 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     val vrfPublicKey: VrfPublicKey = cmdInput.forgerPublicKeys.vrfPublicKey
     val ownerAddress: AddressProposition = cmdInput.ownerAddress
 
+    if (!view.isEoaAccount(ownerAddress.address())) {
+      throw new ExecutionRevertedException(s"Owner account is not an EOA")
+    }
+
     // TODO decide whether we need to check also genesis case (also UTXO model)
     if (!isGenesisScCreation && networkParams.restrictForgers) {
       // check that the delegation arguments satisfy the restricted list of forgers.
@@ -344,12 +348,12 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
   }
 
   @throws(classOf[ExecutionFailedException])
-  override def process(msg: Message, view: BaseAccountStateView, gas: GasPool): Array[Byte] = {
-    view.enableGasTracking(gas)
+  override def process(msg: Message, view: BaseAccountStateView, gas: GasPool, blockContext: BlockContext): Array[Byte] = {
+    val gasView = new AccountStateViewGasTracked(view, gas)
     getFunctionSignature(msg.getData) match {
-      case GetListOfForgersCmd => doGetListOfForgersCmd(msg, view)
-      case AddNewStakeCmd => doAddNewStakeCmd(msg, view)
-      case RemoveStakeCmd => doRemoveStakeCmd(msg, view)
+      case GetListOfForgersCmd => doGetListOfForgersCmd(msg, gasView)
+      case AddNewStakeCmd => doAddNewStakeCmd(msg, gasView)
+      case RemoveStakeCmd => doRemoveStakeCmd(msg, gasView)
       case opCodeHex => throw new ExecutionRevertedException(s"op code $opCodeHex not supported")
     }
   }

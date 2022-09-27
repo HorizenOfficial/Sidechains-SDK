@@ -3,6 +3,7 @@ package com.horizen.forge
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen._
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
+import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainHistoryStorage
@@ -16,6 +17,7 @@ class Forger(settings: SidechainSettings,
   extends AbstractForger[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock](
   settings, viewHolderRef, forgeMessageBuilder, timeProvider, params
 ) {
+  override type FPI = SidechainFeePaymentsInfo
   override type HSTOR = SidechainHistoryStorage
   override type HIS = SidechainHistory
   override type MS = SidechainState

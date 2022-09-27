@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
+import com.horizen.account.FeeUtils;
 import com.horizen.account.block.AccountBlock;
 import com.horizen.account.block.AccountBlockHeader;
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion;
@@ -16,6 +17,7 @@ import com.horizen.account.state.*;
 import com.horizen.account.storage.AccountStateMetadataStorageView;
 import com.horizen.account.transaction.AccountTransaction;
 import com.horizen.account.utils.Account;
+import com.horizen.account.utils.AccountFeePaymentsUtils;
 import com.horizen.account.utils.MainchainTxCrosschainOutputAddressUtil;
 import com.horizen.account.utils.Secp256k1;
 import com.horizen.block.*;
@@ -47,6 +49,7 @@ import scala.collection.mutable.ListBuffer;
 
 
 import java.io.*;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -605,15 +608,15 @@ public class CommandProcessor {
             long currentTimeSeconds = System.currentTimeMillis() / 1000;
             long timestamp = (params instanceof RegTestParams) ? currentTimeSeconds - regtestBlockTimestampRewind : currentTimeSeconds;
 
-            // no fee payments expected for the genesis block
-            byte[] feePaymentsHash = new byte[32];
-
             int withdrawalEpochLength;
             String sidechainBlockHex;
 
 
             // are we building a utxo or account model based block?
             if (block_version == AccountBlock.ACCOUNT_BLOCK_VERSION()) {
+
+                // no fee payments expected for the genesis block
+                byte[] feePaymentsHash = AccountFeePaymentsUtils.DEFAULT_ACCOUNT_FEE_PAYMENTS_HASH();
 
                 byte[] stateRoot;
                 try {
@@ -631,12 +634,11 @@ public class CommandProcessor {
                           MainchainTxCrosschainOutputAddressUtil.getAccountAddress(
                                   sidechainCreation.getScCrOutput().address()));
 
-                // TODO: Add baseFee start value here
-                Long baseFee = 0L;
+                BigInteger baseFee = FeeUtils.INITIAL_BASE_FEE();
 
                 Long gasUsed = 0L;
 
-                Long gasLimit = Long.valueOf(Account.GAS_LIMIT);
+                Long gasLimit = Long.valueOf(FeeUtils.GAS_LIMIT());
 
                 SidechainAccountTransactionsCompanion sidechainTransactionsCompanion = new SidechainAccountTransactionsCompanion(new HashMap<>());
 
@@ -676,6 +678,9 @@ public class CommandProcessor {
 
                 sidechainBlockHex = BytesUtils.toHexString(accountBlock.bytes());
             } else {
+                // no fee payments expected for the genesis block
+                byte[] feePaymentsHash = FeePaymentsUtils.DEFAULT_FEE_PAYMENTS_HASH();
+
                 ForgerBox forgerBox = sidechainCreation.getBox();
                 ForgingStakeInfo forgingStakeInfo = new ForgingStakeInfo(forgerBox.blockSignProposition(), forgerBox.vrfPubKey(), forgerBox.value());
 

@@ -260,10 +260,7 @@ func (s *Service) StateSetStorage(params SetStorageParams) error {
 	if err != nil {
 		return err
 	}
-	// TODO: implement updating the refund counter according to:
-	//  https://github.com/ethereum/go-ethereum/blob/0ce494b60cd00d70f1f9f2dd0b9bfbd76204168a/core/vm/operations_acl.go#L27
-	//  the storage methods below should also use apply this logic
-	statedb.SetState(params.Address, params.Key, params.Value)
+	s.setStateWithRefund(statedb, params.Address, params.Key, params.Value)
 	return nil
 }
 
@@ -273,7 +270,7 @@ func (s *Service) StateRemoveStorage(params StorageParams) error {
 		return err
 	}
 	// the "empty" value will cause the key-value pair to be deleted
-	statedb.SetState(params.Address, params.Key, common.Hash{})
+	s.setStateWithRefund(statedb, params.Address, params.Key, common.Hash{})
 	return nil
 }
 
@@ -340,7 +337,7 @@ func (s *Service) StateSetStorageBytes(params SetStorageBytesParams) error {
 	// the length of the value is stored at the original key and the chunks are stored at hash(key, i)
 	newLength := len(params.Value)
 	// if the new value is empty remove all key-value pairs, including the one holding the value length
-	statedb.SetState(params.Address, params.Key, intToHash(newLength))
+	s.setStateWithRefund(statedb, params.Address, params.Key, intToHash(newLength))
 	for start := 0; start < newLength || start < oldLength; start += common.HashLength {
 		chunkIndex := start / common.HashLength
 		var chunk common.Hash
@@ -355,7 +352,7 @@ func (s *Service) StateSetStorageBytes(params SetStorageBytesParams) error {
 			// remove previous chunks that are not needed anymore
 			chunk = common.Hash{}
 		}
-		statedb.SetState(params.Address, getChunkKey(params.Key, chunkIndex), chunk)
+		s.setStateWithRefund(statedb, params.Address, getChunkKey(params.Key, chunkIndex), chunk)
 	}
 	return nil
 }

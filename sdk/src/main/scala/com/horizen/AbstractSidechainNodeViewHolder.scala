@@ -1,6 +1,7 @@
 package com.horizen
 
 import com.horizen.block.{SidechainBlock, SidechainBlockBase, SidechainBlockHeader, SidechainBlockHeaderBase}
+import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.node._
 import com.horizen.params.NetworkParams
 import com.horizen.storage.AbstractHistoryStorage
@@ -26,9 +27,10 @@ abstract class AbstractSidechainNodeViewHolder[
   extends scorex.core.NodeViewHolder[TX, PMOD]
     with SidechainTypes {
   override type SI = SidechainSyncInfo
-  type HSTOR <: AbstractHistoryStorage[PMOD, HSTOR]
+  type FPI <: AbstractFeePaymentsInfo
+  type HSTOR <: AbstractHistoryStorage[PMOD, FPI, HSTOR]
 
-  override type HIS <: AbstractHistory[TX, H, PMOD, HSTOR, HIS]
+  override type HIS <: AbstractHistory[TX, H, PMOD, FPI, HSTOR, HIS]
   override type VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PMOD, VL]
 
 
@@ -43,7 +45,7 @@ abstract class AbstractSidechainNodeViewHolder[
 
   protected def semanticBlockValidators(params: NetworkParams): Seq[SemanticBlockValidator[PMOD]] = Seq(new SidechainBlockSemanticValidator[TX, PMOD](params))
 
-  protected def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator[TX, H, PMOD, HSTOR, HIS]] = Seq(
+  protected def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator[TX, H, PMOD, FPI, HSTOR, HIS]] = Seq(
     new WithdrawalEpochValidator(params),
     new MainchainPoWValidator(params),
     new MainchainBlockReferenceValidator(params),
@@ -212,9 +214,24 @@ abstract class AbstractSidechainNodeViewHolder[
   // Check if the next modifier will change Consensus Epoch, so notify History and Wallet with current info.
   protected def applyConsensusEpochInfo(history: HIS, state: MS, wallet: VL, modToApply: PMOD): (HIS, VL)
 
+  def getFeePaymentsInfo(state: MS, epochNumber: Int) : FPI
+  def getScanPersistentWallet(modToApply: PMOD, stateOp: Option[MS], epochNumber: Int, wallet: VL) : VL
+  def isWithdrawalEpochLastIndex(state: MS) : Boolean
+  def getWithdrawalEpochNumber(state: MS) : Int
+
   // Check is the modifier ends the withdrawal epoch, so notify History and Wallet about fees to be payed.
   // Scan modifier by the Wallet considering the forger fee payments.
-  protected def scanBlockWithFeePayments(history: HIS, state: MS, wallet: VL, modToApply: PMOD): (HIS, VL)
+  protected def scanBlockWithFeePayments(history: HIS, state: MS, wallet: VL, modToApply: PMOD): (HIS, VL) = {
+    val stateWithdrawalEpochNumber: Int = getWithdrawalEpochNumber(state)
+    if (isWithdrawalEpochLastIndex(state)) {
+      val historyAfterUpdateFee = history.updateFeePaymentsInfo(modToApply.id, getFeePaymentsInfo(state, stateWithdrawalEpochNumber))
+      val walletAfterApply: VL = getScanPersistentWallet(modToApply, Some(state), stateWithdrawalEpochNumber, wallet)
+      (historyAfterUpdateFee, walletAfterApply)
+    } else {
+      val walletAfterApply: VL = getScanPersistentWallet(modToApply, None, stateWithdrawalEpochNumber, wallet)
+      (history, walletAfterApply)
+    }
+  }
 
 
 }
@@ -224,11 +241,12 @@ object AbstractSidechainNodeViewHolder {
     case class GetDataFromCurrentNodeView[TX <: Transaction,
       H <: SidechainBlockHeaderBase,
       PMOD <: SidechainBlockBase[TX, H],
-      NH <: NodeHistoryBase[TX, H, PMOD],
+      FPI <: AbstractFeePaymentsInfo,
+      NH <: NodeHistoryBase[TX, H, PMOD, FPI],
       NS <: NodeStateBase,
       NW <: NodeWalletBase,
       NP <: NodeMemoryPoolBase[TX],
-      NV <: SidechainNodeViewBase[TX, H, PMOD, NH, NS, NW, NP],
+      NV <: SidechainNodeViewBase[TX, H, PMOD, FPI, NH, NS, NW, NP],
       A](f: NV => A)
 
     case class LocallyGeneratedSecret[S <: SidechainTypes#SCS](secret: S)
@@ -236,22 +254,24 @@ object AbstractSidechainNodeViewHolder {
     case class ApplyFunctionOnNodeView[TX <: Transaction,
       H <: SidechainBlockHeaderBase,
       PMOD <: SidechainBlockBase[TX, H],
-      NH <: NodeHistoryBase[TX, H, PMOD],
+      FPI <: AbstractFeePaymentsInfo,
+      NH <: NodeHistoryBase[TX, H, PMOD, FPI],
       NS <: NodeStateBase,
       NW <: NodeWalletBase,
       NP <: NodeMemoryPoolBase[TX],
-      NV <: SidechainNodeViewBase[TX, H, PMOD, NH, NS, NW, NP],
+      NV <: SidechainNodeViewBase[TX, H, PMOD, FPI, NH, NS, NW, NP],
       A](f: java.util.function.Function[NV, A])
 
     case class ApplyBiFunctionOnNodeView[
       TX <: Transaction,
       H <: SidechainBlockHeaderBase,
       PMOD <: SidechainBlockBase[TX, H],
-      NH <: NodeHistoryBase[TX, H, PMOD],
+      FPI <: AbstractFeePaymentsInfo,
+      NH <: NodeHistoryBase[TX, H, PMOD, FPI],
       NS <: NodeStateBase,
       NW <: NodeWalletBase,
       NP <: NodeMemoryPoolBase[TX],
-      NV <: SidechainNodeViewBase[TX, H, PMOD, NH, NS, NW, NP],
+      NV <: SidechainNodeViewBase[TX, H, PMOD, FPI, NH, NS, NW, NP],
       T,
       A](f: java.util.function.BiFunction[NV, T, A], functionParameter: T)
 
