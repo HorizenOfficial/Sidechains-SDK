@@ -1,6 +1,7 @@
 package com.horizen.certificatesubmitter.strategies
 
-import com.horizen.SidechainSettings
+import akka.pattern.ask
+import com.horizen.{SidechainSettings, utils}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
 import com.horizen.certificatesubmitter.dataproof.{DataForProofGeneration, DataForProofGenerationWithoutKeyRotation}
@@ -9,30 +10,46 @@ import com.horizen.params.NetworkParams
 import com.horizen.websocket.server.WebSocketServerRef.sidechainNodeViewHolderRef
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 
-import scala.collection.JavaConverters._
+import java.lang
 import java.util.Optional
+import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.concurrent.Await
 import scala.util.{Failure, Success, Try}
 
-class NoKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams) extends KeyRotationStrategy(settings, params) {
-  protected def generateProof(dataForProofGeneration: DataForProofGenerationWithoutKeyRotation): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
+class WithoutKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams) extends KeyRotationStrategy(settings, params) {
+  def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
     val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
       dataForProofGeneration.schnorrKeyPairs.map {
         case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)
       }.unzip
 
-    log.info(s"Start generating proof with parameters: dataForProofGeneration = $dataForProofGeneration, " +
+    log.info(s"Start generating proof with parameters: dataForProofGeneration = ${
+      dataForProofGeneration
+    }, " +
       s"signersThreshold = ${
         params.signersThreshold
       }. " +
       s"It can take a while.")
 
     //create and return proof with quality
-    CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(schnorrSignatureBytesList = signaturesBytes.asJava, schnorrPublicKeysBytesList = signersPublicKeysBytes.asJava, threshold = params.signersThreshold, provingKeyPath = provingFileAbsolutePath, checkProvingKey = true, zk = true)
+    CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(
+      dataForProofGeneration.withdrawalRequests.asJava,
+      dataForProofGeneration.sidechainId,
+      dataForProofGeneration.referencedEpochNumber,
+      dataForProofGeneration.endEpochCumCommTreeHash,
+      dataForProofGeneration.btrFee,
+      dataForProofGeneration.ftMinAmount,
+      dataForProofGeneration.customFields,
+      signaturesBytes.asJava,
+      signersPublicKeysBytes.asJava,
+      params.signersThreshold,
+      provingFileAbsolutePath,
+      true,
+      true)
   }
 
-  def buildDataForProofGeneration(sidechainNodeView: View, status: SignaturesStatus): DataForProofGenerationWithoutKeyRotation = {
+  override def buildDataForProofGeneration(sidechainNodeView: View, status: SignaturesStatus): DataForProofGenerationWithoutKeyRotation = {
     val history = sidechainNodeView.history
     val state = sidechainNodeView.state
 
@@ -42,16 +59,26 @@ class NoKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams) 
     val ftMinAmount: Long = getFtMinAmount(status.referencedEpoch)
     val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, status.referencedEpoch)
     val sidechainId = params.sidechainId
-    val utxoMerkleTreeRoot: Optional[Array[Byte]] = getUtxoMerkleTreeRoot(status.referencedEpoch, state)
+    val utxoMerkleTreeRoot: Seq[Array[Byte]] = getUtxoMerkleTreeRoot(status.referencedEpoch, state)
 
 
     val signersPublicKeyWithSignatures = params.signersPublicKeys.zipWithIndex.map {
       case (pubKey, pubKeyIndex) =>
         (pubKey, status.knownSigs.find(info => info.pubKeyIndex == pubKeyIndex).map(_.signature))
     }
+
+    DataForProofGenerationWithoutKeyRotation(
+      status.referencedEpoch,
+      sidechainId,
+      withdrawalRequests,
+      endEpochCumCommTreeHash,
+      btrFee,
+      ftMinAmount,
+      utxoMerkleTreeRoot,
+      signersPublicKeyWithSignatures)
   }
 
-  def getMessageToSign(referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
+  override def getMessageToSign(referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
     def getMessage(sidechainNodeView: View): Try[Array[Byte]] = Try {
       val history = sidechainNodeView.history
       val state = sidechainNodeView.state
@@ -64,7 +91,7 @@ class NoKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams) 
       val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
       val sidechainId = params.sidechainId
 
-      val utxoMerkleTreeRoot: Optional[Array[Byte]] = {
+      val utxoMerkleTreeRoot: Seq[Array[Byte]] = {
         Try {
           getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber, state)
         } match {

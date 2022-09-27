@@ -8,7 +8,7 @@ import com.horizen._
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.certificatesubmitter.CertificateSubmitter._
 import com.horizen.certificatesubmitter.dataproof.{DataForProofGeneration, DataForProofGenerationWithKeyRotation, DataForProofGenerationWithoutKeyRotation}
-import com.horizen.certificatesubmitter.strategies.{KeyRotationStrategy, NoKeyRotationStrategy, WithKeyRotationStrategy}
+import com.horizen.certificatesubmitter.strategies.{KeyRotationStrategy, WithoutKeyRotationStrategy, WithKeyRotationStrategy}
 import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.NetworkParams
@@ -543,9 +543,9 @@ object CertificateSubmitterRef {
             mainchainChannel: MainchainNodeChannel)
            (implicit ec: ExecutionContext): Props = {
     if (settings.withdrawalEpochCertificateSettings.typeOfCircuit == TypeOfCertificateSubmitter.NaiveThresholdSignatureCircuit) {
-      val noKeyRotationStrategy = new NoKeyRotationStrategy(settings, params)
+      val withoutKeyRotationStrategy = new WithoutKeyRotationStrategy(settings, params)
       Props(new CertificateSubmitter[DataForProofGenerationWithoutKeyRotation]
-      (settings, sidechainNodeViewHolderRef, params, mainchainChannel, noKeyRotationStrategy))
+      (settings, sidechainNodeViewHolderRef, params, mainchainChannel, withoutKeyRotationStrategy))
         .withMailbox("akka.actor.deployment.submitter-prio-mailbox")
     } else {
       val withKeyRotationStrategy = new WithKeyRotationStrategy(settings, params)

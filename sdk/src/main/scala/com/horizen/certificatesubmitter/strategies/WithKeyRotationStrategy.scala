@@ -4,7 +4,7 @@ import akka.pattern.ask
 import com.horizen.SidechainSettings
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
-import com.horizen.certificatesubmitter.dataproof.DataForProofGenerationWithKeyRotation
+import com.horizen.certificatesubmitter.dataproof.{DataForProofGeneration, DataForProofGenerationWithKeyRotation}
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.params.NetworkParams
 import com.horizen.websocket.server.WebSocketServerRef.sidechainNodeViewHolderRef
@@ -17,7 +17,8 @@ import scala.concurrent.Await
 import scala.util.{Failure, Success, Try}
 
 class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams) extends KeyRotationStrategy(settings, params) {
-  private def generateProof(dataForProofGeneration: DataForProofGenerationWithKeyRotation): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
+
+  override def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
     val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
       dataForProofGeneration.schnorrKeyPairs.map {
         case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)
@@ -48,7 +49,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       true)
   }
 
-  def buildDataForProofGeneration(sidechainNodeView: View, status: SignaturesStatus): DataForProofGenerationWithKeyRotation = {
+  override def buildDataForProofGeneration(sidechainNodeView: View, status: SignaturesStatus): DataForProofGenerationWithKeyRotation = {
     val history = sidechainNodeView.history
     val state = sidechainNodeView.state
 
@@ -58,16 +59,25 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
     val ftMinAmount: Long = getFtMinAmount(status.referencedEpoch)
     val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, status.referencedEpoch)
     val sidechainId = params.sidechainId
-    val utxoMerkleTreeRoot: Optional[Array[Byte]] = getUtxoMerkleTreeRoot(status.referencedEpoch, state)
+    val utxoMerkleTreeRoot: Seq[Array[Byte]] = getUtxoMerkleTreeRoot(status.referencedEpoch, state)
 
 
     val signersPublicKeyWithSignatures = params.signersPublicKeys.zipWithIndex.map {
       case (pubKey, pubKeyIndex) =>
         (pubKey, status.knownSigs.find(info => info.pubKeyIndex == pubKeyIndex).map(_.signature))
     }
+    DataForProofGenerationWithKeyRotation(
+      status.referencedEpoch,
+      sidechainId,
+      withdrawalRequests,
+      endEpochCumCommTreeHash,
+      btrFee,
+      ftMinAmount,
+      utxoMerkleTreeRoot,
+      signersPublicKeyWithSignatures)
   }
 
-  def getMessageToSign(referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
+  override def getMessageToSign(referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
     def getMessage(sidechainNodeView: View): Try[Array[Byte]] = Try {
       val history = sidechainNodeView.history
       val state = sidechainNodeView.state
@@ -80,7 +90,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
       val sidechainId = params.sidechainId
 
-      val utxoMerkleTreeRoot: Optional[Array[Byte]] = {
+      val utxoMerkleTreeRoot: Seq[Array[Byte]] = {
         Try {
           getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber, state)
         } match {

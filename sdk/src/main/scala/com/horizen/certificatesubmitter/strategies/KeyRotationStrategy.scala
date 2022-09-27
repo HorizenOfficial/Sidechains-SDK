@@ -32,17 +32,17 @@ abstract class KeyRotationStrategy(settings: SidechainSettings, params: NetworkP
   // Every positive value FT is allowed.
   protected def getFtMinAmount(referencedWithdrawalEpochNumber: Int): Long = 0
 
-  protected def getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber: Int, state: SidechainState): Optional[Array[Byte]] = {
+  protected def getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber: Int, state: SidechainState): Seq[Array[Byte]] = {
     if (params.isCSWEnabled) {
       state.utxoMerkleTreeRoot(referencedWithdrawalEpochNumber) match {
-        case x: Some[Array[Byte]] => x.asJava
+        case x: Some[Array[Byte]] => x.toSeq
         case None =>
           log.error("UtxoMerkleTreeRoot is not defined even if CSW is enabled")
           throw new IllegalStateException("UtxoMerkleTreeRoot is not defined")
       }
     }
     else {
-      Optional.empty()
+      Seq.empty[Array[Byte]]
     }
   }
 
