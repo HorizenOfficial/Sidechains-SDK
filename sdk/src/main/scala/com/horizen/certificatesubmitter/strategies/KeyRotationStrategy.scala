@@ -1,17 +1,16 @@
 package com.horizen.certificatesubmitter.strategies
 
 import akka.util.Timeout
+import com.horizen._
 import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
 import com.horizen.certificatesubmitter.dataproof.DataForProofGeneration
 import com.horizen.params.NetworkParams
 import com.horizen.utils.BytesUtils
-import com.horizen._
 import scorex.util.ScorexLogging
 import sparkz.core.NodeViewHolder.CurrentView
 
 import java.io.File
-import java.util.Optional
-import scala.compat.java8.OptionConverters.{RichOptionForJava8, RichOptionalGeneric}
+import scala.compat.java8.OptionConverters.RichOptionalGeneric
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
 
@@ -63,7 +62,7 @@ abstract class KeyRotationStrategy(settings: SidechainSettings, params: NetworkP
     headerInfo.cumulativeCommTreeHash
   }
 
-  var provingFileAbsolutePath: String = {
+  val provingFileAbsolutePath: String = {
     if (params.certProvingKeyFilePath.isEmpty) {
       throw new IllegalStateException(s"Proving key file name is not set")
     }
@@ -73,9 +72,8 @@ abstract class KeyRotationStrategy(settings: SidechainSettings, params: NetworkP
       throw new IllegalStateException(s"Proving key file at path ${provingFile.getAbsolutePath} is not exist or can't be read")
       ""
     } else {
-      provingFileAbsolutePath = provingFile.getAbsolutePath
-      log.debug(s"Found proving key file at location: $provingFileAbsolutePath")
-      provingFileAbsolutePath
+      log.debug(s"Found proving key file at location: ${provingFile.getAbsolutePath}")
+      provingFile.getAbsolutePath
     }
   }
 }
