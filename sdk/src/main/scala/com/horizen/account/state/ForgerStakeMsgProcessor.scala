@@ -41,6 +41,14 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
 
   val networkParams: NetworkParams = params
 
+  /**
+   * TODO: Currently the stake id is calculated exclusively from message properties, which is good because it results in
+   *  a predictable result for the caller. The downside is that we need the nonce for that and in the context of RPC
+   *  calls messages often do not contain a nonce. Normal smart contract are also unable to access the nonce of an
+   *  account. A possible solution is to store a nonce counter within the forger stakes contract and use that, which
+   *  removes the need for the message nonce, but also destroys the predictability. We would need to store a nonce per
+   *  account to get that back.
+   */
   def getStakeId(msg: Message): Array[Byte] = {
     Keccak256.hash(Bytes.concat(
       msg.getFrom.address(), msg.getNonce.toByteArray, msg.getValue.toByteArray, msg.getData))
@@ -207,12 +215,22 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
 
   def doAddNewStakeCmd(msg: Message, view: BaseAccountStateView, isGenesisScCreation: Boolean = false): Array[Byte] = {
 
-    // first of all check msg.value, it must be a legal wei amount convertible in satoshi without any remainder
+    // check that message contains a nonce, in the context of RPC calls the nonce might be missing
+    if (msg.getNonce == null) {
+      throw new ExecutionRevertedException("Call must include a nonce")
+    }
+
+    // check that msg.value is greater than zero
+    if (msg.getValue.compareTo(BigInteger.ZERO) <= 0) {
+      throw new ExecutionRevertedException("Value must not be zero")
+    }
+
+    // check that msg.value is a legal wei amount convertible to satoshis without any remainder
     if (!isValidZenAmount(msg.getValue)) {
       throw new ExecutionRevertedException(s"Value is not a legal wei amount: ${msg.getValue.toString()}")
     }
 
-    // check also that sender account exists (unless we are staking in the sc creation phase)
+    // check that sender account exists (unless we are staking in the sc creation phase)
     if (!isGenesisScCreation && !view.accountExists(msg.getFrom.address())) {
       throw new ExecutionRevertedException(s"Sender account does not exist: ${msg.getFrom.toString}")
     }
@@ -241,7 +259,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
 
     // check we do not already have this stake obj in the db
     if (existsStakeData(view, newStakeId)) {
-      throw new ExecutionRevertedException(s"Stake ${BytesUtils.toHexString(newStakeId)} already in stateDb")
+      throw new ExecutionRevertedException(s"Stake ${BytesUtils.toHexString(newStakeId)} already exists")
     }
 
     // add the obj to stateDb
@@ -301,6 +319,11 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
   }
 
   def doRemoveStakeCmd(msg: Message, view: BaseAccountStateView): Array[Byte] = {
+    // check that message contains a nonce, in the context of RPC calls the nonce might be missing
+    if (msg.getNonce == null) {
+      throw new ExecutionRevertedException("Call must include a nonce")
+    }
+
     val inputParams = getArgumentsFromData(msg.getData)
     val cmdInput = RemoveStakeCmdInputDecoder.decode(inputParams)
     val stakeId: Array[Byte] = cmdInput.stakeId
