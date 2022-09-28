@@ -7,6 +7,7 @@
   "initial_txs": 5000,
   "extended_transaction": false,
   "big_transaction": false,
+  "send_coins_to_address": false,
   "network_topology": "ring",
   "nodes": [
     {

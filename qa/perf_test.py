@@ -1,12 +1,14 @@
 import logging
 import math
 import random
-import pprint
 import time
 from multiprocessing import Pool, Value
 from time import sleep
 from os.path import exists
 import csv
+
+import numpy as np
+import psutil
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, LatencyConfig
@@ -14,7 +16,8 @@ from httpCalls.block.best import http_block_best
 from httpCalls.block.findBlockByID import http_block_findById
 from httpCalls.block.forging import http_start_forging, http_stop_forging
 from httpCalls.transaction.allTransactions import allTransactions
-from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress, sendCoinsToAddressExtended, sendCointsToMultipleAddress
+from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress, sendCoinsToAddressExtended, \
+    sendCointsToMultipleAddress
 from httpCalls.wallet.balance import http_wallet_balance
 from httpCalls.wallet.allBoxesOfType import http_wallet_allBoxesOfType
 from httpCalls.transaction.createCoreTransaction import http_create_core_transaction
@@ -80,6 +83,42 @@ def send_transactions_per_second(txs_creator_node, txs_bytes, destination_addres
             print("WARNING:  Number of transactions sent has exceeded 1 second - Adjust the initial_txs and "
                   "test_run_time config values ")
         iteration += 1
+
+
+def get_cpu_ram_usage():
+    per_cpu = psutil.cpu_percent(interval=1, percpu=True)
+    cpu_usage_message = ""
+    for idx, usage in enumerate(per_cpu):
+        cpu_usage_message += f" CORE_{idx}: {usage}%"
+    print(cpu_usage_message)
+
+    mem_usage = psutil.virtual_memory()
+    print(f"Memory Total: {mem_usage.total / (1024 ** 3):.2f}GB")
+    print(f"Memory Free: {mem_usage.percent}%")
+    print(f"Used: {mem_usage.used / (1024 ** 3):.2f}GB")
+
+
+def get_running_process_cpu_ram_usage():
+    start_time = time.time()
+    running_processes = ""
+    for process in [psutil.Process(pid) for pid in psutil.pids()]:
+        try:
+            name = process.name()
+            mem = process.memory_percent()
+            cpu = process.cpu_percent(interval=0.5)
+
+            if cpu > 0:
+                running_processes += f"{process.name()}, "
+        except psutil.NoSuchProcess as e:
+            print(e.pid, "killed before analysis")
+        else:
+            if cpu > 0:
+                print("Name:", name)
+                print("CPU%:", cpu)
+                print("MEM%:", mem)
+    print(f"RUNNING PROCESSES: {running_processes}")
+    end_time = time.time()
+    print(f"TIME TAKEN FOR CPU/RAM STATS: {end_time - start_time}")
 
 
 class PerformanceTest(SidechainTestFramework):
@@ -282,18 +321,34 @@ class PerformanceTest(SidechainTestFramework):
         return forger_nodes
 
     def populate_mempool(self, utxo_amount, txs_creator_nodes, extended_transaction):
-
+        populate_mempool_start_time = time.time()
+        response_times = []
         for j in range(len(txs_creator_nodes)):
             destination_address = http_wallet_createPrivateKey25519(random.choice(self.sc_nodes))
+            start_time = time.time()
             for i in range(self.initial_txs):
+
                 # Populate the mempool - so don't mine a block
-                if (extended_transaction):
+                if extended_transaction:
+                    request_start = time.time()
                     sendCoinsToAddressExtended(txs_creator_nodes[j], destination_address, utxo_amount, 0)
+                    request_end = time.time()
+                    response_times.append(request_end - request_start)
                 else:
+                    request_start = time.time()
                     sendCoinsToAddress(txs_creator_nodes[j], destination_address, utxo_amount, 0)
+                    request_end = time.time()
+                    response_times.append(request_end - request_start)
                 if i % 1000 == 0:
-                    print("Node " + str(j) + " sent txs: " + str(i))
-            print("Node " + str(j) + " totally sent txs: " + str(self.initial_txs))
+                    end_time = time.time()
+                    print("Creator Node " + str(j) + " sent txs: " + str(i))
+                    print(f"Populate Mempool Node{str(j)} time taken to send {str(i)} transactions: {end_time - start_time}")
+                    print(f"Populate Mempool - Average sendCoinsToAddress response time: "
+                          f"{np.array(response_times).mean()}")
+                    get_cpu_ram_usage()
+            print("Creator Node " + str(j) + " total sent txs: " + str(self.initial_txs))
+        populate_mempool_end_time = time.time()
+        print(f"Total Time to Populate Mempool: {populate_mempool_end_time - populate_mempool_start_time}")
 
     def get_best_node_block_ids(self):
         block_ids = {}
@@ -359,6 +414,7 @@ class PerformanceTest(SidechainTestFramework):
         return txs
 
     def txs_creator_send_transactions_per_second_to_addresses(self, utxo_amount, txs_creators, txs_creator_addresses, tps_test):
+        # If we want to have a big transaction of 10 outputs we need to multiply the transaction output value by 10
 
         if tps_test:
             # Each node needs to be able to send a number of transactions per second, without going over 1 second, or
@@ -497,7 +553,8 @@ class PerformanceTest(SidechainTestFramework):
                 outputs = [{"publicKey": txs_creator_addresses[i], "value": utxo_amount} for _ in
                            range(self.MAX_TRANSACTION_OUTPUT)]
                 outputs.append(
-                    {"publicKey": ft_addresses[i], "value": ft_box[0]["value"] - utxo_amount * self.MAX_TRANSACTION_OUTPUT})
+                    {"publicKey": ft_addresses[i],
+                     "value": ft_box[0]["value"] - utxo_amount * self.MAX_TRANSACTION_OUTPUT})
                 raw_tx = http_create_core_transaction(txs_creators[i], [{"boxId": ft_box[0]["id"]}], outputs)
                 res = http_send_transaction(txs_creators[i], raw_tx)
                 assert_true("transactionId" in res)
@@ -564,14 +621,20 @@ class PerformanceTest(SidechainTestFramework):
             while not end_test:
                 end_test = True
                 for creator_node in txs_creators:
+                    remaining_txs = None
                     try:
-                        mempool = allTransactions(creator_node, False)["transactionIds"]
-                    except Exception as e:
-                        mempool = allTransactions(creator_node, False)["transactionIds"]
-                    if len(mempool) != 0:
+                        start_time = time.time()
+                        remaining_txs = len(allTransactions(creator_node, False)["transactionIds"])
+                        end_time = time.time()
+                        print(f"Creator Node{txs_creators.index(creator_node)} allTransactions response time: "
+                              f"{end_time - start_time}")
+                    except Exception:
+                        print(f"Creator Node{txs_creators.index(creator_node)} - Unable to retrieve mempool transactions")
+                    if remaining_txs != 0:
                         end_test = False
                         break
                 # TODO: Check this sleep is efficient
+                get_cpu_ram_usage()
                 sleep(self.block_rate - 2)
 
         elif self.test_type == TestType.Mempool_Timed:
@@ -678,7 +741,6 @@ class PerformanceTest(SidechainTestFramework):
             self.csv_data["block_latency"].append(config.block)
             self.csv_data["request_modifier_spec_latency"].append(config.request_modifier_spec)
             self.csv_data["modifiers_spec_latency"].append(config.modifiers_spec)
-
 
         self.fill_csv()
 

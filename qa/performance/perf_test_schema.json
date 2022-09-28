@@ -6,6 +6,8 @@
     "block_rate",
     "initial_txs",
     "extended_transaction",
+    "big_transaction",
+    "send_coins_to_address",
     "network_topology",
     "nodes"
   ],
@@ -32,6 +34,9 @@
       "type": "boolean"
     },
     "big_transaction": {
+      "type": "boolean"
+    },
+    "send_coins_to_address": {
       "type": "boolean"
     },
     "network_topology": {
