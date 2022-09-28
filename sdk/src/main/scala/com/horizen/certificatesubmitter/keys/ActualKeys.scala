@@ -1,16 +1,23 @@
 package com.horizen.certificatesubmitter.keys
 
 import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
+import com.horizen.utils.MerkleTree
+import scorex.crypto.hash.Sha256
 import scorex.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
+
+import scala.collection.JavaConverters.seqAsJavaListConverter
 
 case class ActualKeys(signingKeys: Vector[SchnorrProposition], masterKeys: Vector[SchnorrProposition]) extends BytesSerializable {
   override type M = ActualKeys
 
   override def serializer: SparkzSerializer[ActualKeys] = ActualKeysSerializer
 
-  def getMerkleRootOfPublicKeys(): Array[Byte] = {
-
+  def getMerkleRootOfPublicKeys: Array[Byte] = {
+    val hashes = (for(i <- signingKeys.indices) yield {
+      Sha256.hash(signingKeys(i).pubKeyBytes(), masterKeys(i).pubKeyBytes()).asInstanceOf[Array[Byte]]
+    }).toList.asJava
+    MerkleTree.createMerkleTree(hashes).rootHash()
   }
 }
 
