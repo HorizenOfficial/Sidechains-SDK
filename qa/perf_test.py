@@ -239,7 +239,7 @@ class PerformanceTest(SidechainTestFramework):
             SCCreationInfo(mc_node, 100),
             *sc_nodes
         )
-
+        self.options.restapitimeout = 20
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720 * self.block_rate)
 
     def sc_setup_nodes(self):
