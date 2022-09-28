@@ -7,7 +7,7 @@ import com.horizen.serialization.Views;
 import java.util.Arrays;
 
 @JsonView(Views.Default.class)
-public class DebugTraceBlockByIdView {
+public class DebugTraceBlockView {
     public DebugTraceTransactionView[] debugTraceTransactionViews;
 
     public DebugTraceBlockByIdView(EvmResult[] evmResults) {
