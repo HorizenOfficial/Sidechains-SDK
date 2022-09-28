@@ -11,6 +11,6 @@ public class DebugTraceBlockView {
     public DebugTraceTransactionView[] debugTraceTransactionViews;
 
     public DebugTraceBlockView(EvmResult[] evmResult) {
-        debugTraceTransactionViews = (DebugTraceTransactionView[]) Arrays.stream(evmResult).map(DebugTraceTransactionView::new).toArray();
+        debugTraceTransactionViews = Arrays.stream(evmResult).map(DebugTraceTransactionView::new).toArray(DebugTraceTransactionView[]::new);
     }
 }

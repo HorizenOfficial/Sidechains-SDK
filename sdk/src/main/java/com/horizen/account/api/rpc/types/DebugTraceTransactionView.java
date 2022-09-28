@@ -16,6 +16,6 @@ public class DebugTraceTransactionView {
     public DebugTraceTransactionView(EvmResult evmResult) {
         gas = Numeric.toHexStringWithPrefix(evmResult.usedGas);
         returnValue = evmResult.returnData == null ? "" : Numeric.toHexString(evmResult.returnData);
-        structLogs = evmResult.traceLogs == null ? null : (EthereumStructLog[]) Arrays.stream(evmResult.traceLogs).map(EthereumStructLog::new).toArray();
+        structLogs = evmResult.traceLogs == null ? null : Arrays.stream(evmResult.traceLogs).map(EthereumStructLog::new).toArray(EthereumStructLog[]::new);
     }
 }
