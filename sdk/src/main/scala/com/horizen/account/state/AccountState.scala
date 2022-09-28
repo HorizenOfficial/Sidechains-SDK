@@ -396,6 +396,8 @@ class AccountState(
 
     if (!tx.isInstanceOf[EthereumTransaction]) return Success()
 
+    if (BigInteger.valueOf(FeeUtils.GAS_LIMIT).compareTo(tx.getGasLimit) < 0)
+      throw new IllegalArgumentException(s"Transaction gas limit exceeds block gas limit: tx gas limit ${tx.getGasLimit}, block gas limit ${FeeUtils.GAS_LIMIT}")
     using(getView) { stateView =>
         //Check the nonce
         val ethTx = tx.asInstanceOf[EthereumTransaction]
