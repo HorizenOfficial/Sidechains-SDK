@@ -232,12 +232,12 @@ abstract class AbstractForgeMessageBuilder[
                            timeout: Timeout,
                            forcedTx: Iterable[TX]): ForgeResult = {
     val parentBlockId: ModifierId = branchPointInfo.branchPointId
-    val parentBlockInfo: SidechainBlockInfo = nodeView.history.blockInfoById(branchPointInfo.branchPointId)
+    val parentBlockInfo: SidechainBlockInfo = nodeView.history.blockInfoById(parentBlockId)
     var withdrawalEpochMcBlocksLeft: Int = params.withdrawalEpochLength - parentBlockInfo.withdrawalEpochInfo.lastEpochIndex
     if (withdrawalEpochMcBlocksLeft == 0) // parent block is the last block of the epoch
       withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength
 
-    var blockSize: Int = precalculateBlockHeaderSize(branchPointInfo.branchPointId, timestamp, forgingStakeMerklePathInfo, vrfProof)
+    var blockSize: Int = precalculateBlockHeaderSize(parentBlockId, timestamp, forgingStakeMerklePathInfo, vrfProof)
     blockSize += 4 + 4 // placeholder for the MainchainReferenceData and Transactions sequences size values
 
     // Get all needed MainchainBlockHeaders from MC Node
@@ -257,7 +257,7 @@ abstract class AbstractForgeMessageBuilder[
     // Get Ommers in case the branch point is not the current best block
     var ommers: Seq[Ommer[H]] = Seq()
     var blockId = nodeView.history.bestBlockId
-    while (blockId != branchPointInfo.branchPointId) {
+    while (blockId != parentBlockId) {
       val block = nodeView.history.getBlockById(blockId).get // TODO: replace with method blockById with no Option
       blockId = block.parentId
       ommers = Ommer.toOmmer(block) +: ommers

@@ -99,6 +99,7 @@ abstract class AbstractCertificateSubmitter[
   }
 
   override def postStop(): Unit = {
+    log.debug("Certificate Submitter actor is stopping...")
     super.postStop()
     if(timers.isTimerActive(CertificateGenerationTimer)) {
       context.system.eventStream.publish(CertificateSubmissionStopped)
@@ -302,18 +303,20 @@ abstract class AbstractCertificateSubmitter[
       }
   }
 
-  protected def signatureFromRemote: Receive = {
+  private def signatureFromRemote: Receive = {
     case SignatureFromRemote(remoteSigInfo: CertificateSignatureFromRemoteInfo) =>
       signaturesStatus match {
         case Some(status) =>
-          log.debug(s"Certificate signature for pub key index ${remoteSigInfo.pubKeyIndex} retrieved from remote.")
-          if(!util.Arrays.equals(status.messageToSign, remoteSigInfo.messageToSign)) {
+          log.debug(s"Certificate signature for pub key index ${
+            remoteSigInfo.pubKeyIndex
+          } retrieved from remote.")
+          if (!util.Arrays.equals(status.messageToSign, remoteSigInfo.messageToSign)) {
             sender() ! DifferentMessageToSign
-          } else if(remoteSigInfo.pubKeyIndex < 0 || remoteSigInfo.pubKeyIndex >= params.signersPublicKeys.size) {
+          } else if (remoteSigInfo.pubKeyIndex < 0 || remoteSigInfo.pubKeyIndex >= params.signersPublicKeys.size) {
             sender() ! InvalidPublicKeyIndex
-          } else if(!remoteSigInfo.signature.isValid(params.signersPublicKeys(remoteSigInfo.pubKeyIndex), remoteSigInfo.messageToSign)) {
+          } else if (!remoteSigInfo.signature.isValid(params.signersPublicKeys(remoteSigInfo.pubKeyIndex), remoteSigInfo.messageToSign)) {
             sender() ! InvalidSignature
-          } else if(!status.knownSigs.exists(item => item.pubKeyIndex == remoteSigInfo.pubKeyIndex)) {
+          } else if (!status.knownSigs.exists(item => item.pubKeyIndex == remoteSigInfo.pubKeyIndex)) {
             status.knownSigs.append(CertificateSignatureInfo(remoteSigInfo.pubKeyIndex, remoteSigInfo.signature))
             sender() ! ValidSignature
             self ! TryToScheduleCertificateGeneration
@@ -322,7 +325,7 @@ abstract class AbstractCertificateSubmitter[
             sender() ! KnownSignature
           }
         case None =>
-            sender() ! SubmitterIsOutsideSubmissionWindow
+          sender() ! SubmitterIsOutsideSubmissionWindow
       }
   }
 

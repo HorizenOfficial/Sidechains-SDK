@@ -35,19 +35,6 @@ class CertificateSubmitter(settings: SidechainSettings,
   type PM = SidechainBlock
 
 
-  override def preStart(): Unit = {
-    super.preStart()
-  }
-
-  override def postRestart(reason: Throwable): Unit = {
-    super.postRestart(reason)
-  }
-
-  override def postStop(): Unit = {
-    log.debug("Certificate Submitter actor is stopping...")
-    super.postStop()
-  }
-
   override def getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber: Int, state: SidechainState): Optional[Array[Byte]] = {
     if (params.isCSWEnabled) {
       state.utxoMerkleTreeRoot(referencedWithdrawalEpochNumber) match {

@@ -252,7 +252,7 @@ class AbstractHistoryStorage[PM <: SidechainBlockBase[_ <: Transaction, _ <: Sid
     toUpdate.add(new JPair(new ByteArrayWrapper(idToBytes(block.id)), new ByteArrayWrapper(block.bytes)))
 
     storage.update(
-      new ByteArrayWrapper(nextVersion),
+      new ByteArrayWrapper(Utils.nextVersion),
       toUpdate,
       new JArrayList[ByteArrayWrapper]())
 
@@ -261,7 +261,7 @@ class AbstractHistoryStorage[PM <: SidechainBlockBase[_ <: Transaction, _ <: Sid
 
   def updateFeePaymentsInfo(blockId: ModifierId, feePaymentsInfo: FeePaymentsInfo): Try[S] = Try {
     storage.update(
-      nextVersion,
+      new ByteArrayWrapper(Utils.nextVersion),
       java.util.Arrays.asList(new JPair(new ByteArrayWrapper(feePaymentsInfoKey(blockId)), new ByteArrayWrapper(feePaymentsInfo.bytes))),
       new JArrayList[ByteArrayWrapper]()
     )
@@ -285,7 +285,7 @@ class AbstractHistoryStorage[PM <: SidechainBlockBase[_ <: Transaction, _ <: Sid
     val blockInfo = oldInfo.copy(semanticValidity = status)
 
     storage.update(
-      new ByteArrayWrapper(nextVersion),
+      new ByteArrayWrapper(Utils.nextVersion),
       java.util.Arrays.asList(new JPair(new ByteArrayWrapper(blockInfoKey(block.id)), new ByteArrayWrapper(blockInfo.bytes))),
       new JArrayList()
     )
@@ -294,7 +294,7 @@ class AbstractHistoryStorage[PM <: SidechainBlockBase[_ <: Transaction, _ <: Sid
 
   def setAsBestBlock(block: PM, blockInfo: SidechainBlockInfo): Try[S] = Try {
     storage.update(
-      new ByteArrayWrapper(nextVersion),
+      new ByteArrayWrapper(Utils.nextVersion),
       java.util.Arrays.asList(new JPair(bestBlockIdKey, new ByteArrayWrapper(idToBytes(block.id)))),
       new JArrayList()
     )

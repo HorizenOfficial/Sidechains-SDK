@@ -54,7 +54,7 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
 
     val value = new ByteArrayWrapper(sidechainSecretsCompanion.toBytes(secret))
 
-    storage.update(new ByteArrayWrapper(nextVersion),
+    storage.update(new ByteArrayWrapper(Utils.nextVersion),
       List(new JPair(key, value)).asJava,
       List[ByteArrayWrapper]().asJava)
 
@@ -75,7 +75,7 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
         new ByteArrayWrapper(sidechainSecretsCompanion.toBytes(s))))
     }
 
-    storage.update(new ByteArrayWrapper(nextVersion),
+    storage.update(new ByteArrayWrapper(Utils.nextVersion),
       updateList,
       List[ByteArrayWrapper]().asJava)
 
@@ -87,7 +87,7 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
 
     val key = calculateKey(proposition)
 
-    storage.update(new ByteArrayWrapper(nextVersion),
+    storage.update(new ByteArrayWrapper(Utils.nextVersion),
       List[JPair[ByteArrayWrapper,ByteArrayWrapper]]().asJava,
       List(key).asJava)
 
@@ -106,7 +106,7 @@ class SidechainSecretStorage(storage: Storage, sidechainSecretsCompanion: Sidech
       removeList.add(key)
     }
 
-    storage.update(new ByteArrayWrapper(nextVersion),
+    storage.update(new ByteArrayWrapper(Utils.nextVersion),
       List[JPair[ByteArrayWrapper,ByteArrayWrapper]]().asJava,
       removeList)
 

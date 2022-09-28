@@ -37,18 +37,6 @@ class AccountCertificateSubmitter(settings: SidechainSettings,
   type MP = AccountMemoryPool
   type PM = AccountBlock
 
-  override def preStart(): Unit = {
-    super.preStart()
-  }
-
-  override def postRestart(reason: Throwable): Unit = {
-    super.postRestart(reason)
-  }
-
-  override def postStop(): Unit = {
-    super.postStop()
-  }
-
   override def getUtxoMerkleTreeRoot(referencedEpoch: Int, state: AccountState): Optional[Array[Byte]] = Optional.empty()
 
   override def getWithdrawalRequests(state: AccountState, referencedEpochNumber: Int): Seq[BackwardTransfer] =
@@ -61,14 +49,17 @@ object AccountCertificateSubmitterRef {
             mainchainChannel: MainchainNodeChannel)
            (implicit ec: ExecutionContext): Props =
     Props(new AccountCertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel))
+      .withMailbox("akka.actor.deployment.submitter-prio-mailbox")
 
   def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel))
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel)
+      .withMailbox("akka.actor.deployment.submitter-prio-mailbox"))
 
   def apply(name: String, settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
-    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel), name)
+    system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel)
+      .withMailbox("akka.actor.deployment.submitter-prio-mailbox"), name)
 }

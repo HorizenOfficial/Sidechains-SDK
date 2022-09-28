@@ -34,6 +34,10 @@ abstract class AbstractSidechainNodeViewSynchronizer[
   extends NodeViewSynchronizer[TX, SidechainSyncInfo, SidechainSyncInfoMessageSpec.type,
     PMOD, HIS, MR](networkControllerRef, viewHolderRef, syncInfoSpec, networkSettings, timeProvider, modifierSerializers)
 {
+  override def postStop(): Unit = {
+    log.info("SidechainNodeViewSynchronizer actor is stopping...")
+    super.postStop()
+  }
 
   private val onSyntacticallyFailedModifier: Receive = {
     case SyntacticallyFailedModification(mod, exception) =>
@@ -53,7 +57,9 @@ abstract class AbstractSidechainNodeViewSynchronizer[
       }
   }
 
-  override protected def viewHolderEvents: Receive = onSyntacticallyFailedModifier orElse super.viewHolderEvents
+  override protected def viewHolderEvents: Receive =
+    onSyntacticallyFailedModifier orElse
+      super.viewHolderEvents
 }
 
 
