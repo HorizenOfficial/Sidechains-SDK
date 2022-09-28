@@ -468,9 +468,6 @@ class SCEvmMetamaskTest(SidechainTestFramework):
         minted_ids_user1 = [1]
         minting_price = 1
         minting_amount = 1
-        gas = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
-                           minted_ids_user1[0], estimate_gas=True, generate_block=False, static_call=False)
-        print("gas:", gas)
         # check execution before submitting proper transaction
         res = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
                            minted_ids_user1[0], static_call=True, generate_block=False)
@@ -481,7 +478,8 @@ class SCEvmMetamaskTest(SidechainTestFramework):
         res = compare_total_supply(sc_node, smart_contract, smart_contract_address, evm_address, 1)
         res = compare_ownerof(sc_node, smart_contract, smart_contract_address, other_address, minted_ids_user1[0],
                               evm_address)
-        last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance - minting_price)
+        (gas_used,_,_) = computeForgedTxFee(sc_node, tx_hash)
+        last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance - minting_price - gas_used)
         last_balance = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address,
                                        last_balance + minting_amount)
 
@@ -503,9 +501,6 @@ class SCEvmMetamaskTest(SidechainTestFramework):
 
         compare_erc20_balance(sc_node, smart_contract, smart_contract_address, evm_address, initial_balance)
 
-        gas = transfer_erc20_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
-                                    transfer_amount, static_call=False, generate_block=False, estimate_gas=True)
-        print("Gas:", gas)
         tx_hash = transfer_erc20_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
                                         transfer_amount, static_call=False, generate_block=True)
 
@@ -538,9 +533,6 @@ class SCEvmMetamaskTest(SidechainTestFramework):
         minted_ids_user1 = [1]
         minting_price = 1
         minting_amount = 1
-        gas = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
-                           minted_ids_user1[0], estimate_gas=True, generate_block=False, static_call=False)
-        print("gas:", gas)
         # check execution before submitting proper transaction
         res = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
                            minted_ids_user1[0], static_call=True, generate_block=False)
@@ -551,7 +543,9 @@ class SCEvmMetamaskTest(SidechainTestFramework):
         res = compare_total_supply(sc_node, smart_contract, smart_contract_address, evm_address, 1)
         res = compare_ownerof(sc_node, smart_contract, smart_contract_address, other_address, minted_ids_user1[0],
                               evm_address)
-        last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance - minting_price)
+
+        (gas_used,_,_) = computeForgedTxFee(sc_node, tx_hash)
+        last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance - minting_price - gas_used)
         last_balance = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address,
                                        last_balance + minting_amount)
 
@@ -573,9 +567,6 @@ class SCEvmMetamaskTest(SidechainTestFramework):
 
         compare_erc20_balance(sc_node, smart_contract, smart_contract_address, evm_address, initial_balance)
 
-        gas = transfer_erc20_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
-                                    transfer_amount, static_call=False, generate_block=False, estimate_gas=True)
-        print("Gas:", gas)
         tx_hash = transfer_erc20_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
                                         transfer_amount, static_call=False, generate_block=True)
 
@@ -608,9 +599,6 @@ class SCEvmMetamaskTest(SidechainTestFramework):
         minted_ids_user1 = [1]
         minting_price = 1
         minting_amount = 1
-        gas = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
-                           minted_ids_user1[0], estimate_gas=True, generate_block=False, static_call=False)
-        print("gas:", gas)
         # check execution before submitting proper transaction
         res = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
                            minted_ids_user1[0], static_call=True, generate_block=False)
@@ -621,7 +609,8 @@ class SCEvmMetamaskTest(SidechainTestFramework):
         res = compare_total_supply(sc_node, smart_contract, smart_contract_address, evm_address, 1)
         res = compare_ownerof(sc_node, smart_contract, smart_contract_address, other_address, minted_ids_user1[0],
                               evm_address)
-        last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance - minting_price)
+        (gas_used,_,_) = computeForgedTxFee(sc_node, tx_hash)
+        last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance - minting_price - gas_used)
         last_balance = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address,
                                        last_balance + minting_amount)
 
@@ -643,9 +632,6 @@ class SCEvmMetamaskTest(SidechainTestFramework):
 
         compare_erc20_balance(sc_node, smart_contract, smart_contract_address, evm_address, initial_balance)
 
-        gas = transfer_erc20_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
-                                    transfer_amount, static_call=False, generate_block=False, estimate_gas=True)
-        print("Gas:", gas)
         tx_hash = transfer_erc20_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
                                         transfer_amount, static_call=False, generate_block=True)
 
