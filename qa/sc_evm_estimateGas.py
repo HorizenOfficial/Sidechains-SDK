@@ -177,7 +177,6 @@ class SCEvmBootstrap(SidechainTestFramework):
 
         # Test estimating forging stake
         # data from AccountTransactionApiRouteTest
-        # TODO check why this is incorrect and returns 0x67b6
         request = {
             "from": "0x" + evm_address,
             "data": "5ca748ff1122334455669988112233445566778811223344556677881122334455667788aabbddddeeff0099aabbccddeeff0099aabbccddeeff0099aabbccddeeff00123400000000000000000000000000000000000000000000000000000000000000000000000000000000000000bbdf1daf64ed9d6e30f80b93f647b8bc6ea13191",
@@ -186,7 +185,7 @@ class SCEvmBootstrap(SidechainTestFramework):
             "nonce": "0x1"
         }
         response = sc_node_1.rpc_eth_estimateGas(request)
-        assert_equal('0x67b4', response['result'])
+        assert_equal('0x6fb6', response['result'])
 
         # Test estimating forging stake with invalid value - Invalid params: gas required exceeds allowance (max gas limit)
         # -32602 = Invalid params
@@ -211,7 +210,7 @@ class SCEvmBootstrap(SidechainTestFramework):
             "value": "0xE8D4A51000"
         }
         response = sc_node_1.rpc_eth_estimateGas(request)
-        assert_equal('0x5e77', response['result'])
+        assert_equal('0x5f3f', response['result'])
 
 if __name__ == "__main__":
     SCEvmBootstrap().main()
