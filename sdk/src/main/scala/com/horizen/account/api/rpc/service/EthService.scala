@@ -68,8 +68,10 @@ class EthService(
       .asInstanceOf[Future[Try[R]]]
     // return result or rethrow potential exceptions
     Await.result(res, nvtimeout) match {
+      case Success(value) => value
       case Failure(exception) =>
         exception match {
+          case err: RpcException => throw err
           case reverted: ExecutionRevertedException =>
             throw new RpcException(
               new RpcError(
@@ -86,7 +88,6 @@ class EthService(
             log.error("unexpected exception", exception)
             throw exception
         }
-      case Success(value) => value
     }
   }
 
