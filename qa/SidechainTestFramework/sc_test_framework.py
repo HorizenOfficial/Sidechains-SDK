@@ -21,7 +21,7 @@ import shutil
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
 
-from SidechainTestFramework.scutil import LEVEL_ERROR, LEVEL_DEBUG
+from SidechainTestFramework.scutil import LEVEL_ERROR, LEVEL_DEBUG, LEVEL_TRACE
 
 '''
 The workflow is the following:
@@ -122,7 +122,7 @@ class SidechainTestFramework(BitcoinTestFramework):
                           help="Print out all RPC calls as they are made")
         parser.add_option("--restapitimeout", dest="restapitimeout", default=5, action="store",
                           help="timeout in seconds for rest API execution, might be useful when debugging")
-        parser.add_option("--logfilelevel", dest="logfilelevel", default=LEVEL_DEBUG, action="store",
+        parser.add_option("--logfilelevel", dest="logfilelevel", default=LEVEL_TRACE, action="store",
                           help="log4j log level for application log file")
         parser.add_option("--logconsolelevel", dest="logconsolelevel", default=LEVEL_ERROR, action="store",
                           help="log4j log level for application console")

@@ -21,8 +21,11 @@ import com.horizen.storage.SidechainSecretStorage
 import com.horizen.validation.SemanticBlockValidator
 import com.horizen.validation.HistoryBlockValidator
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
+import scorex.core.transaction.state.TransactionValidation
 import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ModifierId
+
+import scala.collection.JavaConverters.{collectionAsScalaIterableConverter, seqAsJavaListConverter}
 import scala.util.Success
 
 class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
@@ -60,7 +63,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     history <- AccountHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
     state <- AccountState.restoreState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, timeProvider)
     wallet <- AccountWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes, secretStorage)
-    pool <- Some(AccountMemoryPool.emptyPool)
+    pool <- Some(AccountMemoryPool.createEmptyMempool(state))
   } yield (history, state, wallet, pool)
 
   override protected def genesisState: (HIS, MS, VL, MP) = {
@@ -74,7 +77,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
       wallet <- AccountWallet.createGenesisWallet(sidechainSettings.wallet.seed.getBytes, secretStorage)
 
-      pool <- Success(AccountMemoryPool.emptyPool)
+      pool <- Success(AccountMemoryPool.createEmptyMempool(state))
     } yield (history, state, wallet, pool)
 
     result.get
@@ -184,6 +187,27 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
       }
   }
+
+  override protected def updateMemPool(blocksRemoved: Seq[AccountBlock], blocksApplied: Seq[AccountBlock], memPool: MP, state: MS): MP = {
+    val rolledBackTxs = blocksRemoved.flatMap(extractTransactions)
+
+    val appliedTxs = blocksApplied.flatMap(extractTransactions)
+
+    val applicableTxs = rolledBackTxs ++ memPool.getTransactions.asScala
+
+    val newMemPool = AccountMemoryPool.createEmptyMempool(state)
+
+    applicableTxs.withFilter { tx =>
+      !appliedTxs.exists(t => t.id == tx.id) && {
+        state match {
+          case v: TransactionValidation[SidechainTypes#SCAT] => v.validate(tx).isSuccess
+          case _ => true
+        }
+      }
+    }.foreach(tx => newMemPool.put(tx))
+    newMemPool
+  }
+
 
 }
 

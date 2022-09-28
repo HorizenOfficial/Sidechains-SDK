@@ -5,13 +5,13 @@ import scorex.util.ScorexLogging
 
 import java.math.BigInteger
 
+
 class StateTransition(
     view: AccountStateView,
     messageProcessors: Seq[MessageProcessor],
     blockGasPool: GasPool,
     blockContext: BlockContext
 ) extends ScorexLogging {
-
 
   @throws(classOf[InvalidMessageException])
   @throws(classOf[ExecutionFailedException])
@@ -22,14 +22,11 @@ class StateTransition(
     val gasPool = buyGas(msg)
     // consume intrinsic gas
     val intrinsicGas = GasUtil.intrinsicGas(msg.getData, msg.getTo == null)
-    if (gasPool.getGas.compareTo(intrinsicGas) < 0) {
-      throw IntrinsicGasException(gasPool.getGas, intrinsicGas)
-    }
     gasPool.subGas(intrinsicGas)
     // find and execute the first matching processor
     messageProcessors.find(_.canProcess(msg, view)) match {
       case None =>
-        log.error(s"No message processor found for executing message ${msg}")
+        log.error(s"No message processor found for executing message $msg")
         throw new IllegalArgumentException("Unable to process message.")
       case Some(processor) =>
         // increase the nonce by 1
