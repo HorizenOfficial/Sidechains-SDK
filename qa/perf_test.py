@@ -43,22 +43,28 @@ def get_number_of_transactions_for_node(node):
     return len(allTransactions(node, False)["transactionIds"])
 
 
-def send_transactions_per_second(txs_creator_node, destination_addresses, utxo_amount, start_time, test_run_time,
-                                 transactions_per_second, extended_transaction=False, big_transaction=False):
+def send_transactions_per_second(txs_creator_node, txs_bytes, destination_addresses, utxo_amount, start_time, test_run_time,
+                                 transactions_per_second, extended_transaction=False, big_transaction=False, send_coins_to_address=True):
     # Run until
+    iteration = 0
+
     while time.time() - start_time < test_run_time:
         i = 0
         tps_start_time = time.time()
         # Send transactions until the transactions_per_second value has been reached
         while i < transactions_per_second:
             try:
-                if (big_transaction):
-                    sendCointsToMultipleAddress(txs_creator_node, destination_addresses, [utxo_amount for _ in range(len(destination_addresses))], 0)
-                elif (extended_transaction):
-                    sendCoinsToAddressExtended(txs_creator_node, random.choice(destination_addresses), utxo_amount, 0)
+                if send_coins_to_address:
+                    if (big_transaction):
+                        sendCointsToMultipleAddress(txs_creator_node, destination_addresses, [utxo_amount for _ in range(len(destination_addresses))], 0)
+                    elif (extended_transaction):
+                        sendCoinsToAddressExtended(txs_creator_node, random.choice(destination_addresses), utxo_amount, 0)
+                    else:
+                        sendCoinsToAddress(txs_creator_node, random.choice(destination_addresses), utxo_amount, 0)
                 else:
-                    sendCoinsToAddress(txs_creator_node, random.choice(destination_addresses), utxo_amount, 0)
-            except Exception:
+                    http_send_transaction(txs_creator_node, txs_bytes[i+iteration*transactions_per_second])
+
+            except Exception as e:
                 with errors.get_lock():
                     errors.value += 1
             with counter.get_lock():
@@ -73,6 +79,7 @@ def send_transactions_per_second(txs_creator_node, destination_addresses, utxo_a
         elif completion_time > 1:
             print("WARNING:  Number of transactions sent has exceeded 1 second - Adjust the initial_txs and "
                   "test_run_time config values ")
+        iteration += 1
 
 
 class PerformanceTest(SidechainTestFramework):
@@ -90,6 +97,7 @@ class PerformanceTest(SidechainTestFramework):
     block_rate = perf_data["block_rate"]
     extended_transaction = perf_data["extended_transaction"]
     big_transaction = perf_data["big_transaction"]
+    send_coins_to_address = perf_data["send_coins_to_address"]
     connection_map = {}
     topology = NetworkTopology(perf_data["network_topology"])
 
@@ -111,7 +119,8 @@ class PerformanceTest(SidechainTestFramework):
                 "tps_total": 0, "tps_mined": 0, "blocks_ts": [], "node_api_errors": 0,
                 "extended_transaction": extended_transaction,
                 "mined_txs": [],
-                "big_transaction": big_transaction
+                "big_transaction": big_transaction,
+                "send_coins_to_address": send_coins_to_address
                 }
 
     def get_latency_config(self):
@@ -329,22 +338,58 @@ class PerformanceTest(SidechainTestFramework):
         result = http_block_findById(node, block_id)
         return result["block"]["sidechainTransactions"]
 
-    def txs_creator_send_transactions_per_second_to_addresses(self, utxo_amount, txs_creators, tps_test):
-        start_time = time.time()
+    def create_transactions(self, txs_creator_node, input_boxes, destination_addresses, utxo_amount):
+        txs = []
 
-        #If we want to have a big transaction of 10 outputs we need to multiply the transaction output value by 10
-        #if self.big_transaction:
-        #    utxo_amount = utxo_amount * 10
+        while(len(input_boxes) != 0):
+            if self.big_transaction:
+                outputs = []
+                for address in destination_addresses:
+                    outputs.append({"publicKey": address, "value": int(utxo_amount)})
+                inputs = [{"boxId": input_boxes[j]["id"]} for j in range(len(destination_addresses))]
+                txs.append(http_create_core_transaction(txs_creator_node, inputs , outputs))
+                input_boxes = input_boxes[len(destination_addresses):]
+            else:
+                outputs = [{"publicKey": random.choice(destination_addresses), "value": int(utxo_amount)}]
+                txs.append(http_create_core_transaction(txs_creator_node, [{"boxId": input_boxes[0]["id"]}], outputs))
+                input_boxes.pop(0)
+            if (len(txs) % 1000 == 0):
+                print(f"Created {len(txs)} transactions...")
+        print(f"Created {len(txs)} transactions!")
+        return txs
+
+    def txs_creator_send_transactions_per_second_to_addresses(self, utxo_amount, txs_creators, txs_creator_addresses, tps_test):
 
         if tps_test:
             # Each node needs to be able to send a number of transactions per second, without going over 1 second, or
             # timing out - May need some fine-tuning.
             transactions_per_second = math.floor(self.initial_txs / self.test_run_time)
+
+            # Get the destination addresses of the transactions
+            destination_addresses = []
+            # Create array of destination addresses for all nodes
+            for node in self.sc_nodes:
+                destination_addresses.append(http_wallet_createPrivateKey25519(node))   
+
+            # Pre compute all the transactions bytes that we want to send
+            transactions = []
+            for creator_node in txs_creators:
+                print("Creating raw transactions...")
+                if self.big_transaction:
+                    destination_addresses = []
+                    for i in range (0, 10):
+                        destination_addresses.append(http_wallet_createPrivateKey25519(creator_node))
+                # Retrieve all the ZenBoxes of the node creator
+                all_boxes = http_wallet_allBoxesOfType(creator_node, "ZenBox")
+                assert_true(len(all_boxes) > 0)
+                transactions.append(self.create_transactions(creator_node, all_boxes, destination_addresses, utxo_amount) if not self.send_coins_to_address else []) 
+
             for i in range(len(txs_creators)):
                 print(
                     f"Running Throughput: {transactions_per_second} Transactions Per Second for Creator "
                     f"Node(Node{i})...")
 
+            start_time = self.start_forge()
             while counter.value < self.initial_txs * len(txs_creators) and (
                     (time.time() - start_time) < self.test_run_time):
                 # Create the multiprocess pool
@@ -352,27 +397,16 @@ class PerformanceTest(SidechainTestFramework):
                     args = []
                     # Add send_transactions_per_second arguments to args for each tx_creator_node
                     # starmap runs them all in parallel
-                    for index, sc_node in enumerate(self.sc_nodes_list):
-                        destination_addresses = []
-                        if sc_node["tx_creator"]:
-                            if self.big_transaction:
-                                for i in range (0, 10):
-                                    destination_addresses.append(http_wallet_createPrivateKey25519(self.sc_nodes[index]))
-                            else:
-                                # Create array of destination addresses for all nodes excluding the one we send from
-                                sc_nodes = self.sc_nodes.copy()
-                                del sc_nodes[index]
-                                destination_addresses = []
-                                for node in sc_nodes:
-                                    destination_addresses.append(http_wallet_createPrivateKey25519(node))
-
-                            args.append((self.sc_nodes[index], destination_addresses, utxo_amount, start_time,
-                                         self.test_run_time, transactions_per_second, self.extended_transaction, self.big_transaction))
+                    index = 0
+                    for sc_node in txs_creators:
+                        args.append((sc_node, transactions[index], destination_addresses, utxo_amount, start_time,
+                                    self.test_run_time, transactions_per_second, self.extended_transaction, self.big_transaction, self.send_coins_to_address))
+                        index += 1
                     pool.starmap(send_transactions_per_second, args)
-
                 print(f"... Sent {counter.value} Transactions ...")
                 print(f"Timer: {time.time() - start_time} and counter {counter.value}")
         else:
+            start_time = self.start_forge()
             # We're not interested in transactions per second, just fire all transactions as fast as possible
             for _ in range(self.initial_txs):
                 with Pool(initializer=init_globals, initargs=(counter, errors)) as pool:
@@ -393,7 +427,17 @@ class PerformanceTest(SidechainTestFramework):
                   f"in {time.time() - start_time} seconds.")
 
         print(f"Total Nodes creator ERRORS ENCOUNTERED: {errors.value}")
+        return start_time
 
+    def start_forge(self):
+        # Start forging on nodes where forger == true
+        for index, node in enumerate(self.sc_nodes_list):
+            if node["forger"]:
+                print(f"Forger found - Node{index} - Start Forging...")
+                http_start_forging(self.sc_nodes[index])
+        # Start timing
+        return time.time()
+    
     def run_test(self):
         mc_nodes = self.nodes
         self.set_topology()
@@ -508,15 +552,6 @@ class PerformanceTest(SidechainTestFramework):
         initial_balances = self.log_node_wallet_balances()
         self.csv_data["initial_balances"] = initial_balances
 
-        # Start forging on nodes where forger == true
-        for index, node in enumerate(self.sc_nodes_list):
-            if node["forger"]:
-                print(f"Forger found - Node{index} - Start Forging...")
-                http_start_forging(self.sc_nodes[index])
-
-        # Start timing
-        start_time = time.time()
-
         ##########################################################
         ##################### TEST VERSION 1 #####################
         ##########################################################
@@ -524,6 +559,7 @@ class PerformanceTest(SidechainTestFramework):
         if self.test_type == TestType.Mempool:
             ######## RUN UNTIL NODE CREATORS MEMPOOLS ARE EMPTY ########
             # Wait until mempool empty - this should also mean that other nodes mempools are empty (differences will be performance issues)
+            start_time = self.start_forge()
             end_test = False
             while not end_test:
                 end_test = True
@@ -540,6 +576,7 @@ class PerformanceTest(SidechainTestFramework):
 
         elif self.test_type == TestType.Mempool_Timed:
             ######## RUN UNTIL TIMER END ########
+            start_time = self.start_forge()
             while time.time() - start_time < self.test_run_time:
                 sleep(1)
 
@@ -549,11 +586,11 @@ class PerformanceTest(SidechainTestFramework):
 
         elif self.test_type == TestType.Transactions_Per_Second:
             # 1 thread per txs_creator node sending transactions
-            self.txs_creator_send_transactions_per_second_to_addresses(utxo_amount, txs_creators, True)
+            start_time = self.txs_creator_send_transactions_per_second_to_addresses(utxo_amount, txs_creators, txs_creator_addresses, True)
 
         elif self.test_type == TestType.All_Transactions:
             # 1 thread per txs_creator node sending transactions
-            self.txs_creator_send_transactions_per_second_to_addresses(utxo_amount, txs_creators, False)
+            start_time = self.txs_creator_send_transactions_per_second_to_addresses(utxo_amount, txs_creators, txs_creator_addresses, False)
 
         # stop forging
         for index, node in enumerate(self.sc_nodes_list):
@@ -597,9 +634,9 @@ class PerformanceTest(SidechainTestFramework):
             mempool_transactions.append(mempool_txs)
 
             while current_block_id != start_block_id:
-                number_of_transactions_mined = len(
-                    self.get_node_mined_transactions_by_block_id(node, current_block_id))
-                total_mined_transactions += number_of_transactions_mined
+                transactions_mined = self.get_node_mined_transactions_by_block_id(node, current_block_id)
+                number_of_transactions_mined = len(transactions_mined)
+                total_mined_transactions += len(transactions_mined)
                 print("Node" + str(node_index) + "- BlockId " + str(current_block_id) + " Mined Transactions: " +
                       str(number_of_transactions_mined))
                 total_blocks_for_node += 1
@@ -608,6 +645,10 @@ class PerformanceTest(SidechainTestFramework):
                 if (iteration == 0):
                     blocks_ts.append(current_block["timestamp"])
                     self.csv_data["mined_txs"].append(number_of_transactions_mined)
+                    io_number = 10 if self.big_transaction else 1
+                    for tx in transactions_mined:
+                        assert_equal(len(tx["unlockers"]), io_number)
+                        assert_equal(len(tx["newBoxes"]), io_number)                       
             blocks_per_node.append(total_blocks_for_node)
             iteration += 1
             print("Node" + str(node_index) + " Total Blocks: " + str(total_blocks_for_node))
