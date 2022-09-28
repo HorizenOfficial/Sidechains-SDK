@@ -8,6 +8,7 @@ import com.horizen.serialization.Views;
 import org.web3j.utils.Numeric;
 import scala.collection.JavaConverters;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,16 +29,16 @@ public class EthereumReceiptView {
     public final String status;
     public final String effectiveGasPrice;
 
-    public EthereumReceiptView(EthereumReceipt receipt, EthereumTransaction tx) {
+    public EthereumReceiptView(EthereumReceipt receipt, EthereumTransaction tx, BigInteger baseFee) {
         type = Numeric.toHexString(new byte[]{tx.version()});
         transactionHash = Numeric.toHexString(receipt.transactionHash());
-        transactionIndex = Numeric.prependHexPrefix(Integer.toHexString(receipt.transactionIndex()));
+        transactionIndex = Numeric.encodeQuantity(BigInteger.valueOf(receipt.transactionIndex()));
         blockHash = Numeric.toHexString(receipt.blockHash());
-        blockNumber = Numeric.prependHexPrefix(Integer.toHexString(receipt.blockNumber()));
+        blockNumber = Numeric.encodeQuantity(BigInteger.valueOf(receipt.blockNumber()));
         from = (tx.getFrom() != null) ? Numeric.toHexString(tx.getFrom().address()) : null;
         to = (tx.getTo() != null) ? Numeric.toHexString(tx.getTo().address()) : null;
-        cumulativeGasUsed = Numeric.toHexStringWithPrefix(receipt.consensusDataReceipt().cumulativeGasUsed());
-        gasUsed = Numeric.toHexStringWithPrefix(receipt.gasUsed());
+        cumulativeGasUsed = Numeric.encodeQuantity(receipt.consensusDataReceipt().cumulativeGasUsed());
+        gasUsed = Numeric.encodeQuantity(receipt.gasUsed());
         contractAddress = receipt.contractAddress().length != Account.ADDRESS_SIZE ? null : Numeric.toHexString(receipt.contractAddress());
         var consensusLogs = JavaConverters.seqAsJavaList(receipt.consensusDataReceipt().logs());
         logs = new ArrayList<>(consensusLogs.size());
@@ -46,6 +47,7 @@ public class EthereumReceiptView {
         }
         logsBloom = Numeric.toHexString(receipt.consensusDataReceipt().logsBloom().getBloomFilter());
         status = Numeric.prependHexPrefix(Integer.toHexString(receipt.consensusDataReceipt().status()));
-        effectiveGasPrice = (tx.getGasPrice() != null) ? Numeric.toHexStringWithPrefix(tx.getGasPrice()) : null;
+        // calculate effective gas price, this will work for both legacy and EIP1559 TXs
+        effectiveGasPrice = Numeric.encodeQuantity(baseFee.add(tx.getMaxPriorityFeePerGas()).min(tx.getMaxFeePerGas()));
     }
 }
