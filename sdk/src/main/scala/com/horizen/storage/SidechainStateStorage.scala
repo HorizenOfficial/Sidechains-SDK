@@ -154,33 +154,20 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     withdrawalRequests
   }
 
-  def getSigningKeys(withdrawalEpoch: Int): Option[Seq[SchnorrProposition]] = {
+  def getActualKeys(withdrawalEpoch: Int): Option[ActualKeys] = {
     storage.get(getTopQualityCertificateKey(withdrawalEpoch)).asScala match {
       case Some(baw) =>
         ActualKeysSerializer.parseBytesTry(baw.data) match {
-          case Success(actualKeys: ActualKeys) => Option(actualKeys.signingKeys)
+          case Success(actualKeys: ActualKeys) => Option(actualKeys)
           case Failure(exception) =>
-            log.error("Error while withdrawal epoch certificate signing keys parsing.", exception)
+            log.error("Error while withdrawal epoch certificate public keys parsing.", exception)
             Option.empty
         }
       case _ => Option.empty
     }
   }
 
-  def getMasterKeys(withdrawalEpoch: Int): Option[Seq[SchnorrProposition]] = {
-    storage.get(getTopQualityCertificateKey(withdrawalEpoch)).asScala match {
-      case Some(baw) =>
-        ActualKeysSerializer.parseBytesTry(baw.data) match {
-          case Success(actualKeys: ActualKeys) => Option(actualKeys.masterKeys)
-          case Failure(exception) =>
-            log.error("Error while withdrawal epoch certificate master keys parsing.", exception)
-            Option.empty
-        }
-      case _ => Option.empty
-    }
-  }
-
-  def getListOfKeyRotationProofs(withdrawalEpochNumber: Int): Seq[KeyRotationProof]= {
+  def getKeyRotationProofs(withdrawalEpochNumber: Int): Seq[KeyRotationProof]= {
     val keyRotationProofs: ListBuffer[KeyRotationProof] = ListBuffer()
     val lastCounter = getBlockFeeInfoCounter(withdrawalEpochNumber)
 

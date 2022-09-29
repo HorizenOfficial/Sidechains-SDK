@@ -6,6 +6,7 @@ import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
 import com.horizen.certificatesubmitter.dataproof.{DataForProofGeneration, DataForProofGenerationWithKeyRotation}
 import com.horizen.certificatesubmitter.keys.ActualKeys
+import com.horizen.certificatesubmitter.keys.ActualKeys.getMerkleRootOfPublicKeys
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.params.NetworkParams
 import com.horizen.websocket.server.WebSocketServerRef.sidechainNodeViewHolderRef
@@ -90,7 +91,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
 
       val publicKeysMerkleTreeRoot: Array[Byte] = {
         Try {
-          ActualKeys.getMerkleRootOfPublicKeys()
+          state.actualKeys(referencedWithdrawalEpochNumber).map(getMerkleRootOfPublicKeys)
         } match {
           case Failure(e: IllegalStateException) =>
             throw new Exception("CertificateSubmitter is too late against the State. " +
@@ -98,7 +99,10 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
               s"Current epoch is ${state.getWithdrawalEpochInfo.epoch}")
           case Failure(exception) => log.error("Exception while getting utxoMerkleTreeRoot", exception)
             throw new Exception(exception)
-          case Success(value) => value
+          case Success(byteArrayOption) => byteArrayOption match {
+            case Some(byteArray) => byteArray
+            case None => Array[Byte]()
+          }
         }
       }
 

@@ -25,6 +25,7 @@ import java.math.{BigDecimal, MathContext}
 import java.util
 import java.util.{Optional => JOptional}
 import com.horizen.box.data.ZenBoxData
+import com.horizen.certificatesubmitter.keys.{ActualKeys, KeyRotationProof}
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.forge.ForgerList
 
@@ -90,6 +91,14 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequestBox] = {
     stateStorage.getWithdrawalRequests(withdrawalEpoch)
+  }
+
+  def keyRotationProofs(withdrawalEpoch: Int): Seq[KeyRotationProof] = {
+    stateStorage.getKeyRotationProofs(withdrawalEpoch)
+  }
+
+  def actualKeys(withdrawalEpoch: Int): Option[ActualKeys] = {
+    stateStorage.getActualKeys(withdrawalEpoch)
   }
 
   override def utxoMerkleTreeRoot(withdrawalEpoch: Int): Option[Array[Byte]] = {
