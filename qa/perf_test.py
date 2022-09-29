@@ -1,5 +1,6 @@
 import logging
 import math
+import multiprocessing
 import random
 import time
 from multiprocessing import Pool, Value
@@ -106,9 +107,9 @@ def send_transactions_per_second(sc_node_index, txs_creator_node, txs_bytes, des
         # If completion time exceeds 1 second, it's no longer x transactions per second.
         # Adjust the initial_txs and test_run_time config values until this value is under 1 second.
         elif completion_time > 1:
-            print("WARNING:  Number of transactions sent has exceeded 1 second - Adjust the initial_txs and "
-                  "test_run_time config values ")
-            print(f"TIME TO COMPLETE {transactions_per_second} TPS: {completion_time}(s)")
+            print(f"WARNING:  Node{sc_node_index} Number of transactions sent has exceeded 1 second - Adjust the "
+                  f"initial_txs and test_run_time config values ")
+            print(f"Node{sc_node_index} TIME TO COMPLETE {transactions_per_second} TPS: {completion_time}(s)")
         iteration += 1
 
 
@@ -446,10 +447,11 @@ class PerformanceTest(SidechainTestFramework):
         result = http_block_findById(node, block_id)
         return result["block"]["sidechainTransactions"]
 
-    def create_transactions(self, txs_creator_node, input_boxes, destination_addresses, utxo_amount):
+    def create_transactions(self, node_index, txs_creator_node, input_boxes, destination_addresses, utxo_amount,
+                            transactions):
         txs = []
 
-        while (len(input_boxes) != 0):
+        while len(input_boxes) != 0:
             if self.big_transaction:
                 outputs = []
                 for address in destination_addresses:
@@ -461,10 +463,11 @@ class PerformanceTest(SidechainTestFramework):
                 outputs = [{"publicKey": random.choice(destination_addresses), "value": int(utxo_amount)}]
                 txs.append(http_create_core_transaction(txs_creator_node, [{"boxId": input_boxes[0]["id"]}], outputs))
                 input_boxes.pop(0)
-            if (len(txs) % 1000 == 0):
-                print(f"Created {len(txs)} transactions...")
-        print(f"Created {len(txs)} transactions!")
-        return txs
+            if len(txs) % 1000 == 0:
+                print(f"Node{node_index} Created {len(txs)} transactions...")
+        print(f"!! Node{node_index} Finished Creating {len(txs)} Transactions !!")
+
+        transactions.insert(node_index, txs)
 
     def create_destination_addresses(self):
         # Get the destination addresses of the transactions
@@ -475,28 +478,36 @@ class PerformanceTest(SidechainTestFramework):
         return destination_addresses
 
     def create_raw_transactions(self, txs_creators, utxo_amount, destination_addresses):
-        # Pre compute all the transactions bytes that we want to send
-        transactions = []
-        for creator_node in txs_creators:
+        # Pre-compute all the transactions bytes that we want to send
+        manager = multiprocessing.Manager()
+        transactions = manager.list()
+        with Pool() as pool:
+            args = []
+            # Add send_transactions_per_second arguments to args for each tx_creator_node
+            # starmap runs them all in parallel
+            index = 0
             print("Creating raw transactions...")
-            if self.big_transaction:
-                destination_addresses = []
-                for i in range(0, 10):
-                    destination_addresses.append(http_wallet_createPrivateKey25519(creator_node))
-            # Retrieve all the ZenBoxes of the node creator
-            all_boxes = http_wallet_allBoxesOfType(creator_node, "ZenBox")
-            assert_true(len(all_boxes) > 0)
-            transactions.append(self.create_transactions(creator_node, all_boxes, destination_addresses,
-                                                         utxo_amount) if not self.send_coins_to_address else [])
+            for creator_node in txs_creators:
+
+                # If we want to have a big transaction of 10 outputs we need to multiply the output value by 10
+                if self.big_transaction:
+                    destination_addresses = []
+                    for i in range(0, 10):
+                        destination_addresses.append(http_wallet_createPrivateKey25519(creator_node))
+                # Retrieve all the ZenBoxes of the node creator
+                all_boxes = http_wallet_allBoxesOfType(creator_node, "ZenBox")
+                assert_true(len(all_boxes) > 0)
+
+                args.append((index, creator_node, all_boxes, destination_addresses, utxo_amount, transactions))
+                index += 1
+            pool.starmap(self.create_transactions, args)
+
         return transactions
 
-    def txs_creator_send_transactions_per_second_to_addresses(self, utxo_amount, txs_creators, txs_creator_addresses,
-                                                              tps_test):
-        # If we want to have a big transaction of 10 outputs we need to multiply the transaction output value by 10
-
+    def txs_creator_send_transactions_per_second_to_addresses(self, utxo_amount, txs_creators, tps_test):
         # Get the destination addresses of the transactions
         destination_addresses = self.create_destination_addresses()
-        # Pre compute all the transactions bytes that we want to send
+        # Pre-compute all the transactions bytes that we want to send
         transactions = self.create_raw_transactions(txs_creators, utxo_amount, destination_addresses)
 
         if tps_test:
@@ -725,13 +736,11 @@ class PerformanceTest(SidechainTestFramework):
 
         elif self.test_type == TestType.Transactions_Per_Second:
             # 1 thread per txs_creator node sending transactions
-            start_time = self.txs_creator_send_transactions_per_second_to_addresses(utxo_amount, txs_creators,
-                                                                                    txs_creator_addresses, True)
+            start_time = self.txs_creator_send_transactions_per_second_to_addresses(utxo_amount, txs_creators, True)
 
         elif self.test_type == TestType.All_Transactions:
             # 1 thread per txs_creator node sending transactions
-            start_time = self.txs_creator_send_transactions_per_second_to_addresses(utxo_amount, txs_creators,
-                                                                                    txs_creator_addresses, False)
+            start_time = self.txs_creator_send_transactions_per_second_to_addresses(utxo_amount, txs_creators, False)
 
         # stop forging
         for index, node in enumerate(self.sc_nodes_list):
