@@ -1,7 +1,7 @@
 package com.horizen.validation
 import com.horizen.AbstractHistory
 import com.horizen.block.{OmmersContainer, SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.chain.SidechainBlockInfo
+import com.horizen.chain.{AbstractFeePaymentsInfo, SidechainBlockInfo}
 import com.horizen.consensus._
 import com.horizen.fork.ForkManager
 import com.horizen.params.NetworkParams
@@ -19,13 +19,14 @@ class ConsensusValidator[
   TX <: Transaction,
   H <: SidechainBlockHeaderBase,
   PMOD <: SidechainBlockBase[TX, H],
-  HSTOR <: AbstractHistoryStorage[PMOD, HSTOR],
-  HT <: AbstractHistory[TX, H, PMOD, HSTOR, HT]
+  FPI <: AbstractFeePaymentsInfo,
+  HSTOR <: AbstractHistoryStorage[PMOD, FPI, HSTOR],
+  HT <: AbstractHistory[TX, H, PMOD, FPI, HSTOR, HT]
 ]
 (
   timeProvider: TimeProvider
 )
-  extends HistoryBlockValidator[TX, H, PMOD, HSTOR, HT]
+  extends HistoryBlockValidator[TX, H, PMOD, FPI, HSTOR, HT]
     with ScorexLogging {
 
   override def validate(block: PMOD, history: HT): Try[Unit] = Try {

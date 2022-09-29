@@ -7,13 +7,15 @@ import com.horizen.account.node.NodeAccountState
 import com.horizen.account.receipt.EthereumReceipt
 import com.horizen.account.storage.AccountStateMetadataStorage
 import com.horizen.account.transaction.EthereumTransaction
+import com.horizen.account.utils.{AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment}
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.evm._
 import com.horizen.evm.interop.EvmLog
+import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
-import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, BytesUtils, ClosableResourceHandler, FeePaymentsUtils, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import org.web3j.crypto.ContractUtils.generateContractAddress
 import sparkz.core._
 import sparkz.core.transaction.state.TransactionValidation
@@ -61,7 +63,9 @@ class AccountState(
 
     using(getView) { stateView =>
       if (stateView.hasCeased) {
-        throw new IllegalStateException(s"Can't apply Block ${mod.id}, because the sidechain has ceased.")
+        val errMsg = s"Can't apply Block ${mod.id}, because the sidechain has ceased."
+        log.error(errMsg)
+        throw new IllegalStateException(errMsg)
       }
 
       // Check Txs semantic validity first
@@ -102,28 +106,6 @@ class AccountState(
       val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)
       stateView.updateConsensusEpochNumber(consensusEpochNumber)
 
-      // If SC block has reached the end of the withdrawal epoch -> fee payments expected to be produced.
-      // Verify that Forger assumed the same fees to be paid as the current node does.
-      // If SC block is in the middle of the withdrawal epoch -> no fee payments hash expected to be defined.
-      val isWithdrawalEpochFinished: Boolean = WithdrawalEpochUtils.isEpochLastIndex(modWithdrawalEpochInfo, params)
-      if (isWithdrawalEpochFinished) {
-        // Note: that current block fee info is already in the view
-        // TODO: get the list of block info and recalculate the root of it
-        val feePayments = stateView.getFeePayments(modWithdrawalEpochInfo.epoch)
-        // TODO: analog of FeePaymentsUtils.calculateFeePaymentsHash(feePayments)
-        val feePaymentsHash: Array[Byte] = new Array[Byte](32)
-
-        if (!mod.feePaymentsHash.sameElements(feePaymentsHash))
-          throw new IllegalArgumentException(
-            s"Block ${mod.id} has feePaymentsHash different to expected one: ${BytesUtils.toHexString(feePaymentsHash)}"
-          )
-      } else {
-        // No fee payments expected
-        if (!mod.feePaymentsHash.sameElements(FeePaymentsUtils.DEFAULT_FEE_PAYMENTS_HASH))
-          throw new IllegalArgumentException(
-            s"Block ${mod.id} has feePaymentsHash ${BytesUtils.toHexString(mod.feePaymentsHash)} defined when no fee payments expected."
-          )
-      }
 
       for (mcBlockRefData <- mod.mainchainBlockReferencesData) {
         stateView.applyMainchainBlockReferenceData(mcBlockRefData).get
@@ -133,7 +115,11 @@ class AccountState(
       val receiptList = new ListBuffer[EthereumReceipt]()
       val blockNumber = stateMetadataStorage.getHeight + 1
       val blockHash = idToBytes(mod.id)
-      var cumGasUsed = BigInteger.ZERO
+
+      var cumGasUsed: BigInteger = BigInteger.ZERO
+      var cumBaseFee: BigInteger = BigInteger.ZERO // cumulative base-fee, burned in eth, goes to forgers pool
+      var cumForgerTips: BigInteger = BigInteger.ZERO // cumulative max-priority-fee, is paid to block forger
+
       val blockGasPool = new GasPool(BigInteger.valueOf(mod.header.gasLimit))
       val blockContext = new BlockContext(mod.header, blockNumber, consensusEpochNumber, modWithdrawalEpochInfo.epoch)
 
@@ -167,6 +153,11 @@ class AccountState(
 
             receiptList += fullReceipt
 
+            val baseFeePerGas = blockContext.baseFee
+            val (txBaseFeePerGas, txMaxPriorityFeePerGas) = GasUtil.getTxFeesPerGas(ethTx, baseFeePerGas)
+            cumBaseFee = cumBaseFee.add(txBaseFeePerGas.multiply(txGasUsed))
+            cumForgerTips = cumForgerTips.add(txMaxPriorityFeePerGas.multiply(txGasUsed))
+
           case Failure(err: GasLimitReached) =>
             log.error("Could not apply tx, block gas limit exceeded")
             throw new IllegalArgumentException("Could not apply tx, block gas limit exceeded", err)
@@ -177,9 +168,16 @@ class AccountState(
         }
       }
 
-      // TODO: calculate and update fee info.
-      // Note: we should save the total gas paid and the forgerAddress
-      stateView.addFeeInfo(BlockFeeInfo(0L, mod.header.forgingStakeInfo.blockSignPublicKey))
+      log.debug(s"cumBaseFee=$cumBaseFee, cumForgerTips=$cumForgerTips")
+
+      // The two contributions will go like this:
+      // - base -> forgers pool, weighted by number of blocks forged
+      // - tip -> block forger
+      // Note: store also entries with zero values, which can arise in sc blocks without any tx
+      stateView.addFeeInfo(AccountBlockFeeInfo(cumBaseFee, cumForgerTips, mod.header.forgerAddress))
+
+      // If SC block has reached the end of the withdrawal epoch reward the forgers.
+      evalForgersReward(mod, modWithdrawalEpochInfo, stateView)
 
       // check stateRoot and receiptRoot against block header
       mod.verifyReceiptDataConsistency(receiptList.map(_.consensusDataReceipt))
@@ -206,10 +204,41 @@ class AccountState(
     }
   }
 
+
+  private def evalForgersReward(mod: AccountBlock, modWithdrawalEpochInfo: WithdrawalEpochInfo, stateView: AccountStateView): Unit = {
+    // If SC block has reached the end of the withdrawal epoch -> fee payments expected to be produced.
+    // If SC block is in the middle of the withdrawal epoch -> no fee payments hash expected to be defined.
+    val isWithdrawalEpochFinished: Boolean = WithdrawalEpochUtils.isEpochLastIndex(modWithdrawalEpochInfo, params)
+    if (isWithdrawalEpochFinished) {
+      // current block fee info is already in the view therefore we pass None as second param
+      val feePayments = stateView.getFeePayments(modWithdrawalEpochInfo.epoch, None)
+
+      // Verify that Forger assumed the same fees to be paid as the current node does.
+      val feePaymentsHash: Array[Byte] = AccountFeePaymentsUtils.calculateFeePaymentsHash(feePayments)
+
+      if (!mod.feePaymentsHash.sameElements(feePaymentsHash)) {
+        val errMsg = s"Block ${mod.id}: computed feePaymentsHash ${BytesUtils.toHexString(feePaymentsHash)} is different from the one in the block"
+        log.error(errMsg)
+        throw new IllegalArgumentException(errMsg)
+      }
+
+      // add rewards to forgers balance
+      feePayments.foreach(payment => stateView.addBalance(payment.addressBytes, payment.value))
+
+    } else {
+      // No fee payments expected
+      if (!mod.feePaymentsHash.sameElements(AccountFeePaymentsUtils.DEFAULT_ACCOUNT_FEE_PAYMENTS_HASH)) {
+        val errMsg = s"Block ${mod.id} has feePaymentsHash ${BytesUtils.toHexString(mod.feePaymentsHash)} defined when no fee payments expected."
+        throw new IllegalArgumentException(errMsg)
+      }
+    }
+  }
+
   private def validateTopQualityCertificate(
       topQualityCertificate: WithdrawalEpochCertificate,
       stateView: AccountStateView
   ): Unit = {
+
     val certReferencedEpochNumber: Int = topQualityCertificate.epochNumber
 
     // Check that the top quality certificate data is relevant to the SC active chain cert data.
@@ -231,7 +260,7 @@ class AccountState(
       case (certOutput, expectedWithdrawalRequest) =>
         if (
           certOutput.amount != expectedWithdrawalRequest.valueInZennies ||
-          !util.Arrays.equals(certOutput.pubKeyHash, expectedWithdrawalRequest.proposition.bytes())
+            !util.Arrays.equals(certOutput.pubKeyHash, expectedWithdrawalRequest.proposition.bytes())
         ) {
           throw new IllegalStateException(
             s"Epoch $certReferencedEpochNumber top quality certificate backward transfers " +
@@ -295,9 +324,6 @@ class AccountState(
   override def withdrawalRequests(withdrawalEpoch: Int): Seq[WithdrawalRequest] =
     using(getView)(_.withdrawalRequests(withdrawalEpoch))
 
-  override def getFeePayments(withdrawalEpoch: Int): Seq[BlockFeeInfo] =
-    stateMetadataStorage.getFeePayments(withdrawalEpoch)
-
   override def certificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] =
     stateMetadataStorage.getTopQualityCertificate(referencedWithdrawalEpoch)
 
@@ -309,6 +335,11 @@ class AccountState(
   }
 
   override def hasCeased: Boolean = stateMetadataStorage.hasCeased
+
+  override def getFeePayments(withdrawalEpoch: Int, blockToAppendFeeInfo: Option[AccountBlockFeeInfo] = None): Seq[AccountPayment] = {
+    val feePaymentInfoSeq = stateMetadataStorage.getFeePayments(withdrawalEpoch)
+    AccountFeePaymentsUtils.getForgersRewards(feePaymentInfoSeq)
+  }
 
   def getWithdrawalEpochInfo: WithdrawalEpochInfo = stateMetadataStorage.getWithdrawalEpochInfo
 
@@ -357,37 +388,41 @@ class AccountState(
 
   override def getCode(address: Array[Byte]): Array[Byte] = using(getView)(_.getCode(address))
 
+  override def baseFee: BigInteger = using(getView)(_.baseFee)
+
   override def validate(tx: SidechainTypes#SCAT): Try[Unit] = Try {
     tx.semanticValidity()
 
     if (!tx.isInstanceOf[EthereumTransaction]) return Success()
-    val ethTx = tx.asInstanceOf[EthereumTransaction]
-    val currentTime = timeProvider.time() / 1000
-    val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params, currentTime)
 
     using(getView) { stateView =>
-      val blockContext = new BlockContext(
-        // use the null address as forger
-        new Array[Byte](32),
-        TimeToEpochUtils.getTimeStampForEpochAndSlot(params, epochAndSlot.epochNumber, epochAndSlot.slotNumber),
-        stateView.baseFee,
-        FeeUtils.GAS_LIMIT,
-        stateMetadataStorage.getHeight + 1,
-        epochAndSlot.epochNumber,
-        stateMetadataStorage.getWithdrawalEpochInfo.epoch
-      )
+        //Check the nonce
+        val ethTx = tx.asInstanceOf[EthereumTransaction]
+        val sender = ethTx.getFrom.address()
+        val stateNonce = stateView.getNonce(sender)
+        if (stateNonce.compareTo(tx.getNonce) > 0) {
+          throw NonceTooLowException(sender, tx.getNonce, stateNonce)
+        }
+        //Check the balance
+        val maxTxCost = tx.getValue.add(tx.getGasLimit.multiply(tx.getGasPrice))
+        val currentBalance = stateView.getBalance(sender)
+        if (currentBalance.compareTo(maxTxCost) < 0) {
+          throw new IllegalArgumentException(s"Insufficient funds for executing transaction: balance $currentBalance, tx cost $maxTxCost")
+        }
 
-      val blockGasPool = new GasPool(BigInteger.valueOf(blockContext.blockGasLimit))
+        // Check that the sender is an EOA
+        if (!stateView.isEoaAccount(sender))
+          throw SenderNotEoaException(sender, stateView.getCodeHash(sender))
 
-      stateView.applyTransaction(tx, 0, blockGasPool, blockContext) match {
-        case Success(_) =>
-          log.debug(s"tx=${ethTx.id} succesfully validate against state view")
-
-        case Failure(e) =>
-          log.error("Could not validate tx agaist state view: ", e)
-          throw new IllegalArgumentException(e)
       }
-    }
+  } recoverWith { case t =>
+    log.debug(s"Not valid transaction ${tx.id}", t)
+    Failure(t)
+  }
+
+  // Check that State is on the last index of the withdrawal epoch: last block applied have finished the epoch.
+  def isWithdrawalEpochLastIndex: Boolean = {
+    WithdrawalEpochUtils.isEpochLastIndex(getWithdrawalEpochInfo, params)
   }
 }
 

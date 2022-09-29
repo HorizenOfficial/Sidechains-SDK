@@ -2,6 +2,7 @@ package com.horizen.account
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
@@ -25,9 +26,10 @@ import sparkz.core.ModifiersCache
 import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import sparkz.core.consensus.History.ProgressInfo
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{SemanticallyFailedModification, SemanticallySuccessfulModifier}
+import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
-
 import scala.util.{Failure, Success, Try}
+import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 
 class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                      params: NetworkParams,
@@ -46,6 +48,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override type MS = AccountState
   override type VL = AccountWallet
   override type MP = AccountMemoryPool
+  override type FPI = AccountFeePaymentsInfo
 
   protected def messageProcessors(params: NetworkParams): Seq[MessageProcessor] = {
       MessageProcessorUtil.getMessageProcessorSeq(params, customMessageProcessors)
@@ -55,7 +58,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     ChainIdBlockSemanticValidator(params) +: super.semanticBlockValidators(params)
   }
 
-  override def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock, AccountHistoryStorage, AccountHistory]] = {
+  override def historyBlockValidators(params: NetworkParams): Seq[HistoryBlockValidator[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock, AccountFeePaymentsInfo, AccountHistoryStorage, AccountHistory]] = {
     BaseFeeBlockValidator() +: super.historyBlockValidators(params)
   }
 
@@ -63,7 +66,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     history <- AccountHistory.restoreHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators(params), historyBlockValidators(params))
     state <- AccountState.restoreState(stateMetadataStorage, stateDbStorage, messageProcessors(params), params, timeProvider)
     wallet <- AccountWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes, secretStorage)
-    pool <- Some(AccountMemoryPool.emptyPool)
+    pool <- Some(AccountMemoryPool.createEmptyMempool(state))
   } yield (history, state, wallet, pool)
 
   override def postStop(): Unit = {
@@ -82,7 +85,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
       wallet <- AccountWallet.createGenesisWallet(sidechainSettings.wallet.seed.getBytes, secretStorage)
 
-      pool <- Success(AccountMemoryPool.emptyPool)
+      pool <- Success(AccountMemoryPool.createEmptyMempool(state))
     } yield (history, state, wallet, pool)
 
     result.get
@@ -108,18 +111,24 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     (historyAfterConsensusInfoApply, wallet)
   }
 
-  // Scan modifier only, there is no need to notify AccountWallet about fees,
-  // since account balances are tracked only in the AccountState.
-  // TODO: do we need to notify History with fee payments info?
-  override protected def scanBlockWithFeePayments(history: HIS, state: MS, wallet: VL, modToApply: AccountBlock): (HIS, VL) = {
-    (history, wallet.scanPersistent(modToApply))
+  override def getFeePaymentsInfo(state: MS, epochNumber: Int) : FPI = {
+    val feePayments = state.getFeePayments(epochNumber)
+    AccountFeePaymentsInfo(feePayments)
   }
+
+  override def getScanPersistentWallet(modToApply: AccountBlock, stateOp: Option[MS], epochNumber: Int, wallet: VL) : VL = {
+    wallet.scanPersistent(modToApply)
+  }
+
+  override def isWithdrawalEpochLastIndex(state: MS) : Boolean = state.isWithdrawalEpochLastIndex
+  override def getWithdrawalEpochNumber(state: MS) : Int = state.getWithdrawalEpochInfo.epoch
 
   override protected def getCurrentSidechainNodeViewInfo: Receive = {
     case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView[
       AccountTransaction[Proposition, Proof[Proposition]],
       AccountBlockHeader,
       AccountBlock,
+      AccountFeePaymentsInfo,
       NodeAccountHistory,
       NodeAccountState,
       NodeWalletBase,
@@ -143,6 +152,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       AccountTransaction[Proposition, Proof[Proposition]],
       AccountBlockHeader,
       AccountBlock,
+      AccountFeePaymentsInfo,
       NodeAccountHistory,
       NodeAccountState,
       NodeWalletBase,
@@ -167,6 +177,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       AccountTransaction[Proposition, Proof[Proposition]],
       AccountBlockHeader,
       AccountBlock,
+      AccountFeePaymentsInfo,
       NodeAccountHistory,
       NodeAccountState,
       NodeWalletBase,
@@ -196,7 +207,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     new SDKModifiersCache[AccountBlock, HIS](sparksSettings.network.maxModifiersCacheSize)
 
   // TODO FOR MERGE: implement these methods
-  override def dumpStorages: Unit = ???
+  override def dumpStorages(): Unit = ???
   override def getStorageVersions: Map[String, String] = ???
 
   override def processLocallyGeneratedTransaction: Receive = {
@@ -246,6 +257,27 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
         }
       } else updateInfo
     }
+  }
+
+  override protected def updateMemPool(blocksRemoved: Seq[AccountBlock], blocksApplied: Seq[AccountBlock], memPool: MP, state: MS): MP = {
+    val rolledBackTxs = blocksRemoved.flatMap(extractTransactions)
+
+    val appliedTxs = blocksApplied.flatMap(extractTransactions)
+
+    val applicableTxs = rolledBackTxs ++ memPool.getTransactions.asScala
+
+    val newMemPool = AccountMemoryPool.createEmptyMempool(state)
+
+    applicableTxs.withFilter { tx =>
+      !appliedTxs.exists(t => t.id == tx.id) && {
+        state match {
+          case v: TransactionValidation[SidechainTypes#SCAT] => v.validate(tx).isSuccess
+          case _ => true
+        }
+      }
+    }.foreach(tx => newMemPool.put(tx))
+    newMemPool
+
   }
 
 

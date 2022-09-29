@@ -1,13 +1,12 @@
 package com.horizen.storage
 
 import com.horizen.block.{MainchainBlockReference, MainchainBlockReferenceData, MainchainHeader, SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.chain.{ActiveChain, FeePaymentsInfo, FeePaymentsInfoSerializer, MainchainBlockReferenceDataInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, MainchainHeaderMetadata, SidechainBlockInfo, SidechainBlockInfoSerializer, byteArrayToMainchainHeaderHash}
+import com.horizen.chain.{AbstractFeePaymentsInfo, ActiveChain, MainchainBlockReferenceDataInfo, MainchainHeaderBaseInfo, MainchainHeaderHash, MainchainHeaderInfo, MainchainHeaderMetadata, SidechainBlockInfo, SidechainBlockInfoSerializer, byteArrayToMainchainHeaderHash}
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.NetworkParams
 import com.horizen.utils.ByteArrayWrapper
 import sparkz.core.consensus.ModifierSemanticValidity
 import com.horizen.transaction.Transaction
-import com.horizen.utils.Utils.nextVersion
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
 
@@ -24,10 +23,14 @@ trait SidechainBlockInfoProvider {
   def blockInfoById(blockId: ModifierId): SidechainBlockInfo
 }
 
-class AbstractHistoryStorage[PM <: SidechainBlockBase[_ <: Transaction, _ <: SidechainBlockHeaderBase], S <: AbstractHistoryStorage[PM, S]]
-  (
+abstract class AbstractHistoryStorage[
+  PM <: SidechainBlockBase[_ <: Transaction, _ <: SidechainBlockHeaderBase],
+  FPI <: AbstractFeePaymentsInfo,
+  S <: AbstractHistoryStorage[PM, FPI, S]
+  ]  (
     storage: Storage,
     blockSerializer: SparkzSerializer[PM],
+    feePaymentsInfoSerializer: SparkzSerializer[FPI],
     params: NetworkParams
   )
   extends SidechainBlockInfoProvider
@@ -70,7 +73,7 @@ class AbstractHistoryStorage[PM <: SidechainBlockBase[_ <: Transaction, _ <: Sid
 
   private def blockInfoKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"blockInfo$blockId"))
 
-  private def feePaymentsInfoKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"feePaymentsInfo$blockId"))
+  protected def feePaymentsInfoKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"feePaymentsInfo$blockId"))
 
   def height: Int = activeChain.height
 
@@ -259,7 +262,7 @@ class AbstractHistoryStorage[PM <: SidechainBlockBase[_ <: Transaction, _ <: Sid
     this
   }
 
-  def updateFeePaymentsInfo(blockId: ModifierId, feePaymentsInfo: FeePaymentsInfo): Try[S] = Try {
+  def updateFeePaymentsInfo(blockId: ModifierId, feePaymentsInfo: FPI): Try[S] = Try {
     storage.update(
       new ByteArrayWrapper(Utils.nextVersion),
       java.util.Arrays.asList(new JPair(new ByteArrayWrapper(feePaymentsInfoKey(blockId)), new ByteArrayWrapper(feePaymentsInfo.bytes))),
@@ -268,9 +271,8 @@ class AbstractHistoryStorage[PM <: SidechainBlockBase[_ <: Transaction, _ <: Sid
     this
   }
 
-  def getFeePaymentsInfo(blockId: ModifierId): Option[FeePaymentsInfo] = {
-    storage.get(feePaymentsInfoKey(blockId)).asScala.flatMap(baw => FeePaymentsInfoSerializer.parseBytesTry(baw.data).toOption)
-  }
+  def getFeePaymentsInfo(blockId: ModifierId): Option[FPI] =
+    storage.get(feePaymentsInfoKey(blockId)).asScala.flatMap(baw => feePaymentsInfoSerializer.parseBytesTry(baw.data).toOption)
 
   def semanticValidity(blockId: ModifierId): ModifierSemanticValidity = {
     blockInfoOptionById(blockId) match {

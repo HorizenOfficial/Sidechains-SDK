@@ -20,11 +20,19 @@ import com.horizen.utils.BytesUtils
 import sparkz.core.settings.RESTApiSettings
 import scorex.util.ModifierId
 import sparkz.core.serialization.SparkzSerializer
-
 import java.util.{Optional => JOptional}
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
-
+import com.fasterxml.jackson.annotation.JsonUnwrapped
+import com.horizen.account.api.http.AccountBlockRestSchema._
+import com.horizen.account.api.http.SidechainBlockErrorResponse.ErrorNoBlockFound
+import com.horizen.account.api.rpc.types.ForwardTransfersView
+import com.horizen.account.chain.AccountFeePaymentsInfo
+import com.horizen.account.utils.AccountForwardTransfersHelper.getForwardTransfersForBlock
+import com.horizen.account.utils.AccountPayment
+import com.horizen.api.http.{ErrorResponse, SuccessResponse}
+import scala.collection.JavaConverters._
+import scala.compat.java8.OptionConverters.RichOptionalGeneric
 
 case class AccountBlockApiRoute(
                                   override val settings: RESTApiSettings,
@@ -37,6 +45,7 @@ case class AccountBlockApiRoute(
     SidechainTypes#SCAT,
     AccountBlockHeader,
     AccountBlock,
+    AccountFeePaymentsInfo,
     NodeAccountHistory,
     NodeAccountState,
     NodeWalletBase,
@@ -44,7 +53,7 @@ case class AccountBlockApiRoute(
     AccountNodeView] (settings, forgerRef){
 
   override val route: Route = pathPrefix("block") {
-    findById ~ findLastIds ~ findIdByHeight ~ getBestBlockInfo ~ findBlockInfoById ~ startForging ~ stopForging ~ generateBlockForEpochNumberAndSlot ~ getForgingInfo
+    findById ~ findLastIds ~ findIdByHeight ~ getBestBlockInfo ~ findBlockInfoById ~ getFeePayments ~ getForwardTransfers ~ startForging ~ stopForging ~ generateBlockForEpochNumberAndSlot ~ getForgingInfo
   }
 
   def generateBlockForEpochNumberAndSlot: Route = (post & path("generate")) {
@@ -66,6 +75,37 @@ case class AccountBlockApiRoute(
     }
   }
 
+  /**
+   * Return the list of forward transfers in a given block.
+   * Return error if specified block height does not exist.
+   */
+  def getForwardTransfers: Route = (post & path("getForwardTransfers")) {
+    entity(as[ReqGetForwardTransfersRequests]) { body =>
+      withNodeView { sidechainNodeView =>
+        val block = sidechainNodeView.getNodeHistory.getBlockById(body.blockId)
+        if (block.isEmpty) ApiResponseUtil.toResponse(ErrorNoBlockFound("ErrorNoBlockFound", JOptional.empty()))
+        else ApiResponseUtil.toResponse(
+          RespAllForwardTransfers(new ForwardTransfersView(
+            getForwardTransfersForBlock(block.get()).asJava, true)
+          )
+        )
+      }
+    }
+  }
+
+  /**
+   * Return the list of forgers fee payments paid after the given block was applied.
+   * Return empty list in case no fee payments were paid.
+   */
+  def getFeePayments: Route = (post & path("getFeePayments")) {
+    entity(as[ReqFeePayments]) { body =>
+      applyOnNodeView { sidechainNodeView =>
+        val sidechainHistory = sidechainNodeView.getNodeHistory
+        val payments = sidechainHistory.getFeePaymentsInfo(body.blockId).asScala.map(_.payments).getOrElse(Seq())
+        ApiResponseUtil.toResponse(RespFeePayments(payments))
+      }
+    }
+  }
 }
 
 
@@ -76,4 +116,21 @@ object AccountBlockRestSchema {
     require(blockId.length == SidechainBlockBase.BlockIdHexStringLength, s"Invalid id $blockId. Id length must be 64")
   }
 
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqGetForwardTransfersRequests(blockId: String) {
+    require(blockId.length == 64, s"Invalid id $blockId. Id length must be 64")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespAllForwardTransfers(@JsonUnwrapped listOfFWT: ForwardTransfersView) extends SuccessResponse
+
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespFeePayments(feePayments: Seq[AccountPayment]) extends SuccessResponse
+}
+
+object SidechainBlockErrorResponse {
+  case class ErrorNoBlockFound(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
+    override val code: String = "0401"
+  }
 }

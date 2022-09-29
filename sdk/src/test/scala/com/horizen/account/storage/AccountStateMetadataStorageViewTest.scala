@@ -4,16 +4,18 @@ import com.google.common.primitives.Ints
 import com.horizen.SidechainTypes
 import com.horizen.account.receipt.{EthereumReceipt, ReceiptFixture}
 import com.horizen.account.storage.AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT
+import com.horizen.account.utils.AccountBlockFeeInfo
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateFixture}
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.fixtures.{SecretFixture, StoreFixture, TransactionFixture}
-import com.horizen.utils.{BlockFeeInfo, BytesUtils, WithdrawalEpochInfo}
+import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
 import org.junit.Assert._
 import org.junit._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import sparkz.core._
 
+import java.math.BigInteger
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.io.Source
 import scala.util.Random
@@ -66,7 +68,7 @@ class AccountStateMetadataStorageViewTest
     assertTrue("Only default epoch info should be present in storage", stateMetadataStorage.getWithdrawalEpochInfo.epoch == 0)
     assertTrue("Only default epoch info should be present in storage", stateMetadataStorage.getWithdrawalEpochInfo.lastEpochIndex == 0)
 
-    storageView.addFeePayment(BlockFeeInfo(100, getPrivateKey25519("8333".getBytes()).publicImage()))
+    storageView.addFeePayment(AccountBlockFeeInfo(BigInteger.valueOf(100), BigInteger.valueOf(50), getPrivateKeySecp256k1(8333).publicImage()))
     assertEquals("Block fee is not present in view", 1, storageView.getFeePayments(currentEpoch).size)
     assertEquals("Block fee is present in storage", 0, stateMetadataStorage.getFeePayments(currentEpoch).size)
 
@@ -128,7 +130,7 @@ class AccountStateMetadataStorageViewTest
     (firstEpochToProcess to lastEpochToProcess).foreach(epochNumber => {
       storageView.updateWithdrawalEpochInfo(WithdrawalEpochInfo(epochNumber, 1))
       storageView.updateTopQualityCertificate(generateCertificateWithEpochNumber(epochNumber))
-      storageView.addFeePayment(BlockFeeInfo(230, getPrivateKey25519("8333".getBytes()).publicImage()))
+      storageView.addFeePayment(AccountBlockFeeInfo(BigInteger.valueOf(100), BigInteger.valueOf(50), getPrivateKeySecp256k1(8333).publicImage()))
       storageView.updateAccountStateRoot(getRandomAccountStateRoot)
       storageView.commit(bytesToVersion(getVersion.data()))
 

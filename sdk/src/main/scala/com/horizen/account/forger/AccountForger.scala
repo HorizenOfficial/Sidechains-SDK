@@ -3,6 +3,7 @@ package com.horizen.account.forger
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.horizen.{SidechainTypes, _}
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
@@ -23,6 +24,7 @@ class AccountForger(settings: SidechainSettings,
   extends AbstractForger[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock](
   settings, viewHolderRef, forgeMessageBuilder, timeProvider, params
 ) {
+  override type FPI = AccountFeePaymentsInfo
   override type HSTOR = AccountHistoryStorage
   override type HIS = AccountHistory
   override type MS = AccountState

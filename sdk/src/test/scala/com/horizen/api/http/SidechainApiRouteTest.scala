@@ -11,6 +11,7 @@ import com.horizen.api.http.SidechainBlockActor.ReceivableMessages.{GenerateSide
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.box.Box
+import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus.ConsensusEpochAndSlot
 import com.horizen.csw.CswManager.ReceivableMessages._
@@ -139,6 +140,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
           BoxTransaction[Proposition, Box[Proposition]],
           SidechainBlockHeader,
           SidechainBlock,
+          SidechainFeePaymentsInfo,
           NodeHistory,
           NodeState,
           NodeWallet,
@@ -155,6 +157,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
           BoxTransaction[Proposition, Box[Proposition]],
           SidechainBlockHeader,
           SidechainBlock,
+          SidechainFeePaymentsInfo,
           NodeHistory,
           NodeState,
           NodeWallet,
@@ -170,6 +173,7 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
           BoxTransaction[Proposition, Box[Proposition]],
           SidechainBlockHeader,
           SidechainBlock,
+          SidechainFeePaymentsInfo,
           NodeHistory,
           NodeState,
           NodeWallet,
@@ -386,14 +390,12 @@ abstract class SidechainApiRouteTest extends AnyWordSpec with Matchers with Scal
   val params = MainNetParams(sidechainId = utilMocks.sidechainIdArray)
   val sidechainTransactionApiRoute: Route = SidechainTransactionApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainTransactionActorRef,
     sidechainTransactionsCompanion, params).route
-  val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, sidechainTransactionsCompanion, mockedSidechainBlockForgerActorRef).route
-  val mainchainBlockApiRoute: Route = MainchainBlockApiRoute[BoxTransaction[Proposition, Box[Proposition]],
-    SidechainBlockHeader,SidechainBlock,NodeHistory,NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView](mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val sidechainWalletApiRoute: Route = SidechainWalletApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, sidechainSecretsCompanion).route
   val mockedSidechainApp: SidechainApp = mock[SidechainApp]
-
   val sidechainNodeApiRoute: Route = SidechainNodeApiRoute(mockedPeerManagerRef, mockedNetworkControllerRef, mockedTimeProvider, mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedSidechainApp, params).route
-
+  val sidechainBlockApiRoute: Route = SidechainBlockApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedsidechainBlockActorRef, sidechainTransactionsCompanion, mockedSidechainBlockForgerActorRef).route
+  val mainchainBlockApiRoute: Route = MainchainBlockApiRoute[BoxTransaction[Proposition, Box[Proposition]],
+    SidechainBlockHeader,SidechainBlock,SidechainFeePaymentsInfo, NodeHistory,NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView](mockedRESTSettings, mockedSidechainNodeViewHolderRef).route
   val applicationApiRoute: Route = ApplicationApiRoute(mockedRESTSettings, new SimpleCustomApi(), mockedSidechainNodeViewHolderRef).route
   val sidechainCswApiRoute: Route = SidechainCswApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedCswManagerActorRef, params).route
   val sidechainBackupApiRoute: Route = SidechainBackupApiRoute(mockedRESTSettings, mockedSidechainNodeViewHolderRef, mockedBoxIterator).route

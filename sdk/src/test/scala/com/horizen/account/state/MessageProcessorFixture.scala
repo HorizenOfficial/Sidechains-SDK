@@ -58,37 +58,39 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
       nonce: BigInteger = BigInteger.ZERO
   ): Message = {
     val gasPrice = BigInteger.ZERO
+    val gasFeeCap = BigInteger.valueOf(1000001)
+    val gasTipCap = BigInteger.ZERO
     val gasLimit = BigInteger.valueOf(1000000)
     new Message(
       new AddressProposition(origin),
       if (to == null) null else new AddressProposition(to),
       gasPrice,
-      gasPrice,
-      gasPrice,
+      gasFeeCap,
+      gasTipCap,
       gasLimit,
       value,
       nonce,
-      data
+      data,
+      false
     )
   }
 
   /**
    * Creates a large temporary gas pool and passes it into the given function.
    */
-  def withGas[A](fun: GasPool => A): A = {
-    fun(new GasPool(BigInteger.valueOf(1000000)))
+  def withGas[A](fun: GasPool => A, gasLimit: BigInteger = 1000000): A = {
+    fun(new GasPool(gasLimit))
   }
 
   /**
    * Creates a large temporary gas pool and verifies the amount of total gas consumed.
-   * TODO: enable gas checks again
    */
-  def assertGas[A](expectedGas: BigInteger = BigInteger.ZERO, enfore: Boolean = false)(fun: GasPool => A): A = {
+  def assertGas[A](expectedGas: BigInteger, enforce: Boolean = true)(fun: GasPool => A): A = {
     withGas { gas =>
       try {
         fun(gas)
       } finally {
-        if (enfore) {
+        if (enforce) {
           assertEquals("Unexpected gas consumption", expectedGas, gas.getUsedGas)
         } else {
           println("consumed gas: " + gas.getUsedGas)

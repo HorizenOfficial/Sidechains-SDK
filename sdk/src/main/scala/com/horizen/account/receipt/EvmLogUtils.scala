@@ -50,7 +50,12 @@ object EvmLogUtils extends SparkzSerializer[EvmLog] {
       rlpTopics.add(RlpString.create(t.toBytes))
     }
     result.add(new RlpList(rlpTopics))
-    result.add(RlpString.create(log.data))
+    if (log.data == null){
+      result.add(RlpString.create(Array[Byte](0)))
+    }
+    else {
+      result.add(RlpString.create(log.data))
+    }
     result
   }
 
@@ -64,7 +69,7 @@ object EvmLogUtils extends SparkzSerializer[EvmLog] {
       writer.putBytes(log.topics(i).toBytes)
     }
 
-    val data = log.data
+    val data = if (log.data != null) log.data else Array[Byte](0)
     writer.putInt(data.length)
     writer.putBytes(data)
   }

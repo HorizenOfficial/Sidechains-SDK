@@ -2,6 +2,7 @@ package com.horizen.evm;
 
 import com.horizen.evm.interop.EvmContext;
 import com.horizen.evm.interop.EvmResult;
+import com.horizen.evm.interop.TraceParams;
 
 import java.math.BigInteger;
 
@@ -17,20 +18,9 @@ public final class Evm {
             byte[] input,
             BigInteger gasLimit,
             BigInteger gasPrice,
-            EvmContext context
+            EvmContext context,
+            TraceParams traceParams
     ) {
-        return LibEvm.evmApply(stateDBHandle.handle, from, to, value, input, gasLimit, gasPrice, context);
-    }
-
-    public static EvmResult Apply(
-            ResourceHandle stateDBHandle,
-            byte[] from,
-            byte[] to,
-            BigInteger value,
-            byte[] input,
-            BigInteger gasLimit,
-            BigInteger gasPrice
-    ) {
-        return LibEvm.evmApply(stateDBHandle.handle, from, to, value, input, gasLimit, gasPrice, null);
+        return LibEvm.evmApply(stateDBHandle.handle, from, to, value, input, gasLimit, gasPrice, context, traceParams);
     }
 }

@@ -9,7 +9,7 @@ import com.horizen.api.http.BlockBaseErrorResponse._
 import com.horizen.api.http.BlockBaseRestSchema._
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.chain.SidechainBlockInfo
+import com.horizen.chain.{AbstractFeePaymentsInfo, SidechainBlockInfo}
 import com.horizen.forge.AbstractForger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging}
 import com.horizen.forge.ForgingInfo
 import com.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
@@ -25,19 +25,21 @@ import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
 
+
 abstract class BlockBaseApiRoute[
   TX <: Transaction,
   H <: SidechainBlockHeaderBase,
   PM <: SidechainBlockBase[TX, H],
-  NH <: NodeHistoryBase[TX, H, PM],
+  FPI <: AbstractFeePaymentsInfo,
+  NH <: NodeHistoryBase[TX, H, PM, FPI],
   NS <: NodeStateBase,
   NW <: NodeWalletBase,
   NP <: NodeMemoryPoolBase[TX],
-  NV <: SidechainNodeViewBase[TX, H, PM, NH, NS, NW, NP]](
+  NV <: SidechainNodeViewBase[TX, H, PM, FPI, NH, NS, NW, NP]](
                                   override val settings: RESTApiSettings,
                                   forgerRef: ActorRef)
                                  (implicit val context: ActorRefFactory, override val ec: ExecutionContext, override val tag: ClassTag[NV])
-  extends SidechainApiRoute[TX, H, PM, NH, NS, NW, NP, NV] {
+  extends SidechainApiRoute[TX, H, PM, FPI, NH, NS, NW, NP, NV] {
 
   /**
    * The sidechain block by its id.

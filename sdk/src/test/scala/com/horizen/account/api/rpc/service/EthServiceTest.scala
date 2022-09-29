@@ -14,7 +14,6 @@ import org.junit.{Before, Test}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
 import org.web3j.utils.Numeric
-
 import java.math.BigInteger
 import scala.concurrent.duration.{FiniteDuration, SECONDS}
 

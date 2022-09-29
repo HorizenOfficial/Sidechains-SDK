@@ -20,3 +20,9 @@ log
 /examples/Dockerfile
 project/
 sc_test.log
+.metals/metals.lock.db
+.metals/metals.log
+.metals/metals.mv.db
+qa/.metals/metals.lock.db
+qa/.metals/metals.mv.db
+qa/.metals/metals.log

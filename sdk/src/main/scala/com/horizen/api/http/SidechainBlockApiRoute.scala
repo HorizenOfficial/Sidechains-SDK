@@ -11,6 +11,7 @@ import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainBlockRestSchema._
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.box.ZenBox
+import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.consensus.{intToConsensusEpochNumber, intToConsensusSlotNumber}
 import com.horizen.forge.AbstractForger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot
 import com.horizen.node.{NodeHistory, NodeMemoryPool, NodeState, NodeWallet, SidechainNodeView}
@@ -19,7 +20,6 @@ import com.horizen.utils.BytesUtils
 import sparkz.core.settings.RESTApiSettings
 import scorex.util.ModifierId
 import sparkz.core.serialization.SparkzSerializer
-
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
@@ -38,6 +38,7 @@ case class SidechainBlockApiRoute(
     SidechainTypes#SCBT,
     SidechainBlockHeader,
     SidechainBlock,
+    SidechainFeePaymentsInfo,
     NodeHistory,
     NodeState,
     NodeWallet,

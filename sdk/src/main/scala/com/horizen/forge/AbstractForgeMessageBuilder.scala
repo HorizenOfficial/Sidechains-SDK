@@ -2,7 +2,7 @@ package com.horizen.forge
 
 import akka.util.Timeout
 import com.horizen.block._
-import com.horizen.chain.{MainchainHeaderHash, SidechainBlockInfo}
+import com.horizen.chain.{AbstractFeePaymentsInfo, MainchainHeaderHash, SidechainBlockInfo}
 import com.horizen.consensus._
 import com.horizen.fork.ForkManager
 import com.horizen.params.{NetworkParams, RegTestParams}
@@ -34,9 +34,10 @@ abstract class AbstractForgeMessageBuilder[
     val params: NetworkParams,
     allowNoWebsocketConnectionInRegtest: Boolean) extends ScorexLogging
 {
-  type HSTOR <: AbstractHistoryStorage[PM, HSTOR]
+  type FPI <: AbstractFeePaymentsInfo
+  type HSTOR <: AbstractHistoryStorage[PM, FPI, HSTOR]
+  type HIS <: AbstractHistory[TX, H, PM, FPI, HSTOR, HIS]
   type VL <: AbstractWallet[TX, PM, VL]
-  type HIS <: AbstractHistory[TX, H, PM, HSTOR, HIS]
   type MS <: MinimalState[PM, MS]
   type MP <: MemoryPool[TX, MP]
 
@@ -341,6 +342,7 @@ abstract class AbstractForgeMessageBuilder[
       getZeroFeePaymentsHash()
     }
 
+    log.trace(s"Transactions to apply $transactions")
     val tryBlock = createNewBlock(
       nodeView,
       branchPointInfo,

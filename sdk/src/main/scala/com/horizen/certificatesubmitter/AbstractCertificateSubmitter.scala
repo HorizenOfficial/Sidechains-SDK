@@ -12,6 +12,7 @@ import com.horizen.certificatesubmitter.AbstractCertificateSubmitter._
 import com.horizen.certnative.BackwardTransfer
 import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.consensus.ConsensusEpochNumber
+import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
 import com.horizen.fork.ForkManager
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
@@ -30,7 +31,6 @@ import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallyS
 import sparkz.core.transaction.MemoryPool
 import sparkz.core.transaction.state.MinimalState
 import scorex.util.ScorexLogging
-
 import java.io.File
 import java.util
 import java.util.Optional
@@ -58,8 +58,9 @@ abstract class AbstractCertificateSubmitter[
                            mainchainChannel: MainchainNodeChannel)
   (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging
 {
-  type HSTOR <: AbstractHistoryStorage[PM, HSTOR]
-  type HIS <: AbstractHistory[TX, H, PM, HSTOR, HIS]
+  type FPI <: AbstractFeePaymentsInfo
+  type HSTOR <: AbstractHistoryStorage[PM, FPI, HSTOR]
+  type HIS <: AbstractHistory[TX, H, PM, FPI, HSTOR, HIS]
   type MS <: MinimalState[PM, MS]
   type VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PM, VL]
   type MP <: MemoryPool[TX, MP]

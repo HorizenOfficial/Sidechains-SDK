@@ -1,4 +1,5 @@
 from enum import Enum
+from pprint import pprint
 
 from SidechainTestFramework.account.address_util import format_eoa, format_evm
 from SidechainTestFramework.account.evm_util import CallMethod
@@ -93,9 +94,9 @@ def eoa_transaction(node, *,
                     to_addr: str,
                     value: int,
                     gas: int = 21000,
-                    gas_price: int = 1,
+                    gas_price: int = 875000000,
                     max_priority_fee_per_gas: int = 1,
-                    max_fee_per_gas: int = 1,
+                    max_fee_per_gas: int = 875000000,
                     data: str = '0x',
                     nonce: int = None,
                     tag='latest'):
@@ -116,6 +117,7 @@ def eoa_transaction(node, *,
                 print("No return data in static_call: {}".format(str(response)))
                 return None
         else:
+            pprint(response)
             raise RuntimeError("No result in static call, thus error")
 
     if call_method == CallMethod.RPC_LEGACY:

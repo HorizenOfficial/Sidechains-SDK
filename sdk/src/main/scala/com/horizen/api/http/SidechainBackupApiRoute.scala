@@ -20,6 +20,7 @@ import scala.util.{Failure, Success, Try}
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.backup.BoxIterator
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
 import com.horizen.transaction.Transaction
 
@@ -30,14 +31,15 @@ case class SidechainBackupApiRoute[
   TX <: Transaction,
   H <: SidechainBlockHeaderBase,
   PM <: SidechainBlockBase[TX, H],
-  NH <: NodeHistoryBase[TX, H, PM],
+  FPI <: AbstractFeePaymentsInfo,
+  NH <: NodeHistoryBase[TX, H, PM, FPI],
   NS <: NodeStateBase,
   NW <: NodeWalletBase,
   NP <: NodeMemoryPoolBase[TX],
-  NV <: SidechainNodeViewBase[TX, H, PM, NH, NS, NW, NP]](override val settings: RESTApiSettings,
+  NV <: SidechainNodeViewBase[TX, H, PM, FPI, NH, NS, NW, NP]](override val settings: RESTApiSettings,
                                 sidechainNodeViewHolderRef: ActorRef,
                                 boxIterator: BoxIterator)
-                               (implicit val context: ActorRefFactory, override val ec: ExecutionContext, override val tag: ClassTag[NV]) extends SidechainApiRoute[TX, H, PM, NH, NS, NW, NP, NV] {
+                               (implicit val context: ActorRefFactory, override val ec: ExecutionContext, override val tag: ClassTag[NV]) extends SidechainApiRoute[TX, H, PM, FPI, NH, NS, NW, NP, NV] {
   override val route: Route = pathPrefix("backup") {
     getSidechainBlockIdForBackup ~ getRestoredBoxes
   }

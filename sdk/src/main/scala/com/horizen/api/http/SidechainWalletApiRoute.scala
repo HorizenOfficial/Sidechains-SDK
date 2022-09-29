@@ -18,6 +18,8 @@ import sparkz.core.settings.RESTApiSettings
 import com.horizen.api.http.SidechainWalletErrorResponse.{ErrorFailedToParseSecret, ErrorPropositionNotFound, ErrorPropositionNotMatch, ErrorSecretAlreadyPresent}
 import com.horizen.companion.SidechainSecretsCompanion
 import com.horizen.secret.Secret
+import com.horizen.chain.SidechainFeePaymentsInfo
+
 
 import java.io.{File, PrintWriter}
 import scala.collection.JavaConverters._
@@ -36,6 +38,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
     SidechainTypes#SCBT,
     SidechainBlockHeader,
     SidechainBlock,
+    SidechainFeePaymentsInfo,
     NodeHistory,
     NodeState,
     NodeWallet,

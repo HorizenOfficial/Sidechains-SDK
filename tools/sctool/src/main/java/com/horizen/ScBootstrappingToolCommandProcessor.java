@@ -14,6 +14,7 @@ import com.horizen.account.secret.PrivateKeySecp256k1;
 import com.horizen.account.state.*;
 import com.horizen.account.storage.AccountStateMetadataStorageView;
 import com.horizen.account.transaction.AccountTransaction;
+import com.horizen.account.utils.AccountFeePaymentsUtils;
 import com.horizen.account.utils.MainchainTxCrosschainOutputAddressUtil;
 import com.horizen.account.utils.Secp256k1;
 import com.horizen.block.*;
@@ -679,15 +680,15 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             long currentTimeSeconds = System.currentTimeMillis() / 1000;
             long timestamp = (params instanceof RegTestParams) ? currentTimeSeconds - regtestBlockTimestampRewind : currentTimeSeconds;
 
-            // no fee payments expected for the genesis block
-            byte[] feePaymentsHash = new byte[32];
-
             int withdrawalEpochLength;
             String sidechainBlockHex;
 
 
             // are we building a utxo or account model based block?
             if (block_version == AccountBlock.ACCOUNT_BLOCK_VERSION()) {
+
+                // no fee payments expected for the genesis block
+                byte[] feePaymentsHash = AccountFeePaymentsUtils.DEFAULT_ACCOUNT_FEE_PAYMENTS_HASH();
 
                 byte[] stateRoot;
                 try {
@@ -749,6 +750,9 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
                 sidechainBlockHex = BytesUtils.toHexString(accountBlock.bytes());
             } else {
+                // no fee payments expected for the genesis block
+                byte[] feePaymentsHash = FeePaymentsUtils.DEFAULT_FEE_PAYMENTS_HASH();
+
                 ForgerBox forgerBox = sidechainCreation.getBox();
                 ForgingStakeInfo forgingStakeInfo = new ForgingStakeInfo(forgerBox.blockSignProposition(), forgerBox.vrfPubKey(), forgerBox.value());
 

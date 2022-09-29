@@ -2,6 +2,7 @@ package com.horizen
 
 import java.util.{Optional => JOptional}
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
+import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.consensus._
 import com.horizen.node.NodeHistory
 import com.horizen.params.{NetworkParams, NetworkParamsUtils}
@@ -15,8 +16,9 @@ class SidechainHistory private (storage: SidechainHistoryStorage,
                                 consensusDataStorage: ConsensusDataStorage,
                                 params: NetworkParams,
                                 semanticBlockValidators: Seq[SemanticBlockValidator[SidechainBlock]],
-                                historyBlockValidators: Seq[HistoryBlockValidator[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistoryStorage, SidechainHistory]])
-  extends AbstractHistory[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistoryStorage, SidechainHistory](
+                                historyBlockValidators: Seq[HistoryBlockValidator[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainFeePaymentsInfo, SidechainHistoryStorage, SidechainHistory]])
+  extends AbstractHistory[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainFeePaymentsInfo, SidechainHistoryStorage, SidechainHistory](
+
     storage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)
 
   with NetworkParamsUtils
@@ -76,7 +78,7 @@ object SidechainHistory
                                       consensusDataStorage: ConsensusDataStorage,
                                       params: NetworkParams,
                                       semanticBlockValidators: Seq[SemanticBlockValidator[SidechainBlock]],
-                                      historyBlockValidators: Seq[HistoryBlockValidator[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistoryStorage, SidechainHistory]]): Option[SidechainHistory] = {
+                                      historyBlockValidators: Seq[HistoryBlockValidator[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainFeePaymentsInfo, SidechainHistoryStorage, SidechainHistory]]): Option[SidechainHistory] = {
 
     if (!historyStorage.isEmpty)
       Some(new SidechainHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators))
@@ -87,12 +89,14 @@ object SidechainHistory
 
 
   private[horizen] def createGenesisHistory(historyStorage: SidechainHistoryStorage,
-                                      consensusDataStorage: ConsensusDataStorage,
-                                      params: NetworkParams,
-                                      genesisBlock: SidechainBlock,
-                                      semanticBlockValidators: Seq[SemanticBlockValidator[SidechainBlock]],
-                                      historyBlockValidators: Seq[HistoryBlockValidator[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainHistoryStorage, SidechainHistory]],
-                                      stakeEpochInfo: StakeConsensusEpochInfo) : Try[SidechainHistory] = {
+                                            consensusDataStorage: ConsensusDataStorage,
+                                            params: NetworkParams,
+                                            genesisBlock: SidechainBlock,
+                                            semanticBlockValidators: Seq[SemanticBlockValidator[SidechainBlock]],
+                                            historyBlockValidators: Seq[HistoryBlockValidator[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainFeePaymentsInfo, SidechainHistoryStorage, SidechainHistory]],
+                                            stakeEpochInfo: StakeConsensusEpochInfo) : Try[SidechainHistory] = {
+
+
     if (historyStorage.isEmpty) {
       val nonceEpochInfo = ConsensusDataProvider.calculateNonceForGenesisBlock(params)
       new SidechainHistory(historyStorage, consensusDataStorage, params, semanticBlockValidators, historyBlockValidators)

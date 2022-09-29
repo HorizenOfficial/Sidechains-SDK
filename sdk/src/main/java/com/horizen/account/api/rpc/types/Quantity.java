@@ -22,4 +22,9 @@ public class Quantity {
     public String getValue() {
         return value;
     }
+
+    @Override
+    public String toString() {
+        return String.format("Quantity{value='%s'}", value);
+    }
 }

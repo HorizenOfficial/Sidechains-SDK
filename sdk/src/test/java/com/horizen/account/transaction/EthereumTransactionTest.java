@@ -1,5 +1,6 @@
 package com.horizen.account.transaction;
 
+import com.horizen.account.fixtures.EthereumTransactionFixture;
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.utils.EthereumTransactionDecoder;
@@ -11,6 +12,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.web3j.crypto.*;
 import org.web3j.utils.Numeric;
+import scala.Option;
+import scala.Some;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -155,7 +158,7 @@ public class EthereumTransactionTest {
         // Test 4: toString function returns correctly
         ethereumTransaction = new EthereumTransaction(rawTransaction);
         assertEquals("Ethereum Transaction to String expected to be equal",
-                "EthereumTransaction{from=, nonce=0x1, gasPrice=0x1, gasLimit=0x1, to=0x, value=0x1, data=0x, " +
+                "EthereumTransaction{id=" + ethereumTransaction.id() + ", from=, nonce=0x1, gasPrice=0x1, gasLimit=0x1, to=0x, value=0x1, data=0x, " +
                         "Signature=}",
                 ethereumTransaction.toString());
 
@@ -169,10 +172,10 @@ public class EthereumTransactionTest {
         EthereumTransaction ethereumTransactionDeserialize = EthereumTransactionSerializer.getSerializer().parseBytes(ethereumTransaction.bytes());
         assertArrayEquals(ethereumTransaction.messageToSign(), ethereumTransactionDeserialize.messageToSign());
 
-        // Test 7: getMaxFeePerGas should be null, as this is a legacy transaction
-        assertNull(ethereumTransaction.getMaxFeePerGas());
-        // Test 8: getMaxPriorityFeePerGas should be null, as this is a legacy transaction
-        assertNull(ethereumTransaction.getMaxPriorityFeePerGas());
+        // Test 7: getMaxFeePerGas should be equal to gas price, as this is a legacy transaction
+        assertEquals(ethereumTransaction.getGasPrice(), ethereumTransaction.getMaxFeePerGas());
+        // Test 8: getMaxPriorityFeePerGas should be equal to gas price, as this is a legacy transaction
+        assertEquals(ethereumTransaction.getGasPrice(), ethereumTransaction.getMaxPriorityFeePerGas());
         // Test 9: getChainId should be null, as this is a legacy transaction
         assertNull(ethereumTransaction.getChainId());
         // Test 10: getFrom should be null, as this is an unsigned tx
@@ -288,7 +291,7 @@ public class EthereumTransactionTest {
 
         // Test 2: toString function returns correctly
         ethereumTransaction = new EthereumTransaction(rawTransaction);
-        assertEquals("EthereumTransaction{from=, nonce=0x1, gasLimit=0x1, to=0x, value=0x1, data=0x, " +
+        assertEquals("EthereumTransaction{id=" + ethereumTransaction.id() + ", from=, nonce=0x1, gasLimit=0x1, to=0x, value=0x1, data=0x, " +
                         "maxFeePerGas=0x1, maxPriorityFeePerGas=0x1, Signature=}",
                 ethereumTransaction.toString());
 
@@ -298,7 +301,7 @@ public class EthereumTransactionTest {
         // Test 4: ethereum transaction object returns version correctly
         assertEquals(2 /*eip1559*/, ethereumTransaction.version());
 
-        assertNull(ethereumTransaction.getGasPrice());
+        assertEquals(ethereumTransaction.getMaxFeePerGas(),ethereumTransaction.getGasPrice());
 
         // Test 5: ethereum transaction instance returns messageToSign correctly
         EthereumTransaction ethereumTransactionDeserialize = EthereumTransactionSerializer.getSerializer().parseBytes(ethereumTransaction.bytes());
@@ -370,7 +373,7 @@ public class EthereumTransactionTest {
         ethereumTransaction = new EthereumTransaction(signedRawTransaction);
         try {
             assertEquals("Ethereum Transaction to String expected to be equal",
-                    "EthereumTransaction{from=" + signedRawTransaction.getFrom()
+                    "EthereumTransaction{id=" + ethereumTransaction.id() + ", from=" + signedRawTransaction.getFrom()
                             + ", nonce=0x1, gasPrice=0x1, gasLimit=0x1, to=0x, value=0x1, data=0x, "
                             + "Signature=" + secp256k1Signature.toString() + "}",
                     ethereumTransaction.toString());
@@ -421,7 +424,7 @@ public class EthereumTransactionTest {
                     someValue, "", signedRawTransaction.getSignatureData()
             );
             assertNotNull(someTx.getSignature());
-            assertEquals("EthereumTransaction{from=" + someTx.getFromAddress() + ", nonce=0x1, gasLimit=0x1, to=0x, value=" +
+            assertEquals("EthereumTransaction{id=" + someTx.id() + ", from=" + someTx.getFromAddress() + ", nonce=0x1, gasLimit=0x1, to=0x, value=" +
                             "0x1, data=0x, " +
                             "maxFeePerGas=0x1, maxPriorityFeePerGas=0x1, Signature=" + someTx.getSignature().toString() + '}',
                     someTx.toString());
@@ -457,7 +460,7 @@ public class EthereumTransactionTest {
         ethereumTransaction = new EthereumTransaction(signedRawTransaction);
         try {
             assertEquals("Ethereum Transaction to String expected to be equal",
-                    "EthereumTransaction{from=" + signedRawTransaction.getFrom()
+                    "EthereumTransaction{id=" + ethereumTransaction.id() + ", from=" + signedRawTransaction.getFrom()
                             + ", nonce=0x1, gasPrice=0x1, gasLimit=0x1, to=0x, value=0x1, data=0x, "
                             + "Signature=" + secp256k1Signature.toString() + "}",
                     ethereumTransaction.toString());
@@ -556,4 +559,8 @@ public class EthereumTransactionTest {
         assertThrows("Test2: Exception during tx decoding expected", IllegalArgumentException.class,
                 () -> EthereumTransactionDecoder.decode("0x02f9040c0183012ec786023199fa3df88602e59652e99b8303851d9400000000003b3cc22af3ae1eac0440bcee416b4080b8530100d5a0afa68dd8cb83097765263adad881af6eed479c4a33ab293dce330b92aa52bc2a7cd3816edaa75f890b00000000000000000000000000000000000000000000007eb2e82c51126a5dde0a2e2a52f701f90344f9024994a68dd8cb83097765263adad881af6eed479c4a33f90231a00000000000000000000000000000000000000000000000000000000000000004a0745448ebd86f892e3973b919a6686b32d8505f8eb2e02df5a36797f187adb881a00000000000000000000000000000000000000000000000000000000000000003a00000000000000000000000000000000000000000000000000000000000000011a0a580422a537c1b63e41b8febf02c6c28bef8713a2a44af985cc8d4c2b24b1c86a091e3d6ffd1390da3bfbc0e0875515e89982841b064fcda9b67cffc63d8082ab6a091e3d6ffd1390da3bfbc0e0875515e89982841b064fcda9b67cffc63d8082ab8a0bf9ee777cf4683df01da9dfd7aeab60490278463b1d516455d67d23c750f96dca00000000000000000000000000000000000000000000000000000000000000012a0000000000000000000000000000000000000000000000000000000000000000fa00000000000000000000000000000000000000000000000000000000000000010a0a580422a537c1b63e41b8febf02c6c28bef8713a2a44af985cc8d4c2b24b1c88a0bd9bbcf6ef1c613b05ca02fcfe3d4505eb1c5d375083cb127bda8b8afcd050fba06306683371f43cb3203ee553ce8ac90eb82e4721cc5335d281e1e556d3edcdbca00000000000000000000000000000000000000000000000000000000000000013a0bd9bbcf6ef1c613b05ca02fcfe3d4505eb1c5d375083cb127bda8b8afcd050f9a00000000000000000000000000000000000000000000000000000000000000014f89b94ab293dce330b92aa52bc2a7cd3816edaa75f890bf884a0000000000000000000000000000000000000000000000000000000000000000ca00000000000000000000000000000000000000000000000000000000000000008a00000000000000000000000000000000000000000000000000000000000000006a00000000000000000000000000000000000000000000000000000000000000007f85994c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2f842a051c9df7cdd01b5cb5fb293792b1e67ec1ac1048ae7e4c7cf6cf46883589dfbd4a03c679e5fc421e825187f885e3dcd7f4493f886ceeb4930450588e35818a32b9c80a020d7f34682e1c2834fcb0838e08be184ea6eba5189eda34c9a7561a209f7ed04a07c63c158f32d26630a9732d7553cfc5b16cff01f0a72c41842da693821ccdfcb"));
     }
+
+
+
+
 }

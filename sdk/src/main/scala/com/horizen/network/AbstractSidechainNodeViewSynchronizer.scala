@@ -3,6 +3,7 @@ package com.horizen.network
 import akka.actor.ActorRef
 import com.horizen._
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
 import com.horizen.validation.{BlockInFutureException, InconsistentDataException}
@@ -13,7 +14,6 @@ import sparkz.core.settings.NetworkSettings
 import sparkz.core.transaction.MempoolReader
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
-
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
@@ -22,8 +22,9 @@ abstract class AbstractSidechainNodeViewSynchronizer[
   H <: SidechainBlockHeaderBase,
   PMOD <: SidechainBlockBase[TX, H],
   MR <: MempoolReader[TX]  : ClassTag,
-  HSTOR <: AbstractHistoryStorage[PMOD, HSTOR],
-  HIS <: AbstractHistory[TX, H, PMOD, HSTOR, HIS] : ClassTag]
+  FPI <: AbstractFeePaymentsInfo,
+  HSTOR <: AbstractHistoryStorage[PMOD, FPI, HSTOR],
+  HIS <: AbstractHistory[TX, H, PMOD, FPI, HSTOR, HIS] : ClassTag]
 (
   networkControllerRef: ActorRef,
   viewHolderRef: ActorRef,

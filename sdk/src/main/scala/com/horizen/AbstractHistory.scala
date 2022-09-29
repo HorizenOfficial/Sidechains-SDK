@@ -26,19 +26,21 @@ abstract class AbstractHistory[
   TX <: Transaction,
   H <: SidechainBlockHeaderBase,
   PM <: SidechainBlockBase[TX, H],
-  HSTOR <: AbstractHistoryStorage[PM, HSTOR],
-  HT <: AbstractHistory[TX, H, PM, HSTOR, HT]
+  FPI <: AbstractFeePaymentsInfo,
+  HSTOR <: AbstractHistoryStorage[PM, FPI, HSTOR],
+  HT <: AbstractHistory[TX, H, PM, FPI, HSTOR, HT]
+
 ] protected (
     val storage: HSTOR,
     val consensusDataStorage: ConsensusDataStorage,
     val params: NetworkParams,
     val semanticBlockValidators: Seq[SemanticBlockValidator[PM]],
-    val historyBlockValidators: Seq[HistoryBlockValidator[TX, H, PM, HSTOR, HT]]
+    val historyBlockValidators: Seq[HistoryBlockValidator[TX, H, PM, FPI, HSTOR, HT]]
   )
     extends sparkz.core.consensus.History[PM, SidechainSyncInfo, HT]
       with NetworkParamsUtils
       with ConsensusDataProvider
-      with NodeHistoryBase[TX, H, PM]
+      with NodeHistoryBase[TX, H, PM, FPI]
       with ScorexLogging
 {
   self: HT =>
@@ -428,16 +430,16 @@ abstract class AbstractHistory[
     height
   }
 
-  def getFeePaymentsInfo(blockId: String): java.util.Optional[FeePaymentsInfo] = {
+  def getFeePaymentsInfo(blockId: String): java.util.Optional[FPI] = {
     feePaymentsInfo(ModifierId @@ blockId).asJava
   }
 
-  def updateFeePaymentsInfo(blockId: ModifierId, feePaymentsInfo: FeePaymentsInfo): HT = {
+  def updateFeePaymentsInfo(blockId: ModifierId, feePaymentsInfo: FPI): HT = {
     val newStorage = storage.updateFeePaymentsInfo(blockId, feePaymentsInfo).get
     makeNewHistory(newStorage, consensusDataStorage)
   }
 
-  def feePaymentsInfo(blockId: ModifierId): Option[FeePaymentsInfo] = {
+  def feePaymentsInfo(blockId: ModifierId): Option[FPI] = {
     storage.getFeePaymentsInfo(blockId)
   }
 

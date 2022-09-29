@@ -16,6 +16,7 @@ import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
 import com.horizen.box.{Box, ZenBox}
 import com.horizen.box.ForgerBox
+import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.node._
 import com.horizen.params.NetworkParams
@@ -42,7 +43,7 @@ case class SidechainTransactionApiRoute(override val settings: RESTApiSettings,
                                         params: NetworkParams)
                                        (implicit val context: ActorRefFactory, override val ec: ExecutionContext)
   extends SidechainApiRoute[SidechainTypes#SCBT,
-    SidechainBlockHeader,SidechainBlock,NodeHistory,NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView]  with SidechainTypes {
+    SidechainBlockHeader,SidechainBlock,SidechainFeePaymentsInfo,NodeHistory, NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView]  with SidechainTypes {
 
   override implicit val tag: ClassTag[SidechainNodeView] = ClassTag[SidechainNodeView](classOf[SidechainNodeView])
 

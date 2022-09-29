@@ -7,6 +7,7 @@ import akka.pattern.ask
 import com.horizen.AbstractSidechainNodeViewHolder
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.box.Box
+import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.node._
 import com.horizen.proposition.Proposition
 import com.horizen.transaction.BoxTransaction
@@ -42,6 +43,7 @@ case class ApplicationApiRoute(override val settings: RESTApiSettings, applicati
       BoxTransaction[Proposition, Box[Proposition]],
       SidechainBlockHeader,
       SidechainBlock,
+      SidechainFeePaymentsInfo,
       NodeHistory,
       NodeState,
       NodeWallet,
@@ -56,6 +58,7 @@ case class ApplicationApiRoute(override val settings: RESTApiSettings, applicati
       BoxTransaction[Proposition, Box[Proposition]],
       SidechainBlockHeader,
       SidechainBlock,
+      SidechainFeePaymentsInfo,
       NodeHistory,
       NodeState,
       NodeWallet,

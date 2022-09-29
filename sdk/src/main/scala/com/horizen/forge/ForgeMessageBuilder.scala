@@ -1,7 +1,9 @@
 package com.horizen.forge
 
+
 import com.horizen.block._
 import com.horizen.box.Box
+import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus._
 import com.horizen.params.NetworkParams
@@ -20,7 +22,6 @@ import scala.collection.JavaConverters._
 import sparkz.core.NodeViewModifier
 import sparkz.core.block.Block
 import sparkz.core.block.Block.BlockId
-
 import scala.util.{Failure, Success, Try}
 
 class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
@@ -33,6 +34,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     SidechainBlock](
   mainchainSynchronizer, companion, params, allowNoWebsocketConnectionInRegtest
 ) {
+  type FPI = SidechainFeePaymentsInfo
   type HSTOR = SidechainHistoryStorage
   type VL = SidechainWallet
   type HIS = SidechainHistory
@@ -70,8 +72,6 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
         SidechainBlock.BLOCK_VERSION,
         timestamp,
         mainchainBlockReferencesData,
-        // TODO check, why this works?
-        //  sidechainTransactions.map(asInstanceOf),
         sidechainTransactions.map(x => x.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]),
         mainchainHeaders,
         ommers,
@@ -80,8 +80,6 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
         vrfProof,
         forgingStakeInfoMerklePath,
         new Array[Byte](32), // dummy feePaymentsHash value
-        // TODO check, why this works?
-        //companion.asInstanceOf)
         companion.asInstanceOf[SidechainTransactionsCompanion]
       ) match {
         case Success(blockTemplate) => blockTemplate.feeInfo
@@ -101,8 +99,6 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       SidechainBlock.BLOCK_VERSION,
       timestamp,
       mainchainBlockReferencesData,
-      // TODO check, why this works?
-      //  sidechainTransactions.map(asInstanceOf),
       sidechainTransactions.map(x => x.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]),
       mainchainHeaders,
       ommers,
@@ -111,8 +107,6 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
       vrfProof,
       forgingStakeInfoMerklePath,
       feePaymentsHash,
-      // TODO check, why this works?
-      //companion.asInstanceOf)
       companion.asInstanceOf[SidechainTransactionsCompanion])
   }
 

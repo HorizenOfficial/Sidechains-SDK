@@ -1,5 +1,6 @@
 package com.horizen.account.state
 
+import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.evm.interop.EvmLog
 
 import java.math.BigInteger
@@ -16,4 +17,6 @@ trait AccountStateReader {
 
   def getLogs(txHash: Array[Byte]): Array[EvmLog]
   def getIntermediateRoot: Array[Byte]
+  def baseFee: BigInteger
+
 }

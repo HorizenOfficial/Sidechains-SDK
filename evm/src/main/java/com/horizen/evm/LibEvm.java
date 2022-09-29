@@ -205,14 +205,15 @@ final class LibEvm {
             byte[] input,
             BigInteger gasLimit,
             BigInteger gasPrice,
-            EvmContext context
+            EvmContext context,
+            TraceParams traceParams
     ) {
         if (context == null) {
             context = new EvmContext();
             // TODO: decide what EIPs we are implementing, setting the baseFee to zero currently allows a gas price of zero
             context.baseFee = BigInteger.ZERO;
         }
-        var params = new EvmParams(handle, from, to, value, input, gasLimit, gasPrice, context);
+        var params = new EvmParams(handle, from, to, value, input, gasLimit, gasPrice, context, traceParams);
         return invoke("EvmApply", params, EvmResult.class);
     }
 

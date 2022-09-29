@@ -9,10 +9,10 @@ import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainCswErrorResponse._
 import com.horizen.api.http.SidechainCswRestScheme._
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
+import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.csw.CswManager.Responses._
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
-
 
 import java.util.{Optional => JOptional}
 import scala.concurrent.Await
@@ -34,6 +34,7 @@ abstract class SidechainCswApiRoute (override val settings: RESTApiSettings,
     SidechainTypes#SCBT,
     SidechainBlockHeader,
     SidechainBlock,
+    SidechainFeePaymentsInfo,
     NodeHistory,
     NodeState,
     NodeWallet,

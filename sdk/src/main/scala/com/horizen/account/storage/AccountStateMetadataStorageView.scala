@@ -3,14 +3,14 @@ package com.horizen.account.storage
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.account.receipt.{EthereumReceipt, EthereumReceiptSerializer}
 import com.horizen.account.storage.AccountStateMetadataStorageView.DEFAULT_ACCOUNT_STATE_ROOT
+import com.horizen.account.utils.{AccountBlockFeeInfo, AccountBlockFeeInfoSerializer}
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
 import com.horizen.storage.Storage
-import com.horizen.utils.{BlockFeeInfo, ByteArrayWrapper, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
+import com.horizen.utils.{ByteArrayWrapper, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
 import sparkz.core._
 import scorex.crypto.hash.Blake2b256
 import scorex.util.ScorexLogging
-
 import java.math.BigInteger
 import java.util.{ArrayList => JArrayList}
 import scala.collection.mutable.ListBuffer
@@ -34,7 +34,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
   private[horizen] var hasCeasedOpt: Option[Boolean] = None
   private[horizen] var withdrawalEpochInfoOpt: Option[WithdrawalEpochInfo] = None
   private[horizen] var topQualityCertificateOpt: Option[WithdrawalEpochCertificate] = None
-  private[horizen] var blockFeeInfoOpt: Option[BlockFeeInfo] = None
+  private[horizen] var blockFeeInfoOpt: Option[AccountBlockFeeInfo] = None
   private[horizen] var consensusEpochOpt: Option[ConsensusEpochNumber] = None
   private[horizen] var accountStateRootOpt: Option[Array[Byte]] = None
   private[horizen] var receiptsOpt: Option[Seq[EthereumReceipt]] = None
@@ -59,12 +59,12 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     }
   }
 
-  override def getFeePayments(withdrawalEpochNumber: Int): Seq[BlockFeeInfo] = {
-    val blockFees: ListBuffer[BlockFeeInfo] = ListBuffer()
+  override def getFeePayments(withdrawalEpochNumber: Int): Seq[AccountBlockFeeInfo] = {
+    val blockFees: ListBuffer[AccountBlockFeeInfo] = ListBuffer()
     val lastCounter = getBlockFeeInfoCounter(withdrawalEpochNumber)
     for (counter <- 0 to lastCounter) {
       storage.get(getBlockFeeInfoKey(withdrawalEpochNumber, counter)).asScala match {
-        case Some(baw) => BlockFeeInfoSerializer.parseBytesTry(baw.data) match {
+        case Some(baw) => AccountBlockFeeInfoSerializer.parseBytesTry(baw.data) match {
           case Success(info) => blockFees.append(info)
           case Failure(exception) =>
             log.error("Error while fee payment parsing.", exception)
@@ -170,7 +170,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     receiptsOpt = Some(receipts)
   }
 
-  def addFeePayment(blockFeeInfo: BlockFeeInfo): Unit = {
+  def addFeePayment(blockFeeInfo: AccountBlockFeeInfo): Unit = {
     blockFeeInfoOpt = Some(blockFeeInfo)
   }
 
@@ -249,7 +249,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
         new ByteArrayWrapper(Ints.toByteArray(nextBlockFeeInfoCounter))))
 
       updateList.add(new JPair(getBlockFeeInfoKey(epochInfo.epoch, nextBlockFeeInfoCounter),
-        new ByteArrayWrapper(BlockFeeInfoSerializer.toBytes(feeInfo))))
+        new ByteArrayWrapper(AccountBlockFeeInfoSerializer.toBytes(feeInfo))))
       }
     )
 
@@ -274,8 +274,7 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
     // If withdrawal epoch switched to the next one, then perform some database clean-up:
     // 1) remove outdated topQualityCertificate retrieved 3 epochs before and referenced to the 4 epochs before.
     //    Note: we should keep last 2 epoch certificates, so in case SC has ceased we have an access to the last active cert.
-    // 1) remove outdated BlockFeeInfo records
-
+    // 2) remove outdated AccountBlockFeeInfo records, the relevant forger fee payments have been stored in history by node view holder
     withdrawalEpochInfoOpt match {
       case Some(epochInfo) =>
         val isWithdrawalEpochSwitched: Boolean = getWithdrawalEpochInfoFromStorage match {
@@ -286,6 +285,8 @@ class AccountStateMetadataStorageView(storage: Storage) extends AccountStateMeta
           val certEpochNumberToRemove: Int = epochInfo.epoch - 4
           removeList.add(getTopQualityCertificateKey(certEpochNumberToRemove))
 
+          // TODO: is it safe to remove outdated AccountBlockFeeInfo?
+          //       Can it have an impact in case we need to debug_block (eth rpc call) with fee payments in the past?
           val blockFeeInfoEpochToRemove: Int = epochInfo.epoch - 1
           for (counter <- 0 to getBlockFeeInfoCounter(blockFeeInfoEpochToRemove)) {
             removeList.add(getBlockFeeInfoKey(blockFeeInfoEpochToRemove, counter))

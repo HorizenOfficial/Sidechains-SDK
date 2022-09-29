@@ -3,17 +3,13 @@ package com.horizen.network
 import akka.actor.{ActorRef, ActorRefFactory, Props}
 import com.horizen._
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
+import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.storage.SidechainHistoryStorage
-import com.horizen.validation.{BlockInFutureException, InconsistentDataException}
-
 import sparkz.core.transaction.MempoolReader
-import sparkz.core.network.NodeViewSynchronizer
-import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SyntacticallyFailedModification
 import sparkz.core.serialization.SparkzSerializer
 import sparkz.core.settings.NetworkSettings
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.{ModifierTypeId, NodeViewModifier}
-
 import scala.concurrent.ExecutionContext
 
 class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
@@ -25,7 +21,9 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
   extends AbstractSidechainNodeViewSynchronizer[
     SidechainTypes#SCBT,
     SidechainBlockHeader,
-    SidechainBlock, MempoolReader[SidechainTypes#SCBT], SidechainHistoryStorage, SidechainHistory](networkControllerRef, viewHolderRef, syncInfoSpec, networkSettings, timeProvider, modifierSerializers){
+    SidechainBlock, MempoolReader[SidechainTypes#SCBT],
+    SidechainFeePaymentsInfo,
+    SidechainHistoryStorage, SidechainHistory](networkControllerRef, viewHolderRef, syncInfoSpec, networkSettings, timeProvider, modifierSerializers){
  }
 
 

@@ -5,12 +5,13 @@ import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.account.api.http.AccountWalletErrorResponse.ErrorCouldNotGetBalance
-import com.horizen.account.api.http.AccountWalletRestScheme.{ReqGetBalance, RespCreatePrivateKeySecp256k1, RespGetBalance}
+import com.horizen.account.api.http.AccountWalletRestScheme.{ReqGetBalance, ReqGetTotalBalance, RespCreatePrivateKeySecp256k1, RespGetBalance}
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainTypes}
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.secret.PrivateKeySecp256k1Creator
+import com.horizen.account.secret.{PrivateKeySecp256k1, PrivateKeySecp256k1Creator}
 import com.horizen.api.http.WalletBaseErrorResponse.ErrorSecretNotAdded
 import com.horizen.api.http.{ApiResponseUtil, ErrorResponse, SuccessResponse, WalletBaseApiRoute}
 import com.horizen.node.NodeWalletBase
@@ -26,6 +27,7 @@ import scala.util.{Failure, Success, Try}
 import com.horizen.api.http.JacksonSupport._
 
 import java.math.BigInteger
+import scala.collection.JavaConverters.asScalaBufferConverter
 
 
 case class AccountWalletApiRoute(override val settings: RESTApiSettings,
@@ -34,6 +36,7 @@ case class AccountWalletApiRoute(override val settings: RESTApiSettings,
     SidechainTypes#SCAT,
     AccountBlockHeader,
     AccountBlock,
+    AccountFeePaymentsInfo,
     NodeAccountHistory,
     NodeAccountState,
     NodeWalletBase,
@@ -42,7 +45,7 @@ case class AccountWalletApiRoute(override val settings: RESTApiSettings,
 
   override val route: Route = pathPrefix("wallet") {
     // some of these methods are in the base class
-    createPrivateKey25519 ~ createVrfSecret ~ allPublicKeys ~ createPrivateKeySecp256k1 ~ getBalance
+    createPrivateKey25519 ~ createVrfSecret ~ allPublicKeys ~ createPrivateKeySecp256k1 ~ getBalance ~ getTotalBalance
   }
 
   override implicit val tag: ClassTag[AccountNodeView] = ClassTag[AccountNodeView](classOf[AccountNodeView])
@@ -84,6 +87,38 @@ case class AccountWalletApiRoute(override val settings: RESTApiSettings,
       }
     }
   }
+
+  /**
+   * Check total balance of the wallet.
+   */
+  def getTotalBalance: Route = (post & path("getTotalBalance")) {
+    entity(as[ReqGetTotalBalance]) { body =>
+      // TODO add an argument for listing also all addresses balance
+      applyOnNodeView { sidechainNodeView =>
+        try {
+          val wallet = sidechainNodeView.getNodeWallet
+          val addressList = wallet.secretsOfType(classOf[PrivateKeySecp256k1])
+          if (addressList.isEmpty) {
+            return ApiResponseUtil.toResponse(RespGetBalance(BigInteger.ZERO))
+          }
+
+          val listOfAddressPropositions = addressList.asScala.map(s =>
+              s.publicImage().asInstanceOf[AddressProposition])
+          var totalBalance = BigInteger.ZERO
+          listOfAddressPropositions.foreach(address =>
+            totalBalance = totalBalance.add(sidechainNodeView.getNodeState.getBalance(address.address())))
+
+          ApiResponseUtil.toResponse(RespGetBalance(totalBalance))
+        }
+        catch
+        {
+          case e: Exception =>
+            ApiResponseUtil.toResponse(ErrorCouldNotGetBalance("Could not get balance", JOptional.of(e)))
+        }
+      }
+    }
+  }
+
 }
 
 object AccountWalletRestScheme {
@@ -96,6 +131,10 @@ object AccountWalletRestScheme {
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqGetBalance(address: String) {
     require(address.nonEmpty, "Empty address")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqGetTotalBalance() {
   }
 }
 

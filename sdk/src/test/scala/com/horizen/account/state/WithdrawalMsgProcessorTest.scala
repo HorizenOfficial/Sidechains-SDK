@@ -41,8 +41,8 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
           WithdrawalMsgProcessor.contractAddress,
           args.getArgument(0))
         assertArrayEquals(
-          "Different code hash expected.",
-          WithdrawalMsgProcessor.contractCodeHash,
+          "Different code expected.",
+          WithdrawalMsgProcessor.contractCode,
           args.getArgument(1))
       })
     WithdrawalMsgProcessor.init(mockStateView)
@@ -164,7 +164,7 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
         mockWithdrawalRequestsList.get(new ByteArrayWrapper(key))
       })
 
-    returnData = withGas(WithdrawalMsgProcessor.process(msg, mockStateView, _, defaultBlockContext))
+    returnData = withGas(WithdrawalMsgProcessor.process(msg, mockStateView, _, defaultBlockContext), 10000000)
     assertArrayEquals(WithdrawalRequestsListEncoder.encode(expectedListOfWR), returnData)
   }
 }

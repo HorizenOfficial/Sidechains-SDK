@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
 import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
 import com.horizen.SidechainTypes
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
+import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.account.transaction.{AccountTransaction, EthereumTransaction}
@@ -94,6 +95,7 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
           AccountTransaction[Proposition, Proof[Proposition]],
           AccountBlockHeader,
           AccountBlock,
+          AccountFeePaymentsInfo,
           NodeAccountHistory,
           NodeAccountState,
           NodeWalletBase,
@@ -110,6 +112,7 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
           AccountTransaction[Proposition, Proof[Proposition]],
           AccountBlockHeader,
           AccountBlock,
+          AccountFeePaymentsInfo,
           NodeAccountHistory,
           NodeAccountState,
           NodeWalletBase,
@@ -125,6 +128,7 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
           AccountTransaction[Proposition, Proof[Proposition]],
           AccountBlockHeader,
           AccountBlock,
+          AccountFeePaymentsInfo,
           NodeAccountHistory,
           NodeAccountState,
           NodeWalletBase,
