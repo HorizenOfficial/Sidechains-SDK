@@ -124,7 +124,7 @@ def launch_bootstrap_tool(command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK",
-                                          "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.5.0-SNAPSHOT.jar",
+                                          "..") + "/tools/sctool/target/sidechains-sdk-scbootstrappingtools-0.5.0.jar",
                                 command_name, json_param], stdout=subprocess.PIPE)
     sc_bootstrap_output = java_ps.communicate()[0]
     try:
@@ -146,7 +146,7 @@ def launch_db_tool(dirName, storageNames, command_name, json_parameters):
     json_param = json.dumps(json_parameters)
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK",
-                                          "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-0.5.0-SNAPSHOT.jar",
+                                          "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-0.5.0.jar",
                                 storagesPath, storageNames, command_name, json_param], stdout=subprocess.PIPE)
     db_tool_output = java_ps.communicate()[0]
     try:
@@ -543,9 +543,12 @@ def get_lib_separator():
         lib_separator = ";"
     return lib_separator
 
+def get_examples_dir():
+    return os.path.abspath(os.path.join(os.path.dirname( __file__ ), '../..', 'examples'))
 
-SIMPLE_APP_BINARY = "../examples/simpleapp/target/sidechains-sdk-simpleapp-0.5.0-SNAPSHOT.jar" + get_lib_separator() + "../examples/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
-EVM_APP_BINARY = "../examples/evmapp/target/sidechains-sdk-evmapp-0.5.0-SNAPSHOT.jar" + get_lib_separator() + "../examples/evmapp/target/lib/* com.horizen.examples.EvmApp"
+SIMPLE_APP_BINARY = get_examples_dir() + "/simpleapp/target/sidechains-sdk-simpleapp-0.5.0.jar" + get_lib_separator() + get_examples_dir() + "/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+EVM_APP_BINARY = get_examples_dir() + "/evmapp/target/sidechains-sdk-evmapp-0.5.0-SNAPSHOT.jar" + get_lib_separator() + get_examples_dir() + "/evmapp/target/lib/* com.horizen.examples.EvmApp"
+
 
 
 
@@ -561,10 +564,8 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
 
     if sys.platform.startswith('win'):
         lib_separator = ";"
-    examples_dir = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '../..', 'examples'))
     if binary is None:
         binary = SIMPLE_APP_BINARY
-
     #        else if platform.system() == 'Linux':
     '''
     In order to effectively attach a debugger (e.g IntelliJ) to the simpleapp, it is necessary to start the process
