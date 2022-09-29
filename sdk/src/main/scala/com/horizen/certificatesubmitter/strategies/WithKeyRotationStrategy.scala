@@ -58,8 +58,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       sidechainCreationVersion.id,
       certificateData.genesisKeysRootHash,
       provingFileAbsolutePath,
-      true,
-      true,
+      true
     )
   }
 
