@@ -44,8 +44,8 @@ class MempoolMapTest
 
 
     // Legacy tx with legacy tx
-    val legacyTxHigherPrice = createLegacyTransaction(value, nonce, Option.empty, Some(higherGasPrice))
-    val legacyTxLowerPrice = createLegacyTransaction(value, nonce, Option.empty, Some(lowerGasPrice))
+    val legacyTxHigherPrice = createLegacyTransaction(value, nonce, Option.empty, higherGasPrice)
+    val legacyTxLowerPrice = createLegacyTransaction(value, nonce, Option.empty, lowerGasPrice)
     assertTrue(mempoolMap.canPayHigherFee(legacyTxHigherPrice, legacyTxLowerPrice))
     assertFalse(mempoolMap.canPayHigherFee(legacyTxHigherPrice, legacyTxHigherPrice))
     assertFalse(mempoolMap.canPayHigherFee(legacyTxLowerPrice, legacyTxHigherPrice))
@@ -823,7 +823,7 @@ class MempoolMapTest
       value,
       initialStateNonce,
       account2KeyPairOpt,
-      gasPrice = Some(BigInteger.valueOf(15))
+      gasPrice = BigInteger.valueOf(15)
     )
 
     val account2ExecTransaction1 = createEIP1559Transaction(
@@ -855,7 +855,7 @@ class MempoolMapTest
       value,
       initialStateNonce,
       account3KeyPairOpt,
-      gasPrice = Some(BigInteger.valueOf(20))
+      gasPrice = BigInteger.valueOf(20)
     )
 
 
