@@ -106,14 +106,12 @@ abstract class AbstractForgeMessageBuilder[
       forgingResult
     }
   } match {
-    case Success(result) => {
+    case Success(result) =>
       log.info(s"Forge result is: $result")
       result
-    }
-    case Failure(ex) => {
-      log.error(s"Failed to forge block for ${nextConsensusEpochNumber} epoch ${nextConsensusSlotNumber} slot due:", ex)
+    case Failure(ex) =>
+      log.error(s"Failed to forge block for $nextConsensusEpochNumber epoch $nextConsensusSlotNumber slot due:", ex)
       ForgeFailed(ex)
-    }
   }
 
   protected def getSecretsAndProof(
@@ -220,10 +218,6 @@ abstract class AbstractForgeMessageBuilder[
     }
   }
 
-  def getFeePaymentHash(nodeView: View, block: SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase]): Array[Byte]
-
-  def getZeroFeePaymentsHash(): Array[Byte]
-
   protected def forgeBlock(nodeView: View,
                            timestamp: Long,
                            branchPointInfo: BranchPointInfo,
@@ -310,38 +304,6 @@ abstract class AbstractForgeMessageBuilder[
       collectTransactionsFromMemPool(nodeView, blockSize, mainchainBlockReferenceDataToRetrieve, timestamp, forcedTx)
     }
 
-    val feePaymentsHash: Array[Byte] = if (isWithdrawalEpochLastBlock) {
-      // Current block is expect to be the continuation of the current tip, so there are no ommers.
-      require(nodeView.history.bestBlockId == parentBlockId, "Last block of the withdrawal epoch expect to be a continuation of the tip.")
-      require(ommers.isEmpty, "No Ommers allowed for the last block of the withdrawal epoch.")
-
-      val tryBlock = createNewBlock(
-        nodeView,
-        branchPointInfo,
-        isWithdrawalEpochLastBlock,
-        parentBlockId,
-        timestamp,
-        mainchainReferenceData,
-        transactions,
-        mainchainHeaders,
-        ommers,
-        blockSignPrivateKey,
-        forgingStakeMerklePathInfo.forgingStakeInfo,
-        vrfProof,
-        forgingStakeMerklePathInfo.merklePath,
-        companion,
-        new Array[Byte](32), // dummy feePaymentsHash value
-        blockSize)
-
-      tryBlock match {
-        case Success(block) => getFeePaymentHash(nodeView, block)
-        case Failure(exception) => return ForgeFailed(exception)
-      }
-
-    } else{
-      getZeroFeePaymentsHash()
-    }
-
     log.trace(s"Transactions to apply $transactions")
     val tryBlock = createNewBlock(
       nodeView,
@@ -358,7 +320,6 @@ abstract class AbstractForgeMessageBuilder[
       vrfProof,
       forgingStakeMerklePathInfo.merklePath,
       companion,
-      feePaymentsHash,
       blockSize)
 
     tryBlock match {
@@ -382,7 +343,6 @@ abstract class AbstractForgeMessageBuilder[
                      vrfProof: VrfProof,
                      forgingStakeInfoMerklePath: MerklePath,
                      companion: DynamicTypedSerializer[TX,  TransactionSerializer[TX]],
-                     feePaymentsHash: Array[Byte],
                      inputBlockSize: Int,
                      signatureOption: Option[Signature25519] = None
                     ): Try[SidechainBlockBase[TX, _ <: SidechainBlockHeaderBase]]

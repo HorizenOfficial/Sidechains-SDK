@@ -12,6 +12,7 @@ import com.horizen.account.utils.EthereumTransactionUtils;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
+import com.horizen.utils.BytesUtils;
 import org.jetbrains.annotations.NotNull;
 import org.web3j.crypto.*;
 import org.web3j.crypto.Sign.SignatureData;
@@ -114,7 +115,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             encodedMessage = TransactionEncoder.encode(this.getTransaction(),
                     stx.getSignatureData());
         } else encodedMessage = TransactionEncoder.encode(this.getTransaction());
-        return com.horizen.utils.BytesUtils.toHexString(Hash.sha3(encodedMessage, 0, encodedMessage.length));
+        return BytesUtils.toHexString(Hash.sha3(encodedMessage, 0, encodedMessage.length));
     }
 
     @Override

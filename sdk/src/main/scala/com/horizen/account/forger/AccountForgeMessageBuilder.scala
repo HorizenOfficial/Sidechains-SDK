@@ -158,12 +158,9 @@ class AccountForgeMessageBuilder(
       vrfProof: VrfProof,
       forgingStakeInfoMerklePath: MerklePath,
       companion: DynamicTypedSerializer[SidechainTypes#SCAT, TransactionSerializer[SidechainTypes#SCAT]],
-      feePaymentsHash: Array[Byte],
       inputBlockSize: Int,
       signatureOption: Option[Signature25519]
   ): Try[SidechainBlockBase[SidechainTypes#SCAT, AccountBlockHeader]] = {
-
-
 
     // 1. As forger address take first address from the wallet
     val addressList = nodeView.vault.secretsOfType(classOf[PrivateKeySecp256k1])
@@ -374,10 +371,4 @@ class AccountForgeMessageBuilder(
 
     forgingStakeMerklePathInfoSeq
   }
-
-  override def getFeePaymentHash(nodeView: View, block: SidechainBlockBase[SidechainTypes#SCAT, _ <: SidechainBlockHeaderBase]): Array[Byte] = {
-    block.feePaymentsHash
-  }
-
-  override def getZeroFeePaymentsHash(): Array[Byte] = AccountFeePaymentsUtils.calculateFeePaymentsHash(Seq())
 }

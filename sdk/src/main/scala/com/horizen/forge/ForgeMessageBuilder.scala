@@ -56,7 +56,6 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                  vrfProof: VrfProof,
                  forgingStakeInfoMerklePath: MerklePath,
                  companion: DynamicTypedSerializer[SidechainTypes#SCBT, TransactionSerializer[SidechainTypes#SCBT]],
-                 feePaymentsHash: Array[Byte],
                  inputBlockSize: Int,
                  signatureOption: Option[Signature25519]) : Try[SidechainBlockBase[SidechainTypes#SCBT, SidechainBlockHeader]] =
   {
@@ -133,15 +132,6 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
 
     header.bytes.length
   }
-
-  override def getFeePaymentHash(nodeView: View, block: SidechainBlockBase[SidechainTypes#SCBT, _ <: SidechainBlockHeaderBase]): Array[Byte] = {
-    val withdrawalEpochNumber: Int = nodeView.state.getWithdrawalEpochInfo.epoch
-    val feePayments = nodeView.state.getFeePayments(withdrawalEpochNumber, Some(block.asInstanceOf[SidechainBlock].feeInfo))
-    FeePaymentsUtils.calculateFeePaymentsHash(feePayments)
-  }
-
-  def getZeroFeePaymentsHash(): Array[Byte] =
-    FeePaymentsUtils.calculateFeePaymentsHash(Seq())
 
   override def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int, mainchainBlockReferenceDataToRetrieve: Seq[MainchainHeaderHash], timestamp: Long, forcedTx: Iterable[SidechainTypes#SCBT]) : Seq[SidechainTypes#SCBT] = {
     var blockSize: Int = blockSizeIn
