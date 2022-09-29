@@ -10,7 +10,7 @@ import java.util.Arrays;
 public class DebugTraceBlockView {
     public DebugTraceTransactionView[] debugTraceTransactionViews;
 
-    public DebugTraceBlockByIdView(EvmResult[] evmResults) {
-        debugTraceTransactionViews = Arrays.stream(evmResults).map(r -> new DebugTraceTransactionView(r)).toArray(DebugTraceTransactionView[]::new);
+    public DebugTraceBlockView(EvmResult[] evmResults) {
+        debugTraceTransactionViews = Arrays.stream(evmResults).map(DebugTraceTransactionView::new).toArray(DebugTraceTransactionView[]::new);
     }
 }
