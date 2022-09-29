@@ -159,6 +159,7 @@ class SCEvmForwardTransfer(SidechainTestFramework):
         self.sc_sync_all()
 
         # verify that the balance has not changed, FT to smart contract account should be rejected
+        # TODO check why failed (balance actually increased, problem with FT?)
         balance = sc_node.rpc_eth_getBalance(smart_contract_address, "latest")
         pprint.pprint(balance)
         assert_equal("0x0", balance["result"], "smart contract has non-zero balance")

@@ -1,4 +1,5 @@
 import json
+from pprint import pprint
 from typing import Tuple, Any
 from eth_abi import encode_abi, decode_abi
 from eth_utils import to_checksum_address
@@ -81,8 +82,8 @@ class SmartContract:
     def call_function(self, node, functionName: str, *args,
                       call_method: CallMethod = CallMethod.RPC_LEGACY,
                       fromAddress: str, toAddress: str, nonce: int = None,
-                      gasLimit: int, gasPrice: int = 1, maxFeePerGas: int = 1,
-                      maxPriorityFeePerGas: int = 1, value: int = 0, tag: str = 'latest'):
+                      gasLimit: int, gasPrice: int = 765630000, maxFeePerGas: int = 765630000,
+                      maxPriorityFeePerGas: int = 10, value: int = 0, tag: str = 'latest'):
         """Creates an on-chain writing transaction of the function `functionName` with the encoded arguments.
 
                 Returns:
@@ -108,15 +109,15 @@ class SmartContract:
         response: Any = ''
         if call_method is CallMethod.RPC_LEGACY:
             response = node.rpc_eth_signTransaction(
-                self.__make_legacy_sign_payload(from_addr=fromAddress, to=toAddress, nonce=nonce, gas_price=gasPrice,
+                self.__make_legacy_sign_payload(from_addr=format_evm(fromAddress), to=format_evm(toAddress), nonce=nonce, gas_price=gasPrice,
                                                 gas=gasLimit, data=data, value=value))
         elif call_method is CallMethod.RPC_EIP155:
             response = node.rpc_eth_signTransaction(
-                self.__make_eip155_sign_payload(from_addr=fromAddress, to=toAddress, chain_id=chain_id, nonce=nonce,
+                self.__make_eip155_sign_payload(from_addr=format_evm(fromAddress), to=format_evm(toAddress), chain_id=chain_id, nonce=nonce,
                                                 gas_price=gasPrice, gas=gasLimit, data=data, value=value))
         elif call_method is CallMethod.RPC_EIP1559:
             response = node.rpc_eth_signTransaction(
-                self.__make_eip1559_sign_payload(from_addr=fromAddress, to=toAddress, chain_id=chain_id, nonce=nonce,
+                self.__make_eip1559_sign_payload(from_addr=format_evm(fromAddress), to=format_evm(toAddress), chain_id=chain_id, nonce=nonce,
                                                  max_fee_per_gas=maxFeePerGas,
                                                  max_priority_fee_per_gas=maxPriorityFeePerGas, gas=gasLimit, data=data,
                                                  value=value))
@@ -174,23 +175,27 @@ class SmartContract:
                 raise EvmExecutionError("Execution reverted. Reason: \"{}\"".format(reason))
             raise RuntimeError("Something went wrong, see {}".format(str(response)))
 
-    def estimate_gas(self, node, functionName: str, *args, fromAddress: str, toAddress: str,
+    def estimate_gas(self, node, functionName: str, *args, fromAddress: str, toAddress: str = None,
                      gasLimit: int = None, gasPrice: int = None, value: int = 0, nonce: int = None,
                      tag: str = 'latest'):
         request = {
             "from": format_evm(fromAddress),
-            "to": format_evm(toAddress),
-            "data": self.raw_encode_call(functionName, *args),
             "nonce": self.__ensure_nonce(node, fromAddress, nonce, tag),
             "value": value
         }
+        if functionName == 'constructor':
+            request["data"]= self.Bytecode
+            if 'constructor' in self.Functions:
+                request['data'] = request['data'] + self.Functions['constructor'].encode(*args)
+        else:
+            request["data"]= self.raw_encode_call(functionName, *args)
+        if toAddress is not None:
+            request["to"]= format_evm(toAddress)
         if gasLimit is not None:
             request["gasLimit"] = gasLimit
         if gasPrice is not None:
             request["gasPrice"] = gasPrice
-
         response = node.rpc_eth_estimateGas(request)
-        print(response)
         if 'result' in response:
             if response['result'] is not None and len(response['result']) > 0:
                 return int(response['result'], 16)
@@ -201,7 +206,7 @@ class SmartContract:
             raise EvmExecutionError("Could not estimate gas: {}".format(str(response)))
 
     def deploy(self, node, *args, call_method: CallMethod = CallMethod.RPC_LEGACY, fromAddress: str, nonce: int = None,
-               gasLimit: int, gasPrice: int = 1, maxFeePerGas: int = 1, maxPriorityFeePerGas: int = 1,
+               gasLimit: int, gasPrice: int = 765630000, maxFeePerGas: int = 765630000, maxPriorityFeePerGas: int = 10,
                value: int = 0, tag: str = 'latest'):
         """Calls a function in read-only mode and returns the data if applicable
             :param node: The side chain node to use for rpc/http
@@ -218,7 +223,7 @@ class SmartContract:
         Returns:
             A tuple with the tx_hash and the precomputed address of the smart contract
 """
-        nonce = self.__ensure_nonce(node, fromAddress, nonce, tag)
+        nonce = self.__ensure_nonce(node, format_evm(fromAddress), nonce, tag)
         data = self.Bytecode
         chain_id = self.__ensure_chain_id(node)
 
@@ -250,7 +255,7 @@ class SmartContract:
         if "result" in response:
             response = node.rpc_eth_sendRawTransaction(response['result'])
             if "result" in response:
-                return response["result"], to_checksum_address(mk_contract_address(fromAddress, nonce))
+                return response["result"], to_checksum_address(mk_contract_address(format_evm(fromAddress), nonce))
         raise RuntimeError("Something went wrong, see {}".format(str(response)))
 
     def __str__(self):
@@ -308,11 +313,11 @@ class SmartContract:
             "gas": gas,
             "value": value,
             "input": data,
-            "from": from_addr,
+            "from": format_evm(from_addr),
             "gasPrice": gas_price
         }
         if to is not None:
-            r["to"] = to
+            r["to"] = format_evm(to)
 
         return r
 
@@ -325,12 +330,12 @@ class SmartContract:
             "gas": gas,
             "value": value,
             "input": data,
-            "from": from_addr,
+            "from": format_evm(from_addr),
             "gasPrice": gas_price,
             "chainId": chain_id
         }
         if to is not None:
-            r["to"] = to
+            r["to"] = format_evm(to)
 
         return r
 
@@ -344,13 +349,13 @@ class SmartContract:
             "gas": gas,
             "value": value,
             "input": data,
-            "from": from_addr,
+            "from": format_evm(from_addr),
             "maxPriorityFeePerGas": max_priority_fee_per_gas,
             "maxFeePerGas": max_fee_per_gas,
             "chainId": chain_id
         }
         if to is not None:
-            r["to"] = to
+            r["to"] = format_evm(to)
 
         return r
 

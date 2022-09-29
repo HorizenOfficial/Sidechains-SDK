@@ -7,6 +7,7 @@ import com.horizen.account.utils.Account;
 import com.horizen.serialization.Views;
 import org.web3j.utils.Numeric;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 
 @JsonView(Views.Default.class)
@@ -22,37 +23,42 @@ public class EthereumTransactionView {
     private final String gas;
     private final String value;
     private final String input;
-    private String maxPriorityFeePerGas;
-    private String maxFeePerGas;
-    private String gasPrice;
-    private ArrayList<Object> accessList;
-    private String chainId;
+    private final String maxPriorityFeePerGas;
+    private final String maxFeePerGas;
+    private final String gasPrice;
+    private final ArrayList<Object> accessList;
+    private final String chainId;
     private final String v;
     private final String r;
     private final String s;
 
-    public EthereumTransactionView(EthereumReceipt receipt, EthereumTransaction ethTx) {
+    public EthereumTransactionView(EthereumReceipt receipt, EthereumTransaction ethTx, BigInteger baseFee) {
         type = Numeric.prependHexPrefix((Integer.toHexString(ethTx.transactionTypeId())));
-        nonce = Numeric.toHexStringWithPrefix(ethTx.getNonce());
-        to = Numeric.cleanHexPrefix(ethTx.getToAddress()).length() != 2*Account.ADDRESS_SIZE ? null : ethTx.getToAddress();
-        gas = Numeric.toHexStringWithPrefix(ethTx.getGasLimit());
-        value = Numeric.toHexStringWithPrefix(ethTx.getValue());
+        nonce = Numeric.encodeQuantity(ethTx.getNonce());
+        to = Numeric.cleanHexPrefix(ethTx.getToAddress()).length() != 2 * Account.ADDRESS_SIZE ? null : ethTx.getToAddress();
+        gas = Numeric.encodeQuantity(ethTx.getGasLimit());
+        value = Numeric.encodeQuantity(ethTx.getValue());
         input = Numeric.toHexString(ethTx.getData());
         if (ethTx.isEIP1559()) {
-            maxPriorityFeePerGas = Numeric.toHexStringWithPrefix(ethTx.getMaxPriorityFeePerGas());
-            maxFeePerGas = Numeric.toHexStringWithPrefix(ethTx.getMaxFeePerGas());
+            maxPriorityFeePerGas = Numeric.encodeQuantity(ethTx.getMaxPriorityFeePerGas());
+            maxFeePerGas = Numeric.encodeQuantity(ethTx.getMaxFeePerGas());
+            // calculate effective gas price
+            gasPrice = Numeric.encodeQuantity(baseFee.add(ethTx.getMaxPriorityFeePerGas()).min(ethTx.getMaxFeePerGas()));
         } else {
-            gasPrice = Numeric.toHexStringWithPrefix(ethTx.getGasPrice());
+            maxPriorityFeePerGas = null;
+            maxFeePerGas = null;
+            gasPrice = Numeric.encodeQuantity(ethTx.getGasPrice());
         }
-        if (ethTx.getChainId() != null) chainId = String.valueOf(ethTx.getChainId());
+        chainId = ethTx.getChainId() == null ? null : Numeric.encodeQuantity(BigInteger.valueOf(ethTx.getChainId()));
         v = (ethTx.getV() != null) ? Numeric.toHexString(ethTx.getV()) : null;
         r = (ethTx.getR() != null) ? Numeric.toHexString(ethTx.getR()) : null;
         s = (ethTx.getS() != null) ? Numeric.toHexString(ethTx.getS()) : null;
         blockHash = Numeric.toHexString(receipt.blockHash());
-        blockNumber = Numeric.prependHexPrefix(Integer.toHexString(receipt.blockNumber()));
+        blockNumber = Numeric.encodeQuantity(BigInteger.valueOf(receipt.blockNumber()));
         from = (ethTx.getFrom() != null) ? Numeric.toHexString(ethTx.getFrom().address()) : null;
         hash = Numeric.toHexString(receipt.transactionHash());
-        transactionIndex = Numeric.prependHexPrefix(Integer.toHexString(receipt.transactionIndex()));
+        transactionIndex = Numeric.encodeQuantity(BigInteger.valueOf(receipt.transactionIndex()));
+        accessList = null;
     }
 
     public String getType() {

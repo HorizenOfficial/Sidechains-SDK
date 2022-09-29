@@ -7,26 +7,26 @@ import org.junit._
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito._
 
-class EthereumLogTest
+class EvmLogTest
   extends JUnitSuite
     with MockitoSugar
     with ReceiptFixture
 {
 
   @Test def receiptSimpleEncodeDecodeTest(): Unit = {
-    val ethereumLog = createTestEvmLog
+    val evmLog = createTestEvmLog
     //println(ethereumLog)
-    val encodedLog = EvmLogUtils.rlpEncode(ethereumLog)
+    val encodedLog = EvmLogUtils.rlpEncode(evmLog)
     //println(BytesUtils.toHexString(encodedLog))
     // read what you write
     val dataBytes = encodedLog
     val decodedConsensusDataLog = EvmLogUtils.rlpDecode(dataBytes)
     //println(decodedConsensusDataLog)
     assertEquals(
-      BytesUtils.toHexString(ethereumLog.address.toBytes),
+      BytesUtils.toHexString(evmLog.address.toBytes),
       BytesUtils.toHexString(decodedConsensusDataLog.address.toBytes))
-    assertEquals(ethereumLog, decodedConsensusDataLog)
-    assertEquals(ethereumLog.hashCode(), decodedConsensusDataLog.hashCode())
+    assertEquals(evmLog, decodedConsensusDataLog)
+    assertEquals(evmLog.hashCode(), decodedConsensusDataLog.hashCode())
   }
 
 }

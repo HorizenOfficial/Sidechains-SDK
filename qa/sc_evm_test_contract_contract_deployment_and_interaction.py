@@ -38,30 +38,32 @@ Test:
 
 
 def deploy_smart_contract(node, smart_contract_type, from_address, initial_secret):
+    print("Estimating gas for deployment...")
+    estimated_gas = smart_contract_type.estimate_gas(node, 'constructor', initial_secret,
+                                                                fromAddress=from_address)
+    print("Estimated gas is {}".format(estimated_gas))
     print("Deploying smart contract with initial secret {}...".format(initial_secret))
     tx_hash, address = smart_contract_type.deploy(node, initial_secret,
                                                   fromAddress=from_address,
-                                                  gasLimit=10000000,
-                                                  gasPrice=900000000)
+                                                  gasLimit=estimated_gas)
     print("Generating next block...")
     generate_next_blocks(node, "first node", 1)
     tx_receipt = node.rpc_eth_getTransactionReceipt(tx_hash)
     assert_equal(format_evm(tx_receipt['result']['contractAddress']), format_evm(address))
     print("Smart contract deployed successfully to address 0x{}".format(address))
     return address
-
-
+    
 def deploy_child(node, smart_contract_type, smart_contract_address, from_address, *, static_call,
                  generate_block):
     method = 'deployContract()'
     if static_call:
         print("Read-only calling {}: testing deployment of a child contract".format(method))
         res = smart_contract_type.static_call(node, method, fromAddress=from_address,
-                                              toAddress=smart_contract_address,
-                                               gasPrice = 900000000)
+                                              toAddress=smart_contract_address)
     else:
         print("Calling {}: deploying a child contract".format(method))
-        res = smart_contract_type.call_function(node, method, fromAddress=from_address, gasLimit=10000000, gasPrice=900000000,
+        estimated_gas = smart_contract_type.estimate_gas(node, method, fromAddress=from_address, toAddress=smart_contract_address)
+        res = smart_contract_type.call_function(node, method, fromAddress=from_address, gasLimit=estimated_gas,
                                                 toAddress=smart_contract_address)
     if generate_block:
         print("generating next block...")
@@ -76,12 +78,11 @@ def update_parent_secret(node, smart_contract_type, smart_contract_address, from
     if static_call:
         print("Read-only calling {}: testing setting the secret to {} via a child contract".format(method, new_secret))
         res = smart_contract_type.static_call(node, method, new_secret, fromAddress=from_address,
-                                              toAddress=smart_contract_address,
-                                               gasPrice = 900000000)
+                                              toAddress=smart_contract_address)
     else:
         print("Calling {}: setting the secret to {} via a child contract".format(method, new_secret))
-        res = smart_contract_type.call_function(node, method, new_secret, fromAddress=from_address, gasLimit=10000000,
-                                                gasPrice=900000000, toAddress=smart_contract_address)
+        estimated_gas = smart_contract_type.estimate_gas(node, method, new_secret, fromAddress=from_address, toAddress=smart_contract_address)
+        res = smart_contract_type.call_function(node, method, new_secret, fromAddress=from_address, gasLimit=estimated_gas, toAddress=smart_contract_address)
     if generate_block:
         print("generating next block...")
         generate_next_blocks(node, "first node", 1)
@@ -93,15 +94,14 @@ def get_secret(node, smart_contract_type, smart_contract_address, from_address):
     method = 'checkParentSecret()'
     print("Getting parent secret via function {} on contract {}".format(method, smart_contract_address))
     res = smart_contract_type.static_call(node, method, fromAddress=from_address,
-                                          toAddress=smart_contract_address[2:],
-                                               gasPrice = 900000000)[0]
+                                          toAddress=smart_contract_address)[0]
     print("Parent secret: {}".format(res))
     return res
 
 
 def compare_secret(node, smart_contract_type, smart_contract_address, from_address, expected_secret):
     print("Comparing secrets...")
-    res = get_secret(node, smart_contract_type, smart_contract_address, from_address)
+    res = get_secret(node, smart_contract_type, format_evm(smart_contract_address), from_address)
     print("Expected secret: {}, actual secret: {}".format(expected_secret, res))
     assert_equal(res, expected_secret)
     return res
@@ -111,8 +111,7 @@ def get_children(node, smart_contract_type, smart_contract_address, from_address
     method = 'getChildren()'
     print("Getting children via function {}".format(method))
     res = list(smart_contract_type.static_call(node, method, fromAddress=from_address,
-                                               toAddress=smart_contract_address,
-                                               gasPrice = 900000000)[0])
+                                               toAddress=smart_contract_address)[0])
     print("Children: {}".format(res))
     return res
 
@@ -186,7 +185,7 @@ class SCEvmDeployingContract(SidechainTestFramework):
         ret = sc_node.wallet_allPublicKeys()
         pprint.pprint(ret)
 
-        ft_amount_in_zen = Decimal("33.22")
+        ft_amount_in_zen = Decimal("3000")
 
         # transfer some fund from MC to SC using the evm address created before
         forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,

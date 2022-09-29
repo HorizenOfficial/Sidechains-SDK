@@ -5,9 +5,9 @@ import com.horizen.api.http.ApiResponse;
 import com.horizen.serialization.Views;
 
 @JsonView(Views.Default.class)
-public class RpcResponse implements ApiResponse {
-    private final String jsonrpc;
-    private final String id;
+public abstract class RpcResponse implements ApiResponse {
+    protected final String jsonrpc;
+    protected final String id;
 
     public RpcResponse(String id) {
         this.jsonrpc = "2.0";

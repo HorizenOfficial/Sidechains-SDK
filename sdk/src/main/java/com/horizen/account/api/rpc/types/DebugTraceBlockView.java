@@ -7,10 +7,10 @@ import com.horizen.serialization.Views;
 import java.util.Arrays;
 
 @JsonView(Views.Default.class)
-public class DebugTraceBlockByIdView {
+public class DebugTraceBlockView {
     public DebugTraceTransactionView[] debugTraceTransactionViews;
 
-    public DebugTraceBlockByIdView(EvmResult[] evmResult) {
-        debugTraceTransactionViews = (DebugTraceTransactionView[]) Arrays.stream(evmResult).map(r -> new DebugTraceTransactionView(r)).toArray();
+    public DebugTraceBlockByIdView(EvmResult[] evmResults) {
+        debugTraceTransactionViews = Arrays.stream(evmResults).map(r -> new DebugTraceTransactionView(r)).toArray(DebugTraceTransactionView[]::new);
     }
 }

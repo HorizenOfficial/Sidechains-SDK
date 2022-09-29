@@ -23,7 +23,7 @@ trait WithdrawalRequestProvider {
 object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with WithdrawalRequestProvider {
 
   override val contractAddress: Array[Byte] = BytesUtils.fromHexString("0000000000000000000011111111111111111111")
-  override val contractCodeHash: Array[Byte] = Keccak256.hash("WithdrawalRequestSmartContractCodeHash")
+  override val contractCode: Array[Byte] = Keccak256.hash("WithdrawalRequestSmartContractCode")
 
   val GetListOfWithdrawalReqsCmdSig: String = getABIMethodId("getWithdrawalRequests(uint32)")
   val AddNewWithdrawalReqCmdSig: String = getABIMethodId("submitWithdrawalRequest(bytes20)")

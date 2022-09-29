@@ -8,11 +8,9 @@ import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 object AccountForwardTransfersHelper {
   def getForwardTransfersForBlock(block: AccountBlock): Seq[ForwardTransfer] = {
     block.mainchainBlockReferencesData.flatMap(mcBlockRefData =>
-      mcBlockRefData.sidechainRelatedAggregatedTransaction match {
-        case Some(tx) => tx.mc2scTransactionsOutputs().filter(
-          _.isInstanceOf[ForwardTransfer]
-        ).map(_.asInstanceOf[ForwardTransfer])
-      }
+      mcBlockRefData.sidechainRelatedAggregatedTransaction
+        .map(_.mc2scTransactionsOutputs.filter(_.isInstanceOf[ForwardTransfer]).map(_.asInstanceOf[ForwardTransfer]))
+        .getOrElse(Seq())
     )
   }
 }

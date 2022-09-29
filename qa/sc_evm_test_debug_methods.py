@@ -49,16 +49,19 @@ def eoa_transfer(node, sender, receiver, amount, call_method: CallMethod = globa
     return res
 
 
+
 def call_addr_uint_fn(node, smart_contract, contract_address, source_addr, addr, uint, static_call, generate_block,
-                      method):
+                      method, overrideGas=None):
     if static_call:
-        res = smart_contract.static_call(node, method, addr, uint,
-                                         fromAddress=source_addr,
-                                         gasLimit=1000000, gasPrice=10, toAddress=contract_address)
+        res = smart_contract.static_call(node, method, format_evm(addr), uint,
+                                         fromAddress=source_addr, toAddress=contract_address)
     else:
-        res = smart_contract.call_function(node, method, addr, uint,
+        if overrideGas is None:
+            estimated_gas = smart_contract.estimate_gas(node, method, format_evm(addr), uint,
+                                                                    fromAddress=source_addr, toAddress=format_evm(contract_address))
+        res = smart_contract.call_function(node, method, format_evm(addr), uint,
                                            fromAddress=source_addr,
-                                           gasLimit=1000000, gasPrice=10, toAddress=contract_address)
+                                           gasLimit=estimated_gas if overrideGas is None else overrideGas, toAddress=contract_address)
     if generate_block:
         print("generating next block...")
         generate_next_blocks(node, "first node", 1)
@@ -66,15 +69,17 @@ def call_addr_uint_fn(node, smart_contract, contract_address, source_addr, addr,
 
 
 def call_addr_addr_uint_fn(node, smart_contract, contract_address, source_addr, addr1, addr2, uint, static_call,
-                           generate_block, method):
+                           generate_block, method, overrideGas=None):
     if static_call:
         res = smart_contract.static_call(node, method, addr1, addr2, uint,
-                                         fromAddress=source_addr,
-                                         gasLimit=1000000, gasPrice=10, toAddress=contract_address)
+                                         fromAddress=source_addr, toAddress=contract_address)
     else:
+        if overrideGas is None:
+            estimated_gas = smart_contract.estimate_gas(node, method, addr1, addr2, uint,
+                                                                        fromAddress=source_addr, toAddress=contract_address)
         res = smart_contract.call_function(node, method, addr1, addr2, uint,
                                            fromAddress=source_addr,
-                                           gasLimit=1000000, gasPrice=10, toAddress=contract_address)
+                                            gasLimit=estimated_gas if overrideGas is None else overrideGas, toAddress=contract_address)
     if generate_block:
         print("generating next block...")
         generate_next_blocks(node, "first node", 1)
@@ -82,7 +87,7 @@ def call_addr_addr_uint_fn(node, smart_contract, contract_address, source_addr, 
 
 
 def transfer_tokens(node, smart_contract, contract_address, source_account, target_account, amount, *,
-                    static_call=False, generate_block=True):
+                    static_call=False, generate_block=True, overrideGas = None):
     method = 'transfer(address,uint256)'
     if static_call:
         print("Read-only calling {}: testing transfer of ".format(method) +
@@ -92,7 +97,7 @@ def transfer_tokens(node, smart_contract, contract_address, source_account, targ
                                                                             target_account))
 
     return call_addr_uint_fn(node, smart_contract, contract_address, source_account, target_account, amount,
-                             static_call, generate_block, method)
+                             static_call, generate_block, method, overrideGas)
 
 
 def transfer_from_tokens(node, smart_contract, contract_address, tx_sender_account, source_account, target_account,
@@ -136,8 +141,7 @@ def compare_balance(node, smart_contract, contract_address, account_address, exp
 def compare_allowance(node, smart_contract, contract_address, owner_address, allowed_address, expected_balance):
     print("Checking allowance of 0x{} from 0x{}...".format(allowed_address, owner_address))
     res = smart_contract.static_call(node, 'allowance(address,address)', owner_address, allowed_address,
-                                     fromAddress=allowed_address, gasLimit=1000000,
-                                     gasPrice=10, toAddress=contract_address)
+                                     fromAddress=allowed_address, toAddress=contract_address)
     print("Expected allowance: '{}', actual allowance: '{}'".format(expected_balance, res[0]))
     assert_equal(res[0], expected_balance)
     return res[0]
@@ -145,22 +149,23 @@ def compare_allowance(node, smart_contract, contract_address, owner_address, all
 
 def compare_total_supply(node, smart_contract, contract_address, sender_address, expected_supply):
     print("Checking total supply of token at 0x{}...".format(contract_address))
-    res = smart_contract.static_call(node, 'totalSupply()', fromAddress=sender_address, gasLimit=1000000,
-                                     gasPrice=10, toAddress=contract_address)
+    res = smart_contract.static_call(node, 'totalSupply()', fromAddress=sender_address, toAddress=contract_address)
     print("Expected supply: '{}', actual supply: '{}'".format(expected_supply, res[0]))
     assert_equal(res[0], expected_supply)
     return res[0]
 
 
 def deploy_smart_contract(node, smart_contract, from_address):
+    print("Estimating gas for deployment...")
+    estimated_gas = smart_contract.estimate_gas(node, 'constructor',
+                                                                fromAddress=from_address)
+    print("Estimated gas is {}".format(estimated_gas))
     print("Deploying smart contract...")
     tx_hash, address = smart_contract.deploy(node,
                                              fromAddress=from_address,
-                                             gasLimit=10000000,
-                                             gasPrice=10)
+                                             gasLimit=estimated_gas)
     print("Generating next block...")
     generate_next_blocks(node, "first node", 1)
-    # TODO check logs when implemented (events)
     tx_receipt = node.rpc_eth_getTransactionReceipt(tx_hash)
     assert_equal(format_evm(tx_receipt['result']['contractAddress']), format_evm(address))
     print("Smart contract deployed successfully to address 0x{}".format(address))
@@ -225,7 +230,6 @@ class SCEvmDebugMethods(SidechainTestFramework):
         pprint.pprint(ret)
 
         ft_amount_in_zen = Decimal("33.22")
-        # TODO check why creating transactions fails with 0x prefix
         # transfer some fund from MC to SC using the evm address created before
         forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id,
                                       self.nodes[0],
@@ -256,16 +260,25 @@ class SCEvmDebugMethods(SidechainTestFramework):
 
         tx_hash = transfer_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
                                   transfer_amount, static_call=False, generate_block=True)
-        res = sc_node.rpc_debug_traceTransaction(tx_hash)["result"]
-        assert_true("error" not in res)
+
+        res = sc_node.rpc_eth_getTransactionReceipt(tx_hash)
+        assert_equal(res['result']['status'], '0x1', "Error in tx - unrelated to debug methods")
+
+        res = sc_node.rpc_debug_traceTransaction(tx_hash)['result']
+        assert_true("error" not in res, "debug_traceTransaction failed for successful smart contract transaction")
 
         tx_hash = eoa_transfer(sc_node, evm_address, other_address, transfer_amount, static_call=False,
                                generate_block=True)
-        res = sc_node.rpc_debug_traceTransaction(tx_hash)["result"]
-        assert_true("error" not in res)
 
-        res = sc_node.rpc_debug_traceBlockByNumber("0x4")["result"]
-        assert_true("error" not in res)
+        res = sc_node.rpc_eth_getTransactionReceipt(tx_hash)
+        assert_equal(res['result']['status'], '0x1', "Error in tx - unrelated to debug methods")
+
+        # TODO debug call fails for EOA
+        res = sc_node.rpc_debug_traceTransaction(tx_hash)
+        assert_true("error" not in res['result'], "debug_traceTransaction failed for successful eoa transfer")
+
+        res = sc_node.rpc_debug_traceBlockByNumber("0x4")
+        assert_true("error" not in res["result"], 'debug_traceBlockByNumber failed')
 
 
 if __name__ == "__main__":

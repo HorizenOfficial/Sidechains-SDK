@@ -4,14 +4,20 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.horizen.api.http.SuccessResponse;
 
 public class RpcResponseSuccess extends RpcResponse implements SuccessResponse {
-    private final Object result;
+    protected final Object result;
+
     public RpcResponseSuccess(String id, Object result) {
         super(id);
         this.result = result;
     }
 
-    @JsonInclude(JsonInclude.Include.ALWAYS)
+    @JsonInclude()
     public Object getResult() {
         return result;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("RpcResponseSuccess{jsonrpc='%s', id='%s', result=%s}", jsonrpc, id, result);
     }
 }

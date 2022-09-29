@@ -249,8 +249,8 @@ class AccountStateView(
     !stateDb.isEmpty(address)
 
   // account modifiers:
-  override def addAccount(address: Array[Byte], codeHash: Array[Byte]): Unit =
-    stateDb.setCodeHash(address, codeHash)
+  override def addAccount(address: Array[Byte], code: Array[Byte]): Unit =
+    stateDb.setCode(address, code)
 
   override def increaseNonce(address: Array[Byte]): Unit =
     stateDb.setNonce(address, getNonce(address).add(BigInteger.ONE))

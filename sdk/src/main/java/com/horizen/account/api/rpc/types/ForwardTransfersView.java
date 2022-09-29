@@ -4,12 +4,10 @@ import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.utils.MainchainTxCrosschainOutputAddressUtil;
 import com.horizen.account.utils.ZenWeiConverter;
-import com.horizen.block.MainchainTxForwardTransferCrosschainOutput;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.mainchain.ForwardTransfer;
 import org.web3j.utils.Numeric;
 
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,13 +16,13 @@ public class ForwardTransfersView {
     private final List<ForwardTransferData> forwardTransfers = new ArrayList<>();
 
     public ForwardTransfersView(List<ForwardTransfer> transactions, boolean noPrefix) {
-        for (int i = 0; i < transactions.size(); i++) {
-            MainchainTxForwardTransferCrosschainOutput ftOutput = transactions.get(i).getFtOutput();
+        for (ForwardTransfer transaction : transactions) {
+            var ftOutput = transaction.getFtOutput();
             var to = "";
             var value = "";
-            AddressProposition address = new AddressProposition(
+            var address = new AddressProposition(
                     MainchainTxCrosschainOutputAddressUtil.getAccountAddress(ftOutput.propositionBytes()));
-            BigInteger weiValue = ZenWeiConverter.convertZenniesToWei(ftOutput.amount());
+            var weiValue = ZenWeiConverter.convertZenniesToWei(ftOutput.amount());
             if (noPrefix) {
                 to = Numeric.toHexStringNoPrefix(address.address());
                 value = String.valueOf(weiValue);
