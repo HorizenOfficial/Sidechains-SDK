@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import pprint
 import time
 
 from SidechainTestFramework.account.httpCalls.transaction.allWithdrawRequests import all_withdrawal_requests
@@ -11,7 +12,7 @@ from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, generate_next_blocks, generate_next_block, \
     AccountModelBlockVersion, EVM_APP_BINARY, is_mainchain_block_included_in_sc_block, assert_true, \
-    check_mainchain_block_reference_info, convertZenToZennies, convertZenniesToWei
+    check_mainchain_block_reference_info, convertZenToZennies, convertZenniesToWei, computeForgedTxFee
 from test_framework.util import assert_equal, assert_false, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail
 
@@ -197,6 +198,8 @@ class SCEvmBackwardTransfer(SidechainTestFramework):
         if "error" in res:
             fail(f"Creating Withdrawal request failed: " + json.dumps(res))
 
+        tx_id = res["result"]["transactionId"]
+
         # Check the balance hasn't changed yet
         new_balance = http_wallet_balance(sc_node, evm_address)
         assert_equal(ft_amount_in_wei, new_balance, "wrong balance")
@@ -208,11 +211,19 @@ class SCEvmBackwardTransfer(SidechainTestFramework):
 
         # Generate SC block
         generate_next_blocks(sc_node, "first node", 1)
+
+        #Check the receipt
+        receipt = sc_node.rpc_eth_getTransactionReceipt(tx_id)
+        status = int(receipt['result']['status'], 16)
+        assert_equal(1, status, "Wrong tx status in receipt")
+        # TODO check event in the receipt
+
         # Check the balance has changed
-        bt_amount_in_zen_2 = ft_amount_in_zen - bt_amount_in_zen_1
-        sc_bt_amount_in_zennies_2 = convertZenToZennies(bt_amount_in_zen_2)
+        # Retrieve how much gas was spent
+        gas_fee_paid, _, _ = computeForgedTxFee(sc_node, tx_id)
+        expected_new_balance = ft_amount_in_wei - convertZenniesToWei(sc_bt_amount_in_zennies_1) - gas_fee_paid
         new_balance = http_wallet_balance(sc_node, evm_address)
-        assert_equal(convertZenniesToWei(sc_bt_amount_in_zennies_2), new_balance,  "wrong balance after first withdrawal request")
+        assert_equal(expected_new_balance, new_balance,  "wrong balance after first withdrawal request")
 
         # verifies that there is one withdrawal request
         list_of_WR = all_withdrawal_requests(sc_node, current_epoch_number)["listOfWR"]
@@ -223,15 +234,30 @@ class SCEvmBackwardTransfer(SidechainTestFramework):
 
         mc_address2 = self.nodes[0].getnewaddress()
         print("Second BT MC public key address is {}".format(mc_address2))
+
+        #bt_amount_in_zen_2 = convertWeiToZen(expected_new_balance - 3 * gas_fee_paid)
+        bt_amount_in_zen_2 = 1
+        sc_bt_amount_in_zennies_2 = convertZenToZennies(bt_amount_in_zen_2)
+
         res = withdrawcoins(sc_node, mc_address2, sc_bt_amount_in_zennies_2)
         if "error" in res:
             fail(f"Creating Withdrawal request failed: " + json.dumps(res))
 
         # Generate SC block
         generate_next_blocks(sc_node, "first node", 1)
+
+        #Check the receipt
+        receipt = sc_node.rpc_eth_getTransactionReceipt(tx_id)
+        pprint.pprint(receipt)
+        status = int(receipt['result']['status'], 16)
+        assert_equal(1, status, "Wrong tx status in receipt")
+        # TODO check event in the receipt
+
         # Check the balance has changed
+        gas_fee_paid, forgersPoolFee, forgerTip = computeForgedTxFee(sc_node, tx_id)
+        expected_new_balance = new_balance - convertZenniesToWei(sc_bt_amount_in_zennies_2) - gas_fee_paid
         new_balance = http_wallet_balance(sc_node, evm_address)
-        assert_equal(0, new_balance, "wrong balance after second withdrawal request")
+        assert_equal(expected_new_balance, new_balance,  "wrong balance after first withdrawal request")
 
         # verifies that there are 2 withdrawal request2
         list_of_WR = all_withdrawal_requests(sc_node, current_epoch_number)["listOfWR"]

@@ -12,7 +12,7 @@ from test_framework.util import assert_equal, assert_true, start_nodes, websocke
     forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, \
     is_mainchain_block_included_in_sc_block, check_mainchain_block_reference_info, AccountModelBlockVersion, \
-    EVM_APP_BINARY, generate_next_blocks, generate_next_block, computeForgedTxGasUsed
+    EVM_APP_BINARY, generate_next_blocks, generate_next_block, computeForgedTxFee
 from SidechainTestFramework.account.eoa_util import eoa_transaction
 
 """
@@ -43,14 +43,10 @@ global_call_method = CallMethod.RPC_EIP155
 
 
 def mint_payable(node, smart_contract, contract_address, source_account, amount, tokenid, *, static_call: bool,
-                 estimate_gas: bool = False,
                  generate_block: bool,
                  call_method=global_call_method):
     method = 'mint(uint256)'
-    if estimate_gas:
-        gas = smart_contract.estimate_gas(node, method, tokenid, fromAddress=source_account, toAddress=contract_address,
-                                          gasLimit=100000, gasPrice=10, value=amount)
-        return gas
+        
     if static_call:
         print("Read-only calling {}: testing minting of ".format(method) +
               "a token (id: {}) of collection {} to 0x{}".format(tokenid, contract_address, source_account))
@@ -62,8 +58,8 @@ def mint_payable(node, smart_contract, contract_address, source_account, amount,
         print(
             "Calling {}: minting of a token (id: {}) of collection {} to 0x{}".format(method, tokenid, contract_address,
                                                                                       source_account))
-        res = smart_contract.call_function(node, method, tokenid, fromAddress=source_account, gasLimit=10000000,
-                                           gasPrice=10, maxFeePerGas=10, maxPriorityFeePerGas=1,
+        gas = smart_contract.estimate_gas(node, method, tokenid, fromAddress=source_account, toAddress=contract_address, value=amount)
+        res = smart_contract.call_function(node, method, tokenid, fromAddress=source_account, gasLimit=gas,
                                            toAddress=contract_address, value=amount, call_method=call_method)
     if generate_block:
         print("generating next block...")
@@ -95,8 +91,8 @@ def call_noarg_fn(node, smart_contract, contract_address, sender_address, static
     if static_call:
         res = smart_contract.static_call(node, method, fromAddress=sender_address, toAddress=contract_address)
     else:
-        res = smart_contract.call_function(node, method, fromAddress=sender_address, gasLimit=10000000,
-                                           gasPrice=10, maxFeePerGas=10, maxPriorityFeePerGas=1,
+        gas = smart_contract.estimate_gas(node, method, fromAddress=sender_address, toAddress=contract_address)
+        res = smart_contract.call_function(node, method, fromAddress=sender_address, gasLimit=gas,
                                            toAddress=contract_address, call_method=call_method)
     if generate_block:
         print("generating next block...")
@@ -110,8 +106,8 @@ def call_onearg_fn(node, smart_contract, contract_address, sender_address, stati
     if static_call:
         res = smart_contract.static_call(node, method, arg, fromAddress=sender_address, toAddress=contract_address)
     else:
-        res = smart_contract.call_function(node, method, arg, fromAddress=sender_address, gasLimit=10000000,
-                                           gasPrice=10, maxFeePerGas=10, maxPriorityFeePerGas=1,
+        gas = smart_contract.estimate_gas(node, method, fromAddress=sender_address, toAddress=contract_address)
+        res = smart_contract.call_function(node, method, arg, fromAddress=sender_address, gasLimit=gas,
                                            toAddress=contract_address, call_method=call_method)
     if generate_block:
         print("generating next block...")
@@ -159,12 +155,16 @@ def compare_ownerof(node, smart_contract, contract_address, sender_address, toke
 
 def deploy_smart_contract(node, smart_contract, from_address, name, symbol, metadataURI,
                           call_method=global_call_method):
+
+    print("Estimating gas for deployment...")
+    estimated_gas = smart_contract.estimate_gas(node, 'constructor', name, symbol, metadataURI,
+                                                                fromAddress=from_address)
+    print("Estimated gas is {}".format(estimated_gas))
     print("Deploying smart contract...")
     print("From address: 0x{}".format(from_address))
     tx_hash, address = smart_contract.deploy(node, name, symbol, metadataURI,
                                              fromAddress=from_address,
-                                             gasLimit=100000000,
-                                             gasPrice=10, maxFeePerGas=10, maxPriorityFeePerGas=1,
+                                             gasLimit=estimated_gas,
                                              call_method=call_method)
     print("Generating next block...")
     generate_next_blocks(node, "first node", 1)
@@ -226,9 +226,11 @@ def transfer_token(node, smart_contract, contract_address, sender_address, *, to
         print("Calling {}: transferring".format(method) +
               "token (id: {}) from 0x{} to 0x{} via 0x{}".format(token_id, from_address, target_address,
                                                                  sender_address))
+
+        gas = smart_contract.estimate_gas(node, method, from_address, target_address, token_id, fromAddress=sender_address, 
+                                          toAddress=contract_address)
         res = smart_contract.call_function(node, method, from_address,
-                                           target_address, token_id, fromAddress=sender_address, gasLimit=10000000,
-                                           gasPrice=10, maxFeePerGas=10, maxPriorityFeePerGas=1,
+                                           target_address, token_id, fromAddress=sender_address, gasLimit=gas,
                                            toAddress=contract_address, call_method=call_method)
 
     if generate_block:
@@ -285,17 +287,16 @@ def transfer_erc20_tokens(node, smart_contract, contract_address, source_account
 
 
 def call_addr_uint_fn(node, smart_contract, contract_address, source_addr, addr, uint, static_call, generate_block,
-                      method, estimate_gas=False):
-    if estimate_gas:
-        return smart_contract.estimate_gas(node, method, addr, uint, fromAddress=source_addr, gasLimit=1000000,
-                                           gasPrice=10, toAddress=contract_address)
+                      method):
     if static_call:
         res = smart_contract.static_call(node, method, addr, uint,
                                          fromAddress=source_addr, toAddress=contract_address)
     else:
+
+        gas = smart_contract.estimate_gas(node, method, addr, uint, fromAddress=source_addr, toAddress=contract_address)
         res = smart_contract.call_function(node, method, addr, uint,
                                            fromAddress=source_addr,
-                                           gasLimit=10000000, gasPrice=10, toAddress=contract_address)
+                                           gasLimit=gas, toAddress=contract_address)
     if generate_block:
         print("generating next block...")
         generate_next_blocks(node, "first node", 1)
@@ -312,10 +313,13 @@ def compare_erc20_total_supply(node, smart_contract, contract_address, sender_ad
 
 def deploy_erc20_smart_contract(node, smart_contract, from_address):
     print("Deploying smart contract...")
+    print("Estimating gas for deployment...")
+    estimated_gas = smart_contract.estimate_gas(node, 'constructor',
+                                                                fromAddress=from_address)
+    print("Estimated gas is {}".format(estimated_gas))
     tx_hash, address = smart_contract.deploy(node,
                                              fromAddress=from_address,
-                                             gasLimit=100000000,
-                                             gasPrice=10)
+                                             gasLimit=estimated_gas)
     print("Generating next block...")
     generate_next_blocks(node, "first node", 1)
     tx_receipt = node.rpc_eth_getTransactionReceipt(tx_hash)
@@ -406,7 +410,7 @@ class SCEvmMetamaskTest(SidechainTestFramework):
         tx_hash_legacy = eoa_transfer(sc_node, evm_address, other_address, transfer_amount,
                                       call_method=CallMethod.RPC_LEGACY)
 
-        gas_used_legacy = computeForgedTxGasUsed(sc_node, tx_hash_legacy)
+        (gas_used_legacy,_,_) = computeForgedTxFee(sc_node, tx_hash_legacy)
 
         eoa_assert_native_balance(sc_node, evm_address, initial_balance - (transfer_amount + gas_used_legacy))
         eoa_assert_native_balance(sc_node, other_address, transfer_amount)
@@ -415,7 +419,7 @@ class SCEvmMetamaskTest(SidechainTestFramework):
         tx_hash_eip155 = eoa_transfer(sc_node, evm_address, other_address, transfer_amount,
                                       call_method=CallMethod.RPC_EIP155)
 
-        gas_used_eip155 = computeForgedTxGasUsed(sc_node, tx_hash_eip155)
+        (gas_used_eip155,_,_) = computeForgedTxFee(sc_node, tx_hash_eip155)
 
         eoa_assert_native_balance(sc_node, evm_address,
                                   initial_balance - (2 * transfer_amount + gas_used_legacy + gas_used_eip155))
@@ -427,7 +431,7 @@ class SCEvmMetamaskTest(SidechainTestFramework):
         tx_hash_eip1559 = eoa_transfer(sc_node, evm_address, other_address, transfer_amount,
                                        call_method=CallMethod.RPC_EIP1559)
 
-        gas_used_eip1559 = computeForgedTxGasUsed(sc_node, tx_hash_eip1559)
+        (gas_used_eip1559,_,_) = computeForgedTxFee(sc_node, tx_hash_eip1559)
 
         eoa_assert_native_balance(sc_node, other_address, 3 * transfer_amount)
         eoa_assert_native_balance(sc_node, evm_address, initial_balance - (
@@ -464,9 +468,6 @@ class SCEvmMetamaskTest(SidechainTestFramework):
         minted_ids_user1 = [1]
         minting_price = 1
         minting_amount = 1
-        gas = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
-                           minted_ids_user1[0], estimate_gas=True, generate_block=False, static_call=False)
-        print("gas:", gas)
         # check execution before submitting proper transaction
         res = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
                            minted_ids_user1[0], static_call=True, generate_block=False)
@@ -477,7 +478,8 @@ class SCEvmMetamaskTest(SidechainTestFramework):
         res = compare_total_supply(sc_node, smart_contract, smart_contract_address, evm_address, 1)
         res = compare_ownerof(sc_node, smart_contract, smart_contract_address, other_address, minted_ids_user1[0],
                               evm_address)
-        last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance - minting_price)
+        (gas_used,_,_) = computeForgedTxFee(sc_node, tx_hash)
+        last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance - minting_price - gas_used)
         last_balance = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address,
                                        last_balance + minting_amount)
 
@@ -499,9 +501,6 @@ class SCEvmMetamaskTest(SidechainTestFramework):
 
         compare_erc20_balance(sc_node, smart_contract, smart_contract_address, evm_address, initial_balance)
 
-        gas = transfer_erc20_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
-                                    transfer_amount, static_call=False, generate_block=False, estimate_gas=True)
-        print("Gas:", gas)
         tx_hash = transfer_erc20_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
                                         transfer_amount, static_call=False, generate_block=True)
 
@@ -534,9 +533,6 @@ class SCEvmMetamaskTest(SidechainTestFramework):
         minted_ids_user1 = [1]
         minting_price = 1
         minting_amount = 1
-        gas = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
-                           minted_ids_user1[0], estimate_gas=True, generate_block=False, static_call=False)
-        print("gas:", gas)
         # check execution before submitting proper transaction
         res = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
                            minted_ids_user1[0], static_call=True, generate_block=False)
@@ -547,7 +543,9 @@ class SCEvmMetamaskTest(SidechainTestFramework):
         res = compare_total_supply(sc_node, smart_contract, smart_contract_address, evm_address, 1)
         res = compare_ownerof(sc_node, smart_contract, smart_contract_address, other_address, minted_ids_user1[0],
                               evm_address)
-        last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance - minting_price)
+
+        (gas_used,_,_) = computeForgedTxFee(sc_node, tx_hash)
+        last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance - minting_price - gas_used)
         last_balance = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address,
                                        last_balance + minting_amount)
 
@@ -569,9 +567,6 @@ class SCEvmMetamaskTest(SidechainTestFramework):
 
         compare_erc20_balance(sc_node, smart_contract, smart_contract_address, evm_address, initial_balance)
 
-        gas = transfer_erc20_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
-                                    transfer_amount, static_call=False, generate_block=False, estimate_gas=True)
-        print("Gas:", gas)
         tx_hash = transfer_erc20_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
                                         transfer_amount, static_call=False, generate_block=True)
 
@@ -604,9 +599,6 @@ class SCEvmMetamaskTest(SidechainTestFramework):
         minted_ids_user1 = [1]
         minting_price = 1
         minting_amount = 1
-        gas = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
-                           minted_ids_user1[0], estimate_gas=True, generate_block=False, static_call=False)
-        print("gas:", gas)
         # check execution before submitting proper transaction
         res = mint_payable(sc_node, smart_contract, smart_contract_address, evm_address, minting_price,
                            minted_ids_user1[0], static_call=True, generate_block=False)
@@ -617,7 +609,8 @@ class SCEvmMetamaskTest(SidechainTestFramework):
         res = compare_total_supply(sc_node, smart_contract, smart_contract_address, evm_address, 1)
         res = compare_ownerof(sc_node, smart_contract, smart_contract_address, other_address, minted_ids_user1[0],
                               evm_address)
-        last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance - minting_price)
+        (gas_used,_,_) = computeForgedTxFee(sc_node, tx_hash)
+        last_nat_balance = compare_nat_balance(sc_node, evm_address, last_nat_balance - minting_price - gas_used)
         last_balance = compare_balance(sc_node, smart_contract, smart_contract_address, evm_address,
                                        last_balance + minting_amount)
 
@@ -639,9 +632,6 @@ class SCEvmMetamaskTest(SidechainTestFramework):
 
         compare_erc20_balance(sc_node, smart_contract, smart_contract_address, evm_address, initial_balance)
 
-        gas = transfer_erc20_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
-                                    transfer_amount, static_call=False, generate_block=False, estimate_gas=True)
-        print("Gas:", gas)
         tx_hash = transfer_erc20_tokens(sc_node, smart_contract, smart_contract_address, evm_address, other_address,
                                         transfer_amount, static_call=False, generate_block=True)
 

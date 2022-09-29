@@ -1,10 +1,9 @@
 package com.horizen.account.api.http
 
-import org.web3j.crypto._
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
-import com.fasterxml.jackson.annotation.JsonView
+import com.fasterxml.jackson.annotation.{JsonView}
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.google.common.primitives.Bytes
 import com.horizen.SidechainTypes
@@ -19,9 +18,7 @@ import com.horizen.account.proposition.AddressProposition
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.transaction.EthereumTransaction
-
 import com.horizen.account.utils.{EthereumTransactionDecoder, EthereumTransactionUtils, ZenWeiConverter}
-
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.api.http.SidechainTransactionErrorResponse.GenericTransactionError
@@ -34,13 +31,13 @@ import com.horizen.transaction.Transaction
 import com.horizen.utils.BytesUtils
 import org.web3j.crypto.Sign.SignatureData
 import org.web3j.crypto.TransactionEncoder.createEip155SignatureData
+import org.web3j.crypto._
 import scorex.core.settings.RESTApiSettings
 
-import scala.collection.JavaConverters._
-import scala.compat.java8.OptionConverters._
 import java.lang
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
+import scala.collection.JavaConverters._
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.reflect.ClassTag
@@ -89,6 +86,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
   def getFittingSecret(nodeView: AccountNodeView, fromAddress: Option[String], txValueInWei: BigInteger)
   : Option[PrivateKeySecp256k1] = {
+
+
     val wallet = nodeView.getNodeWallet
     val allAccounts = wallet.secretsOfType(classOf[PrivateKeySecp256k1])
     val secret = allAccounts.find(
@@ -134,18 +133,23 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       applyOnNodeView { sidechainNodeView =>
         val valueInWei = ZenWeiConverter.convertZenniesToWei(body.value)
         val destAddress = body.to
-
         // TODO actual gas implementation
-        val gasPrice = sidechainNodeView.getNodeHistory.getBestBlock.header.baseFee
+        var gasLimit = GasUtil.TxGas
+        var gasPrice = sidechainNodeView.getNodeHistory.getBestBlock.header.baseFee
 
-        val gasLimit = GasUtil.TxGas
+        if (body.gasInfo.isDefined) {
+          gasPrice = body.gasInfo.get.maxFeePerGas
+          gasLimit = body.gasInfo.get.gasLimit
+        }
+
         // check if the fromAddress is either empty or it fits and the value is high enough
-        val secret = getFittingSecret(sidechainNodeView, body.from, valueInWei)
+        val txCost = valueInWei.add(gasPrice.multiply(gasLimit))
+
+        val secret = getFittingSecret(sidechainNodeView, body.from, txCost)
         secret match {
           case Some(secret) =>
             val nonce = body.nonce.getOrElse(sidechainNodeView.getNodeState.getNonce(secret.publicImage.address))
             val isEIP155 = body.EIP155.getOrElse(false)
-
             val response = if (isEIP155) {
                 val tmpTx = new EthereumTransaction(
                   destAddress,
@@ -208,8 +212,10 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
             null
         )
         if (!signedTx.isSigned) {
+          val txCost = signedTx.getValue.add(signedTx.getGasPrice.multiply(signedTx.getGasLimit))
+
           val secret =
-            getFittingSecret(sidechainNodeView, body.from, signedTx.getValue)
+            getFittingSecret(sidechainNodeView, body.from, txCost)
           secret match {
             case Some(secret) =>
               signedTx = signTransactionWithSecret(secret, signedTx)
@@ -245,8 +251,10 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
             null
         )
         if (!signedTx.isSigned) {
+          val txCost = signedTx.getValue.add(signedTx.getGasPrice.multiply(signedTx.getGasLimit))
+
           val secret =
-            getFittingSecret(sidechainNodeView, body.from, signedTx.getValue)
+            getFittingSecret(sidechainNodeView, body.from, txCost)
           secret match {
             case Some(secret) =>
               signedTx = signTransactionWithSecret(secret, signedTx)
@@ -268,8 +276,10 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       applyOnNodeView { sidechainNodeView =>
         var signedTx = new EthereumTransaction(EthereumTransactionDecoder.decode(body.payload))
         if (!signedTx.isSigned) {
+          val txCost = signedTx.getValue.add(signedTx.getGasPrice.multiply(signedTx.getGasLimit))
+
           val secret =
-            getFittingSecret(sidechainNodeView, body.from, signedTx.getValue)
+            getFittingSecret(sidechainNodeView, body.from, txCost)
           secret match {
             case Some(secret) =>
               signedTx = signTransactionWithSecret(secret, signedTx)
@@ -287,8 +297,9 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
       body => {
         applyOnNodeView { sidechainNodeView =>
           var signedTx = new EthereumTransaction(EthereumTransactionDecoder.decode(body.payload))
+          val txCost = signedTx.getValue.add(signedTx.getGasPrice.multiply(signedTx.getGasLimit))
           val secret =
-            getFittingSecret(sidechainNodeView, body.from, signedTx.getValue)
+            getFittingSecret(sidechainNodeView, body.from, txCost)
           secret match {
             case Some(secret) =>
               signedTx = signTransactionWithSecret(secret, signedTx)
@@ -319,9 +330,11 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           maxPriorityFeePerGas = body.gasInfo.get.maxPriorityFeePerGas
           gasLimit = body.gasInfo.get.gasLimit
         }
+
         //getFittingSecret needs to take into account also gas
-        val secret = getFittingSecret(sidechainNodeView, None,
-          valueInWei.add(maxFeePerGas.multiply(gasLimit)))
+        val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
+
+        val secret = getFittingSecret(sidechainNodeView, None, txCost)
 
         secret match {
           case Some(secret) =>
@@ -366,7 +379,8 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           gasLimit = body.gasInfo.get.gasLimit
         }
         //getFittingSecret needs to take into account only gas
-        val secret = getFittingSecret(sidechainNodeView, None, (maxFeePerGas.multiply(gasLimit)))
+        val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
+        val secret = getFittingSecret(sidechainNodeView, None, txCost)
         secret match {
           case Some(txCreatorSecret) =>
             val to = BytesUtils.toHexString(ForgerStakeMsgProcessor.ForgerStakeSmartContractAddress)
@@ -437,8 +451,9 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           maxPriorityFeePerGas = gasInfo.get.maxPriorityFeePerGas
           gasLimit = gasInfo.get.gasLimit
         }
-        //TODO Probably getFittingSecret would need to take into account also gas
-        val secret = getFittingSecret(sidechainNodeView, None, valueInWei)
+
+        val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
+        val secret = getFittingSecret(sidechainNodeView, None, txCost)
         secret match {
           case Some(secret) =>
 
@@ -487,8 +502,9 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           maxPriorityFeePerGas = body.gasInfo.get.maxPriorityFeePerGas
           gasLimit = body.gasInfo.get.gasLimit
         }
-        //TODO Probably getFittingSecret would need to take into account also gas
-        val secret = getFittingSecret(sidechainNodeView, None, valueInWei)
+
+        val txCost = valueInWei.add(maxFeePerGas.multiply(gasLimit))
+        val secret = getFittingSecret(sidechainNodeView, None, txCost)
         secret match {
           case Some(secret) =>
             val to = null
@@ -573,7 +589,6 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
 
 
 object AccountTransactionRestScheme {
-
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqAllTransactions(format: Option[Boolean]) extends SuccessResponse
 
@@ -590,27 +605,6 @@ object AccountTransactionRestScheme {
   private[api] case class RespAllForgerStakes(stakes: List[AccountForgingStakeInfo]) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqFindById(transactionId: String, blockHash: Option[String], transactionIndex: Option[Boolean], format: Option[Boolean])
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class TransactionDTO(transaction: SidechainTypes#SCAT) extends SuccessResponse
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class TransactionBytesDTO(transactionBytes: String) extends SuccessResponse
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqDecodeTransactionBytes(transactionBytes: String)
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespDecodeTransactionBytes(transaction: SidechainTypes#SCAT) extends SuccessResponse
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class TransactionInput(boxId: String)
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class TransactionOutput(publicKey: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)
-
-  @JsonView(Array(classOf[Views.Default]))
   private[api] case class TransactionWithdrawalRequest(mainchainAddress: String, @JsonDeserialize(contentAs = classOf[java.lang.Long]) value: Long)
 
   @JsonView(Array(classOf[Views.Default]))
@@ -624,31 +618,13 @@ object AccountTransactionRestScheme {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqCreateCoreTransaction(transactionInputs: List[TransactionInput],
-                                                   regularOutputs: List[TransactionOutput],
-                                                   withdrawalRequests: List[TransactionWithdrawalRequest],
-                                                   forgerOutputs: List[TransactionForgerOutput],
-                                                   format: Option[Boolean]) {
-    require(transactionInputs.nonEmpty, "Empty inputs list")
-    require(regularOutputs.nonEmpty || withdrawalRequests.nonEmpty || forgerOutputs.nonEmpty, "Empty outputs")
-  }
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqCreateCoreTransactionSimplified(regularOutputs: List[TransactionOutput],
-                                                             withdrawalRequests: List[TransactionWithdrawalRequest],
-                                                             forgerOutputs: List[TransactionForgerOutput],
-                                                             @JsonDeserialize(contentAs = classOf[java.lang.Long]) fee: Long,
-                                                             format: Option[Boolean]) {
-    require(regularOutputs.nonEmpty || withdrawalRequests.nonEmpty || forgerOutputs.nonEmpty, "Empty outputs")
-    require(fee >= 0, "Negative fee. Fee must be >= 0")
-  }
-
-  @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqSendCoinsToAddress(from: Option[String],
                                                 nonce: Option[BigInteger],
                                                 to: String,
                                                 @JsonDeserialize(contentAs = classOf[lang.Long]) value: Long,
-                                                EIP155: Option[Boolean]) {
+                                                EIP155: Option[Boolean],
+                                                gasInfo: Option[EIP1559GasInfo]
+                                               ) {
     require(to.nonEmpty, "Empty destination address")
     require(value >= 0, "Negative value. Value must be >= 0")
   }
@@ -674,9 +650,6 @@ object AccountTransactionRestScheme {
                                               ) {
     require(forgerStakeInfo != null, "Forger stake info must be provided")
   }
-
-  @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqSendTransactionPost(transactionBytes: String)
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqCreateContract(

@@ -6,7 +6,7 @@ import com.horizen.account.storage.AccountStateMetadataStorageView
 import com.horizen.account.utils.Account
 import com.horizen.evm.utils.Hash
 import com.horizen.evm.{MemoryDatabase, StateDB}
-import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
+import com.horizen.utils.{BytesUtils, ClosableResourceHandler}
 import org.junit.Assert.assertEquals
 import org.scalatestplus.mockito.MockitoSugar.mock
 import org.web3j.abi.datatypes.Type
@@ -71,27 +71,27 @@ trait MessageProcessorFixture extends ClosableResourceHandler {
       gasLimit,
       value,
       nonce,
-      data
+      data,
+      false
     )
   }
 
   /**
    * Creates a large temporary gas pool and passes it into the given function.
    */
-  def withGas[A](fun: GasPool => A): A = {
-    fun(new GasPool(BigInteger.valueOf(1000000)))
+  def withGas[A](fun: GasPool => A, gasLimit: BigInteger = 1000000): A = {
+    fun(new GasPool(gasLimit))
   }
 
   /**
    * Creates a large temporary gas pool and verifies the amount of total gas consumed.
-   * TODO: enable gas checks again
    */
-  def assertGas[A](expectedGas: BigInteger = BigInteger.ZERO, enfore: Boolean = false)(fun: GasPool => A): A = {
+  def assertGas[A](expectedGas: BigInteger, enforce: Boolean = true)(fun: GasPool => A): A = {
     withGas { gas =>
       try {
         fun(gas)
       } finally {
-        if (enfore) {
+        if (enforce) {
           assertEquals("Unexpected gas consumption", expectedGas, gas.getUsedGas)
         } else {
           println("consumed gas: " + gas.getUsedGas)

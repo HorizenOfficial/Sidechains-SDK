@@ -32,6 +32,7 @@ import scorex.util.{ModifierId, ScorexLogging, idToBytes}
 
 import java.math.BigInteger
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
@@ -99,8 +100,9 @@ class AccountForgeMessageBuilder(
     var cumGasUsed: BigInteger = BigInteger.ZERO
     var cumBaseFee: BigInteger = BigInteger.ZERO // cumulative base-fee, burned in eth, goes to forgers pool
     var cumForgerTips: BigInteger = BigInteger.ZERO  // cumulative max-priority-fee, is paid to block forger
+    val accountsToSkip = new mutable.HashSet[SidechainTypes#SCP]
 
-    for ((tx, txIndex) <- sidechainTransactions.zipWithIndex) {
+    for ((tx, txIndex) <- sidechainTransactions.zipWithIndex if !accountsToSkip.contains(tx.getFrom)) {
 
       stateView.applyTransaction(tx, txIndex, blockGasPool, blockContext) match {
         case Success(consensusDataReceipt) =>
@@ -120,14 +122,24 @@ class AccountForgeMessageBuilder(
           cumBaseFee = cumBaseFee.add(txBaseFeePerGas.multiply(txGasUsed))
           cumForgerTips = cumForgerTips.add(txForgerTipPerGas.multiply(txGasUsed))
 
-        case Failure(_: GasLimitReached) =>
+       case Failure(e: GasLimitReached) =>
           // block gas limit reached
-          // TODO: keep trying to fit transactions into the block: this TX did not fit, but another one might
+          // keep trying to fit transactions into the block: this TX did not fit, but another one might
+          log.trace(s"Could not apply tx, reason: ${e.getMessage}")
+          // skip all txs from the same account
+          accountsToSkip += tx.getFrom
+        case Failure(e: FeeCapTooLowException) =>
+          // stop forging because all the remaining txs cannot be executed for the nonce, if they are from the same account, or,
+          // if they are from other accounts, they will have a lower fee cap
+          log.trace(s"Could not apply tx, reason: ${e.getMessage}")
           return Success(receiptList, txHashList, cumBaseFee, cumForgerTips)
-
+        case Failure(e: NonceTooLowException) =>
+          //SHOULD NEVER HAPPEN, but in case just skip this tx
+         log.error(s"******** Could not apply tx for NonceTooLowException ******* : ${e.getMessage}")
         case Failure(e) =>
-          // just skip this tx
-          log.debug("Could not apply tx, reason: " + e.getMessage)
+          // skip all txs from the same account
+          accountsToSkip += tx.getFrom
+          log.trace(s"Could not apply tx, reason: ${e.getMessage}. Skipping all next transactions from the same account because not executable anymore",e)
       }
     }
     (receiptList, txHashList, cumBaseFee, cumForgerTips)
@@ -297,7 +309,6 @@ class AccountForgeMessageBuilder(
     // no checks of the block size here, these txes are the candidates and their inclusion
     // will be attempted by forger
 
-    // TODO sort by address and nonce, and then preserving nonce ordering, sort by gas price
     nodeView.pool.take(nodeView.pool.size).toSeq
   }
 

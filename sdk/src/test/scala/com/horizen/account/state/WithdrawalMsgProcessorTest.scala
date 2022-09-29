@@ -2,10 +2,9 @@ package com.horizen.account.state
 
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.account.FeeUtils
-import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.utils.{Account, ZenWeiConverter}
+import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.proposition.MCPublicKeyHashProposition
-import com.horizen.utils.{ByteArrayWrapper, BytesUtils, WithdrawalEpochInfo}
+import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import org.junit.Assert._
 import org.junit._
 import org.mockito._
@@ -42,8 +41,8 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
           WithdrawalMsgProcessor.contractAddress,
           args.getArgument(0))
         assertArrayEquals(
-          "Different code hash expected.",
-          WithdrawalMsgProcessor.contractCodeHash,
+          "Different code expected.",
+          WithdrawalMsgProcessor.contractCode,
           args.getArgument(1))
       })
     WithdrawalMsgProcessor.init(mockStateView)
@@ -165,7 +164,7 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
         mockWithdrawalRequestsList.get(new ByteArrayWrapper(key))
       })
 
-    returnData = withGas(WithdrawalMsgProcessor.process(msg, mockStateView, _, defaultBlockContext))
+    returnData = withGas(WithdrawalMsgProcessor.process(msg, mockStateView, _, defaultBlockContext), 10000000)
     assertArrayEquals(WithdrawalRequestsListEncoder.encode(expectedListOfWR), returnData)
   }
 }

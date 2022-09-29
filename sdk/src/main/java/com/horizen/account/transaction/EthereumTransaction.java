@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.*;
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.state.GasUintOverflowException;
+import com.horizen.account.state.GasUtil;
 import com.horizen.account.state.Message;
 import com.horizen.account.utils.Account;
 import com.horizen.account.utils.BigIntegerUtil;
@@ -30,6 +31,7 @@ import java.util.Objects;
 @JsonIgnoreProperties({"transaction", "gasLimit"})
 @JsonView(Views.Default.class)
 public class EthereumTransaction extends AccountTransaction<AddressProposition, SignatureSecp256k1> {
+
     private final RawTransaction transaction;
 
     // depends on the transaction
@@ -139,39 +141,37 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "non-positive gas limit", id()));
         if (!BigIntegerUtil.isUint64(getGasLimit())) throw new GasUintOverflowException();
+        //TODO why this check is not in Geth (maybe)?
         if (getTo() == null && getData().length == 0)
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "smart contract declaration transaction without data", id()));
 
-        if (isEIP1559()) {
-            if (getMaxFeePerGas().signum() < 0)
-                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                        "eip1559 transaction with negative maxFeePerGas", id()));
-            if (getMaxPriorityFeePerGas().signum() < 0)
-                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                        "eip1559 transaction with negative maxPriorityFeePerGas", id()));
-            if (getMaxFeePerGas().bitLength() > 256)
-                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                        "eip1559 transaction maxFeePerGas bit length [%d] is too high", id(), getMaxFeePerGas().bitLength()));
+        if (getMaxFeePerGas().signum() < 0)
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "eip1559 transaction with negative maxFeePerGas", id()));
+        if (getMaxPriorityFeePerGas().signum() < 0)
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "eip1559 transaction with negative maxPriorityFeePerGas", id()));
+        if (getMaxFeePerGas().bitLength() > 256)
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "eip1559 transaction maxFeePerGas bit length [%d] is too high", id(), getMaxFeePerGas().bitLength()));
 
-            if (getMaxPriorityFeePerGas().bitLength() > 256)
-                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                        "eip1559 transaction maxPriorityFeePerGas bit length [%d] is too high", id(), getMaxPriorityFeePerGas().bitLength()));
+        if (getMaxPriorityFeePerGas().bitLength() > 256)
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "eip1559 transaction maxPriorityFeePerGas bit length [%d] is too high", id(), getMaxPriorityFeePerGas().bitLength()));
 
-            if (getMaxFeePerGas().compareTo(getMaxPriorityFeePerGas()) < 0)
-                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                                "eip1559 transaction max priority fee per gas [%s] higher than max fee per gas [%s]",
-                        id(), getMaxPriorityFeePerGas(), getMaxFeePerGas()));
-        } else { // legacy transaction
-            if (getGasPrice().signum() < 0)
-                throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
-                        "legacy transaction with negative gasPrice", id()));
+        if (getMaxFeePerGas().compareTo(getMaxPriorityFeePerGas()) < 0)
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                            "eip1559 transaction max priority fee per gas [%s] higher than max fee per gas [%s]",
+                    id(), getMaxPriorityFeePerGas(), getMaxFeePerGas()));
+
+        if (getGasLimit().compareTo(GasUtil.intrinsicGas(getData(), getTo() == null)) < 0) {
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "gas limit is below intrinsic gas", id()));
         }
 
-
-        //TODO: add this again later or remove, because these checks are already made in some other place
         try {
-            if (this.getFrom().address().length != Account.ADDRESS_SIZE)
+            if (this.getFrom() == null || this.getFrom().address().length != Account.ADDRESS_SIZE)
                 throw new TransactionSemanticValidityException("Cannot create signed transaction without valid from address");
         } catch (org.web3j.crypto.exception.CryptoWeb3jException e) {
             // for instance badly constructed tx having wrong type
@@ -180,6 +180,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         if (!this.getSignature().isValid(this.getFrom(), this.messageToSign()))
             throw new TransactionSemanticValidityException("Cannot create signed transaction with invalid " +
                     "signature");
+
     }
 
     @Override
@@ -191,19 +192,25 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     public BigInteger getGasPrice() {
         if (!this.isEIP1559())
             return this.legacyTx().getGasPrice();
-        return null;
+        //in Geth for EIP1559 tx gasPrice returns gasFeeCap
+        return getMaxFeePerGas();
     }
 
+    @Override
     public BigInteger getMaxFeePerGas() {
         if (this.isEIP1559())
             return this.eip1559Tx().getMaxFeePerGas();
-        return null;
+        else
+            //in Geth for Legacy tx gasFeeCap is equal to gasPrice
+            return this.legacyTx().getGasPrice();
     }
 
     public BigInteger getMaxPriorityFeePerGas() {
         if (this.isEIP1559())
             return this.eip1559Tx().getMaxPriorityFeePerGas();
-        return null;
+        else
+            //in Geth for Legacy tx MaxPriorityFee is equal to gasPrice
+            return this.legacyTx().getGasPrice();
     }
 
     public Long getChainId() {
@@ -309,6 +316,7 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
         return null;
     }
 
+
     @JsonIgnore
     public Sign.SignatureData getSignatureData() {
         if (this.isSigned()) {
@@ -322,16 +330,25 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
     }
 
     // used in json representation of signature fields. In case of EIP155 tx getV() returns the value carrying the chainId
-    public byte[] getV() { return (getSignatureData() != null) ? getSignatureData().getV() : null; }
-    public byte[] getR() { return (getSignatureData() != null) ? getSignatureData().getR() : null; }
-    public byte[] getS() { return (getSignatureData() != null) ? getSignatureData().getS() : null; }
+    public byte[] getV() {
+        return (getSignatureData() != null) ? getSignatureData().getV() : null;
+    }
+
+    public byte[] getR() {
+        return (getSignatureData() != null) ? getSignatureData().getR() : null;
+    }
+
+    public byte[] getS() {
+        return (getSignatureData() != null) ? getSignatureData().getS() : null;
+    }
 
     @Override
     public String toString() {
         if (this.isEIP1559())
             return String.format(
-                    "EthereumTransaction{from=%s, nonce=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
+                    "EthereumTransaction{id=%s, from=%s, nonce=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
                             "maxFeePerGas=%s, maxPriorityFeePerGas=%s, Signature=%s}",
+                    id(),
                     getFromAddress(),
                     Numeric.toHexStringWithPrefix(this.getNonce()),
                     Numeric.toHexStringWithPrefix(this.getGasLimit()),
@@ -343,8 +360,9 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                     isSigned() ? new SignatureSecp256k1(getSignatureData()).toString() : ""
             );
         else return String.format(
-                "EthereumTransaction{from=%s, nonce=%s, gasPrice=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
+                "EthereumTransaction{id=%s, from=%s, nonce=%s, gasPrice=%s, gasLimit=%s, to=%s, value=%s, data=%s, " +
                         "Signature=%s}",
+                id(),
                 getFromAddress(),
                 Numeric.toHexStringWithPrefix(this.getNonce() != null ? this.getNonce() : BigInteger.ZERO),
                 Numeric.toHexStringWithPrefix(this.getGasPrice() != null ? this.getGasPrice() : BigInteger.ZERO),
@@ -381,7 +399,8 @@ public class EthereumTransaction extends AccountTransaction<AddressProposition, 
                 getGasLimit(),
                 getValue(),
                 getNonce(),
-                getData()
+                getData(),
+                false
         );
     }
 }

@@ -37,4 +37,9 @@ public class RpcError {
     public String getData() {
         return data;
     }
+
+    @Override
+    public String toString() {
+        return String.format("RpcError{code=%d, message='%s', data='%s'}", code, message, data);
+    }
 }
