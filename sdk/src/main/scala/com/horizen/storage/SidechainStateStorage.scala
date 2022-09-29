@@ -6,7 +6,7 @@ import com.horizen.SidechainTypes
 import com.horizen.backup.BoxIterator
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
 import com.horizen.box.{WithdrawalRequestBox, WithdrawalRequestBoxSerializer}
-import com.horizen.certificatesubmitter.keys._
+import com.horizen.certificatesubmitter.keys.{KeyRotationProof, KeyRotationProofSerializer, _}
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
 import com.horizen.forge.{ForgerList, ForgerListSerializer}
@@ -180,17 +180,20 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
   }
 
-  def getListOfKeyRotationProofs(withdrawalEpoch: Int): Option[Seq[KeyRotationProof]]= {
-    storage.get(getTopQualityCertificateKey(withdrawalEpoch)).asScala match {
-      case Some(baw) =>
-        KeyRotationProofSerializer.parseBytesTry(baw.data) match {
-          case Success(keyRotationProofs: Seq[KeyRotationProof]) => Option(keyRotationProofs)
-          case Failure(exception) =>
-            log.error("Error while withdrawal epoch certificate master keys parsing.", exception)
-            Option.empty
+  def getListOfKeyRotationProofs(withdrawalEpochNumber: Int): Seq[KeyRotationProof]= {
+    val keyRotationProofs: ListBuffer[KeyRotationProof] = ListBuffer()
+    val lastCounter = getBlockFeeInfoCounter(withdrawalEpochNumber)
+
+    for (counter <- 0 to lastCounter) {
+      storage.get(getBlockFeeInfoKey(withdrawalEpochNumber, counter)).asScala match {
+        case Some(baw) => KeyRotationProofSerializer.parseBytesTry(baw.data) match {
+          case Success(info) => keyRotationProofs.append(info)
+          case Failure(exception) => throw new IllegalStateException("Error while key rotation proofs parsing.", exception)
         }
-      case _ => Option.empty
+        case None => throw new IllegalStateException("Error while key rotation proofs retrieving: record expected to exist.")
+      }
     }
+    keyRotationProofs
   }
 
   def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
@@ -314,7 +317,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
         })
         updateList.add(new JPair(getKeys(withdrawalEpochInfo.epoch, getWithdrawalEpochCounter(withdrawalEpochInfo.epoch) + 1),
           new ByteArrayWrapper(ActualKeysSerializer.toBytes(actualKeys))))
-      case _ => _
+      case _ => identity()
     }
 
     // Store utxo tree merkle root if present
