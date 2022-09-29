@@ -39,7 +39,6 @@ import java.math.BigInteger
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
-import scala.compat.java8.OptionConverters.RichOptionalGeneric
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
@@ -109,7 +108,7 @@ class EthService(
   def getBlockByHash(tag: String, hydratedTx: Boolean): EthereumBlock = {
     applyOnAccountView { nodeView =>
       using(nodeView.state.getView) { stateView =>
-        constructEthBlockWithTransactions(nodeView, stateView, Numeric.cleanHexPrefix(tag), hydratedTx)
+        constructEthBlockWithTransactions(nodeView, stateView, ModifierId(Numeric.cleanHexPrefix(tag)), hydratedTx)
       }
     }
   }
@@ -117,11 +116,10 @@ class EthService(
   private def constructEthBlockWithTransactions(
       nodeView: NV,
       stateView: AccountStateView,
-      blockId: String,
+      blockId: ModifierId,
       hydratedTx: Boolean
   ): EthereumBlock = {
-    if (blockId == null) return null
-    nodeView.history.getBlockById(blockId).asScala match {
+    nodeView.history.getStorageBlockById(blockId) match {
       case None => null
       case Some(block) =>
         val transactions = block.transactions.filter {
@@ -309,7 +307,7 @@ class EthService(
 
   @RpcMethod("eth_getBalance")
   @RpcOptionalParameters(1)
-  def GetBalance(address: Address, tag: String): Quantity = {
+  def getBalance(address: Address, tag: String): Quantity = {
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { (tagStateView, _) =>
         new Quantity(tagStateView.getBalance(address.toBytes))
@@ -330,10 +328,9 @@ class EthService(
   private def getBlockByTag(nodeView: NV, tag: String): (AccountBlock, SidechainBlockInfo) = {
     val blockId = getBlockIdByTag(nodeView, tag)
     val block = nodeView.history
-      .getBlockById(blockId)
-      .asScala
+      .getStorageBlockById(blockId)
       .getOrElse(throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock, "Invalid block tag parameter.")))
-    val blockInfo = nodeView.history.blockInfoById(ModifierId(blockId))
+    val blockInfo = nodeView.history.blockInfoById(blockId)
     (block, blockInfo)
   }
 
@@ -348,15 +345,18 @@ class EthService(
     using(nodeView.state.getStateDbViewFromRoot(block.header.stateRoot))(fun(_, blockContext))
   }
 
-  private def getBlockIdByTag(nodeView: NV, tag: String): String = {
+  private def getBlockIdByTag(nodeView: NV, tag: String): ModifierId = {
     val history = nodeView.history
     val blockId = tag match {
-      case "earliest" => history.getBlockIdByHeight(1)
+      case "earliest" => history.blockIdByHeight(1)
       case "finalized" | "safe" => throw new RpcException(RpcError.fromCode(RpcCode.UnknownBlock))
-      case "latest" | "pending" | null => history.getBlockIdByHeight(history.getCurrentHeight)
-      case height => history.getBlockIdByHeight(Numeric.decodeQuantity(height).intValueExact())
+      case "latest" | "pending" | null => history.blockIdByHeight(history.getCurrentHeight)
+      case height => Try.apply(Numeric.decodeQuantity(height).intValueExact()).toOption.flatMap(history.blockIdByHeight)
     }
-    blockId.orElse(null)
+    ModifierId(
+      blockId
+        .getOrElse(throw new RpcException(new RpcError(RpcCode.InvalidParams, "Invalid block tag parameter", null)))
+    )
   }
 
   @RpcMethod("net_version")
@@ -517,7 +517,7 @@ class EthService(
   def getForwardTransfers(blockId: String): ForwardTransfersView = {
     if (blockId == null) return null
     applyOnAccountView { nodeView =>
-      nodeView.history.getBlockById(getBlockIdByTag(nodeView, blockId)).asScala match {
+      nodeView.history.getStorageBlockById(getBlockIdByTag(nodeView, blockId)) match {
         case Some(block) => new ForwardTransfersView(getForwardTransfersForBlock(block).asJava, false)
         case None => null
       }

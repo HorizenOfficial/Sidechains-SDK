@@ -18,6 +18,10 @@ public class RpcError {
         this.data = data;
     }
 
+    public RpcError(RpcCode code, String message, String data) {
+        this(code.getCode(), message, data);
+    }
+
     public static RpcError fromCode(RpcCode code, String data) {
         return new RpcError(code.getCode(), code.getMessage(), data);
     }
