@@ -504,11 +504,7 @@ class EthService(
         blockContext.setEvmResult(null)
         tagStateView.applyTransaction(requestedTx, previousTransactions.length, gasPool, blockContext)
 
-        if (blockContext.getEvmResult == null) {
-          null
-        } else {
-          new DebugTraceTransactionView(blockContext.getEvmResult)
-        }
+        new DebugTraceTransactionView(blockContext.getEvmResult)
       }
     }
   }
