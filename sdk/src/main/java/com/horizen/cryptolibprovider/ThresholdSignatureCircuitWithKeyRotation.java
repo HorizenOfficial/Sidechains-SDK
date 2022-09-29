@@ -23,4 +23,12 @@ public interface ThresholdSignatureCircuitWithKeyRotation {
                                    String provingKeyPath,
                                    boolean checkProvingKey,
                                    boolean zk); // map fields to createProof of Cryptolib
+
+    byte[] generateMessageToBeSigned(List<WithdrawalRequestBox> bt,
+                                     byte[] sidechainId,
+                                     int epochNumber,
+                                     byte[] endCumulativeScTxCommTreeRoot,
+                                     long btrFee,
+                                     long ftMinAmount,
+                                     Seq<byte[]> customParameters);
 }

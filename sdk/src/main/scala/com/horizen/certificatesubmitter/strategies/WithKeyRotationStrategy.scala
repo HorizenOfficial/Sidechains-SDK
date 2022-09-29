@@ -35,7 +35,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       s"It can take a while.")
 
     //create and return proof with quality
-    CryptoLibProvider.keyRotationCircuitFunctions.createProof(
+    CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.createProof(
       dataForProofGeneration.withdrawalRequests.asJava,
       dataForProofGeneration.sidechainId,
       dataForProofGeneration.referencedEpochNumber,
@@ -106,8 +106,9 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
         }
       }
 
-
-      CryptoLibProvider.keyRotationCircuitFunctions.generateMessageToBeSigned(withdrawalRequests.asJava, sidechainId, referencedWithdrawalEpochNumber, endEpochCumCommTreeHash, btrFee, ftMinAmount, Seq(publicKeysMerkleTreeRoot))
+      CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+        .generateMessageToBeSigned(withdrawalRequests.asJava, sidechainId, referencedWithdrawalEpochNumber,
+          endEpochCumCommTreeHash, btrFee, ftMinAmount, Seq(publicKeysMerkleTreeRoot))
     }
 
     Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getMessage), settings.sparkzSettings.restApi.timeout).asInstanceOf[Try[Array[Byte]]].get
