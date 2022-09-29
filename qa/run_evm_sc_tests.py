@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import sys
 
+from sc_evm_backward_transfer_2 import SCEvmBackwardTransfer2
 from test_framework.util import assert_equal
 
 from sc_evm_bootstrap import SCEvmBootstrap
@@ -47,6 +48,9 @@ def run_tests(log_file):
 
     result = run_test(SCEvmBackwardTransfer())
     assert_equal(0, result, "sc_evm_backward_transfer test failed!")
+
+    result = run_test(SCEvmBackwardTransfer2())
+    assert_equal(0, result, "sc_evm_backward_transfer2 test failed!")
 
     result = run_test(SCEvmBWTCornerCases())
     assert_equal(0, result, "sc_evm_bwt_corner_cases test failed!")
