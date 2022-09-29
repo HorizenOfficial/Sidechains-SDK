@@ -396,13 +396,14 @@ class PerformanceTest(SidechainTestFramework):
                     print("Creator Node " + str(j) + " sent txs: " + str(i))
                     print(f"Populate Mempool Node{str(j)} time taken to send {str(i)} transactions: "
                           f"{end_time - start_time}")
-                    print(f"Populate Mempool - Average {request_type} response time: "
+                    print(f"Populate Mempool Node{str(j)} - Average {request_type} response time: "
                           f"{np.array(response_times).mean()}")
                     get_cpu_ram_usage()
 
             print("Creator Node " + str(j) + " total sent txs: " + str(self.initial_txs))
             populate_mempool_end_time = time.time()
-            print(f"Total Time to Populate Mempool: {populate_mempool_end_time - populate_mempool_start_time}")
+            print(f"Total Time to Populate Mempool Node{str(j)}: "
+                  f"{populate_mempool_end_time - populate_mempool_start_time}")
 
     def get_best_node_block_ids(self):
         block_ids = {}
@@ -688,7 +689,7 @@ class PerformanceTest(SidechainTestFramework):
 
         # Take best block id of every node and assert they all match
         test_start_block_ids, _ = self.get_best_node_block_ids()
-        assert_equal(len(set(test_start_block_ids.values())), 1)
+        assert_equal(len(set(test_start_block_ids.values())), 1, "Start BlockId's are not equal")
 
         # Output the wallet balance of each node
         print("Node Wallet Balances Before Test...")
@@ -708,21 +709,27 @@ class PerformanceTest(SidechainTestFramework):
                 end_test = True
                 for creator_node in txs_creators:
                     remaining_txs = None
-                    try:
-                        start_time = time.time()
-                        remaining_txs = len(allTransactions(creator_node, False)["transactionIds"])
-                        end_time = time.time()
-                        print(f"Creator Node{txs_creators.index(creator_node)} allTransactions response time: "
-                              f"{end_time - start_time}")
-                    except Exception:
-                        print(
-                            f"Creator Node{txs_creators.index(creator_node)} - Unable to retrieve mempool transactions")
+                    # Don't poll if we haven't mined a block yet, reduce calls to allTransactions
+                    if time.time() - start_time > self.block_rate:
+                        try:
+                            request_start_time = time.time()
+                            remaining_txs = len(allTransactions(creator_node, False)["transactionIds"])
+                            request_end_time = time.time()
+                            print(f"Creator Node{txs_creators.index(creator_node)} allTransactions response time: "
+                                  f"{request_end_time - request_start_time}")
+                        except Exception:
+                            print(
+                                f"Creator Node{txs_creators.index(creator_node)} - Unable to retrieve mempool "
+                                f"transactions")
                     if remaining_txs != 0:
                         end_test = False
                         break
-                # TODO: Check this sleep is efficient
+
                 get_cpu_ram_usage()
-                sleep(self.block_rate - 2)
+                # TODO: Optimise sleep to ensure it isn't effecting end time value
+                # TODO: Sleep until at least 2 blocks have been mined, first call is expensive when mempool filled
+                # Sleep for length of block rate, avoid polling allTransactions too often
+                sleep(self.block_rate)
 
         elif self.test_type == TestType.Mempool_Timed:
             ######## RUN UNTIL TIMER END ########
@@ -743,10 +750,12 @@ class PerformanceTest(SidechainTestFramework):
             start_time = self.txs_creator_send_transactions_per_second_to_addresses(utxo_amount, txs_creators, False)
 
         # stop forging
-        for index, node in enumerate(self.sc_nodes_list):
-            if node["forger"]:
-                print(f"Stopping Forger Node{index}")
-                http_stop_forging(self.sc_nodes[index])
+        for index, node in enumerate(forger_nodes):
+            print(f"Stopping Forger Node{index}")
+            request_start_time = time.time()
+            http_stop_forging(node)
+            request_end_time = time.time()
+            print(f"Stop Forging took: {request_end_time - request_start_time}s")
 
         # Get end time
         end_time = time.time()
@@ -755,7 +764,7 @@ class PerformanceTest(SidechainTestFramework):
 
         # Take blockhash of every node and verify they are all the same
         test_end_block_ids, api_errors = self.get_best_node_block_ids()
-        assert_equal(len(set(test_end_block_ids.values())), 1)
+        assert_equal(len(set(test_end_block_ids.values())), 1, "Test End BlockId's are not equal - was there a fork?")
 
         # TODO: Find balance for the node sender and receiver and verify that it's what we expect
         # sum(balance of each node) => total ZEN present at the end of the test
@@ -801,7 +810,7 @@ class PerformanceTest(SidechainTestFramework):
                         assert_equal(len(tx["newBoxes"]), io_number)
             blocks_per_node.append(total_blocks_for_node)
             iteration += 1
-            print("Node" + str(node_index) + " Total Blocks: " + str(total_blocks_for_node))
+            print("Node" + str(node_index) + " Total Blocks (Including start block): " + str(total_blocks_for_node))
             print("Node" + str(node_index) + " Total Transactions Mined: " + str(total_mined_transactions))
         not_mined_transactions = self.initial_txs * len(txs_creators) - total_mined_transactions
         print(f"Transactions NOT mined: {not_mined_transactions}")
