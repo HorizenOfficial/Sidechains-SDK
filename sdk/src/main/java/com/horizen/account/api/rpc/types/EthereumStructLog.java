@@ -10,15 +10,15 @@ import java.util.HashMap;
 
 @JsonView(Views.Default.class)
 public class EthereumStructLog {
-    public String pc;
-    public String op;
-    public String gas;
-    public String gasCost;
-    public String depth;
-    public String error;
-    public String[] stack;
-    public String[] memory;
-    public HashMap<String, String> storage;
+    public final String pc;
+    public final String op;
+    public final String gas;
+    public final String gasCost;
+    public final String depth;
+    public final String error;
+    public final String[] stack;
+    public final String[] memory;
+    public final HashMap<String, String> storage;
 
     public EthereumStructLog(EvmTraceLog ethereumStructLog) {
         pc = Numeric.toHexStringWithPrefix(BigInteger.valueOf(ethereumStructLog.pc));

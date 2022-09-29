@@ -185,7 +185,7 @@ class SCEvmBootstrap(SidechainTestFramework):
             "nonce": "0x1"
         }
         response = sc_node_1.rpc_eth_estimateGas(request)
-        assert_equal('0x67b4', response['result'])
+        assert_equal('0x6fb6', response['result'])
 
         # Test estimating forging stake with invalid value - Invalid params: gas required exceeds allowance (max gas limit)
         # -32602 = Invalid params
@@ -210,7 +210,7 @@ class SCEvmBootstrap(SidechainTestFramework):
             "value": "0xE8D4A51000"
         }
         response = sc_node_1.rpc_eth_estimateGas(request)
-        assert_equal('0x5e77', response['result'])
+        assert_equal('0x5f3f', response['result'])
 
 if __name__ == "__main__":
     SCEvmBootstrap().main()

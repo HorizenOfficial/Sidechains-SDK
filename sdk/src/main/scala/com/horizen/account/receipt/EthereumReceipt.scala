@@ -25,10 +25,6 @@ case class EthereumReceipt(
 
   override def serializer: ScorexSerializer[EthereumReceipt] = EthereumReceiptSerializer
 
-  lazy val deriveFullLogs: Seq[EthereumLog] = this.consensusDataReceipt.logs.zipWithIndex.map{
-    case (log, idx) => EthereumLog(log, transactionHash, transactionIndex, blockHash, blockNumber, idx)
-  }
-
   override def toString: String = {
 
     var txHashStr : String = "null"

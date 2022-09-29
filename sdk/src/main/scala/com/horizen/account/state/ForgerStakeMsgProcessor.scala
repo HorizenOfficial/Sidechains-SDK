@@ -37,10 +37,18 @@ trait ForgerStakesProvider {
 case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContractMsgProcessor with ForgerStakesProvider {
 
   override val contractAddress: Array[Byte] = ForgerStakeSmartContractAddress
-  override val contractCodeHash: Array[Byte] = Keccak256.hash("ForgerStakeSmartContractCodeHash")
+  override val contractCode: Array[Byte] = Keccak256.hash("ForgerStakeSmartContractCode")
 
   val networkParams: NetworkParams = params
 
+  /**
+   * TODO: Currently the stake id is calculated exclusively from message properties, which is good because it results in
+   *  a predictable result for the caller. The downside is that we need the nonce for that and in the context of RPC
+   *  calls messages often do not contain a nonce. Normal smart contract are also unable to access the nonce of an
+   *  account. A possible solution is to store a nonce counter within the forger stakes contract and use that, which
+   *  removes the need for the message nonce, but also destroys the predictability. We would need to store a nonce per
+   *  account to get that back.
+   */
   def getStakeId(msg: Message): Array[Byte] = {
     Keccak256.hash(Bytes.concat(
       msg.getFrom.address(), msg.getNonce.toByteArray, msg.getValue.toByteArray, msg.getData))
@@ -108,18 +116,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     val newTip = Blake2b256.hash(stakeId)
 
     // modify previous node (if any) to point at this one
-    if (!linkedListNodeRefIsNull(oldTip)) {
-      val previousNode = findLinkedListNode(view, oldTip).get
-
-      val modPreviousNode = LinkedListNode(
-        previousNode.dataKey,
-        previousNode.previousNodeKey,
-        newTip
-      )
-
-      // store the modified previous node
-      view.updateAccountStorageBytes(contractAddress, oldTip,
-        LinkedListNodeSerializer.toBytes(modPreviousNode))
+    modifyNode(view, oldTip) { previousNode =>
+      LinkedListNode(previousNode.dataKey, previousNode.previousNodeKey, newTip)
     }
 
     // update list tip, now it is this newly added one
@@ -148,6 +146,22 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
       ForgerStakeDataSerializer.toBytes(forgerStakeData))
   }
 
+  private def modifyNode(view: BaseAccountStateView, nodeId: Array[Byte])(
+      modify: LinkedListNode => LinkedListNode
+  ): Option[Unit] = {
+    if (linkedListNodeRefIsNull(nodeId)) return None
+    // find original node
+    findLinkedListNode(view, nodeId)
+      // if the node was not found we want to revert execution
+      .orElse(throw new ExecutionRevertedException(s"Failed to update node: ${Numeric.toHexString(nodeId)}"))
+      // modify node
+      .map(modify)
+      // serialize modified node
+      .map(LinkedListNodeSerializer.toBytes)
+      // overwrite the modified node
+      .map(view.updateAccountStorageBytes(contractAddress, nodeId, _))
+  }
+
   def removeForgerStake(view: BaseAccountStateView, stakeId: Array[Byte]): Unit = {
     val nodeToRemoveId = Blake2b256.hash(stakeId)
 
@@ -156,34 +170,14 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     val nodeToRemove = findLinkedListNode(view, nodeToRemoveId).get
 
     // modify previous node if any
-    if (!linkedListNodeRefIsNull(nodeToRemove.previousNodeKey)) {
-      val prevNodeId = nodeToRemove.previousNodeKey
-      val previousNode = findLinkedListNode(view, prevNodeId).get
-
-      val modPreviousNode = LinkedListNode(
-        previousNode.dataKey,
-        previousNode.previousNodeKey,
-        nodeToRemove.nextNodeKey)
-
-      // store the modified previous node
-      view.updateAccountStorageBytes(contractAddress, prevNodeId,
-        LinkedListNodeSerializer.toBytes(modPreviousNode))
+    modifyNode(view, nodeToRemove.previousNodeKey) { previousNode =>
+      LinkedListNode(previousNode.dataKey, previousNode.previousNodeKey, nodeToRemove.nextNodeKey)
     }
 
     // modify next node if any
-    if (!linkedListNodeRefIsNull(nodeToRemove.nextNodeKey)) {
-      val nextNodeId = nodeToRemove.nextNodeKey
-      val nextNode = findLinkedListNode(view, nextNodeId).get
-
-      val modNextNode = LinkedListNode(
-        nextNode.dataKey,
-        nodeToRemove.previousNodeKey,
-        nextNode.nextNodeKey)
-
-      // store the modified next node
-      view.updateAccountStorageBytes(contractAddress, nextNodeId,
-        LinkedListNodeSerializer.toBytes(modNextNode))
-    } else {
+    modifyNode(view, nodeToRemove.nextNodeKey) { nextNode =>
+      LinkedListNode(nextNode.dataKey, nodeToRemove.previousNodeKey, nextNode.nextNodeKey)
+    } getOrElse {
       // if there is no next node, we update the linked list tip to point to the previous node, promoted to be the new tip
       view.updateAccountStorage(contractAddress, LinkedListTipKey, nodeToRemove.previousNodeKey)
     }
@@ -221,13 +215,23 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
 
   def doAddNewStakeCmd(msg: Message, view: BaseAccountStateView, isGenesisScCreation: Boolean = false): Array[Byte] = {
 
-    // first of all check msg.value, it must be a legal wei amount convertible in satoshi without any remainder
+    // check that message contains a nonce, in the context of RPC calls the nonce might be missing
+    if (msg.getNonce == null) {
+      throw new ExecutionRevertedException("Call must include a nonce")
+    }
+
+    // check that msg.value is greater than zero
+    if (msg.getValue.compareTo(BigInteger.ZERO) <= 0) {
+      throw new ExecutionRevertedException("Value must not be zero")
+    }
+
+    // check that msg.value is a legal wei amount convertible to satoshis without any remainder
     if (!isValidZenAmount(msg.getValue)) {
       throw new ExecutionRevertedException(s"Value is not a legal wei amount: ${msg.getValue.toString()}")
     }
 
     val sender = msg.getFrom.address()
-    // check also that sender account exists (unless we are staking in the sc creation phase)
+    // check that sender account exists (unless we are staking in the sc creation phase)
     if (!isGenesisScCreation && !view.accountExists(sender)) {
       throw new ExecutionRevertedException(s"Sender account does not exist: ${msg.getFrom.toString}")
     }
@@ -256,7 +260,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
 
     // check we do not already have this stake obj in the db
     if (existsStakeData(view, newStakeId)) {
-      throw new ExecutionRevertedException(s"Stake ${BytesUtils.toHexString(newStakeId)} already in stateDb")
+      throw new ExecutionRevertedException(s"Stake ${BytesUtils.toHexString(newStakeId)} already exists")
     }
 
     // add the obj to stateDb
@@ -316,6 +320,11 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
   }
 
   def doRemoveStakeCmd(msg: Message, view: BaseAccountStateView): Array[Byte] = {
+    // check that message contains a nonce, in the context of RPC calls the nonce might be missing
+    if (msg.getNonce == null) {
+      throw new ExecutionRevertedException("Call must include a nonce")
+    }
+
     val inputParams = getArgumentsFromData(msg.getData)
     val cmdInput = RemoveStakeCmdInputDecoder.decode(inputParams)
     val stakeId: Array[Byte] = cmdInput.stakeId
