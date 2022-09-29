@@ -13,9 +13,13 @@ case class ActualKeys(signingKeys: Vector[SchnorrProposition], masterKeys: Vecto
 
   override def serializer: SparkzSerializer[ActualKeys] = ActualKeysSerializer
 
-  def getMerkleRootOfPublicKeys: Array[Byte] = {
-    val hashes = (for(i <- signingKeys.indices) yield {
-      Sha256.hash(signingKeys(i).pubKeyBytes(), masterKeys(i).pubKeyBytes()).asInstanceOf[Array[Byte]]
+
+}
+
+object ActualKeys {
+  def getMerkleRootOfPublicKeys(actualKeys: ActualKeys): Array[Byte] = {
+    val hashes = (for (i <- actualKeys.signingKeys.indices) yield {
+      Sha256.hash(actualKeys.signingKeys(i).pubKeyBytes(), actualKeys.masterKeys(i).pubKeyBytes()).asInstanceOf[Array[Byte]]
     }).toList.asJava
     MerkleTree.createMerkleTree(hashes).rootHash()
   }
