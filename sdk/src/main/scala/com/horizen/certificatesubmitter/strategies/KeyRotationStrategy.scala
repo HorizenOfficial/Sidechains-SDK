@@ -6,14 +6,14 @@ import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
 import com.horizen.certificatesubmitter.dataproof.DataForProofGeneration
 import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.consensus.ConsensusEpochNumber
+import com.horizen.fork.ForkManager
 import com.horizen.params.NetworkParams
 import com.horizen.utils.{BytesUtils, TimeToEpochUtils}
 import scorex.util.ScorexLogging
 import sparkz.core.NodeViewHolder.CurrentView
 
 import java.io.File
-import java.util.Optional
-import scala.compat.java8.OptionConverters.{RichOptionForJava8, RichOptionalGeneric}
+import scala.compat.java8.OptionConverters.RichOptionalGeneric
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
 
@@ -32,7 +32,10 @@ abstract class KeyRotationStrategy(settings: SidechainSettings, params: NetworkP
   def getBtrFee(referencedWithdrawalEpochNumber: Int): Long = 0
 
   // Every positive value FT is allowed.
-  protected def getFtMinAmount(referencedWithdrawalEpochNumber: Int): Long = 0
+  protected [certificatesubmitter] def getFtMinAmount(consensusEpochNumber: Int): Long = {
+    ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).ftMinAmount
+  }
+
 
   protected def getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber: Int, state: SidechainState): Seq[Array[Byte]] = {
     if (params.isCSWEnabled) {

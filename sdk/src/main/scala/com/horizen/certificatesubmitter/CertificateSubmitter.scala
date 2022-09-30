@@ -226,13 +226,6 @@ class CertificateSubmitter(settings: SidechainSettings,
     Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getStatus), timeoutDuration).asInstanceOf[SubmissionWindowStatus]
   }
 
-  // No MBTRs support, so no sense to specify btrFee different to zero.
-  private def getBtrFee(referencedWithdrawalEpochNumber: Int): Long = 0
-
-  private[certificatesubmitter] def getFtMinAmount(consensusEpochNumber: Int): Long = {
-    ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).ftMinAmount
-  }
-
   private def calculateSignatures(messageToSign: Array[Byte]): Try[Seq[CertificateSignatureInfo]] = Try {
     def getSignersPrivateKeys(sidechainNodeView: View): Seq[(SchnorrSecret, Int)] = {
       val wallet = sidechainNodeView.vault
