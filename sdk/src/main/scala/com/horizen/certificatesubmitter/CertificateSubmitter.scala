@@ -297,20 +297,6 @@ class CertificateSubmitter(settings: SidechainSettings,
     Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getMessage), timeoutDuration).asInstanceOf[Try[Array[Byte]]].get
   }
 
-  private def getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber: Int, state: SidechainState): Optional[Array[Byte]] = {
-    if (params.isCSWEnabled) {
-      state.utxoMerkleTreeRoot(referencedWithdrawalEpochNumber) match {
-        case x: Some[Array[Byte]] => x.asJava
-        case None =>
-          log.error("UtxoMerkleTreeRoot is not defined even if CSW is enabled")
-          throw new IllegalStateException("UtxoMerkleTreeRoot is not defined")
-      }
-    }
-    else {
-      Optional.empty()
-    }
-  }
-
   private def calculateSignatures(messageToSign: Array[Byte]): Try[Seq[CertificateSignatureInfo]] = Try {
     def getSignersPrivateKeys(sidechainNodeView: View): Seq[(SchnorrSecret, Int)] = {
       val wallet = sidechainNodeView.vault
@@ -569,34 +555,6 @@ class CertificateSubmitter(settings: SidechainSettings,
       ftMinAmount,
       utxoMerkleTreeRoot,
       signersPublicKeyWithSignatures)
-  }
-
-  private def lastConsensusEpochNumberForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): ConsensusEpochNumber = {
-    val headerInfo: MainchainHeaderInfo = getLastMainchainBlockInfoForWithdrawalEpochNumber(history, withdrawalEpochNumber)
-
-    val parentBlockInfo: SidechainBlockInfo = history.storage.blockInfoById(headerInfo.sidechainBlockId)
-    TimeToEpochUtils.timeStampToEpochNumber(params, parentBlockInfo.timestamp)
-  }
-
-  private def lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): Array[Byte] = {
-    val headerInfo: MainchainHeaderInfo = getLastMainchainBlockInfoForWithdrawalEpochNumber(history, withdrawalEpochNumber)
-
-    headerInfo.cumulativeCommTreeHash
-  }
-
-  private def getLastMainchainBlockInfoForWithdrawalEpochNumber(history: SidechainHistory, withdrawalEpochNumber: Int): MainchainHeaderInfo = {
-    val mcBlockHash = withdrawalEpochNumber match {
-      case -1 => params.parentHashOfGenesisMainchainBlock
-      case _ => {
-        val mcHeight = params.mainchainCreationBlockHeight + (withdrawalEpochNumber + 1) * params.withdrawalEpochLength - 1
-        history.getMainchainBlockReferenceInfoByMainchainBlockHeight(mcHeight).asScala.map(_.getMainchainHeaderHash).getOrElse(throw new IllegalStateException("Information for Mc is missed"))
-      }
-    }
-    log.debug(s"Last MC block hash for withdrawal epoch number $withdrawalEpochNumber is ${
-      BytesUtils.toHexString(mcBlockHash)
-    }")
-
-    history.mainchainHeaderInfoByHash(mcBlockHash).getOrElse(throw new IllegalStateException("Missed MC Cumulative Hash"))
   }
 
   private def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
