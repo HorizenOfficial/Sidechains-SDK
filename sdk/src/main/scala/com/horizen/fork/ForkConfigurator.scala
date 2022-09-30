@@ -14,10 +14,10 @@ abstract class ForkConfigurator {
     val fork1EpochNumbers = getSidechainFork1()
 
     //Fork 1
-    if ((fork1EpochNumbers.mainnetEpochNumber < baseConsensusEpochNumbers.mainnetEpochNumber) ||
-                 (fork1EpochNumbers.testnetEpochNumber < baseConsensusEpochNumbers.testnetEpochNumber) ||
-                 (fork1EpochNumbers.regtestEpochNumber < baseConsensusEpochNumbers.regtestEpochNumber))
-        Failure(new RuntimeException("Inappropriate SidechainFork1 activation height."))
+    if ((fork1EpochNumbers.regtestEpochNumber < baseConsensusEpochNumbers.regtestEpochNumber)
+      || (fork1EpochNumbers.testnetEpochNumber < baseConsensusEpochNumbers.testnetEpochNumber)
+      || (fork1EpochNumbers.mainnetEpochNumber < baseConsensusEpochNumbers.mainnetEpochNumber))
+      Failure(new RuntimeException("Inappropriate SidechainFork1 activation height."))
     /*
     * Put checks for each other implemented forks here, comparing corresponding epoch numbers with previous fork
     */

@@ -32,6 +32,9 @@ LEVEL_ALL = "all"
 # timeout in secs for rest api
 DEFAULT_REST_API_TIMEOUT = 5
 
+# max P2P message size for a Modifier
+DEFAULT_MAX_PACKET_SIZE = 5242980
+
 class TimeoutException(Exception):
     def __init__(self, operation):
         Exception.__init__(self)
@@ -143,7 +146,7 @@ def launch_db_tool(dirName, storageNames, command_name, json_parameters):
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK",
                                           "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-0.5.0-SNAPSHOT.jar",
-                                storagesPath, command_name, json_param], stdout=subprocess.PIPE)
+                                storagesPath, storageNames, command_name, json_param], stdout=subprocess.PIPE)
     db_tool_output = java_ps.communicate()[0]
     try:
         jsone_node = json.loads(db_tool_output)
@@ -419,6 +422,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         "CSW_VERIFICATION_KEY_PATH": bootstrap_info.csw_keys_paths.verification_key_path if bootstrap_info.csw_keys_paths is not None else "",
         "RESTRICT_FORGERS": ("true" if sc_node_config.forger_options.restrict_forgers else "false"),
         "ALLOWED_FORGERS_LIST": sc_node_config.forger_options.allowed_forgers,
+        "MAX_PACKET_SIZE": DEFAULT_MAX_PACKET_SIZE
     }
     config = config.replace("'", "")
     config = config.replace("NEW_LINE", "\n")
@@ -476,7 +480,8 @@ def initialize_default_sc_datadir(dirname, n, api_key):
         "CSW_PROVING_KEY_PATH": csw_keys_paths.proving_key_path,
         "CSW_VERIFICATION_KEY_PATH": csw_keys_paths.verification_key_path,
         "RESTRICT_FORGERS": "false",
-        "ALLOWED_FORGERS_LIST": []
+        "ALLOWED_FORGERS_LIST": [],
+        "MAX_PACKET_SIZE": DEFAULT_MAX_PACKET_SIZE
     }
 
     configsData.append({
@@ -966,8 +971,8 @@ def bootstrap_sidechain_node(dirname, n, bootstrap_info, sc_node_configuration,
     initialize_sc_datadir(dirname, n, bootstrap_info, sc_node_configuration, log_info, rest_api_timeout)
 
 
-def generate_forging_request(epoch, slot):
-    return json.dumps({"epochNumber": epoch, "slotNumber": slot})
+def generate_forging_request(epoch, slot, forced_tx):
+    return json.dumps({"epochNumber": epoch, "slotNumber": slot, "transactionsBytes": forced_tx})
 
 
 def get_next_epoch_slot(epoch, slot, slots_in_epoch, force_switch_to_next_epoch=False):
@@ -980,7 +985,7 @@ def get_next_epoch_slot(epoch, slot, slots_in_epoch, force_switch_to_next_epoch=
     return next_epoch, next_slot
 
 
-def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbose=True):
+def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbose=True, forced_tx=None):
     forging_info = node.block_forgingInfo()["result"]
     slots_in_epoch = forging_info["consensusSlotsInEpoch"]
     best_slot = forging_info["bestSlotNumber"]
@@ -988,7 +993,7 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbo
 
     next_epoch, next_slot = get_next_epoch_slot(best_epoch, best_slot, slots_in_epoch, force_switch_to_next_epoch)
 
-    forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot))
+    forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot, forced_tx))
 
     # "while" will break if whole epoch no generated block, due changed error code
     while "error" in forge_result and forge_result["error"]["code"] == "0105":
@@ -997,7 +1002,7 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbo
         logging.info("Skip block generation for epoch {epochNumber} slot {slotNumber}".format(epochNumber=next_epoch,
                                                                                        slotNumber=next_slot))
         next_epoch, next_slot = get_next_epoch_slot(next_epoch, next_slot, slots_in_epoch)
-        forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot))
+        forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot, forced_tx))
 
     assert_true("result" in forge_result, "Error during block generation for SC {0}".format(node_name))
     block_id = forge_result["result"]["blockId"]
