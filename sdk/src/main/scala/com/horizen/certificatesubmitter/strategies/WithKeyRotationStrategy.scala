@@ -1,7 +1,7 @@
 package com.horizen.certificatesubmitter.strategies
 
 import akka.pattern.ask
-import com.horizen.SidechainSettings
+import com.horizen.{SidechainSettings, SidechainState}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
 import com.horizen.certificatesubmitter.dataproof.{DataForProofGeneration, DataForProofGenerationWithKeyRotation}
@@ -9,6 +9,8 @@ import com.horizen.certificatesubmitter.keys.ActualKeys
 import com.horizen.certificatesubmitter.keys.ActualKeys.getMerkleRootOfPublicKeys
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.params.NetworkParams
+import com.horizen.proof.SchnorrProof
+import com.horizen.proposition.SchnorrProposition
 import com.horizen.websocket.server.WebSocketServerRef.sidechainNodeViewHolderRef
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 
@@ -60,11 +62,8 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
     val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, status.referencedEpoch)
     val sidechainId = params.sidechainId
 
+    val publicKeysMerkleTreeRoot: Array[Byte] = getActualKeysMerkleRoot(status.referencedEpoch, state)
 
-    val signersPublicKeyWithSignatures = params.signersPublicKeys.zipWithIndex.map {
-      case (pubKey, pubKeyIndex) =>
-        (pubKey, status.knownSigs.find(info => info.pubKeyIndex == pubKeyIndex).map(_.signature))
-    }
     DataForProofGenerationWithKeyRotation(
       status.referencedEpoch,
       sidechainId,
@@ -72,8 +71,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       endEpochCumCommTreeHash,
       btrFee,
       ftMinAmount,
-      ActualKeys.getMerkleRootOfPublicKeys(),
-      signersPublicKeyWithSignatures)
+      Seq(publicKeysMerkleTreeRoot))
   }
 
   override def getMessageToSign(referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
@@ -89,22 +87,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
       val sidechainId = params.sidechainId
 
-      val publicKeysMerkleTreeRoot: Array[Byte] = {
-        Try {
-          state.actualKeys(referencedWithdrawalEpochNumber).map(getMerkleRootOfPublicKeys)
-        } match {
-          case Failure(e: IllegalStateException) =>
-            throw new Exception("CertificateSubmitter is too late against the State. " +
-              s"No utxo merkle tree root for requested epoch $referencedWithdrawalEpochNumber. " +
-              s"Current epoch is ${state.getWithdrawalEpochInfo.epoch}")
-          case Failure(exception) => log.error("Exception while getting utxoMerkleTreeRoot", exception)
-            throw new Exception(exception)
-          case Success(byteArrayOption) => byteArrayOption match {
-            case Some(byteArray) => byteArray
-            case None => Array[Byte]()
-          }
-        }
-      }
+      val publicKeysMerkleTreeRoot: Array[Byte] = getActualKeysMerkleRoot(referencedWithdrawalEpochNumber, state)
 
       CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
         .generateMessageToBeSigned(withdrawalRequests.asJava, sidechainId, referencedWithdrawalEpochNumber,
@@ -112,5 +95,22 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
     }
 
     Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getMessage), settings.sparkzSettings.restApi.timeout).asInstanceOf[Try[Array[Byte]]].get
+  }
+
+  private def getActualKeysMerkleRoot(referencedWithdrawalEpochNumber: Int, state: SidechainState): Array[Byte] = {
+    Try {
+      state.actualKeys(referencedWithdrawalEpochNumber).map(getMerkleRootOfPublicKeys)
+    } match {
+      case Failure(e: IllegalStateException) =>
+        throw new Exception("CertificateSubmitter is too late against the State. " +
+          s"No utxo merkle tree root for requested epoch $referencedWithdrawalEpochNumber. " +
+          s"Current epoch is ${state.getWithdrawalEpochInfo.epoch}")
+      case Failure(exception) => log.error("Exception while getting utxoMerkleTreeRoot", exception)
+        throw new Exception(exception)
+      case Success(byteArrayOption) => byteArrayOption match {
+        case Some(byteArray) => byteArray
+        case None => Array[Byte]()
+      }
+    }
   }
 }

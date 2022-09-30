@@ -12,8 +12,6 @@ case class ActualKeys(signingKeys: Vector[SchnorrProposition], masterKeys: Vecto
   override type M = ActualKeys
 
   override def serializer: SparkzSerializer[ActualKeys] = ActualKeysSerializer
-
-
 }
 
 object ActualKeys {
