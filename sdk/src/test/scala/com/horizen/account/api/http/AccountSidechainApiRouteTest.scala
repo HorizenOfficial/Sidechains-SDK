@@ -42,7 +42,7 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
 
   val sidechainTransactionsCompanion: SidechainAccountTransactionsCompanion = getDefaultAccountTransactionsCompanion
   val apiTokenHeader = new ApiTokenHeader("api_key", "Horizen")
-
+  val badApiTokenHeader = new ApiTokenHeader("api_key", "Harizen")
 
   val jsonChecker = new SidechainJSONBOChecker
 
@@ -71,7 +71,6 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
 
   val utilMocks = new AccountNodeViewUtilMocks()
 
-
   val memoryPool: java.util.List[EthereumTransaction] = utilMocks.transactionList
 //  val genesisBlock = utilMocks.genesisBlock
 //
@@ -79,8 +78,10 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
 //
   val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
   Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 1 seconds)
+  Mockito.when(mockedRESTSettings.apiKeyHash).thenAnswer(_ => Some("aa8ed2a907753a4a7c66f2aa1d48a0a74d4fde9a6ef34bae96a86dcd7800af98"))
 
-//  val mockedSidechainSettings: SidechainSettings = mock[SidechainSettings]
+
+  //  val mockedSidechainSettings: SidechainSettings = mock[SidechainSettings]
 //  Mockito.when(mockedSidechainSettings.scorexSettings).thenAnswer(_ => {
 //    val mockedScorexSettings: ScorexSettings = mock[ScorexSettings]
 //    Mockito.when(mockedScorexSettings.restApi).thenAnswer(_ => mockedRESTSettings)
