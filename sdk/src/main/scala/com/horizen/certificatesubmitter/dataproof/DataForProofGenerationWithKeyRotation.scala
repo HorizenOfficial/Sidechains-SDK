@@ -12,8 +12,7 @@ case class DataForProofGenerationWithKeyRotation(override val referencedEpochNum
                                                  override val endEpochCumCommTreeHash: Array[Byte],
                                                  override val btrFee: Long,
                                                  override val ftMinAmount: Long,
-                                                 override val customFields: Seq[Array[Byte]],
-                                                 override val schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])])
+                                                 override val customFields: Seq[Array[Byte]])
   extends DataForProofGeneration (referencedEpochNumber, sidechainId, withdrawalRequests, endEpochCumCommTreeHash, btrFee, ftMinAmount, customFields, schnorrKeyPairs) {
   override def toString: String = {
     "DataForProofGeneration(" +
@@ -23,7 +22,6 @@ case class DataForProofGenerationWithKeyRotation(override val referencedEpochNum
       s"endEpochCumCommTreeHash = ${BytesUtils.toHexString(endEpochCumCommTreeHash)}, " +
       s"btrFee = $btrFee, " +
       s"ftMinAmount = $ftMinAmount, " +
-      s"customFields = ${customFields.map(BytesUtils.toHexString)}, " + // from this field different fields for 2 circuits
-      s"number of schnorrKeyPairs = ${schnorrKeyPairs.size})"
+      s"customFields = ${customFields.map(BytesUtils.toHexString)}"
   }
 }

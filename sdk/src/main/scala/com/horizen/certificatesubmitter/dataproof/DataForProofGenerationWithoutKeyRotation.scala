@@ -12,8 +12,8 @@ case class DataForProofGenerationWithoutKeyRotation(override val referencedEpoch
                                                     override val btrFee: Long,
                                                     override val ftMinAmount: Long,
                                                     override val customFields: Seq[Array[Byte]],
-                                                    override val schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])])
-  extends DataForProofGeneration (referencedEpochNumber, sidechainId, withdrawalRequests, endEpochCumCommTreeHash, btrFee, ftMinAmount, customFields, schnorrKeyPairs) {
+                                                    schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])])
+  extends DataForProofGeneration (referencedEpochNumber, sidechainId, withdrawalRequests, endEpochCumCommTreeHash, btrFee, ftMinAmount, customFields) {
   override def toString: String = {
     "DataForProofGeneration(" +
       s"referencedEpochNumber = $referencedEpochNumber, " +
