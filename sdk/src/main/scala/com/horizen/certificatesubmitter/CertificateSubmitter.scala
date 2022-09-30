@@ -6,15 +6,13 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.horizen._
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
-import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter._
-import com.horizen.certificatesubmitter.strategies.KeyRotationStrategy
+import com.horizen.certificatesubmitter.dataproof.DataForProofGeneration
+import com.horizen.certificatesubmitter.strategies.{KeyRotationStrategy, WithKeyRotationStrategy, WithoutKeyRotationStrategy}
 import com.horizen.cryptolibprovider.FieldElementUtils
-import com.horizen.fork.ForkManager
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
-import com.horizen.proposition.SchnorrProposition
 import com.horizen.secret.SchnorrSecret
 import com.horizen.transaction.mainchain.SidechainCreation
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
@@ -25,7 +23,6 @@ import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 
 import java.util
-import java.util.Optional
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.Platform.EOL
 import scala.compat.java8.OptionConverters._
@@ -39,7 +36,7 @@ import scala.util.{Failure, Random, Success, Try}
  * If `submitterEnabled` is `true`, it will try to generate and send the Certificate to MC node in case the proper amount of signatures were collected.
  * Must be singleton.
  */
-class CertificateSubmitter(settings: SidechainSettings,
+class CertificateSubmitter[T <: DataForProofGeneration](settings: SidechainSettings,
                            sidechainNodeViewHolderRef: ActorRef,
                            params: NetworkParams,
                            mainchainChannel: MainchainNodeChannel,
@@ -371,7 +368,7 @@ class CertificateSubmitter(settings: SidechainSettings,
             def getProofGenerationData(sidechainNodeView: View): DataForProofGeneration = keyRotationStrategy.buildDataForProofGeneration(sidechainNodeView, status)
 
             val dataForProofGeneration = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getProofGenerationData), timeoutDuration)
-              .asInstanceOf[DataForProofGeneration]
+              .asInstanceOf[T]
             log.debug(s"Retrieved data for certificate proof calculation: $dataForProofGeneration")
 
             // Run the time consuming part of proof generation and certificate submission in a background
@@ -396,7 +393,7 @@ class CertificateSubmitter(settings: SidechainSettings,
                   dataForProofGeneration.withdrawalRequests,
                   dataForProofGeneration.ftMinAmount,
                   dataForProofGeneration.btrFee,
-                  dataForProofGeneration.utxoMerkleTreeRoot,
+                  dataForProofGeneration.customFields,
                   certificateFee,
                   params)
 
@@ -539,8 +536,15 @@ object CertificateSubmitter {
 object CertificateSubmitterRef {
   def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
-           (implicit ec: ExecutionContext): Props =
-    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel)).withMailbox("akka.actor.deployment.submitter-prio-mailbox")
+           (implicit ec: ExecutionContext): Props = {
+    val keyRotationStrategy = if (settings.withdrawalEpochCertificateSettings.typeOfCircuit  == TypeOfCertificateSubmitter.NaiveThresholdSignatureCircuit) {
+      new WithoutKeyRotationStrategy(settings, params)
+    } else {
+      new WithKeyRotationStrategy(settings, params)
+    }
+    Props(new CertificateSubmitter(settings, sidechainNodeViewHolderRef, params, mainchainChannel, keyRotationStrategy))
+      .withMailbox("akka.actor.deployment.submitter-prio-mailbox")
+  }
 
   def apply(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
@@ -551,4 +555,11 @@ object CertificateSubmitterRef {
             mainchainChannel: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
     system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel).withMailbox("akka.actor.deployment.submitter-prio-mailbox"), name)
+
+  object TypeOfCertificateSubmitter extends Enumeration {
+    type TypeOfCertificateSubmitter = Value
+
+    val NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation = Value
+  }
 }
+
