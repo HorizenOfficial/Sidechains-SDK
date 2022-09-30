@@ -25,7 +25,6 @@ import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
 
-import java.io.File
 import java.util
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.Platform.EOL
