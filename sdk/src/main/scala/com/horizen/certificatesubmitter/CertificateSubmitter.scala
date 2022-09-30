@@ -145,8 +145,6 @@ class CertificateSubmitter(settings: SidechainSettings,
       throw new IllegalStateException("Incorrect configuration for backward transfer, expected SysDataConstant " +
         s"'${BytesUtils.toHexString(expectedSysDataConstantOpt.getOrElse(Array.emptyByteArray))}' but actual is '${BytesUtils.toHexString(actualSysDataConstant)}'")
     }
-
-    loadProvingFilePath()
   }
 
   private def getSidechainCreationTransaction(history: SidechainHistory): SidechainCreation = {
@@ -498,37 +496,6 @@ class CertificateSubmitter(settings: SidechainSettings,
       ftMinAmount,
       utxoMerkleTreeRoot,
       signersPublicKeyWithSignatures)
-  }
-
-  private def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
-    val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
-      dataForProofGeneration.schnorrKeyPairs.map {
-        case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)
-      }.unzip
-
-    log.info(s"Start generating proof with parameters: dataForProofGeneration = ${
-      dataForProofGeneration
-    }, " +
-      s"signersThreshold = ${
-        params.signersThreshold
-      }. " +
-      s"It can take a while.")
-
-    //create and return proof with quality
-    CryptoLibProvider.sigProofThresholdCircuitFunctions.createProof(
-      dataForProofGeneration.withdrawalRequests.asJava,
-      dataForProofGeneration.sidechainId,
-      dataForProofGeneration.referencedEpochNumber,
-      dataForProofGeneration.endEpochCumCommTreeHash,
-      dataForProofGeneration.btrFee,
-      dataForProofGeneration.ftMinAmount,
-      dataForProofGeneration.utxoMerkleTreeRoot,
-      signaturesBytes.asJava,
-      signersPublicKeysBytes.asJava,
-      params.signersThreshold,
-      provingFileAbsolutePath,
-      true,
-      true)
   }
 
   def submitterStatus: Receive = {

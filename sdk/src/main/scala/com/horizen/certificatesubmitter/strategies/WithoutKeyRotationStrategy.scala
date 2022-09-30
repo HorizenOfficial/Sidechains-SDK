@@ -18,7 +18,7 @@ import scala.concurrent.Await
 import scala.util.{Failure, Success, Try}
 
 class WithoutKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams) extends KeyRotationStrategy(settings, params) {
-  def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
+  override def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
     val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
       dataForProofGeneration.schnorrKeyPairs.map {
         case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)
@@ -105,7 +105,6 @@ class WithoutKeyRotationStrategy(settings: SidechainSettings, params: NetworkPar
           case Success(value) => value
         }
       }
-
 
       CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(
         withdrawalRequests.asJava,
