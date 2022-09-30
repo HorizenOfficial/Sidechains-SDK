@@ -1,28 +1,25 @@
 #!/usr/bin/env python3
 import json
-import pprint
 import time
 from decimal import Decimal
-from unicodedata import decimal
+
+from eth_abi import decode
+from eth_utils import remove_0x_prefix, event_signature_to_log_topic, encode_hex, to_hex
 
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
+from SidechainTestFramework.account.address_util import format_evm, format_eoa
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, AccountModelBlockVersion, EVM_APP_BINARY, generate_next_block, convertZenniesToWei, \
-    convertZenToZennies, connect_sc_nodes, convertZenToWei, ForgerStakeSmartContractAddress, get_account_balance, \
-    WithdrawalReqSmartContractAddress
-from sc_evm_test_contract_contract_deployment_and_interaction import deploy_smart_contract, random_byte_string
-from SidechainTestFramework.account.address_util import format_evm, format_eoa
-from test_framework.util import assert_equal, assert_true, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail
+from SidechainTestFramework.scutil import WithdrawalReqSmartContractAddress
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, AccountModelBlockVersion, EVM_APP_BINARY, generate_next_block, convertZenniesToWei, \
     convertZenToZennies, connect_sc_nodes, convertZenToWei, ForgerStakeSmartContractAddress, get_account_balance, \
     computeForgedTxFee, convertWeiToZen
+from sc_evm_test_contract_contract_deployment_and_interaction import random_byte_string
 from test_framework.util import assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail
+from test_framework.util import hex_str_to_bytes
 
 """
 Configuration: 
@@ -61,6 +58,35 @@ def get_sc_wallet_pubkeys(sc_node):
 def print_current_epoch_and_slot(sc_node):
     ret = sc_node.block_forgingInfo()["result"]
     print("Epoch={}, Slot={}".format(ret['bestEpochNumber'], ret['bestSlotNumber']))
+
+def check_make_forger_stake_event(event, source_addr, owner, amount):
+    assert_equal(3, len(event['topics']), "Wrong number of topics in event")
+    event_id = remove_0x_prefix(event['topics'][0])
+    event_signature = remove_0x_prefix(
+        encode_hex(event_signature_to_log_topic('DelegateForgerStake(address,address,bytes32,uint256)')))
+    assert_equal(event_signature, event_id, "Wrong event signature in topics")
+
+    from_addr = decode(['address'], hex_str_to_bytes(event['topics'][1][2:]))[0][2:]
+    assert_equal(source_addr, from_addr, "Wrong from address in topics")
+
+    owner_addr = decode(['address'], hex_str_to_bytes(event['topics'][2][2:]))[0][2:]
+    assert_equal(owner, owner_addr, "Wrong owner address in topics")
+
+    (stake_id, value) = decode(['bytes32' ,'uint256'], hex_str_to_bytes(event['data'][2:]))
+    assert_equal(convertZenToWei(amount), value, "Wrong amount in event")
+
+def check_spend_forger_stake_event(event, owner, stake_id):
+    assert_equal(2, len(event['topics']), "Wrong number of topics in event")
+    event_id = remove_0x_prefix(event['topics'][0])
+    event_signature = remove_0x_prefix(
+        encode_hex(event_signature_to_log_topic('WithdrawForgerStake(address,bytes32)')))
+    assert_equal(event_signature, event_id, "Wrong event signature in topics")
+
+    owner_addr = decode(['address'], hex_str_to_bytes(event['topics'][1][2:]))[0][2:]
+    assert_equal(owner, owner_addr, "Wrong owner address in topics")
+
+    (stake,) = decode(['bytes32'], hex_str_to_bytes(event['data'][2:]))
+    assert_equal(stake_id, to_hex(stake)[2:],"Wrong stake id in data")
 
 
 class SCEvmForger(SidechainTestFramework):
@@ -151,7 +177,7 @@ class SCEvmForger(SidechainTestFramework):
         assert_equal(convertZenniesToWei(stakeAmount), get_account_balance(sc_node_1, ForgerStakeSmartContractAddress),
                      "Contract address balance is wrong.")
 
-        stakeId_genesis = stakeList[0]['stakeId']
+        stake_id_genesis = stakeList[0]['stakeId']
 
         # transfer a small fund from MC to SC2 at a new evm address, do not mine mc block
         # this is for enabling SC 2 gas fee payment when sending txes
@@ -199,7 +225,7 @@ class SCEvmForger(SidechainTestFramework):
 
         # try spending the stake by a sc node which does not own it
         forg_spend_res_2 = sc_node_2.transaction_spendForgingStake(
-            json.dumps({"stakeId": str(stakeId_genesis)}))
+            json.dumps({"stakeId": str(stake_id_genesis)}))
         assert_true('error' in forg_spend_res_2, "The command should fail")
         assert_equal(forg_spend_res_2['error']['description'], "Forger Stake Owner not found")
 
@@ -225,8 +251,12 @@ class SCEvmForger(SidechainTestFramework):
         self.sc_sync_all()
 
         # Checking the receipt
-        status = int(sc_node_1.rpc_eth_getTransactionReceipt(makeForgerStakeJsonRes['result']['transactionId'])['result']['status'], 16)
+        receipt = sc_node_1.rpc_eth_getTransactionReceipt(makeForgerStakeJsonRes['result']['transactionId'])
+        status = int(receipt['result']['status'], 16)
         assert_equal(0, status, "Make forger stake with fake smart contract as owner should create a failed tx")
+        # Check the logs
+        assert_equal(0, len(receipt['result']['logs']), "Wrong number of events in receipt")
+
 
         # Check balance
         gas_fee_paid, _, _ = computeForgedTxFee(sc_node_1, makeForgerStakeJsonRes['result']['transactionId'])
@@ -266,10 +296,12 @@ class SCEvmForger(SidechainTestFramework):
         self.sc_sync_all()
 
         # Checking the receipt
-        status = int(
-            sc_node_1.rpc_eth_getTransactionReceipt(makeForgerStakeJsonRes['result']['transactionId'])['result'][
-                'status'], 16)
+        receipt = sc_node_1.rpc_eth_getTransactionReceipt(makeForgerStakeJsonRes['result']['transactionId'])
+        status = int(receipt['result']['status'], 16)
         assert_equal(0, status, "Make forger stake with fake smart contract as owner should create a failed tx")
+
+        # Check the logs
+        assert_equal(0, len(receipt['result']['logs']), "Wrong number of events in receipt")
 
         # Check balance
         gas_fee_paid, _, _ = computeForgedTxFee(sc_node_1, makeForgerStakeJsonRes['result']['transactionId'])
@@ -294,6 +326,16 @@ class SCEvmForger(SidechainTestFramework):
         self.sc_sync_all()
         print_current_epoch_and_slot(sc_node_1)
 
+        # Checking the receipt
+        receipt = sc_node_1.rpc_eth_getTransactionReceipt(tx_hash)
+        status = int(receipt['result']['status'], 16)
+        assert_equal(1, status)
+
+        # Check the logs
+        assert_equal(1, len(receipt['result']['logs']), "Wrong number of events in receipt")
+        event = receipt['result']['logs'][0]
+        check_make_forger_stake_event(event, evm_address_sc_node_1, evm_address_sc_node_1,
+                                      forgerStake1_amount)
 
         stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
         assert_equal(2, len(stakeList))
@@ -329,6 +371,16 @@ class SCEvmForger(SidechainTestFramework):
         self.sc_sync_all()
         print_current_epoch_and_slot(sc_node_1)
 
+        # Checking the receipt
+        receipt = sc_node_1.rpc_eth_getTransactionReceipt(tx_hash)
+        status = int(receipt['result']['status'], 16)
+        assert_equal(1, status)
+
+        # Check the logs
+        assert_equal(1, len(receipt['result']['logs']), "Wrong number of events in receipt")
+        event = receipt['result']['logs'][0]
+        check_make_forger_stake_event(event, evm_address_sc_node_1, evm_address_sc_node_1,
+                                      forgerStake2_amount)
         # we now have 3 stakes
         stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
         assert_equal(3, len(stakeList))
@@ -390,7 +442,7 @@ class SCEvmForger(SidechainTestFramework):
         # spend the genesis stake
         print("SC1 spends genesis stake...")
         spendForgerStakeJsonRes = sc_node_1.transaction_spendForgingStake(
-            json.dumps({"stakeId": str(stakeId_genesis)}))
+            json.dumps({"stakeId": str(stake_id_genesis)}))
         if "result" not in spendForgerStakeJsonRes:
             fail("spend forger stake failed: " + json.dumps(spendForgerStakeJsonRes))
         else:
@@ -463,11 +515,23 @@ class SCEvmForger(SidechainTestFramework):
         else:
             print("Forger stake removed: " + json.dumps(spendForgerStakeJsonRes))
         self.sc_sync_all()
+        tx_hash = spendForgerStakeJsonRes['result']['transactionId']
 
         # Generate SC block on SC node 1
         generate_next_block(sc_node_2, "second node", force_switch_to_next_epoch=True)
         self.sc_sync_all()
         print_current_epoch_and_slot(sc_node_1)
+
+        # Checking the receipt
+        receipt = sc_node_1.rpc_eth_getTransactionReceipt(tx_hash)
+        status = int(receipt['result']['status'], 16)
+        assert_equal(1, status)
+
+        # Check the logs
+        assert_equal(1, len(receipt['result']['logs']), "Wrong number of events in receipt")
+        event = receipt['result']['logs'][0]
+        check_spend_forger_stake_event(event, evm_address_sc_node_1, stakeId_1)
+
 
         stakeList = sc_node_1.transaction_allForgingStakes()["result"]['stakes']
         assert_equal(len(stakeList), 1)
@@ -487,6 +551,7 @@ class SCEvmForger(SidechainTestFramework):
         else:
             print("Forger stake removed: " + json.dumps(spendForgerStakeJsonRes))
         self.sc_sync_all()
+        tx_hash = spendForgerStakeJsonRes['result']['transactionId']
 
         # Generate SC block on SC node
         generate_next_block(sc_node_2, "first node", force_switch_to_next_epoch=True)
@@ -498,6 +563,15 @@ class SCEvmForger(SidechainTestFramework):
         assert_equal(len(stakeList), 0)
 
         # all balance is now at the expected owner address
+        # Checking the receipt
+        receipt = sc_node_1.rpc_eth_getTransactionReceipt(tx_hash)
+        status = int(receipt['result']['status'], 16)
+        assert_equal(1, status)
+
+        # Check the logs
+        assert_equal(1, len(receipt['result']['logs']), "Wrong number of events in receipt")
+        event = receipt['result']['logs'][0]
+        check_spend_forger_stake_event(event, evm_address_sc_node_1, stakeId_2)
 
         #Check balance
         account_1_balance = get_account_balance(sc_node_1, evm_address_sc_node_1)
