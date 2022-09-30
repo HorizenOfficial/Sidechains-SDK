@@ -14,15 +14,16 @@ public interface ThresholdSignatureCircuitWithKeyRotation {
                                    byte[] endCumulativeScTxCommTreeRoot,
                                    long btrFee,
                                    long ftMinAmount,
-                                   Seq<byte[]> customParameters,
-                                   Seq<byte[]> signingKeySignatures,
-                                   Seq<byte[]> masterKeySignatures,
-                                   Seq<byte[]> newKeySignatures,
-                                   WithdrawalEpochCertificate previousCertificate,
-                                   long threshold,
-                                   String provingKeyPath,
-                                   boolean checkProvingKey,
-                                   boolean zk); // map fields to createProof of Cryptolib
+                                   Seq<byte[]> customParameters//,
+//                                   Seq<byte[]> signingKeySignatures,
+//                                   Seq<byte[]> masterKeySignatures,
+//                                   Seq<byte[]> newKeySignatures,
+//                                   WithdrawalEpochCertificate previousCertificate,
+//                                   long threshold,
+//                                   String provingKeyPath,
+//                                   boolean checkProvingKey,
+//                                   boolean zk
+    ); // map fields to createProof of Cryptolib
 
     byte[] generateMessageToBeSigned(List<WithdrawalRequestBox> bt,
                                      byte[] sidechainId,

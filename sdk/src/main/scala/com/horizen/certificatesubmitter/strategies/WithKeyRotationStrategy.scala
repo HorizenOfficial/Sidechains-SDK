@@ -1,32 +1,23 @@
 package com.horizen.certificatesubmitter.strategies
 
 import akka.pattern.ask
-import com.horizen.{SidechainSettings, SidechainState}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
 import com.horizen.certificatesubmitter.dataproof.{DataForProofGeneration, DataForProofGenerationWithKeyRotation}
-import com.horizen.certificatesubmitter.keys.ActualKeys
 import com.horizen.certificatesubmitter.keys.ActualKeys.getMerkleRootOfPublicKeys
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.params.NetworkParams
-import com.horizen.proof.SchnorrProof
-import com.horizen.proposition.SchnorrProposition
 import com.horizen.websocket.server.WebSocketServerRef.sidechainNodeViewHolderRef
+import com.horizen.{SidechainSettings, SidechainState}
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 
-import java.util.Optional
 import scala.collection.JavaConverters._
-import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.concurrent.Await
 import scala.util.{Failure, Success, Try}
 
 class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams) extends KeyRotationStrategy(settings, params) {
 
   override def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
-    val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
-      dataForProofGeneration.schnorrKeyPairs.map {
-        case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)
-      }.unzip
 
     log.info(s"Start generating proof with parameters: dataForProofGeneration = ${
       dataForProofGeneration
@@ -44,10 +35,10 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       dataForProofGeneration.endEpochCumCommTreeHash,
       dataForProofGeneration.btrFee,
       dataForProofGeneration.ftMinAmount,
-      dataForProofGeneration.customFields,
-      signature1,
-      signature2,
-      signature3
+      dataForProofGeneration.customFields//,
+//      signature1,
+//      signature2,
+//      signature3
     )
   }
 
@@ -64,6 +55,11 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
 
     val publicKeysMerkleTreeRoot: Array[Byte] = getActualKeysMerkleRoot(status.referencedEpoch, state)
 
+    val signersPublicKeyWithSignatures = params.signersPublicKeys.zipWithIndex.map {
+      case (pubKey, pubKeyIndex) =>
+        (pubKey, status.knownSigs.find(info => info.pubKeyIndex == pubKeyIndex).map(_.signature))
+    }
+
     DataForProofGenerationWithKeyRotation(
       status.referencedEpoch,
       sidechainId,
@@ -71,7 +67,8 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       endEpochCumCommTreeHash,
       btrFee,
       ftMinAmount,
-      Seq(publicKeysMerkleTreeRoot))
+      Seq(publicKeysMerkleTreeRoot),
+      signersPublicKeyWithSignatures)
   }
 
   override def getMessageToSign(referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
