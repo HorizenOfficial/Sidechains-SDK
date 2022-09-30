@@ -8,9 +8,8 @@ import com.horizen._
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter._
-import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
-import com.horizen.consensus.ConsensusEpochNumber
-import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
+import com.horizen.certificatesubmitter.strategies.KeyRotationStrategy
+import com.horizen.cryptolibprovider.FieldElementUtils
 import com.horizen.fork.ForkManager
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.NetworkParams
@@ -18,17 +17,15 @@ import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.SchnorrProposition
 import com.horizen.secret.SchnorrSecret
 import com.horizen.transaction.mainchain.SidechainCreation
-import com.horizen.utils.{BytesUtils, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.websocket.client.{MainchainNodeChannel, WebsocketErrorResponseException, WebsocketInvalidErrorMessageException}
+import scorex.util.ScorexLogging
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
-import scorex.util.ScorexLogging
 
-import java.io.File
 import java.util
 import java.util.Optional
-import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.Platform.EOL
 import scala.compat.java8.OptionConverters._
@@ -45,7 +42,8 @@ import scala.util.{Failure, Random, Success, Try}
 class CertificateSubmitter(settings: SidechainSettings,
                            sidechainNodeViewHolderRef: ActorRef,
                            params: NetworkParams,
-                           mainchainChannel: MainchainNodeChannel)
+                           mainchainChannel: MainchainNodeChannel,
+                           keyRotationStrategy: KeyRotationStrategy)
                           (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging {
 
   import CertificateSubmitter.InternalReceivableMessages._
@@ -56,8 +54,6 @@ class CertificateSubmitter(settings: SidechainSettings,
 
   val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
-
-  private var provingFileAbsolutePath: String = _
 
   private[certificatesubmitter] var submitterEnabled: Boolean = settings.withdrawalEpochCertificateSettings.submitterIsEnabled
   private[certificatesubmitter] var certificateSigningEnabled: Boolean = settings.withdrawalEpochCertificateSettings.certificateSigningIsEnabled
@@ -82,7 +78,6 @@ class CertificateSubmitter(settings: SidechainSettings,
     super.postRestart(reason)
     log.error("CertificateSubmitter was restarted because of: ", reason)
     // Switch to the working cycle, otherwise Submitter will stuck on initialization phase.
-    loadProvingFilePath()
     context.become(workingCycle)
   }
 
@@ -184,7 +179,7 @@ class CertificateSubmitter(settings: SidechainSettings,
               case Some(_) => // do nothing
               case None =>
                 val referencedWithdrawalEpochNumber = submissionWindowStatus.withdrawalEpochInfo.epoch - 1
-                getMessageToSign(referencedWithdrawalEpochNumber) match {
+                keyRotationStrategy.getMessageToSign(referencedWithdrawalEpochNumber) match {
                   case Success(messageToSign) =>
                     signaturesStatus = Some(SignaturesStatus(referencedWithdrawalEpochNumber, messageToSign, ArrayBuffer()))
 
@@ -380,7 +375,7 @@ class CertificateSubmitter(settings: SidechainSettings,
         case Some(status) =>
           // Check quality again, in case better Certificate appeared.
           if (checkQuality(status)) {
-            def getProofGenerationData(sidechainNodeView: View): DataForProofGeneration = buildDataForProofGeneration(sidechainNodeView, status)
+            def getProofGenerationData(sidechainNodeView: View): DataForProofGeneration = keyRotationStrategy.buildDataForProofGeneration(sidechainNodeView, status)
 
             val dataForProofGeneration = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getProofGenerationData), timeoutDuration)
               .asInstanceOf[DataForProofGeneration]
@@ -392,7 +387,7 @@ class CertificateSubmitter(settings: SidechainSettings,
               override def run(): Unit = {
                 var proofWithQuality: com.horizen.utils.Pair[Array[Byte], java.lang.Long] = null
                 try {
-                  proofWithQuality = generateProof(dataForProofGeneration)
+                  proofWithQuality = keyRotationStrategy.generateProof(dataForProofGeneration)
                 } catch {
                   case e: Exception =>
                     log.error("Proof creation failed.", e)
@@ -442,29 +437,6 @@ class CertificateSubmitter(settings: SidechainSettings,
       case Failure(exception) =>
         log.error("Certificate creation failed.", exception)
         context.system.eventStream.publish(CertificateSubmissionStopped)
-    }
-  }
-
-  case class DataForProofGeneration(referencedEpochNumber: Int,
-                                    sidechainId: Array[Byte],
-                                    withdrawalRequests: Seq[WithdrawalRequestBox],
-                                    endEpochCumCommTreeHash: Array[Byte],
-                                    btrFee: Long,
-                                    ftMinAmount: Long,
-                                    utxoMerkleTreeRoot: Optional[Array[Byte]],
-                                    schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])]) {
-
-    override def toString: String = {
-      val utxoMerkleTreeRootString = if (utxoMerkleTreeRoot.isPresent) BytesUtils.toHexString(utxoMerkleTreeRoot.get()) else "None"
-      "DataForProofGeneration(" +
-        s"referencedEpochNumber = $referencedEpochNumber, " +
-        s"sidechainId = $sidechainId, " +
-        s"withdrawalRequests = {${withdrawalRequests.mkString(",")}}, " +
-        s"endEpochCumCommTreeHash = ${BytesUtils.toHexString(endEpochCumCommTreeHash)}, " +
-        s"btrFee = $btrFee, " +
-        s"ftMinAmount = $ftMinAmount, " +
-        s"utxoMerkleTreeRoot = ${utxoMerkleTreeRootString}, " +
-        s"number of schnorrKeyPairs = ${schnorrKeyPairs.size})"
     }
   }
 
