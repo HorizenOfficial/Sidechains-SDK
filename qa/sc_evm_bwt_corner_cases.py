@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import pprint
 import time
 
 from SidechainTestFramework.account.httpCalls.transaction.allWithdrawRequests import all_withdrawal_requests
@@ -13,7 +12,7 @@ from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, generate_next_blocks, generate_next_block, \
     AccountModelBlockVersion, EVM_APP_BINARY, convertZenToZennies, convertZenniesToWei, \
     computeForgedTxFee
-from test_framework.util import assert_equal,start_nodes, \
+from test_framework.util import assert_equal, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail
 
 """
@@ -77,8 +76,8 @@ class SCEvmBWTCornerCases(SidechainTestFramework):
 
         # verifies that there are no withdrawal requests yet
         current_epoch_number = 0
-        list_of_WR = all_withdrawal_requests(sc_node, current_epoch_number)["listOfWR"]
-        assert_equal(0, len(list_of_WR))
+        list_of_wr = all_withdrawal_requests(sc_node, current_epoch_number)["listOfWR"]
+        assert_equal(0, len(list_of_wr))
 
         # creates FT to SC to withdraw later
 
@@ -118,8 +117,8 @@ class SCEvmBWTCornerCases(SidechainTestFramework):
 
         # verifies that there are no withdrawal requests
         current_epoch_number = 0
-        list_of_WR = all_withdrawal_requests(sc_node, current_epoch_number)["listOfWR"]
-        assert_equal(0, len(list_of_WR))
+        list_of_wr = all_withdrawal_requests(sc_node, current_epoch_number)["listOfWR"]
+        assert_equal(0, len(list_of_wr))
 
         # verifies that the balance didn't change
         new_balance = http_wallet_balance(sc_node, evm_address)
@@ -136,13 +135,15 @@ class SCEvmBWTCornerCases(SidechainTestFramework):
         generate_next_block(sc_node, "first node")
 
         # Checking the receipt
-        status = int(sc_node.rpc_eth_getTransactionReceipt(tx_id)['result']['status'], 16)
+        receipt = sc_node.rpc_eth_getTransactionReceipt(tx_id)
+        status = int(receipt['result']['status'], 16)
         assert_equal(0, status, "Wrong tx status in receipt")
-        # TODO check event in the receipt
+
+        assert_equal(0, len(receipt['result']['logs']), "Wrong number of events in receipt")
 
         # verifies that there are no withdrawal requests
-        list_of_WR = all_withdrawal_requests(sc_node, current_epoch_number)["listOfWR"]
-        assert_equal(0, len(list_of_WR))
+        list_of_wr = all_withdrawal_requests(sc_node, current_epoch_number)["listOfWR"]
+        assert_equal(0, len(list_of_wr))
 
         # verifies that the balance didn't change except for the consumed gas
         new_balance = http_wallet_balance(sc_node, evm_address)
