@@ -140,7 +140,7 @@ class CertificateSubmitter[T <: DataForProofGeneration](settings: SidechainSetti
         s"'${BytesUtils.toHexString(expectedSysDataConstantOpt.getOrElse(Array.emptyByteArray))}' but actual is '${BytesUtils.toHexString(actualSysDataConstant)}'")
     }
 
-    loadProvingFilePath()
+// TODO    loadProvingFilePath()
   }
 
   private def getSidechainCreationTransaction(history: SidechainHistory): SidechainCreation = {
