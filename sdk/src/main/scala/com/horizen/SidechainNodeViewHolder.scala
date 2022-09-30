@@ -22,6 +22,8 @@ import sparkz.core.{ModifiersCache, idToVersion, versionToId}
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.annotation.tailrec
+import scala.reflect.runtime.universe.typeTag
+import scala.reflect.{ClassTag, classTag}
 import scala.util.{Failure, Success, Try}
 
 class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
@@ -296,7 +298,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       sender() ! getStorageVersions
   }
 
-  protected def processLocallyGeneratedTransaction: Receive = {
+  protected def processLocallyGeneratedTransaction(implicit tag: ClassTag[SidechainTypes#SCBT]): Receive = {
     case newTxs: LocallyGeneratedTransaction[SidechainTypes#SCBT] =>
       newTxs.txs.foreach(tx => {
         if (tx.fee() > maxTxFee)
