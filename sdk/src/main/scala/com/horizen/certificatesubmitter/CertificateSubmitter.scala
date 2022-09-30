@@ -468,36 +468,6 @@ class CertificateSubmitter(settings: SidechainSettings,
     }
   }
 
-  private def buildDataForProofGeneration(sidechainNodeView: View, status: SignaturesStatus): DataForProofGeneration = {
-    val history = sidechainNodeView.history
-    val state = sidechainNodeView.state
-
-    val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(status.referencedEpoch)
-
-    val btrFee: Long = getBtrFee(status.referencedEpoch)
-    val consensusEpochNumber = lastConsensusEpochNumberForWithdrawalEpochNumber(history, status.referencedEpoch)
-    val ftMinAmount: Long = getFtMinAmount(consensusEpochNumber)
-    val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, status.referencedEpoch)
-    val sidechainId = params.sidechainId
-    val utxoMerkleTreeRoot: Optional[Array[Byte]] = getUtxoMerkleTreeRoot(status.referencedEpoch, state)
-
-
-    val signersPublicKeyWithSignatures = params.signersPublicKeys.zipWithIndex.map {
-      case (pubKey, pubKeyIndex) =>
-        (pubKey, status.knownSigs.find(info => info.pubKeyIndex == pubKeyIndex).map(_.signature))
-    }
-
-    DataForProofGeneration(
-      status.referencedEpoch,
-      sidechainId,
-      withdrawalRequests,
-      endEpochCumCommTreeHash,
-      btrFee,
-      ftMinAmount,
-      utxoMerkleTreeRoot,
-      signersPublicKeyWithSignatures)
-  }
-
   def submitterStatus: Receive = {
     case EnableSubmitter =>
       submitterEnabled = true
