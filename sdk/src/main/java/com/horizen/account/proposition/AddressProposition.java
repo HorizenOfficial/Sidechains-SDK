@@ -5,21 +5,16 @@ import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.SparkzEncoding;
 import com.horizen.account.secret.PrivateKeySecp256k1;
 import com.horizen.account.utils.Account;
-import com.horizen.proposition.ProofOfKnowledgeProposition;
-import com.horizen.proposition.PropositionSerializer;
-import com.horizen.proposition.ProvableCheckResult;
-import com.horizen.secret.Secret;
+import com.horizen.proposition.*;
 import com.horizen.serialization.Views;
 import com.horizen.utils.BytesUtils;
 import org.web3j.crypto.Keys;
 import org.web3j.utils.Numeric;
-
 import java.util.Arrays;
-import java.util.List;
 
 @JsonView(Views.Default.class)
 public final class AddressProposition extends SparkzEncoding
-        implements ProofOfKnowledgeProposition<PrivateKeySecp256k1> {
+        implements AbstractSingleSecretProofOfKnowledgeProposition<PrivateKeySecp256k1> {
 
     @JsonProperty("address")
     private final byte[] address;
@@ -39,11 +34,6 @@ public final class AddressProposition extends SparkzEncoding
     @Override
     public byte[] pubKeyBytes() {
         return Arrays.copyOf(address, Account.ADDRESS_SIZE);
-    }
-
-    @Override
-    public ProvableCheckResult<PrivateKeySecp256k1> canBeProvedBy(List<Secret> secrectList) {
-        return null; // TODO FOR MERGE
     }
 
     @Override

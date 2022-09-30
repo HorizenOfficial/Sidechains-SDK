@@ -15,7 +15,7 @@ import java.util.Objects;
 @JsonView(Views.Default.class)
 @JsonIgnoreProperties("valid")
 public class VrfPublicKey
-        extends AbstractSingleSecretProofOfKnowledgeProposition<VrfSecretKey> {
+        implements AbstractSingleSecretProofOfKnowledgeProposition<VrfSecretKey> {
     public final static int KEY_LENGTH = CryptoLibProvider.vrfFunctions().vrfPublicKeyLen();
 
     private final byte[] publicBytes;

@@ -18,8 +18,6 @@ import com.horizen.secret.SecretSerializer;
 import com.horizen.settings.SettingsReader;
 import com.horizen.transaction.TransactionSerializer;
 import com.horizen.utils.Pair;
-
-import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -41,18 +39,6 @@ public class EvmAppModule extends AccountAppModule {
         HashMap<Byte, TransactionSerializer<AccountTransaction<Proposition, Proof<Proposition>>>>
                 customAccountTransactionSerializers = new HashMap<>();
 
-        String dataDirAbsolutePath = sidechainSettings.sparkzSettings().dataDir().getAbsolutePath();
-
-        // two distinct storages are used in application state and wallet in order to test a version
-        // misalignment during startup and the recover logic
-        File appWalletStorage1 = new File(dataDirAbsolutePath + "/appWallet1");
-        File appWalletStorage2 = new File(dataDirAbsolutePath + "/appWallet2");
-        DefaultApplicationWallet defaultApplicationWallet = new DefaultApplicationWallet(appWalletStorage1, appWalletStorage2);
-
-        File appStateStorage1 = new File(dataDirAbsolutePath + "/appState1");
-        File appStateStorage2 = new File(dataDirAbsolutePath + "/appState2");
-        DefaultApplicationState defaultApplicationState = new DefaultApplicationState(appStateStorage1, appStateStorage2);
-
         AppForkConfigurator forkConfigurator = new AppForkConfigurator();
 
         // Here I can add my custom rest api and/or override existing one
@@ -70,8 +56,7 @@ public class EvmAppModule extends AccountAppModule {
         customMessageProcessors.add(new EvmMessageProcessor());
 
         // use a custom object which implements the stopAll() method
-        SidechainAppStopper applicationStopper = new EvmAppStopper(
-                defaultApplicationState, defaultApplicationWallet);
+        SidechainAppStopper applicationStopper = new EvmAppStopper();
 
         bind(SidechainSettings.class)
                 .annotatedWith(Names.named("SidechainSettings"))

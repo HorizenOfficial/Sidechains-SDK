@@ -52,13 +52,6 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     utxoMerkleTreeProvider, stateStorage, forgerBoxStorage,
     secretStorage, walletBoxStorage, walletTransactionStorage, forgingBoxesInfoStorage, cswDataProvider)
 
-
-  /**
-   * Cache for modifiers. If modifiers are coming out-of-order, they are to be stored in this cache.
-   */
-  protected override lazy val modifiersCache: ModifiersCache[SidechainBlock, HIS] =
-    new SDKModifiersCache[SidechainBlock, HIS](sparksSettings.network.maxModifiersCacheSize)
-
   // this method is called at the startup after the load of the storages from the persistent db. It might happen that the node was not
   // stopped gracefully and therefore the consistency among storages might not be ensured. This method tries to recover this situation
   def checkAndRecoverStorages(restoredData: Option[(SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool)]):

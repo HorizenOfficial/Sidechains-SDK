@@ -95,7 +95,7 @@ class SCEvmForger(SidechainTestFramework):
 
     def sc_setup_nodes(self):
         return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
-                              binary=[EVM_APP_BINARY] * 2)  # , extra_args=[['-agentlib'], []])
+                              binary=[EVM_APP_BINARY] * 2)#, extra_args=[[], ['-agentlib']])
 
     def run_test(self):
 
@@ -520,10 +520,14 @@ class SCEvmForger(SidechainTestFramework):
         except Exception as e:
             exception_occurs = True
             print("We had an exception as expected: {}".format(str(e)))
+
+        '''
         finally:
             assert_true(exception_occurs, "No forging stakes expected for SC node 1.")
         self.sc_sync_all()
         print_current_epoch_and_slot(sc_node_1)
+        '''
+        input("_")
 
 
 if __name__ == "__main__":

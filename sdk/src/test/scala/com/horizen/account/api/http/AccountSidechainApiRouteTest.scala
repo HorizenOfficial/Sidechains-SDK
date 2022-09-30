@@ -14,7 +14,7 @@ import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.account.transaction.{AccountTransaction, EthereumTransaction}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import com.horizen.api.http.{SidechainApiErrorHandler, SidechainApiMockConfiguration, SidechainApiRejectionHandler, SidechainJSONBOChecker}
+import com.horizen.api.http.{ApiTokenHeader, SidechainApiErrorHandler, SidechainApiMockConfiguration, SidechainApiRejectionHandler, SidechainJSONBOChecker}
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
 import com.horizen.node.NodeWalletBase
 import com.horizen.params.MainNetParams
@@ -41,6 +41,8 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
   implicit def rejectionHandler: RejectionHandler = SidechainApiRejectionHandler.rejectionHandler
 
   val sidechainTransactionsCompanion: SidechainAccountTransactionsCompanion = getDefaultAccountTransactionsCompanion
+  val apiTokenHeader = new ApiTokenHeader("api_key", "Horizen")
+
 
   val jsonChecker = new SidechainJSONBOChecker
 

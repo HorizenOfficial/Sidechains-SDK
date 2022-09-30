@@ -8,7 +8,7 @@ import com.horizen.{Wallet, _}
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.consensus.{ConsensusEpochAndSlot, ConsensusEpochNumber, ConsensusSlotNumber}
-import com.horizen.forge.AbstractForger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging}
+import com.horizen.forge.AbstractForger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
 import com.horizen.params.NetworkParams
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
@@ -124,7 +124,10 @@ abstract class AbstractForger[
     }
   }
 
-  protected def processTryForgeNextBlockForEpochAndSlotMessage: Receive 
+  protected def processTryForgeNextBlockForEpochAndSlotMessage: Receive = {
+    case obj: TryForgeNextBlockForEpochAndSlot[TX] =>
+      tryToCreateBlockForEpochAndSlot(obj.consensusEpochNumber, obj.consensusSlotNumber, Some(sender()), timeout, obj.forcedTx)  }
+
 
   protected def tryToCreateBlockNow(): Unit = {
     val currentTime: Long = timeProvider.time() / 1000

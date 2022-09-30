@@ -5,7 +5,6 @@ import com.horizen.{SidechainTypes, _}
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.companion.SidechainTransactionsCompanion
-import com.horizen.forge.AbstractForger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainHistoryStorage
 import sparkz.core.utils.NetworkTimeProvider
@@ -26,9 +25,6 @@ class Forger(settings: SidechainSettings,
   override type VL = SidechainWallet
   override type MP = SidechainMemoryPool
 
-  override protected def processTryForgeNextBlockForEpochAndSlotMessage: Receive = {
-    case obj: TryForgeNextBlockForEpochAndSlot[SidechainTypes#SCBT] =>
-      tryToCreateBlockForEpochAndSlot(obj.consensusEpochNumber, obj.consensusSlotNumber, Some(sender()), timeout, obj.forcedTx)  }
 }
 
 

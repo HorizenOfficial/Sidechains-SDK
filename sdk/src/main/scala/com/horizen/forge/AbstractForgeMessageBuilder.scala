@@ -302,7 +302,7 @@ abstract class AbstractForgeMessageBuilder[
       // For example the ommerred Block contains Tx which output is going to be spent by another Tx in the Mempool.
       Seq()
     } else {
-      collectTransactionsFromMemPool(nodeView, blockSize, mainchainBlockReferenceDataToRetrieve, timestamp, forcedTx)
+      collectTransactionsFromMemPool(nodeView, blockSize, mainchainReferenceData, timestamp, forcedTx)
     }
 
     log.trace(s"Transactions to apply $transactions")
@@ -356,7 +356,7 @@ abstract class AbstractForgeMessageBuilder[
                       forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo,
                       vrfProof: VrfProof): Int
 
-  def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int, mainchainBlockReferenceDataToRetrieve: Seq[MainchainHeaderHash], timestamp: Long, forcedTx: Iterable[TX]) : Seq[TX]
+  def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int, mainchainBlockReferenceDataToRetrieve: Seq[MainchainBlockReferenceData], timestamp: Long, forcedTx: Iterable[TX]): Seq[TX]
 
   def getOmmersSize(ommers: Seq[Ommer[H]]) : Int
 

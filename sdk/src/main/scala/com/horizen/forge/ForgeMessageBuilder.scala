@@ -133,7 +133,7 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     header.bytes.length
   }
 
-  override def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int, mainchainBlockReferenceDataToRetrieve: Seq[MainchainHeaderHash], timestamp: Long, forcedTx: Iterable[SidechainTypes#SCBT]) : Seq[SidechainTypes#SCBT] = {
+  override def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int, mainchainBlockReferenceDataToRetrieve: Seq[MainchainBlockReferenceData], timestamp: Long, forcedTx: Iterable[SidechainTypes#SCBT]): Seq[SidechainTypes#SCBT] = {
     var blockSize: Int = blockSizeIn
 
     var txsCounter: Int = 0

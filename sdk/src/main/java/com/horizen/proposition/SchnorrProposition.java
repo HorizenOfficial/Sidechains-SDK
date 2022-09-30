@@ -14,7 +14,7 @@ import java.util.Objects;
 @JsonView(Views.Default.class)
 @JsonIgnoreProperties("valid")
 public class SchnorrProposition
-        extends AbstractSingleSecretProofOfKnowledgeProposition<SchnorrSecret> {
+        implements AbstractSingleSecretProofOfKnowledgeProposition<SchnorrSecret> {
     public static final int KEY_LENGTH = CryptoLibProvider.schnorrFunctions().schnorrPublicKeyLength();
 
     private final byte[] publicBytes;

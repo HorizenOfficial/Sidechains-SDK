@@ -18,11 +18,9 @@ import com.horizen.params.NetworkParams
 import com.horizen.proof.Proof
 import com.horizen.proposition.Proposition
 import com.horizen.storage.{SidechainSecretStorage, SidechainStorageInfo}
-import com.horizen.utils.SDKModifiersCache
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
 import scorex.util.ModifierId
-import sparkz.core.ModifiersCache
 import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import sparkz.core.consensus.History.ProgressInfo
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{SemanticallyFailedModification, SemanticallySuccessfulModifier}
@@ -199,12 +197,6 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   // TODO FOR MERGE
   override val listOfStorageInfo: Seq[SidechainStorageInfo] = Seq()
 
-
-  /**
-   * Cache for modifiers. If modifiers are coming out-of-order, they are to be stored in this cache.
-   */
-  protected override lazy val modifiersCache: ModifiersCache[AccountBlock, HIS] =
-    new SDKModifiersCache[AccountBlock, HIS](sparksSettings.network.maxModifiersCacheSize)
 
   // TODO FOR MERGE: implement these methods
   override def dumpStorages(): Unit = ???

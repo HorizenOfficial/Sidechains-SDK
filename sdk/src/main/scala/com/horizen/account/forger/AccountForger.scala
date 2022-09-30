@@ -10,7 +10,6 @@ import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.state.AccountState
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.wallet.AccountWallet
-import com.horizen.forge.AbstractForger.ReceivableMessages.TryForgeNextBlockForEpochAndSlot
 import com.horizen.forge.{AbstractForger, MainchainSynchronizer}
 import com.horizen.params.NetworkParams
 import sparkz.core.utils.NetworkTimeProvider
@@ -31,9 +30,6 @@ class AccountForger(settings: SidechainSettings,
   override type VL = AccountWallet
   override type MP = AccountMemoryPool
 
-  override protected def processTryForgeNextBlockForEpochAndSlotMessage: Receive = {
-    case obj: TryForgeNextBlockForEpochAndSlot[SidechainTypes#SCAT] =>
-      tryToCreateBlockForEpochAndSlot(obj.consensusEpochNumber, obj.consensusSlotNumber, Some(sender()), timeout, obj.forcedTx)  }
 }
 
 object AccountForgerRef {

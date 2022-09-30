@@ -315,7 +315,7 @@ class AccountForgeMessageBuilder(
     header.bytes.length
   }
 
-  override def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int, mainchainBlockReferenceDataToRetrieve: Seq[MainchainHeaderHash], timestamp: Long, forcedTx: Iterable[SidechainTypes#SCAT]) : Seq[SidechainTypes#SCAT] = {
+  override def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int, mainchainBlockReferenceDataToRetrieve: Seq[MainchainBlockReferenceData], timestamp: Timestamp, forcedTx: Iterable[SidechainTypes#SCAT]): Seq[SidechainTypes#SCAT] = {
     // no checks of the block size here, these txes are the candidates and their inclusion
     // will be attempted by forger
 

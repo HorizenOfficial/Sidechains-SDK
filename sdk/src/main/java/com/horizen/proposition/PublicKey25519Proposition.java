@@ -13,7 +13,7 @@ import java.util.Arrays;
 
 @JsonView(Views.Default.class)
 public final class PublicKey25519Proposition
-    extends AbstractSingleSecretProofOfKnowledgeProposition<PrivateKey25519>
+    implements AbstractSingleSecretProofOfKnowledgeProposition<PrivateKey25519>
 {
     public static final byte ADDRESS_VERSION = 1;
     public static final int CHECKSUM_LENGTH = 4;
