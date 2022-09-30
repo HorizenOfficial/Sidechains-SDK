@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import pprint
-import sha3
+from eth_utils import keccak
 from eth_bloom import BloomFilter
 from decimal import Decimal
 
@@ -315,10 +315,9 @@ class SCEvmBlockBloomFilter(SidechainTestFramework):
         assert_true(bytes.fromhex(erc20_address[2:]) in bloom_filter,
                     "bloom filter should contain the address of emitting contract")
 
-        transfer_event_signature = sha3.keccak_256()
-        transfer_event_signature.update(b"Transfer(address,address,uint256)")
+        transfer_event_signature = keccak(b"Transfer(address,address,uint256)")
 
-        assert_true(bytes.fromhex(transfer_event_signature.hexdigest()) in bloom_filter,
+        assert_true(transfer_event_signature in bloom_filter,
                     "bloom filter should contain the signature of transfer event")
 
         assert_true(bytes.fromhex("0" * (TOPIC_LENGTH - len(other_address)) + other_address) in bloom_filter,
@@ -355,10 +354,10 @@ class SCEvmBlockBloomFilter(SidechainTestFramework):
         assert_true(bytes.fromhex(erc721_address[2:]) in bloom_filter,
                     "bloom filter should contain the address of nft contract")
 
-        transfer_event_signature = sha3.keccak_256()
-        transfer_event_signature.update(b"Transfer(address,address,uint256)")
+        transfer_event_signature = keccak(b"Transfer(address,address,uint256)")
 
-        assert_true(bytes.fromhex(transfer_event_signature.hexdigest()) in bloom_filter,
+
+        assert_true(transfer_event_signature in bloom_filter,
                     "bloom filter should contain the signature of transfer event")
         assert_true(
             bytes.fromhex("0" * (TOPIC_LENGTH - len(evm_address_stripped)) + evm_address_stripped) in bloom_filter,
