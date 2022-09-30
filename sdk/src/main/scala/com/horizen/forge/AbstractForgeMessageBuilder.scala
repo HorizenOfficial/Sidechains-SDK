@@ -1,6 +1,7 @@
 package com.horizen.forge
 
 import akka.util.Timeout
+import com.horizen.account.receipt.LogsBloom
 import com.horizen.block._
 import com.horizen.chain.{AbstractFeePaymentsInfo, MainchainHeaderHash, SidechainBlockInfo}
 import com.horizen.consensus._
@@ -320,7 +321,8 @@ abstract class AbstractForgeMessageBuilder[
       vrfProof,
       forgingStakeMerklePathInfo.merklePath,
       companion,
-      blockSize)
+      blockSize
+    )
 
     tryBlock match {
       case Success(block) => ForgeSuccess(block)

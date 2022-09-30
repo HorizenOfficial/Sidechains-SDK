@@ -10,7 +10,7 @@ import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.mempool.AccountMemoryPool
 import com.horizen.account.proposition.AddressProposition
-import com.horizen.account.receipt.EthereumConsensusDataReceipt
+import com.horizen.account.receipt.{EthereumConsensusDataReceipt, LogsBloom}
 import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.storage.AccountHistoryStorage
@@ -101,44 +101,55 @@ class AccountForgeMessageBuilder(
     val accountsToSkip = new mutable.HashSet[SidechainTypes#SCP]
 
     for ((tx, txIndex) <- sidechainTransactions.zipWithIndex if !accountsToSkip.contains(tx.getFrom)) {
+      val revisionId = stateView.snapshot
+      val initialBlockGas = blockGasPool.getGas
 
-      stateView.applyTransaction(tx, txIndex, blockGasPool, blockContext) match {
-        case Success(consensusDataReceipt) =>
+      try {
+        stateView.applyTransaction(tx, txIndex, blockGasPool, blockContext, finalizeChanges = false) match {
+          case Success(consensusDataReceipt) =>
+            val ethTx = tx.asInstanceOf[EthereumTransaction]
+            val txHash = BytesUtils.fromHexString(ethTx.id)
 
-          val ethTx = tx.asInstanceOf[EthereumTransaction]
-          val txHash = BytesUtils.fromHexString(ethTx.id)
+            receiptList += consensusDataReceipt
+            txHashList += txHash
 
-          receiptList += consensusDataReceipt
-          txHashList += txHash
+            val txGasUsed = consensusDataReceipt.cumulativeGasUsed.subtract(cumGasUsed)
+            // update cumulative gas used so far
+            cumGasUsed = consensusDataReceipt.cumulativeGasUsed
 
-          val txGasUsed = consensusDataReceipt.cumulativeGasUsed.subtract(cumGasUsed)
-          // update cumulative gas used so far
-          cumGasUsed = consensusDataReceipt.cumulativeGasUsed
+            val baseFeePerGas = blockContext.baseFee
+            val (txBaseFeePerGas, txForgerTipPerGas) = GasUtil.getTxFeesPerGas(ethTx, baseFeePerGas)
+            cumBaseFee = cumBaseFee.add(txBaseFeePerGas.multiply(txGasUsed))
+            cumForgerTips = cumForgerTips.add(txForgerTipPerGas.multiply(txGasUsed))
 
-          val baseFeePerGas = blockContext.baseFee
-          val (txBaseFeePerGas, txForgerTipPerGas) = GasUtil.getTxFeesPerGas(ethTx, baseFeePerGas)
-          cumBaseFee = cumBaseFee.add(txBaseFeePerGas.multiply(txGasUsed))
-          cumForgerTips = cumForgerTips.add(txForgerTipPerGas.multiply(txGasUsed))
-
-       case Failure(e: GasLimitReached) =>
-          // block gas limit reached
-          // keep trying to fit transactions into the block: this TX did not fit, but another one might
-          log.trace(s"Could not apply tx, reason: ${e.getMessage}")
-          // skip all txs from the same account
-          accountsToSkip += tx.getFrom
-        case Failure(e: FeeCapTooLowException) =>
-          // stop forging because all the remaining txs cannot be executed for the nonce, if they are from the same account, or,
-          // if they are from other accounts, they will have a lower fee cap
-          log.trace(s"Could not apply tx, reason: ${e.getMessage}")
-          return Success(receiptList, txHashList, cumBaseFee, cumForgerTips)
-        case Failure(e: NonceTooLowException) =>
-          //SHOULD NEVER HAPPEN, but in case just skip this tx
-         log.error(s"******** Could not apply tx for NonceTooLowException ******* : ${e.getMessage}")
-        case Failure(e) =>
-          // skip all txs from the same account
-          accountsToSkip += tx.getFrom
-          log.trace(s"Could not apply tx, reason: ${e.getMessage}. Skipping all next transactions from the same account because not executable anymore",e)
+          case Failure(e: GasLimitReached) =>
+            // block gas limit reached
+            // keep trying to fit transactions into the block: this TX did not fit, but another one might
+            log.trace(s"Could not apply tx, reason: ${e.getMessage}")
+            // skip all txs from the same account
+            accountsToSkip += tx.getFrom
+          case Failure(e: FeeCapTooLowException) =>
+            // stop forging because all the remaining txs cannot be executed for the nonce, if they are from the same account, or,
+            // if they are from other accounts, they will have a lower fee cap
+            log.trace(s"Could not apply tx, reason: ${e.getMessage}")
+            return Success(receiptList, txHashList, cumBaseFee, cumForgerTips)
+          case Failure(e: NonceTooLowException) =>
+            //SHOULD NEVER HAPPEN, but in case just skip this tx
+            log.error(s"******** Could not apply tx for NonceTooLowException ******* : ${e.getMessage}")
+          case Failure(e) =>
+            // skip all txs from the same account but remove any changes caused by the rejected tx
+            log.warn(s"Could not forge tx, reason: ${e.getMessage}", e)
+            accountsToSkip += tx.getFrom
+            stateView.revertToSnapshot(revisionId)
+            //Restore gas
+            val usedGas = initialBlockGas.subtract(blockGasPool.getGas)
+            blockGasPool.addGas(usedGas)
+        }
       }
+      finally {
+        stateView.finalizeChanges()
+      }
+
     }
     (receiptList, txHashList, cumBaseFee, cumForgerTips)
   }
@@ -237,6 +248,11 @@ class AccountForgeMessageBuilder(
     // 8. set the fee payments hash
     val feePaymentsHash: Array[Byte] = AccountFeePaymentsUtils.calculateFeePaymentsHash(feePayments)
 
+    val logsBloom = new LogsBloom()
+    val logsBloomSeq = receiptList.map(r => r.logsBloom)
+
+    logsBloomSeq.foreach(l => logsBloom.addBloomFilter(l))
+
     val block = AccountBlock.create(
       parentId,
       AccountBlock.ACCOUNT_BLOCK_VERSION,
@@ -256,7 +272,8 @@ class AccountForgeMessageBuilder(
       baseFee,
       gasUsed,
       gasLimit,
-      companion.asInstanceOf[SidechainAccountTransactionsCompanion]
+      companion.asInstanceOf[SidechainAccountTransactionsCompanion],
+      logsBloom
     )
 
     block
@@ -291,6 +308,7 @@ class AccountForgeMessageBuilder(
       new Array[Byte](MerkleTree.ROOT_HASH_LENGTH),
       Long.MaxValue,
       new Array[Byte](NodeViewModifier.ModifierIdSize),
+      new LogsBloom(),
       new Signature25519(new Array[Byte](Signature25519.SIGNATURE_LENGTH)) // empty signature
     )
 

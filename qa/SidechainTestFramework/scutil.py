@@ -1236,6 +1236,8 @@ def convertZenniesToZen(valueInZennies):
 WithdrawalReqSmartContractAddress = "0000000000000000000011111111111111111111"
 ForgerStakeSmartContractAddress = "0000000000000000000022222222222222222222"
 
+# Block gas limit
+BLOCK_GAS_LIMIT = 30000000
 
 def get_account_balance(sc_node, address):
     return sc_node.wallet_getBalance(
