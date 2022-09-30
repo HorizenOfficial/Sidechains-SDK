@@ -219,11 +219,13 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           secret match {
             case Some(secret) =>
               signedTx = signTransactionWithSecret(secret, signedTx)
+              validateAndSendTransaction(signedTx)
             case None =>
-              return ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
+              ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
           }
         }
-        validateAndSendTransaction(signedTx)
+        else
+          validateAndSendTransaction(signedTx)
       }
     }
   }
@@ -258,11 +260,13 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           secret match {
             case Some(secret) =>
               signedTx = signTransactionWithSecret(secret, signedTx)
+              validateAndSendTransaction(signedTx)
             case None =>
-              return ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
+              ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
           }
         }
-        validateAndSendTransaction(signedTx)
+        else
+          validateAndSendTransaction(signedTx)
       }
     }
   }
@@ -283,11 +287,13 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           secret match {
             case Some(secret) =>
               signedTx = signTransactionWithSecret(secret, signedTx)
+              validateAndSendTransaction(signedTx)
             case None =>
-              return ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
+              ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
           }
         }
-        validateAndSendTransaction(signedTx)
+        else
+          validateAndSendTransaction(signedTx)
       }
     }
   }
@@ -303,10 +309,10 @@ case class AccountTransactionApiRoute(override val settings: RESTApiSettings,
           secret match {
             case Some(secret) =>
               signedTx = signTransactionWithSecret(secret, signedTx)
+              ApiResponseUtil.toResponse(rawTransactionResponseRepresentation(signedTx))
             case None =>
-              return ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
+              ApiResponseUtil.toResponse(ErrorInsufficientBalance("ErrorInsufficientBalance", JOptional.empty()))
           }
-          ApiResponseUtil.toResponse(rawTransactionResponseRepresentation(signedTx))
         }
       }
     }

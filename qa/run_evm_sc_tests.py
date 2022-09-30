@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import sys
 
+from sc_evm_backward_transfer_2 import SCEvmBackwardTransfer2
 from test_framework.util import assert_equal
 
 from sc_evm_bootstrap import SCEvmBootstrap
@@ -16,6 +17,7 @@ from sc_evm_forger import SCEvmForger
 from sc_evm_closed_forger import SCEvmClosedForgerList
 from sc_evm_orphan_txs import SCEvmOrphanTXS
 from sc_evm_mempool import SCEvmMempool
+from sc_evm_mempool_invalid_txs import SCEvmMempoolInvalidTxs
 
 
 """
@@ -47,6 +49,9 @@ def run_tests(log_file):
     result = run_test(SCEvmBackwardTransfer())
     assert_equal(0, result, "sc_evm_backward_transfer test failed!")
 
+    result = run_test(SCEvmBackwardTransfer2())
+    assert_equal(0, result, "sc_evm_backward_transfer2 test failed!")
+
     result = run_test(SCEvmBWTCornerCases())
     assert_equal(0, result, "sc_evm_bwt_corner_cases test failed!")
 
@@ -70,6 +75,10 @@ def run_tests(log_file):
 
     result = run_test(SCEvmMempool())
     assert_equal(0, result, "sc_evm_mempool test failed!")
+
+    result = run_test(SCEvmMempoolInvalidTxs())
+    assert_equal(0, result, "sc_evm_mempool_invalid_txs test failed!")
+
 
 if __name__ == "__main__":
     log_file = open("sc_evm_test.log", "w")

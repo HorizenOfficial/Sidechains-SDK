@@ -141,7 +141,13 @@ class AccountStateView(
    *    - not enough gas for intrinsic gas
    *    - block gas limit reached
    */
-  override def applyTransaction(tx: SidechainTypes#SCAT, txIndex: Int, blockGasPool: GasPool, blockContext: BlockContext): Try[EthereumConsensusDataReceipt] = Try {
+  override def applyTransaction(
+      tx: SidechainTypes#SCAT,
+      txIndex: Int,
+      blockGasPool: GasPool,
+      blockContext: BlockContext,
+      finalizeChanges: Boolean = true
+  ): Try[EthereumConsensusDataReceipt] = Try {
     if (!tx.isInstanceOf[EthereumTransaction])
       throw new IllegalArgumentException(s"Unsupported transaction type ${tx.getClass.getName}")
 
@@ -164,7 +170,8 @@ class AccountStateView(
         ReceiptStatus.FAILED
     } finally {
       // finalize pending changes, clear the journal and reset refund counter
-      stateDb.finalizeChanges()
+      if (finalizeChanges)
+        stateDb.finalizeChanges()
     }
     val consensusDataReceipt = new EthereumConsensusDataReceipt(
       ethTx.version(), status.id, blockGasPool.getUsedGas, getLogs(txHash))
@@ -316,6 +323,8 @@ class AccountStateView(
   def getRefund: BigInteger = stateDb.getRefund
 
   def snapshot: Int = stateDb.snapshot()
+
+  def finalizeChanges(): Unit =  stateDb.finalizeChanges()
 
   def revertToSnapshot(revisionId: Int): Unit = stateDb.revertToSnapshot(revisionId)
 }

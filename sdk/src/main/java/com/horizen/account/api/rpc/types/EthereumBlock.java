@@ -36,12 +36,13 @@ public class EthereumBlock {
 
     public EthereumBlock(String number, String hash, List<?> transactions, AccountBlock block) {
         var blockHeader = block.header();
+        this.author = Numeric.toHexString(block.header().forgerAddress().address());
         this.number = number;
         this.hash = hash;
         this.parentHash = Numeric.prependHexPrefix((String) block.parentId());
         this.nonce = "0x0"; // no nonce
         this.sha3Uncles = "0x0"; // no uncles
-        this.logsBloom = "0x0"; // not included in block now
+        this.logsBloom = Numeric.toHexString(block.header().logsBloom().getBloomFilter());
         this.transactionsRoot = Numeric.toHexString(block.header().sidechainTransactionsMerkleRootHash());
         this.stateRoot = Numeric.toHexString(block.header().stateRoot());
         this.receiptsRoot = Numeric.toHexString(block.header().receiptsRoot());
