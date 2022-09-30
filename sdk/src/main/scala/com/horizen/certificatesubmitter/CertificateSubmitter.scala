@@ -255,48 +255,6 @@ class CertificateSubmitter(settings: SidechainSettings,
     ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).ftMinAmount
   }
 
-  private def getMessageToSign(referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
-    def getMessage(sidechainNodeView: View): Try[Array[Byte]] = Try {
-      val history = sidechainNodeView.history
-      val state = sidechainNodeView.state
-
-      val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(referencedWithdrawalEpochNumber)
-
-      val btrFee: Long = getBtrFee(referencedWithdrawalEpochNumber)
-      val consensusEpochNumber = lastConsensusEpochNumberForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
-      val ftMinAmount: Long = getFtMinAmount(consensusEpochNumber)
-
-      val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
-      val sidechainId = params.sidechainId
-
-      val utxoMerkleTreeRoot: Optional[Array[Byte]] = {
-        Try {
-          getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber, state)
-        } match {
-          case Failure(e: IllegalStateException) =>
-            throw new Exception("CertificateSubmitter is too late against the State. " +
-              s"No utxo merkle tree root for requested epoch $referencedWithdrawalEpochNumber. " +
-              s"Current epoch is ${state.getWithdrawalEpochInfo.epoch}")
-          case Failure(exception) => log.error("Exception while getting utxoMerkleTreeRoot", exception)
-            throw new Exception(exception)
-          case Success(value) => value
-        }
-      }
-
-
-      CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(
-        withdrawalRequests.asJava,
-        sidechainId,
-        referencedWithdrawalEpochNumber,
-        endEpochCumCommTreeHash,
-        btrFee,
-        ftMinAmount,
-        utxoMerkleTreeRoot)
-    }
-
-    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getMessage), timeoutDuration).asInstanceOf[Try[Array[Byte]]].get
-  }
-
   private def calculateSignatures(messageToSign: Array[Byte]): Try[Seq[CertificateSignatureInfo]] = Try {
     def getSignersPrivateKeys(sidechainNodeView: View): Seq[(SchnorrSecret, Int)] = {
       val wallet = sidechainNodeView.vault

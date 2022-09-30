@@ -86,7 +86,8 @@ class WithoutKeyRotationStrategy(settings: SidechainSettings, params: NetworkPar
       val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(referencedWithdrawalEpochNumber)
 
       val btrFee: Long = getBtrFee(referencedWithdrawalEpochNumber)
-      val ftMinAmount: Long = getFtMinAmount(referencedWithdrawalEpochNumber)
+      val consensusEpochNumber = lastConsensusEpochNumberForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
+      val ftMinAmount: Long = getFtMinAmount(consensusEpochNumber)
 
       val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
       val sidechainId = params.sidechainId
@@ -106,7 +107,14 @@ class WithoutKeyRotationStrategy(settings: SidechainSettings, params: NetworkPar
       }
 
 
-      CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(withdrawalRequests.asJava, sidechainId, referencedWithdrawalEpochNumber, endEpochCumCommTreeHash, btrFee, ftMinAmount, utxoMerkleTreeRoot)
+      CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(
+        withdrawalRequests.asJava,
+        sidechainId,
+        referencedWithdrawalEpochNumber,
+        endEpochCumCommTreeHash,
+        btrFee,
+        ftMinAmount,
+        utxoMerkleTreeRoot)
     }
 
     Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getMessage), timeoutDuration).asInstanceOf[Try[Array[Byte]]].get
