@@ -1,31 +1,25 @@
 #!/usr/bin/env python3
 import json
-import pprint
 import time
 from decimal import Decimal
-from unicodedata import decimal
 
 from eth_abi import decode
 from eth_utils import remove_0x_prefix, event_signature_to_log_topic, encode_hex, to_hex
 
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
+from SidechainTestFramework.account.address_util import format_evm, format_eoa
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, AccountModelBlockVersion, EVM_APP_BINARY, generate_next_block, convertZenniesToWei, \
-    convertZenToZennies, connect_sc_nodes, convertZenToWei, ForgerStakeSmartContractAddress, get_account_balance, \
-    WithdrawalReqSmartContractAddress
-from sc_evm_test_contract_contract_deployment_and_interaction import deploy_smart_contract, random_byte_string
-from SidechainTestFramework.account.address_util import format_evm, format_eoa
-from test_framework.util import assert_equal, assert_true, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail, hex_str_to_bytes
+from SidechainTestFramework.scutil import WithdrawalReqSmartContractAddress
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, AccountModelBlockVersion, EVM_APP_BINARY, generate_next_block, convertZenniesToWei, \
     convertZenToZennies, connect_sc_nodes, convertZenToWei, ForgerStakeSmartContractAddress, get_account_balance, \
     computeForgedTxFee, convertWeiToZen
+from sc_evm_test_contract_contract_deployment_and_interaction import random_byte_string
 from test_framework.util import assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail
+from test_framework.util import hex_str_to_bytes
 
 """
 Configuration: 
