@@ -139,8 +139,6 @@ abstract class AbstractForger[
   }
 
   protected def tryToCreateBlockForEpochAndSlot(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, respondsToOpt: Option[ActorRef], blockCreationTimeout: Timeout, forcedTx: Iterable[TX]): Unit = {
-    val forgeMessage = forgeMessageBuilder.buildForgeMessageForEpochAndSlot(epochNumber, slot, blockCreationTimeout, forcedTx)
-
     val forgedBlockAsFuture = getForgedBlockAsFuture(epochNumber, slot, blockCreationTimeout, forcedTx)
 
     forgedBlockAsFuture.onComplete{
