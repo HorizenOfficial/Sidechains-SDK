@@ -1,10 +1,11 @@
 package com.horizen.account.fixtures
 
+import com.horizen.account.state.GasUtil
 import com.horizen.account.transaction.EthereumTransaction
-import org.web3j.crypto.Sign.SignatureData
-import org.web3j.crypto.{ECKeyPair, Keys, RawTransaction, Sign, SignedRawTransaction}
 
 import java.math.BigInteger
+import org.web3j.crypto.Sign.SignatureData
+import org.web3j.crypto.{ECKeyPair, Keys, RawTransaction, Sign, SignedRawTransaction}
 
 trait EthereumTransactionFixture {
 
@@ -12,19 +13,20 @@ trait EthereumTransactionFixture {
   def createLegacyTransaction(value: BigInteger,
                               nonce: BigInteger = BigInteger.ZERO,
                               pairOpt: Option[ECKeyPair] = None,
-                              gasPrice: Option[BigInteger] = None): EthereumTransaction = {
-    val gasFee = gasPrice.getOrElse(value)
-    val rawTransaction = RawTransaction.createTransaction(nonce, gasFee, value, "0x", value, "")
+                              gasPrice: BigInteger = BigInteger.valueOf(10000),
+                              gasLimit: BigInteger = GasUtil.TxGas): EthereumTransaction = {
+    val rawTransaction = RawTransaction.createTransaction(nonce, gasPrice, gasLimit, "0x", value, "")
     createSignedTransaction(rawTransaction, pairOpt)
   }
 
   def createEIP1559Transaction(value: BigInteger,
                                nonce: BigInteger = BigInteger.ZERO,
                                pairOpt: Option[ECKeyPair] = None,
-                               gasFee: BigInteger = BigInteger.ONE,
-                               priorityGasFee: BigInteger = BigInteger.ONE): EthereumTransaction = {
+                               gasFee: BigInteger = BigInteger.valueOf(10000),
+                               priorityGasFee: BigInteger = BigInteger.valueOf(10000),
+                               gasLimit: BigInteger = GasUtil.TxGas): EthereumTransaction = {
 
-    val rawTransaction = RawTransaction.createTransaction(1997, nonce, value, "", value
+    val rawTransaction = RawTransaction.createTransaction(1997, nonce, gasLimit, "", value
     , "", priorityGasFee, gasFee)
     createSignedTransaction(rawTransaction, pairOpt)
   }

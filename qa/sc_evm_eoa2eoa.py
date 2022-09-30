@@ -193,7 +193,7 @@ class SCEvmEOA2EOA(SidechainTestFramework):
 
         # moreover, check we have consistent chainId and ser/deser signature v value in tx json, as per EIP155
         txJsonResult = sc_node_1.rpc_eth_getTransactionByHash(txHash)['result']
-        chainId = int(txJsonResult['chainId'])
+        chainId = int(txJsonResult['chainId'], 16)
         sigV = int(txJsonResult['v'], 16)
         assert_equal(chainId, getChainIdFromSignatureV(sigV))
 
