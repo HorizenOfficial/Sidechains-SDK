@@ -2,8 +2,6 @@ package com.horizen
 
 import com.horizen.certificatesubmitter.CertificateSubmitterRef.TypeOfCertificateSubmitter
 import com.horizen.certificatesubmitter.CertificateSubmitterRef.TypeOfCertificateSubmitter.TypeOfCertificateSubmitter
-import com.horizen.certificatesubmitter.TypeOfCertificateSubmitter
-import com.horizen.certificatesubmitter.TypeOfCertificateSubmitter.TypeOfCertificateSubmitter
 import sparkz.core.settings.SparkzSettings
 
 import scala.concurrent.duration.FiniteDuration

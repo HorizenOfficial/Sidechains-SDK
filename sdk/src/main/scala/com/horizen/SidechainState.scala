@@ -153,7 +153,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       // Check top quality certificate or notify that sidechain has ceased since we have no certificate in the end of the submission window.
       topQualityCertificateOpt match {
         case Some(cert) =>
-          validateTopQualityCertificate(cert)
+          validateTopQualityCertificate(cert, certReferencedEpochNumber)
         case None =>
           log.info(s"In the end of the certificate submission window of epoch ${modWithdrawalEpochInfo.epoch} " +
             s"there are no certificates referenced to the epoch $certReferencedEpochNumber. Sidechain has ceased.")
@@ -196,13 +196,14 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     //Check that we don't have multiple openStake transactions with the same forgerIndex
     if (openStakeTransactionEnabled(Some(consensusEpochNumber))) {
       val forgerListIndexes = new JArrayList[Int]()
-      mod.transactions.foreach {
-        case openStakeTransaction: OpenStakeTransaction =>
+      mod.transactions.foreach(tx => {
+        if (tx.isInstanceOf[OpenStakeTransaction]) {
+          val openStakeTransaction = tx.asInstanceOf[OpenStakeTransaction]
           if (forgerListIndexes.contains(openStakeTransaction.getForgerIndex))
             throw new IllegalArgumentException(s"Block ${mod.id} contains OpenStakeTransactions with duplicated forgerIndex")
           forgerListIndexes.add(openStakeTransaction.getForgerIndex)
-        case _ =>
-      }
+        }
+      })
     }
 
     if (ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).backwardTransferLimitEnabled())
@@ -228,7 +229,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   def getAllowedWithdrawalRequestBoxes(numberOfMainchainBlockReferenceInBlock: Int): Int = {
     Math.min(params.maxWBsAllowed,
-            (params.maxWBsAllowed * (getWithdrawalEpochInfo.lastEpochIndex + numberOfMainchainBlockReferenceInBlock)) / (params.withdrawalEpochLength - 1))
+      (params.maxWBsAllowed * (getWithdrawalEpochInfo.lastEpochIndex + numberOfMainchainBlockReferenceInBlock)) / (params.withdrawalEpochLength - 1))
   }
 
   def openStakeTransactionEnabled(consensusEpochNumber: Option[ConsensusEpochNumber]): Boolean = {
@@ -240,7 +241,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     }
   }
 
-  private def validateTopQualityCertificate(topQualityCertificate: WithdrawalEpochCertificate): Unit = {
+  private def validateTopQualityCertificate(topQualityCertificate: WithdrawalEpochCertificate, certReferencedEpochNumber: Int): Unit = {
     val certReferencedEpochNumber: Int = topQualityCertificate.epochNumber
 
     // Check that the top quality certificate data is relevant to the SC active chain cert data.
@@ -259,7 +260,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     topQualityCertificate.backwardTransferOutputs.zip(expectedWithdrawalRequests).foreach {
       case (certOutput, expectedWithdrawalRequestBox) =>
         if(certOutput.amount != expectedWithdrawalRequestBox.value() ||
-              !util.Arrays.equals(certOutput.pubKeyHash, expectedWithdrawalRequestBox.proposition().bytes())) {
+          !util.Arrays.equals(certOutput.pubKeyHash, expectedWithdrawalRequestBox.proposition().bytes())) {
           throw new IllegalStateException(s"Epoch $certReferencedEpochNumber top quality certificate backward transfers " +
             s"data is different than expected. Node's active chain is the fork from MC perspective.")
         }
@@ -294,11 +295,11 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       .filter(box => box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]] || box.isInstanceOf[WithdrawalRequestBox])
 
     val coinBoxMinAmount = ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).coinBoxMinAmount
-      newCoinBoxes.foreach { coinBox =>
-        if (coinBox.value() < coinBoxMinAmount)
-          throw new TransactionSemanticValidityException(s"Transaction [${tx.id()}] is semantically invalid: " +
-            s"Coin box value [${coinBox.value()}] is below the threshold[$coinBoxMinAmount].")
-      }
+    newCoinBoxes.foreach { coinBox =>
+      if (coinBox.value() < coinBoxMinAmount)
+        throw new TransactionSemanticValidityException(s"Transaction [${tx.id()}] is semantically invalid: " +
+          s"Coin box value [${coinBox.value()}] is below the threshold[$coinBoxMinAmount].")
+    }
 
   }
 
@@ -324,47 +325,47 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
     if (!tx.isInstanceOf[MC2SCAggregatedTransaction]) {
 
-      tx match {
-        case openStakeTransaction: OpenStakeTransaction =>
-          if (!openStakeTransactionEnabled(Some(consensusEpochNumber)))
-            throw new Exception("OpenStakeTransaction is still not allowed in this consensus epoch!")
-          if (isForgingOpen)
-            throw new Exception("OpenStakeTransactions are not allowed because the forger operation has already been opened!")
-          if (openStakeTransaction.getForgerIndex >= params.allowedForgersList.size || openStakeTransaction.getForgerIndex < 0) {
-            throw new Exception("ForgerIndex in OpenStakeTransaction is out of bound!")
-          }
-          stateStorage.getForgerList match {
-            case Some(forgerList) =>
-              if (openStakeTransaction.getForgerIndex >= forgerList.forgerIndexes.length) {
-                throw new Exception("OpenStakeTransaction forgerIndex out of bound!")
-              }
-              if (forgerList.forgerIndexes(openStakeTransaction.getForgerIndex) == 1) {
-                throw new Exception("Forger already opened the stake!")
-              }
-            case None =>
-              throw new Exception("Forger list was not found in the Storage!")
-          }
-          stateStorage.getBox(openStakeTransaction.getInputId) match {
-            case Some(closedBox) =>
-              if (!closedBox.proposition().asInstanceOf[PublicKey25519Proposition]
-                .equals(params.allowedForgersList(openStakeTransaction.getForgerIndex)._1)) {
-                throw new Exception("OpenStakeTransaction input doesn't match the forgerIndex!")
-              }
-            case None =>
-              throw new Exception("Input box not found!")
-          }
-        case _ =>
+      if (tx.isInstanceOf[OpenStakeTransaction]) {
+        if (!openStakeTransactionEnabled(Some(consensusEpochNumber)))
+          throw new Exception("OpenStakeTransaction is still not allowed in this consensus epoch!")
+        if (isForgingOpen())
+          throw new Exception("OpenStakeTransactions are not allowed because the forger operation has already been opened!")
+        val openStakeTransaction = tx.asInstanceOf[OpenStakeTransaction]
+        if (openStakeTransaction.getForgerIndex >= params.allowedForgersList.size || openStakeTransaction.getForgerIndex < 0) {
+          throw new Exception("ForgerIndex in OpenStakeTransaction is out of bound!")
+        }
+        stateStorage.getForgerList match {
+          case Some(forgerList) =>
+            if (openStakeTransaction.getForgerIndex >= forgerList.forgerIndexes.length) {
+              throw new Exception("OpenStakeTransaction forgerIndex out of bound!")
+            }
+            if (forgerList.forgerIndexes(openStakeTransaction.getForgerIndex) == 1) {
+              throw new Exception("Forger already opened the stake!")
+            }
+          case None =>
+            throw new Exception("Forger list was not found in the Storage!")
+        }
+        stateStorage.getBox(openStakeTransaction.getInputId) match {
+          case Some(closedBox) =>
+            if (!closedBox.proposition().asInstanceOf[PublicKey25519Proposition]
+              .equals(params.allowedForgersList(openStakeTransaction.getForgerIndex)._1)) {
+              throw new Exception("OpenStakeTransaction input doesn't match the forgerIndex!")
+            }
+          case None =>
+            throw new Exception("Input box not found!")
+        }
       }
 
       for (u <- tx.unlockers().asScala) {
         closedBox(u.closedBoxId()) match {
-          case Some(box) =>
+          case Some(box) => {
             val boxKey = u.boxKey()
             if (!boxKey.isValid(box.proposition(), tx.messageToSign()))
               throw new Exception("Box unlocking proof is invalid.")
             if (box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]])
               closedCoinsBoxesAmount += box.value()
-          case None => throw new Exception(s"Box ${u.closedBoxId().mkString("Array(", ", ", ")")} is not found in state")
+          }
+          case None => throw new Exception(s"Box ${u.closedBoxId()} is not found in state")
         }
       }
 
@@ -380,7 +381,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
         throw new Exception("Amounts sum of CoinsBoxes is incorrect. " +
           s"ClosedBox amount - $closedCoinsBoxesAmount, NewBoxesAmount - $newCoinsBoxesAmount, Fee - ${tx.fee()}")
 
-      lazy val isForgerOpen = isForgingOpen
+      lazy val isForgerOpen = isForgingOpen()
       newBoxes
         .filter(box => box.isInstanceOf[ForgerBox])
         .foreach(forgerBox => {
@@ -400,7 +401,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
 
   //Check if the majority of the allowed forgers opened the stake to everyone
-  def isForgingOpen: Boolean = {
+  def isForgingOpen(): Boolean = {
     if (!params.restrictForgers)
       true
     else {
@@ -433,14 +434,14 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   //Take the list of transactions inside a block and calculate the forgerList indexes to update
   def getRestrictForgerIndexToUpdate(txs:  Seq[SidechainTransaction[Proposition, Box[Proposition]]]): Array[Int] = {
-      txs.flatMap(tx => {
-        tx match {
-          case openStakeTransaction: OpenStakeTransaction =>
-            Some(openStakeTransaction.getForgerIndex)
-          case _ =>
-            None
-        }
-      }).toArray
+    txs.flatMap(tx => {
+      if (tx.isInstanceOf[OpenStakeTransaction]) {
+        val openStakeTransaction: OpenStakeTransaction = tx.asInstanceOf[OpenStakeTransaction]
+        Some(openStakeTransaction.getForgerIndex)
+      } else {
+        None
+      }
+    }).toArray
   }
 
   // apply global changes and delegate SDK unknown part to Sidechain.applyChanges(...)
@@ -450,12 +451,12 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   //    if fail -> rollback applicationState
   // 3) ensure everything applied OK and return new SidechainState. If not -> return error
   def applyChanges(changes: BoxStateChanges[SidechainTypes#SCP, SidechainTypes#SCB],
-                            newVersion: VersionTag,
-                            withdrawalEpochInfo: WithdrawalEpochInfo,
-                            consensusEpoch: ConsensusEpochNumber,
-                            topQualityCertificateOpt: Option[WithdrawalEpochCertificate],
-                            blockFeeInfo: BlockFeeInfo,
-                            forgerListIndexes: Array[Int]
+                   newVersion: VersionTag,
+                   withdrawalEpochInfo: WithdrawalEpochInfo,
+                   consensusEpoch: ConsensusEpochNumber,
+                   topQualityCertificateOpt: Option[WithdrawalEpochCertificate],
+                   blockFeeInfo: BlockFeeInfo,
+                   forgerListIndexes: Array[Int]
                   ): Try[SidechainState] = Try {
     val version = new ByteArrayWrapper(versionToBytes(newVersion))
     var boxesToAppend = changes.toAppend.map(_.box)
@@ -478,11 +479,14 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
       boxesToAppend ++= getFeePayments(withdrawalEpochInfo.epoch, Some(blockFeeInfo)).map(_.asInstanceOf[SidechainTypes#SCB])
     }
 
-    boxesToAppend.foreach {
-      case box@(_: ForgerBox) => forgerBoxesToAppend.append(box)
-      case box@(_: WithdrawalRequestBox) => withdrawalRequestsToAppend.append(box)
-      case box => otherBoxesToAppend.append(box)
-    }
+    boxesToAppend.foreach(box => {
+      if(box.isInstanceOf[ForgerBox])
+        forgerBoxesToAppend.append(box)
+      else if(box.isInstanceOf[WithdrawalRequestBox])
+        withdrawalRequestsToAppend.append(box)
+      else
+        otherBoxesToAppend.append(box)
+    })
 
     applicationState.onApplyChanges(this,
       version.data,
@@ -507,9 +511,10 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           newVersion,
           appState
         )
-      case Failure(exception) =>
+      case Failure(exception) => {
         log.error("call to onApplyChanges() method has failed: ", exception)
         throw exception
+      }
     }
   }.recoverWith{
     case exception =>
@@ -518,7 +523,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   }
 
   override def maxRollbackDepth: Int = {
-    stateStorage.rollbackVersions().size
+    stateStorage.rollbackVersions.size
   }
 
   override def rollbackTo(to: VersionTag): Try[SidechainState] = Try {
@@ -532,7 +537,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     val utxoMerkleTreeProviderNew = utxoMerkleTreeProvider.rollback(bawVersion).get
 
     applicationState.onRollback(version) match {
-      case Success(appState) =>
+      case Success(appState) => {
         new SidechainState(
           stateStorageNew,
           forgerBoxStorageNew,
@@ -540,9 +545,11 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
           params,
           to,
           appState)
-      case Failure(exception) =>
+      }
+      case Failure(exception) => {
         log.error("call to applicationState.onRollback() method has failed: ", exception)
         throw exception
+      }
     }
   }.recoverWith{case exception =>
     log.error("Exception was thrown during rollback.", exception)
@@ -560,7 +567,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
   def getCurrentConsensusEpochInfo: (ModifierId, ConsensusEpochInfo) = {
     val forgingStakes: Seq[ForgingStakeInfo] = getOrderedForgingStakesInfoSeq()
     if(forgingStakes.isEmpty) {
-        throw new IllegalStateException("ForgerStakes list can't be empty.")
+      throw new IllegalStateException("ForgerStakes list can't be empty.")
     }
 
     stateStorage.getConsensusEpochNumber match {
@@ -580,7 +587,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   // Note: we consider ordering of the result to keep it deterministic for all Nodes.
   // From biggest stake to lowest, in case of equal compare vrf and block sign keys as well.
-  private def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = {
+  private def getOrderedForgingStakesInfoSeq(): Seq[ForgingStakeInfo] = {
     ForgingStakeInfo.fromForgerBoxes(forgerBoxStorage.getAllForgerBoxes).sorted(Ordering[ForgingStakeInfo].reverse)
   }
 
@@ -591,7 +598,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   // Check that all storages are consistent and in case try some rollbacks.
   // Return the state and common version, throw an exception if some unrecoverable misalignment has been detected
-  def ensureStorageConsistencyAfterRestore: Try[SidechainState] = Try {
+  def ensureStorageConsistencyAfterRestore: Try[(SidechainState)] = Try {
     // updates are in order:
     //      appState--> utxoMerkleTreeStorage --> stateStorage --> forgerBoxStorage
 
@@ -661,8 +668,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     // Aggregate together payments for the same forgers
     val forgerKeys: Seq[PublicKey25519Proposition] = forgersRewards.map(_._1).distinct
     val res: Seq[(PublicKey25519Proposition, Long)] = forgerKeys.map { forgerKey =>
-        val forgerTotalFee: Long = forgersRewards.withFilter(r => forgerKey.equals(r._1)).map(_._2).sum
-        (forgerKey, forgerTotalFee)
+      val forgerTotalFee: Long = forgersRewards.withFilter(r => forgerKey.equals(r._1)).map(_._2).sum
+      (forgerKey, forgerTotalFee)
     }
 
     // Create and return Boxes with payments
@@ -704,7 +711,7 @@ object SidechainState
     // calculate the rewards for Miner/Forger -> create another regular tx OR Forger need to add his Reward during block creation
     @SuppressWarnings(Array("org.wartremover.warts.Product","org.wartremover.warts.Serializable"))
     val ops: Seq[BoxStateChangeOperation[SidechainTypes#SCP, SidechainTypes#SCB]] =
-      toRemove.map(id => Removal[SidechainTypes#SCP, SidechainTypes#SCB](scorex.crypto.authds.ADKey(id))) ++
+    toRemove.map(id => Removal[SidechainTypes#SCP, SidechainTypes#SCB](scorex.crypto.authds.ADKey(id))) ++
       toAdd.map(b => Insertion[SidechainTypes#SCP, SidechainTypes#SCB](b))
 
     BoxStateChanges[SidechainTypes#SCP, SidechainTypes#SCB](ops)

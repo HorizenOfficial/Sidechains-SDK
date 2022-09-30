@@ -298,7 +298,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       sender() ! getStorageVersions
   }
 
-  protected def processLocallyGeneratedTransaction(implicit tag: ClassTag[SidechainTypes#SCBT]): Receive = {
+  protected def processLocallyGeneratedTransaction: Receive = {
     case newTxs: LocallyGeneratedTransaction[SidechainTypes#SCBT] =>
       newTxs.txs.foreach(tx => {
         if (tx.fee() > maxTxFee)
