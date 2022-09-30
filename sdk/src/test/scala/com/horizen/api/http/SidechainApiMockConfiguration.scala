@@ -33,7 +33,6 @@ class SidechainApiMockConfiguration {
   private var should_memPool_searchTransactionInMemoryPool_return_value = true
   private var should_history_searchTransactionInBlockchain_return_value = true
   private var should_history_searchTransactionInBlock_return_value = true
-  private var should_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply = true
   private var should_nodeViewHolder_GetDataFromCurrentNodeView_reply = true
   private var should_nodeViewHolder_ApplyFunctionOnNodeView_reply = true
   private var should_nodeViewHolder_ApplyBiFunctionOnNodeView_reply = true
