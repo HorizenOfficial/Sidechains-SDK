@@ -20,22 +20,15 @@ from SidechainTestFramework.account.eoa_util import eoa_transaction
 global_call_method = CallMethod.RPC_EIP155
 
 """
-Check an EVM ERC20 Smart Contract.
-
-Configuration: bootstrap 1 SC node and start it with genesis info extracted from a mainchain node.
-    - Mine some blocks to reach hard fork
-    - Create 1 SC node
-    - Extract genesis info
-    - Start SC node with that genesis info
-
 Test:
-    For the smart contract:
-        - Deploy the smart contract without initial data
-        - Check initial minting success (static_call)
-        - Check initial supply (static_call)
-        - Check a successful transfer (static_call + actual tx)
-        - Check a reverting transfer (static_call + actual tx)
-        - Check approval + transferFrom (static_call + actual tx)
+    - Deploy the ERC20 smart contract
+    - Transfer some tokens from one address to another (emit Transfer event) and mine a new block
+    - Check if the Transfer event is present in bloom filter of latest block together with ERC20 contract address, sender and recipient
+    - Make an EOA transfer and mine a new block
+    - Check if the bloom filter is empty (no SC was called, so nothing was stored in bloom filter)
+    - Deploy the ERC721 smart contract
+    - Mint tokens to some address and mine a new block
+    - Check if Transfer event was emitted together with sender (since it was minted it is address(0)), recipient and token id
 """
 
 
@@ -224,7 +217,7 @@ def deploy_erc20_smart_contract(node, smart_contract, from_address):
     return address
 
 
-class SCEvmDebugMethods(SidechainTestFramework):
+class SCEvmBlockBloomFilter(SidechainTestFramework):
     sc_nodes_bootstrap_info = None
 
     def setup_nodes(self):
@@ -378,4 +371,4 @@ class SCEvmDebugMethods(SidechainTestFramework):
 
 
 if __name__ == "__main__":
-    SCEvmDebugMethods().main()
+    SCEvmBlockBloomFilter().main()
