@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import pprint
+import logging
 import time
 import base58
 from eth_abi import decode
@@ -156,7 +156,7 @@ class SCEvmBackwardTransfer(SidechainTestFramework):
         # Wait until Certificate will appear in MC node mempool
         time.sleep(10)
         while mc_node.getmempoolinfo()["size"] == 0 and sc_node.submitter_isCertGenerationActive()["result"]["state"]:
-            print("Wait for certificate in mc mempool...")
+            logging.info("Wait for certificate in mc mempool...")
             time.sleep(2)
             sc_node.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
@@ -236,7 +236,7 @@ class SCEvmBackwardTransfer(SidechainTestFramework):
 
         #Check the receipt
         receipt = sc_node.rpc_eth_getTransactionReceipt(tx_id)
-        pprint.pprint(receipt)
+        logging.info(receipt)
         status = int(receipt['result']['status'], 16)
         assert_equal(1, status, "Wrong tx status in receipt")
         # Check the logs
@@ -303,10 +303,10 @@ class SCEvmBackwardTransfer(SidechainTestFramework):
 
         # Generate 8 more MC block to finish the first withdrawal epoch, then generate 1 more SC block to sync with MC.
         we1_end_mcblock_hash = mc_node.generate(8)[7]
-        print("End mc block hash in withdrawal epoch 1 = " + we1_end_mcblock_hash)
+        logging.info("End mc block hash in withdrawal epoch 1 = " + we1_end_mcblock_hash)
         we1_end_mcblock_json = mc_node.getblock(we1_end_mcblock_hash)
         we1_end_epoch_cum_sc_tx_comm_tree_root = we1_end_mcblock_json["scCumTreeHash"]
-        print("End cum sc tx commtree root hash in withdrawal epoch 1 = " + we1_end_epoch_cum_sc_tx_comm_tree_root)
+        logging.info("End cum sc tx commtree root hash in withdrawal epoch 1 = " + we1_end_epoch_cum_sc_tx_comm_tree_root)
         we1_end_scblock_id = generate_next_block(sc_node, "first node")
         check_mcreferencedata_presence(we1_end_mcblock_hash, we1_end_scblock_id, sc_node)
 
@@ -318,7 +318,7 @@ class SCEvmBackwardTransfer(SidechainTestFramework):
         # Wait until Certificate will appear in MC node mempool
         time.sleep(10)
         while mc_node.getmempoolinfo()["size"] == 0 and sc_node.submitter_isCertGenerationActive()["result"]["state"]:
-            print("Wait for certificate in mc mempool...")
+            logging.info("Wait for certificate in mc mempool...")
             time.sleep(2)
             sc_node.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
@@ -331,10 +331,10 @@ class SCEvmBackwardTransfer(SidechainTestFramework):
 
         # Get Certificate for Withdrawal epoch 1 and verify it
         we1_certHash = mc_node.getrawmempool()[0]
-        print("Withdrawal epoch 1 certificate hash = " + we1_certHash)
+        logging.info("Withdrawal epoch 1 certificate hash = " + we1_certHash)
         we1_cert = mc_node.getrawtransaction(we1_certHash, 1)
         we1_cert_hex = mc_node.getrawtransaction(we1_certHash)
-        print("Withdrawal epoch 1 certificate hex = " + we1_cert_hex)
+        logging.info("Withdrawal epoch 1 certificate hex = " + we1_cert_hex)
         assert_equal(self.sc_nodes_bootstrap_info.sidechain_id, we1_cert["cert"]["scid"],
                      "Sidechain Id in certificate is wrong.")
         assert_equal(1, we1_cert["cert"]["epochNumber"], "Sidechain epoch number in certificate is wrong.")
@@ -351,7 +351,7 @@ class SCEvmBackwardTransfer(SidechainTestFramework):
                      "MC block expected to contain 1 Certificate.")
         assert_equal(we1_certHash, mc_node.getblock(we2_2_mcblock_hash)["cert"][0],
                      "MC block expected to contain certificate.")
-        print("MC block with withdrawal certificate for epoch 1 = {0}\n".format(
+        logging.info("MC block with withdrawal certificate for epoch 1 = {0}\n".format(
             str(mc_node.getblock(we2_2_mcblock_hash, False))))
 
         # Check certificate BT entries

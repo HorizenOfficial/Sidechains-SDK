@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import pprint
+import logging
 from decimal import Decimal
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -44,7 +44,7 @@ class SCEvmBootstrap(SidechainTestFramework):
 
     def sc_setup_network(self, split = False):
         self.sc_nodes = self.sc_setup_nodes()
-        print("Connecting sc nodes...")
+        logging.info("Connecting sc nodes...")
         connect_sc_nodes(self.sc_nodes[0], 1)
         self.sc_sync_all()
 
@@ -71,7 +71,7 @@ class SCEvmBootstrap(SidechainTestFramework):
 
         mc_block = self.nodes[0].getblock(str(self.sc_nodes_bootstrap_info.mainchain_block_height))
         mc_block_hex = self.nodes[0].getblock(mc_block["hash"], False)
-        print("SC genesis mc block hex = " + mc_block_hex)
+        logging.info("SC genesis mc block hex = " + mc_block_hex)
 
         sc_best_block = sc_node_1.block_best()["result"]
 
@@ -90,17 +90,17 @@ class SCEvmBootstrap(SidechainTestFramework):
         mc_return_address = self.nodes[0].getnewaddress()
 
         ret = sc_node_1.wallet_createPrivateKeySecp256k1()
-        pprint.pprint(ret)
+        logging.info(ret)
         evm_address = str(ret["result"]["proposition"]["address"])
-        print("pubkey = {}".format(evm_address))
+        logging.info("pubkey = {}".format(evm_address))
 
         ret = sc_node_1.wallet_createPrivateKeySecp256k1()
         evm_address_2 = str(ret["result"]["proposition"]["address"])
-        print("pubkey = {}".format(evm_address_2))
+        logging.info("pubkey = {}".format(evm_address_2))
 
         # call a legacy wallet api
         ret = sc_node_1.wallet_allPublicKeys()
-        pprint.pprint(ret)
+        logging.info(ret)
 
         ft_amount_in_zen = Decimal("33.22")
 
@@ -172,7 +172,7 @@ class SCEvmBootstrap(SidechainTestFramework):
         # result from ethereum mainnet node execution - Invalid params: insufficient funds for transfer
         # -32602 = Invalid params
         response = sc_node_1.rpc_eth_estimateGas(request)
-        print(response['error'])
+        logging.info(response['error'])
         assert_equal(-32602, response['error']['code'])
 
         # Test estimating forging stake
@@ -198,7 +198,7 @@ class SCEvmBootstrap(SidechainTestFramework):
             "nonce": "0x1"
         }
         response = sc_node_1.rpc_eth_estimateGas(request)
-        print(response['error'])
+        logging.info(response['error'])
         assert_equal(-32602, response['error']['code'])
 
         # Test estimating SC to MC withdrawal

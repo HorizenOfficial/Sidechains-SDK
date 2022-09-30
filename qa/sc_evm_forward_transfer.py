@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import json
-import pprint
+import logging
 import json
 from decimal import Decimal
 
@@ -42,7 +42,7 @@ class SCEvmForwardTransfer(SidechainTestFramework):
 
     def sc_setup_network(self, split=False):
         self.sc_nodes = self.sc_setup_nodes()
-        print("...skip sync since it would timeout as of now")
+        logging.info("...skip sync since it would timeout as of now")
         # self.sc_sync_all()
 
     def sc_setup_chain(self):
@@ -64,7 +64,7 @@ class SCEvmForwardTransfer(SidechainTestFramework):
         sc_node = self.sc_nodes[0]
         mc_block = self.nodes[0].getblock(str(self.sc_nodes_bootstrap_info.mainchain_block_height))
         mc_block_hex = self.nodes[0].getblock(mc_block["hash"], False)
-        print("SC genesis mc block hex = " + mc_block_hex)
+        logging.info("SC genesis mc block hex = " + mc_block_hex)
 
         sc_best_block = sc_node.block_best()["result"]
 
@@ -82,13 +82,13 @@ class SCEvmForwardTransfer(SidechainTestFramework):
         mc_return_address = self.nodes[0].getnewaddress()
 
         ret = sc_node.wallet_createPrivateKeySecp256k1()
-        pprint.pprint(ret)
+        logging.info(ret)
         evm_address = format_evm(ret["result"]["proposition"]["address"])
-        print("pubkey = {}".format(evm_address))
+        logging.info("pubkey = {}".format(evm_address))
 
         # call a legacy wallet api
         ret = sc_node.wallet_allPublicKeys()
-        pprint.pprint(ret)
+        logging.info(ret)
 
         ft_amount_in_zen = Decimal("33.22")
 
@@ -104,7 +104,7 @@ class SCEvmForwardTransfer(SidechainTestFramework):
 
         # verify forward transfer was received
         balance = sc_node.rpc_eth_getBalance(evm_address, "latest")
-        pprint.pprint(balance)
+        logging.info(balance)
         assert_equal("0x1cd0525fe2e7a0000", balance["result"], "FT to EOA failed")
 
         # verify forward transfer is contained in block and contains given value and to address via rpc
@@ -123,9 +123,9 @@ class SCEvmForwardTransfer(SidechainTestFramework):
 
         # Deploy Smart Contract
         smart_contract_type = 'StorageTestContract'
-        print(f"Creating smart contract utilities for {smart_contract_type}")
+        logging.info(f"Creating smart contract utilities for {smart_contract_type}")
         smart_contract = SmartContract(smart_contract_type)
-        print(smart_contract)
+        logging.info(smart_contract)
         test_message = 'Initial message'
         tx_hash, smart_contract_address = smart_contract.deploy(sc_node, test_message,
                                                                 fromAddress=evm_address,
@@ -133,19 +133,19 @@ class SCEvmForwardTransfer(SidechainTestFramework):
                                                                 gasPrice=900000000)
 
         self.sc_sync_all()
-        print("Mempool node before")
+        logging.info("Mempool node before")
         response = sc_node.transaction_allTransactions(json.dumps({"format": True}))
-        pprint.pprint(response)
+        logging.info(response)
 
         generate_next_blocks(sc_node, "first node", 1)
         self.sc_sync_all()
-        print("Mempool node after")
+        logging.info("Mempool node after")
         response = sc_node.transaction_allTransactions(json.dumps({"format": True}))
-        pprint.pprint(response)
+        logging.info(response)
 
         # verify smart contract has a balance of zero
         balance = sc_node.rpc_eth_getBalance(smart_contract_address, "latest")
-        pprint.pprint(balance)
+        logging.info(balance)
         assert_equal("0x0", balance["result"], "smart contract has non-zero balance")
 
         # execute forward transfer to the smart contract account
@@ -161,7 +161,7 @@ class SCEvmForwardTransfer(SidechainTestFramework):
         # verify that the balance has not changed, FT to smart contract account should be rejected
         # TODO check why failed (balance actually increased, problem with FT?)
         balance = sc_node.rpc_eth_getBalance(smart_contract_address, "latest")
-        pprint.pprint(balance)
+        logging.info(balance)
         assert_equal("0x0", balance["result"], "smart contract has non-zero balance")
 
 

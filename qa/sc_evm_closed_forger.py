@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import json
-import pprint
+import logging
 
 from decimal import Decimal
 
@@ -44,7 +44,7 @@ class SCEvmClosedForgerList(SidechainTestFramework):
 
     def sc_setup_network(self, split=False):
         self.sc_nodes = self.sc_setup_nodes()
-        print("Connecting sc nodes...")
+        logging.info("Connecting sc nodes...")
         connect_sc_nodes(self.sc_nodes[0], 1)
         self.sc_sync_all()
 
@@ -86,7 +86,7 @@ class SCEvmClosedForgerList(SidechainTestFramework):
         }
         makeForgerStakeJsonRes = sc_node.transaction_makeForgerStake(json.dumps(forgerStakes))
         assert_true("result" in makeForgerStakeJsonRes)
-        #print(json.dumps(makeForgerStakeJsonRes))
+        #logging.info(json.dumps(makeForgerStakeJsonRes))
         self.sc_sync_all()
 
         generate_next_block(sc_node, "first node")
@@ -94,7 +94,7 @@ class SCEvmClosedForgerList(SidechainTestFramework):
 
         # check we had a failure in the receipt
         tx_hash = makeForgerStakeJsonRes['result']["transactionId"]
-        print("Getting receipt for txhash={}".format(tx_hash))
+        logging.info("Getting receipt for txhash={}".format(tx_hash))
 
         receipt = sc_node.rpc_eth_getTransactionReceipt(tx_hash)
         status = int(receipt['result']['status'], 16)
@@ -136,28 +136,28 @@ class SCEvmClosedForgerList(SidechainTestFramework):
         outlaw_vrfPubKey = sc_node_1.wallet_createVrfSecret()["result"]["proposition"]["publicKey"]
 
         # Try to stake to an invalid blockSignProposition
-        print("Try to stake to an invalid blockSignProposition...")
+        logging.info("Try to stake to an invalid blockSignProposition...")
         result = self.tryMakeForgetStake(
               sc_node_1, evm_address_sc_node_1, outlaw_blockSignPubKey,
               self.allowed_forger_vrf_public_key, amount=33)
         assert_false(result)
 
         # Try to stake to an invalid vrfPublicKey
-        print("Try to stake to an invalid vrfPublicKey...")
+        logging.info("Try to stake to an invalid vrfPublicKey...")
         result = self.tryMakeForgetStake(
               sc_node_1, evm_address_sc_node_1, self.allowed_forger_block_signer_public_key,
               outlaw_vrfPubKey, amount=33)
         assert_false(result)
 
         # Try to stake with an invalid blockSignProposition and an invalid vrfPublicKey
-        print("Try to stake to an invalid blockSignProposition and an invalid vrfPublicKey...")
+        logging.info("Try to stake to an invalid blockSignProposition and an invalid vrfPublicKey...")
         result = self.tryMakeForgetStake(
               sc_node_1, evm_address_sc_node_1, outlaw_blockSignPubKey,
               outlaw_vrfPubKey, amount=33)
         assert_false(result)
 
         # Try to stake with a valid blockSignProposition and valid vrfPublicKey
-        print("Try to stake to a valid blockSignProposition and valid vrfPublicKey...")
+        logging.info("Try to stake to a valid blockSignProposition and valid vrfPublicKey...")
         result = self.tryMakeForgetStake(
               sc_node_1, evm_address_sc_node_1, self.allowed_forger_block_signer_public_key,
               self.allowed_forger_vrf_public_key, amount=33)

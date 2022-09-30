@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import pprint
+import logging
 import random
 from decimal import Decimal
 
@@ -38,35 +38,35 @@ Test:
 
 
 def deploy_smart_contract(node, smart_contract_type, from_address, initial_secret):
-    print("Estimating gas for deployment...")
+    logging.info("Estimating gas for deployment...")
     estimated_gas = smart_contract_type.estimate_gas(node, 'constructor', initial_secret,
                                                                 fromAddress=from_address)
-    print("Estimated gas is {}".format(estimated_gas))
-    print("Deploying smart contract with initial secret {}...".format(initial_secret))
+    logging.info("Estimated gas is {}".format(estimated_gas))
+    logging.info("Deploying smart contract with initial secret {}...".format(initial_secret))
     tx_hash, address = smart_contract_type.deploy(node, initial_secret,
                                                   fromAddress=from_address,
                                                   gasLimit=estimated_gas)
-    print("Generating next block...")
+    logging.info("Generating next block...")
     generate_next_blocks(node, "first node", 1)
     tx_receipt = node.rpc_eth_getTransactionReceipt(tx_hash)
     assert_equal(format_evm(tx_receipt['result']['contractAddress']), format_evm(address))
-    print("Smart contract deployed successfully to address 0x{}".format(address))
+    logging.info("Smart contract deployed successfully to address 0x{}".format(address))
     return address
     
 def deploy_child(node, smart_contract_type, smart_contract_address, from_address, *, static_call,
                  generate_block):
     method = 'deployContract()'
     if static_call:
-        print("Read-only calling {}: testing deployment of a child contract".format(method))
+        logging.info("Read-only calling {}: testing deployment of a child contract".format(method))
         res = smart_contract_type.static_call(node, method, fromAddress=from_address,
                                               toAddress=smart_contract_address)
     else:
-        print("Calling {}: deploying a child contract".format(method))
+        logging.info("Calling {}: deploying a child contract".format(method))
         estimated_gas = smart_contract_type.estimate_gas(node, method, fromAddress=from_address, toAddress=smart_contract_address)
         res = smart_contract_type.call_function(node, method, fromAddress=from_address, gasLimit=estimated_gas,
                                                 toAddress=smart_contract_address)
     if generate_block:
-        print("generating next block...")
+        logging.info("generating next block...")
         generate_next_blocks(node, "first node", 1)
 
     return res
@@ -76,15 +76,15 @@ def update_parent_secret(node, smart_contract_type, smart_contract_address, from
                          generate_block):
     method = 'setParentSecret(string)'
     if static_call:
-        print("Read-only calling {}: testing setting the secret to {} via a child contract".format(method, new_secret))
+        logging.info("Read-only calling {}: testing setting the secret to {} via a child contract".format(method, new_secret))
         res = smart_contract_type.static_call(node, method, new_secret, fromAddress=from_address,
                                               toAddress=smart_contract_address)
     else:
-        print("Calling {}: setting the secret to {} via a child contract".format(method, new_secret))
+        logging.info("Calling {}: setting the secret to {} via a child contract".format(method, new_secret))
         estimated_gas = smart_contract_type.estimate_gas(node, method, new_secret, fromAddress=from_address, toAddress=smart_contract_address)
         res = smart_contract_type.call_function(node, method, new_secret, fromAddress=from_address, gasLimit=estimated_gas, toAddress=smart_contract_address)
     if generate_block:
-        print("generating next block...")
+        logging.info("generating next block...")
         generate_next_blocks(node, "first node", 1)
 
     return res
@@ -92,34 +92,34 @@ def update_parent_secret(node, smart_contract_type, smart_contract_address, from
 
 def get_secret(node, smart_contract_type, smart_contract_address, from_address):
     method = 'checkParentSecret()'
-    print("Getting parent secret via function {} on contract {}".format(method, smart_contract_address))
+    logging.info("Getting parent secret via function {} on contract {}".format(method, smart_contract_address))
     res = smart_contract_type.static_call(node, method, fromAddress=from_address,
                                           toAddress=smart_contract_address)[0]
-    print("Parent secret: {}".format(res))
+    logging.info("Parent secret: {}".format(res))
     return res
 
 
 def compare_secret(node, smart_contract_type, smart_contract_address, from_address, expected_secret):
-    print("Comparing secrets...")
+    logging.info("Comparing secrets...")
     res = get_secret(node, smart_contract_type, format_evm(smart_contract_address), from_address)
-    print("Expected secret: {}, actual secret: {}".format(expected_secret, res))
+    logging.info("Expected secret: {}, actual secret: {}".format(expected_secret, res))
     assert_equal(res, expected_secret)
     return res
 
 
 def get_children(node, smart_contract_type, smart_contract_address, from_address):
     method = 'getChildren()'
-    print("Getting children via function {}".format(method))
+    logging.info("Getting children via function {}".format(method))
     res = list(smart_contract_type.static_call(node, method, fromAddress=from_address,
                                                toAddress=smart_contract_address)[0])
-    print("Children: {}".format(res))
+    logging.info("Children: {}".format(res))
     return res
 
 
 def assert_child_count(node, smart_contract_type, smart_contract_address, from_address, expected_count):
-    print("Asserting child count...")
+    logging.info("Asserting child count...")
     res = get_children(node, smart_contract_type, smart_contract_address, from_address)
-    print("Expected child count: {}, actual child count: {}".format(expected_count, len(res)))
+    logging.info("Expected child count: {}, actual child count: {}".format(expected_count, len(res)))
     assert_equal(len(res), expected_count)
     return res
 
@@ -136,7 +136,7 @@ class SCEvmDeployingContract(SidechainTestFramework):
 
     def sc_setup_network(self, split=False):
         self.sc_nodes = self.sc_setup_nodes()
-        print("...skip sync since it would timeout as of now")
+        logging.info("...skip sync since it would timeout as of now")
         # self.sc_sync_all()
 
     def sc_setup_chain(self):
@@ -158,7 +158,7 @@ class SCEvmDeployingContract(SidechainTestFramework):
         sc_node = self.sc_nodes[0]
         mc_block = self.nodes[0].getblock(str(self.sc_nodes_bootstrap_info.mainchain_block_height))
         mc_block_hex = self.nodes[0].getblock(mc_block["hash"], False)
-        print("SC genesis mc block hex = " + mc_block_hex)
+        logging.info("SC genesis mc block hex = " + mc_block_hex)
 
         sc_best_block = sc_node.block_best()["result"]
 
@@ -177,13 +177,13 @@ class SCEvmDeployingContract(SidechainTestFramework):
         # evm_address = generate_account_proposition("seed2", 1)[0]
 
         ret = sc_node.wallet_createPrivateKeySecp256k1()
-        pprint.pprint(ret)
+        logging.info(ret)
         evm_address = ret["result"]["proposition"]["address"]
-        print("pubkey = {}".format(evm_address))
+        logging.info("pubkey = {}".format(evm_address))
 
         # call a legacy wallet api
         ret = sc_node.wallet_allPublicKeys()
-        pprint.pprint(ret)
+        logging.info(ret)
 
         ft_amount_in_zen = Decimal("3000")
 
@@ -198,17 +198,17 @@ class SCEvmDeployingContract(SidechainTestFramework):
         self.sc_sync_all()
 
         sc_best_block = sc_node.block_best()["result"]
-        pprint.pprint(sc_best_block)
+        logging.info(sc_best_block)
 
         parent_smart_contract_type = 'TestDeployingContract'
-        print(f"Creating smart contract utilities for {parent_smart_contract_type}")
+        logging.info(f"Creating smart contract utilities for {parent_smart_contract_type}")
         parent_smart_contract_type = SmartContract(parent_smart_contract_type)
-        print(parent_smart_contract_type)
+        logging.info(parent_smart_contract_type)
 
         child_smart_contract_type = 'TestDeployedContract'
-        print(f"Creating smart contract utilities for {child_smart_contract_type}")
+        logging.info(f"Creating smart contract utilities for {child_smart_contract_type}")
         child_smart_contract_type = SmartContract(child_smart_contract_type)
-        print(child_smart_contract_type)
+        logging.info(child_smart_contract_type)
 
         # testing deployment
         initial_secret = random_byte_string(length=20)

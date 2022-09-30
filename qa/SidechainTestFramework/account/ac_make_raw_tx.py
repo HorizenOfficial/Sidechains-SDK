@@ -1,5 +1,6 @@
 import os
 import subprocess
+import logging
 
 nodeModulesInstalled = False
 cwd = None
@@ -15,14 +16,14 @@ def get_cwd():
 def install_npm_packages():
     global nodeModulesInstalled
     if not nodeModulesInstalled:
-        print("Installing node packages...")
-        print("The first time this runs on your machine, it can take a few minutes...")
+        logging.info("Installing node packages...")
+        logging.info("The first time this runs on your machine, it can take a few minutes...")
         proc = subprocess.run(
             ["yarn", "install", "--quiet", "--non-interactive", "--frozen-lockfile"],
             cwd=get_cwd(),
             stdout=subprocess.PIPE)
         proc.check_returncode()
-        print("Done!")
+        logging.info("Done!")
         nodeModulesInstalled = True
 
 
@@ -46,18 +47,18 @@ def legacy(*, to: str,
         cmd += ['--data', str(data)]
     else:
         cmd += ['--data', '0x']
-    print("Calling", ' '.join(cmd) + '...')
+    logging.info("Calling", ' '.join(cmd) + '...')
     proc = subprocess.run(
         cmd,
         cwd=get_cwd(),
         capture_output=True)
     if proc.returncode != 0:
-        print("Error in call: ", proc.stderr.decode())
+        logging.info("Error in call: ", proc.stderr.decode())
         raise RuntimeError("Something went wrong: " + proc.stderr.decode())
     else:
         output = proc.stdout.decode()
         output = output.split(' ')[1].strip()
-        print("Returned raw transaction:", '"' + output + '"')
+        logging.info("Returned raw transaction:", '"' + output + '"')
         return output
 
 
@@ -85,18 +86,18 @@ def eip1559(*, to: str,
         cmd += ['--data', str(data)]
     else:
         cmd += ['--data', '0x']
-    print("Calling", ' '.join(cmd) + '...')
+    logging.info("Calling", ' '.join(cmd) + '...')
     proc = subprocess.run(
         cmd,
         cwd=get_cwd(),
         capture_output=True)
     if proc.returncode != 0:
-        print("Error in call: ", proc.stderr.decode())
+        logging.info("Error in call: ", proc.stderr.decode())
         raise RuntimeError("Something went wrong: " + proc.stderr.decode())
     else:
         output = proc.stdout.decode()
         output = output.split(' ')[1].strip()
-        print("Returned raw transaction:", '"' + output + '"')
+        logging.info("Returned raw transaction:", '"' + output + '"')
         return output
 
 

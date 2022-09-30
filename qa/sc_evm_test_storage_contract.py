@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import json
-import pprint
+import logging
 from decimal import Decimal
 
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract, EvmExecutionError
@@ -36,27 +36,27 @@ Test:
 
 def set_storage_value(node, smart_contract, address, tx_sender, new_value, *, static_call=False, generate_block=True):
     if static_call:
-        print("Testing setting smart contract storage to {} in a static call".format(new_value))
+        logging.info("Testing setting smart contract storage to {} in a static call".format(new_value))
         res = smart_contract.static_call(node, 'set(string)', new_value, fromAddress=tx_sender, toAddress=address,
                                          gasPrice=900000000)
     else:
-        print("Setting smart contract storage to {}".format(new_value))
+        logging.info("Setting smart contract storage to {}".format(new_value))
         res = smart_contract.call_function(node, 'set(string)', new_value, fromAddress=tx_sender,
                                            gasLimit=10000000, toAddress=address)
     if generate_block:
-        print("generating next block...")
+        logging.info("generating next block...")
         generate_next_blocks(node, "first node", 1)
 
     if not static_call:
         tx_receipt = node.rpc_eth_getTransactionReceipt(res)
-        print(tx_receipt)
+        logging.info(tx_receipt)
     return res
 
 
 def check_storage_value(node, smart_contract, address, tx_sender, expected_value):
-    print("Checking stored value...")
+    logging.info("Checking stored value...")
     res = smart_contract.static_call(node, 'get()', fromAddress=tx_sender, toAddress=address,gasPrice=900000000)
-    print("Expected stored value: \"{}\", actual stored value: \"{}\"".format(expected_value, res[0]))
+    logging.info("Expected stored value: \"{}\", actual stored value: \"{}\"".format(expected_value, res[0]))
     return res[0]
 
 
@@ -68,7 +68,7 @@ class SCEvmStorageContract(SidechainTestFramework):
 
     def sc_setup_network(self, split=False):
         self.sc_nodes = self.sc_setup_nodes()
-        print("...skip sync since it would timeout as of now")
+        logging.info("...skip sync since it would timeout as of now")
         # self.sc_sync_all()
 
     def sc_setup_chain(self):
@@ -90,7 +90,7 @@ class SCEvmStorageContract(SidechainTestFramework):
         sc_node = self.sc_nodes[0]
         mc_block = self.nodes[0].getblock(str(self.sc_nodes_bootstrap_info.mainchain_block_height))
         mc_block_hex = self.nodes[0].getblock(mc_block["hash"], False)
-        print("SC genesis mc block hex = " + mc_block_hex)
+        logging.info("SC genesis mc block hex = " + mc_block_hex)
 
         sc_best_block = sc_node.block_best()["result"]
 
@@ -109,13 +109,13 @@ class SCEvmStorageContract(SidechainTestFramework):
         # evm_address = generate_account_proposition("seed2", 1)[0]
 
         ret = sc_node.wallet_createPrivateKeySecp256k1()
-        pprint.pprint(ret)
+        logging.info(ret)
         evm_address = format_evm(ret["result"]["proposition"]["address"])
-        print("pubkey = {}".format(evm_address))
+        logging.info("pubkey = {}".format(evm_address))
 
         # call a legacy wallet api
         ret = sc_node.wallet_allPublicKeys()
-        pprint.pprint(ret)
+        logging.info(ret)
 
         ft_amount_in_zen = Decimal("3000")
         # transfer some fund from MC to SC using the evm address created before
@@ -129,12 +129,12 @@ class SCEvmStorageContract(SidechainTestFramework):
         self.sc_sync_all()
 
         sc_best_block = sc_node.block_best()["result"]
-        pprint.pprint(sc_best_block)
+        logging.info(sc_best_block)
 
         smart_contract_type = 'StorageTestContract'
-        print(f"Creating smart contract utilities for {smart_contract_type}")
+        logging.info(f"Creating smart contract utilities for {smart_contract_type}")
         smart_contract = SmartContract(smart_contract_type)
-        print(smart_contract)
+        logging.info(smart_contract)
         test_message = 'Initial message'
 
         estimated_gas = smart_contract.estimate_gas(sc_node, 'constructor', test_message,
@@ -143,7 +143,7 @@ class SCEvmStorageContract(SidechainTestFramework):
                                                                 fromAddress=evm_address,
                                                                 gasLimit=estimated_gas)
         generate_next_blocks(sc_node, "first node", 1)
-        print("Blocks mined - tx receipt will contain address")
+        logging.info("Blocks mined - tx receipt will contain address")
         # TODO check logs (events)
         tx_receipt = sc_node.rpc_eth_getTransactionReceipt(tx_hash)
 
@@ -154,11 +154,11 @@ class SCEvmStorageContract(SidechainTestFramework):
         res = check_storage_value(sc_node, smart_contract, smart_contract_address, evm_address, test_message)
 
         block = sc_node.rpc_eth_getBlockByNumber('0x3', 'false')
-        pprint.pprint(block)
+        logging.info(block)
 
         tx_hash = block['result']['transactions'][0]
-        pprint.pprint(sc_node.rpc_eth_getTransactionReceipt(tx_hash))
-        pprint.pprint(sc_node.rpc_eth_getTransactionByHash(tx_hash))
+        logging.info(sc_node.rpc_eth_getTransactionReceipt(tx_hash))
+        logging.info(sc_node.rpc_eth_getTransactionByHash(tx_hash))
         was_exception = False
         test_message = 'This is a message'
         try:
@@ -166,7 +166,7 @@ class SCEvmStorageContract(SidechainTestFramework):
             res = set_storage_value(sc_node, smart_contract, smart_contract_address, evm_address, test_message,
                                     static_call=True, generate_block=False)
         except EvmExecutionError as err:
-            print(err)
+            logging.info(err)
             was_exception = True
         finally:
             assert_true(not was_exception, "static call failed but should not have")

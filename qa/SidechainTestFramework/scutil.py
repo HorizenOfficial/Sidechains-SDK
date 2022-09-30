@@ -1,6 +1,5 @@
 import logging
 import os
-import pprint
 import sys
 import json
 
@@ -1248,15 +1247,15 @@ def computeForgedTxGasUsed(sc_node, tx_hash, tracing_on=False):
     if (transactionJson is None):
         raise Exception('Error: Transaction {} not found (not yet forged?)'.format(tx_hash))
     if tracing_on:
-        print("tx:")
-        pprint.pprint(transactionJson)
+        logging.info("tx:")
+        logging.info(transactionJson)
 
     receiptJson = sc_node.rpc_eth_getTransactionReceipt(tx_hash)['result']
     if (receiptJson is None):
         raise Exception('Unexpected error: Receipt not found for transaction {}'.format(tx_hash))
     if tracing_on:
-        print("receipt:")
-        pprint.pprint(receiptJson)
+        logging.info("receipt:")
+        logging.info(receiptJson)
 
     return int(receiptJson['gasUsed'], 16)
 
@@ -1269,8 +1268,8 @@ def computeForgedTxFee(sc_node, tx_hash, tracing_on=False):
     if (transactionJson is None):
         raise Exception('Error: Transaction {} not found (not yet forged?)'.format(tx_hash))
     if tracing_on:
-        print("tx:")
-        pprint.pprint(transactionJson)
+        logging.info("tx:")
+        logging.info(transactionJson)
 
     resp = sc_node.rpc_eth_getTransactionReceipt(tx_hash)
     if not 'result' in resp:
@@ -1280,8 +1279,8 @@ def computeForgedTxFee(sc_node, tx_hash, tracing_on=False):
     if (receiptJson is None):
         raise Exception('Unexpected error: Receipt not found for transaction {}'.format(tx_hash))
     if tracing_on:
-        print("receipt:")
-        pprint.pprint(receiptJson)
+        logging.info("receipt:")
+        logging.info(receiptJson)
 
     gasUsed = int(receiptJson['gasUsed'], 16)
 
@@ -1294,8 +1293,8 @@ def computeForgedTxFee(sc_node, tx_hash, tracing_on=False):
     if (blockJson is None):
         raise Exception('Unexpected error: block not found {}'.format(block_hash))
     if tracing_on:
-        print("block:")
-        pprint.pprint(blockJson)
+        logging.info("block:")
+        logging.info(blockJson)
 
     baseFeePerGas = int(blockJson['baseFeePerGas'], 16)
 
@@ -1318,7 +1317,7 @@ def computeForgedTxFee(sc_node, tx_hash, tracing_on=False):
     forgersPoolFee = baseFeePerGas*gasUsed
     forgerTip = forgerTipPerGas*gasUsed
     if tracing_on:
-        print("totalFee = {} (forgersPoolFee = {}, forgerTip = {}".format(totalTxFee, forgersPoolFee, forgerTip))
+        logging.info("totalFee = {} (forgersPoolFee = {}, forgerTip = {}".format(totalTxFee, forgersPoolFee, forgerTip))
 
     return totalTxFee, forgersPoolFee, forgerTip
 
