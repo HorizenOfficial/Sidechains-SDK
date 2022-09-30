@@ -188,7 +188,8 @@ class PerformanceTest(SidechainTestFramework):
                 "extended_transaction": extended_transaction,
                 "mined_txs": [],
                 "big_transaction": big_transaction,
-                "send_coins_to_address": send_coins_to_address
+                "send_coins_to_address": send_coins_to_address,
+                "block_tps": []
                 }
 
     def get_latency_config(self):
@@ -804,6 +805,7 @@ class PerformanceTest(SidechainTestFramework):
                 if (iteration == 0):
                     blocks_ts.append(current_block["timestamp"])
                     self.csv_data["mined_txs"].append(number_of_transactions_mined)
+                    self.csv_data["block_tps"].append(number_of_transactions_mined / self.block_rate)
                     io_number = 10 if self.big_transaction else 1
                     for tx in transactions_mined:
                         assert_equal(len(tx["unlockers"]), io_number)
