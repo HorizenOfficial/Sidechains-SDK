@@ -749,7 +749,9 @@ class MempoolMapTest
     val account1NonExecTransaction0 = createEIP1559Transaction(
       value,
       BigInteger.valueOf(1000),
-      account1KeyPairOpt
+      account1KeyPairOpt,
+      gasFee = BigInteger.ONE,
+      priorityGasFee = BigInteger.ONE
     )
     res = mempoolMap.add(account1NonExecTransaction0)
     assertTrue(res.isSuccess)
@@ -768,7 +770,8 @@ class MempoolMapTest
       value,
       account1ExecTransaction0.getNonce.add(BigInteger.ONE),
       account1KeyPairOpt,
-      gasFee = BigInteger.valueOf(20)
+      gasFee = BigInteger.valueOf(20),
+      priorityGasFee = BigInteger.ONE
     )
     res = mempoolMap.add(account1ExecTransaction1)
     assertTrue(res.isSuccess)
