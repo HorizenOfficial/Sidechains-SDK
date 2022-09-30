@@ -133,11 +133,11 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     header.bytes.length
   }
 
-  override def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int, mainchainBlockReferenceDataToRetrieve: Seq[MainchainBlockReferenceData], timestamp: Long, forcedTx: Iterable[SidechainTypes#SCBT]): Seq[SidechainTypes#SCBT] = {
+  override def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int, mainchainBlockReferenceData: Seq[MainchainBlockReferenceData], timestamp: Long, forcedTx: Iterable[SidechainTypes#SCBT]): Seq[SidechainTypes#SCBT] = {
     var blockSize: Int = blockSizeIn
 
     var txsCounter: Int = 0
-    val allowedWithdrawalRequestBoxes = nodeView.state.getAllowedWithdrawalRequestBoxes(mainchainBlockReferenceDataToRetrieve.size) - nodeView.state.getAlreadyMinedWithdrawalRequestBoxesInCurrentEpoch
+    val allowedWithdrawalRequestBoxes = nodeView.state.getAllowedWithdrawalRequestBoxes(mainchainBlockReferenceData.size) - nodeView.state.getAlreadyMinedWithdrawalRequestBoxesInCurrentEpoch
     val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, timestamp)
     val mempoolTx =
       if (ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).backwardTransferLimitEnabled())

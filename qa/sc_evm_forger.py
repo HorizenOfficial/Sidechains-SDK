@@ -595,13 +595,10 @@ class SCEvmForger(SidechainTestFramework):
             exception_occurs = True
             print("We had an exception as expected: {}".format(str(e)))
 
-        '''
         finally:
             assert_true(exception_occurs, "No forging stakes expected for SC node 1.")
         self.sc_sync_all()
         print_current_epoch_and_slot(sc_node_1)
-        '''
-        input("_")
 
 
 if __name__ == "__main__":

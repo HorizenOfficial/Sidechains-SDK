@@ -356,7 +356,7 @@ abstract class AbstractForgeMessageBuilder[
                       forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo,
                       vrfProof: VrfProof): Int
 
-  def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int, mainchainBlockReferenceDataToRetrieve: Seq[MainchainBlockReferenceData], timestamp: Long, forcedTx: Iterable[TX]): Seq[TX]
+  def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int, mainchainBlockReferenceData: Seq[MainchainBlockReferenceData], timestamp: Long, forcedTx: Iterable[TX]): Seq[TX]
 
   def getOmmersSize(ommers: Seq[Ommer[H]]) : Int
 
