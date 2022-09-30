@@ -142,7 +142,7 @@ class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
         s"'${BytesUtils.toHexString(expectedSysDataConstantOpt.getOrElse(Array.emptyByteArray))}' but actual is '${BytesUtils.toHexString(actualSysDataConstant)}'")
     }
 
-    loadProvingFilePath()
+// TODO    loadProvingFilePath()
   }
 
   private def loadProvingFilePath(): Unit = {
