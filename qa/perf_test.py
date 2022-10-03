@@ -764,7 +764,10 @@ class PerformanceTest(SidechainTestFramework):
 
         # Take blockhash of every node and verify they are all the same
         test_end_block_ids, api_errors = self.get_best_node_block_ids()
-        assert_equal(len(set(test_end_block_ids.values())), 1, "Test End BlockId's are not equal - was there a fork?")
+        if len(set(test_end_block_ids.values())) != 1:
+            print(test_end_block_ids)
+            input("Waiting for command...")
+        #assert_equal(len(set(test_end_block_ids.values())), 1, "Test End BlockId's are not equal - was there a fork?")
 
         # TODO: Find balance for the node sender and receiver and verify that it's what we expect
         # sum(balance of each node) => total ZEN present at the end of the test
