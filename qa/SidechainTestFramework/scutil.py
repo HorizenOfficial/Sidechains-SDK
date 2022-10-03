@@ -529,8 +529,8 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
             processors = [first_available_process, first_available_process + 1]
         p = psutil.Process()
         p.cpu_affinity(processors)
-        print(f"Processes #{processors}: Set Node{i} affinity to {processors}, Node{i} affinity now {p.cpu_affinity()}",
-              flush=True)
+        logging.info(f"Processes #{processors}: Set Node{i} affinity to {processors}, Node{i} affinity now "
+                     f"{p.cpu_affinity()}")
     """
     Start a SC node and returns API connection to it
     """
@@ -583,10 +583,10 @@ def start_sc_nodes_with_multiprocessing(num_nodes, dirname, extra_args=None, rpc
 
     processors: int = multiprocessing.Pool()._processes
     processors_available = processors/2
-    print(f"Available processors (2 threads each): {processors_available}")
-    print(f"Number of Nodes: {num_nodes}")
+    logging.info(f"Available processors (2 threads each): {processors_available}")
+    logging.info(f"Number of Nodes: {num_nodes}")
     if processors_available / num_nodes < 1:
-        print("WARNING: Number of Nodes exceeds available Processors")
+        logging.warning("WARNING: Number of Nodes exceeds available Processors")
 
     nodes = [
         start_sc_node(i, dirname, extra_args[i], rpchost, binary=binary[i], print_output_to_file=print_output_to_file,
