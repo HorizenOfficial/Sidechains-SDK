@@ -178,7 +178,7 @@ object SidechainBlockBase {
   // SC Max block size is enough to include at least 2 MC block ref data full of SC outputs + Top quality cert -> ~2.3MB each
   // Also it is more than enough to process Ommers for very long MC forks (2000+)
   val MAX_BLOCK_SIZE: Int = 5000000
-  val MAX_SIDECHAIN_TXS_NUMBER: Int = 1000
+  val MAX_SIDECHAIN_TXS_NUMBER: Int = 1000000
   val ModifierTypeId: ModifierTypeId = sparkz.core.ModifierTypeId @@ 3.toByte
   val BlockIdHexStringLength = 64
 
