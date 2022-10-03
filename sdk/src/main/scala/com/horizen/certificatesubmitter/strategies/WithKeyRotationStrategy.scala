@@ -53,7 +53,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
     val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, status.referencedEpoch)
     val sidechainId = params.sidechainId
 
-    val publicKeysMerkleTreeRoot: Array[Byte] = getActualKeysMerkleRoot(status.referencedEpoch, state)
+    val customFields: Array[Byte] = getActualKeysMerkleRoot(status.referencedEpoch, state)
 
     val signersPublicKeyWithSignatures = params.signersPublicKeys.zipWithIndex.map {
       case (pubKey, pubKeyIndex) =>
@@ -67,7 +67,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       endEpochCumCommTreeHash,
       btrFee,
       ftMinAmount,
-      Seq(publicKeysMerkleTreeRoot),
+      Seq(customFields),
       signersPublicKeyWithSignatures)
   }
 
@@ -81,14 +81,14 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       val btrFee: Long = getBtrFee(referencedWithdrawalEpochNumber)
       val ftMinAmount: Long = getFtMinAmount(referencedWithdrawalEpochNumber)
 
-      val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
+      val endEpochCumCommTreeHash: Array[Byte] = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
       val sidechainId = params.sidechainId
 
-      val publicKeysMerkleTreeRoot: Array[Byte] = getActualKeysMerkleRoot(referencedWithdrawalEpochNumber, state)
+      val customFields: Array[Byte] = getActualKeysMerkleRoot(referencedWithdrawalEpochNumber, state)
 
       CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
         .generateMessageToBeSigned(withdrawalRequests.asJava, sidechainId, referencedWithdrawalEpochNumber,
-          endEpochCumCommTreeHash, btrFee, ftMinAmount, Seq(publicKeysMerkleTreeRoot))
+          endEpochCumCommTreeHash, btrFee, ftMinAmount, Seq(customFields))
     }
 
     Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getMessage), settings.sparkzSettings.restApi.timeout).asInstanceOf[Try[Array[Byte]]].get
