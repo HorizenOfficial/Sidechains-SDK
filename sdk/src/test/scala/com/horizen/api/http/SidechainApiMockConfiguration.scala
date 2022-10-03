@@ -15,6 +15,7 @@ class SidechainApiMockConfiguration {
   private var should_history_getCurrentHeight_return_value = true
   private var should_blockActor_SubmitSidechainBlock_reply = true
   private var should_blockActor_GenerateSidechainBlocks_reply = true
+  private var should_history_getBlockInfoById_return_value: Boolean = true
   var should_blockActor_StopForging_reply: Boolean = true
   var should_blockActor_StartForging_reply: Boolean = true
   var should_blockActor_ForgingInfo_reply: Try[ForgingInfo] = Failure(new NullPointerException)
@@ -32,14 +33,18 @@ class SidechainApiMockConfiguration {
   private var should_memPool_searchTransactionInMemoryPool_return_value = true
   private var should_history_searchTransactionInBlockchain_return_value = true
   private var should_history_searchTransactionInBlock_return_value = true
-  private var should_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply = true
   private var should_nodeViewHolder_GetDataFromCurrentNodeView_reply = true
   private var should_nodeViewHolder_ApplyFunctionOnNodeView_reply = true
   private var should_nodeViewHolder_ApplyBiFunctionOnNodeView_reply = true
+  private var should_nodeViewHolder_GetStorageVersions_reply: Boolean = true
 
   def getShould_nodeViewHolder_LocallyGeneratedSecret_reply(): Boolean = should_nodeViewHolder_LocallyGeneratedSecret_reply
 
   def setShould_nodeViewHolder_LocallyGeneratedSecret_reply(value: Boolean): Unit = should_nodeViewHolder_LocallyGeneratedSecret_reply = value
+
+  def getShould_nodeViewHolder_GetStorageVersions_reply(): Boolean = should_nodeViewHolder_GetStorageVersions_reply
+
+  def setShould_nodeViewHolder_GetStorageVersions_reply(value: Boolean): Unit = should_nodeViewHolder_GetStorageVersions_reply = value
 
   def getShould_history_getBlockById_return_value(): Boolean = should_history_getBlockById_return_value
 
@@ -109,10 +114,6 @@ class SidechainApiMockConfiguration {
 
   def setShould_history_searchTransactionInBlock_return_value(value: Boolean): Unit = should_history_searchTransactionInBlock_return_value = value
 
-  def getShould_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply(): Boolean = should_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply
-
-  def setShould_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply(value: Boolean): Unit = should_nodeViewHolder_GetDataFromCurrentSidechainNodeView_reply = value
-
   def getShould_nodeViewHolder_GetDataFromCurrentNodeView_reply(): Boolean = should_nodeViewHolder_GetDataFromCurrentNodeView_reply
 
   def setShould_nodeViewHolder_GetDataFromCurrentNodeView_reply(value: Boolean): Unit = should_nodeViewHolder_GetDataFromCurrentNodeView_reply = value
@@ -124,4 +125,10 @@ class SidechainApiMockConfiguration {
   def getShould_nodeViewHolder_ApplyBiFunctionOnNodeView_reply(): Boolean = should_nodeViewHolder_ApplyBiFunctionOnNodeView_reply
 
   def setShould_nodeViewHolder_ApplyBiFunctionOnNodeView_reply(value: Boolean): Unit = should_nodeViewHolder_ApplyBiFunctionOnNodeView_reply = value
+
+  def getShould_history_getBlockInfoById_return_value(): Boolean = should_history_getBlockInfoById_return_value
+
+  def setShould_history_getBlockInfoById_return_value(value: Boolean): Unit = should_history_getBlockInfoById_return_value = value
+
+
 }

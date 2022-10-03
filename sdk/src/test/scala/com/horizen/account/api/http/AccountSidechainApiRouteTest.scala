@@ -6,7 +6,7 @@ import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit
 import akka.testkit.{TestActor, TestProbe}
 import com.fasterxml.jackson.databind.{ObjectMapper, SerializationFeature}
-import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentNodeView, LocallyGeneratedSecret}
+import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.{ApplyBiFunctionOnNodeView, ApplyFunctionOnNodeView, GetDataFromCurrentSidechainNodeView, LocallyGeneratedSecret}
 import com.horizen.SidechainTypes
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.chain.AccountFeePaymentsInfo
@@ -14,7 +14,7 @@ import com.horizen.account.companion.SidechainAccountTransactionsCompanion
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
 import com.horizen.account.transaction.{AccountTransaction, EthereumTransaction}
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
-import com.horizen.api.http.{SidechainApiErrorHandler, SidechainApiMockConfiguration, SidechainApiRejectionHandler, SidechainJSONBOChecker}
+import com.horizen.api.http.{ApiTokenHeader, SidechainApiErrorHandler, SidechainApiMockConfiguration, SidechainApiRejectionHandler, SidechainJSONBOChecker}
 import com.horizen.fixtures.{CompanionsFixture, SidechainBlockFixture}
 import com.horizen.node.NodeWalletBase
 import com.horizen.params.MainNetParams
@@ -27,7 +27,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.junit.JUnitRunner
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.core.settings.RESTApiSettings
+import sparkz.core.settings.RESTApiSettings
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -41,6 +41,8 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
   implicit def rejectionHandler: RejectionHandler = SidechainApiRejectionHandler.rejectionHandler
 
   val sidechainTransactionsCompanion: SidechainAccountTransactionsCompanion = getDefaultAccountTransactionsCompanion
+  val apiTokenHeader = new ApiTokenHeader("api_key", "Horizen")
+  val badApiTokenHeader = new ApiTokenHeader("api_key", "Harizen")
 
   val jsonChecker = new SidechainJSONBOChecker
 
@@ -69,7 +71,6 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
 
   val utilMocks = new AccountNodeViewUtilMocks()
 
-
   val memoryPool: java.util.List[EthereumTransaction] = utilMocks.transactionList
 //  val genesisBlock = utilMocks.genesisBlock
 //
@@ -77,8 +78,10 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
 //
   val mockedRESTSettings: RESTApiSettings = mock[RESTApiSettings]
   Mockito.when(mockedRESTSettings.timeout).thenAnswer(_ => 1 seconds)
+  Mockito.when(mockedRESTSettings.apiKeyHash).thenAnswer(_ => Some("aa8ed2a907753a4a7c66f2aa1d48a0a74d4fde9a6ef34bae96a86dcd7800af98"))
 
-//  val mockedSidechainSettings: SidechainSettings = mock[SidechainSettings]
+
+  //  val mockedSidechainSettings: SidechainSettings = mock[SidechainSettings]
 //  Mockito.when(mockedSidechainSettings.scorexSettings).thenAnswer(_ => {
 //    val mockedScorexSettings: ScorexSettings = mock[ScorexSettings]
 //    Mockito.when(mockedScorexSettings.restApi).thenAnswer(_ => mockedRESTSettings)
@@ -91,7 +94,7 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
   mockedSidechainNodeViewHolder.setAutoPilot(new testkit.TestActor.AutoPilot {
     override def run(sender: ActorRef, msg: Any): TestActor.AutoPilot = {
       msg match {
-        case m: GetDataFromCurrentNodeView[
+        case m: GetDataFromCurrentSidechainNodeView[
           AccountTransaction[Proposition, Proof[Proposition]],
           AccountBlockHeader,
           AccountBlock,
@@ -103,7 +106,7 @@ abstract class AccountSidechainApiRouteTest extends AnyWordSpec with Matchers wi
           AccountNodeView,
           _] @unchecked =>
           m match {
-            case GetDataFromCurrentNodeView(f) =>
+            case GetDataFromCurrentSidechainNodeView(f) =>
               if (sidechainApiMockConfiguration.getShould_nodeViewHolder_GetDataFromCurrentNodeView_reply()) {
                 sender ! f(utilMocks.getAccountNodeView(sidechainApiMockConfiguration))
               }

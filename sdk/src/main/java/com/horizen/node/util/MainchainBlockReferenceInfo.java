@@ -2,10 +2,10 @@ package com.horizen.node.util;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.horizen.CommonParams;
+import com.horizen.params.CommonParams;
 import com.horizen.serialization.Views;
-import scorex.core.serialization.BytesSerializable;
-import scorex.core.serialization.ScorexSerializer;
+import sparkz.core.serialization.BytesSerializable;
+import sparkz.core.serialization.SparkzSerializer;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -76,7 +76,7 @@ public final class MainchainBlockReferenceInfo implements BytesSerializable {
     }
 
     @Override
-    public ScorexSerializer<BytesSerializable> serializer() {
+    public SparkzSerializer<BytesSerializable> serializer() {
         return MainchainBlockReferenceInfoSerializer.getSerializer();
     }
 

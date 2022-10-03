@@ -1,15 +1,15 @@
 package com.horizen.block
 
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonView}
-import com.horizen.account.block.{AccountBlock, AccountBlockHeader, AccountBlockHeaderSerializer}
-import com.horizen.params.NetworkParams
+import com.horizen.account.block.{AccountBlockHeader, AccountBlockHeaderSerializer}
 import com.horizen.serialization.Views
 import com.horizen.transaction.Transaction
 import com.horizen.utils.{BytesUtils, ListSerializer, MerkleTree, Utils}
 import com.horizen.validation.{InconsistentOmmerDataException, InvalidOmmerDataException}
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
+import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.util.serialization.{Reader, Writer}
 import scorex.util.idToBytes
+import com.horizen.params.NetworkParams
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
@@ -24,11 +24,12 @@ case class Ommer[H <: SidechainBlockHeaderBase](
                 ) extends OmmersContainer[H] with BytesSerializable {
   override type M = Ommer[H]
 
-  override def serializer: ScorexSerializer[Ommer[H]] = header match {
-    case h: SidechainBlockHeader => OmmerSerializer.asInstanceOf[ScorexSerializer[Ommer[H]]]
-    case h: AccountBlockHeader => AccountOmmerSerializer.asInstanceOf[ScorexSerializer[Ommer[H]]]
+  override def serializer: SparkzSerializer[Ommer[H]] = header match {
+    case h: SidechainBlockHeader => OmmerSerializer.asInstanceOf[SparkzSerializer[Ommer[H]]]
+    case h: AccountBlockHeader => AccountOmmerSerializer.asInstanceOf[SparkzSerializer[Ommer[H]]]
     case other => throw new UnsupportedOperationException(s"No Ommer serializer found with header type ${other.getClass.toString}")
   }
+
 
   lazy val id: Array[Byte] = idToBytes(header.id)
 
@@ -151,7 +152,8 @@ object Ommer {
 }
 
 
-object OmmerSerializer extends ScorexSerializer[Ommer[SidechainBlockHeader]] {
+object OmmerSerializer extends SparkzSerializer[Ommer[SidechainBlockHeader]] {
+
   private val mainchainHeaderListSerializer = new ListSerializer[MainchainHeader](MainchainHeaderSerializer)
   private val ommersListSerializer = new ListSerializer[Ommer[SidechainBlockHeader]](OmmerSerializer)
 
@@ -184,7 +186,7 @@ object OmmerSerializer extends ScorexSerializer[Ommer[SidechainBlockHeader]] {
   }
 }
 
-object AccountOmmerSerializer extends ScorexSerializer[Ommer[AccountBlockHeader]] {
+object AccountOmmerSerializer extends SparkzSerializer[Ommer[AccountBlockHeader]] {
   private val mainchainHeaderListSerializer = new ListSerializer[MainchainHeader](MainchainHeaderSerializer)
   private val ommersListSerializer = new ListSerializer[Ommer[AccountBlockHeader]](AccountOmmerSerializer)
 

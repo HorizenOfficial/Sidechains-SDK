@@ -21,26 +21,23 @@ import com.horizen.block.SidechainBlockBase
 import com.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
 import com.horizen.consensus.ConsensusDataStorage
 import com.horizen.evm.LevelDBDatabase
+import com.horizen.fork.ForkConfigurator
 import com.horizen.node.NodeWalletBase
 import com.horizen.secret.SecretSerializer
 import com.horizen.storage._
 import com.horizen.storage.leveldb.VersionedLevelDbStorageAdapter
 import com.horizen.transaction._
-import com.horizen.transaction.mainchain.SidechainCreation
-import com.horizen.utils.{BlockUtils, BytesUtils, Pair}
-import scorex.core.api.http.ApiRoute
-import scorex.core.serialization.ScorexSerializer
-import scorex.core.settings.ScorexSettings
-import scorex.core.transaction.Transaction
-import scorex.core.{ModifierTypeId, NodeViewModifier}
+import com.horizen.utils.{BytesUtils, Pair}
+import sparkz.core.api.http.ApiRoute
+import sparkz.core.serialization.SparkzSerializer
+import sparkz.core.transaction.Transaction
+import sparkz.core.{ModifierTypeId, NodeViewModifier}
 
 import java.io.File
 import java.lang.{Byte => JByte}
 import java.util.{HashMap => JHashMap, List => JList}
 import scala.collection.JavaConverters.asScalaBufferConverter
 import scala.collection.mutable
-import scala.io.{Codec, Source}
-import scala.util.{Failure, Success}
 
 
 class AccountSidechainApp @Inject()
@@ -49,14 +46,18 @@ class AccountSidechainApp @Inject()
    @Named("CustomAccountTransactionSerializers") val customAccountTransactionSerializers: JHashMap[JByte, TransactionSerializer[SidechainTypes#SCAT]],
    @Named("CustomApiGroups") customApiGroups: JList[ApplicationApiGroup],
    @Named("RejectedApiPaths") rejectedApiPaths : JList[Pair[String, String]],
-   @Named("ChainInfo") chainInfo : ChainInfo,
-   @Named("CustomMessageProcessors") customMessageProcessors: JList[MessageProcessor]
+   @Named("CustomMessageProcessors") customMessageProcessors: JList[MessageProcessor],
+   @Named("ApplicationStopper") applicationStopper : SidechainAppStopper,
+   @Named("ForkConfiguration") forkConfigurator : ForkConfigurator,
+   @Named("ChainInfo") chainInfo : ChainInfo
   )
   extends AbstractSidechainApp(
     sidechainSettings,
     customSecretSerializers,
     customApiGroups,
     rejectedApiPaths,
+    applicationStopper,
+    forkConfigurator,
     chainInfo
   )
 {
@@ -65,11 +66,9 @@ class AccountSidechainApp @Inject()
   override type PMOD = AccountBlock
   override type NVHT = AccountSidechainNodeViewHolder
 
-  override implicit lazy val settings: ScorexSettings = sidechainSettings.scorexSettings
-
   private val storageList = mutable.ListBuffer[Storage]()
 
-  log.info(s"Starting application with settings \n$sidechainSettings")
+  log.info(s"Starting account application with settings \n$sidechainSettings")
 
   protected lazy val sidechainAccountTransactionsCompanion: SidechainAccountTransactionsCompanion = SidechainAccountTransactionsCompanion(customAccountTransactionSerializers)
 
@@ -78,12 +77,9 @@ class AccountSidechainApp @Inject()
       BytesUtils.fromHexString(sidechainSettings.genesisData.scGenesisBlockHex)
     )
 
-  lazy val sidechainCreationOutput: SidechainCreation = BlockUtils.tryGetSidechainCreation(genesisBlock) match {
-    case Success(output) => output
-    case Failure(exception) => throw new IllegalArgumentException("Genesis block specified in the configuration file has no Sidechain Creation info.", exception)
-  }
+  require (!isCSWEnabled, "Ceased Sidechain Withdrawal (CSW) should not be enabled in AccountSidechainApp!")
 
-  val dataDirAbsolutePath: String = sidechainSettings.scorexSettings.dataDir.getAbsolutePath
+  val dataDirAbsolutePath: String = sidechainSettings.sparkzSettings.dataDir.getAbsolutePath
   val secretStore = new File(dataDirAbsolutePath + "/secret")
   val metaStateStore = new File(dataDirAbsolutePath + "/state")
   val historyStore = new File(dataDirAbsolutePath + "/history")
@@ -130,7 +126,7 @@ class AccountSidechainApp @Inject()
     genesisBlock
     ) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
-  def modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =
+  def modifierSerializers: Map[ModifierTypeId, SparkzSerializer[_ <: NodeViewModifier]] =
     Map(SidechainBlockBase.ModifierTypeId -> new AccountBlockSerializer(sidechainAccountTransactionsCompanion),
       Transaction.ModifierTypeId -> sidechainAccountTransactionsCompanion)
 
@@ -148,42 +144,31 @@ class AccountSidechainApp @Inject()
 
   // Init Certificate Submitter
   val certificateSubmitterRef: ActorRef = AccountCertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
-  val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.scorexSettings.network)
+  val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.sparkzSettings.network)
 
   // Init API
-  var rejectedApiRoutes : Seq[SidechainRejectionApiRoute] = Seq[SidechainRejectionApiRoute]()
   rejectedApiPaths.asScala.foreach(path => rejectedApiRoutes = rejectedApiRoutes :+ SidechainRejectionApiRoute(path.getKey, path.getValue, settings.restApi, nodeViewHolderRef))
 
   // Once received developer's custom api, we need to create, for each of them, a SidechainApiRoute.
   // For do this, we use an instance of ApplicationApiRoute. This is an entry point between SidechainApiRoute and external java api.
-  var applicationApiRoutes : Seq[ApplicationApiRoute] = Seq[ApplicationApiRoute]()
   customApiGroups.asScala.foreach(apiRoute => applicationApiRoutes = applicationApiRoutes :+ ApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
 
-  var coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
-    MainchainBlockApiRoute[TX, AccountBlockHeader,PMOD, AccountFeePaymentsInfo, NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef),
-    AccountBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
-    SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi),
+  coreApiRoutes = Seq[ApiRoute](
+    MainchainBlockApiRoute[TX, AccountBlockHeader, PMOD, AccountFeePaymentsInfo, NodeAccountHistory, NodeAccountState,NodeWalletBase,NodeAccountMemoryPool,AccountNodeView](settings.restApi, nodeViewHolderRef),
+    AccountBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainAccountTransactionsCompanion, sidechainBlockForgerActorRef),
+    SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params),
     AccountTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainAccountTransactionsCompanion, params),
-    // TODO there can be only one of them since both has the 'wallet' tag in the path. Fix this. 
-    //SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
     AccountWalletApiRoute(settings.restApi, nodeViewHolderRef),
     SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef),
     AccountEthRpcRoute(settings.restApi, nodeViewHolderRef, sidechainSettings, params, sidechainTransactionActorRef, stateMetadataStorage, stateDbStorage, customMessageProcessors.asScala)
   )
 
-  // In order to provide the feature to override core api and exclude some other apis,
-  // first we create custom reject routes (otherwise we cannot know which route has to be excluded), second we bind custom apis and then core apis
-  override val apiRoutes: Seq[ApiRoute] = Seq[ApiRoute]()
-    .union(rejectedApiRoutes)
-    .union(applicationApiRoutes)
-    .union(coreApiRoutes)
-
-  override val swaggerConfig: String = Source.fromResource("api/sidechainApi.yaml")(Codec.UTF8).getLines.mkString("\n")
-
+  /*
   override def stopAll(): Unit = {
     super.stopAll()
     storageList.foreach(_.close())
   }
+   */
 
   actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 }

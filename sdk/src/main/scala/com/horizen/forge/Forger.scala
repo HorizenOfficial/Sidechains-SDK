@@ -1,13 +1,14 @@
 package com.horizen.forge
 
 import akka.actor.{ActorRef, ActorSystem, Props}
-import com.horizen._
+import com.horizen.{SidechainTypes, _}
 import com.horizen.block.{SidechainBlock, SidechainBlockHeader}
 import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.params.NetworkParams
 import com.horizen.storage.SidechainHistoryStorage
-import scorex.core.utils.NetworkTimeProvider
+import sparkz.core.utils.NetworkTimeProvider
+
 
 class Forger(settings: SidechainSettings,
              viewHolderRef: ActorRef,
@@ -23,7 +24,9 @@ class Forger(settings: SidechainSettings,
   override type MS = SidechainState
   override type VL = SidechainWallet
   override type MP = SidechainMemoryPool
+
 }
+
 
 object ForgerRef {
   def props(settings: SidechainSettings,

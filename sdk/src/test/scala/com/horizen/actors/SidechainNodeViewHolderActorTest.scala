@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.testkit.TestKit
 import akka.util.Timeout
-import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView
+import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView
 import com.horizen.fixtures.SidechainNodeViewHolderFixture
 import com.horizen.node.SidechainNodeView
 import org.junit.runner.RunWith
@@ -24,7 +24,7 @@ import scala.language.postfixOps
 class SidechainNodeViewHolderActorTest extends Suites(
   new SidechainNodeViewHolderActorTest1,
   new SidechainNodeViewHolderActorTest2
-)
+) {}
 
 @RunWith(classOf[JUnitRunner])
 class SidechainNodeViewHolderActorTest1
@@ -44,7 +44,7 @@ class SidechainNodeViewHolderActorTest1
   test ("Test1") {
     def f(v: SidechainNodeView) = v
     val sidechainNodeViewHolderRef: ActorRef = getSidechainNodeViewHolderRef
-    val nodeView = (sidechainNodeViewHolderRef ? GetDataFromCurrentNodeView(f))
+    val nodeView = (sidechainNodeViewHolderRef ? GetDataFromCurrentSidechainNodeView(f))
       .mapTo[SidechainNodeView]
 
     assert(Await.result(nodeView, 5 seconds) != null)
@@ -73,7 +73,7 @@ class SidechainNodeViewHolderActorTest2
 
       def f(v: SidechainNodeView) = v
       val sidechainNodeViewHolderRef: ActorRef = getSidechainNodeViewHolderRef
-      val nodeView = (sidechainNodeViewHolderRef ? GetDataFromCurrentNodeView(f))
+      val nodeView = (sidechainNodeViewHolderRef ? GetDataFromCurrentSidechainNodeView(f))
         .mapTo[SidechainNodeView]
 
       Await.result(nodeView, 5 seconds) should not be(null)

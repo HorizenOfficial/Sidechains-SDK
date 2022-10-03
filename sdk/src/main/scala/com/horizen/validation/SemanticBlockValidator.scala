@@ -1,6 +1,6 @@
 package com.horizen.validation
 
-import scorex.core.PersistentNodeViewModifier
+import sparkz.core.PersistentNodeViewModifier
 import scala.util.Try
 
 trait SemanticBlockValidator[PMOD <: PersistentNodeViewModifier] {

@@ -19,9 +19,8 @@ import com.horizen.params.NetworkParams
 import com.horizen.serialization.SerializationUtil
 import com.horizen.utils.ClosableResourceHandler
 import com.horizen.{SidechainSettings, SidechainTypes}
-import scorex.core.settings.RESTApiSettings
+import sparkz.core.settings.RESTApiSettings
 import scorex.util.ScorexLogging
-
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 

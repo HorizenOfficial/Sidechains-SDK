@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import json
-import pprint
+import logging
 from decimal import Decimal
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -42,7 +42,7 @@ class SCEvmEOA2EOA(SidechainTestFramework):
 
     def sc_setup_network(self, split = False):
         self.sc_nodes = self.sc_setup_nodes()
-        print("Connecting sc nodes...")
+        logging.info("Connecting sc nodes...")
         connect_sc_nodes(self.sc_nodes[0], 1)
         self.sc_sync_all()
 
@@ -95,7 +95,7 @@ class SCEvmEOA2EOA(SidechainTestFramework):
         assert_true(tx_hash in response['result']['transactionIds'])
 
         if print_json_results:
-            pprint.pprint(from_sc_node.transaction_allTransactions(json.dumps({"format": True})))
+            logging.info(from_sc_node.transaction_allTransactions(json.dumps({"format": True})))
 
         generate_next_block(from_sc_node, "first node")
         self.sc_sync_all()
@@ -106,7 +106,7 @@ class SCEvmEOA2EOA(SidechainTestFramework):
         # check receipt, meanwhile do some check on amounts
         receipt = from_sc_node.rpc_eth_getTransactionReceipt(tx_hash)
         if print_json_results:
-            pprint.pprint(receipt)
+            logging.info(receipt)
         status = int(receipt['result']['status'], 16)
         gasUsed = int(receipt['result']['gasUsed'][2:], 16) * int(receipt['result']['effectiveGasPrice'][2:], 16)
         if status == 0:
@@ -153,39 +153,39 @@ class SCEvmEOA2EOA(SidechainTestFramework):
         generate_next_block(sc_node_1, "first node")
         self.sc_sync_all()
 
-        print("Create an EOA to EOA transaction moving some fund from SC1 address to a SC2 address...")
+        logging.info("Create an EOA to EOA transaction moving some fund from SC1 address to a SC2 address...")
         transferred_amount_in_zen = Decimal('11')
         ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc2, transferred_amount_in_zen)
         assert_true(ret, msg)
 
-        print("Create an EOA to EOA transaction moving some fund from SC1 address to a SC1 different address.")
+        logging.info("Create an EOA to EOA transaction moving some fund from SC1 address to a SC1 different address.")
         evm_address_sc1_b = sc_node_1.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
         transferred_amount_in_zen = Decimal('22')
         ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc1_b, transferred_amount_in_zen)
         assert_true(ret, msg)
 
-        print("Create an EOA to EOA transaction moving some fund from SC1 address to the same SC1 address.")
+        logging.info("Create an EOA to EOA transaction moving some fund from SC1 address to the same SC1 address.")
         transferred_amount_in_zen = Decimal('33')
         ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_1, evm_address_sc1, evm_address_sc1, transferred_amount_in_zen)
         assert_true(ret, msg)
 
-        print("Create an EOA to EOA transaction with the minimum amount (1 satoshi)")
+        logging.info("Create an EOA to EOA transaction with the minimum amount (1 satoshi)")
         transferred_amount_in_zen = Decimal('0.00000001')
         ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc2, transferred_amount_in_zen)
         assert_true(ret, msg)
 
-        print("Create an EOA to EOA transaction with a null value")
+        logging.info("Create an EOA to EOA transaction with a null value")
         transferred_amount_in_zen = Decimal('0.0')
         ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc2, transferred_amount_in_zen)
         assert_true(ret, msg)
 
-        print("Create an EOA to EOA transaction to a not existing address")
+        logging.info("Create an EOA to EOA transaction to a not existing address")
         transferred_amount_in_zen = Decimal('1')
         not_existing_address = "63FaC9201494f0bd17B9892B9fae4d52fe3BD377"
         ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, not_existing_address, transferred_amount_in_zen)
         assert_true(ret, msg)
 
-        print("Create an EOA to EOA EIP155 transaction moving some fund from SC1 address to a SC2 address...")
+        logging.info("Create an EOA to EOA EIP155 transaction moving some fund from SC1 address to a SC2 address...")
         transferred_amount_in_zen = Decimal('15')
         ret, msg, txHash = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc2, transferred_amount_in_zen,
                                     isEIP155=True, print_json_results=False)
@@ -199,74 +199,74 @@ class SCEvmEOA2EOA(SidechainTestFramework):
 
         #negative cases
 
-        print("Create an EOA to EOA transaction moving all the from balance")
+        logging.info("Create an EOA to EOA transaction moving all the from balance")
         transferred_amount_in_zen = convertWeiToZen(get_account_balance(sc_node_1, evm_address_sc1))
         ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc2,
                                     transferred_amount_in_zen)
         if not ret:
-            print("Expected failure: {}".format(msg))
+            logging.info("Expected failure: {}".format(msg))
         else:
             fail("EOA2EOA of the whole balance should not work due to gas consummation")
 
 
-        print("Create an EOA to EOA transaction with an invalid from address (not owned) ==> SHOULD FAIL")
+        logging.info("Create an EOA to EOA transaction with an invalid from address (not owned) ==> SHOULD FAIL")
         transferred_amount_in_zen = Decimal('1')
         not_owned_address = sc_node_2.wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
         ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, not_owned_address, evm_address_sc2, transferred_amount_in_zen)
         if not ret:
-            print("Expected failure: {}".format(msg))
+            logging.info("Expected failure: {}".format(msg))
         else:
             fail("EOA2EOA with not owned from address should not work")
 
 
-        print("Create an EOA to EOA transaction with an invalid amount (negative) ==> SHOULD FAIL")
+        logging.info("Create an EOA to EOA transaction with an invalid amount (negative) ==> SHOULD FAIL")
         transferred_amount_in_zen = Decimal('-0.1')
         try:
             self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc2, transferred_amount_in_zen)
             fail("EOA2EOA with invalid format from address should not work")
         except Exception as e:
-            print("Expected failure: {}".format(e))
+            logging.info("Expected failure: {}".format(e))
 
-        # print("Create an EOA to EOA transaction moving some fund with too high a nonce ==> SHOULD FAIL")
+        # logging.info("Create an EOA to EOA transaction moving some fund with too high a nonce ==> SHOULD FAIL")
         # transferred_amount_in_zen = Decimal('33')
         # ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc2, transferred_amount_in_zen,
         #                             nonce=33)
         # if not ret:
-        #     print("Expected failure: {}".format(msg))
+        #     logging.info("Expected failure: {}".format(msg))
         # else:
         #     fail("EOA2EOA with bad nonce should not work")
 
-        print("Create an EOA to EOA transaction moving some fund with too low a nonce ==> SHOULD FAIL")
+        logging.info("Create an EOA to EOA transaction moving some fund with too low a nonce ==> SHOULD FAIL")
         transferred_amount_in_zen = Decimal('33')
         ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc2,
                                     transferred_amount_in_zen, nonce=0)
         if not ret:
-            print("Expected failure: {}".format(msg))
+            logging.info("Expected failure: {}".format(msg))
         else:
             fail("EOA2EOA with bad nonce should not work")
 
-        print("Create an EOA to EOA transaction moving too large a fund ==> SHOULD FAIL")
+        logging.info("Create an EOA to EOA transaction moving too large a fund ==> SHOULD FAIL")
         transferred_amount_in_zen = Decimal('5678')
         ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, evm_address_sc2, transferred_amount_in_zen)
         if not ret:
-            print("Expected failure: {}".format(msg))
+            logging.info("Expected failure: {}".format(msg))
         else:
             fail("EOA2EOA with too big an amount should not work")
 
-        print("Create an EOA to EOA transaction moving a fund to a fake contract address (forger stakes)  ==> SHOULD FAIL")
+        logging.info("Create an EOA to EOA transaction moving a fund to a fake contract address (forger stakes)  ==> SHOULD FAIL")
         transferred_amount_in_zen = Decimal('1')
         ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, ForgerStakeSmartContractAddress, transferred_amount_in_zen)
         if not ret:
-            print("Expected failure: {}".format(msg))
+            logging.info("Expected failure: {}".format(msg))
         else:
             fail("EOA2EOA to fake smart contract should not work")
 
-        print("Create an EOA to EOA transaction moving a fund to a fake contract address (withdrawal reqs) ==> SHOULD FAIL")
+        logging.info("Create an EOA to EOA transaction moving a fund to a fake contract address (withdrawal reqs) ==> SHOULD FAIL")
         transferred_amount_in_zen = Decimal('1')
         ret, msg, _ = self.makeEoa2Eoa(sc_node_1, sc_node_2, evm_address_sc1, WithdrawalReqSmartContractAddress,
                                     transferred_amount_in_zen)
         if not ret:
-            print("Expected failure: {}".format(msg))
+            logging.info("Expected failure: {}".format(msg))
         else:
             fail("EOA2EOA to fake smart contract should not work")
 

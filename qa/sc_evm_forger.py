@@ -44,7 +44,7 @@ Test:
 
 def get_sc_wallet_pubkeys(sc_node):
     wallet_propositions = sc_node.wallet_allPublicKeys()['result']['propositions']
-    # pprint.pprint(wallet_propositions)
+    # logging.info(wallet_propositions)
     pkey_list = []
     for p in wallet_propositions:
         if 'publicKey' in p:
@@ -57,7 +57,7 @@ def get_sc_wallet_pubkeys(sc_node):
 
 def print_current_epoch_and_slot(sc_node):
     ret = sc_node.block_forgingInfo()["result"]
-    print("Epoch={}, Slot={}".format(ret['bestEpochNumber'], ret['bestSlotNumber']))
+    logging.info("Epoch={}, Slot={}".format(ret['bestEpochNumber'], ret['bestSlotNumber']))
 
 def check_make_forger_stake_event(event, source_addr, owner, amount):
     assert_equal(3, len(event['topics']), "Wrong number of topics in event")
@@ -100,7 +100,7 @@ class SCEvmForger(SidechainTestFramework):
 
     def sc_setup_network(self, split=False):
         self.sc_nodes = self.sc_setup_nodes()
-        print("Connecting sc nodes...")
+        logging.info("Connecting sc nodes...")
         connect_sc_nodes(self.sc_nodes[0], 1)
         self.sc_sync_all()
 
@@ -121,7 +121,7 @@ class SCEvmForger(SidechainTestFramework):
 
     def sc_setup_nodes(self):
         return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
-                              binary=[EVM_APP_BINARY] * 2)  # , extra_args=[['-agentlib'], []])
+                              binary=[EVM_APP_BINARY] * 2)#, extra_args=[[], ['-agentlib']])
 
     def run_test(self):
 
@@ -246,7 +246,7 @@ class SCEvmForger(SidechainTestFramework):
         if "result" not in makeForgerStakeJsonRes:
             fail("make forger stake with fake smart contract as owner should create a tx: " + json.dumps(makeForgerStakeJsonRes))
         else:
-            print("Transaction created as expected")
+            logging.info("Transaction created as expected")
         generate_next_block(sc_node_1, "first node")
         self.sc_sync_all()
 
@@ -291,7 +291,7 @@ class SCEvmForger(SidechainTestFramework):
             fail("make forger stake with fake smart contract as owner should create a tx: " + json.dumps(
                 makeForgerStakeJsonRes))
         else:
-            print("Transaction created as expected")
+            logging.info("Transaction created as expected")
         generate_next_block(sc_node_1, "first node")
         self.sc_sync_all()
 
@@ -317,7 +317,7 @@ class SCEvmForger(SidechainTestFramework):
         if "result" not in makeForgerStakeJsonRes:
             fail("make forger stake failed: " + json.dumps(makeForgerStakeJsonRes))
         else:
-            print("Forger stake created: " + json.dumps(makeForgerStakeJsonRes))
+            logging.info("Forger stake created: " + json.dumps(makeForgerStakeJsonRes))
         tx_hash = makeForgerStakeJsonRes['result']['transactionId']
         self.sc_sync_all()
 
@@ -362,7 +362,7 @@ class SCEvmForger(SidechainTestFramework):
         if "result" not in makeForgerStakeJsonRes:
             fail("make forger stake failed: " + json.dumps(makeForgerStakeJsonRes))
         else:
-            print("Forger stake created: " + json.dumps(makeForgerStakeJsonRes))
+            logging.info("Forger stake created: " + json.dumps(makeForgerStakeJsonRes))
         self.sc_sync_all()
         tx_hash = makeForgerStakeJsonRes['result']['transactionId']
 
@@ -394,11 +394,11 @@ class SCEvmForger(SidechainTestFramework):
         # Verify SC node 2 can not forge yet
         exception_occurs = False
         try:
-            print("SC2 Trying to generate a block: should fail...")
+            logging.info("SC2 Trying to generate a block: should fail...")
             generate_next_block(sc_node_2, "second node", force_switch_to_next_epoch=False)
         except Exception as e:
             exception_occurs = True
-            print("We had an exception as expected: {}".format(str(e)))
+            logging.info("We had an exception as expected: {}".format(str(e)))
         finally:
             assert_true(exception_occurs, "No forging stakes expected for SC node 2.")
         self.sc_sync_all()
@@ -412,11 +412,11 @@ class SCEvmForger(SidechainTestFramework):
         # Verify SC node 2 can not forge yet
         exception_occurs = False
         try:
-            print("Trying to generate a block: should fail...")
+            logging.info("Trying to generate a block: should fail...")
             generate_next_block(sc_node_2, "second node", force_switch_to_next_epoch=False)
         except Exception as e:
             exception_occurs = True
-            print("We had an exception as expected: {}".format(str(e)))
+            logging.info("We had an exception as expected: {}".format(str(e)))
         finally:
             assert_true(exception_occurs, "No forging stakes expected for SC node 2.")
         self.sc_sync_all()
@@ -440,13 +440,13 @@ class SCEvmForger(SidechainTestFramework):
             get_account_balance(sc_node_1, ForgerStakeSmartContractAddress))
 
         # spend the genesis stake
-        print("SC1 spends genesis stake...")
+        logging.info("SC1 spends genesis stake...")
         spendForgerStakeJsonRes = sc_node_1.transaction_spendForgingStake(
             json.dumps({"stakeId": str(stake_id_genesis)}))
         if "result" not in spendForgerStakeJsonRes:
             fail("spend forger stake failed: " + json.dumps(spendForgerStakeJsonRes))
         else:
-            print("Forger stake removed: " + json.dumps(spendForgerStakeJsonRes))
+            logging.info("Forger stake removed: " + json.dumps(spendForgerStakeJsonRes))
         self.sc_sync_all()
         tx_hash = spendForgerStakeJsonRes['result']['transactionId']
 
@@ -481,11 +481,11 @@ class SCEvmForger(SidechainTestFramework):
         # Verify SC node 1 now can not forge anymore if switching epoch
         exception_occurs = False
         try:
-            print("SC1 Trying to generate a block: should fail...")
+            logging.info("SC1 Trying to generate a block: should fail...")
             generate_next_block(sc_node_1, "first node", force_switch_to_next_epoch=True)
         except Exception as e:
             exception_occurs = True
-            print("We had an exception as expected: {}".format(str(e)))
+            logging.info("We had an exception as expected: {}".format(str(e)))
         finally:
             assert_true(exception_occurs, "No forging stakes expected for SC node 1.")
 
@@ -513,7 +513,7 @@ class SCEvmForger(SidechainTestFramework):
         if "result" not in spendForgerStakeJsonRes:
             fail("spend forger stake failed: " + json.dumps(spendForgerStakeJsonRes))
         else:
-            print("Forger stake removed: " + json.dumps(spendForgerStakeJsonRes))
+            logging.info("Forger stake removed: " + json.dumps(spendForgerStakeJsonRes))
         self.sc_sync_all()
         tx_hash = spendForgerStakeJsonRes['result']['transactionId']
 
@@ -549,7 +549,7 @@ class SCEvmForger(SidechainTestFramework):
         if "result" not in spendForgerStakeJsonRes:
             fail("spend forger stake failed: " + json.dumps(spendForgerStakeJsonRes))
         else:
-            print("Forger stake removed: " + json.dumps(spendForgerStakeJsonRes))
+            logging.info("Forger stake removed: " + json.dumps(spendForgerStakeJsonRes))
         self.sc_sync_all()
         tx_hash = spendForgerStakeJsonRes['result']['transactionId']
 
@@ -587,13 +587,14 @@ class SCEvmForger(SidechainTestFramework):
         # since consensus epoch info are not valid (empty list of stakes)
         exception_occurs = False
         try:
-            print("Trying to generate a block: should fail...")
+            logging.info("Trying to generate a block: should fail...")
             generate_next_block(sc_node_2, "first node", force_switch_to_next_epoch=True)
             self.sc_sync_all()
             print_current_epoch_and_slot(sc_node_1)
         except Exception as e:
             exception_occurs = True
-            print("We had an exception as expected: {}".format(str(e)))
+            logging.info("We had an exception as expected: {}".format(str(e)))
+
         finally:
             assert_true(exception_occurs, "No forging stakes expected for SC node 1.")
         self.sc_sync_all()

@@ -5,7 +5,7 @@ import com.horizen.account.utils.{AccountPayment, AccountPaymentSerializer}
 import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.serialization.Views
 import com.horizen.utils.ListSerializer
-import scorex.core.serialization.ScorexSerializer
+import sparkz.core.serialization.SparkzSerializer
 import scorex.util.serialization.{Reader, Writer}
 
 import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListConverter}
@@ -14,11 +14,11 @@ import scala.collection.JavaConverters.{asScalaBufferConverter, seqAsJavaListCon
 case class AccountFeePaymentsInfo(payments: Seq[AccountPayment]) extends AbstractFeePaymentsInfo {
   override type M = AccountFeePaymentsInfo
 
-  override def serializer: ScorexSerializer[M] = AccountFeePaymentsInfoSerializer
+  override def serializer: SparkzSerializer[M] = AccountFeePaymentsInfoSerializer
 }
 
 
-object AccountFeePaymentsInfoSerializer extends ScorexSerializer[AccountFeePaymentsInfo] {
+object AccountFeePaymentsInfoSerializer extends SparkzSerializer[AccountFeePaymentsInfo] {
 
   private val outputsSerializer: ListSerializer[AccountPayment] = new ListSerializer[AccountPayment](AccountPaymentSerializer.getSerializer)
 

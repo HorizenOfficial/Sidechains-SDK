@@ -5,14 +5,14 @@ import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
 import com.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
-import scorex.core.block.Block
+import sparkz.core.block.Block
 import scorex.util.{ModifierId, bytesToId}
 
 trait NetworkParams {
   // Mainchain ProofOfWork parameters:
   val EquihashN: Int
   val EquihashK: Int
-  val EquihashVarIntLength: Int // VarInt value length for Equihash solution bytes
+  val EquihashCompactSizeLength: Int // CompactSize value length for Equihash solution bytes
   val EquihashSolutionLength: Int // solution bytes length
 
   val powLimit: BigInteger
@@ -41,6 +41,7 @@ trait NetworkParams {
   val cswProvingKeyFilePath: String
   val cswVerificationKeyFilePath: String
   val sidechainCreationVersion: SidechainCreationVersion
+  val isCSWEnabled: Boolean
 
   val maxHistoryRewritingLength: Int = 100
 
@@ -64,4 +65,8 @@ trait NetworkParams {
 
   // Account chain params
   val chainId : Long
+
+  //Max Withdrawal Boxes per certificate
+  final val maxWBsAllowed: Int = 3999
+
 }

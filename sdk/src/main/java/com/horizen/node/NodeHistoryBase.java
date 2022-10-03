@@ -3,6 +3,7 @@ package com.horizen.node;
 import com.horizen.block.*;
 import com.horizen.chain.AbstractFeePaymentsInfo;
 import com.horizen.chain.MainchainHeaderInfo;
+import com.horizen.chain.SidechainBlockInfo;
 import com.horizen.node.util.MainchainBlockReferenceInfo;
 import com.horizen.transaction.Transaction;
 
@@ -16,6 +17,10 @@ public interface NodeHistoryBase<
         FPI extends AbstractFeePaymentsInfo>  {
 
     Optional<PM> getBlockById(String blockId);
+
+    Optional<SidechainBlockInfo> getBlockInfoById(String blockId);
+
+    boolean isInActiveChain(String blockId);
 
     PM getBestBlock();
 

@@ -182,7 +182,7 @@ class SCEvmBWTCornerCases(SidechainTestFramework):
    #                  fail(f"Creating Withdrawal request {i} failed: " + json.dumps(res))
    #              else:
    #                  if i % 10 == 0:
-   #                      print(f"Created Withdrawal request {i}")
+   #                      logging.info(f"Created Withdrawal request {i}")
    #          generate_next_block(sc_node, "first node")
    #
    #      num_of_created_wr = num_of_blocks * num_of_wr_per_block
@@ -192,7 +192,7 @@ class SCEvmBWTCornerCases(SidechainTestFramework):
    #          if "error" in res:
    #              fail(f"Creating Withdrawal request {i} failed: " + json.dumps(res))
    #          else:
-   #              print(f"Created Withdrawal request {i}")
+   #              logging.info(f"Created Withdrawal request {i}")
    #
    #      generate_next_block(sc_node, "first node")
    #
@@ -228,10 +228,10 @@ class SCEvmBWTCornerCases(SidechainTestFramework):
    #
    #      # Generate 8 more MC block to finish the first withdrawal epoch, then generate 1 more SC block to sync with MC.
    #      we0_end_mcblock_hash = mc_node.generate(8)[7]
-   #      print("End mc block hash in withdrawal epoch 0 = " + we0_end_mcblock_hash)
+   #      logging.info("End mc block hash in withdrawal epoch 0 = " + we0_end_mcblock_hash)
    #      we0_end_mcblock_json = mc_node.getblock(we0_end_mcblock_hash)
    #      we0_end_epoch_cum_sc_tx_comm_tree_root = we0_end_mcblock_json["scCumTreeHash"]
-   #      print("End cum sc tx commtree root hash in withdrawal epoch 0 = " + we0_end_epoch_cum_sc_tx_comm_tree_root)
+   #      logging.info("End cum sc tx commtree root hash in withdrawal epoch 0 = " + we0_end_epoch_cum_sc_tx_comm_tree_root)
    #      scblock_id2 = generate_next_block(sc_node, "first node")
    #      check_mcreferencedata_presence(we0_end_mcblock_hash, scblock_id2, sc_node)
    #
@@ -243,7 +243,7 @@ class SCEvmBWTCornerCases(SidechainTestFramework):
    #      # Wait until Certificate will appear in MC node mempool
    #      time.sleep(10)
    #      while mc_node.getmempoolinfo()["size"] == 0 and sc_node.submitter_isCertGenerationActive()["result"]["state"]:
-   #          print("Wait for certificate in mc mempool...")
+   #          logging.info("Wait for certificate in mc mempool...")
    #          time.sleep(2)
    #          sc_node.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
    #      assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
@@ -256,10 +256,10 @@ class SCEvmBWTCornerCases(SidechainTestFramework):
    #
    #      # Get Certificate for Withdrawal epoch 0 and verify it
    #      we0_certHash = mc_node.getrawmempool()[0]
-   #      print("Withdrawal epoch 0 certificate hash = " + we0_certHash)
+   #      logging.info("Withdrawal epoch 0 certificate hash = " + we0_certHash)
    #      we0_cert = mc_node.getrawtransaction(we0_certHash, 1)
    #      we0_cert_hex = mc_node.getrawtransaction(we0_certHash)
-   #      print("Withdrawal epoch 0 certificate hex = " + we0_cert_hex)
+   #      logging.info("Withdrawal epoch 0 certificate hex = " + we0_cert_hex)
    #      assert_equal(self.sc_nodes_bootstrap_info.sidechain_id, we0_cert["cert"]["scid"],
    #                   "Sidechain Id in certificate is wrong.")
    #      assert_equal(current_epoch_number, we0_cert["cert"]["epochNumber"], "Sidechain epoch number in certificate is wrong.")
@@ -275,7 +275,7 @@ class SCEvmBWTCornerCases(SidechainTestFramework):
    #                   "MC block expected to contain 1 Certificate.")
    #      assert_equal(we0_certHash, mc_node.getblock(we1_2_mcblock_hash)["cert"][0],
    #                   "MC block expected to contain certificate.")
-   #      print("MC block with withdrawal certificate for epoch 0 = {0}\n".format(
+   #      logging.info("MC block with withdrawal certificate for epoch 0 = {0}\n".format(
    #          str(mc_node.getblock(we1_2_mcblock_hash, False))))
    #
    #      # Generate SC block and verify that certificate is synced back

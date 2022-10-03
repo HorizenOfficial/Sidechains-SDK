@@ -2,14 +2,14 @@ package com.horizen.account.utils;
 
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.proposition.AddressPropositionSerializer;
-import scorex.core.serialization.ScorexSerializer;
+import sparkz.core.serialization.SparkzSerializer;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
 
 import java.math.BigInteger;
 
 public final class AccountPaymentSerializer
-        implements ScorexSerializer<AccountPayment> {
+        implements SparkzSerializer<AccountPayment> {
 
     private final static AccountPaymentSerializer serializer;
 

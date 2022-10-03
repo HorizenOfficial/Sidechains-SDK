@@ -1,14 +1,11 @@
 package com.horizen.account.utils
 
-import com.horizen.account.FeeUtils
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.history.AccountHistory
 import com.horizen.params.NetworkParams
 import org.mockito.Mockito
 import org.scalatestplus.mockito.MockitoSugar.mock
-import org.web3j.utils.Numeric
 import scorex.util.bytesToId
-
 import java.math.BigInteger
 import java.util.Optional
 

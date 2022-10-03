@@ -1,6 +1,6 @@
 package com.horizen.account.validation
 
-import com.horizen.account.FeeUtils
+import com.horizen.account.utils.FeeUtils
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.utils.AccountMockDataHelper
@@ -9,7 +9,6 @@ import org.junit.Test
 import org.scalatestplus.junit.JUnitSuite
 import scorex.util.bytesToId
 import org.web3j.utils.Numeric
-
 import java.math.BigInteger
 import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.util.Random

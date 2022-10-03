@@ -3,32 +3,33 @@ package com.horizen
 import java.util
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.TestProbe
-import com.horizen.block.{SidechainBlock, SidechainBlockBase}
+import com.horizen.block.SidechainBlock
+import akka.util.Timeout
 import com.horizen.box.ZenBox
 import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus.{ConsensusEpochInfo, FullConsensusEpochInfo, intToConsensusEpochNumber}
 import com.horizen.fixtures._
 import com.horizen.params.{NetworkParams, RegTestParams}
-import com.horizen.utils.{BlockFeeInfo, MerkleTree, WithdrawalEpochInfo}
+import com.horizen.utils.{BlockFeeInfo, CountDownLatchController, MerkleTree, WithdrawalEpochInfo}
 import org.junit.Assert.{assertEquals, assertFalse, assertTrue}
 import org.junit.{Before, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
-import scorex.core.NodeViewHolder.DownloadRequest
-import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
-import scorex.core.consensus.History.ProgressInfo
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
-import scorex.core.{VersionTag, idToVersion}
+import sparkz.core.NodeViewHolder.ReceivableMessages.{LocallyGeneratedModifier, ModifiersFromRemote}
+import sparkz.core.consensus.History.ProgressInfo
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ModifiersProcessingResult, SemanticallySuccessfulModifier}
+import sparkz.core.validation.RecoverableModifierError
+import sparkz.core.{VersionTag, idToVersion}
 import scorex.util.ModifierId
-
-import scala.util.Success
+import scala.concurrent.duration.DurationInt
+import scala.util.{Failure, Success, Try}
 
 class SidechainNodeViewHolderTest extends JUnitSuite
   with MockedSidechainNodeViewHolderFixture
   with SidechainBlockFixture
   with CompanionsFixture
-  with scorex.core.utils.ScorexEncoding
+  with sparkz.core.utils.SparkzEncoding
 {
   var history: SidechainHistory = _
   var state: SidechainState = _
@@ -42,14 +43,23 @@ class SidechainNodeViewHolderTest extends JUnitSuite
 
   val genesisBlock: SidechainBlock = SidechainBlockFixture.generateSidechainBlock(sidechainTransactionsCompanion)
   val params: NetworkParams = RegTestParams(initialCumulativeCommTreeHash = FieldElementFixture.generateFieldElement())
+  implicit lazy val timeout: Timeout = Timeout(10000 milliseconds)
+
 
   @Before
   def setUp(): Unit = {
     history = mock[SidechainHistory]
     state = mock[SidechainState]
     wallet = mock[SidechainWallet]
-    mempool = SidechainMemoryPool.emptyPool
+    mempool = SidechainMemoryPool.createEmptyMempool(getMockedMempoolSettings(300))
     mockedNodeViewHolderRef = getMockedSidechainNodeViewHolderRef(history, state, wallet, mempool)
+  }
+
+  private def getMockedMempoolSettings(maxSize: Int): MempoolSettings = {
+    val mockedSettings: MempoolSettings = mock[MempoolSettings]
+    Mockito.when(mockedSettings.maxSize).thenReturn(maxSize)
+    Mockito.when(mockedSettings.minFeeRate).thenReturn(0)
+    mockedSettings
   }
 
   @Test
@@ -58,8 +68,8 @@ class SidechainNodeViewHolderTest extends JUnitSuite
 
     // Mock history to add the incoming block to the ProgressInfo append list
     Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer( answer =>
-      Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(answer.getArgument(0).asInstanceOf[SidechainBlock]), Seq())))
-    Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenReturn(history)
+      Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(answer.getArgument(0).asInstanceOf[SidechainBlock]))))
+    Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenReturn(Try(history))
     // Mock state to notify that any incoming block to append will lead to chain switch
     Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[SidechainBlock])).thenReturn(true)
     // Mock state to apply incoming block successfully
@@ -95,6 +105,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
 
     // Send locally generated block to the NodeViewHolder
     val eventListener = TestProbe()
+
     actorSystem.eventStream.subscribe(eventListener.ref, classOf[SemanticallySuccessfulModifier[SidechainBlock]])
     val block = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params)
     mockedNodeViewHolderRef ! LocallyGeneratedModifier(block)
@@ -120,10 +131,10 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer( answer => {
       val blockToAppend: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
       assertEquals("History received different block to append.", block.id, blockToAppend.id)
-      Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(blockToAppend), Seq()))
+      Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(blockToAppend)))
     })
     // History semantic validity check
-    Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenAnswer( answer => {
+    Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenAnswer( answer => Try {
       val validBlock: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
       assertEquals("History received semantically valid notification about different block.", block.id, validBlock.id)
       history
@@ -183,11 +194,11 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer( answer => {
       val blockToAppend: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
       assertEquals("History received different block to append.", secondBlockInFork.id, blockToAppend.id)
-      Success(history -> ProgressInfo[SidechainBlock](Some(branchPointBlock.id), Seq(firstBlockInActiveChain), Seq(firstBlockInFork, secondBlockInFork), Seq()))
+      Success(history -> ProgressInfo[SidechainBlock](Some(branchPointBlock.id), Seq(firstBlockInActiveChain), Seq(firstBlockInFork, secondBlockInFork)))
     })
     // History semantic validity check for fork blocks - one by one.
     Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock]))
-      .thenAnswer( answer => {
+      .thenAnswer( answer => Try {
       val validBlock: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
       assertEquals("History received semantically valid notification about different block. First fork block expected.",
         firstBlockInFork.id, validBlock.id)
@@ -270,68 +281,13 @@ class SidechainNodeViewHolderTest extends JUnitSuite
   }
 
   @Test
-  def downloadRequest(): Unit = {
-    // Test: Verify the flow of requesting for download
-
-    // Define block id to download
-    val blockIdToDownload: ModifierId = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params).id
-    // Create block to apply - just for test
-    val block: SidechainBlock = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params)
-
-    // History appending check
-    Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer( _ => {
-      Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(), Seq(SidechainBlockBase.ModifierTypeId -> blockIdToDownload)))
-    })
-    // History semantic validity check
-    Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenAnswer( _ => {
-      fail("History should NOT receive semantically valid notifications.")
-      history
-    })
-    // State apply check
-    Mockito.when(state.applyModifier(ArgumentMatchers.any[SidechainBlock])).thenAnswer( _ => {
-      fail("State should NOT receive block to apply.")
-      Success(state)
-    })
-    // Mock state withdrawal epoch methods
-    Mockito.when(state.getWithdrawalEpochInfo).thenReturn(WithdrawalEpochInfo(0, 1))
-    Mockito.when(state.isWithdrawalEpochLastIndex).thenReturn(false)
-
-    // Wallet apply
-    Mockito.when(wallet.scanPersistent(ArgumentMatchers.any[SidechainBlock],
-      ArgumentMatchers.any[Int](),
-      ArgumentMatchers.any(),
-      ArgumentMatchers.any())).thenAnswer( _ => {
-      fail("Wallet should NOT receive block to apply.")
-      wallet
-    })
-
-
-    // Consensus epoch switching checks
-    Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[SidechainBlock])).thenAnswer( _ => {
-      fail("State switching consensus check should NOT being emitted.")
-      false
-    })
-
-
-    // Send locally generated block to the NodeViewHolder
-    val eventListener = TestProbe()
-    actorSystem.eventStream.subscribe(eventListener.ref, classOf[SemanticallySuccessfulModifier[SidechainBlock]])
-    actorSystem.eventStream.subscribe(eventListener.ref, classOf[DownloadRequest])
-    mockedNodeViewHolderRef ! LocallyGeneratedModifier(block)
-
-
-    // Verify requesting for download
-    eventListener.expectMsgType[DownloadRequest]
-  }
-
-  @Test
   def withdrawalEpochInTheMiddle(): Unit = {
     // Test: Verify that SC block in the middle of withdrawal epoch will NOT emit notify wallet with fee payments and utxo merkle tree view.
 
     // Mock history to add the incoming block to the ProgressInfo append list
     Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer( answer =>
-      Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(answer.getArgument(0).asInstanceOf[SidechainBlock]), Seq())))
-    Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenReturn(history)
+      Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(answer.getArgument(0).asInstanceOf[SidechainBlock]))))
+    Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenReturn(Try(history))
     // Mock state to notify that any incoming block to append will NOT lead to chain switch
     Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[SidechainBlock])).thenReturn(false)
     // Mock state to apply incoming block successfully
@@ -390,8 +346,8 @@ class SidechainNodeViewHolderTest extends JUnitSuite
 
     // Mock history to add the incoming block to the ProgressInfo append list
     Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer( answer =>
-      Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(answer.getArgument(0).asInstanceOf[SidechainBlock]), Seq())))
-    Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenReturn(history)
+      Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(answer.getArgument(0).asInstanceOf[SidechainBlock]))))
+    Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenReturn(Try(history))
     Mockito.when(history.updateFeePaymentsInfo(ArgumentMatchers.any[ModifierId],ArgumentMatchers.any[SidechainFeePaymentsInfo])).thenReturn(history)
     // Mock state to notify that any incoming block to append will NOT lead to chain switch
     Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[SidechainBlock])).thenReturn(false)
@@ -447,5 +403,238 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     // Verify that all the checks passed
     assertTrue("State feePayments checks failed.", stateChecksPassed)
     assertTrue("Wallet scanPersistent checks failed.", walletChecksPassed)
+  }
+
+  @Test
+  def remoteModifiers(): Unit = {
+    val block1 = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params)
+    val block2 = generateNextSidechainBlock(block1, sidechainTransactionsCompanion, params)
+    val block3 = generateNextSidechainBlock(block2, sidechainTransactionsCompanion, params)
+    val block4 = generateNextSidechainBlock(block3, sidechainTransactionsCompanion, params)
+    val block5 = generateNextSidechainBlock(block4, sidechainTransactionsCompanion, params)
+    val block6 = generateNextSidechainBlock(block5, sidechainTransactionsCompanion, params)
+    val block7 = generateNextSidechainBlock(block6, sidechainTransactionsCompanion, params)
+    val block8 = generateNextSidechainBlock(block7, sidechainTransactionsCompanion, params)
+
+    val blocks = Array(block1, block2, block3, block4, block5, block6, block7, block8)
+    var blockIndex: Int = 0
+
+    // History appending check
+    Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer( answer => {
+      val blockToAppend: SidechainBlock = answer.getArgument(0).asInstanceOf[SidechainBlock]
+      Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq()))
+    })
+
+    Mockito.when(history.applicableTry(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
+      val block: SidechainBlock = answer.getArgument(0)
+
+      if (block.id == blocks(blockIndex).id) {
+        blockIndex += 1
+        Success(Unit)
+      } else
+        Failure(new RecoverableModifierError("Parent block is not in history yet"))
+    })
+
+    val eventListener = TestProbe()
+    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[(Seq[SidechainBlock], Seq[SidechainBlock])]])
+
+    mockedNodeViewHolderRef ! ModifiersFromRemote(blocks)
+
+    eventListener.fishForMessage(timeout.duration) {
+      case m =>
+        m match {
+          case ModifiersProcessingResult(applied, cleared) => {
+            assertTrue("Applied block sequence is differ", applied.toSet.equals(blocks.toSet))
+            assertTrue("Cleared block sequence is not empty.", cleared.isEmpty)
+            true
+          }
+          case _ => {
+            false
+          }
+        }
+    }
+  }
+
+  /*
+   * This test check correctness of applying two remoteModifiers messages
+   * Second remoteModifiers arrives during applying first block.
+   * Steps:
+   *  - creates 6 blocks
+   *  - send remoteModifiers with 1st, 2nd and 6th blocks
+   *  - send remoteModifiers with 3rd, 4th and 5th blocks during applying first block
+   *  - check that ModifiersProcessingResult message contain 6 applied blocks
+   */
+  @Test
+  def remoteModifiersTwoMessages(): Unit = {
+    val block1 = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params)
+    val block2 = generateNextSidechainBlock(block1, sidechainTransactionsCompanion, params)
+    val block3 = generateNextSidechainBlock(block2, sidechainTransactionsCompanion, params)
+    val block4 = generateNextSidechainBlock(block3, sidechainTransactionsCompanion, params)
+    val block5 = generateNextSidechainBlock(block4, sidechainTransactionsCompanion, params)
+    val block6 = generateNextSidechainBlock(block5, sidechainTransactionsCompanion, params)
+
+    val firstRequestBlocks = Seq(block1, block2, block6)
+    val secondRequestBlocks = Seq(block3, block4, block5)
+    val correctSequence = Array(block1, block2, block3, block4, block5, block6)
+    var blockIndex = 0
+
+    // History appending check
+    Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
+      Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq()))
+    })
+
+    Mockito.when(history.applicableTry(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
+      val block: SidechainBlock = answer.getArgument(0)
+
+      if (block.id == correctSequence(blockIndex).id) {
+        blockIndex += 1
+        Success(Unit)
+      } else
+        Failure(new RecoverableModifierError("Parent block is not in history yet"))
+    })
+
+    val eventListener = TestProbe()
+    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[(Seq[SidechainBlock], Seq[SidechainBlock])]])
+
+    mockedNodeViewHolderRef ! ModifiersFromRemote(firstRequestBlocks)
+    mockedNodeViewHolderRef ! ModifiersFromRemote(secondRequestBlocks)
+
+    eventListener.fishForMessage(timeout.duration) {
+      case m =>
+        m match {
+          case ModifiersProcessingResult(applied, cleared) => {
+            assertTrue("Applied block sequence is differ", applied.toSet.equals(correctSequence.toSet))
+            assertTrue("Cleared block sequence is not empty.", cleared.isEmpty)
+            true
+          }
+          case _ => false // Log
+        }
+    }
+  }
+
+  /*
+   * This test check correctness of applying two remoteModifiers messages
+   * Second remoteModifiers arrives during applying first block.
+   * Steps:
+   *  - creates 6 blocks
+   *  - send remoteModifiers with 1st, 2nd and 6th blocks
+   *  - send remoteModifiers with 3rd, 4th and 5th blocks after applying second block
+   *  - check that first ModifiersProcessingResult message contain 2 applied blocks(1st, 2nd)
+   *  - check that second ModifiersProcessingResult message contain 4 applied blocks(3rd, 4th, 5th, 6th)
+   */
+  @Test
+  def remoteModifiersTwoSequences(): Unit = {
+    val block1 = generateNextSidechainBlock(genesisBlock, sidechainTransactionsCompanion, params)
+    val block2 = generateNextSidechainBlock(block1, sidechainTransactionsCompanion, params)
+    val block3 = generateNextSidechainBlock(block2, sidechainTransactionsCompanion, params)
+    val block4 = generateNextSidechainBlock(block3, sidechainTransactionsCompanion, params)
+    val block5 = generateNextSidechainBlock(block4, sidechainTransactionsCompanion, params)
+    val block6 = generateNextSidechainBlock(block5, sidechainTransactionsCompanion, params)
+
+    val firstRequestBlocks = Seq(block1, block2, block6)
+    val secondRequestBlocks = Seq(block3, block4, block5)
+    val correctSequence = Array(block1, block2, block3, block4, block5, block6)
+    var blockIndex = 0
+
+    val countDownController: CountDownLatchController = new CountDownLatchController(1)
+
+    // History appending check
+    Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
+      Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq()))
+    })
+
+    Mockito.when(history.applicableTry(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
+      val block: SidechainBlock = answer.getArgument(0)
+
+      if (block.id == correctSequence(blockIndex).id) {
+        if (blockIndex == 1) {
+          countDownController.countDown()
+        }
+
+        blockIndex += 1
+        Success(Unit)
+      } else
+        Failure(new RecoverableModifierError("Parent block is not in history yet"))
+    })
+
+    val eventListener = TestProbe()
+    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[(Seq[SidechainBlock], Seq[SidechainBlock])]])
+
+    mockedNodeViewHolderRef ! ModifiersFromRemote(firstRequestBlocks)
+    countDownController.await(3000)
+    Thread.sleep(1000)
+    mockedNodeViewHolderRef ! ModifiersFromRemote(secondRequestBlocks)
+
+    eventListener.fishForMessage(timeout.duration) {
+      case m =>
+        m match {
+          case ModifiersProcessingResult(applied, cleared) => {
+            assertTrue("Applied block sequence is differ", applied.toSet.equals(Set(block1, block2)))
+            assertTrue("Cleared block sequence is not empty.", cleared.isEmpty)
+            true
+          }
+          case _ => false
+        }
+    }
+
+    eventListener.fishForMessage(timeout.duration) {
+      case m =>
+        m match {
+          case ModifiersProcessingResult(applied, _) => {
+            assertTrue("Applied block sequence is differ", applied.toSet.equals(Set(block3, block4, block5, block6)))
+            true
+          }
+          case _ => false
+        }
+    }
+  }
+
+  /*
+   * This test check cache cleaning in case the number of rejected blocks overwhelms cache size.
+   * Steps:
+   *  - create 520 blocks
+   *  - apply first 3 blocks
+   *  - reject all other blocks
+   *  - check that 3 blocks were applied
+   *  - check that number of cleared blocks(520 - numberOfAppliedBlock - cacheSize)
+   */
+  @Test
+  def remoteModifiersCacheClean(): Unit = {
+    val blocksNumber = 520
+    val blocks = generateSidechainBlockSeq(blocksNumber, sidechainTransactionsCompanion, params, Some(genesisBlock.id))
+    var blockIndex = 0
+    val blockToApply = 3
+
+    // History appending check
+    Mockito.when(history.append(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
+       Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq()))
+    })
+
+    Mockito.when(history.applicableTry(ArgumentMatchers.any[SidechainBlock])).thenAnswer(answer => {
+      val block: SidechainBlock = answer.getArgument(0)
+
+      if (block.id == blocks(blockIndex).id && blockIndex < blockToApply) {
+        blockIndex += 1
+        Success(Unit)
+      } else
+        Failure(new RecoverableModifierError("Parent block is not in history yet"))
+    })
+
+    val eventListener = TestProbe()
+    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[(Seq[SidechainBlock], Seq[SidechainBlock])]])
+
+    mockedNodeViewHolderRef ! ModifiersFromRemote(blocks)
+
+    eventListener.fishForMessage(timeout.duration) {
+      case m =>
+        m match {
+          case ModifiersProcessingResult(applied, cleared) => {
+            assertEquals("Different number of applied blocks", blockToApply, applied.length)
+            assertEquals("Different number of cleared blocks from cached", (blocksNumber - blockToApply - maxModifiersCacheSize), cleared.length)
+            true
+          }
+          case _ => false
+        }
+    }
   }
 }

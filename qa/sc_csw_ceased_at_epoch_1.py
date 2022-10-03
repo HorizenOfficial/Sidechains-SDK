@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
+import logging
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import fail, assert_equal, assert_true, assert_false, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain
+    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, certificate_field_config_csw_enabled
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, generate_next_blocks, generate_next_block, if_csws_were_generated
 from SidechainTestFramework.sc_forging_util import *
@@ -37,7 +38,6 @@ Test:
         - Create CSW proofs and send CSWs to MC. Check the results.
 """
 class SCCswCeasedAtEpoch1(SidechainTestFramework):
-
     sidechain_id = None
     sc_withdrawal_epoch_length = 10
     MaxWithdrawalReqsNumPerEpoch = 3999
@@ -54,7 +54,7 @@ class SCCswCeasedAtEpoch1(SidechainTestFramework):
             cert_submitter_enabled=False,  # disable submitter
             cert_signing_enabled=False  # disable signer
         )
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length), sc_node_configuration)
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 1000, self.sc_withdrawal_epoch_length, csw_enabled=True), sc_node_configuration)
         self.sidechain_id = bootstrap_sidechain_nodes(self.options, network).sidechain_id
 
     def sc_setup_nodes(self):
@@ -65,6 +65,28 @@ class SCCswCeasedAtEpoch1(SidechainTestFramework):
         self.sync_all()
         mc_node = self.nodes[0]
         sc_node = self.sc_nodes[0]
+
+        # Check CSW is enabled on SC node
+        is_csw_enabled = sc_node.csw_isCSWEnabled()["result"]["cswEnabled"]
+        assert_true(is_csw_enabled, "Ceased Sidechain Withdrawal expected to be enabled.")
+
+        # Checks that CSW is enabled in Sidechain creation transaction on Mainchain
+        mc_block_height = mc_node.getblockcount()
+        mc_block = mc_node.getblock(str(mc_block_height))
+        mc_sc_creation_tx_id = mc_block["tx"][1]
+        mc_sc_creation_tx = mc_node.getrawtransaction(mc_sc_creation_tx_id, 1)
+
+        vsc_ccout_ = mc_sc_creation_tx["vsc_ccout"][0]
+        assert_true(vsc_ccout_["vFieldElementCertificateFieldConfig"] == certificate_field_config_csw_enabled,
+                    "Custom Field Elements Configuration in MC are wrong. Expected: " + format(certificate_field_config_csw_enabled) +
+                    ", actual: " + format(vsc_ccout_["vFieldElementCertificateFieldConfig"]))
+        assert_true("wCeasedVk" in vsc_ccout_, "CSW verification key should be present")
+
+        # Checks that Sidechain creation transaction is in SC block
+        mc_block_hash = mc_sc_creation_tx["blockhash"]
+        sc_block_id = sc_node.block_best()["result"]["block"]["id"]
+        check_mcreference_presence(mc_block_hash, sc_block_id, sc_node)
+
 
         # ******************** EPOCH 0 START ********************
 
@@ -123,10 +145,10 @@ class SCCswCeasedAtEpoch1(SidechainTestFramework):
 
         # Generate 8 more MC blocks to finish the first withdrawal epoch, then generate 1 more SC block to sync with MC.
         we0_end_mcblock_hash = mc_node.generate(epoch_mc_blocks_left)[-1]
-        print("End mc block hash in withdrawal epoch 0 = " + we0_end_mcblock_hash)
+        logging.info("End mc block hash in withdrawal epoch 0 = " + we0_end_mcblock_hash)
         we0_end_mcblock_json = mc_node.getblock(we0_end_mcblock_hash)
         we0_end_epoch_cum_sc_tx_comm_tree_root = we0_end_mcblock_json["scCumTreeHash"]
-        print("End cum sc tx cum comm tree root hash in withdrawal epoch 0 = " + we0_end_epoch_cum_sc_tx_comm_tree_root)
+        logging.info("End cum sc tx cum comm tree root hash in withdrawal epoch 0 = " + we0_end_epoch_cum_sc_tx_comm_tree_root)
         sc_block_id_1 = generate_next_block(sc_node, "first node")
         check_mcreferencedata_presence(we0_end_mcblock_hash, sc_block_id_1, sc_node)
 
@@ -191,7 +213,7 @@ class SCCswCeasedAtEpoch1(SidechainTestFramework):
         assert_equal("CEASED", sc_info['state'], "Sidechain expected to be ceased.")
         # Same for SC
         has_ceased = sc_node.csw_hasCeased()["result"]["state"]
-        assert_true("Sidechain expected to be ceased.", has_ceased)
+        assert_true(has_ceased, "Sidechain expected to be ceased.")
 
         # Check SC node owned boxes:
         # 2 FTs must be spent from wallet perspective
@@ -207,6 +229,10 @@ class SCCswCeasedAtEpoch1(SidechainTestFramework):
         for opened_box_id in opened_box_ids:
             assert_false(any(box["id"] == opened_box_id for box in all_zen_boxes),
                         "Opened box appeared in the wallet: " + opened_box_id)
+
+        # Check CSW is enabled on SC node
+        is_csw_enabled = sc_node.csw_isCSWEnabled()["result"]["cswEnabled"]
+        assert_true(is_csw_enabled, "Ceased Sidechain Withdrawal expected to be enabled.")
 
         # Check CSW available boxes on SC node
         csw_boxes = [ft_box_1, ft_box_2, ft_box_3, ft_box_4]
@@ -250,7 +276,7 @@ class SCCswCeasedAtEpoch1(SidechainTestFramework):
         # Wait for proofs generation completion.
         attempts = 100
         while not if_csws_were_generated(sc_node, csw_box_ids, allow_absent=True) and attempts > 0:
-            print("Wait for CSW proofs creation completion...")
+            logging.info("Wait for CSW proofs creation completion...")
             time.sleep(10)
             attempts -= 1
 
@@ -285,9 +311,9 @@ class SCCswCeasedAtEpoch1(SidechainTestFramework):
             sigRawtx = mc_node.signrawtransaction(funded_tx['hex'], None, None, "NONE")
             finalRawtx = mc_node.sendrawtransaction(sigRawtx['hex'])
 
-            print("sent csw 1 {} retrieving {} coins on MC node".format(finalRawtx, sc_csws[0]['amount']))
+            logging.info("sent csw 1 {} retrieving {} coins on MC node".format(finalRawtx, sc_csws[0]['amount']))
 
-            print("Check csw is in mempool...")
+            logging.info("Check csw is in mempool...")
             assert_true(finalRawtx in mc_node.getrawmempool())
 
             # MC has a limit per number of CSW in the mempool in regtest: ScMaxNumberOfCswInputsInMempool = 5

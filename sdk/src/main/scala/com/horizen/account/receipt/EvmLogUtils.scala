@@ -4,13 +4,13 @@ package com.horizen.account.receipt
 import com.horizen.evm.interop.EvmLog
 import com.horizen.evm.utils.{Address, Hash}
 import org.web3j.rlp.{RlpDecoder, RlpEncoder, RlpList, RlpString, RlpType}
-import scorex.core.serialization.ScorexSerializer
+import sparkz.core.serialization.SparkzSerializer
 import scorex.util.serialization.{Reader, Writer}
 
 import java.util
 
 
-object EvmLogUtils extends ScorexSerializer[EvmLog] {
+object EvmLogUtils extends SparkzSerializer[EvmLog] {
   
   def rlpEncode(r: EvmLog): Array[Byte] = {
     val values = asRlpValues(r)

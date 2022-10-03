@@ -2,8 +2,7 @@ package com.horizen.storage
 
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.SidechainTypes
-import com.horizen.utils.{ByteArrayWrapper, CswData, CswDataSerializer, ListSerializer, Pair => JPair}
-import scorex.crypto.hash.Blake2b256
+import com.horizen.utils.{ByteArrayWrapper, CswData, CswDataSerializer, ListSerializer, Utils, Pair => JPair}
 import scorex.util.ScorexLogging
 
 import java.util.{ArrayList => JArrayList}
@@ -12,25 +11,21 @@ import scala.collection.mutable.ListBuffer
 import scala.compat.java8.OptionConverters._
 import scala.util.{Failure, Success, Try}
 
-class SidechainWalletCswDataStorage(storage: Storage) extends ScorexLogging with SidechainTypes {
+class SidechainWalletCswDataStorage(storage: Storage) extends ScorexLogging with SidechainStorageInfo with SidechainTypes {
   require(storage != null, "Storage must be NOT NULL.")
 
   private val cswDataListSerializer = new ListSerializer[CswData](CswDataSerializer)
 
-  private[horizen] val withdrawalEpochKey = calculateKey("withdrawalEpoch".getBytes)
+  private[horizen] val withdrawalEpochKey = Utils.calculateKey("withdrawalEpoch".getBytes)
 
   private val undefinedWithdrawalEpochCounter: Int = -1
 
   private[horizen] def getWithdrawalEpochCounterKey(withdrawalEpoch: Int): ByteArrayWrapper = {
-    calculateKey(Bytes.concat("withdrawalEpochCounter".getBytes, Ints.toByteArray(withdrawalEpoch)))
+    Utils.calculateKey(Bytes.concat("withdrawalEpochCounter".getBytes, Ints.toByteArray(withdrawalEpoch)))
   }
 
   private[horizen] def getCswDataKey(withdrawalEpoch: Int, counter: Int): ByteArrayWrapper = {
-    calculateKey(Bytes.concat("withdrawalRequests".getBytes, Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
-  }
-
-  private[horizen] def calculateKey(boxId: Array[Byte]): ByteArrayWrapper = {
-    new ByteArrayWrapper(Blake2b256.hash(boxId))
+    Utils.calculateKey(Bytes.concat("withdrawalRequests".getBytes, Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
   }
 
   def getWithdrawalEpochCounter(epoch: Int): Int = {
@@ -115,7 +110,7 @@ class SidechainWalletCswDataStorage(storage: Storage) extends ScorexLogging with
     this
   }
 
-  def lastVersionId: Option[ByteArrayWrapper] = {
+  override def lastVersionId: Option[ByteArrayWrapper] = {
     storage.lastVersionID().asScala
   }
 

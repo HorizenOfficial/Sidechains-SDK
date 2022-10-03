@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import logging
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -130,10 +131,10 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
 
         # Generate 9 more MC block to finish the first withdrawal epoch, then generate 3 more SC block to sync with MC.
         we0_end_mcblock_hash = mc_node.generate(9)[8]
-        print("End mc block hash in withdrawal epoch 0 = " + we0_end_mcblock_hash)
+        logging.info("End mc block hash in withdrawal epoch 0 = " + we0_end_mcblock_hash)
         we0_end_mcblock_json = mc_node.getblock(we0_end_mcblock_hash)
         we0_end_epoch_cum_sc_tx_comm_tree_root = we0_end_mcblock_json["scCumTreeHash"]
-        print("End cum sc tx commtree root hash in withdrawal epoch 0 = " + we0_end_epoch_cum_sc_tx_comm_tree_root)
+        logging.info("End cum sc tx commtree root hash in withdrawal epoch 0 = " + we0_end_epoch_cum_sc_tx_comm_tree_root)
         scblock_id2 = generate_next_block(sc_node1, "first node")
         check_mcreferencedata_presence(we0_end_mcblock_hash, scblock_id2, sc_node1)
 
@@ -145,7 +146,7 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
         # Wait until Certificate will appear in MC node mempool
         time.sleep(15)
         while mc_node.getmempoolinfo()["size"] == 0 and sc_node1.submitter_isCertGenerationActive()["result"]["state"]:
-            print("Wait for certificate in mc mempool...")
+            logging.info("Wait for certificate in mc mempool...")
             time.sleep(2)
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
 
@@ -158,7 +159,7 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
         assert_equal(1, len(mc_node.getblock(we1_2_mcblock_hash)["tx"]), "MC block expected to contain 1 transaction.")
         assert_equal(1, len(mc_node.getblock(we1_2_mcblock_hash)["cert"]), "MC block expected to contain 1 Certificate.")
         assert_equal(we0_cert_hash, mc_node.getblock(we1_2_mcblock_hash)["cert"][0], "MC block expected to contain certificate.")
-        print("MC block with withdrawal certificate for epoch 0 = {0}\n".format(str(mc_node.getblock(we1_2_mcblock_hash, False))))
+        logging.info("MC block with withdrawal certificate for epoch 0 = {0}\n".format(str(mc_node.getblock(we1_2_mcblock_hash, False))))
 
         # Generate SC block and verify that certificate is synced back
         scblock_id4 = generate_next_blocks(sc_node1, "first node", 1)[0]
@@ -169,7 +170,7 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
         assert_equal(7, mbrefdata["topQualityCertificate"]["quality"], "Certificate quality is wrong.")
 
         # Exclude SC Node 4 from the network
-        print("Disconnecting SC Node 4 from the network.")
+        logging.info("Disconnecting SC Node 4 from the network.")
         disconnect_sc_nodes_bi(self.sc_nodes, 2, 3)
         # Check network configuration
         assert_equal(1, len(sc_connected_peers(sc_node1)), "Sc Node 1 expect to have only 1 connection.")
@@ -179,7 +180,7 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
 
         # Generate 8 more MC block to finish the second withdrawal epoch, then generate 3 more SC block to sync with MC.
         we1_end_mcblock_hash = mc_node.generate(8)[7]
-        print("End mc block hash in withdrawal epoch 1 = " + we1_end_mcblock_hash)
+        logging.info("End mc block hash in withdrawal epoch 1 = " + we1_end_mcblock_hash)
         scblock_id5 = generate_next_block(sc_node1, "first node")
         check_mcreferencedata_presence(we1_end_mcblock_hash, scblock_id5, sc_node1)
 
@@ -191,7 +192,7 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
         # Wait and check that certificate generation has not started at all.
         time.sleep(15)
         while mc_node.getmempoolinfo()["size"] == 0 and sc_node1.submitter_isCertGenerationActive()["result"]["state"]:
-            print("Wait for possible certificate in mc mempool...")
+            logging.info("Wait for possible certificate in mc mempool...")
             time.sleep(2)
 
         assert_equal(0, mc_node.getmempoolinfo()["size"], "Certificate was added to Mc node mempool.")
@@ -205,7 +206,7 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
         # Wait until Certificate will appear in MC node mempool
         time.sleep(20)
         while mc_node.getmempoolinfo()["size"] == 0 and sc_node1.submitter_isCertGenerationActive()["result"]["state"]:
-            print("Wait for certificate in mc mempool...")
+            logging.info("Wait for certificate in mc mempool...")
             time.sleep(2)
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mmepool.")
 
@@ -219,7 +220,7 @@ class SCCertSubmissionDecentralization(SidechainTestFramework):
                      "MC block expected to contain 1 Certificate.")
         assert_equal(we1_cert_hash, mc_node.getblock(we2_2_mcblock_hash)["cert"][0],
                      "MC block expected to contain certificate.")
-        print("MC block with withdrawal certificate for epoch 1 = {0}\n".format(
+        logging.info("MC block with withdrawal certificate for epoch 1 = {0}\n".format(
             str(mc_node.getblock(we2_2_mcblock_hash, False))))
 
         # Generate SC block and verify that certificate is synced back

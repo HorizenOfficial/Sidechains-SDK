@@ -2,7 +2,6 @@ import json
 
 
 # execute a transaction/createEIP1559Transaction call
-import pprint
 
 
 def createEIP1559Transaction(sidechainNode, *, fromAddress=None, toAddress=None, nonce=None, gasLimit,

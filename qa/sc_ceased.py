@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import logging
 import time
 import math
 
@@ -98,7 +99,7 @@ class SCCeased(SidechainTestFramework):
         sc_block_id = generate_next_block(sc_node, "first node")
         check_mcreference_presence(mcblock_hash, sc_block_id, sc_node)
         has_ceased = sc_node.csw_hasCeased()["result"]["state"]
-        assert_true("Sidechain expected to be ceased.", has_ceased)
+        assert_true(has_ceased, "Sidechain expected to be ceased.")
 
         # Try to generate 1 SC block after SC has ceased.
         # Node must fail on apply block, because of ceased SC.
@@ -106,7 +107,7 @@ class SCCeased(SidechainTestFramework):
         try:
             generate_next_block(sc_node, "first node")
         except SCAPIException as e:
-            print("Expected SCAPIException: " + e.error)
+            logging.info("Expected SCAPIException: " + e.error)
             error_occur = True
 
         assert_true(error_occur,

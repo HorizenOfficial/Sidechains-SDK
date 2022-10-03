@@ -7,7 +7,7 @@ import com.horizen.proposition.{MCPublicKeyHashProposition, MCPublicKeyHashPropo
 import com.horizen.serialization.Views
 import org.web3j.abi.datatypes.StaticStruct
 import org.web3j.abi.datatypes.generated.{Bytes20, Uint256}
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
+import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
 import java.math.BigInteger
@@ -16,7 +16,7 @@ import java.math.BigInteger
 case class WithdrawalRequest(proposition: MCPublicKeyHashProposition, value: java.math.BigInteger) extends BytesSerializable with ABIEncodable[StaticStruct] {
   override type M = WithdrawalRequest
 
-  override def serializer: ScorexSerializer[WithdrawalRequest] = WithdrawalRequestSerializer
+  override def serializer: SparkzSerializer[WithdrawalRequest] = WithdrawalRequestSerializer
 
   val valueInZennies: Long = ZenWeiConverter.convertWeiToZennies(value)
 
@@ -26,7 +26,7 @@ case class WithdrawalRequest(proposition: MCPublicKeyHashProposition, value: jav
 
 }
 
-object WithdrawalRequestSerializer extends ScorexSerializer[WithdrawalRequest] {
+object WithdrawalRequestSerializer extends SparkzSerializer[WithdrawalRequest] {
   override def serialize(obj: WithdrawalRequest, writer: Writer): Unit = {
     MCPublicKeyHashPropositionSerializer.getSerializer.serialize(obj.proposition, writer)
     val byteArray = obj.value.toByteArray

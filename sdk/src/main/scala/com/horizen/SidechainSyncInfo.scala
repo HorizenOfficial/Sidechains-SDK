@@ -1,12 +1,12 @@
 package com.horizen
 
-import com.horizen.block.{SidechainBlock, SidechainBlockBase}
-import scorex.core.NodeViewModifier
-import scorex.core.consensus.History.ModifierIds
+import com.horizen.block.SidechainBlockBase
+import sparkz.core.NodeViewModifier
+import sparkz.core.consensus.History.ModifierIds
 import scorex.util.ModifierId
-import scorex.core.consensus.SyncInfo
-import scorex.core.network.message.SyncInfoMessageSpec
-import scorex.core.serialization.ScorexSerializer
+import sparkz.core.consensus.SyncInfo
+import sparkz.core.network.message.SyncInfoMessageSpec
+import sparkz.core.serialization.SparkzSerializer
 import scorex.util.serialization.{Reader, Writer}
 import scorex.util.{bytesToId, idToBytes}
 
@@ -15,7 +15,7 @@ import scorex.util.{bytesToId, idToBytes}
 case class SidechainSyncInfo(knownBlockIds: Seq[ModifierId]) extends SyncInfo {
   override type M = SidechainSyncInfo
 
-  override def serializer: ScorexSerializer[SidechainSyncInfo] = SidechainSyncInfoSerializer
+  override def serializer: SparkzSerializer[SidechainSyncInfo] = SidechainSyncInfoSerializer
 
   // get most recent block
   override def startingPoints: ModifierIds = {
@@ -27,7 +27,7 @@ case class SidechainSyncInfo(knownBlockIds: Seq[ModifierId]) extends SyncInfo {
 }
 
 
-object SidechainSyncInfoSerializer extends ScorexSerializer[SidechainSyncInfo] {
+object SidechainSyncInfoSerializer extends SparkzSerializer[SidechainSyncInfo] {
 
   override def serialize(obj: SidechainSyncInfo, w: Writer): Unit = {
     w.putInt(obj.knownBlockIds.size)

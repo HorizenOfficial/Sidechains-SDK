@@ -31,10 +31,9 @@ import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
 import org.web3j.crypto.Sign.SignatureData
 import org.web3j.crypto.{SignedRawTransaction, TransactionEncoder}
 import org.web3j.utils.Numeric
-import scorex.core.NodeViewHolder
-import scorex.core.NodeViewHolder.CurrentView
+import sparkz.core.NodeViewHolder
+import sparkz.core.NodeViewHolder.CurrentView
 import scorex.util.{ModifierId, ScorexLogging}
-
 import java.math.BigInteger
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters.seqAsJavaListConverter

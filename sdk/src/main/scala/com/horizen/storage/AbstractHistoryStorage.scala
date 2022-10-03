@@ -5,19 +5,19 @@ import com.horizen.chain.{AbstractFeePaymentsInfo, ActiveChain, MainchainBlockRe
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.NetworkParams
 import com.horizen.utils.ByteArrayWrapper
-import scorex.core.consensus.ModifierSemanticValidity
-import scorex.core.serialization.ScorexSerializer
+import sparkz.core.consensus.ModifierSemanticValidity
 import com.horizen.transaction.Transaction
 import scorex.crypto.hash.Blake2b256
 import scorex.util.{ModifierId, ScorexLogging, bytesToId, idToBytes}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.compat.java8.OptionConverters._
-import scala.util.{Failure, Random, Success, Try}
+import scala.util.{Failure, Success, Try}
 import com.horizen.utils._
 
 import java.util.{ArrayList => JArrayList, List => JList}
 import com.horizen.utils.{Pair => JPair}
+import sparkz.core.serialization.SparkzSerializer
 
 trait SidechainBlockInfoProvider {
   def blockInfoById(blockId: ModifierId): SidechainBlockInfo
@@ -29,11 +29,13 @@ abstract class AbstractHistoryStorage[
   S <: AbstractHistoryStorage[PM, FPI, S]
   ]  (
     storage: Storage,
-    blockSerializer: ScorexSerializer[PM],
-    feePaymentsInfoSerializer: ScorexSerializer[FPI],
+    blockSerializer: SparkzSerializer[PM],
+    feePaymentsInfoSerializer: SparkzSerializer[FPI],
     params: NetworkParams
   )
-  extends SidechainBlockInfoProvider with ScorexLogging {
+  extends SidechainBlockInfoProvider
+    with SidechainStorageInfo
+    with ScorexLogging {
   this: S =>
   // Version - RandomBytes(32)
 
@@ -72,12 +74,6 @@ abstract class AbstractHistoryStorage[
   private def blockInfoKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"blockInfo$blockId"))
 
   protected def feePaymentsInfoKey(blockId: ModifierId): ByteArrayWrapper = new ByteArrayWrapper(Blake2b256(s"feePaymentsInfo$blockId"))
-
-  private def nextVersion: Array[Byte] = {
-    val version = new Array[Byte](32)
-    Random.nextBytes(version)
-    version
-  }
 
   def height: Int = activeChain.height
 
@@ -150,7 +146,7 @@ abstract class AbstractHistoryStorage[
 
   def activeChainBlockId(height: Int): Option[ModifierId] = activeChain.idByHeight(height)
 
-  def activeChainAfter(blockId: ModifierId): Seq[ModifierId] = activeChain.chainAfter(blockId)
+  def activeChainAfter(blockId: ModifierId, limit: Option[Int]): Seq[ModifierId] = activeChain.chainAfter(blockId, limit)
 
   def getSidechainBlockContainingMainchainHeader(mainchainHeaderHash: Array[Byte]): Option[PM] = {
     activeChain.idByMcHeader(byteArrayToMainchainHeaderHash(mainchainHeaderHash)).flatMap(blockById)
@@ -259,7 +255,7 @@ abstract class AbstractHistoryStorage[
     toUpdate.add(new JPair(new ByteArrayWrapper(idToBytes(block.id)), new ByteArrayWrapper(block.bytes)))
 
     storage.update(
-      new ByteArrayWrapper(nextVersion),
+      new ByteArrayWrapper(Utils.nextVersion),
       toUpdate,
       new JArrayList[ByteArrayWrapper]())
 
@@ -268,7 +264,7 @@ abstract class AbstractHistoryStorage[
 
   def updateFeePaymentsInfo(blockId: ModifierId, feePaymentsInfo: FPI): Try[S] = Try {
     storage.update(
-      nextVersion,
+      new ByteArrayWrapper(Utils.nextVersion),
       java.util.Arrays.asList(new JPair(new ByteArrayWrapper(feePaymentsInfoKey(blockId)), new ByteArrayWrapper(feePaymentsInfo.bytes))),
       new JArrayList[ByteArrayWrapper]()
     )
@@ -291,7 +287,7 @@ abstract class AbstractHistoryStorage[
     val blockInfo = oldInfo.copy(semanticValidity = status)
 
     storage.update(
-      new ByteArrayWrapper(nextVersion),
+      new ByteArrayWrapper(Utils.nextVersion),
       java.util.Arrays.asList(new JPair(new ByteArrayWrapper(blockInfoKey(block.id)), new ByteArrayWrapper(blockInfo.bytes))),
       new JArrayList()
     )
@@ -300,7 +296,7 @@ abstract class AbstractHistoryStorage[
 
   def setAsBestBlock(block: PM, blockInfo: SidechainBlockInfo): Try[S] = Try {
     storage.update(
-      new ByteArrayWrapper(nextVersion),
+      new ByteArrayWrapper(Utils.nextVersion),
       java.util.Arrays.asList(new JPair(bestBlockIdKey, new ByteArrayWrapper(idToBytes(block.id)))),
       new JArrayList()
     )
@@ -311,4 +307,8 @@ abstract class AbstractHistoryStorage[
   }
 
   def isEmpty: Boolean = storage.isEmpty
+
+  override def lastVersionId : Option[ByteArrayWrapper] = {
+    storage.lastVersionID().asScala
+  }
 }

@@ -15,31 +15,43 @@ import org.junit.Assert._
 import org.mockito.Mockito
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.core.network.{Broadcast, BroadcastExceptOf, ConnectedPeer, ConnectionDirection, ConnectionId, SendToPeer, SendToRandom}
-import scorex.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, SendToNetwork}
-import scorex.core.network.NetworkControllerSharedMessages.ReceivableMessages.DataFromPeer
-import scorex.core.network.peer.PenaltyType
-import scorex.core.settings.NetworkSettings
+import sparkz.core.network.{Broadcast, BroadcastExceptOf, ConnectedPeer, ConnectionDirection, ConnectionId, SendToPeer, SendToRandom}
+import sparkz.core.network.NetworkController.ReceivableMessages.{PenalizePeer, RegisterMessageSpecs, SendToNetwork}
+import sparkz.core.network.message.{Message, MessageSerializer}
+import sparkz.core.network.peer.PenaltyType
+import sparkz.core.settings.NetworkSettings
 
 import java.net.InetSocketAddress
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext
 import scala.language.postfixOps
 import scala.concurrent.duration._
+import scala.util.Success
 
 class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
 
   implicit lazy val actorSystem: ActorSystem = ActorSystem("submitter-manager-actor-test")
-  implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("scorex.executionContext")
+  implicit val executionContext: ExecutionContext = actorSystem.dispatchers.lookup("sparkz.executionContext")
   implicit val timeout: Timeout = 100 milliseconds
 
   val pubKeysNumber = 5
   val networkSettings: NetworkSettings = getMockedSettings(5 seconds)
   val params: NetworkParams = getParams(pubKeysNumber)
+  val getCertificateSignaturesSpec = new GetCertificateSignaturesSpec(pubKeysNumber)
+  val certificateSignaturesSpec = new CertificateSignaturesSpec(pubKeysNumber)
+  val messageSerializer = new MessageSerializer(Seq(getCertificateSignaturesSpec, certificateSignaturesSpec), networkSettings.magicBytes, networkSettings.messageLengthBytesLimit)
+
+  def roundTrip(msg: Message[_]): Message[_] = {
+    messageSerializer.deserialize(messageSerializer.serialize(msg), msg.source) match {
+      case Success(Some(value)) => value
+    }
+  }
 
   private def getMockedSettings(timeoutDuration: FiniteDuration): NetworkSettings = {
     val mockedSettings: NetworkSettings = mock[NetworkSettings]
     Mockito.when(mockedSettings.syncTimeout).thenReturn(Some(timeoutDuration))
+    Mockito.when(mockedSettings.magicBytes).thenReturn(Array[Byte](12, 34, 56, 78))
+    Mockito.when(mockedSettings.messageLengthBytesLimit).thenReturn(16777216)
 
     mockedSettings
   }
@@ -94,12 +106,11 @@ class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
     })
 
     val peer: ConnectedPeer = mock[ConnectedPeer]
-    val getCertificateSignaturesSpec = new GetCertificateSignaturesSpec(pubKeysNumber)
     val invData: InvUnknownSignatures = InvUnknownSignatures(Seq(1, 2, 4))
 
 
     // Test 1: getCertificateSignaturesSpec when outside the submission window -> do nothing
-    certificateSignaturesManagerRef ! DataFromPeer(getCertificateSignaturesSpec, invData, peer)
+    certificateSignaturesManagerRef ! roundTrip(Message(getCertificateSignaturesSpec, Right(invData), Some(peer)))
     // Expect no answer to be send back to the peer
     networkController.expectNoMessage(timeout.duration)
 
@@ -110,7 +121,7 @@ class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
     val noKnownSigs: ArrayBuffer[CertificateSignatureInfo] = ArrayBuffer()
     statusOpt = Some(SignaturesStatus(referencedEpoch, messageToSign, noKnownSigs))
 
-    certificateSignaturesManagerRef ! DataFromPeer(getCertificateSignaturesSpec, invData, peer)
+    certificateSignaturesManagerRef ! roundTrip(Message(getCertificateSignaturesSpec, Right(invData), Some(peer)))
     // Expect no answer to be send back to the peer
     networkController.expectNoMessage(timeout.duration)
 
@@ -122,7 +133,7 @@ class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
     val knownSigs: ArrayBuffer[CertificateSignatureInfo] = ArrayBuffer(invData.indexes.map(idx => CertificateSignatureInfo(idx, secret.sign(messageToSign))) : _*)
     statusOpt = Some(SignaturesStatus(referencedEpoch, messageToSign, knownSigs))
 
-    certificateSignaturesManagerRef ! DataFromPeer(getCertificateSignaturesSpec, invData, peer)
+    certificateSignaturesManagerRef ! roundTrip(Message(getCertificateSignaturesSpec, Right(invData), Some(peer)))
     // Expect an answer to be send back to the peer
     val msg: SendToNetwork = networkController.expectMsgClass(timeout.duration, classOf[SendToNetwork])
 
@@ -224,7 +235,6 @@ class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
       Props(new CertificateSignaturesManager(networkControllerRef, submitterRef, params, networkSettings)))
 
     val peer: ConnectedPeer = mock[ConnectedPeer]
-    val certificateSignaturesSpec = new CertificateSignaturesSpec(pubKeysNumber)
     val messageToSign: Array[Byte] = FieldElementFixture.generateFieldElement()
     val keyGenerator = SchnorrKeyGenerator.getInstance()
     val secret = keyGenerator.generateSecret("seed1".getBytes())
@@ -234,21 +244,21 @@ class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
 
     // Test 1: CertificateSignaturesSpec arrives when Submitter is outside the Submission window -> no actions expected
     signatureProcessingStatusRes = SubmitterIsOutsideSubmissionWindow
-    certificateSignaturesManagerRef ! DataFromPeer(certificateSignaturesSpec, knownSignatures, peer)
+    certificateSignaturesManagerRef ! roundTrip(Message(certificateSignaturesSpec, Right(knownSignatures), Some(peer)))
     // Expect no actions
     networkController.expectNoMessage(timeout.duration)
 
 
     // Test 2: CertificateSignaturesSpec arrives with all known signatures -> no actions expected
     signatureProcessingStatusRes = KnownSignature
-    certificateSignaturesManagerRef ! DataFromPeer(certificateSignaturesSpec, knownSignatures, peer)
+    certificateSignaturesManagerRef ! roundTrip(Message(certificateSignaturesSpec, Right(knownSignatures), Some(peer)))
     // Expect no actions
     networkController.expectNoMessage(timeout.duration)
 
 
     // Test 3: CertificateSignaturesSpec arrives message to sign from another chain -> no actions expected
     signatureProcessingStatusRes = DifferentMessageToSign
-    certificateSignaturesManagerRef ! DataFromPeer(certificateSignaturesSpec, knownSignatures, peer)
+    certificateSignaturesManagerRef ! roundTrip(Message(certificateSignaturesSpec, Right(knownSignatures), Some(peer)))
     // Expect no actions
     networkController.expectNoMessage(timeout.duration)
 
@@ -259,7 +269,7 @@ class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
     })
 
     signatureProcessingStatusRes = InvalidPublicKeyIndex
-    certificateSignaturesManagerRef ! DataFromPeer(certificateSignaturesSpec, knownSignatures, peer)
+    certificateSignaturesManagerRef ! roundTrip(Message(certificateSignaturesSpec, Right(knownSignatures), Some(peer)))
     // Expect for penalty message
     var penalizeMsg: PenalizePeer = networkController.expectMsgClass(timeout.duration, classOf[PenalizePeer])
     assertEquals("Different remote address expected.", peer.connectionId.remoteAddress, penalizeMsg.address)
@@ -270,7 +280,7 @@ class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
 
     // Test 5: CertificateSignaturesSpec arrives with invalid signature -> peer penalizing expected
     signatureProcessingStatusRes = InvalidSignature
-    certificateSignaturesManagerRef ! DataFromPeer(certificateSignaturesSpec, knownSignatures, peer)
+    certificateSignaturesManagerRef ! roundTrip(Message(certificateSignaturesSpec, Right(knownSignatures), Some(peer)))
     // Expect for penalty message
     penalizeMsg = networkController.expectMsgClass(timeout.duration, classOf[PenalizePeer])
     assertEquals("Different remote address expected.", peer.connectionId.remoteAddress, penalizeMsg.address)
@@ -296,7 +306,7 @@ class CertificateSignaturesManagerTest extends JUnitSuite with MockitoSugar {
       TestActor.KeepRunning
     })
 
-    certificateSignaturesManagerRef ! DataFromPeer(certificateSignaturesSpec, knownSignatures, peer)
+    certificateSignaturesManagerRef ! roundTrip(Message(certificateSignaturesSpec, Right(knownSignatures), Some(peer)))
     // Expect an answer to be send back to the peer
     val msg: SendToNetwork = networkController.expectMsgClass(timeout.duration, classOf[SendToNetwork])
 

@@ -1,5 +1,5 @@
 from enum import Enum
-from pprint import pprint
+import logging
 
 from SidechainTestFramework.account.address_util import format_eoa, format_evm
 from SidechainTestFramework.account.evm_util import CallMethod
@@ -114,10 +114,10 @@ def eoa_transaction(node, *,
             if response['result'] is not None and len(response['result']) > 0:
                 return response['result']
             else:
-                print("No return data in static_call: {}".format(str(response)))
+                logging.info("No return data in static_call: {}".format(str(response)))
                 return None
         else:
-            pprint(response)
+            logging.info(response)
             raise RuntimeError("No result in static call, thus error")
 
     if call_method == CallMethod.RPC_LEGACY:

@@ -1,6 +1,6 @@
 package com.horizen.account.utils
 
-import com.horizen.account.FeeUtils.{GAS_LIMIT, INITIAL_BASE_FEE, calculateNextBaseFee}
+import com.horizen.account.utils.FeeUtils.{GAS_LIMIT, INITIAL_BASE_FEE, calculateNextBaseFee}
 import com.horizen.account.block.AccountBlock
 import org.junit.Assert.assertTrue
 import org.junit.Test

@@ -13,12 +13,12 @@ import com.horizen.params.NetworkParams
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
 import com.horizen.utils.TimeToEpochUtils
-import scorex.core.NodeViewHolder.{CurrentView, ReceivableMessages}
-import scorex.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
-import scorex.core.transaction.MemoryPool
-import scorex.core.transaction.state.MinimalState
-import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ScorexLogging
+import sparkz.core.NodeViewHolder.{CurrentView, ReceivableMessages}
+import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedModifier
+import sparkz.core.transaction.MemoryPool
+import sparkz.core.transaction.state.MinimalState
+import sparkz.core.utils.NetworkTimeProvider
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -44,7 +44,7 @@ abstract class AbstractForger[
 
   type View = CurrentView[HIS, MS, VL, MP]
 
-  val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
+  val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
 
   private val consensusMillisecondsInSlot: Int = params.consensusSecondsInSlot * 1000
@@ -56,7 +56,10 @@ abstract class AbstractForger[
       case Some(_) => log.info("Automatically forging already had been started")
       case None => {
         val newTimer = new Timer()
-        newTimer.scheduleAtFixedRate(forgingInitiatorTimerTask, 0, consensusMillisecondsInSlot)
+        val currentTime: Long = timeProvider.time() / 1000
+        val delay = TimeToEpochUtils.secondsRemainingInSlot(params, currentTime) * 1000
+        newTimer.schedule(forgingInitiatorTimerTask, 0L)
+        newTimer.scheduleAtFixedRate(forgingInitiatorTimerTask, delay, consensusMillisecondsInSlot)
         timerOpt = Some(newTimer)
         log.info("Automatically forging had been started")
       }
@@ -80,6 +83,11 @@ abstract class AbstractForger[
 
   override def preStart(): Unit = {
     context.system.eventStream.subscribe(self, SidechainAppEvents.SidechainApplicationStart.getClass)
+  }
+
+  override def postStop(): Unit = {
+    log.debug("Forger actor is stopping...")
+    super.postStop()
   }
 
   override def receive: Receive = {
@@ -117,25 +125,24 @@ abstract class AbstractForger[
   }
 
   protected def processTryForgeNextBlockForEpochAndSlotMessage: Receive = {
-    case TryForgeNextBlockForEpochAndSlot(epochNumber, slotNumber) => tryToCreateBlockForEpochAndSlot(epochNumber, slotNumber, Some(sender()), timeout)
-  }
+    case obj: TryForgeNextBlockForEpochAndSlot[TX] =>
+      tryToCreateBlockForEpochAndSlot(obj.consensusEpochNumber, obj.consensusSlotNumber, Some(sender()), timeout, obj.forcedTx)  }
+
 
   protected def tryToCreateBlockNow(): Unit = {
     val currentTime: Long = timeProvider.time() / 1000
     val epochAndSlot = TimeToEpochUtils.timestampToEpochAndSlot(params, currentTime)
     log.info(s"Send TryForgeNextBlockForEpochAndSlot message with epoch and slot ${epochAndSlot}")
-    tryToCreateBlockForEpochAndSlot(epochAndSlot.epochNumber, epochAndSlot.slotNumber, None, timeout)
-  }
+    tryToCreateBlockForEpochAndSlot(epochAndSlot.epochNumber, epochAndSlot.slotNumber, None, timeout, Seq())  }
 
-  def getForgedBlockAsFuture(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, blockCreationTimeout: Timeout) : Future[ForgeResult] = {
-    val forgeMessage: AbstractForgeMessageBuilder[TX, H, PM]#ForgeMessageType = forgeMessageBuilder.buildForgeMessageForEpochAndSlot(epochNumber, slot, blockCreationTimeout)
+  def getForgedBlockAsFuture(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, blockCreationTimeout: Timeout, forcedTx: Iterable[TX]) : Future[ForgeResult] = {
+    val forgeMessage: AbstractForgeMessageBuilder[TX, H, PM]#ForgeMessageType = forgeMessageBuilder.buildForgeMessageForEpochAndSlot(epochNumber, slot, blockCreationTimeout, forcedTx)
     val forgedBlockAsFuture = (viewHolderRef ? forgeMessage).asInstanceOf[Future[ForgeResult]]
     forgedBlockAsFuture
   }
 
-  protected def tryToCreateBlockForEpochAndSlot(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, respondsToOpt: Option[ActorRef], blockCreationTimeout: Timeout): Unit = {
-
-    val forgedBlockAsFuture = getForgedBlockAsFuture(epochNumber, slot, blockCreationTimeout)
+  protected def tryToCreateBlockForEpochAndSlot(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, respondsToOpt: Option[ActorRef], blockCreationTimeout: Timeout, forcedTx: Iterable[TX]): Unit = {
+    val forgedBlockAsFuture = getForgedBlockAsFuture(epochNumber, slot, blockCreationTimeout, forcedTx)
 
     forgedBlockAsFuture.onComplete{
       case Success(ForgeSuccess(block)) => {
@@ -194,7 +201,7 @@ object AbstractForger extends ScorexLogging {
   object ReceivableMessages {
     case object StartForging
     case object StopForging
-    case class  TryForgeNextBlockForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber)
+    case class TryForgeNextBlockForEpochAndSlot[TX](consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber, forcedTx: Iterable[TX])
     case object GetForgingInfo
   }
 }

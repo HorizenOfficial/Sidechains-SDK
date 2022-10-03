@@ -3,7 +3,7 @@ package com.horizen.account.receipt
 import com.horizen.evm.interop.EvmLog
 import com.horizen.evm.utils.Address
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
+import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 import scorex.util.serialization.{Reader, Writer}
 
 import java.math.BigInteger
@@ -23,7 +23,7 @@ case class EthereumReceipt(
   // optional field
   require(contractAddress.length == 0 || contractAddress.length == Address.LENGTH)
 
-  override def serializer: ScorexSerializer[EthereumReceipt] = EthereumReceiptSerializer
+  override def serializer: SparkzSerializer[EthereumReceipt] = EthereumReceiptSerializer
 
   override def toString: String = {
 
@@ -74,7 +74,7 @@ case class EthereumReceipt(
   }
 }
 
-object EthereumReceiptSerializer extends ScorexSerializer[EthereumReceipt]{
+object EthereumReceiptSerializer extends SparkzSerializer[EthereumReceipt]{
 
   override def serialize(receipt: EthereumReceipt, writer: Writer): Unit = {
     // consensus data

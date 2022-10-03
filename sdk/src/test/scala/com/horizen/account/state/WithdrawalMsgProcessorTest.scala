@@ -1,7 +1,7 @@
 package com.horizen.account.state
 
 import com.google.common.primitives.{Bytes, Ints}
-import com.horizen.account.FeeUtils
+import com.horizen.account.utils.FeeUtils
 import com.horizen.account.utils.ZenWeiConverter
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}

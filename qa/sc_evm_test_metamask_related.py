@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import pprint
+import logging
 from decimal import Decimal
 
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
@@ -48,40 +48,40 @@ def mint_payable(node, smart_contract, contract_address, source_account, amount,
     method = 'mint(uint256)'
         
     if static_call:
-        print("Read-only calling {}: testing minting of ".format(method) +
+        logging.info("Read-only calling {}: testing minting of ".format(method) +
               "a token (id: {}) of collection {} to 0x{}".format(tokenid, contract_address, source_account))
         res = smart_contract.static_call(node, method, tokenid,
                                          fromAddress=source_account,
                                          toAddress=contract_address,
                                          value=amount)
     else:
-        print(
+        logging.info(
             "Calling {}: minting of a token (id: {}) of collection {} to 0x{}".format(method, tokenid, contract_address,
                                                                                       source_account))
         gas = smart_contract.estimate_gas(node, method, tokenid, fromAddress=source_account, toAddress=contract_address, value=amount)
         res = smart_contract.call_function(node, method, tokenid, fromAddress=source_account, gasLimit=gas,
                                            toAddress=contract_address, value=amount, call_method=call_method)
     if generate_block:
-        print("generating next block...")
+        logging.info("generating next block...")
         generate_next_blocks(node, "first node", 1)
     return res
 
 
 def compare_balance(node, smart_contract, contract_address, account_address, expected_balance):
-    print("Checking balance of 0x{}...".format(account_address))
+    logging.info("Checking balance of 0x{}...".format(account_address))
     res = smart_contract.static_call(node, 'balanceOf(address)', account_address,
                                      fromAddress=account_address,
                                      toAddress=contract_address)
-    print("Expected balance: '{}', actual balance: '{}'".format(expected_balance, res[0]))
+    logging.info("Expected balance: '{}', actual balance: '{}'".format(expected_balance, res[0]))
     assert_equal(res[0], expected_balance)
     return res[0]
 
 
 def compare_allowance(node, smart_contract, contract_address, owner_address, allowed_address, expected_balance):
-    print("Checking allowance of 0x{} from 0x{}...".format(allowed_address, owner_address))
+    logging.info("Checking allowance of 0x{} from 0x{}...".format(allowed_address, owner_address))
     res = smart_contract.static_call(node, 'allowance(address,address)', owner_address, allowed_address,
                                      fromAddress=allowed_address, toAddress=contract_address)
-    print("Expected allowance: '{}', actual allowance: '{}'".format(expected_balance, res[0]))
+    logging.info("Expected allowance: '{}', actual allowance: '{}'".format(expected_balance, res[0]))
     assert_equal(res[0], expected_balance)
     return res[0]
 
@@ -95,7 +95,7 @@ def call_noarg_fn(node, smart_contract, contract_address, sender_address, static
         res = smart_contract.call_function(node, method, fromAddress=sender_address, gasLimit=gas,
                                            toAddress=contract_address, call_method=call_method)
     if generate_block:
-        print("generating next block...")
+        logging.info("generating next block...")
         generate_next_blocks(node, "first node", 1)
 
     return res
@@ -110,7 +110,7 @@ def call_onearg_fn(node, smart_contract, contract_address, sender_address, stati
         res = smart_contract.call_function(node, method, arg, fromAddress=sender_address, gasLimit=gas,
                                            toAddress=contract_address, call_method=call_method)
     if generate_block:
-        print("generating next block...")
+        logging.info("generating next block...")
         generate_next_blocks(node, "first node", 1)
 
     return res
@@ -118,27 +118,27 @@ def call_onearg_fn(node, smart_contract, contract_address, sender_address, stati
 
 def compare_total_supply(node, smart_contract, contract_address, sender_address, expected_supply):
     method = 'totalSupply()'
-    print("Checking total supply of token at 0x{}...".format(contract_address))
+    logging.info("Checking total supply of token at 0x{}...".format(contract_address))
     res = call_noarg_fn(node, smart_contract, contract_address, sender_address, True, False, method)
-    print("Expected supply: '{}', actual supply: '{}'".format(expected_supply, res[0]))
+    logging.info("Expected supply: '{}', actual supply: '{}'".format(expected_supply, res[0]))
     assert_equal(res[0], expected_supply)
     return res[0]
 
 
 def compare_name(node, smart_contract, contract_address, sender_address, expected_name):
     method = 'name()'
-    print("Checking name of collection at {}...".format(contract_address))
+    logging.info("Checking name of collection at {}...".format(contract_address))
     res = call_noarg_fn(node, smart_contract, contract_address, sender_address, True, False, method)
-    print("Expected name: '{}', actual name: '{}'".format(expected_name, res[0]))
+    logging.info("Expected name: '{}', actual name: '{}'".format(expected_name, res[0]))
     assert_equal(res[0], expected_name)
     return res[0]
 
 
 def compare_symbol(node, smart_contract, contract_address, sender_address, expected_name):
     method = 'symbol()'
-    print("Checking symbol of collection at {}...".format(contract_address))
+    logging.info("Checking symbol of collection at {}...".format(contract_address))
     res = call_noarg_fn(node, smart_contract, contract_address, sender_address, True, False, method)
-    print("Expected symbol: '{}', actual symbol: '{}'".format(expected_name, res[0]))
+    logging.info("Expected symbol: '{}', actual symbol: '{}'".format(expected_name, res[0]))
     assert_equal(res[0], expected_name)
     return res[0]
 
@@ -146,9 +146,9 @@ def compare_symbol(node, smart_contract, contract_address, sender_address, expec
 def compare_ownerof(node, smart_contract, contract_address, sender_address, tokenid, expected_owner):
     method = 'ownerOf(uint256)'
     expected_owner = format_evm(expected_owner)
-    print("Checking owner of token {} of collection at {}...".format(tokenid, contract_address))
+    logging.info("Checking owner of token {} of collection at {}...".format(tokenid, contract_address))
     res = call_onearg_fn(node, smart_contract, contract_address, sender_address, True, False, method, tokenid)
-    print("Expected owner: '{}', actual owner: '{}'".format(expected_owner, res[0]))
+    logging.info("Expected owner: '{}', actual owner: '{}'".format(expected_owner, res[0]))
     assert_equal(format_evm(res[0]), format_evm(expected_owner))
     return res[0]
 
@@ -156,24 +156,24 @@ def compare_ownerof(node, smart_contract, contract_address, sender_address, toke
 def deploy_smart_contract(node, smart_contract, from_address, name, symbol, metadataURI,
                           call_method=global_call_method):
 
-    print("Estimating gas for deployment...")
+    logging.info("Estimating gas for deployment...")
     estimated_gas = smart_contract.estimate_gas(node, 'constructor', name, symbol, metadataURI,
                                                                 fromAddress=from_address)
-    print("Estimated gas is {}".format(estimated_gas))
-    print("Deploying smart contract...")
-    print("From address: 0x{}".format(from_address))
+    logging.info("Estimated gas is {}".format(estimated_gas))
+    logging.info("Deploying smart contract...")
+    logging.info("From address: 0x{}".format(from_address))
     tx_hash, address = smart_contract.deploy(node, name, symbol, metadataURI,
                                              fromAddress=from_address,
                                              gasLimit=estimated_gas,
                                              call_method=call_method)
-    print("Generating next block...")
+    logging.info("Generating next block...")
     generate_next_blocks(node, "first node", 1)
     # TODO check logs when implemented (events)
     tx_receipt = node.rpc_eth_getTransactionReceipt(tx_hash)
-    print(tx_receipt)
+    logging.info(tx_receipt)
     assert_equal(tx_receipt['result']['contractAddress'], address.lower())
     address = tx_receipt['result']['contractAddress']
-    print("Smart contract deployed successfully to address 0x{}".format(address))
+    logging.info("Smart contract deployed successfully to address 0x{}".format(address))
     return address
 
 
@@ -182,9 +182,9 @@ def get_native_balance(node, addr):
 
 
 def compare_nat_balance(node, addr, expected_balance):
-    print("Checking native balance of 0x{}".format(addr))
+    logging.info("Checking native balance of 0x{}".format(addr))
     new_balance = get_native_balance(node, addr)
-    print("Expected native balance: '{}', actual native balance: '{}'".format(expected_balance, new_balance))
+    logging.info("Expected native balance: '{}', actual native balance: '{}'".format(expected_balance, new_balance))
     assert_equal(new_balance, expected_balance)
     return new_balance
 
@@ -197,15 +197,15 @@ def set_paused(node, smart_contract, contract_address, sender_address, *, paused
         method = 'unpause()'
 
     if static_call:
-        print("Read-only calling {}: checking (un)pausing of contract at {} from account 0x{}".format(method,
+        logging.info("Read-only calling {}: checking (un)pausing of contract at {} from account 0x{}".format(method,
                                                                                                       contract_address,
                                                                                                       sender_address))
     else:
-        print("Calling {}: (un)pausing contract at {} from account 0x{}".format(method,
+        logging.info("Calling {}: (un)pausing contract at {} from account 0x{}".format(method,
                                                                                 contract_address,
                                                                                 sender_address))
     if generate_block:
-        print("generating next block...")
+        logging.info("generating next block...")
         generate_next_blocks(node, "first node", 1)
 
     return call_noarg_fn(node, smart_contract, contract_address, sender_address, static_call, generate_block, method,
@@ -216,14 +216,14 @@ def transfer_token(node, smart_contract, contract_address, sender_address, *, to
                    target_address=str, static_call: bool, generate_block: bool, call_method=global_call_method):
     method = 'transferFrom(address,address,uint256)'
     if static_call:
-        print("Read-only calling {}: testing transferring of ".format(method) +
+        logging.info("Read-only calling {}: testing transferring of ".format(method) +
               "token (id: {}) from 0x{} to 0x{} via 0x{}".format(token_id, from_address, target_address,
                                                                  sender_address))
         res = smart_contract.static_call(node, method, from_address, target_address, token_id,
                                          fromAddress=sender_address,
                                          toAddress=contract_address)
     else:
-        print("Calling {}: transferring".format(method) +
+        logging.info("Calling {}: transferring".format(method) +
               "token (id: {}) from 0x{} to 0x{} via 0x{}".format(token_id, from_address, target_address,
                                                                  sender_address))
 
@@ -234,7 +234,7 @@ def transfer_token(node, smart_contract, contract_address, sender_address, *, to
                                            toAddress=contract_address, call_method=call_method)
 
     if generate_block:
-        print("generating next block...")
+        logging.info("generating next block...")
         generate_next_blocks(node, "first node", 1)
     return res
 
@@ -246,7 +246,7 @@ def eoa_transfer(node, sender, receiver, amount, call_method: CallMethod = globa
     else:
         res = eoa_transaction(node, from_addr=sender, to_addr=receiver, call_method=call_method, value=amount)
         if generate_block:
-            print("generating next block...")
+            logging.info("generating next block...")
             generate_next_blocks(node, "first node", 1)
     return res
 
@@ -263,11 +263,11 @@ def eoa_assert_native_balance(node, address, expected_balance, tag='latest'):
 
 
 def compare_erc20_balance(node, smart_contract, contract_address, account_address, expected_balance):
-    print("Checking balance of 0x{}...".format(account_address))
+    logging.info("Checking balance of 0x{}...".format(account_address))
     res = smart_contract.static_call(node, 'balanceOf(address)', account_address,
                                      fromAddress=account_address,
                                      toAddress=contract_address)
-    print("Expected balance: '{}', actual balance: '{}'".format(expected_balance, res[0]))
+    logging.info("Expected balance: '{}', actual balance: '{}'".format(expected_balance, res[0]))
     assert_equal(res[0], expected_balance)
     return res[0]
 
@@ -276,10 +276,10 @@ def transfer_erc20_tokens(node, smart_contract, contract_address, source_account
                           static_call=False, generate_block=True, estimate_gas: bool = False):
     method = 'transfer(address,uint256)'
     if static_call:
-        print("Read-only calling {}: testing transfer of ".format(method) +
+        logging.info("Read-only calling {}: testing transfer of ".format(method) +
               "{} tokens from 0x{} to 0x{}".format(amount, source_account, target_account))
     else:
-        print("Calling {}: transferring {} tokens from 0x{} to 0x{}".format(method, amount, source_account,
+        logging.info("Calling {}: transferring {} tokens from 0x{} to 0x{}".format(method, amount, source_account,
                                                                             target_account))
 
     return call_addr_uint_fn(node, smart_contract, contract_address, source_account, target_account, amount,
@@ -298,33 +298,33 @@ def call_addr_uint_fn(node, smart_contract, contract_address, source_addr, addr,
                                            fromAddress=source_addr,
                                            gasLimit=gas, toAddress=contract_address)
     if generate_block:
-        print("generating next block...")
+        logging.info("generating next block...")
         generate_next_blocks(node, "first node", 1)
     return res
 
 
 def compare_erc20_total_supply(node, smart_contract, contract_address, sender_address, expected_supply):
-    print("Checking total supply of token at 0x{}...".format(contract_address))
+    logging.info("Checking total supply of token at 0x{}...".format(contract_address))
     res = smart_contract.static_call(node, 'totalSupply()', fromAddress=sender_address, toAddress=contract_address)
-    print("Expected supply: '{}', actual supply: '{}'".format(expected_supply, res[0]))
+    logging.info("Expected supply: '{}', actual supply: '{}'".format(expected_supply, res[0]))
     assert_equal(res[0], expected_supply)
     return res[0]
 
 
 def deploy_erc20_smart_contract(node, smart_contract, from_address):
-    print("Deploying smart contract...")
-    print("Estimating gas for deployment...")
+    logging.info("Deploying smart contract...")
+    logging.info("Estimating gas for deployment...")
     estimated_gas = smart_contract.estimate_gas(node, 'constructor',
                                                                 fromAddress=from_address)
-    print("Estimated gas is {}".format(estimated_gas))
+    logging.info("Estimated gas is {}".format(estimated_gas))
     tx_hash, address = smart_contract.deploy(node,
                                              fromAddress=from_address,
                                              gasLimit=estimated_gas)
-    print("Generating next block...")
+    logging.info("Generating next block...")
     generate_next_blocks(node, "first node", 1)
     tx_receipt = node.rpc_eth_getTransactionReceipt(tx_hash)
     assert_equal(format_evm(tx_receipt['result']['contractAddress']), format_evm(address))
-    print("Smart contract deployed successfully to address 0x{}".format(address))
+    logging.info("Smart contract deployed successfully to address 0x{}".format(address))
     return address
 
 
@@ -336,7 +336,7 @@ class SCEvmMetamaskTest(SidechainTestFramework):
 
     def sc_setup_network(self, split=False):
         self.sc_nodes = self.sc_setup_nodes()
-        print("...skip sync since it would timeout as of now")
+        logging.info("...skip sync since it would timeout as of now")
         # self.sc_sync_all()
 
     def sc_setup_chain(self):
@@ -360,7 +360,7 @@ class SCEvmMetamaskTest(SidechainTestFramework):
         sc_node = self.sc_nodes[0]
         mc_block = self.nodes[0].getblock(str(self.sc_nodes_bootstrap_info.mainchain_block_height))
         mc_block_hex = self.nodes[0].getblock(mc_block["hash"], False)
-        print("SC genesis mc block hex = " + mc_block_hex)
+        logging.info("SC genesis mc block hex = " + mc_block_hex)
 
         sc_best_block = sc_node.block_best()["result"]
 
@@ -379,9 +379,9 @@ class SCEvmMetamaskTest(SidechainTestFramework):
         # evm_address = generate_account_proposition("seed2", 1)[0]
 
         ret = sc_node.wallet_createPrivateKeySecp256k1()
-        pprint.pprint(ret)
+        logging.info(ret)
         evm_address = format_evm(ret["result"]["proposition"]["address"])
-        print("pubkey = {}".format(evm_address))
+        logging.info("pubkey = {}".format(evm_address))
 
         ret = sc_node.wallet_createPrivateKeySecp256k1()
         other_address = format_evm(ret["result"]["proposition"]["address"])
@@ -425,7 +425,7 @@ class SCEvmMetamaskTest(SidechainTestFramework):
                                   initial_balance - (2 * transfer_amount + gas_used_legacy + gas_used_eip155))
         eoa_assert_native_balance(sc_node, other_address, 2 * transfer_amount)
 
-        print(initial_balance - (2 * transfer_amount + gas_used_legacy + gas_used_eip155))
+        logging.info(initial_balance - (2 * transfer_amount + gas_used_legacy + gas_used_eip155))
 
         eoa_transfer(sc_node, evm_address, other_address, transfer_amount, static_call=True, generate_block=False)
         tx_hash_eip1559 = eoa_transfer(sc_node, evm_address, other_address, transfer_amount,
@@ -444,10 +444,10 @@ class SCEvmMetamaskTest(SidechainTestFramework):
         collection_uri = "https://localhost:1337"
 
         global_call_method = CallMethod.RPC_EIP155
-        print("Running test with EIP155 calls")
+        logging.info("Running test with EIP155 calls")
 
         smart_contract_type = 'TestERC721'
-        print("Creating smart contract utilities for {}".format(smart_contract_type))
+        logging.info("Creating smart contract utilities for {}".format(smart_contract_type))
         smart_contract = SmartContract(smart_contract_type)
         smart_contract_address = deploy_smart_contract(sc_node, smart_contract, evm_address,
                                                        collection_name,
@@ -509,10 +509,10 @@ class SCEvmMetamaskTest(SidechainTestFramework):
         res = compare_erc20_balance(sc_node, smart_contract, smart_contract_address, other_address, transfer_amount)
 
         global_call_method = CallMethod.RPC_LEGACY
-        print("Running test with legacy calls")
+        logging.info("Running test with legacy calls")
 
         smart_contract_type = 'TestERC721'
-        print("Creating smart contract utilities for {}".format(smart_contract_type))
+        logging.info("Creating smart contract utilities for {}".format(smart_contract_type))
         smart_contract = SmartContract(smart_contract_type)
         smart_contract_address = deploy_smart_contract(sc_node, smart_contract, evm_address,
                                                        collection_name,
@@ -575,10 +575,10 @@ class SCEvmMetamaskTest(SidechainTestFramework):
         res = compare_erc20_balance(sc_node, smart_contract, smart_contract_address, other_address, transfer_amount)
 
         global_call_method = CallMethod.RPC_EIP1559
-        print("Running test with EIP1559 calls")
+        logging.info("Running test with EIP1559 calls")
 
         smart_contract_type = 'TestERC721'
-        print("Creating smart contract utilities for {}".format(smart_contract_type))
+        logging.info("Creating smart contract utilities for {}".format(smart_contract_type))
         smart_contract = SmartContract(smart_contract_type)
         smart_contract_address = deploy_smart_contract(sc_node, smart_contract, evm_address,
                                                        collection_name,

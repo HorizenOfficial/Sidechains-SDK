@@ -1,7 +1,7 @@
 package com.horizen.account.forger
 
 import akka.actor.{ActorRef, ActorSystem, Props}
-import com.horizen._
+import com.horizen.{SidechainTypes, _}
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.chain.AccountFeePaymentsInfo
 import com.horizen.account.companion.SidechainAccountTransactionsCompanion
@@ -12,7 +12,7 @@ import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.forge.{AbstractForger, MainchainSynchronizer}
 import com.horizen.params.NetworkParams
-import scorex.core.utils.NetworkTimeProvider
+import sparkz.core.utils.NetworkTimeProvider
 
 
 class AccountForger(settings: SidechainSettings,
@@ -29,6 +29,7 @@ class AccountForger(settings: SidechainSettings,
   override type MS = AccountState
   override type VL = AccountWallet
   override type MP = AccountMemoryPool
+
 }
 
 object AccountForgerRef {

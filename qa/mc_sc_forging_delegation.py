@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import logging
 
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -115,7 +116,7 @@ class MCSCForgingDelegation(SidechainTestFramework):
         if "result" not in makeForgerStakeJsonRes:
             fail("make forger stake failed: " + json.dumps(makeForgerStakeJsonRes))
         else:
-            print("Forger stake created: " + json.dumps(makeForgerStakeJsonRes))
+            logging.info("Forger stake created: " + json.dumps(makeForgerStakeJsonRes))
 
         # Generate SC block
         generate_next_block(sc_node1, "first node")
@@ -142,7 +143,7 @@ class MCSCForgingDelegation(SidechainTestFramework):
         # Check ForgingStake for SC block
         res = sc_node2.block_findById(blockId=scnode2_block_id)
         stakeInfo = res["result"]["block"]["header"]["forgingStakeInfo"]
-        print("SC Node 2 forged block with forging info:\n" + json.dumps(stakeInfo, indent=4))
+        logging.info("SC Node 2 forged block with forging info:\n" + json.dumps(stakeInfo, indent=4))
         assert_equal(stakeInfo["stakeAmount"], ft_amount * 100000000,
                      "Forging stake is wrong.")
         assert_equal(stakeInfo["blockSignPublicKey"]["publicKey"], sc_node2_address,
@@ -172,7 +173,7 @@ class MCSCForgingDelegation(SidechainTestFramework):
         if "result" not in tx_hex:
             fail("spend forger stake failed: " + json.dumps(tx_hex))
         else:
-            print("Forger stake was spend: " + json.dumps(tx_hex))
+            logging.info("Forger stake was spend: " + json.dumps(tx_hex))
 
         # Generate one more SC block on SC node 1 to include transaction
         generate_next_block(sc_node1, "first node")

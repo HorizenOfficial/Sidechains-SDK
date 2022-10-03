@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import json
-import pprint
+import logging
 import random
 from decimal import Decimal
 
@@ -97,7 +97,7 @@ class SCEvmMempoolInvalidTxs(SidechainTestFramework):
                                             maxFeePerGas=9000000000, value=1)
         except RuntimeError as e:
             exception_occurs = True
-            print("Adding a transaction with with negative nonce had an exception as expected: {}".format(str(e)))
+            logging.info("Adding a transaction with with negative nonce had an exception as expected: {}".format(str(e)))
 
         assert_true(exception_occurs, "Adding a transaction with with negative nonce should fail")
         response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
@@ -111,7 +111,7 @@ class SCEvmMempoolInvalidTxs(SidechainTestFramework):
                                             maxFeePerGas=900000000, value=-1)
         except RuntimeError as e:
             exception_occurs = True
-            print("Adding a transaction with with negative value had an exception as expected: {}".format(str(e)))
+            logging.info("Adding a transaction with with negative value had an exception as expected: {}".format(str(e)))
 
         assert_true(exception_occurs, "Adding a transaction with with negative value should fail")
         response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
@@ -125,7 +125,7 @@ class SCEvmMempoolInvalidTxs(SidechainTestFramework):
                                             maxFeePerGas=1, value=1)
         except RuntimeError as e:
             exception_occurs = True
-            print("Adding a transaction  with max fee lower than priority fee had an exception as expected: {}".format(str(e)))
+            logging.info("Adding a transaction  with max fee lower than priority fee had an exception as expected: {}".format(str(e)))
 
         assert_true(exception_occurs, "Adding a transaction  with max fee lower than priority fee should fail")
         response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
@@ -137,7 +137,7 @@ class SCEvmMempoolInvalidTxs(SidechainTestFramework):
         #  to transfer more than about 3000 zen in the sidechain from the mainchain
         #tx with
         # very_large_num = random.getrandbits(257)
-        # pprint.pprint(very_large_num)
+        # logging.info(very_large_num)
         # exception_occurs = False
         # try:
         #     createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=evm_address_sc1,
@@ -145,7 +145,7 @@ class SCEvmMempoolInvalidTxs(SidechainTestFramework):
         #                                     maxFeePerGas=very_large_num, value=1)
         # except RuntimeError as e:
         #     exception_occurs = True
-        #     print("Adding a transaction with max fee with more than 256 bits  had an exception as expected: {}".format(str(e)))
+        #     logging.info("Adding a transaction with max fee with more than 256 bits  had an exception as expected: {}".format(str(e)))
         #
         # assert_true(exception_occurs, "Adding a transaction with max fee with more than 256 bits should fail")
         # response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
@@ -153,7 +153,7 @@ class SCEvmMempoolInvalidTxs(SidechainTestFramework):
 
         # Test that a transaction with gas limit with more than 64 bits is rejected by the mem pool
         very_large_num = random.getrandbits(65)
-        pprint.pprint(very_large_num)
+        logging.info(very_large_num)
         exception_occurs = False
         try:
             createEIP1559Transaction(sc_node_1, fromAddress=evm_address_sc1, toAddress=evm_address_sc1,
@@ -161,7 +161,7 @@ class SCEvmMempoolInvalidTxs(SidechainTestFramework):
                                             maxFeePerGas=1, value=1)
         except RuntimeError as e:
             exception_occurs = True
-            print("Adding a transaction with gas limit with more than 64 bits had an exception as expected: {}".format(str(e)))
+            logging.info("Adding a transaction with gas limit with more than 64 bits had an exception as expected: {}".format(str(e)))
 
         assert_true(exception_occurs, "Adding a transaction with gas limit with more than 64 bits should fail")
         response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
@@ -174,7 +174,7 @@ class SCEvmMempoolInvalidTxs(SidechainTestFramework):
                                           nonce=0, gasLimit=(BLOCK_GAS_LIMIT + 10), maxPriorityFeePerGas=900000000, maxFeePerGas=900000000, value=1)
         except RuntimeError as e:
             exception_occurs = True
-            print("Adding a transaction with gas limit > block gas limit had an exception as expected: {}".format(str(e)))
+            logging.info("Adding a transaction with gas limit > block gas limit had an exception as expected: {}".format(str(e)))
 
         assert_true(exception_occurs, "Adding a transaction with gas limit > block gas limit should fail")
         response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
@@ -188,7 +188,7 @@ class SCEvmMempoolInvalidTxs(SidechainTestFramework):
                                             maxFeePerGas=900000000, value=1, data='')
         except RuntimeError as e:
             exception_occurs = True
-            print("Adding a transaction that creates a smart contract with empty data had an exception as expected: {}".format(str(e)))
+            logging.info("Adding a transaction that creates a smart contract with empty data had an exception as expected: {}".format(str(e)))
 
         assert_true(exception_occurs, "Adding a transaction that creates a smart contract with empty data should fail")
         response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
@@ -203,7 +203,7 @@ class SCEvmMempoolInvalidTxs(SidechainTestFramework):
                                             maxFeePerGas=900000000, value=1, data='12344')
         except RuntimeError as e:
             exception_occurs = True
-            print("Adding a transaction with gas limit < intrinsic gas had an exception as expected: {}".format(str(e)))
+            logging.info("Adding a transaction with gas limit < intrinsic gas had an exception as expected: {}".format(str(e)))
 
         assert_true(exception_occurs, "Adding a transaction with gas limit < intrinsic gas should fail")
         response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
@@ -225,7 +225,7 @@ class SCEvmMempoolInvalidTxs(SidechainTestFramework):
                                             maxFeePerGas=900000000, value=1)
         except RuntimeError as e:
             exception_occurs = True
-            print("Adding a transaction with nonce too low had an exception as expected: {}".format(str(e)))
+            logging.info("Adding a transaction with nonce too low had an exception as expected: {}".format(str(e)))
 
         assert_true(exception_occurs, "Adding a transaction with nonce too low should fail")
         response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))

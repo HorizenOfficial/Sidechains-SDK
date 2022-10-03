@@ -1,7 +1,7 @@
 package com.horizen.account.state
 
 import com.horizen.SidechainTypes
-import com.horizen.account.FeeUtils
+import com.horizen.account.utils.FeeUtils
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.node.NodeAccountState
 import com.horizen.account.receipt.{EthereumReceipt, LogsBloom}
@@ -18,11 +18,10 @@ import com.horizen.state.State
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 
 import org.web3j.crypto.ContractUtils.generateContractAddress
-import scorex.core._
-import scorex.core.transaction.state.TransactionValidation
-import scorex.core.utils.NetworkTimeProvider
+import sparkz.core._
+import sparkz.core.transaction.state.TransactionValidation
+import sparkz.core.utils.NetworkTimeProvider
 import scorex.util.{ModifierId, ScorexLogging}
-
 import java.math.BigInteger
 import java.util
 import scala.collection.JavaConverters.seqAsJavaListConverter

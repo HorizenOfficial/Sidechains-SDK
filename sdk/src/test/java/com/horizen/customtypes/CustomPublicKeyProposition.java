@@ -2,17 +2,14 @@ package com.horizen.customtypes;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.horizen.ScorexEncoding;
-import com.horizen.proposition.ProofOfKnowledgeProposition;
-import com.horizen.proposition.PropositionSerializer;
+import com.horizen.proposition.*;
 import com.horizen.serialization.Views;
 import com.horizen.utils.BytesUtils;
-
 import java.util.Arrays;
 
+
 @JsonView(Views.Default.class)
-public class CustomPublicKeyProposition extends ScorexEncoding implements ProofOfKnowledgeProposition<CustomPrivateKey>
-{
+public class CustomPublicKeyProposition implements AbstractSingleSecretProofOfKnowledgeProposition<CustomPrivateKey> {
     public static final int PUBLIC_KEY_LENGTH = 128;
 
     @JsonProperty("publicKey")
@@ -58,4 +55,5 @@ public class CustomPublicKeyProposition extends ScorexEncoding implements ProofO
     public byte[] pubKeyBytes() {
         return Arrays.copyOf(pubKeyBytes, PUBLIC_KEY_LENGTH);
     }
+
 }

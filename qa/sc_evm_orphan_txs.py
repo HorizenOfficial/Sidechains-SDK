@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import json
-import pprint
+import logging
 from decimal import Decimal
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -39,7 +39,7 @@ class SCEvmOrphanTXS(SidechainTestFramework):
 
     def sc_setup_network(self, split=False):
         self.sc_nodes = self.sc_setup_nodes()
-        print("Connecting sc nodes...")
+        logging.info("Connecting sc nodes...")
         connect_sc_nodes(self.sc_nodes[0], 1)
         self.sc_sync_all()
 
@@ -85,7 +85,7 @@ class SCEvmOrphanTXS(SidechainTestFramework):
         generate_next_block(sc_node_1, "first node")
         self.sc_sync_all()
 
-        print("Create an orphan transaction and check it is not included in a block...")
+        logging.info("Create an orphan transaction and check it is not included in a block...")
         transferred_amount_in_zen = Decimal('11')
         # Amount should be expressed in zennies
         amount_in_zennies = convertZenToZennies(transferred_amount_in_zen)
@@ -103,7 +103,7 @@ class SCEvmOrphanTXS(SidechainTestFramework):
             fail("send failed: " + str(response))
 
         orphan_tx_hash = response['result']["transactionId"]
-        pprint.pprint(orphan_tx_hash)
+        logging.info(orphan_tx_hash)
         self.sc_sync_all()
 
         # get mempool contents and check contents are as expected
@@ -119,7 +119,7 @@ class SCEvmOrphanTXS(SidechainTestFramework):
         response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
         assert_true(orphan_tx_hash in response['result']['transactionIds'])
 
-        print("Create the missing transaction and check that now both are included in a block...")
+        logging.info("Create the missing transaction and check that now both are included in a block...")
         j["nonce"] = 0
 
         response = sc_node_1.transaction_sendCoinsToAddress(json.dumps(j))
@@ -241,7 +241,7 @@ class SCEvmOrphanTXS(SidechainTestFramework):
 
         txs_in_block = sc_node_1.block_best()["result"]["block"]["sidechainTransactions"]
 
-        pprint.pprint(txs_in_block)
+        logging.info(txs_in_block)
         assert_equal(9, len(txs_in_block), "Wrong number of transactions in the block")
         assert_equal(txC_0, txs_in_block[0]['id'])
         assert_equal(txC_1, txs_in_block[1]['id'])

@@ -1,8 +1,8 @@
 package com.horizen.account.forger
 
 import com.horizen.SidechainTypes
-import com.horizen.account.FeeUtils
-import com.horizen.account.FeeUtils.calculateBaseFee
+import com.horizen.account.utils.{Account, AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment, FeeUtils}
+import com.horizen.account.utils.FeeUtils.calculateBaseFee
 import com.horizen.account.block.AccountBlock.calculateReceiptRoot
 import com.horizen.account.block.{AccountBlock, AccountBlockHeader}
 import com.horizen.account.chain.AccountFeePaymentsInfo
@@ -15,9 +15,9 @@ import com.horizen.account.secret.PrivateKeySecp256k1
 import com.horizen.account.state._
 import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.transaction.EthereumTransaction
-import com.horizen.account.utils.{Account, AccountBlockFeeInfo, AccountFeePaymentsUtils, AccountPayment}
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block._
+import com.horizen.chain.MainchainHeaderHash
 import com.horizen.consensus._
 import com.horizen.forge.{AbstractForgeMessageBuilder, MainchainSynchronizer}
 import com.horizen.params.NetworkParams
@@ -25,11 +25,9 @@ import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.{PrivateKey25519, Secret}
 import com.horizen.transaction.TransactionSerializer
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochUtils}
-import com.horizen.utils.{ByteArrayWrapper, ClosableResourceHandler, DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree, TimeToEpochUtils, WithdrawalEpochUtils}
-import scorex.core.NodeViewModifier
-import scorex.core.block.Block.{BlockId, Timestamp}
-import scorex.util.{ModifierId, ScorexLogging, idToBytes}
-
+import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.core.block.Block.{BlockId, Timestamp}
+import sparkz.core.{NodeViewModifier, idToBytes}
 import java.math.BigInteger
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -279,6 +277,7 @@ class AccountForgeMessageBuilder(
     )
 
     block
+
   }
 
   override def precalculateBlockHeaderSize(
@@ -316,7 +315,7 @@ class AccountForgeMessageBuilder(
     header.bytes.length
   }
 
-  override def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int): Seq[SidechainTypes#SCAT] = {
+  override def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int, mainchainBlockReferenceData: Seq[MainchainBlockReferenceData], timestamp: Timestamp, forcedTx: Iterable[SidechainTypes#SCAT]): Seq[SidechainTypes#SCAT] = {
     // no checks of the block size here, these txes are the candidates and their inclusion
     // will be attempted by forger
 

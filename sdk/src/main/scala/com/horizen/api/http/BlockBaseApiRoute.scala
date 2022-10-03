@@ -5,26 +5,26 @@ import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.SidechainNodeViewBase
-import com.horizen.api.http.BlockBaseErrorResponse.{ErrorBlockNotCreated, ErrorGetForgingInfo, ErrorInvalidBlockHeight, ErrorInvalidBlockId, ErrorStartForging, ErrorStopForging}
-import com.horizen.api.http.BlockBaseRestSchema.{ReqFindById, ReqFindIdByHeight, ReqGenerateByEpochAndSlot, ReqLastIds, RespBest, RespFindById, RespFindIdByHeight, RespForgingInfo, RespGenerate, RespLastIds, RespStartForging, RespStopForging}
+import com.horizen.api.http.BlockBaseErrorResponse._
+import com.horizen.api.http.BlockBaseRestSchema._
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
-import com.horizen.chain.AbstractFeePaymentsInfo
-import com.horizen.consensus.{intToConsensusEpochNumber, intToConsensusSlotNumber}
-import com.horizen.forge.AbstractForger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging, TryForgeNextBlockForEpochAndSlot}
+import com.horizen.chain.{AbstractFeePaymentsInfo, SidechainBlockInfo}
+import com.horizen.forge.AbstractForger.ReceivableMessages.{GetForgingInfo, StartForging, StopForging}
 import com.horizen.forge.ForgingInfo
 import com.horizen.node.{NodeHistoryBase, NodeMemoryPoolBase, NodeStateBase, NodeWalletBase}
 import com.horizen.serialization.Views
 import com.horizen.transaction.Transaction
 import com.horizen.utils.BytesUtils
-import scorex.core.settings.RESTApiSettings
-import scorex.util.ModifierId
+import sparkz.core.settings.RESTApiSettings
 
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext}
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
+
+
 
 abstract class BlockBaseApiRoute[
   TX <: Transaction,
@@ -35,22 +35,27 @@ abstract class BlockBaseApiRoute[
   NS <: NodeStateBase,
   NW <: NodeWalletBase,
   NP <: NodeMemoryPoolBase[TX],
-  NV <: SidechainNodeViewBase[TX, H, PM, FPI, NH, NS, NW, NP]](override val settings: RESTApiSettings, sidechainBlockActorRef: ActorRef, forgerRef: ActorRef)
-                                                         (implicit val context: ActorRefFactory, override val ec: ExecutionContext, override val tag: ClassTag[NV])
+  NV <: SidechainNodeViewBase[TX, H, PM, FPI, NH, NS, NW, NP]](
+                                  override val settings: RESTApiSettings,
+                                  forgerRef: ActorRef)
+                                 (implicit val context: ActorRefFactory, override val ec: ExecutionContext, override val tag: ClassTag[NV])
   extends SidechainApiRoute[TX, H, PM, FPI, NH, NS, NW, NP, NV] {
 
   /**
    * The sidechain block by its id.
+   * Returns the sidechain block and its height for given block id.
    */
   def findById: Route = (post & path("findById")) {
     entity(as[ReqFindById]) { body =>
       withNodeView { sidechainNodeView =>
-        val optionSidechainBlock = sidechainNodeView.getNodeHistory.getBlockById(body.blockId)
+        val sidechainHistory = sidechainNodeView.getNodeHistory
+        val optionSidechainBlock = sidechainHistory.getBlockById(body.blockId)
 
         if (optionSidechainBlock.isPresent) {
           val sblock = optionSidechainBlock.get()
           val sblock_serialized = sblock.serializer.toBytes(sblock)
-          ApiResponseUtil.toResponse(RespFindById[TX, H, PM](BytesUtils.toHexString(sblock_serialized), sblock))
+          val height = sidechainHistory.getBlockHeightById(body.blockId).get
+          ApiResponseUtil.toResponse(RespFindById[TX, H, PM](BytesUtils.toHexString(sblock_serialized), sblock, height))
         }
         else
           ApiResponseUtil.toResponse(ErrorInvalidBlockId(s"Invalid id: ${body.blockId}", JOptional.empty()))
@@ -80,8 +85,9 @@ abstract class BlockBaseApiRoute[
       withNodeView { sidechainNodeView =>
         val sidechainHistory = sidechainNodeView.getNodeHistory
         val blockIdOptional = sidechainHistory.getBlockIdByHeight(body.height)
-        if (blockIdOptional.isPresent)
+        if (blockIdOptional.isPresent) {
           ApiResponseUtil.toResponse(RespFindIdByHeight(blockIdOptional.get()))
+        }
         else
           ApiResponseUtil.toResponse(ErrorInvalidBlockHeight(s"Invalid height: ${body.height}", JOptional.empty()))
       }
@@ -96,11 +102,34 @@ abstract class BlockBaseApiRoute[
       sidechainNodeView =>
         val sidechainHistory = sidechainNodeView.getNodeHistory
         val height = sidechainHistory.getCurrentHeight
+
         if (height > 0) {
           val bestBlock: PM = sidechainHistory.getBestBlock
           ApiResponseUtil.toResponse(RespBest[TX, H, PM](bestBlock, height))
         } else
           ApiResponseUtil.toResponse(ErrorInvalidBlockHeight(s"Invalid height: $height", JOptional.empty()))
+
+    }
+  }
+
+  /**
+   * Returns SidechainBlockInfo by its id and if the block is in the active chain or not.
+   */
+  def findBlockInfoById: Route = (post & path("findBlockInfoById")) {
+    entity(as[ReqFindBlockInfoById]) { body =>
+      withNodeView { sidechainNodeView =>
+        val sidechainHistory = sidechainNodeView.getNodeHistory
+        val optionSidechainBlock = sidechainHistory.getBlockInfoById(body.blockId)
+
+        if (optionSidechainBlock.isPresent) {
+          val sblock = optionSidechainBlock.get()
+          val isInActiveChain = sidechainHistory.isInActiveChain(body.blockId)
+
+          ApiResponseUtil.toResponse(RespFindBlockInfoById(sblock, isInActiveChain))
+        }
+        else
+          ApiResponseUtil.toResponse(ErrorInvalidBlockId(s"Invalid id: ${body.blockId}", JOptional.empty()))
+      }
     }
   }
 
@@ -123,19 +152,6 @@ abstract class BlockBaseApiRoute[
         ApiResponseUtil.toResponse(RespStopForging)
       case Failure(e) =>
         ApiResponseUtil.toResponse(ErrorStopForging(s"Failed to stop forging: ${e.getMessage}", JOptional.empty()))
-    }
-  }
-
-  def generateBlockForEpochNumberAndSlot: Route = (post & path("generate")) {
-    entity(as[ReqGenerateByEpochAndSlot]) { body =>
-      val future = sidechainBlockActorRef ? TryForgeNextBlockForEpochAndSlot(intToConsensusEpochNumber(body.epochNumber), intToConsensusSlotNumber(body.slotNumber))
-      val submitResultFuture = Await.result(future, timeout.duration).asInstanceOf[Future[Try[ModifierId]]]
-      Await.result(submitResultFuture, timeout.duration) match {
-        case Success(id) =>
-          ApiResponseUtil.toResponse(RespGenerate(id.asInstanceOf[String]))
-        case Failure(e) =>
-          ApiResponseUtil.toResponse(ErrorBlockNotCreated(s"Block was not created: ${e.getMessage}", JOptional.empty()))
-      }
     }
   }
 
@@ -163,14 +179,15 @@ object BlockBaseRestSchema {
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqFindById(blockId: String) {
-    require(blockId.length == 64, s"Invalid id $blockId. Id length must be 64")
+    require(blockId.length == SidechainBlockBase.BlockIdHexStringLength, s"Invalid id $blockId. Id length must be ${SidechainBlockBase.BlockIdHexStringLength}")
   }
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespFindById[TX <: Transaction,
     H <: SidechainBlockHeaderBase,
     PM <: SidechainBlockBase[TX, H]]
-  (blockHex: String, block: PM) extends SuccessResponse
+  (blockHex: String, block: PM, height: Int) extends SuccessResponse
+
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class ReqLastIds(number: Int) {
@@ -186,7 +203,7 @@ object BlockBaseRestSchema {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class ReqGenerateByEpochAndSlot(epochNumber: Int, slotNumber: Int)
+  case class ReqGenerateByEpochAndSlot(epochNumber: Int, slotNumber: Int, transactionsBytes: Seq[String] = Seq())
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespFindIdByHeight(blockId: String) extends SuccessResponse
@@ -197,6 +214,14 @@ object BlockBaseRestSchema {
     H <: SidechainBlockHeaderBase,
     PM <: SidechainBlockBase[TX, H]
   ](block: PM, height: Int) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqFindBlockInfoById(blockId: String) {
+    require(blockId.length == SidechainBlockBase.BlockIdHexStringLength, s"Invalid id $blockId. Id length must be ${SidechainBlockBase.BlockIdHexStringLength}")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespFindBlockInfoById(blockInfo: SidechainBlockInfo, isInActiveChain: Boolean) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] object RespStartForging extends SuccessResponse
@@ -225,11 +250,16 @@ object BlockBaseRestSchema {
   }
 
   @JsonView(Array(classOf[Views.Default]))
-  private[api] case class RespGenerate(blockId: String) extends SuccessResponse
+  case class RespGenerate(blockId: String) extends SuccessResponse
 
   @JsonView(Array(classOf[Views.Default]))
   private[api] object RespGenerateSkipSlot extends SuccessResponse {
     val result = "No block is generated due no eligible forger box are present, skip slot"
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqFeePayments(blockId: String) {
+    require(blockId.length == SidechainBlockBase.BlockIdHexStringLength, s"Invalid id $blockId. Id length must be ${SidechainBlockBase.BlockIdHexStringLength}")
   }
 
 }

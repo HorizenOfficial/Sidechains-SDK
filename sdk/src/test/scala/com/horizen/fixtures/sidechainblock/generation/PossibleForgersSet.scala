@@ -22,12 +22,12 @@ class PossibleForgersSet(forgers: Set[PossibleForger]) {
 
   def getNotSpentSidechainForgingData: Set[SidechainForgingData] = forgingDataToPossibleForger.filter{case (forgingData, possibleForger) => possibleForger.isNotSpent}.keys.to
 
-  def getEligibleForger(slotNumber: ConsensusSlotNumber, nonceConsensusEpochInfo: NonceConsensusEpochInfo, totalStake: Long, additionalCheck: Boolean => Boolean): Option[(PossibleForger, VrfProof, VrfOutput)] = {
+  def getEligibleForger(slotNumber: ConsensusSlotNumber, nonceConsensusEpochInfo: NonceConsensusEpochInfo, totalStake: Long, additionalCheck: Boolean => Boolean, nextEpochNumber: ConsensusEpochNumber): Option[(PossibleForger, VrfProof, VrfOutput)] = {
     val vrfMessage = buildVrfMessage(slotNumber, nonceConsensusEpochInfo)
     forgingDataToPossibleForger
       .values
       .view
-      .flatMap{forger => forger.canBeForger(vrfMessage, totalStake, additionalCheck).map{case (proof, vrfOutput) => (forger, proof, vrfOutput)}} //get eligible forgers
+      .flatMap{forger => forger.canBeForger(vrfMessage, totalStake, additionalCheck, nextEpochNumber).map{case (proof, vrfOutput) => (forger, proof, vrfOutput)}} //get eligible forgers
       .headOption
   }
 

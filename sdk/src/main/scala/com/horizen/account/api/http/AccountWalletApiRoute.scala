@@ -18,7 +18,7 @@ import com.horizen.node.NodeWalletBase
 import com.horizen.proposition.Proposition
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
-import scorex.core.settings.RESTApiSettings
+import sparkz.core.settings.RESTApiSettings
 
 import java.util.{Optional => JOptional}
 import scala.concurrent.{Await, ExecutionContext}

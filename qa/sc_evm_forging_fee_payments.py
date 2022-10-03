@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import pprint
+import logging
 
 from SidechainTestFramework.account.httpCalls.createEIP1559Transaction import createEIP1559Transaction
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
@@ -92,7 +92,7 @@ class ScEvmForgingFeePayments(SidechainTestFramework):
       sc_node_2 = self.sc_nodes[1]
 
       # Connect and sync SC nodes
-      print("Connecting sc nodes...")
+      logging.info("Connecting sc nodes...")
       connect_sc_nodes(self.sc_nodes[0], 1)
       self.sc_sync_all()
       # Set the genesis SC block fee info
@@ -127,8 +127,8 @@ class ScEvmForgingFeePayments(SidechainTestFramework):
       # balance is in wei
       initial_balance_2 = get_account_balance(sc_node_2, evm_address_sc_node_2)
       assert_equal(ft_amount_in_wei, initial_balance_2)
-      pprint.pprint(get_account_balance(sc_node_2, evm_address_sc_node_2))
-      pprint.pprint(sc_node_2.wallet_getTotalBalance())
+      logging.info(get_account_balance(sc_node_2, evm_address_sc_node_2))
+      logging.info(sc_node_2.wallet_getTotalBalance())
 
       # Create forger stake with some Zen for SC node 2
       sc2_blockSignPubKey = sc_node_2.wallet_createPrivateKey25519()["result"]["proposition"]["publicKey"]
@@ -149,7 +149,7 @@ class ScEvmForgingFeePayments(SidechainTestFramework):
       if "result" not in makeForgerStakeJsonRes:
           fail("make forger stake failed: " + json.dumps(makeForgerStakeJsonRes))
       else:
-          print("Forger stake created: " + json.dumps(makeForgerStakeJsonRes))
+          logging.info("Forger stake created: " + json.dumps(makeForgerStakeJsonRes))
       self.sc_sync_all()
 
       tx_hash_0 = makeForgerStakeJsonRes['result']['transactionId']
@@ -159,7 +159,7 @@ class ScEvmForgingFeePayments(SidechainTestFramework):
 
       transactionFee_0, forgersPoolFee, forgerTip = computeForgedTxFee(sc_node_1, tx_hash_0)
 
-      pprint.pprint(sc_node_2.wallet_getTotalBalance())
+      logging.info(sc_node_2.wallet_getTotalBalance())
 
       # balance now is initial (ft) minus forgerStake and fee
       assert_equal(
@@ -259,8 +259,8 @@ class ScEvmForgingFeePayments(SidechainTestFramework):
           total_fee += sc_block_fee.baseFee + sc_block_fee.forgerTips
           pool_fee += sc_block_fee.baseFee
 
-      print("total fee = {}".format(total_fee))
-      print("pool fee = {}".format(pool_fee))
+      logging.info("total fee = {}".format(total_fee))
+      logging.info("pool fee = {}".format(pool_fee))
 
       for idx, sc_block_fee in enumerate(sc_block_fee_info):
           if sc_block_fee.node in forger_fees:
@@ -273,7 +273,7 @@ class ScEvmForgingFeePayments(SidechainTestFramework):
           if idx < pool_fee % len(sc_block_fee_info):
               forger_fees[sc_block_fee.node] += 1
 
-          print("block {} fees: {}, {}".format(idx, sc_block_fee.baseFee, sc_block_fee.forgerTips))
+          logging.info("block {} fees: {}, {}".format(idx, sc_block_fee.baseFee, sc_block_fee.forgerTips))
 
 
       sc_node_1_balance_after_payments = sc_node_1.wallet_getTotalBalance()['result']['balance']
@@ -283,11 +283,11 @@ class ScEvmForgingFeePayments(SidechainTestFramework):
       node_2_fees = forger_fees[2]
 
       # Check forger fee payments
-      print("SC1 bal before = {}, after = {}".format(sc_node_1_balance_before_payments, sc_node_1_balance_after_payments))
-      print("SC2 bal before = {}, after = {}".format(sc_node_2_balance_before_payments, sc_node_2_balance_after_payments))
+      logging.info("SC1 bal before = {}, after = {}".format(sc_node_1_balance_before_payments, sc_node_1_balance_after_payments))
+      logging.info("SC2 bal before = {}, after = {}".format(sc_node_2_balance_before_payments, sc_node_2_balance_after_payments))
 
-      print("SC1 forger fees = {}".format(node_1_fees))
-      print("SC2 forger fees = {}".format(node_2_fees))
+      logging.info("SC1 forger fees = {}".format(node_1_fees))
+      logging.info("SC2 forger fees = {}".format(node_2_fees))
 
       assert_equal(node_1_fees + node_2_fees, total_fee)
 
@@ -300,13 +300,13 @@ class ScEvmForgingFeePayments(SidechainTestFramework):
       # Check fee payments from API perspective
       # Non-last block of the epoch:
       api_fee_payments_node1 = http_block_getFeePayments(sc_node_1, sc_middle_we_block_id)['feePayments']
-      pprint.pprint(api_fee_payments_node1)
+      logging.info(api_fee_payments_node1)
 
       assert_equal(0, len(api_fee_payments_node1),
                    "No fee payments expected to be found for the block in the middle of WE")
 
       api_fee_payments_node2 = http_block_getFeePayments(sc_node_2, sc_middle_we_block_id)['feePayments']
-      pprint.pprint(api_fee_payments_node2)
+      logging.info(api_fee_payments_node2)
 
 
       assert_equal(0, len(api_fee_payments_node2),
@@ -316,8 +316,8 @@ class ScEvmForgingFeePayments(SidechainTestFramework):
       # Last block of the epoch:
       api_fee_payments_node1 = http_block_getFeePayments(sc_node_1, sc_last_we_block_id)['feePayments']
       api_fee_payments_node2 = http_block_getFeePayments(sc_node_2, sc_last_we_block_id)['feePayments']
-      pprint.pprint(api_fee_payments_node1)
-      pprint.pprint(api_fee_payments_node2)
+      logging.info(api_fee_payments_node1)
+      logging.info(api_fee_payments_node2)
 
       assert_equal(api_fee_payments_node1, api_fee_payments_node2,
                    "SC nodes have different view on the fee payments")

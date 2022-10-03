@@ -1,8 +1,8 @@
 package com.horizen.chain
 
-import scorex.core.serialization.{BytesSerializable, ScorexSerializer}
+import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 
 trait AbstractFeePaymentsInfo extends BytesSerializable {
 
-  override def serializer: ScorexSerializer[M]
+  override def serializer: SparkzSerializer[M]
 }

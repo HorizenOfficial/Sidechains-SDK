@@ -1,8 +1,8 @@
-package com.horizen.account
+package com.horizen.account.utils
 
 import com.horizen.account.block.AccountBlock
 import com.horizen.account.history.AccountHistory
-import scorex.core.block.Block.BlockId
+import sparkz.core.block.Block.BlockId
 
 import java.math.BigInteger
 import scala.compat.java8.OptionConverters.RichOptionalGeneric

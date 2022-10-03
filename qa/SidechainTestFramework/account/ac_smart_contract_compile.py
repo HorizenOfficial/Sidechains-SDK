@@ -1,5 +1,6 @@
 import os
 import subprocess
+import logging
 
 nodeModulesInstalled = False
 sigHashesGenerated = False
@@ -16,14 +17,14 @@ def get_cwd():
 def install_npm_packages():
     global nodeModulesInstalled
     if not nodeModulesInstalled:
-        print("Installing node packages...")
-        print("The first time this runs on your machine, it can take a few minutes...")
+        logging.info("Installing node packages...")
+        logging.info("The first time this runs on your machine, it can take a few minutes...")
         proc = subprocess.run(
             ["yarn", "install", "--quiet", "--non-interactive", "--frozen-lockfile"],
             cwd=get_cwd(),
             stdout=subprocess.PIPE)
         proc.check_returncode()
-        print("Done!")
+        logging.info("Done!")
         nodeModulesInstalled = True
 
 
@@ -31,20 +32,20 @@ def compile_smart_contracts():
     global sigHashesGenerated
     if not sigHashesGenerated:
         os.environ["TS_NODE_TRANSPILE_ONLY"] = '1'
-        print("Compiling smart contracts...")
+        logging.info("Compiling smart contracts...")
         proc = subprocess.run(
             ["npx", "hardhat", "compile"],
             cwd=get_cwd(),
             # capture_output=True
         )
         proc.check_returncode()
-        print("Generating signature hashes...")
+        logging.info("Generating signature hashes...")
         proc = subprocess.run(
             ["npx", "hardhat", "sighashes"],
             cwd=get_cwd(),
             capture_output=True)
         proc.check_returncode()
-        print("Done!")
+        logging.info("Done!")
         sigHashesGenerated = True
 
 

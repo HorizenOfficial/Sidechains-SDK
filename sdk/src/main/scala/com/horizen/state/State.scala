@@ -1,8 +1,8 @@
 package com.horizen.state
 
 import com.horizen.transaction.Transaction
-import scorex.core.PersistentNodeViewModifier
-import scorex.core.transaction.state.{MinimalState, StateReader}
+import sparkz.core.PersistentNodeViewModifier
+import sparkz.core.transaction.state.{MinimalState, StateReader}
 
 trait State[TX <: Transaction, PMOD <: PersistentNodeViewModifier, SV <: StateView[TX], S <: State[TX, PMOD, SV, S]]
   extends MinimalState[PMOD, S]

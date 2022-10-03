@@ -5,6 +5,7 @@ import com.horizen.account.receipt.LogsBloom
 import com.horizen.block._
 import com.horizen.chain.{AbstractFeePaymentsInfo, MainchainHeaderHash, SidechainBlockInfo}
 import com.horizen.consensus._
+import com.horizen.fork.ForkManager
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.{PrivateKey25519, VrfSecretKey}
@@ -13,11 +14,11 @@ import com.horizen.transaction.{Transaction, TransactionSerializer}
 import com.horizen.utils.{DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, TimeToEpochUtils}
 import com.horizen.vrf.VrfOutput
 import com.horizen.{AbstractHistory, AbstractWallet}
-import scorex.core.NodeViewHolder.CurrentView
-import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
-import scorex.core.block.Block
-import scorex.core.transaction.MemoryPool
-import scorex.core.transaction.state.MinimalState
+import sparkz.core.NodeViewHolder.CurrentView
+import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
+import sparkz.core.block.Block
+import sparkz.core.transaction.MemoryPool
+import sparkz.core.transaction.state.MinimalState
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.collection.JavaConverters._
@@ -45,8 +46,8 @@ abstract class AbstractForgeMessageBuilder[
 
   type ForgeMessageType = GetDataFromCurrentView[ HIS,  MS,  VL,  MP, ForgeResult]
 
-  def buildForgeMessageForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber, timeout: Timeout): ForgeMessageType = {
-    val forgingFunctionForEpochAndSlot: View => ForgeResult = tryToForgeNextBlock(consensusEpochNumber, consensusSlotNumber, timeout)
+  def buildForgeMessageForEpochAndSlot(consensusEpochNumber: ConsensusEpochNumber, consensusSlotNumber: ConsensusSlotNumber, timeout: Timeout, forcedTx: Iterable[TX]): ForgeMessageType = {
+    val forgingFunctionForEpochAndSlot: View => ForgeResult = tryToForgeNextBlock(consensusEpochNumber, consensusSlotNumber, timeout, forcedTx)
 
     val forgeMessage: ForgeMessageType =
       GetDataFromCurrentView[ HIS,  MS,  VL,  MP, ForgeResult](forgingFunctionForEpochAndSlot)
@@ -56,7 +57,7 @@ abstract class AbstractForgeMessageBuilder[
 
   case class BranchPointInfo(branchPointId: ModifierId, referenceDataToInclude: Seq[MainchainHeaderHash], headersToInclude: Seq[MainchainHeaderHash])
 
-  protected def tryToForgeNextBlock(nextConsensusEpochNumber: ConsensusEpochNumber, nextConsensusSlotNumber: ConsensusSlotNumber, timeout: Timeout)(nodeView: View): ForgeResult = Try {
+  protected def tryToForgeNextBlock(nextConsensusEpochNumber: ConsensusEpochNumber, nextConsensusSlotNumber: ConsensusSlotNumber, timeout: Timeout, forcedTx: Iterable[TX])(nodeView: View): ForgeResult = Try {
     log.info(s"Try to forge block for epoch $nextConsensusEpochNumber with slot $nextConsensusSlotNumber")
 
     val branchPointInfo: BranchPointInfo = getBranchPointInfo(nodeView.history) match {
@@ -89,9 +90,10 @@ abstract class AbstractForgeMessageBuilder[
       val ownedForgingDataView: Seq[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof, VrfOutput)]
       = forgingStakeMerklePathInfoSeq.view.flatMap(forgingStakeMerklePathInfo => getSecretsAndProof(nodeView.vault, vrfMessage, forgingStakeMerklePathInfo))
 
+      val percentageForkApplied = ForkManager.getSidechainConsensusEpochFork(nextConsensusEpochNumber).stakePercentageForkApplied
       val eligibleForgingDataView: Seq[(ForgingStakeMerklePathInfo, PrivateKey25519, VrfProof, VrfOutput)]
       = ownedForgingDataView.filter { case (forgingStakeMerklePathInfo, _, _, vrfOutput) =>
-        vrfProofCheckAgainstStake(vrfOutput, forgingStakeMerklePathInfo.forgingStakeInfo.stakeAmount, totalStake)
+        vrfProofCheckAgainstStake(vrfOutput, forgingStakeMerklePathInfo.forgingStakeInfo.stakeAmount, totalStake, percentageForkApplied)
       }
 
 
@@ -99,20 +101,18 @@ abstract class AbstractForgeMessageBuilder[
 
       val forgingResult = eligibleForgerOpt
         .map { case (forgingStakeMerklePathInfo, privateKey25519, vrfProof, _) =>
-          forgeBlock(nodeView, nextBlockTimestamp, branchPointInfo, forgingStakeMerklePathInfo, privateKey25519, vrfProof, timeout)
+          forgeBlock(nodeView, nextBlockTimestamp, branchPointInfo, forgingStakeMerklePathInfo, privateKey25519, vrfProof, timeout, forcedTx)
         }
         .getOrElse(SkipSlot("No eligible forging stake found."))
       forgingResult
     }
   } match {
-    case Success(result) => {
+    case Success(result) =>
       log.info(s"Forge result is: $result")
       result
-    }
-    case Failure(ex) => {
-      log.error(s"Failed to forge block for ${nextConsensusEpochNumber} epoch ${nextConsensusSlotNumber} slot due:", ex)
+    case Failure(ex) =>
+      log.error(s"Failed to forge block for $nextConsensusEpochNumber epoch $nextConsensusSlotNumber slot due:", ex)
       ForgeFailed(ex)
-    }
   }
 
   protected def getSecretsAndProof(
@@ -225,14 +225,15 @@ abstract class AbstractForgeMessageBuilder[
                            forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo,
                            blockSignPrivateKey: PrivateKey25519,
                            vrfProof: VrfProof,
-                           timeout: Timeout): ForgeResult = {
+                           timeout: Timeout,
+                           forcedTx: Iterable[TX]): ForgeResult = {
     val parentBlockId: ModifierId = branchPointInfo.branchPointId
-    val parentBlockInfo: SidechainBlockInfo = nodeView.history.blockInfoById(branchPointInfo.branchPointId)
+    val parentBlockInfo: SidechainBlockInfo = nodeView.history.blockInfoById(parentBlockId)
     var withdrawalEpochMcBlocksLeft: Int = params.withdrawalEpochLength - parentBlockInfo.withdrawalEpochInfo.lastEpochIndex
     if (withdrawalEpochMcBlocksLeft == 0) // parent block is the last block of the epoch
       withdrawalEpochMcBlocksLeft = params.withdrawalEpochLength
 
-    var blockSize: Int = precalculateBlockHeaderSize(branchPointInfo.branchPointId, timestamp, forgingStakeMerklePathInfo, vrfProof)
+    var blockSize: Int = precalculateBlockHeaderSize(parentBlockId, timestamp, forgingStakeMerklePathInfo, vrfProof)
     blockSize += 4 + 4 // placeholder for the MainchainReferenceData and Transactions sequences size values
 
     // Get all needed MainchainBlockHeaders from MC Node
@@ -252,8 +253,8 @@ abstract class AbstractForgeMessageBuilder[
     // Get Ommers in case the branch point is not the current best block
     var ommers: Seq[Ommer[H]] = Seq()
     var blockId = nodeView.history.bestBlockId
-    while (blockId != branchPointInfo.branchPointId) {
-      val block = nodeView.history.getBlockById(blockId).get() // TODO: replace with method blockById with no Option
+    while (blockId != parentBlockId) {
+      val block = nodeView.history.getBlockById(blockId).get // TODO: replace with method blockById with no Option
       blockId = block.parentId
       ommers = Ommer.toOmmer(block) +: ommers
     }
@@ -292,15 +293,16 @@ abstract class AbstractForgeMessageBuilder[
     })
 
     val isWithdrawalEpochLastBlock: Boolean = mainchainReferenceData.size == withdrawalEpochMcBlocksLeft
-    val forkOngoing: Boolean = (blockId != branchPointInfo.branchPointId)
 
-    val transactions: Seq[TX] = if (
-      isWithdrawalEpochLastBlock || // SC block is going to become the last block of the withdrawal epoch
-      forkOngoing // a fork is ongoing, the tip state is not fully reliable
-    ) {
+    val transactions: Seq[TX] = if (isWithdrawalEpochLastBlock) {
       Seq() // no SC Txs allowed
+    } else if (parentBlockId != nodeView.history.bestBlockId) {
+      // SC block extends the block behind the current tip (for example, in case of ommers).
+      // We can't be sure that transactions in the Mempool are valid against the block in the past.
+      // For example the ommerred Block contains Tx which output is going to be spent by another Tx in the Mempool.
+      Seq()
     } else {
-      collectTransactionsFromMemPool(nodeView, blockSize)
+      collectTransactionsFromMemPool(nodeView, blockSize, mainchainReferenceData, timestamp, forcedTx)
     }
 
     log.trace(s"Transactions to apply $transactions")
@@ -354,8 +356,7 @@ abstract class AbstractForgeMessageBuilder[
                       forgingStakeMerklePathInfo: ForgingStakeMerklePathInfo,
                       vrfProof: VrfProof): Int
 
-  def collectTransactionsFromMemPool(nodeView: View, blockSize: Int): Seq[TX]
-
+  def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int, mainchainBlockReferenceData: Seq[MainchainBlockReferenceData], timestamp: Long, forcedTx: Iterable[TX]): Seq[TX]
 
   def getOmmersSize(ommers: Seq[Ommer[H]]) : Int
 

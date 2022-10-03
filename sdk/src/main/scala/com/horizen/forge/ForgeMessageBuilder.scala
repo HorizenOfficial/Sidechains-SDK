@@ -13,11 +13,15 @@ import com.horizen.secret.PrivateKey25519
 import com.horizen.storage.SidechainHistoryStorage
 import com.horizen.transaction.{SidechainTransaction, TransactionSerializer}
 import com.horizen.utils.{DynamicTypedSerializer, FeePaymentsUtils, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, MerkleTree}
-import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainTypes, SidechainWallet}
+import com.horizen.chain.MainchainHeaderHash
 import scorex.util.ModifierId
+import com.horizen.fork.ForkManager
+import com.horizen.utils.TimeToEpochUtils
+import com.horizen.{SidechainHistory, SidechainMemoryPool, SidechainState, SidechainWallet, SidechainTypes}
 import scala.collection.JavaConverters._
-import scorex.core.NodeViewModifier
-import scorex.core.block.Block.{BlockId, Timestamp}
+import sparkz.core.NodeViewModifier
+import sparkz.core.block.Block
+import sparkz.core.block.Block.BlockId
 import scala.util.{Failure, Success, Try}
 
 class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
@@ -42,13 +46,14 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
                  branchPointInfo: BranchPointInfo,
                  isWithdrawalEpochLastBlock: Boolean,
                  parentId: BlockId,
-                 timestamp: Timestamp,
+                 timestamp: Block.Timestamp,
                  mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
                  sidechainTransactions: Seq[SidechainTypes#SCBT],
                  mainchainHeaders: Seq[MainchainHeader],
                  ommers: Seq[Ommer[SidechainBlockHeader]],
                  ownerPrivateKey: PrivateKey25519,
-                 forgingStakeInfo: ForgingStakeInfo, vrfProof: VrfProof,
+                 forgingStakeInfo: ForgingStakeInfo,
+                 vrfProof: VrfProof,
                  forgingStakeInfoMerklePath: MerklePath,
                  companion: DynamicTypedSerializer[SidechainTypes#SCBT, TransactionSerializer[SidechainTypes#SCBT]],
                  inputBlockSize: Int,
@@ -128,20 +133,33 @@ class ForgeMessageBuilder(mainchainSynchronizer: MainchainSynchronizer,
     header.bytes.length
   }
 
-  override def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int): Seq[SidechainTypes#SCBT] =
-  {
+  override def collectTransactionsFromMemPool(nodeView: View, blockSizeIn: Int, mainchainBlockReferenceData: Seq[MainchainBlockReferenceData], timestamp: Long, forcedTx: Iterable[SidechainTypes#SCBT]): Seq[SidechainTypes#SCBT] = {
     var blockSize: Int = blockSizeIn
+
     var txsCounter: Int = 0
-    nodeView.pool.take(nodeView.pool.size).filter(tx => {
-      val txSize = tx.bytes.length + 4 // placeholder for Tx length
-      txsCounter += 1
-      if (txsCounter > SidechainBlockBase.MAX_SIDECHAIN_TXS_NUMBER || blockSize + txSize > SidechainBlockBase.MAX_BLOCK_SIZE)
-        false // stop data collection
-      else {
-        blockSize += txSize
-        true // continue data collection
-      }
-    }).toSeq
+    val allowedWithdrawalRequestBoxes = nodeView.state.getAllowedWithdrawalRequestBoxes(mainchainBlockReferenceData.size) - nodeView.state.getAlreadyMinedWithdrawalRequestBoxesInCurrentEpoch
+    val consensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, timestamp)
+    val mempoolTx =
+      if (ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).backwardTransferLimitEnabled())
+      //In case we reached the Sidechain Fork1 we filter the mempool txs considering also the WithdrawalBoxes allowed to be mined in the current block.
+        nodeView.pool.takeWithWithdrawalBoxesLimit(allowedWithdrawalRequestBoxes)
+      else
+        nodeView.pool.take(nodeView.pool.size)
+    (mempoolTx
+      .filter(nodeView.state.validateWithFork(_, consensusEpochNumber).isSuccess)
+      ++ forcedTx)
+      .filter(tx => {
+        val txSize = tx.bytes.length + 4 // placeholder for Tx length
+        txsCounter += 1
+        if (txsCounter > SidechainBlockBase.MAX_SIDECHAIN_TXS_NUMBER || blockSize + txSize > SidechainBlockBase.MAX_BLOCK_SIZE)
+          false // stop data collection
+        else {
+          blockSize += txSize
+          true // continue data collection
+        }
+
+      })
+      .map(tx => tx.asInstanceOf[SidechainTransaction[Proposition, Box[Proposition]]]).toSeq // TODO: problems with types
   }
 
   override def getOmmersSize(ommers: Seq[Ommer[SidechainBlockHeader]]): Int = {

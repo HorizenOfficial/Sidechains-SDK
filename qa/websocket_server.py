@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 import json
+import logging
 
-from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration, Account
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import assert_equal, assert_true, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, is_mainchain_block_included_in_sc_block, check_box_balance, \
-    check_mainchain_block_reference_info, generate_next_blocks
+from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
+    SCNetworkConfiguration
+from test_framework.util import assert_equal, assert_true, forward_transfer_to_sidechain, \
+    websocket_port_by_mc_node_index, assert_false
+from SidechainTestFramework.scutil import generate_next_blocks, bootstrap_sidechain_nodes, start_sc_nodes
 from httpCalls.wallet.balance import http_wallet_balance
 from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress
 from httpCalls.wallet.createPrivateKey25519 import  http_wallet_createPrivateKey25519
@@ -16,10 +15,6 @@ from httpCalls.transaction.findTransactionByID import http_transaction_findById
 from httpCalls.block.findBlockByID import http_block_findById
 from httpCalls.block.best import http_block_best
 from SidechainTestFramework.websocket_client import WebsocketClient
-try:
-    import thread
-except ImportError:
-    import _thread as thread
 import time
 
 """
@@ -55,13 +50,35 @@ Workflow modelled in this test:
         -Verify that both event are triggered
         -Send some coin to previous public key
         -Verify that mempool changed event is triggered
+    Test that we don't return FeePaymentTransactions in case of no transactions in the epoch
+        -Generate block in order to complete the epoch
+        -Advance of another epoch without sending any transaction
+        -Verify that updateTip event and get single block request of the last epoch block don't return FeePaymentTransaction
 """
 
 class SCWsServer(SidechainTestFramework):
+    number_of_sidechain_nodes = 1
     blocks = []
+    sc_withdrawal_epoch_length = 10
+
+    def sc_setup_chain(self):
+        # Bootstrap new SC, specify SC node connection to MC node
+        mc_node_1 = self.nodes[0]
+        sc_node_1_configuration = SCNodeConfiguration(
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node_1.hostname, websocket_port_by_mc_node_index(0))),
+        )
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node_1, 500, self.sc_withdrawal_epoch_length),
+                                        sc_node_1_configuration)
+
+        # rewind sc genesis block timestamp for 5 consensus epochs
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720*120*5)
+
+    def sc_setup_nodes(self):
+        # Start 1 SC node
+        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir)
 
     def run_test(self):
-        print("SC ws server requests test is starting...")
+        logging.info("SC ws server requests test is starting...")
 
         mc_node = self.nodes[0]
         sc_node1 = self.sc_nodes[0]
@@ -87,7 +104,7 @@ class SCWsServer(SidechainTestFramework):
         ws_connection = ws.create_connection("ws://localhost:8025/")
 
         ######## Mempool requests test ########
-        print("######## Mempool requests test ########")
+        logging.info("######## Mempool requests test ########")
 
         # Test with empty mempool
 
@@ -207,7 +224,7 @@ class SCWsServer(SidechainTestFramework):
 
 
         ######## Get single block request test ########
-        print("######## Get single block request test ########")
+        logging.info("######## Get single block request test ########")
 
         # Test get single block request
 
@@ -287,7 +304,7 @@ class SCWsServer(SidechainTestFramework):
         assert_equal(response['responsePayload'], "Invalid parameter")
 
         ######## Get new block hashes request test ########
-        print("######## Get new block hashes request test ########")
+        logging.info("######## Get new block hashes request test ########")
         # Test with no hashes in common
 
         # Send get new block hashes request with non existing block hash
@@ -341,7 +358,7 @@ class SCWsServer(SidechainTestFramework):
         assert_equal(responsePayload['hashes'][0],self.blocks[1])
 
         ######## Websocket events tests ########
-        print("######## Websocket events test ########")
+        logging.info("######## Websocket events test ########")
 
         self.blocks.append(generate_next_blocks(sc_node1, "", 1)[0])
         self.sc_sync_all()
@@ -396,6 +413,54 @@ class SCWsServer(SidechainTestFramework):
         eventPayload = changedMempoolEvent['eventPayload']
         assert_equal(eventPayload['size'],1)
         assert_equal(eventPayload['transactions'],[txid])
+
+        generate_next_blocks(sc_node1, "", 1)[0]
+        ws_connection.recv()
+        ws_connection.recv()
+
+        mc_node.generate(8)
+        generate_next_blocks(sc_node1, "", 1)[0]
+        ws_connection.recv()
+        ws_connection.recv()
+
+        mc_node.generate(1)
+        generate_next_blocks(sc_node1, "", 1)[0]
+        ws_connection.recv()
+        ws_connection.recv()
+
+        # Wait until Certificate will appear in MC node mempool
+        time.sleep(10)
+        while mc_node.getmempoolinfo()["size"] == 0 and sc_node1.submitter_isCertGenerationActive()["result"]["state"]:
+            logging.info("Wait for certificate in mc mempool...")
+            time.sleep(2)
+            sc_node1.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
+        assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
+
+        #Next epoch
+        logging.info("#Next epoch")
+        assert_equal(mc_node.getscinfo(self.sc_nodes_bootstrap_info.sidechain_id)["items"][0]["state"], "ALIVE")
+        assert_equal(mc_node.getscinfo(self.sc_nodes_bootstrap_info.sidechain_id)["items"][0]["epoch"], 1)
+
+        #Test that we don't return feePayments if there aren't transactions in the epoch
+        logging.info("#Test that we don't return feePayments if there aren't transactions in the epoch")
+        mc_node.generate(9)
+        lastBlock = generate_next_blocks(sc_node1, "", 1)[0]
+        for i in range (0,2):
+            response = json.loads(ws_connection.recv())
+            if response['msgType'] == 0 and response['answerType'] == 0: # new Tip event
+                newTipEvent = response
+                eventPayload = response['eventPayload']
+                assert_equal(eventPayload['block']['header']['feePaymentsHash'], '0000000000000000000000000000000000000000000000000000000000000000')
+                assert_false('feePayments' in eventPayload)
+
+        response = json.loads(ws.sendMessage(ws_connection,
+                ws.REQUEST_MSG_TYPE,
+                0,
+                ws.GET_SINGLE_BLOCK_REQUEST,
+                json.dumps({"hash": lastBlock})))
+        responsePayload = response['responsePayload']
+        assert_equal(responsePayload['block']['header']['feePaymentsHash'], '0000000000000000000000000000000000000000000000000000000000000000')
+        assert_false('feePayments' in responsePayload)
 
 if __name__ == "__main__":
     SCWsServer().main()

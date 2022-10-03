@@ -2,31 +2,30 @@ package com.horizen.account.mempool
 
 import com.horizen.SidechainTypes
 import com.horizen.account.node.NodeAccountMemoryPool
-import com.horizen.account.state.AccountStateReader
-import scorex.core.transaction.MempoolReader
+import sparkz.core.transaction.MempoolReader
 import scorex.util.{ModifierId, ScorexLogging}
-
+import com.horizen.account.state.AccountStateReader
 import java.util
 import java.util.{Comparator, Optional}
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.util.{Failure, Success, Try}
 
 class AccountMemoryPool(
-    unconfirmed: MempoolMap,
-    stateReader: AccountStateReader
-) extends scorex.core.transaction.MemoryPool[
-      SidechainTypes#SCAT,
-      AccountMemoryPool
-    ]
-    with SidechainTypes
-    with NodeAccountMemoryPool
-    with ScorexLogging {
+                         unconfirmed: MempoolMap,
+                         stateReader: AccountStateReader
+                       ) extends sparkz.core.transaction.MemoryPool[
+  SidechainTypes#SCAT,
+  AccountMemoryPool
+]
+  with SidechainTypes
+  with NodeAccountMemoryPool
+  with ScorexLogging {
   override type NVCT = AccountMemoryPool
 
   // Getters:
   override def modifierById(
-      modifierId: ModifierId
-  ): Option[SidechainTypes#SCAT] = {
+                             modifierId: ModifierId
+                           ): Option[SidechainTypes#SCAT] = {
     unconfirmed.getTransaction(modifierId)
   }
 

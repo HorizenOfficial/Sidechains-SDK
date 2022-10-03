@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 import json
+import logging
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
 from test_framework.util import fail, assert_false, start_nodes, \
-    websocket_port_by_mc_node_index
+    websocket_port_by_mc_node_index, COIN
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
     start_sc_nodes, check_box_balance, check_wallet_coins_balance, generate_next_blocks, generate_next_block
 from SidechainTestFramework.sc_forging_util import *
@@ -44,11 +45,13 @@ class SCBwtMinValue(SidechainTestFramework):
         return start_nodes(num_nodes, self.options.tmpdir, extra_args=[['-debug=sc', '-logtimemicros=1', '-scproofqueuesize=0']] * num_nodes)
 
     def sc_setup_chain(self):
+        sc_creation_zens = 100
         mc_node = self.nodes[0]
         sc_node_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
+            max_fee=sc_creation_zens*COIN
         )
-        network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length), sc_node_configuration)
+        network = SCNetworkConfiguration(SCCreationInfo(mc_node, sc_creation_zens, self.sc_withdrawal_epoch_length), sc_node_configuration)
         self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network)
 
     def sc_setup_nodes(self):
@@ -103,7 +106,7 @@ class SCBwtMinValue(SidechainTestFramework):
         # Checking withdrawCoins
         # Try to withdraw coins from SC to MC: amount below the dust threshold
         mc_address1 = self.nodes[0].getnewaddress()
-        print("First BT MC public key address is {}".format(mc_address1))
+        logging.info("First BT MC public key address is {}".format(mc_address1))
         sc_bt_amount0 = 53
         withdrawal_request = {"outputs": [ \
                                { "mainchainAddress": mc_address1,
@@ -115,7 +118,7 @@ class SCBwtMinValue(SidechainTestFramework):
         if "result" in withdrawCoinsJson:
             fail("It shouldn't be possible to send less than dust threshold coins(54 satoshi)")
         else:
-            print("Expected Coins withdrawn fail: " + json.dumps(withdrawCoinsJson))
+            logging.info("Expected Coins withdrawn fail: " + json.dumps(withdrawCoinsJson))
 
         # Try to withdraw coins from SC to MC: minimum amount to send
         sc_bt_amount1 = 54 # in Satoshi
@@ -128,14 +131,14 @@ class SCBwtMinValue(SidechainTestFramework):
         if "result" not in withdrawCoinsJson:
             fail("Withdraw coins failed: " + json.dumps(withdrawCoinsJson))
         else:
-            print("Coins withdrawn: " + json.dumps(withdrawCoinsJson))
+            logging.info("Coins withdrawn: " + json.dumps(withdrawCoinsJson))
 
         # Generate SC block
         generate_next_blocks(sc_node, "first node", 1)
 
         # Checking createCoreTransactionSimplified
         mc_address2 = self.nodes[0].getnewaddress()
-        print("Second BT MC public key address is {}".format(mc_address2))
+        logging.info("Second BT MC public key address is {}".format(mc_address2))
         withdrawal_requests = [{ "mainchainAddress": mc_address2,
                                  "value": sc_bt_amount0 }
                               ]
@@ -154,7 +157,7 @@ class SCBwtMinValue(SidechainTestFramework):
         if "result" in coreTransactionJson:
             fail("Coins withdraw should have failed: " + json.dumps(coreTransactionJson))
         else:
-            print("Expected Core transaction exception: " + json.dumps(coreTransactionJson))
+            logging.info("Expected Core transaction exception: " + json.dumps(coreTransactionJson))
 
         sc_bt_amount2 = 54  # in Satoshi
         withdrawal_requests = [{ "mainchainAddress": mc_address2,
@@ -172,13 +175,13 @@ class SCBwtMinValue(SidechainTestFramework):
         if "result" not in coreTransactionJson:
             fail("Coins withdraw failed: " + json.dumps(coreTransactionJson))
         else:
-            print("Core transaction bytes: " + json.dumps(coreTransactionJson))
+            logging.info("Core transaction bytes: " + json.dumps(coreTransactionJson))
 
         transactionJson = sc_node.transaction_sendTransaction(json.dumps(coreTransactionJson["result"]))
         if not "result" in transactionJson:
             fail("Withdraw coins failed: " + json.dumps(transactionJson))
         else:
-            print("Coins withdrawal transaction: " + json.dumps(transactionJson))
+            logging.info("Coins withdrawal transaction: " + json.dumps(transactionJson))
 
         # Generate SC block
         generate_next_blocks(sc_node, "first node", 1)
@@ -200,7 +203,7 @@ class SCBwtMinValue(SidechainTestFramework):
         if "result" in coreTransactionJson:
             fail("Coins withdraw should have failed: " + json.dumps(coreTransactionJson))
         else:
-            print("Expected Core transaction exception: " + json.dumps(coreTransactionJson))
+            logging.info("Expected Core transaction exception: " + json.dumps(coreTransactionJson))
 
         sc_bt_amount3 = 54  # in Satoshi
         core_transaction_request = {
@@ -215,23 +218,23 @@ class SCBwtMinValue(SidechainTestFramework):
         if "result" not in withdrawCoinsJson:
             fail("Coins withdraw failed: " + json.dumps(withdrawCoinsJson))
         else:
-            print("Coins withdrawal transaction: " + json.dumps(withdrawCoinsJson))
+            logging.info("Coins withdrawal transaction: " + json.dumps(withdrawCoinsJson))
 
         transactionJson = sc_node.transaction_sendTransaction(json.dumps(coreTransactionJson["result"]))
         if not "result" in transactionJson:
             fail("Coins withdraw failed: " + json.dumps(transactionJson))
         else:
-            print("Coins withdrawal transaction: " + json.dumps(transactionJson))
+            logging.info("Coins withdrawal transaction: " + json.dumps(transactionJson))
 
         # Generate SC block
         generate_next_blocks(sc_node, "first node", 1)
 
         # Generate 8 more MC block to finish the first withdrawal epoch, then generate 1 more SC block to sync with MC.
         we1_end_mcblock_hash = mc_node.generate(8)[7]
-        print("End mc block hash in withdrawal epoch 1 = " + we1_end_mcblock_hash)
+        logging.info("End mc block hash in withdrawal epoch 1 = " + we1_end_mcblock_hash)
         we1_end_mcblock_json = mc_node.getblock(we1_end_mcblock_hash)
         we1_end_epoch_cum_sc_tx_comm_tree_root = we1_end_mcblock_json["scCumTreeHash"]
-        print("End cum sc tx commtree root hash in withdrawal epoch 1 = " + we1_end_epoch_cum_sc_tx_comm_tree_root)
+        logging.info("End cum sc tx commtree root hash in withdrawal epoch 1 = " + we1_end_epoch_cum_sc_tx_comm_tree_root)
         we1_end_scblock_id = generate_next_block(sc_node, "first node")
         check_mcreferencedata_presence(we1_end_mcblock_hash, we1_end_scblock_id, sc_node)
 
@@ -243,7 +246,7 @@ class SCBwtMinValue(SidechainTestFramework):
         # Wait until Certificate will appear in MC node mempool
         time.sleep(10)
         while mc_node.getmempoolinfo()["size"] == 0 and sc_node.submitter_isCertGenerationActive()["result"]["state"]:
-            print("Wait for certificate in mc mempool...")
+            logging.info("Wait for certificate in mc mempool...")
             time.sleep(2)
             sc_node.block_best()  # just a ping to SC node. For some reason, STF can't request SC node API after a while idle.
         assert_equal(1, mc_node.getmempoolinfo()["size"], "Certificate was not added to Mc node mempool.")
@@ -255,10 +258,10 @@ class SCBwtMinValue(SidechainTestFramework):
 
         # Get Certificate for Withdrawal epoch 1 and verify it
         we1_certHash = mc_node.getrawmempool()[0]
-        print("Withdrawal epoch 0 certificate hash = " + we1_certHash)
+        logging.info("Withdrawal epoch 0 certificate hash = " + we1_certHash)
         we1_cert = mc_node.getrawtransaction(we1_certHash, 1)
         we1_cert_hex = mc_node.getrawtransaction(we1_certHash)
-        print("Withdrawal epoch 0 certificate hex = " + we1_cert_hex)
+        logging.info("Withdrawal epoch 0 certificate hex = " + we1_cert_hex)
         assert_equal(self.sc_nodes_bootstrap_info.sidechain_id, we1_cert["cert"]["scid"],
                      "Sidechain Id in certificate is wrong.")
         assert_equal(0, we1_cert["cert"]["epochNumber"], "Sidechain epoch number in certificate is wrong.")
@@ -273,7 +276,7 @@ class SCBwtMinValue(SidechainTestFramework):
                      "MC block expected to contain 1 Certificate.")
         assert_equal(we1_certHash, mc_node.getblock(we2_2_mcblock_hash)["cert"][0],
                      "MC block expected to contain certificate.")
-        print("MC block with withdrawal certificate for epoch 1 = {0}\n".format(
+        logging.info("MC block with withdrawal certificate for epoch 1 = {0}\n".format(
             str(mc_node.getblock(we2_2_mcblock_hash, False))))
 
         cert_address_1 = we1_cert["vout"][1]["scriptPubKey"]["addresses"][0]

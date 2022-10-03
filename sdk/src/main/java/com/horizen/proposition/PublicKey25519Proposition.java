@@ -3,21 +3,17 @@ package com.horizen.proposition;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.horizen.serialization.Views;
+import com.horizen.utils.BytesUtils;
 import com.horizen.utils.Ed25519;
-import scala.util.Try;
-
 import com.horizen.secret.PrivateKey25519;
-import com.horizen.ScorexEncoding;
-
 import scorex.crypto.hash.Blake2b256;
 import com.google.common.primitives.Bytes;
-
 import java.util.Arrays;
+
 
 @JsonView(Views.Default.class)
 public final class PublicKey25519Proposition
-    extends ScorexEncoding
-    implements ProofOfKnowledgeProposition<PrivateKey25519>
+    implements AbstractSingleSecretProofOfKnowledgeProposition<PrivateKey25519>
 {
     public static final byte ADDRESS_VERSION = 1;
     public static final int CHECKSUM_LENGTH = 4;
@@ -70,7 +66,7 @@ public final class PublicKey25519Proposition
     }
 
     public String address() {
-        return encoder().encode(Bytes.concat(pubKeyBytesWithVersion(), calcCheckSum(pubKeyBytesWithVersion())));
+        return BytesUtils.toHexString(Bytes.concat(pubKeyBytesWithVersion(), calcCheckSum(pubKeyBytesWithVersion())));
     }
 
     @Override
@@ -84,11 +80,7 @@ public final class PublicKey25519Proposition
 
     // TO DO: should we return null if something going wrong or throw exception?
     public static PublicKey25519Proposition parseAddress(String address) {
-        Try<byte[]> res = encoder().decode(address);
-        if(res.isFailure())
-            throw new IllegalArgumentException("Wrong address encoding");
-
-        byte[] addressBytes = res.get();
+        byte[] addressBytes = BytesUtils.fromHexString(address);
         if(addressBytes.length != ADDRESS_LENGTH)
             throw new IllegalArgumentException("Wrong address length");
 

@@ -13,7 +13,6 @@ public interface NodeMemoryPoolBase<TX extends Transaction> {
             Comparator<TX> c,
             int limit);
 
-
     int getSize();
 
     Optional<TX> getTransactionById(String transactionId);

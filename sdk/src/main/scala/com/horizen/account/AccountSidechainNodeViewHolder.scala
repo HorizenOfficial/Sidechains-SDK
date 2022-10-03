@@ -17,16 +17,17 @@ import com.horizen.node.NodeWalletBase
 import com.horizen.params.NetworkParams
 import com.horizen.proof.Proof
 import com.horizen.proposition.Proposition
-import com.horizen.storage.SidechainSecretStorage
-import com.horizen.validation.SemanticBlockValidator
-import com.horizen.validation.HistoryBlockValidator
+import com.horizen.storage.{SidechainSecretStorage, SidechainStorageInfo}
+import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
 import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
-import scorex.core.transaction.state.TransactionValidation
-import scorex.core.utils.NetworkTimeProvider
 import scorex.util.ModifierId
-
-import scala.collection.JavaConverters.{collectionAsScalaIterableConverter, seqAsJavaListConverter}
-import scala.util.Success
+import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
+import sparkz.core.consensus.History.ProgressInfo
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{SemanticallyFailedModification, SemanticallySuccessfulModifier}
+import sparkz.core.transaction.state.TransactionValidation
+import sparkz.core.utils.NetworkTimeProvider
+import scala.util.{Failure, Success, Try}
+import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 
 class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                      params: NetworkParams,
@@ -38,7 +39,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                                      customMessageProcessors: Seq[MessageProcessor],
                                      secretStorage: SidechainSecretStorage,
                                      genesisBlock: AccountBlock)
-  extends AbstractSidechainNodeViewHolder[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock](sidechainSettings, params, timeProvider) {
+  extends AbstractSidechainNodeViewHolder[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock](sidechainSettings, timeProvider) {
 
   override type HSTOR = AccountHistoryStorage
   override type HIS = AccountHistory
@@ -65,6 +66,11 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     wallet <- AccountWallet.restoreWallet(sidechainSettings.wallet.seed.getBytes, secretStorage)
     pool <- Some(AccountMemoryPool.createEmptyMempool(state))
   } yield (history, state, wallet, pool)
+
+  override def postStop(): Unit = {
+    log.info("AccountSidechainNodeViewHolder actor is stopping...")
+    super.postStop()
+  }
 
   override protected def genesisState: (HIS, MS, VL, MP) = {
     val result = for {
@@ -116,7 +122,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override def getWithdrawalEpochNumber(state: MS) : Int = state.getWithdrawalEpochInfo.epoch
 
   override protected def getCurrentSidechainNodeViewInfo: Receive = {
-    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView[
+    case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView[
       AccountTransaction[Proposition, Proof[Proposition]],
       AccountBlockHeader,
       AccountBlock,
@@ -128,7 +134,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       AccountNodeView,
       _] @unchecked =>
       msg match {
-        case AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentNodeView(f) => try {
+        case AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView(f) => try {
           val l: AccountNodeView = new AccountNodeView(history(), minimalState(), vault(), memoryPool())
           sender() ! f(l)
         }
@@ -188,6 +194,63 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       }
   }
 
+  // TODO FOR MERGE
+  override val listOfStorageInfo: Seq[SidechainStorageInfo] = Seq()
+
+
+  // TODO FOR MERGE: implement these methods
+  override def dumpStorages(): Unit = ???
+  override def getStorageVersions: Map[String, String] = ???
+
+  override def processLocallyGeneratedTransaction: Receive = {
+    case newTxs: LocallyGeneratedTransaction[SidechainTypes#SCAT] =>
+      newTxs.txs.foreach(tx => {
+        // TODO FOR MERGE - Any custom implementation?
+        /*
+        if (tx.fee() > maxTxFee)
+          context.system.eventStream.publish(FailedTransaction(tx.asInstanceOf[Transaction].id, new IllegalArgumentException(s"Transaction ${tx.id()} with fee of ${tx.fee()} exceed the predefined MaxFee of ${maxTxFee}"),
+            immediateFailure = true))
+        else
+
+         */
+        log.info(s"Got locally generated tx ${tx.id} of type ${tx.modifierTypeId}")
+
+        txModify(tx)
+
+      })
+  }
+
+  // Apply state and wallet with blocks one by one, if consensus epoch is going to be changed -> notify wallet and history.
+  override protected def applyStateAndWallet(history: HIS,
+                                    stateToApply: MS,
+                                    walletToApply: VL,
+                                    suffixTrimmed: IndexedSeq[AccountBlock],
+                                    progressInfo: ProgressInfo[AccountBlock]): Try[SidechainNodeUpdateInformation] = Try {
+    // TODO FOR MERGE - check Sidechain implementation and possibly bring this method in abstract class
+
+    val updateInfoSample = SidechainNodeUpdateInformation(history, stateToApply, walletToApply, None, None, suffixTrimmed)
+    progressInfo.toApply.foldLeft(updateInfoSample) { case (updateInfo, modToApply) =>
+      if (updateInfo.failedMod.isEmpty) {
+        val (newHistory, newWallet) = applyConsensusEpochInfo(updateInfo.history, updateInfo.state, updateInfo.wallet, modToApply)
+
+        updateInfo.state.applyModifier(modToApply) match {
+          case Success(stateAfterApply) =>
+            val historyAfterApply = newHistory.reportModifierIsValid(modToApply).get
+            context.system.eventStream.publish(SemanticallySuccessfulModifier(modToApply))
+
+            val (historyAfterUpdateFee, walletAfterApply) = scanBlockWithFeePayments(historyAfterApply, stateAfterApply, newWallet, modToApply)
+            SidechainNodeUpdateInformation(historyAfterUpdateFee, stateAfterApply, walletAfterApply, None, None, updateInfo.suffix :+ modToApply)
+
+          case Failure(e) =>
+            log.error(s"Failed to apply block ${modToApply.id} to the state.", e)
+            val (historyAfterApply, newProgressInfo) = newHistory.reportModifierIsInvalid(modToApply, progressInfo).get
+            context.system.eventStream.publish(SemanticallyFailedModification(modToApply, e))
+            SidechainNodeUpdateInformation(historyAfterApply, updateInfo.state, newWallet, Some(modToApply), Some(newProgressInfo), updateInfo.suffix)
+        }
+      } else updateInfo
+    }
+  }
+
   override protected def updateMemPool(blocksRemoved: Seq[AccountBlock], blocksApplied: Seq[AccountBlock], memPool: MP, state: MS): MP = {
     val rolledBackTxs = blocksRemoved.flatMap(extractTransactions)
 
@@ -206,6 +269,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       }
     }.foreach(tx => newMemPool.put(tx))
     newMemPool
+
   }
 
 

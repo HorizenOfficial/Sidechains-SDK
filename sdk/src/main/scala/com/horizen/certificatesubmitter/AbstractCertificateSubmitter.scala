@@ -10,8 +10,11 @@ import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.ReceivableM
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.Timers.CertificateGenerationTimer
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter._
 import com.horizen.certnative.BackwardTransfer
+import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
+import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.cryptolibprovider.{CryptoLibProvider, FieldElementUtils}
+import com.horizen.fork.ForkManager
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
@@ -20,15 +23,14 @@ import com.horizen.secret.SchnorrSecret
 import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.Transaction
 import com.horizen.transaction.mainchain.SidechainCreation
-import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
+import com.horizen.utils.{BytesUtils, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
 import com.horizen.websocket.client.{MainchainNodeChannel, WebsocketErrorResponseException, WebsocketInvalidErrorMessageException}
-import scorex.core.NodeViewHolder.CurrentView
-import scorex.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
-import scorex.core.transaction.MemoryPool
-import scorex.core.transaction.state.MinimalState
+import sparkz.core.NodeViewHolder.CurrentView
+import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.SemanticallySuccessfulModifier
+import sparkz.core.transaction.MemoryPool
+import sparkz.core.transaction.state.MinimalState
 import scorex.util.ScorexLogging
-
 import java.io.File
 import java.util
 import java.util.Optional
@@ -65,7 +67,7 @@ abstract class AbstractCertificateSubmitter[
 
   type View = CurrentView[HIS, MS, VL, MP]
 
-  val timeoutDuration: FiniteDuration = settings.scorexSettings.restApi.timeout
+  val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
 
   protected var provingFileAbsolutePath: String = _
@@ -98,6 +100,7 @@ abstract class AbstractCertificateSubmitter[
   }
 
   override def postStop(): Unit = {
+    log.debug("Certificate Submitter actor is stopping...")
     super.postStop()
     if(timers.isTimerActive(CertificateGenerationTimer)) {
       context.system.eventStream.publish(CertificateSubmissionStopped)
@@ -260,8 +263,9 @@ abstract class AbstractCertificateSubmitter[
   // No MBTRs support, so no sense to specify btrFee different to zero.
   protected def getBtrFee(referencedWithdrawalEpochNumber: Int): Long = 0
 
-  // Every positive value FT is allowed.
-  protected def getFtMinAmount(referencedWithdrawalEpochNumber: Int): Long = 0
+  private[certificatesubmitter] def getFtMinAmount(consensusEpochNumber: Int): Long = {
+    ForkManager.getSidechainConsensusEpochFork(consensusEpochNumber).ftMinAmount
+  }
 
   protected def calculateSignatures(messageToSign: Array[Byte]): Try[Seq[CertificateSignatureInfo]] = Try {
     def getSignersPrivateKeys(sidechainNodeView: View): Seq[(SchnorrSecret, Int)] = {
@@ -284,9 +288,11 @@ abstract class AbstractCertificateSubmitter[
     case LocallyGeneratedSignature(info: CertificateSignatureInfo) =>
       signaturesStatus match {
         case Some(status) =>
-          log.debug(s"Locally generated Certificate signature for pub key index ${info.pubKeyIndex} retrieved.")
-          if(status.knownSigs.exists(item => item.pubKeyIndex == info.pubKeyIndex))
-              log.error("Locally generated signature already presents")
+          log.debug(s"Locally generated Certificate signature for pub key index ${
+            info.pubKeyIndex
+          } retrieved.")
+          if (status.knownSigs.exists(item => item.pubKeyIndex == info.pubKeyIndex))
+            log.error("Locally generated signature already presents")
           else {
             status.knownSigs.append(info)
             val infoToRemote = CertificateSignatureFromRemoteInfo(info.pubKeyIndex, status.messageToSign, info.signature)
@@ -298,18 +304,20 @@ abstract class AbstractCertificateSubmitter[
       }
   }
 
-  protected def signatureFromRemote: Receive = {
+  private def signatureFromRemote: Receive = {
     case SignatureFromRemote(remoteSigInfo: CertificateSignatureFromRemoteInfo) =>
       signaturesStatus match {
         case Some(status) =>
-          log.debug(s"Certificate signature for pub key index ${remoteSigInfo.pubKeyIndex} retrieved from remote.")
-          if(!util.Arrays.equals(status.messageToSign, remoteSigInfo.messageToSign)) {
+          log.debug(s"Certificate signature for pub key index ${
+            remoteSigInfo.pubKeyIndex
+          } retrieved from remote.")
+          if (!util.Arrays.equals(status.messageToSign, remoteSigInfo.messageToSign)) {
             sender() ! DifferentMessageToSign
-          } else if(remoteSigInfo.pubKeyIndex < 0 || remoteSigInfo.pubKeyIndex >= params.signersPublicKeys.size) {
+          } else if (remoteSigInfo.pubKeyIndex < 0 || remoteSigInfo.pubKeyIndex >= params.signersPublicKeys.size) {
             sender() ! InvalidPublicKeyIndex
-          } else if(!remoteSigInfo.signature.isValid(params.signersPublicKeys(remoteSigInfo.pubKeyIndex), remoteSigInfo.messageToSign)) {
+          } else if (!remoteSigInfo.signature.isValid(params.signersPublicKeys(remoteSigInfo.pubKeyIndex), remoteSigInfo.messageToSign)) {
             sender() ! InvalidSignature
-          } else if(!status.knownSigs.exists(item => item.pubKeyIndex == remoteSigInfo.pubKeyIndex)) {
+          } else if (!status.knownSigs.exists(item => item.pubKeyIndex == remoteSigInfo.pubKeyIndex)) {
             status.knownSigs.append(CertificateSignatureInfo(remoteSigInfo.pubKeyIndex, remoteSigInfo.signature))
             sender() ! ValidSignature
             self ! TryToScheduleCertificateGeneration
@@ -318,23 +326,26 @@ abstract class AbstractCertificateSubmitter[
             sender() ! KnownSignature
           }
         case None =>
-            sender() ! SubmitterIsOutsideSubmissionWindow
+          sender() ! SubmitterIsOutsideSubmissionWindow
       }
   }
 
-  protected def getCertificateTopQuality(epoch: Int): Try[Long] = {
+  private def getCertificateTopQuality(epoch: Int): Try[Long] = {
     mainchainChannel.getTopQualityCertificates(BytesUtils.toHexString(BytesUtils.reverseBytes(params.sidechainId)))
       .map(topQualityCertificates => {
-        topQualityCertificates.mempoolCertInfo match {
+        (topQualityCertificates.mempoolCertInfo, topQualityCertificates.chainCertInfo) match {
           // case we have mempool cert for the given epoch return its quality.
-          case Some(mempoolInfo) if (mempoolInfo.epoch == epoch) => mempoolInfo.quality
-          // else look for inchain cert
-          case _ => topQualityCertificates.chainCertInfo match {
-            // case we have chain cert for the given epoch return its quality.
-            case Some(chainInfo) if (chainInfo.epoch == epoch) => chainInfo.quality
-            // no known certs
-            case _ => 0
-          }
+          case (Some(mempoolInfo), _) if mempoolInfo.epoch == epoch => mempoolInfo.quality
+          // case the mempool certificate epoch is a newer than submitter epoch thrown an exception
+          case (Some(mempoolInfo), _) if mempoolInfo.epoch > epoch =>
+            throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + mempoolInfo.quality)
+          // case we have chain cert for the given epoch return its quality.
+          case (_, Some(chainInfo)) if chainInfo.epoch == epoch => chainInfo.quality
+          // case the chain certificate epoch is a newer than submitter epoch thrown an exception
+          case (_, Some(chainInfo)) if chainInfo.epoch > epoch =>
+            throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + chainInfo.quality)
+          // no known certs
+          case _ => 0
         }
       })
   }
@@ -352,6 +363,10 @@ abstract class AbstractCertificateSubmitter[
             // So we don't know the result
             // Return true to keep submitter going and prevent SC ceasing
             return true
+          // May happen during node synchronization and node behind for one epoch or more
+          case ex: ObsoleteWithdrawalEpochException =>
+            log.info("Sidechain is behind the Mainchain(" + ex + ")")
+            return false
           // May happen if MC and SDK websocket protocol is inconsistent.
           // Should never happen in production.
           case ex: WebsocketInvalidErrorMessageException =>
@@ -378,14 +393,14 @@ abstract class AbstractCertificateSubmitter[
     case TryToScheduleCertificateGeneration =>
       signaturesStatus match {
         case Some(status) =>
-          if(checkQuality(status)) {
+          if (checkQuality(status)) {
             val delay = Random.nextInt(15) + 5 // random delay from 5 to 20 seconds
             log.info(s"Scheduling Certificate generation in $delay seconds")
             timers.startSingleTimer(CertificateGenerationTimer, TryToGenerateCertificate, FiniteDuration(delay, SECONDS))
             context.system.eventStream.publish(CertificateSubmissionStarted)
           }
         case None =>
-          log.error("Trying to schedule certificate generation being outside Certificate submission window.")
+          log.warn("Trying to schedule certificate generation being outside Certificate submission window.")
       }
   }
 
@@ -396,10 +411,11 @@ abstract class AbstractCertificateSubmitter[
     val withdrawalRequests: Seq[BackwardTransfer] = getWithdrawalRequests(state, status.referencedEpoch)
 
     val btrFee: Long = getBtrFee(status.referencedEpoch)
-    val ftMinAmount: Long = getFtMinAmount(status.referencedEpoch)
+    val consensusEpochNumber = lastConsensusEpochNumberForWithdrawalEpochNumber(history, status.referencedEpoch)
+    val ftMinAmount: Long = getFtMinAmount(consensusEpochNumber)
     val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, status.referencedEpoch)
     val sidechainId = params.sidechainId
-    val utxoMerkleTreeRoot = getUtxoMerkleTreeRoot(state, status.referencedEpoch)
+    val utxoMerkleTreeRoot = getUtxoMerkleTreeRoot(status.referencedEpoch, state)
 
     val signersPublicKeyWithSignatures = params.signersPublicKeys.zipWithIndex.map{
       case (pubKey, pubKeyIndex) =>
@@ -417,8 +433,7 @@ abstract class AbstractCertificateSubmitter[
       signersPublicKeyWithSignatures)
   }
 
-
-  protected def tryToGenerateCertificate: Receive = {
+  protected  def tryToGenerateCertificate: Receive = {
     case TryToGenerateCertificate => Try {
       signaturesStatus match {
         case Some(status) =>
@@ -456,7 +471,13 @@ abstract class AbstractCertificateSubmitter[
                   certificateFee,
                   params)
 
-                log.info(s"Backward transfer certificate request was successfully created for epoch number ${certificateRequest.epochNumber}, with proof ${BytesUtils.toHexString(proofWithQuality.getKey)} with quality ${proofWithQuality.getValue} try to send it to mainchain")
+                log.info(s"Backward transfer certificate request was successfully created for epoch number ${
+                  certificateRequest.epochNumber
+                }, with proof ${
+                  BytesUtils.toHexString(proofWithQuality.getKey)
+                } with quality ${
+                  proofWithQuality.getValue
+                } try to send it to mainchain")
 
                 mainchainChannel.sendCertificate(certificateRequest) match {
                   case Success(certificate) =>
@@ -483,24 +504,37 @@ abstract class AbstractCertificateSubmitter[
     }
   }
 
+  def getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber: Int, state: MS): Optional[Array[Byte]]
 
-  protected def lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history: HIS, withdrawalEpochNumber: Int): Array[Byte] = {
-    val mcBlockHash = withdrawalEpochNumber match {
-      case -1 => params.parentHashOfGenesisMainchainBlock
-      case _  => {
-        val mcHeight = params.mainchainCreationBlockHeight + (withdrawalEpochNumber + 1) * params.withdrawalEpochLength - 1
-        history.getMainchainBlockReferenceInfoByMainchainBlockHeight(mcHeight).asScala.map(_.getMainchainHeaderHash).getOrElse(throw new IllegalStateException("Information for Mc is missed"))
-      }
-    }
-    log.debug(s"Last MC block hash for withdrawal epoch number $withdrawalEpochNumber is ${BytesUtils.toHexString(mcBlockHash)}")
+  def getWithdrawalRequests(state: MS, referencedEpochNumber: Int) : Seq[BackwardTransfer]
 
-    val headerInfo = history.mainchainHeaderInfoByHash(mcBlockHash).getOrElse(throw new IllegalStateException("Missed MC Cumulative Hash"))
+  private def lastConsensusEpochNumberForWithdrawalEpochNumber(history: HIS, withdrawalEpochNumber: Int): ConsensusEpochNumber = {
+    val headerInfo: MainchainHeaderInfo = getLastMainchainBlockInfoForWithdrawalEpochNumber(history, withdrawalEpochNumber)
+
+    val parentBlockInfo: SidechainBlockInfo = history.storage.blockInfoById(headerInfo.sidechainBlockId)
+    TimeToEpochUtils.timeStampToEpochNumber(params, parentBlockInfo.timestamp)
+  }
+
+  private def lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history: HIS, withdrawalEpochNumber: Int): Array[Byte] = {
+    val headerInfo: MainchainHeaderInfo = getLastMainchainBlockInfoForWithdrawalEpochNumber(history, withdrawalEpochNumber)
 
     headerInfo.cumulativeCommTreeHash
   }
 
-  def getUtxoMerkleTreeRoot(state: MS, referencedEpochNumber: Int) : Array[Byte]
-  def getWithdrawalRequests(state: MS, referencedEpochNumber: Int) : Seq[BackwardTransfer]
+  private def getLastMainchainBlockInfoForWithdrawalEpochNumber(history: HIS, withdrawalEpochNumber: Int): MainchainHeaderInfo = {
+    val mcBlockHash = withdrawalEpochNumber match {
+      case -1 => params.parentHashOfGenesisMainchainBlock
+      case _ => {
+        val mcHeight = params.mainchainCreationBlockHeight + (withdrawalEpochNumber + 1) * params.withdrawalEpochLength - 1
+        history.getMainchainBlockReferenceInfoByMainchainBlockHeight(mcHeight).asScala.map(_.getMainchainHeaderHash).getOrElse(throw new IllegalStateException("Information for Mc is missed"))
+      }
+    }
+    log.debug(s"Last MC block hash for withdrawal epoch number $withdrawalEpochNumber is ${
+      BytesUtils.toHexString(mcBlockHash)
+    }")
+
+    history.mainchainHeaderInfoByHash(mcBlockHash).getOrElse(throw new IllegalStateException("Missed MC Cumulative Hash"))
+  }
 
   protected def getMessageToSign(referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
     def getMessage(sidechainNodeView: View): Array[Byte] = {
@@ -510,13 +544,26 @@ abstract class AbstractCertificateSubmitter[
       val withdrawalRequests: Seq[BackwardTransfer] = getWithdrawalRequests(state, referencedWithdrawalEpochNumber)
 
       val btrFee: Long = getBtrFee (referencedWithdrawalEpochNumber)
-      val ftMinAmount: Long = getFtMinAmount (referencedWithdrawalEpochNumber)
+      val consensusEpochNumber = lastConsensusEpochNumberForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
+      val ftMinAmount: Long = getFtMinAmount(consensusEpochNumber)
 
       val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
       val sidechainId = params.sidechainId
 
-      val utxoMerkleTreeRoot = getUtxoMerkleTreeRoot(state, referencedWithdrawalEpochNumber)
-
+      val utxoMerkleTreeRoot: Optional[Array[Byte]] = {
+        Try {
+          getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber, state)
+        } match {
+          case Failure(e: IllegalStateException) =>
+            throw new Exception("CertificateSubmitter is too late against the State. " +
+              s"No utxo merkle tree root for requested epoch $referencedWithdrawalEpochNumber. ")
+              // TODO eneble state.getWithdrawalEpochInfo
+              // + s"Current epoch is ${state.getWithdrawalEpochInfo.epoch}")
+          case Failure(exception) => log.error("Exception while getting utxoMerkleTreeRoot", exception)
+            throw new Exception(exception)
+          case Success(value) => value
+        }
+      }
       CryptoLibProvider.sigProofThresholdCircuitFunctions.generateMessageToBeSigned(
         withdrawalRequests.asJava,
         sidechainId,
@@ -536,20 +583,35 @@ abstract class AbstractCertificateSubmitter[
                                     endEpochCumCommTreeHash: Array[Byte],
                                     btrFee: Long,
                                     ftMinAmount: Long,
-                                    utxoMerkleTreeRoot: Array[Byte],
-                                    schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])])
+                                    utxoMerkleTreeRoot: Optional[Array[Byte]],
+                                    schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])]) {
+    override def toString: String = {
+      val utxoMerkleTreeRootString = if (utxoMerkleTreeRoot.isPresent) BytesUtils.toHexString(utxoMerkleTreeRoot.get()) else "None"
+      "DataForProofGeneration(" +
+        s"referencedEpochNumber = $referencedEpochNumber, " +
+        s"sidechainId = $sidechainId, " +
+        s"withdrawalRequests = {${withdrawalRequests.mkString(",")}}, " +
+        s"endEpochCumCommTreeHash = ${BytesUtils.toHexString(endEpochCumCommTreeHash)}, " +
+        s"btrFee = $btrFee, " +
+        s"ftMinAmount = $ftMinAmount, " +
+        s"utxoMerkleTreeRoot = ${utxoMerkleTreeRootString}, " +
+        s"number of schnorrKeyPairs = ${schnorrKeyPairs.size})"
+    }
+  }
 
 
   protected def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
     val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
-      dataForProofGeneration.schnorrKeyPairs.map{case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)}.unzip
+      dataForProofGeneration.schnorrKeyPairs.map {
+        case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)
+      }.unzip
 
-    log.info(s"Start generating proof for ${dataForProofGeneration.referencedEpochNumber} withdrawal epoch number, " +
-      s"with parameters: sidechainId LE = ${BytesUtils.toHexString(dataForProofGeneration.sidechainId)}, " +
-      s"withdrawalRequests=${dataForProofGeneration.withdrawalRequests.map( wr => s"[amount: ${wr.getAmount}, publicKeyHash: ${BytesUtils.toHexString(wr.getPublicKeyHash)}]" ).mkString("{",",", "}")}, " +
-      s"endEpochCumCommTreeHash=${BytesUtils.toHexString(dataForProofGeneration.endEpochCumCommTreeHash)}, " +
-      s"utxoMerkleTreeRoot=${BytesUtils.toHexString(dataForProofGeneration.utxoMerkleTreeRoot)}, " +
-      s"signersThreshold=${params.signersThreshold}. " +
+    log.info(s"Start generating proof with parameters: dataForProofGeneration = ${
+      dataForProofGeneration
+    }, " +
+      s"signersThreshold = ${
+        params.signersThreshold
+      }. " +
       s"It can take a while.")
 
     //create and return proof with quality
@@ -622,6 +684,9 @@ object AbstractCertificateSubmitter {
     require(pubKeyIndex >= 0, "pubKeyIndex can't be negative value.")
     require(messageToSign.length == FieldElementUtils.fieldElementLength(), "messageToSign has invalid length")
   }
+
+  case class ObsoleteWithdrawalEpochException(message: String = "", cause: Option[Throwable] = None)
+    extends RuntimeException(message, cause.orNull)
 
   // Internal interface
   protected[certificatesubmitter] object Timers {

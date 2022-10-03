@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import json
-import pprint
+import logging
 from decimal import Decimal
 
 
@@ -51,7 +51,7 @@ class SCEvmMempool(SidechainTestFramework):
 
     def sc_setup_network(self, split=False):
         self.sc_nodes = self.sc_setup_nodes()
-        print("Connecting sc nodes...")
+        logging.info("Connecting sc nodes...")
         connect_sc_nodes(self.sc_nodes[0], 1)
         self.sc_sync_all()
 
@@ -122,7 +122,7 @@ class SCEvmMempool(SidechainTestFramework):
         if "result" not in makeForgerStakeJsonRes:
             fail("make forger stake failed: " + json.dumps(makeForgerStakeJsonRes))
         else:
-            print("Forger stake created: " + json.dumps(makeForgerStakeJsonRes))
+            logging.info("Forger stake created: " + json.dumps(makeForgerStakeJsonRes))
         self.sc_sync_all()
 
         # Generate SC blocks on SC node to make node 2 a forger
@@ -144,12 +144,12 @@ class SCEvmMempool(SidechainTestFramework):
             nonce_addr_2 += 1
 
         self.sc_sync_all()
-        print("Mempool node 1")
+        logging.info("Mempool node 1")
         response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        pprint.pprint(response)
-        print("Mempool node 2")
+        logging.info(response)
+        logging.info("Mempool node 2")
         response = sc_node_2.transaction_allTransactions(json.dumps({"format": False}))
-        pprint.pprint(response)
+        logging.info(response)
 
         # Disconnect SC nodes
         disconnect_sc_nodes_bi(self.sc_nodes, 0, 1)
@@ -167,12 +167,12 @@ class SCEvmMempool(SidechainTestFramework):
                                           nonce = nonce_addr_2, gasLimit = 230000, maxPriorityFeePerGas = 900000000, maxFeePerGas = 900000000, value=1))
            nonce_addr_2 += 1
 
-        print("Mempool node 1 after disconnection")
+        logging.info("Mempool node 1 after disconnection")
         response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        pprint.pprint(response)
-        print("Mempool node 2 after disconnection")
+        logging.info(response)
+        logging.info("Mempool node 2 after disconnection")
         response = sc_node_2.transaction_allTransactions(json.dumps({"format": False}))
-        pprint.pprint(response)
+        logging.info(response)
 
         # Create a block on node 1
         generate_next_block(sc_node_1, "first node")
@@ -184,12 +184,12 @@ class SCEvmMempool(SidechainTestFramework):
         # Sync SC nodes
         sync_sc_blocks(self.sc_nodes)
 
-        print("Mempool node 1 after nodes reconnection")
+        logging.info("Mempool node 1 after nodes reconnection")
         response = sc_node_1.transaction_allTransactions(json.dumps({"format": False}))
-        pprint.pprint(response)
-        print("Mempool node 2 after nodes reconnection")
+        logging.info(response)
+        logging.info("Mempool node 2 after nodes reconnection")
         response = sc_node_2.transaction_allTransactions(json.dumps({"format": False}))
-        pprint.pprint(response)
+        logging.info(response)
 
         # Check that node 2 mem pool doesn't contain common txs anymore but still contains its own txs
         assert_equal(len(node_2_tx_list), len(response['result']['transactionIds']), "Wrong number of transactions in node 2 mempool")

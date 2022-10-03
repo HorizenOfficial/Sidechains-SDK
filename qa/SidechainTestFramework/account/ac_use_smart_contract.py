@@ -1,5 +1,5 @@
 import json
-from pprint import pprint
+import logging
 from typing import Tuple, Any
 from eth_abi import encode_abi, decode_abi
 from eth_utils import to_checksum_address
@@ -163,12 +163,12 @@ class SmartContract:
             if response['result'] is not None and len(response['result']) > 0:
                 return self.raw_decode_call_result(functionName, bytes.fromhex(format_eoa(response['result'])))
             else:
-                print("No return data in static_call: {}".format(str(response)))
+                logging.info("No return data in static_call: {}".format(str(response)))
                 return None
         else:
             if response['error']['message'] == 'execution reverted' and response['error']['data'].startswith(
                     '0x08c379a0'):
-                print(response['error'])
+                logging.info(response['error'])
                 if len(response['error']['data']) < 68:
                     raise EvmExecutionError("Execution reverted without a reason.")
                 reason = decode_abi(['string'], bytes.fromhex(response['error']['data'][2:])[4:])[0]
@@ -200,7 +200,7 @@ class SmartContract:
             if response['result'] is not None and len(response['result']) > 0:
                 return int(response['result'], 16)
             else:
-                print("No return data in estimate_gas: {}".format(str(response)))
+                logging.info("No return data in estimate_gas: {}".format(str(response)))
                 return None
         else:
             raise EvmExecutionError("Could not estimate gas: {}".format(str(response)))
@@ -423,7 +423,7 @@ class SmartContract:
 
 
 if __name__ == '__main__':
-    # print(get_cwd())
+    # logging.info(get_cwd())
     # try:
     #     SmartContract("path")
     # except RuntimeError as err:
@@ -434,8 +434,8 @@ if __name__ == '__main__':
     # except RuntimeError as err:
     #     pass
     # SmartContract("contracts/ExampleERC20")
-    print("Loading example contract and testing encoding")
+    logging.info("Loading example contract and testing encoding")
     sc = SmartContract("StorageTestContract.sol")
-    print(sc)
-    print(
+    logging.info(sc)
+    logging.info(
         "Smart contract call set(string) encoding: {}".format(sc.raw_encode_call('set(string)', 'This is my message')))

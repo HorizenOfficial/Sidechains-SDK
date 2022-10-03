@@ -8,6 +8,10 @@ import com.horizen.block.{SidechainBlock, SidechainBlockBase, SidechainBlockHead
 import com.horizen.box.BoxSerializer
 import com.horizen.certificatesubmitter.CertificateSubmitterRef
 import com.horizen.certificatesubmitter.network.CertificateSignaturesManagerRef
+import java.lang.{Byte => JByte}
+import java.nio.file.{Files, Paths}
+import java.util.{HashMap => JHashMap, List => JList}
+import com.horizen.backup.BoxIterator
 import com.horizen.chain.SidechainFeePaymentsInfo
 import com.horizen.companion._
 import com.horizen.consensus.ConsensusDataStorage
@@ -17,28 +21,20 @@ import com.horizen.forge.ForgerRef
 import com.horizen.helper._
 import com.horizen.network.SidechainNodeViewSynchronizer
 import com.horizen.node._
+import com.horizen.params._
 import com.horizen.secret.SecretSerializer
 import com.horizen.state.ApplicationState
 import com.horizen.storage._
 import com.horizen.transaction._
-import com.horizen.transaction.mainchain.SidechainCreation
-import com.horizen.utils.{BlockUtils, BytesUtils, Pair}
+import com.horizen.utils.{BytesUtils, Pair}
 import com.horizen.wallet.ApplicationWallet
 import com.horizen.websocket.server.WebSocketServerRef
-import scorex.core.api.http.ApiRoute
-import scorex.core.serialization.ScorexSerializer
-import scorex.core.settings.ScorexSettings
-import scorex.core.transaction.Transaction
-import scorex.core.{ModifierTypeId, NodeViewModifier}
-
-import java.lang.{Byte => JByte}
-import java.nio.file.{Files, Paths}
-import java.util.{HashMap => JHashMap, List => JList}
 import scala.collection.JavaConverters._
-import scala.collection.mutable
-import scala.io.{Codec, Source}
-import scala.util.{Failure, Success}
-
+import com.horizen.fork.ForkConfigurator
+import sparkz.core.api.http.ApiRoute
+import sparkz.core.{ModifierTypeId, NodeViewModifier}
+import sparkz.core.serialization.SparkzSerializer
+import sparkz.core.transaction.Transaction
 
 class SidechainApp @Inject()
   (@Named("SidechainSettings") sidechainSettings: SidechainSettings,
@@ -57,14 +53,19 @@ class SidechainApp @Inject()
    @Named("WalletForgingBoxesInfoStorage") val walletForgingBoxesInfoStorage: Storage,
    @Named("WalletCswDataStorage") val walletCswDataStorage: Storage,
    @Named("ConsensusStorage") val consensusStorage: Storage,
+   @Named("BackupStorage") val backUpStorage: Storage,
    @Named("CustomApiGroups") customApiGroups: JList[ApplicationApiGroup],
-   @Named("RejectedApiPaths") rejectedApiPaths : JList[Pair[String, String]]
+   @Named("RejectedApiPaths") rejectedApiPaths : JList[Pair[String, String]],
+   @Named("ApplicationStopper") applicationStopper : SidechainAppStopper,
+   @Named("ForkConfiguration") forkConfigurator : ForkConfigurator
   )
   extends AbstractSidechainApp(
     sidechainSettings,
     customSecretSerializers,
     customApiGroups,
     rejectedApiPaths,
+    applicationStopper,
+    forkConfigurator,
     ChainInfo(
       regtestId = 111, 
       testnetId = 222, 
@@ -76,10 +77,6 @@ class SidechainApp @Inject()
   override type PMOD = SidechainBlock
   override type NVHT = SidechainNodeViewHolder
 
-  override implicit lazy val settings: ScorexSettings = sidechainSettings.scorexSettings
-
-  private val storageList = mutable.ListBuffer[Storage]()
-
   log.info(s"Starting application with settings \n$sidechainSettings")
 
   protected lazy val sidechainTransactionsCompanion: SidechainTransactionsCompanion = SidechainTransactionsCompanion(customTransactionSerializers)
@@ -90,49 +87,59 @@ class SidechainApp @Inject()
       BytesUtils.fromHexString(sidechainSettings.genesisData.scGenesisBlockHex)
     )
 
-  lazy val sidechainCreationOutput: SidechainCreation = BlockUtils.tryGetSidechainCreation(genesisBlock) match {
-    case Success(output) => output
-    case Failure(exception) => throw new IllegalArgumentException("Genesis block specified in the configuration file has no Sidechain Creation info.", exception)
-  }
+  if (isCSWEnabled) {
+    log.info("Ceased Sidechain Withdrawal (CSW) is enabled")
+    if (Option(params.cswVerificationKeyFilePath).forall(_.trim.isEmpty)){
+      log.error("CSW Verification Key file path is not defined.")
+      throw new IllegalArgumentException("CSW Verification Key file path is not defined.")
+    }
+    if (Option(params.cswProvingKeyFilePath).forall(_.trim.isEmpty)){
+      log.error("CSW Proving Key file path is not defined.")
+      throw new IllegalArgumentException("CSW Proving Key file path is not defined.")
+    }
 
-  if (!Files.exists(Paths.get(params.cswVerificationKeyFilePath)) || !Files.exists(Paths.get(params.cswProvingKeyFilePath))) {
-    log.info("Generating CSW snark keys. It may take some time.")
-    if (!CryptoLibProvider.cswCircuitFunctions.generateCoboundaryMarlinSnarkKeys(
-      params.withdrawalEpochLength, params.cswProvingKeyFilePath, params.cswVerificationKeyFilePath)) {
-      throw new IllegalArgumentException("Can't generate CSW Coboundary Marlin ProvingSystem snark keys.")
+    if (!Files.exists(Paths.get(params.cswVerificationKeyFilePath)) || !Files.exists(Paths.get(params.cswProvingKeyFilePath))) {
+      log.info("Generating CSW snark keys. It may take some time.")
+      if (!CryptoLibProvider.cswCircuitFunctions.generateCoboundaryMarlinSnarkKeys(
+        params.withdrawalEpochLength, params.cswProvingKeyFilePath, params.cswVerificationKeyFilePath)) {
+        throw new IllegalArgumentException("Can't generate CSW Coboundary Marlin ProvingSystem snark keys.")
+      }
+
     }
   }
-
-  // Init CSW manager
-  lazy val cswManager: ActorRef = CswManagerRef(sidechainSettings, params, nodeViewHolderRef)
+  else {
+    log.warn("******** Ceased Sidechain Withdrawal (CSW) is DISABLED ***********")
+  }
 
   // Init all storages
   protected val sidechainSecretStorage = new SidechainSecretStorage(
-    //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/secret")),
+    //openStorage(new JFile(s"${sidechainSettings.sparkzSettings.dataDir.getAbsolutePath}/secret")),
     registerStorage(secretStorage),
     sidechainSecretsCompanion)
   protected val sidechainWalletBoxStorage = new SidechainWalletBoxStorage(
-    //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/wallet")),
+    //openStorage(new JFile(s"${sidechainSettings.sparkzSettings.dataDir.getAbsolutePath}/wallet")),
     registerStorage(walletBoxStorage),
     sidechainBoxesCompanion)
   protected val sidechainWalletTransactionStorage = new SidechainWalletTransactionStorage(
-    //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/walletTransaction")),
+    //openStorage(new JFile(s"${sidechainSettings.sparkzSettings.dataDir.getAbsolutePath}/walletTransaction")),
     registerStorage(walletTransactionStorage),
     sidechainTransactionsCompanion)
   protected val sidechainStateStorage = new SidechainStateStorage(
-    //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/state")),
+    //openStorage(new JFile(s"${sidechainSettings.sparkzSettings.dataDir.getAbsolutePath}/state")),
     registerStorage(stateStorage),
     sidechainBoxesCompanion)
   protected val sidechainStateForgerBoxStorage = new SidechainStateForgerBoxStorage(registerStorage(forgerBoxStorage))
-  protected val sidechainStateUtxoMerkleTreeStorage = new SidechainStateUtxoMerkleTreeStorage(registerStorage(utxoMerkleTreeStorage))
+  protected val sidechainStateUtxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider = getSidechainStateUtxoMerkleTreeProvider(registerStorage(utxoMerkleTreeStorage), params)
+
   protected val sidechainHistoryStorage = new SidechainHistoryStorage(
+    //openStorage(new JFile(s"${sidechainSettings.sparkzSettings.dataDir.getAbsolutePath}/history")),
     registerStorage(historyStorage),
     sidechainTransactionsCompanion, params)
   protected val consensusDataStorage = new ConsensusDataStorage(
-    //openStorage(new JFile(s"${sidechainSettings.scorexSettings.dataDir.getAbsolutePath}/consensusData")),
+    //openStorage(new JFile(s"${sidechainSettings.sparkzSettings.dataDir.getAbsolutePath}/consensusData")),
     registerStorage(consensusStorage))
   protected val forgingBoxesMerklePathStorage = new ForgingBoxesInfoStorage(registerStorage(walletForgingBoxesInfoStorage))
-  protected val sidechainWalletCswDataStorage = new SidechainWalletCswDataStorage(registerStorage(walletCswDataStorage))
+  protected val sidechainWalletCswDataProvider: SidechainWalletCswDataProvider = getSidechainWalletCswDataProvider(registerStorage(walletCswDataStorage), params)
 
   // Append genesis secrets if we start the node first time
   if(sidechainSecretStorage.isEmpty) {
@@ -143,18 +150,21 @@ class SidechainApp @Inject()
       sidechainSecretStorage.add(sidechainSecretsCompanion.parseBytes(BytesUtils.fromHexString(secretSchnorr)))
   }
 
+  protected val backupStorage = new BackupStorage(registerStorage(backUpStorage), sidechainBoxesCompanion)
+
   override val nodeViewHolderRef: ActorRef = SidechainNodeViewHolderRef(
     sidechainSettings,
     sidechainHistoryStorage,
     consensusDataStorage,
     sidechainStateStorage,
     sidechainStateForgerBoxStorage,
-    sidechainStateUtxoMerkleTreeStorage,
+    sidechainStateUtxoMerkleTreeProvider,
     sidechainWalletBoxStorage,
     sidechainSecretStorage,
     sidechainWalletTransactionStorage,
     forgingBoxesMerklePathStorage,
-    sidechainWalletCswDataStorage,
+    sidechainWalletCswDataProvider,
+    backupStorage,
     params,
     timeProvider,
     applicationWallet,
@@ -162,7 +172,7 @@ class SidechainApp @Inject()
     genesisBlock
     ) // TO DO: why not to put genesisBlock as a part of params? REVIEW Params structure
 
-  def modifierSerializers: Map[ModifierTypeId, ScorexSerializer[_ <: NodeViewModifier]] =
+  def modifierSerializers: Map[ModifierTypeId, SparkzSerializer[_ <: NodeViewModifier]] =
     Map(SidechainBlockBase.ModifierTypeId -> new SidechainBlockSerializer(sidechainTransactionsCompanion),
       Transaction.ModifierTypeId -> sidechainTransactionsCompanion)
 
@@ -179,7 +189,10 @@ class SidechainApp @Inject()
 
   // Init Certificate Submitter
   val certificateSubmitterRef: ActorRef = CertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)
-  val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.scorexSettings.network)
+  val certificateSignaturesManagerRef: ActorRef = CertificateSignaturesManagerRef(networkControllerRef, certificateSubmitterRef, params, sidechainSettings.sparkzSettings.network)
+
+  // Init CSW manager
+  val cswManager: Option[ActorRef] = if (isCSWEnabled) Some(CswManagerRef(sidechainSettings, params, nodeViewHolderRef)) else None
 
   //Websocket server for the Explorer
   if(sidechainSettings.websocket.wsServer) {
@@ -187,46 +200,52 @@ class SidechainApp @Inject()
   }
 
   // Init API
-  var rejectedApiRoutes : Seq[SidechainRejectionApiRoute] = Seq[SidechainRejectionApiRoute]()
   rejectedApiPaths.asScala.foreach(path => rejectedApiRoutes = rejectedApiRoutes :+ SidechainRejectionApiRoute(path.getKey, path.getValue, settings.restApi, nodeViewHolderRef))
 
   // Once received developer's custom api, we need to create, for each of them, a SidechainApiRoute.
   // For do this, we use an instance of ApplicationApiRoute. This is an entry point between SidechainApiRoute and external java api.
-  var applicationApiRoutes : Seq[ApplicationApiRoute] = Seq[ApplicationApiRoute]()
   customApiGroups.asScala.foreach(apiRoute => applicationApiRoutes = applicationApiRoutes :+ ApplicationApiRoute(settings.restApi, apiRoute, nodeViewHolderRef))
+  val boxIterator: BoxIterator = backupStorage.getBoxIterator
 
-  var coreApiRoutes: Seq[ApiRoute] = Seq[ApiRoute](
+  coreApiRoutes = Seq[ApiRoute](
     MainchainBlockApiRoute[TX,
       SidechainBlockHeader,PMOD, SidechainFeePaymentsInfo, NodeHistory, NodeState,NodeWallet,NodeMemoryPool,SidechainNodeView](settings.restApi, nodeViewHolderRef),
-    SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainBlockForgerActorRef),
-    SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi),
+    SidechainBlockApiRoute(settings.restApi, nodeViewHolderRef, sidechainBlockActorRef, sidechainTransactionsCompanion, sidechainBlockForgerActorRef),
+    SidechainNodeApiRoute(peerManagerRef, networkControllerRef, timeProvider, settings.restApi, nodeViewHolderRef, this, params),
     SidechainTransactionApiRoute(settings.restApi, nodeViewHolderRef, sidechainTransactionActorRef, sidechainTransactionsCompanion, params),
-    SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef),
+    SidechainWalletApiRoute(settings.restApi, nodeViewHolderRef, sidechainSecretsCompanion),
     SidechainSubmitterApiRoute(settings.restApi, certificateSubmitterRef, nodeViewHolderRef),
-    SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager)
+    SidechainCswApiRoute(settings.restApi, nodeViewHolderRef, cswManager, params),
+    SidechainBackupApiRoute(settings.restApi, nodeViewHolderRef, boxIterator)
   )
 
+  // specific to Sidechain app only
   val nodeViewProvider : NodeViewProvider = new NodeViewProviderImpl(nodeViewHolderRef)
   val secretSubmitProvider: SecretSubmitProvider = new SecretSubmitProviderImpl(nodeViewHolderRef)
   val transactionSubmitProvider : TransactionSubmitProvider = new TransactionSubmitProviderImpl(sidechainTransactionActorRef)
-
-  // In order to provide the feature to override core api and exclude some other apis,
-  // first we create custom reject routes (otherwise we cannot know which route has to be excluded), second we bind custom apis and then core apis
-  override val apiRoutes: Seq[ApiRoute] = Seq[ApiRoute]()
-    .union(rejectedApiRoutes)
-    .union(applicationApiRoutes)
-    .union(coreApiRoutes)
-
-  override val swaggerConfig: String = Source.fromResource("api/sidechainApi.yaml")(Codec.UTF8).getLines.mkString("\n")
-
-  override def stopAll(): Unit = {
-    super.stopAll()
-    storageList.foreach(_.close())
-  }
 
   def getTransactionSubmitProvider: TransactionSubmitProvider = transactionSubmitProvider
   def getNodeViewProvider: NodeViewProvider = nodeViewProvider
   def getSecretSubmitProvider: SecretSubmitProvider = secretSubmitProvider
 
+  private def getSidechainStateUtxoMerkleTreeProvider(utxoMerkleTreeStorage: Storage, params: NetworkParams) = {
+    if (params.isCSWEnabled) {
+      SidechainUtxoMerkleTreeProviderCSWEnabled(new SidechainStateUtxoMerkleTreeStorage(utxoMerkleTreeStorage))
+    }
+    else
+      SidechainUtxoMerkleTreeProviderCSWDisabled()
+  }
+
+
+  private def getSidechainWalletCswDataProvider(cswDataStorage: Storage, params: NetworkParams) = {
+    if (params.isCSWEnabled) {
+      SidechainWalletCswDataProviderCSWEnabled(new SidechainWalletCswDataStorage(cswDataStorage))
+    }
+    else
+      SidechainWalletCswDataProviderCSWDisabled()
+  }
+
+
   actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
+
 }

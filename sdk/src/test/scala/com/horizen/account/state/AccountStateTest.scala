@@ -11,8 +11,8 @@ import org.junit._
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.scalatestplus.mockito.MockitoSugar
-import scorex.core.VersionTag
-import scorex.core.utils.NetworkTimeProvider
+import sparkz.core.VersionTag
+import sparkz.core.utils.NetworkTimeProvider
 import java.math.BigInteger
 
 

@@ -2,7 +2,7 @@ package com.horizen.websocket.server
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import com.horizen.block.SidechainBlock
-import scorex.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedMempool, SemanticallySuccessfulModifier}
+import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{ChangedMempool, SemanticallySuccessfulModifier}
 import scorex.util.ScorexLogging
 
 import scala.concurrent.ExecutionContext
@@ -25,6 +25,7 @@ class WebSocketServer(wsPort: Int)
   }
 
   override def postStop(): Unit = {
+    log.debug("WebSocket Server actor is stopping...")
     websocket.stop()
     super.postStop()
   }

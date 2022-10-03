@@ -4,11 +4,11 @@ package com.horizen.block
 import com.horizen.params.NetworkParams
 import com.horizen.utils.{MerkleTree, Utils}
 import com.horizen.validation.{InconsistentSidechainBlockDataException, InvalidSidechainBlockDataException}
-import scorex.core.block.Block
-import scorex.core.block.Block.Timestamp
 import com.horizen.transaction.Transaction
-import scorex.core.ModifierTypeId
 import scorex.util.ModifierId
+import sparkz.core.ModifierTypeId
+import sparkz.core.block.Block
+import sparkz.core.block.Block.Timestamp
 
 import scala.util.{Failure, Success, Try}
 import scala.collection.JavaConverters._
@@ -177,7 +177,8 @@ object SidechainBlockBase {
   // Also it is more than enough to process Ommers for very long MC forks (2000+)
   val MAX_BLOCK_SIZE: Int = 5000000
   val MAX_SIDECHAIN_TXS_NUMBER: Int = 1000
-  val ModifierTypeId: ModifierTypeId = scorex.core.ModifierTypeId @@ 3.toByte
+  val ModifierTypeId: ModifierTypeId = sparkz.core.ModifierTypeId @@ 3.toByte
+  val BlockIdHexStringLength = 64
 
   def calculateMainchainMerkleRootHash(mainchainBlockReferencesData: Seq[MainchainBlockReferenceData],
                                        mainchainHeaders: Seq[MainchainHeader]): Array[Byte] = {
