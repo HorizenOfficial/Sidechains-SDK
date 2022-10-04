@@ -94,7 +94,7 @@ case class AccountBlockHeader(
           throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $id signature is invalid.")
 
         // check, that gas limit is valid
-        if (baseFee.compareTo(BigInteger.ZERO) == 1) {
+        if (baseFee.signum() == 1) {
           if(gasLimit != FeeUtils.GAS_LIMIT)
             throw new InvalidSidechainBlockHeaderException(s"AccountBlockHeader $gasLimit is invalid.")
           if(gasUsed < 0)

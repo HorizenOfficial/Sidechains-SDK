@@ -33,7 +33,7 @@ public class EthereumTransactionDecoder {
         byte[] encodedTx = Arrays.copyOfRange(transaction, 1, transaction.length);
         RlpList rlpList = RlpDecoder.decode(encodedTx);
         RlpList values = (RlpList)rlpList.getValues().get(0);
-        long chainId = ((RlpString)values.getValues().get(0)).asPositiveBigInteger().longValue();
+        long chainId = ((RlpString)values.getValues().get(0)).asPositiveBigInteger().longValueExact();
         BigInteger nonce = ((RlpString)values.getValues().get(1)).asPositiveBigInteger();
         BigInteger maxPriorityFeePerGas = ((RlpString)values.getValues().get(2)).asPositiveBigInteger();
         BigInteger maxFeePerGas = ((RlpString)values.getValues().get(3)).asPositiveBigInteger();
@@ -46,7 +46,7 @@ public class EthereumTransactionDecoder {
         if (values.getValues().size() == 9) {
             return rawTransaction;
         } else {
-            byte[] v = Sign.getVFromRecId(Numeric.toBigInt(((RlpString)values.getValues().get(9)).getBytes()).intValue());
+            byte[] v = Sign.getVFromRecId(Numeric.toBigInt(((RlpString)values.getValues().get(9)).getBytes()).intValueExact());
             byte[] r = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(10)).getBytes()), 32);
             byte[] s = Numeric.toBytesPadded(Numeric.toBigInt(((RlpString)values.getValues().get(11)).getBytes()), 32);
             Sign.SignatureData signatureData = new Sign.SignatureData(v, r, s);

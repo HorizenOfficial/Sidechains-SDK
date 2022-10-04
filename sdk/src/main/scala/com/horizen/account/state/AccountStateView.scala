@@ -195,7 +195,7 @@ class AccountStateView(
 
   @throws(classOf[ExecutionFailedException])
   override def addBalance(address: Array[Byte], amount: BigInteger): Unit = {
-    amount.compareTo(BigInteger.ZERO) match {
+    amount.signum() match {
       case x if x == 0 => // amount is zero
       case x if x < 0 =>
         throw new ExecutionFailedException("cannot add negative amount to balance")
@@ -209,7 +209,7 @@ class AccountStateView(
   override def subBalance(address: Array[Byte], amount: BigInteger): Unit = {
     // stateDb lib does not do any sanity check, and negative balances might arise (and java/go json IF does not correctly handle it)
     // TODO: for the time being do the checks here, later they will be done in the caller stack
-    amount.compareTo(BigInteger.ZERO) match {
+    amount.signum() match {
       case x if x == 0 => // amount is zero
       case x if x < 0 =>
         throw new ExecutionFailedException("cannot subtract negative amount from balance")

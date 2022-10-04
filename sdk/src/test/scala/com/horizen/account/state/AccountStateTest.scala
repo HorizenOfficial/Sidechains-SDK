@@ -87,7 +87,7 @@ class AccountStateTest
     feePayments = state.getFeePayments(0)
     assertEquals(s"Fee payments size expected to be different.", 3, feePayments.size)
 
-    var forgerTotalFee = feePayments.foldLeft(BigInteger.ZERO)((sum, payment) => sum.add(payment.value))
+    var forgerTotalFee = feePayments.map(_.value).reduce(_.add(_))
 
     assertEquals(s"Total fee value is wrong", totalFee, forgerTotalFee)
 
@@ -119,7 +119,7 @@ class AccountStateTest
 
     assertEquals(s"Fee payments size expected to be different.", 3, feePayments.size)
 
-    forgerTotalFee = feePayments.foldLeft(BigInteger.ZERO)((sum, payment) => sum.add(payment.value))
+    forgerTotalFee = feePayments.map(_.value).reduce(_.add(_))
 
     assertEquals(s"Total fee value is wrong", totalFee, forgerTotalFee)
 
@@ -159,7 +159,7 @@ class AccountStateTest
 
     assertEquals(s"Fee payments size expected to be different.", 2, feePayments.size)
 
-    forgerTotalFee = feePayments.foldLeft(BigInteger.ZERO)((sum, payment) => sum.add(payment.value))
+    forgerTotalFee = feePayments.map(_.value).reduce(_.add(_))
 
     assertEquals(s"Total fee value is wrong", totalFee, forgerTotalFee)
 
