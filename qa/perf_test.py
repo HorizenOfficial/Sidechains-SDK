@@ -189,7 +189,8 @@ class PerformanceTest(SidechainTestFramework):
                 "mined_txs": [],
                 "big_transaction": big_transaction,
                 "send_coins_to_address": send_coins_to_address,
-                "block_tps": []
+                "block_tps": [],
+                "forks": []
                 }
 
     def get_latency_config(self):
@@ -261,6 +262,7 @@ class PerformanceTest(SidechainTestFramework):
         return start_nodes(1, self.options.tmpdir)
 
     def sc_setup_chain(self):
+        print("Initializing test directory " + self.options.tmpdir)
         logging.info("Initializing test directory " + self.options.tmpdir)
         mc_node = self.nodes[0]
         sc_nodes = self.get_node_configuration(mc_node)
@@ -329,6 +331,24 @@ class PerformanceTest(SidechainTestFramework):
                         connect_sc_nodes(self.sc_nodes[i], j)
                         self.create_node_connection_map(i, [j])
 
+        # Strong connected forger Topology
+        if self.topology == NetworkTopology.StrongConnectedForgers:
+            forgers = self.get_forger_nodes_indexes()
+            for i in range(0, node_count):
+                if i in forgers:
+                    for j in range(0, node_count):
+                        if j in forgers:
+                            existing_node_connection = j in self.connection_map
+                            if i != j and (existing_node_connection and i not in self.connection_map[j] or not existing_node_connection):
+                                logging.debug(f"Connect {i} to {j}")
+                                connect_sc_nodes(self.sc_nodes[i], j)
+                                self.create_node_connection_map(i, [j])
+                else:
+                    near_forger = random.choice(forgers)
+                    logging.debug(f"Connect {i} to {near_forger}")
+                    connect_sc_nodes(self.sc_nodes[i], near_forger)
+                    self.create_node_connection_map(i, [near_forger])
+
         logging.info(f"NETWORK TOPOLOGY CONNECTION MAP: {self.connection_map}")
         self.sc_sync_all()
 
@@ -341,6 +361,13 @@ class PerformanceTest(SidechainTestFramework):
             else:
                 non_txs_creator.append(self.sc_nodes[index])
         return txs_creators, non_txs_creator
+    
+    def get_forger_nodes_indexes(self):
+        forgers = []
+        for index, node in enumerate(self.sc_nodes_list):
+            if node["forger"]:
+                forgers.append(index)
+        return forgers
 
     def find_forger_nodes(self):
         forger_nodes = []
@@ -577,6 +604,17 @@ class PerformanceTest(SidechainTestFramework):
                 http_start_forging(self.sc_nodes[index])
         # Start timing
         return time.time()
+
+    def scan_logs_for_forks(self):
+        for i in range(len(self.sc_nodes)):
+            assert_true(exists(self.options.tmpdir+"/sc_node"+str(i)))
+            last_fork = ""
+            with open(self.options.tmpdir+"/sc_node"+str(i)+"/log/debugLog.txt", 'r') as fp:
+                logging.info(f"Check node {i} log...")
+                for line in fp:
+                    if 'the fork number' in line:
+                        last_fork = line
+            self.csv_data["forks"].append(last_fork)
 
     def run_test(self):
         mc_nodes = self.nodes
@@ -842,6 +880,7 @@ class PerformanceTest(SidechainTestFramework):
             self.csv_data["request_modifier_spec_latency"].append(config.request_modifier_spec)
             self.csv_data["modifiers_spec_latency"].append(config.modifiers_spec)
 
+        self.scan_logs_for_forks()
         self.fill_csv()
 
 

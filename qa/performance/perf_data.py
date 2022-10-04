@@ -7,6 +7,7 @@ class NetworkTopology(Enum):
     Ring = "ring"
     Star = "star"
     PeerToPeer = "p2p"
+    StrongConnectedForgers = "strong_connected_forgers"
 
 
 class TestType(Enum):

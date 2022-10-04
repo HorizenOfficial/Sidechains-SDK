@@ -45,7 +45,8 @@
         "daisy_chain",
         "ring",
         "star",
-        "p2p"
+        "p2p",
+        "strong_connected_forgers"
       ]
     },
     "nodes": {
