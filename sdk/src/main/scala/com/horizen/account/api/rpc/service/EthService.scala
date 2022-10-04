@@ -31,10 +31,12 @@ import com.horizen.utils.{BytesUtils, ClosableResourceHandler, TimeToEpochUtils}
 import org.web3j.crypto.Sign.SignatureData
 import org.web3j.crypto.{SignedRawTransaction, TransactionEncoder}
 import org.web3j.utils.Numeric
+import scorex.util.{ModifierId, ScorexLogging}
 import sparkz.core.NodeViewHolder
 import sparkz.core.NodeViewHolder.CurrentView
-import scorex.util.{ModifierId, ScorexLogging}
+
 import java.math.BigInteger
+import java.util
 import java.util.{Optional => JOptional}
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
@@ -184,9 +186,7 @@ class EthService(
   @RpcMethod("eth_signTransaction") def signTransaction(params: TransactionArgs): String = {
     applyOnAccountView { nodeView =>
       var signedTx = params.toTransaction
-      val secret =
-        getFittingSecret(nodeView.vault, nodeView.state, Option.apply(params.from.toUTXOString), params.value)
-      secret match {
+      getFittingSecret(nodeView.vault, nodeView.state, Option.apply(params.from), params.value) match {
         case Some(secret) =>
           signedTx = signTransactionWithSecret(secret, signedTx)
         case None =>
@@ -202,20 +202,18 @@ class EthService(
   private def getFittingSecret(
       wallet: AccountWallet,
       state: AccountState,
-      fromAddress: Option[String],
+      fromAddress: Option[Address],
       txValueInWei: BigInteger
   ): Option[PrivateKeySecp256k1] = {
-    val allAccounts = wallet.secretsOfType(classOf[PrivateKeySecp256k1])
-    val secret = allAccounts.find(a =>
-      (fromAddress.isEmpty ||
-        BytesUtils.toHexString(a.asInstanceOf[PrivateKeySecp256k1].publicImage.address) == fromAddress.get) &&
-        state
-          .getBalance(a.asInstanceOf[PrivateKeySecp256k1].publicImage.address)
-          .compareTo(txValueInWei) >= 0 // TODO account for gas
-    )
-
-    if (secret.nonEmpty) Option.apply(secret.get.asInstanceOf[PrivateKeySecp256k1])
-    else Option.empty[PrivateKeySecp256k1]
+    wallet
+      .secretsOfType(classOf[PrivateKeySecp256k1])
+      .map(_.asInstanceOf[PrivateKeySecp256k1])
+      .find(secret =>
+        // if from address is given the secrets public key needs to match, otherwise check all of the secrets
+        fromAddress.forall(from => util.Arrays.equals(from.toBytes, secret.publicImage().address())) &&
+          // TODO account for gas
+          state.getBalance(secret.publicImage.address).compareTo(txValueInWei) >= 0
+      )
   }
 
   private def signTransactionWithSecret(secret: PrivateKeySecp256k1, tx: EthereumTransaction): EthereumTransaction = {
