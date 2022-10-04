@@ -1,6 +1,6 @@
 package com.horizen
 
-import com.horizen.block.{SidechainBlock, SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.node._
 import com.horizen.params.NetworkParams
@@ -29,6 +29,7 @@ abstract class AbstractSidechainNodeViewHolder[
   type HSTOR <: AbstractHistoryStorage[PMOD, FPI, HSTOR]
 
   override type HIS <: AbstractHistory[TX, H, PMOD, FPI, HSTOR, HIS]
+  override type MS <: AbstractState[TX, H, PMOD, MS]
   override type VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PMOD, VL]
 
   protected var applyingBlock: Boolean = false
@@ -253,14 +254,12 @@ abstract class AbstractSidechainNodeViewHolder[
 
   def getFeePaymentsInfo(state: MS, epochNumber: Int) : FPI
   def getScanPersistentWallet(modToApply: PMOD, stateOp: Option[MS], epochNumber: Int, wallet: VL) : VL
-  def isWithdrawalEpochLastIndex(state: MS) : Boolean
-  def getWithdrawalEpochNumber(state: MS) : Int
 
   // Check is the modifier ends the withdrawal epoch, so notify History and Wallet about fees to be payed.
   // Scan modifier by the Wallet considering the forger fee payments.
   protected def scanBlockWithFeePayments(history: HIS, state: MS, wallet: VL, modToApply: PMOD): (HIS, VL) = {
-    val stateWithdrawalEpochNumber: Int = getWithdrawalEpochNumber(state)
-    if (isWithdrawalEpochLastIndex(state)) {
+    val stateWithdrawalEpochNumber: Int = state.getWithdrawalEpochNumber
+    if (state.isWithdrawalEpochLastIndex) {
       val historyAfterUpdateFee = history.updateFeePaymentsInfo(modToApply.id, getFeePaymentsInfo(state, stateWithdrawalEpochNumber))
       val walletAfterApply: VL = getScanPersistentWallet(modToApply, Some(state), stateWithdrawalEpochNumber, wallet)
       (historyAfterUpdateFee, walletAfterApply)

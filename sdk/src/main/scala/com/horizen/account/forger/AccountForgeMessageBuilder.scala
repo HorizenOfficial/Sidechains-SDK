@@ -17,9 +17,8 @@ import com.horizen.account.storage.AccountHistoryStorage
 import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.block._
-import com.horizen.chain.MainchainHeaderHash
 import com.horizen.consensus._
-import com.horizen.forge.{AbstractForgeMessageBuilder, MainchainSynchronizer}
+import com.horizen.forge.{AbstractForgeMessageBuilder, ForgeFailure, ForgingStakeListEmpty, MainchainSynchronizer}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.{Signature25519, VrfProof}
 import com.horizen.secret.{PrivateKey25519, Secret}
@@ -28,6 +27,7 @@ import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler,
 import scorex.util.{ModifierId, ScorexLogging}
 import sparkz.core.block.Block.{BlockId, Timestamp}
 import sparkz.core.{NodeViewModifier, idToBytes}
+
 import java.math.BigInteger
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -356,7 +356,7 @@ class AccountForgeMessageBuilder(
     // 2. get from stateDb using root above the collection of all forger stakes (ordered)
     val forgingStakeInfoSeq: Seq[ForgingStakeInfo] = using(state.getStateDbViewFromRoot(stateRoot)) {
       stateViewFromRoot =>
-        stateViewFromRoot.getOrderedForgingStakeInfoSeq
+        stateViewFromRoot.getOrderedForgingStakesInfoSeq
     }
 
     // 3. using wallet secrets, filter out the not-mine forging stakes

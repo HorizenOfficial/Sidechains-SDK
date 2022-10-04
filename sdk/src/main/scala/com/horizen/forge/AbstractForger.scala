@@ -38,7 +38,7 @@ abstract class AbstractForger[
   type FPI <: AbstractFeePaymentsInfo
   type HSTOR <: AbstractHistoryStorage[PM, FPI, HSTOR]
   type HIS <: AbstractHistory[TX, H, PM, FPI, HSTOR, HIS]
-  type MS <: MinimalState[PM, MS]
+  type MS <: AbstractState[TX, H, PM, MS]
   type VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PM, VL]
   type MP <: MemoryPool[TX, MP]
 
@@ -159,6 +159,11 @@ abstract class AbstractForger[
       case Success(NoOwnedForgingStake) => {
         log.info(s"No forging stake.")
         respondsToOpt.map(respondsTo => respondsTo ! Failure(new RuntimeException("Can't forge block, no forging stake is present for epoch.")))
+      }
+
+      case Success(ForgingStakeListEmpty) => {
+        log.info(s"No forging stakes available for this sidechain.")
+        respondsToOpt.map(respondsTo => respondsTo ! Failure(new RuntimeException("Can't forge block, no forging stakes can be found for this sidechain")))
       }
 
       case Success(ForgeFailed(ex)) => {

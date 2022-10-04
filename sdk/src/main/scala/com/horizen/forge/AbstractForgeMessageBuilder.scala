@@ -1,7 +1,6 @@
 package com.horizen.forge
 
 import akka.util.Timeout
-import com.horizen.account.receipt.LogsBloom
 import com.horizen.block._
 import com.horizen.chain.{AbstractFeePaymentsInfo, MainchainHeaderHash, SidechainBlockInfo}
 import com.horizen.consensus._
@@ -13,14 +12,12 @@ import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.{Transaction, TransactionSerializer}
 import com.horizen.utils.{DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, TimeToEpochUtils}
 import com.horizen.vrf.VrfOutput
-import com.horizen.{AbstractHistory, AbstractWallet}
+import com.horizen.{AbstractHistory, AbstractState, AbstractWallet}
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.block.Block
 import sparkz.core.transaction.MemoryPool
-import sparkz.core.transaction.state.MinimalState
 import scorex.util.{ModifierId, ScorexLogging}
-
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.util.{Failure, Success, Try}
@@ -39,7 +36,7 @@ abstract class AbstractForgeMessageBuilder[
   type HSTOR <: AbstractHistoryStorage[PM, FPI, HSTOR]
   type HIS <: AbstractHistory[TX, H, PM, FPI, HSTOR, HIS]
   type VL <: AbstractWallet[TX, PM, VL]
-  type MS <: MinimalState[PM, MS]
+  type MS <: AbstractState[TX, H, PM, MS]
   type MP <: MemoryPool[TX, MP]
 
   type View = CurrentView[HIS, MS, VL, MP]
@@ -56,6 +53,21 @@ abstract class AbstractForgeMessageBuilder[
   }
 
   case class BranchPointInfo(branchPointId: ModifierId, referenceDataToInclude: Seq[MainchainHeaderHash], headersToInclude: Seq[MainchainHeaderHash])
+
+  def checkSwitchingConsensusEpoch(state: MS, nextBlockTimestamp: Long): Option[ForgeFailure] = {
+    if (state.isSwitchingConsensusEpoch(nextBlockTimestamp))
+    {
+      if (state.getOrderedForgingStakesInfoSeq.isEmpty) {
+        log.error(s"ForgerStakes list can never be empty. Found at block time stamp $nextBlockTimestamp which would switch the epoch")
+        Some(ForgingStakeListEmpty)
+      } else {
+        None
+      }
+    } else {
+      // no checks if the epoch is not switching
+      None
+    }
+  }
 
   protected def tryToForgeNextBlock(nextConsensusEpochNumber: ConsensusEpochNumber, nextConsensusSlotNumber: ConsensusSlotNumber, timeout: Timeout, forcedTx: Iterable[TX])(nodeView: View): ForgeResult = Try {
     log.info(s"Try to forge block for epoch $nextConsensusEpochNumber with slot $nextConsensusSlotNumber")
@@ -78,6 +90,13 @@ abstract class AbstractForgeMessageBuilder[
     val consensusInfo: FullConsensusEpochInfo = nodeView.history.getFullConsensusEpochInfoForBlock(nextBlockTimestamp, parentBlockId)
     val totalStake = consensusInfo.stakeConsensusEpochInfo.totalStake
     val vrfMessage = buildVrfMessage(nextConsensusSlotNumber, consensusInfo.nonceConsensusEpochInfo)
+
+    // check if there are conditions in the switching epoch case which would prevent a valid block creation
+    // for instance a non-empty forger stakes list
+    checkSwitchingConsensusEpoch(nodeView.state, nextBlockTimestamp) match {
+      case Some(forgeFailure) => return forgeFailure
+      case _ => // check passed
+    }
 
     // Get ForgingStakeMerklePathInfo from wallet and order them by stake decreasing.
     val forgingStakeMerklePathInfoSeq: Seq[ForgingStakeMerklePathInfo] = getForgingStakeMerklePathInfo(

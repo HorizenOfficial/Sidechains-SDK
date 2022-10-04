@@ -20,6 +20,10 @@ case object NoOwnedForgingStake extends ForgeFailure {
   override def toString: String = s"Can't forge block, no forging stake is present for epoch."
 }
 
+case object ForgingStakeListEmpty extends ForgeFailure {
+  override def toString: String = s"Can't forge block, ForgerStakes list can't be empty."
+}
+
 case class ForgeFailed(ex: Throwable) extends ForgeFailure {
   override def toString: String = s"Failed block generation due $ex"
 }

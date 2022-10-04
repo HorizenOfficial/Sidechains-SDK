@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import logging
 import time
 from decimal import Decimal
 
@@ -582,8 +583,8 @@ class SCEvmForger(SidechainTestFramework):
         self.sc_sync_all()
         print_current_epoch_and_slot(sc_node_1)
 
-        # Try to generate one more SC block switching epoch, that should fail because while the forging itself will
-        # be successful (the forger info points to two epoch earlier), the block can not be applied
+        # Try to generate one more SC block switching epoch, that should fail because even if the forging itself could
+        # take place (the forger info points to two epoch earlier), the block would not be applied
         # since consensus epoch info are not valid (empty list of stakes)
         exception_occurs = False
         try:
@@ -594,9 +595,9 @@ class SCEvmForger(SidechainTestFramework):
         except Exception as e:
             exception_occurs = True
             logging.info("We had an exception as expected: {}".format(str(e)))
-
         finally:
             assert_true(exception_occurs, "No forging stakes expected for SC node 1.")
+
         self.sc_sync_all()
         print_current_epoch_and_slot(sc_node_1)
 

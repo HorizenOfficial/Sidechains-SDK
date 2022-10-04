@@ -12,13 +12,12 @@ import com.horizen.storage._
 import com.horizen.wallet.ApplicationWallet
 import sparkz.core.utils.NetworkTimeProvider
 import scorex.util.ModifierId
-import com.horizen.utils.{BytesUtils, SDKModifiersCache}
+import com.horizen.utils.BytesUtils
 import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import sparkz.core.consensus.History.ProgressInfo
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
 import sparkz.core.transaction.Transaction
-import sparkz.core.{ModifiersCache, idToVersion, versionToId}
-
+import sparkz.core.{idToVersion, versionToId}
 import scala.util.{Failure, Success, Try}
 
 class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
@@ -307,7 +306,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
   // Check if the next modifier will change Consensus Epoch, so notify History and Wallet with current info.
   override protected def applyConsensusEpochInfo(history: HIS, state: MS, wallet: VL, modToApply: SidechainBlock): (HIS, VL) = {
-    if (state.isSwitchingConsensusEpoch(modToApply)) {
+    if (state.isSwitchingConsensusEpoch(modToApply.timestamp)) {
       val (lastBlockInEpoch: ModifierId, consensusEpochInfo: ConsensusEpochInfo) = state.getCurrentConsensusEpochInfo
       val nonceConsensusEpochInfo = history.calculateNonceForEpoch(blockIdToEpochId(lastBlockInEpoch))
       val stakeConsensusEpochInfo = StakeConsensusEpochInfo(consensusEpochInfo.forgingStakeInfoTree.rootHash(), consensusEpochInfo.forgersStake)
@@ -350,7 +349,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       case (success@Success(updateInfo), modToApply) =>
         if (updateInfo.failedMod.isEmpty) {
           // Check if the next modifier will change Consensus Epoch, so notify History and Wallet with current info.
-          val (newHistory, newWallet) = if (updateInfo.state.isSwitchingConsensusEpoch(modToApply)) {
+          val (newHistory, newWallet) = if (updateInfo.state.isSwitchingConsensusEpoch(modToApply.timestamp)) {
             log.debug("Switching consensus epoch")
             val (lastBlockInEpoch, consensusEpochInfo) = updateInfo.state.getCurrentConsensusEpochInfo
             val nonceConsensusEpochInfo = updateInfo.history.calculateNonceForEpoch(blockIdToEpochId(lastBlockInEpoch))
@@ -418,10 +417,6 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
         } else success
     }
   }
-
-  override def isWithdrawalEpochLastIndex(state: MS) : Boolean = state.isWithdrawalEpochLastIndex
-  override def getWithdrawalEpochNumber(state: MS) : Int = state.getWithdrawalEpochInfo.epoch
-
 }
 
 object SidechainNodeViewHolderRef {
