@@ -3,6 +3,7 @@ import math
 import multiprocessing
 import random
 import time
+import pprint
 from multiprocessing import Pool, Value
 from time import sleep
 from os.path import exists
@@ -15,18 +16,22 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
 from httpCalls.block.best import http_block_best
 from httpCalls.block.findBlockByID import http_block_findById
 from httpCalls.block.forging import http_start_forging, http_stop_forging
+from httpCalls.block.forgingInfo import http_block_forging_info
 from httpCalls.transaction.allTransactions import allTransactions
 from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress, sendCoinsToAddressExtended, \
     sendCointsToMultipleAddress
-from httpCalls.wallet.balance import http_wallet_balance
-from httpCalls.wallet.allBoxesOfType import http_wallet_allBoxesOfType
+from httpCalls.transaction.makeForgerStake import makeForgerStake
 from httpCalls.transaction.createCoreTransaction import http_create_core_transaction
 from httpCalls.transaction.sendTransaction import http_send_transaction
+from httpCalls.wallet.balance import http_wallet_balance
+from httpCalls.wallet.allBoxesOfType import http_wallet_allBoxesOfType
 from httpCalls.wallet.createPrivateKey25519 import http_wallet_createPrivateKey25519
+from httpCalls.wallet.createVrfSecret import http_wallet_createVrfSecret
+
 from test_framework.util import start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, assert_equal
 from SidechainTestFramework.scutil import assert_true, bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks, \
-    deserialize_perf_test_json, connect_sc_nodes, start_sc_nodes_with_multiprocessing
+    deserialize_perf_test_json, connect_sc_nodes, start_sc_nodes_with_multiprocessing, generate_next_block
 from performance.perf_data import NetworkTopology, TestType
 
 # Declare global thread safe values used for multiprocessing tps test
@@ -107,8 +112,7 @@ def send_transactions_per_second(sc_node_index, txs_creator_node, txs_bytes, des
         # If completion time exceeds 1 second, it's no longer x transactions per second.
         # Adjust the initial_txs and test_run_time config values until this value is under 1 second.
         elif completion_time > 1:
-            logging.debug(f"WARNING:  Node{sc_node_index} Number of transactions sent has exceeded 1 second - Adjust "
-                          f"the initial_txs and test_run_time config values ")
+            #logging.debug(f"WARNING:  Node{sc_node_index} Number of transactions sent has exceeded 1 second - Adjust the initial_txs and test_run_time config values ")
             logging.debug(f"Node{sc_node_index} TIME TO COMPLETE {transactions_per_second} TPS: {completion_time}(s)")
         iteration += 1
 
@@ -152,6 +156,7 @@ def get_running_process_cpu_ram_usage():
 
 class PerformanceTest(SidechainTestFramework):
     MAX_TRANSACTION_OUTPUT = 998
+    FORGING_STAKE_AMOUNT = 1
     CONFIG_FILE = "./performance/perf_test.json"
     CSV_FILE = "./tps_result.csv"
     sc_nodes_bootstrap_info = None
@@ -268,11 +273,11 @@ class PerformanceTest(SidechainTestFramework):
         sc_nodes = self.get_node_configuration(mc_node)
 
         network = SCNetworkConfiguration(
-            SCCreationInfo(mc_node, 100),
+            SCCreationInfo(mc_node, self.FORGING_STAKE_AMOUNT),
             *sc_nodes
         )
         self.options.restapitimeout = 20
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720 * self.block_rate)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720 * self.block_rate * 5 / 2)
 
     def sc_setup_nodes(self):
         if self.perf_data["use_multiprocessing"]:
@@ -623,13 +628,15 @@ class PerformanceTest(SidechainTestFramework):
         # Declare SC Addresses
         txs_creator_addresses = []
         ft_addresses = []
+        forger_addresses = []
+        forger_vrf_pks = []
         ft_amount = self.initial_ft_amount
         mc_return_address = mc_nodes[0].getnewaddress()
 
         # Get tx creator nodes and non tx creator nodes
         txs_creators, non_txs_creators = self.get_txs_creators_and_non_creators()
 
-        # create 1 FT to every transaction creator node
+        # Send funds to tx creator nodes
         for i in range(len(txs_creators)):
             ft_addresses.append(http_wallet_createPrivateKey25519(txs_creators[i]))
             forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id, mc_nodes[0],
@@ -647,6 +654,43 @@ class PerformanceTest(SidechainTestFramework):
         for node in txs_creators:
             # Multiply ft_amount by 1e8 to get zentoshi value
             assert_equal(http_wallet_balance(node), ft_amount * 1e8)
+            
+        # Send funds to every forger nodes
+        # We skip the first one because it already receives it in the sidechain creation phase
+        for i in range(1, len(forger_nodes)):
+            # Create new forger entity
+            forger_addresses.append(http_wallet_createPrivateKey25519(forger_nodes[i]))
+            forger_vrf_pks.append(http_wallet_createVrfSecret(forger_nodes[i]))
+
+            # Send some funds
+            forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id, mc_nodes[0],
+                                        forger_addresses[-1], self.FORGING_STAKE_AMOUNT, mc_return_address)        
+        self.sc_sync_all()
+        generate_next_blocks(forger_nodes[0], "first node", 1)[0]
+        self.sc_sync_all()
+
+        # Verify that every forgers node received the FT and create forging stakes.
+        for i in range(1, len(forger_nodes)):
+            # Multiply ft_amount by 1e8 to get zentoshi value
+            assert_equal(http_wallet_balance(forger_nodes[i]), self.FORGING_STAKE_AMOUNT * 1e8)
+            makeForgerStake(forger_nodes[i], forger_addresses[i-1], forger_addresses[i-1], forger_vrf_pks[i-1], self.FORGING_STAKE_AMOUNT * 1e8)
+
+        self.sc_sync_all()
+        generate_next_blocks(forger_nodes[0], "first node", 1)[0]
+        self.sc_sync_all()
+
+        # Verify that every forgers node created the correct forging stakes.
+        for node  in forger_nodes:
+            boxes = http_wallet_allBoxesOfType(node, "ForgerBox")
+            assert_equal(len(boxes), 1)
+            assert_equal(boxes[0]["value"], self.FORGING_STAKE_AMOUNT * 1e8)
+
+        # Advance of 2 consensus epochs to maturate the new forging stakes
+        generate_next_block(forger_nodes[0], "first node", force_switch_to_next_epoch = True)[0]
+        self.sc_sync_all()
+        generate_next_block(forger_nodes[0], "first node", force_switch_to_next_epoch = True)[0]
+        self.sc_sync_all()
+
 
         # Create many UTXOs in a single transaction to multiple addresses
         # Taking FT box and splitting into many UTXOs to enable the creation of multiple transactions for the next part
@@ -803,8 +847,8 @@ class PerformanceTest(SidechainTestFramework):
         # Take blockhash of every node and verify they are all the same
         test_end_block_ids, api_errors = self.get_best_node_block_ids()
         if len(set(test_end_block_ids.values())) != 1:
-            print(test_end_block_ids)
-            input("Waiting for command...")
+            generate_next_blocks(forger_nodes[0], "first node", 1)[0]
+            self.sc_sync_all()
         #assert_equal(len(set(test_end_block_ids.values())), 1, "Test End BlockId's are not equal - was there a fork?")
 
         # TODO: Find balance for the node sender and receiver and verify that it's what we expect
