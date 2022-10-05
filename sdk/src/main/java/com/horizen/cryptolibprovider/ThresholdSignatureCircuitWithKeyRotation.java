@@ -1,5 +1,6 @@
 package com.horizen.cryptolibprovider;
 
+import com.horizen.block.WithdrawalEpochCertificate;
 import com.horizen.box.WithdrawalRequestBox;
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesListBytes;
 import com.horizen.utils.Pair;
