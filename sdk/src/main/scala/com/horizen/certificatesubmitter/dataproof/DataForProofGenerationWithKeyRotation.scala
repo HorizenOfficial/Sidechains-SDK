@@ -1,5 +1,6 @@
 package com.horizen.certificatesubmitter.dataproof
 
+import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.keys.{ActualKeys, KeyRotationProof}
 import com.horizen.proof.SchnorrProof
@@ -15,7 +16,7 @@ case class DataForProofGenerationWithKeyRotation(override val referencedEpochNum
                                                  override val ftMinAmount: Long,
                                                  override val customFields: Seq[Array[Byte]],
                                                  override val schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])],
-                                                 val actualKeys: Option[ActualKeys])
+                                                 val previousCertificate: Option[WithdrawalEpochCertificate])
   extends DataForProofGeneration (referencedEpochNumber, sidechainId, withdrawalRequests, endEpochCumCommTreeHash, btrFee, ftMinAmount, customFields, schnorrKeyPairs) {
   override def toString: String = {
     "DataForProofGeneration(" +

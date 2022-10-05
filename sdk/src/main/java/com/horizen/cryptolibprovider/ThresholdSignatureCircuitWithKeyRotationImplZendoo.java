@@ -1,7 +1,8 @@
 package com.horizen.cryptolibprovider;
 
+import com.horizen.block.SidechainCreationVersions;
+import com.horizen.block.WithdrawalEpochCertificate;
 import com.horizen.box.WithdrawalRequestBox;
-import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesList;
 import com.horizen.certnative.BackwardTransfer;
 import com.horizen.certnative.CreateProofResult;
 import com.horizen.certnative.NaiveThresholdSigProof;
@@ -11,6 +12,7 @@ import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.schnorrnative.SchnorrPublicKey;
 import com.horizen.schnorrnative.SchnorrSignature;
 import com.horizen.utils.Pair;
+import scala.Option;
 import scala.collection.Iterator;
 import scala.collection.Seq;
 
@@ -97,20 +99,22 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
     }
 
     @Override
-    public Pair<byte[], Long> createProof //
+    public Pair<byte[], Long> createProof
             (List<WithdrawalRequestBox> bt,
-                                          byte[] sidechainId,
-                                          int epochNumber,
-                                          byte[] endCumulativeScTxCommTreeRoot,
-                                          long btrFee,
-                                          long ftMinAmount,
-                                          Seq<byte[]> customParameters,
-                                          List<Optional<byte[]>> schnorrSignatureBytesList,
-                                          List<byte[]> schnorrPublicKeysBytesList,
-                                          long threshold,
-                                          String provingKeyPath,
-                                          boolean checkProvingKey,
-                                          boolean zk
+             byte[] sidechainId,
+             int epochNumber,
+             byte[] endCumulativeScTxCommTreeRoot,
+             long btrFee,
+             long ftMinAmount,
+             Seq<byte[]> customParameters,
+             List<Optional<byte[]>> schnorrSignatureBytesList,
+             List<byte[]> schnorrPublicKeysBytesList,
+             long threshold,
+             String provingKeyPath,
+             boolean checkProvingKey,
+             boolean zk,
+             Option<WithdrawalEpochCertificate> previousEpochCertificateOption,
+             int sidechainCreationVersionInt
             ) {
 
         List<SchnorrSignature> signatures = schnorrSignatureBytesList
@@ -125,10 +129,12 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
         List<FieldElement> customFe = prepareCustomFieldElements(customParameters);
 
-        SchnorrKeysSignaturesList keysSignaturesList = new SchnorrKeysSignaturesList();
+        Optional<WithdrawalCertificate> previousCertificateOption = previousEpochCertificateOption
+                .map(c -> CswCircuitImplZendoo.createWithdrawalCertificate(c,
+                        SidechainCreationVersions.Value(sidechainCreationVersionInt)));
 
         CreateProofResult proofAndQuality = KeyRotationThresholdSigProof.createProof(
-                keysSignaturesList, withdrawalCertificate, prevWithdrawalCertificate, signatures,
+                keysSignaturesList, withdrawalCertificate, previousCertificateOption, signatures,
                 maxPks, threshold, genesisKeysRootHash);
 
         endCumulativeScTxCommTreeRootFe.freeFieldElement();
