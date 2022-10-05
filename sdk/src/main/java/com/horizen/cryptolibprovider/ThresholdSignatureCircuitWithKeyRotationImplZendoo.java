@@ -15,6 +15,7 @@ import com.horizen.utils.Pair;
 import scala.Option;
 import scala.collection.Iterator;
 import scala.collection.Seq;
+import scala.compat.java8.OptionConverters;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -129,12 +130,12 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
         List<FieldElement> customFe = prepareCustomFieldElements(customParameters);
 
-        Optional<WithdrawalCertificate> previousCertificateOption = previousEpochCertificateOption
+        Optional<WithdrawalCertificate> previousCertificateOption = OptionConverters.toJava(previousEpochCertificateOption)
                 .map(c -> CswCircuitImplZendoo.createWithdrawalCertificate(c,
                         SidechainCreationVersions.Value(sidechainCreationVersionInt)));
 
         CreateProofResult proofAndQuality = KeyRotationThresholdSigProof.createProof(
-                keysSignaturesList, withdrawalCertificate, previousCertificateOption, signatures,
+                keysSignaturesList, withdrawalCertificate, previousCertificateOption, schnorrSignatureBytesList,
                 maxPks, threshold, genesisKeysRootHash);
 
         endCumulativeScTxCommTreeRootFe.freeFieldElement();
