@@ -11,7 +11,7 @@ abstract class DataForProofGeneration(val referencedEpochNumber: Int,
                                       val btrFee: Long,
                                       val ftMinAmount: Long,
                                       val customFields: Seq[Array[Byte]],
-                                      val schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])]
+                                      val schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])],
                                      )
 
 

@@ -41,7 +41,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
 
   override def buildDataForProofGeneration(sidechainNodeView: View, status: SignaturesStatus): DataForProofGenerationWithKeyRotation = {
     val history = sidechainNodeView.history
-    val state = sidechainNodeView.state
+    val state: SidechainState = sidechainNodeView.state
 
     val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(status.referencedEpoch)
 
@@ -57,6 +57,8 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
         (pubKey, status.knownSigs.find(info => info.pubKeyIndex == pubKeyIndex).map(_.signature))
     }
 
+    val actualKeysOption = state.actualKeys(status.referencedEpoch)
+
     DataForProofGenerationWithKeyRotation(
       status.referencedEpoch,
       sidechainId,
@@ -65,7 +67,9 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       btrFee,
       ftMinAmount,
       Seq(customFields),
-      signersPublicKeyWithSignatures)
+      signersPublicKeyWithSignatures,
+      actualKeysOption,
+      state.get)
   }
 
   override def getMessageToSign(referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
