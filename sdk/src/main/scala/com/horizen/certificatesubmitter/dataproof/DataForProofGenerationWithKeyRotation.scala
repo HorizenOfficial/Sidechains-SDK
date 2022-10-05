@@ -1,6 +1,7 @@
 package com.horizen.certificatesubmitter.dataproof
 
 import com.horizen.box.WithdrawalRequestBox
+import com.horizen.certificatesubmitter.keys.KeyRotationProof
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.SchnorrProposition
 import com.horizen.utils.BytesUtils

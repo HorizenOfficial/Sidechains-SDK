@@ -1,11 +1,11 @@
 package com.horizen.cryptolibprovider;
 
-import com.horizen.block.WithdrawalEpochCertificate;
 import com.horizen.box.WithdrawalRequestBox;
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesListBytes;
 import com.horizen.utils.Pair;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ThresholdSignatureCircuitWithKeyRotation {
     byte[] generateMessageToBeSigned(List<WithdrawalRequestBox> bt,
