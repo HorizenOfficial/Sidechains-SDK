@@ -138,11 +138,20 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                 .map(c -> CswCircuitImplZendoo.createWithdrawalCertificate(c,
                         SidechainCreationVersions.Value(sidechainCreationVersionInt)));
 
+        List<SchnorrSignature> updatedSigningKeysSkSignatures = new ArrayList<>();
+        List<SchnorrSignature> updatedSigningKeysMkSignatures = new ArrayList<>();
+        List<SchnorrSignature> updatedMasterKeysSkSignatures = new ArrayList<>();
+        List<SchnorrSignature> updatedMasterKeysMkSignatures = new ArrayList<>();
+
         SchnorrKeysSignaturesList keysSignaturesList = new SchnorrKeysSignaturesList(
-                schnorrSignersPublicKeysBytesList,
-                schnorrMastersPublicKeysBytesList,
-                newSchnorrSignersPublicKeysBytesList,
-                newSchnorrMastersPublicKeysBytesList
+                byteArrayToKeysList(schnorrSignersPublicKeysBytesList),
+                        byteArrayToKeysList(schnorrMastersPublicKeysBytesList),
+                                byteArrayToKeysList(newSchnorrSignersPublicKeysBytesList),
+                                        byteArrayToKeysList(newSchnorrMastersPublicKeysBytesList),
+                        updatedSigningKeysSkSignatures,
+        updatedSigningKeysMkSignatures,
+        updatedMasterKeysSkSignatures,
+        updatedMasterKeysMkSignatures
         );
 
         CreateProofResult proofAndQuality = KeyRotationThresholdSigProof.createProof(
@@ -156,6 +165,10 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         customFe.forEach(FieldElement::freeFieldElement);
 
         return new Pair<>(proofAndQuality.getProof(), proofAndQuality.getQuality());
+    }
+
+    private List<SchnorrPublicKey> byteArrayToKeysList(List<byte[]> schnorrPublicKeysBytesList) {
+        return schnorrPublicKeysBytesList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList());
     }
 
     @Override
