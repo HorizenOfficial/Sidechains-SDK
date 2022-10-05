@@ -613,12 +613,15 @@ class PerformanceTest(SidechainTestFramework):
     def scan_logs_for_forks(self):
         for i in range(len(self.sc_nodes)):
             assert_true(exists(self.options.tmpdir+"/sc_node"+str(i)))
-            last_fork = ""
+            last_fork = "0"
             with open(self.options.tmpdir+"/sc_node"+str(i)+"/log/debugLog.txt", 'r') as fp:
                 logging.info(f"Check node {i} log...")
                 for line in fp:
                     if 'the fork number' in line:
-                        last_fork = line
+                        print(line)
+                        tmp = line.split("fork number")
+                        last_fork = tmp[1].split("has been")[0]
+
             self.csv_data["forks"].append(last_fork)
 
     def run_test(self):
