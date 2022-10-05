@@ -1,9 +1,11 @@
 package com.horizen.cryptolibprovider;
 
 import com.horizen.box.WithdrawalRequestBox;
+import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesList;
 import com.horizen.certnative.BackwardTransfer;
 import com.horizen.certnative.CreateProofResult;
 import com.horizen.certnative.NaiveThresholdSigProof;
+import com.horizen.certnative.WithdrawalCertificate;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.schnorrnative.SchnorrPublicKey;
@@ -108,9 +110,8 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                                           long threshold,
                                           String provingKeyPath,
                                           boolean checkProvingKey,
-                                          boolean zk) {  // TODO: what is zk
-        List<BackwardTransfer> backwardTransfers =
-                bt.stream().map(ThresholdSignatureCircuitWithKeyRotationImplZendoo::withdrawalRequestBoxToBackwardTransfer).collect(Collectors.toList());
+                                          boolean zk
+            ) {
 
         List<SchnorrSignature> signatures = schnorrSignatureBytesList
                                                 .stream()
@@ -124,12 +125,12 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
         List<FieldElement> customFe = prepareCustomFieldElements(customParameters);
 
-        CreateProofResult proofAndQuality = NaiveThresholdSigProof.createProof(
-                backwardTransfers, sidechainIdFe, epochNumber, endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount,
-                signatures, publicKeys, threshold, customFe, Optional.of(supportedSegmentSize),
-                provingKeyPath, checkProvingKey, zk);
+        SchnorrKeysSignaturesList keysSignaturesList = new SchnorrKeysSignaturesList();
 
-        // TODO: actually it will be more efficient to pass byte arrays directly to the `createProof` and deserialize them to FEs inside. JNI calls cost a lot.
+        CreateProofResult proofAndQuality = KeyRotationThresholdSigProof.createProof(
+                keysSignaturesList, withdrawalCertificate, prevWithdrawalCertificate, signatures,
+                maxPks, threshold, genesisKeysRootHash);
+
         endCumulativeScTxCommTreeRootFe.freeFieldElement();
         sidechainIdFe.freeFieldElement();
         publicKeys.forEach(SchnorrPublicKey::freePublicKey);

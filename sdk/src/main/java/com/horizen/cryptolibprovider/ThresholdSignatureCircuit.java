@@ -30,7 +30,7 @@ public interface ThresholdSignatureCircuit {
                                    long threshold,
                                    String provingKeyPath,
                                    boolean checkProvingKey,
-                                   boolean zk); // todo check name
+                                   boolean zk);
 
     Boolean verifyProof(List<WithdrawalRequestBox> bt,
                         byte[] sidechainId,
