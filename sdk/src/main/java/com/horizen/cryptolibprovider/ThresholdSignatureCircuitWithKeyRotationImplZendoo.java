@@ -147,7 +147,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
 
         CreateProofResult proofAndQuality = KeyRotationThresholdSigProof.createProof(
                 keysSignaturesList, withdrawalCertificate, previousCertificateOption, schnorrSignatureBytesList,
-                maxPks, threshold, genesisKeysRootHash);
+                schnorrSignersPublicKeysBytesList.size(), threshold, genesisKeysRootHash);
 
         endCumulativeScTxCommTreeRootFe.freeFieldElement();
         sidechainIdFe.freeFieldElement();
