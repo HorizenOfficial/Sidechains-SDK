@@ -1,7 +1,10 @@
 package com.horizen.cryptolibprovider;
 
+import com.horizen.block.SidechainCreationVersions;
+import com.horizen.block.WithdrawalEpochCertificate;
 import com.horizen.box.WithdrawalRequestBox;
 import com.horizen.utils.Pair;
+import scala.Option;
 import scala.collection.Seq;
 
 import java.util.List;
@@ -28,7 +31,9 @@ public interface ThresholdSignatureCircuitWithKeyRotation {
                                    long threshold,
                                    String provingKeyPath,
                                    boolean checkProvingKey,
-                                   boolean zk); // todo check name
+                                   boolean zk,
+                                   Option<WithdrawalEpochCertificate> previousEpochCertificateOption,
+                                   int sidechainCreationVersionInt);
 
     Boolean verifyProof(List<WithdrawalRequestBox> bt,
                         byte[] sidechainId,

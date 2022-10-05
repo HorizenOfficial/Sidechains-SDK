@@ -1,6 +1,8 @@
 package com.horizen.certificatesubmitter.strategies
 
 import akka.pattern.ask
+import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
+import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
 import com.horizen.certificatesubmitter.dataproof.{DataForProofGeneration, DataForProofGenerationWithKeyRotation}
@@ -11,13 +13,20 @@ import com.horizen.websocket.server.WebSocketServerRef.sidechainNodeViewHolderRe
 import com.horizen.{SidechainSettings, SidechainState}
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 
+import java.util.Optional
 import scala.collection.JavaConverters._
 import scala.concurrent.Await
 import scala.util.{Failure, Success, Try}
+import scala.compat.java8.OptionConverters.RichOptionForJava8
 
 class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams) extends KeyRotationStrategy(settings, params) {
 
   override def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
+
+    val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
+      dataForProofGeneration.schnorrKeyPairs.map {
+        case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)
+      }.unzip
 
     log.info(s"Start generating proof with parameters: dataForProofGeneration = ${
       dataForProofGeneration
@@ -27,7 +36,9 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       }. " +
       s"It can take a while.")
 
+    val dataForProofGenerationWithKeyRotation = dataForProofGeneration.asInstanceOf[DataForProofGenerationWithKeyRotation]
     //create and return proof with quality
+    val sidechainCreationVersion: SidechainCreationVersion = params.sidechainCreationVersion
     CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.createProof(
       dataForProofGeneration.withdrawalRequests.asJava,
       dataForProofGeneration.sidechainId,
@@ -35,7 +46,15 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       dataForProofGeneration.endEpochCumCommTreeHash,
       dataForProofGeneration.btrFee,
       dataForProofGeneration.ftMinAmount,
-      dataForProofGeneration.customFields
+      dataForProofGeneration.customFields,
+      signaturesBytes.asJava,
+      signersPublicKeysBytes.asJava,
+      params.signersThreshold,
+      provingFileAbsolutePath,
+      true,
+      true,
+      dataForProofGenerationWithKeyRotation.previousCertificate,
+      sidechainCreationVersion.id
     )
   }
 
@@ -58,6 +77,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
     }
 
     val actualKeysOption = state.actualKeys(status.referencedEpoch)
+    val previousCertificate: Option[WithdrawalEpochCertificate] = state.certificate(status.referencedEpoch - 1)
 
     DataForProofGenerationWithKeyRotation(
       status.referencedEpoch,
@@ -68,8 +88,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       ftMinAmount,
       Seq(customFields),
       signersPublicKeyWithSignatures,
-      actualKeysOption,
-      state.get)
+      previousCertificate)
   }
 
   override def getMessageToSign(referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
