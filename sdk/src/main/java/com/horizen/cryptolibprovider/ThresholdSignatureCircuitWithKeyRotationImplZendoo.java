@@ -3,6 +3,7 @@ package com.horizen.cryptolibprovider;
 import com.horizen.block.SidechainCreationVersions;
 import com.horizen.block.WithdrawalEpochCertificate;
 import com.horizen.box.WithdrawalRequestBox;
+import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesList;
 import com.horizen.certnative.BackwardTransfer;
 import com.horizen.certnative.CreateProofResult;
 import com.horizen.certnative.NaiveThresholdSigProof;
@@ -109,7 +110,10 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
              long ftMinAmount,
              Seq<byte[]> customParameters,
              List<Optional<byte[]>> schnorrSignatureBytesList,
-             List<byte[]> schnorrPublicKeysBytesList,
+             List<byte[]> schnorrSignersPublicKeysBytesList,
+             List<byte[]> schnorrMastersPublicKeysBytesList,
+             List<byte[]> newSchnorrSignersPublicKeysBytesList,
+             List<byte[]> newSchnorrMastersPublicKeysBytesList,
              long threshold,
              String provingKeyPath,
              boolean checkProvingKey,
@@ -133,6 +137,13 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         Optional<WithdrawalCertificate> previousCertificateOption = OptionConverters.toJava(previousEpochCertificateOption)
                 .map(c -> CswCircuitImplZendoo.createWithdrawalCertificate(c,
                         SidechainCreationVersions.Value(sidechainCreationVersionInt)));
+
+        SchnorrKeysSignaturesList keysSignaturesList = new SchnorrKeysSignaturesList(
+                schnorrSignersPublicKeysBytesList,
+                schnorrMastersPublicKeysBytesList,
+                newSchnorrSignersPublicKeysBytesList,
+                newSchnorrMastersPublicKeysBytesList
+        );
 
         CreateProofResult proofAndQuality = KeyRotationThresholdSigProof.createProof(
                 keysSignaturesList, withdrawalCertificate, previousCertificateOption, schnorrSignatureBytesList,

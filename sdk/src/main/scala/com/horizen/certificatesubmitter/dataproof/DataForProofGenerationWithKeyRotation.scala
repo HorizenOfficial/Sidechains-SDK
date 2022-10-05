@@ -16,6 +16,10 @@ case class DataForProofGenerationWithKeyRotation(override val referencedEpochNum
                                                  override val ftMinAmount: Long,
                                                  override val customFields: Seq[Array[Byte]],
                                                  override val schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])],
+                                                 schnorrSignersPublicKeysBytesList: Seq[Array[Byte]],
+                                                 schnorrMastersPublicKeysBytesList: Seq[Array[Byte]],
+                                                 newSchnorrSignersPublicKeysBytesList: Seq[Array[Byte]],
+                                                 newSchnorrMastersPublicKeysBytesList: Seq[Array[Byte]],
                                                  val previousCertificate: Option[WithdrawalEpochCertificate])
   extends DataForProofGeneration (referencedEpochNumber, sidechainId, withdrawalRequests, endEpochCumCommTreeHash, btrFee, ftMinAmount, customFields, schnorrKeyPairs) {
   override def toString: String = {
