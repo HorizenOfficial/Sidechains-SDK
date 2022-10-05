@@ -672,29 +672,6 @@ class PerformanceTest(SidechainTestFramework):
         generate_next_blocks(forger_nodes[0], "first node", 1)[0]
         self.sc_sync_all()
 
-        # Verify that every forgers node received the FT and create forging stakes.
-        for i in range(1, len(forger_nodes)):
-            # Multiply ft_amount by 1e8 to get zentoshi value
-            assert_equal(http_wallet_balance(forger_nodes[i]), self.FORGING_STAKE_AMOUNT * 1e8)
-            makeForgerStake(forger_nodes[i], forger_addresses[i-1], forger_addresses[i-1], forger_vrf_pks[i-1], self.FORGING_STAKE_AMOUNT * 1e8)
-
-        self.sc_sync_all()
-        generate_next_blocks(forger_nodes[0], "first node", 1)[0]
-        self.sc_sync_all()
-
-        # Verify that every forgers node created the correct forging stakes.
-        for node  in forger_nodes:
-            boxes = http_wallet_allBoxesOfType(node, "ForgerBox")
-            assert_equal(len(boxes), 1)
-            assert_equal(boxes[0]["value"], self.FORGING_STAKE_AMOUNT * 1e8)
-
-        # Advance of 2 consensus epochs to maturate the new forging stakes
-        generate_next_block(forger_nodes[0], "first node", force_switch_to_next_epoch = True)[0]
-        self.sc_sync_all()
-        generate_next_block(forger_nodes[0], "first node", force_switch_to_next_epoch = True)[0]
-        self.sc_sync_all()
-
-
         # Create many UTXOs in a single transaction to multiple addresses
         # Taking FT box and splitting into many UTXOs to enable the creation of multiple transactions for the next part
         # of the test (population of the mempool)
@@ -771,6 +748,28 @@ class PerformanceTest(SidechainTestFramework):
             # Verify that all the nodes have the correct amount of transactions in the mempool
             for node in self.sc_nodes:
                 assert_equal(len(allTransactions(node, True)["transactions"]), self.initial_txs * len(txs_creators))
+
+        # Verify that every forgers node received the FT and create forging stakes.
+        for i in range(1, len(forger_nodes)):
+            # Multiply ft_amount by 1e8 to get zentoshi value
+            assert_equal(http_wallet_balance(forger_nodes[i]), self.FORGING_STAKE_AMOUNT * 1e8)
+            makeForgerStake(forger_nodes[i], forger_addresses[i-1], forger_addresses[i-1], forger_vrf_pks[i-1], self.FORGING_STAKE_AMOUNT * 1e8)
+
+        self.sc_sync_all()
+        generate_next_blocks(forger_nodes[0], "first node", 1)[0]
+        self.sc_sync_all()
+
+        # Verify that every forgers node created the correct forging stakes.
+        for node  in forger_nodes:
+            boxes = http_wallet_allBoxesOfType(node, "ForgerBox")
+            assert_equal(len(boxes), 1)
+            assert_equal(boxes[0]["value"], self.FORGING_STAKE_AMOUNT * 1e8)
+
+        # Advance of 2 consensus epochs to maturate the new forging stakes
+        generate_next_block(forger_nodes[0], "first node", force_switch_to_next_epoch = True)[0]
+        self.sc_sync_all()
+        generate_next_block(forger_nodes[0], "first node", force_switch_to_next_epoch = True)[0]
+        self.sc_sync_all()
 
         # Take best block id of every node and assert they all match
         test_start_block_ids, _ = self.get_best_node_block_ids()
