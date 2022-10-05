@@ -850,10 +850,12 @@ class PerformanceTest(SidechainTestFramework):
         # Take blockhash of every node and verify they are all the same
         test_end_block_ids, api_errors = self.get_best_node_block_ids()
         if len(set(test_end_block_ids.values())) != 1:
-            generate_next_blocks(forger_nodes[0], "first node", 1)[0]
-            self.sc_sync_all()
-        #assert_equal(len(set(test_end_block_ids.values())), 1, "Test End BlockId's are not equal - was there a fork?")
-
+            try:
+                for forger in forger_nodes:
+                    generate_next_blocks(forger, "first node", 1)[0]
+                self.sc_sync_all()
+            except Exception as e:
+                print(e)
         # TODO: Find balance for the node sender and receiver and verify that it's what we expect
         # sum(balance of each node) => total ZEN present at the end of the test
         # Output the wallet balance of each node
