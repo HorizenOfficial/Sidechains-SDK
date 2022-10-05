@@ -35,10 +35,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       dataForProofGeneration.endEpochCumCommTreeHash,
       dataForProofGeneration.btrFee,
       dataForProofGeneration.ftMinAmount,
-      dataForProofGeneration.customFields//,
-//      signature1,
-//      signature2,
-//      signature3
+      dataForProofGeneration.customFields
     )
   }
 

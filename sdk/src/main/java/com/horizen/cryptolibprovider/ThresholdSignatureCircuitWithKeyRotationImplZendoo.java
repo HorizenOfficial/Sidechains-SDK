@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCircuit {
+public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements ThresholdSignatureCircuitWithKeyRotation {
     // Note: supportedSegmentSize should correlate with the snark circuit complexity,
     // but is always less or equal the one defined in the MC network (maxSegmentSize).
     private static final int supportedSegmentSize = (1 << 17);
@@ -40,17 +40,10 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
         Iterator<byte[]> iterator = customFields.iterator();
         List<FieldElement> fieldElements = new ArrayList<>();
         while (iterator.hasNext()) {
-            fieldElements.addAll(splitUtxoMerkleTreeRootToFieldElements(iterator.next()));
+            byte[] actualKeysMerkleRootHash = iterator.next();
+            fieldElements.add(FieldElement.deserialize(actualKeysMerkleRootHash));
         }
         return fieldElements;
-    }
-
-    private List<FieldElement> splitUtxoMerkleTreeRootToFieldElements(byte[] utxoMerkleTreeRoot) {
-        FieldElement utxoMerkleTreeRootFe = FieldElement.deserialize(utxoMerkleTreeRoot);
-        List<FieldElement> split = utxoMerkleTreeRootFe.splitAt(16);
-        utxoMerkleTreeRootFe.freeFieldElement();
-
-        return split;
     }
 
     @Override
@@ -83,7 +76,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
                                             long ftMinAmount,
                                             Seq<byte[]> customParameters) {
         BackwardTransfer[] backwardTransfers =
-                bt.stream().map(ThresholdSignatureCircuitImplZendoo::withdrawalRequestBoxToBackwardTransfer).toArray(BackwardTransfer[]::new);
+                bt.stream().map(ThresholdSignatureCircuitWithKeyRotationImplZendoo::withdrawalRequestBoxToBackwardTransfer).toArray(BackwardTransfer[]::new);
 
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
@@ -117,7 +110,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
                                           boolean checkProvingKey,
                                           boolean zk) {  // TODO: what is zk
         List<BackwardTransfer> backwardTransfers =
-                bt.stream().map(ThresholdSignatureCircuitImplZendoo::withdrawalRequestBoxToBackwardTransfer).collect(Collectors.toList());
+                bt.stream().map(ThresholdSignatureCircuitWithKeyRotationImplZendoo::withdrawalRequestBoxToBackwardTransfer).collect(Collectors.toList());
 
         List<SchnorrSignature> signatures = schnorrSignatureBytesList
                                                 .stream()
@@ -160,7 +153,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
                                String verificationKeyPath,
                                boolean checkVerificationKey) {
         List<BackwardTransfer> backwardTransfers =
-                bt.stream().map(ThresholdSignatureCircuitImplZendoo::withdrawalRequestBoxToBackwardTransfer).collect(Collectors.toList());
+                bt.stream().map(ThresholdSignatureCircuitWithKeyRotationImplZendoo::withdrawalRequestBoxToBackwardTransfer).collect(Collectors.toList());
 
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         FieldElement constantFe = FieldElement.deserialize(constant);
