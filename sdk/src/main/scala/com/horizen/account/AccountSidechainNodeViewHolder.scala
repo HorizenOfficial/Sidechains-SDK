@@ -284,7 +284,7 @@ object AccountNodeViewHolderRef {
             timeProvider: NetworkTimeProvider,
             genesisBlock: AccountBlock): Props =
     Props(new AccountSidechainNodeViewHolder(sidechainSettings, params, timeProvider, historyStorage,
-      consensusDataStorage, stateMetadataStorage, stateDbStorage, customMessageProcessors, secretStorage, genesisBlock))
+      consensusDataStorage, stateMetadataStorage, stateDbStorage, customMessageProcessors, secretStorage, genesisBlock)).withMailbox("akka.actor.deployment.prio-mailbox")
 
   def apply(sidechainSettings: SidechainSettings,
             historyStorage: AccountHistoryStorage,
@@ -298,7 +298,7 @@ object AccountNodeViewHolderRef {
             genesisBlock: AccountBlock)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateMetadataStorage, stateDbStorage,
-      customMessageProcessors, secretStorage, params, timeProvider, genesisBlock))
+      customMessageProcessors, secretStorage, params, timeProvider, genesisBlock).withMailbox("akka.actor.deployment.prio-mailbox"))
 
   def apply(name: String,
             sidechainSettings: SidechainSettings,
@@ -313,6 +313,6 @@ object AccountNodeViewHolderRef {
             genesisBlock: AccountBlock)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateMetadataStorage, stateDbStorage,
-      customMessageProcessors, secretStorage, params, timeProvider, genesisBlock), name)
+      customMessageProcessors, secretStorage, params, timeProvider, genesisBlock).withMailbox("akka.actor.deployment.prio-mailbox"), name)
 
 }
