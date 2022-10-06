@@ -42,7 +42,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         return fesBytes;
     }
 
-    private List<FieldElement> prepareCustomFieldElements(Seq<byte[]> customFields)  {
+    private List<FieldElement> prepareCustomFieldElements(Seq<byte[]> customFields) {
         Iterator<byte[]> iterator = customFields.iterator();
         List<FieldElement> fieldElements = new ArrayList<>();
         while (iterator.hasNext()) {
@@ -55,10 +55,10 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
     @Override
     public byte[] reconstructUtxoMerkleTreeRoot(byte[] fe1Bytes, byte[] fe2Bytes) {
         FieldElement fe1 = FieldElement.deserialize(fe1Bytes);
-        if(fe1 == null)
+        if (fe1 == null)
             return new byte[0];
         FieldElement fe2 = FieldElement.deserialize(fe2Bytes);
-        if(fe2 == null) {
+        if (fe2 == null) {
             fe1.freeFieldElement();
             return new byte[0];
         }
@@ -123,9 +123,9 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
             ) {
 
         List<SchnorrSignature> signatures = schnorrSignatureBytesList
-                                                .stream()
-                                                .map(signatureBytesOpt -> signatureBytesOpt.map(SchnorrSignature::deserialize).orElse(signaturePlaceHolder))
-                                                .collect(Collectors.toList());
+                .stream()
+                .map(signatureBytesOpt -> signatureBytesOpt.map(SchnorrSignature::deserialize).orElse(signaturePlaceHolder))
+                .collect(Collectors.toList());
 
         List<SchnorrPublicKey> publicKeys =
                 schnorrPublicKeysBytesList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList());
@@ -138,20 +138,22 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                 .map(c -> CswCircuitImplZendoo.createWithdrawalCertificate(c,
                         SidechainCreationVersions.Value(sidechainCreationVersionInt)));
 
+        List<SchnorrPublicKey> schnorrSignersPublicKeys = byteArrayToKeysList(schnorrSignersPublicKeysBytesList);
+
         List<SchnorrSignature> updatedSigningKeysSkSignatures = new ArrayList<>();
         List<SchnorrSignature> updatedSigningKeysMkSignatures = new ArrayList<>();
         List<SchnorrSignature> updatedMasterKeysSkSignatures = new ArrayList<>();
         List<SchnorrSignature> updatedMasterKeysMkSignatures = new ArrayList<>();
 
         SchnorrKeysSignaturesList keysSignaturesList = new SchnorrKeysSignaturesList(
-                byteArrayToKeysList(schnorrSignersPublicKeysBytesList),
-                        byteArrayToKeysList(schnorrMastersPublicKeysBytesList),
-                                byteArrayToKeysList(newSchnorrSignersPublicKeysBytesList),
-                                        byteArrayToKeysList(newSchnorrMastersPublicKeysBytesList),
-                        updatedSigningKeysSkSignatures,
-        updatedSigningKeysMkSignatures,
-        updatedMasterKeysSkSignatures,
-        updatedMasterKeysMkSignatures
+                schnorrSignersPublicKeys,
+                byteArrayToKeysList(schnorrMastersPublicKeysBytesList),
+                byteArrayToKeysList(newSchnorrSignersPublicKeysBytesList),
+                byteArrayToKeysList(newSchnorrMastersPublicKeysBytesList),
+                updatedSigningKeysSkSignatures,
+                updatedSigningKeysMkSignatures,
+                updatedMasterKeysSkSignatures,
+                updatedMasterKeysMkSignatures
         );
 
         CreateProofResult proofAndQuality = KeyRotationThresholdSigProof.createProof(
@@ -160,7 +162,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
 
         endCumulativeScTxCommTreeRootFe.freeFieldElement();
         sidechainIdFe.freeFieldElement();
-        publicKeys.forEach(SchnorrPublicKey::freePublicKey);
+        schnorrSignersPublicKeys.forEach(SchnorrPublicKey::freePublicKey);
         signatures.forEach(SchnorrSignature::freeSignature);
         customFe.forEach(FieldElement::freeFieldElement);
 
@@ -206,7 +208,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
 
 
     @Override
-    public byte[] generateSysDataConstant(List<byte[]> publicKeysList, long threshold){
+    public byte[] generateSysDataConstant(List<byte[]> publicKeysList, long threshold) {
         List<SchnorrPublicKey> schnorrPublicKeys = publicKeysList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList());
 
         // Note: sc-cryptolib return constant in LittleEndian
