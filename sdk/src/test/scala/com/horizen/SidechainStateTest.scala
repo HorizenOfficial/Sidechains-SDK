@@ -29,7 +29,7 @@ import java.util.{ArrayList => JArrayList, List => JList, Optional => JOptional}
 import scala.collection.JavaConverters._
 import scala.collection.immutable._
 import scala.collection.mutable.ListBuffer
-import scala.util.{Random, Success}
+import scala.util.{Failure, Random, Success}
 
 
 class SidechainStateTest
@@ -42,7 +42,6 @@ class SidechainStateTest
 {
 
   val mockedStateStorage: SidechainStateStorage = mock[SidechainStateStorage]
-  Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(ConsensusEpochNumber @@ 0))
   val mockedStateForgerBoxStorage: SidechainStateForgerBoxStorage = mock[SidechainStateForgerBoxStorage]
   val mockedStateUtxoMerkleTreeProvider: SidechainStateUtxoMerkleTreeProvider = mock[SidechainStateUtxoMerkleTreeProvider]
   val mockedApplicationState: ApplicationState = mock[ApplicationState]
@@ -58,7 +57,11 @@ class SidechainStateTest
 
   @Before
   def init(): Unit = {
-    ForkManager.init(new SimpleForkConfigurator(), "regtest")
+    ForkManager.reset()
+    ForkManager.init(new SimpleForkConfigurator(), "regtest").get
+    Mockito.reset(mockedStateStorage)
+    Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(ConsensusEpochNumber @@ 0))
+
   }
 
   def buildRegularTransaction(regularOutputsCount: Int,
@@ -763,7 +766,7 @@ class SidechainStateTest
     var tryValidate = sidechainState.validate(openStakeTransaction.asInstanceOf[SidechainTypes#SCBT])
     assertFalse("Transaction validation must fail.",
       tryValidate.isSuccess)
-    assertTrue(tryValidate.failed.get.getMessage.equals("OpenStakeTransaction is still not allowed in this consensus epoch!"))
+    assertEquals("OpenStakeTransaction is still not allowed in this consensus epoch!", tryValidate.failed.get.getMessage)
 
     //Test validate(Transaction) with restrict forger disabled
     Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(intToConsensusEpochNumber(11)))
@@ -1049,7 +1052,7 @@ class SidechainStateTest
     //Test validate block with no empty WB slots accumulated, 2 new mainchain block reference and 1 transaction with 10 WBs and 1 transaction with 5 WBs
     Mockito.when(mockedBlock.mainchainBlockReferencesData).thenReturn(Seq(emptyRefData, emptyRefData))
     validateTry = sidechainState.validate(mockedBlock)
-    assertTrue("Block validation must be successful.",
+    assertTrue(s"Block validation must be successful. ${validateTry}",
       validateTry.isSuccess)
 
     //Test validate block with 1 empty WB slots accumulated, 1 new mainchain block reference and 1 transaction with 10 WBs and 1 transaction with 5 WBs
@@ -1119,7 +1122,7 @@ class SidechainStateTest
       .thenReturn("00000000000000000000000000000000".asInstanceOf[ModifierId])
 
     validateTry = sidechainState.validate(mockedBlock)
-    assertTrue("Block validation must be successful.",
+    assertTrue(s"Block validation must be successful ${validateTry}",
       validateTry.isSuccess)
   }
   @Test
@@ -1139,13 +1142,13 @@ class SidechainStateTest
     val sidechainState = new SidechainState(mockedStateStorage, mockedStateForgerBoxStorage, mockedStateUtxoMerkleTreeProvider,
       params, bytesToVersion(getVersion.data()), mockedApplicationState)
 
-    val consensusEpochNumberFork = 10
 
     val tryValidate = sidechainState.validate(tx)
     assertTrue(tryValidate.isSuccess)
     val tryValidate2 = sidechainState.validate(tx2)
-    assertTrue(tryValidate2.isSuccess)
+    assertTrue(s"Failed ${tryValidate2}", tryValidate2.isSuccess)
 
+    val consensusEpochNumberFork = 10
     Mockito.when(mockedStateStorage.getConsensusEpochNumber).thenReturn(Some(ConsensusEpochNumber @@ consensusEpochNumberFork))
 
     val tryValidateAfterFork = sidechainState.validate(tx)

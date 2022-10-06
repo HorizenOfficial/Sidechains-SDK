@@ -55,6 +55,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
   def init(): Unit = {
     val forkConfigurator = new SimpleForkConfigurator()
     consensusEpochAtWhichForkIsApplied = forkConfigurator.getSidechainFork1().regtestEpochNumber
+    ForkManager.reset()
     ForkManager.init(new SimpleForkConfigurator(), "regtest")
   }
 
@@ -713,6 +714,7 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val submitter: CertificateSubmitter = TestActorRef(Props(
         new CertificateSubmitter(mockedSettings, mock[ActorRef], mock[NetworkParams], mock[MainchainNodeChannel])
     )).underlyingActor
+
 
     assertEquals("Before the fork, ftMinAmount should be 0",
       0, submitter.getFtMinAmount(consensusEpochAtWhichForkIsApplied - 1))
