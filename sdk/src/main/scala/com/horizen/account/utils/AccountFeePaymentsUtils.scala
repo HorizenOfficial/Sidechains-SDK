@@ -49,8 +49,7 @@ object AccountFeePaymentsUtils {
         // sum all rewards for this forger address
         val forgerTotalFee = allForgersRewards
           .filter(info => forgerKey.equals(info.address))
-          .map(_.value)
-          .reduce(_.add(_))
+          .foldLeft(BigInteger.ZERO)((sum, info) => sum.add(info.value))
 
         // return the resulting entry
         AccountPayment(forgerKey, forgerTotalFee)
