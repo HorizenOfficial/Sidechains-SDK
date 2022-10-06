@@ -537,11 +537,11 @@ class PerformanceTest(SidechainTestFramework):
 
         return transactions
 
-    def txs_creator_send_transactions_per_second_to_addresses(self, utxo_amount, txs_creators, tps_test):
+    def txs_creator_send_transactions_per_second_to_addresses(self, utxo_amount, txs_creators, tps_test, send_coins_to_address):
         # Get the destination addresses of the transactions
         destination_addresses = self.create_destination_addresses()
         # Pre-compute all the transactions bytes that we want to send
-        transactions = self.create_raw_transactions(txs_creators, utxo_amount, destination_addresses)
+        transactions = self.create_raw_transactions(txs_creators, utxo_amount, destination_addresses) if not send_coins_to_address else [[] for _ in range(len(txs_creators))]
 
         if tps_test:
             # Each node needs to be able to send a number of transactions per second, without going over 1 second, or
@@ -827,11 +827,11 @@ class PerformanceTest(SidechainTestFramework):
 
         elif self.test_type == TestType.Transactions_Per_Second:
             # 1 thread per txs_creator node sending transactions
-            start_time = self.txs_creator_send_transactions_per_second_to_addresses(utxo_amount, txs_creators, True)
+            start_time = self.txs_creator_send_transactions_per_second_to_addresses(utxo_amount, txs_creators, True, self.send_coins_to_address)
 
         elif self.test_type == TestType.All_Transactions:
             # 1 thread per txs_creator node sending transactions
-            start_time = self.txs_creator_send_transactions_per_second_to_addresses(utxo_amount, txs_creators, False)
+            start_time = self.txs_creator_send_transactions_per_second_to_addresses(utxo_amount, txs_creators, False, self.send_coins_to_address)
 
         # stop forging
         for index, node in enumerate(forger_nodes):
