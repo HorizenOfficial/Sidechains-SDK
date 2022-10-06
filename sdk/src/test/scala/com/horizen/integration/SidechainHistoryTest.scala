@@ -8,7 +8,7 @@ import com.horizen.companion.SidechainTransactionsCompanion
 import com.horizen.consensus.{ConsensusDataStorage, NonceConsensusEpochInfo, StakeConsensusEpochInfo}
 import com.horizen.customtypes.SemanticallyInvalidTransactionSerializer
 import com.horizen.fixtures._
-import com.horizen.fork.{ForkManager, SimpleForkConfigurator}
+import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.params.{MainNetParams, NetworkParams}
 import com.horizen.storage.{InMemoryStorageAdapter, SidechainHistoryStorage, Storage}
 import com.horizen.transaction.TransactionSerializer
@@ -52,7 +52,8 @@ class SidechainHistoryTest extends JUnitSuite
 
   @Before
   def setUp(): Unit = {
-    ForkManager.init(new SimpleForkConfigurator(), "regtest")
+    val forkManagerUtil = new ForkManagerUtil()
+    forkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
     // declare real genesis block id
     params = MainNetParams(new Array[Byte](32), genesisBlock.id, sidechainGenesisBlockTimestamp = 720 * 120)
 
