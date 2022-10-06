@@ -9,15 +9,30 @@
 
 chmod +x ../perf_test.py
 # Update these exports before running
-export BITCOINCLI="/home/rushby/GitHub/zen/src/zen-cli"
-export BITCOIND="/home/rushby/GitHub/zen/src/zend"
-export SIDECHAIN_SDK="/home/rushby/GitHub/Sidechains-SDK"
+#export BITCOINCLI="<PATH_TO_ZEN-CLI>"
+#export BITCOIND="<PATH_TO_ZEND>"
+#export SIDECHAIN_SDK="<PATH_TO_SIDECHAIN_SDK"
 
-BLOCKRATE=($1)
+#BLOCKRATE=($1)
 
-for rate in ${BLOCKRATE[@]}; do
-    jq --argjson rate $rate '.block_rate = $rate' perf_test.json
+#for rate in ${BLOCKRATE[@]}; do
+    #jq --argjson rate $rate '.block_rate = $rate' perf_test.json
     # Modify this line if python version is set differently on local machine
-    (cd .. && python3.9 perf_test.py)
-done
+    #(cd .. && python3.9 perf_test.py)
+#done
 
+RANDOM_LATENCY=($1)
+
+rm -f perf_test.json
+cp perf_test_example.json perf_test.json
+
+if $RANDOM_LATENCY; then
+    nodes_number=$(jq . perf_test.json | jq '.nodes' | grep 'forger' | wc -l)
+    for i in $(seq $nodes_number);
+    do
+        latency=$[ $RANDOM % 2000 + 200 ]
+        sed -i "0,/\"modifiers_spec\":[[:space:]]0/{s/\"modifiers_spec\":[[:space:]]0/\"modifiers_spec\": ${latency}/}" perf_test.json
+    done
+fi
+
+(cd .. && python3 perf_test.py)
