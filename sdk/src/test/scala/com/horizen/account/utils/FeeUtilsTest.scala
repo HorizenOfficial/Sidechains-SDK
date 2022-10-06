@@ -21,7 +21,7 @@ class FeeUtilsTest extends JUnitSuite {
   }
 
   /**
-   * Separate test for calculate next base fee as it is not used in base fee validator test
+   * Separate test for calculating the next base fee as it is not used in base fee validator test.
    */
   @Test
   def calculateNextBaseFeeTest(): Unit = {
@@ -38,7 +38,7 @@ class FeeUtilsTest extends JUnitSuite {
     assertBaseFeeChange("30% filled block should decrease base fee by 5%", 30, 1000000000, 950000000)
 
     assertBaseFeeChange("base fee should not fall to zero", 0, 1, 1)
-    // because of integer division the base fee cannot decrease anymore beclow 8
+    // because of integer division the base fee cannot decrease anymore below 8
     assertBaseFeeChange("base fee should decrease by one", 0, 8, 7)
     assertBaseFeeChange("base fee should not decrease below 8", 0, 7, 7)
     // sanity check: base fee should never reach zero, but even if it does it should increase by at least one here
