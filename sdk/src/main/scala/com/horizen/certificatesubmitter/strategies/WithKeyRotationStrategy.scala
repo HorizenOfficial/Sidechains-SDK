@@ -86,6 +86,15 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
     val actualKeysOption = state.actualKeys(status.referencedEpoch)
     val previousCertificate: Option[WithdrawalEpochCertificate] = state.certificate(status.referencedEpoch - 1)
 
+    val schnorrSignersPublicKeysBytesList = Seq[Array[Byte]]()
+    val schnorrMastersPublicKeysBytesList = Seq[Array[Byte]]()
+    val newSchnorrSignersPublicKeysBytesList = Seq[Array[Byte]]()
+    val newSchnorrMastersPublicKeysBytesList = Seq[Array[Byte]]()
+    val updatedSigningKeysSkSignatures = Seq[Array[Byte]]()
+    val updatedSigningKeysMkSignatures = Seq[Array[Byte]]()
+    val updatedMasterKeysSkSignatures = Seq[Array[Byte]]()
+    val updatedMasterKeysMkSignatures = Seq[Array[Byte]]()
+
     DataForProofGenerationWithKeyRotation(
       status.referencedEpoch,
       sidechainId,
@@ -95,6 +104,14 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       ftMinAmount,
       Seq(customFields),
       signersPublicKeyWithSignatures,
+      schnorrSignersPublicKeysBytesList,
+      schnorrMastersPublicKeysBytesList,
+      newSchnorrSignersPublicKeysBytesList,
+      newSchnorrMastersPublicKeysBytesList,
+      updatedSigningKeysSkSignatures,
+      updatedSigningKeysMkSignatures,
+      updatedMasterKeysSkSignatures,
+      updatedMasterKeysMkSignatures,
       previousCertificate)
   }
 
