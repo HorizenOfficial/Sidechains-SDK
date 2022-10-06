@@ -2,6 +2,7 @@
 import logging
 import math
 import time
+import multiprocessing
 from multiprocessing import Pool, Value
 from time import sleep
 from os.path import exists
@@ -14,6 +15,7 @@ from httpCalls.block.findBlockByID import http_block_findById
 from httpCalls.block.forging import http_start_forging, http_stop_forging
 from httpCalls.transaction.allTransactions import allTransactions
 from httpCalls.transaction.sendCoinsToAddressAccount import sendCoinsToAddressAccount
+from httpCalls.transaction.createCoreTransactionAccount import http_create_core_transaction_account
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
 from test_framework.util import start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, assert_equal
@@ -36,6 +38,41 @@ def get_latency_config(perf_data):
         perf_data["latency_settings"]["modifiers_spec"]
     )
 
+def get_cpu_ram_usage(cpu_usage=True, ram_usage=False):
+    if cpu_usage:
+        per_cpu = psutil.cpu_percent(interval=1, percpu=True)
+        cpu_usage_message = "CPU CORE % USAGE: "
+        for idx, usage in enumerate(per_cpu):
+            cpu_usage_message += f" CORE_{idx}: {usage}%"
+        logging.debug(cpu_usage_message)
+    if ram_usage:
+        mem_usage = psutil.virtual_memory()
+        logging.debug(f"Memory Total: {mem_usage.total / (1024 ** 3):.2f}GB")
+        logging.debug(f"Memory Free: {mem_usage.percent}%")
+        logging.debug(f"Used: {mem_usage.used / (1024 ** 3):.2f}GB")
+
+def get_running_process_cpu_ram_usage():
+    start_time = time.time()
+    running_processes = ""
+    for process in [psutil.Process(pid) for pid in psutil.pids()]:
+        try:
+            name = process.name()
+            mem = process.memory_percent()
+            cpu = process.cpu_percent(interval=0.5)
+
+            if cpu > 0:
+                running_processes += f"{process.name()}, "
+        except psutil.NoSuchProcess as e:
+            logging.debug(e.pid, "killed before analysis")
+        else:
+            if cpu > 0:
+                logging.debug("Name:", name)
+                logging.debug("CPU%:", cpu)
+                logging.debug("MEM%:", mem)
+    logging.debug(f"RUNNING PROCESSES: {running_processes}")
+    end_time = time.time()
+    logging.debug(f"TIME TAKEN FOR CPU/RAM STATS: {end_time - start_time}")
+
 # Initialise the threadsafe globals
 def init_globals(count, err):
     global counter
@@ -47,6 +84,7 @@ def get_number_of_transactions_for_node(node):
     return len(allTransactions(node, False)["transactionIds"])
 
 
+# TODO create the transaction with the createCoreTransaction endpoint and then broadcast them with the sendRawTransaction
 def send_transactions_per_second(txs_creator_node, destination_address, tx_amount, start_time, test_run_time,
                                  transactions_per_second, extended_transaction=False):
     # Run until
@@ -258,7 +296,6 @@ class PerformanceTest(SidechainTestFramework):
                     print("Node " + str(j) + " sent txs: " + str(i))
             print('transaction number: ')
             print(len(allTransactions(txs_creator_nodes[j], False)["transactionIds"]))
-            assert_equal(len(allTransactions(txs_creator_nodes[j], False)["transactionIds"]), self.initial_txs)
             print("Node " + str(j) + " totally sent txs: " + str(self.initial_txs))
 
     def get_best_node_block_ids(self):
@@ -310,10 +347,53 @@ class PerformanceTest(SidechainTestFramework):
         result = http_block_findById(node, block_id)
         return result["block"]["sidechainTransactions"]
 
+    def create_transactions(self, node_index, txs_creator_node, destination_address, tx_amount,
+                            transactions):
+        print('here in create transactions')
+        txs = []
+        # FIXME use a variable parameter changing this method signature, we have to use the input intial_txs
+        transactions_counter = 500
+        nonce = 0
+        # print('result ', http_create_core_transaction_account(txs_creator_node, destination_address, tx_amount, nonce))
+        while nonce < transactions_counter:
+            #sendCoinsToAddressAccount(txs_creator_node, destination_address, tx_amount, nonce)
+            txs.append(http_create_core_transaction_account(txs_creator_node, destination_address, tx_amount, nonce, None))
+            nonce += 1
+        transactions.insert(node_index, txs)
+
+    def create_raw_transactions(self, txs_creator_nodes, destination_address, tx_amount):
+        # Pre-compute all the transactions bytes that we want to send
+        manager = multiprocessing.Manager()
+        transactions = manager.list()
+        with Pool() as pool:
+            args = []
+            # Add send_transactions_per_second arguments to args for each txs_creator_node
+            # starmap runs them all in parallel
+            index = 0
+            logging.info("Creating raw transactions...")
+            for creator_node in txs_creator_nodes:
+
+                args.append((index, creator_node, destination_address, tx_amount, transactions))
+                index += 1
+
+            pool.starmap(self.create_transactions, args)
+
+        return transactions
+
+
     def txs_creator_send_transactions_per_second_to_addresses(self, tx_amount, txs_creator_nodes, non_creator_nodes,
                                                               tps_test):
 
         destination_address = non_creator_nodes[0].wallet_createPrivateKeySecp256k1()["result"]["proposition"]["address"]
+
+        # TODO create raw transaction here
+        # Pre-compute all the transactions bytes that we want to send
+        transactions = self.create_raw_transactions(txs_creator_nodes, tx_amount, destination_address)
+
+        # FIXME don't call the api directly but define a function that given the transaction creator nodes return the list of signed raw transactions
+        #transactionAddresses = createCoreTransactionAccount(txs_creator_node, destination_address, tx_amount, nonce)
+
+        # TODO this has to be moved after this point
         start_time = time.time()
 
         if tps_test:
@@ -399,7 +479,9 @@ class PerformanceTest(SidechainTestFramework):
 
         # --------------------------------------------------------------------------------------------------------------
         # --------------------------------------------------------------------------------------------------------------
-        tx_amount = ft_amount_in_zennies / self.initial_txs
+        # tx_amount = ft_amount_in_zennies / self.initial_txs
+        tx_amount = 10
+        print('tx_amount: ', tx_amount)
         print(self.test_type)
         if self.test_type == TestType.Mempool or self.test_type == TestType.Mempool_Timed:
             # Populate the mempool
@@ -411,7 +493,7 @@ class PerformanceTest(SidechainTestFramework):
 
             # Verify that all the nodes have the correct amount of transactions in the mempool
             for node in self.sc_nodes:
-                assert_equal(len(allTransactions(node, True)["transactions"]), self.initial_txs)
+                assert_equal(len(allTransactions(node, True)["transactions"]), self.initial_txs * len(txs_creators))
 
         # Take best block id of every node and assert they all match
         test_start_block_ids, _ = self.get_best_node_block_ids()
@@ -444,11 +526,25 @@ class PerformanceTest(SidechainTestFramework):
             while not end_test:
                 end_test = True
                 for creator_node in txs_creators:
-                    if len(allTransactions(creator_node, False)["transactionIds"]) != 0:
+                    remaining_txs = None
+                    # Don't poll if we haven't mined a block yet, reduce calls to allTransactions
+                    if time.time() - start_time > self.block_rate:
+                        try:
+                            request_start_time = time.time()
+                            remaining_txs = len(allTransactions(creator_node, False)["transactionIds"])
+                            print('remaing transactions: ', remaining_txs)
+                            request_end_time = time.time()
+                            logging.info(f"Creator Node{txs_creators.index(creator_node)} allTransactions response time: "
+                                         f"{request_end_time - request_start_time}")
+                        except Exception:
+                            logging.warning(
+                                f"Creator Node{txs_creators.index(creator_node)} - Unable to retrieve mempool "
+                                f"transactions")
+                    if remaining_txs != 0:
                         end_test = False
                         break
-                # TODO: Check this sleep is efficient
-                sleep(self.block_rate - 2)
+                sleep(self.block_rate)
+
 
         elif self.test_type == TestType.Mempool_Timed:
             ######## RUN UNTIL TIMER END ########

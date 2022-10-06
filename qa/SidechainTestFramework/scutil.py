@@ -612,7 +612,8 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     return proxy
 
 
-def start_sc_nodes_with_multiprocessing(num_nodes, dirname, extra_args=None, rpchost=None, binary=None, print_output_to_file=False):
+def start_sc_nodes_with_multiprocessing(num_nodes, dirname, extra_args=None, rpchost=None, binary=None, print_output_to_file=False,
+                                        auth_api_key=DEFAULT_API_KEY):
     """
     Start multiple SC clients, return connections to them
     """
@@ -628,7 +629,7 @@ def start_sc_nodes_with_multiprocessing(num_nodes, dirname, extra_args=None, rpc
 
     nodes = [
         start_sc_node(i, dirname, extra_args[i], rpchost, binary=binary[i], print_output_to_file=print_output_to_file,
-                      use_multiprocessing=True, processor=i)
+                      use_multiprocessing=True, processor=i, auth_api_key=auth_api_key)
         for i in range(num_nodes)]
 
     wait_for_sc_node_initialization(nodes)

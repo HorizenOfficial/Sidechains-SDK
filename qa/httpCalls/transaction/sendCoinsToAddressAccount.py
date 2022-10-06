@@ -7,8 +7,8 @@ def sendCoinsToAddressAccount(sidechainNode, destination_address, amount, nonce)
         "value": amount,
         "nonce": nonce
     }
-
     request = json.dumps(j)
+    print(request)
     response = sidechainNode.transaction_sendCoinsToAddress(request)
     if "error" in response:
         print(response)
