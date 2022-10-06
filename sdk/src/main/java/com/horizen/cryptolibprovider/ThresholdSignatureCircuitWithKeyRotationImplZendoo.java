@@ -127,9 +127,6 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                 .map(signatureBytesOpt -> signatureBytesOpt.map(SchnorrSignature::deserialize).orElse(signaturePlaceHolder))
                 .collect(Collectors.toList());
 
-        List<SchnorrPublicKey> publicKeys =
-                schnorrPublicKeysBytesList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList());
-
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
         List<FieldElement> customFe = prepareCustomFieldElements(customParameters);
