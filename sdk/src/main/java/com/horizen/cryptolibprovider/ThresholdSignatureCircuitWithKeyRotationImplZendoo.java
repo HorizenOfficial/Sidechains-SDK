@@ -114,6 +114,10 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
              List<byte[]> schnorrMastersPublicKeysBytesList,
              List<byte[]> newSchnorrSignersPublicKeysBytesList,
              List<byte[]> newSchnorrMastersPublicKeysBytesList,
+             List<byte[]> updatedSigningKeysSkSignatures,
+             List<byte[]> updatedSigningKeysMkSignatures,
+             List<byte[]> updatedMasterKeysSkSignatures,
+             List<byte[]> updatedMasterKeysMkSignatures,
              long threshold,
              String provingKeyPath,
              boolean checkProvingKey,
@@ -137,20 +141,16 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
 
         List<SchnorrPublicKey> schnorrSignersPublicKeys = byteArrayToKeysList(schnorrSignersPublicKeysBytesList);
 
-        List<SchnorrSignature> updatedSigningKeysSkSignatures = new ArrayList<>();
-        List<SchnorrSignature> updatedSigningKeysMkSignatures = new ArrayList<>();
-        List<SchnorrSignature> updatedMasterKeysSkSignatures = new ArrayList<>();
-        List<SchnorrSignature> updatedMasterKeysMkSignatures = new ArrayList<>();
 
         SchnorrKeysSignaturesList keysSignaturesList = new SchnorrKeysSignaturesList(
                 schnorrSignersPublicKeys,
                 byteArrayToKeysList(schnorrMastersPublicKeysBytesList),
                 byteArrayToKeysList(newSchnorrSignersPublicKeysBytesList),
                 byteArrayToKeysList(newSchnorrMastersPublicKeysBytesList),
-                updatedSigningKeysSkSignatures,
-                updatedSigningKeysMkSignatures,
-                updatedMasterKeysSkSignatures,
-                updatedMasterKeysMkSignatures
+                byteArrayToSignaturesList(updatedSigningKeysSkSignatures),
+                byteArrayToSignaturesList(updatedSigningKeysMkSignatures),
+                byteArrayToSignaturesList(updatedMasterKeysSkSignatures),
+                byteArrayToSignaturesList(updatedMasterKeysMkSignatures)
         );
 
         CreateProofResult proofAndQuality = KeyRotationThresholdSigProof.createProof(
@@ -168,6 +168,10 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
 
     private List<SchnorrPublicKey> byteArrayToKeysList(List<byte[]> schnorrPublicKeysBytesList) {
         return schnorrPublicKeysBytesList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList());
+    }
+
+    private List<SchnorrSignature> byteArrayToSignaturesList(List<byte[]> schnorrSignaturesBytesList) {
+        return schnorrSignaturesBytesList.stream().map(SchnorrSignature::deserialize).collect(Collectors.toList());
     }
 
     @Override
