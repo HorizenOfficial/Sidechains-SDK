@@ -56,7 +56,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       provingFileAbsolutePath,
       true,
       true,
-      dataForProofGenerationWithKeyRotation.previousCertificate,
+      dataForProofGenerationWithKeyRotation.previousCertificateOption,
       sidechainCreationVersion.id
     )
   }

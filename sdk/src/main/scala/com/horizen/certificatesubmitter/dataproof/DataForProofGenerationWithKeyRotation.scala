@@ -2,7 +2,6 @@ package com.horizen.certificatesubmitter.dataproof
 
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.box.WithdrawalRequestBox
-import com.horizen.certificatesubmitter.keys.{ActualKeys, KeyRotationProof}
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.SchnorrProposition
 import com.horizen.utils.BytesUtils
@@ -20,8 +19,8 @@ case class DataForProofGenerationWithKeyRotation(override val referencedEpochNum
                                                  schnorrMastersPublicKeysBytesList: Seq[Array[Byte]],
                                                  newSchnorrSignersPublicKeysBytesList: Seq[Array[Byte]],
                                                  newSchnorrMastersPublicKeysBytesList: Seq[Array[Byte]],
-                                                 val previousCertificate: Option[WithdrawalEpochCertificate])
-  extends DataForProofGeneration (referencedEpochNumber, sidechainId, withdrawalRequests, endEpochCumCommTreeHash, btrFee, ftMinAmount, customFields, schnorrKeyPairs) {
+                                                 val previousCertificateOption: Option[WithdrawalEpochCertificate])
+  extends DataForProofGeneration(referencedEpochNumber, sidechainId, withdrawalRequests, endEpochCumCommTreeHash, btrFee, ftMinAmount, customFields, schnorrKeyPairs) {
   override def toString: String = {
     "DataForProofGeneration(" +
       s"referencedEpochNumber = $referencedEpochNumber, " +
@@ -30,7 +29,12 @@ case class DataForProofGenerationWithKeyRotation(override val referencedEpochNum
       s"endEpochCumCommTreeHash = ${BytesUtils.toHexString(endEpochCumCommTreeHash)}, " +
       s"btrFee = $btrFee, " +
       s"ftMinAmount = $ftMinAmount, " +
-      s"customFields = ${customFields.map(BytesUtils.toHexString)}, " + // from this field different fields for 2 circuits
-      s"number of schnorrKeyPairs = ${schnorrKeyPairs.size})"
+      s"customFields = ${customFields.map(BytesUtils.toHexString)}, " +
+      s"number of schnorrKeyPairs = ${schnorrKeyPairs.size})" +
+      s"signers public keys = ${schnorrSignersPublicKeysBytesList.map(BytesUtils.toHexString)}), " +
+      s"masters public keys = ${schnorrMastersPublicKeysBytesList.map(BytesUtils.toHexString)}), " +
+      s"new signers public keys = ${newSchnorrSignersPublicKeysBytesList.map(BytesUtils.toHexString)}), " +
+      s"new masters public keys = ${newSchnorrMastersPublicKeysBytesList.map(BytesUtils.toHexString)}), " +
+      s"previous certificate = ${previousCertificateOption.getOrElse("").toString})"
   }
 }
