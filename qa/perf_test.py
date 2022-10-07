@@ -195,8 +195,7 @@ class PerformanceTest(SidechainTestFramework):
                 "big_transaction": big_transaction,
                 "send_coins_to_address": send_coins_to_address,
                 "block_tps": [],
-                "forks": [],
-                "blocks_mined": 0
+                "forks": []
                 }
 
     def get_latency_config(self):
@@ -918,7 +917,6 @@ class PerformanceTest(SidechainTestFramework):
         self.csv_data["tps_mined"] = total_mined_transactions / test_run_time
         self.csv_data["blocks_ts"] = blocks_ts
         self.csv_data["node_api_errors"] = api_errors
-        self.csv_data["blocks_mined"] = len(blocks_ts)
 
         # Get latency configuration values
         latency_configurations = self.get_latency_config()
