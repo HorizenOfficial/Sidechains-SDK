@@ -1,6 +1,6 @@
 package com.horizen.consensus
 
-import com.horizen.fork.{ForkManager, SimpleForkConfigurator}
+import com.horizen.fork.{ForkManager, ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.storage.InMemoryStorageAdapter
 import com.horizen.utils._
 import org.junit.{Before, Test}
@@ -14,7 +14,8 @@ class ConsensusDataStorageTest {
 
   @Before
   def init(): Unit = {
-    ForkManager.init(new SimpleForkConfigurator(), "regtest")
+    val forkManagerUtil = new ForkManagerUtil()
+    forkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
   }
 
   @Test
