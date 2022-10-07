@@ -505,6 +505,11 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
 
         boolean isNonCeasing = false;
         int virtualWithdrawalEpochLength = 0;
+        if (json.has("virtualWithdrawalEpochLength") && !json.get("virtualWithdrawalEpochLength").isInt()) {
+            printGenesisInfoUsageMsg("'virtualWithdrawalEpochLength' should be integer.");
+            return;
+        }
+
         if (json.has("virtualWithdrawalEpochLength") && json.get("virtualWithdrawalEpochLength").isInt()) {
             virtualWithdrawalEpochLength = json.get("virtualWithdrawalEpochLength").asInt();
 
@@ -644,12 +649,12 @@ public class ScBootstrappingToolCommandProcessor extends CommandProcessor {
             isNonCeasing = (withdrawalEpochLength == 0);
 
             if (isNonCeasing && virtualWithdrawalEpochLength == 0) {
-                printGenesisInfoUsageMsg("For nonCeasing Sidechains VirtualWithdrawalEpochLength should be specified.");
+                printGenesisInfoUsageMsg("For nonCeasing Sidechains virtualWithdrawalEpochLength should be specified.");
                 return;
             }
 
             if (!isNonCeasing && virtualWithdrawalEpochLength != 0) {
-                printGenesisInfoUsageMsg("For ceasing Sidechains VirtualWithdrawalEpochLength should not be specified.");
+                printGenesisInfoUsageMsg("For ceasing Sidechains virtualWithdrawalEpochLength should not be specified.");
                 return;
             }
 

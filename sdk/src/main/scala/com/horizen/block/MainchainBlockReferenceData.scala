@@ -19,7 +19,7 @@ case class MainchainBlockReferenceData(
                                         existenceProof: Option[Array[Byte]],
                                         absenceProof: Option[Array[Byte]],
                                         lowerCertificateLeaves: Seq[Array[Byte]],
-                                        topQualityCertificate: Seq[WithdrawalEpochCertificate]) extends BytesSerializable {
+                                        topQualityCertificates: Seq[WithdrawalEpochCertificate]) extends BytesSerializable {
   override type M = MainchainBlockReferenceData
 
   override def serializer: SparkzSerializer[MainchainBlockReferenceData] = MainchainBlockReferenceDataSerializer
@@ -42,7 +42,7 @@ case class MainchainBlockReferenceData(
     })
 
     lowerCertificateLeaves.foreach(leaf => commitmentTree.addCertLeaf(sidechainId, leaf))
-    topQualityCertificate.foreach(cert => commitmentTree.addCertificate(cert, version))
+    topQualityCertificates.foreach(cert => commitmentTree.addCertificate(cert, version))
 
     commitmentTree
   }
@@ -78,8 +78,9 @@ object MainchainBlockReferenceDataSerializer extends SparkzSerializer[MainchainB
     w.putInt(obj.lowerCertificateLeaves.size)
     obj.lowerCertificateLeaves.foreach(leaf => w.putBytes(leaf))
 
-    w.putInt(obj.topQualityCertificate.size)
-    obj.topQualityCertificate.foreach(cert => {
+    // TODO Backward compatibility
+    w.putInt(obj.topQualityCertificates.size)
+    obj.topQualityCertificates.foreach(cert => {
       val cb = WithdrawalEpochCertificateSerializer.toBytes(cert)
       w.putInt(cb.length)
       w.putBytes(cb)

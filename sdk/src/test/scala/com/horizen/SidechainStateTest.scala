@@ -322,7 +322,7 @@ class SidechainStateTest
         val boxToRemove = answer.getArgument[Set[ByteArrayWrapper]](3)
         val withdrawalRequestAppendSeq = answer.getArgument[ListBuffer[WithdrawalRequestBox]](4)
         val consensusEpoch = answer.getArgument[ConsensusEpochNumber](5)
-        val backwardTransferCertificate = answer.getArgument[Option[WithdrawalEpochCertificate]](6)
+        val backwardTransferCertificates = answer.getArgument[Seq[WithdrawalEpochCertificate]](6)
         val blockFeeInfo = answer.getArgument[BlockFeeInfo](7)
         val utxoMerkleTreeRootOpt = answer.getArgument[Option[Array[Byte]]](8)
         val scHasCeased = answer.getArgument[Boolean](9)
@@ -332,7 +332,7 @@ class SidechainStateTest
         // Verify consensus epoch number
         assertEquals("Consensus epoch  number should be different.", 2, consensusEpoch)
         // Verify certificate presence
-        assertEquals("Certificate expected to be absent.", None, backwardTransferCertificate)
+        assertEquals("Certificate expected to be absent.", Seq(), backwardTransferCertificates)
         // Verify blockFeeInfo
         assertEquals("blockFeeInfo expected to be different.", modBlockFeeInfo, blockFeeInfo)
         // Verify utxoMerkleTreeRoot

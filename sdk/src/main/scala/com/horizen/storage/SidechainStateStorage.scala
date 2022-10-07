@@ -160,6 +160,23 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
   }
 
+ def getLastTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {
+    var certificateOpt:Option[ByteArrayWrapper] = storage.get(getTopQualityCertificateKey(referencedWithdrawalEpoch)).asScala
+    while(certificateOpt.isEmpty) {
+      certificateOpt = storage.get(getTopQualityCertificateKey(referencedWithdrawalEpoch)).asScala
+    }
+    certificateOpt match {
+      case Some(baw) =>
+        WithdrawalEpochCertificateSerializer.parseBytesTry(baw.data) match {
+          case Success(certificate) => Option(certificate)
+          case Failure(exception) =>
+            log.error("Error while withdrawal epoch certificate information parsing.", exception)
+            Option.empty
+        }
+      case _ => Option.empty
+    }
+  }
+
   def getUtxoMerkleTreeRoot(withdrawalEpoch: Int): Option[Array[Byte]] = {
     storage.get(getUtxoMerkleTreeRootKey(withdrawalEpoch)).asScala.map(_.data)
   }

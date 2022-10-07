@@ -55,7 +55,7 @@ case class MainchainBlockReference(
 
     if (header.version != MainchainBlockReference.SC_CERT_BLOCK_VERSION) {
       if (data.sidechainRelatedAggregatedTransaction.isDefined ||
-          data.topQualityCertificate.nonEmpty ||
+          data.topQualityCertificates.nonEmpty ||
           data.lowerCertificateLeaves.nonEmpty ||
           data.existenceProof.isDefined ||
           data.absenceProof.isDefined) {
@@ -70,7 +70,7 @@ case class MainchainBlockReference(
     // Checks if we have proof defined - current sidechain was mentioned in MainchainBlockReference.
     if (data.existenceProof.isDefined) {
       // Check for defined transaction and/or certificate.
-      if (data.sidechainRelatedAggregatedTransaction.isEmpty && data.topQualityCertificate.isEmpty && data.lowerCertificateLeaves.isEmpty)
+      if (data.sidechainRelatedAggregatedTransaction.isEmpty && data.topQualityCertificates.isEmpty && data.lowerCertificateLeaves.isEmpty)
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
 
       // Check for absence proof.
@@ -78,7 +78,7 @@ case class MainchainBlockReference(
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
 
       // Check top quality certificate custom fields.
-      data.topQualityCertificate.foreach(cert => {
+      data.topQualityCertificates.foreach(cert => {
         if (params.scCreationBitVectorCertificateFieldConfigs.size != cert.bitVectorCertificateFields.size) {
           throw new InvalidMainchainDataException(s"MainchainBlockReferenceData ${header.hashHex} Top quality certificate " +
             s"bitvectors number is inconsistent to Sc Creation info.")
@@ -112,7 +112,7 @@ case class MainchainBlockReference(
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader hashScTxsCommitment")
     } else { // Current sidechain was not mentioned in MainchainBlockReference.
       // Check for empty transaction and certificates.
-      if (data.sidechainRelatedAggregatedTransaction.isDefined || data.topQualityCertificate.nonEmpty || data.lowerCertificateLeaves.nonEmpty)
+      if (data.sidechainRelatedAggregatedTransaction.isDefined || data.topQualityCertificates.nonEmpty || data.lowerCertificateLeaves.nonEmpty)
         throw new InconsistentMainchainBlockReferenceDataException(s"MainchainBlockReferenceData ${header.hashHex} is inconsistent to MainchainHeader")
 
       // Check for absence proof to be defined.
@@ -187,9 +187,10 @@ object MainchainBlockReference extends ScorexLogging {
           sidechainRelatedCrosschainOutputs.get(sidechainId).map(outputs => new MC2SCAggregatedTransaction(outputs.asJava, MC2SCAggregatedTransaction.MC2SC_AGGREGATED_TRANSACTION_VERSION))
         // Certificates for a given sidechain are ordered by quality: from lowest to highest.
         // So get the last sidechain related certificate if present
-        certificates
+
         val topQualityCertificate: Seq[WithdrawalEpochCertificate] = certificates.reverse.filter(c => util.Arrays.equals(c.sidechainId, sidechainId.data))
         // Get lower quality cert leaves if present.
+        // TODO Remove from non-ceasing version
         val certLeaves = commitmentTree.getCertLeaves(sidechainId.data)
         val lowerCertificateLeaves: Seq[Array[Byte]] = if(certLeaves.isEmpty) Seq() else certLeaves.init
 

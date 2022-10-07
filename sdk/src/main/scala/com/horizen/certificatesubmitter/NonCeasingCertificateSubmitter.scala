@@ -99,7 +99,13 @@ class NonCeasingCertificateSubmitter(settings: SidechainSettings,
   private[certificatesubmitter] def getSubmissionWindowStatus(block: SidechainBlock): Try[SubmissionWindowStatus] = Try {
     def getStatus(sidechainNodeView: View): SubmissionWindowStatus = {
       val withdrawalEpochInfo: WithdrawalEpochInfo = sidechainNodeView.history.blockInfoById(block.id).withdrawalEpochInfo
-      SubmissionWindowStatus(withdrawalEpochInfo, WithdrawalEpochUtils.inSubmitCertificateWindow(withdrawalEpochInfo, params))
+      val lastCertificate = sidechainNodeView.state.lastTopQualityCertificate(withdrawalEpochInfo.epoch)
+      if (lastCertificate.isDefined && lastCertificate.get.epochNumber < withdrawalEpochInfo.epoch) {
+        SubmissionWindowStatus(withdrawalEpochInfo, true)
+      } else {
+        // TODO remove inSubmitCertificateWindow
+        SubmissionWindowStatus(withdrawalEpochInfo, WithdrawalEpochUtils.inSubmitCertificateWindow(withdrawalEpochInfo, params))
+      }
     }
 
     Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getStatus), timeoutDuration).asInstanceOf[SubmissionWindowStatus]
