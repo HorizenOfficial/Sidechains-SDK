@@ -132,6 +132,26 @@ class EthService(
       .orNull
   }
 
+  @RpcMethod("eth_getBlockTransactionCountByNumber")
+  def getBlockTransactionCountByNumber(tag: String): Quantity = {
+    blockTransactionCount(nodeView => getBlockIdByTag(nodeView, tag))
+  }
+
+  @RpcMethod("eth_getBlockTransactionCountByHash")
+  def getBlockTransactionCountByHash(hash: Hash): Quantity = {
+    blockTransactionCount(_ => bytesToId(hash.toBytes))
+  }
+
+  private def blockTransactionCount(getBlockId: NV => ModifierId): Quantity = {
+    applyOnAccountView { nodeView =>
+      nodeView.history
+        .getStorageBlockById(getBlockId(nodeView))
+        .map(_.transactions.count(_.isInstanceOf[EthereumTransaction]))
+        .map(new Quantity(_))
+        .orNull
+    }
+  }
+
   private def doCall(nodeView: NV, params: TransactionArgs, tag: String): Array[Byte] = {
     getStateViewAtTag(nodeView, tag) { (tagStateView, blockContext) =>
       val msg = params.toMessage(blockContext.baseFee)
