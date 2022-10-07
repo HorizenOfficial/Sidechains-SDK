@@ -374,11 +374,16 @@ class EthService(
     }.orNull
   }
 
-  @RpcMethod("eth_sendRawTransaction") def sendRawTransaction(signedTxData: String): Quantity = {
+  @RpcMethod("eth_sendRawTransaction") def sendRawTransaction(signedTxData: String): String = {
     val tx = new EthereumTransaction(EthereumTransactionDecoder.decode(signedTxData))
-    implicit val timeout: Timeout = Timeout.apply(5, SECONDS)
-    Await.result(sidechainTransactionActorRef ? BroadcastTransaction(tx), timeout.duration)
-    new Quantity(Numeric.prependHexPrefix(tx.id))
+    implicit val timeout: Timeout = new Timeout(5, SECONDS)
+    // submit tx to sidechain transaction actor
+    val submit = (sidechainTransactionActorRef ? BroadcastTransaction(tx)).asInstanceOf[Future[Future[ModifierId]]]
+    // wait for submit
+    val validate = Await.result(submit, timeout.duration)
+    // wait for validation of the transaction
+    val txHash = Await.result(validate, timeout.duration)
+    Numeric.prependHexPrefix(txHash)
   }
 
   @RpcMethod("eth_getCode")
