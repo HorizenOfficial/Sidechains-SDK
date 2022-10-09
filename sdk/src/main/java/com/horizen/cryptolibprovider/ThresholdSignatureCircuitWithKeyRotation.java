@@ -34,7 +34,8 @@ public interface ThresholdSignatureCircuitWithKeyRotation {
                                    boolean checkProvingKey,
                                    boolean zk,
                                    Option<WithdrawalEpochCertificate> previousEpochCertificateOption,
-                                   int sidechainCreationVersionInt);
+                                   int sidechainCreationVersionInt,
+                                   byte[] genesisKeysRootHash);
 
     Boolean verifyProof(List<WithdrawalRequestBox> bt,
                         byte[] sidechainId,

@@ -117,7 +117,8 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
              boolean checkProvingKey,
              boolean zk,
              Option<WithdrawalEpochCertificate> previousEpochCertificateOption,
-             int sidechainCreationVersionInt
+             int sidechainCreationVersionInt,
+             byte[] genesisKeysRootHash
             ) {
 
         List<SchnorrSignature> signatures = schnorrSignatureBytesList
@@ -150,7 +151,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         // TODO instead of calling KeyRotationThresholdSigProof from Zendoo I heed to create local KeyRotationThresholdSigProof
         CreateProofResult proofAndQuality = KeyRotationThresholdSigProof.createProof(
                 keysSignaturesList, withdrawalCertificate, previousCertificateOption, schnorrSignatureBytesList,
-                schnorrSignersPublicKeysBytesList.size(), threshold, genesisKeysRootHash);
+                signingPublicKeys.size(), threshold, FieldElement.deserialize(genesisKeysRootHash));
 
         endCumulativeScTxCommTreeRootFe.freeFieldElement();
         sidechainIdFe.freeFieldElement();

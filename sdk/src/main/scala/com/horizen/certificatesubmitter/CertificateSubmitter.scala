@@ -48,7 +48,6 @@ class CertificateSubmitter[T <: DataForProofGeneration](settings: SidechainSetti
   import CertificateSubmitter.Timers._
 
   type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
-
   val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
 
@@ -365,7 +364,7 @@ class CertificateSubmitter[T <: DataForProofGeneration](settings: SidechainSetti
         case Some(status) =>
           // Check quality again, in case better Certificate appeared.
           if (checkQuality(status)) {
-            def getProofGenerationData(sidechainNodeView: View): DataForProofGeneration = keyRotationStrategy.buildDataForProofGeneration(sidechainNodeView, status)
+            def getProofGenerationData(sidechainNodeView: View): DataForProofGeneration = keyRotationStrategy.buildDataForProofGeneration(sidechainNodeView, status, params)
 
             val dataForProofGeneration = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getProofGenerationData), timeoutDuration)
               .asInstanceOf[T]

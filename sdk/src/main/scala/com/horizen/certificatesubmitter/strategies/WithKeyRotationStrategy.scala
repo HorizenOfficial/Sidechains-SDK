@@ -65,7 +65,8 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       true,
       true,
       dataForProofGenerationWithKeyRotation.previousCertificateOption,
-      sidechainCreationVersion.id
+      sidechainCreationVersion.id,
+      dataForProofGenerationWithKeyRotation.genesisKeysRootHash
     )
   }
 
@@ -140,7 +141,9 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       Seq(customFields),
       signersPublicKeyWithSignatures,
       schnorrKeysSignaturesListBytes,
-      previousCertificateOption)
+      previousCertificateOption,
+      ActualKeys.getMerkleRootOfPublicKeys(ActualKeys(params.signersPublicKeys.toVector, params.mastersPublicKeys.toVector))
+    )
   }
 
   override def getMessageToSign(referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
