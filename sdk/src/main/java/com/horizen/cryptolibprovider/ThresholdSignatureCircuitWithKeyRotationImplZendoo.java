@@ -133,25 +133,19 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                 .map(c -> CswCircuitImplZendoo.createWithdrawalCertificate(c,
                         SidechainCreationVersions.Value(sidechainCreationVersionInt)));
 
-
-        // TODO need to instansiate new withdrawal certificate here, passing List<WithdrawalRequestBox> bt,
-        //             byte[] sidechainId,
-        //             int epochNumber,
-        //             byte[] endCumulativeScTxCommTreeRoot,
-        //             long btrFee,
-        //             long ftMinAmount,
-        //             Seq<byte[]> customFields)
-//        private BackwardTransfer[] btList;
-//        private long quality;
-//        private FieldElement mcbScTxsCom;
-//        private long ftMinAmount;
-//        private long btrMinFee;
-//        private FieldElement[] customFields;
-
-        WithdrawalCertificate withdrawalCertificate = new WithdrawalCertificate(sidechainId, epochNumber,  bt, 1,
-                endCumulativeScTxCommTreeRoot, ftMinAmount, btrFee, customFields);
-
         SchnorrKeysSignaturesList keysSignaturesList = SchnorrKeysSignaturesList.getSchnorrKeysSignaturesList(schnorrKeysSignaturesListBytes);
+        List<SchnorrPublicKey> signingPublicKeys = keysSignaturesList.signingKeys();
+
+        WithdrawalCertificate withdrawalCertificate = new WithdrawalCertificate(
+                FieldElement.deserialize(sidechainId),
+                epochNumber,
+                signingPublicKeys.stream().map(k -> new BackwardTransfer(k.serializePublicKey(), 0)).collect(Collectors.toList()),
+                1,
+                FieldElement.deserialize(endCumulativeScTxCommTreeRoot),
+                ftMinAmount,
+                btrFee,
+                scala.collection.JavaConverters.seqAsJavaList(customFields).stream().map(FieldElement::deserialize).collect(Collectors.toList())
+        );
 
         // TODO instead of calling KeyRotationThresholdSigProof from Zendoo I heed to create local KeyRotationThresholdSigProof
         CreateProofResult proofAndQuality = KeyRotationThresholdSigProof.createProof(
