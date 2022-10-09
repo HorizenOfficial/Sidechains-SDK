@@ -7,6 +7,7 @@ import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
 import com.horizen.certificatesubmitter.dataproof.{DataForProofGeneration, DataForProofGenerationWithKeyRotation}
 import com.horizen.certificatesubmitter.keys.ActualKeys.getMerkleRootOfPublicKeys
+import com.horizen.certificatesubmitter.keys.{KeyRotationProof, SchnorrKeysSignaturesListBytes}
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.params.NetworkParams
 import com.horizen.websocket.server.WebSocketServerRef.sidechainNodeViewHolderRef
@@ -85,17 +86,29 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
 
     val actualKeysOption = state.actualKeys(status.referencedEpoch)
     val previousCertificate: Option[WithdrawalEpochCertificate] = state.certificate(status.referencedEpoch - 1)
+    val genesisKeysRootHash = params.signersPublicKeys
+
+    val keyRotationProofs: Seq[KeyRotationProof] = state.keyRotationProofs(status.referencedEpoch)
 
     val schnorrSignersPublicKeysBytesList = Seq[Array[Byte]]()
     val schnorrMastersPublicKeysBytesList = Seq[Array[Byte]]()
     val newSchnorrSignersPublicKeysBytesList = Seq[Array[Byte]]()
     val newSchnorrMastersPublicKeysBytesList = Seq[Array[Byte]]()
-    val updatedSigningKeysSkSignatures = Seq[Array[Byte]]() // TODO getKeyRotationProofs from state
+    val updatedSigningKeysSkSignatures = Seq[Array[Byte]]()
     val updatedSigningKeysMkSignatures = Seq[Array[Byte]]()
     val updatedMasterKeysSkSignatures = Seq[Array[Byte]]()
     val updatedMasterKeysMkSignatures = Seq[Array[Byte]]()
 
-    val genesisKeysRootHash = params.signersPublicKeys
+    val schnorrKeysSignaturesListBytes =  SchnorrKeysSignaturesListBytes(
+      schnorrSignersPublicKeysBytesList,
+      schnorrMastersPublicKeysBytesList,
+      newSchnorrSignersPublicKeysBytesList,
+      newSchnorrMastersPublicKeysBytesList,
+      updatedSigningKeysSkSignatures,
+      updatedSigningKeysMkSignatures,
+      updatedMasterKeysSkSignatures,
+      updatedMasterKeysMkSignatures
+    )
 
     DataForProofGenerationWithKeyRotation(
       status.referencedEpoch,
@@ -106,14 +119,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       ftMinAmount,
       Seq(customFields),
       signersPublicKeyWithSignatures,
-      schnorrSignersPublicKeysBytesList,
-      schnorrMastersPublicKeysBytesList,
-      newSchnorrSignersPublicKeysBytesList,
-      newSchnorrMastersPublicKeysBytesList,
-      updatedSigningKeysSkSignatures,
-      updatedSigningKeysMkSignatures,
-      updatedMasterKeysSkSignatures,
-      updatedMasterKeysMkSignatures,
+      schnorrKeysSignaturesListBytes,
       previousCertificate)
   }
 
