@@ -4,6 +4,7 @@ import com.horizen.block.SidechainCreationVersions;
 import com.horizen.block.WithdrawalEpochCertificate;
 import com.horizen.box.WithdrawalRequestBox;
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesList;
+import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesListBytes;
 import com.horizen.certnative.BackwardTransfer;
 import com.horizen.certnative.CreateProofResult;
 import com.horizen.certnative.NaiveThresholdSigProof;
@@ -108,16 +109,9 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
              byte[] endCumulativeScTxCommTreeRoot,
              long btrFee,
              long ftMinAmount,
-             Seq<byte[]> customParameters,
+             Seq<byte[]> customFields,
              List<Optional<byte[]>> schnorrSignatureBytesList,
-             List<byte[]> schnorrSignersPublicKeysBytesList,
-             List<byte[]> schnorrMastersPublicKeysBytesList,
-             List<byte[]> newSchnorrSignersPublicKeysBytesList,
-             List<byte[]> newSchnorrMastersPublicKeysBytesList,
-             List<byte[]> updatedSigningKeysSkSignatures,
-             List<byte[]> updatedSigningKeysMkSignatures,
-             List<byte[]> updatedMasterKeysSkSignatures,
-             List<byte[]> updatedMasterKeysMkSignatures,
+             SchnorrKeysSignaturesListBytes schnorrKeysSignaturesListBytes,
              long threshold,
              String provingKeyPath,
              boolean checkProvingKey,
@@ -133,45 +127,44 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
 
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
-        List<FieldElement> customFe = prepareCustomFieldElements(customParameters);
+        List<FieldElement> customFe = prepareCustomFieldElements(customFields);
 
         Optional<WithdrawalCertificate> previousCertificateOption = OptionConverters.toJava(previousEpochCertificateOption)
                 .map(c -> CswCircuitImplZendoo.createWithdrawalCertificate(c,
                         SidechainCreationVersions.Value(sidechainCreationVersionInt)));
 
-        List<SchnorrPublicKey> schnorrSignersPublicKeys = byteArrayToKeysList(schnorrSignersPublicKeysBytesList);
 
+        // TODO need to instansiate new withdrawal certificate here, passing List<WithdrawalRequestBox> bt,
+        //             byte[] sidechainId,
+        //             int epochNumber,
+        //             byte[] endCumulativeScTxCommTreeRoot,
+        //             long btrFee,
+        //             long ftMinAmount,
+        //             Seq<byte[]> customFields)
+//        private BackwardTransfer[] btList;
+//        private long quality;
+//        private FieldElement mcbScTxsCom;
+//        private long ftMinAmount;
+//        private long btrMinFee;
+//        private FieldElement[] customFields;
 
-        SchnorrKeysSignaturesList keysSignaturesList = new SchnorrKeysSignaturesList(
-                schnorrSignersPublicKeys,
-                byteArrayToKeysList(schnorrMastersPublicKeysBytesList),
-                byteArrayToKeysList(newSchnorrSignersPublicKeysBytesList),
-                byteArrayToKeysList(newSchnorrMastersPublicKeysBytesList),
-                byteArrayToSignaturesList(updatedSigningKeysSkSignatures),
-                byteArrayToSignaturesList(updatedSigningKeysMkSignatures),
-                byteArrayToSignaturesList(updatedMasterKeysSkSignatures),
-                byteArrayToSignaturesList(updatedMasterKeysMkSignatures)
-        );
+        WithdrawalCertificate withdrawalCertificate = new WithdrawalCertificate(sidechainId, epochNumber,  bt, 1,
+                endCumulativeScTxCommTreeRoot, ftMinAmount, btrFee, customFields);
 
+        SchnorrKeysSignaturesList keysSignaturesList = SchnorrKeysSignaturesList.getSchnorrKeysSignaturesList(schnorrKeysSignaturesListBytes);
+
+        // TODO instead of calling KeyRotationThresholdSigProof from Zendoo I heed to create local KeyRotationThresholdSigProof
         CreateProofResult proofAndQuality = KeyRotationThresholdSigProof.createProof(
                 keysSignaturesList, withdrawalCertificate, previousCertificateOption, schnorrSignatureBytesList,
                 schnorrSignersPublicKeysBytesList.size(), threshold, genesisKeysRootHash);
 
         endCumulativeScTxCommTreeRootFe.freeFieldElement();
         sidechainIdFe.freeFieldElement();
-        schnorrSignersPublicKeys.forEach(SchnorrPublicKey::freePublicKey);
+        keysSignaturesList.signingKeys().forEach(SchnorrPublicKey::freePublicKey);
         signatures.forEach(SchnorrSignature::freeSignature);
         customFe.forEach(FieldElement::freeFieldElement);
 
         return new Pair<>(proofAndQuality.getProof(), proofAndQuality.getQuality());
-    }
-
-    private List<SchnorrPublicKey> byteArrayToKeysList(List<byte[]> schnorrPublicKeysBytesList) {
-        return schnorrPublicKeysBytesList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList());
-    }
-
-    private List<SchnorrSignature> byteArrayToSignaturesList(List<byte[]> schnorrSignaturesBytesList) {
-        return schnorrSignaturesBytesList.stream().map(SchnorrSignature::deserialize).collect(Collectors.toList());
     }
 
     @Override
