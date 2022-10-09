@@ -25,7 +25,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
 
   override def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
 
-    val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
+    val (_: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
       dataForProofGeneration.schnorrKeyPairs.map {
         case (proposition, proof) => (proposition.bytes(), proof.map(_.bytes()).asJava)
       }.unzip
@@ -89,7 +89,6 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
 
     val actualKeysOption: Option[ActualKeys] = state.actualKeys(status.referencedEpoch)
     val previousCertificateOption: Option[WithdrawalEpochCertificate] = state.certificate(status.referencedEpoch - 1)
-    val genesisKeysRootHash = params.signersPublicKeys
 
     val keyRotationProofs: Seq[KeyRotationProof] = state.keyRotationProofs(status.referencedEpoch)
     val schnorrSignersPublicKeysBytesList: mutable.IndexedSeq[Array[Byte]] = actualKeysOption match {
