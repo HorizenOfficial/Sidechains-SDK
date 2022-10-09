@@ -90,10 +90,12 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
     val schnorrMastersPublicKeysBytesList = Seq[Array[Byte]]()
     val newSchnorrSignersPublicKeysBytesList = Seq[Array[Byte]]()
     val newSchnorrMastersPublicKeysBytesList = Seq[Array[Byte]]()
-    val updatedSigningKeysSkSignatures = Seq[Array[Byte]]()
+    val updatedSigningKeysSkSignatures = Seq[Array[Byte]]() // TODO getKeyRotationProofs from state
     val updatedSigningKeysMkSignatures = Seq[Array[Byte]]()
     val updatedMasterKeysSkSignatures = Seq[Array[Byte]]()
     val updatedMasterKeysMkSignatures = Seq[Array[Byte]]()
+
+    val genesisKeysRootHash = params.signersPublicKeys
 
     DataForProofGenerationWithKeyRotation(
       status.referencedEpoch,

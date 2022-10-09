@@ -3,6 +3,7 @@ package com.horizen.cryptolibprovider;
 import com.horizen.block.SidechainCreationVersions;
 import com.horizen.block.WithdrawalEpochCertificate;
 import com.horizen.box.WithdrawalRequestBox;
+import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesListBytes;
 import com.horizen.utils.Pair;
 import scala.Option;
 import scala.collection.Seq;
@@ -27,14 +28,7 @@ public interface ThresholdSignatureCircuitWithKeyRotation {
                                    long ftMinAmount,
                                    Seq<byte[]> customParameters,
                                    List<Optional<byte[]>> schnorrSignatureBytesList,
-                                   List<byte[]> schnorrSignersPublicKeysBytesList,
-                                   List<byte[]> schnorrMastersPublicKeysBytesList,
-                                   List<byte[]> newSchnorrSignersPublicKeysBytesList,
-                                   List<byte[]> newSchnorrMastersPublicKeysBytesList,
-                                   List<byte[]> updatedSigningKeysSkSignatures,
-                                   List<byte[]> updatedSigningKeysMkSignatures,
-                                   List<byte[]> updatedMasterKeysSkSignatures,
-                                   List<byte[]> updatedMasterKeysMkSignatures,
+                                   SchnorrKeysSignaturesListBytes schnorrKeysSignaturesListBytes,
                                    long threshold,
                                    String provingKeyPath,
                                    boolean checkProvingKey,
