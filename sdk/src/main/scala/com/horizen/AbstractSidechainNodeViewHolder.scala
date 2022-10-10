@@ -2,6 +2,7 @@ package com.horizen
 
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain.AbstractFeePaymentsInfo
+import com.horizen.consensus.{FullConsensusEpochInfo, StakeConsensusEpochInfo, blockIdToEpochId}
 import com.horizen.node._
 import com.horizen.params.NetworkParams
 import com.horizen.storage.{AbstractHistoryStorage, SidechainStorageInfo}
@@ -13,7 +14,6 @@ import sparkz.core.{ModifiersCache, idToVersion}
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages._
 import sparkz.core.utils.NetworkTimeProvider
 import sparkz.core.settings.SparkzSettings
-
 import scala.util.{Failure, Success, Try}
 
 abstract class AbstractSidechainNodeViewHolder[
@@ -30,7 +30,7 @@ abstract class AbstractSidechainNodeViewHolder[
 
   override type HIS <: AbstractHistory[TX, H, PMOD, FPI, HSTOR, HIS]
   override type MS <: AbstractState[TX, H, PMOD, MS]
-  override type VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PMOD, VL]
+  override type VL <: AbstractWallet[TX, PMOD, VL]
 
   protected var applyingBlock: Boolean = false
 
@@ -46,7 +46,7 @@ abstract class AbstractSidechainNodeViewHolder[
 
 
   case class SidechainNodeUpdateInformation(history: HIS,
-                                            state: MS,
+                                            state: AbstractState[TX, H, PMOD, MS],
                                             wallet: VL,
                                             failedMod: Option[PMOD],
                                             alternativeProgressInfo: Option[ProgressInfo[PMOD]],
@@ -158,11 +158,11 @@ abstract class AbstractSidechainNodeViewHolder[
 
             newStateTry match {
               case Success(newState) =>
-                val newMemPool = updateMemPool(progressInfo.toRemove, blocksApplied, memoryPool(), newState)
+                val newMemPool = updateMemPool(progressInfo.toRemove, blocksApplied, memoryPool(), newState.asInstanceOf[MS])
                 // Note: in parent NodeViewHolder.pmodModify wallet was updated here.
 
                 log.info(s"Persistent modifier ${pmod.encodedId} applied successfully, now updating node view")
-                updateNodeView(Some(newHistory), Some(newState), Some(newWallet), Some(newMemPool))
+                updateNodeView(Some(newHistory), Some(newState.asInstanceOf[MS]), Some(newWallet), Some(newMemPool))
 
                 log.debug(s"Current mempool size: ${newMemPool.size} transactions")
               // TODO FOR MERGE: usedSizeKBytes()/usedPercentage() should be moved into sparkz.core.transaction.MemoryPool
@@ -187,10 +187,10 @@ abstract class AbstractSidechainNodeViewHolder[
   // This method is actually a copy-paste of parent NodeViewHolder.updateState method.
   // The difference is that State is updated together with Wallet.
   def updateStateAndWallet(history: HIS,
-                                   state: MS,
+                                   state: AbstractState[TX, H, PMOD, MS],
                                    wallet: VL,
                                    progressInfo: ProgressInfo[PMOD],
-                                   suffixApplied: IndexedSeq[PMOD]): (HIS, Try[MS], VL, Seq[PMOD]) = {
+                                   suffixApplied: IndexedSeq[PMOD]): (HIS, Try[AbstractState[TX, H, PMOD, MS]], VL, Seq[PMOD]) = {
 
     // Do rollback if chain switch needed
     val (walletToApplyTry: Try[VL], stateToApplyTry: Try[MS], suffixTrimmed: IndexedSeq[PMOD]) = if (progressInfo.chainSwitchingNeeded) {
@@ -243,14 +243,91 @@ abstract class AbstractSidechainNodeViewHolder[
 
   // Apply state and wallet with blocks one by one, if consensus epoch is going to be changed -> notify wallet and history.
   protected def applyStateAndWallet(history: HIS,
-                                    stateToApply: MS,
+                                    stateToApply: AbstractState[TX, H, PMOD, MS],
                                     walletToApply: VL,
                                     suffixTrimmed: IndexedSeq[PMOD],
-                                    progressInfo: ProgressInfo[PMOD]): Try[SidechainNodeUpdateInformation]
+                                    progressInfo: ProgressInfo[PMOD]): Try[SidechainNodeUpdateInformation] = {
+    val updateInfoSample = SidechainNodeUpdateInformation(history, stateToApply, walletToApply, None, None, suffixTrimmed)
+    progressInfo.toApply.foldLeft[Try[SidechainNodeUpdateInformation]](Success(updateInfoSample)) {
+      case (f@Failure(ex), _) =>
+        log.error("Reporting modifier failed", ex)
+        f
+      case (success@Success(updateInfo), modToApply) =>
+        if (updateInfo.failedMod.isEmpty) {
+          // Check if the next modifier will change Consensus Epoch, so notify History and Wallet with current info.
+          val (newHistory, newWallet) = if (updateInfo.state.isSwitchingConsensusEpoch(modToApply.timestamp)) {
+            log.debug("Switching consensus epoch")
+            val (lastBlockInEpoch, consensusEpochInfo) = updateInfo.state.getCurrentConsensusEpochInfo
+            val nonceConsensusEpochInfo = updateInfo.history.calculateNonceForEpoch(blockIdToEpochId(lastBlockInEpoch))
+            val stakeConsensusEpochInfo = StakeConsensusEpochInfo(consensusEpochInfo.forgingStakeInfoTree.rootHash(), consensusEpochInfo.forgersStake)
+
+            val historyAfterConsensusInfoApply =
+              updateInfo.history.applyFullConsensusInfo(lastBlockInEpoch, FullConsensusEpochInfo(stakeConsensusEpochInfo, nonceConsensusEpochInfo))
+
+            val walletAfterStakeConsensusApply = updateInfo.wallet.applyConsensusEpochInfo(consensusEpochInfo)
+            (historyAfterConsensusInfoApply, walletAfterStakeConsensusApply)
+          } else
+            (updateInfo.history, updateInfo.wallet)
+
+          // if a crash happens here the inconsistency between state and history wont appear: we should check the wallet storages and if a inconsistency is seen, rollback it
+          // we have:
+          //   1. state == history
+          //   2. (wallet storages set) != state because of forgerBoxStorage
+          //   3. history consensus storage has evolved as well but it has no rollback points
+
+          //   At the restart all the update above would be re-applied, but in the meanwhile (before re-update it) such data might be used
+          //   for instance in the forging phase or even in the validation phase.
+          //   To rule out this possibility, even in case of future modifications,
+          //   we can find a common root between state and ForgerBoxStorage versions and roll back up to that point
+
+          updateInfo.state.applyModifier(modToApply) match {
+            case Success(stateAfterApply) => {
+              log.debug("success: modifier applied to state, blockInfo: " + newHistory.blockInfoById(modToApply.id))
+
+              context.system.eventStream.publish(SemanticallySuccessfulModifier(modToApply))
+
+              val stateWithdrawalEpochNumber: Int = stateAfterApply.getWithdrawalEpochInfo.epoch
+              val (historyResult, walletResult) = if (stateAfterApply.isWithdrawalEpochLastIndex) {
+                val feePayments = getFeePaymentsInfo(stateAfterApply, stateWithdrawalEpochNumber)
+                var historyAfterUpdateFee = newHistory
+                if (!feePayments.isEmpty) {
+                  historyAfterUpdateFee = newHistory.updateFeePaymentsInfo(modToApply.id, feePayments)
+                }
+
+                val walletAfterApply = getScanPersistentWallet(modToApply, Some(stateAfterApply), stateWithdrawalEpochNumber, newWallet)
+                (historyAfterUpdateFee, walletAfterApply)
+              } else {
+                val walletAfterApply = getScanPersistentWallet(modToApply, None, stateWithdrawalEpochNumber, newWallet)
+                (newHistory, walletAfterApply)
+              }
+
+              // as a final step update the history (validity and best block info), in this way we can check
+              // at the startup the consistency of state and history storage versions and be sure that also intermediate steps
+              // are consistent
+              historyResult.reportModifierIsValid(modToApply).map { newHistory =>
+                log.debug("success: modifier applied to history, blockInfo " + newHistory.blockInfoById(modToApply.id))
+
+                SidechainNodeUpdateInformation(newHistory, stateAfterApply, walletResult, None, None, updateInfo.suffix :+ modToApply)
+              }
+
+            }
+            case Failure(e) => {
+              log.error(s"Could not apply modifier ${modToApply.id}, exception:" + e)
+              newHistory.reportModifierIsInvalid(modToApply, progressInfo).map {
+                case (historyAfterApply, newProgressInfo) =>
+                  context.system.eventStream.publish(SemanticallyFailedModification(modToApply, e))
+                  SidechainNodeUpdateInformation(historyAfterApply, updateInfo.state, newWallet, Some(modToApply), Some(newProgressInfo), updateInfo.suffix)
+              }
+            }
+          }
+        } else success
+    }
+  }
+
 
 
   // Check if the next modifier will change Consensus Epoch, so notify History and Wallet with current info.
-  protected def applyConsensusEpochInfo(history: HIS, state: MS, wallet: VL, modToApply: PMOD): (HIS, VL)
+  protected def applyConsensusEpochInfo(history: HIS, state: AbstractState[TX, H, PMOD, MS], wallet: VL, modToApply: PMOD): (HIS, VL)
 
   def getFeePaymentsInfo(state: MS, epochNumber: Int) : FPI
   def getScanPersistentWallet(modToApply: PMOD, stateOp: Option[MS], epochNumber: Int, wallet: VL) : VL

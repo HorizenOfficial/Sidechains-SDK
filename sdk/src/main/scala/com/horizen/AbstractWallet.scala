@@ -1,6 +1,7 @@
 package com.horizen
 
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
+import com.horizen.consensus.ConsensusEpochInfo
 import com.horizen.node.NodeWalletBase
 import com.horizen.proposition.Proposition
 import com.horizen.secret.Secret
@@ -98,6 +99,9 @@ abstract class AbstractWallet[
   }
 
   override def walletSeed(): Array[Byte] = seed
+
+  // default does nothing, used by account model
+  def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo): W = this
 
 }
 

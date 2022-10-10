@@ -15,6 +15,8 @@ case class AccountFeePaymentsInfo(payments: Seq[AccountPayment]) extends Abstrac
   override type M = AccountFeePaymentsInfo
 
   override def serializer: SparkzSerializer[M] = AccountFeePaymentsInfoSerializer
+
+  override def isEmpty: Boolean = payments.isEmpty
 }
 
 

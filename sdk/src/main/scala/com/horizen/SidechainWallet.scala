@@ -267,7 +267,7 @@ class SidechainWallet private[horizen] (seed: Array[Byte],
     walletBoxStorage.getAll.withFilter(_.box.isInstanceOf[CoinsBox[_ <: PublicKey25519Proposition]]).map(_.box.value()).sum
   }
 
-  def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo): SidechainWallet = {
+  override def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo): SidechainWallet = {
     val merkleTreeLeaves = epochInfo.forgingStakeInfoTree.leaves().asScala.map(leaf => new ByteArrayWrapper(leaf))
 
     // Calculate merkle path for all delegated forgerBoxes

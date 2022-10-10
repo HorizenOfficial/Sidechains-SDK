@@ -19,13 +19,14 @@ import com.horizen.proof.Proof
 import com.horizen.proposition.Proposition
 import com.horizen.storage.{SidechainSecretStorage, SidechainStorageInfo}
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
-import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
+import com.horizen.{AbstractSidechainNodeViewHolder, AbstractState, SidechainSettings, SidechainTypes}
 import scorex.util.ModifierId
 import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
 import sparkz.core.consensus.History.ProgressInfo
 import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{SemanticallyFailedModification, SemanticallySuccessfulModifier}
 import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
+
 import scala.util.{Failure, Success, Try}
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 
@@ -94,7 +95,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   // Check if the next modifier will change Consensus Epoch, so notify History with current info.
   // Note: there is no need to store any info in the Wallet, since for Account model Forger is able
   // to get all necessary information from the State.
-  override protected def applyConsensusEpochInfo(history: HIS, state: MS, wallet: VL, modToApply: AccountBlock): (HIS, VL) = {
+  override protected def applyConsensusEpochInfo(history: HIS, state: AbstractState[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock, AccountState], wallet: VL, modToApply: AccountBlock): (HIS, VL) = {
      val historyAfterConsensusInfoApply = if (state.isSwitchingConsensusEpoch(modToApply.timestamp)) {
       val (lastBlockInEpoch: ModifierId, consensusEpochInfo: ConsensusEpochInfo) = state.getCurrentConsensusEpochInfo
       val nonceConsensusEpochInfo = history.calculateNonceForEpoch(blockIdToEpochId(lastBlockInEpoch))
@@ -217,9 +218,10 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       })
   }
 
+  /*
   // Apply state and wallet with blocks one by one, if consensus epoch is going to be changed -> notify wallet and history.
   override protected def applyStateAndWallet(history: HIS,
-                                    stateToApply: MS,
+                                    stateToApply: AbstractState[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock, AccountState],
                                     walletToApply: VL,
                                     suffixTrimmed: IndexedSeq[AccountBlock],
                                     progressInfo: ProgressInfo[AccountBlock]): Try[SidechainNodeUpdateInformation] = Try {
@@ -247,6 +249,8 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       } else updateInfo
     }
   }
+
+   */
 
   override protected def updateMemPool(blocksRemoved: Seq[AccountBlock], blocksApplied: Seq[AccountBlock], memPool: MP, state: MS): MP = {
     val rolledBackTxs = blocksRemoved.flatMap(extractTransactions)

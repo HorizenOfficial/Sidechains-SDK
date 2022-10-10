@@ -12,6 +12,8 @@ case class SidechainFeePaymentsInfo(transaction: FeePaymentsTransaction) extends
   override type M = SidechainFeePaymentsInfo
 
   override def serializer: SparkzSerializer[M] = FeePaymentsInfoSerializer
+
+  override def isEmpty: Boolean = transaction.newBoxes().isEmpty
 }
 
 object SidechainFeePaymentsInfo {

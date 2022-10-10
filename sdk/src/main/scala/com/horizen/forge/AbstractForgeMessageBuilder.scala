@@ -54,21 +54,6 @@ abstract class AbstractForgeMessageBuilder[
 
   case class BranchPointInfo(branchPointId: ModifierId, referenceDataToInclude: Seq[MainchainHeaderHash], headersToInclude: Seq[MainchainHeaderHash])
 
-  def checkSwitchingConsensusEpoch(state: MS, nextBlockTimestamp: Long): Option[ForgeFailure] = {
-    if (state.isSwitchingConsensusEpoch(nextBlockTimestamp))
-    {
-      if (state.getOrderedForgingStakesInfoSeq.isEmpty) {
-        log.error(s"ForgerStakes list can never be empty. Found at block time stamp $nextBlockTimestamp which would switch the epoch")
-        Some(ForgingStakeListEmpty)
-      } else {
-        None
-      }
-    } else {
-      // no checks if the epoch is not switching
-      None
-    }
-  }
-
   protected def tryToForgeNextBlock(nextConsensusEpochNumber: ConsensusEpochNumber, nextConsensusSlotNumber: ConsensusSlotNumber, timeout: Timeout, forcedTx: Iterable[TX])(nodeView: View): ForgeResult = Try {
     log.info(s"Try to forge block for epoch $nextConsensusEpochNumber with slot $nextConsensusSlotNumber")
 
@@ -90,13 +75,6 @@ abstract class AbstractForgeMessageBuilder[
     val consensusInfo: FullConsensusEpochInfo = nodeView.history.getFullConsensusEpochInfoForBlock(nextBlockTimestamp, parentBlockId)
     val totalStake = consensusInfo.stakeConsensusEpochInfo.totalStake
     val vrfMessage = buildVrfMessage(nextConsensusSlotNumber, consensusInfo.nonceConsensusEpochInfo)
-
-    // check if there are conditions in the switching epoch case which would prevent a valid block creation
-    // for instance a non-empty forger stakes list
-    checkSwitchingConsensusEpoch(nodeView.state, nextBlockTimestamp) match {
-      case Some(forgeFailure) => return forgeFailure
-      case _ => // check passed
-    }
 
     // Get ForgingStakeMerklePathInfo from wallet and order them by stake decreasing.
     val forgingStakeMerklePathInfoSeq: Seq[ForgingStakeMerklePathInfo] = getForgingStakeMerklePathInfo(
