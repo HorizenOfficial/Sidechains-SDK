@@ -24,7 +24,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
 
     private static final SchnorrSignature signaturePlaceHolder = new SchnorrSignature();
 
-    private static BackwardTransfer withdrawalRequestBoxToBackwardTransfer(WithdrawalRequestBox box) {
+    static BackwardTransfer withdrawalRequestBoxToBackwardTransfer(WithdrawalRequestBox box) {
         return new BackwardTransfer(box.proposition().bytes(), box.value());
     }
 
