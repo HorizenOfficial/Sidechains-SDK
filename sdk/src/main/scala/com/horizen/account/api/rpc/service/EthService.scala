@@ -132,14 +132,14 @@ class EthService(
       .orNull
   }
 
-  @RpcMethod("eth_getBlockTransactionCountByNumber")
-  def getBlockTransactionCountByNumber(tag: String): Quantity = {
-    blockTransactionCount(nodeView => getBlockIdByTag(nodeView, tag))
-  }
-
   @RpcMethod("eth_getBlockTransactionCountByHash")
   def getBlockTransactionCountByHash(hash: Hash): Quantity = {
     blockTransactionCount(_ => bytesToId(hash.toBytes))
+  }
+
+  @RpcMethod("eth_getBlockTransactionCountByNumber")
+  def getBlockTransactionCountByNumber(tag: String): Quantity = {
+    blockTransactionCount(nodeView => getBlockIdByTag(nodeView, tag))
   }
 
   private def blockTransactionCount(getBlockId: NV => ModifierId): Quantity = {
@@ -381,6 +381,28 @@ class EthService(
   def getTransactionByHash(transactionHash: Hash): EthereumTransactionView = {
     getTransactionAndReceipt(transactionHash).map { case (block, tx, receipt) =>
       new EthereumTransactionView(receipt, tx, block.header.baseFee)
+    }.orNull
+  }
+
+  @RpcMethod("eth_getTransactionByBlockHashAndIndex")
+  def getTransactionByBlockHashAndIndex(hash: Hash, index: Quantity): EthereumTransactionView = {
+    blockTransactionByIndex(_ => bytesToId(hash.toBytes), index)
+  }
+
+  @RpcMethod("eth_getTransactionByBlockNumberAndIndex")
+  def getTransactionByBlockNumberAndIndex(tag: String, index: Quantity): EthereumTransactionView = {
+    blockTransactionByIndex(nodeView => getBlockIdByTag(nodeView, tag), index)
+  }
+
+  private def blockTransactionByIndex(getBlockId: NV => ModifierId, index: Quantity): EthereumTransactionView = {
+    applyOnAccountView { nodeView =>
+      nodeView.history
+        .getStorageBlockById(getBlockId(nodeView))
+        .flatMap(block => {
+          val tx = block.transactions(index.toNumber.intValueExact()).asInstanceOf[EthereumTransaction]
+          using(nodeView.state.getView)(_.getTransactionReceipt(Numeric.hexStringToByteArray(tx.id)))
+            .map(new EthereumTransactionView(_, tx, block.header.baseFee))
+        })
     }.orNull
   }
 

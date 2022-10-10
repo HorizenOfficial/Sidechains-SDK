@@ -27,6 +27,10 @@ public class Quantity {
         return value;
     }
 
+    public BigInteger toNumber() {
+        return Numeric.decodeQuantity(value);
+    }
+
     @Override
     public String toString() {
         return String.format("Quantity{value='%s'}", value);
