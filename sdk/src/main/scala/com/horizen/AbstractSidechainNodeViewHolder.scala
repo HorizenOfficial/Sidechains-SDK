@@ -166,6 +166,7 @@ abstract class AbstractSidechainNodeViewHolder[
 
                 log.debug(s"Current mempool size: ${newMemPool.size} transactions")
               // TODO FOR MERGE: usedSizeKBytes()/usedPercentage() should be moved into sparkz.core.transaction.MemoryPool
+              //                 or a new AbstractMemoryPool class should be created between MP and the concrete classes
               // - ${newMemPool.usedSizeKBytes}kb (${newMemPool.usedPercentage}%)")
               case Failure(e) =>
                 log.warn(s"Can`t apply persistent modifier (id: ${pmod.encodedId}, contents: $pmod) to minimal state", e)
@@ -246,9 +247,11 @@ abstract class AbstractSidechainNodeViewHolder[
                                     stateToApply: AbstractState[TX, H, PMOD, MS],
                                     walletToApply: VL,
                                     suffixTrimmed: IndexedSeq[PMOD],
-                                    progressInfo: ProgressInfo[PMOD]): Try[SidechainNodeUpdateInformation] = {
+                                    progressInfo: ProgressInfo[PMOD]): Try[SidechainNodeUpdateInformation] =  Try {
+
     val updateInfoSample = SidechainNodeUpdateInformation(history, stateToApply, walletToApply, None, None, suffixTrimmed)
-    progressInfo.toApply.foldLeft[Try[SidechainNodeUpdateInformation]](Success(updateInfoSample)) {
+
+    val wrappedResultObj : Try[SidechainNodeUpdateInformation] = progressInfo.toApply.foldLeft[Try[SidechainNodeUpdateInformation]](Success(updateInfoSample)) {
       case (f@Failure(ex), _) =>
         log.error("Reporting modifier failed", ex)
         f
@@ -322,6 +325,7 @@ abstract class AbstractSidechainNodeViewHolder[
           }
         } else success
     }
+    wrappedResultObj.get
   }
 
 

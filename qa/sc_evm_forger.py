@@ -592,7 +592,7 @@ class SCEvmForger(SidechainTestFramework):
         exception_occurs = False
         try:
             logging.info("Trying to generate a block: should fail...")
-            generate_next_block(sc_node_2, "first node", force_switch_to_next_epoch=True)
+            generate_next_block(sc_node_2, "second node", force_switch_to_next_epoch=True)
             self.sc_sync_all()
             print_current_epoch_and_slot(sc_node_1)
         except Exception as e:

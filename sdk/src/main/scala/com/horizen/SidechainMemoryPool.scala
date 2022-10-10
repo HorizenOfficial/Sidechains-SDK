@@ -149,7 +149,7 @@ class SidechainMemoryPool private(unconfirmed: MempoolMap, mempoolSettings: Memp
         //the pool is empty but txsize exceeds its  limit,
         //or the pool is full, and the entry we are trying to add has feerate lower than the miminum in pool
         //In both cases the insert will fail
-        return false;
+        return false
       }
       unconfirmed.remove(lastEntry.get.getUnconfirmedTx().id())
     }
