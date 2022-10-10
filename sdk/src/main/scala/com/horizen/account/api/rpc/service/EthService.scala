@@ -395,13 +395,19 @@ class EthService(
   }
 
   private def blockTransactionByIndex(getBlockId: NV => ModifierId, index: Quantity): EthereumTransactionView = {
+    val txIndex = index.toNumber.intValueExact()
     applyOnAccountView { nodeView =>
       nodeView.history
         .getStorageBlockById(getBlockId(nodeView))
         .flatMap(block => {
-          val tx = block.transactions(index.toNumber.intValueExact()).asInstanceOf[EthereumTransaction]
-          using(nodeView.state.getView)(_.getTransactionReceipt(Numeric.hexStringToByteArray(tx.id)))
-            .map(new EthereumTransactionView(_, tx, block.header.baseFee))
+          block.transactions
+            .drop(txIndex)
+            .headOption
+            .map(_.asInstanceOf[EthereumTransaction])
+            .flatMap(tx =>
+              using(nodeView.state.getView)(_.getTransactionReceipt(Numeric.hexStringToByteArray(tx.id)))
+                .map(new EthereumTransactionView(_, tx, block.header.baseFee))
+            )
         })
     }.orNull
   }
