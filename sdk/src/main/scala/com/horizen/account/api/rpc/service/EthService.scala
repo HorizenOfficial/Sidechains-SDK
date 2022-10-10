@@ -523,4 +523,15 @@ class EthService(
         .orNull
     }
   }
+
+  @RpcMethod("eth_getStorageAt")
+  @RpcOptionalParameters(1)
+  def getStorageAt(address: Address, key: Quantity, tag: String): Hash = {
+    val storageKey = Numeric.toBytesPadded(key.toNumber, 32)
+    applyOnAccountView { nodeView =>
+      getStateViewAtTag(nodeView, tag) { (stateView, _) =>
+        Hash.FromBytes(stateView.getAccountStorage(address.toBytes, storageKey))
+      }
+    }
+  }
 }
