@@ -18,7 +18,7 @@ import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.Timers.Cert
 import com.horizen.certificatesubmitter.AbstractCertificateSubmitter.{BroadcastLocallyGeneratedSignature, CertificateSignatureFromRemoteInfo, CertificateSignatureInfo, CertificateSubmissionStarted, CertificateSubmissionStopped, DifferentMessageToSign, InvalidPublicKeyIndex, InvalidSignature, KnownSignature, SignatureProcessingStatus, SignaturesStatus, SubmitterIsOutsideSubmissionWindow, ValidSignature}
 import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.fixtures.FieldElementFixture
-import com.horizen.fork.{ForkManager, SimpleForkConfigurator}
+import com.horizen.fork.{ForkManagerUtil, SimpleForkConfigurator}
 import com.horizen.node.util.MainchainBlockReferenceInfo
 import com.horizen.params.CommonParams
 import com.horizen.secret.{SchnorrKeyGenerator, SchnorrSecret}
@@ -55,7 +55,8 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
   def init(): Unit = {
     val forkConfigurator = new SimpleForkConfigurator()
     consensusEpochAtWhichForkIsApplied = forkConfigurator.getSidechainFork1().regtestEpochNumber
-    ForkManager.init(new SimpleForkConfigurator(), "regtest")
+    val forkManagerUtil = new ForkManagerUtil()
+    forkManagerUtil.initializeForkManager(new SimpleForkConfigurator(), "regtest")
   }
 
   private def getMockedSettings(timeoutDuration: FiniteDuration, submitterIsEnabled: Boolean, signerIsEnabled: Boolean): SidechainSettings = {

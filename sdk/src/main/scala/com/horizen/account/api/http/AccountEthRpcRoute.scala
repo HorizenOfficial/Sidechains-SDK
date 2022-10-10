@@ -21,6 +21,8 @@ import com.horizen.utils.ClosableResourceHandler
 import com.horizen.{SidechainSettings, SidechainTypes}
 import sparkz.core.settings.RESTApiSettings
 import scorex.util.ScorexLogging
+import sparkz.core.api.http.ApiDirectives
+
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
@@ -47,7 +49,8 @@ case class AccountEthRpcRoute(
     ]
       with SidechainTypes
       with ClosableResourceHandler
-      with ScorexLogging {
+      with ScorexLogging
+      with ApiDirectives {
 
   override implicit val tag: ClassTag[AccountNodeView] = ClassTag[AccountNodeView](classOf[AccountNodeView])
   override val route: Route = pathPrefix("ethv1") {
@@ -67,13 +70,15 @@ case class AccountEthRpcRoute(
    * Returns the success / error response of called rpc method or error if method does not exist
    */
   def ethRpc: Route = post {
-    entity(as[JsonNode]) { body =>
-      val req = new RpcRequest(body)
-      log.debug(s"request >> $body")
-      val res = rpcHandler.apply(req)
-      val json = SerializationUtil.serialize(res)
-      log.debug(s"response << $json")
-      SidechainApiResponse(json);
+    withAuth {
+      entity(as[JsonNode]) { body =>
+        val req = new RpcRequest(body)
+        log.debug(s"request >> $body")
+        val res = rpcHandler.apply(req)
+        val json = SerializationUtil.serialize(res)
+        log.debug(s"response << $json")
+        SidechainApiResponse(json);
+      }
     }
   }
 
