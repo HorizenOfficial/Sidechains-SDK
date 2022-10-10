@@ -6,7 +6,8 @@ import time
 import pprint
 from multiprocessing import Pool, Value
 from time import sleep
-from os.path import exists
+import os
+import gzip
 import csv
 import numpy as np
 import psutil
@@ -196,7 +197,8 @@ class PerformanceTest(SidechainTestFramework):
                 "send_coins_to_address": send_coins_to_address,
                 "block_tps": [],
                 "forks": [],
-                "blocks_mined": 0   
+                "blocks_mined": 0,
+                "max_forks_length": []
                 }
 
     def get_latency_config(self):
@@ -214,7 +216,7 @@ class PerformanceTest(SidechainTestFramework):
         return node_latency_configs
 
     def fill_csv(self):
-        if not exists(self.CSV_FILE):
+        if not os.path.exists(self.CSV_FILE):
             f = open(self.CSV_FILE, 'w')
             writer = csv.writer(f)
 
@@ -611,19 +613,38 @@ class PerformanceTest(SidechainTestFramework):
         # Start timing
         return time.time()
 
+    def get_fork_length(self, line, max_fork_length):
+        tmp = line.split("TPS-TEST:")
+        block_removed = tmp[1].split("blocks are to be removed")
+        fork_length = int(block_removed[0]) 
+        if (fork_length > max_fork_length):
+            return fork_length
+        else:
+            return max_fork_length
+
     def scan_logs_for_forks(self):
         for i in range(len(self.sc_nodes)):
-            assert_true(exists(self.options.tmpdir+"/sc_node"+str(i)))
-            last_fork = "0"
-            with open(self.options.tmpdir+"/sc_node"+str(i)+"/log/debugLog.txt", 'r') as fp:
-                logging.info(f"Check node {i} log...")
-                for line in fp:
-                    if 'the fork number' in line:
-                        print(line)
-                        tmp = line.split("fork number")
-                        last_fork = tmp[1].split("has been")[0]
+            assert_true(os.path.exists(self.options.tmpdir+"/sc_node"+str(i)))
+            last_fork = 0
+            max_fork_length = 0
+            for filename in os.scandir(self.options.tmpdir+"/sc_node"+str(i)+"/log/"):
+                if (".gz" in filename.name):
+                    with gzip.open(filename, 'r') as fp:
+                        for line in fp:
+                            if 'blocks are to be removed' in str(line):
+                                max_fork_length = self.get_fork_length(str(line), max_fork_length)
+                else:
+                    with open(filename, 'r') as fp:
+                        logging.info(f"Check node {i} log...")
+                        for line in fp:
+                            if 'the fork number' in line:
+                                tmp = line.split("fork number")
+                                last_fork = int(tmp[1].split("has been")[0])
+                            if 'blocks are to be removed' in line:
+                                max_fork_length = self.get_fork_length(line, max_fork_length)
 
             self.csv_data["forks"].append(last_fork)
+            self.csv_data["max_forks_length"].append(max_fork_length)
 
     def run_test(self):
         mc_nodes = self.nodes
