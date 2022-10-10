@@ -10,7 +10,8 @@ from decimal import Decimal
 import jsonschema
 from jsonschema.validators import validate
 from SidechainTestFramework.sc_boostrap_info import MCConnectionInfo, SCBootstrapInfo, SCNetworkConfiguration, Account, \
-    VrfAccount, SchnorrAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths, LARGE_WITHDRAWAL_EPOCH_LENGTH, \
+    VrfAccount, SchnorrAccount, CertificateProofInfo, SCNodeConfiguration, ProofKeysPaths, \
+    LARGE_WITHDRAWAL_EPOCH_LENGTH, \
     DEFAULT_API_KEY
 from SidechainTestFramework.sidechainauthproxy import SidechainAuthServiceProxy
 import subprocess
@@ -34,6 +35,7 @@ LEVEL_ALL = "all"
 
 # timeout in secs for rest api
 DEFAULT_REST_API_TIMEOUT = 5
+
 
 class TimeoutException(Exception):
     def __init__(self, operation):
@@ -239,6 +241,8 @@ Parameters:
 
 Output: an array of instances of SchnorrKey (see sc_bootstrap_info.py).
 """
+
+
 def generate_cert_signer_secrets(seed, number_of_schnorr_keys):
     schnorr_keys = []
     secrets = []
@@ -442,6 +446,8 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
 Create directories for each node and default configuration files inside them.
 For each node put also genesis data in configuration files.
 """
+
+
 def initialize_default_sc_datadir(dirname, n, api_key):
     apiAddress = "127.0.0.1"
     configsData = []
@@ -523,14 +529,19 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
                   auth_api_key=None, use_multiprocessing=False, processor=None):
     if use_multiprocessing:
         if i == 0:
-            processors = [i, i+1]
+            processors = [i, i + 1]
         else:
             first_available_process = i * 2
             processors = [first_available_process, first_available_process + 1]
         p = psutil.Process()
-        p.cpu_affinity(processors)
-        logging.info(f"Processes #{processors}: Set Node{i} affinity to {processors}, Node{i} affinity now "
-                     f"{p.cpu_affinity()}")
+        try:
+            p.cpu_affinity(processors)
+            logging.info(f"Processes #{processors}: Set Node{i} affinity to {processors}, Node{i} affinity now "
+                         f"{p.cpu_affinity()}")
+        except Exception:
+            logging.error("Exception: Unable to map cpu to process, ensure enough processors are available")
+            raise
+
     """
     Start a SC node and returns API connection to it
     """
@@ -540,7 +551,7 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
 
     if sys.platform.startswith('win'):
         lib_separator = ";"
-    examples_dir = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '../..', 'examples'))
+    examples_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', 'examples'))
     if binary is None:
         binary = f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-0.5.0-SNAPSHOT.jar" + lib_separator + f"{examples_dir}/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
     #        else if platform.system() == 'Linux':
@@ -573,8 +584,9 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     return proxy
 
 
-def start_sc_nodes_with_multiprocessing(num_nodes, dirname, extra_args=None, rpchost=None, binary=None, print_output_to_file=False,
-                   auth_api_key=DEFAULT_API_KEY):
+def start_sc_nodes_with_multiprocessing(num_nodes, dirname, extra_args=None, rpchost=None, binary=None,
+                                        print_output_to_file=False,
+                                        auth_api_key=DEFAULT_API_KEY):
     """
     Start multiple SC clients, return connections to them
     """
@@ -582,7 +594,7 @@ def start_sc_nodes_with_multiprocessing(num_nodes, dirname, extra_args=None, rpc
     if binary is None: binary = [None for i in range(num_nodes)]
 
     processors: int = multiprocessing.Pool()._processes
-    processors_available = processors/2
+    processors_available = processors / 2
     logging.info(f"Available processors (2 threads each): {processors_available}")
     logging.info(f"Number of Nodes: {num_nodes}")
     if processors_available / num_nodes < 1:
@@ -666,7 +678,8 @@ def connect_sc_nodes(from_connection, node_num, wait_for=25):
     while True:
         if time.time() - start >= wait_for:
             raise (TimeoutException("Trying to connect to node{0}".format(node_num)))
-        if any(i for i in (from_connection.node_connectedPeers()["result"]["peers"]) if i.get("remoteAddress") == "/" + ip_port):
+        if any(i for i in (from_connection.node_connectedPeers()["result"]["peers"]) if
+               i.get("remoteAddress") == "/" + ip_port):
             break
         time.sleep(WAIT_CONST)
 
@@ -873,7 +886,8 @@ network: {
  - bootstrap information of the sidechain nodes. An instance of SCBootstrapInfo (see sc_boostrap_info.py)    
 """
 
-#If we want to use a different block rate (not 120s) override this block_timestamp_rewind field.
+
+# If we want to use a different block rate (not 120s) override this block_timestamp_rewind field.
 def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
                               block_timestamp_rewind=DefaultBlockTimestampRewind):
     log_info = LogInfo(options.logfilelevel, options.logconsolelevel)
@@ -1037,7 +1051,7 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbo
         if ("no forging stake" in forge_result["error"]["description"]):
             raise AssertionError("No forging stake for the epoch")
         logging.info("Skip block generation for epoch {epochNumber} slot {slotNumber}".format(epochNumber=next_epoch,
-                                                                                       slotNumber=next_slot))
+                                                                                              slotNumber=next_slot))
         next_epoch, next_slot = get_next_epoch_slot(next_epoch, next_slot, slots_in_epoch)
         forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot))
 
@@ -1168,6 +1182,7 @@ def create_certificate_for_alien_sc(mcTest, scid, mc_node, fePatternArray):
     assert_equal(True, cert in mc_node.getrawmempool())
     return cert
 
+
 def deserialize_perf_test_json(json_file):
     with open(json_file) as f:
         json_data = json.load(f)
@@ -1181,5 +1196,6 @@ def deserialize_perf_test_json(json_file):
 
     return json_data
 
+
 def get_resources_dir():
-    return os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'resources'))
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'resources'))
