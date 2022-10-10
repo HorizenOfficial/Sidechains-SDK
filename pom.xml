@@ -18,5 +18,6 @@
 		<module>examples/simpleapp</module>
 		<module>tools/sctool</module>
 		<module>tools/dbtool</module>
+		<module>tools/signingtool</module>
 	</modules>
 </project>
