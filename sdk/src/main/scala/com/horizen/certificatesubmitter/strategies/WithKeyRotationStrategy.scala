@@ -51,7 +51,6 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
     //create and return proof with quality
     val sidechainCreationVersion: SidechainCreationVersion = params.sidechainCreationVersion
     CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.createProof(
-      dataForProofGeneration.withdrawalRequests.asJava,
       dataForProofGeneration.sidechainId,
       dataForProofGeneration.referencedEpochNumber,
       dataForProofGeneration.endEpochCumCommTreeHash,

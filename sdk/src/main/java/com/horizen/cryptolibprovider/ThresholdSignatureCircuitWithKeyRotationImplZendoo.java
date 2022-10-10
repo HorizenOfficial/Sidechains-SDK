@@ -137,17 +137,36 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         SchnorrKeysSignaturesList keysSignaturesList = SchnorrKeysSignaturesList.getSchnorrKeysSignaturesList(schnorrKeysSignaturesListBytes);
         List<SchnorrPublicKey> signingPublicKeys = keysSignaturesList.signingKeys();
 
+        List<BackwardTransfer> backwardTransfers =
+                bt.stream().map(ThresholdSignatureCircuitImplZendoo::withdrawalRequestBoxToBackwardTransfer).collect(Collectors.toList());
+
         WithdrawalCertificate withdrawalCertificate = new WithdrawalCertificate(
                 FieldElement.deserialize(sidechainId),
                 epochNumber,
-                signingPublicKeys.stream().map(k -> new BackwardTransfer(k.serializePublicKey(), 0)).collect(Collectors.toList()),
-                1,
+                backwardTransfers,
+                0,
                 FieldElement.deserialize(endCumulativeScTxCommTreeRoot),
                 ftMinAmount,
                 btrFee,
                 scala.collection.JavaConverters.seqAsJavaList(customFields).stream().map(FieldElement::deserialize).collect(Collectors.toList())
         );
-
+/*
+public static CreateProofResult createProof(
+            SchnorrKeysSignaturesList keysSignaturesList,
+            WithdrawalCertificate withdrawalCertificate,
+            Optional<WithdrawalCertificate> prevWithdrawalCertificate,
+            List<SchnorrSignature> certSignaturesList,
+            long maxPks,
+            long threshold,
+            FieldElement genesisKeysRootHash,
+            Optional<Integer> supportedDegree,
+            String provingKeyPath,
+            boolean enforceMembership,
+            boolean zk,
+            boolean compressedPk,
+            boolean compressProof
+    )
+ */
         // TODO instead of calling KeyRotationThresholdSigProof from Zendoo I heed to create local KeyRotationThresholdSigProof
         CreateProofResult proofAndQuality = KeyRotationThresholdSigProof.createProof(
                 keysSignaturesList, withdrawalCertificate, previousCertificateOption, schnorrSignatureBytesList,
