@@ -16,7 +16,7 @@ interface ForgerStakes {
         bytes1 vrf2;
     }
 
-    function getAllForgersStakes() external returns (StakeInfo[] memory);
+    function getAllForgersStakes() external view returns (StakeInfo[] memory);
 
     function delegate(bytes32 publicKey, bytes32 vrf1, bytes1 vrf2, address owner) external payable returns (StakeID);
 
