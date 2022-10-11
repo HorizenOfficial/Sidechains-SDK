@@ -36,7 +36,7 @@ LABEL mantainer="infrastructure@zensystem.io"
 ARG ARG_SDK_VERSION=0.5.0
 ARG ARG_TINI_VERSION=v0.19.0
 ARG ARG_GOSU_VERSION=1.14
-ARG ARG_SC_JAR_NAME=sidechains-sdk-simpleapp
+ARG ARG_SC_JAR_NAME=sidechains-sdk-scbootstrappingtools
 ARG ARG_SC_MAIN_CLASS=com.horizen.examples.simpleapp
 ARG ARG_SC_CONF_PATH=/simpleapp/config/simpleapp_settings.conf
 ARG ARG_SC_WORKDIR=/simpleapp
@@ -55,6 +55,8 @@ WORKDIR /simpleapp
 
 COPY --from=builder /Sidechains-SDK/examples/simpleapp/target/*.jar /simpleapp/
 COPY --from=builder /Sidechains-SDK/examples/simpleapp/target/lib /simpleapp/lib/
+COPY --from=builder /Sidechains-SDK/tools/sctool/target/*.jar /tools/
+COPY --from=builder /Sidechains-SDK/tools/sctool/target/lib /tools/lib/
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY --from=builder /Sidechains-SDK/examples/simpleapp/src/main/resources/simpleapp_settings.conf /simpleapp/config/simpleapp_settings.conf
 
@@ -106,6 +108,7 @@ RUN set -euo pipefail \
     fi \
     && apt-mark auto '.*' &> /dev/null && [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark &> /dev/null \
     && DEBIAN_FRONTEND=noninteractive apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
+    && java -jar "/tools/${SC_JAR_NAME}-${SDK_VERSION}.jar" help \
     && rm -rf /var/{lib/apt/lists/*,cache/apt/archives/*.deb} /tmp/*
 
 VOLUME ["/simpleapp/datadir/"]
