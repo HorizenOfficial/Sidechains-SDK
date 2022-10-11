@@ -221,7 +221,7 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     }
 
     // check that msg.value is greater than zero
-    if (msg.getValue.compareTo(BigInteger.ZERO) <= 0) {
+    if (msg.getValue.signum() <= 0) {
       throw new ExecutionRevertedException("Value must not be zero")
     }
 

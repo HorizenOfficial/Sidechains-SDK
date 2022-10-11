@@ -10,7 +10,7 @@ object AccountForwardTransfersHelper {
     block.mainchainBlockReferencesData.flatMap(mcBlockRefData =>
       mcBlockRefData.sidechainRelatedAggregatedTransaction
         .map(_.mc2scTransactionsOutputs.filter(_.isInstanceOf[ForwardTransfer]).map(_.asInstanceOf[ForwardTransfer]))
-        .getOrElse(Seq())
+        .getOrElse(Seq.empty)
     )
   }
 }

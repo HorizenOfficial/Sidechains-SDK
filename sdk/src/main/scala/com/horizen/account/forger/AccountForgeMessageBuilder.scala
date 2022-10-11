@@ -243,7 +243,7 @@ class AccountForgeMessageBuilder(
     val receiptsRoot: Array[Byte] = calculateReceiptRoot(receiptList)
 
     // 7. Get cumulativeGasUsed from last receipt in list if available
-    val gasUsed: Long = receiptList.lastOption.map(_.cumulativeGasUsed.longValue()).getOrElse(0)
+    val gasUsed: Long = receiptList.lastOption.map(_.cumulativeGasUsed.longValueExact()).getOrElse(0)
 
     // 8. set the fee payments hash
     val feePaymentsHash: Array[Byte] = AccountFeePaymentsUtils.calculateFeePaymentsHash(feePayments)
