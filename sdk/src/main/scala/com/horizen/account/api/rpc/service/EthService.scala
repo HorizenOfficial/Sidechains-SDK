@@ -18,7 +18,7 @@ import com.horizen.account.utils.EthereumTransactionDecoder
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.chain.SidechainBlockInfo
-import com.horizen.evm.interop.TraceParams
+import com.horizen.evm.interop.{ProofAccountResult, TraceParams}
 import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
@@ -531,6 +531,17 @@ class EthService(
     applyOnAccountView { nodeView =>
       getStateViewAtTag(nodeView, tag) { (stateView, _) =>
         Hash.FromBytes(stateView.getAccountStorage(address.toBytes, storageKey))
+      }
+    }
+  }
+
+  @RpcMethod("eth_getProof")
+  @RpcOptionalParameters(1)
+  def getProof(address: Address, keys: Array[Quantity], tag: String): ProofAccountResult = {
+    val storageKeys = keys.map(key => Numeric.toBytesPadded(key.toNumber, 32))
+    applyOnAccountView { nodeView =>
+      getStateViewAtTag(nodeView, tag) { (stateView, _) =>
+        stateView.getProof(address.toBytes, storageKeys)
       }
     }
   }

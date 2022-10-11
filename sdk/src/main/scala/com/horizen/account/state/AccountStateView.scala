@@ -11,7 +11,7 @@ import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils._
 import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput, WithdrawalEpochCertificate}
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
-import com.horizen.evm.interop.EvmLog
+import com.horizen.evm.interop.{EvmLog, ProofAccountResult}
 import com.horizen.evm.{ResourceHandle, StateDB, StateStorageStrategy}
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.StateView
@@ -19,6 +19,7 @@ import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
 import sparkz.core.VersionTag
 import scorex.util.ScorexLogging
+
 import java.math.BigInteger
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 import scala.util.Try
@@ -230,17 +231,17 @@ class AccountStateView(
   override def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit =
     stateDb.setStorage(address, key, value, StateStorageStrategy.RAW)
 
-
   override def updateAccountStorageBytes(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit =
     stateDb.setStorage(address, key, value, StateStorageStrategy.CHUNKED)
-
 
   override def removeAccountStorage(address: Array[Byte], key: Array[Byte]): Unit =
     stateDb.removeStorage(address, key, StateStorageStrategy.RAW)
 
-
   override def removeAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Unit =
     stateDb.removeStorage(address, key, StateStorageStrategy.CHUNKED)
+
+  def getProof(address: Array[Byte], keys: Array[Array[Byte]]): ProofAccountResult =
+    stateDb.getProof(address, keys)
 
   // out-of-the-box helpers
   override def addCertificate(cert: WithdrawalEpochCertificate): Unit =
