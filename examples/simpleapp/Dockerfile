@@ -38,7 +38,7 @@ ARG ARG_TINI_VERSION=v0.19.0
 ARG ARG_GOSU_VERSION=1.14
 ARG ARG_SC_JAR_NAME=sidechains-sdk-scbootstrappingtools
 ARG ARG_SC_MAIN_CLASS=com.horizen.examples.simpleapp
-ARG ARG_SC_CONF_PATH=/simpleapp/config/simpleapp_settings.conf
+ARG ARG_SC_CONF_PATH=/config/simpleapp_settings.conf
 
 ENV SDK_VERSION=${ARG_SDK_VERSION} \
     SC_JAR_NAME=${ARG_SC_JAR_NAME} \
@@ -46,15 +46,14 @@ ENV SDK_VERSION=${ARG_SDK_VERSION} \
     SC_CONF_PATH=${ARG_SC_CONF_PATH} \
     GOSU_VERSION=${ARG_GOSU_VERSION} \
     TINI_VERSION=${ARG_TINI_VERSION}
+    
 SHELL ["/bin/bash", "-c"]
 
-WORKDIR /simpleapp
+WORKDIR /
 
-COPY --from=simpleapp-builder /Sidechains-SDK/examples/simpleapp/target/*.jar /simpleapp/
-COPY --from=simpleapp-builder /Sidechains-SDK/examples/simpleapp/target/lib /simpleapp/lib
+COPY --from=builder /Sidechains-SDK/tools/sctool/target/*.jar /tools/
+COPY --from=builder /Sidechains-SDK/tools/sctool/target/lib /tools/lib/
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-COPY --from=simpleapp-builder /Sidechains-SDK/examples/simpleapp/src/main/resources/simpleapp_settings.conf /simpleapp/config/simpleapp_settings.conf
-
 
 
 RUN set -euo pipefail \
@@ -105,13 +104,15 @@ RUN set -euo pipefail \
     fi \
     && apt-mark auto '.*' &> /dev/null && [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark &> /dev/null \
     && DEBIAN_FRONTEND=noninteractive apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-    && java -jar /simpleapp/"${SC_JAR_NAME}-${SDK_VERSION}.jar" help \
+    && java -jar /"${SC_JAR_NAME}-${SDK_VERSION}.jar" help \
     && rm -rf /var/{lib/apt/lists/*,cache/apt/archives/*.deb} /tmp/*
 
-VOLUME ["/sidechain/datadir/"]
-VOLUME ["/sidechain/logs/"]
+VOLUME ["/tools/output"]
+
 
 ENTRYPOINT ["/usr/local/bin/tini", "--", "/usr/local/bin/entrypoint.sh"]
 
-# "java -cp '/sidechain/${ARG_SC_JAR_NAME}-${SDK_VERSION}.jar:/sidechain/lib/*' $SC_MAIN_CLASS $SC_CONF_PATH"
+# This is a placeholder CMD, the actual CMD is constructed in entrypoint.sh like this:
+# "java -jar /tools/${SC_JAR_NAME}-${SDK_VERSION}.jar $args"
+
 CMD ["/usr/bin/true"]

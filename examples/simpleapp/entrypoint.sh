@@ -30,13 +30,13 @@ else
 fi
 
 # set file ownership
-find /simpleapp/output /tmp -writable -print0 | xargs -0 -I{} -P64 -n1 chown -f "${CURRENT_UID}":"${CURRENT_GID}" "{}" &> /dev/null
+find /tools/output /tmp -writable -print0 | xargs -0 -I{} -P64 -n1 chown -f "${CURRENT_UID}":"${CURRENT_GID}" "{}" &> /dev/null
 
 # if we have no commands or "$1" appears to be a subcommand, inject "java -jar sctool.jar"
 if [ "$#" -eq 0 ] || [ "${1}" = "/usr/bin/true" ]; then
-  set -- java -jar /simpleapp/"${SC_JAR_NAME}-${SDK_VERSION}.jar" help
+  set -- java -jar /tools/"${SC_JAR_NAME}-${SDK_VERSION}.jar" help
 elif [[ "${1}" == +(help|generatekey|generateVrfKey|generateCertProofInfo|generateCswProofInfo|genesisinfo|generateAccountKey|generateCertificateSignerKey) ]]; then
-  set -- java -jar /simpleapp/"${SC_JAR_NAME}-${SDK_VERSION}.jar" "$@"
+  set -- java -jar /tools/"${SC_JAR_NAME}-${SDK_VERSION}.jar" "$@"
 fi
 
 if [ "${USERNAME}" = "user" ]; then
