@@ -46,7 +46,6 @@ ENV SDK_VERSION=${ARG_SDK_VERSION} \
     SC_CONF_PATH=${ARG_SC_CONF_PATH} \
     GOSU_VERSION=${ARG_GOSU_VERSION} \
     TINI_VERSION=${ARG_TINI_VERSION}
-# CONTAINER_PUBLISH to False is used to bypass entrypoint_setup_gpg.sh
 SHELL ["/bin/bash", "-c"]
 
 WORKDIR /simpleapp
@@ -58,8 +57,7 @@ COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY --from=simpleapp-builder /Sidechains-SDK/examples/simpleapp/src/main/resources/simpleapp_settings.conf /simpleapp/config/simpleapp_settings.conf
 
 RUN set -euo pipefail \
-    && chmod +x /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint_setup_gpg.sh \
-    &&  mkdir -p /build/ci/docker && ln -s /usr/local/bin/entrypoint_setup_gpg.sh /build/ci/docker/entrypoint_setup_gpg.sh \
+    && chmod +x /usr/local/bin/entrypoint.sh \
     && apt-get update \
     && export DEBIAN_FRONTEND=noninteractive \
     && apt-get update \
