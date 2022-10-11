@@ -104,7 +104,7 @@ RUN set -euo pipefail \
     fi \
     && apt-mark auto '.*' &> /dev/null && [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark &> /dev/null \
     && DEBIAN_FRONTEND=noninteractive apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-    && java -jar /"${SC_JAR_NAME}-${SDK_VERSION}.jar" help \
+    && java -jar /tools/"${SC_JAR_NAME}-${SDK_VERSION}.jar" help \
     && rm -rf /var/{lib/apt/lists/*,cache/apt/archives/*.deb} /tmp/*
 
 VOLUME ["/tools/output"]
