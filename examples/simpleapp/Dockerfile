@@ -12,7 +12,7 @@ LABEL mantainer="infrastructure@zensystem.io"
 
 # Scoped ARGS
 
-ARG SDK_COMMITTISH=0_5_0_changelog
+ARG SDK_COMMITTISH=dockerize_simpleapp
 
 SHELL ["/bin/bash", "-c"]
 
