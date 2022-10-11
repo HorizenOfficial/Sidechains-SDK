@@ -109,7 +109,7 @@ class ForgerStakeMsgProcessorTest
     if (!view.accountExists(origin)) {
       view.addAccount(origin, randomHash)
 
-      if (amount.compareTo(BigInteger.ZERO) >= 0) {
+      if (amount.signum() == 1) {
         view.addBalance(origin, amount)
       }
     }

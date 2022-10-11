@@ -11,6 +11,8 @@ object FeeUtils {
 
   val GAS_LIMIT = 30000000
   val INITIAL_BASE_FEE: BigInteger = BigInteger.valueOf(1000000000)
+  val BASE_FEE_CHANGE_DENOMINATOR: BigInteger = BigInteger.valueOf(8)
+  val BASE_FEE_ELASTICITY_MULTIPLIER: Long = 2
 
   def calculateBaseFee(history: AccountHistory, parentId: BlockId): BigInteger = {
     // If the current block is the first block, return the InitialBaseFee.
@@ -31,27 +33,27 @@ object FeeUtils {
 
   private def calculateBaseFeeForBlock(block: AccountBlock): BigInteger = {
     val blockHeader = block.header
-    val gasTarget = blockHeader.gasLimit / 2
+    val gasTarget = blockHeader.gasLimit / BASE_FEE_ELASTICITY_MULTIPLIER
 
     // If the parent gasUsed is the same as the target, the baseFee remains unchanged
     if (blockHeader.gasUsed == gasTarget) {
       return blockHeader.baseFee
     }
 
-    if (blockHeader.gasUsed > gasTarget) {
+    val gasDiff = blockHeader.gasUsed - gasTarget
+
+    val baseFeeDiff = BigInteger
+      .valueOf(Math.abs(gasDiff))
+      .multiply(blockHeader.baseFee)
+      .divide(BigInteger.valueOf(gasTarget))
+      .divide(BASE_FEE_CHANGE_DENOMINATOR)
+
+    if (gasDiff.signum == 1) {
       // If the parent block used more gas than its target, the baseFee should increase
-      var baseFeeInc: BigInteger = BigInteger.valueOf(blockHeader.gasUsed - gasTarget)
-      baseFeeInc = baseFeeInc.multiply(blockHeader.baseFee)
-      baseFeeInc = baseFeeInc.divide(BigInteger.valueOf(gasTarget))
-      baseFeeInc = baseFeeInc.divide(BigInteger.valueOf(8))
-      blockHeader.baseFee.add(baseFeeInc.max(BigInteger.ONE))
+      blockHeader.baseFee.add(baseFeeDiff.max(BigInteger.ONE))
     } else {
       // Otherwise if the parent block used less gas than its target, the baseFee should decrease
-      var baseFeeDec: BigInteger = BigInteger.valueOf(gasTarget - blockHeader.gasUsed)
-      baseFeeDec = baseFeeDec.multiply(blockHeader.baseFee)
-      baseFeeDec = baseFeeDec.divide(BigInteger.valueOf(gasTarget))
-      baseFeeDec = baseFeeDec.divide(BigInteger.valueOf(8))
-      blockHeader.baseFee.subtract(baseFeeDec).max(BigInteger.ONE)
+      blockHeader.baseFee.subtract(baseFeeDiff).max(BigInteger.ONE)
     }
   }
 }

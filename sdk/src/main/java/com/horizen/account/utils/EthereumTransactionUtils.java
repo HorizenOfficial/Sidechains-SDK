@@ -18,7 +18,7 @@ public final class EthereumTransactionUtils {
     // w3j way for converting bytes, it works also with generic byte contents (not only Long.BYTES byte arrays)
     public static long convertToLong(byte[] bytes) {
         BigInteger bi = Numeric.toBigInt(bytes);
-        return bi.longValue();
+        return bi.longValueExact();
     }
 
     private EthereumTransactionUtils() {

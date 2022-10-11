@@ -14,7 +14,7 @@ class GasPool(initialGas: BigInteger) extends ScorexLogging {
 
   @throws(classOf[OutOfGasException])
   def subGas(gas: BigInteger): Unit = {
-    if (gas.compareTo(BigInteger.ZERO) < 0)
+    if (gas.signum() == -1)
       throw new IllegalArgumentException("cannot consume a negative amount of gas")
     if (currentGas.compareTo(gas) < 0) {
       throw new OutOfGasException()
@@ -25,7 +25,7 @@ class GasPool(initialGas: BigInteger) extends ScorexLogging {
   }
 
   def addGas(gas: BigInteger): Unit = {
-    if (gas.compareTo(BigInteger.ZERO) < 0)
+    if (gas.signum() == -1)
       throw new IllegalArgumentException("cannot return a negative amount of gas")
     log.trace(s"adding $gas to currentGas=$currentGas")
     val sum = currentGas.add(gas)

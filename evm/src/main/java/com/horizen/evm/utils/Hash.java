@@ -1,5 +1,6 @@
 package com.horizen.evm.utils;
 
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
@@ -45,19 +46,24 @@ public class Hash {
         return Arrays.hashCode(bytes);
     }
 
+    @JsonValue
+    @Override
+    public String toString() {
+        return "0x" + Converter.toHexString(bytes);
+    }
+
     public static class Serializer extends JsonSerializer<Hash> {
         @Override
-        public void serialize(
-                Hash address, JsonGenerator jsonGenerator, SerializerProvider serializerProvider
-        ) throws IOException {
-            jsonGenerator.writeString("0x" + Converter.toHexString(address.bytes));
+        public void serialize(Hash hash, JsonGenerator jsonGenerator, SerializerProvider serializerProvider)
+            throws IOException {
+            jsonGenerator.writeString(hash.toString());
         }
     }
 
     public static class Deserializer extends JsonDeserializer<Hash> {
         @Override
         public Hash deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
-                throws IOException {
+            throws IOException {
             var text = jsonParser.getText();
             if (!text.startsWith("0x")) {
                 throw new IOException("hash must be prefixed with 0x");

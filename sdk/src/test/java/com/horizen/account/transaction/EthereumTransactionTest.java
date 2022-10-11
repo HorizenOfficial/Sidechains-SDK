@@ -1,6 +1,5 @@
 package com.horizen.account.transaction;
 
-import com.horizen.account.fixtures.EthereumTransactionFixture;
 import com.horizen.account.proof.SignatureSecp256k1;
 import com.horizen.account.proposition.AddressProposition;
 import com.horizen.account.utils.EthereumTransactionDecoder;
@@ -12,8 +11,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.web3j.crypto.*;
 import org.web3j.utils.Numeric;
-import scala.Option;
-import scala.Some;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -271,13 +268,13 @@ public class EthereumTransactionTest {
     @Test
     public void ethereumEIP1559RawTransactionTest() {
         // Test 0: direct constructor
-        var someTx = new EthereumTransaction(someValue.longValue(),
+        var someTx = new EthereumTransaction(someValue.longValueExact(),
                 "0x", someValue, someValue, someValue, someValue,
                 someValue, "", null
         );
         assertNull(someTx.getSignature());
 
-        rawTransaction = RawTransaction.createTransaction(someValue.longValue(), someValue,
+        rawTransaction = RawTransaction.createTransaction(someValue.longValueExact(), someValue,
                 someValue, "0x", someValue, "", someValue, someValue);
 
         // Test 1: everything is correct
@@ -318,11 +315,11 @@ public class EthereumTransactionTest {
 
         assertEquals(ethereumTransaction.getMaxFeePerGas(), someValue);
         assertEquals(ethereumTransaction.getMaxPriorityFeePerGas(), someValue);
-        assertEquals(ethereumTransaction.getChainId().longValue(), someValue.longValue());
+        assertEquals(ethereumTransaction.getChainId().longValue(), someValue.longValueExact());
 
         // Test 9: ethereum transaction instance returns to proposition address correctly
         RawTransaction toTx =
-                RawTransaction.createTransaction(someValue.longValue(), someValue,
+                RawTransaction.createTransaction(someValue.longValueExact(), someValue,
                         someValue, "0x00112233445566778899AABBCCDDEEFF01020304", someValue,
                         "", someValue, someValue);
         EthereumTransaction toEthereumTransaction = new EthereumTransaction(toTx);
@@ -419,7 +416,7 @@ public class EthereumTransactionTest {
     public void ethereumSignedEIP1559TransactionTest() {
         // Test 0: direct constructor
         try {
-            var someTx = new EthereumTransaction(someValue.longValue(),
+            var someTx = new EthereumTransaction(someValue.longValueExact(),
                     "0x", someValue, someValue, someValue, someValue,
                     someValue, "", signedRawTransaction.getSignatureData()
             );
