@@ -445,14 +445,18 @@ class PerformanceTest(SidechainTestFramework):
         index = 0
         errors = 0
         for node in self.sc_nodes:
-            try:
-                block = http_block_best(node)
-                block_ids[self.sc_nodes.index(node)] = block["id"]
-            except Exception as e:
-                logging.warning(f"Node API ERROR {index}")
-                errors += 1
-                block = http_block_best(node)
-                block_ids[self.sc_nodes.index(node)] = block["id"]
+            n_try = 0
+            error = True
+            while n_try < 20 and error:
+                try:
+                    block = http_block_best(node)
+                    block_ids[self.sc_nodes.index(node)] = block["id"]
+                    error = False
+                except Exception as e:
+                    logging.warning(f"Node API ERROR {index}")
+                    errors += 1
+                    n_try += 1
+
             index += 1
         logging.debug("Block ids: " + str(block_ids))
         return (block_ids, errors)
