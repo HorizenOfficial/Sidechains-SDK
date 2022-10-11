@@ -6,7 +6,7 @@ ARG FROM_IMAGE_BUILD=zencash/sc-ci-base:focal_jdk-11_latest
 
 ARG FROM_IMAGE_RUN=eclipse-temurin:11-jre-focal
 
-FROM $FROM_IMAGE_BUILD as simpleapp-builder
+FROM $FROM_IMAGE_BUILD as builder
 
 LABEL mantainer="infrastructure@zensystem.io"
 
