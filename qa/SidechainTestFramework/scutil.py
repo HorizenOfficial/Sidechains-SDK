@@ -1261,7 +1261,7 @@ def computeForgedTxGasUsed(sc_node, tx_hash, tracing_on=False):
     return int(receiptJson['gasUsed'], 16)
 
 def computeForgedTxFee(sc_node, tx_hash, tracing_on=False):
-    resp = sc_node.rpc_eth_getTransactionByHash(tx_hash)
+    resp = sc_node.rpc_eth_getTransactionByHash("0x" + tx_hash)
     if not 'result' in resp:
         raise Exception('Rpc eth_getTransactionByHash cmd failed: {}'.format(json.dumps(resp, indent=2)))
 
@@ -1272,7 +1272,7 @@ def computeForgedTxFee(sc_node, tx_hash, tracing_on=False):
         logging.info("tx:")
         logging.info(transactionJson)
 
-    resp = sc_node.rpc_eth_getTransactionReceipt(tx_hash)
+    resp = sc_node.rpc_eth_getTransactionReceipt("0x" + tx_hash)
     if not 'result' in resp:
         raise Exception('Rpc eth_getTransactionReceipt cmd failed:{}'.format(json.dumps(resp, indent=2)))
 
