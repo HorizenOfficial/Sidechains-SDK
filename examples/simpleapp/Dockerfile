@@ -53,6 +53,7 @@ WORKDIR /simpleapp
 COPY --from=simpleapp-builder /Sidechains-SDK/examples/simpleapp/target/*.jar /Sidechains-SDK/tools/sctool/target/sidechains-sdk-scbootstrappingtools-*.jar /simpleapp/
 COPY --from=simpleapp-builder /Sidechains-SDK/examples/simpleapp/target/lib /simpleapp/lib
 COPY --from=simpleapp-builder /Sidechains-SDK/tools/sctool/target/lib /simpleapp/tools/lib
+COPY --from=simpleapp-builder /Sidechains-SDK/tools/sctool/target/*.jar /simpleapp/tools/
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY --from=simpleapp-builder /Sidechains-SDK/examples/simpleapp/src/main/resources/simpleapp_settings.conf /simpleapp/config/simpleapp_settings.conf
 

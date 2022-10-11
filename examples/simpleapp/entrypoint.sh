@@ -30,7 +30,7 @@ else
 fi
 
 # set file ownership
-find /tools/output /tmp -writable -print0 | xargs -0 -I{} -P64 -n1 chown -f "${CURRENT_UID}":"${CURRENT_GID}" "{}" &> /dev/null
+find /simpleapp/tools/output /tmp -writable -print0 | xargs -0 -I{} -P64 -n1 chown -f "${CURRENT_UID}":"${CURRENT_GID}" "{}" &> /dev/null
 
 # if we have no commands or "$1" appears to be a subcommand, inject "java -jar sctool.jar"
 if [ "$#" -eq 0 ] || [ "${1}" = "/usr/bin/true" ]; then
