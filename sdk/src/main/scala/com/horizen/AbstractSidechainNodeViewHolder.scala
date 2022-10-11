@@ -46,7 +46,7 @@ abstract class AbstractSidechainNodeViewHolder[
 
 
   case class SidechainNodeUpdateInformation(history: HIS,
-                                            state: AbstractState[TX, H, PMOD, MS],
+                                            state: MS,
                                             wallet: VL,
                                             failedMod: Option[PMOD],
                                             alternativeProgressInfo: Option[ProgressInfo[PMOD]],
@@ -158,11 +158,11 @@ abstract class AbstractSidechainNodeViewHolder[
 
             newStateTry match {
               case Success(newState) =>
-                val newMemPool = updateMemPool(progressInfo.toRemove, blocksApplied, memoryPool(), newState.asInstanceOf[MS])
+                val newMemPool = updateMemPool(progressInfo.toRemove, blocksApplied, memoryPool(), newState)
                 // Note: in parent NodeViewHolder.pmodModify wallet was updated here.
 
                 log.info(s"Persistent modifier ${pmod.encodedId} applied successfully, now updating node view")
-                updateNodeView(Some(newHistory), Some(newState.asInstanceOf[MS]), Some(newWallet), Some(newMemPool))
+                updateNodeView(Some(newHistory), Some(newState), Some(newWallet), Some(newMemPool))
 
                 log.debug(s"Current mempool size: ${newMemPool.size} transactions")
               // TODO FOR MERGE: usedSizeKBytes()/usedPercentage() should be moved into sparkz.core.transaction.MemoryPool
@@ -188,10 +188,10 @@ abstract class AbstractSidechainNodeViewHolder[
   // This method is actually a copy-paste of parent NodeViewHolder.updateState method.
   // The difference is that State is updated together with Wallet.
   def updateStateAndWallet(history: HIS,
-                                   state: AbstractState[TX, H, PMOD, MS],
+                                   state: MS,
                                    wallet: VL,
                                    progressInfo: ProgressInfo[PMOD],
-                                   suffixApplied: IndexedSeq[PMOD]): (HIS, Try[AbstractState[TX, H, PMOD, MS]], VL, Seq[PMOD]) = {
+                                   suffixApplied: IndexedSeq[PMOD]): (HIS, Try[MS], VL, Seq[PMOD]) = {
 
     // Do rollback if chain switch needed
     val (walletToApplyTry: Try[VL], stateToApplyTry: Try[MS], suffixTrimmed: IndexedSeq[PMOD]) = if (progressInfo.chainSwitchingNeeded) {
@@ -244,7 +244,7 @@ abstract class AbstractSidechainNodeViewHolder[
 
   // Apply state and wallet with blocks one by one, if consensus epoch is going to be changed -> notify wallet and history.
   protected def applyStateAndWallet(history: HIS,
-                                    stateToApply: AbstractState[TX, H, PMOD, MS],
+                                    stateToApply: MS,
                                     walletToApply: VL,
                                     suffixTrimmed: IndexedSeq[PMOD],
                                     progressInfo: ProgressInfo[PMOD]): Try[SidechainNodeUpdateInformation] =  Try {
@@ -331,7 +331,7 @@ abstract class AbstractSidechainNodeViewHolder[
 
 
   // Check if the next modifier will change Consensus Epoch, so notify History and Wallet with current info.
-  protected def applyConsensusEpochInfo(history: HIS, state: AbstractState[TX, H, PMOD, MS], wallet: VL, modToApply: PMOD): (HIS, VL)
+  protected def applyConsensusEpochInfo(history: HIS, state: MS, wallet: VL, modToApply: PMOD): (HIS, VL)
 
   def getFeePaymentsInfo(state: MS, epochNumber: Int) : FPI
   def getScanPersistentWallet(modToApply: PMOD, stateOp: Option[MS], epochNumber: Int, wallet: VL) : VL

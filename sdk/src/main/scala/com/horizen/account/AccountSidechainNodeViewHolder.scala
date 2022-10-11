@@ -90,7 +90,7 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   // Check if the next modifier will change Consensus Epoch, so notify History with current info.
   // Note: there is no need to store any info in the Wallet, since for Account model Forger is able
   // to get all necessary information from the State.
-  override protected def applyConsensusEpochInfo(history: HIS, state: AbstractState[SidechainTypes#SCAT, AccountBlockHeader, AccountBlock, AccountState], wallet: VL, modToApply: AccountBlock): (HIS, VL) = {
+  override protected def applyConsensusEpochInfo(history: HIS, state: MS, wallet: VL, modToApply: AccountBlock): (HIS, VL) = {
      val historyAfterConsensusInfoApply = if (state.isSwitchingConsensusEpoch(modToApply.timestamp)) {
       val (lastBlockInEpoch: ModifierId, consensusEpochInfo: ConsensusEpochInfo) = state.getCurrentConsensusEpochInfo
       val nonceConsensusEpochInfo = history.calculateNonceForEpoch(blockIdToEpochId(lastBlockInEpoch))

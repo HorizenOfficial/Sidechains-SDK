@@ -304,7 +304,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
 
 
   // Check if the next modifier will change Consensus Epoch, so notify History and Wallet with current info.
-  override protected def applyConsensusEpochInfo(history: HIS, state: AbstractState[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainState], wallet: VL, modToApply: SidechainBlock): (HIS, VL) = {
+  override protected def applyConsensusEpochInfo(history: HIS, state: MS, wallet: VL, modToApply: SidechainBlock): (HIS, VL) = {
     if (state.isSwitchingConsensusEpoch(modToApply.timestamp)) {
       val (lastBlockInEpoch: ModifierId, consensusEpochInfo: ConsensusEpochInfo) = state.getCurrentConsensusEpochInfo
       val nonceConsensusEpochInfo = history.calculateNonceForEpoch(blockIdToEpochId(lastBlockInEpoch))
