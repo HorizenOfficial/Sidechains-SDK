@@ -1,20 +1,27 @@
 #!/usr/bin/env python3
+import json
 import logging
+import math
+
+from eth_utils import add_0x_prefix
 
 from SidechainTestFramework.account.httpCalls.createEIP1559Transaction import createEIP1559Transaction
+from SidechainTestFramework.sc_boostrap_info import (
+    MCConnectionInfo, SCCreationInfo, SCNetworkConfiguration,
+    SCNodeConfiguration,
+)
+from SidechainTestFramework.sc_forging_util import check_mcreference_presence
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration
+from SidechainTestFramework.scutil import (
+    AccountModelBlockVersion, EVM_APP_BINARY, bootstrap_sidechain_nodes,
+    computeForgedTxFee, connect_sc_nodes, convertZenToWei, convertZenToZennies, convertZenniesToWei,
+    generate_account_proposition, generate_next_block, get_account_balance, start_sc_nodes,
+)
 from httpCalls.block.getFeePayments import http_block_getFeePayments
-from test_framework.util import initialize_chain_clean, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, \
-    connect_sc_nodes, generate_next_block, AccountModelBlockVersion, \
-    EVM_APP_BINARY, convertZenToZennies, convertZenniesToWei, get_account_balance, generate_account_proposition, \
-    convertZenToWei, computeForgedTxFee
-from SidechainTestFramework.sc_forging_util import *
-
-import math
+from test_framework.util import (
+    assert_equal, fail, forward_transfer_to_sidechain, initialize_chain_clean, start_nodes,
+    websocket_port_by_mc_node_index,
+)
 
 """
 Info about forger account block fee payments
@@ -209,7 +216,7 @@ class ScEvmForgingFeePayments(SidechainTestFramework):
       transferred_amount_in_zen_2 = 0.001
       transferred_amount_in_wei_2 = convertZenToWei(transferred_amount_in_zen_2)
 
-      blockJson = sc_node_2.rpc_eth_getBlockByHash(sc_middle_we_block_id, False)['result']
+      blockJson = sc_node_2.rpc_eth_getBlockByHash(add_0x_prefix(sc_middle_we_block_id), False)['result']
       if (blockJson is None):
           raise Exception('Unexpected error: block not found {}'.format(sc_middle_we_block_id))
       baseFeePerGas = int(blockJson['baseFeePerGas'], 16)

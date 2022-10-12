@@ -1,6 +1,7 @@
 package com.horizen.evm;
 
 import com.horizen.evm.interop.EvmLog;
+import com.horizen.evm.interop.ProofAccountResult;
 import com.horizen.evm.utils.Converter;
 
 import java.math.BigInteger;
@@ -258,6 +259,16 @@ public class StateDB extends ResourceHandle {
             default:
                 throw new RuntimeException("invalid storage strategy");
         }
+    }
+
+    /**
+     * Get the Merkle-proof for a given account and optionally some storage keys.
+     * @param address account address
+     * @param keys storage keys
+     * @return proofs
+     */
+    public ProofAccountResult getProof(byte[] address, byte[][] keys) {
+        return LibEvm.stateGetProof(handle, address, keys);
     }
 
     /**

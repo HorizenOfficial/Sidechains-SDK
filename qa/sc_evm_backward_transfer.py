@@ -1,23 +1,31 @@
 #!/usr/bin/env python3
+import json
 import logging
 import time
+
 import base58
 from eth_abi import decode
-from eth_utils import to_checksum_address, remove_0x_prefix, event_signature_to_log_topic, encode_hex
+from eth_utils import add_0x_prefix, encode_hex, event_signature_to_log_topic, remove_0x_prefix
 
 from SidechainTestFramework.account.httpCalls.transaction.allWithdrawRequests import all_withdrawal_requests
 from SidechainTestFramework.account.httpCalls.transaction.withdrawCoins import withdrawcoins
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
-from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration
-from SidechainTestFramework.sc_forging_util import *
+from SidechainTestFramework.sc_boostrap_info import (
+    MCConnectionInfo, SCCreationInfo, SCNetworkConfiguration,
+    SCNodeConfiguration,
+)
+from SidechainTestFramework.sc_forging_util import check_mcreference_presence, check_mcreferencedata_presence
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, generate_next_blocks, generate_next_block, \
-    AccountModelBlockVersion, EVM_APP_BINARY, is_mainchain_block_included_in_sc_block, assert_true, \
-    check_mainchain_block_reference_info, convertZenToZennies, convertZenniesToWei, computeForgedTxFee
-from test_framework.util import assert_equal, assert_false, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail, hex_str_to_bytes
+from SidechainTestFramework.scutil import (
+    AccountModelBlockVersion, EVM_APP_BINARY, assert_true,
+    bootstrap_sidechain_nodes, check_mainchain_block_reference_info, computeForgedTxFee, convertZenToZennies,
+    convertZenniesToWei, generate_next_block, generate_next_blocks, is_mainchain_block_included_in_sc_block,
+    start_sc_nodes,
+)
+from test_framework.util import (
+    assert_equal, assert_false, fail, forward_transfer_to_sidechain, hex_str_to_bytes,
+    start_nodes, websocket_port_by_mc_node_index,
+)
 
 """
 Checks Certificate automatic creation and submission to MC for an EVM Sidechain:
@@ -220,7 +228,7 @@ class SCEvmBackwardTransfer(SidechainTestFramework):
         if "error" in res:
             fail(f"Creating Withdrawal request failed: " + json.dumps(res))
 
-        tx_id = res["result"]["transactionId"]
+        tx_id = add_0x_prefix(res["result"]["transactionId"])
 
         # Check the balance hasn't changed yet
         new_balance = http_wallet_balance(sc_node, evm_address)
@@ -270,7 +278,7 @@ class SCEvmBackwardTransfer(SidechainTestFramework):
         # Generate SC block
         generate_next_blocks(sc_node, "first node", 1)
 
-        tx_id = res["result"]["transactionId"]
+        tx_id = add_0x_prefix(res["result"]["transactionId"])
         #Check the receipt
         receipt = sc_node.rpc_eth_getTransactionReceipt(tx_id)
 

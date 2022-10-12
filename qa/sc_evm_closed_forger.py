@@ -1,18 +1,24 @@
 #!/usr/bin/env python3
 import json
 import logging
-
 from decimal import Decimal
 
-from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH, SCForgerConfiguration
+from eth_utils import add_0x_prefix
+
+from SidechainTestFramework.sc_boostrap_info import (
+    LARGE_WITHDRAWAL_EPOCH_LENGTH, MCConnectionInfo, SCCreationInfo,
+    SCForgerConfiguration, SCNetworkConfiguration, SCNodeConfiguration,
+)
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import assert_equal, assert_true, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, assert_false
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, AccountModelBlockVersion, EVM_APP_BINARY, generate_next_block, \
-    convertZenToZennies, connect_sc_nodes, convertZenToWei, generate_secrets, \
-    generate_vrf_secrets, get_account_balance
+from SidechainTestFramework.scutil import (
+    AccountModelBlockVersion, EVM_APP_BINARY, bootstrap_sidechain_nodes,
+    connect_sc_nodes, convertZenToWei, convertZenToZennies, generate_next_block, generate_secrets, generate_vrf_secrets,
+    get_account_balance, start_sc_nodes,
+)
+from test_framework.util import (
+    assert_equal, assert_false, assert_true, forward_transfer_to_sidechain, start_nodes,
+    websocket_port_by_mc_node_index,
+)
 
 """
 Check the EVM bootstrap feature.
@@ -27,7 +33,6 @@ Test:
 
 
 """
-
 
 
 class SCEvmClosedForgerList(SidechainTestFramework):
@@ -96,7 +101,7 @@ class SCEvmClosedForgerList(SidechainTestFramework):
         tx_hash = makeForgerStakeJsonRes['result']["transactionId"]
         logging.info("Getting receipt for txhash={}".format(tx_hash))
 
-        receipt = sc_node.rpc_eth_getTransactionReceipt(tx_hash)
+        receipt = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash))
         status = int(receipt['result']['status'], 16)
         # status == 1 is succesful
         return (status == 1)
