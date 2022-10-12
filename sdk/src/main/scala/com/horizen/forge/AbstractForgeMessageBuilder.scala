@@ -12,12 +12,14 @@ import com.horizen.storage.AbstractHistoryStorage
 import com.horizen.transaction.{Transaction, TransactionSerializer}
 import com.horizen.utils.{DynamicTypedSerializer, ForgingStakeMerklePathInfo, ListSerializer, MerklePath, TimeToEpochUtils}
 import com.horizen.vrf.VrfOutput
-import com.horizen.{AbstractHistory, AbstractState, AbstractWallet}
+import com.horizen.{AbstractHistory, AbstractWallet}
 import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.block.Block
 import sparkz.core.transaction.MemoryPool
 import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.core.transaction.state.MinimalState
+
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.util.{Failure, Success, Try}
@@ -36,7 +38,7 @@ abstract class AbstractForgeMessageBuilder[
   type HSTOR <: AbstractHistoryStorage[PM, FPI, HSTOR]
   type HIS <: AbstractHistory[TX, H, PM, FPI, HSTOR, HIS]
   type VL <: AbstractWallet[TX, PM, VL]
-  type MS <: AbstractState[TX, H, PM, MS]
+  type MS <: MinimalState[PM, MS]
   type MP <: MemoryPool[TX, MP]
 
   type View = CurrentView[HIS, MS, VL, MP]

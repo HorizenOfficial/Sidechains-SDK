@@ -2,6 +2,7 @@
 package com.horizen.account.wallet
 
 import com.horizen.account.block.AccountBlock
+import com.horizen.consensus.ConsensusEpochInfo
 import com.horizen.node.NodeWalletBase
 import com.horizen.storage.SidechainSecretStorage
 import com.horizen.{AbstractWallet, SidechainTypes}
@@ -28,6 +29,10 @@ class AccountWallet private[horizen](seed: Array[Byte],
   }
 
   override def scanPersistent(modifier: AccountBlock): AccountWallet = {
+    this
+  }
+
+  override def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo): AccountWallet = {
     this
   }
 }

@@ -66,11 +66,19 @@ case class AccountBlockApiRoute(
 
       val future = sidechainBlockActorRef ? TryForgeNextBlockForEpochAndSlot(intToConsensusEpochNumber(body.epochNumber), intToConsensusSlotNumber(body.slotNumber), forcedTx)
       val submitResultFuture = Await.result(future, timeout.duration).asInstanceOf[Future[Try[ModifierId]]]
-      Await.result(submitResultFuture, timeout.duration) match {
-        case Success(id) =>
-          ApiResponseUtil.toResponse(RespGenerate(id.asInstanceOf[String]))
+      Try {
+        Await.result(submitResultFuture, timeout.duration) match {
+          case Success(id) =>
+            ApiResponseUtil.toResponse(RespGenerate(id.asInstanceOf[String]))
+          case Failure(e) =>
+            ApiResponseUtil.toResponse(ErrorBlockNotCreated(s"Block was not created: ${e.getMessage}", JOptional.empty()))
+        }
+      } match {
         case Failure(e) =>
-          ApiResponseUtil.toResponse(ErrorBlockNotCreated(s"Block was not created: ${e.getMessage}", JOptional.empty()))
+          // trap the error coming from block actor if any, just to avoid having a generic internal error at caller side
+          ApiResponseUtil.toResponse(ErrorBlockNotCreated(s"Block processing failure: ${e.getMessage}", JOptional.empty()))
+        case Success(response) =>
+          response
       }
     }
   }

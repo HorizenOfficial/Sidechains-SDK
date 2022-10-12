@@ -100,8 +100,7 @@ abstract class AbstractWallet[
 
   override def walletSeed(): Array[Byte] = seed
 
-  // default does nothing, used by account model
-  def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo): W = this
+  def applyConsensusEpochInfo(epochInfo: ConsensusEpochInfo): W
 
 }
 

@@ -220,6 +220,7 @@ abstract class AbstractSidechainNodeViewHolder[
               case None => (nodeUpdateInfo.history, Success(nodeUpdateInfo.state), nodeUpdateInfo.wallet, nodeUpdateInfo.suffix)
             }
           case Failure(ex) =>
+            log.warn("applyStateAndWallet returned with a failure", ex)
             (history, Failure(ex), wallet, suffixTrimmed)
         }
       case (Failure(e), _) =>
@@ -247,30 +248,47 @@ abstract class AbstractSidechainNodeViewHolder[
                                     stateToApply: MS,
                                     walletToApply: VL,
                                     suffixTrimmed: IndexedSeq[PMOD],
-                                    progressInfo: ProgressInfo[PMOD]): Try[SidechainNodeUpdateInformation] =  Try {
+                                    progressInfo: ProgressInfo[PMOD]): Try[SidechainNodeUpdateInformation] = {
 
     val updateInfoSample = SidechainNodeUpdateInformation(history, stateToApply, walletToApply, None, None, suffixTrimmed)
 
-    val wrappedResultObj : Try[SidechainNodeUpdateInformation] = progressInfo.toApply.foldLeft[Try[SidechainNodeUpdateInformation]](Success(updateInfoSample)) {
+    progressInfo.toApply.foldLeft[Try[SidechainNodeUpdateInformation]](Success(updateInfoSample)) {
       case (f@Failure(ex), _) =>
         log.error("Reporting modifier failed", ex)
         f
       case (success@Success(updateInfo), modToApply) =>
         if (updateInfo.failedMod.isEmpty) {
+
           // Check if the next modifier will change Consensus Epoch, so notify History and Wallet with current info.
-          val (newHistory, newWallet) = if (updateInfo.state.isSwitchingConsensusEpoch(modToApply.timestamp)) {
-            log.debug("Switching consensus epoch")
-            val (lastBlockInEpoch, consensusEpochInfo) = updateInfo.state.getCurrentConsensusEpochInfo
-            val nonceConsensusEpochInfo = updateInfo.history.calculateNonceForEpoch(blockIdToEpochId(lastBlockInEpoch))
-            val stakeConsensusEpochInfo = StakeConsensusEpochInfo(consensusEpochInfo.forgingStakeInfoTree.rootHash(), consensusEpochInfo.forgersStake)
+          val (newHistory, newWallet): (HIS, VL) = Try {
+            if (updateInfo.state.isSwitchingConsensusEpoch(modToApply.timestamp)) {
+              log.debug("Switching consensus epoch")
 
-            val historyAfterConsensusInfoApply =
-              updateInfo.history.applyFullConsensusInfo(lastBlockInEpoch, FullConsensusEpochInfo(stakeConsensusEpochInfo, nonceConsensusEpochInfo))
+              val (lastBlockInEpoch, consensusEpochInfo) = updateInfo.state.getCurrentConsensusEpochInfo
+              val nonceConsensusEpochInfo = updateInfo.history.calculateNonceForEpoch(blockIdToEpochId(lastBlockInEpoch))
+              val stakeConsensusEpochInfo = StakeConsensusEpochInfo(consensusEpochInfo.forgingStakeInfoTree.rootHash(), consensusEpochInfo.forgersStake)
 
-            val walletAfterStakeConsensusApply = updateInfo.wallet.applyConsensusEpochInfo(consensusEpochInfo)
-            (historyAfterConsensusInfoApply, walletAfterStakeConsensusApply)
-          } else
-            (updateInfo.history, updateInfo.wallet)
+              val historyAfterConsensusInfoApply =
+                updateInfo.history.applyFullConsensusInfo(lastBlockInEpoch, FullConsensusEpochInfo(stakeConsensusEpochInfo, nonceConsensusEpochInfo))
+
+              val walletAfterStakeConsensusApply = updateInfo.wallet.applyConsensusEpochInfo(consensusEpochInfo)
+              (historyAfterConsensusInfoApply, walletAfterStakeConsensusApply)
+            } else
+              (updateInfo.history, updateInfo.wallet)
+          } match {
+            // any exception thrown above will make this method return with a success try-obj which contains the information of the failure, similarly
+            // to what we do below when applying modifier to the state
+            case Failure(ex) =>
+              log.error(s"Could not apply modifier ${modToApply.id}, exception:", ex)
+              val failureInformation : Try[SidechainNodeUpdateInformation] = updateInfo.history.reportModifierIsInvalid(modToApply, progressInfo).map {
+                case (historyAfterApply, newProgressInfo) =>
+                  context.system.eventStream.publish(SemanticallyFailedModification(modToApply, ex))
+                  SidechainNodeUpdateInformation(historyAfterApply, updateInfo.state, updateInfo.wallet, Some(modToApply), Some(newProgressInfo), updateInfo.suffix)
+              }
+              return failureInformation
+            case Success(success) =>
+              success
+          }
 
           // if a crash happens here the inconsistency between state and history wont appear: we should check the wallet storages and if a inconsistency is seen, rollback it
           // we have:
@@ -284,7 +302,7 @@ abstract class AbstractSidechainNodeViewHolder[
           //   we can find a common root between state and ForgerBoxStorage versions and roll back up to that point
 
           updateInfo.state.applyModifier(modToApply) match {
-            case Success(stateAfterApply) => {
+            case Success(stateAfterApply) =>
               log.debug("success: modifier applied to state, blockInfo: " + newHistory.blockInfoById(modToApply.id))
 
               context.system.eventStream.publish(SemanticallySuccessfulModifier(modToApply))
@@ -313,19 +331,20 @@ abstract class AbstractSidechainNodeViewHolder[
                 SidechainNodeUpdateInformation(newHistory, stateAfterApply, walletResult, None, None, updateInfo.suffix :+ modToApply)
               }
 
-            }
-            case Failure(e) => {
+            case Failure(e) =>
               log.error(s"Could not apply modifier ${modToApply.id}, exception:" + e)
               newHistory.reportModifierIsInvalid(modToApply, progressInfo).map {
                 case (historyAfterApply, newProgressInfo) =>
                   context.system.eventStream.publish(SemanticallyFailedModification(modToApply, e))
                   SidechainNodeUpdateInformation(historyAfterApply, updateInfo.state, newWallet, Some(modToApply), Some(newProgressInfo), updateInfo.suffix)
               }
-            }
           }
         } else success
+    } recoverWith {
+      case exception =>
+        log.error(s"Unexpected error while processing info: ${progressInfo.toString()}", exception)
+        Failure(exception)
     }
-    wrappedResultObj.get
   }
 
 
@@ -339,7 +358,7 @@ abstract class AbstractSidechainNodeViewHolder[
   // Check is the modifier ends the withdrawal epoch, so notify History and Wallet about fees to be payed.
   // Scan modifier by the Wallet considering the forger fee payments.
   protected def scanBlockWithFeePayments(history: HIS, state: MS, wallet: VL, modToApply: PMOD): (HIS, VL) = {
-    val stateWithdrawalEpochNumber: Int = state.getWithdrawalEpochNumber
+    val stateWithdrawalEpochNumber: Int = state.getWithdrawalEpochInfo.epoch
     if (state.isWithdrawalEpochLastIndex) {
       val historyAfterUpdateFee = history.updateFeePaymentsInfo(modToApply.id, getFeePaymentsInfo(state, stateWithdrawalEpochNumber))
       val walletAfterApply: VL = getScanPersistentWallet(modToApply, Some(state), stateWithdrawalEpochNumber, wallet)

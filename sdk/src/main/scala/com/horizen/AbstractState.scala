@@ -22,9 +22,6 @@ abstract class AbstractState[
   def isWithdrawalEpochLastIndex: Boolean
   def getWithdrawalEpochInfo: WithdrawalEpochInfo
   def getCurrentConsensusEpochInfo: (ModifierId, ConsensusEpochInfo)
-
-  // default implementations
-  def getWithdrawalEpochNumber: Int = getWithdrawalEpochInfo.epoch
 }
 
 

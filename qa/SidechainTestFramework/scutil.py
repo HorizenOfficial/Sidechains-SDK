@@ -1069,6 +1069,11 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbo
     while "error" in forge_result and forge_result["error"]["code"] == "0105":
         if ("no forging stake" in forge_result["error"]["description"]):
             raise AssertionError("No forging stake for the epoch")
+        if ("ForgerStakes list can't be empty" in forge_result["error"]["description"]):
+            raise AssertionError("Empty forger stakes list")
+        if ("top quality certificate" in forge_result["error"]["description"]):
+            raise AssertionError("Inconsistent top quality ceritificate")
+
         logging.info("Skip block generation for epoch {epochNumber} slot {slotNumber}".format(epochNumber=next_epoch,
                                                                                        slotNumber=next_slot))
         next_epoch, next_slot = get_next_epoch_slot(next_epoch, next_slot, slots_in_epoch)
