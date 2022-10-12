@@ -24,9 +24,10 @@ trait EthereumTransactionFixture {
                                pairOpt: Option[ECKeyPair] = None,
                                gasFee: BigInteger = BigInteger.valueOf(10000),
                                priorityGasFee: BigInteger = BigInteger.valueOf(10000),
-                               gasLimit: BigInteger = GasUtil.TxGas): EthereumTransaction = {
+                               gasLimit: BigInteger = GasUtil.TxGas,
+                               to: String = ""): EthereumTransaction = {
 
-    val rawTransaction = RawTransaction.createTransaction(1997, nonce, gasLimit, "", value
+    val rawTransaction = RawTransaction.createTransaction(1997, nonce, gasLimit, to, value
     , "", priorityGasFee, gasFee)
     createSignedTransaction(rawTransaction, pairOpt)
   }

@@ -69,16 +69,6 @@ class AccountMemoryPool(
 
   override def put(tx: SidechainTypes#SCAT): Try[AccountMemoryPool] = {
     Try {
-//      if (tx.isInstanceOf[EthereumTransaction]) {
-////        val ethTx = tx.asInstanceOf[EthereumTransaction]
-////        if (!unconfirmed.containsAccountInfo(ethTx.getFrom)) {
-////          val stateNonce = stateReader.getNonce(ethTx.getFrom.address())
-////          unconfirmed.initializeAccount(stateNonce, ethTx.getFrom)
-////        }
-//        new AccountMemoryPool(unconfirmed.add(tx).get, stateReader)
-//      }
-//      else
-//        this
       new AccountMemoryPool(unconfirmed.add(tx).get, stateReader)
     }
   }
