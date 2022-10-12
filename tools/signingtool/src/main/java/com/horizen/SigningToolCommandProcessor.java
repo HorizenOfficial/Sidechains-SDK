@@ -3,25 +3,32 @@ package com.horizen;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.horizen.cryptolibprovider.SchnorrFunctionsImplZendoo;
+import com.horizen.companion.SidechainSecretsCompanion;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.poseidonnative.PoseidonHash;
-import com.horizen.schnorrnative.SchnorrPublicKey;
-import com.horizen.schnorrnative.SchnorrSecretKey;
+import com.horizen.proof.SchnorrProof;
+import com.horizen.proof.SchnorrSignatureSerializer;
+import com.horizen.proposition.SchnorrProposition;
+import com.horizen.proposition.SchnorrPropositionSerializer;
+import com.horizen.secret.SchnorrSecret;
+import com.horizen.secret.Secret;
+import com.horizen.secret.SecretsIdsEnum;
 import com.horizen.tools.utils.Command;
 import com.horizen.tools.utils.CommandProcessor;
 import com.horizen.tools.utils.MessagePrinter;
-import scorex.util.encode.Base64;
+import com.horizen.utils.BytesUtils;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Objects;
 
 public class SigningToolCommandProcessor extends CommandProcessor {
 
-    private final SchnorrFunctionsImplZendoo schnorrFunctions = new SchnorrFunctionsImplZendoo();
+    public static final SchnorrSignatureSerializer SIGNATURE_SERIALIZER = SchnorrSignatureSerializer.getSerializer();
+    public static final SidechainSecretsCompanion SECRETS_COMPANION = new SidechainSecretsCompanion(new HashMap<>());
 
     public SigningToolCommandProcessor(MessagePrinter printer) {
         super(printer);
@@ -130,7 +137,7 @@ public class SigningToolCommandProcessor extends CommandProcessor {
                 "\tcreateSignature { \"message\": message, \"privateKey\": private_key, \"type\": \"string\" [\"schnorr\"] }");
     }
 
-    private void createSignature(JsonNode json) throws Exception {
+    private void createSignature(JsonNode json) {
         if (!json.has("message") || !json.get("message").isTextual()) {
             printCreateSignatureUsageMsg("message is not specified or has invalid format.");
             return;
@@ -141,15 +148,9 @@ public class SigningToolCommandProcessor extends CommandProcessor {
             printCreateSignatureUsageMsg("type is not specified or has invalid format.");
             return;
         }
-        byte[] privateKey = Base64.decode(json.get("privateKey").asText()).get();
-        byte[] publicKey = privateToPublicKey(privateKey);
         byte[] message = json.get("message").asText().getBytes();
-
-        byte[] signatureBytes = schnorrFunctions.sign(privateKey, publicKey, message);
-        ObjectNode resJson = new ObjectMapper().createObjectNode();
-        resJson.put("signature", signatureBytes);
-
-        printer.print(resJson.toString());
+        String privateKey = json.get("privateKey").asText();
+        signMessage(privateKey, message);
     }
 
     private void printVerifySignatureUsageMsg(String error) {
@@ -173,17 +174,10 @@ public class SigningToolCommandProcessor extends CommandProcessor {
             return;
         }
         byte[] message = json.get("message").asText().getBytes();
-        byte[] signature = Base64.decode(json.get("signature").asText()).get();
-        byte[] publicKey = Base64.decode(json.get("publicKey").asText()).get();
-
-        boolean res = schnorrFunctions.verify(message, publicKey, signature);
-
-        ObjectNode resJson = new ObjectMapper().createObjectNode();
-        resJson.put("valid", res);
-
-        printer.print(resJson.toString());
+        String signature = json.get("signature").asText();
+        String publicKey = json.get("publicKey").asText();
+        verifyMessage(signature, publicKey, message);
     }
-
 
     private void printSignMessageUsageMsg(String error) {
         printer.print("Error: " + error);
@@ -191,7 +185,7 @@ public class SigningToolCommandProcessor extends CommandProcessor {
                 "\tsignMessage { \"message\": message, \"privateKey\": private_key, \"prefix\": prefix, \"type\": \"string\" [\"schnorr\"] }");
     }
 
-    private void signMessage(JsonNode json) throws Exception {
+    private void signMessage(JsonNode json) {
         if (!json.has("message") || !json.get("message").isTextual()) {
             printSignMessageUsageMsg("message is not specified or has invalid format.");
             return;
@@ -205,17 +199,12 @@ public class SigningToolCommandProcessor extends CommandProcessor {
             printSignMessageUsageMsg("type is not specified or has invalid format.");
             return;
         }
-        byte[] privateKey = Base64.decode(json.get("privateKey").asText()).get();
-        byte[] publicKey = privateToPublicKey(privateKey);
+        String privateKey = json.get("privateKey").asText();
         byte[] message = json.get("message").asText().getBytes();
         byte[] prefix = json.get("prefix").asText().getBytes();
         byte[] prefixMessage = hash(concatenate(prefix, message));
 
-        byte[] signatureBytes = schnorrFunctions.sign(privateKey, publicKey, prefixMessage);
-        ObjectNode resJson = new ObjectMapper().createObjectNode();
-        resJson.put("signature", signatureBytes);
-
-        printer.print(resJson.toString());
+        signMessage(privateKey, prefixMessage);
     }
 
     private void printValidateMessageUsageMsg(String error) {
@@ -242,17 +231,12 @@ public class SigningToolCommandProcessor extends CommandProcessor {
             return;
         }
         byte[] message = json.get("message").asText().getBytes();
-        byte[] signature = Base64.decode(json.get("signature").asText()).get();
-        byte[] publicKey = Base64.decode(json.get("publicKey").asText()).get();
+        String signature = json.get("signature").asText();
+        String publicKey = json.get("publicKey").asText();
         byte[] prefix = json.get("prefix").asText().getBytes();
         byte[] prefixMessage = hash(concatenate(prefix, message));
 
-        boolean res = schnorrFunctions.verify(prefixMessage, publicKey, signature);
-
-        ObjectNode resJson = new ObjectMapper().createObjectNode();
-        resJson.put("valid", res);
-
-        printer.print(resJson.toString());
+        verifyMessage(signature, publicKey, prefixMessage);
     }
 
     private void printPrivKeyToPubkeyUsageMsg(String error) {
@@ -261,7 +245,7 @@ public class SigningToolCommandProcessor extends CommandProcessor {
                 "\tprivKeyToPubkey { \"privateKey\": private_key, \"type\": \"string\" [\"schnorr\"] }");
     }
 
-    private void privKeyToPubkey(JsonNode json) throws Exception {
+    private void privKeyToPubkey(JsonNode json) {
         if (!json.has("privateKey") || !json.get("privateKey").isTextual()) {
             printPrivKeyToPubkeyUsageMsg("privateKey is not specified or has invalid format.");
             return;
@@ -270,20 +254,42 @@ public class SigningToolCommandProcessor extends CommandProcessor {
             return;
         }
 
-        byte[] privateKey = Base64.decode(json.get("privateKey").asText()).get();
-        byte[] publicKey = privateToPublicKey(privateKey);
+        String privateKey = json.get("privateKey").asText();
+        Secret secret = SECRETS_COMPANION.parseBytes(BytesUtils.fromHexString(privateKey));
+        assert secret.secretTypeId() == SecretsIdsEnum.SchnorrSecretKeyId.id();
+        SchnorrSecret secretKey = (SchnorrSecret) secret;
+        byte[] publicKey = SchnorrPropositionSerializer.getSerializer().toBytes(secretKey.publicImage());
 
         ObjectNode resJson = new ObjectMapper().createObjectNode();
-        resJson.put("publicKey", publicKey);
+        resJson.put("publicKey", BytesUtils.toHexString(publicKey));
         printer.print(resJson.toString());
     }
 
-    private byte[] privateToPublicKey(byte[] privateKey) throws Exception {
-        try (SchnorrSecretKey secretKey = SchnorrSecretKey.deserialize(privateKey);
-             SchnorrPublicKey publicKey = secretKey.getPublicKey())
-        {
-            return publicKey.serializePublicKey();
-        }
+    private void signMessage(String privateKey, byte[] message) {
+        Secret secret = SECRETS_COMPANION.parseBytes(BytesUtils.fromHexString(privateKey));
+        assert secret.secretTypeId() == SecretsIdsEnum.SchnorrSecretKeyId.id();
+        SchnorrSecret secretKey = (SchnorrSecret) secret;
+
+        SchnorrProof signature = secretKey.sign(message);
+
+        byte[] signatureBytes = SIGNATURE_SERIALIZER.toBytes(signature);
+
+        ObjectNode resJson = new ObjectMapper().createObjectNode();
+        resJson.put("signature", BytesUtils.toHexString(signatureBytes));
+
+        printer.print(resJson.toString());
+    }
+
+    private void verifyMessage(String signature, String publicKey, byte[] message) {
+        SchnorrProof proof = SchnorrSignatureSerializer.getSerializer().parseBytes(BytesUtils.fromHexString(signature));
+        SchnorrProposition proposition = SchnorrPropositionSerializer.getSerializer().parseBytes(BytesUtils.fromHexString(publicKey));
+
+        boolean res = proposition.verify(message, proof);
+
+        ObjectNode resJson = new ObjectMapper().createObjectNode();
+        resJson.put("valid", res);
+
+        printer.print(resJson.toString());
     }
 
     public byte[] concatenate(byte[] a, byte[] b) {

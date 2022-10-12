@@ -31,7 +31,7 @@ public class SigningTool {
                 StringBuilder cmd = new StringBuilder(args[0]);
                 for(int i=1; i<args.length; i++)
                     cmd.append(" ").append(args[i]);
-                logger.info("Starting bootstrapping tool with cmd input: " + cmd);
+                logger.info("Starting signingtool tool with cmd input: " + cmd);
                 processor.processCommand(cmd.toString());
             }catch (Exception e){
                 printer.print(e.getMessage());
@@ -44,7 +44,7 @@ public class SigningTool {
                 try {
                     if(input.startsWith("exit"))
                         break;
-                    logger.info("Starting bootstrapping tool with cmd input: " + input);
+                    logger.info("Starting signingtool tool with cmd input: " + input);
                     processor.processCommand(input);
                 }
                 catch(Exception e) {
@@ -52,7 +52,7 @@ public class SigningTool {
                 }
             }
         }
-        logger.info("... exiting bootstrapping tool application.");
+        logger.info("... exiting signingtool tool application.");
 
     }
 }
