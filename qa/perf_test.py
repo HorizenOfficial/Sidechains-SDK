@@ -472,7 +472,14 @@ class PerformanceTest(SidechainTestFramework):
         balances = []
         # Output the balance of each node
         for index, node in enumerate(self.sc_nodes):
-            wallet_boxes = http_wallet_allBoxesOfType(node, "ZenBox")
+            n_try = 0
+            error = True
+            while n_try < 20 and error:
+                try:
+                    wallet_boxes = http_wallet_allBoxesOfType(node, "ZenBox")
+                    error = False
+                except Exception as e:
+                    n_try += 1
             wallet_balance = 0
             for box in wallet_boxes:
                 wallet_balance += box["value"]
