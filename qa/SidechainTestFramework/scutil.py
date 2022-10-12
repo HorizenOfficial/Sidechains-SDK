@@ -1073,6 +1073,8 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbo
             raise AssertionError("Empty forger stakes list")
         if ("top quality certificate" in forge_result["error"]["description"]):
             raise AssertionError("Inconsistent top quality ceritificate")
+        if ("the sidechain has ceased" in forge_result["error"]["description"]):
+            raise AssertionError("Sidechain has ceased")
 
         logging.info("Skip block generation for epoch {epochNumber} slot {slotNumber}".format(epochNumber=next_epoch,
                                                                                        slotNumber=next_slot))
