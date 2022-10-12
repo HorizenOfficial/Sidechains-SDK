@@ -54,8 +54,8 @@ public class SigningToolCommandProcessor extends CommandProcessor {
                 case "validateMessage":
                     validateMessage(command.data());
                     break;
-                case "privKeyToPubkey":
-                    privKeyToPubkey(command.data());
+                case "privKeyToPubKey":
+                    privKeyToPubKey(command.data());
                     break;
                 default:
                     printUnsupportedCommandMsg(command.name());
@@ -126,7 +126,7 @@ public class SigningToolCommandProcessor extends CommandProcessor {
                         "\tverifySignature <arguments>\n" +
                         "\tsignMessage <arguments>\n" +
                         "\tvalidateMessage <arguments>\n" +
-                        "\tprivKeyToPubkey <arguments>\n" +
+                        "\tprivKeyToPubKey <arguments>\n" +
                         "\texit\n"
         );
     }
@@ -239,18 +239,18 @@ public class SigningToolCommandProcessor extends CommandProcessor {
         verifyMessage(signature, publicKey, prefixMessage);
     }
 
-    private void printPrivKeyToPubkeyUsageMsg(String error) {
+    private void printPrivKeyToPubKeyUsageMsg(String error) {
         printer.print("Error: " + error);
         printer.print("Usage:\n" +
-                "\tprivKeyToPubkey { \"privateKey\": private_key, \"type\": \"string\" [\"schnorr\"] }");
+                "\tprivKeyToPubKey { \"privateKey\": private_key, \"type\": \"string\" [\"schnorr\"] }");
     }
 
     private void privKeyToPubkey(JsonNode json) {
         if (!json.has("privateKey") || !json.get("privateKey").isTextual()) {
-            printPrivKeyToPubkeyUsageMsg("privateKey is not specified or has invalid format.");
+            printPrivKeyToPubKeyUsageMsg("privateKey is not specified or has invalid format.");
             return;
         } else if (!json.has("type") || !json.get("type").isTextual() || !Objects.equals(json.get("type").asText(), "schnorr")) {
-            printPrivKeyToPubkeyUsageMsg("type is not specified or has invalid format.");
+            printPrivKeyToPubKeyUsageMsg("type is not specified or has invalid format.");
             return;
         }
 
