@@ -146,7 +146,7 @@ class EthService(
     applyOnAccountView { nodeView =>
       nodeView.history
         .getStorageBlockById(getBlockId(nodeView))
-        .map(_.transactions.count(_.isInstanceOf[EthereumTransaction]))
+        .map(_.transactions.size)
         .map(new Quantity(_))
         .orNull
     }
