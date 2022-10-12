@@ -16,6 +16,7 @@ from contextlib import closing
 from SidechainTestFramework.sidechainauthproxy import SidechainAuthServiceProxy
 from test_framework.mc_test.mc_test import generate_random_field_element_hex, get_field_element_with_padding
 from test_framework.util import get_spendable, swap_bytes, assert_equal, initialize_new_sidechain_in_mainchain
+from eth_utils import add_0x_prefix
 
 WAIT_CONST = 1
 
@@ -1261,7 +1262,9 @@ def computeForgedTxGasUsed(sc_node, tx_hash, tracing_on=False):
     return int(receiptJson['gasUsed'], 16)
 
 def computeForgedTxFee(sc_node, tx_hash, tracing_on=False):
-    resp = sc_node.rpc_eth_getTransactionByHash("0x" + tx_hash)
+    # make sure the transaction hash prefixed with 0x
+    tx_hash = add_0x_prefix(tx_hash)
+    resp = sc_node.rpc_eth_getTransactionByHash(tx_hash)
     if not 'result' in resp:
         raise Exception('Rpc eth_getTransactionByHash cmd failed: {}'.format(json.dumps(resp, indent=2)))
 
@@ -1272,7 +1275,7 @@ def computeForgedTxFee(sc_node, tx_hash, tracing_on=False):
         logging.info("tx:")
         logging.info(transactionJson)
 
-    resp = sc_node.rpc_eth_getTransactionReceipt("0x" + tx_hash)
+    resp = sc_node.rpc_eth_getTransactionReceipt(tx_hash)
     if not 'result' in resp:
         raise Exception('Rpc eth_getTransactionReceipt cmd failed:{}'.format(json.dumps(resp, indent=2)))
 

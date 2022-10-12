@@ -18,7 +18,7 @@ import com.horizen.account.utils.EthereumTransactionDecoder
 import com.horizen.account.wallet.AccountWallet
 import com.horizen.api.http.SidechainTransactionActor.ReceivableMessages.BroadcastTransaction
 import com.horizen.chain.SidechainBlockInfo
-import com.horizen.evm.interop.TraceParams
+import com.horizen.evm.interop.{ProofAccountResult, TraceParams}
 import com.horizen.evm.utils.{Address, Hash}
 import com.horizen.params.NetworkParams
 import com.horizen.transaction.exception.TransactionSemanticValidityException
@@ -130,6 +130,26 @@ class EthService(
         )
       })
       .orNull
+  }
+
+  @RpcMethod("eth_getBlockTransactionCountByHash")
+  def getBlockTransactionCountByHash(hash: Hash): Quantity = {
+    blockTransactionCount(_ => bytesToId(hash.toBytes))
+  }
+
+  @RpcMethod("eth_getBlockTransactionCountByNumber")
+  def getBlockTransactionCountByNumber(tag: String): Quantity = {
+    blockTransactionCount(nodeView => getBlockIdByTag(nodeView, tag))
+  }
+
+  private def blockTransactionCount(getBlockId: NV => ModifierId): Quantity = {
+    applyOnAccountView { nodeView =>
+      nodeView.history
+        .getStorageBlockById(getBlockId(nodeView))
+        .map(_.transactions.size)
+        .map(new Quantity(_))
+        .orNull
+    }
   }
 
   private def doCall(nodeView: NV, params: TransactionArgs, tag: String): Array[Byte] = {
@@ -364,6 +384,34 @@ class EthService(
     }.orNull
   }
 
+  @RpcMethod("eth_getTransactionByBlockHashAndIndex")
+  def getTransactionByBlockHashAndIndex(hash: Hash, index: Quantity): EthereumTransactionView = {
+    blockTransactionByIndex(_ => bytesToId(hash.toBytes), index)
+  }
+
+  @RpcMethod("eth_getTransactionByBlockNumberAndIndex")
+  def getTransactionByBlockNumberAndIndex(tag: String, index: Quantity): EthereumTransactionView = {
+    blockTransactionByIndex(nodeView => getBlockIdByTag(nodeView, tag), index)
+  }
+
+  private def blockTransactionByIndex(getBlockId: NV => ModifierId, index: Quantity): EthereumTransactionView = {
+    val txIndex = index.toNumber.intValueExact()
+    applyOnAccountView { nodeView =>
+      nodeView.history
+        .getStorageBlockById(getBlockId(nodeView))
+        .flatMap(block => {
+          block.transactions
+            .drop(txIndex)
+            .headOption
+            .map(_.asInstanceOf[EthereumTransaction])
+            .flatMap(tx =>
+              using(nodeView.state.getView)(_.getTransactionReceipt(Numeric.hexStringToByteArray(tx.id)))
+                .map(new EthereumTransactionView(_, tx, block.header.baseFee))
+            )
+        })
+    }.orNull
+  }
+
   @RpcMethod("eth_getTransactionReceipt")
   def getTransactionReceipt(transactionHash: Hash): EthereumReceiptView = {
     getTransactionAndReceipt(transactionHash).map { case (block, tx, receipt) =>
@@ -473,6 +521,28 @@ class EthService(
         .getStorageBlockById(getBlockIdByTag(nodeView, blockId))
         .map(block => new ForwardTransfersView(getForwardTransfersForBlock(block).asJava, false))
         .orNull
+    }
+  }
+
+  @RpcMethod("eth_getStorageAt")
+  @RpcOptionalParameters(1)
+  def getStorageAt(address: Address, key: Quantity, tag: String): Hash = {
+    val storageKey = Numeric.toBytesPadded(key.toNumber, 32)
+    applyOnAccountView { nodeView =>
+      getStateViewAtTag(nodeView, tag) { (stateView, _) =>
+        Hash.FromBytes(stateView.getAccountStorage(address.toBytes, storageKey))
+      }
+    }
+  }
+
+  @RpcMethod("eth_getProof")
+  @RpcOptionalParameters(1)
+  def getProof(address: Address, keys: Array[Quantity], tag: String): ProofAccountResult = {
+    val storageKeys = keys.map(key => Numeric.toBytesPadded(key.toNumber, 32))
+    applyOnAccountView { nodeView =>
+      getStateViewAtTag(nodeView, tag) { (stateView, _) =>
+        stateView.getProof(address.toBytes, storageKeys)
+      }
     }
   }
 }

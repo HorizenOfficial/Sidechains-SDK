@@ -15,25 +15,22 @@ public class EvmLogTest extends LibEvmTestBase {
 
     @Test
     public void nullEvmLogToStringTest() {
-
         EvmLog defaultLog = new EvmLog();
-
-        assertEquals("EvmLog (log consensus data) {address=null, topics=topics{}, data=}", defaultLog.toString());
+        assertEquals("EvmLog (log consensus data) {address=null, topics=[], data=}", defaultLog.toString());
 
         EvmLog nullLog = new EvmLog();
-
         nullLog.data = null;
         nullLog.topics = null;
-        assertEquals("EvmLog (log consensus data) {address=null, topics=topics{null}, data=null}", nullLog.toString());
+        assertEquals("EvmLog (log consensus data) {address=null, topics=null, data=null}", nullLog.toString());
 
         EvmLog invalidTopicsLog = new EvmLog();
         invalidTopicsLog.topics = new Hash[2];
-        assertEquals("EvmLog (log consensus data) {address=null, topics=topics{ null null}, data=}", invalidTopicsLog.toString());
+        assertEquals(
+            "EvmLog (log consensus data) {address=null, topics=[null,null], data=}", invalidTopicsLog.toString());
     }
 
     @Test
     public void nullEvmLogHashCodeTest() {
-
         EvmLog defaultLog = new EvmLog();
         EvmLog defaultLog2 = new EvmLog();
         assertEquals(defaultLog, defaultLog2);
@@ -67,14 +64,17 @@ public class EvmLogTest extends LibEvmTestBase {
 
         EvmLog randomLog = new EvmLog();
         var addressBytes = new byte[Address.LENGTH];
-               new Random().nextBytes(addressBytes);
-        var address = Address.FromBytes(addressBytes);
-        randomLog.address = address;
+        new Random().nextBytes(addressBytes);
+        randomLog.address = Address.FromBytes(addressBytes);
         var topics = new Hash[4];
-        topics[0] = Hash.FromBytes(Converter.fromHexString("0000000000000000000000000000000000000000000000000000000000000000"));
-        topics[1] = Hash.FromBytes(Converter.fromHexString("1111111111111111111111111111111111111111111111111111111111111111"));
-        topics[2] = Hash.FromBytes(Converter.fromHexString("2222222222222222222222222222222222222222222222222222222222222222"));
-        topics[3] = Hash.FromBytes(Converter.fromHexString("3333333333333333333333333333333333333333333333333333333333333333"));
+        topics[0] = Hash.FromBytes(
+            Converter.fromHexString("0000000000000000000000000000000000000000000000000000000000000000"));
+        topics[1] = Hash.FromBytes(
+            Converter.fromHexString("1111111111111111111111111111111111111111111111111111111111111111"));
+        topics[2] = Hash.FromBytes(
+            Converter.fromHexString("2222222222222222222222222222222222222222222222222222222222222222"));
+        topics[3] = Hash.FromBytes(
+            Converter.fromHexString("3333333333333333333333333333333333333333333333333333333333333333"));
 
         randomLog.topics = topics;
         var data = Converter.fromHexString("aabbccddeeff22");
@@ -83,8 +83,5 @@ public class EvmLogTest extends LibEvmTestBase {
         EvmLog randomLog2 = new EvmLog(Address.FromBytes(addressBytes), topics, data);
         assertEquals(randomLog, randomLog2);
         assertEquals(randomLog.hashCode(), randomLog2.hashCode());
-
-
     }
-
 }

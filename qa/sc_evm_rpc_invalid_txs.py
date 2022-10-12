@@ -4,13 +4,16 @@ from decimal import Decimal
 
 from SidechainTestFramework.account.address_util import format_evm
 from SidechainTestFramework.account.eoa_util import eoa_transaction
-from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
+from SidechainTestFramework.sc_boostrap_info import (
+    LARGE_WITHDRAWAL_EPOCH_LENGTH, MCConnectionInfo, SCCreationInfo,
+    SCNetworkConfiguration, SCNodeConfiguration,
+)
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, start_sc_nodes, generate_next_block, \
-    EVM_APP_BINARY, AccountModelBlockVersion, assert_true, convertZenToWei
-from test_framework.util import start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain
+from SidechainTestFramework.scutil import (
+    AccountModelBlockVersion, EVM_APP_BINARY, assert_true,
+    bootstrap_sidechain_nodes, convertZenToWei, generate_next_block, start_sc_nodes,
+)
+from test_framework.util import forward_transfer_to_sidechain, start_nodes, websocket_port_by_mc_node_index
 
 """
 Check that sending an invalid transaction to the RPC method eth_sendRawTransaction returns an error
