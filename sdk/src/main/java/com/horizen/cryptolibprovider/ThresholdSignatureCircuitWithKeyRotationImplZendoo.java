@@ -14,6 +14,7 @@ import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.schnorrnative.SchnorrPublicKey;
 import com.horizen.schnorrnative.SchnorrSignature;
 import com.horizen.utils.Pair;
+import com.horizen.websocket.client.BackwardTransfer;
 import scala.Option;
 import scala.collection.Iterator;
 import scala.collection.Seq;
@@ -150,27 +151,10 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                 btrFee,
                 scala.collection.JavaConverters.seqAsJavaList(customFields).stream().map(FieldElement::deserialize).collect(Collectors.toList())
         );
-/*
-public static CreateProofResult createProof(
-            SchnorrKeysSignaturesList keysSignaturesList,
-            WithdrawalCertificate withdrawalCertificate,
-            Optional<WithdrawalCertificate> prevWithdrawalCertificate,
-            List<SchnorrSignature> certSignaturesList,
-            long maxPks,
-            long threshold,
-            FieldElement genesisKeysRootHash,
-            Optional<Integer> supportedDegree,
-            String provingKeyPath,
-            boolean enforceMembership,
-            boolean zk,
-            boolean compressedPk,
-            boolean compressProof
-    )
- */
-        // TODO instead of calling KeyRotationThresholdSigProof from Zendoo I heed to create local KeyRotationThresholdSigProof
         CreateProofResult proofAndQuality = KeyRotationThresholdSigProof.createProof(
                 keysSignaturesList, withdrawalCertificate, previousCertificateOption, schnorrSignatureBytesList,
-                signingPublicKeys.size(), threshold, FieldElement.deserialize(genesisKeysRootHash));
+                signingPublicKeys.size(), threshold, FieldElement.deserialize(genesisKeysRootHash), Optional.empty(),
+                provingKeyPath, false, zk, true, true);
 
         endCumulativeScTxCommTreeRootFe.freeFieldElement();
         sidechainIdFe.freeFieldElement();
