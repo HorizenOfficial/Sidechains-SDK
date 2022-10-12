@@ -258,7 +258,7 @@ class SCEvmBackwardTransfer2(SidechainTestFramework):
         if "error" in res:
             fail(f"Creating Withdrawal request failed: " + json.dumps(res))
 
-        tx_id = res["result"]["transactionId"]
+        tx_id = add_0x_prefix(res["result"]["transactionId"])
 
         # Generate SC block
         generate_next_blocks(sc_node, "first node", 1)
