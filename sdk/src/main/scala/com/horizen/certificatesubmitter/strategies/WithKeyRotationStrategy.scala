@@ -50,23 +50,25 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
     )
     //create and return proof with quality
     val sidechainCreationVersion: SidechainCreationVersion = params.sidechainCreationVersion
-    CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.createProof(
-      dataForProofGeneration.sidechainId,
-      dataForProofGeneration.referencedEpochNumber,
-      dataForProofGeneration.endEpochCumCommTreeHash,
-      dataForProofGeneration.btrFee,
-      dataForProofGeneration.ftMinAmount,
-      dataForProofGeneration.customFields,
-      signaturesBytes.asJava,
-      schnorrKeysSignaturesListBytes,
-      params.signersThreshold,
-      provingFileAbsolutePath,
-      true,
-      true,
-      dataForProofGenerationWithKeyRotation.previousCertificateOption,
-      sidechainCreationVersion.id,
-      dataForProofGenerationWithKeyRotation.genesisKeysRootHash
-    )
+//    CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.createProof(
+//      dataForProofGeneration.withdrawalRequests.asJava,
+//      dataForProofGeneration.sidechainId,
+//      dataForProofGeneration.referencedEpochNumber,
+//      dataForProofGeneration.endEpochCumCommTreeHash,
+//      dataForProofGeneration.btrFee,
+//      dataForProofGeneration.ftMinAmount,
+//      dataForProofGeneration.customFields,
+//      signaturesBytes.asJava,
+//      schnorrKeysSignaturesListBytes,
+//      params.signersThreshold,
+//      provingFileAbsolutePath,
+//      true,
+//      true,
+//      dataForProofGenerationWithKeyRotation.previousCertificateOption,
+//      sidechainCreationVersion.id,
+//      dataForProofGenerationWithKeyRotation.genesisKeysRootHash
+//    )
+    null
   }
 
   override def buildDataForProofGeneration(sidechainNodeView: View, status: SignaturesStatus): DataForProofGenerationWithKeyRotation = {
@@ -108,11 +110,11 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
 
     keyRotationProofs.foreach(keyRotationProof => {
       keyRotationProof.keyType match {
-        case _ == KeyRotationProofType.SigningKeyRotationProofType =>
+        case KeyRotationProofType.SigningKeyRotationProofType =>
           newSchnorrMastersPublicKeysBytesList(keyRotationProof.index) = keyRotationProof.newValueOfKey.bytes()
           updatedSigningKeysSkSignatures(keyRotationProof.index) = keyRotationProof.signingKeySignature.bytes()
           updatedSigningKeysMkSignatures(keyRotationProof.index) = keyRotationProof.masterKeySignature.bytes()
-        case _ == KeyRotationProofType.MasterKeyRotationProofType =>
+        case KeyRotationProofType.MasterKeyRotationProofType =>
           newSchnorrMastersPublicKeysBytesList(keyRotationProof.index) = keyRotationProof.newValueOfKey.bytes()
           updatedSigningKeysSkSignatures(keyRotationProof.index) = keyRotationProof.signingKeySignature.bytes()
           updatedSigningKeysMkSignatures(keyRotationProof.index) = keyRotationProof.masterKeySignature.bytes()
@@ -160,9 +162,10 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
 
       val customFields: Array[Byte] = getActualKeysMerkleRoot(referencedWithdrawalEpochNumber, state)
 
-      CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
-        .generateMessageToBeSigned(withdrawalRequests.asJava, sidechainId, referencedWithdrawalEpochNumber,
-          endEpochCumCommTreeHash, btrFee, ftMinAmount, Seq(customFields))
+//      CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+//        .generateMessageToBeSigned(withdrawalRequests.asJava, sidechainId, referencedWithdrawalEpochNumber,
+//          endEpochCumCommTreeHash, btrFee, ftMinAmount, Seq(customFields))
+      null
     }
 
     Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getMessage), settings.sparkzSettings.restApi.timeout).asInstanceOf[Try[Array[Byte]]].get

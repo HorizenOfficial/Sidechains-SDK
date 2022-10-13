@@ -364,7 +364,7 @@ class CertificateSubmitter[T <: DataForProofGeneration](settings: SidechainSetti
         case Some(status) =>
           // Check quality again, in case better Certificate appeared.
           if (checkQuality(status)) {
-            def getProofGenerationData(sidechainNodeView: View): DataForProofGeneration = keyRotationStrategy.buildDataForProofGeneration(sidechainNodeView, status, params)
+            def getProofGenerationData(sidechainNodeView: View): DataForProofGeneration = keyRotationStrategy.buildDataForProofGeneration(sidechainNodeView, status)
 
             val dataForProofGeneration = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getProofGenerationData), timeoutDuration)
               .asInstanceOf[T]
