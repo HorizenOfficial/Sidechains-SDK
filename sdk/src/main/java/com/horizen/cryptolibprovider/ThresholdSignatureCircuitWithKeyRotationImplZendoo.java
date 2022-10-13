@@ -29,10 +29,6 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
 
     private static final SchnorrSignature signaturePlaceHolder = new SchnorrSignature();
 
-    private static BackwardTransfer withdrawalRequestBoxToBackwardTransfer(WithdrawalRequestBox box) {
-        return new BackwardTransfer(box.proposition().bytes(), box.value());
-    }
-
     @Override
     public List<byte[]> getCertificateCustomFields(Seq<byte[]> customFields) {
         List<FieldElement> fes = prepareCustomFieldElements(customFields);
@@ -81,7 +77,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                                             long ftMinAmount,
                                             Seq<byte[]> customParameters) {
         BackwardTransfer[] backwardTransfers =
-                bt.stream().map(ThresholdSignatureCircuitWithKeyRotationImplZendoo::withdrawalRequestBoxToBackwardTransfer).toArray(BackwardTransfer[]::new);
+                bt.stream().map(CommonCircuit::withdrawalRequestBoxToBackwardTransfer).toArray(BackwardTransfer[]::new);
 
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
@@ -144,7 +140,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         SchnorrPublicKey[] signingPublicKeys = keysSignaturesList.getSigningKeys();
 
         List<BackwardTransfer> backwardTransfers =
-                bt.stream().map(ThresholdSignatureCircuitImplZendoo::withdrawalRequestBoxToBackwardTransfer).collect(Collectors.toList());
+                bt.stream().map(CommonCircuit::withdrawalRequestBoxToBackwardTransfer).collect(Collectors.toList());
 
         WithdrawalCertificate withdrawalCertificate = new WithdrawalCertificate(
                 sidechainIdFieldElement,
@@ -186,7 +182,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                                byte[] genesisConstantBytes,
                                Enumeration.Value sidechainCreationVersion) {
         List<BackwardTransfer> backwardTransfers =
-                bt.stream().map(ThresholdSignatureCircuitWithKeyRotationImplZendoo::withdrawalRequestBoxToBackwardTransfer).collect(Collectors.toList());
+                bt.stream().map(CommonCircuit::withdrawalRequestBoxToBackwardTransfer).collect(Collectors.toList());
 
         FieldElement mcbScTxsCom = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         FieldElement constantFe = FieldElement.deserialize(constant);

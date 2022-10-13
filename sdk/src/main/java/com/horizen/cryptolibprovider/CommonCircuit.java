@@ -1,5 +1,7 @@
 package com.horizen.cryptolibprovider;
 
+import com.horizen.box.WithdrawalRequestBox;
+import com.horizen.certnative.BackwardTransfer;
 import com.horizen.provingsystemnative.ProvingSystem;
 import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.utils.BytesUtils;
@@ -8,7 +10,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-public class CommonCircuit {
+public class  CommonCircuit {
     private static final int maxSegmentSize = (1 << 18);
 
     // Keys total max size values are the same as in MC
@@ -34,5 +36,9 @@ public class CommonCircuit {
         } catch (IOException e) {
             return "";
         }
+    }
+
+    static BackwardTransfer withdrawalRequestBoxToBackwardTransfer(WithdrawalRequestBox box) {
+        return new BackwardTransfer(box.proposition().bytes(), box.value());
     }
 }
