@@ -1,5 +1,7 @@
 package com.horizen;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.horizen.tools.utils.ConsolePrinter;
 import com.horizen.tools.utils.MessagePrinter;
 import org.apache.logging.log4j.LogManager;
@@ -26,32 +28,23 @@ public class SigningTool {
 
         MessagePrinter printer = new ConsolePrinter();
         SigningToolCommandProcessor processor = new SigningToolCommandProcessor(printer);
-        if(args.length > 0)
-            try {
+        try {
+            if (args.length > 0) {
                 StringBuilder cmd = new StringBuilder(args[0]);
-                for(int i=1; i<args.length; i++)
+                for (int i = 1; i < args.length; i++)
                     cmd.append(" ").append(args[i]);
                 logger.info("Starting signingtool tool with cmd input: " + cmd);
                 processor.processCommand(cmd.toString());
-            }catch (Exception e){
-                printer.print(e.getMessage());
+            } else {
+                processor.processCommand("help");
             }
-        else{
-            printer.print("Tool successfully started...\nPlease, enter the command:");
-            Scanner scanner = new Scanner(System.in);
-            while(true) {
-                String input = scanner.nextLine();
-                try {
-                    if(input.startsWith("exit"))
-                        break;
-                    logger.info("Starting signingtool tool with cmd input: " + input);
-                    processor.processCommand(input);
-                }
-                catch(Exception e) {
-                    printer.print(e.getMessage());
-                }
-            }
+        } catch (Exception e) {
+            ObjectNode resJson = new ObjectMapper().createObjectNode();
+            resJson.put("error", e.getMessage());
+
+            printer.print(resJson.toString());
         }
+
         logger.info("... exiting signingtool tool application.");
 
     }

@@ -18,9 +18,6 @@ import com.horizen.tools.utils.CommandProcessor;
 import com.horizen.tools.utils.MessagePrinter;
 import com.horizen.utils.BytesUtils;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Objects;
@@ -70,8 +67,7 @@ public class SigningToolCommandProcessor extends CommandProcessor {
 
     // Command structure is:
     // 1) <command name>
-    // 1) <command name> <json argument>
-    // 2) <command name> -f <path to file with json argument>
+    // 2) <command name> <json argument>
     @Override
     protected Command parseCommand(String input) throws IOException {
         String[] inputData = input.trim().split(" ", 2);
@@ -83,24 +79,7 @@ public class SigningToolCommandProcessor extends CommandProcessor {
         if (inputData.length == 1)
             return new Command(inputData[0], objectMapper.createObjectNode());
 
-        String jsonData;
-        String commandArguments = inputData[1].trim();
-        // Check for file flag
-        if (commandArguments.startsWith("-f ")) {
-            // Remove '-f', possible around whitespaces and/or quotes
-            String filePath = commandArguments.replaceAll("^-f\\s*\"*|\"$", "");
-            // Try to open and read data from file
-            try (
-                    FileReader file = new FileReader(filePath);
-                    BufferedReader reader = new BufferedReader(file)
-            ) {
-                jsonData = reader.readLine();
-            } catch (FileNotFoundException e) {
-                throw new IOException(String.format("Error: Input data file '%s' not found.%nSee 'help' for usage guideline.", filePath));
-            }
-        } else {
-            jsonData = commandArguments;
-        }
+        String jsonData = inputData[1].trim();
 
         JsonNode jsonNode;
         try {
@@ -114,27 +93,29 @@ public class SigningToolCommandProcessor extends CommandProcessor {
 
     @Override
     protected void printUsageMsg() {
-        printer.print(
-                "Usage:\n" +
-                        "\tFrom command line: <program name> <command name> [<json data>]\n" +
-                        "\tFor interactive mode: <command name> [<json data>]\n" +
-                        "\tRead command arguments from file: <command name> -f <path to file with json data>\n" +
-                        "\n" +
-                        "Supported commands:\n" +
-                        "\thelp\n" +
-                        "\tcreateSignature <arguments>\n" +
-                        "\tverifySignature <arguments>\n" +
-                        "\tsignMessage <arguments>\n" +
-                        "\tvalidateMessage <arguments>\n" +
-                        "\tprivKeyToPubKey <arguments>\n" +
-                        "\texit\n"
+        ObjectNode resJson = new ObjectMapper().createObjectNode();
+
+        resJson.putIfAbsent("Usage", new ObjectMapper().createArrayNode()
+                .add("From command line: <program name> <command name> [<json data>]"));
+        resJson.putIfAbsent("Supported commands", new ObjectMapper().createArrayNode()
+                .add("help")
+                .add("createSignature <arguments>")
+                .add("verifySignature <arguments>")
+                .add("signMessage <arguments>")
+                .add("validateMessage <arguments>")
+                .add("privKeyToPubKey <arguments>")
         );
+
+        printer.print(resJson.toString());
     }
 
     private void printCreateSignatureUsageMsg(String error) {
-        printer.print("Error: " + error);
-        printer.print("Usage:\n" +
-                "\tcreateSignature { \"message\": message, \"privateKey\": private_key, \"type\": \"string\" [\"schnorr\"] }");
+        ObjectNode resJson = new ObjectMapper().createObjectNode();
+
+        resJson.put("Error", error);
+        resJson.put("Usage", "createSignature { \"message\": message, \"privateKey\": private_key, \"type\": \"string\" [\"schnorr\"] }");
+
+        printer.print(resJson.toString());
     }
 
     private void createSignature(JsonNode json) {
@@ -154,9 +135,12 @@ public class SigningToolCommandProcessor extends CommandProcessor {
     }
 
     private void printVerifySignatureUsageMsg(String error) {
-        printer.print("Error: " + error);
-        printer.print("Usage:\n" +
-                "\tverifySignature { \"message\": message, \"signature\": signature, \"publicKey\": public_key, \"type\": \"string\" [\"schnorr\"] }");
+        ObjectNode resJson = new ObjectMapper().createObjectNode();
+
+        resJson.put("Error", error);
+        resJson.put("Usage", "verifySignature { \"message\": message, \"signature\": signature, \"publicKey\": public_key, \"type\": \"string\" [\"schnorr\"] }");
+
+        printer.print(resJson.toString());
     }
 
     private void verifySignature(JsonNode json) {
@@ -180,9 +164,12 @@ public class SigningToolCommandProcessor extends CommandProcessor {
     }
 
     private void printSignMessageUsageMsg(String error) {
-        printer.print("Error: " + error);
-        printer.print("Usage:\n" +
-                "\tsignMessage { \"message\": message, \"privateKey\": private_key, \"prefix\": prefix, \"type\": \"string\" [\"schnorr\"] }");
+        ObjectNode resJson = new ObjectMapper().createObjectNode();
+
+        resJson.put("Error", error);
+        resJson.put("Usage", "signMessage { \"message\": message, \"privateKey\": private_key, \"prefix\": prefix, \"type\": \"string\" [\"schnorr\"] }");
+
+        printer.print(resJson.toString());
     }
 
     private void signMessage(JsonNode json) {
@@ -192,7 +179,7 @@ public class SigningToolCommandProcessor extends CommandProcessor {
         } else if (!json.has("privateKey") || !json.get("privateKey").isTextual()) {
             printSignMessageUsageMsg("privateKey is not specified or has invalid format.");
             return;
-        } else if (!json.has("prefix") || !json.get("prefix").isTextual()) {
+        } else if (!json.has("prefix") || !json.get("prefix").isTextual() || json.get("prefix").asText().isEmpty()) {
             printSignMessageUsageMsg("prefix is not specified or has invalid format.");
             return;
         } else if (!json.has("type") || !json.get("type").isTextual() || !Objects.equals(json.get("type").asText(), "schnorr")) {
@@ -208,9 +195,12 @@ public class SigningToolCommandProcessor extends CommandProcessor {
     }
 
     private void printValidateMessageUsageMsg(String error) {
-        printer.print("Error: " + error);
-        printer.print("Usage:\n" +
-                "\tvalidateMessage { \"message\": message, \"signature\": signature, \"publicKey\": public_key, \"prefix\": prefix, \"type\": \"string\" [\"schnorr\"] }");
+        ObjectNode resJson = new ObjectMapper().createObjectNode();
+
+        resJson.put("Error", error);
+        resJson.put("Usage", "validateMessage { \"message\": message, \"signature\": signature, \"publicKey\": public_key, \"prefix\": prefix, \"type\": \"string\" [\"schnorr\"] }");
+
+        printer.print(resJson.toString());
     }
 
     private void validateMessage(JsonNode json) {
@@ -223,7 +213,7 @@ public class SigningToolCommandProcessor extends CommandProcessor {
         } else if (!json.has("publicKey") || !json.get("publicKey").isTextual()) {
             printValidateMessageUsageMsg("publicKey is not specified or has invalid format.");
             return;
-        } else if (!json.has("prefix") || !json.get("prefix").isTextual()) {
+        } else if (!json.has("prefix") || !json.get("prefix").isTextual() || json.get("prefix").asText().isEmpty()) {
             printValidateMessageUsageMsg("prefix is not specified or has invalid format.");
             return;
         } else if (!json.has("type") || !json.get("type").isTextual() || !Objects.equals(json.get("type").asText(), "schnorr")) {
@@ -240,12 +230,15 @@ public class SigningToolCommandProcessor extends CommandProcessor {
     }
 
     private void printPrivKeyToPubKeyUsageMsg(String error) {
-        printer.print("Error: " + error);
-        printer.print("Usage:\n" +
-                "\tprivKeyToPubKey { \"privateKey\": private_key, \"type\": \"string\" [\"schnorr\"] }");
+        ObjectNode resJson = new ObjectMapper().createObjectNode();
+
+        resJson.put("Error", error);
+        resJson.put("Usage", "privKeyToPubKey { \"privateKey\": private_key, \"type\": \"string\" [\"schnorr\"] }");
+
+        printer.print(resJson.toString());
     }
 
-    private void privKeyToPubkey(JsonNode json) {
+    private void privKeyToPubKey(JsonNode json) {
         if (!json.has("privateKey") || !json.get("privateKey").isTextual()) {
             printPrivKeyToPubKeyUsageMsg("privateKey is not specified or has invalid format.");
             return;

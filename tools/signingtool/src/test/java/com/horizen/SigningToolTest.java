@@ -44,8 +44,7 @@ public class SigningToolTest {
             return byteArrayOutputStream.toString();
         } catch (Exception e) {
             fail("Unexpected error in tests: " + e.getMessage());
-        }
-        finally {
+        } finally {
             System.setOut(console);
         }
         return null;
@@ -55,7 +54,7 @@ public class SigningToolTest {
     public void testUsage() {
         String command = "help";
         String result = runTest(new String[]{command});
-        assertTrue(result != null && result.contains("Usage:") && result.contains("Supported commands:"));
+        assertTrue(result != null && result.contains("Usage") && result.contains("Supported commands"));
     }
 
     @Test
@@ -153,7 +152,7 @@ public class SigningToolTest {
 
     @Test
     public void testPrivKeyToPubkey() throws IOException {
-        String command = "privKeyToPubkey";
+        String command = "privKeyToPubKey";
         SchnorrSecret secretKey = generateSecret();
 
         ObjectNode argsJson = new ObjectMapper().createObjectNode();
