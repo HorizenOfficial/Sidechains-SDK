@@ -1,7 +1,7 @@
 package com.horizen.certificatesubmitter.strategies
 
 import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
-import com.horizen.block.WithdrawalEpochCertificate
+import com.horizen.block.{SidechainCreationVersions, WithdrawalEpochCertificate}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
 import com.horizen.certificatesubmitter.dataproof.CertificateDataWithKeyRotation
