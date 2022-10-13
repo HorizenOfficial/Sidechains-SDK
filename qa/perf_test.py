@@ -3,7 +3,6 @@ import math
 import multiprocessing
 import random
 import time
-import pprint
 from multiprocessing import Pool, Value
 from time import sleep
 from os.path import exists
@@ -16,7 +15,6 @@ from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreat
 from httpCalls.block.best import http_block_best
 from httpCalls.block.findBlockByID import http_block_findById
 from httpCalls.block.forging import http_start_forging, http_stop_forging
-from httpCalls.block.forgingInfo import http_block_forging_info
 from httpCalls.transaction.allTransactions import allTransactions
 from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress, sendCoinsToAddressExtended, \
     sendCointsToMultipleAddress
@@ -27,7 +25,6 @@ from httpCalls.wallet.balance import http_wallet_balance
 from httpCalls.wallet.allBoxesOfType import http_wallet_allBoxesOfType
 from httpCalls.wallet.createPrivateKey25519 import http_wallet_createPrivateKey25519
 from httpCalls.wallet.createVrfSecret import http_wallet_createVrfSecret
-
 from test_framework.util import start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, assert_equal
 from SidechainTestFramework.scutil import assert_true, bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks, \
@@ -112,7 +109,7 @@ def send_transactions_per_second(sc_node_index, txs_creator_node, txs_bytes, des
         # If completion time exceeds 1 second, it's no longer x transactions per second.
         # Adjust the initial_txs and test_run_time config values until this value is under 1 second.
         elif completion_time > 1:
-            #logging.debug(f"WARNING:  Node{sc_node_index} Number of transactions sent has exceeded 1 second - Adjust the initial_txs and test_run_time config values ")
+            # logging.debug(f"WARNING:  Node{sc_node_index} Number of transactions sent has exceeded 1 second - Adjust the initial_txs and test_run_time config values ")
             logging.debug(f"Node{sc_node_index} TIME TO COMPLETE {transactions_per_second} TPS: {completion_time}(s)")
         iteration += 1
 
@@ -154,6 +151,22 @@ def get_running_process_cpu_ram_usage():
     logging.debug(f"TIME TAKEN FOR CPU/RAM STATS: {end_time - start_time}")
 
 
+class NodeData(object):
+    def __init__(self, forger, tx_creator, machine=None):
+        self.forger = forger
+        self.tx_creator = tx_creator
+        self.machine = machine
+
+
+class MachineCredentials(object):
+    def __init__(self, ip_address, port, base_directory, ssh_username, ssh_password):
+        self.ip_address = ip_address
+        self.port = port
+        self.base_directory = base_directory
+        self.ssh_username = ssh_username
+        self.ssh_password = ssh_password
+
+
 class PerformanceTest(SidechainTestFramework):
     MAX_TRANSACTION_OUTPUT = 998
     FORGING_STAKE_AMOUNT = 1
@@ -171,6 +184,7 @@ class PerformanceTest(SidechainTestFramework):
     extended_transaction = perf_data["extended_transaction"]
     big_transaction = perf_data["big_transaction"]
     send_coins_to_address = perf_data["send_coins_to_address"]
+    multi_machine = perf_data["multi_machine"]
     connection_map = {}
     topology = NetworkTopology(perf_data["network_topology"])
 
@@ -196,7 +210,7 @@ class PerformanceTest(SidechainTestFramework):
                 "send_coins_to_address": send_coins_to_address,
                 "block_tps": [],
                 "forks": [],
-                "blocks_mined": 0   
+                "blocks_mined": 0
                 }
 
     def get_latency_config(self):
@@ -212,6 +226,41 @@ class PerformanceTest(SidechainTestFramework):
             ))
 
         return node_latency_configs
+
+    def get_machine_credentials(self):
+        machine_credentials = []
+        machines = self.perf_data["machines"]
+
+        if machines is None:
+            raise "No machine data present in the config"
+
+        for machine in machines:
+            machine_credentials.append({
+                MachineCredentials(machine["ip_address"],
+                                   machine["port"],
+                                   machine["base_directory"],
+                                   machine["ssh_username"])
+            })
+
+        return machine_credentials
+
+    def get_node_data(self):
+        node_data = []
+        nodes = self.sc_node_data
+
+        if nodes is None:
+            raise "No nodes data present in the config"
+
+        for node in nodes:
+            if self.multi_machine:
+                try:
+                    node_data.append({
+                        NodeData(node["forger"],
+                                 node["tx_creator"],
+                                 node["machine"])})
+                except Exception:
+                    raise
+        return nodes
 
     def fill_csv(self):
         if not exists(self.CSV_FILE):
@@ -240,6 +289,9 @@ class PerformanceTest(SidechainTestFramework):
         last_index = sc_nodes.index(self.sc_node_data[-1])
         latency_configurations = self.get_latency_config()
 
+        if self.multi_machine:
+            machines = self.get_machine_credentials()
+
         for index, _ in enumerate(sc_nodes):
             if (index == 0 or index == last_index) and self.topology == NetworkTopology.DaisyChain:
                 max_connections = 1
@@ -252,13 +304,23 @@ class PerformanceTest(SidechainTestFramework):
             elif index != 0 and self.topology == NetworkTopology.Star:
                 max_connections = 1
 
+            if self.multi_machine:
+                host_machine = self.sc_node_data[index]["machine"]
+                try:
+                    machine_credentials = machines[host_machine]
+                except Exception:
+                    raise "Unable to retrieve machine credentials for node"
+            else:
+                machine_credentials = None
+
             node_configuration.append(
                 SCNodeConfiguration(
                     mc_connection_info=MCConnectionInfo(
                         address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
                     max_connections=max_connections,
                     block_rate=self.block_rate,
-                    latency_settings=latency_configurations[index]
+                    latency_settings=latency_configurations[index],
+                    machine_credentials=machine_credentials
                 )
             )
         return node_configuration
@@ -273,16 +335,24 @@ class PerformanceTest(SidechainTestFramework):
         mc_node = self.nodes[0]
         sc_nodes = self.get_node_configuration(mc_node)
 
+        if self.multi_machine:
+            machines = self.get_machine_credentials()
+        else:
+            machines = None
+
         network = SCNetworkConfiguration(
             SCCreationInfo(mc_node, self.FORGING_STAKE_AMOUNT),
             *sc_nodes
         )
         self.options.restapitimeout = 20
-        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720 * self.block_rate * 5 / 2)
+        self.sc_nodes_bootstrap_info = bootstrap_sidechain_nodes(self.options, network, 720 * self.block_rate * 5 / 2,
+                                                                 machines)
 
     def sc_setup_nodes(self):
         if self.perf_data["use_multiprocessing"]:
-            return start_sc_nodes_with_multiprocessing(len(self.sc_node_data), self.options.tmpdir)
+            nodes = self.get_node_data()
+            return start_sc_nodes_with_multiprocessing(node_data, self.options.tmpdir,
+                                                       machine_credentials=self.get_machine_credentials())
         else:
             return start_sc_nodes(len(self.sc_node_data), self.options.tmpdir)
 
@@ -332,7 +402,8 @@ class PerformanceTest(SidechainTestFramework):
             for i in range(0, node_count):
                 for j in range(0, node_count):
                     existing_node_connection = j in self.connection_map
-                    if i != j and (existing_node_connection and i not in self.connection_map[j] or not existing_node_connection):
+                    if i != j and (existing_node_connection and i not in self.connection_map[
+                        j] or not existing_node_connection):
                         logging.debug(f"Connect {i} to {j}")
                         connect_sc_nodes(self.sc_nodes[i], j)
                         self.create_node_connection_map(i, [j])
@@ -345,7 +416,8 @@ class PerformanceTest(SidechainTestFramework):
                     for j in range(0, node_count):
                         if j in forgers:
                             existing_node_connection = j in self.connection_map
-                            if i != j and (existing_node_connection and i not in self.connection_map[j] or not existing_node_connection):
+                            if i != j and (existing_node_connection and i not in self.connection_map[
+                                j] or not existing_node_connection):
                                 logging.debug(f"Connect {i} to {j}")
                                 connect_sc_nodes(self.sc_nodes[i], j)
                                 self.create_node_connection_map(i, [j])
@@ -367,7 +439,7 @@ class PerformanceTest(SidechainTestFramework):
             else:
                 non_txs_creator.append(self.sc_nodes[index])
         return txs_creators, non_txs_creator
-    
+
     def get_forger_nodes_indexes(self):
         forgers = []
         for index, node in enumerate(self.sc_nodes_list):
@@ -538,11 +610,15 @@ class PerformanceTest(SidechainTestFramework):
 
         return transactions
 
-    def txs_creator_send_transactions_per_second_to_addresses(self, utxo_amount, txs_creators, tps_test, send_coins_to_address):
+    def txs_creator_send_transactions_per_second_to_addresses(self, utxo_amount, txs_creators, tps_test,
+                                                              send_coins_to_address):
         # Get the destination addresses of the transactions
         destination_addresses = self.create_destination_addresses()
         # Pre-compute all the transactions bytes that we want to send
-        transactions = self.create_raw_transactions(txs_creators, utxo_amount, destination_addresses) if not send_coins_to_address else [[] for _ in range(len(txs_creators))]
+        transactions = self.create_raw_transactions(txs_creators, utxo_amount,
+                                                    destination_addresses) if not send_coins_to_address else [[] for _
+                                                                                                              in range(
+                len(txs_creators))]
 
         if tps_test:
             # Each node needs to be able to send a number of transactions per second, without going over 1 second, or
@@ -613,9 +689,9 @@ class PerformanceTest(SidechainTestFramework):
 
     def scan_logs_for_forks(self):
         for i in range(len(self.sc_nodes)):
-            assert_true(exists(self.options.tmpdir+"/sc_node"+str(i)))
+            assert_true(exists(self.options.tmpdir + "/sc_node" + str(i)))
             last_fork = "0"
-            with open(self.options.tmpdir+"/sc_node"+str(i)+"/log/debugLog.txt", 'r') as fp:
+            with open(self.options.tmpdir + "/sc_node" + str(i) + "/log/debugLog.txt", 'r') as fp:
                 logging.info(f"Check node {i} log...")
                 for line in fp:
                     if 'the fork number' in line:
@@ -658,7 +734,7 @@ class PerformanceTest(SidechainTestFramework):
         for node in txs_creators:
             # Multiply ft_amount by 1e8 to get zentoshi value
             assert_equal(http_wallet_balance(node), ft_amount * 1e8)
-            
+
         # Send funds to every forger nodes
         # We skip the first one because it already receives it in the sidechain creation phase
         for i in range(1, len(forger_nodes)):
@@ -668,7 +744,7 @@ class PerformanceTest(SidechainTestFramework):
 
             # Send some funds
             forward_transfer_to_sidechain(self.sc_nodes_bootstrap_info.sidechain_id, mc_nodes[0],
-                                        forger_addresses[-1], self.FORGING_STAKE_AMOUNT, mc_return_address)        
+                                          forger_addresses[-1], self.FORGING_STAKE_AMOUNT, mc_return_address)
         self.sc_sync_all()
         generate_next_blocks(forger_nodes[0], "first node", 1)[0]
         self.sc_sync_all()
@@ -754,22 +830,23 @@ class PerformanceTest(SidechainTestFramework):
         for i in range(1, len(forger_nodes)):
             # Multiply ft_amount by 1e8 to get zentoshi value
             assert_equal(http_wallet_balance(forger_nodes[i]), self.FORGING_STAKE_AMOUNT * 1e8)
-            makeForgerStake(forger_nodes[i], forger_addresses[i-1], forger_addresses[i-1], forger_vrf_pks[i-1], self.FORGING_STAKE_AMOUNT * 1e8)
+            makeForgerStake(forger_nodes[i], forger_addresses[i - 1], forger_addresses[i - 1], forger_vrf_pks[i - 1],
+                            self.FORGING_STAKE_AMOUNT * 1e8)
 
         self.sc_sync_all()
         generate_next_blocks(forger_nodes[0], "first node", 1)[0]
         self.sc_sync_all()
 
         # Verify that every forgers node created the correct forging stakes.
-        for node  in forger_nodes:
+        for node in forger_nodes:
             boxes = http_wallet_allBoxesOfType(node, "ForgerBox")
             assert_equal(len(boxes), 1)
             assert_equal(boxes[0]["value"], self.FORGING_STAKE_AMOUNT * 1e8)
 
         # Advance of 2 consensus epochs to maturate the new forging stakes
-        generate_next_block(forger_nodes[0], "first node", force_switch_to_next_epoch = True)[0]
+        generate_next_block(forger_nodes[0], "first node", force_switch_to_next_epoch=True)[0]
         self.sc_sync_all()
-        generate_next_block(forger_nodes[0], "first node", force_switch_to_next_epoch = True)[0]
+        generate_next_block(forger_nodes[0], "first node", force_switch_to_next_epoch=True)[0]
         self.sc_sync_all()
 
         # Take best block id of every node and assert they all match
@@ -800,8 +877,9 @@ class PerformanceTest(SidechainTestFramework):
                             request_start_time = time.time()
                             remaining_txs = len(allTransactions(creator_node, False)["transactionIds"])
                             request_end_time = time.time()
-                            logging.info(f"Creator Node{txs_creators.index(creator_node)} allTransactions response time: "
-                                  f"{request_end_time - request_start_time}")
+                            logging.info(
+                                f"Creator Node{txs_creators.index(creator_node)} allTransactions response time: "
+                                f"{request_end_time - request_start_time}")
                         except Exception:
                             logging.warning(
                                 f"Creator Node{txs_creators.index(creator_node)} - Unable to retrieve mempool "
@@ -828,11 +906,13 @@ class PerformanceTest(SidechainTestFramework):
 
         elif self.test_type == TestType.Transactions_Per_Second:
             # 1 thread per txs_creator node sending transactions
-            start_time = self.txs_creator_send_transactions_per_second_to_addresses(utxo_amount, txs_creators, True, self.send_coins_to_address)
+            start_time = self.txs_creator_send_transactions_per_second_to_addresses(utxo_amount, txs_creators, True,
+                                                                                    self.send_coins_to_address)
 
         elif self.test_type == TestType.All_Transactions:
             # 1 thread per txs_creator node sending transactions
-            start_time = self.txs_creator_send_transactions_per_second_to_addresses(utxo_amount, txs_creators, False, self.send_coins_to_address)
+            start_time = self.txs_creator_send_transactions_per_second_to_addresses(utxo_amount, txs_creators, False,
+                                                                                    self.send_coins_to_address)
 
         # stop forging
         for index, node in enumerate(forger_nodes):
@@ -887,7 +967,7 @@ class PerformanceTest(SidechainTestFramework):
                 number_of_transactions_mined = len(transactions_mined)
                 total_mined_transactions += len(transactions_mined)
                 logging.info("Node" + str(node_index) + "- BlockId " + str(current_block_id) + " Mined Transactions: " +
-                      str(number_of_transactions_mined))
+                             str(number_of_transactions_mined))
                 total_blocks_for_node += 1
                 current_block = http_block_findById(node, current_block_id)["block"]
                 current_block_id = current_block["parentId"]
@@ -901,7 +981,8 @@ class PerformanceTest(SidechainTestFramework):
                         assert_equal(len(tx["newBoxes"]), io_number)
             blocks_per_node.append(total_blocks_for_node)
             iteration += 1
-            logging.info("Node" + str(node_index) + " Total Blocks (Including start block): " + str(total_blocks_for_node))
+            logging.info(
+                "Node" + str(node_index) + " Total Blocks (Including start block): " + str(total_blocks_for_node))
             logging.info("Node" + str(node_index) + " Total Transactions Mined: " + str(total_mined_transactions))
         not_mined_transactions = self.initial_txs * len(txs_creators) - total_mined_transactions
         logging.info(f"Transactions NOT mined: {not_mined_transactions}")

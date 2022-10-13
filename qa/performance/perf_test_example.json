@@ -12,18 +12,25 @@
   "network_topology": "ring",
   "machine_credentials": [
     {
-      "ip_address": "",
+      "ip_address": "127.0.0.1",
       "port": "",
-      "ssh": {
-        "username": "",
-        "password": ""
-      }
+      "base_directory": "/home/abc",
+      "ssh_username": "myname",
+      "ssh_password": ""
+    },
+    {
+      "ip_address": "127.0.0.2",
+      "port": "",
+      "base_directory": "/home/abc",
+      "ssh_username": "myname",
+      "ssh_password": ""
     }
   ],
   "nodes": [
     {
       "forger": true,
       "tx_creator": false,
+      "machine": 0,
       "latency_settings": {
         "get_peer_spec": 0,
         "peer_spec": 0,

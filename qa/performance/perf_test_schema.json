@@ -73,27 +73,23 @@
           "port": {
             "type": "string"
           },
-          "ssh": {
-            "type": "object",
-            "properties": {
-              "username": {
-                "type": "string"
-              },
-              "password": {
-                "type": "string"
-              }
-            },
-            "required":[
-              "username",
-              "password"
-            ]
+          "base_directory": {
+            "type": "string"
+          },
+          "ssh_username": {
+            "type": "string"
+          },
+          "ssh_password": {
+            "type": "string"
           }
         }
         },
         "required": [
           "ip_address",
           "port",
-          "ssh"
+          "base_directory",
+          "ssh_username",
+          "ssh_password"
           ]
         },
     "nodes": {

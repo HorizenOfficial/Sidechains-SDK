@@ -1,5 +1,5 @@
-import pprint
-
+import paramiko
+from scp import SCPClient
 import psutil
 import logging
 import multiprocessing
@@ -338,6 +338,63 @@ def generate_csw_proof_info(withdrawal_epoch_len, keys_paths):
     return verification_key
 
 
+def connect_ssh_client(machine_credentials):
+    ssh_client = paramiko.SSHClient()
+    ssh_client.load_system_host_keys()
+    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh_client.connect(machine_credentials.ip_address, machine_credentials.port, machine_credentials.username,
+                       machine_credentials.password)
+    return ssh_client
+
+
+def disconnect_ssh_client(ssh_client):
+    try:
+        ssh_client.close()
+    except:
+        raise "Unable to close SSH Client"
+
+
+def copy_files_to_machine(ssh_client, machine_credentials):
+    examples_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', 'examples'))
+
+    machine_jar_path = f"{machine_credentials.base_directory}/simpleapp/target/"
+    machine_lib_path = f"{machine_credentials.base_directory}/simpleapp/target/lib/"
+
+    create_directory_on_machine(ssh_client, machine_jar_path)
+    create_directory_on_machine(ssh_client, machine_lib_path)
+
+    # TODO: Does resources_dir and template.conf need to be copied?
+    # resources_dir = get_resources_dir()
+    with SCPClient(ssh_client.get_transport()) as scp:
+        scp.put(f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-0.5.0-SNAPSHOT.jar", machine_jar_path)
+        scp.put(f"{examples_dir}/simpleapp/target/lib/* com.horizen.examples.SimpleApp", machine_lib_path)
+
+
+def copy_node_conf_to_machine(ssh_client, machine_credentials, conf, data_directory):
+    remote_path = machine_credentials.base_directory + data_directory
+    create_directory_on_machine(ssh_client, remote_path)
+
+    with SCPClient(ssh_client.get_transport()) as scp:
+        scp.put(conf, data_directory)
+
+
+def create_directory_on_machine(ssh_client, remote_path):
+    sftp = paramiko.SFTPClient.from_transport(ssh_client.get_transport())
+    try:
+        # Test if remote_path exists
+        sftp.chdir(remote_path)
+    except IOError:
+        # Create remote_path
+        sftp.mkdir(remote_path)
+        sftp.chdir(remote_path)
+    sftp.close()
+
+
+def start_sc_node_on_machine(ssh_client, bash_cmd):
+    stdin, stdout, stderr = ssh_client.exec_command(bash_cmd)
+    logging.error(stderr.readlines())
+
+
 """
 Create directories for each node and configuration files inside them.
 For each node put also genesis data in configuration files.
@@ -352,8 +409,12 @@ Parameters:
 
 def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_config=SCNodeConfiguration(),
                           log_info=LogInfo(), rest_api_timeout=DEFAULT_REST_API_TIMEOUT):
-    apiAddress = "127.0.0.1"
+    if sc_node_config.machine_credentials is not None:
+        api_address = sc_node_config.machine_credentials.ip_address
+    else:
+        api_address = "127.0.0.1"
     configsData = []
+    # TODO: multi machine api ports
     apiPort = sc_rpc_port(n)
     bindPort = sc_p2p_port(n)
     datadir = os.path.join(dirname, "sc_node" + str(n))
@@ -361,6 +422,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
     websocket_config = sc_node_config.mc_connection_info
     if not os.path.isdir(datadir):
         os.makedirs(datadir)
+
     resourcesDir = get_resources_dir()
     customFileName = resourcesDir + '/template_' + str(n + 1) + '.conf'
     fileToOpen = resourcesDir + '/template.conf'
@@ -390,7 +452,7 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
         'LOG_FILE_LEVEL': log_info.logFileLevel,
         'LOG_CONSOLE_LEVEL': log_info.logConsoleLevel,
         'WALLET_SEED': "sidechain_seed_{0}".format(n),
-        'API_ADDRESS': "127.0.0.1",
+        'API_ADDRESS': api_address,
         'API_PORT': str(apiPort),
         'API_KEY_HASH': api_key_hash,
         'API_TIMEOUT': (str(rest_api_timeout) + "s"),
@@ -433,11 +495,16 @@ def initialize_sc_datadir(dirname, n, bootstrap_info=SCBootstrapInfo, sc_node_co
     config = config.replace("NEW_LINE", "\n")
     configsData.append({
         "name": "node" + str(n),
-        "url": "http://" + apiAddress + ":" + str(apiPort)
+        "url": "http://" + api_address + ":" + str(apiPort)
     })
 
-    with open(os.path.join(datadir, "node" + str(n) + ".conf"), 'w+') as configFile:
+    filename = os.path.join(datadir, "node" + str(n) + ".conf")
+    with open(filename, 'w+') as configFile:
         configFile.write(config)
+
+    # If we're doing multi machine testing copy the config file to the relevant machine
+    if sc_node_config.machine_credentials is not None:
+        copy_node_conf_to_machine(sc_node_config.machine_credentials, filename, datadir)
 
     return configsData
 
@@ -525,35 +592,48 @@ def get_websocket_configuration(index, array_of_MCConnectionInfo):
     return array_of_MCConnectionInfo[index] if index < len(array_of_MCConnectionInfo) else MCConnectionInfo()
 
 
+def map_node_to_processor(machine_credentials, i):
+    if i == 0:
+        processors = [i, i + 1]
+    else:
+        first_available_process = i * 2
+        processors = [first_available_process, first_available_process + 1]
+    #TODO - cpu affinity for another machine
+    # if machine_credentials is not None
+    p = psutil.Process()
+    try:
+        p.cpu_affinity(processors)
+        logging.info(f"Processes #{processors}: Set Node{i} affinity to {processors}, Node{i} affinity now "
+                     f"{p.cpu_affinity()}")
+    except Exception:
+        logging.error("Exception: Unable to map cpu to process, ensure enough processors are available")
+        raise
+
+
 def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None, print_output_to_file=False,
-                  auth_api_key=None, use_multiprocessing=False, processor=None):
+                  auth_api_key=None, use_multiprocessing=False, processor=None, machine_credentials=None):
     if use_multiprocessing:
-        if i == 0:
-            processors = [i, i + 1]
-        else:
-            first_available_process = i * 2
-            processors = [first_available_process, first_available_process + 1]
-        p = psutil.Process()
-        try:
-            p.cpu_affinity(processors)
-            logging.info(f"Processes #{processors}: Set Node{i} affinity to {processors}, Node{i} affinity now "
-                         f"{p.cpu_affinity()}")
-        except Exception:
-            logging.error("Exception: Unable to map cpu to process, ensure enough processors are available")
-            raise
+        map_node_to_processor(i)
 
     """
     Start a SC node and returns API connection to it
     """
     # Will we have  extra args for SC too ?
-    datadir = os.path.join(dirname, "sc_node" + str(i))
+    if machine_credentials is not None:
+        datadir = os.path.join(machine_credentials.base_directory, dirname, "sc_node" + str(i))
+    else:
+        datadir = os.path.join(dirname, "sc_node" + str(i))
     lib_separator = ":"
 
     if sys.platform.startswith('win'):
         lib_separator = ";"
     examples_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', 'examples'))
     if binary is None:
-        binary = f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-0.5.0-SNAPSHOT.jar" + lib_separator + f"{examples_dir}/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+        # TODO: can we set binary before calling start_sc_node
+        if machine_credentials is not None:
+            binary = f"{machine_credentials.base_directory}/simpleapp/target/" + lib_separator + f"{machine_credentials.base_directory}/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+        else:
+            binary = f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-0.5.0-SNAPSHOT.jar" + lib_separator + f"{examples_dir}/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
     #        else if platform.system() == 'Linux':
     '''
     In order to effectively attach a debugger (e.g IntelliJ) to the simpleapp, it is necessary to start the process
@@ -572,38 +652,76 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     '''
     bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + dbg_agent_opt + ' -cp ' + binary + " " + cfgFileName
     if print_output_to_file:
+        # TODO: multi-machine with stdout
         with open(datadir + "/log_out.txt", "wb") as out, open(datadir + "/log_err.txt", "wb") as err:
+            # TODO: How to handle these subprocesses for multi machine
             sidechainclient_processes[i] = subprocess.Popen(bashcmd.split(), stdout=out, stderr=err)
     else:
-        sidechainclient_processes[i] = subprocess.Popen(bashcmd.split())
+        if machine_credentials is not None:
+            start_sc_node_on_machine(machine_credentials, bashcmd)
+        else:
+            sidechainclient_processes[i] = subprocess.Popen(bashcmd.split())
 
-    url = "http://rt:rt@%s:%d" % ('127.0.0.1' or rpchost, sc_rpc_port(i))
+    ip = "127.0.0.1"
+    if machine_credentials is not None:
+        ip = machine_credentials.ip_address
+    # TODO: rpc port number for multi machine
+    url = "http://rt:rt@%s:%d" % (ip or rpchost, sc_rpc_port(i))
     proxy = SidechainAuthServiceProxy(url, auth_api_key=auth_api_key)
     proxy.url = url  # store URL on proxy for info
     proxy.dataDir = datadir  # store the name of the datadir
     return proxy
 
 
-def start_sc_nodes_with_multiprocessing(num_nodes, dirname, extra_args=None, rpchost=None, binary=None,
-                                        print_output_to_file=False,
-                                        auth_api_key=DEFAULT_API_KEY):
+def log_available_processors(machine_credentials, num_nodes):
+    machine_processor_count = []
+
+    if machine_credentials is not None:
+        for machine in machine_credentials:
+            ssh_client = connect_ssh_client(machine)
+            stdin, stdout, stderr = ssh_client.exec_command("nproc --all")
+            machine_processor_count.append(int(stdout.read()))
+            disconnect_ssh_client(ssh_client)
+    else:
+        machine_processor_count.append(multiprocessing.Pool()._processes)
+
+    for index, processors in machine_processor_count:
+        processors_available = processors / 2
+        logging.info(f"Machine{index} Available processors (2 threads each): {processors_available}")
+        logging.info(f"Number of Nodes: {num_nodes}")
+        if processors_available / num_nodes < 1:
+            logging.warning("WARNING: Number of Nodes exceeds available Processors")
+
+
+
+
+def start_sc_nodes_with_multiprocessing(node_data, dirname, extra_args=None, rpchost=None, binary=None,
+                                        print_output_to_file=False,auth_api_key=DEFAULT_API_KEY,
+                                        machine_credentials=None):
+    num_nodes = len(node_data)
     """
     Start multiple SC clients, return connections to them
     """
-    if extra_args is None: extra_args = [None for i in range(num_nodes)]
-    if binary is None: binary = [None for i in range(num_nodes)]
+    if extra_args is None: extra_args = [None for _ in range(num_nodes)]
+    if binary is None: binary = [None for _ in range(num_nodes)]
 
-    processors: int = multiprocessing.Pool()._processes
-    processors_available = processors / 2
-    logging.info(f"Available processors (2 threads each): {processors_available}")
-    logging.info(f"Number of Nodes: {num_nodes}")
-    if processors_available / num_nodes < 1:
-        logging.warning("WARNING: Number of Nodes exceeds available Processors")
+    log_available_processors(machine_credentials, num_nodes)
 
-    nodes = [
-        start_sc_node(i, dirname, extra_args[i], rpchost, binary=binary[i], print_output_to_file=print_output_to_file,
-                      auth_api_key=auth_api_key, use_multiprocessing=True, processor=i)
-        for i in range(num_nodes)]
+    if machine_credentials is not None:
+        nodes = []
+        for i in range(machine_credentials):
+            node_number = 0
+            for index, node in enumerate(node_data):
+                if node.machine == i:
+                    nodes.append(start_sc_node(index, dirname, extra_args[index], rpchost, binary=binary[index],
+                                               print_output_to_file=print_output_to_file, auth_api_key=auth_api_key,
+                                               use_multiprocessing=True, processor=node_number))
+                node_number += 1
+    else:
+        nodes = [
+            start_sc_node(i, dirname, extra_args[i], rpchost, binary=binary[i], print_output_to_file=print_output_to_file,
+                          auth_api_key=auth_api_key, use_multiprocessing=True, processor=i)
+            for i in range(num_nodes)]
 
     wait_for_sc_node_initialization(nodes)
 
@@ -889,7 +1007,7 @@ network: {
 
 # If we want to use a different block rate (not 120s) override this block_timestamp_rewind field.
 def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
-                              block_timestamp_rewind=DefaultBlockTimestampRewind):
+                              block_timestamp_rewind=DefaultBlockTimestampRewind, machines=None):
     log_info = LogInfo(options.logfilelevel, options.logconsolelevel)
     logging.info(options)
     total_number_of_sidechain_nodes = len(network.sc_nodes_configuration)
@@ -920,6 +1038,13 @@ def bootstrap_sidechain_nodes(options, network=SCNetworkConfiguration,
                                                             sc_nodes_bootstrap_info.initial_cumulative_comm_tree_hash,
                                                             cert_keys_paths,
                                                             csw_keys_paths)
+    # Copy necessary files to another machine
+    if machines is not None:
+        for index, machine in enumerate(machines):
+            # First machine (0) is the test framework host machine and does not need files copied
+            if index > 0:
+                copy_files_to_machine(machine)
+
     for i in range(total_number_of_sidechain_nodes):
         sc_node_conf = network.sc_nodes_configuration[i]
         if i == 0:
