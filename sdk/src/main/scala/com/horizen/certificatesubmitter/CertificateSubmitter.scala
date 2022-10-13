@@ -536,7 +536,7 @@ object CertificateSubmitterRef {
   def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit ec: ExecutionContext): Props = {
-    val keyRotationStrategy = if (settings.withdrawalEpochCertificateSettings.typeOfCircuit  == TypeOfCertificateSubmitter.NaiveThresholdSignatureCircuit) {
+    val keyRotationStrategy = if (settings.withdrawalEpochCertificateSettings.typeOfCircuit  == TypeOfCircuit.NaiveThresholdSignatureCircuit) {
       new WithoutKeyRotationStrategy(settings, params)
     } else {
       new WithKeyRotationStrategy(settings, params)
@@ -555,8 +555,8 @@ object CertificateSubmitterRef {
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
     system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel).withMailbox("akka.actor.deployment.submitter-prio-mailbox"), name)
 
-  object TypeOfCertificateSubmitter extends Enumeration {
-    type TypeOfCertificateSubmitter = Value
+  object TypeOfCircuit extends Enumeration {
+    type TypeOfCircuit = Value
 
     val NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation = Value
   }

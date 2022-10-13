@@ -1,7 +1,7 @@
 package com.horizen
 
-import com.horizen.certificatesubmitter.CertificateSubmitterRef.TypeOfCertificateSubmitter
-import com.horizen.certificatesubmitter.CertificateSubmitterRef.TypeOfCertificateSubmitter.TypeOfCertificateSubmitter
+import com.horizen.certificatesubmitter.CertificateSubmitterRef.TypeOfCircuit
+import com.horizen.certificatesubmitter.CertificateSubmitterRef.TypeOfCircuit.TypeOfCircuit
 import sparkz.core.settings.SparkzSettings
 
 import scala.concurrent.duration.FiniteDuration
@@ -34,7 +34,7 @@ case class WithdrawalEpochCertificateSettings(submitterIsEnabled: Boolean,
                                               maxPks: Long,
                                               certProvingKeyFilePath: String,
                                               certVerificationKeyFilePath: String,
-                                              typeOfCircuit: TypeOfCertificateSubmitter = TypeOfCertificateSubmitter.NaiveThresholdSignatureCircuit,
+                                              typeOfCircuit: TypeOfCircuit = TypeOfCircuit.NaiveThresholdSignatureCircuit,
                                               certificateSigningIsEnabled: Boolean = true,
                                               certificateAutomaticFeeComputation: Boolean = true,
                                               certificateFee: String = "0.0001"
