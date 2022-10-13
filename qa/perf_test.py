@@ -180,11 +180,8 @@ class PerformanceTest(SidechainTestFramework):
                 "test_run_time": test_run_time, "block_rate": block_rate,
                 "use_multiprocessing": perf_data["use_multiprocessing"], "initial_txs": initial_txs,
                 "network_topology": topology,
-                "get_peer_spec_latency": [],
-                "peer_spec_latency": [],
                 "transaction_latency": [],
                 "block_latency": [],
-                "request_modifier_spec_latency": [],
                 "modifiers_spec_latency": [],
                 "n_nodes": len(sc_node_data), "n_forgers": sum(map(lambda x: x["forger"] == True, sc_nodes_list)),
                 "n_tx_creator": sum(map(lambda x: x["tx_creator"] == True, sc_nodes_list)), "initial_balances": [],
@@ -955,11 +952,8 @@ class PerformanceTest(SidechainTestFramework):
         # Get latency configuration values
         latency_configurations = self.get_latency_config()
         for config in latency_configurations:
-            self.csv_data["get_peer_spec_latency"].append(config.get_peer_spec)
-            self.csv_data["peer_spec_latency"].append(config.peer_spec)
             self.csv_data["transaction_latency"].append(config.transaction)
             self.csv_data["block_latency"].append(config.block)
-            self.csv_data["request_modifier_spec_latency"].append(config.request_modifier_spec)
             self.csv_data["modifiers_spec_latency"].append(config.modifiers_spec)
 
         self.scan_logs_for_forks()
