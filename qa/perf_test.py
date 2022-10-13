@@ -29,7 +29,7 @@ from httpCalls.wallet.allBoxesOfType import http_wallet_allBoxesOfType
 from httpCalls.wallet.createPrivateKey25519 import http_wallet_createPrivateKey25519
 from httpCalls.wallet.createVrfSecret import http_wallet_createVrfSecret
 
-from test_framework.util import start_nodes, \
+from test_framework.util import assert_false, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain, assert_equal
 from SidechainTestFramework.scutil import assert_true, bootstrap_sidechain_nodes, start_sc_nodes, generate_next_blocks, \
     deserialize_perf_test_json, connect_sc_nodes, start_sc_nodes_with_multiprocessing, generate_next_block
@@ -362,6 +362,7 @@ class PerformanceTest(SidechainTestFramework):
         non_txs_creator = []
         for index, node in enumerate(self.sc_nodes_list):
             if node["tx_creator"]:
+                assert_false(node["forger"])
                 txs_creators.append(self.sc_nodes[index])
             else:
                 non_txs_creator.append(self.sc_nodes[index])
