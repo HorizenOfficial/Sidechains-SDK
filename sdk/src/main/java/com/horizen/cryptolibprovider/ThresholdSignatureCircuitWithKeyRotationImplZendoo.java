@@ -181,10 +181,12 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                                long ftMinAmount,
                                Seq<byte[]> customFields,
                                byte[] constant,
-                               long quality, byte[] proof,
-                               boolean checkProof,
+                               long quality,
+                               byte[] proof,
                                String verificationKeyPath,
-                               boolean checkVerificationKey) {
+                               Option<WithdrawalEpochCertificate> previousEpochCertificateOption,
+                               byte[] genesisConstantBytes,
+                               int sidechainCreationVersionInt) {
         List<BackwardTransfer> backwardTransfers =
                 bt.stream().map(ThresholdSignatureCircuitWithKeyRotationImplZendoo::withdrawalRequestBoxToBackwardTransfer).collect(Collectors.toList());
 
@@ -192,10 +194,25 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         FieldElement constantFe = FieldElement.deserialize(constant);
         FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
         List<FieldElement> customFe = prepareCustomFieldElements(customFields);
+        FieldElement genesisConstant = FieldElement.deserialize(genesisConstantBytes);
 
-        boolean verificationResult = NaiveThresholdSignatureWKeyRotation.verifyProof(backwardTransfers, sidechainIdFe, epochNumber,
-                endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount, constantFe, quality, customFe, proof, checkProof,
-                verificationKeyPath, checkVerificationKey);
+        WithdrawalCertificate withdrawalCertificate = new WithdrawalCertificate(
+                FieldElement.deserialize(sidechainId),
+                epochNumber,
+                backwardTransfers,
+                quality,
+                FieldElement.deserialize(endCumulativeScTxCommTreeRoot),
+                ftMinAmount,
+                btrFee,
+                scala.collection.JavaConverters.seqAsJavaList(customFields).stream().map(FieldElement::deserialize).collect(Collectors.toList())
+        );
+
+        Optional<WithdrawalCertificate> previousCertificateOption = OptionConverters.toJava(previousEpochCertificateOption)
+                .map(c -> CswCircuitImplZendoo.createWithdrawalCertificate(c,
+                        SidechainCreationVersions.Value(sidechainCreationVersionInt)));
+
+
+        boolean verificationResult = NaiveThresholdSignatureWKeyRotation.verifyProof(withdrawalCertificate, previousCertificateOption, genesisConstant, proof, verificationKeyPath);
 
         endCumulativeScTxCommTreeRootFe.freeFieldElement();
         sidechainIdFe.freeFieldElement();
