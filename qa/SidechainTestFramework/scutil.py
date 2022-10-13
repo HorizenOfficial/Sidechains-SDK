@@ -1066,6 +1066,7 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbo
 
     # "while" will break if whole epoch no generated block, due changed error code
     # ErrorBlockNotCreated = 0105
+    count_slot = 720
     while "error" in forge_result and forge_result["error"]["code"] == "0105":
         if ("no forging stake" in forge_result["error"]["description"]):
             raise AssertionError("No forging stake for the epoch")
@@ -1075,6 +1076,12 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbo
             raise AssertionError("Inconsistent top quality ceritificate")
         if ("the sidechain has ceased" in forge_result["error"]["description"]):
             raise AssertionError("Sidechain has ceased")
+        if ("semantically invalid" in forge_result["error"]["description"]):
+            raise AssertionError("One transaction in the block is semantically invalid")
+
+        count_slot -= 1
+        if (count_slot <= 0):
+            raise AssertionError("Could not generate any block in this epoch")
 
         logging.info("Skip block generation for epoch {epochNumber} slot {slotNumber}".format(epochNumber=next_epoch,
                                                                                        slotNumber=next_slot))
