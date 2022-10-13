@@ -2,7 +2,7 @@ package com.horizen.certificatesubmitter.strategies
 
 import akka.pattern.ask
 import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
-import com.horizen.block.WithdrawalEpochCertificate
+import com.horizen.block.{SidechainCreationVersions, WithdrawalEpochCertificate}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
 import com.horizen.certificatesubmitter.dataproof.{DataForProofGeneration, DataForProofGenerationWithKeyRotation}
@@ -65,7 +65,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       true,
       true,
       dataForProofGenerationWithKeyRotation.previousCertificateOption,
-      sidechainCreationVersion.id,
+      SidechainCreationVersions(sidechainCreationVersion.id),
       dataForProofGenerationWithKeyRotation.genesisKeysRootHash
     )
   }
