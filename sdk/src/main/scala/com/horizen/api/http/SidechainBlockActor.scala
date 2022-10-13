@@ -40,7 +40,7 @@ class SidechainBlockActor[PMOD <: PersistentNodeViewModifier : ClassTag, SI <: S
     if (submitBlockPromises.contains(sidechainBlock.id) ) {
       submitBlockPromises.get(sidechainBlock.id) match {
         case Some(p) =>
-          p.failure(throwable)
+          p.success(Failure(throwable))
           submitBlockPromises -= sidechainBlock.id
         case _ =>
       }

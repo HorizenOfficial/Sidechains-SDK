@@ -1081,7 +1081,9 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbo
 
         count_slot -= 1
         if (count_slot <= 0):
-            raise AssertionError("Could not generate any block in this epoch")
+            errMsg = "Could not generate any block in this epoch: {}".format(forge_result["error"]["description"])
+            logging.warning("Api Error msg not handled: " + errMsg)
+            raise AssertionError(errMsg)
 
         logging.info("Skip block generation for epoch {epochNumber} slot {slotNumber}".format(epochNumber=next_epoch,
                                                                                        slotNumber=next_slot))
