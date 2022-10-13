@@ -271,6 +271,7 @@ class EthService(
           doCall(nodeView, params, tag)
           true
         } catch {
+          case _: ExecutionRevertedException => true
           case _: ExecutionFailedException => false
           case _: IntrinsicGasException => false
         }
