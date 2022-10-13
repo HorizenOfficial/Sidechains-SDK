@@ -224,15 +224,13 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
 
 
     @Override
-    public byte[] generateSysDataConstant(List<byte[]> publicKeysList, long threshold) {
-        List<SchnorrPublicKey> schnorrPublicKeys = publicKeysList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList());
+    public byte[] generateSysDataConstant(byte[] genesisKeysRootHash, long threshold) {
 
         // Note: sc-cryptolib return constant in LittleEndian
-        FieldElement sysDataConstant = NaiveThresholdSignatureWKeyRotation.getConstant(schnorrPublicKeys, threshold);
+        FieldElement sysDataConstant = NaiveThresholdSignatureWKeyRotation.getConstant(FieldElement.deserialize(genesisKeysRootHash), threshold);
         byte[] sysDataConstantBytes = sysDataConstant.serializeFieldElement();
 
         sysDataConstant.freeFieldElement();
-        schnorrPublicKeys.forEach(SchnorrPublicKey::freePublicKey);
 
         return sysDataConstantBytes;
     }

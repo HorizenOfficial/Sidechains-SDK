@@ -1,6 +1,5 @@
 package com.horizen.cryptolibprovider;
 
-import com.horizen.block.SidechainCreationVersions;
 import com.horizen.block.WithdrawalEpochCertificate;
 import com.horizen.box.WithdrawalRequestBox;
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesListBytes;
@@ -52,7 +51,7 @@ public interface ThresholdSignatureCircuitWithKeyRotation {
                         byte[] genesisConstantBytes,
                         int sidechainCreationVersionInt);
 
-    byte[] generateSysDataConstant(List<byte[]> publicKeysList, long threshold);
+    byte[] generateSysDataConstant(byte[] genesisKeysRootHash, long threshold);
 
     boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath, int customFieldsNum);
 
