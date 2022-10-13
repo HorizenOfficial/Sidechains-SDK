@@ -3,12 +3,12 @@ package com.horizen.cryptolibprovider;
 import com.horizen.block.SidechainCreationVersions;
 import com.horizen.block.WithdrawalEpochCertificate;
 import com.horizen.box.WithdrawalRequestBox;
-import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesList;
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesListBytes;
 import com.horizen.certnative.*;
 import com.horizen.certnative.BackwardTransfer;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.provingsystemnative.ProvingSystemType;
+import com.horizen.schnorrnative.SchnorrKeysSignaturesList;
 import com.horizen.schnorrnative.SchnorrPublicKey;
 import com.horizen.schnorrnative.SchnorrSignature;
 import com.horizen.utils.Pair;
@@ -142,8 +142,8 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                 .map(c -> CswCircuitImplZendoo.createWithdrawalCertificate(c,
                         SidechainCreationVersions.Value(sidechainCreationVersionInt)));
 
-        SchnorrKeysSignaturesList keysSignaturesList = SchnorrKeysSignaturesList.getSchnorrKeysSignaturesList(schnorrKeysSignaturesListBytes);
-        List<SchnorrPublicKey> signingPublicKeys = keysSignaturesList.signingKeys();
+        SchnorrKeysSignaturesList keysSignaturesList = SchnorrKeysSignaturesListBytes.getSchnorrKeysSignaturesList(schnorrKeysSignaturesListBytes);
+        SchnorrPublicKey[] signingPublicKeys = keysSignaturesList.getSigningKeys();
 
         List<BackwardTransfer> backwardTransfers =
                 bt.stream().map(ThresholdSignatureCircuitImplZendoo::withdrawalRequestBoxToBackwardTransfer).collect(Collectors.toList());
@@ -158,14 +158,14 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                 btrFee,
                 scala.collection.JavaConverters.seqAsJavaList(customFields).stream().map(FieldElement::deserialize).collect(Collectors.toList())
         );
-        CreateProofResult proofAndQuality = NaiveThresholdSignatureWKeyRotation.createProof(
-                keysSignaturesList, withdrawalCertificate, previousCertificateOption, schnorrSignatureBytesList,
-                signingPublicKeys.size(), threshold, FieldElement.deserialize(genesisKeysRootHash), Optional.empty(),
+        CreateProofResult proofAndQuality = NaiveThresholdSignatureWKeyRotation.createProof(keysSignaturesList,
+                withdrawalCertificate, previousCertificateOption, signatures,
+                signingPublicKeys.length, threshold, FieldElement.deserialize(genesisKeysRootHash), Optional.empty(),
                 provingKeyPath, false, zk, true, true);
 
         endCumulativeScTxCommTreeRootFe.freeFieldElement();
         sidechainIdFe.freeFieldElement();
-        keysSignaturesList.signingKeys().forEach(SchnorrPublicKey::freePublicKey);
+        Arrays.stream(keysSignaturesList.getSigningKeys()).forEach(SchnorrPublicKey::freePublicKey);
         signatures.forEach(SchnorrSignature::freeSignature);
         customFe.forEach(FieldElement::freeFieldElement);
 
