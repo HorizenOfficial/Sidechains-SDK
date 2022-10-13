@@ -315,8 +315,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
   }
 
   def doGetListOfForgersCmd(msg: Message, view: BaseAccountStateView): Array[Byte] = {
-    if (msg.getValue.compareTo(BigInteger.ZERO) == 1) {
-      throw new ExecutionRevertedException("Call value can't be greater than zero")
+    if (msg.getValue.compareTo(BigInteger.ZERO) != 0) {
+      throw new ExecutionRevertedException("Call value must be zero")
     }
 
     checkGetListOfForgersCmd(msg)
@@ -329,8 +329,8 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
       throw new ExecutionRevertedException("Call must include a nonce")
     }
 
-    if (msg.getValue.compareTo(BigInteger.ZERO) == 1) {
-      throw new ExecutionRevertedException("Call value can't be greater than zero")
+    if (msg.getValue.compareTo(BigInteger.ZERO) != 0) {
+      throw new ExecutionRevertedException("Call value must be zero")
     }
 
     val inputParams = getArgumentsFromData(msg.getData)
