@@ -45,10 +45,12 @@ public interface ThresholdSignatureCircuitWithKeyRotation {
                         long ftMinAmount,
                         Seq<byte[]> customFields,
                         byte[] constant,
-                        long quality, byte[] proof,
-                        boolean checkProof,
+                        long quality,
+                        byte[] proof,
                         String verificationKeyPath,
-                        boolean checkVerificationKey);
+                        Option<WithdrawalEpochCertificate> previousEpochCertificateOption,
+                        byte[] genesisConstantBytes,
+                        int sidechainCreationVersionInt);
 
     byte[] generateSysDataConstant(List<byte[]> publicKeysList, long threshold);
 
