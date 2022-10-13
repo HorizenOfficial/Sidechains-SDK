@@ -23,6 +23,8 @@ chmod +x ../perf_test.py
 
 RANDOM_LATENCY=($1)
 
+ADD_FORGER=($2)
+
 rm -f perf_test.json
 cp perf_test_example.json perf_test.json
 
@@ -33,6 +35,18 @@ if $RANDOM_LATENCY; then
         latency=$[ $RANDOM % 2000 + 200 ]
         sed -i "0,/\"modifiers_spec\":[[:space:]]0/{s/\"modifiers_spec\":[[:space:]]0/\"modifiers_spec\": ${latency}/}" perf_test.json
     done
+    (cd .. && python3 perf_test.py)
 fi
 
-(cd .. && python3 perf_test.py)
+
+if $ADD_FORGER; then
+
+    for value in {1..5}
+    do
+        sed -i "0,/\"forger\":[[:space:]]false/{s/\"forger\":[[:space:]]false/\"forger\": true/}" perf_test.json
+        sed -i "0,/\"tx_creator\":[[:space:]]true/{s/\"tx_creator\":[[:space:]]true/\"tx_creator\": false/}" perf_test.json
+        (cd .. && python3 perf_test.py)
+    done
+
+fi
+
