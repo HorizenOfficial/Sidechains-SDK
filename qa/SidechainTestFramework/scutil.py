@@ -391,8 +391,8 @@ def create_directory_on_machine(ssh_client, remote_path):
 
 
 def start_sc_node_on_machine(ssh_client, bash_cmd):
-    stdin, stdout, stderr = ssh_client.exec_command(bash_cmd)
-    logging.error(stderr.readlines())
+    # TODO: is this return correct?
+    return ssh_client.exec_command(bash_cmd)
 
 
 """
@@ -592,19 +592,22 @@ def get_websocket_configuration(index, array_of_MCConnectionInfo):
     return array_of_MCConnectionInfo[index] if index < len(array_of_MCConnectionInfo) else MCConnectionInfo()
 
 
-def map_node_to_processor(machine_credentials, i):
-    if i == 0:
-        processors = [i, i + 1]
+def get_processors_to_map(node_number):
+    if node_number == 0:
+        return [node_number, node_number + 1]
     else:
-        first_available_process = i * 2
-        processors = [first_available_process, first_available_process + 1]
-    #TODO - cpu affinity for another machine
-    # if machine_credentials is not None
+        first_available_process = node_number * 2
+        return [first_available_process, first_available_process + 1]
+
+
+def map_node_to_processor(machine_credentials, node_number):
+    processors = get_processors_to_map(node_number)
+
     p = psutil.Process()
     try:
         p.cpu_affinity(processors)
-        logging.info(f"Processes #{processors}: Set Node{i} affinity to {processors}, Node{i} affinity now "
-                     f"{p.cpu_affinity()}")
+        logging.info(f"Processes #{processors}: Set Node{node_number} affinity to {processors}, Node{node_number} "
+                     f"affinity now {p.cpu_affinity()}")
     except Exception:
         logging.error("Exception: Unable to map cpu to process, ensure enough processors are available")
         raise
@@ -612,8 +615,9 @@ def map_node_to_processor(machine_credentials, i):
 
 def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None, print_output_to_file=False,
                   auth_api_key=None, use_multiprocessing=False, processor=None, machine_credentials=None):
-    if use_multiprocessing:
-        map_node_to_processor(i)
+    # Local, single machine processor mapping
+    if use_multiprocessing and machine_credentials is None:
+        map_node_to_processor(machine_credentials, i)
 
     """
     Start a SC node and returns API connection to it
@@ -629,11 +633,13 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
         lib_separator = ";"
     examples_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', 'examples'))
     if binary is None:
-        # TODO: can we set binary before calling start_sc_node
+        # TODO: can we set binary before calling start_sc_node?
         if machine_credentials is not None:
-            binary = f"{machine_credentials.base_directory}/simpleapp/target/" + lib_separator + f"{machine_credentials.base_directory}/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+            binary = f"{machine_credentials.base_directory}/simpleapp/target/" + lib_separator + \
+                     f"{machine_credentials.base_directory}/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
         else:
-            binary = f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-0.5.0-SNAPSHOT.jar" + lib_separator + f"{examples_dir}/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
+            binary = f"{examples_dir}/simpleapp/target/sidechains-sdk-simpleapp-0.5.0-SNAPSHOT.jar" + lib_separator + \
+                     f"{examples_dir}/simpleapp/target/lib/* com.horizen.examples.SimpleApp"
     #        else if platform.system() == 'Linux':
     '''
     In order to effectively attach a debugger (e.g IntelliJ) to the simpleapp, it is necessary to start the process
@@ -651,6 +657,12 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
     The --add-opens VM option remove this warning.
     '''
     bashcmd = 'java --add-opens java.base/java.lang=ALL-UNNAMED ' + dbg_agent_opt + ' -cp ' + binary + " " + cfgFileName
+
+    if use_multiprocessing and machine_credentials is not None:
+        # Assumes 2 processors are used per node
+        processors = get_processors_to_map(i)
+        bashcmd = f'taskset -cpa {str(processors[0])}, {str(processors[1])}' + bashcmd
+
     if print_output_to_file:
         # TODO: multi-machine with stdout
         with open(datadir + "/log_out.txt", "wb") as out, open(datadir + "/log_err.txt", "wb") as err:
@@ -658,7 +670,7 @@ def start_sc_node(i, dirname, extra_args=None, rpchost=None, timewait=None, bina
             sidechainclient_processes[i] = subprocess.Popen(bashcmd.split(), stdout=out, stderr=err)
     else:
         if machine_credentials is not None:
-            start_sc_node_on_machine(machine_credentials, bashcmd)
+            sidechainclient_processes[i] = start_sc_node_on_machine(machine_credentials, bashcmd)
         else:
             sidechainclient_processes[i] = subprocess.Popen(bashcmd.split())
 
@@ -691,8 +703,6 @@ def log_available_processors(machine_credentials, num_nodes):
         logging.info(f"Number of Nodes: {num_nodes}")
         if processors_available / num_nodes < 1:
             logging.warning("WARNING: Number of Nodes exceeds available Processors")
-
-
 
 
 def start_sc_nodes_with_multiprocessing(node_data, dirname, extra_args=None, rpchost=None, binary=None,
@@ -781,7 +791,7 @@ def wait_sidechainclients():
 def get_sc_node_pids():
     return [process.pid for process in sidechainclient_processes.values()]
 
-
+# TODO: Multi machine
 def connect_sc_nodes(from_connection, node_num, wait_for=25):
     """
     Connect a SC node, from_connection, to another one, specifying its node_num. 
@@ -801,7 +811,7 @@ def connect_sc_nodes(from_connection, node_num, wait_for=25):
             break
         time.sleep(WAIT_CONST)
 
-
+# TODO: Multi machine
 def disconnect_sc_nodes(from_connection, node_num):
     """
     Disconnect a SC node, from_connection, to another one, specifying its node_num.
