@@ -20,7 +20,7 @@ import com.horizen.storage.SidechainSecretStorage
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils}
 import com.horizen.{SidechainSettings, SidechainTypes, WalletSettings}
 import org.junit.Assert.{assertEquals, assertTrue}
-import org.junit.{Before, Test}
+import org.junit.{Before, Ignore, Test}
 import org.mockito.{ArgumentMatchers, Mockito}
 import org.scalatestplus.junit.JUnitSuite
 import org.web3j.crypto.{ECKeyPair, Keys}
@@ -47,7 +47,7 @@ class AccountSidechainNodeViewHolderPerfTest
   implicit val actorSystem: ActorSystem = ActorSystem("sc_nvh_mocked")
   var mockedNodeViewHolderRef: ActorRef = _
 
-  val nonces = TrieMap[ByteArrayWrapper, BigInteger]()
+  val mockStateDbNonces = TrieMap[ByteArrayWrapper, BigInteger]()
 
   @Before
   def setUp(): Unit = {
@@ -62,7 +62,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
     Mockito.when(stateViewMock.getNonce(ArgumentMatchers.any[Array[Byte]])).thenAnswer { answer =>
       {
-        nonces.getOrElse(new ByteArrayWrapper(answer.getArgument(0).asInstanceOf[Array[Byte]]), BigInteger.ZERO)
+        mockStateDbNonces.getOrElse(new ByteArrayWrapper(answer.getArgument(0).asInstanceOf[Array[Byte]]), BigInteger.ZERO)
       }
     }
 
@@ -71,7 +71,7 @@ class AccountSidechainNodeViewHolderPerfTest
   }
 
   @Test
-  // @Ignore
+  //@Ignore
   def txModifyTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/txModifyTest.txt", true))
 
@@ -182,6 +182,7 @@ class AccountSidechainNodeViewHolderPerfTest
   }
 
   @Test
+  //@Ignore
   def updateMemPoolTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/updateMemPoolTest.txt", true))
 
@@ -218,7 +219,7 @@ class AccountSidechainNodeViewHolderPerfTest
 
       val listOfNormalTxs = createTransactions(numOfNormalAccount, numOfTxsPerNormalAccounts, orphanIdx = 2)
 
-      val listOfSpammerTxs = createTransactions(numOfNormalAccount, numOfTxsPerNormalAccounts, orphanIdx = 75)
+      val listOfSpammerTxs = createTransactions(numOfSpammerAccount, numOfTxsPerSpammerAccounts, orphanIdx = 75)
 
       val listOfTxs = listOfSpammerTxs ++ listOfNormalTxs
       listOfTxs.foreach(tx => nodeViewHolder.txModify(tx.asInstanceOf[SidechainTypes#SCAT]))
@@ -232,7 +233,7 @@ class AccountSidechainNodeViewHolderPerfTest
       Mockito.when(appliedBlock.transactions).thenReturn(listOfTxsInBlock.asInstanceOf[Seq[SidechainTypes#SCAT]])
       // Update the nonces
       listOfTxsInBlock.foreach(tx =>
-        nonces.put(new ByteArrayWrapper(tx.getFrom.address()), tx.getNonce.add(BigInteger.ONE))
+        mockStateDbNonces.put(new ByteArrayWrapper(tx.getFrom.address()), tx.getNonce.add(BigInteger.ONE))
       )
 
       println("Starting test")
@@ -248,20 +249,20 @@ class AccountSidechainNodeViewHolderPerfTest
       mempool = newMemPool
       val rollBackBlock = appliedBlock
       // restore the mempool so its size is again numOfTxs
-      val additionalTxs = createTransactions(numOfTxsInBlock, 1, -1)
+      val additionalTxs = createTransactions(numOfTxsInBlock, 1)
       additionalTxs.foreach(tx => nodeViewHolder.txModify(tx.asInstanceOf[SidechainTypes#SCAT]))
       assertEquals(numOfTxs, mempool.size)
 
       // the block to applied will have 1000 txs of the rolledBack block and 400 from the additionalTxs
       val appliedBlock2: AccountBlock = mock[AccountBlock]
-      val listOfTxsInBlock2 = listOfTxsInBlock.take(1000) ++ additionalTxs.take(400)
+      val listOfTxsInBlock2 = listOfTxsInBlock.take(1000) ++ additionalTxs.take(400)//TODO
       Mockito.when(appliedBlock2.transactions).thenReturn(listOfTxsInBlock2.asInstanceOf[Seq[SidechainTypes#SCAT]])
 
       // Update the nonces
       // First reapplying the txs in the rollBackBlock, then the ones in appliedBlock2
-      listOfTxsInBlock.foreach(tx => nonces.put(new ByteArrayWrapper(tx.getFrom.address()), tx.getNonce))
+      listOfTxsInBlock.foreach(tx => mockStateDbNonces.put(new ByteArrayWrapper(tx.getFrom.address()), tx.getNonce))
       listOfTxsInBlock2.foreach(tx =>
-        nonces.put(new ByteArrayWrapper(tx.getFrom.address()), tx.getNonce.add(BigInteger.ONE))
+        mockStateDbNonces.put(new ByteArrayWrapper(tx.getFrom.address()), tx.getNonce.add(BigInteger.ONE))
       )
       println("Starting test")
       val startTime2 = System.currentTimeMillis()
@@ -278,7 +279,7 @@ class AccountSidechainNodeViewHolderPerfTest
   }
 
   @Test
-  // @Ignore
+//  @Ignore
   def takeTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/takeTest.txt", true))
 
