@@ -81,7 +81,7 @@ object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with Withdra
   }
 
   protected def execGetListOfWithdrawalReqRecords(msg: Message, view: BaseAccountStateView): Array[Byte] = {
-    if (msg.getValue.compareTo(BigInteger.ZERO) != 0) {
+    if (msg.getValue.signum() != 0) {
       throw new ExecutionRevertedException("Call value must be zero")
     }
 
