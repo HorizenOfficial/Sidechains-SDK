@@ -269,18 +269,25 @@ class EthService(
         try {
           params.gas = gas
           doCall(nodeView, params, tag)
-          true
+          (true, None)
         } catch {
-          case _: ExecutionFailedException => false
-          case _: IntrinsicGasException => false
+          case err: ExecutionRevertedException => (false, Some(err))
+          case _: ExecutionFailedException => (false, None)
+          case _: IntrinsicGasException => (false, None)
         }
       // Execute the binary search and hone in on an executable gas limit
       // We need to do a search because the gas required during execution is not necessarily equal to the consumed
       // gas after the execution. See https://github.com/ethereum/go-ethereum/commit/682875adff760a29a2bb0024190883e4b4dd5d72
-      val requiredGasLimit = binarySearch(lowBound, highBound)(check)
+      val requiredGasLimit = binarySearch(lowBound, highBound)(check(_)._1)
       // Reject the transaction as invalid if it still fails at the highest allowance
-      if (requiredGasLimit == highBound && !check(highBound)) {
-        throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, s"gas required exceeds allowance ($highBound)"))
+      if (requiredGasLimit == highBound) {
+        val (success, reverted) = check(highBound)
+        if (!success) {
+          val error = reverted
+            .map(err => RpcError.fromCode(RpcCode.ExecutionReverted, Numeric.toHexString(err.revertReason)))
+            .getOrElse(RpcError.fromCode(RpcCode.InvalidParams, s"gas required exceeds allowance ($highBound)"))
+          throw new RpcException(error)
+        }
       }
       new Quantity(requiredGasLimit)
     }
