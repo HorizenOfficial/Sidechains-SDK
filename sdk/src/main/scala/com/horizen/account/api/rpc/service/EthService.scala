@@ -222,6 +222,7 @@ class EthService(
   @RpcOptionalParameters(1)
   def estimateGas(params: TransactionArgs, tag: String): Quantity = {
     applyOnAccountView { nodeView =>
+      var reverted: ExecutionRevertedException = null
       // Binary search the gas requirement, as it may be higher than the amount used
       val lowBound = GasUtil.TxGas.subtract(BigInteger.ONE)
       // Determine the highest gas limit can be used during the estimation.
@@ -271,7 +272,8 @@ class EthService(
           doCall(nodeView, params, tag)
           true
         } catch {
-          case _: ExecutionRevertedException => true
+          case err: ExecutionRevertedException => reverted = err
+          false
           case _: ExecutionFailedException => false
           case _: IntrinsicGasException => false
         }
@@ -281,6 +283,7 @@ class EthService(
       val requiredGasLimit = binarySearch(lowBound, highBound)(check)
       // Reject the transaction as invalid if it still fails at the highest allowance
       if (requiredGasLimit == highBound && !check(highBound)) {
+        if (reverted != null) throw new RpcException(new RpcError(RpcCode.ExecutionReverted.getCode, reverted.getMessage, Numeric.toHexString(reverted.revertReason)))
         throw new RpcException(RpcError.fromCode(RpcCode.InvalidParams, s"gas required exceeds allowance ($highBound)"))
       }
       new Quantity(requiredGasLimit)
