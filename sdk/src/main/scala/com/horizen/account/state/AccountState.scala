@@ -411,7 +411,7 @@ class AccountState(
           throw NonceTooLowException(sender, tx.getNonce, stateNonce)
         }
         //Check the balance
-        val maxTxCost = tx.getValue.add(tx.getGasLimit.multiply(tx.getGasPrice))
+        val maxTxCost = tx.maxCost()
         val currentBalance = stateView.getBalance(sender)
         if (currentBalance.compareTo(maxTxCost) < 0) {
           throw new IllegalArgumentException(s"Insufficient funds for executing transaction: balance $currentBalance, tx cost $maxTxCost")

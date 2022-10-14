@@ -252,24 +252,24 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   }
 
   override protected def updateMemPool(blocksRemoved: Seq[AccountBlock], blocksApplied: Seq[AccountBlock], memPool: MP, state: MS): MP = {
-    val rolledBackTxs = blocksRemoved.flatMap(extractTransactions)
+    val rollBackTxs = blocksRemoved.flatMap(extractTransactions)
 
     val appliedTxs = blocksApplied.flatMap(extractTransactions)
 
-    val applicableTxs = rolledBackTxs ++ memPool.getTransactions.asScala
-
-    val newMemPool = AccountMemoryPool.createEmptyMempool(state)
-
-    applicableTxs.withFilter { tx =>
-      !appliedTxs.exists(t => t.id == tx.id) && {
-        state match {
-          case v: TransactionValidation[SidechainTypes#SCAT] => v.validate(tx).isSuccess
-          case _ => true
-        }
-      }
-    }.foreach(tx => newMemPool.put(tx))
-    newMemPool
-
+//    val applicableTxs = rollBackTxs ++ memPool.getTransactions.asScala
+//
+//    val newMemPool = AccountMemoryPool.createEmptyMempool(state)
+//
+//    applicableTxs.withFilter { tx =>
+//      !appliedTxs.exists(t => t.id == tx.id) && {
+//        state match {
+//          case v: TransactionValidation[SidechainTypes#SCAT] => v.validate(tx).isSuccess
+//          case _ => true
+//        }
+//      }
+//    }.foreach(tx => newMemPool.put(tx))
+//    newMemPool
+    memPool.updateMemPool(rollBackTxs, appliedTxs)
   }
 
 

@@ -71,7 +71,7 @@ class AccountSidechainNodeViewHolderPerfTest
   }
 
   @Test
-  //@Ignore
+  @Ignore
   def txModifyTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/txModifyTest.txt", true))
 
@@ -182,7 +182,7 @@ class AccountSidechainNodeViewHolderPerfTest
   }
 
   @Test
-  //@Ignore
+  @Ignore
   def updateMemPoolTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/updateMemPoolTest.txt", true))
 
@@ -215,7 +215,7 @@ class AccountSidechainNodeViewHolderPerfTest
         "Invalid test parameters",
         numOfTxs % (numOfTxsPerSpammerAccounts + normalSpammerRatio * numOfTxsPerNormalAccounts) == 0
       )
-      println("************** Testing with one block to apply")
+      println("************** Testing with one block to apply **************")
 
       val listOfNormalTxs = createTransactions(numOfNormalAccount, numOfTxsPerNormalAccounts, orphanIdx = 2)
 
@@ -245,7 +245,7 @@ class AccountSidechainNodeViewHolderPerfTest
       out.write(s"\n********************* Testing with one block to apply results *********************\n")
       out.write(s"Duration of the test:                      $updateTime ms\n")
 
-      println("************** Testing with one rollback block and one to apply")
+      println("************** Testing with one rollback block and one to apply **************")
       mempool = newMemPool
       val rollBackBlock = appliedBlock
       // restore the mempool so its size is again numOfTxs
@@ -279,7 +279,7 @@ class AccountSidechainNodeViewHolderPerfTest
   }
 
   @Test
-//  @Ignore
+  @Ignore
   def takeTest(): Unit = {
     val out = new BufferedWriter(new FileWriter("log/takeTest.txt", true))
 

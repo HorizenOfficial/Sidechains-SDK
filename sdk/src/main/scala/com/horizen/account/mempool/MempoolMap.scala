@@ -17,13 +17,15 @@ class MempoolMap(stateReader: AccountStateReader) extends ScorexLogging {
   type TxIdByNonceMap = mutable.SortedMap[BigInteger, ModifierId]
 
   // All transactions currently in the mempool
-  private val all: TrieMap[ModifierId, SidechainTypes#SCAT] = TrieMap[ModifierId, SidechainTypes#SCAT]()
+  private val all: TrieMap[ModifierId, SidechainTypes#SCAT] = TrieMap.empty[ModifierId, SidechainTypes#SCAT]
   // Transaction ids of all currently processable transactions, grouped by account and ordered by nonce
-  private val executableTxs: TrieMap[SidechainTypes#SCP, TxIdByNonceMap] = TrieMap[SidechainTypes#SCP, TxIdByNonceMap]()
+  private val executableTxs: TrieMap[SidechainTypes#SCP, TxIdByNonceMap] =
+    TrieMap.empty[SidechainTypes#SCP, TxIdByNonceMap]
   // Transaction ids of all transactions that cannot be executed because they are "orphans", grouped by account and ordered by nonce
-  private val nonExecutableTxs: TrieMap[SidechainTypes#SCP, TxIdByNonceMap] = TrieMap[SidechainTypes#SCP, TxIdByNonceMap]()
+  private val nonExecutableTxs: TrieMap[SidechainTypes#SCP, TxIdByNonceMap] =
+    TrieMap.empty[SidechainTypes#SCP, TxIdByNonceMap]
   // Next expected nonce for each account. It is the max nonce of the executable txs plus 1, if any, otherwise it has the same value of the statedb nonce.
-  private val nonces: TrieMap[SidechainTypes#SCP, BigInteger] = TrieMap[SidechainTypes#SCP, BigInteger]()
+  private val nonces: TrieMap[SidechainTypes#SCP, BigInteger] = TrieMap.empty[SidechainTypes#SCP, BigInteger]
 
   def add(ethTransaction: SidechainTypes#SCAT): Try[MempoolMap] = Try {
     require(ethTransaction.isInstanceOf[EthereumTransaction], "Transaction is not EthereumTransaction")
@@ -37,54 +39,44 @@ class MempoolMap(stateReader: AccountStateReader) extends ScorexLogging {
       val expectedNonce = nonces(account)
       if (expectedNonce.equals(ethTransaction.getNonce)) {
         all.put(ethTransaction.id, ethTransaction)
-        val executableTxsPerAccount = executableTxs.getOrElse(account, {
-          val txsPerAccountMap = new mutable.TreeMap[BigInteger, ModifierId]()
-          executableTxs.put(account, txsPerAccountMap)
-          txsPerAccountMap
-        })
+        val executableTxsPerAccount =
+          executableTxs.getOrElseUpdate(account, new mutable.TreeMap[BigInteger, ModifierId]())
         executableTxsPerAccount.put(ethTransaction.getNonce, ethTransaction.id)
         var nextNonce = expectedNonce.add(BigInteger.ONE)
-        nonExecutableTxs.get(account).foreach(txs => {
-          while (txs.contains(nextNonce)) {
-            val promotedTxId = txs.remove(nextNonce).get
-            executableTxsPerAccount.put(nextNonce, promotedTxId)
-            nextNonce = nextNonce.add(BigInteger.ONE)
-          }
-          if (txs.isEmpty) {
-            nonExecutableTxs.remove(account)
-          }
-        }
-
-        )
+        nonExecutableTxs
+          .get(account)
+          .foreach(txs => {
+            while (txs.contains(nextNonce)) {
+              val promotedTxId = txs.remove(nextNonce).get
+              executableTxsPerAccount.put(nextNonce, promotedTxId)
+              nextNonce = nextNonce.add(BigInteger.ONE)
+            }
+            if (txs.isEmpty) {
+              nonExecutableTxs.remove(account)
+            }
+          })
         nonces.put(account, nextNonce)
 
-      }
-      else if (expectedNonce.compareTo(ethTransaction.getNonce) < 0) {
-        val listOfTxs = nonExecutableTxs.getOrElse(account, {
-          val txsPerAccountMap = new mutable.TreeMap[BigInteger, ModifierId]()
-          nonExecutableTxs.put(account, txsPerAccountMap)
-          txsPerAccountMap
-        })
+      } else if (expectedNonce.compareTo(ethTransaction.getNonce) < 0) {
+        val listOfTxs = nonExecutableTxs.getOrElseUpdate(account, new mutable.TreeMap[BigInteger, ModifierId]())
         if (listOfTxs.contains(ethTransaction.getNonce)) {
           val oldTxId = listOfTxs(ethTransaction.getNonce)
           val oldTx = all(oldTxId)
-          if (canPayHigherFee(ethTransaction, oldTx)){
+          if (canPayHigherFee(ethTransaction, oldTx)) {
             log.trace(s"Replacing transaction $oldTx with $ethTransaction")
             all.remove(oldTxId)
             all.put(ethTransaction.id, ethTransaction)
             listOfTxs.put(ethTransaction.getNonce, ethTransaction.id)
           }
-        }
-        else {
+        } else {
           all.put(ethTransaction.id, ethTransaction)
           listOfTxs.put(ethTransaction.getNonce, ethTransaction.id)
         }
-      }
-      else {
+      } else {
         val listOfTxs = executableTxs(account)
         val oldTxId = listOfTxs(ethTransaction.getNonce)
         val oldTx = all(oldTxId)
-        if (canPayHigherFee(ethTransaction, oldTx)){
+        if (canPayHigherFee(ethTransaction, oldTx)) {
           log.trace(s"Replacing transaction $oldTx with $ethTransaction")
           all.remove(oldTxId)
           all.put(ethTransaction.id, ethTransaction)
@@ -98,8 +90,10 @@ class MempoolMap(stateReader: AccountStateReader) extends ScorexLogging {
 
   def remove(ethTransaction: SidechainTypes#SCAT): Try[MempoolMap] = Try {
     if (all.remove(ethTransaction.id).isDefined) {
-      if (nonces(ethTransaction.getFrom).compareTo(ethTransaction.getNonce) < 0){
-        nonExecutableTxs.get(ethTransaction.getFrom).foreach(nonExecTxsPerAccount => {
+      if (nonces(ethTransaction.getFrom).compareTo(ethTransaction.getNonce) < 0) {
+        nonExecutableTxs
+          .get(ethTransaction.getFrom)
+          .foreach(nonExecTxsPerAccount => {
             nonExecTxsPerAccount.remove(ethTransaction.getNonce)
             if (nonExecTxsPerAccount.isEmpty) {
               nonExecutableTxs.remove(ethTransaction.getFrom)
@@ -107,31 +101,29 @@ class MempoolMap(stateReader: AccountStateReader) extends ScorexLogging {
                 nonces.remove(ethTransaction.getFrom)
               }
             }
-        })
-       }
-      else {
-        executableTxs.get(ethTransaction.getFrom).foreach( execTxsPerAccount => {
-          execTxsPerAccount.remove(ethTransaction.getNonce)
-          nonces.put(ethTransaction.getFrom, ethTransaction.getNonce)
-          var demotedTxId = execTxsPerAccount.remove(ethTransaction.getNonce.add(BigInteger.ONE))
-          while (demotedTxId.isDefined) {
-            val demotedTx = all(demotedTxId.get)
-            val nonExecTxsPerAccount = nonExecutableTxs.getOrElse(ethTransaction.getFrom, {
-              val txsPerAccountMap = new mutable.TreeMap[BigInteger, ModifierId]()
-              nonExecutableTxs.put(ethTransaction.getFrom, txsPerAccountMap)
-              txsPerAccountMap
-            })
-            nonExecTxsPerAccount.put(demotedTx.getNonce, demotedTxId.get)
-            demotedTxId = execTxsPerAccount.remove(demotedTx.getNonce.add(BigInteger.ONE))
-          }
-          if (execTxsPerAccount.isEmpty) {
-            executableTxs.remove(ethTransaction.getFrom)
-            if (!nonExecutableTxs.contains(ethTransaction.getFrom)) {
-              nonces.remove(ethTransaction.getFrom)
+          })
+      } else {
+        executableTxs
+          .get(ethTransaction.getFrom)
+          .foreach(execTxsPerAccount => {
+            execTxsPerAccount.remove(ethTransaction.getNonce)
+            nonces.put(ethTransaction.getFrom, ethTransaction.getNonce)
+            var demotedTxId = execTxsPerAccount.remove(ethTransaction.getNonce.add(BigInteger.ONE))
+            while (demotedTxId.isDefined) {
+              val demotedTx = all(demotedTxId.get)
+              val nonExecTxsPerAccount =
+                nonExecutableTxs.getOrElseUpdate(ethTransaction.getFrom, new mutable.TreeMap[BigInteger, ModifierId]())
+              nonExecTxsPerAccount.put(demotedTx.getNonce, demotedTxId.get)
+              demotedTxId = execTxsPerAccount.remove(demotedTx.getNonce.add(BigInteger.ONE))
             }
-          }
-        })
-       }
+            if (execTxsPerAccount.isEmpty) {
+              executableTxs.remove(ethTransaction.getFrom)
+              if (!nonExecutableTxs.contains(ethTransaction.getFrom)) {
+                nonces.remove(ethTransaction.getFrom)
+              }
+            }
+          })
+      }
     }
     this
   }
@@ -175,7 +167,149 @@ class MempoolMap(stateReader: AccountStateReader) extends ScorexLogging {
   }
 
   def canPayHigherFee(newTx: SidechainTypes#SCAT, oldTx: SidechainTypes#SCAT): Boolean = {
-     (newTx.getMaxFeePerGas.compareTo(oldTx.getMaxFeePerGas) > 0) &&
-      (newTx.getMaxPriorityFeePerGas.compareTo(oldTx.getMaxPriorityFeePerGas) > 0)
+    (newTx.getMaxFeePerGas.compareTo(oldTx.getMaxFeePerGas) > 0) &&
+    (newTx.getMaxPriorityFeePerGas.compareTo(oldTx.getMaxPriorityFeePerGas) > 0)
+  }
+
+  def updateMemPool(listOfTxsToReAdd: Seq[SidechainTypes#SCAT], listOfTxsToRemove: Seq[SidechainTypes#SCAT]): Unit = {
+    val accountsOfTxsToRemove = TrieMap.empty[SidechainTypes#SCP, BigInteger]
+    val NonceForMissingAccount = BigInteger.valueOf(-1)
+    listOfTxsToRemove.foreach(tx =>
+      if (accountsOfTxsToRemove.getOrElse(tx.getFrom, NonceForMissingAccount).compareTo(tx.getNonce) < 0)
+        accountsOfTxsToRemove.put(tx.getFrom, tx.getNonce)
+    )
+
+    val txsToAddPerAccounts = listOfTxsToReAdd.groupBy(_.getFrom)
+
+    txsToAddPerAccounts.foreach { case (account, revertedTxs) =>
+      val newExpectedNonce = accountsOfTxsToRemove.remove(account)
+      updateAccount(account, newExpectedNonce, revertedTxs)
     }
+    accountsOfTxsToRemove.foreach { case (account, nonce) =>
+      updateAccount(account, Some(nonce), Seq.empty[SidechainTypes#SCAT])
+    }
+  }
+
+  def updateAccount(
+      account: SidechainTypes#SCP,
+      expectedNonceOpt: Option[BigInteger],
+      revertedTxs: Seq[SidechainTypes#SCAT]
+  ): Any = {
+    val fromAddress = account.asInstanceOf[AddressProposition].address()
+    var newExpectedNonce = if (expectedNonceOpt.isDefined) expectedNonceOpt.get.add(BigInteger.ONE) else stateReader.getNonce(fromAddress)
+    val balance = stateReader.getBalance(fromAddress)
+    val oldExpectedNonce = nonces.get(account)
+
+    val newExecTxs: mutable.TreeMap[BigInteger, ModifierId] = new mutable.TreeMap[BigInteger, ModifierId]()
+    val newNonExecTxs: mutable.TreeMap[BigInteger, ModifierId] = new mutable.TreeMap[BigInteger, ModifierId]()
+
+    if (oldExpectedNonce.isEmpty) {
+      revertedTxs
+        .withFilter(tx => tx.getNonce.compareTo(newExpectedNonce) >= 0 &&
+          balance.compareTo(tx.maxCost) >= 0)
+        .foreach { tx =>
+          all.put(tx.id, tx)
+          if (newExpectedNonce.compareTo(tx.getNonce) == 0) {
+            newExecTxs.put(tx.getNonce, tx.id)
+            newExpectedNonce = tx.getNonce.add(BigInteger.ONE)
+            while (newNonExecTxs.contains(newExpectedNonce)) {
+              val promotedTxId = newNonExecTxs.remove(newExpectedNonce).get
+              newExecTxs.put(newExpectedNonce, promotedTxId)
+              newExpectedNonce = newExpectedNonce.add(BigInteger.ONE)
+            }
+          } else {
+            newNonExecTxs.put(tx.getNonce, tx.id)
+          }
+        }
+    } else if (oldExpectedNonce.get.compareTo(newExpectedNonce) <= 0) {
+      // In this case the reverted txs and the execTxs are all dropped. I just need to check the non exec txs
+      executableTxs.remove(account).foreach { execTxs => execTxs.foreach { case (_, id) => all.remove(id) } }
+      val nonExecTxs = nonExecutableTxs.remove(account)
+      nonExecTxs.foreach {
+        _.foreach { case (nonce, id) =>
+          if (nonce.compareTo(newExpectedNonce) < 0) {
+            all.remove(id)
+          } else {
+            val tx = all(id)
+            val maxTxCost = tx.maxCost
+            if (balance.compareTo(maxTxCost) >= 0) {
+              if (nonce.compareTo(newExpectedNonce) == 0) {
+                newExecTxs.put(nonce, id)
+                newExpectedNonce = newExpectedNonce.add(BigInteger.ONE)
+              } else {
+                newNonExecTxs.put(nonce, id)
+              }
+            } else
+              all.remove(id)
+          }
+        }
+      }
+    } else {
+      // In this case non exec txs remain non exec, but reverted and exec could become non exec
+      revertedTxs
+        .withFilter(tx =>
+          tx.getNonce.compareTo(newExpectedNonce) >= 0 &&
+            balance.compareTo(tx.maxCost) >= 0
+        )
+        .foreach { tx =>
+          all.put(tx.id, tx)
+          if (newExpectedNonce.compareTo(tx.getNonce) == 0) {
+            newExecTxs.put(tx.getNonce, tx.id)
+            newExpectedNonce = tx.getNonce.add(BigInteger.ONE)
+            while (newNonExecTxs.contains(newExpectedNonce)) {
+              val promotedTxId = newNonExecTxs.remove(newExpectedNonce).get
+              newExecTxs.put(newExpectedNonce, promotedTxId)
+              newExpectedNonce = newExpectedNonce.add(BigInteger.ONE)
+            }
+          } else {
+            newNonExecTxs.put(tx.getNonce, tx.id)
+          }
+        }
+
+      executableTxs
+        .remove(account)
+        .foreach(_.foreach { case (nonce, id) =>
+          if (newExpectedNonce.compareTo(nonce) > 0) {
+            all.remove(id)
+          } else {
+            val tx = all(id)
+            val maxTxCost = tx.maxCost
+            if (balance.compareTo(maxTxCost) >= 0) {
+              if (nonce.compareTo(newExpectedNonce) == 0) {
+                newExecTxs.put(nonce, id)
+                newExpectedNonce = newExpectedNonce.add(BigInteger.ONE)
+              } else {
+                newNonExecTxs.put(nonce, id)
+              }
+            } else
+              all.remove(id)
+          }
+        })
+
+      val nonExecTxsOpt = nonExecutableTxs.remove(account)
+
+      nonExecTxsOpt.foreach(_.foreach { case (nonce, id) =>
+        val tx = all(id)
+        val maxTxCost = tx.maxCost
+        if (balance.compareTo(maxTxCost) >= 0) {
+          newNonExecTxs.put(nonce, id)
+        } else
+          all.remove(id)
+      })
+
+    }
+
+    if (newExecTxs.isEmpty && newNonExecTxs.isEmpty) {
+      nonces.remove(account)
+    } else {
+      nonces.put(account, newExpectedNonce)
+      if (newExecTxs.nonEmpty) {
+        executableTxs.put(account, newExecTxs)
+      }
+      if (newNonExecTxs.nonEmpty) {
+        nonExecutableTxs.put(account, newNonExecTxs)
+      }
+    }
+  }
+
 }

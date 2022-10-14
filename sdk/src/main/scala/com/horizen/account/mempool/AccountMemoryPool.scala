@@ -124,6 +124,11 @@ class AccountMemoryPool(
       unconfirmed.getTransaction(ModifierId @@ transactionId).orNull
     )
   }
+
+  def updateMemPool(listOfTxsToAdd: Seq[SidechainTypes#SCAT], listOfTxsToRemoved: Seq[SidechainTypes#SCAT]): AccountMemoryPool = {
+    unconfirmed.updateMemPool(listOfTxsToAdd, listOfTxsToRemoved)
+    this
+  }
 }
 
 object AccountMemoryPool {
