@@ -81,6 +81,10 @@ object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with Withdra
   }
 
   protected def execGetListOfWithdrawalReqRecords(msg: Message, view: BaseAccountStateView): Array[Byte] = {
+    if (msg.getValue.signum() != 0) {
+      throw new ExecutionRevertedException("Call value must be zero")
+    }
+
     //TODO should any length between OP_CODE_LENGTH to OP_CODE_LENGTH + 32 be supported?
     if (msg.getData.length != METHOD_CODE_LENGTH + GetListOfWithdrawalRequestsCmdInputDecoder.getABIDataParamsLengthInBytes)
       throw new ExecutionRevertedException(s"Wrong message data field length: ${msg.getData.length}")

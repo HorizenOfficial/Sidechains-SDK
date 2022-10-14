@@ -315,6 +315,10 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
   }
 
   def doGetListOfForgersCmd(msg: Message, view: BaseAccountStateView): Array[Byte] = {
+    if (msg.getValue.signum() != 0) {
+      throw new ExecutionRevertedException("Call value must be zero")
+    }
+
     checkGetListOfForgersCmd(msg)
     doUncheckedGetListOfForgersCmd(view)
   }
@@ -323,6 +327,10 @@ case class ForgerStakeMsgProcessor(params: NetworkParams) extends FakeSmartContr
     // check that message contains a nonce, in the context of RPC calls the nonce might be missing
     if (msg.getNonce == null) {
       throw new ExecutionRevertedException("Call must include a nonce")
+    }
+
+    if (msg.getValue.signum() != 0) {
+      throw new ExecutionRevertedException("Call value must be zero")
     }
 
     val inputParams = getArgumentsFromData(msg.getData)
