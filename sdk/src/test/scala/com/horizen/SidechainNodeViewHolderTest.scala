@@ -71,7 +71,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
       Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(answer.getArgument(0).asInstanceOf[SidechainBlock]))))
     Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenReturn(Try(history))
     // Mock state to notify that any incoming block to append will lead to chain switch
-    Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[SidechainBlock])).thenReturn(true)
+    Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[Long])).thenReturn(true)
     // Mock state to apply incoming block successfully
     Mockito.when(state.applyModifier(ArgumentMatchers.any[SidechainBlock])).thenReturn(Success(state))
     // Mock state withdrawal epoch methods
@@ -161,7 +161,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
 
     // Consensus epoch switching checks
     // Mock state to notify that any incoming block to append will NOT lead to chain switch
-    Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[SidechainBlock])).thenReturn(false)
+    Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[Long])).thenReturn(false)
     // Check that consensus epoch data was not requested from the State.
     Mockito.when(state.getCurrentConsensusEpochInfo).thenAnswer( _ => {
       fail("Consensus epoch data should not being requested from the State.")
@@ -261,7 +261,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
 
     // Consensus epoch switching checks
     // Mock state to notify that any incoming block to append will NOT lead to chain switch
-    Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[SidechainBlock])).thenReturn(false)
+    Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[Long])).thenReturn(false)
     // Check that consensus epoch data was not requested from the State.
     Mockito.when(state.getCurrentConsensusEpochInfo).thenAnswer( _ => {
       fail("Consensus epoch data should not being requested from the State.")
@@ -289,7 +289,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
       Success(history -> ProgressInfo[SidechainBlock](None, Seq(), Seq(answer.getArgument(0).asInstanceOf[SidechainBlock]))))
     Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenReturn(Try(history))
     // Mock state to notify that any incoming block to append will NOT lead to chain switch
-    Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[SidechainBlock])).thenReturn(false)
+    Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[Long])).thenReturn(false)
     // Mock state to apply incoming block successfully
     Mockito.when(state.applyModifier(ArgumentMatchers.any[SidechainBlock])).thenReturn(Success(state))
 
@@ -350,7 +350,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     Mockito.when(history.reportModifierIsValid(ArgumentMatchers.any[SidechainBlock])).thenReturn(Try(history))
     Mockito.when(history.updateFeePaymentsInfo(ArgumentMatchers.any[ModifierId],ArgumentMatchers.any[SidechainFeePaymentsInfo])).thenReturn(history)
     // Mock state to notify that any incoming block to append will NOT lead to chain switch
-    Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[SidechainBlock])).thenReturn(false)
+    Mockito.when(state.isSwitchingConsensusEpoch(ArgumentMatchers.any[Long])).thenReturn(false)
     // Mock state to apply incoming block successfully
     Mockito.when(state.applyModifier(ArgumentMatchers.any[SidechainBlock])).thenReturn(Success(state))
 
@@ -436,7 +436,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     })
 
     val eventListener = TestProbe()
-    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[(Seq[SidechainBlock], Seq[SidechainBlock])]])
+    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[SidechainBlock]])
 
     mockedNodeViewHolderRef ! ModifiersFromRemote(blocks)
 
@@ -494,7 +494,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     })
 
     val eventListener = TestProbe()
-    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[(Seq[SidechainBlock], Seq[SidechainBlock])]])
+    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[SidechainBlock]])
 
     mockedNodeViewHolderRef ! ModifiersFromRemote(firstRequestBlocks)
     mockedNodeViewHolderRef ! ModifiersFromRemote(secondRequestBlocks)
@@ -558,7 +558,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     })
 
     val eventListener = TestProbe()
-    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[(Seq[SidechainBlock], Seq[SidechainBlock])]])
+    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[SidechainBlock]])
 
     mockedNodeViewHolderRef ! ModifiersFromRemote(firstRequestBlocks)
     countDownController.await(3000)
@@ -621,7 +621,7 @@ class SidechainNodeViewHolderTest extends JUnitSuite
     })
 
     val eventListener = TestProbe()
-    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[(Seq[SidechainBlock], Seq[SidechainBlock])]])
+    actorSystem.eventStream.subscribe(eventListener.ref, classOf[ModifiersProcessingResult[SidechainBlock]])
 
     mockedNodeViewHolderRef ! ModifiersFromRemote(blocks)
 

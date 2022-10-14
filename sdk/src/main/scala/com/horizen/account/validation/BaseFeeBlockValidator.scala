@@ -15,7 +15,7 @@ case class BaseFeeBlockValidator() extends HistoryBlockValidator[SidechainTypes#
   override def validate(block: AccountBlock, history: AccountHistory): Try[Unit] = Try {
     val baseFee = block.header.baseFee
     val expectedBaseFee: BigInteger = FeeUtils.calculateBaseFee(history, block.header.parentId)
-    if (baseFee.compareTo(expectedBaseFee) != 0)
+    if (!baseFee.equals(expectedBaseFee))
       throw new InvalidBaseFeeException(s"Calculated base fee $baseFee of block with id ${block.id} is invalid")
   }
 }

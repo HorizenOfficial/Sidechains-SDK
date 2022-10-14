@@ -3,17 +3,22 @@ import json
 import logging
 from decimal import Decimal
 
-from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
+from eth_utils import add_0x_prefix
+
+from SidechainTestFramework.sc_boostrap_info import (
+    LARGE_WITHDRAWAL_EPOCH_LENGTH, MCConnectionInfo, SCCreationInfo,
+    SCNetworkConfiguration, SCNodeConfiguration,
+)
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import assert_equal, assert_true, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail, assert_false
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, \
-    check_mainchain_block_reference_info, \
-    AccountModelBlockVersion, EVM_APP_BINARY, generate_next_blocks, generate_next_block, generate_account_proposition, \
-    convertZenniesToWei, convertZenToZennies, connect_sc_nodes, get_account_balance, convertZenToWei, \
-    ForgerStakeSmartContractAddress, WithdrawalReqSmartContractAddress, convertWeiToZen, computeForgedTxFee
+from SidechainTestFramework.scutil import (
+    AccountModelBlockVersion, EVM_APP_BINARY, ForgerStakeSmartContractAddress,
+    WithdrawalReqSmartContractAddress, bootstrap_sidechain_nodes, connect_sc_nodes, convertWeiToZen, convertZenToWei,
+    convertZenToZennies, generate_next_block, get_account_balance, start_sc_nodes,
+)
+from test_framework.util import (
+    assert_equal, assert_true, fail, forward_transfer_to_sidechain, start_nodes,
+    websocket_port_by_mc_node_index,
+)
 
 """
 Configuration: 
@@ -36,6 +41,7 @@ class SCEvmEOA2EOA(SidechainTestFramework):
     sc_nodes_bootstrap_info=None
     number_of_mc_nodes = 1
     number_of_sidechain_nodes = 2
+    API_KEY = "Horizen"
 
     def setup_nodes(self):
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
@@ -49,10 +55,12 @@ class SCEvmEOA2EOA(SidechainTestFramework):
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
         sc_node_1_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
+            api_key = self.API_KEY
         )
         sc_node_2_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
+            api_key = self.API_KEY
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, LARGE_WITHDRAWAL_EPOCH_LENGTH),
                                          sc_node_1_configuration, sc_node_2_configuration)
@@ -61,7 +69,7 @@ class SCEvmEOA2EOA(SidechainTestFramework):
 
     def sc_setup_nodes(self):
         return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
-                              binary=[EVM_APP_BINARY]*2)#, extra_args=[['-agentlib'], []])
+                              auth_api_key=self.API_KEY, binary=[EVM_APP_BINARY]*2)#, extra_args=[['-agentlib'], []])
 
     def makeEoa2Eoa(self, from_sc_node, to_sc_node, from_addr, to_addr, amount_in_zen, *,
                     nonce = None, isEIP155 = False, print_json_results = False):
@@ -104,7 +112,7 @@ class SCEvmEOA2EOA(SidechainTestFramework):
         final_balance_to = get_account_balance(to_sc_node, to_addr)
 
         # check receipt, meanwhile do some check on amounts
-        receipt = from_sc_node.rpc_eth_getTransactionReceipt(tx_hash)
+        receipt = from_sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash))
         if print_json_results:
             logging.info(receipt)
         status = int(receipt['result']['status'], 16)
@@ -192,7 +200,7 @@ class SCEvmEOA2EOA(SidechainTestFramework):
         assert_true(ret, msg)
 
         # moreover, check we have consistent chainId and ser/deser signature v value in tx json, as per EIP155
-        txJsonResult = sc_node_1.rpc_eth_getTransactionByHash(txHash)['result']
+        txJsonResult = sc_node_1.rpc_eth_getTransactionByHash(add_0x_prefix(txHash))['result']
         chainId = int(txJsonResult['chainId'], 16)
         sigV = int(txJsonResult['v'], 16)
         assert_equal(chainId, getChainIdFromSignatureV(sigV))

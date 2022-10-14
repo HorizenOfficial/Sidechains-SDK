@@ -1,18 +1,24 @@
 #!/usr/bin/env python3
 import json
 import logging
-
 from decimal import Decimal
 
-from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH, SCForgerConfiguration
+from eth_utils import add_0x_prefix
+
+from SidechainTestFramework.sc_boostrap_info import (
+    LARGE_WITHDRAWAL_EPOCH_LENGTH, MCConnectionInfo, SCCreationInfo,
+    SCForgerConfiguration, SCNetworkConfiguration, SCNodeConfiguration,
+)
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from test_framework.util import assert_equal, assert_true, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, assert_false
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, AccountModelBlockVersion, EVM_APP_BINARY, generate_next_block, \
-    convertZenToZennies, connect_sc_nodes, convertZenToWei, generate_secrets, \
-    generate_vrf_secrets, get_account_balance
+from SidechainTestFramework.scutil import (
+    AccountModelBlockVersion, EVM_APP_BINARY, bootstrap_sidechain_nodes,
+    connect_sc_nodes, convertZenToWei, convertZenToZennies, generate_next_block, generate_secrets, generate_vrf_secrets,
+    get_account_balance, start_sc_nodes,
+)
+from test_framework.util import (
+    assert_equal, assert_false, assert_true, forward_transfer_to_sidechain, start_nodes,
+    websocket_port_by_mc_node_index,
+)
 
 """
 Check the EVM bootstrap feature.
@@ -29,12 +35,12 @@ Test:
 """
 
 
-
 class SCEvmClosedForgerList(SidechainTestFramework):
     sc_nodes_bootstrap_info = None
     number_of_mc_nodes = 1
     number_of_sidechain_nodes = 2
     sc_creation_amount = 100
+    API_KEY = "Horizen"
 
     allowed_forger_block_signer_public_key = generate_secrets("seed_new", 1)[0].publicKey
     allowed_forger_vrf_public_key = generate_vrf_secrets("seed_new", 1)[0].publicKey
@@ -57,11 +63,13 @@ class SCEvmClosedForgerList(SidechainTestFramework):
 
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            forger_options = forger_configuration
+            forger_options = forger_configuration,
+            api_key = self.API_KEY
         )
         sc_node_2_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            forger_options = forger_configuration
+            forger_options = forger_configuration,
+            api_key = self.API_KEY
         )
         network = SCNetworkConfiguration(
             SCCreationInfo(mc_node, self.sc_creation_amount, LARGE_WITHDRAWAL_EPOCH_LENGTH),
@@ -72,6 +80,7 @@ class SCEvmClosedForgerList(SidechainTestFramework):
 
     def sc_setup_nodes(self):
         return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
+                              auth_api_key=self.API_KEY,
                               binary=[EVM_APP_BINARY] * 2)#, extra_args=[['-agentlib'], []])
 
     def tryMakeForgetStake(self, sc_node, owner_address, blockSignPubKey, vrf_public_key, amount):
@@ -96,7 +105,7 @@ class SCEvmClosedForgerList(SidechainTestFramework):
         tx_hash = makeForgerStakeJsonRes['result']["transactionId"]
         logging.info("Getting receipt for txhash={}".format(tx_hash))
 
-        receipt = sc_node.rpc_eth_getTransactionReceipt(tx_hash)
+        receipt = sc_node.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash))
         status = int(receipt['result']['status'], 16)
         # status == 1 is succesful
         return (status == 1)

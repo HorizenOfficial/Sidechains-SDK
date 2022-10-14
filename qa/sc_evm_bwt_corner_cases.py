@@ -1,19 +1,26 @@
 #!/usr/bin/env python3
+import json
 import time
+
+from eth_utils import add_0x_prefix, remove_0x_prefix
 
 from SidechainTestFramework.account.httpCalls.transaction.allWithdrawRequests import all_withdrawal_requests
 from SidechainTestFramework.account.httpCalls.transaction.withdrawCoins import withdrawcoins
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
-from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration
-from SidechainTestFramework.sc_forging_util import *
+from SidechainTestFramework.sc_boostrap_info import (
+    MCConnectionInfo, SCCreationInfo, SCNetworkConfiguration,
+    SCNodeConfiguration,
+)
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, generate_next_blocks, generate_next_block, \
-    AccountModelBlockVersion, EVM_APP_BINARY, convertZenToZennies, convertZenniesToWei, \
-    computeForgedTxFee
-from test_framework.util import assert_equal, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail
+from SidechainTestFramework.scutil import (
+    AccountModelBlockVersion, EVM_APP_BINARY, bootstrap_sidechain_nodes,
+    computeForgedTxFee, convertZenToZennies, convertZenniesToWei, generate_next_block, generate_next_blocks,
+    start_sc_nodes,
+)
+from test_framework.util import (
+    assert_equal, fail, forward_transfer_to_sidechain, start_nodes,
+    websocket_port_by_mc_node_index,
+)
 
 """
 Checks withdrawal requests creation in special cases:
@@ -46,6 +53,7 @@ class SCEvmBWTCornerCases(SidechainTestFramework):
     sc_nodes_bootstrap_info = None
     sc_withdrawal_epoch_length = 10
     number_of_sidechain_nodes = 1
+    API_KEY = "Horizen"
 
     def setup_nodes(self):
         num_nodes = 1
@@ -56,7 +64,8 @@ class SCEvmBWTCornerCases(SidechainTestFramework):
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
         sc_node_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
+            api_key = self.API_KEY
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, self.sc_withdrawal_epoch_length),
                                          sc_node_configuration)
@@ -65,7 +74,8 @@ class SCEvmBWTCornerCases(SidechainTestFramework):
                                                                  blockversion=AccountModelBlockVersion)
 
     def sc_setup_nodes(self):
-        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir, binary=[EVM_APP_BINARY] * 2) #, extra_args=[['-agentlib']]
+        return start_sc_nodes(self.number_of_sidechain_nodes, self.options.tmpdir,
+                              auth_api_key=self.API_KEY, binary=[EVM_APP_BINARY] * 2) #, extra_args=[['-agentlib']]
 
 
     def run_test(self):
@@ -130,7 +140,7 @@ class SCEvmBWTCornerCases(SidechainTestFramework):
         res = withdrawcoins(sc_node, mc_address1, bt_amount_in_zennies)
         if "error" in res:
             fail(f"Creating Withdrawal request failed: " + json.dumps(res))
-        tx_id = res["result"]["transactionId"]
+        tx_id = add_0x_prefix(res["result"]["transactionId"])
 
         generate_next_block(sc_node, "first node")
 
@@ -155,7 +165,7 @@ class SCEvmBWTCornerCases(SidechainTestFramework):
         # Verifies there is the transaction in the block
 
         tx_in_block = sc_node.block_best()["result"]["block"]["sidechainTransactions"][0]["id"]
-        assert_equal(tx_id, tx_in_block, "Tx is not in the block")
+        assert_equal(remove_0x_prefix(tx_id), tx_in_block, "Tx is not in the block")
 
         # *************** Test 3: Withdrawal amount not valid zen amount (e.g. 1 wei) TODO *****************
         # *************** Test 4: Test all_withdrawal_requests with a value >0. Being non-payable, it should fail TODO *****************

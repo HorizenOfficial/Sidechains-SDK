@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
+	"libevm/lib/geth_internal"
 	"math/big"
 )
 
@@ -60,6 +61,11 @@ type SetStorageParams struct {
 type SetStorageBytesParams struct {
 	StorageParams
 	Value []byte `json:"value"`
+}
+
+type ProofParams struct {
+	AccountParams
+	StorageKeys []string `json:"storageKeys"`
 }
 
 type SnapshotParams struct {
@@ -366,6 +372,15 @@ func (s *Service) StateRemoveStorageBytes(params StorageParams) error {
 	return s.StateSetStorageBytes(deleteParams)
 }
 
+func (s *Service) StateGetProof(params ProofParams) (error, *geth_internal.AccountResult) {
+	err, statedb := s.statedbs.Get(params.Handle)
+	if err != nil {
+		return err, nil
+	}
+	result, err := geth_internal.GetProof(statedb, params.Address, params.StorageKeys)
+	return err, result
+}
+
 func (s *Service) StateSnapshot(params HandleParams) (error, int) {
 	err, statedb := s.statedbs.Get(params.Handle)
 	if err != nil {
@@ -396,12 +411,11 @@ func (s *Service) StateAddLog(params AddLogParams) error {
 	if err != nil {
 		return err
 	}
-	log := &types.Log{
+	statedb.AddLog(&types.Log{
 		Address: params.Address,
 		Topics:  params.Topics,
 		Data:    params.Data,
-	}
-	statedb.AddLog(log)
+	})
 	return nil
 }
 

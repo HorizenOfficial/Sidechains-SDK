@@ -18,9 +18,17 @@ public class Quantity {
         this(Numeric.encodeQuantity(number));
     }
 
+    public Quantity(Long number) {
+        this(BigInteger.valueOf(number));
+    }
+
     @JsonValue
     public String getValue() {
         return value;
+    }
+
+    public BigInteger toNumber() {
+        return Numeric.decodeQuantity(value);
     }
 
     @Override

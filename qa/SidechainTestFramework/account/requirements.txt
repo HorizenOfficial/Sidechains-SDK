@@ -2,3 +2,4 @@ eth_abi
 pycryptodome
 rlp
 eth_utils
+eth_bloom

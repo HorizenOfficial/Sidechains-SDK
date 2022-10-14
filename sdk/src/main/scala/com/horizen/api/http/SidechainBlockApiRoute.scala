@@ -72,12 +72,14 @@ case class SidechainBlockApiRoute(
 
       val future = sidechainBlockActorRef ? TryForgeNextBlockForEpochAndSlot(intToConsensusEpochNumber(body.epochNumber), intToConsensusSlotNumber(body.slotNumber), forcedTx)
       val submitResultFuture = Await.result(future, timeout.duration).asInstanceOf[Future[Try[ModifierId]]]
+
       Await.result(submitResultFuture, timeout.duration) match {
         case Success(id) =>
           ApiResponseUtil.toResponse(RespGenerate(id.asInstanceOf[String]))
         case Failure(e) =>
           ApiResponseUtil.toResponse(ErrorBlockNotCreated(s"Block was not created: ${e.getMessage}", JOptional.empty()))
       }
+
     }
   }
 

@@ -11,7 +11,7 @@ import com.horizen.account.transaction.EthereumTransaction
 import com.horizen.account.utils._
 import com.horizen.block.{MainchainBlockReferenceData, MainchainTxForwardTransferCrosschainOutput, MainchainTxSidechainCreationCrosschainOutput, WithdrawalEpochCertificate}
 import com.horizen.consensus.{ConsensusEpochNumber, ForgingStakeInfo}
-import com.horizen.evm.interop.EvmLog
+import com.horizen.evm.interop.{EvmLog, ProofAccountResult}
 import com.horizen.evm.{ResourceHandle, StateDB, StateStorageStrategy}
 import com.horizen.proposition.{PublicKey25519Proposition, VrfPublicKey}
 import com.horizen.state.StateView
@@ -19,6 +19,7 @@ import com.horizen.transaction.mainchain.{ForwardTransfer, SidechainCreation}
 import com.horizen.utils.{BytesUtils, WithdrawalEpochInfo}
 import sparkz.core.VersionTag
 import scorex.util.ScorexLogging
+
 import java.math.BigInteger
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 import scala.util.Try
@@ -108,7 +109,7 @@ class AccountStateView(
   override def getForgerStakeData(stakeId: String): Option[ForgerStakeData] =
     forgerStakesProvider.findStakeData(this, BytesUtils.fromHexString(stakeId))
 
-  def getOrderedForgingStakeInfoSeq: Seq[ForgingStakeInfo] = {
+  def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = {
     forgerStakesProvider.getListOfForgers(this).map { item =>
       ForgingStakeInfo(
         item.forgerStakeData.forgerPublicKeys.blockSignPublicKey,
@@ -195,7 +196,7 @@ class AccountStateView(
 
   @throws(classOf[ExecutionFailedException])
   override def addBalance(address: Array[Byte], amount: BigInteger): Unit = {
-    amount.compareTo(BigInteger.ZERO) match {
+    amount.signum() match {
       case x if x == 0 => // amount is zero
       case x if x < 0 =>
         throw new ExecutionFailedException("cannot add negative amount to balance")
@@ -209,7 +210,7 @@ class AccountStateView(
   override def subBalance(address: Array[Byte], amount: BigInteger): Unit = {
     // stateDb lib does not do any sanity check, and negative balances might arise (and java/go json IF does not correctly handle it)
     // TODO: for the time being do the checks here, later they will be done in the caller stack
-    amount.compareTo(BigInteger.ZERO) match {
+    amount.signum() match {
       case x if x == 0 => // amount is zero
       case x if x < 0 =>
         throw new ExecutionFailedException("cannot subtract negative amount from balance")
@@ -230,17 +231,17 @@ class AccountStateView(
   override def updateAccountStorage(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit =
     stateDb.setStorage(address, key, value, StateStorageStrategy.RAW)
 
-
   override def updateAccountStorageBytes(address: Array[Byte], key: Array[Byte], value: Array[Byte]): Unit =
     stateDb.setStorage(address, key, value, StateStorageStrategy.CHUNKED)
-
 
   override def removeAccountStorage(address: Array[Byte], key: Array[Byte]): Unit =
     stateDb.removeStorage(address, key, StateStorageStrategy.RAW)
 
-
   override def removeAccountStorageBytes(address: Array[Byte], key: Array[Byte]): Unit =
     stateDb.removeStorage(address, key, StateStorageStrategy.CHUNKED)
+
+  def getProof(address: Array[Byte], keys: Array[Array[Byte]]): ProofAccountResult =
+    stateDb.getProof(address, keys)
 
   // out-of-the-box helpers
   override def addCertificate(cert: WithdrawalEpochCertificate): Unit =

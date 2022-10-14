@@ -31,7 +31,7 @@ object AccountFeePaymentsUtils {
     // Split poolFee in equal parts to be paid to forgers.
     val forgerPoolFee: BigInteger = poolFee.divide(BigInteger.valueOf(forgersBlockRewards.size))
     // The rest N satoshis must be paid to the first N forgers (1 satoshi each)
-    val rest = poolFee.mod(BigInteger.valueOf(forgersBlockRewards.size)).longValue()
+    val rest = poolFee.mod(BigInteger.valueOf(forgersBlockRewards.size)).longValueExact()
 
     // Calculate final fee for forger considering forger fee, pool fee and the undistributed satoshis
     val allForgersRewards : Seq[AccountPayment] = forgersBlockRewards.zipWithIndex.map {

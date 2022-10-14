@@ -177,6 +177,10 @@ final class LibEvm {
         invoke("StateRemoveStorageBytes", new StorageParams(handle, address, key));
     }
 
+    public static ProofAccountResult stateGetProof(int handle, byte[] address, byte[][] keys) {
+        return invoke("StateGetProof", new ProofParams(handle, address, keys), ProofAccountResult.class);
+    }
+
     public static int stateSnapshot(int handle) {
         return invoke("StateSnapshot", new HandleParams(handle), int.class);
     }

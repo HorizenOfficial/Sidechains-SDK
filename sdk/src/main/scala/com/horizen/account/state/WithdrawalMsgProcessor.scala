@@ -81,6 +81,10 @@ object WithdrawalMsgProcessor extends FakeSmartContractMsgProcessor with Withdra
   }
 
   protected def execGetListOfWithdrawalReqRecords(msg: Message, view: BaseAccountStateView): Array[Byte] = {
+    if (msg.getValue.signum() != 0) {
+      throw new ExecutionRevertedException("Call value must be zero")
+    }
+
     //TODO should any length between OP_CODE_LENGTH to OP_CODE_LENGTH + 32 be supported?
     if (msg.getData.length != METHOD_CODE_LENGTH + GetListOfWithdrawalRequestsCmdInputDecoder.getABIDataParamsLengthInBytes)
       throw new ExecutionRevertedException(s"Wrong message data field length: ${msg.getData.length}")
@@ -165,7 +169,7 @@ object GetListOfWithdrawalRequestsCmdInputDecoder extends ABIDecoder[GetListOfWi
   override def getListOfABIParamTypes: util.List[TypeReference[Type[_]]] = org.web3j.abi.Utils.convert(util.Arrays.asList(new TypeReference[Uint32]() {}))
 
   override def createType(listOfParams: util.List[Type[_]]): GetListOfWithdrawalRequestsInputCmd = {
-    GetListOfWithdrawalRequestsInputCmd(listOfParams.get(0).asInstanceOf[Uint32].getValue.intValue())
+    GetListOfWithdrawalRequestsInputCmd(listOfParams.get(0).asInstanceOf[Uint32].getValue.intValueExact())
   }
 
 }

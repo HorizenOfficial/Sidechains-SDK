@@ -238,6 +238,7 @@ def transfer_token(node, smart_contract, contract_address, sender_address, *, to
 
 class SCEvmERC721Contract(SidechainTestFramework):
     sc_nodes_bootstrap_info = None
+    API_KEY = "Horizen"
 
     def setup_nodes(self):
         return start_nodes(1, self.options.tmpdir)
@@ -250,7 +251,8 @@ class SCEvmERC721Contract(SidechainTestFramework):
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
         sc_node_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
+            api_key = self.API_KEY
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, LARGE_WITHDRAWAL_EPOCH_LENGTH),
                                          sc_node_configuration)
@@ -260,6 +262,7 @@ class SCEvmERC721Contract(SidechainTestFramework):
 
     def sc_setup_nodes(self):
         return start_sc_nodes(num_nodes=1, dirname=self.options.tmpdir,
+                              auth_api_key=self.API_KEY,
                               binary=[EVM_APP_BINARY])  # , extra_args=['-agentlib'])
 
     def run_test(self):

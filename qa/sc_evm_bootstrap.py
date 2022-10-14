@@ -8,6 +8,8 @@ from eth_utils import to_checksum_address
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
+from httpCalls.wallet.allPublicKeys import http_wallet_allPublicKeys
+from httpCalls.wallet.createPrivateKeySecp256k1 import http_wallet_createPrivateKeySec256k1
 from test_framework.util import assert_equal, assert_true, start_nodes, \
     websocket_port_by_mc_node_index, forward_transfer_to_sidechain
 from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
@@ -35,6 +37,7 @@ class SCEvmBootstrap(SidechainTestFramework):
     sc_nodes_bootstrap_info=None
     number_of_mc_nodes = 1
     number_of_sidechain_nodes = 2
+    API_KEY = "Horizen"
 
     def setup_nodes(self):
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
@@ -48,10 +51,12 @@ class SCEvmBootstrap(SidechainTestFramework):
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
         sc_node_1_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
+            api_key = self.API_KEY
         )
         sc_node_2_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
+            api_key = self.API_KEY
         )
         network = SCNetworkConfiguration(SCCreationInfo(mc_node, 100, LARGE_WITHDRAWAL_EPOCH_LENGTH),
                                          sc_node_1_configuration, sc_node_2_configuration)
@@ -59,7 +64,8 @@ class SCEvmBootstrap(SidechainTestFramework):
 
 
     def sc_setup_nodes(self):
-        return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir, binary=[EVM_APP_BINARY]*2)#, extra_args=[[], ['-agentlib']])
+        return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
+                              auth_api_key=self.API_KEY, binary=[EVM_APP_BINARY]*2)#, extra_args=[['-agentlib'], []])
 
 
     def run_test(self):
@@ -88,18 +94,26 @@ class SCEvmBootstrap(SidechainTestFramework):
         mc_return_address = self.nodes[0].getnewaddress()
         #evm_address = generate_account_proposition("seed2", 1)[0]
 
-        ret = sc_node_1.wallet_createPrivateKeySecp256k1()
-        logging.info(ret)
-        evm_address = str(ret["result"]["proposition"]["address"])
+        # test we can not use a wrong key
+        exception_occurs = False
+        try:
+            http_wallet_createPrivateKeySec256k1(sc_node_1, "qqq")
+        except Exception as e:
+            exception_occurs = True
+            logging.info("We had an exception as expected: {}".format(str(e)))
+        finally:
+            assert_true(exception_occurs, "Using a wrong key should fail")
+
+
+        evm_address = http_wallet_createPrivateKeySec256k1(sc_node_1)
         evm_hex_address = to_checksum_address(evm_address)
         logging.info("pubkey = {}".format(evm_address))
 
-        ret = sc_node_1.wallet_createPrivateKeySecp256k1()
-        evm_address_2 = str(ret["result"]["proposition"]["address"])
+        evm_address_2 = http_wallet_createPrivateKeySec256k1(sc_node_1)
         logging.info("pubkey = {}".format(evm_address_2))
 
         # call a legacy wallet api
-        ret = sc_node_1.wallet_allPublicKeys()
+        ret = http_wallet_allPublicKeys(sc_node_1)
         logging.info(ret)
 
         ft_amount_in_zen = Decimal("33.22")

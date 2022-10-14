@@ -1,20 +1,29 @@
 #!/usr/bin/env python3
+import json
+import logging
 import time
-from decimal import Decimal
+
+from eth_utils import add_0x_prefix
 
 from SidechainTestFramework.account.httpCalls.transaction.allWithdrawRequests import all_withdrawal_requests
 from SidechainTestFramework.account.httpCalls.transaction.withdrawCoins import withdrawcoins
 from SidechainTestFramework.account.httpCalls.wallet.balance import http_wallet_balance
-from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration
-from SidechainTestFramework.sc_forging_util import *
+from SidechainTestFramework.sc_boostrap_info import (
+    MCConnectionInfo, SCCreationInfo, SCNetworkConfiguration,
+    SCNodeConfiguration,
+)
+from SidechainTestFramework.sc_forging_util import check_mcreference_presence, check_mcreferencedata_presence
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, generate_next_blocks, generate_next_block, \
-    AccountModelBlockVersion, EVM_APP_BINARY, is_mainchain_block_included_in_sc_block, assert_true, \
-    check_mainchain_block_reference_info, convertZenToZennies, convertZenniesToWei, computeForgedTxFee
-from test_framework.util import assert_equal, assert_false, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail
+from SidechainTestFramework.scutil import (
+    AccountModelBlockVersion, EVM_APP_BINARY, assert_true,
+    bootstrap_sidechain_nodes, check_mainchain_block_reference_info, computeForgedTxFee, convertZenToZennies,
+    convertZenniesToWei, generate_next_block, generate_next_blocks, is_mainchain_block_included_in_sc_block,
+    start_sc_nodes,
+)
+from test_framework.util import (
+    assert_equal, assert_false, fail, forward_transfer_to_sidechain, start_nodes,
+    websocket_port_by_mc_node_index,
+)
 
 """
 This is similar to sc_evm_backward_transfer.py, but uses a longer withdrawal epoch length.
@@ -206,7 +215,7 @@ class SCEvmBackwardTransfer2(SidechainTestFramework):
         if "error" in res:
             fail(f"Creating Withdrawal request failed: " + json.dumps(res))
 
-        tx_id = res["result"]["transactionId"]
+        tx_id = add_0x_prefix(res["result"]["transactionId"])
 
         # Check the balance hasn't changed yet
         new_balance = http_wallet_balance(sc_node, evm_address)
@@ -249,6 +258,8 @@ class SCEvmBackwardTransfer2(SidechainTestFramework):
         if "error" in res:
             fail(f"Creating Withdrawal request failed: " + json.dumps(res))
 
+        tx_id = add_0x_prefix(res["result"]["transactionId"])
+
         # Generate SC block
         generate_next_blocks(sc_node, "first node", 1)
         #Check the receipt
@@ -262,7 +273,7 @@ class SCEvmBackwardTransfer2(SidechainTestFramework):
         new_balance = http_wallet_balance(sc_node, evm_address)
         assert_equal(expected_new_balance, new_balance,  "wrong balance after first withdrawal request")
 
-        # verifies that there are 2 withdrawal request2
+        # verifies that there are 2 withdrawal requests
         list_of_WR = all_withdrawal_requests(sc_node, current_epoch_number)["listOfWR"]
         assert_equal(2, len(list_of_WR))
 

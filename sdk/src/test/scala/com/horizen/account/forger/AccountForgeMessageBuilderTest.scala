@@ -133,7 +133,7 @@ class AccountForgeMessageBuilderTest
       Array.empty[Byte],
       1000,
       BigInteger.ZERO,
-      gasLimit.longValue(),//Just enough for 1 tx
+      gasLimit.longValueExact(),//Just enough for 1 tx
       11,
       2,
       3

@@ -16,6 +16,7 @@ from contextlib import closing
 from SidechainTestFramework.sidechainauthproxy import SidechainAuthServiceProxy
 from test_framework.mc_test.mc_test import generate_random_field_element_hex, get_field_element_with_padding
 from test_framework.util import get_spendable, swap_bytes, assert_equal, initialize_new_sidechain_in_mainchain
+from eth_utils import add_0x_prefix
 
 WAIT_CONST = 1
 
@@ -1064,9 +1065,26 @@ def generate_next_block(node, node_name, force_switch_to_next_epoch=False, verbo
     forge_result = node.block_generate(generate_forging_request(next_epoch, next_slot, forced_tx))
 
     # "while" will break if whole epoch no generated block, due changed error code
+    # ErrorBlockNotCreated = 0105
+    count_slot = 720
     while "error" in forge_result and forge_result["error"]["code"] == "0105":
         if ("no forging stake" in forge_result["error"]["description"]):
             raise AssertionError("No forging stake for the epoch")
+        if ("ForgerStakes list can't be empty" in forge_result["error"]["description"]):
+            raise AssertionError("Empty forger stakes list")
+        if ("top quality certificate" in forge_result["error"]["description"]):
+            raise AssertionError("Inconsistent top quality ceritificate")
+        if ("the sidechain has ceased" in forge_result["error"]["description"]):
+            raise AssertionError("Sidechain has ceased")
+        if ("semantically invalid" in forge_result["error"]["description"]):
+            raise AssertionError("One transaction in the block is semantically invalid")
+
+        count_slot -= 1
+        if (count_slot <= 0):
+            errMsg = "Could not generate any block in this epoch: {}".format(forge_result["error"]["description"])
+            logging.warning("Api Error msg not handled: " + errMsg)
+            raise AssertionError(errMsg)
+
         logging.info("Skip block generation for epoch {epochNumber} slot {slotNumber}".format(epochNumber=next_epoch,
                                                                                        slotNumber=next_slot))
         next_epoch, next_slot = get_next_epoch_slot(next_epoch, next_slot, slots_in_epoch)
@@ -1260,6 +1278,8 @@ def computeForgedTxGasUsed(sc_node, tx_hash, tracing_on=False):
     return int(receiptJson['gasUsed'], 16)
 
 def computeForgedTxFee(sc_node, tx_hash, tracing_on=False):
+    # make sure the transaction hash prefixed with 0x
+    tx_hash = add_0x_prefix(tx_hash)
     resp = sc_node.rpc_eth_getTransactionByHash(tx_hash)
     if not 'result' in resp:
         raise Exception('Rpc eth_getTransactionByHash cmd failed: {}'.format(json.dumps(resp, indent=2)))

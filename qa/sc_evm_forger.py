@@ -1,25 +1,29 @@
 #!/usr/bin/env python3
 import json
+import logging
 import time
 from decimal import Decimal
 
 from eth_abi import decode
-from eth_utils import remove_0x_prefix, event_signature_to_log_topic, encode_hex, to_hex
+from eth_utils import add_0x_prefix, encode_hex, event_signature_to_log_topic, remove_0x_prefix, to_hex
 
 from SidechainTestFramework.account.ac_use_smart_contract import SmartContract
-from SidechainTestFramework.account.address_util import format_evm, format_eoa
-from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
-    SCNetworkConfiguration, LARGE_WITHDRAWAL_EPOCH_LENGTH
+from SidechainTestFramework.account.address_util import format_eoa, format_evm
+from SidechainTestFramework.sc_boostrap_info import (
+    LARGE_WITHDRAWAL_EPOCH_LENGTH, MCConnectionInfo, SCCreationInfo,
+    SCNetworkConfiguration, SCNodeConfiguration,
+)
 from SidechainTestFramework.sc_test_framework import SidechainTestFramework
-from SidechainTestFramework.scutil import WithdrawalReqSmartContractAddress
-from SidechainTestFramework.scutil import bootstrap_sidechain_nodes, \
-    start_sc_nodes, AccountModelBlockVersion, EVM_APP_BINARY, generate_next_block, convertZenniesToWei, \
-    convertZenToZennies, connect_sc_nodes, convertZenToWei, ForgerStakeSmartContractAddress, get_account_balance, \
-    computeForgedTxFee, convertWeiToZen
+from SidechainTestFramework.scutil import (
+    AccountModelBlockVersion, EVM_APP_BINARY, ForgerStakeSmartContractAddress,
+    WithdrawalReqSmartContractAddress, bootstrap_sidechain_nodes, computeForgedTxFee, connect_sc_nodes, convertWeiToZen,
+    convertZenToWei, convertZenToZennies, convertZenniesToWei, generate_next_block, get_account_balance, start_sc_nodes,
+)
 from sc_evm_test_contract_contract_deployment_and_interaction import random_byte_string
-from test_framework.util import assert_equal, assert_true, start_nodes, \
-    websocket_port_by_mc_node_index, forward_transfer_to_sidechain, fail
-from test_framework.util import hex_str_to_bytes
+from test_framework.util import (
+    assert_equal, assert_true, fail, forward_transfer_to_sidechain, hex_str_to_bytes,
+    start_nodes, websocket_port_by_mc_node_index,
+)
 
 """
 Configuration: 
@@ -94,6 +98,7 @@ class SCEvmForger(SidechainTestFramework):
     number_of_mc_nodes = 1
     number_of_sidechain_nodes = 2
     sc_creation_amount = 100
+    API_KEY = "Horizen"
 
     def setup_nodes(self):
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
@@ -107,10 +112,12 @@ class SCEvmForger(SidechainTestFramework):
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
         sc_node_1_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
+            api_key = self.API_KEY
         )
         sc_node_2_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
+            api_key = self.API_KEY
         )
         network = SCNetworkConfiguration(
             SCCreationInfo(mc_node, self.sc_creation_amount, LARGE_WITHDRAWAL_EPOCH_LENGTH),
@@ -121,7 +128,7 @@ class SCEvmForger(SidechainTestFramework):
 
     def sc_setup_nodes(self):
         return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
-                              binary=[EVM_APP_BINARY] * 2)#, extra_args=[[], ['-agentlib']])
+                              auth_api_key=self.API_KEY, binary=[EVM_APP_BINARY] * 2)#, extra_args=[[], ['-agentlib']])
 
     def run_test(self):
 
@@ -251,7 +258,8 @@ class SCEvmForger(SidechainTestFramework):
         self.sc_sync_all()
 
         # Checking the receipt
-        receipt = sc_node_1.rpc_eth_getTransactionReceipt(makeForgerStakeJsonRes['result']['transactionId'])
+        tx_id = makeForgerStakeJsonRes['result']['transactionId']
+        receipt = sc_node_1.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_id))
         status = int(receipt['result']['status'], 16)
         assert_equal(0, status, "Make forger stake with fake smart contract as owner should create a failed tx")
         # Check the logs
@@ -296,7 +304,8 @@ class SCEvmForger(SidechainTestFramework):
         self.sc_sync_all()
 
         # Checking the receipt
-        receipt = sc_node_1.rpc_eth_getTransactionReceipt(makeForgerStakeJsonRes['result']['transactionId'])
+        tx_id = makeForgerStakeJsonRes['result']['transactionId']
+        receipt = sc_node_1.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_id))
         status = int(receipt['result']['status'], 16)
         assert_equal(0, status, "Make forger stake with fake smart contract as owner should create a failed tx")
 
@@ -327,7 +336,7 @@ class SCEvmForger(SidechainTestFramework):
         print_current_epoch_and_slot(sc_node_1)
 
         # Checking the receipt
-        receipt = sc_node_1.rpc_eth_getTransactionReceipt(tx_hash)
+        receipt = sc_node_1.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash))
         status = int(receipt['result']['status'], 16)
         assert_equal(1, status)
 
@@ -372,7 +381,7 @@ class SCEvmForger(SidechainTestFramework):
         print_current_epoch_and_slot(sc_node_1)
 
         # Checking the receipt
-        receipt = sc_node_1.rpc_eth_getTransactionReceipt(tx_hash)
+        receipt = sc_node_1.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash))
         status = int(receipt['result']['status'], 16)
         assert_equal(1, status)
 
@@ -523,7 +532,7 @@ class SCEvmForger(SidechainTestFramework):
         print_current_epoch_and_slot(sc_node_1)
 
         # Checking the receipt
-        receipt = sc_node_1.rpc_eth_getTransactionReceipt(tx_hash)
+        receipt = sc_node_1.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash))
         status = int(receipt['result']['status'], 16)
         assert_equal(1, status)
 
@@ -564,7 +573,7 @@ class SCEvmForger(SidechainTestFramework):
 
         # all balance is now at the expected owner address
         # Checking the receipt
-        receipt = sc_node_1.rpc_eth_getTransactionReceipt(tx_hash)
+        receipt = sc_node_1.rpc_eth_getTransactionReceipt(add_0x_prefix(tx_hash))
         status = int(receipt['result']['status'], 16)
         assert_equal(1, status)
 
@@ -582,21 +591,21 @@ class SCEvmForger(SidechainTestFramework):
         self.sc_sync_all()
         print_current_epoch_and_slot(sc_node_1)
 
-        # Try to generate one more SC block switching epoch, that should fail because while the forging itself will
-        # be successful (the forger info points to two epoch earlier), the block can not be applied
+        # Try to generate one more SC block switching epoch, that should fail because even if the forging itself could
+        # take place (the forger info points to two epoch earlier), the block would not be applied
         # since consensus epoch info are not valid (empty list of stakes)
         exception_occurs = False
         try:
             logging.info("Trying to generate a block: should fail...")
-            generate_next_block(sc_node_2, "first node", force_switch_to_next_epoch=True)
+            generate_next_block(sc_node_2, "second node", force_switch_to_next_epoch=True)
             self.sc_sync_all()
             print_current_epoch_and_slot(sc_node_1)
         except Exception as e:
             exception_occurs = True
             logging.info("We had an exception as expected: {}".format(str(e)))
-
         finally:
             assert_true(exception_occurs, "No forging stakes expected for SC node 1.")
+
         self.sc_sync_all()
         print_current_epoch_and_slot(sc_node_1)
 

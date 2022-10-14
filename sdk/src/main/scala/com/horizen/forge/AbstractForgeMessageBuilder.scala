@@ -1,7 +1,6 @@
 package com.horizen.forge
 
 import akka.util.Timeout
-import com.horizen.account.receipt.LogsBloom
 import com.horizen.block._
 import com.horizen.chain.{AbstractFeePaymentsInfo, MainchainHeaderHash, SidechainBlockInfo}
 import com.horizen.consensus._
@@ -18,8 +17,8 @@ import sparkz.core.NodeViewHolder.CurrentView
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 import sparkz.core.block.Block
 import sparkz.core.transaction.MemoryPool
-import sparkz.core.transaction.state.MinimalState
 import scorex.util.{ModifierId, ScorexLogging}
+import sparkz.core.transaction.state.MinimalState
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
