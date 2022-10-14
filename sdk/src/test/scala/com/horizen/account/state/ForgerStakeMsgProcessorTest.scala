@@ -657,7 +657,7 @@ class ForgerStakeMsgProcessorTest
   }
 
   @Test
-  def testRejectSendingPositiveValueToWithdraw(): Unit = {
+  def testRejectSendingInvalidValueToWithdraw(): Unit = {
     val expectedBlockSignerProposition = "aa22334455667788112233445586778811223344556677881122334455667788" // 32 bytes
     val blockSignerProposition = new PublicKey25519Proposition(BytesUtils.fromHexString(expectedBlockSignerProposition)) // 32 bytes
     val expectedVrfKey = "aabbccddeeff0099aabb87ddeeff0099aabbccddeeff0099aabbccd2aeff001234"
@@ -699,21 +699,24 @@ class ForgerStakeMsgProcessorTest
       // create command arguments
       val removeCmdInput = RemoveStakeCmdInput(forgingStakeInfo.stakeId, msgSignature)
       val data: Array[Byte] = removeCmdInput.encode()
-      val msg = getMessage(contractAddress, BigInteger.ONE, BytesUtils.fromHexString(RemoveStakeCmd) ++ data, nonce)
+      var msg = getMessage(contractAddress, BigInteger.ONE, BytesUtils.fromHexString(RemoveStakeCmd) ++ data, nonce)
 
-      // try processing the removal of stake, should succeed
-      val returnData = intercept[ExecutionRevertedException] {
+      assertThrows[ExecutionFailedException] {
         withGas(forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext))
       }
 
-      assert(returnData.getMessage === "Call value must be zero")
+      msg = getMessage(contractAddress, BigInteger.valueOf(-1), BytesUtils.fromHexString(RemoveStakeCmd) ++ data, nonce)
+
+      assertThrows[ExecutionFailedException] {
+        withGas(forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext))
+      }
 
       view.commit(bytesToVersion(getVersion.data()))
     }
   }
 
   @Test
-  def testRejectSendingNegativeValueToWithdraw(): Unit = {
+  def testRejectSendingInvalidValueToGetAllForgerStakes(): Unit = {
     val expectedBlockSignerProposition = "aa22334455667788112233445586778811223344556677881122334455667788" // 32 bytes
     val blockSignerProposition = new PublicKey25519Proposition(BytesUtils.fromHexString(expectedBlockSignerProposition)) // 32 bytes
     val expectedVrfKey = "aabbccddeeff0099aabb87ddeeff0099aabbccddeeff0099aabbccd2aeff001234"
@@ -728,94 +731,18 @@ class ForgerStakeMsgProcessorTest
 
       forgerStakeMessageProcessor.init(view)
 
-      // create sender account with some fund in it
-      // val initialAmount = BigInteger.valueOf(10).multiply(validWeiAmount)
-      val initialAmount = ZenWeiConverter.MAX_MONEY_IN_WEI
-      createSenderAccount(view, initialAmount)
-
-      val cmdInput = AddNewStakeCmdInput(
-        ForgerPublicKeys(blockSignerProposition, vrfPublicKey),
-        ownerAddressProposition
-      )
-      val addNewStakeData: Array[Byte] = cmdInput.encode()
-
-      val stakeAmount = validWeiAmount
-      val addNewStakeMsg = getMessage(contractAddress, stakeAmount, BytesUtils.fromHexString(AddNewStakeCmd) ++ addNewStakeData, randomNonce)
-      val expStakeId = forgerStakeMessageProcessor.getStakeId(addNewStakeMsg)
-      val forgingStakeInfo = AccountForgingStakeInfo(expStakeId, ForgerStakeData(ForgerPublicKeys(blockSignerProposition, vrfPublicKey), ownerAddressProposition, stakeAmount))
-      val addNewStakeReturnData = withGas(forgerStakeMessageProcessor.process(addNewStakeMsg, view, _, defaultBlockContext))
-      assertNotNull(addNewStakeReturnData)
-
-
-      val nonce = randomNonce
-      val msgToSign = ForgerStakeMsgProcessor.getMessageToSign(forgingStakeInfo.stakeId, origin, nonce.toByteArray)
-      val msgSignatureData = Sign.signMessage(msgToSign, pair, true)
-      val msgSignature = new SignatureSecp256k1(msgSignatureData)
-
-      // create command arguments
-      val removeCmdInput = RemoveStakeCmdInput(forgingStakeInfo.stakeId, msgSignature)
-      val data: Array[Byte] = removeCmdInput.encode()
-      val msg = getMessage(contractAddress, BigInteger.valueOf(-1), BytesUtils.fromHexString(RemoveStakeCmd) ++ data, nonce)
-
-      // try processing the removal of stake, should succeed
-      val returnData = intercept[ExecutionRevertedException] {
-        withGas(forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext))
-      }
-
-      assert(returnData.getMessage === "Call value must be zero")
-
-      view.commit(bytesToVersion(getVersion.data()))
-    }
-  }
-
-  @Test
-  def testRejectSendingPositiveValueToGetAllForgerStakes(): Unit = {
-    val expectedBlockSignerProposition = "aa22334455667788112233445586778811223344556677881122334455667788" // 32 bytes
-    val blockSignerProposition = new PublicKey25519Proposition(BytesUtils.fromHexString(expectedBlockSignerProposition)) // 32 bytes
-    val expectedVrfKey = "aabbccddeeff0099aabb87ddeeff0099aabbccddeeff0099aabbccd2aeff001234"
-    val vrfPublicKey = new VrfPublicKey(BytesUtils.fromHexString(expectedVrfKey)) // 33 bytes
-
-    Mockito.when(mockNetworkParams.restrictForgers).thenReturn(true)
-    Mockito.when(mockNetworkParams.allowedForgersList).thenReturn(Seq(
-      (blockSignerProposition, vrfPublicKey)
-    ))
-
-    usingView(forgerStakeMessageProcessor) { view =>
-
-      forgerStakeMessageProcessor.init(view)
-
-      val msg = getMessage(contractAddress, BigInteger.ONE, BytesUtils.fromHexString(GetListOfForgersCmd), randomNonce)
       withGas { gas =>
-        val returnData = intercept[ExecutionRevertedException] {
+        var msg = getMessage(contractAddress, BigInteger.ONE, BytesUtils.fromHexString(GetListOfForgersCmd), randomNonce)
+
+        assertThrows[ExecutionFailedException] {
           forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)
         }
-        assert(returnData.getMessage === "Call value must be zero")
-      }
-    }
-  }
 
-  @Test
-  def testRejectSendingNegativeValueToGetAllForgerStakes(): Unit = {
-    val expectedBlockSignerProposition = "aa22334455667788112233445586778811223344556677881122334455667788" // 32 bytes
-    val blockSignerProposition = new PublicKey25519Proposition(BytesUtils.fromHexString(expectedBlockSignerProposition)) // 32 bytes
-    val expectedVrfKey = "aabbccddeeff0099aabb87ddeeff0099aabbccddeeff0099aabbccd2aeff001234"
-    val vrfPublicKey = new VrfPublicKey(BytesUtils.fromHexString(expectedVrfKey)) // 33 bytes
+        msg = getMessage(contractAddress, BigInteger.valueOf(-1), BytesUtils.fromHexString(GetListOfForgersCmd), randomNonce)
 
-    Mockito.when(mockNetworkParams.restrictForgers).thenReturn(true)
-    Mockito.when(mockNetworkParams.allowedForgersList).thenReturn(Seq(
-      (blockSignerProposition, vrfPublicKey)
-    ))
-
-    usingView(forgerStakeMessageProcessor) { view =>
-
-      forgerStakeMessageProcessor.init(view)
-
-      val msg = getMessage(contractAddress, BigInteger.valueOf(-1), BytesUtils.fromHexString(GetListOfForgersCmd), randomNonce)
-      withGas { gas =>
-        val returnData = intercept[ExecutionRevertedException] {
+        assertThrows[ExecutionFailedException] {
           forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)
         }
-        assert(returnData.getMessage === "Call value must be zero")
       }
     }
   }

@@ -173,36 +173,28 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
   }
 
   @Test
-  def testRejectSendingPositiveValueToGetListOfWithdrawal(): Unit = {
+  def testRejectSendingInvalidValueToGetListOfWithdrawal(): Unit = {
     val mockStateView = mock[AccountStateView]
 
-    val msg = getMessage(
+    var msg = getMessage(
       WithdrawalMsgProcessor.contractAddress,
       BigInteger.ONE,
       BytesUtils.fromHexString(WithdrawalMsgProcessor.GetListOfWithdrawalReqsCmdSig)
     )
 
-    val returnData = intercept[ExecutionRevertedException] {
+    assertThrows[ExecutionFailedException] {
       withGas(WithdrawalMsgProcessor.process(msg, mockStateView, _, defaultBlockContext))
     }
-    assert(returnData.getMessage === "Call value must be zero")
 
-  }
-
-  @Test
-  def testRejectSendingNegativeValueToGetListOfWithdrawal(): Unit = {
-    val mockStateView = mock[AccountStateView]
-
-    val msg = getMessage(
+    msg = getMessage(
       WithdrawalMsgProcessor.contractAddress,
       BigInteger.valueOf(-1),
       BytesUtils.fromHexString(WithdrawalMsgProcessor.GetListOfWithdrawalReqsCmdSig)
     )
 
-    val returnData = intercept[ExecutionRevertedException] {
+    assertThrows[ExecutionFailedException] {
       withGas(WithdrawalMsgProcessor.process(msg, mockStateView, _, defaultBlockContext))
     }
-    assert(returnData.getMessage === "Call value must be zero")
-
   }
+
 }
