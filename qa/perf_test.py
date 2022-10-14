@@ -468,6 +468,7 @@ class PerformanceTest(SidechainTestFramework):
 
     def log_node_wallet_balances(self):
         balances = []
+        errors = 0
         # Output the balance of each node
         for index, node in enumerate(self.sc_nodes):
             n_try = 0
@@ -477,7 +478,9 @@ class PerformanceTest(SidechainTestFramework):
                     wallet_boxes = http_wallet_allBoxesOfType(node, "ZenBox")
                     error = False
                 except Exception as e:
+                    logging.warning(f"Node API ERROR {index}")
                     n_try += 1
+                    errors += 1
             wallet_balance = 0
             for box in wallet_boxes:
                 wallet_balance += box["value"]
@@ -486,7 +489,7 @@ class PerformanceTest(SidechainTestFramework):
                 logging.info(f"Node{index} (Transaction Creator) Wallet Balance: {wallet_balance}")
             else:
                 logging.info(f"Node{index} Wallet Balance: {wallet_balance}")
-        return balances
+        return (balances, errors)
 
     def get_node_mined_transactions_by_block_id(self, node, block_id):
         result = http_block_findById(node, block_id)
@@ -679,8 +682,10 @@ class PerformanceTest(SidechainTestFramework):
                 http_wallet_createPrivateKey25519(txs_creators[i]))
         self.sc_sync_all()
 
-        # Generate 1 SC block to include FTs.
+        # Generate 2 SC blocks to include all the FTs.
         forger_nodes = self.find_forger_nodes()
+        generate_next_blocks(forger_nodes[0], "first node", 1)[0]
+        self.sc_sync_all()
         generate_next_blocks(forger_nodes[0], "first node", 1)[0]
         self.sc_sync_all()
 
@@ -890,8 +895,9 @@ class PerformanceTest(SidechainTestFramework):
         # sum(balance of each node) => total ZEN present at the end of the test
         # Output the wallet balance of each node
         logging.info("Node Wallet Balances After Test...")
-        end_balances = self.log_node_wallet_balances()
+        end_balances, wallet_balance_api_errors = self.log_node_wallet_balances()
         self.csv_data["end_balances"] = end_balances
+        api_errors += wallet_balance_api_errors
 
         # OUTPUT TEST RESULTS
         blocks_per_node = []
