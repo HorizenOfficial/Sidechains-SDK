@@ -701,13 +701,13 @@ class ForgerStakeMsgProcessorTest
       val data: Array[Byte] = removeCmdInput.encode()
       var msg = getMessage(contractAddress, BigInteger.ONE, BytesUtils.fromHexString(RemoveStakeCmd) ++ data, nonce)
 
-      assertThrows[ExecutionFailedException] {
+      assertThrows[ExecutionRevertedException] {
         withGas(forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext))
       }
 
       msg = getMessage(contractAddress, BigInteger.valueOf(-1), BytesUtils.fromHexString(RemoveStakeCmd) ++ data, nonce)
 
-      assertThrows[ExecutionFailedException] {
+      assertThrows[ExecutionRevertedException] {
         withGas(forgerStakeMessageProcessor.process(msg, view, _, defaultBlockContext))
       }
 
@@ -734,13 +734,13 @@ class ForgerStakeMsgProcessorTest
       withGas { gas =>
         var msg = getMessage(contractAddress, BigInteger.ONE, BytesUtils.fromHexString(GetListOfForgersCmd), randomNonce)
 
-        assertThrows[ExecutionFailedException] {
+        assertThrows[ExecutionRevertedException] {
           forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)
         }
 
         msg = getMessage(contractAddress, BigInteger.valueOf(-1), BytesUtils.fromHexString(GetListOfForgersCmd), randomNonce)
 
-        assertThrows[ExecutionFailedException] {
+        assertThrows[ExecutionRevertedException] {
           forgerStakeMessageProcessor.process(msg, view, gas, defaultBlockContext)
         }
       }

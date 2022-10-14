@@ -182,7 +182,7 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
       BytesUtils.fromHexString(WithdrawalMsgProcessor.GetListOfWithdrawalReqsCmdSig)
     )
 
-    assertThrows[ExecutionFailedException] {
+    assertThrows[ExecutionRevertedException] {
       withGas(WithdrawalMsgProcessor.process(msg, mockStateView, _, defaultBlockContext))
     }
 
@@ -192,7 +192,7 @@ class WithdrawalMsgProcessorTest extends JUnitSuite with MockitoSugar with Withd
       BytesUtils.fromHexString(WithdrawalMsgProcessor.GetListOfWithdrawalReqsCmdSig)
     )
 
-    assertThrows[ExecutionFailedException] {
+    assertThrows[ExecutionRevertedException] {
       withGas(WithdrawalMsgProcessor.process(msg, mockStateView, _, defaultBlockContext))
     }
   }
