@@ -258,6 +258,8 @@ class SCEvmBackwardTransfer2(SidechainTestFramework):
         if "error" in res:
             fail(f"Creating Withdrawal request failed: " + json.dumps(res))
 
+        tx_id = add_0x_prefix(res["result"]["transactionId"])
+
         # Generate SC block
         generate_next_blocks(sc_node, "first node", 1)
         #Check the receipt
@@ -271,7 +273,7 @@ class SCEvmBackwardTransfer2(SidechainTestFramework):
         new_balance = http_wallet_balance(sc_node, evm_address)
         assert_equal(expected_new_balance, new_balance,  "wrong balance after first withdrawal request")
 
-        # verifies that there are 2 withdrawal request2
+        # verifies that there are 2 withdrawal requests
         list_of_WR = all_withdrawal_requests(sc_node, current_epoch_number)["listOfWR"]
         assert_equal(2, len(list_of_WR))
 

@@ -191,6 +191,44 @@ class MCSCForgingDelegation(SidechainTestFramework):
         finally:
             assert_true(exception_occurs, "No forging stakes expected for SC node 1.")
 
+        # now spend all of the remaining forging stakes delegated by SC1 to SC2
+        forger_boxes_1 = sc_node1.wallet_allBoxes(json.dumps(all_forger_boxes_req))["result"]["boxes"]
+        for box in forger_boxes_1:
+            spend_forger_stakes_req = {
+                "transactionInputs": [{"boxId": box['id']}],
+                "regularOutputs": [{"publicKey": sc_node1_address, "value": box['value']}],
+                "forgerOutputs": []
+            }
+
+            sc_node1.transaction_spendForgingStake(json.dumps(spend_forger_stakes_req))
+            self.sc_sync_all()
+
+        response = sc_node1.transaction_allTransactions(json.dumps({"format": False}))
+        assert_equal(len(response['result']['transactionIds']), 2)
+
+        # do not switch epoch yet
+        generate_next_block(sc_node2, "second node", force_switch_to_next_epoch=False)
+        self.sc_sync_all()
+
+        # check we do not have any forging stake at all
+        forger_boxes_1 = sc_node1.wallet_allBoxes(json.dumps(all_forger_boxes_req))["result"]["boxes"]
+        forger_boxes_2 = sc_node2.wallet_allBoxes(json.dumps(all_forger_boxes_req))["result"]["boxes"]
+        assert_true(len(forger_boxes_1) == 0)
+        assert_true(len(forger_boxes_2) == 0)
+
+        # Try to generate one more block switching epoch, that should fail because even if the forging itself would
+        # take place (the SC2 forger info points to two epoch earlier, and back then we had stakes delegated by SC1
+        # to him), yet the block will not be applied since consensus epoch info are not valid (empty list of stakes)
+        exception_occurs = False
+        try:
+            generate_next_block(sc_node2, "second node", force_switch_to_next_epoch=True)
+        except Exception as e:
+            exception_occurs = True
+            logging.info("We had an exception as expected: {}".format(str(e)))
+        finally:
+            assert_true(exception_occurs, "Forging should not happen")
+
+
 
 if __name__ == "__main__":
     MCSCForgingDelegation().main()

@@ -124,7 +124,8 @@ class SidechainForkOneForcedTransactionsTest(SidechainTestFramework):
                                 forced_tx=[low_amount_tx_bytes])
             assert_true(False, "Forced transaction should fail to verify agains stake")
         except Exception as e:
-            assert_true("There was an internal server error." in e.error)
+            logging.info("We had an exception as expected: {}".format(str(e)))
+            assert_true("semantically invalid" in str(e))
 
         # Generate block with forced unverified openStakeTransaction, it should succeed and transaction be included
         forger0_box = self.find_box(allBoxes, self.allowed_forger_propositions[0].publicKey)

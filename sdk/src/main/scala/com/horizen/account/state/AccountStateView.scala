@@ -109,7 +109,7 @@ class AccountStateView(
   override def getForgerStakeData(stakeId: String): Option[ForgerStakeData] =
     forgerStakesProvider.findStakeData(this, BytesUtils.fromHexString(stakeId))
 
-  def getOrderedForgingStakeInfoSeq: Seq[ForgingStakeInfo] = {
+  def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = {
     forgerStakesProvider.getListOfForgers(this).map { item =>
       ForgingStakeInfo(
         item.forgerStakeData.forgerPublicKeys.blockSignPublicKey,

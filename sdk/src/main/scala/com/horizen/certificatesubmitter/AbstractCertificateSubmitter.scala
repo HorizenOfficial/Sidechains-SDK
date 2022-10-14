@@ -61,7 +61,7 @@ abstract class AbstractCertificateSubmitter[
   type FPI <: AbstractFeePaymentsInfo
   type HSTOR <: AbstractHistoryStorage[PM, FPI, HSTOR]
   type HIS <: AbstractHistory[TX, H, PM, FPI, HSTOR, HIS]
-  type MS <: MinimalState[PM, MS]
+  type MS <: AbstractState[TX, H, PM, MS]
   type VL <: Wallet[SidechainTypes#SCS, SidechainTypes#SCP, TX, PM, VL]
   type MP <: MemoryPool[TX, MP]
 

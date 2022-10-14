@@ -9,7 +9,7 @@ import com.horizen.AbstractSidechainNodeViewHolder.ReceivableMessages.LocallyGen
 import com.horizen.api.http.JacksonSupport._
 import com.horizen.api.http.SidechainWalletRestScheme.RespCreatePrivateKey
 import com.horizen.api.http.WalletBaseErrorResponse.ErrorSecretNotAdded
-import com.horizen.api.http.WalletBaseRestScheme.{ReqAllPropositions, RespAllPublicKeys, RespCreateVrfSecret}
+import com.horizen.api.http.WalletBaseRestScheme.{ReqAllPropositions, ReqCreateKey, RespAllPublicKeys, RespCreateVrfSecret}
 import com.horizen.block.{SidechainBlockBase, SidechainBlockHeaderBase}
 import com.horizen.chain.AbstractFeePaymentsInfo
 import com.horizen.node._
@@ -48,17 +48,19 @@ abstract class WalletBaseApiRoute[
    */
   def createVrfSecret: Route = (post & path("createVrfSecret")) {
     withAuth {
-      withNodeView { sidechainNodeView =>
-        //replace to VRFKeyGenerator.generateNextSecret(wallet)
-        val secret = VrfKeyGenerator.getInstance().generateNextSecret(sidechainNodeView.getNodeWallet)
-        val public = secret.publicImage()
+      entity(as[ReqCreateKey]) { _ =>
+        withNodeView { sidechainNodeView =>
+          //replace to VRFKeyGenerator.generateNextSecret(wallet)
+          val secret = VrfKeyGenerator.getInstance().generateNextSecret(sidechainNodeView.getNodeWallet)
+          val public = secret.publicImage()
 
-        val future = sidechainNodeViewHolderRef ? ReceivableMessages.LocallyGeneratedSecret(secret)
-        Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
-          case Success(_) =>
-            ApiResponseUtil.toResponse(RespCreateVrfSecret(public))
-          case Failure(e) =>
-            ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create Vrf key pair.", JOptional.of(e)))
+          val future = sidechainNodeViewHolderRef ? ReceivableMessages.LocallyGeneratedSecret(secret)
+          Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
+            case Success(_) =>
+              ApiResponseUtil.toResponse(RespCreateVrfSecret(public))
+            case Failure(e) =>
+              ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create Vrf key pair.", JOptional.of(e)))
+          }
         }
       }
     }
@@ -69,15 +71,17 @@ abstract class WalletBaseApiRoute[
    */
   def createPrivateKey25519: Route = (post & path("createPrivateKey25519")) {
     withAuth {
-      withNodeView { sidechainNodeView =>
-        val wallet = sidechainNodeView.getNodeWallet
-        val secret = PrivateKey25519Creator.getInstance().generateNextSecret(wallet)
-        val future = sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)
-        Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
-          case Success(_) =>
-            ApiResponseUtil.toResponse(RespCreatePrivateKey(secret.publicImage()))
-          case Failure(e) =>
-            ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create key pair.", JOptional.of(e)))
+      entity(as[ReqCreateKey]) { _ =>
+        withNodeView { sidechainNodeView =>
+          val wallet = sidechainNodeView.getNodeWallet
+          val secret = PrivateKey25519Creator.getInstance().generateNextSecret(wallet)
+          val future = sidechainNodeViewHolderRef ? LocallyGeneratedSecret(secret)
+          Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
+            case Success(_) =>
+              ApiResponseUtil.toResponse(RespCreatePrivateKey(secret.publicImage()))
+            case Failure(e) =>
+              ApiResponseUtil.toResponse(ErrorSecretNotAdded("Failed to create key pair.", JOptional.of(e)))
+          }
         }
       }
     }
@@ -131,6 +135,9 @@ object WalletBaseRestScheme {
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespAllPublicKeys(propositions: Seq[Proposition]) extends SuccessResponse
 
+  @JsonView(Array(classOf[Views.Default]))
+  case class ReqCreateKey() {
+  }
 }
 
 object WalletBaseErrorResponse {

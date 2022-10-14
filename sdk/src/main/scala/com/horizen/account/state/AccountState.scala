@@ -12,7 +12,6 @@ import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.consensus.{ConsensusEpochInfo, ConsensusEpochNumber, ForgingStakeInfo, intToConsensusEpochNumber}
 import com.horizen.evm._
 import com.horizen.evm.interop.EvmLog
-import com.horizen.evm.utils.Address
 import com.horizen.params.NetworkParams
 import com.horizen.state.State
 import com.horizen.utils.{ByteArrayWrapper, BytesUtils, ClosableResourceHandler, MerkleTree, TimeToEpochUtils, WithdrawalEpochInfo, WithdrawalEpochUtils}
@@ -293,8 +292,8 @@ class AccountState(
   }
 
   // Note: Equal to SidechainState.isSwitchingConsensusEpoch
-  def isSwitchingConsensusEpoch(mod: AccountBlock): Boolean = {
-    val blockConsensusEpoch: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)
+  def isSwitchingConsensusEpoch(blockTimeStamp: Long): Boolean = {
+    val blockConsensusEpoch: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, blockTimeStamp)
     val currentConsensusEpoch: ConsensusEpochNumber = getConsensusEpochNumber.getOrElse(intToConsensusEpochNumber(0))
 
     blockConsensusEpoch != currentConsensusEpoch
@@ -350,7 +349,7 @@ class AccountState(
 
   def getConsensusEpochNumber: Option[ConsensusEpochNumber] = stateMetadataStorage.getConsensusEpochNumber
 
-  private def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = using(getView)(_.getOrderedForgingStakeInfoSeq)
+  def getOrderedForgingStakesInfoSeq: Seq[ForgingStakeInfo] = using(getView)(_.getOrderedForgingStakesInfoSeq)
 
   // Returns lastBlockInEpoch and ConsensusEpochInfo for that epoch
   // TODO this is common code with SidechainState

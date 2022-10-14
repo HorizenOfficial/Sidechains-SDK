@@ -13,7 +13,7 @@ import com.horizen.account.forger.AccountForgerRef
 import com.horizen.account.history.AccountHistory
 import com.horizen.account.network.AccountNodeViewSynchronizer
 import com.horizen.account.node.{AccountNodeView, NodeAccountHistory, NodeAccountMemoryPool, NodeAccountState}
-import com.horizen.account.state.MessageProcessor
+import com.horizen.account.state.{AccountState, MessageProcessor}
 import com.horizen.account.storage.{AccountHistoryStorage, AccountStateMetadataStorage}
 import com.horizen.{AbstractSidechainApp, ChainInfo, SidechainAppEvents, SidechainSettings, SidechainSyncInfoMessageSpec, SidechainTypes}
 import com.horizen.api.http._
@@ -140,7 +140,7 @@ class AccountSidechainApp @Inject()
 
   // Init Transactions and Block actors for Api routes classes
   val sidechainTransactionActorRef: ActorRef = SidechainTransactionActorRef(nodeViewHolderRef)
-  val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef[PMOD, SidechainSyncInfo, AccountHistory]("AccountBlock", sidechainSettings, nodeViewHolderRef, sidechainBlockForgerActorRef)
+  val sidechainBlockActorRef: ActorRef = SidechainBlockActorRef[PMOD, SidechainSyncInfo, AccountHistory]("AccountBlock", sidechainSettings, sidechainBlockForgerActorRef)
 
   // Init Certificate Submitter
   val certificateSubmitterRef: ActorRef = AccountCertificateSubmitterRef(sidechainSettings, nodeViewHolderRef, params, mainchainNodeChannel)

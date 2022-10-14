@@ -98,6 +98,7 @@ class SCEvmForger(SidechainTestFramework):
     number_of_mc_nodes = 1
     number_of_sidechain_nodes = 2
     sc_creation_amount = 100
+    API_KEY = "Horizen"
 
     def setup_nodes(self):
         return start_nodes(self.number_of_mc_nodes, self.options.tmpdir)
@@ -111,10 +112,12 @@ class SCEvmForger(SidechainTestFramework):
     def sc_setup_chain(self):
         mc_node = self.nodes[0]
         sc_node_1_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
+            api_key = self.API_KEY
         )
         sc_node_2_configuration = SCNodeConfiguration(
-            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0)))
+            MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
+            api_key = self.API_KEY
         )
         network = SCNetworkConfiguration(
             SCCreationInfo(mc_node, self.sc_creation_amount, LARGE_WITHDRAWAL_EPOCH_LENGTH),
@@ -125,7 +128,7 @@ class SCEvmForger(SidechainTestFramework):
 
     def sc_setup_nodes(self):
         return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
-                              binary=[EVM_APP_BINARY] * 2)#, extra_args=[[], ['-agentlib']])
+                              auth_api_key=self.API_KEY, binary=[EVM_APP_BINARY] * 2)#, extra_args=[[], ['-agentlib']])
 
     def run_test(self):
 
@@ -588,21 +591,21 @@ class SCEvmForger(SidechainTestFramework):
         self.sc_sync_all()
         print_current_epoch_and_slot(sc_node_1)
 
-        # Try to generate one more SC block switching epoch, that should fail because while the forging itself will
-        # be successful (the forger info points to two epoch earlier), the block can not be applied
+        # Try to generate one more SC block switching epoch, that should fail because even if the forging itself could
+        # take place (the forger info points to two epoch earlier), the block would not be applied
         # since consensus epoch info are not valid (empty list of stakes)
         exception_occurs = False
         try:
             logging.info("Trying to generate a block: should fail...")
-            generate_next_block(sc_node_2, "first node", force_switch_to_next_epoch=True)
+            generate_next_block(sc_node_2, "second node", force_switch_to_next_epoch=True)
             self.sc_sync_all()
             print_current_epoch_and_slot(sc_node_1)
         except Exception as e:
             exception_occurs = True
             logging.info("We had an exception as expected: {}".format(str(e)))
-
         finally:
             assert_true(exception_occurs, "No forging stakes expected for SC node 1.")
+
         self.sc_sync_all()
         print_current_epoch_and_slot(sc_node_1)
 

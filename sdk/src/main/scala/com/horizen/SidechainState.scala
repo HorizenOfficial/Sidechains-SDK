@@ -2,7 +2,7 @@ package com.horizen
 
 import com.google.common.primitives.{Bytes, Ints}
 import com.horizen.backup.BoxIterator
-import com.horizen.block.{SidechainBlock, WithdrawalEpochCertificate}
+import com.horizen.block.{SidechainBlock, SidechainBlockHeader, WithdrawalEpochCertificate}
 import com.horizen.box._
 import com.horizen.box.data.ZenBoxData
 import com.horizen.consensus._
@@ -37,7 +37,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
                                        val params: NetworkParams,
                                        override val version: VersionTag,
                                        val applicationState: ApplicationState)
-  extends MinimalState[SidechainBlock, SidechainState]
+  extends AbstractState[SidechainTypes#SCBT, SidechainBlockHeader, SidechainBlock, SidechainState]
     with TransactionValidation[SidechainTypes#SCBT]
     with ModifierValidation[SidechainBlock]
     with SidechainTypes
@@ -547,8 +547,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     Failure(exception)
   }
 
-  def isSwitchingConsensusEpoch(mod: SidechainBlock): Boolean = {
-    val blockConsensusEpoch: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, mod.timestamp)
+  def isSwitchingConsensusEpoch(blockTimestamp: Long): Boolean = {
+    val blockConsensusEpoch: ConsensusEpochNumber = TimeToEpochUtils.timeStampToEpochNumber(params, blockTimestamp)
     val currentConsensusEpoch: ConsensusEpochNumber = stateStorage.getConsensusEpochNumber.getOrElse(intToConsensusEpochNumber(0))
 
     blockConsensusEpoch != currentConsensusEpoch
@@ -578,7 +578,7 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
 
   // Note: we consider ordering of the result to keep it deterministic for all Nodes.
   // From biggest stake to lowest, in case of equal compare vrf and block sign keys as well.
-  private def getOrderedForgingStakesInfoSeq(): Seq[ForgingStakeInfo] = {
+  def getOrderedForgingStakesInfoSeq(): Seq[ForgingStakeInfo] = {
     ForgingStakeInfo.fromForgerBoxes(forgerBoxStorage.getAllForgerBoxes).sorted(Ordering[ForgingStakeInfo].reverse)
   }
 

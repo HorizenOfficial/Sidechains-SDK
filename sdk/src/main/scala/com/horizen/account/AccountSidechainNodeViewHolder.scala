@@ -19,14 +19,12 @@ import com.horizen.proof.Proof
 import com.horizen.proposition.Proposition
 import com.horizen.storage.{SidechainSecretStorage, SidechainStorageInfo}
 import com.horizen.validation.{HistoryBlockValidator, SemanticBlockValidator}
-import com.horizen.{AbstractSidechainNodeViewHolder, SidechainSettings, SidechainTypes}
+import com.horizen.{AbstractSidechainNodeViewHolder, AbstractState, SidechainSettings, SidechainTypes}
 import scorex.util.ModifierId
 import sparkz.core.NodeViewHolder.ReceivableMessages.LocallyGeneratedTransaction
-import sparkz.core.consensus.History.ProgressInfo
-import sparkz.core.network.NodeViewSynchronizer.ReceivableMessages.{SemanticallyFailedModification, SemanticallySuccessfulModifier}
 import sparkz.core.transaction.state.TransactionValidation
 import sparkz.core.utils.NetworkTimeProvider
-import scala.util.{Failure, Success, Try}
+import scala.util.Success
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 
 class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
@@ -89,13 +87,11 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     result.get
   }
 
-  // TODO: define SidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView(f) / ApplyFunctionOnNodeView / ApplyBiFunctionOnNodeView processors
-
   // Check if the next modifier will change Consensus Epoch, so notify History with current info.
   // Note: there is no need to store any info in the Wallet, since for Account model Forger is able
   // to get all necessary information from the State.
   override protected def applyConsensusEpochInfo(history: HIS, state: MS, wallet: VL, modToApply: AccountBlock): (HIS, VL) = {
-     val historyAfterConsensusInfoApply = if (state.isSwitchingConsensusEpoch(modToApply)) {
+     val historyAfterConsensusInfoApply = if (state.isSwitchingConsensusEpoch(modToApply.timestamp)) {
       val (lastBlockInEpoch: ModifierId, consensusEpochInfo: ConsensusEpochInfo) = state.getCurrentConsensusEpochInfo
       val nonceConsensusEpochInfo = history.calculateNonceForEpoch(blockIdToEpochId(lastBlockInEpoch))
       val stakeConsensusEpochInfo = StakeConsensusEpochInfo(consensusEpochInfo.forgingStakeInfoTree.rootHash(), consensusEpochInfo.forgersStake)
@@ -117,9 +113,6 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
   override def getScanPersistentWallet(modToApply: AccountBlock, stateOp: Option[MS], epochNumber: Int, wallet: VL) : VL = {
     wallet.scanPersistent(modToApply)
   }
-
-  override def isWithdrawalEpochLastIndex(state: MS) : Boolean = state.isWithdrawalEpochLastIndex
-  override def getWithdrawalEpochNumber(state: MS) : Int = state.getWithdrawalEpochInfo.epoch
 
   override protected def getCurrentSidechainNodeViewInfo: Receive = {
     case msg: AbstractSidechainNodeViewHolder.ReceivableMessages.GetDataFromCurrentSidechainNodeView[
@@ -220,37 +213,6 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
       })
   }
 
-  // Apply state and wallet with blocks one by one, if consensus epoch is going to be changed -> notify wallet and history.
-  override protected def applyStateAndWallet(history: HIS,
-                                    stateToApply: MS,
-                                    walletToApply: VL,
-                                    suffixTrimmed: IndexedSeq[AccountBlock],
-                                    progressInfo: ProgressInfo[AccountBlock]): Try[SidechainNodeUpdateInformation] = Try {
-    // TODO FOR MERGE - check Sidechain implementation and possibly bring this method in abstract class
-
-    val updateInfoSample = SidechainNodeUpdateInformation(history, stateToApply, walletToApply, None, None, suffixTrimmed)
-    progressInfo.toApply.foldLeft(updateInfoSample) { case (updateInfo, modToApply) =>
-      if (updateInfo.failedMod.isEmpty) {
-        val (newHistory, newWallet) = applyConsensusEpochInfo(updateInfo.history, updateInfo.state, updateInfo.wallet, modToApply)
-
-        updateInfo.state.applyModifier(modToApply) match {
-          case Success(stateAfterApply) =>
-            val historyAfterApply = newHistory.reportModifierIsValid(modToApply).get
-            context.system.eventStream.publish(SemanticallySuccessfulModifier(modToApply))
-
-            val (historyAfterUpdateFee, walletAfterApply) = scanBlockWithFeePayments(historyAfterApply, stateAfterApply, newWallet, modToApply)
-            SidechainNodeUpdateInformation(historyAfterUpdateFee, stateAfterApply, walletAfterApply, None, None, updateInfo.suffix :+ modToApply)
-
-          case Failure(e) =>
-            log.error(s"Failed to apply block ${modToApply.id} to the state.", e)
-            val (historyAfterApply, newProgressInfo) = newHistory.reportModifierIsInvalid(modToApply, progressInfo).get
-            context.system.eventStream.publish(SemanticallyFailedModification(modToApply, e))
-            SidechainNodeUpdateInformation(historyAfterApply, updateInfo.state, newWallet, Some(modToApply), Some(newProgressInfo), updateInfo.suffix)
-        }
-      } else updateInfo
-    }
-  }
-
   override protected def updateMemPool(blocksRemoved: Seq[AccountBlock], blocksApplied: Seq[AccountBlock], memPool: MP, state: MS): MP = {
     val rolledBackTxs = blocksRemoved.flatMap(extractTransactions)
 
@@ -271,8 +233,6 @@ class AccountSidechainNodeViewHolder(sidechainSettings: SidechainSettings,
     newMemPool
 
   }
-
-
 }
 
 object AccountNodeViewHolderRef {
@@ -287,7 +247,7 @@ object AccountNodeViewHolderRef {
             timeProvider: NetworkTimeProvider,
             genesisBlock: AccountBlock): Props =
     Props(new AccountSidechainNodeViewHolder(sidechainSettings, params, timeProvider, historyStorage,
-      consensusDataStorage, stateMetadataStorage, stateDbStorage, customMessageProcessors, secretStorage, genesisBlock))
+      consensusDataStorage, stateMetadataStorage, stateDbStorage, customMessageProcessors, secretStorage, genesisBlock)).withMailbox("akka.actor.deployment.prio-mailbox")
 
   def apply(sidechainSettings: SidechainSettings,
             historyStorage: AccountHistoryStorage,
@@ -301,7 +261,7 @@ object AccountNodeViewHolderRef {
             genesisBlock: AccountBlock)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateMetadataStorage, stateDbStorage,
-      customMessageProcessors, secretStorage, params, timeProvider, genesisBlock))
+      customMessageProcessors, secretStorage, params, timeProvider, genesisBlock).withMailbox("akka.actor.deployment.prio-mailbox"))
 
   def apply(name: String,
             sidechainSettings: SidechainSettings,
@@ -316,6 +276,6 @@ object AccountNodeViewHolderRef {
             genesisBlock: AccountBlock)
            (implicit system: ActorSystem): ActorRef =
     system.actorOf(props(sidechainSettings, historyStorage, consensusDataStorage, stateMetadataStorage, stateDbStorage,
-      customMessageProcessors, secretStorage, params, timeProvider, genesisBlock), name)
+      customMessageProcessors, secretStorage, params, timeProvider, genesisBlock).withMailbox("akka.actor.deployment.prio-mailbox"), name)
 
 }

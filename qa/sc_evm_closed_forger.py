@@ -40,6 +40,7 @@ class SCEvmClosedForgerList(SidechainTestFramework):
     number_of_mc_nodes = 1
     number_of_sidechain_nodes = 2
     sc_creation_amount = 100
+    API_KEY = "Horizen"
 
     allowed_forger_block_signer_public_key = generate_secrets("seed_new", 1)[0].publicKey
     allowed_forger_vrf_public_key = generate_vrf_secrets("seed_new", 1)[0].publicKey
@@ -62,11 +63,13 @@ class SCEvmClosedForgerList(SidechainTestFramework):
 
         sc_node_1_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            forger_options = forger_configuration
+            forger_options = forger_configuration,
+            api_key = self.API_KEY
         )
         sc_node_2_configuration = SCNodeConfiguration(
             MCConnectionInfo(address="ws://{0}:{1}".format(mc_node.hostname, websocket_port_by_mc_node_index(0))),
-            forger_options = forger_configuration
+            forger_options = forger_configuration,
+            api_key = self.API_KEY
         )
         network = SCNetworkConfiguration(
             SCCreationInfo(mc_node, self.sc_creation_amount, LARGE_WITHDRAWAL_EPOCH_LENGTH),
@@ -77,6 +80,7 @@ class SCEvmClosedForgerList(SidechainTestFramework):
 
     def sc_setup_nodes(self):
         return start_sc_nodes(self.number_of_sidechain_nodes, dirname=self.options.tmpdir,
+                              auth_api_key=self.API_KEY,
                               binary=[EVM_APP_BINARY] * 2)#, extra_args=[['-agentlib'], []])
 
     def tryMakeForgetStake(self, sc_node, owner_address, blockSignPubKey, vrf_public_key, amount):
