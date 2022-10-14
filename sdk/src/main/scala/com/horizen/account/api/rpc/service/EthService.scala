@@ -552,4 +552,16 @@ class EthService(
       }
     }
   }
+
+  @RpcMethod("eth_accounts")
+  def getAccounts: Array[String] = {
+    applyOnAccountView { nodeView =>
+      nodeView.vault
+        .secretsOfType(classOf[PrivateKeySecp256k1])
+        .map(_.asInstanceOf[PrivateKeySecp256k1])
+        .map(_.publicImage())
+        .map(_.checksumAddress())
+        .toArray
+    }
+  }
 }
