@@ -3,6 +3,7 @@ import math
 import multiprocessing
 import random
 import time
+import urllib.request
 from multiprocessing import Pool, Value
 from time import sleep
 from os.path import exists
@@ -326,8 +327,13 @@ class PerformanceTest(SidechainTestFramework):
         return node_configuration
 
     def setup_nodes(self):
-        # Start 1 MC node
-        return start_nodes(1, self.options.tmpdir)
+        # Start 1 MC node (on local machine)
+        if self.multi_machine:
+            external_ip = urllib.request.urlopen('https://ident.me').read().decode('utf8')
+            print(f"EXTERNAL IP IS: {external_ip}")
+            return start_nodes(1, self.options.tmpdir, rpchost=external_ip)
+        else:
+            return start_nodes(1, self.options.tmpdir)
 
     def sc_setup_chain(self):
         print("Initializing test directory " + self.options.tmpdir)
@@ -350,7 +356,7 @@ class PerformanceTest(SidechainTestFramework):
 
     def sc_setup_nodes(self):
         if self.perf_data["use_multiprocessing"]:
-            nodes = self.get_node_data()
+            node_data = self.get_node_data()
             return start_sc_nodes_with_multiprocessing(node_data, self.options.tmpdir,
                                                        machine_credentials=self.get_machine_credentials())
         else:

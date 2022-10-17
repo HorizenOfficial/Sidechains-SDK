@@ -791,15 +791,18 @@ def wait_sidechainclients():
 def get_sc_node_pids():
     return [process.pid for process in sidechainclient_processes.values()]
 
-# TODO: Multi machine
-def connect_sc_nodes(from_connection, node_num, wait_for=25):
+# TODO: Check node_num value is correct for port number  for multi machine
+def connect_sc_nodes(from_connection, node_num, wait_for=25, machine_credentials=None):
     """
     Connect a SC node, from_connection, to another one, specifying its node_num. 
     Method will attempt to create the connection for maximum wait_for seconds.
     """
-    j = {"host": "127.0.0.1", \
-         "port": str(sc_p2p_port(node_num))}
-    ip_port = "127.0.0.1:" + str(sc_p2p_port(node_num))
+    if machine_credentials is not None:
+        ip = machine_credentials.ip_address
+    else:
+        ip = "127.0.0.1"
+    j = {"host": {ip}, "port": str(sc_p2p_port(node_num))}
+    ip_port = f"{ip}:" + str(sc_p2p_port(node_num))
     logging.info("Connecting to '" + ip_port + "'")
     from_connection.node_connect(json.dumps(j))
     start = time.time()
@@ -812,13 +815,17 @@ def connect_sc_nodes(from_connection, node_num, wait_for=25):
         time.sleep(WAIT_CONST)
 
 # TODO: Multi machine
-def disconnect_sc_nodes(from_connection, node_num):
+def disconnect_sc_nodes(from_connection, node_num, machine_credentials):
     """
     Disconnect a SC node, from_connection, to another one, specifying its node_num.
     """
-    j = {"host": "127.0.0.1", \
-         "port": str(sc_p2p_port(node_num))}
-    ip_port = "\"127.0.0.1:" + str(sc_p2p_port(node_num)) + "\""
+    if machine_credentials is not None:
+        ip = machine_credentials.ip_address
+    else:
+        ip = "127.0.0.1"
+
+    j = {"host": {ip}, "port": str(sc_p2p_port(node_num))}
+    ip_port = f"\"{ip}:" + str(sc_p2p_port(node_num)) + "\""
     logging.info("Disconnecting from " + ip_port)
     from_connection.node_disconnect(json.dumps(j))
 
