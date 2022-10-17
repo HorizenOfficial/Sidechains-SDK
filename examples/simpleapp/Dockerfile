@@ -51,14 +51,13 @@ SHELL ["/bin/bash", "-c"]
 
 WORKDIR /simpleapp
 
-COPY --from=builder /Sidechains-SDK/tools/sctool/target/*.jar /tools/
-COPY --from=builder /Sidechains-SDK/tools/sctool/target/lib /tools/lib/
+COPY --from=builder /Sidechains-SDK/tools/sctool/target/*.jar /simpleapp/
+COPY --from=builder /Sidechains-SDK/tools/sctool/target/lib /simpleapp/lib/
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-COPY scripts/init.sh /usr/local/bin/init.sh
 COPY --from=builder /Sidechains-SDK/examples/simpleapp/src/main/resources/simpleapp_settings.conf /simpleapp/config/simpleapp_settings.conf
 
 RUN set -euo pipefail \
-    && chmod +x /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/init.sh \
+    && chmod +x /usr/local/bin/entrypoint.sh \
     && apt-get update \
     && export DEBIAN_FRONTEND=noninteractive \
     && apt-get update \
@@ -105,7 +104,7 @@ RUN set -euo pipefail \
     fi \
     && apt-mark auto '.*' &> /dev/null && [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark &> /dev/null \
     && DEBIAN_FRONTEND=noninteractive apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-    && java -jar /tools/"${SC_JAR_NAME}-${SDK_VERSION}.jar" help \
+    && java -jar /simpleapp/"${SC_JAR_NAME}-${SDK_VERSION}.jar" help \
     && rm -rf /var/{lib/apt/lists/*,cache/apt/archives/*.deb} /tmp/*
 
 VOLUME ["/simpleapp/output"]

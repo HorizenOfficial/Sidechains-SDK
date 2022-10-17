@@ -44,9 +44,3 @@ if [ "${USERNAME}" = "user" ]; then
 else
     exec "$@"
 fi
-
-
-
-
-
-#THIS IS RUNNING FINE
