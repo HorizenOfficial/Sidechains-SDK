@@ -3,11 +3,12 @@ package com.horizen
 import com.google.common.io.Files
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.box.data.WithdrawalRequestBoxData
+import com.horizen.certificatesubmitter.keys.ActualKeys
 import com.horizen.cryptolibprovider.SchnorrFunctions.KeyType
 import com.horizen.cryptolibprovider._
 import com.horizen.fixtures.FieldElementFixture
 import com.horizen.proposition.{MCPublicKeyHashProposition, SchnorrProposition}
-import com.horizen.schnorrnative.{SchnorrPublicKey, SchnorrSecretKey}
+import com.horizen.schnorrnative.SchnorrSecretKey
 import com.horizen.utils.BytesUtils
 import org.junit.Assert.{assertEquals, assertTrue, fail}
 import org.junit.{After, Ignore, Test}
@@ -67,11 +68,14 @@ class KeyRotationProofTest {
     val keyPairsLen = 9
     val threshold = 6 //hardcoded value
 
-    val keyPairs = (0 until keyPairsLen).view.map(buildSchnorrPrivateKey).map(secret => (secret, secret.getPublicKey))
-    val publicSigningKeysBytes: util.List[SchnorrPublicKey] = keyPairs.map(_._2).toList.asJava
-    val publicMasterKeysBytes: util.List[SchnorrPublicKey] = keyPairs.map(_._2).toList.asJava
+    val signingKeyPairs = (0 until keyPairsLen).view.map(buildSchnorrPrivateKey).map(secret => (secret, secret.getPublicKey))
+    val masterKeyPairs = (0 until keyPairsLen).view.map(buildSchnorrPrivateKey).map(secret => (secret, secret.getPublicKey))
+    val publicSigningKeysBytes: Vector[SchnorrProposition] = signingKeyPairs.map(k => new SchnorrProposition(k._2.serializePublicKey())).toVector
+    val publicMasterKeysBytes: Vector[SchnorrProposition] = masterKeyPairs.map(k => new SchnorrProposition(k._2.serializePublicKey())).toVector
+    val actualKeys = ActualKeys(publicSigningKeysBytes, publicMasterKeysBytes)
+    val actualKeysRootHash = ActualKeys.getMerkleRootOfPublicKeys(actualKeys)
 
-    val sysConstant = circuitWithKeyRotation.generateSysDataConstant(publicKeysBytes, threshold)
+    val sysConstant = circuitWithKeyRotation.generateSysDataConstant(actualKeysRootHash, threshold)
 
 
     val epochNumber: Int = 10
@@ -86,7 +90,7 @@ class KeyRotationProofTest {
     val messageToBeSigned = circuitWithKeyRotation.generateMessageToBeSigned(wb, sidechainId, epochNumber, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, utxoMerkleTreeRoot)
 
     val emptySigs = List.fill[Optional[Array[Byte]]](keyPairsLen - threshold)(Optional.empty[Array[Byte]]())
-    val signatures: util.List[Optional[Array[Byte]]] = (keyPairs
+    val signatures: util.List[Optional[Array[Byte]]] = (signingKeyPairs
       .map{case (secret, public) => schnorrFunctions.sign(secret.serializeSecretKey(), public.serializePublicKey(), messageToBeSigned)}
       .map(b => Optional.of(b))
       .take(threshold)
@@ -116,7 +120,7 @@ class KeyRotationProofTest {
 
     val messageToBeSignedCSWDisabled = circuitWithKeyRotation.generateMessageToBeSigned(wb, sidechainId, epochNumber, endCumulativeScTxCommTreeRoot, btrFee, ftMinAmount, utxoMerkleTreeRootCSWDisabled)
 
-    val signaturesCSWDisabled: util.List[Optional[Array[Byte]]] = (keyPairs
+    val signaturesCSWDisabled: util.List[Optional[Array[Byte]]] = (signingKeyPairs
       .map{case (secret, public) => schnorrFunctions.sign(secret.serializeSecretKey(), public.serializePublicKey(), messageToBeSignedCSWDisabled)}
       .map(b => Optional.of(b))
       .take(threshold)
