@@ -50,7 +50,7 @@ class EthService(
       with ScorexLogging {
   type NV = CurrentView[AccountHistory, AccountState, AccountWallet, AccountMemoryPool]
 
-  def applyOnAccountView[R](functionToBeApplied: NV => R): R = {
+  private def applyOnAccountView[R](functionToBeApplied: NV => R): R = {
     implicit val timeout: Timeout = new Timeout(nvtimeout)
     val res = scNodeViewHolderRef
       .ask {
@@ -167,27 +167,35 @@ class EthService(
     }
   }
 
-  def binarySearch(lowBound: BigInteger, highBound: BigInteger)(fun: BigInteger => Boolean): BigInteger = {
-    var low = lowBound
-    var high = highBound
-    while (low.add(BigInteger.ONE).compareTo(high) < 0) {
-      val mid = high.add(low).divide(BigInteger.TWO)
-      if (fun(mid)) {
-        // on success lower the upper bound
-        high = mid
-      } else {
-        // on failure raise the lower bound
-        low = mid
-      }
-    }
-    high
+  @RpcMethod("eth_sendTransaction")
+  def sendTransaction(params: TransactionArgs): String = {
+    val tx = signTransaction(params)
+    sendRawTransaction(tx)
   }
 
-  @RpcMethod("eth_signTransaction") def signTransaction(params: TransactionArgs): String = {
+  @RpcMethod("eth_signTransaction")
+  def signTransaction(params: TransactionArgs): String = {
     applyOnAccountView { nodeView =>
       getFittingSecret(nodeView.vault, nodeView.state, Option.apply(params.from), params.value)
         .map(secret => signTransactionWithSecret(secret, params.toTransaction))
         .map(tx => Numeric.toHexString(TransactionEncoder.encode(tx.getTransaction, tx.getSignatureData)))
+        .orNull
+    }
+  }
+
+  /**
+   * Sign calculates an ECDSA signature for: keccack256("\x19Ethereum Signed Message:\n" + len(message) + message). This
+   * gives context to the signed message and prevents signing of transactions.
+   */
+  @RpcMethod("eth_sign")
+  def sign(sender: Address, message: String): String = {
+    val data = Numeric.hexStringToByteArray(message)
+    val prefix = s"\u0019Ethereum Signed Message:\n${data.length}"
+    val messageToSign = prefix.getBytes() ++ data
+    applyOnAccountView { nodeView =>
+      getFittingSecret(nodeView.vault, nodeView.state, Some(sender), BigInteger.ZERO)
+        .map(secret => secret.sign(messageToSign))
+        .map(signature => Numeric.toHexString(signature.getR ++ signature.getS ++ signature.getV))
         .orNull
     }
   }
@@ -216,6 +224,22 @@ class EthService(
       signatureData = TransactionEncoder.createEip155SignatureData(signatureData, tx.getChainId)
     }
     new EthereumTransaction(new SignedRawTransaction(tx.getTransaction.getTransaction, signatureData))
+  }
+
+  private def binarySearch(lowBound: BigInteger, highBound: BigInteger)(fun: BigInteger => Boolean): BigInteger = {
+    var low = lowBound
+    var high = highBound
+    while (low.add(BigInteger.ONE).compareTo(high) < 0) {
+      val mid = high.add(low).divide(BigInteger.TWO)
+      if (fun(mid)) {
+        // on success lower the upper bound
+        high = mid
+      } else {
+        // on failure raise the lower bound
+        low = mid
+      }
+    }
+    high
   }
 
   @RpcMethod("eth_estimateGas")
@@ -426,7 +450,8 @@ class EthService(
     }.orNull
   }
 
-  @RpcMethod("eth_sendRawTransaction") def sendRawTransaction(signedTxData: String): String = {
+  @RpcMethod("eth_sendRawTransaction")
+  def sendRawTransaction(signedTxData: String): String = {
     val tx = new EthereumTransaction(EthereumTransactionDecoder.decode(signedTxData))
     implicit val timeout: Timeout = new Timeout(5, SECONDS)
     // submit tx to sidechain transaction actor
