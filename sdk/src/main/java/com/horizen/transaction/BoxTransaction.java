@@ -85,7 +85,7 @@ public abstract class BoxTransaction<P extends Proposition, B extends Box<P>> ex
             proofsStream.write(proofBytes, 0, proofBytes.length);
         }
 
-        return BytesUtils.toHexString(Blake2b256.hash(Bytes.concat(
+        return BytesUtils.toHexString((byte[]) Blake2b256.hash(Bytes.concat(
                 messageToSign(),
                 proofsStream.toByteArray(),
                 customFieldsData()
