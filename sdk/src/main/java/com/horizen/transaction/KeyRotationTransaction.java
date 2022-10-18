@@ -148,7 +148,7 @@ public class KeyRotationTransaction extends SidechainNoncedTransaction<PublicKey
     }
 
 
-    public static OpenStakeTransaction create(Pair<ZenBox, PrivateKey25519> from,
+    public static KeyRotationTransaction create(Pair<ZenBox, PrivateKey25519> from,
                                               PublicKey25519Proposition changeAddress,
                                               int forgerIndex,
                                               long fee) throws TransactionSemanticValidityException {
@@ -166,7 +166,9 @@ public class KeyRotationTransaction extends SidechainNoncedTransaction<PublicKey
         byte[] messageToSign = unsignedTransaction.messageToSign();
         Secret secret = from.getValue();
 
-        OpenStakeTransaction transaction = new OpenStakeTransaction(from.getKey().id(), output, (Signature25519) secret.sign(messageToSign), forgerIndex, fee, KEY_ROTATION_TRANSACTION_VERSION);
+        KeyRotationProof keyRotationProof = new KeyRotationProof(null, 0, null, null, null);
+        // (byte[] inputId, Optional<ZenBoxData> outputData, Signature25519 proof, long fee, byte version, KeyRotationProof keyRotationProof)
+        KeyRotationTransaction transaction = new KeyRotationTransaction(from.getKey().id(), output, (Signature25519) secret.sign(messageToSign), fee, KEY_ROTATION_TRANSACTION_VERSION, keyRotationProof);
         transaction.transactionSemanticValidity();
 
         return transaction;
