@@ -67,6 +67,10 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     Utils.calculateKey(Bytes.concat("blockFeeInfo".getBytes, Ints.toByteArray(withdrawalEpochNumber), Ints.toByteArray(counter)))
   }
 
+  private[horizen] def getKeyRotationProof(withdrawalEpochNumber: Int, counter: Int): ByteArrayWrapper = {
+    Utils.calculateKey(Bytes.concat("keyRotationProof".getBytes, Ints.toByteArray(withdrawalEpochNumber), Ints.toByteArray(counter)))
+  }
+
   private[horizen] def getUtxoMerkleTreeRootKey(withdrawalEpochNumber: Int): ByteArrayWrapper = {
     Utils.calculateKey(Bytes.concat("utxoMerkleTreeRoot".getBytes, Ints.toByteArray(withdrawalEpochNumber)))
   }
@@ -168,19 +172,14 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   }
 
   def getKeyRotationProofs(withdrawalEpochNumber: Int): Seq[KeyRotationProof]= {
-    val keyRotationProofs: ListBuffer[KeyRotationProof] = ListBuffer()
-    val lastCounter = getBlockFeeInfoCounter(withdrawalEpochNumber)
-
-    for (counter <- 0 to lastCounter) {
-      storage.get(getBlockFeeInfoKey(withdrawalEpochNumber, counter)).asScala match {
-        case Some(baw) => KeyRotationProofSerializer.parseBytesTry(baw.data) match {
-          case Success(info) => keyRotationProofs.append(info)
-          case Failure(exception) => throw new IllegalStateException("Error while key rotation proofs parsing.", exception)
-        }
-        case None => throw new IllegalStateException("Error while key rotation proofs retrieving: record expected to exist.")
+    val lastCounter = getWithdrawalEpochCounter(withdrawalEpochNumber)
+    storage.get(getKeyRotationProof(withdrawalEpochNumber, lastCounter)).asScala match {
+      case Some(baw) => KeyRotationProofSerializer.parseBytesTry(baw.data) match {
+        case Success(keyRotationProofs) => Seq(keyRotationProofs)
+        case Failure(exception) => throw new IllegalStateException("Error while key rotation proofs parsing.", exception)
       }
+      case None => Seq[KeyRotationProof]()
     }
-    keyRotationProofs
   }
 
   def getTopQualityCertificate(referencedWithdrawalEpoch: Int): Option[WithdrawalEpochCertificate] = {

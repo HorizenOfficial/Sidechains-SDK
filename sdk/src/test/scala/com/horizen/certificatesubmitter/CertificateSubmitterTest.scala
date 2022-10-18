@@ -11,6 +11,8 @@ import com.horizen.certificatesubmitter.CertificateSubmitter.InternalReceivableM
 import com.horizen.certificatesubmitter.CertificateSubmitter.ReceivableMessages._
 import com.horizen.certificatesubmitter.CertificateSubmitter.Timers.CertificateGenerationTimer
 import com.horizen.certificatesubmitter.CertificateSubmitter._
+import com.horizen.certificatesubmitter.dataproof.DataForProofGenerationWithoutKeyRotation
+import com.horizen.certificatesubmitter.strategies.WithoutKeyRotationStrategy
 import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.fixtures.FieldElementFixture
 import com.horizen.fork.{ForkConfigurator, ForkManager, SimpleForkConfigurator}
@@ -99,8 +101,9 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val params: NetworkParams = mock[NetworkParams]
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
 
-    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, params, mainchainChannel)))
+    val keyRotationStrategy = new WithoutKeyRotationStrategy(mockedSettings, params)
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter[DataForProofGenerationWithoutKeyRotation]] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, params, mainchainChannel, keyRotationStrategy)))
 
     actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 
@@ -140,8 +143,9 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
 
-    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, params, mainchainChannel)))
+    val keyRotationStrategy = new WithoutKeyRotationStrategy(mockedSettings, params)
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter[DataForProofGenerationWithoutKeyRotation]] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, params, mainchainChannel, keyRotationStrategy)))
 
     actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 
@@ -179,8 +183,9 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
 
-    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, params, mainchainChannel)))
+    val keyRotationStrategy = new WithoutKeyRotationStrategy(mockedSettings, params)
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter[DataForProofGenerationWithoutKeyRotation]] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, params, mainchainChannel, keyRotationStrategy)))
 
     actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 
@@ -218,8 +223,9 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
 
-    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, params, mainchainChannel)))
+    val keyRotationStrategy = new WithoutKeyRotationStrategy(mockedSettings, params)
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter[DataForProofGenerationWithoutKeyRotation]] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, params, mainchainChannel, keyRotationStrategy)))
 
     actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 
@@ -258,8 +264,9 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
 
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
 
-    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, params, mainchainChannel)))
+    val keyRotationStrategy = new WithoutKeyRotationStrategy(mockedSettings, params)
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter[DataForProofGenerationWithoutKeyRotation]] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, params, mainchainChannel, keyRotationStrategy)))
 
     actorSystem.eventStream.publish(SidechainAppEvents.SidechainApplicationStart)
 
@@ -284,11 +291,12 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
 
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
+    val params: NetworkParams = mock[NetworkParams]
+    val keyRotationStrategy = new WithoutKeyRotationStrategy(mockedSettings, params)
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter[DataForProofGenerationWithoutKeyRotation]] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[NetworkParams], mainchainChannel, keyRotationStrategy)))
 
-    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[NetworkParams], mainchainChannel)))
-
-    val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
+    val submitter: CertificateSubmitter[DataForProofGenerationWithoutKeyRotation] = certificateSubmitterRef.underlyingActor
 
     // Skip initialization
     submitter.context.become(submitter.workingCycle)
@@ -316,11 +324,12 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
 
     val mainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
+    val params: NetworkParams = mock[NetworkParams]
+    val keyRotationStrategy = new WithoutKeyRotationStrategy(mockedSettings, params)
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter[DataForProofGenerationWithoutKeyRotation]] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[NetworkParams], mainchainChannel, keyRotationStrategy)))
 
-    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, mock[NetworkParams], mainchainChannel)))
-
-    val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
+    val submitter: CertificateSubmitter[DataForProofGenerationWithoutKeyRotation] = certificateSubmitterRef.underlyingActor
 
     // Skip initialization
     submitter.context.become(submitter.workingCycle)
@@ -385,11 +394,11 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     })
     val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
 
+    val keyRotationStrategy = new WithoutKeyRotationStrategy(mockedSettings, params)
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter[DataForProofGenerationWithoutKeyRotation]] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, params, mockedMainchainChannel, keyRotationStrategy)))
 
-    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, params, mockedMainchainChannel)))
-
-    val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
+    val submitter: CertificateSubmitter[DataForProofGenerationWithoutKeyRotation] = certificateSubmitterRef.underlyingActor
 
     val watch = TestProbe()
     watch.watch(certificateSubmitterRef)
@@ -709,16 +718,18 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
   def getFtMinAmount(): Unit = {
     val mockedSettings: SidechainSettings = getMockedSettings(timeout.duration * 100, submitterIsEnabled = true, signerIsEnabled = true)
     val dustThreshold = ZenCoinsUtils.getMinDustThreshold(ZenCoinsUtils.MC_DEFAULT_FEE_RATE)
-    val submitter: CertificateSubmitter = TestActorRef(Props(
-        new CertificateSubmitter(mockedSettings, mock[ActorRef], mock[NetworkParams], mock[MainchainNodeChannel])
+    val params: NetworkParams = mock[NetworkParams]
+    val keyRotationStrategy = new WithoutKeyRotationStrategy(mockedSettings, params)
+    val submitter: CertificateSubmitter[DataForProofGenerationWithoutKeyRotation] = TestActorRef(Props(
+        new CertificateSubmitter(mockedSettings, mock[ActorRef], mock[NetworkParams], mock[MainchainNodeChannel], keyRotationStrategy)
     )).underlyingActor
 
     assertEquals("Before the fork, ftMinAmount should be 0",
-      0, submitter.getFtMinAmount(consensusEpochAtWhichForkIsApplied - 1))
+      0, keyRotationStrategy.getFtMinAmount(consensusEpochAtWhichForkIsApplied - 1))
     assertEquals(s"After the fork, ftMinAmount should be equal to dust threshold [$dustThreshold]",
-      dustThreshold, submitter.getFtMinAmount(consensusEpochAtWhichForkIsApplied))
+      dustThreshold, keyRotationStrategy.getFtMinAmount(consensusEpochAtWhichForkIsApplied))
     assertEquals(s"After the fork, ftMinAmount should be equal to dust threshold [$dustThreshold]",
-      dustThreshold, submitter.getFtMinAmount(consensusEpochAtWhichForkIsApplied + 1))
+      dustThreshold, keyRotationStrategy.getFtMinAmount(consensusEpochAtWhichForkIsApplied + 1))
   }
 
   @Test
@@ -751,11 +762,11 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     })
     val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
 
+    val keyRotationStrategy = new WithoutKeyRotationStrategy(mockedSettings, params)
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter[DataForProofGenerationWithoutKeyRotation]] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, params, mockedMainchainChannel, keyRotationStrategy)))
 
-    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, params, mockedMainchainChannel)))
-
-    val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
+    val submitter: CertificateSubmitter[DataForProofGenerationWithoutKeyRotation] = certificateSubmitterRef.underlyingActor
 
     // Skip initialization
     submitter.context.become(submitter.workingCycle)
@@ -882,11 +893,11 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     })
     val mockedSidechainNodeViewHolderRef: ActorRef = mockedSidechainNodeViewHolder.ref
 
+    val keyRotationStrategy = new WithoutKeyRotationStrategy(mockedSettings, params)
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter[DataForProofGenerationWithoutKeyRotation]] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, params, mockedMainchainChannel, keyRotationStrategy)))
 
-    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolderRef, params, mockedMainchainChannel)))
-
-    val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
+    val submitter: CertificateSubmitter[DataForProofGenerationWithoutKeyRotation] = certificateSubmitterRef.underlyingActor
 
 
     val certSubmissionEventListener = TestProbe()
@@ -941,10 +952,11 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mockedMainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
     val mockedSidechainNodeViewHolder = TestProbe()
 
-    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolder.ref, params, mockedMainchainChannel)))
+    val keyRotationStrategy = new WithoutKeyRotationStrategy(mockedSettings, params)
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter[DataForProofGenerationWithoutKeyRotation]] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolder.ref, params, mockedMainchainChannel, keyRotationStrategy)))
 
-    val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
+    val submitter: CertificateSubmitter[DataForProofGenerationWithoutKeyRotation] = certificateSubmitterRef.underlyingActor
 
     // Skip initialization
     submitter.context.become(submitter.workingCycle)
@@ -983,10 +995,11 @@ class CertificateSubmitterTest extends JUnitSuite with MockitoSugar {
     val mockedMainchainChannel: MainchainNodeChannel = mock[MainchainNodeChannel]
     val mockedSidechainNodeViewHolder = TestProbe()
 
-    val certificateSubmitterRef: TestActorRef[CertificateSubmitter] = TestActorRef(
-      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolder.ref, params, mockedMainchainChannel)))
+    val keyRotationStrategy = new WithoutKeyRotationStrategy(mockedSettings, params)
+    val certificateSubmitterRef: TestActorRef[CertificateSubmitter[DataForProofGenerationWithoutKeyRotation]] = TestActorRef(
+      Props(new CertificateSubmitter(mockedSettings, mockedSidechainNodeViewHolder.ref, params, mockedMainchainChannel, keyRotationStrategy)))
 
-    val submitter: CertificateSubmitter = certificateSubmitterRef.underlyingActor
+    val submitter: CertificateSubmitter[DataForProofGenerationWithoutKeyRotation] = certificateSubmitterRef.underlyingActor
 
     // Skip initialization
     submitter.context.become(submitter.workingCycle)
