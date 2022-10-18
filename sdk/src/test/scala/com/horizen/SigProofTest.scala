@@ -67,7 +67,7 @@ class SigProofTest {
     val ftMinAmount: Long = 100
     val endCumulativeScTxCommTreeRoot = FieldElementFixture.generateFieldElement()
     val sidechainId = FieldElementFixture.generateFieldElement()
-    val utxoMerkleTreeRoot = Optional.of(FieldElementFixture.generateFieldElement())
+    val utxoMerkleTreeRoot = Seq(FieldElementFixture.generateFieldElement())
 
     val wb: util.List[WithdrawalRequestBox] = Seq(new WithdrawalRequestBox(new WithdrawalRequestBoxData(new MCPublicKeyHashProposition(Array.fill(20)(Random.nextInt().toByte)), 2345), 42)).asJava
 
