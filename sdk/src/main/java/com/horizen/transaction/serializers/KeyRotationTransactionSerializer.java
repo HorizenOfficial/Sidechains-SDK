@@ -43,8 +43,9 @@ public class KeyRotationTransactionSerializer implements TransactionSerializer<K
         } else {
             writer.putInt(0);
         }
-        Signature25519Serializer.getSerializer().serialize(transaction.proof(), writer);
-        KeyRotationProofSerializer.serialize(transaction.);
+        Signature25519Serializer.getSerializer().serialize(transaction.proof, writer);
+
+        KeyRotationProofSerializer.serialize(transaction.keyRotationProof, writer);
     }
 
     @Override
@@ -65,6 +66,7 @@ public class KeyRotationTransactionSerializer implements TransactionSerializer<K
         }
 
         Signature25519 proof = Signature25519Serializer.getSerializer().parse(reader);
+
         KeyRotationProof keyRotationProof = KeyRotationProofSerializer.parse(reader);
 
         return new KeyRotationTransaction(inputsId, output, proof, fee, version, keyRotationProof);
