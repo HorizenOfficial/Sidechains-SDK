@@ -83,3 +83,13 @@ You can find an example of a sidechain implementation without any custom busines
 ## Extras
 
 In order to build and use `SNAPSHOT.jar` package version refer to the following [documentation](./ci/README.md)
+
+
+** Test Sidechains-SDK with unreleased version of zendoo-sc-cryptolib **
+1. Clone [https://github.com/HorizenOfficial/zendoo-sc-cryptolib](Zendoo Cryptolib)
+2. Checkout needed branch ml/key_rotation
+3. cd ci/devtools/
+4. ./set_version.sh 0.5.1-SNAPSHOT 5.5.5-SNAPSHOT (instead of 0.5.1-SNAPSHOT please put version in line 6 of zendoo-sc-cryptolib/jni/pom.xml)
+5. cd ../../jni
+6. mvn clean install -Dmaven.test.skip=true
+7. Sidechains-SDK/sdk/pom.xml change version of <artifactId>zendoo-sc-cryptolib to 5.5.5-SNAPSHOT
