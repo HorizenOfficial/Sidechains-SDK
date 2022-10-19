@@ -191,8 +191,13 @@ public class KeyRotationTransaction extends SidechainNoncedTransaction<PublicKey
         if (from.getKey().value() > fee) {
             output = Optional.of(new ZenBoxData(changeAddress, from.getKey().value() - fee));
         }
-        Enumeration.Value keyRotationProofType = KeyRotationProofType.Value(keyTypeEnumerationNumber);
+
+        if(keyTypeEnumerationNumber < 0 || keyTypeEnumerationNumber >= KeyRotationProofType.maxId()) {
+            throw new IllegalArgumentException("Key type enumeration value should be valid!");
+        }
+        Enumeration.Value keyRotationProofType = KeyRotationProofType.apply(keyTypeEnumerationNumber);
         KeyRotationProof keyRotationProof = new KeyRotationProof(keyRotationProofType, indexOfKey, newValueOfKey, signingKeySignature, masterKeySignature);
+
         KeyRotationTransaction unsignedTransaction = new KeyRotationTransaction(from.getKey().id(), output, null, fee, KEY_ROTATION_TRANSACTION_VERSION, keyRotationProof);
 
         byte[] messageToSign = unsignedTransaction.messageToSign();
