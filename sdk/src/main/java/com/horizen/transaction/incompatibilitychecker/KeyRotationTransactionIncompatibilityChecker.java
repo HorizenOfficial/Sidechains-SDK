@@ -7,18 +7,19 @@ import java.util.List;
 
 public class KeyRotationTransactionIncompatibilityChecker extends DefaultTransactionIncompatibilityChecker {
     @Override
-    public <T extends BoxTransaction> boolean isTransactionCompatible(T newTx, List<T> currentTxs) {
-        if (!super.isTransactionCompatible(newTx, currentTxs)) {
+    public <T extends BoxTransaction> boolean isTransactionCompatible(T newTransaction, List<T> memoryPoolTransactions) {
+        if (!super.isTransactionCompatible(newTransaction, memoryPoolTransactions)) {
             return false;
-        } else if (newTx instanceof KeyRotationTransaction) {
-            KeyRotationTransaction keyRotationTransaction = (KeyRotationTransaction) newTx;
-//            for (T mempoolTx: currentTxs) {
-//                if (mempoolTx instanceof KeyRotationTransaction) {
-//                    if (keyRotationTransaction.getForgerIndex() == ((KeyRotationTransaction) mempoolTx).getForgerIndex()) {
-//                        return false;
-//                    }
-//                }
-//            }
+        } else if (newTransaction instanceof KeyRotationTransaction) {
+            KeyRotationTransaction keyRotationTransaction = (KeyRotationTransaction) newTransaction;
+            for (T memoryPoolTransaction: memoryPoolTransactions) {
+                if (memoryPoolTransaction instanceof KeyRotationTransaction) {
+                    if (keyRotationTransaction.getKeyRotationProof().keyType() == ((KeyRotationTransaction) memoryPoolTransaction).getKeyRotationProof().keyType() &&
+                            keyRotationTransaction.getKeyRotationProof().index() == ((KeyRotationTransaction) memoryPoolTransaction).getKeyRotationProof().index()) {
+                        return false;
+                    }
+                }
+            }
         }
         return true;
     }
