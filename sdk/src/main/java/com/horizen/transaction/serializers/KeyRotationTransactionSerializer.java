@@ -14,7 +14,7 @@ import sparkz.core.NodeViewModifier$;
 
 import java.util.Optional;
 
-import static com.horizen.transaction.OpenStakeTransaction.OPEN_STAKE_TRANSACTION_VERSION;
+import static com.horizen.transaction.KeyRotationTransaction.KEY_ROTATION_TRANSACTION_VERSION;
 
 public class KeyRotationTransactionSerializer implements TransactionSerializer<KeyRotationTransaction>
 {
@@ -43,9 +43,9 @@ public class KeyRotationTransactionSerializer implements TransactionSerializer<K
         } else {
             writer.putInt(0);
         }
-        Signature25519Serializer.getSerializer().serialize(transaction.proof, writer);
+        Signature25519Serializer.getSerializer().serialize(transaction.getProof(), writer);
 
-        KeyRotationProofSerializer.serialize(transaction.keyRotationProof, writer);
+        KeyRotationProofSerializer.serialize(transaction.getKeyRotationProof(), writer);
     }
 
     @Override
@@ -53,7 +53,7 @@ public class KeyRotationTransactionSerializer implements TransactionSerializer<K
         byte[] inputsId = reader.getBytes(NodeViewModifier$.MODULE$.ModifierIdSize());
 
         byte version = reader.getByte();
-        if (version != OPEN_STAKE_TRANSACTION_VERSION) {
+        if (version != KEY_ROTATION_TRANSACTION_VERSION) {
             throw new IllegalArgumentException(String.format("Unsupported transaction version[%d].", version));
         }
 

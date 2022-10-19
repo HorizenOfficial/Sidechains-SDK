@@ -14,6 +14,8 @@ import com.horizen.proposition.SchnorrProposition;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.secret.Secret;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
+import com.horizen.transaction.incompatibilitychecker.KeyRotationTransactionIncompatibilityChecker;
+import com.horizen.transaction.serializers.KeyRotationTransactionSerializer;
 import com.horizen.utils.Pair;
 import scala.Array;
 import scala.Enumeration;
@@ -23,7 +25,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static com.horizen.transaction.CoreTransactionsIdsEnum.OpenStakeTransactionId;
+import static com.horizen.transaction.CoreTransactionsIdsEnum.KeyRotationTransactionId;
 
 /*
  * KeyRotationTransaction is used for key rotation of signer or master key of certificate submitter
@@ -54,7 +56,7 @@ public class KeyRotationTransaction extends SidechainNoncedTransaction<PublicKey
 
     @Override
     public TransactionSerializer serializer() {
-        return OpenStakeTransactionSerializer.getSerializer();
+        return KeyRotationTransactionSerializer.getSerializer();
     }
 
     @Override
@@ -128,7 +130,7 @@ public class KeyRotationTransaction extends SidechainNoncedTransaction<PublicKey
 
     @Override
     public byte transactionTypeId() {
-        return OpenStakeTransactionId.id();
+        return KeyRotationTransactionId.id();
     }
 
     @Override
@@ -151,8 +153,11 @@ public class KeyRotationTransaction extends SidechainNoncedTransaction<PublicKey
         return Ints.toByteArray(this.keyRotationProof.index());
     }
 
-    public int getForgerIndex() {
-        return this.keyRotationProof.index();
+    public Signature25519 getProof() {
+        return this.proof;
+    }
+    public KeyRotationProof getKeyRotationProof() {
+        return this.keyRotationProof;
     }
 
     public byte[] getInputId() {
@@ -164,13 +169,12 @@ public class KeyRotationTransaction extends SidechainNoncedTransaction<PublicKey
     }
 
     public TransactionIncompatibilityChecker incompatibilityChecker() {
-        return new OpenStakeTransactionIncompatibilityChecker();
+        return new KeyRotationTransactionIncompatibilityChecker();
     }
 
 
     public static KeyRotationTransaction create(Pair<ZenBox, PrivateKey25519> from,
                                                 PublicKey25519Proposition changeAddress,
-                                                int forgerIndex,
                                                 long fee,
                                                 int keyTypeEnumerationNumber,
                                                 int indexOfKey,
@@ -187,21 +191,17 @@ public class KeyRotationTransaction extends SidechainNoncedTransaction<PublicKey
         if (from.getKey().value() > fee) {
             output = Optional.of(new ZenBoxData(changeAddress, from.getKey().value() - fee));
         }
-        OpenStakeTransaction unsignedTransaction = new OpenStakeTransaction(from.getKey().id(), output, null, forgerIndex, fee, KEY_ROTATION_TRANSACTION_VERSION);
+        Enumeration.Value keyRotationProofType = KeyRotationProofType.Value(keyTypeEnumerationNumber);
+        KeyRotationProof keyRotationProof = new KeyRotationProof(keyRotationProofType, indexOfKey, newValueOfKey, signingKeySignature, masterKeySignature);
+        KeyRotationTransaction unsignedTransaction = new KeyRotationTransaction(from.getKey().id(), output, null, fee, KEY_ROTATION_TRANSACTION_VERSION, keyRotationProof);
 
         byte[] messageToSign = unsignedTransaction.messageToSign();
         Secret secret = from.getValue();
 
 
-        Enumeration.Value keyRotationProofType = KeyRotationProofType.Value(keyTypeEnumerationNumber);
-        KeyRotationProof keyRotationProof = new KeyRotationProof(keyRotationProofType, indexOfKey, newValueOfKey, signingKeySignature, masterKeySignature);
         KeyRotationTransaction transaction = new KeyRotationTransaction(from.getKey().id(), output, (Signature25519) secret.sign(messageToSign), fee, KEY_ROTATION_TRANSACTION_VERSION, keyRotationProof);
         transaction.transactionSemanticValidity();
 
         return transaction;
-    }
-
-    public static void main(String[] args) {
-        KeyRotationProofType.Value(4); // TODO
     }
 }
