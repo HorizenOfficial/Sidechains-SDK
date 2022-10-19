@@ -8,6 +8,7 @@ import com.horizen.box.BoxUnlocker;
 import com.horizen.proposition.Proposition;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
+import com.horizen.transaction.incompatibilitychecker.MempoolIncompatibleTransactionIncompatibilityChecker;
 import com.horizen.transaction.mainchain.*;
 import com.horizen.utils.*;
 import scala.Array;

@@ -1,7 +1,6 @@
 package com.horizen.transaction.incompatibilitychecker;
 
 import com.horizen.transaction.BoxTransaction;
-import com.horizen.transaction.DefaultTransactionIncompatibilityChecker;
 import com.horizen.transaction.KeyRotationTransaction;
 
 import java.util.List;

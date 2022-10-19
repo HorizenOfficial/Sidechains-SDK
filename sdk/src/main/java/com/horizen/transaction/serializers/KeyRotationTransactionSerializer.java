@@ -18,7 +18,7 @@ import static com.horizen.transaction.KeyRotationTransaction.KEY_ROTATION_TRANSA
 
 public class KeyRotationTransactionSerializer implements TransactionSerializer<KeyRotationTransaction>
 {
-    private static KeyRotationTransactionSerializer serializer;
+    private static final KeyRotationTransactionSerializer serializer;
 
     static {
         serializer = new KeyRotationTransactionSerializer();
