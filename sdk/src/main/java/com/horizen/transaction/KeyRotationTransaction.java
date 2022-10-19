@@ -61,7 +61,7 @@ public class KeyRotationTransaction extends SidechainNoncedTransaction<PublicKey
     public synchronized List<BoxUnlocker<PublicKey25519Proposition>> unlockers() {
         if (unlockers == null) {
             unlockers = new ArrayList<>();
-            BoxUnlocker<PublicKey25519Proposition> unlocker = new BoxUnlocker() {
+            BoxUnlocker<PublicKey25519Proposition> unlocker = new BoxUnlocker<>() {
                 @Override
                 public byte[] closedBoxId() {
                     return inputId;
@@ -110,9 +110,20 @@ public class KeyRotationTransaction extends SidechainNoncedTransaction<PublicKey
                     "forgerList index negative.", id()));
         }
 
-        // TODO
-        // old key and new key are different
-        // some other checks
+        if (keyRotationProof.newValueOfKey() == null) {
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "no newValueOfKey data present.", id()));
+        }
+
+        if (keyRotationProof.signingKeySignature() == null) {
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "no signingKeySignature data present.", id()));
+        }
+
+        if (keyRotationProof.masterKeySignature() == null) {
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "no masterKeySignature data present.", id()));
+        }
     }
 
     @Override
@@ -181,11 +192,16 @@ public class KeyRotationTransaction extends SidechainNoncedTransaction<PublicKey
         byte[] messageToSign = unsignedTransaction.messageToSign();
         Secret secret = from.getValue();
 
+
         Enumeration.Value keyRotationProofType = KeyRotationProofType.Value(keyTypeEnumerationNumber);
         KeyRotationProof keyRotationProof = new KeyRotationProof(keyRotationProofType, indexOfKey, newValueOfKey, signingKeySignature, masterKeySignature);
         KeyRotationTransaction transaction = new KeyRotationTransaction(from.getKey().id(), output, (Signature25519) secret.sign(messageToSign), fee, KEY_ROTATION_TRANSACTION_VERSION, keyRotationProof);
         transaction.transactionSemanticValidity();
 
         return transaction;
+    }
+
+    public static void main(String[] args) {
+        KeyRotationProofType.Value(4); // TODO
     }
 }
