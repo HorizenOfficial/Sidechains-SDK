@@ -55,7 +55,7 @@
     <dependency>
       <groupId>io.horizen</groupId>
       <artifactId>zendoo-sc-cryptolib</artifactId>
-      <version>5.5.5-SNAPSHOT</version>
+      <version>0.5.1</version>
       <scope>compile</scope>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.sparkzfoundation/sparkz-core -->
