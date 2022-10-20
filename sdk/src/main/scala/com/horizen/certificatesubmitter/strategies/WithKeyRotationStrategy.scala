@@ -147,27 +147,23 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
     )
   }
 
-  override def getMessageToSign(referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
-    def getMessage(sidechainNodeView: View): Try[Array[Byte]] = Try {
-      val history = sidechainNodeView.history
-      val state = sidechainNodeView.state
+  override def getMessageToSign(sidechainNodeView: View, referencedWithdrawalEpochNumber: Int): Try[Array[Byte]] = Try {
+    val history = sidechainNodeView.history
+    val state = sidechainNodeView.state
 
-      val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(referencedWithdrawalEpochNumber)
+    val withdrawalRequests: Seq[WithdrawalRequestBox] = state.withdrawalRequests(referencedWithdrawalEpochNumber)
 
-      val btrFee: Long = getBtrFee(referencedWithdrawalEpochNumber)
-      val ftMinAmount: Long = getFtMinAmount(referencedWithdrawalEpochNumber)
+    val btrFee: Long = getBtrFee(referencedWithdrawalEpochNumber)
+    val ftMinAmount: Long = getFtMinAmount(referencedWithdrawalEpochNumber)
 
-      val endEpochCumCommTreeHash: Array[Byte] = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
-      val sidechainId = params.sidechainId
+    val endEpochCumCommTreeHash: Array[Byte] = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
+    val sidechainId = params.sidechainId
 
-      val customFields: Array[Byte] = getActualKeysMerkleRoot(referencedWithdrawalEpochNumber, state)
+    val customFields: Array[Byte] = getActualKeysMerkleRoot(referencedWithdrawalEpochNumber, state)
 
-      CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
-        .generateMessageToBeSigned(withdrawalRequests.asJava, sidechainId, referencedWithdrawalEpochNumber,
-          endEpochCumCommTreeHash, btrFee, ftMinAmount, util.Arrays.asList(customFields))
-    }
-
-    Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getMessage), settings.sparkzSettings.restApi.timeout).asInstanceOf[Try[Array[Byte]]].get
+    CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
+      .generateMessageToBeSigned(withdrawalRequests.asJava, sidechainId, referencedWithdrawalEpochNumber,
+        endEpochCumCommTreeHash, btrFee, ftMinAmount, util.Arrays.asList(customFields))
   }
 
   private def getActualKeysMerkleRoot(referencedWithdrawalEpochNumber: Int, state: SidechainState): Array[Byte] = {

@@ -26,7 +26,7 @@ abstract class KeyRotationStrategy(settings: SidechainSettings, params: NetworkP
   type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
   def buildDataForProofGeneration(sidechainNodeView: View, status: SignaturesStatus): DataForProofGeneration
 
-  def getMessageToSign(referencedWithdrawalEpochNumber: Int): Try[Array[Byte]]
+  def getMessageToSign(view: View, referencedWithdrawalEpochNumber: Int): Try[Array[Byte]]
 
   // No MBTRs support, so no sense to specify btrFee different to zero.
   def getBtrFee(referencedWithdrawalEpochNumber: Int): Long = 0

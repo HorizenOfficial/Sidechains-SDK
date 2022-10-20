@@ -37,11 +37,11 @@ import scala.util.{Failure, Random, Success, Try}
  * Must be singleton.
  */
 class CertificateSubmitter[T <: DataForProofGeneration](settings: SidechainSettings,
-                           sidechainNodeViewHolderRef: ActorRef,
-                           params: NetworkParams,
-                           mainchainChannel: MainchainNodeChannel,
-                           keyRotationStrategy: KeyRotationStrategy)
-                          (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging {
+                                                        sidechainNodeViewHolderRef: ActorRef,
+                                                        params: NetworkParams,
+                                                        mainchainChannel: MainchainNodeChannel,
+                                                        keyRotationStrategy: KeyRotationStrategy)
+                                                       (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging {
 
   import CertificateSubmitter.InternalReceivableMessages._
   import CertificateSubmitter.ReceivableMessages._
@@ -80,7 +80,7 @@ class CertificateSubmitter[T <: DataForProofGeneration](settings: SidechainSetti
   override def postStop(): Unit = {
     log.debug("Certificate Submitter actor is stopping...")
     super.postStop()
-    if(timers.isTimerActive(CertificateGenerationTimer)) {
+    if (timers.isTimerActive(CertificateGenerationTimer)) {
       context.system.eventStream.publish(CertificateSubmissionStopped)
     }
   }
@@ -98,16 +98,16 @@ class CertificateSubmitter[T <: DataForProofGeneration](settings: SidechainSetti
 
   private[certificatesubmitter] def workingCycle: Receive = {
     onCertificateSubmissionEvent orElse
-    newBlockArrived orElse
-    locallyGeneratedSignature orElse
-    signatureFromRemote orElse
-    tryToScheduleCertificateGeneration orElse
-    tryToGenerateCertificate orElse
-    getCertGenerationState orElse
-    getSignaturesStatus orElse
-    submitterStatus orElse
-    signerStatus orElse
-    reportStrangeInput
+      newBlockArrived orElse
+      locallyGeneratedSignature orElse
+      signatureFromRemote orElse
+      tryToScheduleCertificateGeneration orElse
+      tryToGenerateCertificate orElse
+      getCertGenerationState orElse
+      getSignaturesStatus orElse
+      submitterStatus orElse
+      signerStatus orElse
+      reportStrangeInput
   }
 
   protected def checkSubmitter: Receive = {
@@ -175,7 +175,14 @@ class CertificateSubmitter[T <: DataForProofGeneration](settings: SidechainSetti
               case Some(_) => // do nothing
               case None =>
                 val referencedWithdrawalEpochNumber = submissionWindowStatus.withdrawalEpochInfo.epoch - 1
-                keyRotationStrategy.getMessageToSign(referencedWithdrawalEpochNumber) match {
+
+                val messageToSignTry = Try {
+
+                  Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(view => keyRotationStrategy.getMessageToSign(view, referencedWithdrawalEpochNumber)),
+                    timeoutDuration).asInstanceOf[Try[Array[Byte]]].get
+                }
+
+                messageToSignTry match {
                   case Success(messageToSign) =>
                     signaturesStatus = Some(SignaturesStatus(referencedWithdrawalEpochNumber, messageToSign, ArrayBuffer()))
 
@@ -292,12 +299,12 @@ class CertificateSubmitter[T <: DataForProofGeneration](settings: SidechainSetti
           case (Some(mempoolInfo), _) if mempoolInfo.epoch == epoch => mempoolInfo.quality
           // case the mempool certificate epoch is a newer than submitter epoch thrown an exception
           case (Some(mempoolInfo), _) if mempoolInfo.epoch > epoch =>
-          throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + mempoolInfo.quality)
+            throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + mempoolInfo.quality)
           // case we have chain cert for the given epoch return its quality.
           case (_, Some(chainInfo)) if chainInfo.epoch == epoch => chainInfo.quality
           // case the chain certificate epoch is a newer than submitter epoch thrown an exception
           case (_, Some(chainInfo)) if chainInfo.epoch > epoch =>
-          throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + chainInfo.quality)
+            throw ObsoleteWithdrawalEpochException("Requested epoch " + epoch + " is obsolete. Current epoch is " + chainInfo.quality)
           // no known certs
           case _ => 0
         }
@@ -536,7 +543,7 @@ object CertificateSubmitterRef {
   def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit ec: ExecutionContext): Props = {
-    val keyRotationStrategy = if (settings.withdrawalEpochCertificateSettings.typeOfCircuit  == TypeOfCircuit.NaiveThresholdSignatureCircuit) {
+    val keyRotationStrategy = if (settings.withdrawalEpochCertificateSettings.typeOfCircuit == TypeOfCircuit.NaiveThresholdSignatureCircuit) {
       new WithoutKeyRotationStrategy(settings, params)
     } else {
       new WithKeyRotationStrategy(settings, params)
