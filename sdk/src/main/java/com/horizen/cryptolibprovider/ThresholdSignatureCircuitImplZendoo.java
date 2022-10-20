@@ -9,10 +9,9 @@ import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.schnorrnative.SchnorrPublicKey;
 import com.horizen.schnorrnative.SchnorrSignature;
 import com.horizen.utils.Pair;
-import scala.collection.Iterator;
-import scala.collection.Seq;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -29,14 +28,14 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     }
 
     @Override
-    public List<byte[]> getCertificateCustomFields(Seq<byte[]> customFields) {
+    public List<byte[]> getCertificateCustomFields(List<byte[]> customFields) {
         List<FieldElement> fes = prepareCustomFieldElements(customFields);
         List<byte[]> fesBytes = fes.stream().map(FieldElement::serializeFieldElement).collect(Collectors.toList());
         fes.forEach(FieldElement::freeFieldElement);
         return fesBytes;
     }
 
-    private List<FieldElement> prepareCustomFieldElements(Seq<byte[]> customFields)  {
+    private List<FieldElement> prepareCustomFieldElements(List<byte[]> customFields)  {
         Iterator<byte[]> iterator = customFields.iterator();
         List<FieldElement> fieldElements = new ArrayList<>();
         while (iterator.hasNext()) {
@@ -81,7 +80,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
                                             byte[] endCumulativeScTxCommTreeRoot,
                                             long btrFee,
                                             long ftMinAmount,
-                                            Seq<byte[]> customParameters) {
+                                            List<byte[]> customParameters) {
         BackwardTransfer[] backwardTransfers =
                 bt.stream().map(ThresholdSignatureCircuitImplZendoo::withdrawalRequestBoxToBackwardTransfer).toArray(BackwardTransfer[]::new);
 
@@ -109,7 +108,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
                                           byte[] endCumulativeScTxCommTreeRoot,
                                           long btrFee,
                                           long ftMinAmount,
-                                          Seq<byte[]> customParameters,
+                                          List<byte[]> customParameters,
                                           List<Optional<byte[]>> schnorrSignatureBytesList,
                                           List<byte[]> schnorrPublicKeysBytesList,
                                           long threshold,
@@ -153,7 +152,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
                                byte[] endCumulativeScTxCommTreeRoot,
                                long btrFee,
                                long ftMinAmount,
-                               Seq<byte[]> customFields,
+                               List<byte[]> customFields,
                                byte[] constant,
                                long quality, byte[] proof,
                                boolean checkProof,

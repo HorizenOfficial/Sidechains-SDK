@@ -11,15 +11,8 @@ import com.horizen.schnorrnative.SchnorrPublicKey;
 import com.horizen.schnorrnative.SchnorrSignature;
 import com.horizen.utils.Pair;
 import scala.Enumeration;
-import scala.Option;
-import scala.collection.Iterator;
-import scala.collection.Seq;
-import scala.compat.java8.OptionConverters;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements ThresholdSignatureCircuitWithKeyRotation {
@@ -30,14 +23,14 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
     private static final SchnorrSignature signaturePlaceHolder = new SchnorrSignature();
 
     @Override
-    public List<byte[]> getCertificateCustomFields(Seq<byte[]> customFields) {
+    public List<byte[]> getCertificateCustomFields(List<byte[]> customFields) {
         List<FieldElement> fes = prepareCustomFieldElements(customFields);
         List<byte[]> fesBytes = fes.stream().map(FieldElement::serializeFieldElement).collect(Collectors.toList());
         fes.forEach(FieldElement::freeFieldElement);
         return fesBytes;
     }
 
-    private List<FieldElement> prepareCustomFieldElements(Seq<byte[]> customFields) {
+    private List<FieldElement> prepareCustomFieldElements(List<byte[]> customFields) {
         Iterator<byte[]> iterator = customFields.iterator();
         List<FieldElement> fieldElements = new ArrayList<>();
         while (iterator.hasNext()) {
@@ -75,7 +68,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                                             byte[] endCumulativeScTxCommTreeRoot,
                                             long btrFee,
                                             long ftMinAmount,
-                                            Seq<byte[]> customParameters) {
+                                            List<byte[]> customParameters) {
         BackwardTransfer[] backwardTransfers =
                 bt.stream().map(CommonCircuit::withdrawalRequestBoxToBackwardTransfer).toArray(BackwardTransfer[]::new);
 
@@ -112,14 +105,14 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
              byte[] endCumulativeScTxCommTreeRoot,
              long btrFee,
              long ftMinAmount,
-             Seq<byte[]> customFields,
+             List<byte[]> customFields,
              List<Optional<byte[]>> schnorrSignatureBytesList,
              SchnorrKeysSignaturesListBytes schnorrKeysSignaturesListBytes,
              long threshold,
              String provingKeyPath,
              boolean checkProvingKey,
              boolean zk,
-             Option<WithdrawalEpochCertificate> previousEpochCertificateOption,
+             Optional<WithdrawalEpochCertificate> previousEpochCertificateOption,
              Enumeration.Value sidechainCreationVersion,
              byte[] genesisKeysRootHash
             ) {
@@ -133,7 +126,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         FieldElement sidechainIdFieldElement = FieldElement.deserialize(sidechainId);
         List<FieldElement> customFieldsElements = prepareCustomFieldElements(customFields);
 
-        Optional<WithdrawalCertificate> previousCertificateOption = OptionConverters.toJava(previousEpochCertificateOption)
+        Optional<WithdrawalCertificate> previousCertificateOption = previousEpochCertificateOption
                 .map(c -> CswCircuitImplZendoo.createWithdrawalCertificate(c, sidechainCreationVersion));
 
         SchnorrKeysSignaturesList keysSignaturesList = SchnorrKeysSignaturesListBytes.getSchnorrKeysSignaturesList(schnorrKeysSignaturesListBytes);
@@ -173,12 +166,12 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                                byte[] endCumulativeScTxCommTreeRoot,
                                long btrFee,
                                long ftMinAmount,
-                               Seq<byte[]> customFields,
+                               List<byte[]> customFields,
                                byte[] constant,
                                long quality,
                                byte[] proof,
                                String verificationKeyPath,
-                               Option<WithdrawalEpochCertificate> previousEpochCertificateOption,
+                               Optional<WithdrawalEpochCertificate> previousEpochCertificateOption,
                                byte[] genesisConstantBytes,
                                Enumeration.Value sidechainCreationVersion) {
         List<BackwardTransfer> backwardTransfers =
@@ -201,8 +194,8 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                 customFieldsElements
         );
 
-        Optional<WithdrawalCertificate> previousCertificateOption = OptionConverters.toJava(previousEpochCertificateOption)
-                .map(c -> CswCircuitImplZendoo.createWithdrawalCertificate(c,sidechainCreationVersion));
+        Optional<WithdrawalCertificate> previousCertificateOption = previousEpochCertificateOption
+                .map(c -> CswCircuitImplZendoo.createWithdrawalCertificate(c, sidechainCreationVersion));
 
 
         boolean verificationResult = NaiveThresholdSignatureWKeyRotation.verifyProof(withdrawalCertificate, previousCertificateOption, genesisConstant, proof, verificationKeyPath);
