@@ -3,24 +3,28 @@ package com.horizen.certificatesubmitter.dataproof
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesListBytes
+import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.proof.SchnorrProof
 import com.horizen.proposition.SchnorrProposition
 import com.horizen.utils.BytesUtils
 
 
-case class DataForProofGenerationWithKeyRotation(override val referencedEpochNumber: Int,
-                                                 override val sidechainId: Array[Byte],
-                                                 override val withdrawalRequests: Seq[WithdrawalRequestBox],
-                                                 override val endEpochCumCommTreeHash: Array[Byte],
-                                                 override val btrFee: Long,
-                                                 override val ftMinAmount: Long,
-                                                 override val customFields: Seq[Array[Byte]],
-                                                 override val schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])],
-                                                 schnorrKeysSignaturesListBytes: SchnorrKeysSignaturesListBytes,
-                                                 previousCertificateOption: Option[WithdrawalEpochCertificate],
-                                                 genesisKeysRootHash: Array[Byte]
+case class CertificateDataWithKeyRotation(override val referencedEpochNumber: Int,
+                                          override val sidechainId: Array[Byte],
+                                          override val withdrawalRequests: Seq[WithdrawalRequestBox],
+                                          override val endEpochCumCommTreeHash: Array[Byte],
+                                          override val btrFee: Long,
+                                          override val ftMinAmount: Long,
+                                          override val schnorrKeyPairs: Seq[(SchnorrProposition, Option[SchnorrProof])],
+                                          schnorrKeysSignaturesListBytes: SchnorrKeysSignaturesListBytes,
+                                          previousCertificateOption: Option[WithdrawalEpochCertificate],
+                                          genesisKeysRootHash: Array[Byte]
                                                 )
-  extends DataForProofGeneration(referencedEpochNumber, sidechainId, withdrawalRequests, endEpochCumCommTreeHash, btrFee, ftMinAmount, customFields, schnorrKeyPairs) {
+  extends CertificateData(referencedEpochNumber, sidechainId, withdrawalRequests, endEpochCumCommTreeHash, btrFee, ftMinAmount, schnorrKeyPairs) {
+
+  override def getCustomFields: Seq[Array[Byte]] = {
+    CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.getUpdatedKeysRootHash(utxoMerkleTreeRoot.asJava).toSeq
+  }
   override def toString: String = {
     "DataForProofGeneration(" +
       s"referencedEpochNumber = $referencedEpochNumber, " +

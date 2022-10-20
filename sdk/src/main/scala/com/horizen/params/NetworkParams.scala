@@ -2,8 +2,10 @@ package com.horizen.params
 
 
 import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
+
 import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
+import com.horizen.cryptolibprovider.utils.TypeOfCircuit.TypeOfCircuit
 import com.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
 import sparkz.core.block.Block
 import scorex.util.{ModifierId, bytesToId}
@@ -34,6 +36,7 @@ trait NetworkParams {
   val sidechainGenesisBlockParentId: ModifierId = bytesToId(new Array[Byte](32))
   val signersPublicKeys: Seq[SchnorrProposition]
   val mastersPublicKeys: Seq[SchnorrProposition]
+  val typeOfCircuit: TypeOfCircuit
   val signersThreshold: Int
   val certProvingKeyFilePath: String
   val certVerificationKeyFilePath: String

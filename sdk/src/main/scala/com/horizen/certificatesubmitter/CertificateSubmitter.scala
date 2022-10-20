@@ -7,7 +7,7 @@ import akka.util.Timeout
 import com.horizen._
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.certificatesubmitter.CertificateSubmitter._
-import com.horizen.certificatesubmitter.dataproof.DataForProofGeneration
+import com.horizen.certificatesubmitter.dataproof.CertificateData
 import com.horizen.certificatesubmitter.strategies.{KeyRotationStrategy, WithKeyRotationStrategy, WithoutKeyRotationStrategy}
 import com.horizen.cryptolibprovider.utils.{FieldElementUtils, TypeOfCircuit}
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
@@ -36,12 +36,12 @@ import scala.util.{Failure, Random, Success, Try}
  * If `submitterEnabled` is `true`, it will try to generate and send the Certificate to MC node in case the proper amount of signatures were collected.
  * Must be singleton.
  */
-class CertificateSubmitter[T <: DataForProofGeneration](settings: SidechainSettings,
-                                                        sidechainNodeViewHolderRef: ActorRef,
-                                                        params: NetworkParams,
-                                                        mainchainChannel: MainchainNodeChannel,
-                                                        keyRotationStrategy: KeyRotationStrategy)
-                                                       (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging {
+class CertificateSubmitter[T <: CertificateData](settings: SidechainSettings,
+                                                 sidechainNodeViewHolderRef: ActorRef,
+                                                 params: NetworkParams,
+                                                 mainchainChannel: MainchainNodeChannel,
+                                                 keyRotationStrategy: KeyRotationStrategy)
+                                                (implicit ec: ExecutionContext) extends Actor with Timers with ScorexLogging {
 
   import CertificateSubmitter.InternalReceivableMessages._
   import CertificateSubmitter.ReceivableMessages._
@@ -371,7 +371,7 @@ class CertificateSubmitter[T <: DataForProofGeneration](settings: SidechainSetti
         case Some(status) =>
           // Check quality again, in case better Certificate appeared.
           if (checkQuality(status)) {
-            def getProofGenerationData(sidechainNodeView: View): DataForProofGeneration = keyRotationStrategy.buildDataForProofGeneration(sidechainNodeView, status)
+            def getProofGenerationData(sidechainNodeView: View): CertificateData = keyRotationStrategy.buildDataForProofGeneration(sidechainNodeView, status)
 
             val dataForProofGeneration = Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getProofGenerationData), timeoutDuration)
               .asInstanceOf[T]
@@ -399,7 +399,7 @@ class CertificateSubmitter[T <: DataForProofGeneration](settings: SidechainSetti
                   dataForProofGeneration.withdrawalRequests,
                   dataForProofGeneration.ftMinAmount,
                   dataForProofGeneration.btrFee,
-                  dataForProofGeneration.customFields,
+                  dataForProofGeneration.getCustomFields,
                   certificateFee,
                   params)
 
@@ -543,7 +543,7 @@ object CertificateSubmitterRef {
   def props(settings: SidechainSettings, sidechainNodeViewHolderRef: ActorRef, params: NetworkParams,
             mainchainChannel: MainchainNodeChannel)
            (implicit ec: ExecutionContext): Props = {
-    val keyRotationStrategy = if (settings.withdrawalEpochCertificateSettings.typeOfCircuit == TypeOfCircuit.NaiveThresholdSignatureCircuit) {
+    val keyRotationStrategy = if (params.typeOfCircuit == TypeOfCircuit.NaiveThresholdSignatureCircuit) {
       new WithoutKeyRotationStrategy(settings, params)
     } else {
       new WithKeyRotationStrategy(settings, params)

@@ -5,7 +5,7 @@ import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 import com.horizen.block.{SidechainCreationVersions, WithdrawalEpochCertificate}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
-import com.horizen.certificatesubmitter.dataproof.{DataForProofGeneration, DataForProofGenerationWithKeyRotation}
+import com.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateDataWithKeyRotation}
 import com.horizen.certificatesubmitter.keys.ActualKeys.getMerkleRootOfPublicKeys
 import com.horizen.certificatesubmitter.keys.{ActualKeys, KeyRotationProof, KeyRotationProofType, SchnorrKeysSignaturesListBytes}
 import com.horizen.cryptolibprovider.CryptoLibProvider
@@ -24,7 +24,7 @@ import scala.util.{Failure, Success, Try}
 
 class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams) extends KeyRotationStrategy(settings, params) {
 
-  override def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
+  override def generateProof(dataForProofGeneration: CertificateData): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
 
     val (_: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
       dataForProofGeneration.schnorrKeyPairs.map {
@@ -37,7 +37,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       }. " +
       s"It can take a while.")
 
-    val dataForProofGenerationWithKeyRotation = dataForProofGeneration.asInstanceOf[DataForProofGenerationWithKeyRotation]
+    val dataForProofGenerationWithKeyRotation = dataForProofGeneration.asInstanceOf[CertificateDataWithKeyRotation]
 
     val schnorrKeysSignaturesListBytes = SchnorrKeysSignaturesListBytes(
       dataForProofGenerationWithKeyRotation.schnorrKeysSignaturesListBytes.schnorrSignersPublicKeysBytesList,
@@ -71,7 +71,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
     )
   }
 
-  override def buildDataForProofGeneration(sidechainNodeView: View, status: SignaturesStatus): DataForProofGenerationWithKeyRotation = {
+  override def buildDataForProofGeneration(sidechainNodeView: View, status: SignaturesStatus): CertificateDataWithKeyRotation = {
     val history = sidechainNodeView.history
     val state: SidechainState = sidechainNodeView.state
 

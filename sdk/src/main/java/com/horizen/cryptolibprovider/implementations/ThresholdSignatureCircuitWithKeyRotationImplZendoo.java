@@ -216,4 +216,17 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                 Optional.of(supportedSegmentSize),
                 provingKeyPath, verificationKeyPath, CommonCircuit.maxProofPlusVkSize);
     }
+
+    public byte[] getKeysRootHash(long maxPks, String provingKeyPath, String verificationKeyPath, int customFieldsNum) {
+        SchnorrKeysSignaturesList schnorrKeysSignaturesList = new SchnorrKeysSignaturesList();
+        FieldElement fieldElement = null;
+        try {
+            fieldElement = schnorrKeysSignaturesList.getUpdatedKeysRootHash(schnorrKeysSignaturesList.getSigningKeys().length);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        byte[] b =  fieldElement.serializeFieldElement();
+        fieldElement.freeFieldElement();
+        return b;
+    }
 }

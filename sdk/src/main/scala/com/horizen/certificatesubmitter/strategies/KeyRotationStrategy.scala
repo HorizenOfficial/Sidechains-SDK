@@ -3,7 +3,7 @@ package com.horizen.certificatesubmitter.strategies
 import akka.util.Timeout
 import com.horizen._
 import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
-import com.horizen.certificatesubmitter.dataproof.DataForProofGeneration
+import com.horizen.certificatesubmitter.dataproof.CertificateData
 import com.horizen.chain.{MainchainHeaderInfo, SidechainBlockInfo}
 import com.horizen.consensus.ConsensusEpochNumber
 import com.horizen.fork.ForkManager
@@ -21,10 +21,10 @@ abstract class KeyRotationStrategy(settings: SidechainSettings, params: NetworkP
 
   val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
-  def generateProof(dataForProofGeneration: DataForProofGeneration): com.horizen.utils.Pair[Array[Byte], java.lang.Long]
+  def generateProof(dataForProofGeneration: CertificateData): com.horizen.utils.Pair[Array[Byte], java.lang.Long]
 
   type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
-  def buildDataForProofGeneration(sidechainNodeView: View, status: SignaturesStatus): DataForProofGeneration
+  def buildDataForProofGeneration(sidechainNodeView: View, status: SignaturesStatus): CertificateData
 
   def getMessageToSign(view: View, referencedWithdrawalEpochNumber: Int): Try[Array[Byte]]
 
