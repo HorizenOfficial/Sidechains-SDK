@@ -295,10 +295,10 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
             new ByteArrayWrapper(KeyRotationProofSerializer.toBytes(keyRotationProof))))
 
           keyRotationProof match {
-            case keyRotationProof if keyRotationProof.keyType == KeyRotationProofType.MasterKeyRotationProofType =>
-              actualKeys.masterKeys.updated(keyRotationProof.index, keyRotationProof.newValueOfKey)
-            case keyRotationProof if keyRotationProof.keyType == KeyRotationProofType.SigningKeyRotationProofType =>
+            case keyRotationProof if keyRotationProof.keyType.id == 0 =>
               actualKeys.signingKeys.updated(keyRotationProof.index, keyRotationProof.newValueOfKey)
+            case keyRotationProof if keyRotationProof.keyType.id == 1 =>
+              actualKeys.masterKeys.updated(keyRotationProof.index, keyRotationProof.newValueOfKey)
           }
         })
         updateList.add(new JPair(getKeys(withdrawalEpochInfo.epoch, getWithdrawalEpochCounter(withdrawalEpochInfo.epoch) + 1),
