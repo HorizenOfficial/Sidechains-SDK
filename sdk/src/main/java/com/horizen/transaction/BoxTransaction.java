@@ -11,6 +11,7 @@ import com.horizen.proposition.Proposition;
 import com.horizen.serialization.Views;
 import com.horizen.transaction.exception.TransactionSemanticValidityException;
 import com.horizen.transaction.incompatibilitychecker.DefaultTransactionIncompatibilityChecker;
+import com.horizen.transaction.incompatibilitychecker.TransactionIncompatibilityChecker;
 import com.horizen.utils.ByteArrayWrapper;
 import com.horizen.utils.BytesUtils;
 import scorex.crypto.hash.Blake2b256;

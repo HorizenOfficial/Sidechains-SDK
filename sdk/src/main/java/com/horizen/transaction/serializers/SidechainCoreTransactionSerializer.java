@@ -1,4 +1,4 @@
-package com.horizen.transaction;
+package com.horizen.transaction.serializers;
 
 import com.horizen.box.Box;
 import com.horizen.box.data.*;
@@ -6,6 +6,8 @@ import com.horizen.proof.Proof;
 import com.horizen.proof.ProofSerializer;
 import com.horizen.proof.Signature25519Serializer;
 import com.horizen.proposition.Proposition;
+import com.horizen.transaction.SidechainCoreTransaction;
+import com.horizen.transaction.TransactionSerializer;
 import com.horizen.utils.DynamicTypedSerializer;
 import com.horizen.utils.ListSerializer;
 import sparkz.core.NodeViewModifier$;
@@ -53,13 +55,13 @@ public final class SidechainCoreTransactionSerializer implements TransactionSeri
     public void serialize(SidechainCoreTransaction transaction, Writer writer) {
         writer.put(transaction.version());
         writer.putLong(transaction.fee());
-        writer.putInt(transaction.inputsIds.size());
-        for (byte[] id: transaction.inputsIds) {
+        writer.putInt(transaction.getInputsIds().size());
+        for (byte[] id: transaction.getInputsIds()) {
             writer.putBytes(id);
         }
 
         boxesDataSerializer.serialize(transaction.getOutputData(), writer);
-        proofsSerializer.serialize(transaction.proofs, writer);
+        proofsSerializer.serialize(transaction.getProofs(), writer);
     }
 
     @Override

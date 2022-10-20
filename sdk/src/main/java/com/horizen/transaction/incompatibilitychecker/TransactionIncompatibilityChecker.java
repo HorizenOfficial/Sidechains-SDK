@@ -1,4 +1,6 @@
-package com.horizen.transaction;
+package com.horizen.transaction.incompatibilitychecker;
+
+import com.horizen.transaction.BoxTransaction;
 
 import java.util.List;
 

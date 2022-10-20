@@ -2,7 +2,6 @@ package com.horizen.transaction.incompatibilitychecker;
 
 import com.horizen.box.BoxUnlocker;
 import com.horizen.transaction.BoxTransaction;
-import com.horizen.transaction.TransactionIncompatibilityChecker;
 import com.horizen.utils.ByteArrayWrapper;
 
 import java.util.List;

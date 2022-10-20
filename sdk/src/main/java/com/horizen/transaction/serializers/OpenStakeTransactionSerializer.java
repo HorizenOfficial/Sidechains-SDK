@@ -1,9 +1,11 @@
-package com.horizen.transaction;
+package com.horizen.transaction.serializers;
 
 import com.horizen.box.data.ZenBoxData;
 import com.horizen.box.data.ZenBoxDataSerializer;
 import com.horizen.proof.Signature25519;
 import com.horizen.proof.Signature25519Serializer;
+import com.horizen.transaction.OpenStakeTransaction;
+import com.horizen.transaction.TransactionSerializer;
 import sparkz.core.NodeViewModifier$;
 import scorex.util.serialization.Reader;
 import scorex.util.serialization.Writer;
@@ -32,14 +34,14 @@ public class OpenStakeTransactionSerializer implements TransactionSerializer<Ope
     public void serialize(OpenStakeTransaction transaction, Writer writer) {
         writer.put(transaction.version());
         writer.putLong(transaction.fee());
-        writer.putBytes(transaction.inputId);
+        writer.putBytes(transaction.getInputId());
         if(transaction.getOutputBox().isPresent()) {
             writer.putInt(1);
             ZenBoxDataSerializer.getSerializer().serialize(transaction.getOutputBox().get(), writer);
         } else {
             writer.putInt(0);
         }
-        Signature25519Serializer.getSerializer().serialize(transaction.proof, writer);
+        Signature25519Serializer.getSerializer().serialize(transaction.getProof(), writer);
         writer.putInt(transaction.getForgerIndex());
     }
 

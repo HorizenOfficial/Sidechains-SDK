@@ -1,5 +1,7 @@
-package com.horizen.transaction;
+package com.horizen.transaction.serializers;
 
+import com.horizen.transaction.MC2SCAggregatedTransaction;
+import com.horizen.transaction.TransactionSerializer;
 import com.horizen.transaction.mainchain.BwtRequestSerializer;
 import com.horizen.transaction.mainchain.ForwardTransferSerializer;
 import com.horizen.transaction.mainchain.SidechainCreationSerializer;
