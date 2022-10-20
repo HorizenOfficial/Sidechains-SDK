@@ -42,27 +42,6 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
     }
 
     @Override
-    public byte[] reconstructUtxoMerkleTreeRoot(byte[] fe1Bytes, byte[] fe2Bytes) {
-        FieldElement fe1 = FieldElement.deserialize(fe1Bytes);
-        if (fe1 == null)
-            return new byte[0];
-        FieldElement fe2 = FieldElement.deserialize(fe2Bytes);
-        if (fe2 == null) {
-            fe1.freeFieldElement();
-            return new byte[0];
-        }
-
-        FieldElement utxoMerkleTreeRootFe = FieldElement.joinAt(fe1, 16, fe2, 16);
-        byte[] utxoMerkleTreeRoot = utxoMerkleTreeRootFe.serializeFieldElement();
-
-        fe1.freeFieldElement();
-        fe2.freeFieldElement();
-        utxoMerkleTreeRootFe.freeFieldElement();
-
-        return utxoMerkleTreeRoot;
-    }
-
-    @Override
     public byte[] generateMessageToBeSigned(List<WithdrawalRequestBox> bt,
                                             byte[] sidechainId,
                                             int epochNumber,

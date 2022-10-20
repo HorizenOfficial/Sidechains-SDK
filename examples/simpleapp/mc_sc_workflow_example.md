@@ -364,7 +364,7 @@ withdrawalEpochCertificate {
         "0400000020930c3927bbdf74fffd54860bf3a6192488493f116040381dbaa63f91a0e68c1324be6e17b1b523a40c12ae2523633922ec405a41983268bae65717ce89202d3c00"
     ]
     maxPks = 7
-    typeOfCircuit = "NaiveThresholdSignatureCircuit"
+    typeOfCircuit = 0
     certProvingKeyFilePath = "sidechainapp/cert_marlin_snark_pk"
     certVerificationKeyFilePath = "sidechainapp/cert_marlin_snark_vk"
     certificateAutomaticFeeComputation = true

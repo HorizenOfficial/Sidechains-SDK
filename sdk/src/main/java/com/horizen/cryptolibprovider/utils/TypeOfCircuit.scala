@@ -1,7 +1,7 @@
 package com.horizen.cryptolibprovider.utils
 
 object TypeOfCircuit extends Enumeration {
-  type TypeOfCircuit = Value
+  type Int = Value
 
   val NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation = Value
 }
