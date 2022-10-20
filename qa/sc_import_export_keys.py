@@ -275,11 +275,16 @@ class SidechainImportExportKeysTest(SidechainTestFramework):
         self.sc_sync_all()
         balance_node1_beforeImport = http_wallet_balance(sc_node1, self.API_KEY_NODE1)
         http_wallet_importSecret(sc_node1, sc_address_new_secret, self.API_KEY_NODE1, True)
+
         #ensure the reindex ended correctly
         reindexStatus = http_wallet_reindex_status(sc_node1, self.API_KEY_NODE1)
-        while reindexStatus != 'inactive' :
+        maxTries = 60 #maximum time of 1 minute more or less to complete the reindex
+        while (reindexStatus != 'inactive' or maxTries < 0):
             time.sleep(1)
+            maxTries = maxTries - 1
             reindexStatus = http_wallet_reindex_status(sc_node1, self.API_KEY_NODE1)
+        assert_equal(reindexStatus, 'inactive')
+
         #after an import + reindex the balance should by immediately updated
         balance_node1_afterImport = http_wallet_balance(sc_node1, self.API_KEY_NODE1)
         assert_true(balance_node1_afterImport == (balance_node1_beforeImport+1000))

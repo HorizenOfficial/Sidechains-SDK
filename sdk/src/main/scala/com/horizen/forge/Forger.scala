@@ -130,11 +130,9 @@ class Forger(settings: SidechainSettings,
   }
 
   protected def tryToCreateBlockForEpochAndSlot(epochNumber: ConsensusEpochNumber, slot: ConsensusSlotNumber, respondsToOpt: Option[ActorRef], blockCreationTimeout: Timeout): Unit = {
-    if (history.isDefined && history.get.isReindexing()){
-      log.info("Forge skipped - reindex was in progress")
-      respondsToOpt.map(respondsTo => respondsTo ! Failure(new RuntimeException("Forge skipped - reindex was in progress")))
-    }
-    val forgeMessage: ForgeMessageBuilder#ForgeMessageType = forgeMessageBuilder.buildForgeMessageForEpochAndSlot(epochNumber, slot, blockCreationTimeout)
+    val forgeMessage: ForgeMessageBuilder#ForgeMessageType =
+      forgeMessageBuilder.buildForgeMessageForEpochAndSlot(epochNumber, slot,  (history.isDefined && history.get.isReindexing()), blockCreationTimeout)
+
     val forgedBlockAsFuture = (viewHolderRef ? forgeMessage).asInstanceOf[Future[ForgeResult]]
     forgedBlockAsFuture.onComplete{
       case Success(ForgeSuccess(block)) => {

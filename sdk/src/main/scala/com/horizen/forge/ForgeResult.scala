@@ -18,6 +18,10 @@ case class SkipSlot(reason: String = "") extends ForgeFailure {
 case object NoOwnedForgingStake extends ForgeFailure {
   override def toString: String = s"Can't forge block, no forging stake is present for epoch."
 }
+case object ForgeFailedForReindex extends ForgeFailure {
+  override def toString: String = s"Failed block generation - reindex in progress"
+}
+
 
 case class ForgeFailed(ex: Throwable) extends ForgeFailure {
   override def toString: String = s"Failed block generation due $ex"

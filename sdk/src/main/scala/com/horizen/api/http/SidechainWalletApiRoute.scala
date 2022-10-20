@@ -173,7 +173,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
         Await.result(future, timeout.duration).asInstanceOf[Try[Unit]] match {
           case Success(_) =>
             if (body.reindex.isDefined && body.reindex.get){
-              sidechainNodeViewReindexer ? StartReindex()
+              sidechainNodeViewReindexer ? StartReindex
             }
             ApiResponseUtil.toResponse(RespCreatePrivateKey(secret.publicImage()))
           case Failure(e) =>
@@ -190,7 +190,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
    */
   def reindex: Route = (post & path("reindex")) {
     withAuth {
-      val future = sidechainNodeViewReindexer ? StartReindex()
+      val future = sidechainNodeViewReindexer ? StartReindex
       Await.result(future, timeout.duration).asInstanceOf[Try[Option[Int]]] match {
         case Success(ret) => {
           if (ret.isEmpty){
@@ -212,7 +212,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
    */
   def reindexStatus: Route = (post & path("reindexStatus")) {
     withAuth {
-      val future = sidechainNodeViewReindexer ? StatusReindex()
+      val future = sidechainNodeViewReindexer ? StatusReindex
       Await.result(future, timeout.duration).asInstanceOf[Try[Int]] match {
         case Success(ret) => {
           ret match {
@@ -318,7 +318,7 @@ case class SidechainWalletApiRoute(override val settings: RESTApiSettings,
             }
           })
           if (body.reindex.isDefined && body.reindex.get && successfullyAdded  > 0){
-            sidechainNodeViewReindexer ? StartReindex()
+            sidechainNodeViewReindexer ? StartReindex
           }
           ApiResponseUtil.toResponse(RespImportSecrets(successfullyAdded, failedToAdd, errorDetail))
         }

@@ -132,9 +132,13 @@ class SidechainWalletReindexTest(SidechainTestFramework):
         reindexStarted = http_wallet_reindex(sc_node2, self.API_KEY_NODE2)
         assert_equal(reindexStarted, True)
         reindexStatus = http_wallet_reindex_status(sc_node2, self.API_KEY_NODE2)
-        while reindexStatus != 'inactive' :
+        maxTries = 600 #maximum time of 1 minute more or less to complete the reindex
+        while (reindexStatus != 'inactive' or maxTries < 0) :
             time.sleep(0.1)
+            maxTries = maxTries - 1
             reindexStatus = http_wallet_reindex_status(sc_node2, self.API_KEY_NODE2)
+
+        assert_equal(reindexStatus, 'inactive')
 
         print("# Node2 balance should be changed now")
         balance_node2 = http_wallet_balance(sc_node2, self.API_KEY_NODE2)
@@ -165,6 +169,8 @@ class SidechainWalletReindexTest(SidechainTestFramework):
 
         print("# Push a tx on the mempool from node1")
         sendCoinsToAddress(sc_node1, sc_address_2, 1000, 0, self.API_KEY_NODE1)
+
+        time.sleep(3)
 
         print("# The tx should be present only on the node1 mempool")
         node1MempoolTx = allTransactions(sc_node1, False)
@@ -209,9 +215,11 @@ class SidechainWalletReindexTest(SidechainTestFramework):
 
         print("# Complete the reindex")
         reindexStatus_node2 = http_wallet_reindex_status(sc_node2, self.API_KEY_NODE2)
-        while (reindexStatus_node2 == 'ongoing'):
+        maxTries = 60 #maximum time of 1 minute more or less to complete the reindex
+        while (reindexStatus_node2 == 'ongoing' or maxTries < 0):
             http_debug_reindex_step(sc_node2, self.API_KEY_NODE2)
             time.sleep(1)
+            maxTries = maxTries - 1
             reindexStatus_node2 = http_wallet_reindex_status(sc_node2, self.API_KEY_NODE2)
         assert_equal(reindexStatus_node2, 'inactive')
 

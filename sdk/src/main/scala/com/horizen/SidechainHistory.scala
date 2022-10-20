@@ -627,6 +627,7 @@ object SidechainHistory
   }
 
   val ReindexNotInProgress : Int = -1
+  val ReindexJustStarted : Int = 0
 
   def calculateGenesisBlockInfo(block: SidechainBlock, params: NetworkParams): SidechainBlockInfo = {
     require(block.id == params.sidechainGenesisBlockId, "Passed block is not a genesis block.")

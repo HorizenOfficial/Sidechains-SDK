@@ -2,9 +2,8 @@ package com.horizen.api.http
 
 import akka.actor.{ActorRef, ActorRefFactory}
 import akka.http.scaladsl.server.Route
-
 import com.fasterxml.jackson.annotation.JsonView
-import com.horizen.SidechainNodeViewHolder.ReceivableMessages.ReindexStep
+import com.horizen.SidechainNodeViewHolder.InternalReceivableMessages.ReindexStep
 import com.horizen.serialization.Views
 import sparkz.core.settings.RESTApiSettings
 import scala.concurrent.ExecutionContext

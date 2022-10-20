@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 import time
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
@@ -14,7 +14,7 @@ Check that a node can answer to block requests from another node even if is sync
 Configuration: start 2 sidechain nodes and 1 Mainchain node, from which the sidechain is bootstrapped.
 
     Steps:
-        - make  node 1 create 2000 blocks
+        - make  node 1 create 20 blocks
         - put node 1 in resync status
         - make node 2 connectTo the node 1 ( it should start to Synchronize right after)
 

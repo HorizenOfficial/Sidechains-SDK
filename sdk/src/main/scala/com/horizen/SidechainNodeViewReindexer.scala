@@ -17,7 +17,7 @@ class SidechainNodeViewReindexer
   HR <: HistoryReader[PMOD, SI] : ClassTag]
 (viewHolderRef: ActorRef) (implicit ec: ExecutionContext) extends Actor with ScorexLogging {
 
-  protected var reindexStatus : Int = 0
+  protected var reindexStatus : Int = SidechainHistory.ReindexNotInProgress
 
   override def preStart(): Unit = {
     //subscribe for all the node view holder events involving history
@@ -37,14 +37,15 @@ class SidechainNodeViewReindexer
   }
 
   protected def processReindexEvents: Receive = {
-    case SidechainNodeViewReindexer.ReceivableMessages.StartReindex() => startReindex()
-    case SidechainNodeViewReindexer.ReceivableMessages.StatusReindex() => statusReindex()
+    case SidechainNodeViewReindexer.ReceivableMessages.StartReindex => startReindex()
+    case SidechainNodeViewReindexer.ReceivableMessages.StatusReindex => statusReindex()
   }
 
   protected def startReindex(): Unit = {
     if (reindexStatus == SidechainHistory.ReindexNotInProgress) {
-        viewHolderRef ! SidechainNodeViewHolder.ReceivableMessages.ReindexStep(true)
-        sender() ! Success(Option.empty)
+      reindexStatus = SidechainHistory.ReindexJustStarted //status is updated immediately to avoid cuncurrent calls conflicts
+      viewHolderRef ! SidechainNodeViewHolder.InternalReceivableMessages.ReindexStep(true)
+      sender() ! Success(Option.empty)
     }else {
       //nothing to do, just return the current progress
       sender() ! Success(Some(reindexStatus))
@@ -58,12 +59,10 @@ class SidechainNodeViewReindexer
 }
 
 object SidechainNodeViewReindexer {
-
   object ReceivableMessages {
-    case class StartReindex()
-    case class StatusReindex()
+    case object StartReindex
+    case object StatusReindex
   }
-
 }
 
 object SidechainNodeViewReindexerRef {
