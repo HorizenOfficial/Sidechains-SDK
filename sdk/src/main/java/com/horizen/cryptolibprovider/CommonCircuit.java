@@ -1,14 +1,20 @@
 package com.horizen.cryptolibprovider;
 
+import com.horizen.block.WithdrawalEpochCertificate;
 import com.horizen.box.WithdrawalRequestBox;
 import com.horizen.certnative.BackwardTransfer;
+import com.horizen.certnative.WithdrawalCertificate;
+import com.horizen.librustsidechains.FieldElement;
 import com.horizen.provingsystemnative.ProvingSystem;
 import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.utils.BytesUtils;
+import scala.Enumeration;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 public class  CommonCircuit {
     private static final int maxSegmentSize = (1 << 18);
@@ -40,5 +46,18 @@ public class  CommonCircuit {
 
     static BackwardTransfer withdrawalRequestBoxToBackwardTransfer(WithdrawalRequestBox box) {
         return new BackwardTransfer(box.proposition().bytes(), box.value());
+    }
+
+    static WithdrawalCertificate createWithdrawalCertificate(WithdrawalEpochCertificate cert, Enumeration.Value sidechainCreationVersion) {
+        return new WithdrawalCertificate(
+                FieldElement.deserialize(cert.sidechainId()),
+                cert.epochNumber(),
+                scala.collection.JavaConverters.seqAsJavaList(cert.backwardTransferOutputs()).stream().map(bto -> new BackwardTransfer(bto.pubKeyHash(), bto.amount())).collect(Collectors.toList()),
+                cert.quality(),
+                FieldElement.deserialize(cert.endCumulativeScTxCommitmentTreeRoot()),
+                cert.ftMinAmount(),
+                cert.btrFee(),
+                Arrays.stream(cert.customFieldsOpt(sidechainCreationVersion).get()).map(FieldElement::deserialize).collect(Collectors.toList())
+        );
     }
 }

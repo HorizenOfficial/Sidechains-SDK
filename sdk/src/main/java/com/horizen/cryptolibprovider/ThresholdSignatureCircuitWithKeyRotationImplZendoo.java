@@ -128,7 +128,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         List<FieldElement> customFieldsElements = prepareCustomFieldElements(customFields);
 
         Optional<WithdrawalCertificate> previousCertificateOption = previousEpochCertificateOption
-                .map(c -> CswCircuitImplZendoo.createWithdrawalCertificate(c, sidechainCreationVersion));
+                .map(c -> CommonCircuit.createWithdrawalCertificate(c, sidechainCreationVersion));
 
         SchnorrKeysSignaturesList keysSignaturesList = SchnorrKeysSignaturesListBytes.getSchnorrKeysSignaturesList(schnorrKeysSignaturesListBytes);
         SchnorrPublicKey[] signingPublicKeys = keysSignaturesList.getSigningKeys();
@@ -196,7 +196,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         );
 
         Optional<WithdrawalCertificate> previousCertificateOption = previousEpochCertificateOption
-                .map(c -> CswCircuitImplZendoo.createWithdrawalCertificate(c, sidechainCreationVersion));
+                .map(c -> CommonCircuit.createWithdrawalCertificate(c, sidechainCreationVersion));
 
 
         boolean verificationResult = NaiveThresholdSignatureWKeyRotation.verifyProof(withdrawalCertificate, previousCertificateOption, genesisConstant, proof, verificationKeyPath);
