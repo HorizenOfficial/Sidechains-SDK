@@ -2,7 +2,6 @@ package com.horizen.cryptolibprovider;
 
 import com.horizen.block.WithdrawalEpochCertificate;
 import com.horizen.box.Box;
-import com.horizen.certnative.BackwardTransfer;
 import com.horizen.certnative.WithdrawalCertificate;
 import com.horizen.cswnative.CswFtProverData;
 import com.horizen.cswnative.CswProof;
@@ -11,13 +10,13 @@ import com.horizen.cswnative.CswUtxoProverData;
 import com.horizen.fwtnative.ForwardTransferOutput;
 import com.horizen.librustsidechains.Constants;
 import com.horizen.librustsidechains.FieldElement;
+import com.horizen.merkletreenative.MerklePath;
 import com.horizen.proposition.Proposition;
 import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.scutxonative.ScUtxoOutput;
 import com.horizen.secret.PrivateKey25519;
 import com.horizen.utils.BytesUtils;
 import com.horizen.utils.ForwardTransferCswData;
-import com.horizen.merkletreenative.MerklePath;
 import com.horizen.utils.UtxoCswData;
 import com.horizen.utils.WithdrawalEpochUtils;
 import scala.Enumeration;
@@ -56,7 +55,7 @@ public class CswCircuitImplZendoo implements CswCircuit {
     public byte[] privateKey25519ToScalar(PrivateKey25519 pk) {
         byte[] pkBytes = pk.privateKey();
 
-        byte[] hash = null;
+        byte[] hash;
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-512");
             digest.update(pkBytes, 0, pkBytes.length);
@@ -71,7 +70,7 @@ public class CswCircuitImplZendoo implements CswCircuit {
         // Pruning:
         // The lowest three bits of the first octet are cleared
         lowerBytes[0] &= 0b11111000;
-        // The highest bit of the last octet is cleared, and the second highest bit of the last octet is set.
+        // The highest bit of the last octet is cleared, and the second-highest bit of the last octet is set.
         lowerBytes[31] &= 0b01111111;
         lowerBytes[31] |= 0b01000000;
 

@@ -14,6 +14,7 @@ import com.horizen.websocket.server.WebSocketServerRef.sidechainNodeViewHolderRe
 import com.horizen.{SidechainSettings, SidechainState}
 import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 
+import java.util
 import java.util.Optional
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -57,15 +58,15 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       dataForProofGeneration.endEpochCumCommTreeHash,
       dataForProofGeneration.btrFee,
       dataForProofGeneration.ftMinAmount,
-      dataForProofGeneration.customFields,
+      scala.collection.JavaConverters.seqAsJavaList(dataForProofGeneration.customFields),
       signaturesBytes.asJava,
       schnorrKeysSignaturesListBytes,
       params.signersThreshold,
       provingFileAbsolutePath,
       true,
       true,
-      dataForProofGenerationWithKeyRotation.previousCertificateOption,
-      SidechainCreationVersions(sidechainCreationVersion.id),
+      Optional.of(dataForProofGenerationWithKeyRotation.previousCertificateOption),
+      sidechainCreationVersion.id,
       dataForProofGenerationWithKeyRotation.genesisKeysRootHash
     )
   }
@@ -163,7 +164,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
 
       CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
         .generateMessageToBeSigned(withdrawalRequests.asJava, sidechainId, referencedWithdrawalEpochNumber,
-          endEpochCumCommTreeHash, btrFee, ftMinAmount, Seq(customFields))
+          endEpochCumCommTreeHash, btrFee, ftMinAmount, util.Arrays.asList(customFields))
     }
 
     Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getMessage), settings.sparkzSettings.restApi.timeout).asInstanceOf[Try[Array[Byte]]].get

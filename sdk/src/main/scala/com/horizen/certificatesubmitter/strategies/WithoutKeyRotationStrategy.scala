@@ -60,7 +60,7 @@ class WithoutKeyRotationStrategy(settings: SidechainSettings, params: NetworkPar
     val ftMinAmount: Long = getFtMinAmount(consensusEpochNumber)
     val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, status.referencedEpoch)
     val sidechainId = params.sidechainId
-    val utxoMerkleTreeRoot: Seq[Array[Byte]] = getUtxoMerkleTreeRoot(status.referencedEpoch, state)
+    val utxoMerkleTreeRoot: Option[Array[Byte]] = getUtxoMerkleTreeRoot(status.referencedEpoch, state)
 
 
     val signersPublicKeyWithSignatures = params.signersPublicKeys.zipWithIndex.map {
@@ -93,7 +93,7 @@ class WithoutKeyRotationStrategy(settings: SidechainSettings, params: NetworkPar
       val endEpochCumCommTreeHash = lastMainchainBlockCumulativeCommTreeHashForWithdrawalEpochNumber(history, referencedWithdrawalEpochNumber)
       val sidechainId = params.sidechainId
 
-      val utxoMerkleTreeRoot: Seq[Array[Byte]] = {
+      val utxoMerkleTreeRoot: Option[Array[Byte]] = {
         Try {
           getUtxoMerkleTreeRoot(referencedWithdrawalEpochNumber, state)
         } match {
@@ -114,7 +114,8 @@ class WithoutKeyRotationStrategy(settings: SidechainSettings, params: NetworkPar
         endEpochCumCommTreeHash,
         btrFee,
         ftMinAmount,
-        utxoMerkleTreeRoot)
+        Optional.ofNullable(utxoMerkleTreeRoot.orNull)
+      )
     }
 
     Await.result(sidechainNodeViewHolderRef ? GetDataFromCurrentView(getMessage), timeoutDuration).asInstanceOf[Try[Array[Byte]]].get

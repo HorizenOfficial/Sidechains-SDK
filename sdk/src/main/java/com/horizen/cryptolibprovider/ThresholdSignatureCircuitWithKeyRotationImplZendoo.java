@@ -1,5 +1,6 @@
 package com.horizen.cryptolibprovider;
 
+import com.horizen.block.SidechainCreationVersions;
 import com.horizen.block.WithdrawalEpochCertificate;
 import com.horizen.box.WithdrawalRequestBox;
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesListBytes;
@@ -11,7 +12,6 @@ import com.horizen.schnorrnative.SchnorrKeysSignaturesList;
 import com.horizen.schnorrnative.SchnorrPublicKey;
 import com.horizen.schnorrnative.SchnorrSignature;
 import com.horizen.utils.Pair;
-import scala.Enumeration;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -114,7 +114,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
              boolean checkProvingKey,
              boolean zk,
              Optional<WithdrawalEpochCertificate> previousEpochCertificateOption,
-             Enumeration.Value sidechainCreationVersion,
+             int sidechainCreationVersionNumber,
              byte[] genesisKeysRootHash
             ) {
 
@@ -128,7 +128,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         List<FieldElement> customFieldsElements = prepareCustomFieldElements(customFields);
 
         Optional<WithdrawalCertificate> previousCertificateOption = previousEpochCertificateOption
-                .map(c -> CommonCircuit.createWithdrawalCertificate(c, sidechainCreationVersion));
+                .map(c -> CommonCircuit.createWithdrawalCertificate(c, SidechainCreationVersions.Value(sidechainCreationVersionNumber)));
 
         SchnorrKeysSignaturesList keysSignaturesList = SchnorrKeysSignaturesListBytes.getSchnorrKeysSignaturesList(schnorrKeysSignaturesListBytes);
         SchnorrPublicKey[] signingPublicKeys = keysSignaturesList.getSigningKeys();
@@ -174,7 +174,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                                String verificationKeyPath,
                                Optional<WithdrawalEpochCertificate> previousEpochCertificateOption,
                                byte[] genesisConstantBytes,
-                               Enumeration.Value sidechainCreationVersion) {
+                               int sidechainCreationVersionNumber) {
         List<BackwardTransfer> backwardTransfers =
                 bt.stream().map(CommonCircuit::withdrawalRequestBoxToBackwardTransfer).collect(Collectors.toList());
 
@@ -196,7 +196,7 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         );
 
         Optional<WithdrawalCertificate> previousCertificateOption = previousEpochCertificateOption
-                .map(c -> CommonCircuit.createWithdrawalCertificate(c, sidechainCreationVersion));
+                .map(c -> CommonCircuit.createWithdrawalCertificate(c, SidechainCreationVersions.Value(sidechainCreationVersionNumber)));
 
 
         boolean verificationResult = NaiveThresholdSignatureWKeyRotation.verifyProof(withdrawalCertificate, previousCertificateOption, genesisConstant, proof, verificationKeyPath);

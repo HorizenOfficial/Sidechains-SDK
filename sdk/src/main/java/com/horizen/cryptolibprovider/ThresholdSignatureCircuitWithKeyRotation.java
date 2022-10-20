@@ -1,10 +1,10 @@
 package com.horizen.cryptolibprovider;
 
+import com.horizen.block.SidechainCreationVersions;
 import com.horizen.block.WithdrawalEpochCertificate;
 import com.horizen.box.WithdrawalRequestBox;
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesListBytes;
 import com.horizen.utils.Pair;
-import scala.Enumeration;
 
 import java.util.List;
 import java.util.Optional;
@@ -32,7 +32,7 @@ public interface ThresholdSignatureCircuitWithKeyRotation {
                                    boolean checkProvingKey,
                                    boolean zk,
                                    Optional<WithdrawalEpochCertificate> previousEpochCertificateOption,
-                                   Enumeration.Value sidechainCreationVersion,
+                                   int sidechainCreationVersionNumber,
                                    byte[] genesisKeysRootHash);
 
     Boolean verifyProof(List<WithdrawalRequestBox> bt,
@@ -48,7 +48,7 @@ public interface ThresholdSignatureCircuitWithKeyRotation {
                         String verificationKeyPath,
                         Optional<WithdrawalEpochCertificate> previousEpochCertificateOption,
                         byte[] genesisConstantBytes,
-                        Enumeration.Value sidechainCreationVersion);
+                        int sidechainCreationVersionNumber);
 
     byte[] generateSysDataConstant(byte[] genesisKeysRootHash, long threshold);
 
