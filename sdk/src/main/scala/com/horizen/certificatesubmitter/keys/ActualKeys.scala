@@ -1,6 +1,8 @@
 package com.horizen.certificatesubmitter.keys
 
+import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
+import com.horizen.serialization.Views
 import com.horizen.utils.MerkleTree
 import scorex.crypto.hash.Sha256
 import scorex.util.serialization.{Reader, Writer}
@@ -8,6 +10,7 @@ import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 
 import scala.collection.JavaConverters.seqAsJavaListConverter
 
+@JsonView(Array(classOf[Views.Default]))
 case class ActualKeys(signingKeys: Vector[SchnorrProposition], masterKeys: Vector[SchnorrProposition]) extends BytesSerializable {
   override type M = ActualKeys
 

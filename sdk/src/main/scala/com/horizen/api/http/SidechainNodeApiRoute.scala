@@ -6,9 +6,13 @@ import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.SidechainApp
 import com.horizen.SidechainNodeViewHolder.ReceivableMessages.GetStorageVersions
 import com.horizen.api.http.JacksonSupport._
-import com.horizen.api.http.SidechainNodeErrorResponse.{ErrorInvalidHost, ErrorStopNodeAlreadyInProgress}
+import com.horizen.api.http.SidechainNodeErrorResponse.{ErrorBadCircuit, ErrorInvalidHost, ErrorRetrieveCertificateSigners, ErrorStopNodeAlreadyInProgress}
 import com.horizen.api.http.SidechainNodeRestSchema._
+import com.horizen.certificatesubmitter.CertificateSubmitterRef.TypeOfCircuit.{NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation, TypeOfCircuit}
+import com.horizen.certificatesubmitter.keys.{ActualKeys, KeyRotationProof}
 import com.horizen.params.NetworkParams
+import com.horizen.schnorrnative.SchnorrSecretKey
+import com.horizen.secret.SchnorrSecret
 import com.horizen.serialization.Views
 import com.horizen.utils.BytesUtils
 import sparkz.core.network.ConnectedPeer
@@ -27,12 +31,12 @@ import scala.util.{Failure, Success, Try}
 case class SidechainNodeApiRoute(peerManager: ActorRef,
                                  networkController: ActorRef,
                                  timeProvider: NetworkTimeProvider,
-                                 override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, app: SidechainApp, params: NetworkParams)
+                                 override val settings: RESTApiSettings, sidechainNodeViewHolderRef: ActorRef, app: SidechainApp, params: NetworkParams, circuiType: TypeOfCircuit)
                                 (implicit val context: ActorRefFactory, override val ec: ExecutionContext) extends SidechainApiRoute {
 
   override val route: Route = pathPrefix("node") {
 
-    connect ~ allPeers ~ connectedPeers ~ blacklistedPeers ~ disconnect ~ stop ~ getNodeStorageVersions ~ getSidechainId
+    connect ~ allPeers ~ connectedPeers ~ blacklistedPeers ~ disconnect ~ stop ~ getNodeStorageVersions ~ getSidechainId ~ signMessage ~ getCertificateSigners ~ getKeyRotationProofs
   }
 
   private val addressAndPortRegexp = "([\\w\\.]+):(\\d{1,5})".r
@@ -177,6 +181,60 @@ case class SidechainNodeApiRoute(peerManager: ActorRef,
     }
   }
 
+  def signMessage: Route = (post & path("signMessage")) {
+    entity(as[ReqSignMessage]) { body =>
+      try {
+        val secretKey = SchnorrSecretKey.deserialize(BytesUtils.fromHexString(body.key))
+        val publickKey = secretKey.getPublicKey
+        val schnorrSecret = new SchnorrSecret(secretKey.serializeSecretKey(), publickKey.serializePublicKey())
+        ApiResponseUtil.toResponse(
+          RespSignMessage(
+            BytesUtils.toHexString(
+              schnorrSecret.sign(
+                BytesUtils.fromHexString(body.messageToSign)
+              ).bytes()
+            )
+          )
+        )
+      } catch {
+        case e: Throwable => SidechainApiError(e)
+      }
+    }
+  }
+
+  def getCertificateSigners: Route = (post & path("getCertificateSigners")) {
+    try {
+      withView { sidechainNodeView =>
+        val currentEpoch = sidechainNodeView.state.getWithdrawalEpochInfo.epoch
+        sidechainNodeView.state.actualKeys(currentEpoch) match {
+          case Some(actualKeys) =>
+            ApiResponseUtil.toResponse(RespGetCertificateSigners(actualKeys))
+          case None =>
+            ApiResponseUtil.toResponse(ErrorRetrieveCertificateSigners("Impossible to find certificate signer keys!", JOptional.empty()))
+        }
+      }
+    } catch {
+      case e: Throwable => SidechainApiError(e)
+    }
+  }
+
+  def getKeyRotationProofs: Route = (post & path("getKeyRotationProofs")) {
+    try {
+      withView { sidechainNodeView =>
+        circuiType match {
+          case NaiveThresholdSignatureCircuit =>
+            ApiResponseUtil.toResponse(ErrorBadCircuit("The current circuit doesn't support key rotation proofs!", JOptional.empty()))
+          case NaiveThresholdSignatureCircuitWithKeyRotation =>
+            val currentEpoch = sidechainNodeView.state.getWithdrawalEpochInfo.epoch
+            val keyRotationProofs = sidechainNodeView.state.keyRotationProofs(currentEpoch)
+            ApiResponseUtil.toResponse(RespGetKeyRotationProof(keyRotationProofs))
+        }
+      }
+    } catch {
+      case e: Throwable => SidechainApiError(e)
+    }
+  }
+
 }
 
 object SidechainNodeRestSchema {
@@ -223,6 +281,20 @@ object SidechainNodeRestSchema {
   @JsonView(Array(classOf[Views.Default]))
   private[api] case class RespGetSidechainId(sidechainId: String) extends SuccessResponse
 
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class ReqSignMessage(messageToSign: String, key: String) {
+    require(messageToSign != null && messageToSign.length > 0, "Null messageToSign")
+    require(key != null && key.length > 0, "Null key")
+  }
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespSignMessage(signedMessage: String) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespGetCertificateSigners(actualKeys: ActualKeys) extends SuccessResponse
+
+  @JsonView(Array(classOf[Views.Default]))
+  private[api] case class RespGetKeyRotationProof(keyRotationProofs: Seq[KeyRotationProof]) extends SuccessResponse
 }
 
 object SidechainNodeErrorResponse {
@@ -233,6 +305,14 @@ object SidechainNodeErrorResponse {
 
   case class ErrorStopNodeAlreadyInProgress(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
     override val code: String = "0402"
+  }
+
+  case class ErrorRetrieveCertificateSigners(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
+    override val code: String = "0403"
+  }
+
+  case class ErrorBadCircuit(description: String, exception: JOptional[Throwable]) extends ErrorResponse {
+    override val code: String = "0404"
   }
 
 }

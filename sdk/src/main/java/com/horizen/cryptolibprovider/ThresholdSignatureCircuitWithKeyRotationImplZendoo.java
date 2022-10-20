@@ -6,6 +6,7 @@ import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesListBytes;
 import com.horizen.certnative.*;
 import com.horizen.certnative.BackwardTransfer;
 import com.horizen.librustsidechains.FieldElement;
+import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.schnorrnative.SchnorrKeysSignaturesList;
 import com.horizen.schnorrnative.SchnorrPublicKey;
 import com.horizen.schnorrnative.SchnorrSignature;
@@ -217,14 +218,43 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
 
 
     @Override
-    public byte[] generateSysDataConstant(byte[] genesisKeysRootHash, long threshold) {
+    public byte[] generateSysDataConstant(List<byte[]> signerPublicKeysList, List<byte[]> masterPublicKeysList, long threshold) {
+
+        List<SchnorrPublicKey> signerPublicKeys = signerPublicKeysList.stream().map(key -> SchnorrPublicKey.deserialize(key)).
+                collect(Collectors.toList());
+        List<SchnorrPublicKey> masterPublicKeys = masterPublicKeysList.stream().map(key -> SchnorrPublicKey.deserialize(key)).
+                collect(Collectors.toList());
+
+        SchnorrKeysSignaturesList schnorrKeysSignaturesList = new SchnorrKeysSignaturesList(
+                signerPublicKeys,
+                masterPublicKeys,
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>()
+        );
 
         // Note: sc-cryptolib return constant in LittleEndian
-        FieldElement sysDataConstant = NaiveThresholdSignatureWKeyRotation.getConstant(FieldElement.deserialize(genesisKeysRootHash), threshold);
+        FieldElement sysDataConstant;
+        try {
+            sysDataConstant = NaiveThresholdSignatureWKeyRotation.getConstant(schnorrKeysSignaturesList.getKeysRootHash(signerPublicKeys.size()), threshold);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Fail to get the Constant");
+        }
+
         byte[] sysDataConstantBytes = sysDataConstant.serializeFieldElement();
 
         sysDataConstant.freeFieldElement();
 
         return sysDataConstantBytes;
+    }
+
+    @Override
+    public boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath, int customFieldsNum) {
+        return NaiveThresholdSigProof.setup(ProvingSystemType.COBOUNDARY_MARLIN, maxPks, customFieldsNum,
+                Optional.of(supportedSegmentSize),
+                provingKeyPath, verificationKeyPath, CommonCircuit.maxProofPlusVkSize);
     }
 }

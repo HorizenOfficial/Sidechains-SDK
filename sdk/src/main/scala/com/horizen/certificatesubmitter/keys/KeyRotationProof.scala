@@ -1,11 +1,14 @@
 package com.horizen.certificatesubmitter.keys
 
+import com.fasterxml.jackson.annotation.JsonView
 import com.horizen.certificatesubmitter.keys.KeyRotationProofType.KeyRotationProofType
 import com.horizen.proof.{SchnorrProof, SchnorrSignatureSerializer}
 import com.horizen.proposition.{SchnorrProposition, SchnorrPropositionSerializer}
+import com.horizen.serialization.Views
 import scorex.util.serialization.{Reader, Writer}
 import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 
+@JsonView(Array(classOf[Views.Default]))
 case class KeyRotationProof(keyType: KeyRotationProofType, index: Int = 0, newValueOfKey: SchnorrProposition,
                             signingKeySignature: SchnorrProof, masterKeySignature: SchnorrProof) extends BytesSerializable {
 
