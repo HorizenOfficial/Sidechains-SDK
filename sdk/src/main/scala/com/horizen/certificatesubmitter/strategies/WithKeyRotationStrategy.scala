@@ -6,8 +6,8 @@ import com.horizen.block.{SidechainCreationVersions, WithdrawalEpochCertificate}
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
 import com.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateDataWithKeyRotation}
-import com.horizen.certificatesubmitter.keys.ActualKeys.getMerkleRootOfPublicKeys
-import com.horizen.certificatesubmitter.keys.{ActualKeys, KeyRotationProof, KeyRotationProofType, SchnorrKeysSignaturesListBytes}
+import com.horizen.certificatesubmitter.keys.CertifiersKeys.getMerkleRootOfPublicKeys
+import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofType, SchnorrKeysSignaturesListBytes}
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.params.NetworkParams
 import com.horizen.websocket.server.WebSocketServerRef.sidechainNodeViewHolderRef
@@ -89,7 +89,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
         (pubKey, status.knownSigs.find(info => info.pubKeyIndex == pubKeyIndex).map(_.signature))
     }
 
-    val actualKeysOption: Option[ActualKeys] = state.actualKeys(status.referencedEpoch)
+    val actualKeysOption: Option[CertifiersKeys] = state.certifiersKeys(status.referencedEpoch)
     val previousCertificateOption: Option[WithdrawalEpochCertificate] = state.certificate(status.referencedEpoch - 1)
 
     val keyRotationProofs: Seq[KeyRotationProof] = state.keyRotationProofs(status.referencedEpoch)
@@ -143,7 +143,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       signersPublicKeyWithSignatures,
       schnorrKeysSignaturesListBytes,
       previousCertificateOption,
-      ActualKeys.getMerkleRootOfPublicKeys(ActualKeys(params.signersPublicKeys.toVector, params.mastersPublicKeys.toVector))
+      CertifiersKeys.getMerkleRootOfPublicKeys(CertifiersKeys(params.signersPublicKeys.toVector, params.mastersPublicKeys.toVector))
     )
   }
 
@@ -168,7 +168,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
 
   private def getActualKeysMerkleRoot(referencedWithdrawalEpochNumber: Int, state: SidechainState): Array[Byte] = {
     Try {
-      state.actualKeys(referencedWithdrawalEpochNumber).map(getMerkleRootOfPublicKeys)
+      state.certifiersKeys(referencedWithdrawalEpochNumber).map(getMerkleRootOfPublicKeys)
     } match {
       case Failure(e: IllegalStateException) =>
         throw new Exception("CertificateSubmitter is too late against the State. " +

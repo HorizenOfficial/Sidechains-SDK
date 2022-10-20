@@ -158,11 +158,11 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     withdrawalRequests
   }
 
-  def getActualKeys(withdrawalEpoch: Int): Option[ActualKeys] = {
+  def getActualCertifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys] = {
     storage.get(getTopQualityCertificateKey(withdrawalEpoch)).asScala match {
       case Some(baw) =>
         ActualKeysSerializer.parseBytesTry(baw.data) match {
-          case Success(actualKeys: ActualKeys) => Option(actualKeys)
+          case Success(actualKeys: CertifiersKeys) => Option(actualKeys)
           case Failure(exception) =>
             log.error("Error while withdrawal epoch certificate public keys parsing.", exception)
             Option.empty
@@ -251,7 +251,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
              forgerListIndexes: Array[Int],
              forgerListSize: Int,
              keyRotationProofs: Option[Seq[KeyRotationProof]] = None,
-             actualKeys: Option[ActualKeys] = None): Try[SidechainStateStorage] = Try {
+             actualKeys: Option[CertifiersKeys] = None): Try[SidechainStateStorage] = Try {
     require(withdrawalEpochInfo != null, "WithdrawalEpochInfo must be NOT NULL.")
     require(boxUpdateList != null, "List of Boxes to add/update must be NOT NULL. Use empty List instead.")
     require(boxIdsRemoveSet != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")
@@ -289,7 +289,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
     (keyRotationProofs, actualKeys) match {
 
-      case (Some(keyRotationProofs: Seq[KeyRotationProof]), Some(actualKeys: ActualKeys)) =>
+      case (Some(keyRotationProofs: Seq[KeyRotationProof]), Some(actualKeys: CertifiersKeys)) =>
         keyRotationProofs.foreach(keyRotationProof => {
           updateList.add(new JPair(getKeys(withdrawalEpochInfo.epoch, getWithdrawalEpochCounter(withdrawalEpochInfo.epoch) + 1),
             new ByteArrayWrapper(KeyRotationProofSerializer.toBytes(keyRotationProof))))
