@@ -13,7 +13,7 @@ public interface ThresholdSignatureCircuit {
                                      byte[] endCumulativeScTxCommTreeRoot,
                                      long btrFee,
                                      long ftMinAmount,
-                                     List<byte[]> customParameters);
+                                     Optional<byte[]> utxoMerkleTreeRoot);
 
     //None elements for schnorrSignatureBytesList if no secret key available, thus schnorrSignatureBytesList.size() == schnorrPublicKeysBytesList.size()
     //threshold is the same as in generateSysDataConstant
@@ -23,13 +23,13 @@ public interface ThresholdSignatureCircuit {
                                    byte[] endCumulativeScTxCommTreeRoot,
                                    long btrFee,
                                    long ftMinAmount,
-                                   List<byte[]> customParameters,
+                                   Optional<byte[]> utxoMerkleTreeRoot,
                                    List<Optional<byte[]>> schnorrSignatureBytesList,
                                    List<byte[]> schnorrPublicKeysBytesList,
                                    long threshold,
                                    String provingKeyPath,
                                    boolean checkProvingKey,
-                                   boolean zk);
+                                   boolean zk); // todo check name
 
     Boolean verifyProof(List<WithdrawalRequestBox> bt,
                         byte[] sidechainId,
@@ -37,7 +37,7 @@ public interface ThresholdSignatureCircuit {
                         byte[] endCumulativeScTxCommTreeRoot,
                         long btrFee,
                         long ftMinAmount,
-                        List<byte[]> customFields,
+                        Optional<byte[]> utxoMerkleTreeRoot,
                         byte[] constant,
                         long quality, byte[] proof,
                         boolean checkProof,
@@ -48,7 +48,7 @@ public interface ThresholdSignatureCircuit {
 
     boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath, int customFieldsNum);
 
-    List<byte[]> getCertificateCustomFields(List<byte[]> customFields);
+    List<byte[]> getCertificateCustomFields(Optional<byte[]> utxoMerkleTreeRoot);
 
     byte[] reconstructUtxoMerkleTreeRoot(byte[] fe1Bytes, byte[] fe2Bytes);
 }

@@ -11,7 +11,6 @@ import com.horizen.schnorrnative.SchnorrSignature;
 import com.horizen.utils.Pair;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -23,25 +22,25 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
 
     private static final SchnorrSignature signaturePlaceHolder = new SchnorrSignature();
 
-    static BackwardTransfer withdrawalRequestBoxToBackwardTransfer(WithdrawalRequestBox box) {
+    private static BackwardTransfer withdrawalRequestBoxToBackwardTransfer(WithdrawalRequestBox box) {
         return new BackwardTransfer(box.proposition().bytes(), box.value());
     }
 
     @Override
-    public List<byte[]> getCertificateCustomFields(List<byte[]> customFields) {
-        List<FieldElement> fes = prepareCustomFieldElements(customFields);
+    public List<byte[]> getCertificateCustomFields(Optional<byte[]> utxoMerkleTreeRoot) {
+        List<FieldElement> fes = prepareCustomFieldElements(utxoMerkleTreeRoot);
         List<byte[]> fesBytes = fes.stream().map(FieldElement::serializeFieldElement).collect(Collectors.toList());
         fes.forEach(FieldElement::freeFieldElement);
         return fesBytes;
     }
 
-    private List<FieldElement> prepareCustomFieldElements(List<byte[]> customFields)  {
-        Iterator<byte[]> iterator = customFields.iterator();
-        List<FieldElement> fieldElements = new ArrayList<>();
-        while (iterator.hasNext()) {
-            fieldElements.addAll(splitUtxoMerkleTreeRootToFieldElements(iterator.next()));
+    private List<FieldElement> prepareCustomFieldElements(Optional<byte[]> utxoMerkleTreeRoot)  {
+        if (utxoMerkleTreeRoot.isPresent())   {
+            return splitUtxoMerkleTreeRootToFieldElements(utxoMerkleTreeRoot.get());
         }
-        return fieldElements;
+        else {
+            return new ArrayList<>();
+        }
     }
 
     private List<FieldElement> splitUtxoMerkleTreeRootToFieldElements(byte[] utxoMerkleTreeRoot) {
@@ -80,13 +79,13 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
                                             byte[] endCumulativeScTxCommTreeRoot,
                                             long btrFee,
                                             long ftMinAmount,
-                                            List<byte[]> customParameters) {
+                                            Optional<byte[]> utxoMerkleTreeRoot) {
         BackwardTransfer[] backwardTransfers =
                 bt.stream().map(ThresholdSignatureCircuitImplZendoo::withdrawalRequestBoxToBackwardTransfer).toArray(BackwardTransfer[]::new);
 
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
-        List<FieldElement> customFe = prepareCustomFieldElements(customParameters);
+        List<FieldElement> customFe = prepareCustomFieldElements(utxoMerkleTreeRoot);
 
         FieldElement messageToSign = NaiveThresholdSigProof.createMsgToSign(backwardTransfers, sidechainIdFe,
                 epochNumber, endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount, customFe);
@@ -101,14 +100,13 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
     }
 
     @Override
-    public Pair<byte[], Long> createProof //
-            (List<WithdrawalRequestBox> bt,
+    public Pair<byte[], Long> createProof(List<WithdrawalRequestBox> bt,
                                           byte[] sidechainId,
                                           int epochNumber,
                                           byte[] endCumulativeScTxCommTreeRoot,
                                           long btrFee,
                                           long ftMinAmount,
-                                          List<byte[]> customParameters,
+                                          Optional<byte[]> utxoMerkleTreeRoot,
                                           List<Optional<byte[]>> schnorrSignatureBytesList,
                                           List<byte[]> schnorrPublicKeysBytesList,
                                           long threshold,
@@ -119,16 +117,16 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
                 bt.stream().map(ThresholdSignatureCircuitImplZendoo::withdrawalRequestBoxToBackwardTransfer).collect(Collectors.toList());
 
         List<SchnorrSignature> signatures = schnorrSignatureBytesList
-                                                .stream()
-                                                .map(signatureBytesOpt -> signatureBytesOpt.map(SchnorrSignature::deserialize).orElse(signaturePlaceHolder))
-                                                .collect(Collectors.toList());
+                .stream()
+                .map(signatureBytesOpt -> signatureBytesOpt.map(SchnorrSignature::deserialize).orElse(signaturePlaceHolder))
+                .collect(Collectors.toList());
 
         List<SchnorrPublicKey> publicKeys =
                 schnorrPublicKeysBytesList.stream().map(SchnorrPublicKey::deserialize).collect(Collectors.toList());
 
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
-        List<FieldElement> customFe = prepareCustomFieldElements(customParameters);
+        List<FieldElement> customFe = prepareCustomFieldElements(utxoMerkleTreeRoot);
 
         CreateProofResult proofAndQuality = NaiveThresholdSigProof.createProof(
                 backwardTransfers, sidechainIdFe, epochNumber, endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount,
@@ -152,7 +150,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
                                byte[] endCumulativeScTxCommTreeRoot,
                                long btrFee,
                                long ftMinAmount,
-                               List<byte[]> customFields,
+                               Optional<byte[]> utxoMerkleTreeRoot,
                                byte[] constant,
                                long quality, byte[] proof,
                                boolean checkProof,
@@ -164,7 +162,7 @@ public class ThresholdSignatureCircuitImplZendoo implements ThresholdSignatureCi
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         FieldElement constantFe = FieldElement.deserialize(constant);
         FieldElement sidechainIdFe = FieldElement.deserialize(sidechainId);
-        List<FieldElement> customFe = prepareCustomFieldElements(customFields);
+        List<FieldElement> customFe = prepareCustomFieldElements(utxoMerkleTreeRoot);
 
         boolean verificationResult = NaiveThresholdSigProof.verifyProof(backwardTransfers, sidechainIdFe, epochNumber,
                 endCumulativeScTxCommTreeRootFe, btrFee, ftMinAmount, constantFe, quality, customFe, proof, checkProof,
