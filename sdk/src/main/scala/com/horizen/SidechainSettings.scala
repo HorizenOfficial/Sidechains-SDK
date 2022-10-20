@@ -1,7 +1,7 @@
 package com.horizen
 
-import com.horizen.certificatesubmitter.CertificateSubmitterRef.TypeOfCircuit
-import com.horizen.certificatesubmitter.CertificateSubmitterRef.TypeOfCircuit.TypeOfCircuit
+import com.horizen.cryptolibprovider.utils.TypeOfCircuit
+import com.horizen.cryptolibprovider.utils.TypeOfCircuit.TypeOfCircuit
 import sparkz.core.settings.SparkzSettings
 
 import scala.concurrent.duration.FiniteDuration

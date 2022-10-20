@@ -2,7 +2,7 @@ package com.horizen.fixtures
 
 import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.chain.{MainchainHeaderBaseInfo, MainchainHeaderHash, SidechainBlockInfo, byteArrayToMainchainHeaderHash}
-import com.horizen.cryptolibprovider.CumulativeHashFunctions
+import com.horizen.cryptolibprovider.utils.CumulativeHashFunctions
 import com.horizen.params.{NetworkParams, RegTestParams}
 import com.horizen.utils.{WithdrawalEpochInfo, WithdrawalEpochUtils, BytesUtils}
 import sparkz.core.consensus.ModifierSemanticValidity

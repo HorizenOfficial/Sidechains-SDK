@@ -4,7 +4,7 @@
 //import com.horizen.box.WithdrawalRequestBox
 //import com.horizen.box.data.WithdrawalRequestBoxData
 //import com.horizen.certificatesubmitter.keys.ActualKeys
-//import com.horizen.cryptolibprovider.SchnorrFunctions.KeyType
+//import com.horizen.cryptolibprovider.utils.SchnorrFunctions.KeyType
 //import com.horizen.cryptolibprovider._
 //import com.horizen.fixtures.FieldElementFixture
 //import com.horizen.proposition.{MCPublicKeyHashProposition, SchnorrProposition}

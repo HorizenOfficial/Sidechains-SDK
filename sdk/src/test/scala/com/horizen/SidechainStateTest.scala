@@ -4,7 +4,7 @@ import com.horizen.block.{MainchainBlockReferenceData, SidechainBlock, Withdrawa
 import com.horizen.box._
 import com.horizen.box.data.{BoxData, ForgerBoxData, WithdrawalRequestBoxData, ZenBoxData}
 import com.horizen.consensus.{ConsensusEpochNumber, intToConsensusEpochNumber}
-import com.horizen.cryptolibprovider.FieldElementUtils
+import com.horizen.cryptolibprovider.utils.FieldElementUtils
 import com.horizen.fixtures.{SecretFixture, SidechainTypesTestsExtension, StoreFixture, TransactionFixture}
 import com.horizen.forge.ForgerList
 import com.horizen.fork.{ForkManager, SimpleForkConfigurator}

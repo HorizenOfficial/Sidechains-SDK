@@ -1,8 +1,10 @@
-package com.horizen.cryptolibprovider;
+package com.horizen.cryptolibprovider.implementations;
 
 import com.horizen.block.WithdrawalEpochCertificate;
 import com.horizen.box.Box;
 import com.horizen.certnative.WithdrawalCertificate;
+import com.horizen.cryptolibprovider.CommonCircuit;
+import com.horizen.cryptolibprovider.CswCircuit;
 import com.horizen.cswnative.CswFtProverData;
 import com.horizen.cswnative.CswProof;
 import com.horizen.cswnative.CswSysData;

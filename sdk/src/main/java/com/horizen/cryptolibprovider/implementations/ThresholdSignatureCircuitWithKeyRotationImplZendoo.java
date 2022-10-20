@@ -1,4 +1,4 @@
-package com.horizen.cryptolibprovider;
+package com.horizen.cryptolibprovider.implementations;
 
 import com.horizen.block.SidechainCreationVersions;
 import com.horizen.block.WithdrawalEpochCertificate;
@@ -6,6 +6,8 @@ import com.horizen.box.WithdrawalRequestBox;
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesListBytes;
 import com.horizen.certnative.*;
 import com.horizen.certnative.BackwardTransfer;
+import com.horizen.cryptolibprovider.CommonCircuit;
+import com.horizen.cryptolibprovider.ThresholdSignatureCircuitWithKeyRotation;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.schnorrnative.SchnorrKeysSignaturesList;

@@ -3,8 +3,9 @@ package com.horizen
 import com.google.common.io.Files
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.box.data.WithdrawalRequestBoxData
-import com.horizen.cryptolibprovider.SchnorrFunctions.KeyType
-import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider, SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitImplZendoo}
+import com.horizen.cryptolibprovider.utils.SchnorrFunctions.KeyType
+import com.horizen.cryptolibprovider.implementations.{SchnorrFunctionsImplZendoo, ThresholdSignatureCircuitImplZendoo}
+import com.horizen.cryptolibprovider.{CommonCircuit, CryptoLibProvider}
 import com.horizen.fixtures.FieldElementFixture
 import com.horizen.proposition.MCPublicKeyHashProposition
 import com.horizen.schnorrnative.SchnorrSecretKey

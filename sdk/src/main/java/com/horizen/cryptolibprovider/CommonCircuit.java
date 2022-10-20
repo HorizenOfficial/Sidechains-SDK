@@ -44,11 +44,11 @@ public class  CommonCircuit {
         }
     }
 
-    static BackwardTransfer withdrawalRequestBoxToBackwardTransfer(WithdrawalRequestBox box) {
+    public static BackwardTransfer withdrawalRequestBoxToBackwardTransfer(WithdrawalRequestBox box) {
         return new BackwardTransfer(box.proposition().bytes(), box.value());
     }
 
-    static WithdrawalCertificate createWithdrawalCertificate(WithdrawalEpochCertificate cert, Enumeration.Value sidechainCreationVersion) {
+    public static WithdrawalCertificate createWithdrawalCertificate(WithdrawalEpochCertificate cert, Enumeration.Value sidechainCreationVersion) {
         return new WithdrawalCertificate(
                 FieldElement.deserialize(cert.sidechainId()),
                 cert.epochNumber(),

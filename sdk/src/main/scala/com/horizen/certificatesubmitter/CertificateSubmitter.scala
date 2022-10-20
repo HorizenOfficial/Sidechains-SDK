@@ -9,7 +9,7 @@ import com.horizen.block.{MainchainBlockReference, SidechainBlock}
 import com.horizen.certificatesubmitter.CertificateSubmitter._
 import com.horizen.certificatesubmitter.dataproof.DataForProofGeneration
 import com.horizen.certificatesubmitter.strategies.{KeyRotationStrategy, WithKeyRotationStrategy, WithoutKeyRotationStrategy}
-import com.horizen.cryptolibprovider.FieldElementUtils
+import com.horizen.cryptolibprovider.utils.{FieldElementUtils, TypeOfCircuit}
 import com.horizen.mainchain.api.{CertificateRequestCreator, SendCertificateRequest}
 import com.horizen.params.NetworkParams
 import com.horizen.proof.SchnorrProof
@@ -554,11 +554,5 @@ object CertificateSubmitterRef {
             mainchainChannel: MainchainNodeChannel)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef =
     system.actorOf(props(settings, sidechainNodeViewHolderRef, params, mainchainChannel).withMailbox("akka.actor.deployment.submitter-prio-mailbox"), name)
-
-  object TypeOfCircuit extends Enumeration {
-    type TypeOfCircuit = Value
-
-    val NaiveThresholdSignatureCircuit, NaiveThresholdSignatureCircuitWithKeyRotation = Value
-  }
 }
 
