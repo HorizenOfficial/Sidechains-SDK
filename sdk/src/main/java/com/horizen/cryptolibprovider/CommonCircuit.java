@@ -4,9 +4,11 @@ import com.horizen.block.WithdrawalEpochCertificate;
 import com.horizen.box.WithdrawalRequestBox;
 import com.horizen.certnative.BackwardTransfer;
 import com.horizen.certnative.WithdrawalCertificate;
+import com.horizen.cryptolibprovider.implementations.ThresholdSignatureCircuitImplZendoo;
 import com.horizen.librustsidechains.FieldElement;
 import com.horizen.provingsystemnative.ProvingSystem;
 import com.horizen.provingsystemnative.ProvingSystemType;
+import com.horizen.schnorrnative.SchnorrSignature;
 import com.horizen.utils.BytesUtils;
 import scala.Enumeration;
 
@@ -14,6 +16,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class  CommonCircuit {
@@ -59,5 +63,17 @@ public class  CommonCircuit {
                 cert.btrFee(),
                 Arrays.stream(cert.customFieldsOpt(sidechainCreationVersion).get()).map(FieldElement::deserialize).collect(Collectors.toList())
         );
+    }
+
+    public static List<SchnorrSignature> getSignatures(List<Optional<byte[]>> schnorrSignatureBytesList){
+        return schnorrSignatureBytesList
+                .stream()
+                .map(signatureBytesOpt -> signatureBytesOpt.map(SchnorrSignature::deserialize).orElse(new SchnorrSignature()))
+                .collect(Collectors.toList());
+    }
+
+    public static List<BackwardTransfer> getBackwardTransfers(List<WithdrawalRequestBox> withdrawalRequestBoxes){
+        return withdrawalRequestBoxes.stream()
+                .map(CommonCircuit::withdrawalRequestBoxToBackwardTransfer).collect(Collectors.toList());
     }
 }

@@ -22,8 +22,6 @@ import sparkz.core.{ModifiersCache, idToVersion, versionToId}
 import scorex.util.{ModifierId, ScorexLogging}
 
 import scala.annotation.tailrec
-import scala.reflect.runtime.universe.typeTag
-import scala.reflect.{ClassTag, classTag}
 import scala.util.{Failure, Success, Try}
 
 class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,

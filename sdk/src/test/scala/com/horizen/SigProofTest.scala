@@ -35,17 +35,6 @@ class SigProofTest {
     tmpDir.delete()
   }
 
-  // Use this method to regenerate Schnorr PrivateKeys and save them to resources.
-  // Note: currently schnorr keys are generated non-deterministically
-  private def generateSchnorrPrivateKeys(): Unit = {
-    (0 to 9).foreach(index => {
-      val bts = schnorrFunctions.generateSchnorrKeys(s"$index".getBytes()).get(KeyType.SECRET)
-      val bw = new BufferedWriter(new FileWriter("src/test/resources/schnorr_sk0"+ index + "_hex"))
-      bw.write(BytesUtils.toHexString(bts))
-      bw.close()
-    })
-  }
-
   private def buildSchnorrPrivateKey(index: Int): SchnorrSecretKey = {
     var bytes: Array[Byte] = null
     try {
