@@ -49,7 +49,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     Utils.calculateKey(Bytes.concat("withdrawalRequests".getBytes, Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
   }
 
-  private[horizen] def getKeys(withdrawalEpoch: Int, counter: Int): ByteArrayWrapper = {
+  private[horizen] def getActualCertifierStorageKey(withdrawalEpoch: Int, counter: Int): ByteArrayWrapper = {
     Utils.calculateKey(Bytes.concat("keys".getBytes, Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
   }
 
@@ -171,7 +171,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
   }
 
-  def getKeyRotationProofs(withdrawalEpochNumber: Int): Seq[KeyRotationProof]= {
+  def getKeyRotationProofs(withdrawalEpochNumber: Int): Seq[KeyRotationProof] = {
     val lastCounter = getWithdrawalEpochCounter(withdrawalEpochNumber)
     storage.get(getKeyRotationProof(withdrawalEpochNumber, lastCounter)).asScala match {
       case Some(baw) => KeyRotationProofSerializer.parseBytesTry(baw.data) match {
@@ -250,7 +250,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
              scHasCeased: Boolean,
              forgerListIndexes: Array[Int],
              forgerListSize: Int,
-             keyRotationProofs: Option[Seq[KeyRotationProof]] = None,
+             keyRotationProofs: Seq[KeyRotationProof] = Seq.empty[KeyRotationProof],
              actualKeys: Option[CertifiersKeys] = None): Try[SidechainStateStorage] = Try {
     require(withdrawalEpochInfo != null, "WithdrawalEpochInfo must be NOT NULL.")
     require(boxUpdateList != null, "List of Boxes to add/update must be NOT NULL. Use empty List instead.")
@@ -289,9 +289,9 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
     (keyRotationProofs, actualKeys) match {
 
-      case (Some(keyRotationProofs: Seq[KeyRotationProof]), Some(actualKeys: CertifiersKeys)) =>
+      case (keyRotationProofs: Seq[KeyRotationProof], Some(actualKeys: CertifiersKeys)) if keyRotationProofs.nonEmpty =>
         keyRotationProofs.foreach(keyRotationProof => {
-          updateList.add(new JPair(getKeys(withdrawalEpochInfo.epoch, getWithdrawalEpochCounter(withdrawalEpochInfo.epoch) + 1),
+          updateList.add(new JPair(getActualCertifierStorageKey(withdrawalEpochInfo.epoch, getWithdrawalEpochCounter(withdrawalEpochInfo.epoch) + 1),
             new ByteArrayWrapper(KeyRotationProofSerializer.toBytes(keyRotationProof))))
 
           keyRotationProof match {
@@ -301,7 +301,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
               actualKeys.masterKeys.updated(keyRotationProof.index, keyRotationProof.newValueOfKey)
           }
         })
-        updateList.add(new JPair(getKeys(withdrawalEpochInfo.epoch, getWithdrawalEpochCounter(withdrawalEpochInfo.epoch) + 1),
+        updateList.add(new JPair(getActualCertifierStorageKey(withdrawalEpochInfo.epoch, getWithdrawalEpochCounter(withdrawalEpochInfo.epoch) + 1),
           new ByteArrayWrapper(ActualKeysSerializer.toBytes(actualKeys))))
       case _ => identity()
     }
