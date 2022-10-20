@@ -6,6 +6,7 @@ import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesListBytes;
 import com.horizen.certnative.*;
 import com.horizen.certnative.BackwardTransfer;
 import com.horizen.librustsidechains.FieldElement;
+import com.horizen.provingsystemnative.ProvingSystemType;
 import com.horizen.schnorrnative.SchnorrKeysSignaturesList;
 import com.horizen.schnorrnative.SchnorrPublicKey;
 import com.horizen.schnorrnative.SchnorrSignature;
@@ -219,5 +220,12 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         sysDataConstant.freeFieldElement();
 
         return sysDataConstantBytes;
+    }
+
+    @Override
+    public boolean generateCoboundaryMarlinSnarkKeys(long maxPks, String provingKeyPath, String verificationKeyPath, int customFieldsNum) {
+        return NaiveThresholdSignatureWKeyRotation.setup(ProvingSystemType.COBOUNDARY_MARLIN, maxPks, customFieldsNum,
+                Optional.of(supportedSegmentSize),
+                provingKeyPath, verificationKeyPath, CommonCircuit.maxProofPlusVkSize);
     }
 }
