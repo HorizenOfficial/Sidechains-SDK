@@ -4,8 +4,9 @@ import com.horizen.block.SidechainCreationVersions;
 import com.horizen.block.WithdrawalEpochCertificate;
 import com.horizen.box.WithdrawalRequestBox;
 import com.horizen.certificatesubmitter.keys.SchnorrKeysSignaturesListBytes;
-import com.horizen.certnative.*;
-import com.horizen.certnative.BackwardTransfer;
+import com.horizen.certnative.CreateProofResult;
+import com.horizen.certnative.NaiveThresholdSignatureWKeyRotation;
+import com.horizen.certnative.WithdrawalCertificate;
 import com.horizen.cryptolibprovider.CommonCircuit;
 import com.horizen.cryptolibprovider.ThresholdSignatureCircuitWithKeyRotation;
 import com.horizen.librustsidechains.FieldElement;
@@ -58,7 +59,6 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                 FieldElement.deserialize(sidechainId),
                 epochNumber,
                 CommonCircuit.getBackwardTransfers(bt),
-                0,
                 endCumulativeScTxCommTreeRootFe,
                 ftMinAmount,
                 btrFee,
@@ -110,7 +110,6 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                 sidechainIdFieldElement,
                 epochNumber,
                 CommonCircuit.getBackwardTransfers(bt),
-                0,
                 endCumulativeScTxCommTreeRootFe,
                 ftMinAmount,
                 btrFee,
@@ -196,9 +195,9 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                 provingKeyPath, verificationKeyPath, CommonCircuit.maxProofPlusVkSize);
     }
 
-    public byte[] getKeysRootHash(long maxPks, String provingKeyPath, String verificationKeyPath, int customFieldsNum) {
+    public byte[] getKeysRootHash() {
         SchnorrKeysSignaturesList schnorrKeysSignaturesList = new SchnorrKeysSignaturesList();
-        FieldElement fieldElement = null;
+        FieldElement fieldElement;
         try {
             fieldElement = schnorrKeysSignaturesList.getUpdatedKeysRootHash(schnorrKeysSignaturesList.getSigningKeys().length);
         } catch (Exception e) {
