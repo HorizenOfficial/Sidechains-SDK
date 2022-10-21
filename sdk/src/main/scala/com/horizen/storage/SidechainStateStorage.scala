@@ -6,11 +6,10 @@ import com.horizen.SidechainTypes
 import com.horizen.backup.BoxIterator
 import com.horizen.block.{WithdrawalEpochCertificate, WithdrawalEpochCertificateSerializer}
 import com.horizen.box.{WithdrawalRequestBox, WithdrawalRequestBoxSerializer}
-import com.horizen.certificatesubmitter.keys.{KeyRotationProof, KeyRotationProofSerializer, _}
+import com.horizen.certificatesubmitter.keys._
 import com.horizen.companion.SidechainBoxesCompanion
 import com.horizen.consensus._
 import com.horizen.forge.{ForgerList, ForgerListSerializer}
-import com.horizen.proposition.SchnorrProposition
 import com.horizen.utils.{ByteArrayWrapper, ListSerializer, WithdrawalEpochInfo, WithdrawalEpochInfoSerializer, Pair => JPair, _}
 import scorex.util.ScorexLogging
 
@@ -49,8 +48,11 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     Utils.calculateKey(Bytes.concat("withdrawalRequests".getBytes, Ints.toByteArray(withdrawalEpoch), Ints.toByteArray(counter)))
   }
 
-  private[horizen] def getActualCertifierStorageKey(withdrawalEpoch: Int): ByteArrayWrapper = {
-    Utils.calculateKey(Bytes.concat("keys".getBytes, Ints.toByteArray(withdrawalEpoch)))
+  private[horizen] def getCertifierKey(withdrawalEpoch: Int): ByteArrayWrapper = {
+    Utils.calculateKey(Bytes.concat("certificateKeys".getBytes, Ints.toByteArray(withdrawalEpoch)))
+  }
+  private[horizen] def getKeyRotationProofKey(withdrawalEpoch: Int): ByteArrayWrapper = {
+    Utils.calculateKey(Bytes.concat("keyRotationProof".getBytes, Ints.toByteArray(withdrawalEpoch)))
   }
 
   private[horizen] def getTopQualityCertificateKey(referencedWithdrawalEpoch: Int): ByteArrayWrapper = {
@@ -65,10 +67,6 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
   private[horizen] def getBlockFeeInfoKey(withdrawalEpochNumber: Int, counter: Int): ByteArrayWrapper = {
     Utils.calculateKey(Bytes.concat("blockFeeInfo".getBytes, Ints.toByteArray(withdrawalEpochNumber), Ints.toByteArray(counter)))
-  }
-
-  private[horizen] def getKeyRotationProof(withdrawalEpochNumber: Int, counter: Int): ByteArrayWrapper = {
-    Utils.calculateKey(Bytes.concat("keyRotationProof".getBytes, Ints.toByteArray(withdrawalEpochNumber), Ints.toByteArray(counter)))
   }
 
   private[horizen] def getUtxoMerkleTreeRootKey(withdrawalEpochNumber: Int): ByteArrayWrapper = {
@@ -159,7 +157,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   }
 
   def getActualCertifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys] = {
-    storage.get(getTopQualityCertificateKey(withdrawalEpoch)).asScala match {
+    storage.get(getCertifierKey(withdrawalEpoch)).asScala match {
       case Some(baw) =>
         CertifiersKeysSerializer.parseBytesTry(baw.data) match {
           case Success(actualKeys: CertifiersKeys) => Option(actualKeys)
@@ -172,8 +170,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   }
 
   def getKeyRotationProofs(withdrawalEpochNumber: Int): Seq[KeyRotationProof] = {
-    val lastCounter = getWithdrawalEpochCounter(withdrawalEpochNumber)
-    storage.get(getKeyRotationProof(withdrawalEpochNumber, lastCounter)).asScala match {
+    storage.get(getKeyRotationProofKey(withdrawalEpochNumber)).asScala match {
       case Some(baw) => KeyRotationProofSerializer.parseBytesTry(baw.data) match {
         case Success(keyRotationProofs) => Seq(keyRotationProofs)
         case Failure(exception) => throw new IllegalStateException("Error while key rotation proofs parsing.", exception)
@@ -221,7 +218,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
   def getForgerList: Option[ForgerList] = {
     storage.get(forgerListIndexKey).asScala match {
-      case Some(baw) => {
+      case Some(baw) =>
         Try {
           ForgerListSerializer.parseBytesTry(baw.data)
         } match {
@@ -233,7 +230,6 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
             log.error("Error while forger list indexes information parsing.", exception)
             Option.empty
         }
-      }
       case None => Option.empty
     }
   }
@@ -289,13 +285,13 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
 
     certifiersKeysOption match {
       case Some(actualKeys: CertifiersKeys) =>
-        updateList.add(new JPair(getActualCertifierStorageKey(withdrawalEpochInfo.epoch),
+        updateList.add(new JPair(getCertifierKey(withdrawalEpochInfo.epoch),
           new ByteArrayWrapper(CertifiersKeysSerializer.toBytes(actualKeys))))
       case _ => identity()
     }
 
     keyRotationProofs.foreach(keyRotationProof => {
-      updateList.add(new JPair(getActualCertifierStorageKey(withdrawalEpochInfo.epoch),
+      updateList.add(new JPair(getKeyRotationProofKey(withdrawalEpochInfo.epoch),
         new ByteArrayWrapper(KeyRotationProofSerializer.toBytes(keyRotationProof))))
     })
 
@@ -320,6 +316,8 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
         removeList.add(getWithdrawalRequestsKey(wrEpochNumberToRemove, counter))
       }
       removeList.add(getWithdrawalEpochCounterKey(wrEpochNumberToRemove))
+      removeList.add(getCertifierKey(wrEpochNumberToRemove))
+      removeList.add(getKeyRotationProofKey(wrEpochNumberToRemove))
 
       val certEpochNumberToRemove: Int = withdrawalEpochInfo.epoch - 4
       removeList.add(getTopQualityCertificateKey(certEpochNumberToRemove))
@@ -396,7 +394,8 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
    * This function restores the unspent boxes that come from a ceased sidechain by saving
    * them into the SidechainStateStorage
    *
-   * @param backupStorage : storage containing the boxes saved from the ceased sidechain
+   * @param backupStorageBoxIterator : storage containing the boxes saved from the ceased sidechain
+   * @param lastVersion : lastVersion
    */
   def restoreBackup(backupStorageBoxIterator: BoxIterator, lastVersion: Array[Byte]): Unit = {
     val removeList = new JArrayList[ByteArrayWrapper]()
