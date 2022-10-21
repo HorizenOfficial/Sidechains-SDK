@@ -105,7 +105,7 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
     val (newSchnorrMastersPublicKeysBytesList, updatedMasterKeysSkSignatures, updatedMasterKeysMkSignatures) = (for {
       indexOfSigner <- schnorrMastersPublicKeysBytesList.indices
     } yield {
-      state.keyRotationProof(status.referencedEpoch, indexOfSigner, keyType = 0) match {
+      state.keyRotationProof(status.referencedEpoch, indexOfSigner, keyType = 1) match {
         case Some(keyRotationProof: KeyRotationProof) =>
           (keyRotationProof.newValueOfKey.bytes(), keyRotationProof.signingKeySignature.bytes(), keyRotationProof.masterKeySignature.bytes())
         case _ => (schnorrMastersPublicKeysBytesList(indexOfSigner), null, null)
