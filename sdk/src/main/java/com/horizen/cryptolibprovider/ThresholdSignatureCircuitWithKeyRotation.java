@@ -27,12 +27,12 @@ public interface ThresholdSignatureCircuitWithKeyRotation {
                                    List<Optional<byte[]>> schnorrSignatureBytesList,
                                    SchnorrKeysSignaturesListBytes schnorrKeysSignaturesListBytes,
                                    long threshold,
-                                   String provingKeyPath,
-                                   boolean checkProvingKey,
-                                   boolean zk,
                                    Optional<WithdrawalEpochCertificate> previousEpochCertificateOption,
                                    int sidechainCreationVersionNumber,
-                                   byte[] genesisKeysRootHash);
+                                   byte[] genesisKeysRootHash,
+                                   String provingKeyPath,
+                                   boolean checkProvingKey,
+                                   boolean zk);
 
     Boolean verifyProof(List<WithdrawalRequestBox> bt,
                         byte[] sidechainId,
@@ -43,11 +43,11 @@ public interface ThresholdSignatureCircuitWithKeyRotation {
                         List<byte[]> customFields,
                         byte[] constant,
                         long quality,
-                        byte[] proof,
-                        String verificationKeyPath,
                         Optional<WithdrawalEpochCertificate> previousEpochCertificateOption,
                         byte[] genesisConstantBytes,
-                        int sidechainCreationVersionNumber);
+                        int sidechainCreationVersionNumber,
+                        byte[] proof,
+                        String verificationKeyPath);
 
     byte[] generateSysDataConstant(byte[] genesisKeysRootHash, long threshold);
 

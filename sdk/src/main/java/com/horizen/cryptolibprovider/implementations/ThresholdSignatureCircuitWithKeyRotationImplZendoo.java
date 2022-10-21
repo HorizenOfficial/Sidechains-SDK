@@ -24,14 +24,6 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
     // but is always less or equal the one defined in the MC network (maxSegmentSize).
     private static final int supportedSegmentSize = (1 << 17);
 
-    @Override
-    public List<byte[]> getCertificateCustomFields(List<byte[]> customFields) {
-        List<FieldElement> fes = prepareCustomFieldElements(customFields);
-        List<byte[]> fesBytes = fes.stream().map(FieldElement::serializeFieldElement).collect(Collectors.toList());
-        fes.forEach(FieldElement::freeFieldElement);
-        return fesBytes;
-    }
-
     private List<FieldElement> prepareCustomFieldElements(List<byte[]> customFields) {
         Iterator<byte[]> iterator = customFields.iterator();
         List<FieldElement> fieldElements = new ArrayList<>();
@@ -91,12 +83,12 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
              List<Optional<byte[]>> schnorrSignatureBytesList,
              SchnorrKeysSignaturesListBytes schnorrKeysSignaturesListBytes,
              long threshold,
-             String provingKeyPath,
-             boolean checkProvingKey,
-             boolean zk,
              Optional<WithdrawalEpochCertificate> previousEpochCertificateOption,
              int sidechainCreationVersionNumber,
-             byte[] genesisKeysRootHash
+             byte[] genesisKeysRootHash,
+             String provingKeyPath,
+             boolean checkProvingKey,
+             boolean zk
             ) {
         List<SchnorrSignature> signatures = CommonCircuit.getSignatures(schnorrSignatureBytesList);
 
@@ -143,11 +135,11 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
                                List<byte[]> customFields,
                                byte[] constant,
                                long quality,
-                               byte[] proof,
-                               String verificationKeyPath,
                                Optional<WithdrawalEpochCertificate> previousEpochCertificateOption,
                                byte[] genesisConstantBytes,
-                               int sidechainCreationVersionNumber) {
+                               int sidechainCreationVersionNumber,
+                               byte[] proof,
+                               String verificationKeyPath) {
         FieldElement endCumulativeScTxCommTreeRootFe = FieldElement.deserialize(endCumulativeScTxCommTreeRoot);
         List<FieldElement> customFieldsElements;
         FieldElement genesisConstant;
@@ -194,6 +186,14 @@ public class ThresholdSignatureCircuitWithKeyRotationImplZendoo implements Thres
         sysDataConstant.freeFieldElement();
 
         return sysDataConstantBytes;
+    }
+
+    @Override
+    public List<byte[]> getCertificateCustomFields(List<byte[]> customFields) {
+        List<FieldElement> fes = prepareCustomFieldElements(customFields);
+        List<byte[]> fesBytes = fes.stream().map(FieldElement::serializeFieldElement).collect(Collectors.toList());
+        fes.forEach(FieldElement::freeFieldElement);
+        return fesBytes;
     }
 
     @Override
