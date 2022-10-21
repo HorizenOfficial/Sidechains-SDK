@@ -5,7 +5,6 @@ import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 
 import java.math.BigInteger
 import com.horizen.commitmenttreenative.CustomBitvectorElementsConfig
-import com.horizen.cryptolibprovider.utils.TypeOfCircuit.Int
 import com.horizen.proposition.{PublicKey25519Proposition, SchnorrProposition, VrfPublicKey}
 import sparkz.core.block.Block
 import scorex.util.{ModifierId, bytesToId}

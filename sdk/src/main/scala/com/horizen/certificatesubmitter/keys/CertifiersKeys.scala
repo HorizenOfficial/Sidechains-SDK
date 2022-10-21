@@ -7,10 +7,10 @@ import sparkz.core.serialization.{BytesSerializable, SparkzSerializer}
 case class CertifiersKeys(signingKeys: Vector[SchnorrProposition], masterKeys: Vector[SchnorrProposition]) extends BytesSerializable {
   override type M = CertifiersKeys
 
-  override def serializer: SparkzSerializer[CertifiersKeys] = ActualKeysSerializer
+  override def serializer: SparkzSerializer[CertifiersKeys] = CertifiersKeysSerializer
 }
 
-object ActualKeysSerializer extends SparkzSerializer[CertifiersKeys] {
+object CertifiersKeysSerializer extends SparkzSerializer[CertifiersKeys] {
   override def serialize(actualKeys: CertifiersKeys, writer: Writer): Unit = {
     writer.putInt(actualKeys.signingKeys.length)
     actualKeys.signingKeys.foreach(SchnorrPropositionSerializer.getSerializer.serialize(_, writer))

@@ -161,7 +161,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   def getActualCertifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys] = {
     storage.get(getTopQualityCertificateKey(withdrawalEpoch)).asScala match {
       case Some(baw) =>
-        ActualKeysSerializer.parseBytesTry(baw.data) match {
+        CertifiersKeysSerializer.parseBytesTry(baw.data) match {
           case Success(actualKeys: CertifiersKeys) => Option(actualKeys)
           case Failure(exception) =>
             log.error("Error while withdrawal epoch certificate public keys parsing.", exception)
@@ -302,7 +302,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
           }
         })
         updateList.add(new JPair(getActualCertifierStorageKey(withdrawalEpochInfo.epoch, getWithdrawalEpochCounter(withdrawalEpochInfo.epoch) + 1),
-          new ByteArrayWrapper(ActualKeysSerializer.toBytes(actualKeys))))
+          new ByteArrayWrapper(CertifiersKeysSerializer.toBytes(actualKeys))))
       case _ => identity()
     }
 

@@ -1,25 +1,21 @@
 package com.horizen.certificatesubmitter.strategies
 
-import akka.pattern.ask
 import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
-import com.horizen.block.{SidechainCreationVersions, WithdrawalEpochCertificate}
+import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
 import com.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateDataWithKeyRotation}
 import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofType, SchnorrKeysSignaturesListBytes}
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.params.NetworkParams
-import com.horizen.websocket.server.WebSocketServerRef.sidechainNodeViewHolderRef
 import com.horizen.{SidechainSettings, SidechainState}
-import sparkz.core.NodeViewHolder.ReceivableMessages.GetDataFromCurrentView
 
 import java.util
 import java.util.Optional
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.compat.java8.OptionConverters.RichOptionForJava8
-import scala.concurrent.Await
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams) extends KeyRotationStrategy(settings, params) {
 
@@ -57,16 +53,16 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       dataForProofGeneration.endEpochCumCommTreeHash,
       dataForProofGeneration.btrFee,
       dataForProofGeneration.ftMinAmount,
-      scala.collection.JavaConverters.seqAsJavaList(dataForProofGeneration.customFields),
+      scala.collection.JavaConverters.seqAsJavaList(dataForProofGeneration.getCustomFields),
       signaturesBytes.asJava,
       schnorrKeysSignaturesListBytes,
       params.signersThreshold,
+      Optional.of(dataForProofGenerationWithKeyRotation.previousCertificateOption),
+      sidechainCreationVersion.id,
+      dataForProofGenerationWithKeyRotation.genesisKeysRootHash,
       provingFileAbsolutePath,
       true,
       true,
-      Optional.of(dataForProofGenerationWithKeyRotation.previousCertificateOption),
-      sidechainCreationVersion.id,
-      dataForProofGenerationWithKeyRotation.genesisKeysRootHash
     )
   }
 
@@ -142,7 +138,8 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       signersPublicKeyWithSignatures,
       schnorrKeysSignaturesListBytes,
       previousCertificateOption,
-      CertifiersKeys.getMerkleRootOfPublicKeys(CertifiersKeys(params.signersPublicKeys.toVector, params.mastersPublicKeys.toVector))
+      CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation.generateKeysRootHash(
+        scala.collection.JavaConverters.seqAsJavaList(params.signersPublicKeys), scala.collection.JavaConverters.seqAsJavaList(params.mastersPublicKeys))
     )
   }
 
@@ -163,22 +160,5 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
     CryptoLibProvider.thresholdSignatureCircuitWithKeyRotation
       .generateMessageToBeSigned(withdrawalRequests.asJava, sidechainId, referencedWithdrawalEpochNumber,
         endEpochCumCommTreeHash, btrFee, ftMinAmount, util.Arrays.asList(customFields))
-  }
-
-  private def getActualKeysMerkleRoot(referencedWithdrawalEpochNumber: Int, state: SidechainState): Array[Byte] = {
-    Try {
-      state.certifiersKeys(referencedWithdrawalEpochNumber).map(getMerkleRootOfPublicKeys)
-    } match {
-      case Failure(e: IllegalStateException) =>
-        throw new Exception("CertificateSubmitter is too late against the State. " +
-          s"No utxo merkle tree root for requested epoch $referencedWithdrawalEpochNumber. " +
-          s"Current epoch is ${state.getWithdrawalEpochInfo.epoch}")
-      case Failure(exception) => log.error("Exception while getting utxoMerkleTreeRoot", exception)
-        throw new Exception(exception)
-      case Success(byteArrayOption) => byteArrayOption match {
-        case Some(byteArray) => byteArray
-        case None => Array[Byte]()
-      }
-    }
   }
 }
