@@ -251,7 +251,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
              forgerListIndexes: Array[Int],
              forgerListSize: Int,
              keyRotationProofs: Seq[KeyRotationProof] = Seq.empty[KeyRotationProof],
-             actualKeys: Option[CertifiersKeys] = None): Try[SidechainStateStorage] = Try {
+             certifiersKeysOption: Option[CertifiersKeys] = None): Try[SidechainStateStorage] = Try {
     require(withdrawalEpochInfo != null, "WithdrawalEpochInfo must be NOT NULL.")
     require(boxUpdateList != null, "List of Boxes to add/update must be NOT NULL. Use empty List instead.")
     require(boxIdsRemoveSet != null, "List of Box IDs to remove must be NOT NULL. Use empty List instead.")
@@ -287,24 +287,17 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
         new ByteArrayWrapper(withdrawalRequestSerializer.toBytes(withdrawalRequestAppendSeq.asJava))))
     }
 
-    (keyRotationProofs, actualKeys) match {
-
-      case (keyRotationProofs: Seq[KeyRotationProof], Some(actualKeys: CertifiersKeys)) if keyRotationProofs.nonEmpty =>
-        keyRotationProofs.foreach(keyRotationProof => {
-          updateList.add(new JPair(getActualCertifierStorageKey(withdrawalEpochInfo.epoch),
-            new ByteArrayWrapper(KeyRotationProofSerializer.toBytes(keyRotationProof))))
-
-          keyRotationProof match {
-            case keyRotationProof if keyRotationProof.keyType.id == 0 =>
-              actualKeys.signingKeys.updated(keyRotationProof.index, keyRotationProof.newValueOfKey)
-            case keyRotationProof if keyRotationProof.keyType.id == 1 =>
-              actualKeys.masterKeys.updated(keyRotationProof.index, keyRotationProof.newValueOfKey)
-          }
-        })
+    certifiersKeysOption match {
+      case Some(actualKeys: CertifiersKeys) =>
         updateList.add(new JPair(getActualCertifierStorageKey(withdrawalEpochInfo.epoch),
           new ByteArrayWrapper(CertifiersKeysSerializer.toBytes(actualKeys))))
       case _ => identity()
     }
+
+    keyRotationProofs.foreach(keyRotationProof => {
+      updateList.add(new JPair(getActualCertifierStorageKey(withdrawalEpochInfo.epoch),
+        new ByteArrayWrapper(KeyRotationProofSerializer.toBytes(keyRotationProof))))
+    })
 
     // Store utxo tree merkle root if present
     utxoMerkleTreeRootOpt.foreach(merkleRoot => {
