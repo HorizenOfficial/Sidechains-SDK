@@ -51,6 +51,7 @@ from sc_bt_limit_across_fork import ScBtLimitAcrossForkTest
 from sc_wallet_reindex import SidechainWalletReindexTest
 from sc_wallet_reindex_along_sync import SidechainWalletReindexSyncTest
 from sc_wallet_reindex_feepayments import SidechainWalletReindexFeePayments
+from sc_storage_recovery_with_wallet_reindex import StorageRecoveryWithReindexTest
 
 def run_test(test):
     try:
@@ -167,6 +168,9 @@ def run_tests(log_file):
 
     result = run_test(StorageRecoveryWithoutCSWTest())
     assert_equal(0, result, "DStorage recovery with CSW disabled test failed!")
+
+    result = run_test(StorageRecoveryWithReindexTest())
+    assert_equal(0, result, "DStorage recovery with wallet reindex test failed!")
 
     result = run_test(SidechainBlockIdForBackupTest())
     assert_equal(0, result, "sc_blockid_for_backup test failed!")

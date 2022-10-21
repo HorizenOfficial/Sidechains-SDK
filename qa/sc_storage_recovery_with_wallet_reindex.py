@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import time
-from datetime import datetime
 
 from SidechainTestFramework.sc_boostrap_info import SCNodeConfiguration, SCCreationInfo, MCConnectionInfo, \
     SCNetworkConfiguration
@@ -14,8 +13,6 @@ from httpCalls.wallet.exportSecret import http_wallet_exportSecret
 from httpCalls.wallet.allPublicKeys import http_wallet_allPublicKeys
 from httpCalls.wallet.importSecret import http_wallet_importSecret
 from httpCalls.block.best import http_block_best, http_block_best_height
-from httpCalls.block.findBlockByID import http_block_findById
-from httpCalls.transaction.allTransactions import allTransactions
 from httpCalls.wallet.balance import http_wallet_balance
 from httpCalls.wallet.reindex import http_wallet_reindex, http_wallet_reindex_status, http_debug_reindex_step
 from httpCalls.transaction.sendCoinsToAddress import sendCoinsToAddress
@@ -23,42 +20,23 @@ from httpCalls.wallet.createPrivateKey25519 import http_wallet_createPrivateKey2
 
 
 """
-Test that the sidechain can recover after a crash that left the SC storages inconsistent. 
+Test that the sidechain can recover after a crash while reindexing, that left the SC storages inconsistent. 
 For testing this scenario, the offline db tool is used for interacting with the storage dbs.
 
 Configuration:
     Start 1 MC nodes and 2 SC nodes.
 
 Test:
-    - Synchronize MC node to the point of SC Creation Block.
-    - SC1 forges 5 SC blocks
-    - get storage versions for SC2 and check that they are as expected in this stage (only genesis data)
-    - Connect SC2 node to the SC1 node so that it gets aligned
-    - Stop the SC2 node and try to misalign its storages in various way, reproducing the node behaviour in case of a
-      node crash during the storages update verifying that, restarting the SC2 node and reconnecting to the network, it
-      can recover the situation and achieve synchronization with the SC1
-      
-      
-    Order of storages update in a complete pmodModify cycle:
-        1. History storage (block)
-        ------------------------
-            application (appState1, appState2 storages)
-        2. stateUtxoMerkleTree
-        3. state
-        4. stateForgerBox
-        ------------------------
-            application (appWallet1, appWallet2 storages)
-        5. wallet
-        6. walletTransaction
-        7. walletForgingStake
-        8. walletCswDataStorage
-        ------------------------
-        9. History storage (block info with validity attribute)
-       10. History storage (best block id)
-    
+    - Setup 2 SC Node.
+    - Create a new address on node1, send some zen to it and mine a block
+    - Export the address key on node2, and start a reindex step by step (just first 2 steps)
+    - Stop the node2 and rollback the history index, to simulate a crash
+    - Restart the node
+    - White untile it terminates the reindex
+    - Check node2 balance is updated
+    - Repeat same steps but this time rollbacking also the wallet    
 """
 
-WITHDRAWAL_EPOCH_LENGTH = 10
 CUSTOM_STORAGE_NAMES = " "
 
 def printStoragesVersion(node, storages_list):
