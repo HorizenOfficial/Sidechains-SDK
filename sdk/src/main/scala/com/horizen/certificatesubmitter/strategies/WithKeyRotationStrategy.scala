@@ -134,7 +134,6 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       endEpochCumCommTreeHash,
       btrFee,
       ftMinAmount,
-      Seq(customFields),
       signersPublicKeyWithSignatures,
       schnorrKeysSignaturesListBytes,
       previousCertificateOption,
