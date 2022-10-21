@@ -46,13 +46,16 @@ public class KeyRotationTransaction extends SidechainNoncedTransaction<PublicKey
 
     private final KeyRotationProof keyRotationProof;
 
-    public KeyRotationTransaction(byte[] inputId, Optional<ZenBoxData> outputData, Signature25519 proof, long fee, byte version, KeyRotationProof keyRotationProof) {
+    private final SchnorrProof newKeySignature;
+
+    public KeyRotationTransaction(byte[] inputId, Optional<ZenBoxData> outputData, Signature25519 proof, long fee, byte version, KeyRotationProof keyRotationProof, SchnorrProof newKeySignature) {
         this.inputId = inputId;
         this.outputData = outputData;
         this.proof = proof;
         this.fee = fee;
         this.version = version;
         this.keyRotationProof = keyRotationProof;
+        this.newKeySignature = newKeySignature;
     }
 
     @Override
@@ -127,6 +130,11 @@ public class KeyRotationTransaction extends SidechainNoncedTransaction<PublicKey
             throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
                     "no masterKeySignature data present.", id()));
         }
+
+        if (newKeySignature == null) {
+            throw new TransactionSemanticValidityException(String.format("Transaction [%s] is semantically invalid: " +
+                    "no newKeySignature data present.", id()));
+        }
     }
 
     @Override
@@ -161,6 +169,10 @@ public class KeyRotationTransaction extends SidechainNoncedTransaction<PublicKey
         return this.keyRotationProof;
     }
 
+    public SchnorrProof getNewKeySignature() {
+        return this.newKeySignature;
+    }
+
     public byte[] getInputId() {
         return this.inputId;
     }
@@ -181,7 +193,8 @@ public class KeyRotationTransaction extends SidechainNoncedTransaction<PublicKey
                                                 int indexOfKey,
                                                 SchnorrProposition newValueOfKey,
                                                 SchnorrProof signingKeySignature,
-                                                SchnorrProof masterKeySignature
+                                                SchnorrProof masterKeySignature,
+                                                SchnorrProof newKeySignature
     ) throws TransactionSemanticValidityException {
         if (from == null)
             throw new IllegalArgumentException("Parameters can't be null.");
@@ -199,13 +212,12 @@ public class KeyRotationTransaction extends SidechainNoncedTransaction<PublicKey
         Enumeration.Value keyRotationProofType = KeyRotationProofType.apply(keyTypeEnumerationNumber);
         KeyRotationProof keyRotationProof = new KeyRotationProof(keyRotationProofType, indexOfKey, newValueOfKey, signingKeySignature, masterKeySignature);
 
-        KeyRotationTransaction unsignedTransaction = new KeyRotationTransaction(from.getKey().id(), output, null, fee, KEY_ROTATION_TRANSACTION_VERSION, keyRotationProof);
+        KeyRotationTransaction unsignedTransaction = new KeyRotationTransaction(from.getKey().id(), output, null, fee, KEY_ROTATION_TRANSACTION_VERSION, keyRotationProof, newKeySignature);
 
         byte[] messageToSign = unsignedTransaction.messageToSign();
         Secret secret = from.getValue();
 
-
-        KeyRotationTransaction transaction = new KeyRotationTransaction(from.getKey().id(), output, (Signature25519) secret.sign(messageToSign), fee, KEY_ROTATION_TRANSACTION_VERSION, keyRotationProof);
+        KeyRotationTransaction transaction = new KeyRotationTransaction(from.getKey().id(), output, (Signature25519) secret.sign(messageToSign), fee, KEY_ROTATION_TRANSACTION_VERSION, keyRotationProof, newKeySignature);
         transaction.transactionSemanticValidity();
 
         return transaction;

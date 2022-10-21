@@ -4,8 +4,7 @@ import com.horizen.box.data.ZenBoxData;
 import com.horizen.box.data.ZenBoxDataSerializer;
 import com.horizen.certificatesubmitter.keys.KeyRotationProof;
 import com.horizen.certificatesubmitter.keys.KeyRotationProofSerializer;
-import com.horizen.proof.Signature25519;
-import com.horizen.proof.Signature25519Serializer;
+import com.horizen.proof.*;
 import com.horizen.transaction.KeyRotationTransaction;
 import com.horizen.transaction.TransactionSerializer;
 import scorex.util.serialization.Reader;
@@ -46,6 +45,7 @@ public class KeyRotationTransactionSerializer implements TransactionSerializer<K
         Signature25519Serializer.getSerializer().serialize(transaction.getProof(), writer);
 
         KeyRotationProofSerializer.serialize(transaction.getKeyRotationProof(), writer);
+        SchnorrSignatureSerializer.getSerializer().serialize(transaction.getNewKeySignature(), writer);
     }
 
     @Override
@@ -69,6 +69,8 @@ public class KeyRotationTransactionSerializer implements TransactionSerializer<K
 
         KeyRotationProof keyRotationProof = KeyRotationProofSerializer.parse(reader);
 
-        return new KeyRotationTransaction(inputsId, output, proof, fee, version, keyRotationProof);
+        SchnorrProof newKeySignature = SchnorrSignatureSerializer.getSerializer().parse(reader);
+
+        return new KeyRotationTransaction(inputsId, output, proof, fee, version, keyRotationProof, newKeySignature);
     }
 }
