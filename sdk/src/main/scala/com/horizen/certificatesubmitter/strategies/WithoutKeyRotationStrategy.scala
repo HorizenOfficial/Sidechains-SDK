@@ -12,7 +12,7 @@ import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.util.{Failure, Success, Try}
 
-class WithoutKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams) extends KeyRotationStrategy(settings, params) {
+class WithoutKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams) extends KeyRotationStrategy[CertificateDataWithoutKeyRotation](settings, params) {
   override def generateProof(certificateData: CertificateDataWithoutKeyRotation): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
     val (signersPublicKeysBytes: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
       certificateData.schnorrKeyPairs.map {
@@ -44,7 +44,7 @@ class WithoutKeyRotationStrategy(settings: SidechainSettings, params: NetworkPar
       true)
   }
 
-  override def buildCertificateData(sidechainNodeView: View, status: SignaturesStatus): CertificateData = {
+  override def buildCertificateData(sidechainNodeView: View, status: SignaturesStatus): CertificateDataWithoutKeyRotation = {
     val history = sidechainNodeView.history
     val state = sidechainNodeView.state
 

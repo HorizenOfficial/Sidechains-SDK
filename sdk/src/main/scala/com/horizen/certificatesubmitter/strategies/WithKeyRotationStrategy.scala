@@ -17,9 +17,9 @@ import scala.collection.mutable
 import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.util.Try
 
-class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams) extends KeyRotationStrategy(settings, params) {
+class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams) extends KeyRotationStrategy[CertificateDataWithKeyRotation](settings, params) {
 
-  override def generateProof(certificateData: CertificateData): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
+  override def generateProof(certificateData: CertificateDataWithKeyRotation): com.horizen.utils.Pair[Array[Byte], java.lang.Long] = {
 
     val (_: Seq[Array[Byte]], signaturesBytes: Seq[Optional[Array[Byte]]]) =
       certificateData.schnorrKeyPairs.map {
@@ -32,17 +32,15 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       }. " +
       s"It can take a while.")
 
-    val certificateDataWithKeyRotation = certificateData.asInstanceOf[CertificateDataWithKeyRotation]
-
     val schnorrKeysSignaturesListBytes = SchnorrKeysSignaturesListBytes(
-      certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.schnorrSignersPublicKeysBytesList,
-      certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.schnorrMastersPublicKeysBytesList,
-      certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.newSchnorrSignersPublicKeysBytesList,
-      certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.newSchnorrMastersPublicKeysBytesList,
-      certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.updatedSigningKeysSkSignatures,
-      certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.updatedSigningKeysMkSignatures,
-      certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.updatedMasterKeysSkSignatures,
-      certificateDataWithKeyRotation.schnorrKeysSignaturesListBytes.updatedMasterKeysMkSignatures
+      certificateData.schnorrKeysSignaturesListBytes.schnorrSignersPublicKeysBytesList,
+      certificateData.schnorrKeysSignaturesListBytes.schnorrMastersPublicKeysBytesList,
+      certificateData.schnorrKeysSignaturesListBytes.newSchnorrSignersPublicKeysBytesList,
+      certificateData.schnorrKeysSignaturesListBytes.newSchnorrMastersPublicKeysBytesList,
+      certificateData.schnorrKeysSignaturesListBytes.updatedSigningKeysSkSignatures,
+      certificateData.schnorrKeysSignaturesListBytes.updatedSigningKeysMkSignatures,
+      certificateData.schnorrKeysSignaturesListBytes.updatedMasterKeysSkSignatures,
+      certificateData.schnorrKeysSignaturesListBytes.updatedMasterKeysMkSignatures
     )
     //create and return proof with quality
     val sidechainCreationVersion: SidechainCreationVersion = params.sidechainCreationVersion
@@ -57,9 +55,9 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
       signaturesBytes.asJava,
       schnorrKeysSignaturesListBytes,
       params.signersThreshold,
-      Optional.of(certificateDataWithKeyRotation.previousCertificateOption),
+      Optional.of(certificateData.previousCertificateOption),
       sidechainCreationVersion.id,
-      certificateDataWithKeyRotation.genesisKeysRootHash,
+      certificateData.genesisKeysRootHash,
       provingFileAbsolutePath,
       true,
       true,

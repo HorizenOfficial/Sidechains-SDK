@@ -17,14 +17,14 @@ import scala.compat.java8.OptionConverters.RichOptionalGeneric
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
 
-abstract class KeyRotationStrategy(settings: SidechainSettings, params: NetworkParams) extends ScorexLogging{
+abstract class KeyRotationStrategy[T <: CertificateData](settings: SidechainSettings, params: NetworkParams) extends ScorexLogging{
 
   val timeoutDuration: FiniteDuration = settings.sparkzSettings.restApi.timeout
   implicit val timeout: Timeout = Timeout(timeoutDuration)
-  def generateProof(certificateData: CertificateData): com.horizen.utils.Pair[Array[Byte], java.lang.Long]
+  def generateProof(certificateData: T): com.horizen.utils.Pair[Array[Byte], java.lang.Long]
 
   type View = CurrentView[SidechainHistory, SidechainState, SidechainWallet, SidechainMemoryPool]
-  def buildCertificateData(sidechainNodeView: View, status: SignaturesStatus): CertificateData
+  def buildCertificateData(sidechainNodeView: View, status: SignaturesStatus): T
 
   def getMessageToSign(view: View, referencedWithdrawalEpochNumber: Int): Try[Array[Byte]]
 
