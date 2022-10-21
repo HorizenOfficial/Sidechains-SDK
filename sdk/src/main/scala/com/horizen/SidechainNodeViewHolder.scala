@@ -143,6 +143,7 @@ class SidechainNodeViewHolder(sidechainSettings: SidechainSettings,
                 //the insconsistency between versionToAlign and checkedStateVersion is caoused only  by a not aligned reindex index
                 //(we reindexed succesfully step N+1 but stopped the node before updating the reindex height to that)
                 //we just need to fix the reindex index
+                log.debug(s"Incosistent reindex index detected - fixing reindex height from  = ${reindexHeight} to ${height_s}")
                 Some(restoredHistory.updateReindexStatus(height_s), restoredState, restoredWallet, restoredMempool)
               }else if (versionToAlign == checkedStateVersion) {
                 log.info("state and history storages are consistent")

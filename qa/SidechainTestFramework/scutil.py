@@ -143,14 +143,14 @@ def launch_db_tool(dirName, storageNames, command_name, json_parameters):
     java_ps = subprocess.Popen(["java", "-jar",
                                 os.getenv("SIDECHAIN_SDK",
                                           "..") + "/tools/dbtool/target/sidechains-sdk-dbtools-0.5.0-SNAPSHOT.jar",
-                                storagesPath, command_name, json_param], stdout=subprocess.PIPE)
+                                storagesPath, storageNames, command_name, json_param], stdout=subprocess.PIPE)
     db_tool_output = java_ps.communicate()[0]
     try:
         jsone_node = json.loads(db_tool_output)
         return jsone_node
     except ValueError:
         print("DB tool error occurred for command= {}\nparams: {}\nError: {}\n"
-              .format(command_name, json_param, db_tool_output.decode()))
+                     .format(command_name, json_param, db_tool_output.decode()))
         raise Exception("DB tool error occurred")
 
 

@@ -57,8 +57,6 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
   }
 
   /**
-   * Method copied from the parent class with the addition of isReindexing check
-   *
    * Object ids coming from other node.
    * Filter out modifier ids that are already in process (requested, received or applied),
    * request unknown ids from peer and set this ids to requested state.
@@ -67,33 +65,18 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
     if (this.isReindexing){
       log.warn("Got data from peer while reindexing - will be discarded")
     }else {
-      (mempoolReaderOpt, historyReaderOpt) match {
-        case (Some(mempool), Some(history)) =>
-          val modifierTypeId = invData.typeId
-          val newModifierIds = (modifierTypeId match {
-            case Transaction.ModifierTypeId =>
-              invData.ids.filter(mid => deliveryTracker.status(mid, mempool) == ModifiersStatus.Unknown)
-            case _ =>
-              invData.ids.filter(mid => deliveryTracker.status(mid, history) == ModifiersStatus.Unknown)
-          })
-            .take(deliveryTracker.getPeerLimit(peer))
-
-          if (newModifierIds.nonEmpty) {
-            val msg = Message(requestModifierSpec, Right(InvData(modifierTypeId, newModifierIds)), None)
-            peer.handlerRef ! msg
-            deliveryTracker.setRequested(newModifierIds, modifierTypeId, peer)
-          }
-
-        case _ =>
-          log.warn(s"Got data from peer while readers are not ready ${(mempoolReaderOpt, historyReaderOpt)}")
-      }
+      super.processInv(invData, peer)
     }
   }
 
 
 
   /**
-   * Method copied from the parent class with the addition of isReindexing check
+   * Method copied as-is from the parent class just to use the below modified version of validateAndSetStatus
+   * TODO: this method can be removed once following methods from Sparkz will be changed to protected visibility:
+   * parseModifiers
+   * validateAndSetStatus
+   * processSpam
    *
    * Logic to process modifiers got from another peer.
    * Filter out non-requested modifiers (with a penalty to spamming peer),
@@ -115,14 +98,10 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
         viewHolderRef ! TransactionsFromRemote(parsed)
 
       case Some(serializer: SparkzSerializer[SidechainBlock]@unchecked) =>
-        if (this.isReindexing){
-          log.info("Got block while reindexing - will be discarded")
-        }else {
-          // parse all modifiers and put them to modifiers cache
-          val parsed: Iterable[SidechainBlock] = parseModifiers(requestedModifiers, serializer, remote)
-          val valid: Iterable[SidechainBlock] = parsed.filter(validateAndSetStatus(remote, _))
-          if (valid.nonEmpty) viewHolderRef ! ModifiersFromRemote[SidechainBlock](valid)
-        }
+        // parse all modifiers and put them to modifiers cache
+        val parsed: Iterable[SidechainBlock] = parseModifiers(requestedModifiers, serializer, remote)
+        val valid: Iterable[SidechainBlock] = parsed.filter(validateAndSetStatus(remote, _))
+        if (valid.nonEmpty) viewHolderRef ! ModifiersFromRemote[SidechainBlock](valid)
 
       case _ =>
         log.error(s"Undefined serializer for modifier of type $typeId")
@@ -131,6 +110,7 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
 
   /**
    * Method copied as-is  from the parent class to be used by the previous
+   * TODO: this method can be removed once inherited method from Sparkz will be changed to protected visibility
    *
    * Parse modifiers using specified serializer, check that its id is equal to the declared one,
    * penalize misbehaving peer for every incorrect modifier or additional bytes after the modifier,
@@ -162,33 +142,41 @@ class SidechainNodeViewSynchronizer(networkControllerRef: ActorRef,
   }
 
   /**
-   * Method copied as-is  from the parent class to be used by the previous
+   * Method copied from the parent class, with the addition of isReindexing check: we must avoid to penalize
+   * a peer if receiving a block during reindex
    *
    * Move `pmod` to `Invalid` if it is permanently invalid, to `Received` otherwise
    */
   @SuppressWarnings(Array("org.wartremover.warts.IsInstanceOf"))
   private def validateAndSetStatus(remote: ConnectedPeer, pmod: SidechainBlock): Boolean = {
-    historyReaderOpt match {
-      case Some(hr) =>
-        hr.applicableTry(pmod) match {
-          case Failure(e) if e.isInstanceOf[MalformedModifierError] =>
-            log.warn(s"Modifier ${pmod.encodedId} is permanently invalid", e)
-            deliveryTracker.setInvalid(pmod.id)
-            penalizeMisbehavingPeer(remote)
-            false
-          case _ =>
-            deliveryTracker.setReceived(pmod.id, remote)
-            true
-        }
-      case None =>
-        log.error("Got modifier while history reader is not ready")
-        deliveryTracker.setReceived(pmod.id, remote)
-        true
+    if (isReindexing) {
+      log.error("Got modifier while reindexing - will be discarded")
+      deliveryTracker.setReceived(pmod.id, remote)
+      false
+    }else{
+      historyReaderOpt match {
+        case Some(hr) =>
+          hr.applicableTry(pmod) match {
+            case Failure(e) if e.isInstanceOf[MalformedModifierError] =>
+              log.warn(s"Modifier ${pmod.encodedId} is permanently invalid", e)
+              deliveryTracker.setInvalid(pmod.id)
+              penalizeMisbehavingPeer(remote)
+              false
+            case _ =>
+              deliveryTracker.setReceived(pmod.id, remote)
+              true
+          }
+        case None =>
+          log.error("Got modifier while history reader is not ready")
+          deliveryTracker.setReceived(pmod.id, remote)
+          true
+      }
     }
   }
 
   /**
    * Method copied as-is  from the parent class to be used by the previous
+   * TODO: this method can be removed once inherited method from Sparkz will be changed to protected visibility
    *
    * Get modifiers from remote peer,
    * filter out spam modifiers and penalize peer for spam
