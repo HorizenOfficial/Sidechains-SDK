@@ -51,7 +51,7 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
   private[horizen] def getCertifierKey(withdrawalEpoch: Int): ByteArrayWrapper = {
     Utils.calculateKey(Bytes.concat("certificateKeys".getBytes, Ints.toByteArray(withdrawalEpoch)))
   }
-  private[horizen] def getKeyRotationProofKey(withdrawalEpoch: Int): ByteArrayWrapper = {
+  private[horizen] def getKeyRotationProofKey(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): ByteArrayWrapper = {
     Utils.calculateKey(Bytes.concat("keyRotationProof".getBytes, Ints.toByteArray(withdrawalEpoch)))
   }
 
@@ -169,13 +169,15 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
     }
   }
 
-  def getKeyRotationProofs(withdrawalEpochNumber: Int): Seq[KeyRotationProof] = {
-    storage.get(getKeyRotationProofKey(withdrawalEpochNumber)).asScala match {
+  def getKeyRotationProof(withdrawalEpochNumber: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof] = {
+    storage.get(getKeyRotationProofKey(withdrawalEpochNumber, indexOfSigner, keyType)).asScala match {
       case Some(baw) => KeyRotationProofSerializer.parseBytesTry(baw.data) match {
-        case Success(keyRotationProofs) => Seq(keyRotationProofs)
-        case Failure(exception) => throw new IllegalStateException("Error while key rotation proofs parsing.", exception)
+        case Success(keyRotationProof) => Option(keyRotationProof)
+        case Failure(exception) =>
+          log.error("Error while key rotation proofs parsing.", exception)
+          Option.empty
       }
-      case None => Seq[KeyRotationProof]()
+      case _ => Option.empty
     }
   }
 
@@ -317,7 +319,6 @@ class SidechainStateStorage(storage: Storage, sidechainBoxesCompanion: Sidechain
       }
       removeList.add(getWithdrawalEpochCounterKey(wrEpochNumberToRemove))
       removeList.add(getCertifierKey(wrEpochNumberToRemove))
-      removeList.add(getKeyRotationProofKey(wrEpochNumberToRemove))
 
       val certEpochNumberToRemove: Int = withdrawalEpochInfo.epoch - 4
       removeList.add(getTopQualityCertificateKey(certEpochNumberToRemove))

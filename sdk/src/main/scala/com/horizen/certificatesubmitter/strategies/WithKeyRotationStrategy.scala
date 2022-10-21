@@ -4,8 +4,8 @@ import com.horizen.block.SidechainCreationVersions.SidechainCreationVersion
 import com.horizen.block.WithdrawalEpochCertificate
 import com.horizen.box.WithdrawalRequestBox
 import com.horizen.certificatesubmitter.CertificateSubmitter.SignaturesStatus
-import com.horizen.certificatesubmitter.dataproof.{CertificateData, CertificateDataWithKeyRotation}
-import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, KeyRotationProofType, SchnorrKeysSignaturesListBytes}
+import com.horizen.certificatesubmitter.dataproof.CertificateDataWithKeyRotation
+import com.horizen.certificatesubmitter.keys.{CertifiersKeys, KeyRotationProof, SchnorrKeysSignaturesListBytes}
 import com.horizen.cryptolibprovider.CryptoLibProvider
 import com.horizen.params.NetworkParams
 import com.horizen.{SidechainSettings, SidechainState}
@@ -13,7 +13,6 @@ import com.horizen.{SidechainSettings, SidechainState}
 import java.util
 import java.util.Optional
 import scala.collection.JavaConverters._
-import scala.collection.mutable
 import scala.compat.java8.OptionConverters.RichOptionForJava8
 import scala.util.Try
 
@@ -83,34 +82,36 @@ class WithKeyRotationStrategy(settings: SidechainSettings, params: NetworkParams
     val actualKeysOption: Option[CertifiersKeys] = state.certifiersKeys(status.referencedEpoch)
     val previousCertificateOption: Option[WithdrawalEpochCertificate] = state.certificate(status.referencedEpoch - 1)
 
-    val keyRotationProofs: Seq[KeyRotationProof] = state.keyRotationProofs(status.referencedEpoch)
-    val schnorrSignersPublicKeysBytesList: mutable.IndexedSeq[Array[Byte]] = actualKeysOption match {
-      case Some(actualKeys) => scala.collection.mutable.ArraySeq(actualKeys.signingKeys.map(_.bytes()):_*)
-      case None => mutable.IndexedSeq[Array[Byte]]()
+//    val keyRotationProofs: Seq[KeyRotationProof] = state.keyRotationProofs(status.referencedEpoch)
+    val schnorrSignersPublicKeysBytesList: IndexedSeq[Array[Byte]] = actualKeysOption match {
+      case Some(actualKeys) => actualKeys.signingKeys.map(_.bytes())
+      case None => IndexedSeq[Array[Byte]]()
     }
-    val schnorrMastersPublicKeysBytesList: mutable.IndexedSeq[Array[Byte]] = actualKeysOption match {
-      case Some(actualKeys) => scala.collection.mutable.ArraySeq(actualKeys.masterKeys.map(_.bytes()): _*)
-      case None => mutable.IndexedSeq[Array[Byte]]()
+    val schnorrMastersPublicKeysBytesList: IndexedSeq[Array[Byte]] = actualKeysOption match {
+      case Some(actualKeys) => actualKeys.masterKeys.map(_.bytes())
+      case None => IndexedSeq[Array[Byte]]()
     }
-    val newSchnorrSignersPublicKeysBytesList = schnorrSignersPublicKeysBytesList.clone()
-    val newSchnorrMastersPublicKeysBytesList = schnorrMastersPublicKeysBytesList.clone()
-    val updatedSigningKeysSkSignatures = mutable.IndexedSeq[Array[Byte]]()
-    val updatedSigningKeysMkSignatures = mutable.IndexedSeq[Array[Byte]]()
-    val updatedMasterKeysSkSignatures = mutable.IndexedSeq[Array[Byte]]()
-    val updatedMasterKeysMkSignatures = mutable.IndexedSeq[Array[Byte]]()
 
-    keyRotationProofs.foreach(keyRotationProof => {
-      keyRotationProof.keyType match {
-        case KeyRotationProofType.SigningKeyRotationProofType =>
-          newSchnorrMastersPublicKeysBytesList(keyRotationProof.index) = keyRotationProof.newValueOfKey.bytes()
-          updatedSigningKeysSkSignatures(keyRotationProof.index) = keyRotationProof.signingKeySignature.bytes()
-          updatedSigningKeysMkSignatures(keyRotationProof.index) = keyRotationProof.masterKeySignature.bytes()
-        case KeyRotationProofType.MasterKeyRotationProofType =>
-          newSchnorrMastersPublicKeysBytesList(keyRotationProof.index) = keyRotationProof.newValueOfKey.bytes()
-          updatedSigningKeysSkSignatures(keyRotationProof.index) = keyRotationProof.signingKeySignature.bytes()
-          updatedSigningKeysMkSignatures(keyRotationProof.index) = keyRotationProof.masterKeySignature.bytes()
+    val (newSchnorrSignersPublicKeysBytesList, updatedSigningKeysSkSignatures, updatedSigningKeysMkSignatures) = (for{
+      indexOfSigner <- schnorrSignersPublicKeysBytesList.indices
+    } yield {
+      state.keyRotationProof(status.referencedEpoch, indexOfSigner, keyType = 0) match {
+        case Some(keyRotationProof: KeyRotationProof) =>
+          (keyRotationProof.newValueOfKey.bytes(), keyRotationProof.signingKeySignature.bytes(), keyRotationProof.masterKeySignature.bytes())
+        case _ => (schnorrSignersPublicKeysBytesList(indexOfSigner), null, null)
       }
-    })
+    }).unzip3
+
+    val (newSchnorrMastersPublicKeysBytesList, updatedMasterKeysSkSignatures, updatedMasterKeysMkSignatures) = (for {
+      indexOfSigner <- schnorrMastersPublicKeysBytesList.indices
+    } yield {
+      state.keyRotationProof(status.referencedEpoch, indexOfSigner, keyType = 0) match {
+        case Some(keyRotationProof: KeyRotationProof) =>
+          (keyRotationProof.newValueOfKey.bytes(), keyRotationProof.signingKeySignature.bytes(), keyRotationProof.masterKeySignature.bytes())
+        case _ => (schnorrMastersPublicKeysBytesList(indexOfSigner), null, null)
+      }
+    }).unzip3
+    
 
     val schnorrKeysSignaturesListBytes =  SchnorrKeysSignaturesListBytes(
       schnorrSignersPublicKeysBytesList,

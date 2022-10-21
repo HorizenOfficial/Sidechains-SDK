@@ -87,8 +87,8 @@ class SidechainState private[horizen] (stateStorage: SidechainStateStorage,
     stateStorage.getWithdrawalRequests(withdrawalEpoch)
   }
 
-  def keyRotationProofs(withdrawalEpoch: Int): Seq[KeyRotationProof] = {
-    stateStorage.getKeyRotationProofs(withdrawalEpoch)
+  def keyRotationProof(withdrawalEpoch: Int, indexOfSigner: Int, keyType: Int): Option[KeyRotationProof] = {
+    stateStorage.getKeyRotationProof(withdrawalEpoch, indexOfSigner, keyType)
   }
 
   def certifiersKeys(withdrawalEpoch: Int): Option[CertifiersKeys] = {
